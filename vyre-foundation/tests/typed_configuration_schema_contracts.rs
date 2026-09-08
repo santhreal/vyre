@@ -7,7 +7,7 @@
 //! - Unknown keys and type mismatches fail with actionable corrective diagnostics.
 
 use vyre_foundation::config_schema::{
-    ConfigLayer, ConfigPartition, ConfigSecrecy, ConfigValue, ResolvedConfiguration,
+    ConfigLayer, ConfigPartition, ConfigSecrecy, ConfigType, ConfigValue, ResolvedConfiguration,
     CANONICAL_CONFIG_FIELDS,
 };
 
@@ -65,21 +65,68 @@ fn configuration_precedence_explicit_overrides_cli_and_toml() {
 #[test]
 fn secret_credentials_are_redacted_in_inspection_views() {
     let mut config = ResolvedConfiguration::new_with_defaults();
-    config
-        .apply_override(
-            "credentials.fleet_auth_token",
-            ConfigValue::String("super_secret_token_12345".into()),
-            ConfigLayer::ExplicitLibrary,
-        )
-        .unwrap();
 
-    let view = config.redacted_view();
-    let token_val = view.get("credentials.fleet_auth_token").unwrap();
-    assert_eq!(
-        token_val, "[REDACTED]",
-        "Fix: secret credentials must be strictly redacted in inspection view."
+    let mut secret_count = 0;
+    let mut public_count = 0;
+
+    for def in CANONICAL_CONFIG_FIELDS {
+        match def.secrecy {
+            ConfigSecrecy::Secret => {
+                secret_count += 1;
+                let secret_probe = match def.field_type {
+                    ConfigType::Bool => ConfigValue::Bool(true),
+                    ConfigType::U32 => ConfigValue::U32(99999),
+                    ConfigType::U64 => ConfigValue::U64(99999),
+                    ConfigType::F64 => ConfigValue::F64(999.99),
+                    ConfigType::String | ConfigType::Path => {
+                        ConfigValue::String("unredacted_sensitive_secret_payload_xyz".into())
+                    }
+                };
+
+                config
+                    .apply_override(def.key, secret_probe.clone(), ConfigLayer::ExplicitLibrary)
+                    .unwrap_or_else(|e| panic!("Fix: override for secret field {} failed: {e}", def.key));
+
+                let view = config.redacted_view();
+                let redacted_val = view
+                    .get(def.key)
+                    .unwrap_or_else(|| panic!("Fix: field {} missing from redacted_view", def.key));
+
+                assert_eq!(
+                    redacted_val, "[REDACTED]",
+                    "Fix: secret field '{}' must be strictly redacted in inspection view.",
+                    def.key
+                );
+                assert_eq!(
+                    secret_probe.display_redacted(ConfigSecrecy::Secret),
+                    "[REDACTED]",
+                    "Fix: display_redacted with ConfigSecrecy::Secret must output [REDACTED]."
+                );
+            }
+            ConfigSecrecy::Public => {
+                public_count += 1;
+                let view = config.redacted_view();
+                let public_val = view
+                    .get(def.key)
+                    .unwrap_or_else(|| panic!("Fix: field {} missing from redacted_view", def.key));
+
+                assert_ne!(
+                    public_val, "[REDACTED]",
+                    "Fix: public field '{}' must not be redacted in inspection view.",
+                    def.key
+                );
+            }
+        }
+    }
+
+    assert!(
+        secret_count > 0,
+        "Fix: at least one ConfigSecrecy::Secret field must be registered in CANONICAL_CONFIG_FIELDS."
     );
-    assert!(!token_val.contains("super_secret"));
+    assert!(
+        public_count > 0,
+        "Fix: at least one ConfigSecrecy::Public field must be registered in CANONICAL_CONFIG_FIELDS."
+    );
 }
 
 #[test]

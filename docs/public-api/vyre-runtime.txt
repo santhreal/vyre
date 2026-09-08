@@ -75,9 +75,16 @@ impl vyre_runtime::artifact_admission::DeadlineClass
 impl vyre_runtime::artifact_admission::InteractiveSessionStateMachine
 impl vyre_runtime::artifact_admission::MeshSession
 impl vyre_runtime::artifact_admission::MeshSubmission
+impl vyre_runtime::artifact_admission::ResourceDataSource
+impl vyre_runtime::artifact_admission::ResourceManifest
 impl vyre_runtime::artifact_admission::RetainedArtifactSession
+impl vyre_runtime::artifact_admission::TypedResource
+impl vyre_runtime::artifact_admission::TypedResourceDataset
+impl vyre_runtime::atomic_recovery::SupervisedRestartBudget
 impl vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange
 impl vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler
+impl vyre_runtime::generation_namespace::GenerationScopedNamespace
+impl vyre_runtime::generation_namespace::RollingUpgradeCoordinator
 impl vyre_runtime::mtp::MtpCoordinator
 impl vyre_runtime::paged_residency::BlockTableSpec
 impl vyre_runtime::paged_residency::PagedKVSlabSpec
@@ -182,8 +189,10 @@ impl<'a> vyre_runtime::uring::AsyncUringStream<'a>
 impl<'a> vyre_runtime::uring::GpuMappedBuffer<'a>
 impl<'a> vyre_runtime::uring::NvmeGpuIngestDriver<'a>
 impl<'a> vyre_runtime::uring::UringResidentQueuePump<'a>
+impl<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone> vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>
 impl<R: core::marker::Copy> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>
 impl<R> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec<R>
+impl<T> vyre_runtime::atomic_recovery::AtomicGuardedState<T>
 pub const fn vyre_runtime::RegisteredSemanticExecutor::new(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration) -> Self
 pub const fn vyre_runtime::RegisteredSemanticExecutor::registration(&self) -> &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::envelope(&self) -> &vyre_megakernel::envelope::ArtifactEnvelope
@@ -192,7 +201,10 @@ pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::contract(&self
 pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::remainder(&self) -> core::option::Option<&vyre_runtime::artifact_admission::AdmittedArtifact>
 pub const fn vyre_runtime::artifact_admission::ArtifactAdmissionError::diagnostic(&self) -> &vyre_foundation::diagnostics::Diagnostic
 pub const fn vyre_runtime::artifact_admission::DeadlineClass::budget_ns(&self) -> u64
+pub const fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::new(max_restarts: u32) -> Self
 pub const fn vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange::accounting(&self) -> &vyre_driver::peer_transfer::PeerTransferAccounting
+pub const fn vyre_runtime::generation_namespace::GenerationScopedNamespace::new(domain: vyre_spec::compatibility::ProtocolDomain, version: vyre_spec::compatibility::ProtocolVersion, generation_id: u64) -> Self
+pub const fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::phase(&self) -> vyre_runtime::generation_namespace::UpgradePhase
 pub const fn vyre_runtime::mtp::MtpCoordinator::config(&self) -> &vyre_runtime::mtp::MtpConfig
 pub const fn vyre_runtime::pipeline_cache::PipelineCacheMetricError::field(&self) -> &'static str
 pub const fn vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex::new(state_id: u32, byte_index: u32) -> Self
@@ -268,6 +280,7 @@ pub const vyre_runtime::RingEncodingFault::ALL: [Self; 5]
 pub const vyre_runtime::artifact_admission::INTERACTIVE_DISPATCH_HEADROOM: u64
 pub const vyre_runtime::artifact_admission::MAX_INTERACTIVE_STEP_BUDGET_MICROS: u64
 pub const vyre_runtime::artifact_admission::MEASURED_INTERACTIVE_DISPATCH_CEILING_MICROS: u64
+pub const vyre_runtime::artifact_admission::ResourceManifest::CURRENT_SCHEMA_VERSION: u32
 pub const vyre_runtime::paged_residency::PAGED_RESOURCE_MIN_ALIGNMENT_BYTES: usize
 pub const vyre_runtime::replay::HEADER_BYTES: u64
 pub const vyre_runtime::replay::LOG_MAGIC: &[u8; 8]
@@ -391,21 +404,29 @@ pub const vyre_runtime::tenant::TenantQuota::DEFAULT_MAX_STAGING_BYTES: u64
 pub const vyre_runtime::uring::NVME_CMD_READ: u8
 pub enum vyre_runtime::CounterArithmetic
 pub enum vyre_runtime::CounterScope
+pub enum vyre_runtime::GuardedState<T>
 pub enum vyre_runtime::RequestFault
 pub enum vyre_runtime::RingEncodingFault
+pub enum vyre_runtime::UpgradePhase
 pub enum vyre_runtime::UringPollState
 pub enum vyre_runtime::artifact_admission::ArtifactSessionError
 pub enum vyre_runtime::artifact_admission::CancellationOutcome
 pub enum vyre_runtime::artifact_admission::DeadlineClass
+pub enum vyre_runtime::artifact_admission::GeneratedDataSource
 pub enum vyre_runtime::artifact_admission::InteractiveAdmissionError
 pub enum vyre_runtime::artifact_admission::InteractiveCancellationError
 pub enum vyre_runtime::artifact_admission::InteractiveCompletion
 pub enum vyre_runtime::artifact_admission::InteractiveSessionState
 pub enum vyre_runtime::artifact_admission::MeshSessionError
 pub enum vyre_runtime::artifact_admission::PriorityClass
+pub enum vyre_runtime::artifact_admission::ResourceDataSource
+pub enum vyre_runtime::artifact_admission::ResourceIngestionError
+pub enum vyre_runtime::artifact_admission::ResourceManifestSource
 pub enum vyre_runtime::artifact_admission::RetainedSessionPhase
 pub enum vyre_runtime::artifact_admission::RetainedSessionTransition
+pub enum vyre_runtime::atomic_recovery::GuardedState<T>
 pub enum vyre_runtime::expert_scheduling::ExpertSchedulingError
+pub enum vyre_runtime::generation_namespace::UpgradePhase
 pub enum vyre_runtime::mtp::MtpError
 pub enum vyre_runtime::mtp::MtpStorageCandidate
 pub enum vyre_runtime::paged_residency::PagedResidencyError
@@ -473,15 +494,14 @@ pub fn vyre_runtime::artifact_admission::ArtifactSession::from_bytes(registratio
 pub fn vyre_runtime::artifact_admission::ArtifactSession::from_envelope(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, envelope: vyre_megakernel::envelope::ArtifactEnvelope) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::from_envelope_with_materializer(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, envelope: vyre_megakernel::envelope::ArtifactEnvelope, materializer: alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::host_bindings(&self, inputs: &[&[u8]]) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::ingest(&self, dataset: &vyre_runtime::artifact_admission::TypedResourceDataset) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::ingest_manifest(&self, manifest: &vyre_runtime::artifact_admission::ResourceManifest) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::ingest_manifest_with_base_dir(&self, manifest: &vyre_runtime::artifact_admission::ResourceManifest, base_dir: &std::path::Path) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::ingest_with_workspace(&self, workspace: &vyre_runtime::artifact_admission::ArtifactWorkspace, dataset: &vyre_runtime::artifact_admission::TypedResourceDataset) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::ordered_outputs(&self, completion: &vyre_driver::backend::artifact_lifecycle::Completion) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::payload(&self) -> core::result::Result<vyre_megakernel::identity::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::program_outputs(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, completion: &vyre_driver::backend::artifact_lifecycle::Completion) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_runtime::artifact_admission::ArtifactSessionError>
-pub fn vyre_runtime::artifact_admission::ArtifactSession::program_resident_bindings(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, resources: &[vyre_driver::backend::resource::Resource]) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::rematerialize(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
-pub fn vyre_runtime::artifact_admission::ArtifactSession::resident_bindings(&self, resources: &[vyre_driver::backend::resource::Resource]) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
-pub fn vyre_runtime::artifact_admission::ArtifactSession::resident_bindings_by_name<'a, I>(&self, resources: I) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError> where I: core::iter::traits::collect::IntoIterator<Item = (&'a str, &'a vyre_driver::backend::resource::Resource)>
-pub fn vyre_runtime::artifact_admission::ArtifactSession::resident_bindings_by_value<I>(&self, resources: I) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError> where I: core::iter::traits::collect::IntoIterator<Item = (vyre_megakernel::identity::ArtifactValueId, vyre_driver::backend::resource::Resource)>
-pub fn vyre_runtime::artifact_admission::ArtifactSession::resident_bindings_with_workspace<'a, I>(&self, workspace: &vyre_runtime::artifact_admission::ArtifactWorkspace, resources: I) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError> where I: core::iter::traits::collect::IntoIterator<Item = (&'a str, &'a vyre_driver::backend::resource::Resource)>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::resource(&self, name: &str) -> core::result::Result<vyre_megakernel::identity::ArtifactValueId, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::submit(&self, bindings: vyre_driver::backend::artifact_lifecycle::BindingSet) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::artifact_lifecycle::Submission>, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::submit_and_wait(&self, bindings: vyre_driver::backend::artifact_lifecycle::BindingSet) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::Completion, vyre_runtime::artifact_admission::ArtifactSessionError>
@@ -514,6 +534,19 @@ pub fn vyre_runtime::artifact_admission::MeshSession::submit(&self, bindings: al
 pub fn vyre_runtime::artifact_admission::MeshSubmission::devices(&self) -> alloc::vec::Vec<vyre_megakernel::allocation::DeviceSlot>
 pub fn vyre_runtime::artifact_admission::MeshSubmission::is_ready(&self) -> bool
 pub fn vyre_runtime::artifact_admission::MeshSubmission::wait(self) -> core::result::Result<alloc::vec::Vec<(vyre_megakernel::allocation::DeviceSlot, vyre_driver::backend::artifact_lifecycle::Completion)>, vyre_runtime::artifact_admission::MeshSessionError>
+pub fn vyre_runtime::artifact_admission::ResourceDataSource::byte_len(&self) -> core::option::Option<u64>
+pub fn vyre_runtime::artifact_admission::ResourceDataSource::byte_range(source_id: vyre_megakernel::identity::Digest, offset: u64, length: u64, bytes: impl core::convert::Into<alloc::vec::Vec<u8>>) -> Self
+pub fn vyre_runtime::artifact_admission::ResourceDataSource::fetch_bytes(&self) -> core::result::Result<core::option::Option<alloc::vec::Vec<u8>>, vyre_runtime::artifact_admission::ResourceIngestionError>
+pub fn vyre_runtime::artifact_admission::ResourceDataSource::file(path: impl core::convert::Into<std::path::PathBuf>, offset: u64, length: u64) -> Self
+pub fn vyre_runtime::artifact_admission::ResourceDataSource::memory(bytes: impl core::convert::Into<alloc::vec::Vec<u8>>) -> Self
+pub fn vyre_runtime::artifact_admission::ResourceDataSource::pattern(fill: u8, length: usize) -> Self
+pub fn vyre_runtime::artifact_admission::ResourceDataSource::resident(resource: vyre_driver::backend::resource::Resource) -> Self
+pub fn vyre_runtime::artifact_admission::ResourceDataSource::zeroed(length: usize) -> Self
+pub fn vyre_runtime::artifact_admission::ResourceManifest::from_bytes(bytes: &[u8]) -> core::result::Result<Self, serde_json::error::Error>
+pub fn vyre_runtime::artifact_admission::ResourceManifest::new(artifact_digest: core::option::Option<vyre_megakernel::identity::Digest>, entries: alloc::vec::Vec<vyre_runtime::artifact_admission::ResourceManifestEntry>) -> Self
+pub fn vyre_runtime::artifact_admission::ResourceManifest::to_bytes(&self) -> core::result::Result<alloc::vec::Vec<u8>, serde_json::error::Error>
+pub fn vyre_runtime::artifact_admission::ResourceManifest::to_dataset(&self) -> core::result::Result<vyre_runtime::artifact_admission::TypedResourceDataset, vyre_runtime::artifact_admission::ResourceIngestionError>
+pub fn vyre_runtime::artifact_admission::ResourceManifest::to_dataset_with_base_dir(&self, base_dir: &std::path::Path) -> core::result::Result<vyre_runtime::artifact_admission::TypedResourceDataset, vyre_runtime::artifact_admission::ResourceIngestionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::artifact(&self) -> core::result::Result<vyre_megakernel::identity::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::bindings(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::device(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
@@ -524,10 +557,46 @@ pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::rematerialize(
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::replace_retained(&self, values: alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::submit_and_wait(&self, bindings: vyre_driver::backend::artifact_lifecycle::BindingSet) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::Completion, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::transition(&self, transition: vyre_runtime::artifact_admission::RetainedSessionTransition) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::TypedResource::byte_range(value: vyre_megakernel::identity::ArtifactValueId, source_id: vyre_megakernel::identity::Digest, offset: u64, length: u64, bytes: impl core::convert::Into<alloc::vec::Vec<u8>>) -> Self
+pub fn vyre_runtime::artifact_admission::TypedResource::file(value: vyre_megakernel::identity::ArtifactValueId, path: impl core::convert::Into<std::path::PathBuf>, offset: u64, length: u64) -> Self
+pub fn vyre_runtime::artifact_admission::TypedResource::memory(value: vyre_megakernel::identity::ArtifactValueId, bytes: impl core::convert::Into<alloc::vec::Vec<u8>>) -> Self
+pub fn vyre_runtime::artifact_admission::TypedResource::new(value: vyre_megakernel::identity::ArtifactValueId, source: vyre_runtime::artifact_admission::ResourceDataSource) -> Self
+pub fn vyre_runtime::artifact_admission::TypedResource::pattern(value: vyre_megakernel::identity::ArtifactValueId, fill: u8, length: usize) -> Self
+pub fn vyre_runtime::artifact_admission::TypedResource::resident(value: vyre_megakernel::identity::ArtifactValueId, resource: vyre_driver::backend::resource::Resource) -> Self
+pub fn vyre_runtime::artifact_admission::TypedResource::with_access(self, access: vyre_megakernel::schema::records::AbiAccess) -> Self
+pub fn vyre_runtime::artifact_admission::TypedResource::with_dtype(self, dtype: vyre_spec::data_type::DataType) -> Self
+pub fn vyre_runtime::artifact_admission::TypedResource::with_element_count(self, element_count: u64) -> Self
+pub fn vyre_runtime::artifact_admission::TypedResource::with_generation(self, generation: u64) -> Self
+pub fn vyre_runtime::artifact_admission::TypedResource::with_identity(self, identity: vyre_megakernel::identity::Digest) -> Self
+pub fn vyre_runtime::artifact_admission::TypedResource::with_lifetime(self, lifetime: vyre_megakernel::schema::records::ResourceLifetime) -> Self
+pub fn vyre_runtime::artifact_admission::TypedResource::zeroed(value: vyre_megakernel::identity::ArtifactValueId, length: usize) -> Self
+pub fn vyre_runtime::artifact_admission::TypedResourceDataset::add_memory(&mut self, value: vyre_megakernel::identity::ArtifactValueId, bytes: impl core::convert::Into<alloc::vec::Vec<u8>>) -> &mut Self
+pub fn vyre_runtime::artifact_admission::TypedResourceDataset::add_resident(&mut self, value: vyre_megakernel::identity::ArtifactValueId, resource: vyre_driver::backend::resource::Resource) -> &mut Self
+pub fn vyre_runtime::artifact_admission::TypedResourceDataset::from_manifest(manifest: &vyre_runtime::artifact_admission::ResourceManifest) -> core::result::Result<Self, vyre_runtime::artifact_admission::ResourceIngestionError>
+pub fn vyre_runtime::artifact_admission::TypedResourceDataset::from_manifest_with_base_dir(manifest: &vyre_runtime::artifact_admission::ResourceManifest, base_dir: &std::path::Path) -> core::result::Result<Self, vyre_runtime::artifact_admission::ResourceIngestionError>
+pub fn vyre_runtime::artifact_admission::TypedResourceDataset::from_resources(resources: impl core::iter::traits::collect::IntoIterator<Item = vyre_runtime::artifact_admission::TypedResource>) -> core::result::Result<Self, vyre_runtime::artifact_admission::ResourceIngestionError>
+pub fn vyre_runtime::artifact_admission::TypedResourceDataset::get(&self, value: vyre_megakernel::identity::ArtifactValueId) -> core::option::Option<&vyre_runtime::artifact_admission::TypedResource>
+pub fn vyre_runtime::artifact_admission::TypedResourceDataset::insert(&mut self, resource: vyre_runtime::artifact_admission::TypedResource) -> core::result::Result<(), vyre_runtime::artifact_admission::ResourceIngestionError>
+pub fn vyre_runtime::artifact_admission::TypedResourceDataset::is_empty(&self) -> bool
+pub fn vyre_runtime::artifact_admission::TypedResourceDataset::iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&vyre_megakernel::identity::ArtifactValueId, &vyre_runtime::artifact_admission::TypedResource)>
+pub fn vyre_runtime::artifact_admission::TypedResourceDataset::len(&self) -> usize
+pub fn vyre_runtime::artifact_admission::TypedResourceDataset::new() -> Self
+pub fn vyre_runtime::artifact_admission::TypedResourceDataset::values(&self) -> impl core::iter::traits::iterator::Iterator<Item = &vyre_runtime::artifact_admission::TypedResource>
+pub fn vyre_runtime::artifact_admission::TypedResourceDataset::with_resource(self, resource: vyre_runtime::artifact_admission::TypedResource) -> Self
 pub fn vyre_runtime::artifact_admission::admit_artifact(envelope_bytes: &[u8], required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_cached_artifact(store: &dyn vyre_runtime::pipeline_cache::PipelineCacheStore, fingerprint: &vyre_runtime::pipeline_cache::PipelineFingerprint, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<core::option::Option<vyre_runtime::artifact_admission::AdmittedArtifact>, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_envelope(envelope: vyre_megakernel::envelope::ArtifactEnvelope, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_portfolio(portfolio_bytes: &[u8], required_format: &vyre_megakernel::envelope::TargetPayloadFormat, target_identity: vyre_megakernel::identity::Digest) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedPortfolio, vyre_runtime::artifact_admission::ArtifactAdmissionError>
+pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::new(initial: T, domain: vyre_foundation::failure_domain::FailureDomain, recovery_class: vyre_foundation::failure_domain::RecoveryClass) -> Self
+pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::recover(&self, fresh_state: T)
+pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::with_state<R>(&self, op: impl core::ops::function::FnOnce(&mut T) -> core::result::Result<R, alloc::string::String>) -> core::result::Result<R, vyre_foundation::failure_domain::TypedRecoveryError>
+pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::abort(&self, key: &K, ticket: vyre_runtime::atomic_recovery::PrepareTicket)
+pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::commit(&self, key: K, ticket: vyre_runtime::atomic_recovery::PrepareTicket) -> core::result::Result<V, alloc::string::String>
+pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::is_committed(&self, key: &K) -> bool
+pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::new() -> Self
+pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::prepare(&self, key: K, value: V) -> core::result::Result<core::option::Option<vyre_runtime::atomic_recovery::PrepareTicket>, alloc::string::String>
+pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::record_restart(&self, domain: vyre_foundation::failure_domain::FailureDomain) -> core::result::Result<u32, vyre_foundation::failure_domain::TypedRecoveryError>
+pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::reset(&self)
 pub fn vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange::new(topology: vyre_driver::peer_transfer::PeerTopology) -> Self
 pub fn vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange::route_all_to_all(&mut self, tokens: alloc::vec::Vec<vyre_runtime::expert_scheduling::InterDeviceToken>) -> core::result::Result<alloc::collections::btree::map::BTreeMap<u32, alloc::vec::Vec<vyre_runtime::expert_scheduling::InterDeviceToken>>, vyre_runtime::expert_scheduling::ExpertSchedulingError>
 pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits::default() -> Self
@@ -536,6 +605,14 @@ pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler::dequeue_expe
 pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler::enqueue(&mut self, item: vyre_runtime::expert_scheduling::ExpertWorkItem) -> core::result::Result<(), vyre_runtime::expert_scheduling::ExpertSchedulingError>
 pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler::new(limits: vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits) -> Self
+pub fn vyre_runtime::generation_namespace::GenerationScopedNamespace::scoped_key(&self, raw_key: &str) -> alloc::string::String
+pub fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::active_resource_count(&self) -> usize
+pub fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::begin_upgrade(&mut self, target_version: vyre_spec::compatibility::ProtocolVersion) -> core::result::Result<vyre_runtime::generation_namespace::GenerationScopedNamespace, alloc::string::String>
+pub fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::commit_upgrade(&mut self) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::current_namespace(&self) -> vyre_runtime::generation_namespace::GenerationScopedNamespace
+pub fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::new(domain: vyre_spec::compatibility::ProtocolDomain, initial_version: vyre_spec::compatibility::ProtocolVersion) -> Self
+pub fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::register_resource(&mut self, resource_id: impl core::convert::Into<alloc::string::String>)
+pub fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::rollback(&mut self, previous_version: vyre_spec::compatibility::ProtocolVersion, reason: &'static str) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_runtime::mtp::MtpConfig::default() -> Self
 pub fn vyre_runtime::mtp::MtpCoordinator::new(config: vyre_runtime::mtp::MtpConfig, prefix_cache: vyre_runtime::prefix_cache::PrefixCache) -> Self
 pub fn vyre_runtime::mtp::MtpCoordinator::rollback_all(&self, provisional: vyre_runtime::mtp::MtpProvisionalState) -> core::result::Result<(), vyre_runtime::mtp::MtpError>
@@ -997,6 +1074,7 @@ pub fn vyre_runtime::tenant::TenantHandle::fmt(&self, f: &mut core::fmt::Formatt
 pub fn vyre_runtime::tenant::TenantHandle::generation(&self) -> u32
 pub fn vyre_runtime::tenant::TenantHandle::global_opcode(&self, local: u32) -> core::result::Result<u32, vyre_runtime::tenant::TenantError>
 pub fn vyre_runtime::tenant::TenantHandle::id(&self) -> u32
+pub fn vyre_runtime::tenant::TenantHandle::issue_capability(&self, authenticator: &vyre_foundation::security::capability::CapabilityAuthenticator, device_id: u64, resource_id: u64, permissions: alloc::collections::btree::set::BTreeSet<vyre_foundation::security::label::Permission>) -> vyre_foundation::security::capability::UnforgeableCapability
 pub fn vyre_runtime::tenant::TenantHandle::label(&self) -> &str
 pub fn vyre_runtime::tenant::TenantHandle::max_outstanding_slots(&self) -> u64
 pub fn vyre_runtime::tenant::TenantHandle::note_drained(&self, count: u64)
@@ -1009,6 +1087,8 @@ pub fn vyre_runtime::tenant::TenantHandle::release_staging_bytes(&self, byte_cou
 pub fn vyre_runtime::tenant::TenantHandle::reserve_resident_handles(&self, handle_count: u64) -> core::result::Result<(), vyre_runtime::tenant::TenantError>
 pub fn vyre_runtime::tenant::TenantHandle::reserve_staging_bytes(&self, byte_count: u64) -> core::result::Result<(), vyre_runtime::tenant::TenantError>
 pub fn vyre_runtime::tenant::TenantHandle::runtime_counters(&self) -> vyre_runtime::tenant::TenantRuntimeCounters
+pub fn vyre_runtime::tenant::TenantHandle::tenant_id_128(&self) -> vyre_foundation::security::label::TenantId
+pub fn vyre_runtime::tenant::TenantHandle::validate_capability(&self, authenticator: &vyre_foundation::security::capability::CapabilityAuthenticator, handle: &vyre_foundation::security::capability::UnforgeableCapability, device_id: u64, required_permission: &vyre_foundation::security::label::Permission) -> core::result::Result<(), vyre_foundation::security::error::SecurityError>
 pub fn vyre_runtime::tenant::TenantQuota::default() -> Self
 pub fn vyre_runtime::tenant::TenantRegistry::active_tenants(&self) -> alloc::vec::Vec<vyre_runtime::tenant::TenantHandle>
 pub fn vyre_runtime::tenant::TenantRegistry::active_tenants_into(&self, out: &mut alloc::vec::Vec<vyre_runtime::tenant::TenantHandle>)
@@ -1073,7 +1153,9 @@ pub fn vyre_runtime::uring::UringResidentQueuePump<'a>::observe_epoch(&self, con
 pub fn vyre_runtime::uring::encode_nvme_read_sqe(namespace_id: u32, starting_lba: u64, blocks: u32, dest_bar1_ptr: u64) -> [u8; 64]
 pub mod vyre_runtime
 pub mod vyre_runtime::artifact_admission
+pub mod vyre_runtime::atomic_recovery
 pub mod vyre_runtime::expert_scheduling
+pub mod vyre_runtime::generation_namespace
 pub mod vyre_runtime::mtp
 pub mod vyre_runtime::paged_residency
 pub mod vyre_runtime::persistent_executor
@@ -1120,7 +1202,13 @@ pub mod vyre_runtime::safetensors_transfer
 pub mod vyre_runtime::scheduler
 pub mod vyre_runtime::tenant
 pub mod vyre_runtime::uring
+pub struct vyre_runtime::AtomicGuardedState<T>
+pub struct vyre_runtime::GenerationScopedNamespace
+pub struct vyre_runtime::PrepareCommitJournal<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone>
+pub struct vyre_runtime::PrepareTicket
 pub struct vyre_runtime::RegisteredSemanticExecutor
+pub struct vyre_runtime::RollingUpgradeCoordinator
+pub struct vyre_runtime::SupervisedRestartBudget
 pub struct vyre_runtime::UringCompletionPump<'a>
 pub struct vyre_runtime::artifact_admission::AdmittedArtifact
 pub struct vyre_runtime::artifact_admission::AdmittedPortfolio
@@ -1133,12 +1221,22 @@ pub struct vyre_runtime::artifact_admission::InteractiveSessionStateMachine
 pub struct vyre_runtime::artifact_admission::InteractiveSubmissionRequest
 pub struct vyre_runtime::artifact_admission::MeshSession
 pub struct vyre_runtime::artifact_admission::MeshSubmission
+pub struct vyre_runtime::artifact_admission::ResourceManifest
+pub struct vyre_runtime::artifact_admission::ResourceManifestEntry
 pub struct vyre_runtime::artifact_admission::RetainedArtifactSession
+pub struct vyre_runtime::artifact_admission::TypedResource
+pub struct vyre_runtime::artifact_admission::TypedResourceDataset
+pub struct vyre_runtime::atomic_recovery::AtomicGuardedState<T>
+pub struct vyre_runtime::atomic_recovery::PrepareCommitJournal<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone>
+pub struct vyre_runtime::atomic_recovery::PrepareTicket
+pub struct vyre_runtime::atomic_recovery::SupervisedRestartBudget
 pub struct vyre_runtime::expert_scheduling::ExpertWorkItem
 pub struct vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange
 pub struct vyre_runtime::expert_scheduling::InterDeviceToken
 pub struct vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits
 pub struct vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler
+pub struct vyre_runtime::generation_namespace::GenerationScopedNamespace
+pub struct vyre_runtime::generation_namespace::RollingUpgradeCoordinator
 pub struct vyre_runtime::mtp::MtpConfig
 pub struct vyre_runtime::mtp::MtpCoordinator
 pub struct vyre_runtime::mtp::MtpDraftToken
@@ -1301,6 +1399,15 @@ pub vyre_runtime::CounterArithmetic::Sum
 pub vyre_runtime::CounterScope::IoUring
 pub vyre_runtime::CounterScope::Tenant(u32)
 pub vyre_runtime::CounterScope::TenantRegistry
+pub vyre_runtime::GenerationScopedNamespace::domain: vyre_spec::compatibility::ProtocolDomain
+pub vyre_runtime::GenerationScopedNamespace::generation_id: u64
+pub vyre_runtime::GenerationScopedNamespace::version: vyre_spec::compatibility::ProtocolVersion
+pub vyre_runtime::GuardedState::PoisonedTerminal
+pub vyre_runtime::GuardedState::PoisonedTerminal::domain: vyre_foundation::failure_domain::FailureDomain
+pub vyre_runtime::GuardedState::PoisonedTerminal::reason: alloc::string::String
+pub vyre_runtime::GuardedState::PoisonedTerminal::recovery_class: vyre_foundation::failure_domain::RecoveryClass
+pub vyre_runtime::GuardedState::Ready(T)
+pub vyre_runtime::GuardedState::Rebuilding
 pub vyre_runtime::PipelineError::Backend(alloc::string::String)
 pub vyre_runtime::PipelineError::CounterOrder
 pub vyre_runtime::PipelineError::CounterOrder::consumed: u64
@@ -1378,6 +1485,7 @@ pub vyre_runtime::PipelineError::UnregisteredResource::slot: u32
 pub vyre_runtime::PipelineError::WorkerThreadPanicked
 pub vyre_runtime::PipelineError::WorkerThreadPanicked::fix: &'static str
 pub vyre_runtime::PipelineError::WorkerThreadPanicked::worker: &'static str
+pub vyre_runtime::PrepareTicket::ticket_id: u64
 pub vyre_runtime::RequestFault::BelowMinimum
 pub vyre_runtime::RequestFault::Indivisible
 pub vyre_runtime::RequestFault::LengthMismatch
@@ -1386,11 +1494,20 @@ pub vyre_runtime::RingEncodingFault::Geometry
 pub vyre_runtime::RingEncodingFault::OutOfBounds
 pub vyre_runtime::RingEncodingFault::Overflow
 pub vyre_runtime::RingEncodingFault::Protocol
+pub vyre_runtime::UpgradePhase::Active
+pub vyre_runtime::UpgradePhase::Completed
+pub vyre_runtime::UpgradePhase::RolledBack
+pub vyre_runtime::UpgradePhase::RolledBack::reason: &'static str
+pub vyre_runtime::UpgradePhase::RolledBack::restored_generation: u64
+pub vyre_runtime::UpgradePhase::RollingUpgrade
+pub vyre_runtime::UpgradePhase::RollingUpgrade::draining_generation: u64
+pub vyre_runtime::UpgradePhase::RollingUpgrade::target_generation: u64
 pub vyre_runtime::UringPollState::Completed(u32)
 pub vyre_runtime::UringPollState::Detached
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Admission(vyre_runtime::artifact_admission::ArtifactAdmissionError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Backend(vyre_driver::backend::error::BackendError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Compile(vyre_megakernel::error::CompileError)
+pub vyre_runtime::artifact_admission::ArtifactSessionError::Ingestion(vyre_runtime::artifact_admission::ResourceIngestionError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::State(alloc::string::String)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Target(vyre_megakernel::target::TargetCompileError)
 pub vyre_runtime::artifact_admission::CancellationOutcome::AlreadyCompleted
@@ -1404,6 +1521,14 @@ pub vyre_runtime::artifact_admission::DeadlineClass::HardRealTime::max_jitter_ns
 pub vyre_runtime::artifact_admission::DeadlineClass::InteractiveFrame
 pub vyre_runtime::artifact_admission::DeadlineClass::InteractiveFrame::frame_target_ns: u64
 pub vyre_runtime::artifact_admission::DeadlineClass::InteractiveFrame::target_fps: u32
+pub vyre_runtime::artifact_admission::GeneratedDataSource::Custom
+pub vyre_runtime::artifact_admission::GeneratedDataSource::Custom::bytes: alloc::vec::Vec<u8>
+pub vyre_runtime::artifact_admission::GeneratedDataSource::Custom::length: usize
+pub vyre_runtime::artifact_admission::GeneratedDataSource::Custom::name: alloc::string::String
+pub vyre_runtime::artifact_admission::GeneratedDataSource::Pattern
+pub vyre_runtime::artifact_admission::GeneratedDataSource::Pattern::fill: u8
+pub vyre_runtime::artifact_admission::GeneratedDataSource::Pattern::length: usize
+pub vyre_runtime::artifact_admission::GeneratedDataSource::Zeroed(usize)
 pub vyre_runtime::artifact_admission::InteractiveAdmissionError::DeadlineUnachievable
 pub vyre_runtime::artifact_admission::InteractiveAdmissionError::DeadlineUnachievable::estimated_ns: u64
 pub vyre_runtime::artifact_admission::InteractiveAdmissionError::DeadlineUnachievable::remaining_ns: u64
@@ -1470,6 +1595,90 @@ pub vyre_runtime::artifact_admission::PriorityClass::High = 2
 pub vyre_runtime::artifact_admission::PriorityClass::Low = 0
 pub vyre_runtime::artifact_admission::PriorityClass::Normal = 1
 pub vyre_runtime::artifact_admission::PriorityClass::Urgent = 3
+pub vyre_runtime::artifact_admission::ResourceDataSource::ByteRange
+pub vyre_runtime::artifact_admission::ResourceDataSource::ByteRange::bytes: alloc::vec::Vec<u8>
+pub vyre_runtime::artifact_admission::ResourceDataSource::ByteRange::length: u64
+pub vyre_runtime::artifact_admission::ResourceDataSource::ByteRange::offset: u64
+pub vyre_runtime::artifact_admission::ResourceDataSource::ByteRange::source_id: vyre_megakernel::identity::Digest
+pub vyre_runtime::artifact_admission::ResourceDataSource::File
+pub vyre_runtime::artifact_admission::ResourceDataSource::File::length: u64
+pub vyre_runtime::artifact_admission::ResourceDataSource::File::offset: u64
+pub vyre_runtime::artifact_admission::ResourceDataSource::File::path: std::path::PathBuf
+pub vyre_runtime::artifact_admission::ResourceDataSource::Generated(vyre_runtime::artifact_admission::GeneratedDataSource)
+pub vyre_runtime::artifact_admission::ResourceDataSource::Memory(alloc::vec::Vec<u8>)
+pub vyre_runtime::artifact_admission::ResourceDataSource::Resident(vyre_driver::backend::resource::Resource)
+pub vyre_runtime::artifact_admission::ResourceIngestionError::AccessMismatch
+pub vyre_runtime::artifact_admission::ResourceIngestionError::AccessMismatch::actual: vyre_megakernel::schema::records::AbiAccess
+pub vyre_runtime::artifact_admission::ResourceIngestionError::AccessMismatch::expected: vyre_megakernel::schema::records::AbiAccess
+pub vyre_runtime::artifact_admission::ResourceIngestionError::AccessMismatch::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceIngestionError::AllocationFailed
+pub vyre_runtime::artifact_admission::ResourceIngestionError::AllocationFailed::error: alloc::string::String
+pub vyre_runtime::artifact_admission::ResourceIngestionError::AllocationFailed::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceIngestionError::ByteCountMismatch
+pub vyre_runtime::artifact_admission::ResourceIngestionError::ByteCountMismatch::actual: u64
+pub vyre_runtime::artifact_admission::ResourceIngestionError::ByteCountMismatch::expected: u64
+pub vyre_runtime::artifact_admission::ResourceIngestionError::ByteCountMismatch::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceIngestionError::DataLengthMismatch
+pub vyre_runtime::artifact_admission::ResourceIngestionError::DataLengthMismatch::actual: u64
+pub vyre_runtime::artifact_admission::ResourceIngestionError::DataLengthMismatch::expected: u64
+pub vyre_runtime::artifact_admission::ResourceIngestionError::DtypeMismatch
+pub vyre_runtime::artifact_admission::ResourceIngestionError::DtypeMismatch::actual: vyre_spec::data_type::DataType
+pub vyre_runtime::artifact_admission::ResourceIngestionError::DtypeMismatch::expected: vyre_spec::data_type::DataType
+pub vyre_runtime::artifact_admission::ResourceIngestionError::DtypeMismatch::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceIngestionError::DuplicateConflictingResource
+pub vyre_runtime::artifact_admission::ResourceIngestionError::DuplicateConflictingResource::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceIngestionError::ElementCountMismatch
+pub vyre_runtime::artifact_admission::ResourceIngestionError::ElementCountMismatch::actual: u64
+pub vyre_runtime::artifact_admission::ResourceIngestionError::ElementCountMismatch::expected: u64
+pub vyre_runtime::artifact_admission::ResourceIngestionError::ElementCountMismatch::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceIngestionError::GenerationMismatch
+pub vyre_runtime::artifact_admission::ResourceIngestionError::GenerationMismatch::actual: u64
+pub vyre_runtime::artifact_admission::ResourceIngestionError::GenerationMismatch::expected: u64
+pub vyre_runtime::artifact_admission::ResourceIngestionError::GenerationMismatch::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceIngestionError::IdentityMismatch
+pub vyre_runtime::artifact_admission::ResourceIngestionError::IdentityMismatch::actual: vyre_megakernel::identity::Digest
+pub vyre_runtime::artifact_admission::ResourceIngestionError::IdentityMismatch::expected: vyre_megakernel::identity::Digest
+pub vyre_runtime::artifact_admission::ResourceIngestionError::IdentityMismatch::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceIngestionError::Io
+pub vyre_runtime::artifact_admission::ResourceIngestionError::Io::error: alloc::string::String
+pub vyre_runtime::artifact_admission::ResourceIngestionError::Io::path: alloc::string::String
+pub vyre_runtime::artifact_admission::ResourceIngestionError::LifetimeMismatch
+pub vyre_runtime::artifact_admission::ResourceIngestionError::LifetimeMismatch::actual: vyre_megakernel::schema::records::ResourceLifetime
+pub vyre_runtime::artifact_admission::ResourceIngestionError::LifetimeMismatch::expected: vyre_megakernel::schema::records::ResourceLifetime
+pub vyre_runtime::artifact_admission::ResourceIngestionError::LifetimeMismatch::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceIngestionError::MissingResource
+pub vyre_runtime::artifact_admission::ResourceIngestionError::MissingResource::entry_name: alloc::string::String
+pub vyre_runtime::artifact_admission::ResourceIngestionError::MissingResource::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceIngestionError::UnknownValue
+pub vyre_runtime::artifact_admission::ResourceIngestionError::UnknownValue::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceIngestionError::UploadFailed
+pub vyre_runtime::artifact_admission::ResourceIngestionError::UploadFailed::error: alloc::string::String
+pub vyre_runtime::artifact_admission::ResourceIngestionError::UploadFailed::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceIngestionError::WorkspaceOwnedCollision
+pub vyre_runtime::artifact_admission::ResourceIngestionError::WorkspaceOwnedCollision::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceManifest::artifact_digest: core::option::Option<vyre_megakernel::identity::Digest>
+pub vyre_runtime::artifact_admission::ResourceManifest::entries: alloc::vec::Vec<vyre_runtime::artifact_admission::ResourceManifestEntry>
+pub vyre_runtime::artifact_admission::ResourceManifest::schema_version: u32
+pub vyre_runtime::artifact_admission::ResourceManifestEntry::access: vyre_megakernel::schema::records::AbiAccess
+pub vyre_runtime::artifact_admission::ResourceManifestEntry::byte_count: u64
+pub vyre_runtime::artifact_admission::ResourceManifestEntry::dtype: vyre_spec::data_type::DataType
+pub vyre_runtime::artifact_admission::ResourceManifestEntry::element_count: u64
+pub vyre_runtime::artifact_admission::ResourceManifestEntry::identity: core::option::Option<vyre_megakernel::identity::Digest>
+pub vyre_runtime::artifact_admission::ResourceManifestEntry::lifetime: vyre_megakernel::schema::records::ResourceLifetime
+pub vyre_runtime::artifact_admission::ResourceManifestEntry::name: core::option::Option<alloc::string::String>
+pub vyre_runtime::artifact_admission::ResourceManifestEntry::source: vyre_runtime::artifact_admission::ResourceManifestSource
+pub vyre_runtime::artifact_admission::ResourceManifestEntry::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceManifestSource::File
+pub vyre_runtime::artifact_admission::ResourceManifestSource::File::length: u64
+pub vyre_runtime::artifact_admission::ResourceManifestSource::File::offset: u64
+pub vyre_runtime::artifact_admission::ResourceManifestSource::File::path: alloc::string::String
+pub vyre_runtime::artifact_admission::ResourceManifestSource::InlineBytes
+pub vyre_runtime::artifact_admission::ResourceManifestSource::InlineBytes::bytes: alloc::vec::Vec<u8>
+pub vyre_runtime::artifact_admission::ResourceManifestSource::Pattern
+pub vyre_runtime::artifact_admission::ResourceManifestSource::Pattern::byte_count: u64
+pub vyre_runtime::artifact_admission::ResourceManifestSource::Pattern::fill: u8
+pub vyre_runtime::artifact_admission::ResourceManifestSource::Zeroed
+pub vyre_runtime::artifact_admission::ResourceManifestSource::Zeroed::byte_count: u64
 pub vyre_runtime::artifact_admission::RetainedSessionPhase::InFlight
 pub vyre_runtime::artifact_admission::RetainedSessionPhase::Quarantined
 pub vyre_runtime::artifact_admission::RetainedSessionPhase::Ready
@@ -1480,6 +1689,21 @@ pub vyre_runtime::artifact_admission::RetainedSessionTransition::Quarantine
 pub vyre_runtime::artifact_admission::RetainedSessionTransition::Quarantine::reason: alloc::string::String
 pub vyre_runtime::artifact_admission::RetainedSessionTransition::ReplaceState
 pub vyre_runtime::artifact_admission::RetainedSessionTransition::ReplaceState::expected_generation: u64
+pub vyre_runtime::artifact_admission::TypedResource::access: core::option::Option<vyre_megakernel::schema::records::AbiAccess>
+pub vyre_runtime::artifact_admission::TypedResource::dtype: core::option::Option<vyre_spec::data_type::DataType>
+pub vyre_runtime::artifact_admission::TypedResource::element_count: core::option::Option<u64>
+pub vyre_runtime::artifact_admission::TypedResource::generation: core::option::Option<u64>
+pub vyre_runtime::artifact_admission::TypedResource::identity: core::option::Option<vyre_megakernel::identity::Digest>
+pub vyre_runtime::artifact_admission::TypedResource::lifetime: core::option::Option<vyre_megakernel::schema::records::ResourceLifetime>
+pub vyre_runtime::artifact_admission::TypedResource::source: vyre_runtime::artifact_admission::ResourceDataSource
+pub vyre_runtime::artifact_admission::TypedResource::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::atomic_recovery::GuardedState::PoisonedTerminal
+pub vyre_runtime::atomic_recovery::GuardedState::PoisonedTerminal::domain: vyre_foundation::failure_domain::FailureDomain
+pub vyre_runtime::atomic_recovery::GuardedState::PoisonedTerminal::reason: alloc::string::String
+pub vyre_runtime::atomic_recovery::GuardedState::PoisonedTerminal::recovery_class: vyre_foundation::failure_domain::RecoveryClass
+pub vyre_runtime::atomic_recovery::GuardedState::Ready(T)
+pub vyre_runtime::atomic_recovery::GuardedState::Rebuilding
+pub vyre_runtime::atomic_recovery::PrepareTicket::ticket_id: u64
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExchangeError(alloc::string::String)
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds::expert_id: u32
@@ -1508,6 +1732,17 @@ pub vyre_runtime::expert_scheduling::InterDeviceToken::token_id: u64
 pub vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits::max_queued_per_expert: usize
 pub vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits::max_starvation_ticks: u64
 pub vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits::num_experts: u32
+pub vyre_runtime::generation_namespace::GenerationScopedNamespace::domain: vyre_spec::compatibility::ProtocolDomain
+pub vyre_runtime::generation_namespace::GenerationScopedNamespace::generation_id: u64
+pub vyre_runtime::generation_namespace::GenerationScopedNamespace::version: vyre_spec::compatibility::ProtocolVersion
+pub vyre_runtime::generation_namespace::UpgradePhase::Active
+pub vyre_runtime::generation_namespace::UpgradePhase::Completed
+pub vyre_runtime::generation_namespace::UpgradePhase::RolledBack
+pub vyre_runtime::generation_namespace::UpgradePhase::RolledBack::reason: &'static str
+pub vyre_runtime::generation_namespace::UpgradePhase::RolledBack::restored_generation: u64
+pub vyre_runtime::generation_namespace::UpgradePhase::RollingUpgrade
+pub vyre_runtime::generation_namespace::UpgradePhase::RollingUpgrade::draining_generation: u64
+pub vyre_runtime::generation_namespace::UpgradePhase::RollingUpgrade::target_generation: u64
 pub vyre_runtime::mtp::MtpConfig::hidden_dim: usize
 pub vyre_runtime::mtp::MtpConfig::max_depth: usize
 pub vyre_runtime::mtp::MtpConfig::storage_candidate: vyre_runtime::mtp::MtpStorageCandidate

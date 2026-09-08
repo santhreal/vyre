@@ -50,7 +50,6 @@ impl vyre_driver_wgpu::runtime::readback_ring::ReadbackRing
 impl vyre_driver_wgpu::runtime::readback_ring::ReadbackRingSet
 impl vyre_driver_wgpu::runtime::readback_ring::RingStats
 impl vyre_driver_wgpu::runtime::router::BackendRouter
-impl vyre_driver_wgpu::spirv_backend::SpirvEmitter
 impl vyre_foundation::validate::options::BackendValidationCapabilities for vyre_driver_wgpu::WgpuBackend
 pub async fn vyre_driver_wgpu::runtime::acquire_gpu() -> core::result::Result<((wgpu::api::device::Device, wgpu::api::queue::Queue), wgpu_types::AdapterInfo, vyre_driver_wgpu::runtime::EnabledFeatures), vyre_driver::backend::error::BackendError>
 pub async fn vyre_driver_wgpu::runtime::acquire_gpu_for_adapter(index: usize) -> core::result::Result<((wgpu::api::device::Device, wgpu::api::queue::Queue), wgpu_types::AdapterInfo, vyre_driver_wgpu::runtime::EnabledFeatures), vyre_driver::backend::error::BackendError>
@@ -59,7 +58,6 @@ pub const vyre_driver_wgpu::WGPU_TARGET_ID: vyre_foundation::operation::target_f
 pub const vyre_driver_wgpu::runtime::LruPolicy::DEFAULT_THRESHOLD: u32
 pub const vyre_driver_wgpu::runtime::indirect::INDIRECT_ARGS_BYTES: u64
 pub const vyre_driver_wgpu::runtime::serializer::MAX_SERIALIZED_PART_BYTES: usize
-pub const vyre_driver_wgpu::spirv_backend::SPIRV_BACKEND_ID: &str
 pub enum vyre_driver_wgpu::engine::graph::GpuResource
 pub enum vyre_driver_wgpu::runtime::serializer::SerializerError
 pub fn vyre_driver_wgpu::DispatchArena::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -304,8 +302,6 @@ pub fn vyre_driver_wgpu::runtime::router::BackendRouter::pick_with_override(&sel
 pub fn vyre_driver_wgpu::runtime::select_adapter(criteria: &vyre_driver_wgpu::runtime::AdapterCriteria) -> core::result::Result<(usize, wgpu_types::AdapterInfo), vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::runtime::serializer::decode_parts(bytes: &[u8]) -> vyre_driver_wgpu::runtime::serializer::SerializerResult<alloc::vec::Vec<&[u8]>>
 pub fn vyre_driver_wgpu::runtime::serializer::encode_parts(parts: &[&[u8]]) -> vyre_driver_wgpu::runtime::serializer::SerializerResult<alloc::vec::Vec<u8>>
-pub fn vyre_driver_wgpu::spirv_backend::SpirvEmitter::default_flags() -> naga::back::spv::WriterFlags
-pub fn vyre_driver_wgpu::spirv_backend::SpirvEmitter::emit(module: &naga::ir::Module, entry: &str) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
 pub mod vyre_driver_wgpu
 pub mod vyre_driver_wgpu::buffer
 pub mod vyre_driver_wgpu::emit
@@ -321,7 +317,6 @@ pub mod vyre_driver_wgpu::runtime::prerecorded
 pub mod vyre_driver_wgpu::runtime::readback_ring
 pub mod vyre_driver_wgpu::runtime::router
 pub mod vyre_driver_wgpu::runtime::serializer
-pub mod vyre_driver_wgpu::spirv_backend
 pub struct vyre_driver_wgpu::DispatchArena
 pub struct vyre_driver_wgpu::WgpuBackend
 pub struct vyre_driver_wgpu::WgpuBackendStats
@@ -362,7 +357,6 @@ pub struct vyre_driver_wgpu::runtime::readback_ring::ReadbackTicket
 pub struct vyre_driver_wgpu::runtime::readback_ring::RingStats
 pub struct vyre_driver_wgpu::runtime::router::BackendRouter
 pub struct vyre_driver_wgpu::runtime::router::RouterDecision
-pub struct vyre_driver_wgpu::spirv_backend::SpirvEmitter
 pub type vyre_driver_wgpu::engine::multi_gpu::StreamShardError = vyre_driver_wgpu::engine::multi_gpu::stream_shard::StreamShardError
 pub type vyre_driver_wgpu::runtime::readback_ring::MapResult = core::result::Result<(), wgpu::api::buffer::BufferAsyncError>
 pub type vyre_driver_wgpu::runtime::serializer::SerializerResult<T, E> = core::result::Result<T, E>
