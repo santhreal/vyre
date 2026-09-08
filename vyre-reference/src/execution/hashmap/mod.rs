@@ -26,7 +26,7 @@ use crate::{
     value::Value,
 };
 use rustc_hash::FxHashMap;
-use vyre_foundation::ir::{AtomicOp, BufferAccess, Expr, MemoryOrdering, Node, Program};
+use vyre_foundation::ir::{AtomicOp, BufferAccess, Expr, Node, Program};
 
 /// Order in which the interpreter steps workgroups and the invocations within
 /// each workgroup.
@@ -76,73 +76,26 @@ fn apply_step_order<T>(items: &mut [T], lane_order: LaneOrder) {
     }
 }
 
-/// A `MemoryOrdering::GridSync` barrier, the grid-wide fence `fuse_programs` inserts
-/// between arms whose later arm reads an earlier arm's cross-workgroup
-/// (launch-geometry) output. On real hardware the driver lowers it into separate
-/// globally-ordered dispatch segments; the reference interpreter mirrors that by
-/// advancing the whole grid through one segment before the next.
-fn is_grid_sync_barrier(node: &Node) -> bool {
-    matches!(
-        node,
-        Node::Barrier {
-            ordering: MemoryOrdering::GridSync
-        } | Node::LogicalBarrier {
-            ordering: MemoryOrdering::GridSync
-        }
-    )
-}
-
-/// Whether a GridSync barrier appears anywhere in the SEQUENTIAL scope tree, the
-/// top level or nested inside transparent `Block` / `Region` scopes. It does NOT
-/// descend into data-dependent control flow (`If` / `Loop`), where a grid-wide fence
-/// is ill-defined and fusion never emits one.
-fn contains_grid_sync(nodes: &[Node]) -> bool {
-    nodes.iter().any(|node| match node {
-        Node::Block(inner) => contains_grid_sync(inner),
-        Node::Region { body, .. } => contains_grid_sync(body),
-        // Deliberate: a fence under an `If` or `Loop` is not treated as a scope boundary here, because the resident hashmap only flattens unconditional wrappers.
-        other => is_grid_sync_barrier(other),
-    })
-}
-
-/// Flatten every transparent scope (`Block` / `Region`) that CONTAINS a GridSync so
-/// each GridSync becomes a top-level node ready to split on. A re-fused program (e.g.
-/// the exclusive scan = fuse(inclusive-chain, subtract)) nests the inner chain's
-/// A→B / B→C GridSyncs one arm-scope deeper, so a single-level unwrap misses them.
-/// Scopes WITHOUT a GridSync are kept intact (their locals keep their own scope);
-/// only GridSync-carrying wrappers are dissolved, and post-fusion arm names are
-/// already globally unique, so dropping such a wrapper's scope cannot collide.
-fn flatten_grid_sync_scopes(nodes: &[Node], out: &mut Vec<Node>) {
-    for node in nodes {
-        match node {
-            Node::Block(inner) if contains_grid_sync(inner) => {
-                flatten_grid_sync_scopes(inner, out);
-            }
-            Node::Region { body, .. } if contains_grid_sync(body) => {
-                flatten_grid_sync_scopes(body, out);
-            }
-            // Deliberate: only unconditional wrappers flatten, so any other statement is emitted as one opaque step.
-            other => out.push(other.clone()),
-        }
+/// Split `program` into the segments a whole-grid fence divides it into.
+///
+/// The split itself is `vyre_foundation::transform::grid_sync_split`, the same
+/// transform a backend without a native cooperative launch runs. This crate had
+/// its own copy, which flattened only unconditional wrappers and dropped the
+/// `Let` bindings a segment inherited from an earlier one, so a program that
+/// bound a value before the fence and read it after was rejected as referencing
+/// an undeclared variable. Running the whole grid through segment `k` before
+/// any workgroup enters `k+1` is what a launch boundary does.
+fn grid_sync_segments(program: &Program) -> Result<Option<Vec<Program>>, ReferenceError> {
+    if !vyre_foundation::transform::grid_sync_split::contains_grid_sync(program) {
+        return Ok(None);
     }
-}
-
-/// Split a flattened body (all GridSyncs top-level) into execution segments at each
-/// GridSync barrier. Running the ENTIRE grid through segment `k` before any
-/// workgroup enters segment `k+1` reproduces the driver's dispatch split and makes
-/// GridSync globally ordered (fixes multi-block prefix-scan Pass-B reading Pass-A's
-/// per-block totals, and the same shape in every fused multi-pass kernel).
-fn split_top_level_grid_sync(nodes: &[Node]) -> Vec<&[Node]> {
-    let mut segments = Vec::new();
-    let mut start = 0;
-    for (index, node) in nodes.iter().enumerate() {
-        if is_grid_sync_barrier(node) {
-            segments.push(&nodes[start..index]);
-            start = index + 1;
-        }
-    }
-    segments.push(&nodes[start..]);
-    segments
+    let segments = vyre_foundation::transform::grid_sync_split::split_on_grid_sync(program)
+        .map_err(|error| {
+            ReferenceError::new(format!(
+                "cannot order a whole-grid fence: {error}. Fix: bound the fenced program's node count, or remove the fence."
+            ))
+        })?;
+    Ok(Some(segments))
 }
 
 /// True when `reference_eval` RETURNS this buffer among its outputs. This is the SINGLE
@@ -380,26 +333,14 @@ pub(crate) fn run_hashmap_reference(
     );
     #[cfg(feature = "subgroup-ops")]
     let uses_subgroup_ops = vyre_foundation::program_caps::scan(program).subgroup_ops;
-    // Grid-sync-aware execution: if the body carries `GridSync` barriers (a fused
-    // multi-pass kernel the driver would split into ordered dispatches), run the
-    // WHOLE grid through each inter-barrier segment before the next, so a later pass
-    // never reads a prior pass's not-yet-written cross-workgroup output. GridSyncs
-    // can nest inside transparent Block/Region scopes (a re-fused program buries an
-    // inner chain's barriers an arm-scope deep), so flatten those scopes first. A
-    // body with no GridSync keeps the exact single-segment path (`entry`), preserving
-    // the original single-pass behavior byte-for-byte.
-    let has_grid_sync = contains_grid_sync(entry);
-    let flattened: Vec<Node> = if has_grid_sync {
-        let mut nodes = Vec::new();
-        flatten_grid_sync_scopes(entry, &mut nodes);
-        nodes
-    } else {
-        Vec::new()
-    };
-    let segments: Vec<&[Node]> = if has_grid_sync {
-        split_top_level_grid_sync(&flattened)
-    } else {
-        vec![entry]
+    // A whole-grid fence orders every invocation in the dispatch, so the whole
+    // grid advances through one segment before any workgroup enters the next.
+    // A body with no fence is one segment and takes the original single-pass
+    // path byte for byte.
+    let split = grid_sync_segments(program)?;
+    let segments: Vec<&[Node]> = match &split {
+        Some(segments) => segments.iter().map(Program::entry).collect(),
+        None => vec![entry],
     };
     // Canonical workgroup dispatch order (z,y,x-nested). A non-`Forward`
     // [`LaneOrder`] permutes this list, and the invocations within each workgroup, to
@@ -757,140 +698,4 @@ fn eval_atomic(
     let (old, new) = atomics::apply(op, old, expected, value)?;
     oob::atomic_store(target, idx, new);
     Ok(Value::U32(old))
-}
-
-/// Structural locks for the GridSync segmentation that makes fused multi-pass kernels
-/// globally ordered under `reference_eval` (the fix for multi-block prefix-scan Pass-B
-/// reading Pass-A's not-yet-written per-block totals). These pin the private splitting
-/// helpers IN the crate that owns them, the end-to-end value parity lives downstream in
-/// `vyre-primitives`'s multi_block/line_index tests, but the split MECHANICS belong here.
-// Inline: covers the crate-private `contains_grid_sync` and `flatten_grid_sync_scopes`, which no integration test can reach.
-#[cfg(test)]
-mod grid_sync_segmentation {
-    use super::*;
-    use std::sync::Arc;
-    use vyre_foundation::ir::{Expr, Ident, MemoryOrdering};
-
-    fn gs() -> Node {
-        Node::barrier_with_ordering(MemoryOrdering::GridSync)
-    }
-    fn seqcst() -> Node {
-        Node::barrier_with_ordering(MemoryOrdering::SeqCst)
-    }
-    fn other() -> Node {
-        Node::return_()
-    }
-    fn region(body: Vec<Node>) -> Node {
-        Node::Region {
-            generator: Ident::from("g"),
-            source_region: None,
-            body: Arc::new(body),
-        }
-    }
-    fn gs_count(nodes: &[Node]) -> usize {
-        nodes
-            .iter()
-            .filter(|node| is_grid_sync_barrier(node))
-            .count()
-    }
-    fn has_scope(nodes: &[Node]) -> bool {
-        nodes
-            .iter()
-            .any(|node| matches!(node, Node::Block(_) | Node::Region { .. }))
-    }
-
-    #[test]
-    fn is_grid_sync_barrier_matches_only_gridsync() {
-        assert!(is_grid_sync_barrier(&gs()));
-        // A workgroup-scoped SeqCst barrier is NOT a grid fence and must not split.
-        assert!(!is_grid_sync_barrier(&seqcst()));
-        assert!(!is_grid_sync_barrier(&other()));
-    }
-
-    #[test]
-    fn contains_grid_sync_finds_top_level_and_nested_scopes() {
-        assert!(contains_grid_sync(&[other(), gs(), other()]));
-        assert!(!contains_grid_sync(&[other(), other()]));
-        assert!(!contains_grid_sync(&[seqcst()]));
-        assert!(contains_grid_sync(&[Node::block(vec![gs()])]));
-        assert!(contains_grid_sync(&[region(vec![other(), gs()])]));
-        // A Region wrapping a Block wrapping the barrier (the re-fused exclusive scan).
-        assert!(contains_grid_sync(&[region(vec![Node::block(vec![gs()])])]));
-    }
-
-    #[test]
-    fn contains_grid_sync_does_not_descend_into_data_dependent_control_flow() {
-        // Fusion never emits a grid fence inside an `If`/`Loop`; the splitter must not
-        // treat one there as a top-level segment boundary (it would be ill-defined).
-        let inside_if = Node::if_then(Expr::bool(true), vec![gs()]);
-        assert!(!contains_grid_sync(&[inside_if]));
-    }
-
-    #[test]
-    fn split_partitions_at_each_top_level_barrier() {
-        let body = vec![other(), gs(), other(), gs(), other()];
-        let segments = split_top_level_grid_sync(&body);
-        assert_eq!(segments.len(), 3, "two barriers => three segments");
-        assert!(segments.iter().all(|segment| segment.len() == 1));
-        // The barriers are the split points and appear in NO segment.
-        assert!(segments.iter().all(|segment| gs_count(segment) == 0));
-    }
-
-    #[test]
-    fn split_yields_one_segment_without_a_barrier() {
-        let body = vec![other(), other()];
-        let segments = split_top_level_grid_sync(&body);
-        assert_eq!(segments.len(), 1);
-        assert_eq!(segments[0].len(), 2);
-    }
-
-    #[test]
-    fn split_emits_empty_trailing_segment_for_trailing_barrier() {
-        let body = vec![other(), gs()];
-        let segments = split_top_level_grid_sync(&body);
-        assert_eq!(segments.len(), 2);
-        assert_eq!(segments[0].len(), 1);
-        assert_eq!(segments[1].len(), 0);
-    }
-
-    #[test]
-    fn flatten_dissolves_gridsync_scopes_and_keeps_the_rest() {
-        // A Block carrying a GridSync is dissolved so the barrier surfaces to top level.
-        let mut dissolved = Vec::new();
-        flatten_grid_sync_scopes(&[Node::block(vec![other(), gs(), other()])], &mut dissolved);
-        assert_eq!(dissolved.len(), 3);
-        assert!(
-            !has_scope(&dissolved),
-            "GridSync-carrying Block must be dissolved"
-        );
-        assert_eq!(gs_count(&dissolved), 1);
-
-        // A scope WITHOUT a GridSync is preserved intact (its locals keep their scope).
-        let mut preserved = Vec::new();
-        flatten_grid_sync_scopes(&[Node::block(vec![other(), other()])], &mut preserved);
-        assert_eq!(preserved.len(), 1);
-        assert!(
-            has_scope(&preserved),
-            "a scope with no GridSync must be preserved"
-        );
-    }
-
-    #[test]
-    fn flatten_recurses_through_nested_gridsync_scopes_then_splits() {
-        // The re-fused exclusive-scan shape nests the barrier one scope deeper; the
-        // recursion must reach it so the subsequent split sees it at top level.
-        let nested = region(vec![Node::block(vec![other(), gs(), other()])]);
-        let mut flattened = Vec::new();
-        flatten_grid_sync_scopes(&[nested], &mut flattened);
-        assert!(
-            !has_scope(&flattened),
-            "all GridSync-carrying scopes must dissolve"
-        );
-        assert_eq!(gs_count(&flattened), 1);
-        assert_eq!(
-            split_top_level_grid_sync(&flattened).len(),
-            2,
-            "the surfaced barrier must partition into two segments"
-        );
-    }
 }

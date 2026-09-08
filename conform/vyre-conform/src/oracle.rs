@@ -85,8 +85,8 @@ impl OracleSession {
             None
         };
         let program = expanded.as_ref().unwrap_or(&self.program);
-        let values = reference_values(&program, inputs)?;
-        let outputs = vyre_reference::reference_eval(&program, &values)
+        let values = reference_values(program, inputs)?;
+        let outputs = vyre_reference::reference_eval(program, &values)
             .map_err(|error| OracleError::Evaluation(error.to_string()))?;
 
         Ok(outputs.into_iter().map(|v| v.to_bytes()).collect())

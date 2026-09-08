@@ -118,6 +118,10 @@ pub mod fnv1a32_zero;
 #[path = "gap_transcendentals_parity.rs"]
 pub mod gap_transcendentals_parity;
 
+/// Integration tests from `tests/grid_fence_oracle_contracts.rs`.
+#[path = "grid_fence_oracle_contracts.rs"]
+pub mod grid_fence_oracle_contracts;
+
 /// Integration tests from `tests/hashmap_async_and_indirect_contracts.rs`.
 #[path = "hashmap_async_and_indirect_contracts.rs"]
 pub mod hashmap_async_and_indirect_contracts;

@@ -162,7 +162,7 @@ pub fn compile_request(
     })?;
     let compiler = registered_target_compiler(&target)?;
     vyre_megakernel::attach_target(artifact, compiler.as_ref())
-        .map_err(|error| CompileError::TargetCompilation(error.to_string()))
+        .map_err(CompileError::TargetCompilation)
 }
 
 

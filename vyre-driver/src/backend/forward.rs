@@ -249,9 +249,6 @@ macro_rules! forward_vyre_backend_support {
         ) -> Result<(), $crate::backend::BackendError> {
             self.inner.free_device_buffer(buffer)
         }
-        fn max_shared_memory_bytes(&self) -> u32 {
-            self.inner.max_shared_memory_bytes()
-        }
     };
 }
 

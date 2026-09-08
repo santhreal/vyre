@@ -1718,8 +1718,10 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         package: "xtask",
         areas: &["contract-rules"],
         subject: "workspace manifests",
+        inputs: &["docs/public-api", "docs/CRATE_OWNERSHIP.toml"],
         artifacts: &["docs/SUPPORTED_API.toml"],
         prerequisites: &[],
+        resource_class: ResourceClass::Io,
         proof: "crate::gates::supported_api::tests::classify_line_identifies_kinds_and_stability",
     },
     GateDescriptor {

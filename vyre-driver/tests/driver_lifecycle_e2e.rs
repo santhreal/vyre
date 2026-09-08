@@ -1,8 +1,9 @@
 //! Driver planning contracts and PersistentEngine integration stress.
 //!
-//! Exercises lower-level binding, launch, dispatch, and readback through the
-//! reference backend. Production compilation lifecycle tests live at the
-//! artifact/runtime boundary.
+//! Binding, launch geometry, and ring-buffer behavior are host-side planning
+//! decisions and are proved here against declared device limits. Execution is
+//! a device concern: a program's result is judged by conformance against the
+//! oracle, never by running it on the host from this crate.
 
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
@@ -10,10 +11,8 @@ use std::thread;
 
 use vyre_driver::persistent::{PersistentEngine, PersistentWorkItem};
 use vyre_driver::validation::LaunchGeometryLimits;
-use vyre_driver::{BindingPlan, DispatchConfig, LaunchPlan, VyreBackend};
-use vyre_driver_reference::CpuRefBackend;
+use vyre_driver::{BindingPlan, DispatchConfig, LaunchPlan};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_reference::value::Value;
 
 const PERSISTENT_PRODUCERS: usize = 16;
 const PERSISTENT_CONSUMERS: usize = 16;
@@ -44,16 +43,16 @@ fn multi_op_program() -> Program {
     )
 }
 
-fn launch_limits(backend: &dyn VyreBackend) -> LaunchGeometryLimits {
+/// Limits of a device that accepts a 256-thread workgroup and a 65535-wide grid.
+///
+/// Written out rather than read from a backend: the planner's contract is with
+/// the numbers, and a fixed vector keeps the expected geometry exact.
+fn launch_limits() -> LaunchGeometryLimits {
     LaunchGeometryLimits {
-        backend: backend.id(),
-        max_threads_per_block: backend.max_compute_invocations_per_workgroup(),
-        max_block_dim: backend.max_workgroup_size(),
-        max_grid_dim: [
-            backend.max_compute_workgroups_per_dimension(),
-            backend.max_compute_workgroups_per_dimension(),
-            backend.max_compute_workgroups_per_dimension(),
-        ],
+        backend: "lifecycle-planning-limits",
+        max_threads_per_block: 256,
+        max_block_dim: [256, 256, 64],
+        max_grid_dim: [65_535, 65_535, 65_535],
         // The backend trait exposes no per-compute-unit thread budget, so this
         // lifecycle harness reports none and residency-aware launch decisions
         // stay inert.
@@ -61,54 +60,63 @@ fn launch_limits(backend: &dyn VyreBackend) -> LaunchGeometryLimits {
     }
 }
 
-fn reference_bytes(program: &Program, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
-    let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
-    vyre_reference::reference_eval(program, &values)
-        .expect("Fix: lifecycle oracle program must execute on reference interpreter")
-        .into_iter()
-        .map(|value| value.to_bytes())
-        .collect()
-}
-
 #[test]
-fn driver_low_level_plan_dispatch_readback() {
+fn driver_low_level_plan_geometry_and_params() {
     let program = multi_op_program();
-    let a_bytes = 13_u32.to_le_bytes().to_vec();
-    let b_bytes = 7_u32.to_le_bytes().to_vec();
-    let inputs = vec![a_bytes.clone(), b_bytes.clone()];
 
     let binding_plan = BindingPlan::build(&program).expect("Fix: lifecycle program must bind");
-    vyre_driver::validation::validate_program_for_backend(
-        &CpuRefBackend,
-        &program,
-        &DispatchConfig::default(),
-    )
-    .expect("Fix: lifecycle program must pass backend validation");
+    assert_eq!(
+        binding_plan.bindings.len(),
+        3,
+        "Fix: every declared buffer must receive one binding"
+    );
 
     let launch = LaunchPlan::from_bindings(
         &program,
         &binding_plan.bindings,
         &DispatchConfig::default(),
-        launch_limits(&CpuRefBackend),
+        launch_limits(),
     )
     .expect("Fix: lifecycle launch plan must prepare geometry");
 
     assert_eq!(launch.element_count, 1);
     assert!(!launch.param_words.is_empty());
-
-    let outputs = CpuRefBackend
-        .dispatch(&program, &inputs, &DispatchConfig::default())
-        .expect("Fix: lower-level reference dispatch must succeed");
-
-    let expected = reference_bytes(&program, &inputs);
-    assert_eq!(
-        outputs, expected,
-        "Fix: driver lifecycle readback must match reference_eval bytes"
+    assert!(
+        launch.grid[0] <= 65_535,
+        "Fix: planned grid must stay inside the declared limit"
     );
+}
 
-    let sum = 13_u32.wrapping_add(7);
-    let diff = 13_u32.wrapping_sub(7);
-    assert_eq!(outputs[0], (sum.wrapping_mul(diff)).to_le_bytes().to_vec());
+#[test]
+fn a_grid_wider_than_the_device_admits_is_refused_before_launch() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("a", 0, DataType::U32).with_count(1 << 24),
+            BufferDecl::output("out", 1, DataType::U32).with_count(1 << 24),
+        ],
+        [1 << 24, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::load("a", Expr::u32(0)),
+        )],
+    );
+    let binding_plan = BindingPlan::build(&program).expect("Fix: wide program must bind");
+    let mut limits = launch_limits();
+    limits.max_grid_dim = [4, 1, 1];
+
+    let error = LaunchPlan::from_bindings(
+        &program,
+        &binding_plan.bindings,
+        &DispatchConfig::default(),
+        limits,
+    )
+    .expect_err("Fix: a grid past the declared limit must be refused, not clamped");
+    let text = error.to_string();
+    assert!(
+        text.contains("Fix:"),
+        "Fix: launch refusal must state the corrective action, got `{text}`"
+    );
 }
 
 struct PersistentWaitGroup {

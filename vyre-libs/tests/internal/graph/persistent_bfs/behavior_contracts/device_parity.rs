@@ -31,9 +31,6 @@
 
 use super::*;
 use crate::graph::csr_closure_inputs::CsrClosureInputs;
-use vyre_driver::grid_sync::{contains_grid_sync, dispatch_with_grid_sync_split};
-use vyre_driver::DispatchConfig;
-use vyre_driver_reference::CpuRefBackend;
 use vyre_foundation::ir::{BufferAccess, Program};
 use vyre_primitives::wire::pack_u32_slice;
 use vyre_reference::{output_index, reference_eval, reference_eval_with_grid};
@@ -94,22 +91,17 @@ fn batch_grid(program: &Program, query_count: u32) -> [u32; 3] {
 
 /// Dispatch one persistent-BFS program and read back the named u32 outputs.
 ///
-/// The single-workgroup program (`node_count <= 256`) is one kernel launch, so
-/// the reference interpreter runs it directly. The grid-sync program
-/// (`node_count > 256`) contains a `Node::LogicalBarrier` with `GridSync`, which the
-/// interpreter cannot execute in one pass (variables bound in one segment are
-/// read in the next, carried through buffers). It routes through
-/// [`dispatch_with_grid_sync_split`] on [`CpuRefBackend`], the same non-native
-/// grid-sync path the conform runner and production drivers use: every barrier
-/// becomes a kernel-launch boundary, so prior writes are globally visible to the
-/// next segment.
+/// The grid-sync program (`node_count > 256`) contains a `Node::LogicalBarrier`
+/// with `GridSync`. The interpreter satisfies that fence the way a launch
+/// boundary does: the program is split at the fence and the whole grid advances
+/// through each segment before the next, so a write before the fence is visible
+/// to every lane after it.
 ///
 /// `grid` is `Some` only for the batch programs. A `[256, 1, 1]` workgroup fans
 /// across `grid.y` there (one query per block, `q = gid_y()`), so the
 /// interpreter must be told the real grid or it collapses to `grid.y == 1` and
-/// computes only query 0. The split core clones the grid onto every segment
-/// dispatch. Both paths return outputs in `output_buffer_indices` order, which
-/// is exactly [`output_index`]'s ordering, so the readback is uniform.
+/// computes only query 0. Outputs come back in `output_buffer_indices` order,
+/// which is exactly [`output_index`]'s ordering, so the readback is uniform.
 fn run_device(
     program: &Program,
     edge_offsets: &[u32],
@@ -126,26 +118,18 @@ fn run_device(
         edge_kind_mask,
         frontier_in,
     );
-    let outputs: Vec<Vec<u8>> = if contains_grid_sync(program) {
-        let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-        let mut config = DispatchConfig::default();
-        config.dispatch_grid = grid;
-        dispatch_with_grid_sync_split(&CpuRefBackend, program, &borrowed, &config)
-            .expect("Fix: persistent_bfs grid-sync split dispatch must succeed on a valid graph.")
-    } else {
-        let values: Vec<vyre_reference::value::Value> = inputs
-            .iter()
-            .map(|bytes| vyre_reference::value::Value::from(bytes.as_slice()))
-            .collect();
-        match grid {
-            None => reference_eval(program, &values),
-            Some(grid) => reference_eval_with_grid(program, &values, grid),
-        }
-        .expect("Fix: persistent_bfs reference dispatch must succeed on a valid graph.")
-        .into_iter()
-        .map(|value| value.to_bytes())
-        .collect()
-    };
+    let values: Vec<vyre_reference::value::Value> = inputs
+        .iter()
+        .map(|bytes| vyre_reference::value::Value::from(bytes.as_slice()))
+        .collect();
+    let outputs: Vec<Vec<u8>> = match grid {
+        None => reference_eval(program, &values),
+        Some(grid) => reference_eval_with_grid(program, &values, grid),
+    }
+    .expect("Fix: persistent_bfs oracle dispatch must succeed on a valid graph.")
+    .into_iter()
+    .map(|value| value.to_bytes())
+    .collect();
     reads
         .iter()
         .map(|name| read_named_output(program, &outputs, name))

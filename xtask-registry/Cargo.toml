@@ -38,6 +38,10 @@ vyre-registry-link = { workspace = true, features = [
     "wgpu",
 ] }
 vyre-spec.workspace = true
+# The parity oracle, linked as a library. This is not the deleted `cpu-ref`
+# backend registration: the generated operation schema is assembled from the
+# reference facets, and `trace_f32` diffs a device result against them.
+vyre-reference.workspace = true
 # `lego-audit` is the release catalog gate. It must link every shipped Tier-3
 # consumer so primitive coverage is measured against the real composition
 # surface, not a feature-narrow slice. Each edge names that crate's own

@@ -36,6 +36,7 @@ vyre-registry-link = { workspace = true, features = [
     "spirv",
     "wgpu",
 ] }
+serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 toml.workspace = true
 

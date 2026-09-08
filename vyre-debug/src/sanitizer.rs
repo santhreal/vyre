@@ -12,8 +12,10 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
 use vyre_foundation::diagnostics::{
-    Diagnostic, DiagnosticCause, DiagnosticCode, DiagnosticStage, RetryClass, Severity,
+    CompilerLevel, Diagnostic, DiagnosticCause, DiagnosticCode, DiagnosticStage, RetryClass,
+    Severity,
 };
+
 /// Target-specific sanitizer defect family.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SanitizerKind {
@@ -140,35 +142,42 @@ impl SanitizerFailure {
             severity: Severity::Error,
             code: DiagnosticCode::new(self.kind.code()),
             stage: DiagnosticStage::Materialize,
+            compiler_level: Some(CompilerLevel::DriverRuntime),
             message: self.message.clone().into(),
             location: None,
+            artifact_id: None,
+            target: None,
+            device: None,
             suggested_fix: Some(Cow::Borrowed(self.kind.suggested_fix())),
             cause: Some(DiagnosticCause {
                 kind: format!("{:?}", self.kind),
                 detail: self.message.clone(),
             }),
+            cause_chain: Vec::new(),
             retry: RetryClass::RecompileSource,
+            context_values: Vec::new(),
             doc_url: None,
             notes: Vec::new(),
         };
 
+        // A sanitizer report is consumed by tooling that locates the faulting
+        // access, so each coordinate is a typed context value rather than prose
+        // a reader would have to parse back out of a note.
         if let Some(addr) = self.device_address {
-            diag.notes.push(Cow::Owned(format!(
-                "faulting device address: 0x{addr:016x}"
-            )));
+            diag.context_values
+                .push(("device_address".to_string(), format!("0x{addr:016x}")));
         }
         if let Some([x, y, z]) = self.invocation_coords {
-            diag.notes.push(Cow::Owned(format!(
-                "faulting invocation ID: [{x}, {y}, {z}]"
-            )));
+            diag.context_values
+                .push(("invocation_id".to_string(), format!("{x},{y},{z}")));
         }
         if let Some(offset) = self.instruction_offset {
-            diag.notes
-                .push(Cow::Owned(format!("instruction offset: +0x{offset:04x}")));
+            diag.context_values
+                .push(("instruction_offset".to_string(), format!("0x{offset:04x}")));
         }
         if let Some(raw) = &self.raw_tool_output {
-            diag.notes
-                .push(Cow::Owned(format!("tool raw output: {raw}")));
+            diag.context_values
+                .push(("tool_raw_output".to_string(), raw.clone()));
         }
 
         diag
