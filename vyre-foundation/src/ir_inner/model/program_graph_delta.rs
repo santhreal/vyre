@@ -25,7 +25,11 @@ use super::program_graph::{
 pub const GRAPH_DELTA_VERSION: u16 = 1;
 
 const MAGIC: &[u8; 4] = b"VGD0";
-
+const MAX_DELTA_WIRE_BYTES: usize = 256 * 1024 * 1024;
+const MAX_DELTA_OPERATIONS: usize = 1_000_000;
+const MAX_PORTS_PER_NODE: usize = 1_000_000;
+const MAX_NAME_BYTES: usize = 4_096;
+const MAX_RANK: usize = 256;
 /// Atomic mutation operations in a [`GraphDelta`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GraphDeltaOp {
@@ -607,6 +611,12 @@ impl GraphDelta {
 
     /// Decode delta from canonical wire bytes.
     pub fn from_wire(bytes: &[u8]) -> Result<Self, GraphDeltaError> {
+        if bytes.len() > MAX_DELTA_WIRE_BYTES {
+            return Err(GraphDeltaError::Wire(format!(
+                "delta wire input is {} bytes; maximum is {MAX_DELTA_WIRE_BYTES}",
+                bytes.len()
+            )));
+        }
         if bytes.len() < 10 {
             return Err(GraphDeltaError::Wire("wire payload too short".into()));
         }
@@ -621,9 +631,13 @@ impl GraphDelta {
             });
         }
         let count = u32::from_le_bytes([bytes[6], bytes[7], bytes[8], bytes[9]]) as usize;
+        if count > MAX_DELTA_OPERATIONS {
+            return Err(GraphDeltaError::Wire(format!(
+                "operation count is {count}; maximum is {MAX_DELTA_OPERATIONS}"
+            )));
+        }
         let mut cursor = 10;
-        let mut operations = Vec::with_capacity(count);
-
+        let mut operations = Vec::with_capacity(count.min(bytes.len() - cursor));
         for _ in 0..count {
             if cursor >= bytes.len() {
                 return Err(GraphDeltaError::Wire("unexpected EOF in operations".into()));
@@ -642,7 +656,12 @@ impl GraphDelta {
                     let program = Program::from_wire(&prog_bytes)
                         .map_err(|e| GraphDeltaError::Wire(format!("program decode: {e}")))?;
                     let in_count = read_u32(bytes, &mut cursor)? as usize;
-                    let mut inputs = Vec::with_capacity(in_count);
+                    if in_count > MAX_PORTS_PER_NODE {
+                        return Err(GraphDeltaError::Wire(format!(
+                            "input port count is {in_count}; maximum is {MAX_PORTS_PER_NODE}"
+                        )));
+                    }
+                    let mut inputs = Vec::with_capacity(in_count.min(bytes.len() - cursor));
                     for _ in 0..in_count {
                         let buffer = read_string(bytes, &mut cursor)?;
                         let value = GraphValueId(read_u32(bytes, &mut cursor)?);
@@ -654,7 +673,12 @@ impl GraphDelta {
                         });
                     }
                     let out_count = read_u32(bytes, &mut cursor)? as usize;
-                    let mut outputs = Vec::with_capacity(out_count);
+                    if out_count > MAX_PORTS_PER_NODE {
+                        return Err(GraphDeltaError::Wire(format!(
+                            "output port count is {out_count}; maximum is {MAX_PORTS_PER_NODE}"
+                        )));
+                    }
+                    let mut outputs = Vec::with_capacity(out_count.min(bytes.len() - cursor));
                     for _ in 0..out_count {
                         let buffer = read_string(bytes, &mut cursor)?;
                         let out_name = read_string(bytes, &mut cursor)?;
@@ -689,7 +713,12 @@ impl GraphDelta {
                     let program = Program::from_wire(&prog_bytes)
                         .map_err(|e| GraphDeltaError::Wire(format!("program decode: {e}")))?;
                     let in_count = read_u32(bytes, &mut cursor)? as usize;
-                    let mut inputs = Vec::with_capacity(in_count);
+                    if in_count > MAX_PORTS_PER_NODE {
+                        return Err(GraphDeltaError::Wire(format!(
+                            "input port count is {in_count}; maximum is {MAX_PORTS_PER_NODE}"
+                        )));
+                    }
+                    let mut inputs = Vec::with_capacity(in_count.min(bytes.len() - cursor));
                     for _ in 0..in_count {
                         let buffer = read_string(bytes, &mut cursor)?;
                         let value = GraphValueId(read_u32(bytes, &mut cursor)?);
@@ -701,7 +730,12 @@ impl GraphDelta {
                         });
                     }
                     let out_count = read_u32(bytes, &mut cursor)? as usize;
-                    let mut outputs = Vec::with_capacity(out_count);
+                    if out_count > MAX_PORTS_PER_NODE {
+                        return Err(GraphDeltaError::Wire(format!(
+                            "output port count is {out_count}; maximum is {MAX_PORTS_PER_NODE}"
+                        )));
+                    }
+                    let mut outputs = Vec::with_capacity(out_count.min(bytes.len() - cursor));
                     for _ in 0..out_count {
                         let buffer = read_string(bytes, &mut cursor)?;
                         let out_name = read_string(bytes, &mut cursor)?;
@@ -859,6 +893,11 @@ fn read_u64(bytes: &[u8], cursor: &mut usize) -> Result<u64, GraphDeltaError> {
 
 fn read_string(bytes: &[u8], cursor: &mut usize) -> Result<String, GraphDeltaError> {
     let len = read_u32(bytes, cursor)? as usize;
+    if len > MAX_NAME_BYTES {
+        return Err(GraphDeltaError::Wire(format!(
+            "string length {len} exceeds limit {MAX_NAME_BYTES}"
+        )));
+    }
     if *cursor + len > bytes.len() {
         return Err(GraphDeltaError::Wire("EOF reading string".into()));
     }
@@ -871,6 +910,11 @@ fn read_string(bytes: &[u8], cursor: &mut usize) -> Result<String, GraphDeltaErr
 
 fn read_bytes(bytes: &[u8], cursor: &mut usize) -> Result<Vec<u8>, GraphDeltaError> {
     let len = read_u32(bytes, cursor)? as usize;
+    if len > MAX_DELTA_WIRE_BYTES {
+        return Err(GraphDeltaError::Wire(format!(
+            "byte buffer length {len} exceeds limit {MAX_DELTA_WIRE_BYTES}"
+        )));
+    }
     if *cursor + len > bytes.len() {
         return Err(GraphDeltaError::Wire("EOF reading byte buffer".into()));
     }
@@ -908,7 +952,12 @@ fn read_contract(bytes: &[u8], cursor: &mut usize) -> Result<ValueContract, Grap
     };
     *cursor += 1;
     let rank = read_u32(bytes, cursor)? as usize;
-    let mut shape = Vec::with_capacity(rank);
+    if rank > MAX_RANK {
+        return Err(GraphDeltaError::Wire(format!(
+            "tensor rank {rank} exceeds limit {MAX_RANK}"
+        )));
+    }
+    let mut shape = Vec::with_capacity(rank.min(bytes.len() - *cursor));
     for _ in 0..rank {
         if *cursor >= bytes.len() {
             return Err(GraphDeltaError::Wire("EOF reading shape dim".into()));
