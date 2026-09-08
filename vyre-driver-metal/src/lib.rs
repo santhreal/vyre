@@ -59,17 +59,8 @@ pub fn acquire() -> Result<Box<dyn VyreBackend>, BackendError> {
     })
 }
 
-/// Backend id this crate submits into the backend registry on this target, or
-/// `None` on a target where the native registration is compiled out.
-///
-/// WHY: the registration below lives in this crate's object file, and a linker
-/// keeps that object only when a symbol inside it is referenced. Naming the
-/// crate with `use vyre_driver_metal as _;` references nothing, and reading
-/// [`METAL_BACKEND_ID`] is a `const` that inlines at the use site, so neither
-/// keeps the registration. Calling this function does, which is why the backend
-/// registry owner calls it instead of importing the crate for effect. The
-/// `Option` reports the target truth, so a floor over the linked set does not
-/// demand a Metal registration from a build that never compiled one.
+/// Return the backend identifier submitted into the registry on this target,
+/// or `None` on targets where native Metal registration is omitted.
 #[must_use]
 pub fn registered_backend_id() -> Option<&'static str> {
     #[cfg(any(target_os = "macos", target_os = "ios"))]
@@ -83,34 +74,15 @@ pub fn registered_backend_id() -> Option<&'static str> {
 }
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-inventory::submit! {
-    vyre_driver::BackendRegistration {
-        id: METAL_BACKEND_ID,
-        target_id: METAL_TARGET_ID,
-        payload_format: Some(target_compiler::METAL_TARGET_FORMAT),
-        reference_oracle: false,
-        factory: acquire,
-        supported_ops: vyre_driver::core_supported_ops,
-        semantic_operations: vyre_driver::dialect_only_supported_ops,
-        target_compiler: Some(target_compiler::target_compiler_factory),
-        materializer: Some(materializer::materializer_factory),
-    }
-}
-
-#[cfg(any(target_os = "macos", target_os = "ios"))]
-inventory::submit! {
-    vyre_driver::BackendCapability {
-        id: METAL_BACKEND_ID,
-        dispatches: true,
-    }
-}
-
-#[cfg(any(target_os = "macos", target_os = "ios"))]
-inventory::submit! {
-    vyre_driver::BackendPrecedence {
-        id: METAL_BACKEND_ID,
-        rank: 25,
-    }
+vyre_driver::register_backend! {
+    id: METAL_BACKEND_ID,
+    target_id: METAL_TARGET_ID,
+    payload_format: Some(target_compiler::METAL_TARGET_FORMAT),
+    reference_oracle: false,
+    factory: acquire,
+    target_compiler: Some(target_compiler::target_compiler_factory),
+    materializer: Some(materializer::materializer_factory),
+    rank: 25,
 }
 
 // One module of `tests/internal` names a private item of `runtime`, so the

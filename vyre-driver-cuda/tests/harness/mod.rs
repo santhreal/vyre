@@ -252,11 +252,10 @@ pub(crate) fn compiled_cuda_outputs(
         ),
         compile_facts,
         vyre_megakernel::SearchBudget::new(128, 128, 0, 0, 128),
-        vyre_megakernel::CompileObjective::minimize_latency()
-            .with_bound(
-                vyre_megakernel::ObjectiveMetric::ArtifactBytes,
-                PARITY_ARTIFACT_BYTES,
-            ),
+        vyre_megakernel::CompileObjective::minimize_latency().with_bound(
+            vyre_megakernel::ObjectiveMetric::ArtifactBytes,
+            PARITY_ARTIFACT_BYTES,
+        ),
     )
     .validate()
     .unwrap_or_else(|error| {

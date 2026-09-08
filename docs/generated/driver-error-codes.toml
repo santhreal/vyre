@@ -45,6 +45,11 @@ id = 1008
 summary = "Acquired device generation was lost or invalidated."
 
 [[backend_error]]
+variant = "ExecutionAborted"
+id = 1009
+summary = "A request was abandoned before producing a result because a newer generation superseded it or a caller cancelled it. The program and the device are intact."
+
+[[backend_error]]
 variant = "Unknown"
 id = 1999
 summary = "The backend reported a failure it could not classify, produced by BackendError::new. A code that stays Unknown across releases is a missing variant, not a category."

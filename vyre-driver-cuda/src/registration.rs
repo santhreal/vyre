@@ -1,5 +1,5 @@
 use smallvec::SmallVec;
-use vyre_driver::{BackendError, BackendRegistration, DispatchConfig, Resource, VyreBackend};
+use vyre_driver::{BackendError, DispatchConfig, Resource, VyreBackend};
 use vyre_foundation::ir::Program;
 
 use crate::aot_launcher;
@@ -297,13 +297,6 @@ impl VyreBackend for CudaBackendRegistration {
     fn version(&self) -> &'static str {
         env!("CARGO_PKG_VERSION")
     }
-    fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
-        match mode {
-            vyre_foundation::fp_parity::FloatLoweringMode::Contracted => true,
-            vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee => false,
-        }
-    }
-
 
     fn dispatch_async(
         &self,
@@ -883,49 +876,24 @@ pub(crate) fn cuda_semantic_operations(
     vyre_driver::dialect_only_supported_ops()
 }
 
-/// Backend id this crate submits into the backend registry on this target.
-///
-/// WHY: the registration below lives in this crate's object file, and a linker
-/// keeps that object only when a symbol inside it is referenced. Naming the
-/// crate with `use vyre_driver_cuda as _;` references nothing, and reading
-/// [`CUDA_BACKEND_ID`] is a `const` that inlines at the use site, so neither
-/// keeps the registration. Calling this function does, which is why the backend
-/// registry owner calls it instead of importing the crate for effect.
+/// Backend id submitted into the registry by the CUDA driver.
 #[must_use]
 pub fn registered_backend_id() -> Option<&'static str> {
     Some(CUDA_BACKEND_ID)
 }
 
-inventory::submit! {
-    BackendRegistration {
-        id: CUDA_BACKEND_ID,
-        target_id: CUDA_TARGET_ID,
-        payload_format: Some(target_compiler::CUDA_TARGET_FORMAT),
-        reference_oracle: false,
-        factory: cuda_factory,
-        supported_ops: cuda_supported_ops,
-        semantic_operations: cuda_semantic_operations,
-        target_compiler: Some(target_compiler::target_compiler_factory),
-        materializer: Some(materializer::materializer_factory),
-    }
+vyre_driver::register_backend! {
+    id: CUDA_BACKEND_ID,
+    target_id: CUDA_TARGET_ID,
+    payload_format: Some(target_compiler::CUDA_TARGET_FORMAT),
+    reference_oracle: false,
+    factory: cuda_factory,
+    supported_ops: cuda_supported_ops,
+    semantic_operations: cuda_semantic_operations,
+    target_compiler: Some(target_compiler::target_compiler_factory),
+    materializer: Some(materializer::materializer_factory),
+    rank: 5,
 }
-
-// rank 5 - CUDA is the canonical release dispatch backend when linked.
-inventory::submit! {
-    vyre_driver::BackendPrecedence {
-        id: CUDA_BACKEND_ID,
-        rank: 5,
-    }
-}
-
-// CUDA owns a live dispatch stack, so conform can prove against it.
-inventory::submit! {
-    vyre_driver::BackendCapability {
-        id: CUDA_BACKEND_ID,
-        dispatches: true,
-    }
-}
-
 inventory::submit! {
     vyre_driver::AotLauncherEmitter {
         target: CUDA_TARGET_ID,

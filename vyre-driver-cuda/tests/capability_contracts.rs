@@ -5,8 +5,8 @@
 use vyre_driver::DispatchConfig;
 use vyre_driver::PipelineFeatureFlags;
 use vyre_driver_cuda::{cuda_factory, CudaBackend, CudaDeviceCaps, CudaMegakernelDeviceKey};
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::fp_parity::FloatLoweringMode;
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 #[test]
 fn cuda_device_probe_must_succeed_on_gpu_fleet() {

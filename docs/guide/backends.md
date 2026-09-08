@@ -23,10 +23,15 @@ re-export `VyreBackend`, `DispatchConfig`, `BackendError`,
 ## The registry is what is linked
 
 `registered_backends_by_precedence` returns registrations, not names a
-table hardcodes. Each concrete driver crate submits one
-`BackendRegistration` into an `inventory` collection, and the registry is
-frozen once per process behind a fallible `LazyLock`. A backend absent from
-the binary is absent from the registry, and `acquire` says so:
+table hardcodes. Each concrete driver crate calls
+`vyre_driver::register_backend!` once, which expands to three
+`inventory::submit!` invocations: a `BackendRegistration`, a
+`BackendPrecedence` rank, and a `BackendCapability` row. Omitting
+`supported_ops` takes `core_supported_ops` and omitting
+`semantic_operations` takes `dialect_only_supported_ops`, so a driver
+spells only what differs from the default. The registry is frozen once per
+process behind a fallible `LazyLock`. A backend absent from the binary is
+absent from the registry, and `acquire` says so:
 
 ```text
 backend `cuda` is not linked into this binary. Fix: link the concrete

@@ -241,17 +241,6 @@ impl VyreBackend for MetalBackend {
     fn version(&self) -> &'static str {
         env!("CARGO_PKG_VERSION")
     }
-    fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
-        match mode {
-            vyre_foundation::fp_parity::FloatLoweringMode::Contracted => true,
-            vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee => false,
-        }
-    }
-
-
-    fn supported_ops(&self) -> &std::collections::HashSet<OpId> {
-        vyre_driver::core_supported_ops()
-    }
 
     fn max_workgroup_size(&self) -> [u32; 3] {
         let size = self.device.max_threads_per_threadgroup();
