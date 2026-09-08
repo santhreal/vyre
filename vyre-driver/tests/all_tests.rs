@@ -350,3 +350,7 @@ pub mod unreported_device_facts;
 /// Integration tests from `tests/vyre_backend_forwarding_closure.rs`.
 #[path = "vyre_backend_forwarding_closure.rs"]
 pub mod vyre_backend_forwarding_closure;
+
+/// Integration tests for domain-neutral resource ABI from `tests/resource_abi_contracts.rs`.
+#[path = "resource_abi_contracts.rs"]
+pub mod resource_abi_contracts;

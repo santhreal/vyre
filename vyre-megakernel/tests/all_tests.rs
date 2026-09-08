@@ -92,3 +92,7 @@ pub mod target_payload_contract;
 /// Integration tests from `tests/topology_contract.rs`.
 #[path = "topology_contract.rs"]
 pub mod topology_contract;
+
+/// Integration tests from `tests/real_time_objectives.rs`.
+#[path = "real_time_objectives.rs"]
+pub mod real_time_objectives;

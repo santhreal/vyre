@@ -19,6 +19,7 @@ mod metric;
 mod portfolio;
 mod sequence;
 mod workload;
+pub mod real_time;
 
 use serde::{Deserialize, Serialize};
 
@@ -30,6 +31,11 @@ pub use figures::MetricFigures;
 pub use metric::{MetricSequence, ObjectiveMetric, RequiredFact};
 pub use portfolio::{CoveragePolicy, PortfolioPolicy};
 pub use workload::{RiskStatistic, WorkloadAggregation, WorkloadClass, WorkloadProfile};
+pub use real_time::{
+    EnergyPolicy, InputToVisibleMeasurement, InterferenceAssumptions, LatencyPercentile,
+    RealTimeDeadline, RealTimeObjective, RealTimeViolation, WarmColdState, WorkloadArrivalTrace,
+    REAL_TIME_OBJECTIVE_SCHEMA_VERSION,
+};
 
 /// Current objective schema.
 ///
