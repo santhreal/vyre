@@ -180,13 +180,17 @@ impl LowerCtx {
         Ok(result)
     }
 
-    pub(super) fn alloc_value(&mut self) -> Result<u32, LowerError> {
+    pub(super) fn alloc_values(&mut self, count: u32) -> Result<u32, LowerError> {
         let id = self.next_value;
         self.next_value = self
             .next_value
-            .checked_add(1)
+            .checked_add(count)
             .ok_or(LowerError::OperandIdOverflow)?;
         Ok(id)
+    }
+
+    pub(super) fn alloc_value(&mut self) -> Result<u32, LowerError> {
+        self.alloc_values(1)
     }
 
     pub(super) fn emit_loop_carrier_read(
