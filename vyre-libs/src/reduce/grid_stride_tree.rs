@@ -110,14 +110,22 @@ fn single_block_tree_sum_u32(values: &str, out: &str, count: u32, tile: u32) -> 
         ),
     ];
 
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(values, 0, BufferAccess::ReadOnly, DataType::U32).with_count(count),
-            BufferDecl::workgroup(scratch, tile, DataType::U32),
-            BufferDecl::storage(out, 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-        ],
-        [tile, 1, 1],
-        vec![wrap_anonymous_region(SUM_U32_OP_ID, body)],
+    // Both shapes of this builder present one dispatch signature: `values` in,
+    // `out` published. The same owner as the fused path decides that, so the
+    // single-block form cannot drift into demanding a placeholder for its own
+    // result.
+    crate::plumbing::program::outputs::demote_intermediate_outputs(
+        Program::wrapped(
+            vec![
+                BufferDecl::storage(values, 0, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(count),
+                BufferDecl::workgroup(scratch, tile, DataType::U32),
+                BufferDecl::storage(out, 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+            ],
+            [tile, 1, 1],
+            vec![wrap_anonymous_region(SUM_U32_OP_ID, body)],
+        ),
+        out,
     )
 }
 
@@ -274,7 +282,7 @@ inventory::submit! {
         || grid_stride_tree_sum_u32("values", "out", 4, 4, 1),
         Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[1, 2, 3, 4]), to_bytes(&[0])]]
+            vec![vec![to_bytes(&[1, 2, 3, 4])]]
         }),
         Some(|| vec![vec![vec![0x0a, 0x00, 0x00, 0x00]]]),
     )

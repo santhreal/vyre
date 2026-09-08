@@ -6,6 +6,12 @@ use super::mma_fragment::matmul_mma_fragment;
 use super::shape::{MatrixShape, TileShape};
 use super::tile_coords::{bind_output_tile_coordinates, OutputTileCoordNames};
 
+/// Build the MMA-oriented body for a full M16N8-aligned tile.
+///
+/// Operands stay in `dtype` in memory and accumulate in f32, which is the
+/// `MatrixMma { F16, F16, F32 }` form this fragment sequence targets. The IR
+/// `Fma` takes three f32 operands, so each operand load is cast on the way in
+/// and each accumulator is cast back to `dtype` on the way out.
 pub(super) fn cooperative_matmul_body_mma(
     a: &str,
     b: &str,
@@ -13,10 +19,10 @@ pub(super) fn cooperative_matmul_body_mma(
     out: &str,
     shape: MatrixShape,
     tile: TileShape,
-    _dtype: DataType,
-    _a_tile_name: &str,
-    _b_tile_name: &str,
+    dtype: DataType,
 ) -> Vec<Node> {
+    let to_f32 = |value: Expr| Expr::cast(DataType::F32, value);
+    let from_f32 = |value: Expr| Expr::cast(dtype.clone(), value);
     let col = Expr::var("col");
     let row0 = Expr::var("row0");
     let row1 = Expr::var("row1");
@@ -54,19 +60,19 @@ pub(super) fn cooperative_matmul_body_mma(
         Node::let_bind("row1", Expr::add(Expr::var("row0"), Expr::u32(4))),
         Node::let_bind("row2", Expr::add(Expr::var("row0"), Expr::u32(8))),
         Node::let_bind("row3", Expr::add(Expr::var("row0"), Expr::u32(12))),
-        Node::let_bind("acc0", Expr::u32(0)),
-        Node::let_bind("acc1", Expr::u32(0)),
-        Node::let_bind("acc2", Expr::u32(0)),
-        Node::let_bind("acc3", Expr::u32(0)),
+        Node::let_bind("acc0", Expr::f32(0.0)),
+        Node::let_bind("acc1", Expr::f32(0.0)),
+        Node::let_bind("acc2", Expr::f32(0.0)),
+        Node::let_bind("acc3", Expr::f32(0.0)),
     ]);
     if let Some(bias) = bias {
         body.push(Node::if_then(
             col_in_bounds.clone(),
             vec![
-                Node::assign("acc0", Expr::load(bias, col.clone())),
-                Node::assign("acc1", Expr::load(bias, col.clone())),
-                Node::assign("acc2", Expr::load(bias, col.clone())),
-                Node::assign("acc3", Expr::load(bias, col.clone())),
+                Node::assign("acc0", to_f32(Expr::load(bias, col.clone()))),
+                Node::assign("acc1", to_f32(Expr::load(bias, col.clone()))),
+                Node::assign("acc2", to_f32(Expr::load(bias, col.clone()))),
+                Node::assign("acc3", to_f32(Expr::load(bias, col.clone()))),
             ],
         ));
     }
@@ -76,29 +82,29 @@ pub(super) fn cooperative_matmul_body_mma(
         Expr::u32(shape.k),
         vec![Node::let_bind(
             "b_val",
-            Expr::load(
+            to_f32(Expr::load(
                 b,
                 Expr::add(Expr::mul(Expr::var("kk"), Expr::u32(shape.n)), col.clone()),
-            ),
+            )),
         )]
         .into_iter()
         .chain(matmul_mma_fragment(
-            Expr::load(
+            to_f32(Expr::load(
                 a,
                 Expr::add(Expr::mul(row0.clone(), Expr::u32(shape.k)), Expr::var("kk")),
-            ),
-            Expr::load(
+            )),
+            to_f32(Expr::load(
                 a,
                 Expr::add(Expr::mul(row1.clone(), Expr::u32(shape.k)), Expr::var("kk")),
-            ),
-            Expr::load(
+            )),
+            to_f32(Expr::load(
                 a,
                 Expr::add(Expr::mul(row2.clone(), Expr::u32(shape.k)), Expr::var("kk")),
-            ),
-            Expr::load(
+            )),
+            to_f32(Expr::load(
                 a,
                 Expr::add(Expr::mul(row3.clone(), Expr::u32(shape.k)), Expr::var("kk")),
-            ),
+            )),
             Expr::var("b_val"),
             Expr::var("b_val"),
             Expr::var("acc0"),
@@ -132,7 +138,7 @@ pub(super) fn cooperative_matmul_body_mma(
             vec![Node::Store {
                 buffer: out.into(),
                 index: Expr::add(Expr::mul(row0, Expr::u32(shape.n)), col.clone()),
-                value: Expr::var("acc0"),
+                value: from_f32(Expr::var("acc0")),
             }],
         ),
         Node::if_then(
@@ -140,7 +146,7 @@ pub(super) fn cooperative_matmul_body_mma(
             vec![Node::Store {
                 buffer: out.into(),
                 index: Expr::add(Expr::mul(row1, Expr::u32(shape.n)), col.clone()),
-                value: Expr::var("acc1"),
+                value: from_f32(Expr::var("acc1")),
             }],
         ),
         Node::if_then(
@@ -148,7 +154,7 @@ pub(super) fn cooperative_matmul_body_mma(
             vec![Node::Store {
                 buffer: out.into(),
                 index: Expr::add(Expr::mul(row2, Expr::u32(shape.n)), col.clone()),
-                value: Expr::var("acc2"),
+                value: from_f32(Expr::var("acc2")),
             }],
         ),
         Node::if_then(
@@ -156,7 +162,7 @@ pub(super) fn cooperative_matmul_body_mma(
             vec![Node::Store {
                 buffer: out.into(),
                 index: Expr::add(Expr::mul(row3, Expr::u32(shape.n)), col),
-                value: Expr::var("acc3"),
+                value: from_f32(Expr::var("acc3")),
             }],
         ),
     ]);

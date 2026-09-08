@@ -1,13 +1,19 @@
-//! A fused two-pass reduction publishes only the caller's buffers.
+//! A fused two-pass reduction publishes its result and asks for its input.
 //!
 //! Fusing the block pass with the combine pass concatenates both buffer
 //! tables, so the intermediate the first pass writes and the second pass reads
 //! appears twice. Unless the fused declaration is backend-allocated, the
-//! dispatcher counts it as a third buffer the caller must supply, and a caller
-//! holding only the input and the output is rejected before the kernel runs.
+//! dispatcher counts it as a buffer the caller must supply, and a caller
+//! holding only the input is rejected before the kernel runs.
 //!
-//! The class this closes is the intermediate leaking into the dispatch
-//! signature, whatever the element count or tile happens to be.
+//! The result buffer is the other half of the same ABI. Nothing reads its prior
+//! contents, so it is a backend-allocated output and consumes no host input
+//! slot. Leaving it plain read-write storage made the oracle demand a value for
+//! it, and a placeholder for an output is what the artifact ABI rejects on a
+//! device.
+//!
+//! The class this closes is either buffer landing on the wrong side of the
+//! dispatch signature, whatever the element count or tile happens to be.
 
 use vyre_libs::reduce::grid_stride_tree::{
     grid_stride_tree_sum_u32, grid_stride_tree_sum_u32_blocks, SUM_U32_OP_ID,
@@ -25,33 +31,54 @@ fn caller_supplied(program: &vyre_foundation::ir::Program) -> Vec<String> {
         .collect()
 }
 
-#[test]
-fn a_multi_block_reduction_asks_the_caller_for_only_values_and_out() {
-    // count > tile forces the two-pass path rather than the single-block one.
-    let program = grid_stride_tree_sum_u32("values", "out", 8192, 256, 8);
-    let supplied = caller_supplied(&program);
+/// The full signature at both extents, asserted together: one caller buffer,
+/// one backend-allocated output, and no third entry for the intermediate.
+fn assert_dispatch_signature(program: &vyre_foundation::ir::Program, case: &str) {
+    let supplied = caller_supplied(program);
     assert_eq!(
         supplied,
-        vec!["values".to_string(), "out".to_string()],
-        "the fused reduction must allocate its own partials; op {SUM_U32_OP_ID}"
+        vec!["values".to_string()],
+        "{case}: the fused reduction must allocate its own partials and its own result; op {SUM_U32_OP_ID}"
+    );
+    let published: Vec<&str> = program
+        .buffers()
+        .iter()
+        .filter(|buffer| buffer.is_backend_allocated_output() && buffer.is_pipeline_live_out())
+        .map(|buffer| buffer.name())
+        .collect();
+    assert!(
+        published.contains(&"out"),
+        "{case}: the result must be published, not read from the dispatch inputs: {published:?}"
     );
 }
 
 #[test]
-fn the_intermediate_is_backend_allocated_at_every_block_count() {
-    // Sweep tile/count pairs so a demotion that only holds for one shape fails.
+fn a_multi_block_reduction_asks_the_caller_for_only_its_input() {
+    // count > tile forces the two-pass path rather than the single-block one.
+    let program = grid_stride_tree_sum_u32("values", "out", 8192, 256, 8);
+    assert_dispatch_signature(&program, "count=8192 tile=256 blocks=8");
+}
+
+#[test]
+fn one_signature_holds_across_both_forms() {
+    // The builder switches to the single-block form at `count <= tile`, so the
+    // sweep straddles that boundary: a signature that only holds for the fused
+    // form leaves the caller unable to dispatch the same op at a small count.
     for (count, tile, blocks) in [
-        (8192u32, 256u32, 8u32),
+        (1u32, 16u32, 1u32),
+        (16, 16, 1),
+        (255, 256, 4),
+        (256, 256, 1),
+        (257, 256, 4),
+        (8192, 256, 8),
         (65536, 1024, 64),
         (4096, 64, 64),
         (1_048_576, 1024, 170),
     ] {
         let program = grid_stride_tree_sum_u32("values", "out", count, tile, blocks);
-        let supplied = caller_supplied(&program);
-        assert_eq!(
-            supplied,
-            vec!["values".to_string(), "out".to_string()],
-            "count={count} tile={tile} blocks={blocks} leaked an intermediate into the dispatch signature: {supplied:?}"
+        assert_dispatch_signature(
+            &program,
+            &format!("count={count} tile={tile} blocks={blocks}"),
         );
     }
 }

@@ -40,13 +40,11 @@ fn values(count: u32) -> Vec<u32> {
 fn reduced(count: u32, tile: u32, blocks: u32) -> u32 {
     let input = values(count);
     let program = grid_stride_tree_sum_u32("values", "out", count, tile, blocks);
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[Value::from(pack_u32(&input)), Value::from(pack_u32(&[0]))],
-    )
-    .unwrap_or_else(|error| {
-        panic!("Fix: count={count} tile={tile} blocks={blocks} must evaluate: {error}")
-    });
+    // `out` is a backend-allocated output, so the dispatch carries one input.
+    let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack_u32(&input))])
+        .unwrap_or_else(|error| {
+            panic!("Fix: count={count} tile={tile} blocks={blocks} must evaluate: {error}")
+        });
     let bytes = outputs
         .last()
         .unwrap_or_else(|| {
@@ -142,7 +140,7 @@ fn a_launch_wider_than_the_built_grid_stays_in_bounds() {
         let over_fire = effective * tile * 4;
         let (outputs, oob) = vyre_reference::reference_eval_with_dispatch_oob_report(
             &program,
-            &[Value::from(pack_u32(&input)), Value::from(pack_u32(&[0]))],
+            &[Value::from(pack_u32(&input))],
             over_fire,
         )
         .unwrap_or_else(|error| panic!("Fix: blocks={blocks} must evaluate over-fired: {error}"));

@@ -206,10 +206,6 @@ pub mod composed_regions_resolve_in_the_catalog;
 #[path = "consumer_boundary.rs"]
 pub mod consumer_boundary;
 
-/// Integration tests from `tests/contraction_tiling_epilogue_closure_contracts.rs`.
-#[path = "contraction_tiling_epilogue_closure_contracts.rs"]
-pub mod contraction_tiling_epilogue_closure_contracts;
-
 /// Integration tests from `tests/corpus_privacy_retention_controls.rs`.
 #[path = "corpus_privacy_retention_controls.rs"]
 pub mod corpus_privacy_retention_controls;
@@ -452,6 +448,10 @@ pub mod homotopy_euler_signed_parity;
 /// Integration tests from `tests/host_dispatch_is_parity_only.rs`.
 #[path = "host_dispatch_is_parity_only.rs"]
 pub mod host_dispatch_is_parity_only;
+
+/// Integration tests from `tests/host_oracle_elimination_parity.rs`.
+#[path = "host_oracle_elimination_parity.rs"]
+pub mod host_oracle_elimination_parity;
 
 /// Integration tests from `tests/hypervector_ir_parity_proptest.rs`.
 #[cfg(feature = "hash")]
@@ -964,11 +964,6 @@ pub mod security_flows_to_alias_only_parity;
 /// Integration tests from `tests/security_privacy_path_corpus_guards.rs`.
 #[path = "security_privacy_path_corpus_guards.rs"]
 pub mod security_privacy_path_corpus_guards;
-
-/// Integration tests from `tests/security_terminal_output_closure.rs`.
-#[cfg(feature = "security")]
-#[path = "security_terminal_output_closure.rs"]
-pub mod security_terminal_output_closure;
 
 /// Integration tests from `tests/segment_reduce_ir_parity_proptest.rs`.
 #[cfg(feature = "reduce")]

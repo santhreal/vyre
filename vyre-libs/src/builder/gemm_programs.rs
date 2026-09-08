@@ -5,6 +5,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use super::gemm_algebra::ContractionSemiring;
 use super::ContractionEpilogue;
+use crate::plumbing::operand::element_zero::element_zero;
 use crate::plumbing::operand::tensor_ref::TensorRefError;
 
 /// Assemble 2D GEMM with 1D linear dispatch.
@@ -73,6 +74,7 @@ pub(crate) fn build_matmul_2d_linear(
             bias: None,
             activation,
         } => (semiring.identity_expr(dtype), activation(Expr::var("acc"))),
+        // 2D geometry has a single batch, so the batch scale is the per-tensor scale.
         ContractionEpilogue::QuantizedScale {
             row_scales,
             batch_scales,
@@ -80,7 +82,7 @@ pub(crate) fn build_matmul_2d_linear(
             semiring.identity_expr(dtype),
             Expr::mul(
                 Expr::mul(Expr::var("acc"), Expr::load(row_scales, Expr::var("row"))),
-                Expr::load(batch_scales, Expr::var("batch")),
+                Expr::load(batch_scales, Expr::u32(0)),
             ),
         ),
     };
@@ -109,15 +111,35 @@ pub(crate) fn build_matmul_2d_linear(
         BufferDecl::storage(a, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(a_count),
         BufferDecl::storage(b, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(b_count),
     ];
-    let out_slot = if let Some(bias_name) = bias {
+    let mut next_slot = 2;
+    if let Some(bias_name) = bias {
         buffers.push(
-            BufferDecl::storage(bias_name, 2, BufferAccess::ReadOnly, dtype.clone()).with_count(n),
+            BufferDecl::storage(bias_name, next_slot, BufferAccess::ReadOnly, dtype.clone())
+                .with_count(n),
         );
-        3
-    } else {
-        2
-    };
-    buffers.push(BufferDecl::output(out, out_slot, dtype.clone()).with_count(out_count));
+        next_slot += 1;
+    }
+    if let ContractionEpilogue::QuantizedScale {
+        row_scales,
+        batch_scales,
+    } = epilogue
+    {
+        buffers.push(
+            BufferDecl::storage(row_scales, next_slot, BufferAccess::ReadOnly, dtype.clone())
+                .with_count(m),
+        );
+        buffers.push(
+            BufferDecl::storage(
+                batch_scales,
+                next_slot + 1,
+                BufferAccess::ReadOnly,
+                dtype.clone(),
+            )
+            .with_count(1),
+        );
+        next_slot += 2;
+    }
+    buffers.push(BufferDecl::output(out, next_slot, dtype.clone()).with_count(out_count));
 
     let region = if generator.starts_with("anonymous::") {
         wrap_anonymous_region(generator, body)
@@ -403,7 +425,10 @@ pub(crate) fn build_block_1d_contraction(
     let lane = Expr::var("lane");
     let kk = Expr::var("kk");
 
-    let initial_acc = bias.map_or_else(|| Expr::u32(0), |b| Expr::load(b, lane.clone()));
+    let initial_acc = bias.map_or_else(
+        || element_zero(dtype).unwrap_or_else(|| Expr::u32(0)),
+        |b| Expr::load(b, lane.clone()),
+    );
 
     let body = vec![
         Node::let_bind("lane", Expr::LogicalIndex { axis: 0 }),

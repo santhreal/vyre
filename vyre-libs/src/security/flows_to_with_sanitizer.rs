@@ -244,11 +244,24 @@ pub(crate) fn flows_to_with_sanitizer_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     ]]
 }
 
+/// Source {0} minus an empty sanitizer set: {0}.
+pub(crate) const EXPECTED_CLEAN_BYTES: [u8; 4] = [0b0001, 0, 0, 0];
+/// One hop from clean {0} accumulated with the reach seed {0}: {0, 1}.
+pub(crate) const EXPECTED_REACH_BYTES: [u8; 4] = [0b0011, 0, 0, 0];
+/// Reach minus the empty sanitizer set, so reach survives intact: {0, 1}.
+pub(crate) const EXPECTED_ALIVE_BYTES: [u8; 4] = [0b0011, 0, 0, 0];
+/// Alive nodes intersected with the sink tag on {1}: {1}.
+pub(crate) const EXPECTED_HITS_BYTES: [u8; 4] = [0b0010, 0, 0, 0];
+/// Nonzero because the intersection is non-empty.
 pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_SCALAR_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 #[cfg(test)]
 pub(crate) fn flows_to_with_sanitizer_fixture_expected() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
+        EXPECTED_CLEAN_BYTES.to_vec(),
+        EXPECTED_REACH_BYTES.to_vec(),
+        EXPECTED_ALIVE_BYTES.to_vec(),
+        EXPECTED_HITS_BYTES.to_vec(),
         EXPECTED_FLOWS_TO_WITH_SANITIZER_SCALAR_BYTES.to_vec(),
     ]]
 }
@@ -262,12 +275,25 @@ mod tests {
     };
     use crate::security::flow_composition::linear_dataflow;
 
+    /// WHY: the fixture declares one expected value per buffer the oracle
+    /// returns, and the sanitizer projection contributes two of them. The bytes
+    /// are written out here rather than read from the constants the fixture is
+    /// built from, so a stage whose constant changes fails instead of agreeing
+    /// with itself.
+    ///
+    /// Chain `0 -> 1 -> 2 -> 3` over assignment edges, source {0}, sanitizer
+    /// empty, sink {1}: clean {0}, one hop to reach {0,1}, alive {0,1} because
+    /// nothing is sanitized, hits {1}, witness 1.
     #[test]
-    fn test_flows_to_with_sanitizer_expected_bytes_identity() {
+    fn every_sanitizer_stage_declares_the_bytes_it_produces() {
         assert_eq!(
             flows_to_with_sanitizer_fixture_expected(),
             vec![vec![
-                EXPECTED_FLOWS_TO_WITH_SANITIZER_SCALAR_BYTES.to_vec(),
+                vec![0b0001, 0, 0, 0],
+                vec![0b0011, 0, 0, 0],
+                vec![0b0011, 0, 0, 0],
+                vec![0b0010, 0, 0, 0],
+                vec![1, 0, 0, 0],
             ]]
         );
     }

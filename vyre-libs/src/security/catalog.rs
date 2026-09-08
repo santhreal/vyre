@@ -184,6 +184,8 @@ inventory::submit! {
         Some(super::flow_composition::dataflow_hit_fixture_inputs),
         Some(|| {
             vec![vec![
+                super::flow_composition::DATAFLOW_REACH_EXPECTED_BYTES.to_vec(),
+                super::flow_composition::DATAFLOW_HITS_EXPECTED_BYTES.to_vec(),
                 super::flow_composition::DATAFLOW_HIT_SCALAR_BYTES.to_vec(),
             ]]
         }),
@@ -198,6 +200,8 @@ inventory::submit! {
         Some(super::flow_composition::dataflow_hit_fixture_inputs),
         Some(|| {
             vec![vec![
+                super::flow_composition::DATAFLOW_REACH_EXPECTED_BYTES.to_vec(),
+                super::flow_composition::DATAFLOW_HITS_EXPECTED_BYTES.to_vec(),
                 super::flow_composition::DATAFLOW_HIT_SCALAR_BYTES.to_vec(),
             ]]
         }),
@@ -229,6 +233,10 @@ inventory::submit! {
         Some(super::flows_to_with_sanitizer::flows_to_with_sanitizer_fixture_inputs),
         Some(|| {
             vec![vec![
+                super::flows_to_with_sanitizer::EXPECTED_CLEAN_BYTES.to_vec(),
+                super::flows_to_with_sanitizer::EXPECTED_REACH_BYTES.to_vec(),
+                super::flows_to_with_sanitizer::EXPECTED_ALIVE_BYTES.to_vec(),
+                super::flows_to_with_sanitizer::EXPECTED_HITS_BYTES.to_vec(),
                 super::flows_to_with_sanitizer::EXPECTED_FLOWS_TO_WITH_SANITIZER_SCALAR_BYTES.to_vec(),
             ]]
         }),

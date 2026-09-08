@@ -104,6 +104,76 @@ fn every_registered_witness_case_supplies_one_value_per_reference_input() {
     );
 }
 
+/// WHY: the mirror of the case above, on the side the harness compares against.
+/// `reference_eval` returns one buffer per `vyre_reference::is_reference_output`
+/// decl, so a fused composition returns each stage's result alongside the final
+/// one. Five registrations declared an expected value only for the final
+/// buffer, and the comparison then failed on the count with nothing naming
+/// which stage was unaccounted for. A declaration that is short also leaves
+/// every intermediate unchecked, which is the same as having no oracle for the
+/// stages that produce them.
+///
+/// The entry set is `all_entries()` read at run time, so a newly registered
+/// operation is covered with nothing else edited.
+///
+/// Does not catch: whether the declared bytes are the right bytes. That is the
+/// parity oracle's job.
+#[test]
+fn every_registered_oracle_case_declares_one_value_per_returned_buffer() {
+    let mut checked_entries = 0usize;
+    let mut checked_cases = 0usize;
+    let mut failures = Vec::new();
+
+    for entry in all_entries() {
+        let (Some(build), Some(expected_output)) = (entry.build, entry.expected_output) else {
+            continue;
+        };
+        let program = build();
+        let returned = program
+            .buffers()
+            .iter()
+            .filter(|buffer| vyre_reference::is_reference_output(buffer))
+            .map(|buffer| buffer.name())
+            .collect::<Vec<_>>();
+        checked_entries += 1;
+
+        for (case_idx, case) in expected_output().into_iter().enumerate() {
+            checked_cases += 1;
+            if case.len() == returned.len() {
+                continue;
+            }
+            failures.push(format!(
+                "{} case {case_idx} declares {} expected value(s) for {} returned buffer(s) {:?}",
+                entry.id,
+                case.len(),
+                returned.len(),
+                returned,
+            ));
+        }
+    }
+
+    assert!(
+        checked_entries > 0,
+        "the operation catalog reported no entry with both a builder and an oracle, so this \
+         test proved nothing. Fix: check `vyre_libs::operation_catalog::all_entries`."
+    );
+    assert!(
+        checked_cases >= checked_entries,
+        "{checked_entries} entries declared an oracle but only {checked_cases} cases were \
+         checked, so an entry declared an empty case vector. Fix: every `expected_output` \
+         fixture returns at least one case."
+    );
+    assert!(
+        failures.is_empty(),
+        "{} oracle case(s) of {checked_cases} declare the wrong number of outputs. Fix: declare \
+         one expected value per buffer accepted by `vyre_reference::is_reference_output`, in \
+         `Program::buffers` order, including every intermediate a fused stage leaves \
+         writable:\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+}
+
 /// The two shapes are distinguishable for at least one registered operation, so
 /// the check above is not comparing a count against itself.
 ///

@@ -32,9 +32,7 @@ fn quest_score_pages_writes_full_declared_extent() {
             .expect("query buffer must exist")
             .count();
 
-        let query: Vec<f32> = (0..declared_head_dim)
-            .map(|i| (i + 1) as f32)
-            .collect();
+        let query: Vec<f32> = (0..declared_head_dim).map(|i| (i + 1) as f32).collect();
         let page_metadata: Vec<f32> = (0..declared_pages * declared_head_dim)
             .map(|i| ((i % 7) + 1) as f32)
             .collect();
@@ -93,11 +91,9 @@ fn quest_zero_fill_writes_full_declared_extent() {
             .count();
 
         let initial_io = vec![0xFFFFFFFFu32; declared_pages as usize];
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(u32_bytes(&initial_io))],
-        )
-        .expect("Fix: quest_zero_fill program must evaluate");
+        let outputs =
+            vyre_reference::reference_eval(&program, &[Value::from(u32_bytes(&initial_io))])
+                .expect("Fix: quest_zero_fill program must evaluate");
 
         let io_queue = words_from_bytes(&outputs[0].to_bytes());
         assert_eq!(

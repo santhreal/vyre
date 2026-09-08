@@ -6,6 +6,11 @@ use vyre_foundation::ir::{Expr, Node};
 use super::shape::{in_output_bounds, MatrixShape, TileShape};
 use super::tile_coords::{bind_output_tile_coordinates, OutputTileCoordNames};
 
+/// Build the cooperative staging body for a tiled matmul.
+///
+/// `zero` is the element type's own zero. It seeds the accumulator and pads the
+/// lanes of a tile that the source matrix does not cover, so a partially filled
+/// tile contributes nothing to the product.
 pub(crate) fn cooperative_matmul_body(
     a: &str,
     b: &str,
@@ -13,6 +18,9 @@ pub(crate) fn cooperative_matmul_body(
     out: &str,
     shape: MatrixShape,
     tile: TileShape,
+    a_tile_name: &str,
+    b_tile_name: &str,
+    zero: &Expr,
 ) -> Vec<Node> {
     let tile_count = shape.k.div_ceil(tile.k_tile);
     let load_passes = tile.a_values.max(tile.b_values).div_ceil(tile.lanes).max(1);
@@ -32,7 +40,7 @@ pub(crate) fn cooperative_matmul_body(
             col: "col",
         },
     );
-    body.push(Node::let_bind("acc", Expr::u32(0)));
+    body.push(Node::let_bind("acc", zero.clone()));
     if let Some(bias) = bias {
         body.push(Node::if_then(
             in_bounds.clone(),
@@ -80,9 +88,9 @@ pub(crate) fn cooperative_matmul_body(
                                 Expr::add(Expr::var("k_base"), Expr::var("a_local_k")),
                             ),
                             Node::Store {
-                                buffer: "matmul_a_tile".into(),
+                                buffer: a_tile_name.into(),
                                 index: Expr::var("a_linear"),
-                                value: Expr::u32(0),
+                                value: zero.clone(),
                             },
                             Node::if_then(
                                 Expr::and(
@@ -90,7 +98,7 @@ pub(crate) fn cooperative_matmul_body(
                                     Expr::lt(Expr::var("a_k"), Expr::u32(shape.k)),
                                 ),
                                 vec![Node::Store {
-                                    buffer: "matmul_a_tile".into(),
+                                    buffer: a_tile_name.into(),
                                     index: Expr::var("a_linear"),
                                     value: Expr::load(
                                         a,
@@ -130,9 +138,9 @@ pub(crate) fn cooperative_matmul_body(
                                 Expr::add(Expr::var("tile_col_base"), Expr::var("b_local_col")),
                             ),
                             Node::Store {
-                                buffer: "matmul_b_tile".into(),
+                                buffer: b_tile_name.into(),
                                 index: Expr::var("b_linear"),
-                                value: Expr::u32(0),
+                                value: zero.clone(),
                             },
                             Node::if_then(
                                 Expr::and(
@@ -140,7 +148,7 @@ pub(crate) fn cooperative_matmul_body(
                                     Expr::lt(Expr::var("b_col"), Expr::u32(shape.n)),
                                 ),
                                 vec![Node::Store {
-                                    buffer: "matmul_b_tile".into(),
+                                    buffer: b_tile_name.into(),
                                     index: Expr::var("b_linear"),
                                     value: Expr::load(
                                         b,
@@ -168,14 +176,14 @@ pub(crate) fn cooperative_matmul_body(
                             Expr::var("acc"),
                             Expr::mul(
                                 Expr::load(
-                                    "matmul_a_tile",
+                                    a_tile_name,
                                     Expr::add(
                                         Expr::mul(Expr::var("local_row"), Expr::u32(tile.k_tile)),
                                         Expr::var("tile_k"),
                                     ),
                                 ),
                                 Expr::load(
-                                    "matmul_b_tile",
+                                    b_tile_name,
                                     Expr::add(
                                         Expr::mul(Expr::var("tile_k"), Expr::u32(tile.out_cols)),
                                         Expr::var("local_col"),
