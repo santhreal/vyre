@@ -8,19 +8,15 @@
 
 use std::num::NonZeroU32;
 
-use vyre_foundation::ir::{
-    AtomicOp, BinOp, BufferAccess, BufferDecl, DataType, Expr, MemoryOrdering, Node, Program,
-};
-use vyre_lower::lower;
+use vyre_foundation::ir::{AtomicOp, MemoryOrdering};
 use vyre_lower::analyses::{
     derive_shared_access_profiles, evaluate_mitigation_candidate, select_bank_conflict_strategy,
     AccessPhase, AccessPhaseProfile, BankConflictMitigation, ConflictSeverity,
     SharedBindingAccessProfile, SharedPermutationBlock, TargetBankGeometry,
 };
-use vyre_lower::descriptor_builder::{
-    binop, body, descriptor, effect, global_rw, lit, op, shared_rw, store_global,
-};
-use vyre_lower::{KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
+use vyre_lower::descriptor_builder::{column_walk_tile, effect, op, strided_tile_program};
+use vyre_lower::lower;
+use vyre_lower::{KernelDescriptor, KernelOp, KernelOpKind, WORKGROUP_SLOT_BASE};
 
 /// Bank geometry a case states. Every field is a device fact, so a case names
 /// all four rather than inheriting them.
@@ -152,35 +148,9 @@ fn strategy_does_not_promise_universal_zero_conflicts() {
     assert_ne!(selected.worst_severity, ConflictSeverity::None);
 }
 
-/// A column walk over a 32-wide tile: consecutive lanes address elements a
-/// full bank count apart, which is the classifier's worst case.
-fn column_walk_tile() -> KernelDescriptor {
-    descriptor("column_walk_tile")
-        .slot(global_rw(0, DataType::U32, "out"))
-        .slot(shared_rw(1, DataType::U32, 1024, "tile"))
-        .dispatch(32, 1, 1)
-        .body(
-            body()
-                .literals([LiteralValue::U32(32)])
-                .op(op(KernelOpKind::LocalInvocationId, [], 0))
-                .op(lit(0, 1))
-                .op(binop(BinOp::Mul, 0, 1, 2))
-                .op(effect(KernelOpKind::StoreShared, [1, 2, 0]))
-                .op(effect(
-                    KernelOpKind::Barrier {
-                        ordering: MemoryOrdering::SeqCst,
-                    },
-                    [],
-                ))
-                .op(op(KernelOpKind::LoadShared, [1, 2], 3))
-                .op(store_global(0, 0, 3)),
-        )
-        .build()
-}
-
 /// `column_walk_tile` with `extra` appended to its op stream.
 fn tile_plus(extra: Vec<KernelOp>) -> KernelDescriptor {
-    let mut built = column_walk_tile();
+    let mut built = column_walk_tile(1024);
     built.body.ops.extend(extra);
     built
 }
@@ -191,7 +161,7 @@ fn tile_profile(desc: &KernelDescriptor) -> SharedBindingAccessProfile {
     let banks = NonZeroU32::new(32).expect("Fix: 32 is not zero");
     derive_shared_access_profiles(desc, banks)
         .into_iter()
-        .find(|profile| profile.binding_slot == 1)
+        .find(|profile| profile.binding_slot == WORKGROUP_SLOT_BASE)
         .expect("Fix: the derivation must state every shared binding a descriptor declares")
 }
 
@@ -200,7 +170,7 @@ fn tile_profile(desc: &KernelDescriptor) -> SharedBindingAccessProfile {
 /// each access computes and from the barrier structure between them.
 #[test]
 fn the_derivation_states_a_stride_and_an_active_width_per_phase() {
-    let profile = tile_profile(&column_walk_tile());
+    let profile = tile_profile(&column_walk_tile(1024));
 
     assert_eq!(profile.element_count, 1024);
     assert_eq!(
@@ -232,7 +202,7 @@ fn the_derivation_states_a_stride_and_an_active_width_per_phase() {
 fn every_block_class_removes_the_binding_it_reaches_from_the_permutable_set() {
     let asynchronous = tile_plus(vec![effect(
         KernelOpKind::async_load("dma".into()),
-        [0, 1, 0, 0],
+        [0, WORKGROUP_SLOT_BASE, 0, 0],
     )]);
     assert_eq!(
         tile_profile(&asynchronous).blocked_by,
@@ -246,7 +216,7 @@ fn every_block_class_removes_the_binding_it_reaches_from_the_permutable_set() {
             op: AtomicOp::Add,
             ordering: MemoryOrdering::Relaxed,
         },
-        [1, 2, 0],
+        [WORKGROUP_SLOT_BASE, 2, 0],
         4,
     )]);
     assert_eq!(
@@ -257,7 +227,7 @@ fn every_block_class_removes_the_binding_it_reaches_from_the_permutable_set() {
 
     let unproven = tile_plus(vec![
         op(KernelOpKind::LoadGlobal, [0, 0], 5),
-        op(KernelOpKind::LoadShared, [1, 5], 6),
+        op(KernelOpKind::LoadShared, [WORKGROUP_SLOT_BASE, 5], 6),
     ]);
     assert_eq!(
         tile_profile(&unproven).blocked_by,
@@ -266,7 +236,7 @@ fn every_block_class_removes_the_binding_it_reaches_from_the_permutable_set() {
          no rule classifies states nothing"
     );
 
-    let mut undeclared = column_walk_tile();
+    let mut undeclared = column_walk_tile(1024);
     undeclared.bindings.slots[1].element_count = None;
     assert_eq!(
         tile_profile(&undeclared).blocked_by,
@@ -280,49 +250,18 @@ fn every_block_class_removes_the_binding_it_reaches_from_the_permutable_set() {
 #[test]
 fn the_derivation_states_shared_bindings_only() {
     let banks = NonZeroU32::new(32).expect("Fix: 32 is not zero");
-    let slots: Vec<u32> = derive_shared_access_profiles(&column_walk_tile(), banks)
+    let slots: Vec<u32> = derive_shared_access_profiles(&column_walk_tile(1024), banks)
         .iter()
         .map(|profile| profile.binding_slot)
         .collect();
-    assert_eq!(slots, vec![1]);
-}
-
-/// Build a real `Program` with a shared tile and strided load/store.
-fn real_lowered_strided_tile_program() -> Program {
-    let buffers = vec![
-        BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32),
-        BufferDecl::workgroup("tile", 1024, DataType::U32),
-    ];
-    let tid = Expr::InvocationId { axis: 0 };
-    let stride_32 = Expr::u32(32);
-    let index = Expr::BinOp {
-        op: BinOp::Mul,
-        left: Box::new(tid.clone()),
-        right: Box::new(stride_32),
-    };
-    let nodes = vec![
-        Node::Store {
-            buffer: "tile".into(),
-            index: index.clone(),
-            value: tid.clone(),
-        },
-        Node::Barrier {
-            ordering: MemoryOrdering::SeqCst,
-        },
-        Node::Store {
-            buffer: "out".into(),
-            index: tid,
-            value: Expr::load("tile", index),
-        },
-    ];
-    Program::wrapped(buffers, [32, 1, 1], nodes)
+    assert_eq!(slots, vec![WORKGROUP_SLOT_BASE]);
 }
 
 /// The neutral derivation produces per-phase strides from a real lowered
 /// descriptor produced by `lower(&program)`.
 #[test]
 fn the_derivation_produces_per_phase_strides_from_a_real_lowered_descriptor() {
-    let program = real_lowered_strided_tile_program();
+    let program = strided_tile_program();
     let descriptor = lower(&program).expect("a strided tile program lowers to a descriptor");
 
     let banks = NonZeroU32::new(32).expect("32 is not zero");
@@ -352,7 +291,7 @@ fn the_derivation_produces_per_phase_strides_from_a_real_lowered_descriptor() {
 /// yields a mitigation strategy other than `NoRewrite`.
 #[test]
 fn conflicting_access_pattern_yields_strategy_other_than_no_rewrite() {
-    let program = real_lowered_strided_tile_program();
+    let program = strided_tile_program();
     let descriptor = lower(&program).expect("a strided tile program lowers to a descriptor");
 
     let banks = NonZeroU32::new(32).expect("32 is not zero");

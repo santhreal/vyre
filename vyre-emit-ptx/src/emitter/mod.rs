@@ -24,6 +24,7 @@ mod operand_use_scan;
 mod param_identifier;
 mod register_alloc;
 pub(crate) mod schedule;
+mod shared_permutation;
 mod store_guard;
 mod subgroup;
 mod text_capacity;

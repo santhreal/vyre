@@ -7,34 +7,7 @@ fn output_slot() -> vyre_lower::BindingSlot {
 /// Four unit-stride stores at compile-time indices, which the fusion pass must
 /// coalesce into one vector store.
 pub(crate) fn ptx_for_vector_store_fusion() -> String {
-    let desc = descriptor("vector_store_fusion")
-        .slot(output_slot())
-        .body(
-            body()
-                .literals([
-                    LiteralValue::U32(0),
-                    LiteralValue::U32(10),
-                    LiteralValue::U32(11),
-                    LiteralValue::U32(12),
-                    LiteralValue::U32(13),
-                    LiteralValue::U32(1),
-                    LiteralValue::U32(2),
-                    LiteralValue::U32(3),
-                ])
-                .op(lit(0, 0))
-                .op(lit(1, 1))
-                .op(lit(2, 2))
-                .op(lit(3, 3))
-                .op(lit(4, 4))
-                .op(store_global(0, 0, 1))
-                .op(lit(5, 5))
-                .op(store_global(0, 5, 2))
-                .op(lit(6, 6))
-                .op(store_global(0, 6, 3))
-                .op(lit(7, 7))
-                .op(store_global(0, 7, 4)),
-        )
-        .build();
+    let desc = folded_literal_vector_store("vector_store_fusion");
     emit_ptx(&desc)
 }
 

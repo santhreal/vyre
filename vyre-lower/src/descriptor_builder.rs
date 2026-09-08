@@ -34,13 +34,15 @@
 //! assert_eq!(desc.body.ops.len(), 4);
 //! ```
 
-use vyre_foundation::ir::{BinOp, DataType};
+use vyre_foundation::ir::{
+    BinOp, BufferAccess, BufferDecl, DataType, Expr, MemoryOrdering, Node, Program,
+};
 
 use crate::{
     AsyncWaitSpec, BindingLayout, BindingSlot, BindingVisibility, Dispatch,
     EmissionTargetCapabilities, FragmentValue, GridIndexSpace, KernelBody, KernelDescriptor,
     KernelOp, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec,
-    MatrixTileShape, MemoryClass, SubgroupCapabilities, WorkgroupLimits,
+    MatrixTileShape, MemoryClass, SubgroupCapabilities, WorkgroupLimits, WORKGROUP_SLOT_BASE,
 };
 
 /// An op that produces `result`.
@@ -86,6 +88,12 @@ pub fn effect(kind: KernelOpKind, operands: impl Into<Vec<u32>>) -> KernelOp {
 #[must_use]
 pub fn lit(pool_index: u32, result: u32) -> KernelOp {
     op(KernelOpKind::Literal, [pool_index], result)
+}
+
+/// A [`KernelOpKind::LocalInvocationId`] op along axis `axis` into `result`.
+#[must_use]
+pub fn local_invocation_id(axis: u32, result: u32) -> KernelOp {
+    op(KernelOpKind::LocalInvocationId, [axis], result)
 }
 
 /// A binary-arithmetic op over two value ids.
@@ -330,6 +338,107 @@ pub fn cast_over_load(
                     effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
                 ])
                 .literals([LiteralValue::U32(0)]),
+        )
+        .build()
+}
+
+/// A column walk over a tile of `element_count` U32 elements: lane `t`
+/// addresses element `t * 32`, so every lane lands in the same bank.
+#[must_use]
+pub fn column_walk_tile(element_count: u32) -> KernelDescriptor {
+    descriptor("column_walk_tile")
+        .slot(global_rw(0, DataType::U32, "out"))
+        .slot(shared_rw(
+            WORKGROUP_SLOT_BASE,
+            DataType::U32,
+            element_count,
+            "tile",
+        ))
+        .dispatch(32, 1, 1)
+        .body(
+            body()
+                .literals([LiteralValue::U32(32)])
+                .op(local_invocation_id(0, 0))
+                .op(lit(0, 1))
+                .op(binop(BinOp::Mul, 0, 1, 2))
+                .op(effect(
+                    KernelOpKind::StoreShared,
+                    [WORKGROUP_SLOT_BASE, 2, 0],
+                ))
+                .op(effect(
+                    KernelOpKind::Barrier {
+                        ordering: MemoryOrdering::SeqCst,
+                    },
+                    [],
+                ))
+                .op(op(KernelOpKind::LoadShared, [WORKGROUP_SLOT_BASE, 2], 3))
+                .op(store_global(0, 0, 3)),
+        )
+        .build()
+}
+
+/// A real lowered `Program` with a strided shared tile.
+#[must_use]
+pub fn strided_tile_program() -> Program {
+    let buffers = vec![
+        BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32),
+        BufferDecl::workgroup("tile", 1024, DataType::U32),
+    ];
+    let tid = Expr::InvocationId { axis: 0 };
+    let stride_32 = Expr::u32(32);
+    let index = Expr::BinOp {
+        op: BinOp::Mul,
+        left: Box::new(tid.clone()),
+        right: Box::new(stride_32),
+    };
+    let nodes = vec![
+        Node::Store {
+            buffer: "tile".into(),
+            index: index.clone(),
+            value: tid.clone(),
+        },
+        Node::Barrier {
+            ordering: MemoryOrdering::SeqCst,
+        },
+        Node::Store {
+            buffer: "out".into(),
+            index: tid,
+            value: Expr::load("tile", index),
+        },
+    ];
+    Program::wrapped(buffers, [32, 1, 1], nodes)
+}
+
+/// Four scalar stores into global slot 0 at compile-time indices 0..4 whose
+/// literal-pool indices are non-contiguous with the value literals.
+#[must_use]
+pub fn folded_literal_vector_store(id: &str) -> KernelDescriptor {
+    descriptor(id)
+        .slot(global_wo(0, DataType::U32, "output"))
+        .body(
+            body()
+                .literals([
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(10),
+                    LiteralValue::U32(11),
+                    LiteralValue::U32(12),
+                    LiteralValue::U32(13),
+                    LiteralValue::U32(1),
+                    LiteralValue::U32(2),
+                    LiteralValue::U32(3),
+                ])
+                .op(lit(0, 0))
+                .op(lit(1, 1))
+                .op(lit(2, 2))
+                .op(lit(3, 3))
+                .op(lit(4, 4))
+                .op(store_global(0, 0, 1))
+                .op(lit(5, 5))
+                .op(store_global(0, 5, 2))
+                .op(lit(6, 6))
+                .op(store_global(0, 6, 3))
+                .op(lit(7, 7))
+                .op(store_global(0, 7, 4)),
         )
         .build()
 }

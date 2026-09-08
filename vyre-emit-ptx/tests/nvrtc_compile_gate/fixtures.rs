@@ -6,7 +6,8 @@
 
 use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::descriptor_builder::{
-    binop, body, descriptor, global_ro, global_rw, global_wo, lit, load_global, op, store_global,
+    binop, body, descriptor, folded_literal_vector_store, global_ro, global_rw, global_wo, lit,
+    load_global, op, store_global,
 };
 use vyre_lower::{KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
 

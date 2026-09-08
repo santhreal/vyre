@@ -3,9 +3,10 @@
 //! Each test asserts the exact PTX instruction suffix/mnemonic that the
 //! fix introduced, confirming the pre-fix behaviour is gone.
 
-use vyre_foundation::ir::{BinOp, DataType, MemoryOrdering};
+use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::descriptor_builder::{
-    binop, body, descriptor, effect, global_rw, lit, load_global, op, shared_rw, store_global,
+    binop, body, column_walk_tile, descriptor, global_rw, lit, load_global, op, store_global,
+    strided_tile_program,
 };
 use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue, WORKGROUP_SLOT_BASE};
 
@@ -192,40 +193,6 @@ fn shared_declaration(bytes: u32) -> String {
     format!(".shared .align 4 .b8 shared_buf_{WORKGROUP_SLOT_BASE}[{bytes}];")
 }
 
-/// A column walk over a tile of `element_count` U32 elements: lane `t`
-/// addresses element `t * 32`, so every lane lands in the same bank.
-fn column_walk_tile(element_count: u32) -> KernelDescriptor {
-    descriptor("column_walk_tile")
-        .slot(global_rw(0, DataType::U32, "out"))
-        .slot(shared_rw(
-            WORKGROUP_SLOT_BASE,
-            DataType::U32,
-            element_count,
-            "tile",
-        ))
-        .dispatch(32, 1, 1)
-        .body(
-            body()
-                .literals([LiteralValue::U32(32)])
-                .op(thread_id(0))
-                .op(lit(0, 1))
-                .op(binop(BinOp::Mul, 0, 1, 2))
-                .op(effect(
-                    KernelOpKind::StoreShared,
-                    [WORKGROUP_SLOT_BASE, 2, 0],
-                ))
-                .op(effect(
-                    KernelOpKind::Barrier {
-                        ordering: MemoryOrdering::SeqCst,
-                    },
-                    [],
-                ))
-                .op(op(KernelOpKind::LoadShared, [WORKGROUP_SLOT_BASE, 2], 3))
-                .op(store_global(0, 0, 3)),
-        )
-        .build()
-}
-
 /// Lines that add a row count times the pad to a shared element index.
 ///
 /// The launch prologue emits `mad.lo.u32` too, three times, for the global id
@@ -297,34 +264,7 @@ fn a_tile_that_is_not_a_whole_number_of_rows_is_not_padded() {
 /// with the permuted address computation and grown shared memory declaration.
 #[test]
 fn a_real_lowered_conflicting_program_emits_permuted_ptx() {
-    use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, Expr, Node, Program};
-    let buffers = vec![
-        BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32),
-        BufferDecl::workgroup("tile", 1024, DataType::U32),
-    ];
-    let tid = Expr::InvocationId { axis: 0 };
-    let stride_32 = Expr::u32(32);
-    let index = Expr::BinOp {
-        op: BinOp::Mul,
-        left: Box::new(tid.clone()),
-        right: Box::new(stride_32),
-    };
-    let nodes = vec![
-        Node::Store {
-            buffer: "tile".into(),
-            index: index.clone(),
-            value: tid.clone(),
-        },
-        Node::Barrier {
-            ordering: MemoryOrdering::SeqCst,
-        },
-        Node::Store {
-            buffer: "out".into(),
-            index: tid,
-            value: Expr::load("tile", index),
-        },
-    ];
-    let program = Program::wrapped(buffers, [32, 1, 1], nodes);
+    let program = strided_tile_program();
     let descriptor = vyre_lower::lower(&program).expect("program lowers to descriptor");
     let ptx = emit(&descriptor, "real lowered conflicting program");
 

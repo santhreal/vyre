@@ -1,5 +1,5 @@
 use super::*;
-use vyre_lower::descriptor_builder::{effect, lit, op};
+use vyre_lower::descriptor_builder::{effect, folded_literal_vector_store, lit, op};
 
 #[test]
 fn emit_fuses_four_adjacent_u32_stores_to_ptx_vector_store() {
@@ -70,34 +70,7 @@ fn generated_dynamic_reassociated_store_indices_fuse_to_v4() {
 
 #[test]
 fn emit_fuses_vector_store_across_folded_literal_index_gaps() {
-    let s = emit(&two_slot_u32_kernel(
-        "folded_literal_vec_store",
-        vec![
-            lit(0, 0),
-            lit(1, 1),
-            lit(2, 2),
-            lit(3, 3),
-            lit(4, 4),
-            effect(KernelOpKind::StoreGlobal, [1, 0, 1]),
-            lit(5, 5),
-            effect(KernelOpKind::StoreGlobal, [1, 5, 2]),
-            lit(6, 6),
-            effect(KernelOpKind::StoreGlobal, [1, 6, 3]),
-            lit(7, 7),
-            effect(KernelOpKind::StoreGlobal, [1, 7, 4]),
-        ],
-        vec![
-            LiteralValue::U32(0),
-            LiteralValue::U32(10),
-            LiteralValue::U32(11),
-            LiteralValue::U32(12),
-            LiteralValue::U32(13),
-            LiteralValue::U32(1),
-            LiteralValue::U32(2),
-            LiteralValue::U32(3),
-        ],
-    ))
-    .unwrap();
+    let s = emit(&folded_literal_vector_store("folded_literal_vec_store")).unwrap();
 
     assert!(
         s.contains("st.global.v4.u32"),
