@@ -169,37 +169,6 @@ pub(crate) fn duplicate_nonblank_object_array_field_values(
         })
 }
 
-fn append_duplicate_object_row_finding(
-    value: &Value,
-    array_field: &str,
-    object_field: &str,
-    context: &str,
-    findings: &mut Vec<String>,
-) {
-    let duplicates = duplicate_nonblank_object_array_field_values(value, array_field, object_field);
-    if !duplicates.is_empty() {
-        findings.push(format!(
-            "{context}: {}",
-            duplicates.into_iter().collect::<Vec<_>>().join(", ")
-        ));
-    }
-}
-
-pub(crate) fn inspect_duplicate_object_rows(
-    evidence: &str,
-    value: &Value,
-    array_field: &str,
-    value_field: &str,
-    label: &str,
-    blockers: &mut Vec<String>,
-) {
-    let duplicates = duplicate_nonblank_object_array_field_values(value, array_field, value_field);
-    if !duplicates.is_empty() {
-        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
-        blockers.push(format!("{evidence}: duplicate {label}: {duplicates}"));
-    }
-}
-
 fn collect_nonblank_string_set(
     field: &str,
     items: &[Value],

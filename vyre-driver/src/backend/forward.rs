@@ -49,6 +49,12 @@ macro_rules! forward_vyre_backend_support {
         fn supported_ops(&self) -> &::std::collections::HashSet<::vyre_foundation::ir::OpId> {
             self.inner.supported_ops()
         }
+        fn honors_float_lowering(
+            &self,
+            mode: ::vyre_foundation::fp_parity::FloatLoweringMode,
+        ) -> bool {
+            self.inner.honors_float_lowering(mode)
+        }
         fn allocate_resident(
             &self,
             byte_len: usize,

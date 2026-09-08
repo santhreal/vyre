@@ -102,18 +102,24 @@ fn the_resident_layout_is_declared_in_exactly_one_crate() {
     let root = vyre_workspace_root();
     let owner_module = vyre_crate_directory(OWNER_CRATE).join(DEVICE_MODULE);
     let mut declaring: Vec<(&str, Vec<PathBuf>)> = Vec::new();
+    // One read of the member corpus, not one per declaration. The loop used to
+    // sit outside the walk, so four declarations meant four walks of every
+    // member `src/` tree and four reads of every file in it.
+    let sources: Vec<(PathBuf, String)> = structure_gate::workspace_members(&root)
+        .iter()
+        .flat_map(|member| rust_sources(&root.join(member).join("src")))
+        .filter_map(|source| {
+            std::fs::read_to_string(&source)
+                .ok()
+                .map(|text| (source, text))
+        })
+        .collect();
     for declaration in OWNED_DECLARATIONS {
-        let mut sites = Vec::new();
-        for member in structure_gate::workspace_members(&root) {
-            for source in rust_sources(&root.join(&member).join("src")) {
-                let Ok(text) = std::fs::read_to_string(&source) else {
-                    continue;
-                };
-                if text.contains(declaration) {
-                    sites.push(source);
-                }
-            }
-        }
+        let sites: Vec<PathBuf> = sources
+            .iter()
+            .filter(|(_, text)| text.contains(declaration))
+            .map(|(source, _)| source.clone())
+            .collect();
         declaring.push((declaration, sites));
     }
 

@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre-driver/float-lowering-decisions.toml` records, per registered backend, whether it lowers each `FloatLoweringMode`, and a registry-derived test fails when a backend or a mode has no decision and when a strict dispatch neither matches the reference oracle bit for bit nor is refused naming the mode and the backend."

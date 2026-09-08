@@ -4,7 +4,7 @@
 
 #[path = "harness/generated_control_values.rs"]
 mod generated_control_values;
-mod harness;
+use crate::harness;
 
 use generated_control_values::{
     generated_f32_values, generated_i32_values, generated_u32_values, MAX_F32_ULP,

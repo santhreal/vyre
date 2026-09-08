@@ -2,10 +2,9 @@
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(feature = "graph-dispatch")]
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
-#[path = "../../tests/support/csr_sweep/mod.rs"]
-mod csr_sweep;
+use crate::csr_sweep;
 
 use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_libs::graph::dispatch::persistent_bfs::{

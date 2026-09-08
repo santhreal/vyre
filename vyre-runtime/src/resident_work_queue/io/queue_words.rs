@@ -1,7 +1,7 @@
 //! Bounds-checked word addressing inside the IO slot ring, and the queue-view
 //! validation every host-side entry point runs before touching it.
 
-use crate::PipelineError;
+use crate::{PipelineError, RingEncodingFault};
 use std::sync::atomic::{fence, Ordering};
 
 use super::{IO_SLOT_COUNT, IO_SLOT_WORDS};
@@ -120,10 +120,12 @@ pub(super) fn validate_io_queue_view(byte_len: usize) -> Result<IoQueueView, Pip
             "IO_SLOT_WORDS cannot fit usize: {error}. Fix: keep IO_SLOT_WORDS within the host index ABI."
         ))
     })?;
-    let slot_bytes = slot_words.checked_mul(4).ok_or(PipelineError::QueueFull {
-        queue: "submission",
-        fix: "io_queue slot byte width overflows usize; keep IO_SLOT_WORDS within the u32 ABI",
-    })?;
+    let slot_bytes = slot_words
+        .checked_mul(4)
+        .ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
+            fix: "io_queue slot byte width overflows usize; keep IO_SLOT_WORDS within the u32 ABI",
+        })?;
     if byte_len % slot_bytes != 0 {
         return Err(PipelineError::Backend(format!(
             "io_queue has {byte_len} bytes, which is not a multiple of slot size {slot_bytes}. Fix: pass whole IO slots."
@@ -136,8 +138,8 @@ pub(super) fn validate_io_queue_view(byte_len: usize) -> Result<IoQueueView, Pip
         ))
     })?;
     if slot_count > max_slots {
-        return Err(PipelineError::QueueFull {
-            queue: "submission",
+        return Err(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Capacity,
             fix: "io_queue byte view exceeds the compiled IO poll window of 64 slots; split the queue or rebuild the megakernel with a larger IO_SLOT_COUNT",
         });
     }

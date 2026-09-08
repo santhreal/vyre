@@ -15,6 +15,7 @@ pub(crate) struct QueueClosureLaneProfile {
 }
 
 impl QueueClosureLaneProfile {
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn from_wave_lengths(
         queue_capacity: u32,
@@ -163,6 +164,7 @@ const fn u128_to_u64_saturating(value: u128) -> u64 {
     }
 }
 
+#[cfg(test)]
 const fn u128_to_u32_saturating(value: u128) -> u32 {
     if value > u32::MAX as u128 {
         u32::MAX

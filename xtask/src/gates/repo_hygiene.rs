@@ -272,7 +272,6 @@ impl crate::gate::GateBehavior for SingleBacklog {
         const SEVEN_COLUMN: &str =
             "| ID | Axis | Local evidence | Research basis | Work | Proof gate | Dedup seam |";
 
-        let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
         let tree = Tree::open(&ctx.root)?;
         report.cover_complete("tracked paths", tree.paths().len());

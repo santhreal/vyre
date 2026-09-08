@@ -19,7 +19,7 @@
 #![cfg(feature = "go-parser")]
 #![allow(deprecated)]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::decode_u32_words;
 use wire_words::go::{pack_source as pack, run, tokenize, zeroed_u32_words as zeroed};
 

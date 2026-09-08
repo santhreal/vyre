@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:518586efa1bd46905438f44cae6005e4d8ea8427:dirty=true:worktree=9b097b9e0b020e753d9d6820100c7b9f7796e8f9ec6be5af6f30123bd70db336",
+  "source_fingerprint": "git:e6b8a488d48bb8076217b25e91279ba53e809a5f:dirty=true:worktree=63d55087b12233bf741bf73d570af6ae7e406a46a143f5e96331c28e7200794c",
   "schema_version": 2,
   "objective": "publish the canonical Vyre release artifacts",
   "current_state": "prepublish_release_ready",

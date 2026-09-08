@@ -33,10 +33,7 @@ The crate lives at `vyre`. The `public-facade` owner maintains its
 | --- | --- | --- | --- | --- |
 | `example` | `vyre_release_surface` | `vyre/examples/vyre_release_surface.rs` | None | `./cargo_full test -p vyre --example vyre_release_surface` |
 | `lib` | `vyre` | `vyre/src/lib.rs` | None | `./cargo_full test -p vyre` |
-| `test` | `artifact_workflow` | `vyre/tests/artifact_workflow.rs` | None | `./cargo_full test -p vyre --test artifact_workflow` |
-| `test` | `ir_surface` | `vyre/tests/ir_surface.rs` | None | `./cargo_full test -p vyre --test ir_surface` |
-| `test` | `wire_malformed_adversarial` | `vyre/tests/wire_malformed_adversarial.rs` | None | `./cargo_full test -p vyre --test wire_malformed_adversarial` |
-| `test` | `wire_v1_round_trip` | `vyre/tests/wire_v1_round_trip.rs` | None | `./cargo_full test -p vyre --test wire_v1_round_trip` |
+| `test` | `all_tests` | `vyre/tests/all_tests.rs` | None | `./cargo_full test -p vyre --test all_tests` |
 
 ## Test classes
 

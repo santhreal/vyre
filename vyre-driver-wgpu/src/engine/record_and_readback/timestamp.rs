@@ -10,8 +10,32 @@ use std::sync::{
 use std::time::Instant;
 use vyre_driver::BackendError;
 
-const TIMESTAMP_QUERY_COUNT: u32 = 4;
-const TIMESTAMP_READBACK_BYTES: u64 = 32;
+/// Queries a timed dispatch records: pass boundary at 0 and 1, encoder writes
+/// at 2 and 3. The device capability probe resolves the same layout, so a
+/// change here changes what the probe proves.
+pub(crate) const TIMESTAMP_QUERY_COUNT: u32 = 4;
+pub(crate) const TIMESTAMP_READBACK_BYTES: u64 = 32;
+
+/// The tick array a resolved timestamp query set wrote into `mapped`.
+///
+/// One owner because the adapter capability probe and every timed dispatch
+/// decode the same little-endian `u64` block, and two decoders can disagree
+/// about how many of the resolved queries they read. A short `mapped` stays the
+/// caller's to reject, since each one reports the shortfall in its own error
+/// type.
+pub(crate) fn timestamp_ticks(mapped: &[u8]) -> [u64; TIMESTAMP_QUERY_COUNT as usize] {
+    let mut ticks = [0u64; TIMESTAMP_QUERY_COUNT as usize];
+    for (index, chunk) in mapped
+        .chunks_exact(std::mem::size_of::<u64>())
+        .take(TIMESTAMP_QUERY_COUNT as usize)
+        .enumerate()
+    {
+        let mut raw = [0u8; 8];
+        raw.copy_from_slice(chunk);
+        ticks[index] = u64::from_le_bytes(raw);
+    }
+    ticks
+}
 
 pub(crate) struct TimestampRecorder {
     pub(crate) query_set: wgpu::QuerySet,
@@ -53,7 +77,7 @@ impl TimestampRecorder {
                 .contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS)
         {
             return Err(BackendError::new(
-                "GPU timestamp profiling was requested but TIMESTAMP_QUERY and TIMESTAMP_QUERY_INSIDE_ENCODERS are not both enabled on this wgpu device. Fix: inspect adapter feature negotiation and driver support; do not silently profile with host-only timing.",
+                "GPU timestamp profiling was requested and this adapter carries no timestamp capability: TIMESTAMP_QUERY and TIMESTAMP_QUERY_INSIDE_ENCODERS are not both enabled on the created device, either because the adapter did not advertise them or because device acquisition resolved them and got no monotonic pair. Fix: read `supports_device_timestamps` before requesting a timed dispatch; do not silently profile with host-only timing.",
             ));
         }
 
@@ -190,16 +214,7 @@ pub(crate) fn collect_timestamp_profile(
             "GPU timestamp profile returned {len} bytes, expected {TIMESTAMP_READBACK_BYTES}. Fix: keep timestamp query count and readback buffer size synchronized."
         )));
     }
-    let mut ticks = [0u64; TIMESTAMP_QUERY_COUNT as usize];
-    for (index, chunk) in mapped
-        .chunks_exact(std::mem::size_of::<u64>())
-        .take(TIMESTAMP_QUERY_COUNT as usize)
-        .enumerate()
-    {
-        let mut raw = [0u8; 8];
-        raw.copy_from_slice(chunk);
-        ticks[index] = u64::from_le_bytes(raw);
-    }
+    let ticks = timestamp_ticks(&mapped);
     drop(mapped);
     buf.unmap();
 

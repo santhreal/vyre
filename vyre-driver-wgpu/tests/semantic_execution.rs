@@ -2,7 +2,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 
 use harness::acquire_live_backend;
 use vyre_driver_wgpu::{registered_backend_id, WGPU_BACKEND_ID};

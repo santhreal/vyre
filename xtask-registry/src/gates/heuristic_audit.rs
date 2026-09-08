@@ -230,12 +230,6 @@ fn resolve_vyre_dir(workspace_root: &Path) -> PathBuf {
     }
 }
 
-fn is_workspace_root(path: &Path) -> io::Result<bool> {
-    let manifest = path.join("Cargo.toml");
-    let text = read_text_bounded(&manifest)?;
-    Ok(text.contains("[workspace]") && text.contains("members"))
-}
-
 fn read_text_bounded(path: &Path) -> io::Result<String> {
     xtask::output_arg::read_text_bounded(path, MAX_HEURISTIC_AUDIT_SOURCE_BYTES, "heuristic audit")
 }

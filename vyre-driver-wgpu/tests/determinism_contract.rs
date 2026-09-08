@@ -124,7 +124,7 @@ fn inputs_strategy(program: &vyre::Program) -> BoxedStrategy<Vec<Vec<u8>>> {
     let input_lengths: Vec<usize> = program
         .buffers()
         .iter()
-        .filter(|buffer| !buffer.is_output())
+        .filter(|buffer| vyre_reference::is_reference_input(buffer))
         .map(|buffer| {
             let element_size = match buffer.element() {
                 DataType::U32 | DataType::I32 | DataType::F32 | DataType::Bool => 4,

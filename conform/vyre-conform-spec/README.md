@@ -114,10 +114,10 @@ Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `conform/vyre-conform-spec/tests/cert_contracts.rs`:
+Run the checked-in behavior from `conform/vyre-conform-spec/tests/all_tests.rs`:
 
 ```console
-./cargo_full test -p vyre-conform-spec --test cert_contracts
+./cargo_full test -p vyre-conform-spec --test all_tests
 ```
 
 ### Features

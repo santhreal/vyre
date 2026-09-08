@@ -5,8 +5,7 @@
 //! edge-kind diversity (M8), malformed CSR, cross-word bitsets.
 #![cfg(feature = "graph")]
 
-#[path = "../wire_words/mod.rs"]
-mod wire_words;
+use crate::wire_words;
 use wire_words::toposort;
 
 use vyre_libs::bitset::bitset_words;

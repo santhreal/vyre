@@ -443,6 +443,44 @@ fn source_inspection_test_scanner_is_syntax_aware_and_fail_closed() {
     assert!(findings.is_empty());
 }
 
+/// WHY: the walk followed calls between functions only, so hoisting a source
+/// read into a `LazyLock` static took it out of the graph. A test reading the
+/// static then reached no function that read anything, the file scanned as
+/// inspecting no source, and every declared row naming it read as stale. That
+/// is the silent direction of the failure: the gate stops covering the file and
+/// reports the exemptions as the thing to delete.
+///
+/// It does not catch a read reached only through a trait object or a function
+/// pointer stored at run time, which no name in the file resolves.
+#[test]
+fn source_inspection_test_scanner_follows_a_read_hoisted_into_a_static() {
+    let hoisted = r#"
+            static SOURCE_CORPUS: LazyLock<Vec<String>> = LazyLock::new(read_source_corpus);
+
+            fn read_source_corpus() -> Vec<String> {
+                let text = std::fs::read_to_string("owner.rs").unwrap();
+                vec![text]
+            }
+
+            #[cfg(test)]
+            mod tests {
+                #[test]
+                fn freezes_helper_spelling() {
+                    assert!(SOURCE_CORPUS[0].contains("fn helper"));
+                }
+            }
+        "#;
+    let mut findings = Vec::new();
+    scan_source_inspection_tests(Path::new("driver/src/lib.rs"), hoisted, &mut findings);
+    assert_eq!(
+        findings.len(),
+        1,
+        "a source read behind a static must still reach the test that reads it: {findings:?}"
+    );
+    assert_eq!(findings[0].pattern, "source_inspection_test");
+    assert!(findings[0].text.contains("freezes_helper_spelling"));
+}
+
 /// WHY: text inspection was detected only through five string methods, so a
 /// test that read a `.rs` file and handed the text to a parser was classified as
 /// inspecting nothing. Three declared rows in `STRUCTURAL_GATES.toml` were
@@ -1424,24 +1462,101 @@ pub fn undocumented() {
     );
 }
 
+/// WHY: the walk from a panic up to its doc block stepped over an attribute by
+/// matching a leading `#[`, which only the first line of a multi-line attribute
+/// has. A `#[cfg(all(\n test,\n ...\n))]` between the doc and the signature
+/// stopped the walk on `))]`, so a function that documented `# Panics` was
+/// counted against its crate's ceiling and the fix it names was already there.
+///
+/// It does not catch a doc block separated from its signature by an item the
+/// walk has no reason to cross, which is not valid Rust.
+#[test]
+fn a_multi_line_attribute_does_not_hide_the_panics_section() {
+    let source = "/// Run a fixture program.\n\
+                  ///\n\
+                  /// # Panics\n\
+                  ///\n\
+                  /// Panics when the interpreter rejects the program.\n\
+                  #[cfg(all(\n\
+                  \x20   test,\n\
+                  \x20   any(feature = \"analysis\", feature = \"fixpoint\")\n\
+                  ))]\n\
+                  fn eval(program: &Program) -> Vec<u8> {\n\
+                  \x20   run(program).unwrap_or_else(|error| panic!(\"{error}\"))\n\
+                  }\n";
+    let site = source
+        .lines()
+        .position(|line| line.contains("unwrap_or_else"))
+        .expect("Fix: the fixture must contain the panic site");
+    assert!(
+        has_documented_panic_contract(source, site),
+        "Fix: a multi-line attribute must not hide the `# Panics` section above it."
+    );
+}
+
 /// Braces inside string and character literals must not terminate a cfg(test) module early.
 ///
 /// The hygiene scan previously treated `split("}\n}")` in an inline test as two closing
 /// module braces, then reported the remaining test assertions as production panic blockers.
 #[test]
 fn brace_depth_ignores_literal_and_comment_delimiters() {
-    assert_eq!(
-        update_brace_depth(1, r#"let _ = source.split("}\n}").next();"#),
-        1
-    );
-    assert_eq!(update_brace_depth(1, "let brace = '}';"), 1);
-    assert_eq!(update_brace_depth(1, "call(); // }"), 1);
-    assert_eq!(update_brace_depth(1, "if ready {"), 2);
-    let mut raw = BraceDepthState::with_depth(1);
+    let mut state = BraceDepthState::default();
+    state.update("mod tests {");
+    assert_eq!(state.depth, 1);
+    state.update(r#"let _ = source.split("}\n}").next();"#);
+    assert_eq!(state.depth, 1);
+    state.update("let brace = '}';");
+    assert_eq!(state.depth, 1);
+    state.update("call(); // }");
+    assert_eq!(state.depth, 1);
+    state.update("if ready {");
+    assert_eq!(state.depth, 2);
+
+    let mut raw = BraceDepthState::default();
+    raw.update("mod fixtures {");
     raw.update("let artifact = br#\"{");
     raw.update("  \"nested\": {");
     raw.update("}\"#;");
     assert_eq!(raw.depth, 1);
+}
+
+/// WHY: a raw string and a block comment carried their state to the next line,
+/// a plain string did not. A `"...{\n...\` fixture resumed as code, so its
+/// remaining `}` bytes closed the enclosing `#[cfg(test)] mod tests` and the
+/// production scan resumed inside the test module. That direction is silent:
+/// `.expect(` in a test then counted against the crate's panic ceiling, and one
+/// site in `test_target_membership.rs` did, while six identical ones did not.
+///
+/// It does not catch a fixture that is itself unbalanced in a way valid Rust
+/// would reject, which the compiler answers first.
+#[test]
+fn brace_depth_carries_an_unterminated_plain_string_to_the_next_line() {
+    let mut state = BraceDepthState::default();
+    state.update("#[cfg(test)]");
+    state.update("mod tests {");
+    assert_eq!(state.depth, 1);
+    state.update("    let fixture =");
+    state.update("        \"macro_rules! case {\\n    ($n:ident) => {\\n\\");
+    state.update("            fn $n() {}\\n    };\\n}\\n\";");
+    assert_eq!(
+        state.depth, 1,
+        "a string continued across lines must not spend its braces on the module"
+    );
+    state.update("}");
+    assert_eq!(state.depth, 0, "the module still closes on its own brace");
+}
+
+/// A string left open by a bare newline is the same carry as a `\` continuation.
+///
+/// Rust admits a literal newline inside a plain string, so the state a line ends
+/// in is the only thing that says whether the next line is code.
+#[test]
+fn brace_depth_carries_a_string_opened_by_a_bare_newline() {
+    let mut state = BraceDepthState::default();
+    state.update("mod tests {");
+    state.update("    let text = \"opens here {");
+    state.update("}}} still inside\";");
+    assert_eq!(state.depth, 1);
 }
 
 /// Every spelling of a test cfg gates the item out of the production scan.

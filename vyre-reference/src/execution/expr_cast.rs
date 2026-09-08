@@ -5,19 +5,28 @@ use crate::value::Value;
 use crate::ReferenceError;
 use vyre_foundation::ir::DataType;
 
-pub(crate) fn spec_output_value(ty: DataType, bytes: &[u8]) -> Value {
+/// Decode a call's returned bytes as the declared output type.
+///
+/// Every arm is a decoding this crate has a `Value` for. A type with no arm is
+/// refused rather than returned as its raw bytes: a byte payload where the
+/// caller expects a scalar is a wrong oracle answer, and the conform gate
+/// trusts this value.
+pub(crate) fn spec_output_value(ty: DataType, bytes: &[u8]) -> Result<Value, ReferenceError> {
     match ty {
-        DataType::U32 => Value::U32(read_u32_prefix(bytes)),
-        DataType::I32 => Value::I32(read_u32_prefix(bytes) as i32),
-        DataType::Bool => Value::Bool(read_u32_prefix(bytes) != 0),
-        DataType::U64 => Value::U64(read_u64_prefix(bytes)),
-        DataType::F32 => Value::Float(f64::from(crate::execution::typed_ops::canonical_f32(
-            f32::from_bits(read_u32_prefix(bytes)),
+        DataType::U32 => Ok(Value::U32(read_u32_prefix(bytes))),
+        DataType::I32 => Ok(Value::I32(read_u32_prefix(bytes) as i32)),
+        DataType::Bool => Ok(Value::Bool(read_u32_prefix(bytes) != 0)),
+        DataType::U64 => Ok(Value::U64(read_u64_prefix(bytes))),
+        DataType::F32 => Ok(Value::Float(f64::from(
+            crate::execution::typed_ops::canonical_f32(f32::from_bits(read_u32_prefix(bytes))),
         ))),
-        DataType::Vec2U32 => Value::from(read_fixed_prefix(bytes, 8)),
-        DataType::Vec4U32 => Value::from(read_fixed_prefix(bytes, 16)),
-        DataType::Bytes => Value::from(bytes),
-        _ => Value::from(bytes),
+        DataType::Vec2U32 => Ok(Value::from(read_fixed_prefix(bytes, 8))),
+        DataType::Vec4U32 => Ok(Value::from(read_fixed_prefix(bytes, 16))),
+        DataType::Bytes => Ok(Value::from(bytes)),
+        other => Err(ReferenceError::new(format!(
+            "the reference call ABI decodes no output value for `{other:?}`. Fix: give it an \
+             arm in `spec_output_value`, or declare an output type the ABI already decodes."
+        ))),
     }
 }
 
@@ -476,7 +485,7 @@ mod tests {
     fn spec_output_value_canonicalizes_f32_subnormal_to_zero() {
         // Positive subnormal: smallest positive subnormal f32 = 0x0000_0001.
         let subnormal_bytes = 0x0000_0001_u32.to_le_bytes();
-        let result = spec_output_value(DataType::F32, &subnormal_bytes);
+        let result = spec_output_value(DataType::F32, &subnormal_bytes).expect("f32 decodes");
         // canonical_f32 maps positive subnormal → +0.0 (preserves sign bit only).
         assert_eq!(
             result,
@@ -491,7 +500,7 @@ mod tests {
     fn spec_output_value_canonicalizes_f32_negative_subnormal_to_negative_zero() {
         // Negative subnormal: 0x8000_0001.
         let neg_subnormal_bytes = 0x8000_0001_u32.to_le_bytes();
-        let result = spec_output_value(DataType::F32, &neg_subnormal_bytes);
+        let result = spec_output_value(DataType::F32, &neg_subnormal_bytes).expect("f32 decodes");
         // canonical_f32 maps negative subnormal → -0.0 (sign bit preserved, mantissa cleared).
         assert_eq!(
             result,
@@ -505,7 +514,7 @@ mod tests {
     fn spec_output_value_canonicalizes_f32_nan_payload_to_canonical_nan() {
         // Payload NaN: signaling NaN with a custom payload bit.
         let payload_nan_bytes = 0x7FA0_0001_u32.to_le_bytes();
-        let result = spec_output_value(DataType::F32, &payload_nan_bytes);
+        let result = spec_output_value(DataType::F32, &payload_nan_bytes).expect("f32 decodes");
         // canonical_f32 maps any NaN to 0x7FC0_0000.
         let expected_bits = f32::from_bits(0x7FC0_0000);
         assert_eq!(
@@ -521,11 +530,25 @@ mod tests {
     fn spec_output_value_normal_f32_passes_through_unchanged() {
         // 1.5f32 = 0x3FC0_0000 (a normal value, not subnormal or NaN).
         let normal_bytes = 0x3FC0_0000_u32.to_le_bytes();
-        let result = spec_output_value(DataType::F32, &normal_bytes);
+        let result = spec_output_value(DataType::F32, &normal_bytes).expect("f32 decodes");
         assert_eq!(
             result,
             Value::Float(f64::from(1.5_f32)),
             "Fix: spec_output_value must not alter normal f32 values"
+        );
+    }
+
+    /// An output type with no decoding is refused by name. Returning its raw
+    /// bytes instead would hand the conform gate a payload where the caller
+    /// declared a scalar, and the gate would trust it.
+    #[test]
+    fn an_output_type_without_a_decoding_is_refused_by_name() {
+        let error = spec_output_value(DataType::Array { element_size: 4 }, &[1, 2, 3, 4])
+            .expect_err("an undecodable output type must not return bytes");
+        let message = error.to_string();
+        assert!(
+            message.contains("Array"),
+            "the refusal names the type it cannot decode: {message}"
         );
     }
 }

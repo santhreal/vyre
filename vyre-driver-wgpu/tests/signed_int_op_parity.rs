@@ -11,7 +11,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 use harness::{bytes_u32, u32_bytes};
 
 use vyre_driver::{DispatchConfig, VyreBackend};

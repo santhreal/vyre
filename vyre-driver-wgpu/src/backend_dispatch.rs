@@ -490,6 +490,15 @@ impl WgpuBackend {
                 backend: <Self as vyre_driver::VyreBackend>::id(self).to_string(),
             });
         }
+        // The strict mode is a bit-identity request, and whether this adapter's
+        // shader compiler preserves per-operation rounding is measured rather
+        // than assumed. Every public entry point reaches a queue submission
+        // through `dispatch_borrowed`, `dispatch_borrowed_async`, or
+        // `record_borrowed_batch_job`, and all three admit their config here,
+        // so refusing here refuses the mode everywhere it can be requested.
+        if config.float_lowering.blocks_contraction() && !crate::strict_float::honored(self) {
+            return Err(crate::strict_float::refusal(self));
+        }
         Ok(())
     }
 
@@ -736,6 +745,22 @@ impl vyre_driver::VyreBackend for WgpuBackend {
 
     fn supported_ops(&self) -> &std::collections::HashSet<vyre_foundation::ir::OpId> {
         vyre_driver::default_supported_ops_with_trap()
+    }
+
+    /// The contracted mode always; the strict mode where the adapter earns it.
+    ///
+    /// `emit::strict_expanded` replaces every approximable f32 operation with
+    /// its exact expansion and the Naga emitter publishes each f32 product
+    /// through an integer reinterpretation emitted as its own statement, so the
+    /// module this backend hands the platform is contraction-free. The platform
+    /// then compiles it again, and one that does so under relaxed
+    /// floating-point rules folds the reinterpretation and fuses across
+    /// statements anyway. This used to answer `true` for both modes on every
+    /// adapter, which reported a contracted answer to a bit-identity request as
+    /// honored. `strict_float` measures the adapter once with a multiply-add
+    /// witness instead.
+    fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
+        !mode.blocks_contraction() || crate::strict_float::honored(self)
     }
 
     fn dispatch_borrowed(

@@ -2,7 +2,7 @@
 
 #![forbid(unsafe_code)]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::{default_gated_delta_spec, f32_bytes as bytes, f32_words_of as decode};
 
 use vyre::ir::{

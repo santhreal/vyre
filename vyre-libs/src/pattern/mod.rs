@@ -114,10 +114,3 @@ pub use scan_program::{build as build_scan_program, ScanProgram};
 pub use substring::{substring_search, SCAN_SUBSTRING_OP_ID};
 
 pub use vyre_foundation::execution_plan::fusion::{fuse_programs, fuse_programs_vec, FusionError};
-
-/// Reference region deduplication helper for parity tests.
-#[cfg(test)]
-#[must_use]
-pub(crate) fn dedup_regions_reference(input: Vec<RegionTriple>) -> Vec<RegionTriple> {
-    region::reference_dedup_regions(input)
-}

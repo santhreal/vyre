@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The community Category-A dialect scaffold compiles as generated. Its typed builder calls `check_tensors`, `check_same_shape`, `checked_element_count` and `BuildOptions`, which the `builder` feature publishes, and the generated manifest requested `vyre-libs` with `default-features = false` and no features, so a freshly scaffolded crate failed on four unresolved imports before its author changed a line."

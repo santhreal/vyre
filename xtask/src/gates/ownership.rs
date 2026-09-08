@@ -3,7 +3,7 @@
 //! Duplicate and dedup findings are reported against an owner, so a path has to
 //! resolve to exactly one lane.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
@@ -19,24 +19,12 @@ struct OwnershipConfig {
 struct OwnershipLaneConfig {
     #[serde(default)]
     write: Vec<String>,
-    #[serde(default)]
-    parent_axis: Option<String>,
-    #[serde(default)]
-    support_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct OwnershipLaneRule {
     pub(crate) lane: String,
     pub(crate) write_patterns: Vec<String>,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub(crate) struct OwnershipLaneClassification {
-    pub(crate) lane: String,
-    pub(crate) write_patterns: Vec<String>,
-    pub(crate) parent_axis: Option<String>,
-    pub(crate) support_reason: Option<String>,
 }
 
 pub(crate) fn load_ownership_lanes(path: &Path) -> Result<Vec<OwnershipLaneRule>, String> {
@@ -71,35 +59,6 @@ pub(crate) fn parse_ownership_lane_rules(text: &str) -> Result<Vec<OwnershipLane
     Ok(lanes)
 }
 
-pub(crate) fn parse_ownership_lane_classifications(
-    text: &str,
-) -> Result<BTreeMap<String, OwnershipLaneClassification>, String> {
-    let cfg = parse_ownership_config(text)?;
-    if cfg.lane.is_empty() {
-        return Err("OWNERSHIP.toml has no lane entries".to_string());
-    }
-    let mut lanes = BTreeMap::new();
-    for (lane, cfg) in cfg.lane {
-        lanes.insert(
-            lane.clone(),
-            OwnershipLaneClassification {
-                lane,
-                write_patterns: cfg.write,
-                parent_axis: normalized_optional_text(cfg.parent_axis),
-                support_reason: normalized_optional_text(cfg.support_reason),
-            },
-        );
-    }
-    Ok(lanes)
-}
-
-pub(crate) fn parse_ownership_lane_names(text: &str) -> Result<BTreeSet<String>, String> {
-    Ok(parse_ownership_lane_rules(text)?
-        .into_iter()
-        .map(|lane| lane.lane)
-        .collect())
-}
-
 pub(crate) fn owner_lane_for_file<'a>(
     file: &str,
     ownership_lanes: &'a [OwnershipLaneRule],
@@ -123,27 +82,6 @@ pub(crate) fn owner_lane_for_file<'a>(
 
 fn parse_ownership_config(text: &str) -> Result<OwnershipConfig, String> {
     toml::from_str(text).map_err(|error| error.to_string())
-}
-
-fn normalized_optional_text(value: Option<String>) -> Option<String> {
-    value.and_then(|value| {
-        let trimmed = value.trim();
-        if trimmed.is_empty() {
-            None
-        } else {
-            Some(trimmed.to_string())
-        }
-    })
-}
-
-fn ownership_pattern_matches(pattern: &str, file: &str) -> bool {
-    if let Some(prefix) = pattern.strip_suffix("/**") {
-        file == prefix || file.starts_with(&format!("{prefix}/"))
-    } else if pattern.contains('*') {
-        wildcard_match(pattern, file)
-    } else {
-        pattern == file
-    }
 }
 
 fn ownership_pattern_specificity(pattern: &str, file: &str) -> Option<usize> {
@@ -260,32 +198,6 @@ write = ["vyre-foundation/tests/*optimizer*"]
         assert_eq!(
             owner_lane_for_file("vyre-foundation/tests/wire.rs", &lanes),
             "unowned"
-        );
-    }
-
-    #[test]
-    fn ownership_classifications_preserve_supporting_lane_metadata() {
-        let text = r#"
-[lane.coordination]
-write = ["docs/optimization/**"]
-
-[lane.op_matrix]
-parent_axis = "coordination"
-support_reason = "Op coverage files support coordination evidence."
-write = ["docs/optimization/OP_MATRIX.toml"]
-"#;
-
-        let lanes = parse_ownership_lane_classifications(text).unwrap();
-        let op_matrix = lanes.get("op_matrix").unwrap();
-
-        assert_eq!(op_matrix.parent_axis.as_deref(), Some("coordination"));
-        assert_eq!(
-            op_matrix.support_reason.as_deref(),
-            Some("Op coverage files support coordination evidence.")
-        );
-        assert_eq!(
-            op_matrix.write_patterns,
-            ["docs/optimization/OP_MATRIX.toml"]
         );
     }
 }

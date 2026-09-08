@@ -14,7 +14,7 @@
 
 #![forbid(unsafe_code)]
 
-mod harness;
+use crate::harness;
 
 use harness::ir_fingerprint::assert_pinned_ir_fingerprints;
 use vyre_foundation::ir::{DataType, Node, Program};

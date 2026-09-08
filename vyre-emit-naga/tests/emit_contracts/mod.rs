@@ -113,6 +113,7 @@ mod byte_element_load;
 mod cache_entry;
 mod descriptor_control;
 mod global_store_bounds;
+mod grid_index_space;
 mod pattern_audit;
 mod pattern_pipeline_prewarm;
 mod pattern_vec_pack;

@@ -244,11 +244,21 @@ pub struct WorkspaceSnapshot {
 
 impl WorkspaceSnapshot {
     /// Capture the exact relative file set and BLAKE3 content digests across `root`.
+    ///
+    /// Every gate invocation captures this twice, before and after the gate
+    /// runs, so the whole checkout is read twice per gate. The reads are
+    /// latency-bound rather than core-bound on a network checkout, which made
+    /// one gate spend minutes inside `fs::read` and nothing inside its own
+    /// contract: the walk names the files serially and the reads run over
+    /// `structure_gate::workspace_manifest::read_lanes` lanes, the same bound
+    /// the source-corpus reads use, so the descriptor budget is shared under
+    /// one rule.
     #[must_use]
     pub fn capture(root: &Path) -> Self {
         record_snapshot_capture();
         let mut files = std::collections::BTreeMap::new();
         let mut errors = Vec::new();
+        let mut contents = Vec::new();
         let mut walker = walkdir::WalkDir::new(root).into_iter();
         while let Some(result) = walker.next() {
             let entry = match result {
@@ -284,22 +294,11 @@ impl WorkspaceSnapshot {
             if !entry.file_type().is_file() {
                 continue;
             }
-            match fs::read(path) {
-                Ok(bytes) => {
-                    files.insert(
-                        relative,
-                        SnapshotEntry::File {
-                            size: bytes.len() as u64,
-                            digest: *blake3::hash(&bytes).as_bytes(),
-                        },
-                    );
-                }
-                Err(error) => errors.push(format!(
-                    "workspace snapshot could not read `{}`: {error}",
-                    relative.display()
-                )),
-            }
+            contents.push((relative, path.to_path_buf()));
         }
+        let (read, read_errors) = digest_files(&contents);
+        files.extend(read);
+        errors.extend(read_errors);
         Self { files, errors }
     }
 
@@ -309,6 +308,12 @@ impl WorkspaceSnapshot {
     ///   `declared_artifacts` may be created or modified.
     /// - If `allow_owned_writes` is false (comparison / sweep mode), NO workspace mutation is allowed,
     ///   even for owned artifacts (Section 182.5.6).
+    ///
+    /// A path git ignores is not part of the checkout a gate certifies. Every
+    /// artifact a reviewer reads is tracked, and an ignored path is where a
+    /// concurrent process on the same checkout writes its scratch: a job log
+    /// appearing mid-run reported another process's write as this gate's
+    /// mutation and failed a gate that had touched nothing.
     #[must_use]
     pub fn detect_mutations(
         &self,
@@ -331,10 +336,12 @@ impl WorkspaceSnapshot {
                     .map(|error| format!("gate `{gate_name}` post-execution {error}")),
             )
             .collect();
+        let differing = self.differing_paths(&post);
+        let ignored = ignored_paths(root, &differing);
 
         // 1. Created files
         for rel in post.files.keys() {
-            if !self.files.contains_key(rel) {
+            if !self.files.contains_key(rel) && !ignored.contains(rel) {
                 let rel_str = rel.to_string_lossy().replace('\\', "/");
                 if !allow_owned_writes {
                     violations.push(format!(
@@ -350,7 +357,7 @@ impl WorkspaceSnapshot {
 
         // 2. Deleted files
         for rel in self.files.keys() {
-            if !post.files.contains_key(rel) {
+            if !post.files.contains_key(rel) && !ignored.contains(rel) {
                 let rel_str = rel.to_string_lossy().replace('\\', "/");
                 if !allow_owned_writes {
                     violations.push(format!(
@@ -367,7 +374,7 @@ impl WorkspaceSnapshot {
         // 3. Modified files (content digest changed, even if mtime was restored)
         for (rel, post_state) in &post.files {
             if let Some(pre_state) = self.files.get(rel) {
-                if pre_state != post_state {
+                if pre_state != post_state && !ignored.contains(rel) {
                     let rel_str = rel.to_string_lossy().replace('\\', "/");
                     if !allow_owned_writes {
                         violations.push(format!(
@@ -384,6 +391,136 @@ impl WorkspaceSnapshot {
 
         violations
     }
+
+    /// Every path whose presence or content differs between two snapshots.
+    ///
+    /// The ignore query runs over this set rather than the whole checkout, so
+    /// a run that mutated nothing asks git nothing.
+    fn differing_paths(&self, post: &Self) -> std::collections::BTreeSet<PathBuf> {
+        let mut differing = std::collections::BTreeSet::new();
+        for (rel, post_state) in &post.files {
+            match self.files.get(rel) {
+                Some(pre_state) if pre_state == post_state => {}
+                _ => {
+                    differing.insert(rel.clone());
+                }
+            }
+        }
+        for rel in self.files.keys() {
+            if !post.files.contains_key(rel) {
+                differing.insert(rel.clone());
+            }
+        }
+        differing
+    }
+}
+
+/// The subset of `candidates` git ignores, asked in one invocation.
+///
+/// `git check-ignore` consults the index, so a tracked path is never reported
+/// here however its name reads: a generated artifact that a gate writes stays
+/// a mutation. A checkout git cannot answer for yields nothing, which keeps
+/// every path a mutation and is the strict answer.
+fn ignored_paths(
+    root: &Path,
+    candidates: &std::collections::BTreeSet<PathBuf>,
+) -> std::collections::BTreeSet<PathBuf> {
+    let mut ignored = std::collections::BTreeSet::new();
+    if candidates.is_empty() {
+        return ignored;
+    }
+    let mut child = match std::process::Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["check-ignore", "--stdin", "-z"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+    {
+        Ok(child) => child,
+        Err(_) => return ignored,
+    };
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        for path in candidates {
+            let written = stdin
+                .write_all(path.to_string_lossy().as_bytes())
+                .and_then(|()| stdin.write_all(&[0]));
+            if written.is_err() {
+                break;
+            }
+        }
+    }
+    let Ok(output) = child.wait_with_output() else {
+        return ignored;
+    };
+    for name in output.stdout.split(|byte| *byte == 0) {
+        if name.is_empty() {
+            continue;
+        }
+        ignored.insert(PathBuf::from(String::from_utf8_lossy(name).into_owned()));
+    }
+    ignored
+}
+
+/// Read and digest every named file, over bounded parallel lanes.
+///
+/// Each entry is a relative path and the absolute path to read. A read that
+/// fails contributes an error line and no entry, which is what a serial read
+/// did: a file deleted between the walk and the read is reported, not guessed
+/// at.
+///
+/// # Panics
+///
+/// Resumes the panic of a digest lane that failed. A lane turns a failed read
+/// into an error line, so a panic is a defect here; a partial digest set would
+/// report an artifact as unchanged because its lane never reported.
+fn digest_files(contents: &[(PathBuf, PathBuf)]) -> (Vec<(PathBuf, SnapshotEntry)>, Vec<String>) {
+    if contents.is_empty() {
+        return (Vec::new(), Vec::new());
+    }
+    let lanes = structure_gate::workspace_manifest::read_lanes(contents.len());
+    let chunk = contents.len().div_ceil(lanes);
+    std::thread::scope(|scope| {
+        let handles: Vec<_> = contents
+            .chunks(chunk)
+            .map(|chunk| scope.spawn(move || digest_chunk(chunk)))
+            .collect();
+        let mut entries = Vec::with_capacity(contents.len());
+        let mut errors = Vec::new();
+        for handle in handles {
+            let (lane_entries, lane_errors) = handle.join().expect(
+                "a snapshot read lane must not panic. Fix: the panic is in digest_chunk above, so \
+                 read its message and correct that read, not this join",
+            );
+            entries.extend(lane_entries);
+            errors.extend(lane_errors);
+        }
+        (entries, errors)
+    })
+}
+
+/// Read and digest one lane's files.
+fn digest_chunk(contents: &[(PathBuf, PathBuf)]) -> (Vec<(PathBuf, SnapshotEntry)>, Vec<String>) {
+    let mut entries = Vec::with_capacity(contents.len());
+    let mut errors = Vec::new();
+    for (relative, path) in contents {
+        match fs::read(path) {
+            Ok(bytes) => entries.push((
+                relative.clone(),
+                SnapshotEntry::File {
+                    size: bytes.len() as u64,
+                    digest: *blake3::hash(&bytes).as_bytes(),
+                },
+            )),
+            Err(error) => errors.push(format!(
+                "workspace snapshot could not read `{}`: {error}",
+                relative.display()
+            )),
+        }
+    }
+    (entries, errors)
 }
 
 /// Compare every artifact against the tree, or write it when `write` is set.
@@ -879,8 +1016,21 @@ mod tests {
 
         let snap = WorkspaceSnapshot::capture(root);
 
-        // Modify content
+        // Modify the content, then put the mtime back: only the digest can now
+        // tell the two states apart.
         fs::write(&target, "version 2 modified").expect("write modified");
+        fs::File::options()
+            .write(true)
+            .open(&target)
+            .and_then(|file| file.set_modified(original_mtime))
+            .expect("restore mtime");
+        assert_eq!(
+            fs::metadata(&target)
+                .and_then(|m| m.modified())
+                .expect("mtime"),
+            original_mtime,
+            "Fix: restore the mtime, or the test cannot prove the digest found the change."
+        );
 
         // Compare with snapshot
         let violations = snap.detect_mutations(root, "test-gate", &["target_file.txt"], false);
@@ -939,5 +1089,79 @@ mod tests {
         assert_eq!(violations.len(), 1);
         assert!(violations[0].contains("wrote unowned workspace file `unowned_artifact.json`"));
         assert!(violations[0].contains("Section 182.5.4"));
+    }
+
+    /// WHY: the capture reads its files over parallel lanes, so a chunking
+    /// error drops or duplicates whole ranges of the tree. One file per lane is
+    /// not enough to see that: the file count here exceeds the lane bound, the
+    /// files are spread across nested directories, and every one carries
+    /// distinct content, so a lost chunk shows up as a file the snapshot never
+    /// recorded and a modification it therefore cannot report.
+    #[test]
+    fn a_tree_wider_than_the_read_lanes_is_captured_whole() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+        let count = 200;
+        for index in 0..count {
+            let nested = root.join(format!("dir_{}", index % 7));
+            fs::create_dir_all(&nested).expect("Fix: create the fixture directory.");
+            fs::write(
+                nested.join(format!("file_{index}.txt")),
+                format!("body {index}"),
+            )
+            .expect("Fix: write the fixture file.");
+        }
+
+        let snap = WorkspaceSnapshot::capture(root);
+        assert_eq!(
+            snap.files.len(),
+            count,
+            "Fix: every file the walk named must carry an entry; a lane whose \
+             results were dropped leaves the tree partly unrecorded."
+        );
+
+        let changed = root.join("dir_3/file_199.txt");
+        fs::write(&changed, "changed body").expect("Fix: modify one fixture file.");
+        let violations = snap.detect_mutations(root, "test-gate", &[], false);
+        assert_eq!(
+            violations.len(),
+            1,
+            "Fix: exactly the modified file is a violation; violations={violations:?}"
+        );
+        assert!(
+            violations[0].contains("dir_3/file_199.txt"),
+            "Fix: the violation must name the file that changed; violation={}",
+            violations[0]
+        );
+    }
+
+    #[test]
+    fn a_write_under_a_gitignored_path_is_not_this_gate_s_mutation() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+        crate::fixture_checkout::seeded(root);
+        fs::write(root.join(".gitignore"), "scratch/\n").expect("Fix: write the ignore rule.");
+        fs::create_dir_all(root.join("scratch")).expect("Fix: create the scratch directory.");
+
+        let snap = WorkspaceSnapshot::capture(root);
+        fs::write(root.join("scratch/job.log"), "another process wrote this\n")
+            .expect("Fix: write the scratch file.");
+        fs::write(root.join("tracked.txt"), "the gate wrote this\n")
+            .expect("Fix: modify the tracked file.");
+
+        let violations = snap.detect_mutations(root, "test-gate", &[], false);
+
+        assert_eq!(
+            violations.len(),
+            1,
+            "Fix: an ignored path carries nothing a reviewer reads and belongs to \
+             whatever else runs on this checkout; only the tracked write is a \
+             mutation; violations={violations:?}"
+        );
+        assert!(
+            violations[0].contains("tracked.txt"),
+            "Fix: the tracked write must still be reported; violation={}",
+            violations[0]
+        );
     }
 }

@@ -5,8 +5,7 @@ use vyre_debug::{carrier_summary, find_uncarriered_assigns};
 use vyre_foundation::ir::{Expr, Node, Program, ProgramGraph};
 use vyre_foundation::logical::LogicalProgramGraph;
 
-#[path = "program_fixtures/mod.rs"]
-mod program_fixtures;
+use crate::program_fixtures;
 
 fn lower_library_program(program: &Program) -> vyre_lower::KernelDescriptor {
     let graph = ProgramGraph::from_program("vyre-debug::loop-carrier", program.clone())

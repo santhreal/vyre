@@ -1672,66 +1672,6 @@ proof = "owning pass differential and invariant fixtures"
 benchmark = "foundation.optimizer.scalar.rules"
 
 [[pass]]
-id = "const_fold.binop.add_fma_left"
-kind = "supplemental rule"
-owner = "vyre-foundation-rules"
-phase = "ScalarAlgebra"
-boundary_class = "AbiPreserving"
-requires = []
-invalidates = []
-requires_capabilities = []
-preserves_abi = "true"
-invariant = "preserves scalar expression value while reducing redundant GPU work"
-termination = "bounded by its owning executable pass"
-proof = "owning pass differential and invariant fixtures"
-benchmark = "foundation.optimizer.scalar.rules"
-
-[[pass]]
-id = "const_fold.binop.add_fma_right"
-kind = "supplemental rule"
-owner = "vyre-foundation-rules"
-phase = "ScalarAlgebra"
-boundary_class = "AbiPreserving"
-requires = []
-invalidates = []
-requires_capabilities = []
-preserves_abi = "true"
-invariant = "preserves scalar expression value while reducing redundant GPU work"
-termination = "bounded by its owning executable pass"
-proof = "owning pass differential and invariant fixtures"
-benchmark = "foundation.optimizer.scalar.rules"
-
-[[pass]]
-id = "const_fold.binop.sub_fma_left"
-kind = "supplemental rule"
-owner = "vyre-foundation-rules"
-phase = "ScalarAlgebra"
-boundary_class = "AbiPreserving"
-requires = []
-invalidates = []
-requires_capabilities = []
-preserves_abi = "true"
-invariant = "preserves scalar expression value while reducing redundant GPU work"
-termination = "bounded by its owning executable pass"
-proof = "owning pass differential and invariant fixtures"
-benchmark = "foundation.optimizer.scalar.rules"
-
-[[pass]]
-id = "const_fold.binop.sub_fma_right"
-kind = "supplemental rule"
-owner = "vyre-foundation-rules"
-phase = "ScalarAlgebra"
-boundary_class = "AbiPreserving"
-requires = []
-invalidates = []
-requires_capabilities = []
-preserves_abi = "true"
-invariant = "preserves scalar expression value while reducing redundant GPU work"
-termination = "bounded by its owning executable pass"
-proof = "owning pass differential and invariant fixtures"
-benchmark = "foundation.optimizer.scalar.rules"
-
-[[pass]]
 id = "const_fold.binop.add_zero_left"
 kind = "supplemental rule"
 owner = "vyre-foundation-rules"
@@ -2017,7 +1957,7 @@ proof = "owning pass differential and invariant fixtures"
 benchmark = "foundation.optimizer.scalar.rules"
 
 [[pass]]
-id = "strength_reduce.shift_negation_fma"
+id = "strength_reduce.shift_negation"
 kind = "supplemental rule"
 owner = "vyre-foundation-rules"
 phase = "ScalarAlgebra"

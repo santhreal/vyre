@@ -1,6 +1,6 @@
 //! The edge-pair oracle: Kahn over `(from, to)` pairs.
 
-#[cfg(test)]
+#[cfg(all(test, feature = "graph-dispatch"))]
 use super::error::ToposortError;
 
 /// CPU reference: Kahn's algorithm over `(node_count, edges)`.
@@ -15,7 +15,7 @@ use super::error::ToposortError;
 /// Returns `ToposortError::Cycle` when the input has a cycle, or
 /// `ToposortError::UnknownNode` when an edge names a node id
 /// outside `0..node_count`.
-#[cfg(test)]
+#[cfg(all(test, feature = "graph-dispatch"))]
 pub(crate) fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, ToposortError> {
     for (edge_idx, &(from, to)) in edges.iter().enumerate() {
         if from >= node_count {
@@ -42,7 +42,7 @@ pub(crate) fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>
 }
 
 /// Reference alias for topological ordering.
-#[cfg(test)]
+#[cfg(all(test, feature = "graph-dispatch"))]
 pub(crate) fn reference_topo_order(
     node_count: u32,
     edges: &[(u32, u32)],
@@ -51,7 +51,7 @@ pub(crate) fn reference_topo_order(
 }
 
 /// Compute the set of nodes reachable from `sources` over `edges`.
-#[cfg(test)]
+#[cfg(all(test, feature = "graph-dispatch"))]
 pub(crate) fn reference_reachable_set(
     node_count: u32,
     edges: &[(u32, u32)],
@@ -61,7 +61,7 @@ pub(crate) fn reference_reachable_set(
 }
 
 /// True iff every node in `targets` is reachable from `sources`.
-#[cfg(test)]
+#[cfg(all(test, feature = "graph-dispatch"))]
 pub(crate) fn reference_all_reachable(
     node_count: u32,
     edges: &[(u32, u32)],

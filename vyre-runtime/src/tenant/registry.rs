@@ -6,7 +6,7 @@ use std::sync::Arc;
 use dashmap::DashMap;
 
 use crate::resident_work_queue::protocol::opcode::SHUTDOWN;
-use crate::PipelineError;
+use crate::{CounterArithmetic, CounterScope, PipelineError};
 
 use super::counters::TenantRuntimeCounters;
 use super::error::TenantError;
@@ -112,13 +112,20 @@ impl TenantRegistry {
                     },
                     |_, _| {
                         tenant_registry_retry_idle(registration_retries);
+                        let retries = registration_retries;
                         registration_retries = vyre_driver::accounting::checked_add_u64_lazy(
-                            registration_retries,
+                            retries,
                             1,
                             || {
-                                TenantError::Pipeline(PipelineError::QueueFull {
-                                    queue: "tenant",
-                                    fix: "tenant registration retry counter overflowed u64; retry registration later",
+                                TenantError::Pipeline(PipelineError::CounterOverflow {
+                                    scope: CounterScope::TenantRegistry,
+                                    counter: "registration retry count",
+                                    arithmetic: CounterArithmetic::Sum,
+                                    lhs: retries,
+                                    rhs: 1,
+                                    bits: 64,
+                                    fix:
+                                        "retry registration later; the id allocator has not settled",
                                 })
                             },
                         )?;

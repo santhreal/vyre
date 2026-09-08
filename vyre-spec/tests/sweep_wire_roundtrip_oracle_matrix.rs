@@ -2,21 +2,12 @@
 //!
 //! Builds hostile `Program` shapes whose literals and casts exercise the
 //! frozen `vyre_spec` wire tag surface. What a round trip has to preserve is
-//! owned by `tests/support/wire_round_trip.rs`; the shapes below are this
+//! owned by `vyre_test_support::wire_round_trip`; the shapes below are this
 //! suite's contribution.
 
 #![forbid(unsafe_code)]
 
-#[path = "../../tests/support/spec_variant_tables.rs"]
-mod spec_variant_tables;
-#[path = "../../tests/support/sweep_rng.rs"]
-mod sweep_rng;
-#[path = "../../tests/support/wire_round_trip.rs"]
-mod wire_round_trip;
-
 use smallvec::smallvec;
-use spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
-use sweep_rng::Rng;
 use vyre_foundation::ir::{BufferDecl, Expr, Node, Program};
 use vyre_spec::extension::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionUnOpId,
@@ -25,7 +16,9 @@ use vyre_spec::{
     AtomicOp, BinOp, DataType, QuantizationScale, QuantizationZeroPoint, TypeId, UnOp,
 };
 use vyre_test_support::data_type_elements::flat_buffer_element_types;
-use wire_round_trip::assert_canonical_wire_round_trip;
+use vyre_test_support::spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
+use vyre_test_support::sweep_rng::Rng;
+use vyre_test_support::wire_round_trip::assert_canonical_wire_round_trip;
 
 const CASES: usize = 1024;
 

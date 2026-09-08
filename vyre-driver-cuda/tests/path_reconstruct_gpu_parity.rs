@@ -2,7 +2,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 
 use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::graph::dispatch::path_reconstruct::{reconstruct_path_via, reconstruct_paths_via};

@@ -2,7 +2,7 @@
 
 #![cfg(feature = "nn-linear-4bit")]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::{f32_bytes, f32_words as decode_f32};
 
 use vyre_libs::nn::linear::{linear_4bit_affine_grouped_typed, QuantizedLinear4BitSpec};
@@ -72,7 +72,6 @@ fn execute_case(
         QuantizedLinear4BitSpec::affine_grouped(in_dim as u32, out_dim as u32, group_size as u32);
     let program = linear_4bit_affine_grouped_typed(&spec, "x", "w", "scale", "zp", "b", "out")
         .expect("valid grouped INT4 fixture must build");
-    let padded_output_len = program.buffers()[5].count() as usize;
     let inputs = vec![
         Value::from(f32_bytes(x)),
         Value::from(u32_bytes(&packed)),

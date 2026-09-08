@@ -1,27 +1,12 @@
-//! Per-step slot bookkeeping for a resident dispatch sequence: borrowing the
-//! caller's output vectors, and coalescing the fills an upload already covers.
+//! Per-step slot bookkeeping for a resident dispatch sequence: coalescing the
+//! fills an upload already covers.
 
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
 use vyre_driver::BackendError;
 
 use crate::backend::resident::CudaResidentBuffer;
-use crate::backend::staging_reserve::{reserve_hash_set, reserve_smallvec, resize_vec_slots};
-
-pub(crate) fn borrow_resident_sequence_output_slots(
-    outputs: &mut Vec<Vec<u8>>,
-    slot_count: usize,
-) -> Result<SmallVec<[&mut Vec<u8>; 8]>, BackendError> {
-    resize_vec_slots(outputs, slot_count, "resident sequence output slots")?;
-    let mut borrowed_outputs = SmallVec::<[&mut Vec<u8>; 8]>::new();
-    reserve_smallvec(
-        &mut borrowed_outputs,
-        outputs.len(),
-        "resident sequence borrowed output slots",
-    )?;
-    borrowed_outputs.extend(outputs.iter_mut());
-    Ok(borrowed_outputs)
-}
+use crate::backend::staging_reserve::{reserve_hash_set, reserve_smallvec};
 
 pub(crate) fn prepare_resident_sequence_fills(
     fills: &[(CudaResidentBuffer, u8)],

@@ -12,8 +12,7 @@
     clippy::assertions_on_constants
 )]
 
-#[macro_use]
-mod gate_fixtures;
+use crate::gate_fixtures;
 
 use vyre_libs::reduce::radix_sort::*;
 use vyre_reference::composition_witness::radix_sort_masked_witness as cpu_ref;

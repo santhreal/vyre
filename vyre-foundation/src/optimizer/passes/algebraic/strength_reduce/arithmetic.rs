@@ -1,6 +1,5 @@
 use super::duplication::may_duplicate;
-use crate::ir::{BinOp, Expr, UnOp};
-use crate::optimizer::passes::algebraic::const_fold::is_float_expr;
+use crate::ir::{BinOp, Expr};
 
 const MAX_SHIFT_ADD_CHAIN_COST: u32 = 4;
 
@@ -340,44 +339,6 @@ pub(super) fn reciprocal_constant_fold(left: &Expr, right: &Expr) -> Option<Expr
     None
 }
 
-pub(super) fn synthesize_fma_add(left: &Expr, right: &Expr) -> Option<Expr> {
-    if let Some((a, b)) = mul_terms(left) {
-        if is_float_expr(right) {
-            return Some(Expr::fma(a, b, right.clone()));
-        }
-    }
-    if let Some((a, b)) = mul_terms(right) {
-        if is_float_expr(left) {
-            return Some(Expr::fma(a, b, left.clone()));
-        }
-    }
-    if let Some((a, b)) = negated_mul_terms(left) {
-        if is_float_expr(right) {
-            return Some(Expr::fma(Expr::negate(a), b, right.clone()));
-        }
-    }
-    if let Some((a, b)) = negated_mul_terms(right) {
-        if is_float_expr(left) {
-            return Some(Expr::fma(Expr::negate(a), b, left.clone()));
-        }
-    }
-    None
-}
-
-pub(super) fn synthesize_fma_sub(left: &Expr, right: &Expr) -> Option<Expr> {
-    if let Some((a, b)) = mul_terms(left) {
-        if is_float_expr(right) {
-            return Some(Expr::fma(a, b, Expr::negate(right.clone())));
-        }
-    }
-    if let Some((a, b)) = mul_terms(right) {
-        if is_float_expr(left) {
-            return Some(Expr::fma(Expr::negate(a), b, left.clone()));
-        }
-    }
-    None
-}
-
 pub(super) fn power_of_two_shift(expr: &Expr) -> Option<u32> {
     match expr {
         Expr::LitU32(value) if value.is_power_of_two() => Some(value.trailing_zeros()),
@@ -386,27 +347,6 @@ pub(super) fn power_of_two_shift(expr: &Expr) -> Option<u32> {
         {
             u32::try_from(*value).ok().map(u32::trailing_zeros)
         }
-        _ => None,
-    }
-}
-
-fn mul_terms(expr: &Expr) -> Option<(Expr, Expr)> {
-    match expr {
-        Expr::BinOp {
-            op: BinOp::Mul,
-            left,
-            right,
-        } => Some((left.as_ref().clone(), right.as_ref().clone())),
-        _ => None,
-    }
-}
-
-fn negated_mul_terms(expr: &Expr) -> Option<(Expr, Expr)> {
-    match expr {
-        Expr::UnOp {
-            op: UnOp::Negate,
-            operand,
-        } => mul_terms(operand),
         _ => None,
     }
 }

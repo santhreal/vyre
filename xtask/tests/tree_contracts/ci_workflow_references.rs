@@ -128,6 +128,59 @@ fn run_commands(text: &str) -> Vec<String> {
     commands
 }
 
+/// Every unquoted single-line mapping value in a workflow file is a value YAML
+/// reads back.
+///
+/// WHY: a plain YAML scalar may not contain `": "` and may not end in `:`.
+/// Either one opens a nested mapping key where a value was expected, which is a
+/// parse error for the whole file, so every job in it never starts. A text scan
+/// cannot see that: the other contracts here read the same line, resolve a live
+/// package and a live target on it, and pass.
+///
+/// It shipped once. A composition-parity step filtered a harness by module with
+/// `--test all_tests op_pairwise:: --`, whose `:: ` contains `": "`, and
+/// `gpu-parity.yml` stopped parsing. Quoting the value is one fix and a block
+/// scalar is the other; a block scalar body carries no plain-scalar
+/// restriction, so lines inside one are skipped by indentation.
+fn unparseable_plain_scalars(text: &str) -> Vec<String> {
+    let mut offenders = Vec::new();
+    let mut block: Option<usize> = None;
+    for (number, line) in text.lines().enumerate() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let indent = line.len() - line.trim_start().len();
+        if let Some(opening) = block {
+            if indent > opening {
+                continue;
+            }
+            block = None;
+        }
+        let trimmed = line.trim_start();
+        if trimmed.starts_with('#') {
+            continue;
+        }
+        let Some(colon) = trimmed.find(": ") else {
+            continue;
+        };
+        let value = trimmed[colon + ": ".len()..].trim();
+        if value.is_empty() {
+            continue;
+        }
+        if value.starts_with(['|', '>']) {
+            block = Some(indent);
+            continue;
+        }
+        if value.starts_with(['"', '\'', '&', '*', '[', '{']) {
+            continue;
+        }
+        if value.contains(": ") || value.ends_with(':') {
+            offenders.push(format!("line {}: {trimmed}", number + 1));
+        }
+    }
+    offenders
+}
+
 /// Packages whose binary takes a registered subcommand as its first argument.
 ///
 /// `xtask` dispatches by name, and the other two implement rows of the same
@@ -343,6 +396,90 @@ fn a_shell_variable_is_not_read_as_a_name() {
     let literal = references("ci.yml", "cargo test -p xtask");
     assert_eq!(literal.len(), 1, "a literal package is still read");
     assert_eq!(literal[0].name, "xtask");
+}
+
+/// A quoted value and a block scalar pass; the shipped defect does not.
+///
+/// WHY: the judgement is a text rule standing in for a YAML parser, so it is
+/// worth only what it rejects. This pins both directions on the exact line that
+/// broke `gpu-parity.yml` and on the two forms that carry the same command
+/// legally.
+#[test]
+fn a_module_filter_is_judged_by_how_it_is_quoted() {
+    let step = "--test all_tests op_pairwise:: -- --test-threads=1";
+    assert_eq!(
+        unparseable_plain_scalars(&format!(
+            "      - name: parity\n        run: cargo {step}\n"
+        ))
+        .len(),
+        1,
+        "an unquoted module filter is a parse error and must be reported"
+    );
+    assert!(
+        unparseable_plain_scalars(&format!(
+            "      - name: parity\n        run: \"cargo {step}\"\n"
+        ))
+        .is_empty(),
+        "quoting the value carries the filter legally"
+    );
+    assert!(
+        unparseable_plain_scalars(&format!(
+            "      - name: parity\n        run: >-\n          cargo {step}\n"
+        ))
+        .is_empty(),
+        "a block scalar body carries no plain-scalar restriction"
+    );
+    assert_eq!(
+        unparseable_plain_scalars("      - name: parity\n        run: cargo test all:\n").len(),
+        1,
+        "a value ending in a colon is the same parse error"
+    );
+}
+
+/// Every workflow file is a document YAML parses.
+#[test]
+fn every_workflow_value_is_one_yaml_reads_back() {
+    let root = workspace_root();
+    let directory = root.join(".github/workflows");
+    let mut offenders = Vec::new();
+    let mut files_read = 0_usize;
+
+    for entry in fs::read_dir(&directory)
+        .unwrap_or_else(|error| panic!("Fix: {} must be readable: {error}", directory.display()))
+    {
+        let path = entry
+            .expect("Fix: a workflow directory entry must be readable")
+            .path();
+        if !path
+            .extension()
+            .is_some_and(|extension| extension == "yml" || extension == "yaml")
+        {
+            continue;
+        }
+        files_read += 1;
+        let text = fs::read_to_string(&path)
+            .unwrap_or_else(|error| panic!("Fix: cannot read {}: {error}", path.display()));
+        let name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .expect("Fix: a workflow file name must be UTF-8")
+            .to_string();
+        for offender in unparseable_plain_scalars(&text) {
+            offenders.push(format!("{name}: {offender}"));
+        }
+    }
+
+    assert!(
+        files_read > 0,
+        "Fix: no workflow files under {}, so this gate guards nothing",
+        directory.display()
+    );
+    assert!(
+        offenders.is_empty(),
+        "{offenders:#?} carry `: ` or a trailing `:` in an unquoted value, so the workflow is a \
+         YAML parse error and every job in it never starts. Fix: quote the value, or move the \
+         command into a `>-` or `|` block scalar."
+    );
 }
 
 #[test]

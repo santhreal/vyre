@@ -1,7 +1,6 @@
 use super::validate::validate_csr_inputs;
 use crate::graph::csr_closure_inputs::CsrClosureInputs;
 use vyre_reference::composition_witness::{
-    csr_forward_or_changed_closure_with_step_hook_witness_into,
     csr_forward_or_changed_closure_witness, csr_forward_or_changed_closure_witness_into,
     csr_forward_or_changed_witness_into,
 };
@@ -90,35 +89,6 @@ pub(crate) fn cpu_ref_closure_into(
         seed,
         inputs.allow_mask,
         inputs.max_iters,
-        current,
-        next,
-    );
-}
-
-pub(crate) fn cpu_ref_closure_into_with_step_hook(
-    inputs: CsrClosureInputs<'_>,
-    seed: &[u32],
-    current: &mut Vec<u32>,
-    next: &mut Vec<u32>,
-    on_step: impl FnMut(u32),
-) {
-    let graph = inputs.graph;
-    let _layout = validate_csr_inputs(
-        graph.node_count,
-        graph.edge_offsets,
-        graph.edge_targets,
-        graph.edge_kind_mask,
-    )
-    .unwrap_or_else(|error| panic!("invalid CSR forward witness input: {error}"));
-    csr_forward_or_changed_closure_with_step_hook_witness_into(
-        graph.node_count,
-        graph.edge_offsets,
-        graph.edge_targets,
-        graph.edge_kind_mask,
-        seed,
-        inputs.allow_mask,
-        inputs.max_iters,
-        on_step,
         current,
         next,
     );

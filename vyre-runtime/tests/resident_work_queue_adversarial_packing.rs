@@ -5,8 +5,9 @@ use vyre_runtime::resident_work_queue::{
     protocol::{self, slot},
     ResidentWorkQueue,
 };
-use vyre_runtime::PipelineError;
+use vyre_runtime::RingEncodingFault;
 
+use crate::ring_expectations::assert_ring_fault;
 use vyre_test_support::le_words::write_word;
 
 // ---------------------------------------------------------------------------
@@ -33,7 +34,11 @@ fn packed_slot_with_24_empty_ops_rejects_metadata_overflow() {
         .collect();
     let err = ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &ops)
         .expect_err("24 empty ops must exceed 12-word metadata budget");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Capacity,
+        "packed metadata over the 12-word budget is a capacity fault",
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -89,7 +94,11 @@ fn packed_slot_duplicate_opcodes_with_args_one_over_budget() {
     ];
     let err = ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &ops)
         .expect_err("duplicate opcodes one word over budget must reject");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Capacity,
+        "13 packed words against a 12-word budget is a capacity fault",
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -145,7 +154,11 @@ fn batch_publish_at_u32_max_minus_one_rejects_due_to_overflow() {
         0,
     )
     .expect_err("batch publish that would overflow u32 slot index must reject");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Overflow,
+        "start_slot + item count + fence past u32::MAX is an overflow",
+    );
 }
 
 // ---------------------------------------------------------------------------

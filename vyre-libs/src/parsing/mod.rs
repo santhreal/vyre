@@ -37,6 +37,10 @@ pub mod source_cache;
 /// preserving input order.
 pub mod parallel_parse;
 
+/// The phase-nesting helper, behind the two features that compose a phase:
+/// `parsing` for the core shunting-yard statement pass, `python-parser` for the
+/// Python lex and walk phases.
+#[cfg(any(feature = "parsing", feature = "python-parser"))]
 pub(crate) mod composition;
 
 /// Precomputed LR action/goto tables and CPU reference parser.

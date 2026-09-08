@@ -33,6 +33,7 @@ fn prove_emits_signed_certificate_on_gpu_build() {
         "signature",
         "public_key",
         "pairs",
+        "laws",
     ] {
         assert!(
             parsed.get(required).is_some(),

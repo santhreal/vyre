@@ -18,13 +18,6 @@ fn conditional_metric_points(
     .collect()
 }
 
-fn scaled_ratio_x1000(numerator: u64, denominator: u64) -> u64 {
-    if denominator == 0 {
-        return 0;
-    }
-    (u128::from(numerator) * 1000 / u128::from(denominator)).min(u128::from(u64::MAX)) as u64
-}
-
 /// The bench-wide 32-bit mixer.
 ///
 /// Every case that needs a reproducible pseudo-random stream generates it from

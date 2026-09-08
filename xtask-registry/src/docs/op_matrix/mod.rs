@@ -15,7 +15,7 @@ use std::path::Path;
 
 use xtask::artifact_gate::Inspection;
 
-use registered_rows::{live_operation_ids, registered_records};
+use registered_rows::{live_operation_tiers, registered_records};
 use render::render_matrix;
 use validation::validate_records;
 
@@ -63,7 +63,7 @@ fn inspect(root: &Path) -> Inspection {
 fn build_matrix(root: &Path) -> (String, Vec<String>) {
     let mut problems = Vec::new();
     let mut records = registered_records(root, &mut problems);
-    problems.extend(validate_records(&records, &live_operation_ids()));
+    problems.extend(validate_records(&records, &live_operation_tiers()));
 
     records.sort_by(|left, right| {
         (

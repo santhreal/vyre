@@ -138,14 +138,6 @@ pub(super) fn prefixed_benchmark_artifact(path: &str, prefix: &str) -> String {
     }
 }
 
-pub(super) fn write_backend_suite(
-    workspace_root: &Path,
-    backend: &str,
-    artifact_inputs: Vec<BackendSuiteArtifactInput>,
-) -> Result<(), String> {
-    write_backend_suite_with_extra_blockers(workspace_root, backend, artifact_inputs, Vec::new())
-}
-
 pub(super) fn write_backend_suite_with_extra_blockers(
     workspace_root: &Path,
     backend: &str,
@@ -1002,7 +994,7 @@ mod tests {
     fn write_wgpu_suite_regenerates_gated_fallback_artifact() {
         let dir = TempDir::new().expect("Fix: create a temporary workspace for suite output test.");
 
-        write_backend_suite(dir.path(), "wgpu", Vec::new())
+        write_backend_suite_with_extra_blockers(dir.path(), "wgpu", Vec::new(), Vec::new())
             .expect("Fix: write the backend suite evidence.");
 
         let fallback = dir
@@ -1074,7 +1066,7 @@ mod tests {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for suite duplicate family test.");
 
-        write_backend_suite(
+        write_backend_suite_with_extra_blockers(
             dir.path(),
             "wgpu",
             vec![
@@ -1091,6 +1083,7 @@ mod tests {
                     cpu_sota_100x_required: false,
                 },
             ],
+            Vec::new(),
         )
         .expect("Fix: write the backend suite evidence.");
 
@@ -1127,7 +1120,7 @@ mod tests {
             .expect("Fix: create a temporary workspace for suite duplicate path test.");
         let artifact_rel = "release/evidence/benchmarks/wgpu-shared-path.json";
 
-        write_backend_suite(
+        write_backend_suite_with_extra_blockers(
             dir.path(),
             "wgpu",
             vec![
@@ -1144,6 +1137,7 @@ mod tests {
                     cpu_sota_100x_required: false,
                 },
             ],
+            Vec::new(),
         )
         .expect("Fix: write the backend suite evidence.");
 
@@ -1206,7 +1200,7 @@ mod tests {
         )
         .expect("Fix: write blank requested-case benchmark artifact JSON.");
 
-        write_backend_suite(
+        write_backend_suite_with_extra_blockers(
             dir.path(),
             "wgpu",
             vec![BackendSuiteArtifactInput {
@@ -1215,6 +1209,7 @@ mod tests {
                 requested_case_id: " \t ".to_string(),
                 cpu_sota_100x_required: false,
             }],
+            Vec::new(),
         )
         .expect("Fix: write the backend suite evidence.");
 

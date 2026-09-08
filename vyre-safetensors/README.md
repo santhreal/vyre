@@ -32,10 +32,10 @@ Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-safetensors/tests/ingestion.rs`:
+Run the checked-in behavior from `vyre-safetensors/tests/all_tests.rs`:
 
 ```console
-./cargo_full test -p vyre-safetensors --test ingestion
+./cargo_full test -p vyre-safetensors --test all_tests
 ```
 
 ### Features

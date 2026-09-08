@@ -1,0 +1,2 @@
+category = "Added"
+text = "The `lint-liveness-evasion` gate rejects a discarded path read in production code and a restricted item whose every reference is a test one, so `dead_code = \"deny\"` cannot be satisfied by a marker read or a test-only caller."

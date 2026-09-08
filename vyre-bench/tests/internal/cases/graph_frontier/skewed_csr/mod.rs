@@ -299,7 +299,11 @@ fn skewed_csr_queue_closure_prepare_builds_resident_delta_sequence() {
         prepared.delta_grid,
         vyre_primitives::lane_grid(expected_lanes, 256)
     );
-    assert_eq!(prepared.inputs.len(), 11);
+    assert_eq!(
+        prepared.reset_program.buffers()[3].count,
+        prepared.queue_capacity,
+        "the active queue is bound at the capacity the oracle's widest wave justified"
+    );
     assert_eq!(prepared.stats.node_count, CSR_NODE_COUNT);
     assert_eq!(
         prepared.baseline_output.len(),

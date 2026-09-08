@@ -4,14 +4,14 @@
 //! way a consumer reaches it.
 
 use vyre_runtime::resident_work_queue::protocol::{
-    control, count_done_ring_slots, debug, decode_load_miss, encode_load_miss, read_debug_log,
-    read_debug_log_into, read_done_count, read_epoch, read_metrics_into, read_observable, slot,
-    try_encode_control, try_encode_empty_debug_log, try_encode_empty_ring,
-    try_encode_empty_ring_into, try_encode_load_miss, try_encode_load_miss_into,
-    try_read_debug_log, try_read_debug_log_into, try_read_done_count, try_read_epoch,
-    try_read_metrics_into, try_read_observable, try_slot_byte_len, try_slot_word_base,
-    try_slot_word_index, ProtocolError, MAX_ENCODED_DEBUG_RECORDS, MAX_ENCODED_OBSERVABLE_SLOTS,
-    MAX_ENCODED_RING_SLOTS, SLOT_WORDS, STATUS_WORD,
+    control, count_done_ring_slots, debug, decode_load_miss, read_debug_log, read_debug_log_into,
+    read_done_count, read_epoch, read_metrics_into, read_observable, slot, try_encode_control,
+    try_encode_empty_debug_log, try_encode_empty_ring, try_encode_empty_ring_into,
+    try_encode_load_miss, try_encode_load_miss_into, try_read_debug_log, try_read_debug_log_into,
+    try_read_done_count, try_read_epoch, try_read_metrics_into, try_read_observable,
+    try_slot_byte_len, try_slot_word_base, try_slot_word_index, ProtocolError,
+    MAX_ENCODED_DEBUG_RECORDS, MAX_ENCODED_OBSERVABLE_SLOTS, MAX_ENCODED_RING_SLOTS, SLOT_WORDS,
+    STATUS_WORD,
 };
 
 #[test]
@@ -179,7 +179,8 @@ fn debug_log_owned_decode_does_not_allocate_for_empty_log() {
 
 #[test]
 fn encode_load_miss_produces_correct_slot_layout() {
-    let bytes = encode_load_miss(42, true);
+    let bytes = try_encode_load_miss(42, true)
+        .expect("Fix: a load-miss slot must encode into its fixed 64-byte layout");
     assert_eq!(bytes.len(), 64);
     assert_eq!(decode_load_miss(&bytes, 0), Some((42, true)));
 }
@@ -226,7 +227,8 @@ fn slot_word_arithmetic_rejects_overflow_without_panic() {
 
 #[test]
 fn decode_load_miss_returns_none_for_wrong_opcode() {
-    let mut bytes = encode_load_miss(42, true);
+    let mut bytes = try_encode_load_miss(42, true)
+        .expect("Fix: a load-miss slot must encode into its fixed 64-byte layout");
     // Corrupt the opcode word
     bytes[4..8].copy_from_slice(&0_u32.to_le_bytes());
     assert_eq!(decode_load_miss(&bytes, 0), None);
@@ -240,8 +242,10 @@ fn decode_load_miss_returns_none_for_short_buffer() {
 #[test]
 fn decode_load_miss_uses_slot_index_correctly() {
     let mut ring = vec![0u8; 128];
-    let slot0 = encode_load_miss(7, false);
-    let slot1 = encode_load_miss(99, true);
+    let slot0 = try_encode_load_miss(7, false)
+        .expect("Fix: a load-miss slot must encode into its fixed 64-byte layout");
+    let slot1 = try_encode_load_miss(99, true)
+        .expect("Fix: a load-miss slot must encode into its fixed 64-byte layout");
     ring[..64].copy_from_slice(&slot0);
     ring[64..128].copy_from_slice(&slot1);
     assert_eq!(decode_load_miss(&ring, 0), Some((7, false)));

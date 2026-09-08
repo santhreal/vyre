@@ -353,11 +353,13 @@ fn only_one_file_defines_expr_type() {
         let text = fs::read_to_string(&path)
             .unwrap_or_else(|error| panic!("cannot read {}: {error}", path.display()));
         if text.contains("fn expr_type") {
+            // The expected owner is spelled with `/`, so the scanned path is
+            // spelled the same way before it is compared.
             definitions.push(
                 path.strip_prefix(&src)
                     .unwrap_or(&path)
-                    .display()
-                    .to_string(),
+                    .to_string_lossy()
+                    .replace('\\', "/"),
             );
         }
     }

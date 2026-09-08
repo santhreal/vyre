@@ -5,17 +5,7 @@ use std::hash::{Hash, Hasher};
 
 use rustc_hash::{FxHashMap, FxHasher};
 
-use super::{log_egraph_compat_error, EClassId, EGraphError, ENodeLang};
-
-pub(super) fn eclass_id_from_index(index: usize) -> EClassId {
-    match try_eclass_id_from_index(index) {
-        Ok(id) => id,
-        Err(error) => {
-            log_egraph_compat_error("egraph class id conversion", &error);
-            EClassId(0)
-        }
-    }
-}
+use super::{EClassId, EGraphError, ENodeLang};
 
 pub(super) fn try_eclass_id_from_index(index: usize) -> Result<EClassId, EGraphError> {
     u32::try_from(index)
@@ -62,12 +52,6 @@ pub(super) fn reserve_hashcons<L: Eq + Hash>(
             requested: additional,
             source: source.to_string(),
         })
-}
-
-pub(super) fn dedup_enodes_by_hash<L: ENodeLang>(nodes: &mut Vec<L>) {
-    if let Err(error) = try_dedup_enodes_by_hash(nodes) {
-        log_egraph_compat_error("egraph dedup", &error);
-    }
 }
 
 pub(super) fn try_dedup_enodes_by_hash<L: ENodeLang>(

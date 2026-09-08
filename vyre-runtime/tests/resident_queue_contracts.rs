@@ -3,6 +3,7 @@
 use vyre_runtime::resident_work_queue::readback::ResidentQueueReadback;
 use vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers;
 use vyre_runtime::resident_work_queue::{protocol, ResidentWorkQueue};
+use vyre_runtime::PipelineError;
 
 #[test]
 fn readback_rejects_truncated_ring_before_telemetry() {
@@ -17,7 +18,19 @@ fn readback_rejects_truncated_ring_before_telemetry() {
 
     let error = ResidentQueueReadback::from_outputs(vec![control, ring, debug, io], 2)
         .expect_err("truncated ring readback must fail before telemetry decode");
-    assert!(error.to_string().contains("readback ring"));
+    let PipelineError::Backend(message) = error else {
+        panic!(
+            "a truncated ring readback must reject as a readback validation fault, got {error:?}"
+        )
+    };
+    let expected_ring_bytes =
+        protocol::ring_byte_len(2).expect("two slots must have a representable byte length");
+    assert!(
+        message.contains(&format!(
+            "readback ring has 4 bytes, expected {expected_ring_bytes}"
+        )),
+        "the fault must report the ring length it received and the one the slot count required: {message}"
+    );
 }
 
 #[test]

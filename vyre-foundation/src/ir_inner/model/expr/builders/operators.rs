@@ -145,6 +145,10 @@ impl Expr {
         is_inf => UnOp::IsInf;
         /// `isFinite(a)`.
         is_finite => UnOp::IsFinite;
+        /// Reinterpret the 32 bits of an f32 as a u32, value unchanged.
+        bitcast_f32_to_u32 => UnOp::BitcastF32ToU32;
+        /// Reinterpret the 32 bits of a u32 as an f32, value unchanged.
+        bitcast_u32_to_f32 => UnOp::BitcastU32ToF32;
     }
 
     /// `saturating_sub(a, b)` for unsigned operands; clamps to zero when

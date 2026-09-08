@@ -5,7 +5,7 @@
 //! metadata never changes byte accounting, never drops capability ordering, and
 //! remains serde-stable across thousands of generated type/contract shapes.
 
-mod spec_variants;
+use crate::spec_variants;
 
 use smallvec::smallvec;
 use vyre_spec::SignatureParam;

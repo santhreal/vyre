@@ -3,7 +3,7 @@
 use super::staging_reserve::{
     reserve_hash_map_capacity as reserve_catalog_map, reserve_vec_capacity as reserve_catalog_vec,
 };
-use crate::PipelineError;
+use crate::{PipelineError, RingEncodingFault};
 use rustc_hash::FxHashMap;
 
 /// Dense byte alphabet used by the DFA transition table as the INPUT
@@ -347,16 +347,16 @@ pub fn pack_rule_catalog_into(
             );
 
             let class_map_base =
-                u32::try_from(scratch.class_maps.len()).map_err(|_| PipelineError::QueueFull {
-                    queue: "submission",
+                u32::try_from(scratch.class_maps.len()).map_err(|_| PipelineError::RingEncoding {
+                    fault: RingEncodingFault::Overflow,
                     fix: "flattened byte-class map table exceeds u32::MAX words; split the rule catalog into smaller groups",
                 })?;
             let class_map_target = scratch
                 .class_maps
                 .len()
                 .checked_add(ALPHABET_SIZE_USIZE)
-                .ok_or(PipelineError::QueueFull {
-                    queue: "submission",
+                .ok_or(PipelineError::RingEncoding {
+                    fault: RingEncodingFault::Overflow,
                     fix: "flattened byte-class map length overflows usize; split the rule catalog into smaller groups",
                 })?;
             reserve_catalog_vec(
@@ -367,12 +367,12 @@ pub fn pack_rule_catalog_into(
             scratch.class_maps.extend_from_slice(&scratch.class_scratch);
 
             let transition_base =
-                u32::try_from(scratch.transitions.len()).map_err(|_| PipelineError::QueueFull {
-                    queue: "submission",
+                u32::try_from(scratch.transitions.len()).map_err(|_| PipelineError::RingEncoding {
+                    fault: RingEncodingFault::Overflow,
                     fix: "flattened transition table exceeds u32::MAX words; split the rule catalog into smaller groups",
                 })?;
-            let accept_base = u32::try_from(scratch.accept.len()).map_err(|_| PipelineError::QueueFull {
-                queue: "submission",
+            let accept_base = u32::try_from(scratch.accept.len()).map_err(|_| PipelineError::RingEncoding {
+                fault: RingEncodingFault::Overflow,
                 fix: "flattened accept table exceeds u32::MAX words; split the rule catalog into smaller groups",
             })?;
             // Compressed block size = state_count * num_classes. Both are
@@ -381,16 +381,16 @@ pub fn pack_rule_catalog_into(
             // already validated.
             let compressed_words = (rule.state_count as usize)
                 .checked_mul(num_classes as usize)
-                .ok_or(PipelineError::QueueFull {
-                    queue: "submission",
+                .ok_or(PipelineError::RingEncoding {
+                    fault: RingEncodingFault::Overflow,
                     fix: "compressed transition block size overflows usize; split the rule catalog into smaller groups",
                 })?;
             let transition_target = scratch
                 .transitions
                 .len()
                 .checked_add(compressed_words)
-                .ok_or(PipelineError::QueueFull {
-                    queue: "submission",
+                .ok_or(PipelineError::RingEncoding {
+                    fault: RingEncodingFault::Overflow,
                     fix: "flattened transition table length overflows usize; split the rule catalog into smaller groups",
                 })?;
             reserve_catalog_vec(
@@ -402,8 +402,8 @@ pub fn pack_rule_catalog_into(
                 .accept
                 .len()
                 .checked_add(rule.accept.len())
-                .ok_or(PipelineError::QueueFull {
-                    queue: "submission",
+                .ok_or(PipelineError::RingEncoding {
+                    fault: RingEncodingFault::Overflow,
                     fix: "flattened accept table length overflows usize; split the rule catalog into smaller groups",
                 })?;
             reserve_catalog_vec(

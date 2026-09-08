@@ -113,9 +113,7 @@ mod tests {
         let descriptor = KernelDescriptor {
             id: "forward_dep".into(),
             bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch {
-                workgroup_size: [1, 1, 1],
-            },
+            dispatch: Dispatch::new(1, 1, 1),
             body: KernelBody {
                 ops: vec![
                     lit(0, 1),

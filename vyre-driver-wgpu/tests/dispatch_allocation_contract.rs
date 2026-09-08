@@ -12,7 +12,7 @@
 #![cfg(feature = "device-tests")]
 #![allow(missing_docs)]
 
-mod harness;
+use crate::harness;
 use harness::{acquire_live_backend as live_backend, add_one_program};
 
 use std::alloc::System;

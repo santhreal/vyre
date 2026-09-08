@@ -29,7 +29,7 @@ use vyre_megakernel::{
 
 use graph_fixtures::producer_consumer_pair;
 
-mod graph_fixtures;
+use crate::graph_fixtures;
 
 /// Elements in each declared tile. A u32 tile of 8192 elements is 32 KiB, which
 /// fits the 48 KiB budget below once and not twice.

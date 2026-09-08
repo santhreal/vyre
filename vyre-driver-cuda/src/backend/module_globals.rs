@@ -142,20 +142,6 @@ pub(crate) struct ModuleGlobalsLease {
 }
 
 impl ModuleGlobalsLease {
-    pub(crate) fn new(
-        barrier: Option<(u64, usize)>,
-        trap: Option<Arc<TrapSidecar>>,
-        guard: Option<ModuleGlobalsGuard>,
-        arrival_ceiling: u64,
-    ) -> Self {
-        Self {
-            barrier,
-            trap,
-            guard,
-            arrival_ceiling,
-        }
-    }
-
     /// Zero the grid-barrier counter on `stream`, ahead of the launch it belongs
     /// to.
     ///

@@ -926,7 +926,7 @@ mod tests {
     /// `collective_buffers` is the one match every collective rule and every
     /// collective access walk reads, so a variant it forgets is a buffer no
     /// rule validates. The gate over the whole `Node` surface lives in
-    /// `vyre-foundation/tests/validator_node_kind_coverage.rs`; this pins the
+    /// `vyre-foundation/tests/node_variant_traversal_closure.rs`; this pins the
     /// operand order the callers depend on.
     #[test]
     fn collective_buffers_reports_operands_in_order() {

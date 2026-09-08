@@ -209,10 +209,6 @@ fn adaptive_route_word(signal: u32, history: u32, threshold: u32) -> u32 {
     (route << 24) | (risk & 0x00ff_ffff)
 }
 
-fn value_identity(value: &mut u32) -> u32 {
-    *value
-}
-
 inventory::submit! {
     &ADAPTIVE_ROUTING as &'static dyn BenchCase
 }

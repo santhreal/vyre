@@ -83,7 +83,7 @@ impl MetalBackend {
             .pipeline_cache_misses
             .fetch_add(1, Ordering::Relaxed);
         self.record_pipeline_cache_miss_reason(miss_reason);
-        let lowered = vyre_lower::lower_physical(program).map_err(|error| {
+        let lowered = vyre_lower::lower_baseline(program).map_err(|error| {
             BackendError::KernelCompileFailed {
                 backend: METAL_BACKEND_ID.to_string(),
                 compiler_message: format!(

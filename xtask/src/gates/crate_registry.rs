@@ -37,10 +37,22 @@ pub const OWNERSHIP: &str = "docs/OWNERSHIP.md";
 /// The command that rewrites both documents.
 pub const WRITE_COMMAND: &str = "xtask crate-ownership --write";
 /// Schema the registry must declare.
-const SCHEMA_VERSION: i64 = 2;
+pub const SCHEMA_VERSION: i64 = 3;
 
 /// What a caller does about any disagreement this gate reports.
 const FIX: &str = "change the manifest and its `[[crate.dependency]]` record together, then run `xtask crate-ownership --write`";
+
+/// One declared layer, and its position in the dependency DAG.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LayerRecord {
+    /// Layer name, as a `[[crate]]` row spells it.
+    pub name: String,
+    /// Dependency depth. A production edge is legal only when the source rank
+    /// is strictly greater than the destination rank.
+    pub rank: i64,
+    /// What the layer is for, in the registry's own words.
+    pub purpose: String,
+}
 
 /// One declared internal production edge.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -131,13 +143,19 @@ impl crate::gate::GateBehavior for CrateOwnership {
         report.produced(GRAPH);
         report.produced(OWNERSHIP);
         let records = load_registry(&tree, &mut report)?;
+        let layers = load_layers(&tree, &mut report)?;
         report.cover_complete("workspace crates", records.len());
+        report.cover_complete("architecture layers", layers.len());
         let state = workspace_state(&tree)?;
         report.findings.extend(contract_findings(&state, &records));
+        report
+            .findings
+            .extend(direction_findings(&state, &records, &layers));
         report.note(format!(
-            "{} registry row(s) across {} workspace member(s)",
+            "{} registry row(s) across {} workspace member(s) in {} layer(s)",
             records.len(),
-            state.members.len()
+            state.members.len(),
+            layers.len()
         ));
 
         // A registry that does not describe this workspace cannot render a
@@ -147,7 +165,7 @@ impl crate::gate::GateBehavior for CrateOwnership {
             return Ok(report);
         }
         for (path, rendered) in [
-            (GRAPH, render_graph(&records)?),
+            (GRAPH, render_graph(&records, &layers)?),
             (OWNERSHIP, render_ownership(&records)),
         ] {
             report
@@ -373,6 +391,136 @@ pub fn load_registry(tree: &Tree, report: &mut Report) -> Result<Vec<CrateRecord
         });
     }
     Ok(records)
+}
+
+/// What a caller does about a direction or layer disagreement.
+const DIRECTION_FIX: &str = "put the dependency's destination in a lower-ranked layer, or correct the two `[[layer]]` ranks, then run `xtask crate-ownership --write`";
+
+/// Every `[[layer]]` row the registry declares.
+pub fn load_layers(tree: &Tree, report: &mut Report) -> Result<Vec<LayerRecord>, GateError> {
+    let registry = tree.read_toml(REGISTRY)?;
+    let Some(rows) = registry.get("layer").and_then(Value::as_array) else {
+        report.find(Finding::in_file(
+            REGISTRY,
+            "the registry declares no [[layer]] rows",
+            DIRECTION_FIX,
+        ));
+        return Ok(Vec::new());
+    };
+    let mut layers: Vec<LayerRecord> = Vec::new();
+    for (index, row) in rows.iter().enumerate() {
+        let context = format!("{REGISTRY} [[layer]] row {}", index + 1);
+        let name = text(row, "name", &context, report);
+        let purpose = text(row, "purpose", &context, report);
+        let rank = match row.get("rank").and_then(Value::as_integer) {
+            Some(rank) if rank >= 0 => rank,
+            _ => {
+                report.find(Finding::in_file(
+                    REGISTRY,
+                    format!("{context} declares no non-negative integer `rank`"),
+                    DIRECTION_FIX,
+                ));
+                -1
+            }
+        };
+        if layers.iter().any(|earlier| earlier.name == name) {
+            report.find(Finding::in_file(
+                REGISTRY,
+                format!("{context} declares layer `{name}` a second time"),
+                DIRECTION_FIX,
+            ));
+        }
+        layers.push(LayerRecord {
+            name,
+            rank,
+            purpose,
+        });
+    }
+    Ok(layers)
+}
+
+/// Every way the resolved graph disagrees with the declared layer DAG.
+///
+/// The rule is one comparison: a production edge is legal when the source layer
+/// outranks the destination layer, and an edge inside one layer is always
+/// legal. A reversal fails it directly, and a layer cycle cannot be written
+/// down at all, because a cycle needs at least one edge whose source does not
+/// outrank its destination. Nothing here enumerates permitted layer pairs, so
+/// the registry carries no second roster to drift from the manifests.
+///
+/// Only `normal` edges are judged. A dev-dependency on a higher layer is how a
+/// crate tests against the facade that consumes it, and cargo builds it in a
+/// separate graph that cannot form a production cycle.
+fn direction_findings(
+    state: &WorkspaceState,
+    records: &[CrateRecord],
+    layers: &[LayerRecord],
+) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    let rank: BTreeMap<&str, i64> = layers
+        .iter()
+        .map(|layer| (layer.name.as_str(), layer.rank))
+        .collect();
+    let layer_of: BTreeMap<&str, &str> = records
+        .iter()
+        .map(|record| (record.package.as_str(), record.layer.as_str()))
+        .collect();
+
+    for record in records {
+        if !rank.contains_key(record.layer.as_str()) {
+            findings.push(Finding::in_file(
+                REGISTRY,
+                format!(
+                    "`{}` sits in layer `{}` and no [[layer]] row declares it",
+                    record.package, record.layer
+                ),
+                DIRECTION_FIX,
+            ));
+        }
+    }
+    let occupied: BTreeSet<&str> = records.iter().map(|record| record.layer.as_str()).collect();
+    for layer in layers {
+        if !occupied.contains(layer.name.as_str()) {
+            findings.push(Finding::in_file(
+                REGISTRY,
+                format!("layer `{}` holds no workspace member", layer.name),
+                "delete the [[layer]] row, or move a member into it",
+            ));
+        }
+    }
+
+    for (package, destinations) in &state.dependencies {
+        let Some(source_layer) = layer_of.get(package.as_str()) else {
+            continue;
+        };
+        let Some(source_rank) = rank.get(*source_layer) else {
+            continue;
+        };
+        for (destination, use_) in destinations {
+            if !use_.kinds.iter().any(|kind| kind == "normal") {
+                continue;
+            }
+            let Some(destination_layer) = layer_of.get(destination.as_str()) else {
+                continue;
+            };
+            if source_layer == destination_layer {
+                continue;
+            }
+            let Some(destination_rank) = rank.get(*destination_layer) else {
+                continue;
+            };
+            if source_rank <= destination_rank {
+                findings.push(Finding::in_file(
+                    REGISTRY,
+                    format!(
+                        "`{package}` in layer `{source_layer}` (rank {source_rank}) depends on `{destination}` in layer `{destination_layer}` (rank {destination_rank})"
+                    ),
+                    DIRECTION_FIX,
+                ));
+            }
+        }
+    }
+    findings
 }
 
 /// One `[[crate]]` row as a gate that judges something else reads it.
@@ -828,7 +976,7 @@ fn ordered(records: &[CrateRecord]) -> Vec<&CrateRecord> {
 /// complete on that path, but this is a public renderer and a caller that hands
 /// it a partial record set gets the package name back instead of an index out
 /// of a map.
-pub fn render_graph(records: &[CrateRecord]) -> Result<String, GateError> {
+pub fn render_graph(records: &[CrateRecord], layers: &[LayerRecord]) -> Result<String, GateError> {
     let ordered = ordered(records);
     let ids: BTreeMap<&str, String> = ordered
         .iter()
@@ -851,6 +999,29 @@ pub fn render_graph(records: &[CrateRecord]) -> Result<String, GateError> {
             .to_string(),
         "together, then regenerate this file.".to_string(),
         String::new(),
+        "## Layer ranks".to_string(),
+        String::new(),
+        "A production dependency is legal only when the consumer's layer outranks the".to_string(),
+        "dependency's layer. Two layers share a rank when neither depends on the other."
+            .to_string(),
+        String::new(),
+        "| Rank | Layer | Purpose |".to_string(),
+        "| --- | --- | --- |".to_string(),
+    ];
+    let mut ranked: Vec<&LayerRecord> = layers.iter().collect();
+    ranked.sort_by(|left, right| {
+        left.rank
+            .cmp(&right.rank)
+            .then_with(|| left.name.cmp(&right.name))
+    });
+    for layer in &ranked {
+        lines.push(format!(
+            "| `{}` | `{}` | {} |",
+            layer.rank, layer.name, layer.purpose
+        ));
+    }
+    lines.extend([
+        String::new(),
         "## Workspace dependency graph".to_string(),
         String::new(),
         format!(
@@ -862,7 +1033,7 @@ pub fn render_graph(records: &[CrateRecord]) -> Result<String, GateError> {
         String::new(),
         "```mermaid".to_string(),
         "graph TD".to_string(),
-    ];
+    ]);
     for record in &ordered {
         lines.push(format!(
             "  {}[\"{}\"]",
@@ -1028,5 +1199,117 @@ mod tests {
             format_list(&["gpu".to_string(), "std".to_string()]),
             "`gpu`, `std`"
         );
+    }
+
+    /// One consumer, one dependency, and the layer rows to judge them by.
+    fn direction_case(
+        source_layer: &str,
+        source_rank: i64,
+        destination_layer: &str,
+        destination_rank: i64,
+        kinds: &[&str],
+    ) -> Vec<Finding> {
+        let records = vec![
+            CrateRecord {
+                package: "consumer".to_string(),
+                path: "consumer".to_string(),
+                owner: "consumer-seam".to_string(),
+                layer: source_layer.to_string(),
+                responsibility: "consume".to_string(),
+                dependencies: Vec::new(),
+            },
+            CrateRecord {
+                package: "dependency".to_string(),
+                path: "dependency".to_string(),
+                owner: "dependency-seam".to_string(),
+                layer: destination_layer.to_string(),
+                responsibility: "be consumed".to_string(),
+                dependencies: Vec::new(),
+            },
+        ];
+        let layers = vec![
+            LayerRecord {
+                name: source_layer.to_string(),
+                rank: source_rank,
+                purpose: "consume".to_string(),
+            },
+            LayerRecord {
+                name: destination_layer.to_string(),
+                rank: destination_rank,
+                purpose: "be consumed".to_string(),
+            },
+        ];
+        let state = WorkspaceState {
+            members: vec!["consumer".to_string(), "dependency".to_string()],
+            paths: BTreeMap::from([
+                ("consumer".to_string(), "consumer".to_string()),
+                ("dependency".to_string(), "dependency".to_string()),
+            ]),
+            dependencies: BTreeMap::from([(
+                "consumer".to_string(),
+                BTreeMap::from([(
+                    "dependency".to_string(),
+                    DependencyUse {
+                        kinds: kinds.iter().map(|kind| (*kind).to_string()).collect(),
+                        ..DependencyUse::default()
+                    },
+                )]),
+            )]),
+        };
+        direction_findings(&state, &records, &layers)
+    }
+
+    /// WHY: the rank comparison is the whole direction contract, so the case it
+    /// exists for has to fail. A consumer in a layer the dependency's layer
+    /// outranks is a reversal, and an equal rank is one too: two layers share a
+    /// rank only when neither depends on the other.
+    #[test]
+    fn a_layer_reversal_is_a_finding() {
+        let reversed = direction_case("low", 1, "high", 4, &["normal"]);
+        assert_eq!(reversed.len(), 1, "{reversed:?}");
+        let equal = direction_case("left", 3, "right", 3, &["normal"]);
+        assert_eq!(equal.len(), 1, "{equal:?}");
+        assert!(direction_case("high", 4, "low", 1, &["normal"]).is_empty());
+    }
+
+    /// WHY: a dev-dependency on a higher layer is how a crate tests against the
+    /// facade that consumes it. Cargo resolves it in a separate graph that
+    /// cannot form a production cycle, so judging it would reject the intended
+    /// shape.
+    #[test]
+    fn a_development_edge_carries_no_direction() {
+        assert!(direction_case("low", 1, "high", 4, &["dev"]).is_empty());
+        assert_eq!(
+            direction_case("low", 1, "high", 4, &["dev", "normal"]).len(),
+            1
+        );
+    }
+
+    /// WHY: a layer a crate row names and no `[[layer]]` row declares has no
+    /// rank, so every edge touching it would be skipped rather than judged. The
+    /// unranked layer itself is the finding, and so is a declared layer no
+    /// member occupies: it is a rank nothing is held to.
+    #[test]
+    fn an_unmatched_layer_is_a_finding() {
+        let records = vec![CrateRecord {
+            package: "consumer".to_string(),
+            path: "consumer".to_string(),
+            owner: "consumer-seam".to_string(),
+            layer: "undeclared".to_string(),
+            responsibility: "consume".to_string(),
+            dependencies: Vec::new(),
+        }];
+        let layers = vec![LayerRecord {
+            name: "empty".to_string(),
+            rank: 0,
+            purpose: "nothing".to_string(),
+        }];
+        let state = WorkspaceState {
+            members: vec!["consumer".to_string()],
+            paths: BTreeMap::from([("consumer".to_string(), "consumer".to_string())]),
+            dependencies: BTreeMap::new(),
+        };
+        let findings = direction_findings(&state, &records, &layers);
+        assert_eq!(findings.len(), 2, "{findings:?}");
     }
 }

@@ -30,6 +30,11 @@ links no concrete driver and every device acquisition fails closed.
 published crates and are not facade features. A caller that wants one adds
 it as a direct dependency.
 
+`cpu-parity` is also declared on the facade. It selects no dependency and no
+code in this crate, so a consumer enables `cuda` or `wgpu` and nothing else.
+The reference interpreter is `vyre-reference`, a published crate a caller adds
+as a direct dependency.
+
 ## Why a feature is required
 
 A backend registers itself at link time through the `inventory` crate.

@@ -14,7 +14,7 @@
 //! choice: a budget may change which instruction an op with two forms uses, and
 //! may never decide whether the emitter accepts the descriptor at all.
 //!
-//! The roster is `tests/support/spec_variant_tables.rs`, held to the frozen
+//! The roster is `vyre_test_support::spec_variant_tables`, held to the frozen
 //! `vyre_spec` public surface at run time by
 //! `vyre-spec/tests/spec_variant_tables_cover_the_frozen_surface.rs`. A `UnOp`
 //! added to the enum and gated on the budget turns this red without anyone
@@ -27,16 +27,13 @@
 
 #![forbid(unsafe_code)]
 
-#[path = "../../tests/support/spec_variant_tables.rs"]
-mod spec_variant_tables;
-
-use spec_variant_tables::builtin_un_ops;
 use vyre_emit_ptx::{emit_with_options, ComputeCapability, PtxEmitOptions};
 use vyre_foundation::ir::{DataType, UnOp};
 use vyre_lower::descriptor_builder::{
     body, descriptor, effect, global_ro, global_wo, lit, op, SlotCount,
 };
 use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
+use vyre_test_support::spec_variant_tables::builtin_un_ops;
 
 fn options(ulp_budget: Option<u32>) -> PtxEmitOptions {
     PtxEmitOptions {

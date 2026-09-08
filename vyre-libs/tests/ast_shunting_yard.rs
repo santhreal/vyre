@@ -2,7 +2,7 @@
 
 #![cfg(feature = "parsing")]
 #![allow(deprecated)]
-mod wire_words;
+use crate::wire_words;
 
 use vyre::ir::Expr;
 use vyre_libs::parsing::core::ast::node::*;

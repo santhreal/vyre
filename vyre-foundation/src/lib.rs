@@ -10,6 +10,8 @@ extern crate self as vyre;
 
 /// Shared structured diagnostic protocol.
 pub mod diagnostics;
+/// Strict-IEEE f32 expansion of the approximable transcendentals.
+pub mod fp_expansion;
 /// Shared floating-point parity policy and typed buffer comparison.
 pub mod fp_parity;
 /// Target-neutral launch geometry requirements and lowering strategy.
@@ -87,6 +89,8 @@ pub mod ir {
 pub mod cpu_op;
 /// Backend-neutral literal evaluation used by IR optimization and lowering.
 pub(crate) mod ir_eval;
+/// Program → data-derived loop bound analysis.
+pub mod loop_bounds;
 /// Domain-neutral byte-range result types.
 pub mod match_result;
 /// Substrate-neutral memory ordering.

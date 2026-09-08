@@ -4,7 +4,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 
 use harness::{cuda_u32_bitset_output, with_live_backend};
 use vyre_libs::label::resolve_family::resolve_family;

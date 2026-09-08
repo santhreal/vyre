@@ -2,9 +2,9 @@
 //!
 //! # ONE definitional home for "where is the frozen surface of crate X"
 //!
-//! `scripts/check_public_api_snapshot.sh` extracts every publishable crate's
-//! rustdoc surface into `docs/public-api/<package>.txt`, and a byte-stability
-//! gate holds each file equal to that crate's real surface. Several contract
+//! The `public-api` gate in `xtask/src/gates/public_api.rs` extracts every
+//! publishable crate's rustdoc surface into `docs/public-api/<package>.txt` and
+//! holds each file equal to that crate's real surface. Several contract
 //! tests derive an expected set from those files at run time, which is how a new
 //! IR variant, capability field or evaluator impl reaches them through the
 //! snapshot refresh instead of through a hand-typed list that goes stale in

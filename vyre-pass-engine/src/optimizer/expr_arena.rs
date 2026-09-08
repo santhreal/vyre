@@ -414,6 +414,8 @@ fn un_op_tag(op: &UnOp) -> Result<u32, EncodeError> {
         UnOp::Unpack8Low => 0x22,
         UnOp::Unpack8High => 0x23,
         UnOp::Reciprocal => 0x24,
+        UnOp::BitcastF32ToU32 => 0x25,
+        UnOp::BitcastU32ToF32 => 0x26,
         UnOp::Opaque(_) => {
             return Err(EncodeError::Unsupported(
                 "ExprArena V1: UnOp::Opaque extensions not yet tagged",
@@ -509,6 +511,8 @@ pub fn un_op_from_tag(tag: u32) -> Option<UnOp> {
         0x22 => UnOp::Unpack8Low,
         0x23 => UnOp::Unpack8High,
         0x24 => UnOp::Reciprocal,
+        0x25 => UnOp::BitcastF32ToU32,
+        0x26 => UnOp::BitcastU32ToF32,
         _ => return None,
     })
 }

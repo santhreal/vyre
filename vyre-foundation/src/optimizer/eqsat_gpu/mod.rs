@@ -11,7 +11,7 @@
 //! parallel by subgroup-cooperative passes.
 //!
 //! The mirror is additive: CPU passes keep using `EGraph::saturate`,
-//! while GPU-aware passes use `GpuEGraphSnapshot::from_egraph_with`
+//! while GPU-aware passes use `GpuEGraphSnapshot::try_from_egraph_with`
 //! to materialise the columnar arrays and merge discovered equivalences
 //! back through `apply_equivalences_to_egraph`.
 //!

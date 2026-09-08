@@ -21,7 +21,7 @@
 //! decided, because a move whose domain nobody bounded inherits the inferred
 //! one.
 
-mod harness;
+use crate::harness;
 
 use std::collections::BTreeSet;
 

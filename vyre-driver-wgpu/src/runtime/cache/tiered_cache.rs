@@ -273,8 +273,12 @@ impl TieredCache {
         if self.get(key).is_some() {
             self.evict(key);
         }
+        // The size is recorded only once the entry is placed. Eviction visits
+        // indexed keys, so a tracker node for a key no tier accepted is never
+        // reclaimed and the tracker grows without bound.
+        self.insert_into_tier(key, size, 0)?;
         self.tracker.set_size(key, size);
-        self.insert_into_tier(key, size, 0)
+        Ok(())
     }
 
     /// Record an access for the given key.
@@ -382,10 +386,16 @@ impl TieredCache {
             self.tiers[target].lru.ensure(key);
             self.tiers[target].lru.touch(key);
             self.index.insert(key, target);
-            Ok(())
-        } else {
-            self.insert_into_tier(key, size, fallback)
+            return Ok(());
         }
+        let placed = self.insert_into_tier(key, size, fallback);
+        if placed.is_err() {
+            // The move took the entry out of its tier and no tier took it back,
+            // so the key is gone from the index and its tracker node has no
+            // owner left to evict it.
+            self.tracker.remove(key);
+        }
+        placed
     }
 
     fn make_room(&mut self, tier: usize, size: u64) -> bool {
@@ -513,6 +523,81 @@ fn recompute_tier_used(tier: &CacheTier) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every tracker node must belong to an indexed entry.
+    ///
+    /// The tracker is bounded by the cache index and nothing else: eviction
+    /// reaches a node only through a key the index still holds, so a node left
+    /// behind by a rejected placement is unreclaimable for the life of the
+    /// process. This asserts the invariant over the whole tracker rather than
+    /// one leaked key, so a new mutator that forgets the tracker fails here.
+    fn assert_tracker_holds_only_indexed_keys(cache: &TieredCache, after: &str) {
+        let tracked = cache.tracker.hot_set(usize::MAX);
+        let orphans: Vec<u64> = tracked
+            .iter()
+            .copied()
+            .filter(|key| !cache.index.contains_key(key))
+            .collect();
+        assert!(
+            orphans.is_empty(),
+            "after {after}: tracker holds {orphans:?} with no cache entry; eviction can never reclaim these nodes"
+        );
+    }
+
+    #[test]
+    fn a_rejected_insert_leaves_no_tracker_node() {
+        let mut cache = TieredCache::new(vec![CacheTier::new("gpu", 128)]);
+        assert_eq!(
+            cache.insert(1, 4096),
+            Err(CacheError::EntryTooLarge),
+            "Fix: an entry larger than every tier must be rejected."
+        );
+        assert!(
+            cache.tracker.stats(1).is_none(),
+            "Fix: a key no tier accepted must leave no access node behind."
+        );
+        assert_tracker_holds_only_indexed_keys(&cache, "a rejected insert");
+    }
+
+    #[test]
+    fn a_repeated_rejected_insert_does_not_grow_the_tracker() {
+        let mut cache = TieredCache::new(vec![CacheTier::new("gpu", 128)]);
+        cache
+            .insert(1, 64)
+            .expect("Fix: a fitting entry must insert");
+        for key in 100..1_000 {
+            assert_eq!(cache.insert(key, 4096), Err(CacheError::EntryTooLarge));
+        }
+        assert_eq!(
+            cache.tracker.hot_set(usize::MAX),
+            vec![1],
+            "Fix: 900 rejected inserts must not accumulate 900 access nodes."
+        );
+        assert_tracker_holds_only_indexed_keys(&cache, "900 rejected inserts");
+    }
+
+    #[test]
+    fn a_promote_that_cannot_be_placed_leaves_no_tracker_node() {
+        // The second tier cannot hold the entry, so the promote target rejects
+        // it; the fallback tier is then filled by a hotter key so the entry has
+        // nowhere to return to.
+        let mut cache =
+            TieredCache::new(vec![CacheTier::new("gpu", 64), CacheTier::new("host", 8)]);
+        cache
+            .insert(1, 64)
+            .expect("Fix: a fitting entry must insert");
+        cache.record_access(1);
+        cache.record_access(1);
+        cache.record_access(1);
+        let promoted = cache.promote(1);
+        assert_tracker_holds_only_indexed_keys(&cache, "a promote into a tier that cannot hold it");
+        if cache.get(1).is_none() {
+            assert!(
+                cache.tracker.stats(1).is_none(),
+                "Fix: a promote that dropped the entry must drop its access node, got {promoted:?}"
+            );
+        }
+    }
 
     #[test]
     fn tiered_cache_repairs_used_bytes_after_underflow_instead_of_panicking() {

@@ -16,7 +16,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 use harness::{byte_stream_input_bytes, dispatch_single_u32_output, u32_bytes};
 
 use vyre_driver_wgpu::WgpuBackend;

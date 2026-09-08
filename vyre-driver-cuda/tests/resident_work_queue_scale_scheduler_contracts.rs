@@ -68,7 +68,6 @@ fn sample_dispatch(
 fn schedule_megakernel_from_cuda_samples(
     samples: &[CudaMegakernelScheduleSample],
     launch_overhead_ns: f64,
-    n_steps: u32,
     dt: f64,
 ) -> Result<Vec<f64>, String> {
     if !dt.is_finite() || dt < 0.0 {
@@ -127,13 +126,9 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
         dispatch_cost_ns: 10_000.0,
         ..large
     };
-    let schedule = schedule_megakernel_from_cuda_samples(
-        &[scheduler_small, scheduler_large],
-        launch_ns,
-        64,
-        0.25,
-    )
-    .expect("Fix: CUDA telemetry samples must feed the scale-aware megakernel scheduler.");
+    let schedule =
+        schedule_megakernel_from_cuda_samples(&[scheduler_small, scheduler_large], launch_ns, 0.25)
+            .expect("Fix: CUDA telemetry samples must feed the scale-aware megakernel scheduler.");
     assert_eq!(schedule.len(), 2);
     assert!(
         schedule[1] > schedule[0],

@@ -7,15 +7,16 @@
 //!
 //! ## Layer 1  -  IR-Level Passes (`vyre-foundation/src/optimizer/passes/`)
 //!
-//! Pure mathematical rewrites that transform `Expr → Expr` in the IR.
-//! Backend-agnostic  -  every backend benefits equally.
+//! Pure mathematical rewrites that transform `Expr → Expr` in the IR. Every
+//! backend benefits equally, and no rewrite here changes what the program
+//! computes: contracting `a * b + c` into one rounding does, so it is a Layer 2
+//! decision and appears in the table below.
 //!
 //! | Pass | Example | Lives In |
 //! |------|---------|----------|
 //! | Strength reduce | `x / 7` → `mulhi(x, M) >> s` | `strength_reduce/` |
 //! | Const fold | `3 + 4` → `7` | `const_fold/` |
 //! | Shift-add decomp | `x * 5` → `(x<<2) + x` | `strength_reduce/` |
-//! | FMA synthesis | `a*b + c` → `fma(a,b,c)` | `strength_reduce/` |
 //! | Exact division | `(x*6)/3` → `x * inv(3)` | `strength_reduce/` |
 //! | Lemire remainder | `x % 7` → `lowbits(x*M)*7>>32` | `strength_reduce/` |
 //!
@@ -28,6 +29,7 @@
 //! |----------|---------|--------|
 //! | primary-binary native multiply-high | backend | `MulHigh` → 1 instruction |
 //! | secondary-text native multiply-high | backend | `MulHigh` → 1 instruction |
+//! | Multiply-add contraction | target permitting it | `a*b + c` → one rounding, denied under `FloatLoweringMode::StrictIeee` |
 //! | 16-bit half-word decomp | target-text fallback | `MulHigh` → 14 ALU ops |
 //! | Dual-issue FP32/INT32 | capable device | Division via FP pipeline |
 //! | Matrix-core batching | capable device | Batched int8 multiply |

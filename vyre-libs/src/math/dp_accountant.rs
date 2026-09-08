@@ -102,12 +102,6 @@ fn gaussian_rdp_step_cpu(alpha: &[f64], sigma_squared: &[f64]) -> Vec<f64> {
     vyre_reference::composition_witness::gaussian_rdp_step_witness(alpha, sigma_squared)
 }
 
-/// CPU reference using caller-owned output storage.
-#[cfg(test)]
-fn gaussian_rdp_step_cpu_into(alpha: &[f64], sigma_squared: &[f64], out: &mut Vec<f64>) {
-    vyre_reference::composition_witness::gaussian_rdp_step_witness_into(alpha, sigma_squared, out);
-}
-
 /// Fallible CPU reference using caller-owned output storage.
 #[cfg(test)]
 fn try_gaussian_rdp_step_cpu_into(

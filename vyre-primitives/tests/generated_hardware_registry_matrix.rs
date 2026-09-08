@@ -5,14 +5,12 @@
 //! future CUDA/Vulkan/WGPU gates can reason about arity and semantics without
 //! reverse-engineering fixture buffers.
 
-mod gate_fixtures;
-
 use std::collections::BTreeMap;
 
-use gate_fixtures::run_cpu;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_primitives::hardware::all_entries;
 use vyre_primitives::hardware::catalog::{intrinsic_facet, HardwareSemantic, OpShape};
+use vyre_test_support::hardware_oracle::run_cpu;
 
 #[derive(Clone, Copy)]
 struct ExpectedHardwareEntry {

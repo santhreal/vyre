@@ -13,9 +13,12 @@ concurrency:
 jobs:
   miri:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
-      # Miri cannot run wgpu (host GPU unavailable, native calls). Scope to
-      # pure-Rust crates with no FFI.
+      # `unsafe_code` is denied workspace-wide except in vyre-runtime, so every
+      # raw-pointer, aliasing, and Send/Sync claim Miri can falsify is in that
+      # crate. Miri cannot execute wgpu or CUDA calls, and vyre-runtime enables
+      # no default features, so its unit tests stay host-only.
       MIRIFLAGS: -Zmiri-disable-isolation
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +30,4 @@ jobs:
         # component, so every invocation names the nightly the action installed.
         run: |
           ./cargo_full +nightly miri setup
-          ./cargo_full +nightly miri test -p vyre-spec --lib
-          ./cargo_full +nightly miri test -p vyre-foundation --lib
-          ./cargo_full +nightly miri test -p vyre -p vyre-reference --lib --no-default-features
+          ./cargo_full +nightly miri test -p vyre-runtime --lib

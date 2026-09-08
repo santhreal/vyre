@@ -16,7 +16,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 use harness::{add_one_program, bytes_u32, u32_bytes};
 use vyre_driver::{grid_sync, BackendError, DispatchConfig};
 use vyre_driver_cuda::occupancy::cooperative_thread_residency_block_limit;

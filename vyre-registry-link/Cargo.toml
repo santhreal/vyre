@@ -1,6 +1,7 @@
 [package]
 name = "vyre-registry-link"
 version = "0.8.0"
+autotests = false
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -56,8 +57,10 @@ toml = { workspace = true }
 # one target directory.
 structure-gate = { path = "../structure-gate" }
 # The level-stage closure reads the `IrLevel` variants from `vyre-spec` source
-# and resolves that source through the shared monorepo helpers.
-vyre-test-support = { workspace = true }
+# and resolves that source through the shared monorepo helpers. `ir-fixtures`
+# carries the strict-float witness program the strict-dispatch contract runs,
+# which vyre-driver-wgpu asserts the uncomposed half of.
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 
 [features]
 # The default is every registry and every declared driver, so this crate's own
@@ -78,7 +81,12 @@ wgpu = ["dep:vyre-driver-wgpu"]
 # wrapped in a file-level `cfg`: cargo then skips the suite for a selection that
 # lacks the feature instead of failing on it, and a consumer reads the
 # prerequisite from the manifest.
+
 [[test]]
-name = "registry_link_rules"
-path = "tests/registry_link_rules.rs"
+name = "all_tests"
+path = "tests/all_tests.rs"
+
+[[test]]
+name = "all_tests_operations"
+path = "tests/all_tests_operations.rs"
 required-features = ["operations"]

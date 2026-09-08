@@ -47,8 +47,9 @@ assert_eq!(artifact.nodes().len(), 1);
 assert_eq!(artifact.abi().entries.len(), 1);
 ```
 
-That program is `vyre/tests/artifact_workflow.rs`. Run it with
-`cargo test -p vyre --test artifact_workflow`.
+That program is `vyre/tests/artifact_workflow.rs`, one module of the crate's
+single integration-test binary. Run it with
+`cargo test -p vyre --test all_tests artifact_workflow`.
 
 ## The four steps
 

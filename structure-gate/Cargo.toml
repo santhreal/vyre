@@ -1,6 +1,7 @@
 [package]
 name = "structure-gate"
 version = "0.1.0"
+autotests = false
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -32,3 +33,7 @@ path = "src/lib.rs"
 [[bin]]
 name = "structure-gate"
 path = "src/main.rs"
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

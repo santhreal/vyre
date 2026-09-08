@@ -530,10 +530,13 @@ impl CompiledPipeline for WgpuPipeline {
                 },
                 iterations,
                 timestamp_profile: true,
-                inferred_grid_shape: config
-                    .launch_grid()
-                    .is_none()
-                    .then_some(self.workgroup_shape),
+                inferred_launch: config.launch_grid().is_none().then(|| {
+                    crate::engine::record_and_readback::InferredLaunch {
+                        workgroup_shape: self.workgroup_shape,
+                        max_per_axis: self.axis_ceiling(config),
+                        grid_linearized: self.grid_linearized,
+                    }
+                }),
             },
         )?;
         let enqueue_ns =

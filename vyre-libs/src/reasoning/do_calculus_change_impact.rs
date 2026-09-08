@@ -407,11 +407,12 @@ where
     }
 
     let cells = checked_square_cells(n, op_name)?;
-    let cells_u32 = u32::try_from(cells).map_err(|_| {
-        SemanticExecutionError::InvalidRequest(format!(
+    // Reject the u32 lane limit here: the program builder recomputes n*n as u32 and traps silently.
+    if u32::try_from(cells).is_err() {
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: {op_name} n*n exceeds the primitive u32 lane limit for n={n}."
-        ))
-    })?;
+        )));
+    }
     if adj.len() != cells {
         return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: {op_name} requires adj.len() == n*n, got len={}, n={n}, n*n={cells}.",

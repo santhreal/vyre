@@ -344,17 +344,6 @@ impl CudaBackend {
         Ok(())
     }
 
-    /// Download selected byte ranges from several CUDA-resident buffers with one stream fence.
-    pub(crate) fn download_resident_readbacks_many(
-        &self,
-        handles: &[CudaResidentBuffer],
-        readbacks: &[CudaOutputReadback],
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
-        let mut outputs = reserved_vec(handles.len(), "resident readback output")?;
-        self.download_resident_readbacks_many_into(handles, readbacks, &mut outputs)?;
-        Ok(outputs)
-    }
-
     /// Download selected byte ranges from several CUDA-resident buffers into
     /// caller-owned output slots with one stream fence.
     pub(crate) fn download_resident_readbacks_many_into(
@@ -521,6 +510,15 @@ impl CudaBackend {
 
         let mut fused_views = fused_readbacks.views.iter().copied();
         for (copies, batch_outputs) in copy_batches.iter().zip(outputs.iter_mut()) {
+            if batch_outputs.len() != copies.len() {
+                return Err(BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: CUDA resident fused batched readback holds {} output slot(s) for a batch of {} copy slot(s). Reserve one output slot per copy before collecting outputs; a short batch consumes another batch's fused views.",
+                        batch_outputs.len(),
+                        copies.len()
+                    ),
+                });
+            }
             for output in batch_outputs {
                 let view = fused_views.next().ok_or_else(|| BackendError::InvalidProgram {
                     fix: format!(

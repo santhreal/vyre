@@ -5,7 +5,7 @@
 //! schedulers. This file keeps that wiring broad and deterministic.
 //!
 //! Which cases exist, and what the answer is, belong to
-//! `tests/support/dense_matvec_cases.rs`. This file pins only what
+//! `crate::dense_matvec_cases`. This file pins only what
 //! `vyre_libs::encoding::bitset_transform_pipeline` owes for those cases: its
 //! frontier and LUT sizing, its LUT builder, its CPU parity oracle, and the
 //! Program it composes.
@@ -19,10 +19,7 @@ use vyre_libs::encoding::bitset_transform_pipeline::{
 };
 use vyre_reference::composition_witness::dense_boolean_matvec_witness as reference_dense_boolean_matvec;
 
-#[path = "../../tests/support/dense_matvec_cases.rs"]
-mod dense_matvec_cases;
-
-use dense_matvec_cases::{
+use crate::dense_matvec_cases::{
     arm_coverage, assert_program_overwrites_dirty_output, declared_groups, DenseMatvecCase,
     LutCache,
 };

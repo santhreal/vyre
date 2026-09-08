@@ -2,7 +2,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 
 use harness::self_optimizer::{body_of, run_pipeline};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};

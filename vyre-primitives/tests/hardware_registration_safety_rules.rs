@@ -19,8 +19,6 @@
 //! symmetric and still wrong; rotation separates the two.
 #![cfg(feature = "hardware")]
 
-mod gate_fixtures;
-
 use vyre_foundation::operation::SemanticOperation;
 use vyre_reference::value::Value;
 use vyre_test_support::overfire_grid;

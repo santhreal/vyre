@@ -27,6 +27,7 @@ This crate declares no Cargo features.
 | --- | --- | --- | --- | --- |
 | `bin` | `xtask-registry` | `xtask-registry/src/main.rs` | None | `./cargo_full test -p xtask-registry --bin xtask-registry` |
 | `lib` | `xtask_registry` | `xtask-registry/src/lib.rs` | None | `./cargo_full test -p xtask-registry` |
+| `test` | `registry_contracts` | `xtask-registry/tests/registry_contracts/main.rs` | None | `./cargo_full test -p xtask-registry --test registry_contracts` |
 
 ## Test classes
 

@@ -15,6 +15,7 @@
 //! `stride=1` convolves along rows (horizontal) and `stride=W`
 //! convolves along columns (vertical).
 
+use crate::builder::trip_count::clamped_by_extents;
 use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -49,10 +50,16 @@ pub fn conv1d_node(input: &str, output: &str, weights: &str, params: &str) -> No
             Node::if_then(
                 Expr::lt(Expr::var("idx"), Expr::var("count")),
                 vec![
-                    // Kernel diameter = 2 * radius + 1.
+                    // Kernel diameter = 2 * radius + 1. `radius` is buffer data
+                    // and the doubling wraps, so the diameter is clamped to the
+                    // extent the loop variable indexes.
                     Node::let_bind(
                         "diameter",
-                        Expr::add(Expr::mul(Expr::var("radius"), Expr::u32(2)), Expr::u32(1)),
+                        clamped_by_extents(
+                            Expr::add(Expr::mul(Expr::var("radius"), Expr::u32(2)), Expr::u32(1)),
+                            weights,
+                            [],
+                        ),
                     ),
                     // Accumulator.
                     Node::let_bind("acc", Expr::u32(0)),

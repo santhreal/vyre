@@ -117,6 +117,29 @@ pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, crate::Refer
         };
         return Ok(Value::U32((bits >> shift) & mask));
     }
+    // Bit reinterpretation is shared across operand type and carries no
+    // rounding, so it answers ahead of the per-type dispatch, which
+    // canonicalizes every f32 it touches. A reinterpretation that flushed a
+    // subnormal or quieted a NaN would not be a reinterpretation.
+    match op {
+        UnOp::BitcastF32ToU32 => {
+            return match operand {
+                Value::Float(value) => Ok(Value::U32((value as f32).to_bits())),
+                other => Err(ReferenceError::new(format!(
+                    "unary op `{op:?}` reinterprets an f32 word as u32 and requires an f32 operand, got {other:?}. Fix: produce an f32 value before reinterpreting its bits."
+                ))),
+            };
+        }
+        UnOp::BitcastU32ToF32 => {
+            return match operand {
+                Value::U32(value) => Ok(Value::Float(f64::from(f32::from_bits(value)))),
+                other => Err(ReferenceError::new(format!(
+                    "unary op `{op:?}` reinterprets a u32 word as f32 and requires a u32 operand, got {other:?}. Fix: produce a u32 value before reinterpreting its bits."
+                ))),
+            };
+        }
+        _ => {}
+    }
     match operand {
         Value::U32(value) => unop_u32(op, value),
         Value::I32(value) => unop_i32(op, value),

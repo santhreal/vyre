@@ -6,7 +6,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 
 use harness::{bytes_u32, csr_traversal_inputs, with_live_backend};
 use vyre_driver::DispatchConfig;

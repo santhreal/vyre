@@ -156,9 +156,14 @@ mod tests {
     use crate::workgroup::InvocationIds;
     use std::sync::Arc;
     use vyre_foundation::ir::Node;
-
+    /// A snapshot is taken per lane every time a collective is reached, so it must
+    /// stay proportional to the number of live locals and never touch their payloads.
+    /// The map is a flat hash map, so this is what a reader can rely on: every value
+    /// in the snapshot is the same allocation the invocation still holds, and a
+    /// local bound in an inner scope is present. A snapshot that rebuilt values, or
+    /// that captured only the outermost scope, fails here.
     #[test]
-    fn subgroup_snapshots_share_persistent_local_maps() {
+    fn subgroup_snapshots_copy_no_local_payload() {
         let entry: &[Node] = &[];
         let mut invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
         for index in 0..256 {
@@ -179,10 +184,18 @@ mod tests {
         let invocations = [invocation];
         let snapshots = capture_invocation_snapshots(&invocations);
 
-        assert!(
-            snapshots[0].locals.locals.ptr_eq(&invocations[0].locals.locals),
-            "Fix: subgroup snapshots must clone the persistent locals root instead of rebuilding or deep-cloning values"
-        );
+        for index in 0..256 {
+            let name = format!("lane_value_{index}");
+            let live = invocations[0].locals.local(&name);
+            let captured = snapshots[0].locals.local(&name);
+            let (Some(Value::Bytes(live)), Some(Value::Bytes(captured))) = (live, captured) else {
+                panic!("Fix: subgroup snapshots must retain every bound local `{name}` as bytes");
+            };
+            assert!(
+                Arc::ptr_eq(&live, &captured),
+                "Fix: subgroup snapshots must share local payloads instead of copying them"
+            );
+        }
         assert_eq!(
             snapshots[0].locals.local("scoped"),
             Some(Value::U32(7)),

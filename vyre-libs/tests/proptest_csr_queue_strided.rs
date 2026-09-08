@@ -2,7 +2,7 @@
 
 #![cfg(feature = "graph")]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::{mix64, queue_forward_oracle};
 
 use proptest::prelude::*;

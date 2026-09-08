@@ -7,7 +7,6 @@
 //! on.
 #![allow(unsafe_code)]
 #![allow(non_camel_case_types)]
-#![allow(dead_code)]
 // The POD structs below mirror Linux `io_uring.h` exactly  -  per-field
 // docstrings would just paraphrase the kernel headers. The struct-level
 // doc on each type points at the canonical reference.
@@ -365,10 +364,10 @@ impl IoUringState {
         // SAFETY: sq_ring_ptr is a valid mmap'd SQ ring. The flags word is
         // kernel-owned and documented as an atomically observed status field.
         unsafe {
-            let flags = (*(self.sq_ring_ptr.add(kernel_offset_usize_or_panic(
-                self.params.sq_off.flags,
-                "SQ flags offset",
-            )) as *const core::sync::atomic::AtomicU32))
+            let flags = (*(self
+                .sq_ring_ptr
+                .add(kernel_offset_usize(self.params.sq_off.flags))
+                as *const core::sync::atomic::AtomicU32))
                 .load(core::sync::atomic::Ordering::Acquire);
             (flags & IORING_SQ_NEED_WAKEUP) != 0
         }
@@ -383,29 +382,29 @@ impl IoUringState {
     pub(crate) fn get_sqe(&mut self) -> Option<&mut io_uring_sqe> {
         // SAFETY: mmap regions and kernel offsets are valid; &mut self forbids producers racing.
         unsafe {
-            let head = (*(self.sq_ring_ptr.add(kernel_offset_usize_or_panic(
-                self.params.sq_off.head,
-                "SQ head offset",
-            )) as *const core::sync::atomic::AtomicU32))
+            let head = (*(self
+                .sq_ring_ptr
+                .add(kernel_offset_usize(self.params.sq_off.head))
+                as *const core::sync::atomic::AtomicU32))
                 .load(core::sync::atomic::Ordering::Acquire);
-            let tail_ptr = self.sq_ring_ptr.add(kernel_offset_usize_or_panic(
-                self.params.sq_off.tail,
-                "SQ tail offset",
-            )) as *const core::sync::atomic::AtomicU32;
+            let tail_ptr = self
+                .sq_ring_ptr
+                .add(kernel_offset_usize(self.params.sq_off.tail))
+                as *const core::sync::atomic::AtomicU32;
             let tail = (*tail_ptr).load(core::sync::atomic::Ordering::Relaxed);
-            let ring_entries = *(self.sq_ring_ptr.add(kernel_offset_usize_or_panic(
-                self.params.sq_off.ring_entries,
-                "SQ ring_entries offset",
-            )) as *const u32);
+            let ring_entries = *(self
+                .sq_ring_ptr
+                .add(kernel_offset_usize(self.params.sq_off.ring_entries))
+                as *const u32);
 
             if tail.wrapping_sub(head) < ring_entries {
-                let ring_mask = *(self.sq_ring_ptr.add(kernel_offset_usize_or_panic(
-                    self.params.sq_off.ring_mask,
-                    "SQ ring_mask offset",
-                )) as *const u32);
+                let ring_mask = *(self
+                    .sq_ring_ptr
+                    .add(kernel_offset_usize(self.params.sq_off.ring_mask))
+                    as *const u32);
                 let idx = tail & ring_mask;
                 let sqes = self.sqes_ptr as *mut io_uring_sqe;
-                Some(&mut *sqes.add(kernel_offset_usize_or_panic(idx, "SQE index")))
+                Some(&mut *sqes.add(kernel_offset_usize(idx)))
             } else {
                 None
             }
@@ -416,22 +415,21 @@ impl IoUringState {
     pub fn commit_sqe(&mut self) {
         // SAFETY: same ring invariants as get_sqe; Release tail publish orders SQE writes.
         unsafe {
-            let tail_ptr = self.sq_ring_ptr.add(kernel_offset_usize_or_panic(
-                self.params.sq_off.tail,
-                "SQ tail offset",
-            )) as *const core::sync::atomic::AtomicU32;
+            let tail_ptr = self
+                .sq_ring_ptr
+                .add(kernel_offset_usize(self.params.sq_off.tail))
+                as *const core::sync::atomic::AtomicU32;
             let tail = (*tail_ptr).load(core::sync::atomic::Ordering::Relaxed);
-            let array_ptr = self.sq_ring_ptr.add(kernel_offset_usize_or_panic(
-                self.params.sq_off.array,
-                "SQ array offset",
-            )) as *mut u32;
-            let ring_mask = *(self.sq_ring_ptr.add(kernel_offset_usize_or_panic(
-                self.params.sq_off.ring_mask,
-                "SQ ring_mask offset",
-            )) as *const u32);
+            let array_ptr =
+                self.sq_ring_ptr
+                    .add(kernel_offset_usize(self.params.sq_off.array)) as *mut u32;
+            let ring_mask = *(self
+                .sq_ring_ptr
+                .add(kernel_offset_usize(self.params.sq_off.ring_mask))
+                as *const u32);
             let idx = tail & ring_mask;
 
-            *array_ptr.add(kernel_offset_usize_or_panic(idx, "SQ array index")) = idx;
+            *array_ptr.add(kernel_offset_usize(idx)) = idx;
             (*(tail_ptr as *mut core::sync::atomic::AtomicU32))
                 .store(tail.wrapping_add(1), core::sync::atomic::Ordering::Release);
         }
@@ -441,28 +439,28 @@ impl IoUringState {
     pub(crate) fn peek_cqe(&mut self) -> Option<&io_uring_cqe> {
         // SAFETY: cq_ring_ptr is live and Acquire tail reads synchronize with kernel CQE writes.
         unsafe {
-            let head_ptr = self.cq_ring_ptr.add(kernel_offset_usize_or_panic(
-                self.params.cq_off.head,
-                "CQ head offset",
-            )) as *const core::sync::atomic::AtomicU32;
+            let head_ptr = self
+                .cq_ring_ptr
+                .add(kernel_offset_usize(self.params.cq_off.head))
+                as *const core::sync::atomic::AtomicU32;
             let head = (*head_ptr).load(core::sync::atomic::Ordering::Relaxed);
-            let tail = (*(self.cq_ring_ptr.add(kernel_offset_usize_or_panic(
-                self.params.cq_off.tail,
-                "CQ tail offset",
-            )) as *const core::sync::atomic::AtomicU32))
+            let tail = (*(self
+                .cq_ring_ptr
+                .add(kernel_offset_usize(self.params.cq_off.tail))
+                as *const core::sync::atomic::AtomicU32))
                 .load(core::sync::atomic::Ordering::Acquire);
 
             if head != tail {
-                let ring_mask = *(self.cq_ring_ptr.add(kernel_offset_usize_or_panic(
-                    self.params.cq_off.ring_mask,
-                    "CQ ring_mask offset",
-                )) as *const u32);
+                let ring_mask = *(self
+                    .cq_ring_ptr
+                    .add(kernel_offset_usize(self.params.cq_off.ring_mask))
+                    as *const u32);
                 let idx = head & ring_mask;
-                let cqes = self.cq_ring_ptr.add(kernel_offset_usize_or_panic(
-                    self.params.cq_off.cqes,
-                    "CQ CQE base offset",
-                )) as *const io_uring_cqe;
-                Some(&*cqes.add(kernel_offset_usize_or_panic(idx, "CQE index")))
+                let cqes = self
+                    .cq_ring_ptr
+                    .add(kernel_offset_usize(self.params.cq_off.cqes))
+                    as *const io_uring_cqe;
+                Some(&*cqes.add(kernel_offset_usize(idx)))
             } else {
                 None
             }
@@ -536,10 +534,10 @@ impl IoUringState {
     pub fn advance_cq(&mut self) {
         // SAFETY: cq_ring_ptr is live and Release head store publishes our acknowledgement.
         unsafe {
-            let head_ptr = self.cq_ring_ptr.add(kernel_offset_usize_or_panic(
-                self.params.cq_off.head,
-                "CQ head offset",
-            )) as *mut core::sync::atomic::AtomicU32;
+            let head_ptr = self
+                .cq_ring_ptr
+                .add(kernel_offset_usize(self.params.cq_off.head))
+                as *mut core::sync::atomic::AtomicU32;
             let head = (*head_ptr).load(core::sync::atomic::Ordering::Relaxed);
             (*head_ptr).store(head.wrapping_add(1), core::sync::atomic::Ordering::Release);
         }
@@ -659,8 +657,8 @@ fn kernel_record_span_usize(
     })
 }
 
-fn kernel_offset_usize_or_panic(value: u32, label: &'static str) -> usize {
-    let _ = label;
+/// Widen a kernel-reported ring offset or index to usize.
+fn kernel_offset_usize(value: u32) -> usize {
     value as usize
 }
 

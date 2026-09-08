@@ -89,6 +89,9 @@ fn invalid_f32_reduction_program(
     )
 }
 
+/// Only `math/conv` and `math/weighted_sum` trap an f32 output, and both are
+/// dialect-level modules.
+#[cfg(feature = "math-dialect")]
 #[must_use]
 pub(crate) fn trap_f32_output_program(
     op_id: &'static str,

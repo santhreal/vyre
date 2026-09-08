@@ -205,6 +205,9 @@ fn compiler_grade_release_program_build_scale(criterion: &mut Criterion) {
     group.finish();
 }
 
+// The ingest case reads Linux zero-copy telemetry, so its module is declared for
+// that host only and this projection follows it.
+#[cfg(target_os = "linux")]
 fn nvme_gpu_ingest_telemetry_projection_scale(criterion: &mut Criterion) {
     let mut group = criterion.benchmark_group("runtime_io/nvme_gpu_ingest_telemetry");
     for spec in vyre_bench::cases::nvme_gpu_ingest::nvme_gpu_ingest_specs() {
@@ -239,6 +242,7 @@ fn nvme_gpu_ingest_telemetry_projection_scale(criterion: &mut Criterion) {
     group.finish();
 }
 
+#[cfg(target_os = "linux")]
 criterion_group!(
     release,
     registry_inventory_collection,
@@ -248,5 +252,15 @@ criterion_group!(
     dominator_tree_program_build_scale,
     compiler_grade_release_program_build_scale,
     nvme_gpu_ingest_telemetry_projection_scale
+);
+#[cfg(not(target_os = "linux"))]
+criterion_group!(
+    release,
+    registry_inventory_collection,
+    bitset_and_cpu_ref_scale,
+    bitset_and_cpu_ref_into_scale,
+    dominator_tree_cpu_oracle_scale,
+    dominator_tree_program_build_scale,
+    compiler_grade_release_program_build_scale
 );
 criterion_main!(release);

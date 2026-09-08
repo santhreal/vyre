@@ -7,7 +7,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 #[path = "harness/self_optimizer_const_prop_bool.rs"]
 mod self_optimizer_const_prop_bool;
 

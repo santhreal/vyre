@@ -12,7 +12,10 @@ categories = ["algorithms"]
 
 [dependencies]
 vyre = "0.8.0"
-vyre-libs = { version = "0.8.0", default-features = false }
+# The scaffold's typed builder uses `check_tensors`, `check_same_shape`,
+# `checked_element_count` and `BuildOptions`, which the `builder` feature
+# publishes. `default-features = false` keeps the dialect closure off.
+vyre-libs = { version = "0.8.0", default-features = false, features = ["builder"] }
 vyre-foundation = "0.8.0"
 vyre-spec = "0.8.0"
 thiserror = "2"

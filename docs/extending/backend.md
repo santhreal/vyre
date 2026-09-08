@@ -43,6 +43,24 @@ lowering path both support the thing. A backend that cannot decide answers
 no. An optimistic answer that fails at dispatch is worse than a negative
 one, because the caller had no way to route around it.
 
+## Float lowering modes
+
+`DispatchConfig::float_lowering` states the rounding the caller requires.
+`VyreBackend::honors_float_lowering` states which modes your backend lowers,
+and the default states only the mode that permits contraction. A dispatch
+asking for a mode you do not declare is refused where it enters the registry
+wrapper, because emitting the mode you do lower answers a bit-identity request
+with contracted arithmetic. Declare a mode after the emitter implements it:
+the strict mode requires the exact expansion from
+`vyre_foundation::fp_expansion` and an emission that no adjacent add can fuse.
+
+Record the answer in `vyre-driver/float-lowering-decisions.toml`, one row per
+backend with one key per mode and the reason the answer holds. A backend the
+registry serves with no row there fails
+`vyre-registry-link/tests/float_lowering_decisions.rs`, which also dispatches a
+strict program and requires the result to match the reference oracle bit for
+bit or the refusal to name both the mode and the backend.
+
 ## Device loss
 
 Device loss invalidates the native modules and resident handles of that

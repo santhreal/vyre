@@ -63,10 +63,6 @@ pub(crate) fn tag_creation_order() -> [&'static str; 2] {
     [vyre_rc_tag(), vyre_tag()]
 }
 
-pub(crate) fn rc_to_final_tags() -> [(&'static str, &'static str); 1] {
-    [(vyre_rc_tag(), vyre_tag())]
-}
-
 pub(crate) fn tag_policy() -> &'static str {
     data().tags.policy.as_str()
 }
@@ -118,9 +114,8 @@ mod tests {
     /// The shell launch path must load the same RC and final tags as the Rust release contract.
     ///
     /// Unix only, because the launcher is: `scripts/lib/toml_reader.sh` reads
-    /// the manifest through `python3`, and on Windows that name resolves to the
-    /// Store execution alias, which exits nonzero and prints nothing. The
-    /// release hosts run the script; Windows never does.
+    /// the manifest in bash, and the release hosts run the script through a
+    /// shell Windows does not provide.
     #[cfg(unix)]
     #[test]
     fn shell_release_loader_matches_canonical_tag_creation_order() {

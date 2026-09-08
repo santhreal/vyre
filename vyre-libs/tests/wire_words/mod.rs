@@ -4,7 +4,18 @@
 //! so a test that writes its own `flat_map(to_le_bytes)` loop is a second copy
 //! of a shipped primitive. The BF16 rounding has no production owner because
 //! only the typed contracts need it, so it is owned here.
-#![allow(unused_imports, unused_macros)]
+//!
+//! This module is compiled once per including test binary, and no binary uses
+//! every helper: `literal_set_presence_and_positions_reference` wants one
+//! decoder and `causal_gqa_typed_contract` wants the BF16 rounding. Each
+//! unused-in-this-binary helper is live in a sibling binary, so `dead_code`
+//! here reports the inclusion shape rather than an item with no caller. An
+//! `expect` cannot state that: the lint fires in some binaries and not others,
+//! and the fulfilled half would fail `unfulfilled_lint_expectations`.
+// The rest of the set every including binary used to restate at its own `mod`
+// declaration.
+#![allow(clippy::assertions_on_constants, clippy::identity_op, dead_code)]
+#![allow(unused_imports, unused_macros, unused_mut, unused_variables)]
 
 use vyre_primitives::wire::decode_u16_le_bytes_all;
 use vyre_reference::value::Value;

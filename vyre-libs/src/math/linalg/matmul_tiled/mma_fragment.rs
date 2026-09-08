@@ -43,17 +43,6 @@ impl MmaCapabilityRecord {
             tf32_m16n8k4: true,
         }
     }
-
-    /// A target with no descriptor-level MMA. Every tensor-core path on such a
-    /// target lowers to the cooperative body instead.
-    pub(crate) const fn no_descriptor_mma() -> Self {
-        Self {
-            descriptor_mma: false,
-            f16_m16n8k16: false,
-            bf16_m16n8k16: false,
-            tf32_m16n8k4: false,
-        }
-    }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -248,7 +237,12 @@ mod tests {
     fn mma_capability_gate_falls_back_without_descriptor_mma() {
         let gate = gate_mma_path(
             MatmulKernelPath::TensorCoreF16M16N8K16,
-            MmaCapabilityRecord::no_descriptor_mma(),
+            MmaCapabilityRecord {
+                descriptor_mma: false,
+                f16_m16n8k16: false,
+                bf16_m16n8k16: false,
+                tf32_m16n8k4: false,
+            },
         );
 
         assert_eq!(gate.selected_path, MatmulKernelPath::Cooperative);

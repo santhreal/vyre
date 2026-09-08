@@ -1,6 +1,7 @@
 [package]
 name = "vyre-emit-metal"
 version = "0.8.0"
+autotests = false
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Metal Shading Language artifact emitter for vyre KernelDescriptor. Routes through naga::Module to share substrate-neutral lowering."
@@ -31,3 +32,7 @@ bincode = { workspace = true }
 
 [dev-dependencies]
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

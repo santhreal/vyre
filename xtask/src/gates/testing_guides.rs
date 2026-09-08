@@ -25,8 +25,6 @@ use crate::gates::scan::Tree;
 const METADATA: &str = "docs/testing/TESTING.toml";
 /// The directory this gate owns completely.
 const DIRECTORY: &str = "docs/testing";
-/// The command that rewrites every guide.
-const WRITE_COMMAND: &str = "xtask testing-guides --write";
 /// Schema `docs/testing/TESTING.toml` must declare.
 const SCHEMA_VERSION: i64 = 1;
 /// What a caller does about a stale or missing guide.
@@ -108,11 +106,13 @@ impl crate::gate::GateBehavior for TestingGuides {
             }
             let targets = cargo_targets(&tree, record, &manifest, &mut report);
             let relative = format!("{DIRECTORY}/{}", guide_name(record));
-            if let Some(previous) = expected.insert(
-                relative.clone(),
-                render_guide(record, &manifest, &targets, &fields, &mut report),
-            ) {
-                let _ = previous;
+            if expected
+                .insert(
+                    relative.clone(),
+                    render_guide(record, &manifest, &targets, &fields, &mut report),
+                )
+                .is_some()
+            {
                 report.find(Finding::in_file(
                     &relative,
                     "two workspace members render the same guide filename",

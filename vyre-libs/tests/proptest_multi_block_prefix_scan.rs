@@ -2,8 +2,7 @@
 
 #![cfg(feature = "reduce")]
 
-mod ir_shape;
-use ir_shape::{contains_invocation_id, contains_loop, grid_sync_barrier_count};
+use crate::ir_shape;
 
 use proptest::prelude::*;
 use vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS;
@@ -41,19 +40,21 @@ proptest! {
         let num_blocks = n.div_ceil(BLOCK_LANES);
 
         prop_assert_eq!(program.workgroup_size(), [BLOCK_LANES, 1, 1]);
+        let shape = ir_shape::shape_of(&program);
         prop_assert!(
-            !contains_loop(&program),
-            "multi-block scan must not regress to a serial per-element loop for n={n}"
+            !shape.loops,
+            "multi-block scan must not regress to a serial per-element loop for n={n}; shape was {shape}"
         );
         prop_assert!(
-            !contains_invocation_id(&program),
-            "large multi-block scan must use logical tile and within-tile ids so fused overdispatch cannot address per-tile scratch with a global point for n={n}"
+            !shape.reads_invocation_id,
+            "large multi-block scan must use logical tile and within-tile ids so fused overdispatch cannot address per-tile scratch with a global point for n={n}; shape was {shape}"
         );
         prop_assert_eq!(
-            grid_sync_barrier_count(&program),
+            shape.grid_sync_barriers,
             2,
-            "three-pass multi-block scan must split Pass A, Pass B, and Pass C with grid-level barriers for n={}",
-            n
+            "three-pass multi-block scan must split Pass A, Pass B, and Pass C with grid-level barriers for n={}; shape was {}",
+            n,
+            shape
         );
         let has_partials = program.buffers().iter().any(|buffer| {
             buffer.name() == "__output_mbps_partials"

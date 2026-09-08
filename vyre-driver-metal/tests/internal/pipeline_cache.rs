@@ -1,7 +1,7 @@
 //! Compiled pipeline reuse, policy partitioning, and cache invalidation on
 //! shutdown.
 
-use crate::*;
+use super::*;
 
 use super::fixtures::stores_word;
 use vyre_driver::DispatchConfig;

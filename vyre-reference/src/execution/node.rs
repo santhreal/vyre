@@ -92,6 +92,7 @@ fn step_nodes_frame<'a>(
         return Ok(false);
     }
 
+    crate::execution::step_budget::charge()?;
     invocation.frames_mut().push(Frame::Nodes {
         nodes,
         index: index + 1,
@@ -111,6 +112,7 @@ fn step_loop_frame<'a>(
     if next >= to {
         return Ok(());
     }
+    crate::execution::step_budget::charge()?;
     invocation.frames_mut().push(Frame::Loop {
         var,
         next: next.wrapping_add(1),

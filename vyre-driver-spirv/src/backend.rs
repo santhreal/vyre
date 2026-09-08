@@ -22,7 +22,7 @@ impl SpirvBackend {
     /// rejects the program.
 
     pub fn program_to_spv(program: &Program) -> Result<Vec<u32>, String> {
-        let lowered = vyre_lower::lower_physical(program)
+        let lowered = vyre_lower::lower_baseline(program)
             .map_err(|error| format!("physical lowering failed before SPIR-V emission: {error}"))?;
         vyre_emit_spirv::emit(lowered.descriptor())
             .map_err(|error| format!("SPIR-V emission failed: {error}"))

@@ -415,16 +415,11 @@ impl CudaBackend {
             self.telemetry.record_sync_point();
         }
 
-        let _ = CU_STREAM_CAPTURE_MODE_THREAD_LOCAL; // suppress unused-const warning
-                                                     // Begin capture. Every cuda call on `stream` from here until end
-                                                     // capture is recorded into the graph.
-                                                     //
-                                                     // SAFETY: stream is freshly created. The capture mode is constructed
-                                                     // directly via the typed enum variant (THREAD_LOCAL) rather than
-                                                     // `std::mem::transmute::<u32, _>(1)`  -  the old transmute would have
-                                                     // been UB if the local u32 constant ever drifted away from a valid
-                                                     // variant value (the enum has gaps at 3..). The typed variant is
-                                                     // compile-time-checked and just as efficient.
+        // Begin capture. Every cuda call on `stream` from here until end capture
+        // is recorded into the graph. The capture mode is the typed
+        // `CU_STREAM_CAPTURE_MODE_THREAD_LOCAL` enum variant, not a transmuted
+        // integer: the enum has gaps above 2, so a hand-written value that
+        // drifted off a valid variant would be undefined behaviour.
         let mut capture_guard = begin_cuda_graph_capture(&stream, "cuStreamBeginCapture_v2")?;
 
         // Record HtoD memcpys for each input.

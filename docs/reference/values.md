@@ -41,6 +41,8 @@ overflow-checked positive point bound.
 | `Workgroup` | workgroup-local shared memory |
 
 `BufferAccess` is `#[non_exhaustive]`: match it with a wildcard arm.
+`BufferAccess::ALL` is the whole set as a fixed-length array, so a caller
+outside `vyre-spec` walks every mode without matching exhaustively.
 
 ## Lifetime
 

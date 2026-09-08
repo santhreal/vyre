@@ -1,6 +1,7 @@
 [package]
 name = "vyre-debug"
 version = "0.8.0"
+autotests = false
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Debugging CLI and inspection helpers for Vyre programs, lowering, and emitted shaders."
@@ -42,7 +43,11 @@ vyre-lower = { workspace = true, features = ["test-fixtures"] }
 vyre-megakernel.workspace = true
 # `artifact_report` builds its fixture graphs from the shared IR shape helpers,
 # which the support crate gates behind `ir-fixtures`.
-vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
+vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
 assert_cmd = { workspace = true }
 predicates = { workspace = true }
 tempfile = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

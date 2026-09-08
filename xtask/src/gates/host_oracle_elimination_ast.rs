@@ -53,7 +53,6 @@ struct CallSiteContext {
     is_in_test: bool,
     is_in_expected_output: bool,
     is_in_fallback: bool,
-    is_in_post_dispatch: bool,
     is_in_op_reg: bool,
 }
 
@@ -260,19 +259,17 @@ impl AstAnalysisVisitor {
             is_in_test: context.is_in_test,
             is_in_expected_output: context.is_in_expected_output,
             is_in_fallback: context.is_in_fallback,
-            is_in_post_dispatch: context.is_in_post_dispatch,
             is_in_op_reg: context.is_in_op_reg,
         });
     }
 
-    /// Answer the six context questions for a call recorded in `context`.
+    /// Answer the five context questions for a call recorded in `context`.
     fn call_site_context(&self, context: CallContext) -> CallSiteContext {
         let walk = CallSiteContext {
             caller_fn_idx: self.current_fn_idx,
             is_in_test: self.in_test(),
             is_in_expected_output: self.in_expected_output_depth > 0,
             is_in_fallback: self.in_fallback_depth > 0,
-            is_in_post_dispatch: self.in_gpu_dispatch_root && self.post_dispatch_phase,
             is_in_op_reg: self.in_op_reg_depth > 0,
         };
         match context {
@@ -282,7 +279,6 @@ impl AstAnalysisVisitor {
                 is_in_test: false,
                 is_in_expected_output: true,
                 is_in_fallback: false,
-                is_in_post_dispatch: false,
                 ..walk
             },
             CallContext::FallbackFixture => CallSiteContext {
@@ -290,20 +286,17 @@ impl AstAnalysisVisitor {
                 is_in_test: false,
                 is_in_expected_output: false,
                 is_in_fallback: true,
-                is_in_post_dispatch: false,
                 ..walk
             },
             CallContext::ExpectedOutputArgument => CallSiteContext {
                 is_in_expected_output: true,
                 is_in_fallback: false,
-                is_in_post_dispatch: false,
                 ..walk
             },
             CallContext::OperationRegistration => CallSiteContext {
                 is_in_test: false,
                 is_in_expected_output: false,
                 is_in_fallback: false,
-                is_in_post_dispatch: false,
                 is_in_op_reg: true,
                 ..walk
             },
@@ -1208,27 +1201,6 @@ impl AstAnalysisVisitor {
             .iter()
             .any(|s| temp_visitor.is_dispatch_execution_stmt(s))
     }
-    pub(super) fn extract_dispatch_inputs_from_stmt(&self, stmt: &syn::Stmt) -> BTreeSet<String> {
-        let mut inputs = BTreeSet::new();
-        match stmt {
-            syn::Stmt::Local(l) => {
-                if let Some(init) = &l.init {
-                    inputs.extend(extract_read_idents_from_expr(&init.expr));
-                }
-            }
-            syn::Stmt::Expr(e, _) => {
-                inputs.extend(extract_read_idents_from_expr(e));
-            }
-            syn::Stmt::Macro(m) => {
-                if let Ok(expr) = syn::parse2::<syn::Expr>(m.mac.tokens.clone()) {
-                    inputs.extend(extract_read_idents_from_expr(&expr));
-                }
-            }
-            _ => {}
-        }
-        inputs
-    }
-
     pub(super) fn inspect_function_statements(&mut self, stmts: &[syn::Stmt], is_gpu_root: bool) {
         let prev_in_gpu = self.in_gpu_dispatch_root;
         let prev_post_dispatch = self.post_dispatch_phase;
@@ -1410,7 +1382,6 @@ impl AstAnalysisVisitor {
             match input {
                 syn::FnArg::Receiver(_) => {
                     params.push(FunctionParamRecord {
-                        name: "self".to_string(),
                         qualified_custom_types: BTreeSet::new(),
                     });
                     var_deps.insert("self".to_string(), std::iter::once(input_idx).collect());
@@ -1420,13 +1391,7 @@ impl AstAnalysisVisitor {
                     extract_pat_bindings(&pat_type.pat, &mut idents);
                     let mut custom_types = BTreeSet::new();
                     self.extract_qualified_custom_types(&pat_type.ty, &mut custom_types);
-                    let primary_name = idents
-                        .iter()
-                        .next()
-                        .cloned()
-                        .unwrap_or_else(|| format!("arg{input_idx}"));
                     params.push(FunctionParamRecord {
-                        name: primary_name,
                         qualified_custom_types: custom_types,
                     });
                     for ident in idents {

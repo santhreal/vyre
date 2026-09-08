@@ -132,6 +132,75 @@ pub(crate) fn optimal_workgroup_size(
     [size.min(max_x), 1, 1]
 }
 
+/// Lanes the launch planner sizes a grid for: the widest output binding this
+/// program writes, in words.
+///
+/// Emission and dispatch both read this so the module is compiled for the grid
+/// the dispatch asks for. A program with no output binding dispatches a single
+/// workgroup and has no element index to linearize.
+///
+/// # Errors
+///
+/// Returns when the program's output bindings cannot be laid out or the widest
+/// one does not fit `u32`.
+pub(crate) fn launch_element_count(
+    program: &vyre_foundation::ir::Program,
+) -> Result<u32, LoweringError> {
+    if program.output_buffer_indices().is_empty() {
+        return Ok(0);
+    }
+    let layouts = vyre_driver::output_binding_layouts(program)
+        .map_err(|error| LoweringError::invalid(format!("{error}")))?;
+    let words = layouts
+        .iter()
+        .map(|layout| layout.word_count)
+        .max()
+        .unwrap_or(0);
+    u32::try_from(words).map_err(|error| {
+        LoweringError::invalid(format!(
+            "wgpu launch planning cannot represent {words} output word(s) as u32: {error}. Fix: shard the dispatch or state DispatchConfig::grid_override."
+        ))
+    })
+}
+
+/// Index space the emitted kernel derives its element index in.
+///
+/// A launch whose workgroup count fits one grid axis indexes per axis, which is
+/// what every launch on this backend did before folding existed and what keeps
+/// the emitted text free of grid arithmetic it does not need. A launch that does
+/// not fit is folded across the remaining axes, and only a grid-linearized index
+/// names the same element there. A kernel that reads the grid's shape itself
+/// cannot be linearized, so it keeps its per-axis index and the launch is
+/// refused at the ceiling rather than folded into a wrong answer.
+///
+/// # Errors
+///
+/// Returns when the program's launch element count cannot be derived.
+pub(crate) fn launch_grid_index(
+    descriptor: &vyre_lower::KernelDescriptor,
+    program: &vyre_foundation::ir::Program,
+    config: &vyre_driver::DispatchConfig,
+    workgroup_size: [u32; 3],
+) -> Result<vyre_lower::GridIndexSpace, LoweringError> {
+    let Some(max_per_axis) = config.max_workgroups_per_axis else {
+        return Ok(vyre_lower::GridIndexSpace::PerAxis);
+    };
+    if config.launch_grid().is_some() {
+        return Ok(vyre_lower::GridIndexSpace::PerAxis);
+    }
+    let element_count = launch_element_count(program)?;
+    let single_axis = vyre_driver::infer_dispatch_grid_for_count(element_count, workgroup_size)
+        .map_err(|error| LoweringError::invalid(format!("{error}")))?;
+    let fits = single_axis
+        .iter()
+        .zip(max_per_axis)
+        .all(|(extent, ceiling)| ceiling == 0 || *extent <= ceiling);
+    if fits || !descriptor.admits_grid_linearized_index() {
+        return Ok(vyre_lower::GridIndexSpace::PerAxis);
+    }
+    Ok(vyre_lower::GridIndexSpace::GridLinearized)
+}
+
 impl WgpuProgram {
     /// Build backend IR from a core program.
     ///
@@ -144,17 +213,21 @@ impl WgpuProgram {
         config: &vyre_driver::DispatchConfig,
         enabled_features: &crate::runtime::device::EnabledFeatures,
     ) -> Result<Self, LoweringError> {
+        let expanded = strict_expanded(program, config)?;
+        let program = expanded.as_ref().unwrap_or(program);
         let mut descriptor = descriptor_gate::validate_and_analyze(program)?;
         let workgroup_size = config
             .launch_workgroup()
             .unwrap_or_else(|| optimal_workgroup_size(program, enabled_features));
         descriptor.dispatch.workgroup_size = workgroup_size;
+        descriptor.dispatch.grid_index =
+            launch_grid_index(&descriptor, program, config, workgroup_size)?;
 
         if std::env::var("VYRE_DUMP_KDESC").is_ok() {
             dump_kdesc_if_requested(&descriptor, None);
         }
 
-        let module = match emit_naga_module_for_descriptor(&descriptor) {
+        let module = match emit_naga_module_for_descriptor(&descriptor, config.float_lowering) {
             Ok(module) => module,
             Err(error) => {
                 if std::env::var("VYRE_CAPTURE_FAILED_DESCRIPTOR").is_ok() {
@@ -165,12 +238,9 @@ impl WgpuProgram {
         };
 
         if std::env::var("VYRE_CAPTURE_FAILED_DESCRIPTOR").is_ok() {
-            // Also capture success if specifically requested, or just have it ready if WGSL writing fails downstream.
-            // Let's just capture it now, because from_program succeeds and WGSL writing might fail.
-            // Wait, we only want to capture on failure.
-            // Actually, we can just save it to a temporary location or just write it if the env var is set.
-            // The spec says "On dispatch failure... serialize in-flight".
-            // Since we don't know if WGSL will fail here, we can just proactively dump it if the feature is on.
+            // WGSL writing happens after this function returns, so the capture
+            // is written on success too: a descriptor that emitted a module and
+            // failed serialization is otherwise unrecoverable.
             dump_kdesc_if_requested(&descriptor, Some(&module));
         }
 
@@ -188,8 +258,33 @@ impl WgpuProgram {
     }
 }
 
+/// The program with its approximable f32 operations expanded, or `None` when
+/// the dispatch did not request strict IEEE lowering or the program contains
+/// none.
+///
+/// Expansion happens before descriptor lowering because the reference oracle
+/// evaluates a `Program`: a device and the reference can only be compared bit
+/// for bit if they are running the same expanded IR, and a rewrite applied to
+/// the descriptor would exist only on this side.
+fn strict_expanded(
+    program: &vyre_foundation::ir::Program,
+    config: &vyre_driver::DispatchConfig,
+) -> Result<Option<vyre_foundation::ir::Program>, LoweringError> {
+    if !config.float_lowering.blocks_contraction() {
+        return Ok(None);
+    }
+    vyre_foundation::fp_expansion::expand_strict_transcendentals(program).map_err(|error| {
+        LoweringError::invalid(format!(
+            "{error}. Fix: the strict lowering mode replaces every approximable f32 operation with \
+             an exact f32 expansion, and an operation without one would reach the device as a \
+             native approximate instruction."
+        ))
+    })
+}
+
 pub(crate) fn emit_naga_module_for_descriptor(
     descriptor: &vyre_lower::KernelDescriptor,
+    float_lowering: vyre_foundation::fp_parity::FloatLoweringMode,
 ) -> Result<naga::Module, LoweringError> {
     if let Err(errors) = vyre_lower::verify(descriptor) {
         return Err(LoweringError::invalid(format!(
@@ -197,7 +292,7 @@ pub(crate) fn emit_naga_module_for_descriptor(
             vyre_lower::format_verify_errors(&errors)
         )));
     }
-    vyre_emit_naga::emit(descriptor).map_err(|error| {
+    vyre_emit_naga::emit_with_float_mode(descriptor, float_lowering).map_err(|error| {
         LoweringError::invalid(format!(
             "KernelDescriptor Naga emission failed before wgpu WGSL writing: {error}. Fix: extend vyre-emit-naga descriptor emission; do not route around it with driver-local lowering."
         ))
@@ -468,15 +563,18 @@ mod tests {
     #[test]
     fn adversarial_success_corpus_passes_wgpu_descriptor_emit_path() {
         for case in emit_adversarial_corpus::success_cases() {
-            let module =
-                emit_naga_module_for_descriptor(&case.descriptor).unwrap_or_else(|error| {
-                    panic!(
-                        "Fix: `{}` ({:?}) must pass WGPU descriptor emission: {}",
-                        case.id,
-                        case.family,
-                        error.message()
-                    )
-                });
+            let module = emit_naga_module_for_descriptor(
+                &case.descriptor,
+                vyre_foundation::fp_parity::FloatLoweringMode::default(),
+            )
+            .unwrap_or_else(|error| {
+                panic!(
+                    "Fix: `{}` ({:?}) must pass WGPU descriptor emission: {}",
+                    case.id,
+                    case.family,
+                    error.message()
+                )
+            });
             assert_eq!(
                 module.entry_points[0].name, "main",
                 "{}: WGPU descriptor path must preserve compute entry point",
@@ -504,8 +602,11 @@ mod tests {
     #[test]
     fn adversarial_rejection_corpus_returns_structured_wgpu_errors() {
         for case in emit_adversarial_corpus::rejection_cases() {
-            let error = emit_naga_module_for_descriptor(&case.descriptor)
-                .expect_err("Fix: rejection corpus case must fail WGPU descriptor emission");
+            let error = emit_naga_module_for_descriptor(
+                &case.descriptor,
+                vyre_foundation::fp_parity::FloatLoweringMode::default(),
+            )
+            .expect_err("Fix: rejection corpus case must fail WGPU descriptor emission");
             assert!(
                 error.message().contains("KernelDescriptor") && error.message().contains("Fix:"),
                 "Fix: `{}` WGPU descriptor rejection must include structured KernelDescriptor repair text: {}",

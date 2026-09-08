@@ -19,6 +19,7 @@ mod subgroup;
 
 pub(crate) use setup::emit_uncached;
 use setup::{Builtins, TypeHandles};
+use vyre_lower::GridIndexSpace;
 
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
@@ -42,6 +43,12 @@ struct BodyBuilder<'a> {
     /// address `addr`.
     binding_data_types: &'a FxHashMap<u32, DataType>,
     builtins: Builtins,
+    /// Index space this kernel's lanes derive their element index in.
+    grid_index: GridIndexSpace,
+    /// Workgroup shape the entry point declares. A grid-linearized index
+    /// multiplies the workgroup count on an axis by the workgroup size on it to
+    /// reach that axis's invocation extent.
+    workgroup_size: [u32; 3],
     types: TypeHandles,
     loop_locals: FxHashMap<vyre_lower::Name, naga::Handle<LocalVariable>>,
     loop_types: FxHashMap<vyre_lower::Name, naga::Handle<Type>>,
@@ -93,4 +100,11 @@ struct BodyBuilder<'a> {
     trap_sidecar_slot: Option<u32>,
     trap_tag_codes: FxHashMap<vyre_lower::Name, u32>,
     op_dispatch_routes: op_dispatch::OpDispatchRouteCache,
+    /// Rounding this module is emitted under.
+    ///
+    /// [`FloatLoweringMode::StrictIeee`] makes every f32 multiply publish its
+    /// rounded result through an integer reinterpretation before an adjacent
+    /// add can read it, which is what denies the target the fused pair. The
+    /// default mode emits exactly what it emitted before the mode existed.
+    float_lowering: vyre_foundation::fp_parity::FloatLoweringMode,
 }

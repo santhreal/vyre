@@ -103,6 +103,7 @@ pub fn vyre_driver_wgpu::WgpuBackend::force_device_lost(&self) -> core::result::
 pub fn vyre_driver_wgpu::WgpuBackend::free_device_buffer(&self, buffer: alloc::boxed::Box<dyn vyre_driver::backend::device_buffer::DeviceBuffer>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::WgpuBackend::free_resident(&self, resource: vyre_driver::backend::resource::Resource) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::WgpuBackend::free_wgpu_device_buffer(&self, buffer: alloc::boxed::Box<dyn vyre_driver::backend::device_buffer::DeviceBuffer>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool
 pub fn vyre_driver_wgpu::WgpuBackend::id(&self) -> &'static str
 pub fn vyre_driver_wgpu::WgpuBackend::invalidate_impacted_disk_cache(&self, executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, intervention_mask: &[u32], rule_adj: &[u32], state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32, pipeline_lineage_cell: &[u32], cache_keys: &[alloc::string::String]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::WgpuBackend::invalidate_impacted_pipeline_cache(&self, executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, intervention_mask: &[u32], rule_adj: &[u32], state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32, pipeline_lineage_cell: &[u32], pipeline_keys: &[[u8; 32]]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
@@ -381,6 +382,7 @@ pub vyre_driver_wgpu::buffer::BindGroupCacheStats::evictions: usize
 pub vyre_driver_wgpu::buffer::BindGroupCacheStats::hits: usize
 pub vyre_driver_wgpu::buffer::BindGroupCacheStats::misses: usize
 pub vyre_driver_wgpu::buffer::BufferPoolStats::allocations: usize
+pub vyre_driver_wgpu::buffer::BufferPoolStats::dropped_tiering_events: usize
 pub vyre_driver_wgpu::buffer::BufferPoolStats::evictions: usize
 pub vyre_driver_wgpu::buffer::BufferPoolStats::hits: usize
 pub vyre_driver_wgpu::buffer::BufferPoolStats::releases: usize

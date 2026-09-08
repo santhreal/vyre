@@ -1,6 +1,6 @@
 //! Optimizer idempotence contract for BLAKE3 compression IR.
 
-mod harness;
+use crate::harness;
 
 use harness::optimizer::assert_optimizer_is_idempotent;
 use vyre_libs::hash::blake3_compress;

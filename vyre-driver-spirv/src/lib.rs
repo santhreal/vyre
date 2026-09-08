@@ -108,26 +108,23 @@ impl VyreBackend for SpirvBackendRegistration {
 
     fn allocate_device_buffer(
         &self,
-        byte_len: usize,
+        _byte_len: usize,
     ) -> Result<Box<dyn vyre_driver::DeviceBuffer>, BackendError> {
-        let _ = byte_len;
         Err(spirv_device_buffer_unsupported())
     }
 
     fn upload_device_buffer(
         &self,
-        buffer: &mut dyn vyre_driver::DeviceBuffer,
-        bytes: &[u8],
+        _buffer: &mut dyn vyre_driver::DeviceBuffer,
+        _bytes: &[u8],
     ) -> Result<(), BackendError> {
-        let _ = (buffer, bytes);
         Err(spirv_device_buffer_unsupported())
     }
 
     fn download_device_buffer(
         &self,
-        buffer: &dyn vyre_driver::DeviceBuffer,
+        _buffer: &dyn vyre_driver::DeviceBuffer,
     ) -> Result<Vec<u8>, BackendError> {
-        let _ = buffer;
         Err(spirv_device_buffer_unsupported())
     }
 

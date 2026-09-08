@@ -309,14 +309,11 @@ fn validate_benchmark_bundle_accepts_complete_mac_gate_artifacts() {
             "wgpu".to_string()
         ]
     );
-    assert_eq!(
-        manifest.provenance.baseline_backend,
-        MAC_BENCHMARK_BUNDLE_BASELINE_BACKEND
-    );
-    assert_eq!(
-        manifest.provenance.candidate_backend,
-        MAC_BENCHMARK_BUNDLE_CANDIDATE_BACKEND
-    );
+    // The expected pair is stated here rather than in the module under test: a
+    // constant the production path never reads is an expectation derived from
+    // the observation.
+    assert_eq!(manifest.provenance.baseline_backend, "wgpu");
+    assert_eq!(manifest.provenance.candidate_backend, "metal");
     assert_eq!(
         manifest.provenance.comparison_pairs,
         vec!["cpu-ref->metal".to_string(), "wgpu->metal".to_string()]

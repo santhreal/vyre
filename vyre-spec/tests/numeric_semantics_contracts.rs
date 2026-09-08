@@ -1,7 +1,6 @@
 //! Exhaustive and boundary contract tests for the versioned numeric semantics table.
 
-#[path = "spec_variants/mod.rs"]
-mod spec_variants;
+use crate::spec_variants;
 
 use spec_variants::SCALAR_LEAF_TYPES;
 use vyre_spec::*;

@@ -9,7 +9,7 @@
 //! `picked[winner] = 1`, and zeroes `gains[winner]`. The reference executes the same greedy contract,
 //! so the produced 0/1 vector must match exactly.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::scheduling::submodular_cache_eviction::select_retention_set_via;
 

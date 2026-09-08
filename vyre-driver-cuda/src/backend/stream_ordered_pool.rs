@@ -225,6 +225,9 @@ impl CudaStreamOrderedPool {
     /// # Errors
     ///
     /// Returns [`BackendError`] if the attribute read fails.
+    // Read back only by the device-test evidence suite: `trim` sets this
+    // attribute and never queries it.
+    #[cfg(all(test, feature = "device-tests"))]
     pub(crate) fn release_threshold(&self) -> Result<u64, BackendError> {
         self.attr_u64(
             CUmemPool_attribute_enum::CU_MEMPOOL_ATTR_RELEASE_THRESHOLD,

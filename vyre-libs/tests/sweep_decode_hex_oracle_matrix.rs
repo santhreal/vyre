@@ -57,19 +57,6 @@ fn run_hex_decode(input: &[u8]) -> Vec<u32> {
     vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())
 }
 
-fn oracle_hex_table() -> [u32; 256] {
-    let mut table = [0u32; 256];
-    for (i, slot) in table.iter_mut().enumerate() {
-        *slot = match i as u8 {
-            b'0'..=b'9' => u32::from(i as u8 - b'0'),
-            b'A'..=b'F' => u32::from(i as u8 - b'A' + 10),
-            b'a'..=b'f' => u32::from(i as u8 - b'a' + 10),
-            _ => 0,
-        };
-    }
-    table
-}
-
 fn oracle_hex_decode_packed(input: &[u8]) -> Vec<u32> {
     vyre_reference::composition_witness::hex_decode_packed_witness(input)
 }

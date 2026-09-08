@@ -39,9 +39,15 @@ missing capability or a known failure.
 `vyre-conform-spec`. The enumeration order is public contract, so choose it
 once and record why.
 
-**A new algebraic law** needs a `LawVerdict` variant and its proof pass in
-`LawProver`, plus at least three counterexample tuples known to fail for a
-broken operation, with an assertion that the prover finds them.
+**A new algebraic law** needs a witness in `law_proof`, derived from the
+operation's declared buffers, and a control operation the oracle refutes when
+asked for that law. Witness selection reads every fixture case and runs the
+witness on the cases that admit it: a single-element buffer has one element
+order and an output whose extent is not the input's cannot be fed back, so such
+a case is skipped rather than failing the declaration. A pair no case admits is
+reported as unproven, and `conform/vyre-conform/law-proof-decisions.toml`
+records it with the kind it carries, either the payload the declaration is
+missing or the shape that admits no witness. `unproven_cap` counts the rows.
 
 **A new backend** registers with `vyre-driver` and adds a matrix row in
 `vyre-conform`'s parity matrix fixture. The runner then diffs that
@@ -52,7 +58,7 @@ for an operation whose contract already permits backend-defined drift. Every
 other operation reaches byte identity across every backend.
 
 `conform/vyre-conform/tests/parity_matrix.rs` is the end-to-end wiring.
-`conform/vyre-conform/src/prover.rs` is the verdict shape.
+`conform/vyre-conform/src/law_proof.rs` is the verdict shape.
 
 ## How a production result is obtained
 

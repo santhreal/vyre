@@ -306,7 +306,7 @@ pub fn try_chebyshev_filter_witness_into(
 ) -> Result<(), String> {
     let n_usize = n as usize;
     n_usize.checked_mul(n_usize).ok_or_else(|| {
-        format!("chebyshev_filter_witness n={n} overflows dense Laplacian indexing.")
+        format!("try_chebyshev_filter_witness n={n} overflows dense Laplacian indexing.")
     })?;
     chebyshev_filter_witness_into(
         laplacian,
@@ -343,18 +343,6 @@ pub fn try_chebyshev_filter_witness(
         &mut Vec::new(),
     )?;
     Ok(out)
-}
-
-/// Sequential Chebyshev matrix-polynomial filter witness.
-#[must_use]
-pub fn chebyshev_filter_witness(
-    laplacian: &[f32],
-    signal: &[f32],
-    coefficients: &[f32],
-    n: u32,
-    k_steps: u32,
-) -> Vec<f32> {
-    try_chebyshev_filter_witness(laplacian, signal, coefficients, n, k_steps).unwrap_or_default()
 }
 
 /// Sequential per-block Gauss-Jordan inverse witness without pivoting using caller-provided scratch buffers.

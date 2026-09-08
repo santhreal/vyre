@@ -324,11 +324,6 @@ pub(crate) fn no_program<P>(_prepared: &P) -> Option<&Program> {
     None
 }
 
-/// Program accessor for a case whose whole prepared payload is its program.
-pub(crate) fn program_payload(prepared: &Program) -> Option<&Program> {
-    Some(prepared)
-}
-
 #[cfg(test)]
 mod tests {
     use super::{ContractDescription, WorkloadDescription, HONEST_SUITES};

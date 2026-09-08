@@ -63,12 +63,6 @@ pub(crate) const MATMUL_BIAS_2X2_EXPECTED_BYTES: [u8; 16] = [
 ];
 
 #[cfg(test)]
-#[must_use]
-pub(crate) fn matmul_bias_2x2_fixture_expected() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![MATMUL_BIAS_2X2_EXPECTED_BYTES.to_vec()]]
-}
-
-#[cfg(test)]
 mod tests {
     use super::*;
 

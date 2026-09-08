@@ -35,8 +35,14 @@ fn emit_wgsl_module(
     selected: &SelectedLowering,
     _profile: &TargetProfile,
 ) -> Result<EmittedDialectModule, TargetCompileError> {
-    let module = crate::emit::emit_naga_module_for_descriptor(selected.descriptor())
-        .map_err(|error| TargetCompileError::Emission(format!("WGSL emission failed: {error}")))?;
+    // A target profile is a capability record, so it carries device facts and no
+    // caller policy. Rounding is caller policy and travels on the dispatch, so a
+    // target-payload module is emitted under the default rounding.
+    let module = crate::emit::emit_naga_module_for_descriptor(
+        selected.descriptor(),
+        vyre_foundation::fp_parity::FloatLoweringMode::default(),
+    )
+    .map_err(|error| TargetCompileError::Emission(format!("WGSL emission failed: {error}")))?;
     let wgsl = crate::emit::write_wgsl(&module)
         .map_err(|error| TargetCompileError::Emission(format!("WGSL writing failed: {error}")))?;
     let bytes = serde_json::to_vec(&WgpuTargetModule {

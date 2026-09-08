@@ -58,12 +58,12 @@ pub(super) fn eval_unary_f32_backward(
     program: &Program,
     input: &[f32],
     grad_out: &[f32],
-    error_msg: &'static str,
+    label: &'static str,
 ) -> Vec<f32> {
     let n = input.len();
     assert_eq!(n, grad_out.len());
     let outputs = crate::fixture_bytes::eval_bytes(
-        "unary_f32",
+        label,
         program,
         vec![
             vyre_primitives::wire::pack_f32_slice(input),

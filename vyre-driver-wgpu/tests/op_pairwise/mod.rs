@@ -4,5 +4,4 @@
 #![allow(deprecated)]
 mod all_entries_vec;
 mod entry_cases;
-#[path = "../harness/mod.rs"]
-mod harness;
+use crate::harness;

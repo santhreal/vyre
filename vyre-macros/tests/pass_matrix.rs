@@ -1,8 +1,6 @@
 #![allow(missing_docs)]
 
-extern crate self as vyre;
-
-mod expansion_fixtures;
+use crate::expansion_fixtures;
 
 pub use expansion_fixtures::{ir, optimizer};
 

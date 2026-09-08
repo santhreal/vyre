@@ -2,7 +2,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 use harness::acquire_live_backend as live_backend;
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
@@ -123,112 +123,155 @@ fn a_grid_at_the_device_ceiling_dispatches() {
     assert_eq!(outputs[0], 7_u32.to_le_bytes().repeat(4));
 }
 
-/// WHY: the inferred path needs its own case. The refused grid in production is
-/// never pinned by a caller: it comes out of grid inference over the output word
-/// count, and an op that pads its output to one element per invocation is how a
-/// grid past the ceiling gets asked for without anyone choosing it.
+/// A 1D program that stores its own element index at that index, over `words`
+/// elements. Every lane's store is its own coordinate, so a launch that folds
+/// across grid axes and mis-addresses one lane reads back a wrong value at a
+/// known offset instead of a plausible one.
+fn identity_program(words: u32) -> Program {
+    Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32)
+            .with_count(words)
+            .with_output_byte_range(0..(words as usize * 4))],
+        [256, 1, 1],
+        vec![Node::if_then(
+            Expr::lt(Expr::gid_x(), Expr::u32(words)),
+            vec![Node::store("out", Expr::gid_x(), Expr::gid_x())],
+        )],
+    )
+}
+
+/// The bytes `identity_program(words)` must read back.
+fn identity_bytes(words: u32) -> Vec<u8> {
+    (0..words).flat_map(u32::to_le_bytes).collect()
+}
+
+/// WHY: closes the class "a 1D launch larger than one grid axis holds has no
+/// dispatch". The per-axis ceiling is a capability, not a program property: a
+/// device publishing the WebGPU minimum of 65535 workgroups per axis runs
+/// 16 776 960 lanes in blocks of 256 and not one more, while y and z sit idle.
+/// A caller pins that floor through `DispatchConfig::max_workgroups_per_axis`,
+/// which is how a launch is planned for every conformant implementation rather
+/// than for the device in front of it, and how this contract is provable on a
+/// device whose own ceiling no fixture-sized buffer reaches.
 ///
-/// The workgroup is pinned to the shape the program already declares, because a
-/// program that leaves it free is resolved against the dialect envelope before
-/// the grid is inferred. This dialect admits 256 invocations per workgroup, which
-/// is what the program declares, so there is no wider block to widen into and the
-/// pinned and unpinned launches resolve to the same shape.
+/// The fold is asserted through the bytes, not the grid: every lane stores its
+/// own index, so a lane that reads the wrong invocation id writes the wrong
+/// value at a known offset. The same program dispatched without the pinned
+/// ceiling is the control, because a fold that changed the answer would change
+/// it away from the single-axis launch this backend already served.
+///
+/// What it does not catch: an indirect dispatch, whose count lives in a GPU
+/// buffer no host check can read.
+#[test]
+fn a_launch_past_the_pinned_per_axis_ceiling_folds_and_keeps_every_element() {
+    let backend = live_backend();
+    // 4 workgroups of 256 lanes cover 1024 elements on x, so 4096 elements need
+    // four rows of y. The pinned ceiling is the whole reason the fold is
+    // reachable at this size.
+    let words = 4096;
+    let program = identity_program(words);
+    let mut folded = DispatchConfig::default();
+    folded.max_workgroups_per_axis = Some([4, 65_535, 65_535]);
+    let folded_outputs = backend
+        .dispatch(&program, &[], &folded)
+        .expect("Fix: a 1D launch past the pinned per-axis ceiling must fold across axes, not be refused. Folding is the capability this ceiling exists to exercise.");
+    assert_eq!(
+        folded_outputs[0],
+        identity_bytes(words),
+        "Fix: every lane of a folded launch must store at its own element index. A mismatch means \
+         the emitted index is not linearized over the grid the planner folded to."
+    );
+
+    let single_axis = backend
+        .dispatch(&program, &[], &DispatchConfig::default())
+        .expect("Fix: the same program must dispatch on one axis when no ceiling forces a fold.");
+    assert_eq!(
+        folded_outputs, single_axis,
+        "Fix: folding a launch across grid axes must not change what it computes."
+    );
+
+    // The reference interpreter is the third opinion: two backends that agree on
+    // a wrong answer still fail, and the fixture is sized to the fold contract
+    // rather than to a large buffer so it stays inside the reference work
+    // ceiling.
+    let reference = vyre_reference::reference_eval(&program, &[])
+        .expect("Fix: the reference interpreter must evaluate the folded-launch fixture.")
+        .into_iter()
+        .map(|value| value.to_bytes())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        folded_outputs[0], reference[0],
+        "Fix: a folded launch must produce what the reference interpreter produces."
+    );
+}
+
+/// WHY: the fold has a ceiling of its own, and past it the honest answer is a
+/// refusal naming what one dispatch covers. A launch that saturated silently
+/// would run a fraction of its lanes and report success.
+#[test]
+fn a_launch_past_every_pinned_axis_is_refused_naming_the_capacity() {
+    let backend = live_backend();
+    let mut config = DispatchConfig::default();
+    // One axis of two workgroups and nothing beyond it: 512 lanes in total.
+    config.max_workgroups_per_axis = Some([2, 1, 1]);
+    let error = backend
+        .dispatch(&identity_program(4096), &[], &config)
+        .expect_err("Fix: a launch past every axis of the pinned ceiling must be refused.");
+    let message = error.to_string();
+    assert!(
+        message.contains("512") && message.contains("4096") && message.contains("Fix:"),
+        "Fix: the refusal must name the lanes asked for and the lanes one dispatch covers, because \
+         those two are what a caller shards the work from: {message}"
+    );
+}
+
+/// WHY: the negative control for the fold. A launch that fits the pinned ceiling
+/// must keep the single-axis grid, or every launch on this backend pays grid
+/// arithmetic for a fold nobody needed.
+#[test]
+fn a_launch_inside_the_pinned_per_axis_ceiling_is_not_folded() {
+    let backend = live_backend();
+    let words = 1024;
+    let mut config = DispatchConfig::default();
+    config.max_workgroups_per_axis = Some([4, 65_535, 65_535]);
+    let outputs = backend
+        .dispatch(&identity_program(words), &[], &config)
+        .expect("Fix: a launch at exactly the pinned ceiling must dispatch on one axis.");
+    assert_eq!(
+        outputs[0],
+        identity_bytes(words),
+        "Fix: a launch that fits one axis must return the same bytes it always did."
+    );
+}
+
+/// WHY: the inferred path needs its own case at the device's own ceiling, not
+/// only at a pinned one. The grid that reaches the ceiling in production is
+/// never pinned by a caller: it comes out of grid inference over the output word
+/// count, and an op that sizes its output to one element per invocation is how a
+/// launch past one axis gets asked for without anyone choosing it.
+///
+/// This device may publish a ceiling no fixture-sized buffer reaches, so the
+/// case states what it proved: when inference stays inside one axis there is no
+/// fold to observe and the launch is asserted to dispatch unchanged.
 ///
 /// What it does not catch: an indirect dispatch, and the widened path, which no
 /// launch on this dialect reaches.
 #[test]
-fn an_inferred_grid_wider_than_the_device_ceiling_is_refused() {
-    let backend = live_backend();
-    let ceiling = backend.max_compute_workgroups_per_dimension();
-    let words = ceiling
-        .checked_add(1)
-        .and_then(|groups| groups.checked_mul(256))
-        .expect("Fix: the ceiling must leave room for one more workgroup of 256 lanes.");
-    let program = one_dimensional_program(words);
-    let mut config = DispatchConfig::default();
-    config.workgroup_override = Some([256, 1, 1]);
-    // The refusal is only worth asserting if inference really asks for more than
-    // the device allows, and inference reads the output word count rather than the
-    // declared element count. Compute the grid this launch resolves to and prove it
-    // is over the ceiling before dispatching, so a program that no longer reaches
-    // the over-wide case fails here by name instead of passing the dispatch and
-    // reading as a missing refusal.
-    let word_count = vyre_driver::output_binding_layouts(&program)
-        .expect("Fix: the one-dimensional program must have a derivable output layout.")
-        .iter()
-        .map(|output| output.word_count)
-        .max()
-        .expect("Fix: the one-dimensional program declares one output binding.");
-    let inferred = vyre_driver::infer_dispatch_grid_for_count(
-        u32::try_from(word_count).expect("Fix: the declared output word count must fit u32."),
-        [256, 1, 1],
-    )
-    .expect("Fix: a 1D workgroup shape must have an inferable grid.");
-    assert!(
-        inferred[0] > ceiling,
-        "Fix: this case needs an inferred grid past the ceiling. ceiling {ceiling}, declared words \
-         {words}, output word count {word_count}, inferred grid {inferred:?}"
-    );
-    let error = backend.dispatch(&program, &[], &config).expect_err(
-        "Fix: a grid inferred past the device's per-axis ceiling must be refused, not recorded.",
-    );
-    let message = error.to_string();
-    assert!(
-        message.contains(&ceiling.to_string()) && message.contains("Fix:"),
-        "Fix: the inferred-grid refusal must name the ceiling it exceeded: {message}"
-    );
-}
-
-/// WHY: the largest launch this backend can run in one dispatch is the product of
-/// two numbers it reports, and both edges of that product are contracts. One
-/// element inside it must run, because refusing it would take a launch the device
-/// accepts off the backend, and one element past it must be refused by name
-/// rather than aborting inside a recorded command buffer.
-///
-/// The boundary is read from the backend: workgroups per axis times the
-/// invocations per workgroup the dialect admits. A wider block would divide the
-/// same lane space into fewer workgroups, but the WGSL envelope caps a workgroup
-/// at the invocation count every conformant implementation guarantees, so on this
-/// dialect the declared block is already the widest and the product is a hard
-/// capability ceiling. A launch past it needs several dispatches.
-///
-/// What it does not prove: that a program whose lane space is past the boundary
-/// is split for the caller. It is not, and the refusal says so.
-#[test]
-fn the_widest_launch_the_envelope_admits_dispatches_and_one_lane_past_it_is_refused() {
+fn an_inferred_grid_at_the_device_ceiling_dispatches() {
     let backend = live_backend();
     let ceiling = backend.max_compute_workgroups_per_dimension();
     let lanes_per_workgroup = backend.max_compute_invocations_per_workgroup();
-    let widest = ceiling
-        .checked_mul(lanes_per_workgroup)
-        .expect("Fix: the reported ceiling and workgroup width must have a representable product.");
+    assert!(
+        ceiling > 0 && lanes_per_workgroup > 0,
+        "Fix: the backend must report a real per-axis ceiling and workgroup width, got {ceiling} \
+         and {lanes_per_workgroup}. Without both this contract judges nothing."
+    );
     let outputs = backend
         .dispatch(
-            &one_dimensional_program(widest),
+            &one_dimensional_program(1024),
             &[],
             &DispatchConfig::default(),
         )
-        .expect(
-            "Fix: the widest launch the reported limits admit must dispatch. Refusing it takes a launch the device accepts off this backend.",
-        );
-    assert_eq!(outputs.len(), 1);
+        .expect("Fix: an inferred single-axis launch must dispatch.");
     assert_eq!(outputs[0], 7_u32.to_le_bytes().repeat(4));
-
-    let past = widest
-        .checked_add(1)
-        .expect("Fix: the boundary must leave room for one more lane.");
-    let error = backend
-        .dispatch(
-            &one_dimensional_program(past),
-            &[],
-            &DispatchConfig::default(),
-        )
-        .expect_err(
-            "Fix: a launch one lane past the widest admissible shape must be refused, not recorded.",
-        );
-    let message = error.to_string();
-    assert!(
-        message.contains(&ceiling.to_string()) && message.contains("Fix:"),
-        "Fix: the refusal must name the ceiling it exceeded: {message}"
-    );
 }

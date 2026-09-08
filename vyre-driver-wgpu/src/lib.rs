@@ -25,8 +25,8 @@ pub mod runtime;
 pub mod spirv_backend;
 mod staging_reserve;
 mod stats;
+mod strict_float;
 mod target_compiler;
-mod thread_pool;
 mod wait_backoff;
 
 pub use device_buffer::{WgpuDeviceBuffer, WGPU_BACKEND_ID};

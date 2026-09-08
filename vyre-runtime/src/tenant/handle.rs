@@ -5,15 +5,12 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use crate::resident_work_queue::ResidentWorkQueue;
-use crate::PipelineError;
+use crate::{CounterArithmetic, CounterScope, PipelineError};
 
-use super::counters::{TenantQuotaCounters, TenantRuntimeCounters};
+use super::counters::TenantRuntimeCounters;
 use super::error::TenantError;
 use super::quiesce::quiesce_idle;
-use super::quota::{
-    release_resource_quota, reserve_resource_quota, saturating_atomic_add_u64,
-    saturating_atomic_sub_u64,
-};
+use super::quota::{saturating_atomic_add_u64, saturating_atomic_sub_u64};
 
 /// One tenant's accounting state. Lives inside an `Arc` so handles
 /// stay valid after the registry borrow drops.
@@ -132,10 +129,13 @@ impl TenantHandle {
             });
         }
         let global = self.state.base_opcode + local;
-        if let Err(e) = crate::resident_work_queue::protocol::opcode::validate_user_opcode(global) {
-            return Err(TenantError::Pipeline(PipelineError::Backend(format!(
-                "tenant registry produced invalid global opcode {global}: {e}. Fix: repair tenant opcode window allocation before publishing."
-            ))));
+        if crate::resident_work_queue::protocol::opcode::validate_user_opcode(global).is_err() {
+            return Err(TenantError::Pipeline(PipelineError::ReservedOpcode {
+                tenant_id: self.id(),
+                local_opcode: local,
+                global_opcode: global,
+                fix: "repair the tenant opcode window allocation so the window does not overlap the reserved system range, then publish again",
+            }));
         }
         Ok(global)
     }
@@ -147,8 +147,10 @@ impl TenantHandle {
     /// - [`TenantError::Revoked`] if the tenant was unregistered.
     /// - [`TenantError::OpcodeOutOfRange`] if `local_opcode` is
     ///   outside the tenant's window.
-    /// - [`TenantError::Pipeline`] when the underlying
-    ///   `publish_slot` rejects (e.g., slot still in-flight).
+    /// - [`TenantError::Backpressure`] if the tenant already holds its cap of
+    ///   outstanding slots.
+    /// - [`TenantError::Pipeline`] when the underlying `publish_slot` rejects,
+    ///   or when this tenant's own slot accounting is inconsistent.
     pub fn publish_slot(
         &self,
         ring_bytes: &mut [u8],
@@ -168,7 +170,7 @@ impl TenantHandle {
         Ok(())
     }
 
-    fn ensure_not_revoked(&self) -> Result<(), TenantError> {
+    pub(super) fn ensure_not_revoked(&self) -> Result<(), TenantError> {
         if self.state.revoked.load(Ordering::Acquire) != 0 {
             return Err(TenantError::Revoked {
                 tenant_id: self.state.id,
@@ -190,9 +192,13 @@ impl TenantHandle {
                     published,
                     drained,
                     || {
-                        TenantError::Pipeline(PipelineError::QueueFull {
-                            queue: "tenant",
-                            fix: "tenant drained_count exceeded published_count; rebuild tenant accounting state",
+                        TenantError::Pipeline(PipelineError::CounterOrder {
+                            scope: CounterScope::Tenant(self.state.id),
+                            produced_counter: "published_count",
+                            produced: published,
+                            consumed_counter: "drained_count",
+                            consumed: drained,
+                            fix: "rebuild this tenant's slot accounting; note_drained ran for slots the tenant never published",
                         })
                     },
                 )?;
@@ -204,9 +210,14 @@ impl TenantHandle {
                     });
                 }
                 vyre_driver::accounting::checked_add_u64_lazy(published, 1, || {
-                    TenantError::Pipeline(PipelineError::QueueFull {
-                        queue: "tenant",
-                        fix: "tenant published_count overflowed u64; quiesce or recreate the tenant before publishing more slots",
+                    TenantError::Pipeline(PipelineError::CounterOverflow {
+                        scope: CounterScope::Tenant(self.state.id),
+                        counter: "published_count",
+                        arithmetic: CounterArithmetic::Sum,
+                        lhs: published,
+                        rhs: 1,
+                        bits: 64,
+                        fix: "quiesce or recreate the tenant before publishing more slots",
                     })
                 })
             },
@@ -232,81 +243,6 @@ impl TenantHandle {
     #[must_use]
     pub fn max_outstanding_slots(&self) -> u64 {
         self.state.max_outstanding_slots
-    }
-
-    /// Reserve staging bytes against this tenant's quota.
-    pub fn reserve_staging_bytes(&self, byte_count: u64) -> Result<(), TenantError> {
-        self.ensure_not_revoked()?;
-        reserve_resource_quota(
-            &self.state.staging_bytes,
-            byte_count,
-            self.state.max_staging_bytes,
-            || {
-                TenantError::StagingBackpressure {
-                    tenant_id: self.state.id,
-                    requested: byte_count,
-                    used: self.state.staging_bytes.load(Ordering::Acquire),
-                    cap: self.state.max_staging_bytes,
-                }
-            },
-            "tenant staging byte reservation overflowed u64; release staging reservations or recreate the tenant before reserving more bytes",
-        )
-    }
-
-    /// Release staging bytes previously reserved by this tenant.
-    pub fn release_staging_bytes(&self, byte_count: u64) -> Result<(), TenantError> {
-        release_resource_quota(
-            &self.state.staging_bytes,
-            byte_count,
-            self.state.id,
-            "staging bytes",
-        )
-    }
-
-    /// Reserve resident handles against this tenant's quota.
-    pub fn reserve_resident_handles(&self, handle_count: u64) -> Result<(), TenantError> {
-        self.ensure_not_revoked()?;
-        reserve_resource_quota(
-            &self.state.resident_handles,
-            handle_count,
-            self.state.max_resident_handles,
-            || {
-                TenantError::ResidentHandleBackpressure {
-                    tenant_id: self.state.id,
-                    requested: handle_count,
-                    used: self.state.resident_handles.load(Ordering::Acquire),
-                    cap: self.state.max_resident_handles,
-                }
-            },
-            "tenant resident handle reservation overflowed u64; release resident handles or recreate the tenant before reserving more handles",
-        )
-    }
-
-    /// Release resident handles previously reserved by this tenant.
-    pub fn release_resident_handles(&self, handle_count: u64) -> Result<(), TenantError> {
-        release_resource_quota(
-            &self.state.resident_handles,
-            handle_count,
-            self.state.id,
-            "resident handles",
-        )
-    }
-
-    /// Snapshot quota counters for this tenant.
-    #[must_use]
-    pub fn quota_counters(&self) -> TenantQuotaCounters {
-        TenantQuotaCounters {
-            tenant_id: self.state.id,
-            staging_bytes: self.state.staging_bytes.load(Ordering::Acquire),
-            max_staging_bytes: self.state.max_staging_bytes,
-            resident_handles: self.state.resident_handles.load(Ordering::Acquire),
-            max_resident_handles: self.state.max_resident_handles,
-        }
-    }
-
-    pub(super) fn release_all_resource_reservations(&self) {
-        self.state.staging_bytes.store(0, Ordering::Release);
-        self.state.resident_handles.store(0, Ordering::Release);
     }
 
     /// Snapshot host-visible runtime counters for this tenant.
@@ -378,6 +314,86 @@ impl TenantHandle {
             &self.state.quiesce_wait_ns,
             elapsed_ns,
             "tenant quiesce_wait_ns",
+        );
+    }
+}
+
+/// WHY: `global_opcode` guards an internal invariant, that a tenant's opcode
+/// window stays clear of the range the megakernel reserves. The registry
+/// allocates windows from `TENANT_OPCODE_BASE` and refuses an id past
+/// `MAX_TENANT_OPCODE_WINDOWS`, so no window it hands out can reach the
+/// reserved range and the guard is unreachable through the public registry.
+/// That is exactly why it needs a test: the fault it reports is otherwise
+/// asserted by nothing, and it reported an untyped backend-error string until
+/// `PipelineError::ReservedOpcode` existed. The state fields are `pub(super)`,
+/// so this is the only scope that can build the broken allocation the guard
+/// exists for.
+///
+/// Does not catch: a change to `is_system` that widens the reserved range under
+/// a window the registry does hand out. `validate_user_opcode` owns that
+/// boundary and is tested beside it.
+#[cfg(test)]
+mod reserved_opcode_tests {
+    use super::{TenantHandle, TenantState};
+    use crate::tenant::error::TenantError;
+    use crate::PipelineError;
+    use std::sync::atomic::{AtomicU32, AtomicU64};
+    use std::sync::Arc;
+
+    fn handle_with_window(base_opcode: u32, opcode_cap: u32) -> TenantHandle {
+        TenantHandle {
+            state: Arc::new(TenantState {
+                id: 7,
+                generation: 1,
+                base_opcode,
+                opcode_cap,
+                published_count: AtomicU64::new(0),
+                max_outstanding_slots: 1,
+                staging_bytes: AtomicU64::new(0),
+                max_staging_bytes: 1,
+                resident_handles: AtomicU64::new(0),
+                max_resident_handles: 1,
+                drained_count: AtomicU64::new(0),
+                quiesce_calls: AtomicU64::new(0),
+                quiesce_timeouts: AtomicU64::new(0),
+                quiesce_wait_ns: AtomicU64::new(0),
+                revoked: AtomicU32::new(0),
+                label: "reserved-window".to_string(),
+            }),
+        }
+    }
+
+    #[test]
+    fn a_window_reaching_the_system_range_reports_the_opcode_it_produced() {
+        let handle = handle_with_window(0x8000_0000, 4);
+
+        let error = handle
+            .global_opcode(2)
+            .expect_err("Fix: a global opcode with the system bit set must be refused.");
+
+        let TenantError::Pipeline(PipelineError::ReservedOpcode {
+            tenant_id,
+            local_opcode,
+            global_opcode,
+            ..
+        }) = &error
+        else {
+            panic!("Fix: a reserved global opcode must report ReservedOpcode, got {error:?}");
+        };
+        assert_eq!(*tenant_id, 7);
+        assert_eq!(*local_opcode, 2);
+        assert_eq!(*global_opcode, 0x8000_0002);
+    }
+
+    #[test]
+    fn a_window_clear_of_the_system_range_maps_the_opcode() {
+        let handle = handle_with_window(0x4010_0000, 4);
+
+        assert_eq!(
+            handle
+                .global_opcode(2)
+                .expect("Fix: a window clear of the reserved range must map its local opcodes."),
+            0x4010_0002
         );
     }
 }

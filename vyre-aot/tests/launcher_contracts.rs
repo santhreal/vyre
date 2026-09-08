@@ -1,6 +1,6 @@
 //! Launcher source emission contract tests.
 
-mod fixture_target;
+use crate::fixture_target;
 
 use vyre_aot::{emit_launcher_rust, ArtifactEnvelope, LauncherError, LauncherOpts, TargetId};
 

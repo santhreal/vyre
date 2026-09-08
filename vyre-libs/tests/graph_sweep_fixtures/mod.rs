@@ -1,4 +1,15 @@
 //! Deterministic graph fixtures shared by volume-oracle integration suites.
+//!
+//! This module is compiled once per including test binary, and no binary uses
+//! every fixture: the three `sweep_graph_*_volume_oracle_matrix` suites want
+//! only `bitset_words`, the two `csr_*_traverse_ir_parity_proptest` suites want
+//! `bitset_words` plus `gpu_step`, and `proptest_csr_frontier_queue` wants the
+//! generated-CSR family. Each unused-in-this-binary fixture is live in a
+//! sibling binary, so `dead_code` here reports the inclusion shape rather than
+//! an item with no caller. An `expect` cannot state that: the lint fires in
+//! some binaries and not others, and the fulfilled half would fail
+//! `unfulfilled_lint_expectations`.
+#![allow(dead_code)]
 
 /// Return the number of words required by a node frontier.
 pub(crate) fn bitset_words(node_count: u32) -> usize {

@@ -2,8 +2,7 @@
 
 #![cfg(feature = "text")]
 
-mod ir_shape;
-use ir_shape::{contains_invocation_zero_gate, contains_loop};
+use crate::ir_shape;
 
 use proptest::prelude::*;
 use vyre_foundation::ir::{BufferAccess, DataType, Program, PORTABLE_WORKGROUP_INVOCATIONS};
@@ -116,13 +115,14 @@ proptest! {
         let program = line_index("source", "lines", n);
 
         prop_assert_eq!(program.workgroup_size(), [BLOCK_LANES, 1, 1]);
+        let shape = ir_shape::shape_of(&program);
         prop_assert!(
-            !contains_loop(&program),
-            "line_index must not contain a serial byte loop for n={n}"
+            !shape.loops,
+            "line_index must not contain a serial byte loop for n={n}; shape was {shape}"
         );
         prop_assert!(
-            !contains_invocation_zero_gate(&program),
-            "line_index must not gate all useful work behind InvocationId.x == 0 for n={n}"
+            !shape.gates_on_invocation_zero,
+            "line_index must not gate all useful work behind InvocationId.x == 0 for n={n}; shape was {shape}"
         );
         let has_source = program.buffers().iter().any(|buffer| {
             buffer.name() == "source"
@@ -188,13 +188,14 @@ proptest! {
         let program = line_index_u8("source", "lines", n);
 
         prop_assert_eq!(program.workgroup_size(), [BLOCK_LANES, 1, 1]);
+        let shape = ir_shape::shape_of(&program);
         prop_assert!(
-            !contains_loop(&program),
-            "line_index_u8 must not contain a serial byte loop for n={n}"
+            !shape.loops,
+            "line_index_u8 must not contain a serial byte loop for n={n}; shape was {shape}"
         );
         prop_assert!(
-            !contains_invocation_zero_gate(&program),
-            "line_index_u8 must not gate useful work behind InvocationId.x == 0 for n={n}"
+            !shape.gates_on_invocation_zero,
+            "line_index_u8 must not gate useful work behind InvocationId.x == 0 for n={n}; shape was {shape}"
         );
         let has_u8_source = program.buffers().iter().any(|buffer| {
             buffer.name() == "source"

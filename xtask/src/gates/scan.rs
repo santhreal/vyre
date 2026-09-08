@@ -657,6 +657,73 @@ pub fn is_comment(line: &str) -> bool {
     trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*')
 }
 
+/// One span of a source walk that never stops inside a comment or a literal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Code<'t> {
+    /// A comment or a string or char literal, with its delimiters.
+    Opaque(&'t str),
+    /// One byte of code, which the caller steps past itself.
+    Byte(u8),
+}
+
+/// A cursor over source text that takes every comment and literal whole.
+///
+/// Three gates walked source with the same loop: skip a byte that is not a char
+/// boundary, take a comment or literal whole through
+/// `structure_gate::source_scan::opaque_span`, and read one code byte
+/// otherwise. Each copy repeated both boundary rules, and a walk that stops
+/// inside a literal reads quoted text as code, which is the defect the shared
+/// span owner exists to prevent.
+pub struct CodeCursor<'t> {
+    text: &'t str,
+    at: usize,
+}
+
+impl<'t> CodeCursor<'t> {
+    /// Start a walk at the first byte of `text`.
+    #[must_use]
+    pub fn new(text: &'t str) -> Self {
+        Self { text, at: 0 }
+    }
+
+    /// The byte offset the cursor stands on.
+    #[must_use]
+    pub fn offset(&self) -> usize {
+        self.at
+    }
+
+    /// Move to `offset`, which is how a caller steps past a token it consumed.
+    pub fn seek(&mut self, offset: usize) {
+        self.at = offset;
+    }
+
+    /// The next span and the offset it starts at.
+    ///
+    /// An opaque span is consumed. A code byte is not: its token length belongs
+    /// to the caller, which reads as far as the token runs and then calls
+    /// [`CodeCursor::seek`]. A cursor left where [`Code::Byte`] was returned
+    /// yields that byte again.
+    pub fn step(&mut self) -> Option<(usize, Code<'t>)> {
+        while self.at < self.text.len() {
+            if !self.text.is_char_boundary(self.at) {
+                self.at += 1;
+                continue;
+            }
+            let start = self.at;
+            if let Some(span) = structure_gate::source_scan::opaque_span(self.text, start) {
+                let mut end = (start + span.get()).min(self.text.len());
+                while end < self.text.len() && !self.text.is_char_boundary(end) {
+                    end += 1;
+                }
+                self.at = end;
+                return Some((start, Code::Opaque(&self.text[start..end])));
+            }
+            return Some((start, Code::Byte(self.text.as_bytes()[start])));
+        }
+        None
+    }
+}
+
 /// The text with every string and char literal blanked, comments left intact.
 ///
 /// A detector's own pattern table is source that contains every shape it looks
@@ -670,20 +737,11 @@ pub fn is_comment(line: &str) -> bool {
 #[must_use]
 pub fn mask_literals(text: &str) -> String {
     let mut masked = String::with_capacity(text.len());
-    let mut at = 0;
-    while at < text.len() {
-        if !text.is_char_boundary(at) {
-            at += 1;
-            continue;
-        }
-        match structure_gate::source_scan::opaque_span(text, at) {
-            Some(span) => {
-                let mut end = (at + span.get()).min(text.len());
-                while end < text.len() && !text.is_char_boundary(end) {
-                    end += 1;
-                }
-                let piece = &text[at..end];
-                if piece.starts_with("//") || piece.starts_with("/*") {
+    let mut cursor = CodeCursor::new(text);
+    while let Some((at, span)) = cursor.step() {
+        match span {
+            Code::Opaque(piece) => {
+                if is_comment_span(piece) {
                     masked.push_str(piece);
                 } else {
                     for character in piece.chars() {
@@ -697,16 +755,21 @@ pub fn mask_literals(text: &str) -> String {
                         }
                     }
                 }
-                at = end;
             }
-            None => {
+            Code::Byte(_) => {
                 let character = text[at..].chars().next().unwrap_or(' ');
                 masked.push(character);
-                at += character.len_utf8();
+                cursor.seek(at + character.len_utf8());
             }
         }
     }
     masked
+}
+
+/// Whether an opaque span is a comment rather than a literal.
+#[must_use]
+pub fn is_comment_span(piece: &str) -> bool {
+    piece.starts_with("//") || piece.starts_with("/*")
 }
 
 /// Whether a repository-relative path sits at or under a root.
@@ -785,35 +848,75 @@ pub fn numbered(text: &str) -> Vec<(u32, &str)> {
 ///
 /// An item with a body runs to the line that closes it. An item without one
 /// (`#[cfg(test)] use super::*;`) runs to its terminating semicolon.
+///
+/// Nesting comes from `line_nesting`, because a literal spans lines and a
+/// line-local scan reads its delimiters as code. An attribute is joined by
+/// `joined_attribute` for the same reason: rustfmt wraps a long predicate.
 #[must_use]
 pub fn cfg_test_lines(lines: &[&str]) -> Vec<bool> {
+    let nesting = line_nesting(lines);
     let mut test_only = vec![false; lines.len()];
     let mut depth = 0i32;
     let mut index = 0usize;
     while index < lines.len() {
-        let scan = scan_code(lines[index]);
-        if !is_test_only_attribute(scan.code) {
-            depth += scan.brace_delta;
+        let (attribute, attribute_end) = joined_attribute(&nesting, lines, index);
+        if !is_test_only_attribute(&attribute) {
+            depth += nesting[index].brace_delta;
             index += 1;
             continue;
         }
         let outer_depth = depth;
         let mut opened = false;
         while index < lines.len() {
-            let line = scan_code(lines[index]);
-            depth += line.brace_delta;
-            opened |= line.brace_delta > 0;
+            let line = lines[index];
+            let scan = &nesting[index];
+            depth += scan.brace_delta;
+            opened |= scan.brace_delta > 0;
             test_only[index] = true;
             index += 1;
             if opened && depth <= outer_depth {
                 break;
             }
-            if !opened && line.code.trim_end().ends_with(';') {
+            // A continuation line of the attribute itself can end in a comma or
+            // a brace, so the semicolon that ends a bodyless item is only read
+            // once the attribute is behind us.
+            if !opened && index > attribute_end && scan.code(line).trim_end().ends_with(';') {
                 break;
             }
         }
     }
     test_only
+}
+
+/// The attribute beginning on line `index`, joined into one line, and the line
+/// it ends on.
+///
+/// rustfmt wraps a long `#[cfg(all(test, ...))]`, and the predicate reads one
+/// line, so a wrapped attribute went unrecognised and the item under it scored
+/// as production. `test_material` joins the same way before asking the same
+/// question. Parens come from `line_nesting`, so a paren inside a literal does
+/// not extend the join, and the join stops after `ATTRIBUTE_LINE_LIMIT` lines so
+/// a malformed predicate cannot walk the file.
+fn joined_attribute(nesting: &[LineNesting], lines: &[&str], index: usize) -> (String, usize) {
+    /// How many lines one attribute may span before the join gives up.
+    const ATTRIBUTE_LINE_LIMIT: usize = 32;
+
+    let mut joined = nesting[index].code(lines[index]).trim().to_string();
+    let mut end = index;
+    if !joined.starts_with("#[") {
+        return (joined, end);
+    }
+    let mut open = nesting[index].paren_delta;
+    while open != 0 && end + 1 < lines.len() && end - index < ATTRIBUTE_LINE_LIMIT {
+        end += 1;
+        open += nesting[end].paren_delta;
+        let next = nesting[end].code(lines[end]).trim();
+        if !next.is_empty() {
+            joined.push(' ');
+            joined.push_str(next);
+        }
+    }
+    (joined, end)
 }
 
 /// Whether an attribute puts its item in the test harness and nowhere else.
@@ -899,7 +1002,7 @@ struct DeclaredModule {
 
 /// The file a `#[path = "..."]` attribute names, relative to the directory of
 /// the file that declares the module.
-fn declared_module_path(attrs: &[syn::Attribute]) -> Option<String> {
+pub(crate) fn declared_module_path(attrs: &[syn::Attribute]) -> Option<String> {
     for attr in attrs {
         if let syn::Meta::NameValue(name_value) = &attr.meta {
             if name_value.path.is_ident("path") {
@@ -997,6 +1100,92 @@ pub fn test_module_files(tree: &Tree, sources: &[PathBuf]) -> Result<BTreeSet<Pa
     }
 
     Ok(test_scoped_files)
+}
+
+/// Per-line nesting from a walk that takes every literal and comment whole.
+///
+/// A literal spans lines, so the walk runs over the whole text through
+/// [`CodeCursor`] and attributes each code byte to the line it sits on. A
+/// per-line scan cannot do that: `br#"{` masks its own brace while the bare `}`
+/// closing the same literal reads as a block close, so the two fixtures in
+/// xtask-evidence netted one stray close each, cancelled the `mod tests {`
+/// opener and ended the `#[cfg(test)]` region 234 lines early. A `#[test]`
+/// helper declared past that point then scored as a production item whose only
+/// callers were tests.
+struct LineNesting {
+    /// `{` minus `}` among this line's code bytes.
+    brace_delta: i32,
+    /// `(` minus `)` among this line's code bytes.
+    paren_delta: i32,
+    /// Byte offset in the line where code starts, past the tail of a span that
+    /// opened on an earlier line.
+    code_from: usize,
+    /// Byte offset in the line where code ends, at a comment or the line end.
+    code_end: usize,
+}
+
+impl LineNesting {
+    /// The line's code, with a continued span's tail and any comment removed.
+    fn code<'a>(&self, line: &'a str) -> &'a str {
+        if self.code_from >= self.code_end {
+            return "";
+        }
+        &line[self.code_from..self.code_end]
+    }
+}
+
+/// Walk `lines` as one text and report each line's nesting.
+fn line_nesting(lines: &[&str]) -> Vec<LineNesting> {
+    let text = lines.join("\n");
+    let mut starts = Vec::with_capacity(lines.len());
+    let mut at = 0usize;
+    for line in lines {
+        starts.push(at);
+        at += line.len() + 1;
+    }
+    let mut nesting: Vec<LineNesting> = lines
+        .iter()
+        .map(|line| LineNesting {
+            brace_delta: 0,
+            paren_delta: 0,
+            code_from: 0,
+            code_end: line.len(),
+        })
+        .collect();
+    let line_of = |offset: usize| starts.partition_point(|start| *start <= offset).max(1) - 1;
+    let mut cursor = CodeCursor::new(&text);
+    while let Some((offset, span)) = cursor.step() {
+        match span {
+            Code::Opaque(piece) => {
+                let first = line_of(offset);
+                if piece.starts_with("//") {
+                    nesting[first].code_end = offset - starts[first];
+                    continue;
+                }
+                let last = line_of(offset + piece.len() - 1);
+                if last > first {
+                    // Every line the span crosses is its content, and the line
+                    // it ends on has code only past the closing delimiter.
+                    for index in first + 1..last {
+                        nesting[index].code_end = 0;
+                    }
+                    nesting[last].code_from = offset + piece.len() - starts[last];
+                }
+            }
+            Code::Byte(byte) => {
+                let index = line_of(offset);
+                match byte {
+                    b'{' => nesting[index].brace_delta += 1,
+                    b'}' => nesting[index].brace_delta -= 1,
+                    b'(' => nesting[index].paren_delta += 1,
+                    b')' => nesting[index].paren_delta -= 1,
+                    _ => {}
+                }
+                cursor.seek(offset + 1);
+            }
+        }
+    }
+    nesting
 }
 
 /// One line's runtime code and the nesting it contributes.
@@ -1105,21 +1294,21 @@ fn opens_char_literal(bytes: &[u8], index: usize) -> bool {
 #[must_use]
 pub fn error_construction_lines(lines: &[&str]) -> Vec<bool> {
     const OPENERS: &[&str] = &["Err(", "map_err(", "ok_or_else(", "ok_or("];
+    let nesting = line_nesting(lines);
     let mut on_error_path = vec![false; lines.len()];
     let mut depth = 0i32;
     let mut index = 0usize;
     while index < lines.len() {
-        let scan = scan_code(lines[index]);
-        let delta = scan.brace_delta + scan.paren_delta;
-        if !contains_any(scan.code, OPENERS) {
+        let delta = nesting[index].brace_delta + nesting[index].paren_delta;
+        if !contains_any(nesting[index].code(lines[index]), OPENERS) {
             depth += delta;
             index += 1;
             continue;
         }
         let outer_depth = depth;
         while index < lines.len() {
-            let line = scan_code(lines[index]);
-            depth += line.brace_delta + line.paren_delta;
+            let scan = &nesting[index];
+            depth += scan.brace_delta + scan.paren_delta;
             on_error_path[index] = true;
             index += 1;
             if depth <= outer_depth {
@@ -1346,5 +1535,162 @@ mod tests {
             2,
             "the same rule reports the occurrence once the skip stops covering it"
         );
+    }
+
+    /// WHY: nesting used to be counted one line at a time, so a literal that
+    /// spans lines leaked its delimiters into block depth. `br#"{` masks its
+    /// own brace as content while the bare `}` closing the same literal did
+    /// not, which netted one stray close, cancelled a `mod tests {` opener and
+    /// ended the region early. Each row is a literal form a per-line scan gets
+    /// wrong, and the expectation is the exact region, so a row fails when a
+    /// boundary moves in either direction. The last two rows are the control: a
+    /// brace in code still closes a region, and a literal in production code
+    /// still leaves production lines out.
+    ///
+    /// What this does not catch: a file whose `#[cfg(test)]` region is correct
+    /// for the wrong reason, such as two errors that cancel.
+    #[test]
+    fn a_literal_spanning_lines_does_not_move_a_test_region_boundary() {
+        // `T` marks a line cfg_test_lines has to call test-only, `.` one it must not.
+        let cases: &[(&str, &str, &str)] = &[
+            (
+                "raw literal with one hash",
+                "#[cfg(test)]\nmod tests {\n    const J: &str = r#\"{\n}\n\"#;\n}\nfn after() {}\n",
+                "TTTTTT.",
+            ),
+            (
+                "raw literal with no hash",
+                "#[cfg(test)]\nmod tests {\n    const J: &str = r\"{\n}\";\n}\nfn after() {}\n",
+                "TTTTT.",
+            ),
+            (
+                "byte raw literal with two hashes holding a quote and one hash",
+                "#[cfg(test)]\nmod tests {\n    const J: &[u8] = br##\"{\"a\": \"b\"}\n}\"#\n\"##;\n}\nfn after() {}\n",
+                "TTTTTT.",
+            ),
+            (
+                "quoted string continued by an escaped newline",
+                "#[cfg(test)]\nmod tests {\n    const J: &str = \"{ \\\n}\";\n}\nfn after() {}\n",
+                "TTTTT.",
+            ),
+            (
+                "brace in a line comment",
+                "#[cfg(test)]\nmod tests {\n    // }\n    const A: u32 = 1;\n}\nfn after() {}\n",
+                "TTTTT.",
+            ),
+            (
+                "brace in a char literal",
+                "#[cfg(test)]\nmod tests {\n    const C: char = '}';\n}\nfn after() {}\n",
+                "TTTT.",
+            ),
+            (
+                "raw literal left unterminated at end of file",
+                "#[cfg(test)]\nmod tests {\n    const J: &str = r#\"{\n}\nfn never_closed() {}\n",
+                "TTTTT",
+            ),
+            (
+                "brace in code",
+                "#[cfg(test)]\nmod tests {\n    fn t() {}\n}\nfn after() {}\n",
+                "TTTT.",
+            ),
+            (
+                "literal in production code before the test module",
+                "const P: &str = r#\"{\n}\n\"#;\n#[cfg(test)]\nmod tests {\n    fn t() {}\n}\nfn after() {}\n",
+                "...TTTT.",
+            ),
+        ];
+
+        for (form, source, expected) in cases {
+            let lines: Vec<&str> = source.lines().collect();
+            let rendered: String = cfg_test_lines(&lines)
+                .into_iter()
+                .map(|test_only| if test_only { 'T' } else { '.' })
+                .collect();
+            assert_eq!(
+                &rendered, expected,
+                "Fix: a {form} moved the #[cfg(test)] region boundary; count nesting over the \
+                 whole text through CodeCursor, never one line at a time"
+            );
+        }
+    }
+
+    /// WHY: the error-path exclusion tracks nesting with the same walk, so a
+    /// raw literal inside an `Err(...)` used to close the construction on the
+    /// bare `}` of its own JSON and leave the rest of the message counted as
+    /// dispatch cost.
+    #[test]
+    fn an_error_construction_holding_a_multi_line_literal_ends_at_its_own_close() {
+        let source = "fn f() -> Result<(), String> {\n    Err(\n        r#\"{\n}\n\"#.to_string(),\n    )\n}\nfn after() {}\n";
+        let lines: Vec<&str> = source.lines().collect();
+        let rendered: String = error_construction_lines(&lines)
+            .into_iter()
+            .map(|on_error| if on_error { 'E' } else { '.' })
+            .collect();
+        assert_eq!(
+            rendered, ".EEEEE..",
+            "Fix: the error construction runs from its opener to the line that closes it, with \
+             every line of a multi-line literal counted as content"
+        );
+    }
+
+    /// WHY: the predicate reads one line of attribute text, and rustfmt wraps a
+    /// long `#[cfg(all(test, ...))]`, so a wrapped attribute went unrecognised
+    /// and the item under it scored as production with only test callers. Each
+    /// row is an attribute form the join has to get right, including the two
+    /// that must NOT become test code: `any(test, ...)` compiles in a release
+    /// build with the feature on, and attribute text inside a string literal is
+    /// a fixture rather than an attribute.
+    ///
+    /// What this does not catch: a predicate whose terms are correct but whose
+    /// feature names do not exist in the manifest.
+    #[test]
+    fn a_wrapped_attribute_is_read_as_one_predicate() {
+        // `T` marks a line cfg_test_lines has to call test-only, `.` one it must not.
+        let cases: &[(&str, &str, &str)] = &[
+            (
+                "all(test, ...) wrapped across lines",
+                "#[cfg(all(\n    test,\n    any(feature = \"a\", feature = \"b\")\n))]\nfn helper() -> u32 {\n    1\n}\nfn after() {}\n",
+                "TTTTTTT.",
+            ),
+            (
+                "all(test, ...) on one line",
+                "#[cfg(all(test, feature = \"a\"))]\nfn helper() -> u32 {\n    1\n}\nfn after() {}\n",
+                "TTTT.",
+            ),
+            (
+                "any(test, ...) wrapped across lines is shipped code",
+                "#[cfg(any(\n    feature = \"a\",\n    all(test, feature = \"b\")\n))]\nfn helper() -> u32 {\n    1\n}\nfn after() {}\n",
+                "........",
+            ),
+            (
+                "attribute text inside a string literal is a fixture",
+                "const FIXTURE: &str = \"#[cfg(all(\\n    test,\\n    feature = \\\"a\\\"\\n))]\";\nfn after() {}\n",
+                "..",
+            ),
+            (
+                "wrapped attribute over a bodyless item ends at its semicolon",
+                "#[cfg(all(\n    test,\n    feature = \"a\"\n))]\nuse super::*;\nfn after() {}\n",
+                "TTTTT.",
+            ),
+            (
+                "wrapped attribute over a module runs to the module's close",
+                "#[cfg(all(\n    test,\n    feature = \"a\"\n))]\nmod inner {\n    fn t() {}\n}\nfn after() {}\n",
+                "TTTTTTT.",
+            ),
+        ];
+
+        for (form, source, expected) in cases {
+            let lines: Vec<&str> = source.lines().collect();
+            let rendered: String = cfg_test_lines(&lines)
+                .into_iter()
+                .map(|test_only| if test_only { 'T' } else { '.' })
+                .collect();
+            assert_eq!(
+                &rendered, expected,
+                "Fix: {form} was read wrong; join an attribute's continuation lines before \
+                 testing the predicate, and read parens from line_nesting so a literal cannot \
+                 extend the join"
+            );
+        }
     }
 }

@@ -148,6 +148,17 @@ impl BodyBuilder<'_> {
         self.bind_result_typed(op, value, self.types.u32_ty)
     }
 
+    /// Bind the element index this lane addresses with.
+    ///
+    /// Routed apart from the other builtin axes because a grid-linearized
+    /// launch reads the x axis as a linear index over the whole grid rather
+    /// than as one component of the invocation id vector.
+    pub(super) fn emit_global_invocation_id(&mut self, op: &KernelOp) -> Result<(), EmitError> {
+        let axis = self.inline_axis(op)?;
+        let value = self.global_invocation_axis(axis)?;
+        self.bind_result_typed(op, value, self.types.u32_ty)
+    }
+
     pub(super) fn emit_scalar_builtin(
         &mut self,
         op: &KernelOp,

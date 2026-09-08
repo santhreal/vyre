@@ -130,7 +130,7 @@ fn slot_offset_overflow_returns_invalid_binding_error() {
         .build();
     let result = emit(&desc);
     match result {
-        Err(crate::EmitError::InvalidBinding { slot, reason }) => {
+        Err(vyre_emit_ptx::EmitError::InvalidBinding { slot, reason }) => {
             assert_eq!(
                 slot, overflow_slot,
                 "Fix: error must name the overflowing slot exactly"

@@ -117,7 +117,9 @@ impl ProgramDescriptor {
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
+    // Both cases below are feature-gated, so the import is declared on the
+    // same pair rather than suppressed in the builds that select neither.
+    #[cfg(any(feature = "nn-attention", feature = "math-linalg"))]
     use super::*;
 
     #[cfg(feature = "nn-attention")]

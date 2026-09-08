@@ -15,10 +15,7 @@ use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Pro
 use vyre_spec::extension::ExtensionDataTypeId;
 use vyre_spec::TypeId;
 
-#[path = "../support/opaque_echo_extension.rs"]
-mod opaque_echo_extension;
-
-pub(crate) use opaque_echo_extension::{EchoExpr, EchoNode};
+pub(crate) use crate::opaque_echo_extension::{EchoExpr, EchoNode};
 
 /// The wire suite's opaque leaf carries a payload, so the round-trip has
 /// something to preserve. Everything else comes from `ir_arbitrary`.

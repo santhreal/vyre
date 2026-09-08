@@ -12,8 +12,6 @@ use std::sync::Arc;
 use crate::execution::async_transfer::{AsyncTransfer, PendingAsyncTransfers};
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
-#[cfg(test)]
-use vyre_foundation::ir::BufferAccess;
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_foundation::visit::{visit_node_preorder, visit_preorder, ExprVisitor, NodeVisitor};
@@ -668,81 +666,4 @@ impl<'a> Invocation<'a> {
     pub(crate) fn frames_mut(&mut self) -> &mut Vec<Frame<'a>> {
         &mut self.frames
     }
-}
-
-#[cfg(test)]
-#[allow(dead_code)]
-pub(crate) fn create_invocations(
-    program: &Program,
-    workgroup: [u32; 3],
-    slots: Arc<LocalSlots>,
-) -> Result<Vec<Invocation<'_>>, crate::ReferenceError> {
-    let global_dim = |wgid: u32, size: u32, local: u32| {
-        wgid
-            .checked_mul(size)
-            .and_then(|base| base.checked_add(local))
-            .ok_or_else(|| ReferenceError::new("workgroup * dispatch dimensions overflow u32 global id. Fix: reduce workgroup id or workgroup size so each global_invocation_id component fits in u32."))
-    };
-    let [sx, sy, sz] = program.workgroup_size();
-    let invocation_count = sx
-        .checked_mul(sy)
-        .and_then(|count| count.checked_mul(sz))
-        .ok_or_else(|| {
-            ReferenceError::new("workgroup invocation count overflows u32. Fix: reduce workgroup dimensions before reference execution.")
-        })?;
-    let mut invocations = Vec::with_capacity(usize::try_from(invocation_count).map_err(|_| {
-        ReferenceError::new("workgroup invocation count exceeds host usize. Fix: reduce workgroup dimensions before reference execution.")
-    })?);
-    for z in 0..sz {
-        for y in 0..sy {
-            for x in 0..sx {
-                let local = [x, y, z];
-                let global = [
-                    global_dim(workgroup[0], sx, x)?,
-                    global_dim(workgroup[1], sy, y)?,
-                    global_dim(workgroup[2], sz, z)?,
-                ];
-                invocations.push(Invocation::with_slots(
-                    InvocationIds {
-                        global,
-                        workgroup,
-                        local,
-                    },
-                    program.entry(),
-                    Arc::clone(&slots),
-                ));
-            }
-        }
-    }
-    Ok(invocations)
-}
-
-#[cfg(test)]
-#[allow(dead_code)]
-pub(crate) fn workgroup_memory(program: &Program) -> Result<BufferMap, crate::ReferenceError> {
-    let mut workgroup = BufferMap::new();
-    let mut allocated = 0usize;
-    for decl in program
-        .buffers()
-        .iter()
-        .filter(|decl| decl.access() == BufferAccess::Workgroup)
-    {
-        let element_size = decl.element().min_bytes();
-        let len = (decl.count() as usize)
-            .checked_mul(element_size)
-            .ok_or_else(|| ReferenceError::new(format!(
-                    "workgroup buffer `{}` byte size overflows usize. Fix: reduce count or element size.",
-                    decl.name()
-            )))?;
-        allocated = allocated
-            .checked_add(len)
-            .ok_or_else(|| ReferenceError::new("total workgroup memory byte size overflows usize. Fix: reduce workgroup buffer declarations."))?;
-        if allocated > MAX_WORKGROUP_BYTES {
-            return Err(ReferenceError::new(format!(
-                "workgroup memory requires {allocated} bytes, exceeding the {MAX_WORKGROUP_BYTES}-byte reference budget. Fix: reduce workgroup buffer counts."
-            )));
-        }
-        workgroup.insert(decl.name(), Buffer::new(vec![0; len], decl.element()));
-    }
-    Ok(workgroup)
 }

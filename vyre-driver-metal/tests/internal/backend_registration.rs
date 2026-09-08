@@ -1,6 +1,6 @@
 //! Acquisition, registry submission, and reported device profile.
 
-use crate::*;
+use super::*;
 
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
 #[test]

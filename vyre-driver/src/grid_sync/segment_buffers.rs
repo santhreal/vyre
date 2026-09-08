@@ -260,8 +260,29 @@ pub(super) fn segment_output_names(segment: &Program) -> Result<Vec<Ident>, Back
     Ok(names)
 }
 
+/// The buffers a caller stages from the host, in binding order.
+///
+/// `BufferDecl::consumes_host_input` is the single definition of that list, and
+/// the split has to ask for exactly what the caller was going to pass to an
+/// unsplit dispatch. The segment predicate below is deliberately wider: a
+/// segment reads intermediates a prior segment wrote, including buffers the
+/// backend allocates and buffers of a device-resident kind. Reading the wider
+/// one here demanded a value for a `Shared`-kind or `Persistent`-kind buffer no
+/// backend stages, and the split refused a dispatch whose input list was
+/// correct.
 pub(super) fn original_input_names(program: &Program) -> Result<Vec<Ident>, BackendError> {
-    segment_input_names(program)
+    let mut names = Vec::new();
+    reserve_grid_sync_vec(
+        &mut names,
+        program.buffers().len(),
+        "grid-sync program input names",
+    )?;
+    for buffer in program.buffers() {
+        if buffer.consumes_host_input() {
+            names.push(Ident::from(buffer.name()));
+        }
+    }
+    Ok(names)
 }
 
 pub(super) fn original_output_names(program: &Program) -> Result<Vec<Ident>, BackendError> {
@@ -401,6 +422,75 @@ mod tests {
                 .iter()
                 .any(|n| n.as_str() == "out"),
             "the accumulated output must be forwarded as an input to the later writing segment"
+        );
+    }
+
+    /// The split asks the caller for exactly the ABI list, not the wider set a
+    /// segment reads.
+    ///
+    /// Derived from `BufferDecl::consumes_host_input` over the program's own
+    /// declarations rather than from a written-out roster, so a buffer kind
+    /// added to that rule is covered here without this test being edited. The
+    /// `Shared`-kind declaration is the adversarial case: it is `ReadWrite` and
+    /// not an output, so every predicate that spells the rule out again admits
+    /// it, and a caller that passes the ABI list was then refused for arity.
+    #[test]
+    fn the_program_input_list_is_the_host_abi_and_not_the_segment_read_set() {
+        use vyre_foundation::ir::{DataType, MemoryOrdering};
+
+        let staged =
+            BufferDecl::storage("staged", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4);
+        let scratch = BufferDecl::storage("scratch", 1, BufferAccess::ReadWrite, DataType::U32)
+            .with_count(4)
+            .with_kind(MemoryKind::Shared);
+        let out = BufferDecl::output("out", 2, DataType::U32).with_count(4);
+        let program = Program::wrapped(
+            vec![staged, scratch, out],
+            [1, 1, 1],
+            vec![
+                crate::grid_sync::test_programs::region(
+                    "a",
+                    vec![Node::store(
+                        "scratch",
+                        Expr::u32(0),
+                        Expr::load("staged", Expr::u32(0)),
+                    )],
+                ),
+                Node::barrier_with_ordering(MemoryOrdering::GridSync),
+                crate::grid_sync::test_programs::region(
+                    "b",
+                    vec![Node::store(
+                        "out",
+                        Expr::u32(0),
+                        Expr::load("scratch", Expr::u32(0)),
+                    )],
+                ),
+            ],
+        );
+
+        let expected: Vec<String> = program
+            .buffers()
+            .iter()
+            .filter(|buffer| buffer.consumes_host_input())
+            .map(|buffer| buffer.name().to_string())
+            .collect();
+        let actual: Vec<String> = original_input_names(&program)
+            .expect("program input names")
+            .iter()
+            .map(|name| name.as_str().to_string())
+            .collect();
+        assert_eq!(actual, expected);
+        assert!(
+            !actual.iter().any(|name| name == "scratch"),
+            "a dispatch-allocated `Shared` buffer is not staged from the host"
+        );
+        assert!(
+            segment_buffer_consumes_input(
+                program
+                    .buffer("scratch")
+                    .expect("the program declares scratch")
+            ),
+            "a segment still reads it: the two predicates are deliberately different"
         );
     }
 }

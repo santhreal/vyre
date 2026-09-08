@@ -195,7 +195,7 @@ fn read_write_invocation_lifetime_is_input_and_output() {
             }],
         )
         .unwrap();
-    let out_id = outputs[0];
+    let declared_output = outputs[0];
 
     let (artifact, payload) = single_entry(
         graph,
@@ -205,6 +205,11 @@ fn read_write_invocation_lifetime_is_input_and_output() {
     let core = test_instance_core(&artifact, &payload).unwrap();
     assert_eq!(core.module_inputs[0], vec![ArtifactValueId(val_inv.0)]);
     assert_eq!(core.module_outputs[0], vec![ArtifactValueId(val_inv.0)]);
+    assert!(
+        !core.module_outputs[0].contains(&ArtifactValueId(declared_output.0)),
+        "a read-write invocation output is the aliased input value, not a second value; the \
+         declared output id must not appear beside it"
+    );
 }
 
 #[test]
@@ -247,7 +252,7 @@ fn read_write_constant_lifetime_is_input_and_output() {
             }],
         )
         .unwrap();
-    let _out_id = outputs[0];
+    let declared_output = outputs[0];
 
     let mut facts = ExternalFacts::new(Digest([0; 32]), BTreeMap::new());
     facts.constant_identities.insert(val_const, Digest([1; 32]));
@@ -269,6 +274,10 @@ fn read_write_constant_lifetime_is_input_and_output() {
     let core = test_instance_core(&artifact, &payload).unwrap();
     assert_eq!(core.module_inputs[0], vec![ArtifactValueId(val_const.0)]);
     assert_eq!(core.module_outputs[0], vec![ArtifactValueId(val_const.0)]);
+    assert!(
+        !core.module_outputs[0].contains(&ArtifactValueId(declared_output.0)),
+        "a read-write constant output is the aliased input value, not a second value"
+    );
 }
 
 #[test]

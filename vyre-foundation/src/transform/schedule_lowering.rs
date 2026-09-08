@@ -36,6 +36,17 @@ impl NodeRewrite for ScheduleLowering {
     }
 }
 
+/// Apply a selected schedule's physical mapping to a borrowed program.
+///
+/// Returns `None` when `program` carries no logical execution marker, so a
+/// caller that only needs the physical form pays no allocation for a program
+/// that is already physical.
+#[must_use]
+pub fn lower_logical_schedule_borrowed(program: &Program) -> Option<Program> {
+    let entry = rewrite_body(program.entry(), &mut ScheduleLowering)?;
+    Some(program.with_rewritten_entry(entry))
+}
+
 /// Apply a selected schedule's physical identity and synchronization mapping.
 ///
 /// Returns the original `Program` allocation when it contains no logical
@@ -43,8 +54,8 @@ impl NodeRewrite for ScheduleLowering {
 /// workgroup policy while replacing only entry nodes.
 #[must_use]
 pub fn lower_logical_schedule(program: Program) -> (Program, bool) {
-    let Some(entry) = rewrite_body(program.entry(), &mut ScheduleLowering) else {
-        return (program, false);
-    };
-    (program.with_rewritten_entry(entry), true)
+    match lower_logical_schedule_borrowed(&program) {
+        Some(lowered) => (lowered, true),
+        None => (program, false),
+    }
 }

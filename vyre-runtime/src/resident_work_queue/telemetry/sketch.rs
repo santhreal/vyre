@@ -1,5 +1,5 @@
 use super::RingTelemetry;
-use crate::PipelineError;
+use crate::{PipelineError, RingEncodingFault};
 
 /// Fixed-depth Count-Min sketch for compact megakernel telemetry.
 ///
@@ -23,13 +23,15 @@ impl CountMinSketch {
     /// table size overflows host address space.
     pub fn new(depth: usize, width: usize) -> Result<Self, PipelineError> {
         if depth == 0 || width == 0 {
-            return Err(PipelineError::QueueFull {
-                queue: "telemetry",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Geometry,
                 fix: "Count-Min sketch depth and width must be non-zero",
             });
         }
-        let len = depth.checked_mul(width).ok_or(PipelineError::QueueFull {
-            queue: "telemetry",
+        let len = depth
+            .checked_mul(width)
+            .ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix: "Count-Min sketch dimensions overflowed host address space; reduce depth or width",
         })?;
         let mut counters = Vec::new();
@@ -73,13 +75,15 @@ impl CountMinSketch {
     /// table size overflows host address space.
     pub fn reset_shape(&mut self, depth: usize, width: usize) -> Result<(), PipelineError> {
         if depth == 0 || width == 0 {
-            return Err(PipelineError::QueueFull {
-                queue: "telemetry",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Geometry,
                 fix: "Count-Min sketch depth and width must be non-zero",
             });
         }
-        let len = depth.checked_mul(width).ok_or(PipelineError::QueueFull {
-            queue: "telemetry",
+        let len = depth
+            .checked_mul(width)
+            .ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix: "Count-Min sketch dimensions overflowed host address space; reduce depth or width",
         })?;
         if self.depth == depth && self.width == width && self.counters.len() == len {

@@ -18,10 +18,7 @@ use vyre_megakernel::{
 };
 use vyre_spec::IrLevel;
 
-#[path = "../../tests/support/artifact_fixtures.rs"]
-mod artifact_fixtures;
-
-use artifact_fixtures::{entry_point, neutral_artifact};
+use vyre_test_support::artifact_fixtures::{entry_point, neutral_artifact};
 
 fn format() -> TargetPayloadFormat {
     TargetPayloadFormat::new("test.target-binary", 1)

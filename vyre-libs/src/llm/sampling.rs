@@ -436,12 +436,11 @@ fn fixture_adjusted() -> Vec<f32> {
         .collect()
 }
 
-/// The candidate set the selection produces: exponentials of the adjusted row
-/// relative to its maximum, the two largest in descending order, and their
-/// share of the full softmax denominator.
+/// The candidate set the selection produces: the two largest exponentials of the
+/// adjusted row in descending order, and their share of the full softmax
+/// denominator.
 struct FixtureSelection {
     indices: Vec<u32>,
-    exponentials: Vec<f32>,
     weights: Vec<f32>,
 }
 
@@ -483,39 +482,7 @@ fn fixture_selection() -> FixtureSelection {
         .map(|index| exponentials[*index as usize])
         .collect();
     let weights: Vec<f32> = kept.iter().map(|value| value / sum).collect();
-    FixtureSelection {
-        indices,
-        exponentials: kept,
-        weights,
-    }
-}
-
-/// The token the fixture draw lands on.
-fn fixture_token(selection: &FixtureSelection) -> u32 {
-    let mut kept = 0usize;
-    let mut mass = 0.0f32;
-    for (position, weight) in selection.weights.iter().enumerate() {
-        if kept == 0 {
-            mass += *weight;
-            if mass >= FIXTURE_TOP_P {
-                kept = position + 1;
-            }
-        }
-    }
-    if kept == 0 {
-        kept = selection.weights.len();
-    }
-    let target = FIXTURE_UNIFORM * mass;
-    let mut drawn = 0.0f32;
-    let mut chosen = selection.indices[kept - 1];
-    for position in 0..kept {
-        drawn += selection.weights[position];
-        if drawn >= target {
-            chosen = selection.indices[position];
-            break;
-        }
-    }
-    chosen
+    FixtureSelection { indices, weights }
 }
 
 fn fixture_sampler() -> TokenSampler<'static> {

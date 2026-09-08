@@ -310,7 +310,13 @@ pub enum DiskCacheError {
     Io(#[from] io::Error),
 }
 
-#[cfg_attr(not(any(test, feature = "remote-cache")), allow(dead_code))]
+#[cfg_attr(
+    not(any(test, feature = "remote-cache")),
+    expect(
+        dead_code,
+        reason = "the zero-capacity entry point is called by the remote-cache reader and by this module's own tests, so it has no caller in a build with neither"
+    )
+)]
 pub(super) fn read_verified_cache_blob(mut reader: impl Read) -> Option<Vec<u8>> {
     read_verified_cache_blob_with_capacity(&mut reader, 0)
 }
@@ -385,7 +391,7 @@ fn append_u64_decimal(out: &mut String, mut value: u64) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_artifact_fixtures::tiny_artifact;
+    use vyre_test_support::artifact_fixtures::tiny_artifact;
 
     #[test]
     fn disk_cache_persists_across_store_reopen() {

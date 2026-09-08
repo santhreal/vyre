@@ -22,8 +22,7 @@ use vyre_megakernel::{
     ObjectiveMetric, SearchBudget, ARTIFACT_SCHEMA_VERSION,
 };
 
-#[path = "graph_fixtures/mod.rs"]
-mod graph_fixtures;
+use crate::graph_fixtures;
 use graph_fixtures::{
     asymmetric_join_graph, independent_two_arm_graph, raw_conflict_two_arm_graph,
 };

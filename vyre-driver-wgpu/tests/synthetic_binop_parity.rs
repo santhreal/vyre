@@ -26,8 +26,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod binop_parity_fixtures;
-mod harness;
+use crate::binop_parity_fixtures;
 
 use binop_parity_fixtures::program;
 use vyre_driver_wgpu::WgpuBackend;

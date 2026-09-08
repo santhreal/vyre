@@ -615,14 +615,13 @@ macro_rules! unrelated {
     #[test]
     fn the_workspace_derivation_finds_the_hardware_registration_macros() {
         let root = crate::workspace_manifest::workspace_root();
+        let members = crate::workspace_manifest::workspace_members(&root);
         let mut definitions: BTreeMap<String, String> = BTreeMap::new();
-        for member in crate::workspace_manifest::workspace_members(&root) {
-            for path in crate::workspace_manifest::source_files(&root, &member) {
-                let Ok(text) = std::fs::read_to_string(&path) else {
-                    continue;
-                };
-                definitions.extend(macro_definitions(&text));
-            }
+        for source in crate::workspace_manifest::member_sources(&root, &members).iter() {
+            let Ok(text) = &source.text else {
+                continue;
+            };
+            definitions.extend(macro_definitions(text));
         }
         let submitting = submitting_macros(&definitions);
 

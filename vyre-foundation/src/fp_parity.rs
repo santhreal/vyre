@@ -26,14 +26,91 @@ pub const BACKEND_TRANSCENDENTAL_ULP_BUDGET: u32 = 128;
 /// program-level, not an op-id whitelist.
 pub const BACKEND_ELEMENTARY_F32_ULP_BUDGET: u32 = 4;
 
+/// Rounding a target is permitted to apply to a chain of f32 arithmetic.
+///
+/// The mode is the neutral half of the contraction contract stated above: the
+/// budget says how far a contracted backend may drift, and this says whether
+/// contraction is permitted at all. It names no instruction and no shader
+/// dialect, so every emitter reads the same policy and expresses it in its own
+/// text.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize,
+)]
+pub enum FloatLoweringMode {
+    /// A target may fold `a * b + c` into a single rounding.
+    ///
+    /// Every shipped backend does, which is why
+    /// [`BACKEND_ELEMENTARY_F32_ULP_BUDGET`] is not zero.
+    #[default]
+    Contracted,
+    /// Every f32 operation rounds separately, as IEEE-754 specifies.
+    ///
+    /// An emitter honors this by forcing each intermediate f32 result to be
+    /// materialized before it is consumed, which is what denies a target the
+    /// multiply-add pair it would otherwise fuse. Two chains emitted under
+    /// different modes are different modules, so anything that caches an
+    /// emitted artifact carries the mode in its identity.
+    StrictIeee,
+}
+
+/// Identity of the emitted-artifact contract this mode participates in.
+///
+/// A cached artifact recorded before the mode existed carries no mode, and
+/// serving it to a strict-mode dispatch would return contracted arithmetic
+/// under a strict request. Every cache key that admits an emitted artifact
+/// mixes this value in, so a stale entry misses rather than being served.
+///
+/// Version 2 added the strict expansion in
+/// [`fp_expansion`](crate::fp_expansion): a v1 strict-mode artifact has its
+/// multiply-adds separated but still calls the target's approximate native
+/// transcendental, so serving it under v2 would answer a bit-identity request
+/// with backend-dependent bits.
+pub const FLOAT_LOWERING_CONTRACT_VERSION: u32 = 2;
+
+impl FloatLoweringMode {
+    /// True when the mode denies a target the fused multiply-add.
+    #[must_use]
+    pub const fn blocks_contraction(self) -> bool {
+        matches!(self, Self::StrictIeee)
+    }
+
+    /// Every mode, so a consumer sweeps the set instead of naming one member.
+    ///
+    /// [`Self::roster_index`] is what keeps this list in step with the enum: a
+    /// new variant makes that match non-exhaustive, and the index its new arm
+    /// returns addresses this array, so a variant added without extending the
+    /// array indexes past the end.
+    pub const EVERY: &'static [Self] = &[Self::Contracted, Self::StrictIeee];
+
+    /// Position of this mode in [`Self::EVERY`].
+    #[must_use]
+    pub const fn roster_index(self) -> usize {
+        match self {
+            Self::Contracted => 0,
+            Self::StrictIeee => 1,
+        }
+    }
+
+    /// Stable label a cache key and a diagnostic both name the mode by.
+    #[must_use]
+    pub const fn cache_label(self) -> &'static str {
+        match self {
+            Self::Contracted => "contracted",
+            Self::StrictIeee => "strict-ieee",
+        }
+    }
+}
+
 /// Normalize an f32 so two backends that agree numerically agree bitwise.
 ///
 /// Every NaN payload collapses to one quiet NaN and every subnormal flushes to
 /// a zero of its own sign. A signed zero is preserved: `-0.0` and `+0.0` are
 /// numerically equal and every backend distinguishes their bits, so collapsing
-/// them here would hide a real difference. The wire encoder does collapse them,
-/// which is a different contract for a different purpose and lives with the
-/// encoder.
+/// them here would hide a real difference. The wire encoder applies this same
+/// rule rather than one of its own, because the encoded form is the key an
+/// artifact is cached under: an encoder that folded `-0.0` into `+0.0` served
+/// one program the other one's device code, while the reference interpreter
+/// read the literal as written and disagreed with it.
 ///
 /// This is the one definition. Four identical bodies stood in
 /// `scalar_ops`, two reference evaluators and one reference test, and the whole
@@ -132,42 +209,138 @@ fn program_has_transcendental(program: &Program) -> bool {
     .is_break()
 }
 
+/// Whether one unary operator is an f32 op a backend may lower to an
+/// approximate native instruction.
+///
+/// The set is the policy: an op left out of it asserts that backends agree
+/// with the reference to [`BACKEND_ELEMENTARY_F32_ULP_BUDGET`] on that op.
+/// `UnOp::Reciprocal` is deliberately outside: a division rather than an
+/// approximate reciprocal instruction is the usual lowering, so it stays in the
+/// elementary window.
+///
+/// `UnOp` is `#[non_exhaustive]`, so the closure cannot be a compile-time one
+/// here. [`recorded_approximability`] answers `None` for an operator no arm
+/// names, and the closure test in this module reads that: it walks the frozen
+/// builtin tag table and fails on a tag with no recorded decision.
+#[must_use]
+pub fn is_approximable_unary_op(op: &UnOp) -> bool {
+    recorded_approximability(op).unwrap_or(false)
+}
+
+/// The recorded approximability decision for one unary operator, or `None`
+/// when no arm names it.
+///
+/// The value of the third answer is that an unrecorded builtin is
+/// distinguishable from a recorded elementary one. Two hand-typed lists stood
+/// in the closure test instead, restating this match a third time so the count
+/// of recorded operators could be compared against the tag table. Three copies
+/// of one decision drift, and a list that omitted an operator read as an
+/// absent decision rather than as an omission.
+fn recorded_approximability(op: &UnOp) -> Option<bool> {
+    match op {
+        UnOp::Exp
+        | UnOp::Exp2
+        | UnOp::Log
+        | UnOp::Log2
+        | UnOp::Sqrt
+        | UnOp::InverseSqrt
+        | UnOp::Sin
+        | UnOp::Cos
+        | UnOp::Tan
+        | UnOp::Asin
+        | UnOp::Acos
+        | UnOp::Atan
+        | UnOp::Sinh
+        | UnOp::Cosh
+        | UnOp::Tanh => Some(true),
+        UnOp::Negate
+        | UnOp::BitNot
+        | UnOp::LogicalNot
+        | UnOp::Popcount
+        | UnOp::Clz
+        | UnOp::Ctz
+        | UnOp::ReverseBits
+        | UnOp::Abs
+        | UnOp::Floor
+        | UnOp::Ceil
+        | UnOp::Round
+        | UnOp::Trunc
+        | UnOp::Sign
+        | UnOp::IsNan
+        | UnOp::IsInf
+        | UnOp::IsFinite
+        | UnOp::Unpack4Low
+        | UnOp::Unpack4High
+        | UnOp::Unpack8Low
+        | UnOp::Unpack8High
+        | UnOp::Reciprocal
+        | UnOp::BitcastF32ToU32
+        | UnOp::BitcastU32ToF32 => Some(false),
+        // An extension operator declares its own lowering contract, and this
+        // module cannot read it. It is graded by the elementary window until
+        // the registration states otherwise through `effective_tolerance`.
+        UnOp::Opaque(_) => Some(false),
+        // A builtin operator added to `vyre-spec` after this arm was written.
+        // The closure test names it as soon as it exists.
+        _ => None,
+    }
+}
+
+/// Every builtin unary operator [`is_approximable_unary_op`] admits, in wire
+/// tag order.
+///
+/// Derived by filtering the frozen builtin tag table through the classifier, so
+/// a caller that needs the set never carries a second copy of it and a variant
+/// added to the policy appears here with nothing else edited.
+#[must_use]
+pub fn approximable_unary_ops() -> Vec<UnOp> {
+    crate::serial::wire::tags::builtin_un_ops()
+        .into_iter()
+        .filter(|op| is_approximable_unary_op(op))
+        .collect()
+}
+
 /// Whether `expr` is itself an f32 op a backend may lower to an approximate
 /// native instruction.
 ///
-/// Shallow: sub-expressions are the walk's job. The set is the policy, so a
-/// `UnOp` left out of it asserts that backends agree with the reference to
-/// [`BACKEND_ELEMENTARY_F32_ULP_BUDGET`] on that op. `UnOp::Reciprocal` is
-/// deliberately outside: a division rather than an approximate reciprocal
-/// instruction is the usual lowering, so it stays in the elementary window.
+/// Shallow: sub-expressions are the walk's job.
 fn is_transcendental_op(expr: &Expr) -> bool {
-    matches!(
-        expr,
-        Expr::UnOp {
-            op: UnOp::Exp
-                | UnOp::Exp2
-                | UnOp::Log
-                | UnOp::Log2
-                | UnOp::Sqrt
-                | UnOp::InverseSqrt
-                | UnOp::Sin
-                | UnOp::Cos
-                | UnOp::Tan
-                | UnOp::Asin
-                | UnOp::Acos
-                | UnOp::Atan
-                | UnOp::Sinh
-                | UnOp::Cosh
-                | UnOp::Tanh,
-            ..
-        }
-    )
+    matches!(expr, Expr::UnOp { op, .. } if is_approximable_unary_op(op))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::ir::{BufferDecl, DataType, Node};
+
+    /// WHY: every consumer that separates cached artifacts by rounding mode
+    /// sweeps `FloatLoweringMode::EVERY`. A mode added to the enum and left out
+    /// of that roster would be silently exempt from cache separation, so the
+    /// roster and the enum are pinned to each other here: the index each
+    /// variant reports must address its own slot, and a missing slot indexes
+    /// past the end.
+    #[test]
+    fn every_float_lowering_mode_holds_its_own_roster_slot() {
+        for (slot, mode) in FloatLoweringMode::EVERY.iter().enumerate() {
+            assert_eq!(
+                mode.roster_index(),
+                slot,
+                "Fix: keep FloatLoweringMode::EVERY in the order roster_index reports."
+            );
+        }
+        let mut labels: Vec<&str> = FloatLoweringMode::EVERY
+            .iter()
+            .map(|mode| mode.cache_label())
+            .collect();
+        labels.sort_unstable();
+        let count = labels.len();
+        labels.dedup();
+        assert_eq!(
+            labels.len(),
+            count,
+            "Fix: give every float lowering mode its own cache label."
+        );
+    }
 
     #[test]
     fn elementary_f32_program_gets_contraction_budget() {
@@ -209,6 +382,41 @@ mod tests {
         assert_eq!(
             f32_ulp_tolerance(&program),
             BACKEND_TRANSCENDENTAL_ULP_BUDGET
+        );
+    }
+
+    /// Every builtin unary tag carries a recorded approximability decision.
+    ///
+    /// `UnOp` is `#[non_exhaustive]`, so `recorded_approximability` cannot
+    /// close over the variant space at compile time from this crate: a new
+    /// builtin falls into its catch-all. The closure is enforced here instead,
+    /// over the frozen wire tag table, so a tag added to `vyre-spec` turns
+    /// this red until its decision is recorded.
+    ///
+    /// The partition assertion is what stops the test passing vacuously. A
+    /// classifier that answered one way for every operator would satisfy the
+    /// closure and grade every program under one budget.
+    ///
+    /// What it does not catch: an extension operator, which declares its own
+    /// contract through `effective_tolerance` and has no wire tag to enumerate.
+    #[test]
+    fn every_builtin_unary_tag_has_a_recorded_approximability_decision() {
+        let builtins = crate::serial::wire::tags::builtin_un_ops();
+        let unrecorded: Vec<&UnOp> = builtins
+            .iter()
+            .filter(|op| recorded_approximability(op).is_none())
+            .collect();
+        assert!(
+            unrecorded.is_empty(),
+            "a builtin unary wire tag has no recorded approximability decision. \
+             Fix: give each of {unrecorded:?} an arm in `recorded_approximability`, \
+             deciding whether a backend may lower it to an approximate instruction."
+        );
+        let approximable = approximable_unary_ops();
+        assert!(
+            !approximable.is_empty() && approximable.len() < builtins.len(),
+            "the policy must split the builtin unary operators. \
+             approximable={approximable:?} builtins={builtins:?}"
         );
     }
 }

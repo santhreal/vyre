@@ -1,6 +1,6 @@
 //! Smoke tests for target-neutral `vyre_aot::compile` behavior.
 
-mod fixture_target;
+use crate::fixture_target;
 
 use vyre_aot::{compile, emit_launcher_rust, CompileError, LauncherError, LauncherOpts, TargetId};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};

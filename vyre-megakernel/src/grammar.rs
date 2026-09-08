@@ -724,26 +724,25 @@ pub(crate) const MAPPING_LEVELS: &[MappingLevel] = &[
     MappingLevel::DevicePartition,
 ];
 
-/// Position of one level in `MAPPING_LEVELS`.
+/// `MAPPING_LEVELS` holds every level in hierarchy order, deepest level last.
 ///
 /// The match has no catch-all arm, so a level added to the schedule IR fails to
-/// compile here until the production records a decision for it.
-const fn mapping_level_index(level: MappingLevel) -> usize {
-    match level {
-        MappingLevel::Lane => 0,
-        MappingLevel::Subgroup => 1,
-        MappingLevel::Workgroup => 2,
-        MappingLevel::ComputeUnitPartition => 3,
-        MappingLevel::DevicePartition => 4,
-    }
-}
-
-/// `MAPPING_LEVELS` holds every level the index names, once, in order.
+/// compile here until this list records a decision for it.
 const _: () = {
     let mut index = 0;
     while index < MAPPING_LEVELS.len() {
-        assert!(mapping_level_index(MAPPING_LEVELS[index]) == index);
+        let position = match MAPPING_LEVELS[index] {
+            MappingLevel::Lane => 0,
+            MappingLevel::Subgroup => 1,
+            MappingLevel::Workgroup => 2,
+            MappingLevel::ComputeUnitPartition => 3,
+            MappingLevel::DevicePartition => 4,
+        };
+        assert!(position == index);
         index += 1;
     }
-    assert!(MAPPING_LEVELS.len() == mapping_level_index(MappingLevel::DevicePartition) + 1);
+    assert!(matches!(
+        MAPPING_LEVELS[MAPPING_LEVELS.len() - 1],
+        MappingLevel::DevicePartition
+    ));
 };

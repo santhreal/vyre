@@ -542,12 +542,12 @@ pub fn adjustment_set_ordering_is_safe_witness(
     if treatment == outcome {
         return true;
     }
-    let Some(cells) = (n as usize)
+    if !(n as usize)
         .checked_mul(n as usize)
-        .filter(|&c| adj.len() == c)
-    else {
+        .is_some_and(|cells| adj.len() == cells)
+    {
         return false;
-    };
+    }
     if treatment >= n || outcome >= n {
         return false;
     }
@@ -558,12 +558,12 @@ pub fn adjustment_set_ordering_is_safe_witness(
 /// For each pass index `i`, return strict descendants reachable in the influence graph.
 #[must_use]
 pub fn adjustment_set_pass_descendants_witness(adj: &[u32], n: u32) -> Vec<Vec<u32>> {
-    let Some(cells) = (n as usize)
+    if !(n as usize)
         .checked_mul(n as usize)
-        .filter(|&c| c > 0 && adj.len() == c)
-    else {
+        .is_some_and(|cells| cells > 0 && adj.len() == cells)
+    {
         return Vec::new();
-    };
+    }
     let closure = dense_transitive_closure(adj, n as usize);
     (0..n as usize)
         .map(|i| {

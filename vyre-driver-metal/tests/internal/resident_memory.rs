@@ -1,7 +1,7 @@
 //! Resident buffer lifetime: transfers, ranged batch views, resident and
 //! sequenced dispatch, and handle release on shutdown.
 
-use crate::*;
+use super::*;
 
 use super::fixtures::word_to_word;
 use vyre_driver::{DispatchConfig, ResidentDispatchStep, ResidentReadRange};

@@ -2,7 +2,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 #[path = "harness/vectorized_memory_dynamic_affine.rs"]
 mod vectorized_memory_dynamic_affine;
 

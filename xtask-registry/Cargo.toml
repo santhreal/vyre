@@ -10,6 +10,10 @@ homepage.workspace = true
 description = "xtask subcommands that read the live vyre operation registry."
 # Internal build-task crate, never published.
 publish = false
+# Integration tests are declared, never discovered, so a file added under
+# `tests/` is wired into a target by hand and cannot start linking a binary of
+# its own.
+autotests = false
 
 [lints]
 workspace = true
@@ -61,3 +65,9 @@ structure-gate = { path = "../structure-gate" }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+
+# A `tests/<name>/main.rs` target is already one binary for its whole module
+# tree, so it stays a target of its own.
+[[test]]
+name = "registry_contracts"
+path = "tests/registry_contracts/main.rs"

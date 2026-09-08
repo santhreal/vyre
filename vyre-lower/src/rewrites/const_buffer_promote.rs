@@ -82,9 +82,7 @@ mod tests {
         KernelDescriptor {
             id: "const_promote_test".into(),
             bindings: BindingLayout { slots },
-            dispatch: Dispatch {
-                workgroup_size: [64, 1, 1],
-            },
+            dispatch: Dispatch::new(64, 1, 1),
             body: KernelBody {
                 ops,
                 literals: vec![LiteralValue::U32(0)],

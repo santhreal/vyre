@@ -13,7 +13,7 @@
 //! bitwise arithmetic → BIT-EXACT (no tolerance), compared against the authoritative `reference_mask_*`
 //! CPU oracles.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::encoding::bitset_mask_algebra::{
     mask_and_via, mask_clear_bit_via, mask_contains_via, mask_equal_via, mask_not_via, mask_or_via,

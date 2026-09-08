@@ -21,7 +21,7 @@
 //! BACKLOG `FIXED-amg-fixed-path-unsigned-mul-negatives`). Every operation is exactly reproducible in
 //! u32, so the oracle here is BIT-EXACT (no tolerance) (the same exact-fixed-point route mz_project used).
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::multigrid_matroid_solver::matroid_solve_step_fixed_via;
 

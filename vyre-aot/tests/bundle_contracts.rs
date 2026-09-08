@@ -1,6 +1,6 @@
 //! Bundle packaging contract tests for canonical artifact envelopes.
 
-mod fixture_target;
+use crate::fixture_target;
 
 use vyre_aot::{bundle, package_artifact, BundleError, LauncherError, LauncherOpts, TargetId};
 

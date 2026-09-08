@@ -31,7 +31,6 @@ pub(crate) mod value_range;
 pub mod vec_pack;
 pub(crate) mod workgroup_uniform;
 
-use crate::operand_class::operand_is_result_reference;
 use crate::{KernelBody, KernelOp, KernelOpKind};
 use rustc_hash::FxHashMap;
 
@@ -99,16 +98,6 @@ pub(crate) fn body_result_ids(body: &KernelBody) -> rustc_hash::FxHashSet<u32> {
     results
 }
 
-pub(crate) fn body_refs_only(body: &KernelBody, produced: &rustc_hash::FxHashSet<u32>) -> bool {
-    body.ops.iter().all(|op| {
-        op.operands.iter().enumerate().all(|(position, operand)| {
-            !operand_is_result_reference(&op.kind, position) || produced.contains(operand)
-        })
-    }) && body
-        .child_bodies
-        .iter()
-        .all(|child| body_refs_only(child, produced))
-}
 /// Greatest common divisor for positive unsigned integers.
 pub(crate) fn gcd_u32(mut a: u32, mut b: u32) -> u32 {
     while b != 0 {
@@ -147,6 +136,7 @@ pub use bank_conflict::{
     derive_shared_access_profiles, evaluate_mitigation_candidate, select_bank_conflict_strategy,
     AccessPhase, AccessPhaseProfile, BankConflictMitigation, MitigationEvaluation,
     PhaseConflictReport, SharedBindingAccessProfile, SharedPermutationBlock, TargetBankGeometry,
+    CANDIDATE_MITIGATIONS,
 };
 pub use bank_conflict::{BankAccessSite, BankConflictKind, ConflictSeverity};
 pub use coalesce::{analyze as analyze_coalesce, CoalescenceReport};

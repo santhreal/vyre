@@ -11,8 +11,7 @@
 #![cfg(feature = "device-tests")]
 
 mod basic_resident_contracts;
-#[path = "../harness/mod.rs"]
-mod harness;
+use crate::harness;
 mod repeated_sequence_contracts;
 mod resident_lane_fixture;
 mod sequence_readback_contracts;

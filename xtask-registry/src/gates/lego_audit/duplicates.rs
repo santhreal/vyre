@@ -1,14 +1,58 @@
 //! The duplicate-family report the audit writes for the dedup evidence path.
 //!
 //! The report is the machine-readable form of what checks 1 and 10 print, so a
-//! consumer reads one artifact rather than parsing gate output.
+//! consumer reads one artifact rather than parsing gate output. The two
+//! detectors both feed it, so it is owned here rather than by either check, and
+//! the gate holds the committed artifact to what the live registry produces.
+//!
+//! It was reachable only through a `--duplicate-report-json` path on a
+//! `lego-audit` command that no longer parsed one, so the committed evidence
+//! named a regeneration command nothing implemented. `--write` on this gate is
+//! that command.
+
+use std::path::Path;
+
+use xtask::artifact_gate::{settle, Generated};
+use xtask::artifact_paths::LEGO_AUDIT_DUPLICATES_ARTIFACT;
 
 use super::*;
 
-pub(super) fn lego_duplicate_report(
-    ops: &[OpInfo],
-    generator_command: &str,
-) -> DuplicateFamilyReport {
+/// The command line recorded inside the artifact, and the one that rebuilds it.
+///
+/// Release evidence derives the expected string from the argument vector it
+/// spawns, so this must stay the literal `xtask <gate> --write` form rather than
+/// the `--duplicate-report-json` shape the shared helper produces for the
+/// `whats-similar` command, which parses that flag.
+const GENERATOR_COMMAND: &str = "xtask lego-duplicate-report --write";
+
+/// Holds the lego duplicate-family evidence to the live registry.
+pub struct LegoDuplicateReport;
+
+impl xtask::gate::GateBehavior for LegoDuplicateReport {
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let ops = collect_ops(&mut report);
+        report.cover(Coverage::complete("registered operations", ops.len()));
+        let path = Path::new(LEGO_AUDIT_DUPLICATES_ARTIFACT);
+        let duplicates = lego_duplicate_report(&ops, GENERATOR_COMMAND);
+        report.note(format!(
+            "{} duplicate family(ies) across the no-reinvention and operand-shape detectors",
+            duplicates.families.len()
+        ));
+        match Generated::json(path, &duplicates) {
+            Ok(generated) => {
+                report.produced(path);
+                for finding in settle(&ctx.root, "lego-duplicate-report", &[generated], ctx.write) {
+                    report.find(finding);
+                }
+            }
+            Err(finding) => report.find(finding),
+        }
+        Ok(report)
+    }
+}
+
+fn lego_duplicate_report(ops: &[OpInfo], generator_command: &str) -> DuplicateFamilyReport {
     let mut families = Vec::new();
     families.extend(
         no_reinvention_pairs(ops)
@@ -27,7 +71,7 @@ pub(super) fn lego_duplicate_report(
     duplicate_family_report(generator_command, "registered-op-lego-audit", families)
 }
 
-pub(super) fn lego_duplicate_family(
+fn lego_duplicate_family(
     detector: &str,
     score: f64,
     left: &OpInfo,
@@ -71,37 +115,57 @@ pub(super) fn lego_duplicate_family(
     }
 }
 
-pub(super) fn lego_duplicate_subject(op: &OpInfo) -> DuplicateSubject {
+fn lego_duplicate_subject(op: &OpInfo) -> DuplicateSubject {
     registered_op_duplicate_subject(&op.id, &op.fingerprint, op.own_nodes + op.composed_nodes)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-    use xtask::gates::dedup_report::duplicate_report_json_path;
+    use super::*;
+    use crate::gates::lego_audit::test_ops::op_with_fingerprint;
 
-    /// WHY: this preserves the explicit duplicate-report output path contract.
-    /// The gate reads the flag off `GateCtx` and resolves it through the shared
-    /// helper, so the test exercises both halves rather than a parser that no
-    /// longer exists.
+    /// WHY: release evidence derives the expected generator command from the
+    /// argument vector it spawns, and the previous artifact named a `lego-audit
+    /// --duplicate-report-json` path nothing parsed, so the committed evidence
+    /// could not be reproduced. The recorded command is spelled out here so an
+    /// edit to the const has to be a deliberate one made on both sides.
     #[test]
-    fn duplicate_report_json_arg_accepts_path() {
-        let ctx = xtask::gate::GateCtx::new(
-            PathBuf::from("."),
-            vec![
-                "--with-repo".to_string(),
-                "--duplicate-report-json".to_string(),
-                "release/evidence/dedup/lego-duplicates.json".to_string(),
-            ],
-        );
-        let resolved = duplicate_report_json_path(
-            "--duplicate-report-json",
-            ctx.flag("--duplicate-report-json"),
-            "--duplicate-report-json requires a path",
-        );
+    fn the_report_records_the_gate_that_regenerates_it() {
+        let report = lego_duplicate_report(&[], GENERATOR_COMMAND);
         assert_eq!(
-            resolved.ok(),
-            Some(PathBuf::from("release/evidence/dedup/lego-duplicates.json"))
+            report.generator_command,
+            "xtask lego-duplicate-report --write"
+        );
+        assert_eq!(report.detector_family, "registered-op-lego-audit");
+        assert!(
+            report.families.is_empty(),
+            "no registered operation, no duplicate family: {:?}",
+            report.families
+        );
+    }
+
+    /// WHY: the report unions two detectors, and a version that collected one of
+    /// them would look correct on a tree where the other found nothing. Two ops
+    /// sharing a fingerprint are a pair for both, so both detector labels must
+    /// appear. One pair is one family whatever found it, and the report credits
+    /// every detector that reached it in the family's own label.
+    #[test]
+    fn both_detectors_reach_the_report() {
+        let shared = vec![7u8; 128];
+        let ops = [
+            op_with_fingerprint("vyre-libs::a::twin", shared.clone()),
+            op_with_fingerprint("vyre-libs::b::twin", shared),
+        ];
+        let report = lego_duplicate_report(&ops, "xtask lego-duplicate-report");
+        let detectors: BTreeSet<&str> = report
+            .families
+            .iter()
+            .flat_map(|family| family.detector.split('+'))
+            .collect();
+        assert_eq!(
+            detectors,
+            BTreeSet::from(["lego-audit:no-reinvention", "lego-audit:operand-shape"]),
+            "both detectors must contribute: {detectors:?}"
         );
     }
 }

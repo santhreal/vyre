@@ -19,9 +19,14 @@ pub(crate) fn wgpu_effective_dispatch_config_for_limits(
     geometry: LaunchGeometry,
 ) -> Result<DispatchConfig, BackendError> {
     let mut effective = config.clone();
-    if effective.launch.is_some()
-        || (geometry == LaunchGeometry::Untracked && effective.workgroup_override.is_some())
-    {
+    if effective.launch.is_some() {
+        return Ok(effective);
+    }
+    // Resolve the ceiling before any early return: it decides whether the launch
+    // is folded across grid axes, and every path that infers a grid needs the
+    // same answer the emitter compiled against.
+    effective.max_workgroups_per_axis = Some(resolve_axis_ceiling(config, limits.max_grid_dim));
+    if geometry == LaunchGeometry::Untracked && effective.workgroup_override.is_some() {
         return Ok(effective);
     }
     let element_count = wgpu_launch_element_count_for_tuning(program)?;
@@ -33,6 +38,26 @@ pub(crate) fn wgpu_effective_dispatch_config_for_limits(
         effective.workgroup_override = None;
     }
     Ok(effective)
+}
+
+/// Per-axis workgroup ceiling this launch is planned against.
+///
+/// A caller that states one is planning against a portability floor, so the
+/// smaller of the two wins on each axis: the device never gains headroom it does
+/// not have, and the caller never loses the floor it asked for.
+pub(crate) fn resolve_axis_ceiling(config: &DispatchConfig, device: [u32; 3]) -> [u32; 3] {
+    let Some(stated) = config.max_workgroups_per_axis else {
+        return device;
+    };
+    let mut resolved = device;
+    for (axis, stated) in resolved.iter_mut().zip(stated) {
+        *axis = match (*axis, stated) {
+            (0, stated) => stated,
+            (device, 0) => device,
+            (device, stated) => device.min(stated),
+        };
+    }
+    resolved
 }
 
 fn wgpu_launch_element_count_for_tuning(program: &Program) -> Result<u32, BackendError> {

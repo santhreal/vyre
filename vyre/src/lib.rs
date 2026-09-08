@@ -65,6 +65,9 @@ pub use vyre_foundation::match_result::ByteRange;
 
 #[cfg(test)]
 mod tests {
+    // Both cases that call this are feature-selected, so a default build links
+    // neither and the helper is dead code the workspace lint floor rejects.
+    #[cfg(any(feature = "cuda", feature = "wgpu"))]
     fn backend_is_registered(id: &str) -> bool {
         vyre_driver::registered_backends()
             .expect("feature-selected backend registrations must not conflict")

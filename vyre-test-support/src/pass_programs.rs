@@ -402,3 +402,36 @@ pub fn assert_pipeline_body(backend: &str, case: &PipelineCase, optimized: &Prog
         case.label
     );
 }
+
+/// `sum[0] += values[i]` over `count` lanes, through one atomic add.
+///
+/// One owner because two suites state contracts about this exact shape: a
+/// one-element accumulator every lane contends for, which is what makes a
+/// launch's coverage wider than the region the node binds. `output_byte_range`
+/// declares the accumulator's bytes as a dispatch output range, which is a
+/// property of the readback contract rather than of the arithmetic.
+#[must_use]
+pub fn atomic_sum_program(count: u32, output_byte_range: bool) -> Program {
+    let mut accumulator =
+        BufferDecl::storage("sum", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1);
+    if output_byte_range {
+        accumulator = accumulator.with_output_byte_range(0..4);
+    }
+    Program::wrapped(
+        vec![
+            accumulator,
+            BufferDecl::read("values", 1, DataType::U32).with_count(count),
+        ],
+        [256, 1, 1],
+        vec![
+            Node::let_bind("idx", Expr::gid_x()),
+            Node::if_then(
+                Expr::lt(Expr::var("idx"), Expr::u32(count)),
+                vec![Node::let_bind(
+                    "prior",
+                    Expr::atomic_add("sum", Expr::u32(0), Expr::load("values", Expr::var("idx"))),
+                )],
+            ),
+        ],
+    )
+}

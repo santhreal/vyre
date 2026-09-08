@@ -348,6 +348,11 @@ subsets = ["lego-audit"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "lego-duplicate-report"
+subsets = ["lego-audit"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "lego-exemption-liveness"
 subsets = ["lego-audit"]
 workflows = ["gates.yml"]
@@ -394,6 +399,11 @@ workflows = ["gates.yml"]
 
 [[gate]]
 name = "lint-expect-fix"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "lint-liveness-evasion"
 subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
@@ -613,12 +623,22 @@ subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "test-harness-isolation"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "test-material-placement"
 subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
 name = "test-only-capability"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "test-target-membership"
 subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
@@ -634,6 +654,11 @@ workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
 name = "unification"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "variant-list-closure"
 subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 

@@ -4,8 +4,11 @@
 //! region spans. Turning that into phases with a launch shape is the first
 //! schedule decision of a compile, so it belongs to the crate that owns
 //! selection. Foundation supplies the regions, extents, and dependencies as
-//! facts; the baseline width below is the one shape the search starts from and
-//! every production narrows or widens.
+//! facts, and the analysis of how wide a launch one node's program needs; the
+//! baseline width below is the one shape the search starts from and every
+//! production narrows or widens.
+
+use std::collections::BTreeMap;
 
 use vyre_foundation::logical::{LogicalExtent, LogicalProgramGraph};
 use vyre_foundation::schedule::{
@@ -27,6 +30,12 @@ const BASELINE_VECTOR_WIDTH: u32 = 1;
 #[must_use]
 pub fn baseline_schedule(logical: &LogicalProgramGraph<'_>) -> SelectedSchedule {
     let logical_identity = *blake3::hash(logical.semantic_wire()).as_bytes();
+    let required = logical
+        .graph()
+        .nodes()
+        .iter()
+        .map(|node| (node.id, crate::launch_span::required_coverage(&node.program)))
+        .collect::<BTreeMap<_, _>>();
     let phases = logical
         .regions()
         .iter()
@@ -45,11 +54,19 @@ pub fn baseline_schedule(logical: &LogicalProgramGraph<'_>) -> SelectedSchedule 
                     },
                 })
                 .collect();
+            // A region domain is read off one declared value, which is narrower
+            // than the launch for a program whose result depends on how many
+            // invocations ran. Both the coverage and the priced points take the
+            // wider of the two, so fusing phases sums spans that each cover
+            // their own node.
+            let points = region
+                .max_points
+                .max(required.get(&region.node).copied().unwrap_or(0));
             SchedulePhase {
                 id: SchedulePhaseId(u32::try_from(index).unwrap_or(u32::MAX)),
                 source_regions: vec![region.node.0],
                 axes,
-                grid: [region.max_points, 1, 1],
+                grid: [points, 1, 1],
                 workgroup: BASELINE_WORKGROUP,
                 vector_width: BASELINE_VECTOR_WIDTH,
                 mappings: Vec::new(),
@@ -59,7 +76,7 @@ pub fn baseline_schedule(logical: &LogicalProgramGraph<'_>) -> SelectedSchedule 
                     .map(|dependency| SchedulePhaseId(dependency.predecessor.0))
                     .collect(),
                 resources: ScheduleResourceBounds {
-                    logical_points: region.max_points,
+                    logical_points: points,
                     ..ScheduleResourceBounds::default()
                 },
             }

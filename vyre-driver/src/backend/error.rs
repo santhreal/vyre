@@ -61,9 +61,10 @@ impl ErrorCode {
     /// Every variant, ordered by [`Self::stable_id`].
     ///
     /// Catalog renderers and conformance tests walk this instead of a
-    /// hand-maintained list. `Self::catalog_index` and the const assertion
-    /// below make a variant that is missing here a compile error rather than
-    /// a silently uncatalogued code.
+    /// hand-maintained list. The const assertion below holds the order to
+    /// `stable_id`; `every_declared_variant_is_catalogued` in
+    /// `tests/error_code_catalog.rs` holds the membership to the enum
+    /// declaration, so a variant absent here fails that suite.
     pub const ALL: &'static [Self] = &[
         Self::DeviceOutOfMemory,
         Self::UnsupportedFeature,
@@ -76,29 +77,10 @@ impl ErrorCode {
         Self::Unknown,
     ];
 
-    /// Position of this code in [`Self::ALL`].
-    ///
-    /// Exhaustive on purpose: a new variant must add an arm, and the arm must
-    /// name a position that exists and is not already taken, or the const
-    /// assertion below fails to evaluate.
-    const fn catalog_index(self) -> usize {
-        match self {
-            Self::DeviceOutOfMemory => 0,
-            Self::UnsupportedFeature => 1,
-            Self::PoisonedLock => 2,
-            Self::KernelCompileFailed => 3,
-            Self::DispatchFailed => 4,
-            Self::InvalidProgram => 5,
-            Self::CooperativeResidencyExceeded => 6,
-            Self::DeviceLost => 7,
-            Self::Unknown => 8,
-        }
-    }
-
     /// One-line description carried into the generated catalog.
     ///
-    /// Exhaustive for the same reason as `Self::catalog_index`: a new
-    /// variant cannot reach the catalog without a description.
+    /// Exhaustive on purpose: a variant cannot reach the catalog without a
+    /// description.
     #[must_use]
     pub const fn summary(self) -> &'static str {
         match self {
@@ -127,11 +109,11 @@ impl ErrorCode {
 }
 
 const _: () = {
-    let mut index = 0;
+    let mut index = 1;
     while index < ErrorCode::ALL.len() {
         assert!(
-            ErrorCode::ALL[index].catalog_index() == index,
-            "ErrorCode::ALL and ErrorCode::catalog_index disagree"
+            ErrorCode::ALL[index - 1].stable_id() < ErrorCode::ALL[index].stable_id(),
+            "ErrorCode::ALL must be ordered by stable_id"
         );
         index += 1;
     }
@@ -298,6 +280,24 @@ impl BackendError {
             name: format!("opaque IR extension `{extension_kind}`/`{debug_identity}`"),
             backend: backend.into(),
         }
+    }
+
+    /// Build the error a backend returns for a contract method it does not
+    /// implement.
+    ///
+    /// Every `VyreBackend` default that reports a missing capability routes
+    /// through here, so the variant and the fields it carries have one owner.
+    pub(crate) fn unsupported_feature(backend: &str, feature: &str) -> Self {
+        Self::UnsupportedFeature {
+            name: feature.to_string(),
+            backend: backend.to_string(),
+        }
+    }
+
+    /// The result a backend contract method returns for a capability it does
+    /// not implement.
+    pub(crate) fn unsupported<T>(backend: &str, feature: &str) -> Result<T, Self> {
+        Err(Self::unsupported_feature(backend, feature))
     }
 
     /// Build a structured lock-poisoning error.

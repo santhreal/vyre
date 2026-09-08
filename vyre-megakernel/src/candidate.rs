@@ -1,13 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
-use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use vyre_foundation::{
     logical::LogicalProgramGraph,
-    schedule::{
-        MappingLevel, ScheduleLegalityError, SchedulePhaseId, ScheduleTransform, SelectedSchedule,
-    },
+    schedule::{MappingLevel, ScheduleLegalityError, ScheduleTransform, SelectedSchedule},
 };
 
 use crate::certificate::LawCitation;
@@ -479,99 +476,6 @@ impl CandidatePlan {
         }
     }
 
-    #[cfg(test)]
-    #[must_use]
-    pub(crate) fn from_edges(node_count: usize, edges: &[DataflowEdge]) -> Self {
-        let (node_groups, fused_edges) = Self::groups_from_edges(node_count, edges);
-        let (schedule, schedule_error) = schedule_for_groups(
-            vyre_test_support::selected_schedules::synthetic(node_count),
-            &node_groups,
-        );
-        Self {
-            node_groups,
-            fused_edges,
-            derivation: Vec::new(),
-            workgroup_width: None,
-            topology: ExecutionTopology::Sequential,
-            frontier_topology: FrontierTopology::SparseFrontier,
-            schedule,
-            schedule_error,
-            law_derivation: Vec::new(),
-            law_facts: None,
-        }
-    }
-
-    /// Group nodes that one fused edge set joins, and the edges in stable order.
-    fn groups_from_edges(
-        node_count: usize,
-        edges: &[DataflowEdge],
-    ) -> (Vec<u32>, Vec<DataflowEdge>) {
-        let mut parent: Vec<usize> = (0..node_count).collect();
-        for edge in edges {
-            let from = edge.from.0 as usize;
-            let to = edge.to.0 as usize;
-            if from >= node_count || to >= node_count {
-                continue;
-            }
-            let from_root = root(&mut parent, from);
-            let to_root = root(&mut parent, to);
-            if from_root != to_root {
-                let first = from_root.min(to_root);
-                let second = from_root.max(to_root);
-                parent[second] = first;
-            }
-        }
-
-        let mut roots = Vec::<usize>::new();
-        let mut node_groups = Vec::with_capacity(node_count);
-        for node in 0..node_count {
-            let root = root(&mut parent, node);
-            let group = match roots.iter().position(|candidate| *candidate == root) {
-                Some(group) => group,
-                None => {
-                    roots.push(root);
-                    roots.len() - 1
-                }
-            };
-            node_groups.push(u32::try_from(group).unwrap_or(u32::MAX));
-        }
-        let mut fused_edges = edges.to_vec();
-        fused_edges.sort_by_key(|edge| (edge.from, edge.to, edge.value));
-        fused_edges.dedup();
-        (node_groups, fused_edges)
-    }
-
-    #[must_use]
-    pub(crate) fn from_edges_for(
-        logical: &LogicalProgramGraph<'_>,
-        edges: &[DataflowEdge],
-    ) -> Self {
-        let (node_groups, fused_edges) =
-            Self::groups_from_edges(logical.graph().nodes().len(), edges);
-        let (schedule, schedule_error) =
-            schedule_for_groups(crate::baseline::baseline_schedule(logical), &node_groups);
-        Self {
-            node_groups,
-            fused_edges,
-            derivation: Vec::new(),
-            workgroup_width: None,
-            topology: ExecutionTopology::Sequential,
-            frontier_topology: FrontierTopology::SparseFrontier,
-            schedule,
-            schedule_error,
-            law_derivation: Vec::new(),
-            law_facts: None,
-        }
-    }
-
-    /// Same grouping launched at `width` instead of the declared widths.
-    #[must_use]
-    pub(crate) fn with_workgroup_width(&self, width: Option<u32>) -> Self {
-        let mut candidate = self.clone();
-        candidate.workgroup_width = width;
-        candidate
-    }
-
     /// Same grouping executed with `topology`.
     #[must_use]
     pub(crate) fn with_topology(&self, topology: ExecutionTopology) -> Self {
@@ -674,16 +578,6 @@ impl CandidatePlan {
         } else {
             declared
         }
-    }
-
-    /// Invocations per workgroup this candidate launches one group with.
-    #[must_use]
-    pub(crate) fn group_invocations(&self, group: u32, facts: &PlanningFacts) -> u64 {
-        let workgroup = self.group_workgroup(group, facts);
-        u64::from(workgroup[0])
-            .saturating_mul(u64::from(workgroup[1]))
-            .saturating_mul(u64::from(workgroup[2]))
-            .max(1)
     }
 
     pub(crate) fn selected_schedule(
@@ -864,34 +758,4 @@ fn resident_topology(schedule: &SelectedSchedule) -> Option<ExecutionTopology> {
         }
     }
     mode.map(|mode| ExecutionTopology::ResidentPartition { partitions, mode })
-}
-
-fn schedule_for_groups(
-    mut schedule: SelectedSchedule,
-    node_groups: &[u32],
-) -> (SelectedSchedule, Option<ScheduleLegalityError>) {
-    let mut phases_by_group = BTreeMap::<u32, Vec<SchedulePhaseId>>::new();
-    for (node, group) in node_groups.iter().copied().enumerate() {
-        phases_by_group
-            .entry(group)
-            .or_default()
-            .push(SchedulePhaseId(u32::try_from(node).unwrap_or(u32::MAX)));
-    }
-    for phases in phases_by_group
-        .into_values()
-        .filter(|phases| phases.len() > 1)
-    {
-        if let Err(error) = schedule.apply(ScheduleTransform::Fuse { phases }) {
-            return (schedule, Some(error));
-        }
-    }
-    (schedule, None)
-}
-
-fn root(parent: &mut [usize], mut node: usize) -> usize {
-    while parent[node] != node {
-        parent[node] = parent[parent[node]];
-        node = parent[node];
-    }
-    node
 }

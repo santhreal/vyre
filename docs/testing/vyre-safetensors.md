@@ -26,7 +26,7 @@ This crate declares no Cargo features.
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
 | `lib` | `vyre_safetensors` | `vyre-safetensors/src/lib.rs` | None | `./cargo_full test -p vyre-safetensors` |
-| `test` | `ingestion` | `vyre-safetensors/tests/ingestion.rs` | None | `./cargo_full test -p vyre-safetensors --test ingestion` |
+| `test` | `all_tests` | `vyre-safetensors/tests/all_tests.rs` | None | `./cargo_full test -p vyre-safetensors --test all_tests` |
 
 ## Test classes
 

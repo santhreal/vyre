@@ -96,7 +96,6 @@ pub(super) const FIX: &str = "move the host reference implementation into a #[cf
 /// Structural record of a parameter in a function signature.
 #[derive(Clone, Debug)]
 pub(super) struct FunctionParamRecord {
-    pub(super) name: String,
     pub(super) qualified_custom_types: BTreeSet<String>,
 }
 
@@ -123,7 +122,6 @@ pub(super) struct FunctionRecord {
     pub(super) returns_data_output: bool,
     pub(super) is_explicit_oracle_name: bool,
     pub(super) has_canonical_dispatcher_param: bool,
-    pub(super) param_custom_types: BTreeSet<String>,
     pub(super) return_custom_types: BTreeSet<String>,
     pub(super) has_collection_payload_inputs: bool,
     pub(super) params: Vec<FunctionParamRecord>,
@@ -144,7 +142,6 @@ pub(super) struct CallSiteRecord {
     pub(super) is_in_test: bool,
     pub(super) is_in_expected_output: bool,
     pub(super) is_in_fallback: bool,
-    pub(super) is_in_post_dispatch: bool,
     pub(super) is_in_op_reg: bool,
 }
 

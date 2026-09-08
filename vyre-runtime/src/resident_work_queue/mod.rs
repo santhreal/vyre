@@ -49,7 +49,7 @@ pub use builder::{
     build_program_sharded_slots_shared, build_program_sharded_with_io_polling,
     build_program_sharded_with_workspace_adapter, persistent_body, persistent_body_jit,
     persistent_body_priority, persistent_body_priority_slots,
-    try_build_program_with_self_loading_miss_handler, try_persistent_body,
+    try_build_program_with_self_loading_miss_handler, try_persistent_body, try_persistent_body_jit,
 };
 /// Ring-slot state transition. `protocol_api` is private, so this is the one
 /// public path to it.

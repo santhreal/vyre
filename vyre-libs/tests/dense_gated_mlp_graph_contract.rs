@@ -2,7 +2,7 @@
 
 #![forbid(unsafe_code)]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::{bf16_bytes, bf16_word, f32_bytes, f32_words_of as decode_f32};
 
 use std::collections::HashMap;
@@ -13,14 +13,6 @@ use vyre_reference::value::Value;
 
 fn decode_bf16_word(word: u16) -> f32 {
     f32::from_bits(u32::from(word) << 16)
-}
-
-fn element_bytes(dtype: &DataType) -> usize {
-    match dtype {
-        DataType::F16 | DataType::BF16 => 2,
-        DataType::F32 => 4,
-        other => panic!("Fix: dense MLP test received unsupported dtype {other:?}"),
-    }
 }
 
 fn execute_graph(graph: &ProgramGraph, external: &[(&str, Vec<u8>)]) -> Value {

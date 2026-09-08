@@ -57,7 +57,7 @@ fn parity_reference_runner_uses_planned_zeroed_read_write_inputs() {
             &program,
             &inputs,
             &mut values,
-            Some(&plan),
+            &plan,
             &mut borrowed_inputs,
         )
         .expect("Fix: reference parity runner must receive planned zeroed read-write inputs.");
@@ -156,7 +156,7 @@ fn measure_entry(
                 &program,
                 inputs,
                 &mut reference_values,
-                Some(&input_plan),
+                &input_plan,
                 &mut borrowed_inputs,
             )
             .map_err(|error| {
@@ -199,7 +199,7 @@ fn measure_entry(
                     &program,
                     inputs,
                     &mut reference_values,
-                    Some(&input_plan),
+                    &input_plan,
                     &mut borrowed_inputs,
                 )
             })) {
@@ -404,7 +404,7 @@ fn the_synthetic_opaque_extension_round_trips_through_the_wire() {
                     &decoded,
                     inputs,
                     &mut values,
-                    Some(&input_plan),
+                    &input_plan,
                     &mut borrowed_inputs,
                 )
                 .unwrap_or_else(|error| {

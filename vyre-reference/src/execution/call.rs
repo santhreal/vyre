@@ -89,10 +89,7 @@ where
         ))
     })?;
     invoke_cpu_ref(op_id, cpu_ref, &input, &mut output)?;
-    Ok(spec_output_value(
-        output_data_type(signature.outputs),
-        &output,
-    ))
+    spec_output_value(output_data_type(op_id, signature.outputs)?, &output)
 }
 
 pub(crate) fn invoke_cpu_ref(
@@ -220,26 +217,53 @@ fn scalar_width(ty: &str) -> Option<usize> {
 /// Bytes to reserve for a call's output buffer.
 fn output_reserve(outputs: &[TypedParam]) -> usize {
     outputs.first().map_or(BYTES_OUTPUT_RESERVE, |param| {
-        scalar_width(param.ty).unwrap_or(BYTES_OUTPUT_RESERVE)
+        match param_encoding(param.ty) {
+            Some(ParamEncoding::Scalar(width)) => width,
+            Some(ParamEncoding::Payload) | None => BYTES_OUTPUT_RESERVE,
+        }
     })
 }
 
 /// The `DataType` a call's returned bytes are decoded as.
-fn output_data_type(outputs: &[TypedParam]) -> DataType {
-    outputs
-        .first()
-        .map_or(DataType::Bytes, |param| match param.ty {
-            "u32" => DataType::U32,
-            "i32" => DataType::I32,
-            "f32" => DataType::F32,
-            _ => DataType::Bytes,
-        })
+///
+/// Every scalar spelling the call ABI encodes has an arm here, and a spelling
+/// with no decoding is refused. Defaulting one to `Bytes` returned the raw
+/// payload where the signature declared a scalar, so an operation could declare
+/// a `u64` output and the oracle would answer with bytes while the suite stayed
+/// green.
+fn output_data_type(op_id: &str, outputs: &[TypedParam]) -> Result<DataType, ReferenceError> {
+    let Some(param) = outputs.first() else {
+        return Ok(DataType::Bytes);
+    };
+    match param_encoding(param.ty) {
+        Some(ParamEncoding::Payload) => Ok(DataType::Bytes),
+        Some(ParamEncoding::Scalar(_)) => match param.ty {
+            "u32" => Ok(DataType::U32),
+            "i32" => Ok(DataType::I32),
+            "f32" => Ok(DataType::F32),
+            "u64" => Ok(DataType::U64),
+            "bool" => Ok(DataType::Bool),
+            other => Err(ReferenceError::new(format!(
+                "call `{op_id}` declares output type `{other}`, which the call ABI encodes but \
+                 the reference decoder has no value for. Fix: give `{other}` a decoding in \
+                 `output_data_type` and `spec_output_value`, or declare an output type that \
+                 already has one."
+            ))),
+        },
+        None => Err(ReferenceError::new(format!(
+            "call `{op_id}` declares output type `{}`, which the reference call ABI cannot \
+             decode. Fix: declare a spelling the ABI decodes, or give this one an encoding in \
+             `param_encoding` and a decoding in `output_data_type`.",
+            param.ty
+        ))),
+    }
 }
 
 // Inline: covers the crate-private `ParamEncoding` and `declared_width`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
-    use super::{declared_width, param_encoding, ParamEncoding};
+    use super::{declared_width, output_data_type, param_encoding, ParamEncoding, TypedParam};
+    use vyre_foundation::ir::DataType;
     use vyre_foundation::operation::OperationRegistry;
 
     /// Every parameter spelling a registered callable signature uses must have an
@@ -272,6 +296,67 @@ mod tests {
             missing.is_empty(),
             "Fix: give every spelling below an encoding in `param_encoding`, or change \
              the operation to declare a spelling that already has one: {missing:?}"
+        );
+    }
+
+    /// Every registered signature's declared output must decode to a value.
+    ///
+    /// Membership is the registry read at run time, so registering an operation
+    /// whose output spelling has no decoding turns this red. The spelling set
+    /// the ABI encodes is wider than the set it decodes: `u8`, `i8`, `i64`,
+    /// `f64` and `vec-count` are encodable inputs with no output value, and the
+    /// old mapping answered all of them with the raw byte payload.
+    #[test]
+    fn every_registered_output_spelling_decodes_to_a_value() {
+        let mut undecodable: Vec<(&str, &str)> = Vec::new();
+        for operation in OperationRegistry::global().iter() {
+            let Some(signature) = operation.signature else {
+                continue;
+            };
+            if output_data_type(operation.id, signature.outputs).is_err() {
+                let spelling = signature.outputs.first().map_or("", |param| param.ty);
+                undecodable.push((operation.id, spelling));
+            }
+        }
+        assert!(
+            undecodable.is_empty(),
+            "Fix: give every output spelling below a decoding in `output_data_type` and \
+             `spec_output_value`, or change the operation to declare one that has it: \
+             {undecodable:?}"
+        );
+    }
+
+    /// A scalar output decodes as its declared type, a buffer output as bytes,
+    /// and an encodable spelling with no value is refused by name rather than
+    /// answered with the payload.
+    #[test]
+    fn an_output_spelling_without_a_value_is_refused_by_name() {
+        let scalar = [TypedParam {
+            name: "out",
+            ty: "u64",
+        }];
+        assert_eq!(
+            output_data_type("demo.op", &scalar).expect("u64 decodes"),
+            DataType::U64
+        );
+        let buffer = [TypedParam {
+            name: "out",
+            ty: "buffer<u32>",
+        }];
+        assert_eq!(
+            output_data_type("demo.op", &buffer).expect("a buffer decodes as bytes"),
+            DataType::Bytes
+        );
+        let narrow = [TypedParam {
+            name: "out",
+            ty: "u8",
+        }];
+        let message = output_data_type("demo.op", &narrow)
+            .expect_err("an encodable spelling with no value is refused")
+            .to_string();
+        assert!(
+            message.contains("u8") && message.contains("demo.op"),
+            "the refusal names the operation and the spelling: {message}"
         );
     }
 

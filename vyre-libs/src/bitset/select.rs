@@ -59,10 +59,16 @@ pub fn select1_query(
                             )],
                             vec![
                                 Node::let_bind("select_word_scan", Expr::var("select_word")),
+                                // This arm is reached only when
+                                // `select_remaining <= popcount(select_word)`,
+                                // so the count is already at most 32. The `min`
+                                // states that in the IR, where a reader and the
+                                // reference interpreter can both see it, rather
+                                // than leaving it to the enclosing branch.
                                 Node::loop_for(
                                     "select_skip",
                                     Expr::u32(1),
-                                    Expr::var("select_remaining"),
+                                    Expr::min(Expr::var("select_remaining"), Expr::u32(32)),
                                     vec![Node::assign(
                                         "select_word_scan",
                                         Expr::bitand(

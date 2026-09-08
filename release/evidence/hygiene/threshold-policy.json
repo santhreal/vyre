@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:d9bcd400a6ad14708796af12741b9277fca821f8:dirty=true:worktree=ba7c571995093d8fe3b85fdb312513826612d363456fb865022d0cc7517dd497",
+  "source_fingerprint": "git:3cfaa0ef1ac2f973c5c9b7be833ce2c0d92fbb6a:dirty=true:worktree=2a1cb0a8a68b1071af1018b7631e9eb50b8549b16ba11caabae9cc0ed5f106bc",
   "schema_version": 1,
   "source_manifest": "docs/optimization/THRESHOLD_POLICY.toml",
   "evidence_artifact": "release/evidence/hygiene/threshold-policy.json",
@@ -23,7 +23,7 @@
     {
       "id": "VX475-TIERING_EVENT_CAPACITY_MIN",
       "path": "vyre-driver-wgpu/src/buffer/pool.rs",
-      "line": 157,
+      "line": 163,
       "name": "TIERING_EVENT_CAPACITY_MIN",
       "observed_value": "1024",
       "unit": "tiering events",
@@ -36,7 +36,7 @@
     {
       "id": "VX475-TIERING_EVENT_CAPACITY_MAX",
       "path": "vyre-driver-wgpu/src/buffer/pool.rs",
-      "line": 158,
+      "line": 164,
       "name": "TIERING_EVENT_CAPACITY_MAX",
       "observed_value": "65_536",
       "unit": "tiering events",

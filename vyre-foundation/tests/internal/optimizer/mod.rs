@@ -58,10 +58,19 @@ proptest! {
     /// runs (same input → same hash) and distinct across semantically
     /// different programs (different input → different hash, barring
     /// a blake3 collision which is cryptographically infeasible).
+    ///
+    /// The copy is taken before either side is fingerprinted, because
+    /// `Program::clone` carries an already-computed fingerprint across and
+    /// `Program::fingerprint` memoizes into a `OnceLock`. Asking one value
+    /// twice, or cloning a warmed one, compares a cached scalar with itself
+    /// and holds however the hash was computed. Two cold values each compute
+    /// once, so a hash that reached a map iteration order, a pointer address,
+    /// or uninitialized padding in the wire encoding separates them.
     #[test]
     fn prop_fingerprint_program_deterministic(program in valid_program()) {
+        let copy = program.clone();
         let a = super::fingerprint_program(&program);
-        let b = super::fingerprint_program(&program);
+        let b = super::fingerprint_program(&copy);
         prop_assert_eq!(a, b, "fingerprint must be stable for identical programs");
     }
 }

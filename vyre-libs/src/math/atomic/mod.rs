@@ -453,7 +453,7 @@ pub(crate) mod testutil {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use testutil::{assert_serial_matches, SerialAtomicOracle};
+    use testutil::{cpu_serial, run_serial, SerialAtomicOracle};
 
     struct GeneratedSerialCase {
         name: &'static str,
@@ -528,7 +528,12 @@ mod tests {
                     });
                 }
                 let program = (case.build)("values", "state", "trace", values.len() as u32);
-                assert_serial_matches(&program, case.kind, &values, initial);
+                assert_eq!(
+                    run_serial(&program, &values, initial),
+                    cpu_serial(case.kind, &values, initial),
+                    "generated atomic serial case {} diverged from the CPU oracle at iteration {iteration}",
+                    case.name
+                );
             }
         }
     }

@@ -1,14 +1,17 @@
 use std::future::Future;
 use std::ops::Deref;
 use std::pin::Pin;
-use std::sync::{Arc, LazyLock, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
 use std::task::{Context, Poll, Wake, Waker};
 use std::thread::{self, Thread};
+use std::time::Duration;
 use vyre_driver::BackendError;
 
 type Result<T, E = BackendError> = std::result::Result<T, E>;
 
+use super::features::{enabled_features_for_adapter, subgroup_smoke_compiles, EnabledFeatures};
 use super::reserve_probe_vec;
+use super::selector::gpu_candidate_score;
 
 /// Excludes concurrent Vulkan loader startup and shutdown across the process.
 ///
@@ -20,10 +23,29 @@ use super::reserve_probe_vec;
 /// rewrites the same loader state, so it is held under the same lock.
 static LOADER_STARTUP: Mutex<()> = Mutex::new(());
 
+/// A resolve on a created device already waited for its submission, so the
+/// mapping callback is a driver hand-off rather than device work. This bounds a
+/// driver that never delivers it, so device acquisition cannot hang on the
+/// capability probe.
+const TIMESTAMP_PROBE_READBACK_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Take the loader lock, or end the process.
+///
+/// Poison here is the exact state the lock excludes. A thread that panicked
+/// inside `vkCreateInstance` or `vkDestroyInstance` left the loader dispatch
+/// table half written, `PoisonError::into_inner` hands that table to the next
+/// caller, and what the caller gets is the SIGSEGV the comment above describes,
+/// in an ICD frame that names no vyre code. Loader state is also not this
+/// process's to rebuild, and `LoaderInstance::drop` takes the same lock, so no
+/// caller could be handed an error even where one would help.
 fn loader_startup() -> MutexGuard<'static, ()> {
-    LOADER_STARTUP
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner)
+    match LOADER_STARTUP.lock() {
+        Ok(guard) => guard,
+        Err(_) => vyre_driver::lock_policy::process_fatal_poison(
+            "the wgpu device factory",
+            "the graphics loader dispatch table",
+        ),
+    }
 }
 
 /// Backends this driver dispatches compute through.
@@ -84,42 +106,6 @@ pub(crate) fn new_instance() -> LoaderInstance {
         backends: COMPUTE_BACKENDS,
         ..Default::default()
     })))
-}
-
-/// Snapshot of features that were actually enabled when the cached
-/// device was created. Consumed by `WgpuBackend::supports_*` methods
-/// so the VyreBackend capability reports are *honest*  -  a feature bit
-/// is reported only if it was both advertised by the adapter AND
-/// requested at device creation.
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
-pub struct EnabledFeatures {
-    /// Wgpu timestamp queries feature.
-    pub timestamp_query: bool,
-    /// Wgpu timestamp writes directly on command encoders.
-    pub timestamp_query_inside_encoders: bool,
-    /// Wgpu subgroup feature.
-    pub subgroup: bool,
-    /// Wgpu subgroup barrier feature.
-    pub subgroup_barrier: bool,
-    /// Wgpu shader f16 feature.
-    pub shader_f16: bool,
-    /// Wgpu pipeline cache feature.
-    pub pipeline_cache: bool,
-    /// Wgpu push constants feature.
-    pub push_constants: bool,
-    /// Wgpu indirect first instance feature.
-    pub indirect_first_instance: bool,
-    /// Wgpu adapter max workgroup size limit.
-    pub max_workgroup_size: [u32; 3],
-    /// Wgpu adapter max storage buffer binding size limit.
-    pub max_storage_buffer_binding_size: u64,
-    /// Wgpu adapter max subgroup size.
-    pub max_subgroup_size: u32,
-    /// Wgpu adapter minimum subgroup size (I.6). `0` means the
-    /// adapter did not report a subgroup size; consumers must treat
-    /// subgroup-width-dependent planning as unavailable unless
-    /// `crate::capabilities::supports_subgroup_ops` returns true.
-    pub min_subgroup_size: u32,
 }
 
 pub(crate) fn poll_device_once(
@@ -339,10 +325,84 @@ pub(super) async fn request_device_for_adapter(
     // deliver).
     let adapter_features = adapter.features();
     let adapter_limits = adapter.limits();
-    let (features, mut enabled) =
+    let (mut features, mut enabled) =
         enabled_features_for_adapter(adapter_features, &adapter_limits, adapter_info.backend);
 
-    let device_queue = adapter
+    let mut device_queue = request_device_with(
+        adapter,
+        label,
+        features,
+        &enabled,
+        &adapter_limits,
+        &adapter_info,
+    )
+    .await?;
+
+    // An adapter may advertise both timestamp features and still resolve a zero
+    // end timestamp, which reaches a caller as a delta underflow on its first
+    // timed dispatch instead of as a missing capability. Resolve once here, in
+    // the layout every timed dispatch records, and drop the capability when the
+    // pair is not monotonic. The device is recreated without the features so
+    // `device.features()` agrees with what the resolve proved.
+    let resolve_verdict = if enabled.timestamp_query && enabled.timestamp_query_inside_encoders {
+        timestamp_resolve_is_monotonic(&device_queue.0, &device_queue.1)
+    } else {
+        Ok(())
+    };
+    if let Err(reason) = resolve_verdict {
+        tracing::warn!(
+            target: "vyre.wgpu.timestamps",
+            adapter = %adapter_info.name,
+            %reason,
+            "adapter advertises timestamp queries but its resolve produced no monotonic pair; reporting no timestamp capability"
+        );
+        features.remove(
+            wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS,
+        );
+        enabled.timestamp_query = false;
+        enabled.timestamp_query_inside_encoders = false;
+        drop(device_queue);
+        device_queue = request_device_with(
+            adapter,
+            label,
+            features,
+            &enabled,
+            &adapter_limits,
+            &adapter_info,
+        )
+        .await?;
+    }
+
+    let device_limits = device_queue.0.limits();
+    enabled.max_workgroup_size = [
+        device_limits.max_compute_workgroup_size_x,
+        device_limits.max_compute_workgroup_size_y,
+        device_limits.max_compute_workgroup_size_z,
+    ];
+    enabled.max_storage_buffer_binding_size =
+        u64::from(device_limits.max_storage_buffer_binding_size);
+    enabled.max_subgroup_size = device_limits.max_subgroup_size;
+    enabled.min_subgroup_size = device_limits.min_subgroup_size;
+
+    if enabled.subgroup {
+        subgroup_smoke_compiles(&device_queue.0).map_err(|error| BackendError::new(format!(
+            "adapter `{}` advertises SUBGROUP but rejects the subgroup compute-pipeline smoke test: {error}. Fix: repair the wgpu feature negotiation or GPU driver; do not silently report subgroup support as disabled on a subgroup-capable adapter.",
+            adapter_info.name
+        )))?;
+    }
+
+    Ok((device_queue, adapter_info, enabled))
+}
+
+async fn request_device_with(
+    adapter: &wgpu::Adapter,
+    label: &'static str,
+    features: wgpu::Features,
+    enabled: &EnabledFeatures,
+    adapter_limits: &wgpu::Limits,
+    adapter_info: &wgpu::AdapterInfo,
+) -> Result<(wgpu::Device, wgpu::Queue)> {
+    adapter
         .request_device(
             &wgpu::DeviceDescriptor {
                 label: Some(label),
@@ -390,182 +450,162 @@ pub(super) async fn request_device_for_adapter(
             },
         )
         .await
-        .map_err(|error| BackendError::new(format!("failed to acquire device for adapter `{}`: {error}. Fix: check requested wgpu limits/features against the adapter and update the GPU driver if limits are unexpectedly low.", adapter_info.name)))?;
-    let device_limits = device_queue.0.limits();
-    enabled.max_workgroup_size = [
-        device_limits.max_compute_workgroup_size_x,
-        device_limits.max_compute_workgroup_size_y,
-        device_limits.max_compute_workgroup_size_z,
-    ];
-    enabled.max_storage_buffer_binding_size =
-        u64::from(device_limits.max_storage_buffer_binding_size);
-    enabled.max_subgroup_size = device_limits.max_subgroup_size;
-    enabled.min_subgroup_size = device_limits.min_subgroup_size;
-
-    if enabled.subgroup {
-        subgroup_smoke_compiles(&device_queue.0).map_err(|error| BackendError::new(format!(
-            "adapter `{}` advertises SUBGROUP but rejects the subgroup compute-pipeline smoke test: {error}. Fix: repair the wgpu feature negotiation or GPU driver; do not silently report subgroup support as disabled on a subgroup-capable adapter.",
-            adapter_info.name
-        )))?;
-    }
-
-    Ok((device_queue, adapter_info, enabled))
+        .map_err(|error| BackendError::new(format!("failed to acquire device for adapter `{}`: {error}. Fix: check requested wgpu limits/features against the adapter and update the GPU driver if limits are unexpectedly low.", adapter_info.name)))
 }
 
-/// wgpu only implements the persistent pipeline cache on the Vulkan and DX12
-/// backends (`VK_EXT_pipeline_creation_cache_control` / `ID3D12PipelineLibrary`).
-/// Apple's Metal backend (and GL) advertise the `PIPELINE_CACHE` adapter
-/// feature under wgpu 25 but then fail `device_create_pipeline_cache_init`
-/// with a fatal, un-catchable validation error in downstream GPU diagnostics.
-/// Gate the request on a backend that actually honors it.
-fn backend_implements_pipeline_cache(backend: wgpu::Backend) -> bool {
-    matches!(backend, wgpu::Backend::Vulkan | wgpu::Backend::Dx12)
+/// Resolve the timed-dispatch query layout once on a created device and report
+/// whether it produced usable timestamps.
+///
+/// A Metal adapter advertises `TIMESTAMP_QUERY` and
+/// `TIMESTAMP_QUERY_INSIDE_ENCODERS`, admits the capability check, and resolves
+/// an end-of-pass timestamp of zero. Without this resolve the first timed
+/// dispatch reports a delta underflow, which reads as a broken dispatch rather
+/// than as an adapter that cannot be timed.
+fn timestamp_resolve_is_monotonic(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+) -> std::result::Result<(), String> {
+    use crate::engine::record_and_readback::timestamp::{
+        timestamp_ticks, TIMESTAMP_QUERY_COUNT, TIMESTAMP_READBACK_BYTES,
+    };
+
+    const WGSL: &str = r"
+@compute @workgroup_size(1)
+fn main() {
 }
-
-pub(super) fn enabled_features_for_adapter(
-    adapter_features: wgpu::Features,
-    adapter_limits: &wgpu::Limits,
-    backend: wgpu::Backend,
-) -> (wgpu::Features, EnabledFeatures) {
-    let mut features = wgpu::Features::empty();
-    let mut enabled = EnabledFeatures::default();
-    if adapter_features.contains(wgpu::Features::TIMESTAMP_QUERY) {
-        features |= wgpu::Features::TIMESTAMP_QUERY;
-        enabled.timestamp_query = true;
-    }
-    if adapter_features.contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS) {
-        features |= wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS;
-        enabled.timestamp_query = true;
-        enabled.timestamp_query_inside_encoders = true;
-    }
-    if crate::capabilities::supports_subgroup_for_adapter(adapter_features, adapter_limits) {
-        features |= wgpu::Features::SUBGROUP;
-        enabled.subgroup = true;
-    }
-    if adapter_features.contains(wgpu::Features::SUBGROUP_BARRIER) {
-        features |= wgpu::Features::SUBGROUP_BARRIER;
-        enabled.subgroup_barrier = true;
-    }
-    if adapter_features.contains(wgpu::Features::SHADER_F16) {
-        features |= wgpu::Features::SHADER_F16;
-        enabled.shader_f16 = true;
-    }
-    if adapter_features.contains(wgpu::Features::PIPELINE_CACHE)
-        && backend_implements_pipeline_cache(backend)
-    {
-        features |= wgpu::Features::PIPELINE_CACHE;
-        enabled.pipeline_cache = true;
-    }
-    if adapter_features.contains(wgpu::Features::PUSH_CONSTANTS) {
-        features |= wgpu::Features::PUSH_CONSTANTS;
-        enabled.push_constants = true;
-    }
-    if adapter_features.contains(wgpu::Features::INDIRECT_FIRST_INSTANCE) {
-        features |= wgpu::Features::INDIRECT_FIRST_INSTANCE;
-        enabled.indirect_first_instance = true;
-    }
-
-    enabled.max_workgroup_size = [
-        adapter_limits.max_compute_workgroup_size_x,
-        adapter_limits.max_compute_workgroup_size_y,
-        adapter_limits.max_compute_workgroup_size_z,
-    ];
-    enabled.max_storage_buffer_binding_size =
-        u64::from(adapter_limits.max_storage_buffer_binding_size);
-    enabled.max_subgroup_size = adapter_limits.max_subgroup_size;
-    enabled.min_subgroup_size = adapter_limits.min_subgroup_size;
-    (features, enabled)
-}
-
-fn real_gpu_rank(device_type: wgpu::DeviceType) -> u8 {
-    match device_type {
-        wgpu::DeviceType::DiscreteGpu => 3,
-        wgpu::DeviceType::IntegratedGpu => 2,
-        wgpu::DeviceType::VirtualGpu => 1,
-        wgpu::DeviceType::Cpu | wgpu::DeviceType::Other => 0,
-    }
-}
-
-fn gpu_candidate_score(
-    info: &wgpu::AdapterInfo,
-    adapter_features: wgpu::Features,
-    adapter_limits: &wgpu::Limits,
-) -> u128 {
-    let mut feature_score = 0u128;
-    if crate::capabilities::supports_subgroup_for_adapter(adapter_features, adapter_limits) {
-        feature_score |= 1 << 7;
-    }
-    if adapter_features.contains(wgpu::Features::SUBGROUP_BARRIER) {
-        feature_score |= 1 << 6;
-    }
-    if adapter_features.contains(wgpu::Features::SHADER_F16) {
-        feature_score |= 1 << 5;
-    }
-    if adapter_features.contains(wgpu::Features::PIPELINE_CACHE) {
-        feature_score |= 1 << 4;
-    }
-    if adapter_features.contains(wgpu::Features::PUSH_CONSTANTS) {
-        feature_score |= 1 << 3;
-    }
-    if adapter_features.contains(wgpu::Features::INDIRECT_FIRST_INSTANCE) {
-        feature_score |= 1 << 2;
-    }
-    if adapter_features.contains(wgpu::Features::TIMESTAMP_QUERY) {
-        feature_score |= 1 << 1;
-    }
-    if adapter_features.contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS) {
-        feature_score |= 1;
-    }
-
-    let storage_binding_bits = u128::from(adapter_limits.max_storage_buffer_binding_size.ilog2());
-    let buffer_bits = u128::from(adapter_limits.max_buffer_size.max(1).ilog2());
-    let workgroup_invocations = u128::from(adapter_limits.max_compute_invocations_per_workgroup);
-    let workgroup_storage_bits = u128::from(
-        adapter_limits
-            .max_compute_workgroup_storage_size
-            .max(1)
-            .ilog2(),
-    );
-    let storage_buffers = u128::from(adapter_limits.max_storage_buffers_per_shader_stage);
-
-    (u128::from(real_gpu_rank(info.device_type)) << 120)
-        | (feature_score << 96)
-        | (storage_binding_bits << 88)
-        | (buffer_bits << 80)
-        | (workgroup_invocations << 56)
-        | (workgroup_storage_bits << 48)
-        | storage_buffers
-}
-
-fn subgroup_smoke_compiles(device: &wgpu::Device) -> std::result::Result<(), String> {
-    const WGSL: &str = r#"
-@compute @workgroup_size(32)
-fn main(@builtin(subgroup_invocation_id) lane: u32, @builtin(subgroup_size) size: u32) {
-    let total = subgroupAdd(lane + size);
-    if (total == 0u) {
-        return;
-    }
-}
-"#;
+";
 
     device.push_error_scope(wgpu::ErrorFilter::Validation);
+    let query_set = device.create_query_set(&wgpu::QuerySetDescriptor {
+        label: Some("vyre timestamp resolve probe"),
+        ty: wgpu::QueryType::Timestamp,
+        count: TIMESTAMP_QUERY_COUNT,
+    });
+    let resolve_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("vyre timestamp resolve probe resolve"),
+        size: TIMESTAMP_READBACK_BYTES,
+        usage: wgpu::BufferUsages::QUERY_RESOLVE | wgpu::BufferUsages::COPY_SRC,
+        mapped_at_creation: false,
+    });
+    let readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("vyre timestamp resolve probe readback"),
+        size: TIMESTAMP_READBACK_BYTES,
+        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    });
     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("vyre subgroup capability probe"),
+        label: Some("vyre timestamp resolve probe"),
         source: wgpu::ShaderSource::Wgsl(WGSL.into()),
     });
-    let _pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-        label: Some("vyre subgroup capability probe"),
+    let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        label: Some("vyre timestamp resolve probe"),
         layout: None,
         module: &module,
         entry_point: Some("main"),
         compilation_options: wgpu::PipelineCompilationOptions::default(),
         cache: None,
     });
-    match pop_error_scope_now(device) {
-        Ok(None) => Ok(()),
-        Ok(Some(error)) => Err(format!("validation error: {error}")),
-        Err(error) => Err(error.to_string()),
+
+    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        label: Some("vyre timestamp resolve probe"),
+    });
+    {
+        let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            label: Some("vyre timestamp resolve probe"),
+            timestamp_writes: Some(wgpu::ComputePassTimestampWrites {
+                query_set: &query_set,
+                beginning_of_pass_write_index: Some(0),
+                end_of_pass_write_index: Some(1),
+            }),
+        });
+        pass.set_pipeline(&pipeline);
+        pass.dispatch_workgroups(1, 1, 1);
     }
+    encoder.write_timestamp(&query_set, 2);
+    encoder.write_timestamp(&query_set, 3);
+    encoder.resolve_query_set(&query_set, 0..TIMESTAMP_QUERY_COUNT, &resolve_buffer, 0);
+    encoder.copy_buffer_to_buffer(
+        &resolve_buffer,
+        0,
+        &readback_buffer,
+        0,
+        TIMESTAMP_READBACK_BYTES,
+    );
+    let submission = queue.submit(std::iter::once(encoder.finish()));
+
+    let _ = poll_device_wait_for(device, submission).map_err(|error| error.to_string())?;
+    // After the submission wait, so encoder-recording validation has surfaced
+    // and the scope resolves without a second blocking poll.
+    match pop_error_scope_now(device) {
+        Ok(None) => {}
+        Ok(Some(error)) => return Err(format!("validation error: {error}")),
+        // The resolved ticks are the verdict. An error scope that has not
+        // resolved is not evidence against the device, and withdrawing a
+        // working capability over it would cost every timed dispatch.
+        Err(reason) => tracing::debug!(
+            target: "vyre.wgpu.timestamps",
+            %reason,
+            "timestamp probe error scope did not resolve"
+        ),
+    }
+
+    let (sender, receiver) = crossbeam_channel::bounded(1);
+    readback_buffer
+        .slice(0..TIMESTAMP_READBACK_BYTES)
+        .map_async(wgpu::MapMode::Read, move |result| {
+            drop(sender.send(result));
+        });
+    let _ = device
+        .poll(wgpu::PollType::Wait)
+        .map_err(|error| format!("device poll before timestamp probe readback failed: {error}"))?;
+    match receiver.recv_timeout(TIMESTAMP_PROBE_READBACK_TIMEOUT) {
+        Ok(Ok(())) => {}
+        Ok(Err(error)) => return Err(format!("probe readback mapping failed: {error:?}")),
+        Err(error) => return Err(format!("probe readback did not complete: {error}")),
+    }
+
+    let ticks = {
+        let mapped = readback_buffer
+            .slice(0..TIMESTAMP_READBACK_BYTES)
+            .get_mapped_range();
+        if mapped.len() < TIMESTAMP_READBACK_BYTES as usize {
+            let len = mapped.len();
+            return Err(format!(
+                "probe readback returned {len} bytes, expected {TIMESTAMP_READBACK_BYTES}"
+            ));
+        }
+        timestamp_ticks(&mapped)
+    };
+    readback_buffer.unmap();
+
+    timestamp_ticks_are_usable(&ticks)
+}
+
+/// Pairs a timed dispatch subtracts: the compute pass, the encoder bracket, and
+/// the whole submission. A resolve is usable only if every one of them advances.
+const TIMESTAMP_MONOTONIC_PAIRS: [(usize, usize); 3] = [(1, 0), (3, 2), (3, 0)];
+
+/// A resolve is usable when each recorded pair advances and the whole set is
+/// not zero. An all-zero resolve advertises a device time of zero for every
+/// dispatch, which is not a measurement.
+fn timestamp_ticks_are_usable(ticks: &[u64]) -> std::result::Result<(), String> {
+    if ticks.iter().all(|tick| *tick == 0) {
+        return Err("resolve returned only zero timestamps".to_string());
+    }
+    for (end, start) in TIMESTAMP_MONOTONIC_PAIRS {
+        let (Some(&end_tick), Some(&start_tick)) = (ticks.get(end), ticks.get(start)) else {
+            return Err(format!(
+                "resolve returned {} timestamps, too few to compare query {end} against {start}",
+                ticks.len()
+            ));
+        };
+        if end_tick < start_tick {
+            return Err(format!(
+                "query {end} resolved {end_tick}, earlier than query {start} at {start_tick}"
+            ));
+        }
+    }
+    Ok(())
 }
 
 struct ThreadWaker(Thread);
@@ -625,6 +665,79 @@ pub(super) fn wait_for_gpu<T>(future: impl Future<Output = T>) -> T {
 mod tests {
     use super::*;
 
+    /// Every pair the timed-dispatch layout compares, driven from the layout
+    /// itself rather than a hand-listed set, so a query count change turns this
+    /// red instead of leaving a pair unchecked.
+    #[test]
+    fn a_pair_that_runs_backwards_is_not_a_usable_resolve() {
+        let count = crate::engine::record_and_readback::timestamp::TIMESTAMP_QUERY_COUNT as usize;
+        let highest = TIMESTAMP_MONOTONIC_PAIRS
+            .iter()
+            .flat_map(|(end, start)| [*end, *start])
+            .max()
+            .expect("Fix: a timed dispatch must compare at least one pair");
+        assert!(
+            highest < count,
+            "Fix: pair {highest} is compared but the resolve records only {count} queries"
+        );
+        let baseline: Vec<u64> = (0..count).map(|index| 1_000 + index as u64).collect();
+        timestamp_ticks_are_usable(&baseline)
+            .expect("Fix: an increasing resolve is the usable case");
+
+        for (end, start) in TIMESTAMP_MONOTONIC_PAIRS {
+            let mut ticks = baseline.clone();
+            ticks[end] = baseline[start] - 1;
+            let reason = timestamp_ticks_are_usable(&ticks)
+                .expect_err("Fix: a pair whose end precedes its start is not a usable resolve");
+            assert!(
+                reason.contains(&format!("query {end} resolved")),
+                "Fix: the reason must name the query that ran backwards, got {reason}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_zero_end_timestamp_is_reported_as_no_capability() {
+        // The measured Metal resolve: a beginning-of-pass tick and a
+        // zero end-of-pass tick, which reached a caller as a delta underflow.
+        let reason = timestamp_ticks_are_usable(&[1_177_748_395_222_791, 0, 1, 2])
+            .expect_err("Fix: a zero end-of-pass tick is not a usable resolve");
+        assert!(
+            reason.contains("query 1 resolved 0"),
+            "Fix: the reason must name the zero tick, got {reason}"
+        );
+    }
+
+    #[test]
+    fn an_all_zero_resolve_is_not_a_measurement() {
+        let reason = timestamp_ticks_are_usable(&[0, 0, 0, 0])
+            .expect_err("Fix: an all-zero resolve reports a zero device time for every dispatch");
+        assert!(
+            reason.contains("only zero timestamps"),
+            "Fix: the reason must say the resolve was all zero, got {reason}"
+        );
+    }
+
+    #[test]
+    fn a_short_resolve_names_the_pair_it_cannot_compare() {
+        let highest = TIMESTAMP_MONOTONIC_PAIRS
+            .iter()
+            .flat_map(|(end, start)| [*end, *start])
+            .max()
+            .expect("Fix: a timed dispatch must compare at least one pair");
+        let (end, start) = TIMESTAMP_MONOTONIC_PAIRS
+            .into_iter()
+            .find(|(end, start)| *end >= highest || *start >= highest)
+            .expect("Fix: the highest compared index belongs to some pair");
+        let ticks = vec![1u64; highest];
+        let reason = timestamp_ticks_are_usable(&ticks)
+            .expect_err("Fix: too few timestamps cannot prove a monotonic layout");
+        assert!(
+            reason.contains(&format!("too few to compare query {end} against {start}")),
+            "Fix: the reason must name the pair it could not read, got {reason}"
+        );
+    }
+
     /// The cached-device helper now returns a stable singleton.
     #[cfg(feature = "device-tests")]
     #[test]
@@ -659,105 +772,6 @@ mod tests {
         assert!(
             is_cached_device(&device_queue.0),
             "cached adapter info must not replace the cached device with a second init"
-        );
-    }
-
-    #[test]
-    fn gpu_candidate_score_prefers_stronger_compute_adapter_within_same_class() {
-        let info = wgpu::AdapterInfo {
-            name: "gpu".to_string(),
-            vendor: 0x10de,
-            device: 0x2c02,
-            device_type: wgpu::DeviceType::DiscreteGpu,
-            driver: "nvidia".to_string(),
-            driver_info: "test".to_string(),
-            backend: wgpu::Backend::Vulkan,
-        };
-        let weak_limits = wgpu::Limits {
-            max_storage_buffer_binding_size: 1 << 20,
-            max_buffer_size: 1 << 28,
-            max_compute_invocations_per_workgroup: 256,
-            max_compute_workgroup_storage_size: 16 << 10,
-            max_storage_buffers_per_shader_stage: 8,
-            ..wgpu::Limits::default()
-        };
-        let strong_limits = wgpu::Limits {
-            max_storage_buffer_binding_size: 1 << 30,
-            max_buffer_size: 1 << 34,
-            max_compute_invocations_per_workgroup: 1024,
-            max_compute_workgroup_storage_size: 64 << 10,
-            max_storage_buffers_per_shader_stage: 16,
-            min_subgroup_size: 32,
-            max_subgroup_size: 32,
-            ..wgpu::Limits::default()
-        };
-        let weak = gpu_candidate_score(&info, wgpu::Features::empty(), &weak_limits);
-        let strong = gpu_candidate_score(
-            &info,
-            wgpu::Features::SUBGROUP
-                | wgpu::Features::SUBGROUP_BARRIER
-                | wgpu::Features::SHADER_F16
-                | wgpu::Features::PIPELINE_CACHE,
-            &strong_limits,
-        );
-
-        assert!(
-            strong > weak,
-            "Fix: automatic GPU acquisition must prefer the stronger same-class compute adapter."
-        );
-    }
-
-    /// Regression guard for the Apple-Silicon GPU crash: Metal (and GL / WebGPU)
-    /// advertise the `PIPELINE_CACHE` adapter feature under wgpu 25 but then fail
-    /// `device_create_pipeline_cache_init` with a fatal, un-catchable validation
-    /// error. `enabled_features_for_adapter` MUST gate the feature off on those
-    /// backends even when the adapter advertises it; dropping the
-    /// `backend_implements_pipeline_cache` guard silently reintroduces a hard macOS
-    /// crash that no Linux/Windows host would surface. These are pure functions of
-    /// the backend enum, so this locks the cross-OS guard without a Mac or a GPU.
-    #[test]
-    fn pipeline_cache_enabled_only_on_backends_that_implement_it() {
-        let limits = wgpu::Limits::default();
-        let advertises = wgpu::Features::PIPELINE_CACHE;
-
-        // Backends wgpu actually implements the persistent cache on -> enable it.
-        for backend in [wgpu::Backend::Vulkan, wgpu::Backend::Dx12] {
-            assert!(
-                backend_implements_pipeline_cache(backend),
-                "{backend:?} implements the persistent pipeline cache (Vulkan/DX12)"
-            );
-            let (features, enabled) = enabled_features_for_adapter(advertises, &limits, backend);
-            assert!(
-                features.contains(wgpu::Features::PIPELINE_CACHE) && enabled.pipeline_cache,
-                "{backend:?} advertises AND implements PIPELINE_CACHE -> must be enabled"
-            );
-        }
-
-        // Backends that advertise the feature but crash on init -> gate OFF.
-        for backend in [
-            wgpu::Backend::Metal,
-            wgpu::Backend::Gl,
-            wgpu::Backend::BrowserWebGpu,
-            wgpu::Backend::Noop,
-        ] {
-            assert!(
-                !backend_implements_pipeline_cache(backend),
-                "{backend:?} does not implement the persistent pipeline cache"
-            );
-            let (features, enabled) = enabled_features_for_adapter(advertises, &limits, backend);
-            assert!(
-                !features.contains(wgpu::Features::PIPELINE_CACHE) && !enabled.pipeline_cache,
-                "{backend:?} advertises PIPELINE_CACHE but crashes on init -> must be gated OFF (Apple-Silicon crash guard)"
-            );
-        }
-
-        // An implementing backend that does NOT advertise the feature -> still off
-        // (no phantom enable when the adapter never offered it).
-        let (features, enabled) =
-            enabled_features_for_adapter(wgpu::Features::empty(), &limits, wgpu::Backend::Vulkan);
-        assert!(
-            !features.contains(wgpu::Features::PIPELINE_CACHE) && !enabled.pipeline_cache,
-            "Vulkan without the adapter feature must not phantom-enable PIPELINE_CACHE"
         );
     }
 

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`xtask lego-trend --write-baseline` regenerates `audits/lego-composition.tsv` from the live registry, and refuses to record a baseline while the trend check reports a regression."

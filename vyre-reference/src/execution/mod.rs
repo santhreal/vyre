@@ -16,6 +16,8 @@ pub(crate) mod node_tree;
 /// Thread-local arithmetic-IR-op counting for roofline / complexity analysis.
 pub mod op_count;
 pub mod sequential;
+/// Work ceiling that gives the interpreter a termination contract.
+pub mod step_budget;
 pub(crate) mod tile;
 pub(crate) mod typed_ops;
 
@@ -203,6 +205,44 @@ pub fn reference_eval_with_dispatch(
     min_dispatch_elements: u32,
 ) -> Result<Vec<Value>, crate::ReferenceError> {
     run_arena_reference_with_dispatch(program, inputs, min_dispatch_elements)
+}
+
+/// [`reference_eval`] plus the interpreter steps the run charged.
+///
+/// The step count is what makes [`step_budget::MAX_REFERENCE_STEPS`] a measured
+/// number rather than a chosen one: the corpus measurement reads the heaviest
+/// legitimate run through this entry point and the ceiling is derived from it.
+///
+/// # Errors
+/// Same as [`reference_eval`], plus a refusal when the run exceeds the ceiling.
+pub fn reference_eval_step_count(
+    program: &Program,
+    inputs: &[Value],
+) -> Result<(Vec<Value>, u64), crate::ReferenceError> {
+    reference_eval_with_step_ceiling(program, inputs, step_budget::MAX_REFERENCE_STEPS)
+}
+
+/// [`reference_eval`] under an explicit work ceiling, reporting steps charged.
+///
+/// A caller that must bound the oracle more tightly than the interpreter's own
+/// ceiling states the bound here instead of abandoning a thread that is still
+/// running the program.
+///
+/// # Errors
+/// Same as [`reference_eval`], plus a refusal naming the program and `ceiling`
+/// when the run exceeds it.
+pub fn reference_eval_with_step_ceiling(
+    program: &Program,
+    inputs: &[Value],
+    ceiling: u64,
+) -> Result<(Vec<Value>, u64), crate::ReferenceError> {
+    let runnable = program_for_interpreter(program)?;
+    let budget = step_budget::arm_with(&runnable, ceiling);
+    let outputs =
+        hashmap::run_hashmap_reference(&runnable, inputs, 0, hashmap::LaneOrder::Forward, None)?;
+    let steps = step_budget::charged();
+    drop(budget);
+    Ok((outputs, steps))
 }
 
 /// Execute using the statement-IR reference evaluator.

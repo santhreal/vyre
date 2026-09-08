@@ -8,7 +8,7 @@
 
 #![forbid(unsafe_code)]
 
-mod workspace_sources;
+use crate::workspace_sources;
 
 use std::fs;
 use std::path::Path;

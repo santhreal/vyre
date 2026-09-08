@@ -17,7 +17,7 @@ use std::fs::File;
 use std::os::fd::AsRawFd;
 
 use vyre_runtime::uring::{AsyncUringStream, GpuMappedBuffer, IoUringState, Iovec};
-use vyre_runtime::PipelineError;
+use vyre_runtime::{PipelineError, RequestFault};
 
 #[test]
 fn reads_from_dev_zero_into_host_buffer() {
@@ -87,7 +87,7 @@ fn reads_from_dev_zero_into_host_buffer() {
 }
 
 #[test]
-fn empty_iovs_storage_returns_queue_full() {
+fn empty_iovs_storage_reports_the_missing_iovec_slot() {
     let ring = match IoUringState::new(8) {
         Ok(r) => r,
         Err(_) => return,
@@ -104,11 +104,25 @@ fn empty_iovs_storage_returns_queue_full() {
             .submit_read_to_gpu(0, 0, 4, 0, &mut empty)
             .expect_err("empty iovs must be rejected")
     };
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    // An empty iovec array is a malformed request, not a full queue: the
+    // submission queue was never consulted.
+    assert!(
+        matches!(
+            err,
+            PipelineError::InvalidRequest {
+                fault: RequestFault::BelowMinimum,
+                quantity: "iovec storage slots",
+                observed: 0,
+                bound: 1,
+                ..
+            }
+        ),
+        "empty iovec storage must report the missing slot: {err}"
+    );
 }
 
 #[test]
-fn out_of_bounds_chunk_returns_queue_full() {
+fn out_of_bounds_chunk_reports_the_range_past_the_mapped_buffer() {
     let ring = match IoUringState::new(8) {
         Ok(r) => r,
         Err(_) => return,
@@ -129,5 +143,20 @@ fn out_of_bounds_chunk_returns_queue_full() {
             .submit_read_to_gpu(0, 0, 8, 4, &mut iovs)
             .expect_err("out-of-bounds chunk must be rejected")
     };
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    // The destination range, not the queue, is what the stream rejected, and
+    // the offset and region length it observed are part of the fault.
+    assert!(
+        matches!(
+            err,
+            PipelineError::RegionBounds {
+                region: "GpuMappedBuffer mapped allocation",
+                offset: 32,
+                len: 8,
+                region_len: 16,
+                unit: "bytes",
+                ..
+            }
+        ),
+        "an out-of-bounds chunk must report the range and the region: {err}"
+    );
 }

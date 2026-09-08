@@ -32,13 +32,6 @@
 //! - `append_*_slice_le_bytes` for header builders that need to extend a
 //!   composite buffer rather than overwrite it.
 
-#[cfg(test)]
-fn checked_byte_len(count: usize, width: usize, label: &str) -> Result<usize, String> {
-    count.checked_mul(width).ok_or_else(|| {
-        format!("{label} count {count} overflows host byte indexing. Fix: shard the buffer.")
-    })
-}
-
 /// Grow `out` so a following clear-and-refill to `target_len` elements does not
 /// reallocate.
 ///
@@ -60,9 +53,13 @@ fn reserve_exact_len<T>(out: &mut Vec<T>, target_len: usize, label: &str) -> Res
 trait LeWireWord: bytemuck::Pod + Copy {
     const WIDTH: usize;
 
+    /// Append one LE value, byte by byte. Only a big-endian host encodes this
+    /// way; a little-endian host casts the whole slice.
+    #[cfg(target_endian = "big")]
     fn push_le_bytes(self, out: &mut Vec<u8>);
 
     /// Decode one LE value from a `WIDTH`-byte chunk (big-endian decode path).
+    #[cfg(target_endian = "big")]
     fn from_le_chunk(chunk: &[u8]) -> Self;
 }
 
@@ -71,10 +68,12 @@ macro_rules! impl_le_wire_word {
         impl LeWireWord for $ty {
             const WIDTH: usize = $width;
 
+            #[cfg(target_endian = "big")]
             fn push_le_bytes(self, out: &mut Vec<u8>) {
                 out.extend_from_slice(&self.to_le_bytes());
             }
 
+            #[cfg(target_endian = "big")]
             fn from_le_chunk(chunk: &[u8]) -> Self {
                 let mut buf = [0u8; $width];
                 buf.copy_from_slice(chunk);
@@ -626,29 +625,6 @@ pub fn decode_u16_le_bytes_all(bytes: &[u8]) -> Vec<u16> {
     out
 }
 
-fn pack_u32_iter_into<I>(words: I, out: &mut Vec<u8>)
-where
-    I: IntoIterator<Item = u32>,
-{
-    for word in words {
-        out.extend_from_slice(&word.to_le_bytes());
-    }
-}
-
-/// Packs an owned or generated stream of little-endian u32 words.
-///
-/// Use this for range/generated test inputs so callers do not duplicate
-/// `flat_map(u32::to_le_bytes)` loops or allocate an intermediate word vector.
-#[cfg(test)]
-pub fn pack_u32_iter<I>(words: I) -> Vec<u8>
-where
-    I: IntoIterator<Item = u32>,
-{
-    let mut out = Vec::new();
-    pack_u32_iter_into(words, &mut out);
-    out
-}
-
 /// Read one little-endian `f32` word at `word_index` from a byte stream.
 ///
 /// This is the canonical scalar companion to [`decode_f32_le_bytes_all`]
@@ -822,13 +798,6 @@ mod tests {
         let mut packed = vec![0xee, 0xdd];
         append_packed_byte_lane(&[1, 2], &mut packed);
         assert_eq!(packed, vec![0xee, 0xdd, 1, 0, 0, 0, 2, 0, 0, 0]);
-    }
-
-    #[test]
-    fn generated_u32_pack_matches_slice_pack() {
-        let words = [0, 1, 0x1234_5678, u32::MAX];
-        let generated = pack_u32_iter(words);
-        assert_eq!(generated, pack_u32_slice(&words));
     }
 
     #[test]

@@ -34,6 +34,13 @@ schema = 1
 # infallible wrappers documented their panic contracts.
 
 [[crate_budget]]
+name = "structure-gate"
+# 3 -> 0: the three thread-join sites document the contract they resume. A
+# partial corpus, roster, or crate-root set would let a sweep pass on whatever
+# loaded, so a lane panic ends the process instead of shrinking the population.
+ceiling = 0
+
+[[crate_budget]]
 name = "vyre-driver"
 ceiling = 0
 

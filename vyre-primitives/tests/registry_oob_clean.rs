@@ -19,8 +19,6 @@
 //! asserted over every registered primitive rather than only the fixtured ones.
 #![cfg(feature = "inventory-registry")]
 
-mod gate_fixtures;
-
 use vyre_reference::value::Value;
 use vyre_test_support::registry_nets::RegistrySweep;
 

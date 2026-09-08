@@ -196,7 +196,7 @@ impl WgpuBackend {
             },
             iterations: 1,
             timestamp_profile: false,
-            inferred_grid_shape: None,
+            inferred_launch: None,
         })
         .map_err(|error| error.into_message())?;
 

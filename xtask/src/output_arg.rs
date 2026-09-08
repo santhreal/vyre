@@ -52,17 +52,6 @@ pub fn read_text_bounded(path: &Path, max_bytes: u64, context: &str) -> io::Resu
     Ok(text)
 }
 
-pub(crate) fn parse_define(value: &str) -> (String, Option<String>) {
-    match value.split_once('=') {
-        Some((name, body)) => (name.to_string(), Some(body.to_string())),
-        None => (value.to_string(), None),
-    }
-}
-
-pub(crate) fn contains_any(text: &str, needles: &[&str]) -> bool {
-    needles.iter().any(|needle| text.contains(needle))
-}
-
 /// Resolve `path` against `base_dir` unless it is already absolute.
 pub fn resolve_path(base_dir: &Path, path: &str) -> PathBuf {
     let candidate = PathBuf::from(path);

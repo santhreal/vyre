@@ -30,7 +30,7 @@ use vyre_driver::allocation::reserve_hash_set_to_capacity;
 #[cfg(test)]
 pub(crate) use vyre_driver::enforce_actual_output_budget;
 use vyre_driver::BackendLayoutFingerprint;
-use vyre_driver::{admit_dispatch_grid, find_indirect_dispatch, infer_dispatch_grid_for_count};
+use vyre_driver::{admit_dispatch_grid, find_indirect_dispatch, infer_launch_grid};
 pub(crate) use vyre_driver::{element_size_bytes, OutputBindingLayout};
 pub use vyre_driver::{output_layout_from_program, IndirectDispatch, OutputLayout};
 use vyre_driver::{BackendError, DispatchConfig, LaunchGeometry, OutputBuffers};
@@ -78,6 +78,10 @@ pub struct WgpuPipeline {
     pub(crate) device_queue: Arc<(wgpu::Device, wgpu::Queue)>,
     pub(crate) output: OutputLayout,
     pub(crate) output_word_count: usize,
+    /// The compiled module reads its element index linearized over the grid, so
+    /// a workgroup count past one axis is folded onto the others rather than
+    /// refused.
+    pub(crate) grid_linearized: bool,
     pub(crate) workgroup_shape: [u32; 3],
     pub(crate) workgroup_size: u32,
     pub(crate) indirect: Option<IndirectDispatch>,
@@ -128,6 +132,7 @@ impl WgpuPipeline {
             device_queue,
             output: cached.output,
             output_word_count: cached.output_word_count,
+            grid_linearized: cached.grid_linearized,
             workgroup_shape: cached.workgroup_shape,
             workgroup_size: cached.workgroup_size,
             indirect: cached.indirect.clone(),
@@ -278,6 +283,36 @@ impl WgpuPipeline {
                     workgroup_shape
                 ))
             })?;
+        // The emitted module decides the index space; recompute it from the same
+        // inputs `crate::emit` used so the launch the planner folds is the launch
+        // the text was compiled for. Authenticated target bytes were emitted
+        // elsewhere and are dispatched exactly as recorded, so they index per
+        // axis.
+        //
+        // The fold is also only sound while the shape the planner divides by is
+        // the shape the emitted stride multiplies by. A program that declares no
+        // workgroup leaves the two to separate fallbacks, and a launch planned
+        // against the wrong stride would store every element at a wrong offset,
+        // so a disagreement keeps the single-axis grid and the launch is refused
+        // at the ceiling by name. A linearized module on a single-axis grid reads
+        // the same index either way: y and z are zero there.
+        let emitted_workgroup = config.launch_workgroup().unwrap_or_else(|| {
+            crate::emit::optimal_workgroup_size(compile_program, &enabled_features)
+        });
+        let grid_linearized = authenticated_wgsl.is_none()
+            && emitted_workgroup == workgroup_shape
+            && matches!(
+                crate::emit::launch_grid_index(
+                    &descriptor,
+                    compile_program,
+                    config,
+                    emitted_workgroup,
+                )
+                .map_err(|error| BackendError::InvalidProgram {
+                    fix: format!("Fix: wgpu launch planning rejected the Program: {error}"),
+                })?,
+                vyre_lower::GridIndexSpace::GridLinearized
+            );
         let indirect = find_indirect_dispatch(compile_program)?;
         let mut public_output_bindings = FxHashSet::default();
         reserve_hash_set_to_capacity(
@@ -416,6 +451,7 @@ impl WgpuPipeline {
             buffer_bindings: buffer_bindings.clone(),
             output,
             output_word_count,
+            grid_linearized,
             workgroup_shape,
             workgroup_size,
             indirect: indirect.clone(),
@@ -458,8 +494,20 @@ impl WgpuPipeline {
         &self,
         config: &DispatchConfig,
     ) -> Result<[u32; 3], BackendError> {
-        let grid = self.requested_workgroups(config)?;
-        admit_dispatch_grid(grid, self.max_workgroups_per_axis(), crate::WGPU_BACKEND_ID)
+        let limits = self.axis_ceiling(config);
+        // A caller who pinned the grid asked for that exact shape, so it is
+        // judged and never reshaped. Everything else is inferred, and inference
+        // folds a launch past one axis onto the others when the compiled module
+        // reads a grid-linearized index.
+        if let Some(grid) = config.launch_grid() {
+            return admit_dispatch_grid(grid, limits, crate::WGPU_BACKEND_ID);
+        }
+        self.inferred_workgroups(limits)
+    }
+
+    /// Per-axis workgroup ceiling this launch is planned against.
+    pub(crate) fn axis_ceiling(&self, config: &DispatchConfig) -> [u32; 3] {
+        crate::pipeline::tuning::resolve_axis_ceiling(config, [self.max_workgroups_per_axis(); 3])
     }
 
     /// The per-axis workgroup ceiling this device reported.
@@ -470,10 +518,7 @@ impl WgpuPipeline {
             .max_compute_workgroups_per_dimension
     }
 
-    fn requested_workgroups(&self, config: &DispatchConfig) -> Result<[u32; 3], BackendError> {
-        if let Some(grid) = config.launch_grid() {
-            return Ok(grid);
-        }
+    fn inferred_workgroups(&self, limits: [u32; 3]) -> Result<[u32; 3], BackendError> {
         // Non-1D workgroups have no unambiguous default grid: there's
         // no single right way to map an unknown element_count across
         // an N×M (or N×M×K) thread tile. Force the caller to set
@@ -492,7 +537,13 @@ impl WgpuPipeline {
                 self.output_word_count
             ))
         })?;
-        infer_dispatch_grid_for_count(output_word_count, self.workgroup_shape)
+        infer_launch_grid(
+            output_word_count,
+            self.workgroup_shape,
+            limits,
+            self.grid_linearized,
+            crate::WGPU_BACKEND_ID,
+        )
     }
 
     /// Substrate-neutral performance and accuracy plan computed for this

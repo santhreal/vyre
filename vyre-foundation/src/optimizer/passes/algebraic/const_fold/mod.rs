@@ -6,7 +6,7 @@
 //   binop_identities  -  binary operator algebraic identities (Add/Sub/Mul/…)
 //   unary_rules       -  unary operator simplifications (involutions, idempotent)
 //   select_rules      -  Select node optimizations (branch flip, cast canon.)
-//   fma_rules         -  FMA synthesis and simplification
+//   fma_rules         -  simplification of an author-written FMA
 //   cast_rules        -  compile-time literal Cast folding
 //
 // To add a new rule:
@@ -25,8 +25,6 @@ mod fma_rules;
 pub mod reaching_def_propagate;
 mod select_rules;
 mod unary_rules;
-
-pub(crate) use binop_identities::is_float_expr;
 
 use crate::ir::eval::{fold_binary_literal, fold_literal_tree, fold_unary_literal};
 use crate::ir::{Expr, Program};

@@ -14,7 +14,7 @@
 //! rank product exactly (integer·2^16 >> 16 = integer, no rounding), so the final scalar is the exact
 //! product of the nonzero ranks (an independent mathematical oracle the IR must reproduce).
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::tensor_train_chain_fusion::fusion_pressure_via;
 

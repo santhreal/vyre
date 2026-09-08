@@ -26,8 +26,6 @@ pub(crate) fn log_cuda_drop_result(op: &str, result: cudarc::driver::sys::CUresu
     }
 }
 
-pub(crate) const CU_STREAM_CAPTURE_MODE_THREAD_LOCAL: u32 = 1;
-
 #[derive(Debug)]
 pub(crate) struct DevicePtrGuard {
     ptr: u64,
@@ -405,17 +403,6 @@ impl GraphHostBuffers {
         Ok(buffers)
     }
 
-    pub(crate) fn push_input(&mut self, bytes: &[u8]) -> Result<(), BackendError> {
-        if bytes.is_empty() {
-            self.input.push(PinnedHostAllocation::default());
-            return Ok(());
-        }
-        let mut allocation = self.pool.acquire(bytes.len())?;
-        allocation.copy_from_slice(bytes)?;
-        self.input.push(allocation);
-        Ok(())
-    }
-
     pub(crate) fn push_input_padded(
         &mut self,
         bytes: &[u8],
@@ -485,7 +472,7 @@ mod tests {
             .expect("Fix: graph host buffers should reserve tiny test capacities");
 
         buffers
-            .push_input(&[])
+            .push_input_padded(&[], 0)
             .expect("Fix: zero-byte graph input must not call CUDA host allocation APIs");
         buffers
             .push_output(0)

@@ -1,6 +1,6 @@
 //! Regression coverage for AOT packaging of canonical compiler envelopes.
 
-mod fixture_target;
+use crate::fixture_target;
 
 use vyre_aot::{package_artifact, TargetId};
 

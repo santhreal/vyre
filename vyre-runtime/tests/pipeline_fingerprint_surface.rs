@@ -27,10 +27,7 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_runtime::pipeline_cache::PipelineFingerprint;
 
-#[path = "../src/pipeline_cache/test_artifact_fixtures.rs"]
-mod artifact_fixtures;
-
-use artifact_fixtures::artifact_for_program as artifact;
+use vyre_test_support::artifact_fixtures::artifact_for_program as artifact;
 
 fn single_store() -> Program {
     Program::wrapped(

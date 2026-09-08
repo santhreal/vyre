@@ -50,6 +50,22 @@ admitted them. An empty record states the programs as written. Every chain here
 also appears in `SelectedPlan::certificate.law_derived`, and a plan naming a
 chain the search never cited is rejected as a malformed artifact.
 
+## A launch covers what its program depends on
+
+An artifact carries one geometry record per node, and each record states the
+logical points its launch covers. Three constructs make a node's result depend
+on how many invocations ran rather than on which elements each one touched: an
+atomic, a subgroup collective, and a workgroup-scoped buffer. For a program
+carrying one of them the required coverage is the widest element count the
+program declares outside workgroup scope, not the point count of the region
+domain.
+
+A record covering fewer points than that is refused as
+`MKC001_INVALID_PROGRAM` where the record is built, naming the node and its
+`logical_coverage`. An atomic reduction over 4096 elements into a single
+accumulator states a domain of one point, and a launch sized from that domain
+returns one workgroup's partial sum.
+
 ## Identity is neutral; payloads are not
 
 The same semantic plan digests the same everywhere. A `TargetPayload`

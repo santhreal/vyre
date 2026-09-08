@@ -41,6 +41,7 @@
 //! nobody can see, so the message is mandatory and goes to stderr.
 
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 
 /// Environment variable that declares the monorepo root explicitly.
 ///
@@ -101,8 +102,9 @@ pub fn vyre_crate_directory(package: &str) -> PathBuf {
 /// file wherever it goes, across crates as well as directories.
 ///
 /// The search covers every source file the workspace holds, from
-/// [`structure_gate::scan`], which is the same roster the structure gate walks.
-/// `marker` must be the opening text of the declaration, such as
+/// [`structure_gate::source_file_roster`], which is the same roster the
+/// structure gate walks. `marker` must be the opening text of the declaration,
+/// such as
 /// `pub fn fnv1a64_program`, and a file matches when some line begins with it
 /// once indentation is trimmed. Matching a line prefix rather than any
 /// occurrence keeps the caller's own copy of the marker, which is a string
@@ -119,16 +121,14 @@ pub fn vyre_crate_directory(package: &str) -> PathBuf {
 #[must_use]
 pub fn declaring_source_file(marker: &str) -> PathBuf {
     let root = vyre_workspace_root();
-    let matches: Vec<String> = structure_gate::scan(&root)
-        .source_files
-        .into_iter()
-        .filter(|relative| {
-            std::fs::read_to_string(root.join(relative)).is_ok_and(|source| {
-                source
-                    .lines()
-                    .any(|line| line.trim_start().starts_with(marker))
-            })
+    let matches: Vec<&str> = SOURCE_CORPUS
+        .iter()
+        .filter(|(_, source)| {
+            source
+                .lines()
+                .any(|line| line.trim_start().starts_with(marker))
         })
+        .map(|(relative, _)| relative.as_str())
         .collect();
     match matches.as_slice() {
         [only] => root.join(only),
@@ -143,6 +143,78 @@ pub fn declaring_source_file(marker: &str) -> PathBuf {
             several.join(", ")
         ),
     }
+}
+
+/// Every workspace source file with its text, read once per process.
+///
+/// [`declaring_source_file`] used to read the whole corpus on every call: 4495
+/// files and 37 MiB, walked again for each marker. A roster test that resolves
+/// three exemption owners therefore paid for three complete walks, and on a
+/// network-mounted checkout that is minutes per walk rather than milliseconds:
+/// one such test held a validation host for ten minutes with no output. The
+/// corpus does not change while a test binary runs, so one read serves every
+/// marker.
+///
+/// The read is spread across many lanes because it is latency-bound rather than
+/// bandwidth-bound: each file is one round trip to the server, and 37 MiB is
+/// nothing beside 4495 of those. The lane count comes from
+/// [`structure_gate::read_lanes`], which holds the width above the core count
+/// and below the descriptor budget the whole process shares. The roster comes
+/// from [`structure_gate::source_file_roster`] rather than a full workspace
+/// scan, which walks the tree once instead of once per roster a scan derives
+/// from source text. Chunks are contiguous slices of that roster, so the corpus
+/// keeps its order and a duplicate-home report names files in the same
+/// sequence every run.
+static SOURCE_CORPUS: LazyLock<Vec<(String, String)>> = LazyLock::new(read_source_corpus);
+
+fn read_source_corpus() -> Vec<(String, String)> {
+    let root = vyre_workspace_root();
+    let files = structure_gate::source_file_roster(&root);
+    let per_lane = files
+        .len()
+        .div_ceil(structure_gate::read_lanes(files.len()));
+    if per_lane == 0 {
+        return Vec::new();
+    }
+    std::thread::scope(|scope| {
+        let handles: Vec<_> = files
+            .chunks(per_lane)
+            .map(|chunk| {
+                let root = root.as_path();
+                scope.spawn(move || {
+                    chunk
+                        .iter()
+                        .map(|relative| {
+                            // A dropped read used to be silent, and the corpus
+                            // is what answers "which file declares this". A
+                            // process out of descriptors then reported that
+                            // nothing declares a name that is right there.
+                            let text = std::fs::read_to_string(root.join(relative)).unwrap_or_else(
+                                |error| {
+                                    panic!(
+                                        "Fix: read {relative}: {error}. Every file in the roster \
+                                         is a tracked Rust source, so a failure here is the \
+                                         process out of descriptors or a lost mount, not a file \
+                                         the corpus may skip."
+                                    )
+                                },
+                            );
+                            (relative.clone(), text)
+                        })
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect();
+        handles
+            .into_iter()
+            .flat_map(|handle| {
+                handle.join().expect(
+                    "a corpus read lane must not panic. Fix: the panic is in the spawned read \
+                     above, so read its message and correct that read, not this join",
+                )
+            })
+            .collect()
+    })
 }
 
 /// Workspace member paths and excluded paths from the root manifest, in this

@@ -1,7 +1,7 @@
 //! Adversarial tests that expose real semantic gaps in the vyre-reference CPU
 //! interpreter. Every assertion documents behavior that was previously untested.
 
-mod flat_expr_eval;
+use crate::flat_expr_eval;
 
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_reference::expr::Buffer;

@@ -21,20 +21,6 @@ pub(crate) fn model_count(dag: &DnnfDag) -> u64 {
     vyre_reference::composition_witness::dnnf_model_count_witness(dag)
 }
 
-/// Whether the formula has at least one model.
-#[must_use]
-#[cfg(test)]
-pub(crate) fn is_satisfiable(dag: &DnnfDag) -> bool {
-    vyre_reference::composition_witness::dnnf_is_satisfiable_witness(dag)
-}
-
-/// Whether every assignment over `num_vars` variables is a model.
-#[must_use]
-#[cfg(test)]
-pub(crate) fn is_tautology(dag: &DnnfDag, num_vars: u32) -> bool {
-    vyre_reference::composition_witness::dnnf_is_tautology_witness(dag, num_vars)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

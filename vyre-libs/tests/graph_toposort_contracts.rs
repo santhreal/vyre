@@ -1,6 +1,6 @@
 //! Contracts for both topological-sort oracles and the emitted program.
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::toposort;
 
 use vyre_libs::graph::toposort::{

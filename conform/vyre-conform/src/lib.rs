@@ -1,14 +1,14 @@
 //! Canonical conformance engine for proof execution, replay, minimization,
-//! algebraic-law checking, and certificate verification.
+//! algebraic-law proof, and certificate verification.
 
 pub mod bundle_cert;
 pub mod cert;
 pub mod convergence_lens;
+pub mod law_proof;
 pub mod lens;
 pub mod minimizer;
 pub mod panic_payload;
 pub mod production;
-pub mod prover;
 #[doc(hidden)]
 pub mod witness_plan;
 
@@ -17,6 +17,9 @@ pub use bundle_cert::issue::issue_bundle_cert;
 pub use bundle_cert::signature::verify_cert_signature_hex;
 pub use bundle_cert::verify::{verify_bundle_against_reference, verify_bundle_with_backend};
 pub use cert::{issue_certificate, verify_structural, CertificateError, IssueInput};
+pub use law_proof::{
+    prove_declared_laws, prove_law, LawProof, LawVerdict, LawWitness, UnprovenKind,
+};
 pub use minimizer::{CounterexampleMinimizer, MinimizationBudget, MinimizerReport};
 pub use panic_payload::panic_message;
 pub use production::{
@@ -24,4 +27,3 @@ pub use production::{
     ProductionExecution, ProductionSession, ReplayCapsule, ScheduleAgreement,
     ScheduleAgreementReport, ScheduleDisagreement, ScheduleOutcome, CONFORMANCE_SCHEDULES,
 };
-pub use prover::{LawProver, LawVerdict};

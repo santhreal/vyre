@@ -32,6 +32,7 @@ pub(crate) fn step_nodes_frame<'a>(
         index: index + 1,
         scoped,
     });
+    crate::execution::step_budget::charge()?;
     let node = &nodes[index];
     match node {
         Node::Let { name, value } => {
@@ -453,6 +454,9 @@ pub(crate) fn step_loop_frame<'a>(
     if next >= to {
         return Ok(());
     }
+    // An empty body executes no statement, so a data-derived trip count would
+    // otherwise spin without charging anything.
+    crate::execution::step_budget::charge()?;
     invocation.frames.push(Frame::Loop {
         var,
         next: next.wrapping_add(1),

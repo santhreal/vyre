@@ -1,5 +1,9 @@
 //! Const-fold tests  -  split per audit cleanup A13 (2026-04-30) so no
 //! single test file exceeds the 1000-LOC hygiene cap.
+//!
+//! Simplification of an author-written FMA is proved by the `fma_rules`
+//! section of `structural.rs`, which owns the whole set: unit multiplier on
+//! either operand and the signed-zero product boundary.
 
 use super::super::*;
 use crate::ir::{BinOp, BufferDecl, DataType, Expr, Node, UnOp};
@@ -374,87 +378,41 @@ fn select_identical_branches() {
     assert_eq!(fold_expr(&expr), Some(x));
 }
 
-// ---- FMA synthesis tests ----
+// ---- Multiply-add is left alone ----
 
+/// Folding `a * b + c` into one rounding is not an algebraic identity.
+///
+/// An FMA rounds once where the written program rounds twice, so a semantic
+/// pass that introduces one answers a different function than the caller wrote.
+/// The target contracts the pair itself wherever
+/// `FloatLoweringMode::Contracted` permits it, and under
+/// `FloatLoweringMode::StrictIeee` an emitter denies it; neither answer is this
+/// pass's to choose. Every float-evident shape the old synthesis fired on is
+/// listed here, because one surviving arm is enough to make a strict-mode
+/// dispatch return contracted arithmetic.
 #[test]
-fn fma_synthesis_mul_plus_c() {
-    // (a * b) + c → Fma(a, b, c)
+fn no_multiply_add_shape_is_folded_into_an_fma() {
     let a = Expr::var("a");
     let b = Expr::var("b");
-    let c = Expr::f32(1.0);
-    let expr = Expr::add(Expr::mul(a.clone(), b.clone()), c.clone());
-    let result = fold_expr(&expr)
-        .expect("Fix: should synthesize fma; restore this invariant before continuing.");
-    assert_eq!(
-        result,
-        Expr::Fma {
-            a: Box::new(a),
-            b: Box::new(b),
-            c: Box::new(c),
-        }
-    );
-}
-
-#[test]
-fn fma_synthesis_c_plus_mul() {
-    // c + (a * b) → Fma(a, b, c)
-    let a = Expr::var("a");
-    let b = Expr::var("b");
-    let c = Expr::f32(2.5);
-    let expr = Expr::add(c.clone(), Expr::mul(a.clone(), b.clone()));
-    let result = fold_expr(&expr)
-        .expect("Fix: should synthesize fma; restore this invariant before continuing.");
-    assert_eq!(
-        result,
-        Expr::Fma {
-            a: Box::new(a),
-            b: Box::new(b),
-            c: Box::new(c),
-        }
-    );
-}
-
-#[test]
-fn fma_synthesis_mul_minus_c() {
-    let a = Expr::var("a");
-    let b = Expr::var("b");
-    let c = Expr::f32(2.0);
-    let result = fold_expr(&Expr::sub(Expr::mul(a.clone(), b.clone()), c.clone()))
-        .expect("Fix: should synthesize fma for mul-minus-c");
-
-    assert_eq!(result, Expr::fma(a, b, Expr::negate(c)));
-}
-
-#[test]
-fn fma_synthesis_c_minus_mul_uses_negated_multiplicand() {
-    let a = Expr::var("a");
-    let b = Expr::var("b");
-    let c = Expr::f32(2.0);
-    let result = fold_expr(&Expr::sub(c.clone(), Expr::mul(a.clone(), b.clone())))
-        .expect("Fix: should synthesize fma for c-minus-mul");
-
-    assert_eq!(result, Expr::fma(Expr::negate(a), b, c));
-}
-
-#[test]
-fn fma_synthesis_nested_mul_add_chain() {
-    let a = Expr::var("a");
-    let b = Expr::var("b");
-    let c = Expr::var("c");
-    let d = Expr::f32(4.0);
-    let result = fold_expr(&Expr::add(
-        Expr::mul(a.clone(), b.clone()),
-        Expr::mul(c.clone(), d.clone()),
-    ))
-    .expect("Fix: should synthesize fma for mul-add chain with float evidence");
-
-    assert_eq!(result, Expr::fma(a, b, Expr::mul(c, d)));
-}
-
-#[test]
-fn fma_synthesis_does_not_fire_for_unknown_integer_shape() {
-    let expr = Expr::add(Expr::mul(Expr::var("a"), Expr::var("b")), Expr::var("c"));
-    assert_eq!(fold_expr(&expr), None);
+    let literal = Expr::f32(2.0);
+    let product = Expr::mul(a.clone(), b.clone());
+    let shapes = [
+        Expr::add(product.clone(), literal.clone()),
+        Expr::add(literal.clone(), product.clone()),
+        Expr::sub(product.clone(), literal.clone()),
+        Expr::sub(literal.clone(), product.clone()),
+        Expr::add(product.clone(), Expr::mul(Expr::var("c"), literal.clone())),
+        Expr::add(Expr::negate(product.clone()), literal.clone()),
+        Expr::sub(Expr::negate(product), literal),
+    ];
+    for shape in shapes {
+        let folded = fold_expr(&shape);
+        assert!(
+            !matches!(folded, Some(Expr::Fma { .. })),
+            "Fix: {shape:?} folded to {folded:?}, which rounds once where the program \
+             written rounds twice"
+        );
+    }
 }
 
 // ---- Self-operand identity tests ----

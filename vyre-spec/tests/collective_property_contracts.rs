@@ -1,6 +1,6 @@
 //! Generated property coverage for collective operation wire contracts.
 
-mod spec_variants;
+use crate::spec_variants;
 
 use proptest::prelude::*;
 use spec_variants::collective_op_strategy;

@@ -21,7 +21,7 @@
 //! semantic equivalence check.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use vyre_test_support::monorepo::{vyre_crate_directory, vyre_workspace_root};
 
@@ -45,8 +45,9 @@ const OWNER_CRATE: &str = "vyre-primitives";
 fn source_files() -> Vec<(String, String)> {
     let root = vyre_crate_directory(SUBJECT_CRATE);
     let src = root.join("src");
-    let mut out = Vec::new();
-    collect_rs(&src, &root, &mut out);
+    let mut paths = Vec::new();
+    collect_rs_paths(&src, &mut paths);
+    let mut out = read_all(&paths, &root);
     out.sort_by(|a, b| a.0.cmp(&b.0));
     assert_walk_is_closed_under_the_module_tree(&out, &src);
     out
@@ -174,24 +175,25 @@ fn workspace_source_files() -> Vec<(String, String)> {
         members.len()
     );
 
-    let mut out = Vec::new();
+    let mut paths = Vec::new();
     for member in &members {
         let src = root.join(member).join("src");
         if src.is_dir() {
-            collect_rs(&src, &root, &mut out);
+            collect_rs_paths(&src, &mut paths);
         }
     }
     assert!(
-        out.len() > 500,
+        paths.len() > 500,
         "Fix: only {} source files were found across {} workspace members; the walk is wrong, so the gate would pass by finding no members.",
-        out.len(),
+        paths.len(),
         members.len()
     );
+    let mut out = read_all(&paths, &root);
     out.sort_by(|a, b| a.0.cmp(&b.0));
     out
 }
 
-fn collect_rs(dir: &Path, root: &Path, out: &mut Vec<(String, String)>) {
+fn collect_rs_paths(dir: &Path, out: &mut Vec<PathBuf>) {
     let entries = std::fs::read_dir(dir)
         .unwrap_or_else(|e| panic!("Fix: cannot read {}: {e}", dir.display()));
     for entry in entries {
@@ -199,18 +201,56 @@ fn collect_rs(dir: &Path, root: &Path, out: &mut Vec<(String, String)>) {
             .unwrap_or_else(|e| panic!("Fix: cannot read an entry of {}: {e}", dir.display()))
             .path();
         if path.is_dir() {
-            collect_rs(&path, root, out);
+            collect_rs_paths(&path, out);
         } else if path.extension().is_some_and(|e| e == "rs") {
-            let text = std::fs::read_to_string(&path)
-                .unwrap_or_else(|e| panic!("Fix: cannot read {}: {e}", path.display()));
-            let relative = path
-                .strip_prefix(root)
-                .unwrap_or(&path)
-                .to_string_lossy()
-                .replace('\\', "/");
-            out.push((relative, text));
+            out.push(path);
         }
     }
+}
+
+/// Read every collected path, spread across many lanes.
+///
+/// The walk is latency-bound: two thousand sources are 20 MiB, and on a
+/// network-mounted checkout each one is a separate round trip to the server. Read
+/// serially this took over a minute for a gate that then spends milliseconds
+/// judging the text. The lane count comes from `structure_gate::read_lanes` and
+/// exceeds the host's core count on purpose, because a blocked read occupies no
+/// core and the useful width is requests in flight. The caller sorts, so lane
+/// order does not reach the result.
+fn read_all(paths: &[PathBuf], root: &Path) -> Vec<(String, String)> {
+    let per_lane = paths
+        .len()
+        .div_ceil(structure_gate::read_lanes(paths.len()));
+    if per_lane == 0 {
+        return Vec::new();
+    }
+    std::thread::scope(|scope| {
+        let handles: Vec<_> = paths
+            .chunks(per_lane)
+            .map(|chunk| {
+                scope.spawn(move || {
+                    chunk
+                        .iter()
+                        .map(|path| {
+                            let text = std::fs::read_to_string(path).unwrap_or_else(|e| {
+                                panic!("Fix: cannot read {}: {e}", path.display())
+                            });
+                            let relative = path
+                                .strip_prefix(root)
+                                .unwrap_or(path)
+                                .to_string_lossy()
+                                .replace('\\', "/");
+                            (relative, text)
+                        })
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect();
+        handles
+            .into_iter()
+            .flat_map(|handle| handle.join().expect("a source read lane must not panic"))
+            .collect()
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -796,5 +836,121 @@ fn both_crate_directories_are_the_ones_this_workspace_holds() {
         subject.join("tests/shared_owner_closure.rs").is_file(),
         "Fix: {} does not hold this test file, so the walk is reading a different checkout.",
         subject.display()
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Class 4: a dispatch wrapper reads its results by declared name.
+// ---------------------------------------------------------------------------
+
+/// The dispatch tree whose wrappers must not count their own results.
+const DISPATCH_TREE: &str = "src/graph/dispatch/";
+
+/// Signatures that derive a result set independently of the declarations.
+///
+/// `vyre_megakernel::writable_graph_value_buffers` answers which buffers a node
+/// writes and `returned_graph_values` answers which values a completion
+/// carries. A wrapper that matches the result list by position, or checks its
+/// length against a number it summed itself, is a second answer to one of them,
+/// and the read-write value a program writes but no caller reads is where the
+/// two part: the count check rejects the result the device just computed.
+fn positional_dispatch_readbacks(files: &[(String, String)]) -> Vec<(String, String)> {
+    let mut offenders = Vec::new();
+    for (path, text) in files {
+        if !path.starts_with(DISPATCH_TREE) {
+            continue;
+        }
+        let production = non_test_source_text(text);
+        for signature in ["outputs.as_slice()", "outputs.len()"] {
+            if production.contains(signature) {
+                offenders.push((path.clone(), signature.to_string()));
+            }
+        }
+        if production.contains(".execute(&request)")
+            && !production.contains("returned_graph_values")
+        {
+            offenders.push((
+                path.clone(),
+                "submits a graph without the owner".to_string(),
+            ));
+        }
+    }
+    offenders.sort();
+    offenders
+}
+
+/// WHY: every wrapper under the dispatch tree reads its results by declared
+/// buffer name or by the graph values `returned_graph_values` names, so a new
+/// wrapper that positions or counts them instead turns this red. The member set
+/// is every file in the tree at run time, so adding a wrapper enrolls it.
+///
+/// Does NOT catch a count derived under a name these signatures do not match,
+/// nor a wrapper outside this tree.
+#[test]
+fn no_graph_dispatch_wrapper_derives_its_own_result_set() {
+    let offenders: Vec<String> = positional_dispatch_readbacks(&source_files())
+        .into_iter()
+        .map(|(path, signature)| format!("{path}: {signature}"))
+        .collect();
+
+    assert!(
+        offenders.is_empty(),
+        "Fix: these wrappers derive their own result set. Read each buffer by the name the Program declares through `dispatch_bridge::dispatch_u32_outputs_from_prepared_into`, or compare the returned identities against `vyre_megakernel::returned_graph_values`:\n  {}",
+        offenders.join("\n  ")
+    );
+}
+
+/// The signature must still match the shapes it claims to reject.
+///
+/// An empty result is the passing state of the gate above, so the scan has to
+/// be proven able to see a member at all.
+#[test]
+fn the_dispatch_readback_signature_matches_every_shape_it_rejects() {
+    let sample = vec![
+        (
+            format!("{DISPATCH_TREE}probe/dispatch.rs"),
+            concat!(
+                "let [a, b] = match outputs.as_slice() {\n",
+                "    _ => return Err(err(format!(\"got {}\", outputs.len()))),\n",
+                "};\n",
+                "let done = dispatcher.execute(&request)?;\n",
+            )
+            .to_string(),
+        ),
+        (
+            format!("{DISPATCH_TREE}owned/dispatch.rs"),
+            concat!(
+                "let retained = returned_graph_values(logical.graph());\n",
+                "let done = dispatcher.execute(&request)?;\n",
+                "#[cfg(test)]\n",
+                "mod tests {\n",
+                "    fn probe() { let _ = outputs.len(); }\n",
+                "}\n",
+            )
+            .to_string(),
+        ),
+        (
+            "src/graph/other.rs".to_string(),
+            "let [a] = match outputs.as_slice() { _ => unreachable!() };\n".to_string(),
+        ),
+    ];
+
+    assert_eq!(
+        positional_dispatch_readbacks(&sample),
+        vec![
+            (
+                format!("{DISPATCH_TREE}probe/dispatch.rs"),
+                "outputs.as_slice()".to_string()
+            ),
+            (
+                format!("{DISPATCH_TREE}probe/dispatch.rs"),
+                "outputs.len()".to_string()
+            ),
+            (
+                format!("{DISPATCH_TREE}probe/dispatch.rs"),
+                "submits a graph without the owner".to_string()
+            ),
+        ],
+        "Fix: the dispatch-readback signature no longer sees a positional match, a result count or an unowned graph submission, or it now flags a wrapper that reads by declared name, a count inside a test module, or a file outside the dispatch tree."
     );
 }

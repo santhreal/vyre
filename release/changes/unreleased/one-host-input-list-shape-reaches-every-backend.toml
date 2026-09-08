@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The wgpu record-and-readback path accepts one host input list shape, one value per binding that consumes host bytes, and refuses any other count by name instead of selecting between two shapes on list length."

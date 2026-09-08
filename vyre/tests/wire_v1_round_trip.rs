@@ -8,9 +8,16 @@
 
 use vyre::ir::Program;
 
-#[path = "program_fixtures/mod.rs"]
-mod program_fixtures;
-use program_fixtures::{empty_program, one_store_program};
+use crate::program_fixtures;
+use program_fixtures::one_store_program;
+
+/// A program with no buffers and no body, at the smallest workgroup size.
+///
+/// Read only here: the malformed-wire suite has no use for a program with
+/// nothing in it to corrupt.
+fn empty_program() -> Program {
+    Program::wrapped(Vec::new(), [1, 1, 1], Vec::new())
+}
 
 #[test]
 fn empty_program_round_trips() {

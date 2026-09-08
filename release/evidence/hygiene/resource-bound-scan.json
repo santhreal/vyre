@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:ca5a721355cd1c4e5f29260fad39cea17fcca005:dirty=true:worktree=c6bbe533c6b4fb3e5a379b8b04d4576c008af12c951b908b570b5aec1562d078",
+  "source_fingerprint": "git:3cfaa0ef1ac2f973c5c9b7be833ce2c0d92fbb6a:dirty=true:worktree=2a1cb0a8a68b1071af1018b7631e9eb50b8549b16ba11caabae9cc0ed5f106bc",
   "schema_version": 1,
   "scan": "resource-bound",
   "findings": [
@@ -16,16 +16,22 @@
       "text": "std::thread::sleep(sleep.min(deadline - waited));"
     },
     {
+      "path": "vyre-test-support/src/csr_sweep.rs",
+      "line": 342,
+      "pattern": "unbounded_read",
+      "text": ".map(|path| std::fs::read_to_string(path).expect(\"Fix: read a test source\"))"
+    },
+    {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 328,
+      "line": 380,
       "pattern": "unbounded_read",
       "text": "let source = std::fs::read_to_string(&path)"
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 126,
+      "line": 192,
       "pattern": "unbounded_read",
-      "text": "std::fs::read_to_string(root.join(relative)).is_ok_and(|source| {"
+      "text": "let text = std::fs::read_to_string(root.join(relative)).unwrap_or_else("
     },
     {
       "path": "xtask/src/gates/hot_path_scan.rs",

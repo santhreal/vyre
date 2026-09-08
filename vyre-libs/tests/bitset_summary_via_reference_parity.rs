@@ -10,7 +10,7 @@
 //! outputs[0]. Exact integer arithmetic → BIT-EXACT (no tolerance), compared against a fully
 //! independent inline `u32::count_ones` oracle.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::encoding::bitset_summary::{per_word_popcount_via, total_set_bits_via};
 

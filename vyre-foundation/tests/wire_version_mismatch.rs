@@ -4,9 +4,7 @@
 //! past schema version, producing actionable errors rather than
 //! silent misinterpretation or panics.
 
-mod wire_decode_hostile_inputs;
-
-use wire_decode_hostile_inputs::{decode_error_string, minimal_program_bytes};
+use vyre_test_support::wire_hostile_inputs::{decode_error_string, minimal_program_bytes};
 
 #[test]
 fn wire_decoder_rejects_future_version() {

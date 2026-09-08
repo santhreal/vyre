@@ -15,7 +15,7 @@
 //! across iterations through reference_eval (so the full multi-iteration closure is validated here).
 //! Values are exact bitset unions → BIT-EXACT (no tolerance) vs `reference_provenance_closure`.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::encoding::scallop_provenance::provenance_closure_via;
 use vyre_reference::composition_witness::scallop_join_fixpoint_witness;

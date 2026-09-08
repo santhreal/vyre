@@ -1,8 +1,9 @@
 #![allow(missing_docs)]
 
-extern crate self as vyre;
+use crate::expansion_fixtures;
 
-mod expansion_fixtures;
+#[path = "expansion_fixtures/default_metadata.rs"]
+mod default_metadata;
 
 pub use expansion_fixtures::{ir, optimizer};
 
@@ -170,7 +171,7 @@ fn vyre_pass_emits_metadata_trait_impl_and_inventory_registration() {
 fn vyre_pass_default_metadata_is_a_stable_contract() {
     let pass = ReleaseSurfaceDefaultsPass;
     let metadata = optimizer::ProgramPass::metadata(&pass);
-    expansion_fixtures::assert_default_metadata(&metadata, "release_surface_defaults");
+    default_metadata::assert_default_metadata(&metadata, "release_surface_defaults");
 
     let program = ir::Program { id: 11 };
     assert_eq!(

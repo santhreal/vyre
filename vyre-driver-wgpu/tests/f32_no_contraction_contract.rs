@@ -27,17 +27,26 @@
 //!    arithmetic drifts by an ulp per fused pair.
 //!
 //! The contract asserted below is the one that is actually true and portable:
-//! the device returns one of the two well-defined answers, never a third, and
-//! the two differ by at most one ulp. A device that stops contracting still
-//! passes; a device that returns something outside that pair has a real bug.
+//! under the default lowering the device returns one of the two well-defined
+//! answers, never a third, and the two differ by at most one ulp. A device that
+//! stops contracting still passes; a device that returns something outside that
+//! pair has a real bug.
+//!
+//! The strict lowering is the other half. It denies the target the pair, and
+//! whether the denial survives the platform's own compilation of the module is
+//! a property of the adapter rather than of the driver, so the driver measures
+//! it once and refuses the mode where it does not hold. Both outcomes are
+//! asserted: separately-rounded bits on an adapter that honors the mode, a
+//! refusal naming the mode on one that does not.
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 use harness::acquire_live_backend as live_backend;
+use harness::{bytes_f32, f32_bytes};
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_test_support::strict_float_programs::f32_multiply_add_program;
 
 /// `1 + 2^-12`, squared and offset by -1, is the tightest fma witness.
 ///
@@ -49,46 +58,6 @@ const WITNESS: f32 = f32::from_bits(0x3F80_0800); // 1 + 2^-12, exact in f32.
 
 /// What two separately-rounded operations must produce.
 const SEPARATELY_ROUNDED: f32 = 0.000_488_281_25; // 2^-11, exact in f32.
-
-fn f32_bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_bits().to_le_bytes())
-        .collect()
-}
-
-fn bytes_f32(bytes: &[u8]) -> Vec<f32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| f32::from_bits(u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]])))
-        .collect()
-}
-
-/// `out[i] = a[i] * b[i] + c[i]`, one lane per element.
-fn multiply_add_program(count: u32) -> Program {
-    let i = Expr::gid_x();
-    let body = vec![Node::if_then(
-        Expr::lt(i.clone(), Expr::u32(count)),
-        vec![Node::store(
-            "out",
-            i.clone(),
-            Expr::add(
-                Expr::mul(Expr::load("a", i.clone()), Expr::load("b", i.clone())),
-                Expr::load("c", i.clone()),
-            ),
-        )],
-    )];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(count),
-            BufferDecl::storage("b", 1, BufferAccess::ReadOnly, DataType::F32).with_count(count),
-            BufferDecl::storage("c", 2, BufferAccess::ReadOnly, DataType::F32).with_count(count),
-            BufferDecl::storage("out", 3, BufferAccess::ReadWrite, DataType::F32).with_count(count),
-        ],
-        [64, 1, 1],
-        body,
-    )
-}
 
 /// The witness really does separate the two roundings on the host.
 ///
@@ -120,7 +89,7 @@ fn the_witness_distinguishes_fused_from_separate_rounding_on_the_host() {
 #[test]
 fn multiply_add_lands_on_one_of_the_two_well_defined_roundings() {
     let backend = live_backend();
-    let program = multiply_add_program(1);
+    let program = f32_multiply_add_program(1, None);
     let outputs = backend
         .dispatch(
             &program,
@@ -195,7 +164,7 @@ fn the_reference_and_the_gpu_agree_to_within_one_ulp_on_multiply_add() {
     let b: Vec<f32> = a.clone();
     let c: Vec<f32> = vec![-1.0, -9.0, -1e-6, -56.25, -4.0, -1e12];
     let count = a.len() as u32;
-    let program = multiply_add_program(count);
+    let program = f32_multiply_add_program(count, None);
     let inputs = vec![f32_bytes(&a), f32_bytes(&b), f32_bytes(&c)];
 
     let gpu = bytes_f32(
@@ -215,6 +184,76 @@ fn the_reference_and_the_gpu_agree_to_within_one_ulp_on_multiply_add() {
             seen.to_bits(),
             separate.to_bits(),
             fused.to_bits()
+        );
+    }
+}
+
+/// Under the strict mode the device rounds separately, or refuses the mode.
+///
+/// Everything above characterizes the DEFAULT lowering, where contraction is
+/// permitted and the answer is one of two. The strict mode removes the choice:
+/// `emit_binop` publishes every f32 product through a `u32` reinterpretation
+/// emitted as its own statement, so the following add has no unrounded product
+/// to absorb. A bitwise parity claim against the reference rests entirely on
+/// that surviving the platform's own compilation of the module, and nothing
+/// pinned it. The pair of tests above measured contraction in the mode that
+/// allows it, and the strict answer was asserted only indirectly, by a
+/// transcendental parity suite whose expansions are what it was really
+/// exercising.
+///
+/// The witness is the tightest one there is: the fused and separate answers
+/// differ by the single bit a rounded multiply discards. An adapter whose
+/// platform compiler folds the barrier is measured by the driver and refuses
+/// the mode, and that refusal is asserted here rather than passed over, because
+/// answering with the fused bits is the defect.
+#[test]
+fn the_strict_mode_rounds_separately_or_is_refused_by_name() {
+    use vyre_foundation::fp_parity::FloatLoweringMode;
+
+    let backend = live_backend();
+    let a: Vec<f32> = vec![WITNESS, 3.000_244_1, 1e-3, 7.5, -2.000_488_3, 1e6];
+    let b: Vec<f32> = a.clone();
+    let c: Vec<f32> = vec![-1.0, -9.0, -1e-6, -56.25, -4.0, -1e12];
+    let count = u32::try_from(a.len()).expect("Fix: lane count must fit in u32");
+    let program = f32_multiply_add_program(count, None);
+    let inputs = vec![f32_bytes(&a), f32_bytes(&b), f32_bytes(&c)];
+
+    // `DispatchConfig` is non-exhaustive, so a struct expression cannot name it
+    // from outside `vyre-driver`. Mutating the default is the documented shape.
+    let mut config = DispatchConfig::default();
+    config.float_lowering = FloatLoweringMode::StrictIeee;
+
+    let outcome = backend.dispatch(&program, &inputs, &config);
+    if !backend.honors_float_lowering(FloatLoweringMode::StrictIeee) {
+        let message = outcome
+            .err()
+            .map(|error| error.to_string())
+            .unwrap_or_else(|| {
+                panic!(
+                    "the adapter reports it does not honor the strict mode and then answered a \
+                     strict dispatch, so a caller would compare contracted bits with the oracle"
+                )
+            });
+        assert!(
+            message.contains(FloatLoweringMode::StrictIeee.cache_label()),
+            "a refusal must name the mode so a caller knows what to change: {message}"
+        );
+        return;
+    }
+    let gpu = bytes_f32(
+        &outcome.expect("Fix: an adapter that honors the strict mode must answer this program")[0],
+    );
+
+    for (index, ((a, b), c)) in a.iter().zip(&b).zip(&c).enumerate() {
+        let separate = a * b + c;
+        assert_eq!(
+            gpu[index].to_bits(),
+            separate.to_bits(),
+            "lane {index}: the strict mode must round the product before the add. Got \
+             {:#010x}, two roundings give {:#010x}, and the fused answer is {:#010x}",
+            gpu[index].to_bits(),
+            separate.to_bits(),
+            a.mul_add(*b, *c).to_bits()
         );
     }
 }

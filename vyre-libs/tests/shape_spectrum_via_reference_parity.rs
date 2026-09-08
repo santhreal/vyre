@@ -13,7 +13,7 @@
 //! `mp_edge_clip_cpu` (`v.min(edge)`) applied to the same magnitudes and re-encoded, so this suite
 //! asserts BOTH the direct u32 min oracle AND agreement with the importable `mp_edge_clip_cpu`.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::scheduling::spectral_schedule::shape_spectrum_fixed_via;
 use vyre_reference::composition_witness::mp_edge_clip_witness as mp_edge_clip_cpu;

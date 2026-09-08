@@ -3,6 +3,7 @@
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+use crate::builder::trip_count::clamped_by_extents;
 use crate::graph::frontier_bits::bind_bit_address;
 
 /// Lane assignment and in-bounds rule for one queued CSR source row.
@@ -388,6 +389,10 @@ fn csr_queued_source_nodes(
 }
 
 /// CSR row bounds for the queued source.
+///
+/// `edge_offsets` is producer data, so `edge_offsets[src + 1]` is both the trip
+/// count of the scalar walk and, through `degree`, the stripe count of the team
+/// walk. Clamping it here bounds both.
 fn csr_queue_row_bounds(spec: &CsrQueueStepSpec<'_>) -> Vec<Node> {
     let src = spec.var("src");
     vec![
@@ -397,9 +402,13 @@ fn csr_queue_row_bounds(spec: &CsrQueueStepSpec<'_>) -> Vec<Node> {
         ),
         Node::let_bind(
             spec.var("edge_end"),
-            Expr::load(
-                spec.inputs.edge_offsets,
-                Expr::add(Expr::var(src.as_str()), Expr::u32(1)),
+            clamped_by_extents(
+                Expr::load(
+                    spec.inputs.edge_offsets,
+                    Expr::add(Expr::var(src.as_str()), Expr::u32(1)),
+                ),
+                spec.inputs.edge_targets,
+                [spec.inputs.edge_kind_mask],
             ),
         ),
     ]
@@ -475,11 +484,19 @@ fn csr_queue_team_row_nodes(spec: &CsrQueueStepSpec<'_>, lanes: u32) -> Vec<Node
     let edge = spec.var("e");
     let mut nodes = csr_queue_row_bounds(spec);
     nodes.extend([
+        // `edge_end` is clamped to the edge buffers, but `edge_start` is a raw
+        // offset load, so a non-monotonic `edge_offsets` would wrap this
+        // subtraction and hand the stripe loop a near-`u32::MAX` iteration
+        // count. Subtracting `min(start, end)` saturates at zero instead, and
+        // is the same value whenever the offsets ascend.
         Node::let_bind(
             degree.as_str(),
             Expr::sub(
                 Expr::var(spec.var("edge_end").as_str()),
-                Expr::var(spec.var("edge_start").as_str()),
+                Expr::min(
+                    Expr::var(spec.var("edge_start").as_str()),
+                    Expr::var(spec.var("edge_end").as_str()),
+                ),
             ),
         ),
         Node::let_bind(

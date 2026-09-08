@@ -32,7 +32,7 @@
 //!     exercises (and regression-locks) the signed multiply + signed divide fix.
 //! Every input value is a multiple of 0.5 or a power of two → exact in 16.16.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::amg_pass_solver::{smooth_matroid_flow_fixed_via, DEFAULT_OMEGA};
 use vyre_reference::composition_witness::amg_v_cycle_witness;

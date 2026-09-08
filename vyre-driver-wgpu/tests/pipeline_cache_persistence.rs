@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-mod harness;
+use crate::harness;
 use harness::f32_to_ordered;
 use std::collections::BTreeMap;
 use tempfile::TempDir;

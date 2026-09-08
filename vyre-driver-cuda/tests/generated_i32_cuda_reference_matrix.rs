@@ -2,7 +2,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 
 use harness::{
     assert_u32_matrix_sweep, eq_word, ge_word, generated_lane_program, gt_word,

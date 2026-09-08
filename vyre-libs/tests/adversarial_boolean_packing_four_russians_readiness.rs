@@ -2,7 +2,7 @@
 //! Four-Russians readiness contracts.
 #![cfg(feature = "bitset")]
 
-mod gate_fixtures;
+use crate::gate_fixtures;
 use gate_fixtures::u32_bytes;
 
 // Coverage: bitset_words sizing, word-aligned packing invariants,

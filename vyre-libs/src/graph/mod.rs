@@ -75,7 +75,8 @@ pub(crate) fn padded_u32_slice_fingerprint(values: &[u32], padded_words: usize) 
     hash
 }
 
-#[cfg(feature = "graph")]
+// Test-only seed mixer for the generated graph cases; no production caller.
+#[cfg(all(test, feature = "graph"))]
 #[inline]
 pub(crate) const fn mix32(mut value: u32) -> u32 {
     value ^= value >> 16;

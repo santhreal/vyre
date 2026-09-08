@@ -2,7 +2,7 @@
 
 #![forbid(unsafe_code)]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::{
     bf16_bytes, bf16_word, default_gated_delta_spec, f32_bytes as bytes, f32_words,
     f32_words_of as decode, u16_words,
@@ -23,10 +23,9 @@ fn run_schedule(
     lanes: &[Vec<f32>; 5],
     source: DataType,
 ) -> (Vec<u8>, Vec<f32>) {
-    let len = sequence as usize;
-    let (encode, lane_width) = match source {
-        DataType::BF16 => (bf16_bytes as fn(&[f32]) -> Vec<u8>, 2),
-        DataType::F32 => (bytes as fn(&[f32]) -> Vec<u8>, 4),
+    let encode = match source {
+        DataType::BF16 => bf16_bytes as fn(&[f32]) -> Vec<u8>,
+        DataType::F32 => bytes as fn(&[f32]) -> Vec<u8>,
         other => panic!("Fix: gated delta contract covers BF16 and F32 sources, not {other:?}"),
     };
     let spec = default_gated_delta_spec(sequence, 1, 1, 1, 1, source);

@@ -457,8 +457,24 @@ impl ExprArena {
     }
 }
 
+/// `ExprId` for the node about to be pushed at index `len`.
+///
+/// # Panics
+///
+/// Panics once the arena holds `u32::MAX` nodes. Saturating instead would
+/// hand every further node the same id, `get` would return one node for
+/// another, and the optimizer would rewrite the program into something it
+/// never described  -  a wrong answer no later pass can detect. The bound is
+/// a real ceiling on interned nodes, not a programming error, so it is
+/// reported as exhaustion.
 fn expr_id_from_len(len: usize) -> ExprId {
-    ExprId(u32::try_from(len).unwrap_or(u32::MAX))
+    match u32::try_from(len) {
+        Ok(index) if index < u32::MAX => ExprId(index),
+        _ => panic!(
+            "ExprArena exhausted its {} node ids. Fix: split the program before interning, or lower it in regions.",
+            u32::MAX
+        ),
+    }
 }
 
 #[cfg(test)]
@@ -627,5 +643,24 @@ mod tests {
         let id_b = arena.intern(&Expr::Opaque(arc));
         assert_eq!(id_a, id_b, "two Arcs of the same allocation must collapse");
         assert_eq!(arena.len(), 1);
+    }
+
+    #[test]
+    fn last_usable_index_is_still_an_id() {
+        // One below the ceiling is a node the arena can address, so it is an
+        // id and not an exhaustion.
+        assert_eq!(
+            expr_id_from_len(u32::MAX as usize - 1),
+            ExprId(u32::MAX - 1)
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "ExprArena exhausted")]
+    fn exhausted_ids_refuse_instead_of_colliding() {
+        // The saturating conversion this replaced returned `u32::MAX` here and
+        // for every node after it, so two distinct expressions shared one id
+        // and `get` answered with the wrong node.
+        let _ = expr_id_from_len(u32::MAX as usize);
     }
 }

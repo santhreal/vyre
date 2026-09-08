@@ -229,13 +229,6 @@ fn generated_try_cpu_ref_into_with_scratch_matches_allocating_reference() {
     }
 }
 
-// The 4-node chain 0->1->2->3, seeded at node 0, has true closure 0b1111
-// reached after 3 growth steps; a 4th step adds nothing and proves the
-// fixpoint. The offsets/targets below encode exactly that chain.
-const CHAIN4_OFFSETS: &[u32] = &[0, 1, 2, 3, 3];
-const CHAIN4_TARGETS: &[u32] = &[1, 2, 3];
-const CHAIN4_MASKS: &[u32] = &[1, 1, 1];
-
 #[test]
 fn converged_reports_false_and_partial_frontier_when_max_iters_below_diameter() {
     // Two steps grow {0}->{0,1}->{0,1,2}; the closure is still growing, so the

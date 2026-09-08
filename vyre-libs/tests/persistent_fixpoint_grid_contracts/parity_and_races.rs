@@ -346,7 +346,9 @@ fn grid_builder_opens_the_driver_cooperative_launch_gate_the_workgroup_builder_c
          racing termination protocol off a multi-group dispatch"
     );
     assert_eq!(
-        vyre_driver::grid_sync::split_on_grid_sync(&grid).len(),
+        vyre_driver::grid_sync::try_split_on_grid_sync(&grid)
+            .expect("Fix: the fixture program must split at its grid-sync fences")
+            .len(),
         2 * max_iterations as usize + 1,
         "a backend without a native grid barrier must see one ordered dispatch segment per \
          inter-fence span"

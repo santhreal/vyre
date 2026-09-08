@@ -157,25 +157,88 @@ fn int_mod_by_power_of_two_becomes_bitand() {
     ));
 }
 
+/// WHY: `x / C` becomes `x * (1/C)` only when the reciprocal is exact, so the
+/// pair computes one quotient bit for bit. The rewrite used to fire for every
+/// finite non-zero constant, which rounded `1/C` and shifted the result of any
+/// division by a constant that is not a power of two.
+///
+/// The class is the exponent range, not one divisor: every power of two whose
+/// reciprocal is normal reduces, down to the subnormal divisor `2^-127` whose
+/// reciprocal is still the largest normal power of two. `1.0` is excluded
+/// because dividing by it is the identity and drops the multiply entirely.
 #[test]
-fn float_div_by_constant_becomes_reciprocal_mul() {
-    // x / 3.0 → x * (1.0/3.0)
-    let result = reduce_expr(&Expr::div(Expr::var("x"), Expr::f32(3.0)));
-    assert!(result.is_some());
-    let reduced = result.unwrap();
-    match &reduced {
-        Expr::BinOp {
-            op: BinOp::Mul,
-            right,
-            ..
-        } => match right.as_ref() {
-            Expr::LitF32(v) => {
-                assert!((v - 1.0 / 3.0).abs() < 1e-7, "reciprocal should be ~0.333");
-            }
-            other => panic!("expected LitF32 reciprocal, got {other:?}"),
-        },
-        other => panic!("expected Mul, got {other:?}"),
+fn float_div_reduces_only_where_the_reciprocal_is_exact() {
+    let exact = (-127_i32..=126).map(|exponent| {
+        let divisor = if exponent < -126 {
+            f32::from_bits(1_u32 << (149 + exponent))
+        } else {
+            f32::from_bits(((exponent + 127) as u32) << 23)
+        };
+        (exponent, divisor)
+    });
+    for (exponent, divisor) in exact {
+        assert!(
+            (1.0_f32 / divisor).is_normal(),
+            "2^{exponent} is only in this class while its reciprocal is normal"
+        );
+        if exponent != 0 {
+            assert_eq!(
+                reduce_expr(&Expr::div(Expr::var("x"), Expr::f32(divisor))),
+                Some(Expr::mul(Expr::var("x"), Expr::f32(1.0 / divisor))),
+                "2^{exponent} has an exact reciprocal and must reduce"
+            );
+        }
+        assert_eq!(
+            reduce_expr(&Expr::div(Expr::var("x"), Expr::f32(-divisor))),
+            Some(Expr::mul(Expr::var("x"), Expr::f32(-1.0 / divisor))),
+            "the sign does not change whether 2^{exponent} reciprocates exactly"
+        );
     }
+    assert_eq!(
+        reduce_expr(&Expr::div(Expr::var("x"), Expr::f32(1.0))),
+        Some(Expr::var("x")),
+        "dividing by one is the identity, not a multiply by one"
+    );
+}
+
+/// WHY: a rounded reciprocal is a different program. Each divisor here is
+/// finite and non-zero, which is all the previous guard asked for, and each
+/// one's reciprocal is inexact or catastrophic.
+#[test]
+fn float_div_by_an_inexact_reciprocal_stays_a_division() {
+    // A significand other than one: the reciprocal rounds.
+    for divisor in [3.0_f32, 10.0, 0.1, 1.5, 7.0, -3.0, 1e6] {
+        assert_eq!(
+            reduce_expr(&Expr::div(Expr::var("x"), Expr::f32(divisor))),
+            None,
+            "{divisor} has no exact reciprocal and must not reduce"
+        );
+    }
+    // A power of two whose reciprocal overflows: `x * inf`, not `x / C`. The
+    // step from -127 to -128 is the whole boundary, so both sides are pinned:
+    // -127 reduces in the case above and -128 does not.
+    for exponent in [-128_i32, -140, -149] {
+        let divisor = f32::from_bits(1_u32 << (149 + exponent));
+        assert!(divisor > 0.0 && divisor.is_finite());
+        assert!(
+            (1.0_f32 / divisor).is_infinite(),
+            "2^{exponent} must be one of the divisors the guard exists for"
+        );
+        assert_eq!(
+            reduce_expr(&Expr::div(Expr::var("x"), Expr::f32(divisor))),
+            None,
+            "2^{exponent} reciprocates out of range and must not reduce"
+        );
+    }
+    // A power of two whose exact reciprocal is subnormal, which the rule
+    // declines rather than reasoning about underflow in the product.
+    let largest = f32::from_bits(254_u32 << 23);
+    assert!(!(1.0_f32 / largest).is_normal() && (1.0_f32 / largest) > 0.0);
+    assert_eq!(
+        reduce_expr(&Expr::div(Expr::var("x"), Expr::f32(largest))),
+        None,
+        "2^127 reciprocates to a subnormal and must not reduce"
+    );
 }
 
 #[test]

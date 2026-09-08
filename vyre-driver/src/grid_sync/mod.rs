@@ -86,23 +86,18 @@ pub use segment_buffers::plan_host_grid_sync_segment_programs;
 pub use vyre_foundation::transform::grid_sync_split::contains_grid_sync;
 pub(crate) use vyre_foundation::transform::grid_sync_split::entry_sequence;
 
-/// Split `program` at every grid-sync fence, or produce no segments when the
-/// split itself fails.
+/// Split `program` at every grid-sync fence.
 ///
-/// Every dispatch route rejects an empty segment list through
-/// `reject_empty_grid_sync_split`, so a failed split cannot be mistaken for a
-/// program that had nothing to run.
-#[must_use]
-pub fn split_on_grid_sync(program: &Program) -> Vec<Program> {
-    try_split_on_grid_sync(program).unwrap_or_default()
-}
-
-/// Fallible variant of [`split_on_grid_sync`] for production dispatch paths.
+/// A backend without a native grid barrier runs one ordered dispatch per
+/// inter-fence span, and the dispatch boundary is the barrier.
 ///
 /// # Errors
 ///
 /// Returns an actionable [`BackendError`] if segment storage cannot be reserved
-/// or if split accounting overflows.
+/// or if split accounting overflows. There is no infallible form: an empty
+/// segment list is what a program with no fence looks like, so a failed split
+/// returned as one arrives at the dispatch route as a program with nothing to
+/// run and loses the sentence that says why.
 pub fn try_split_on_grid_sync(program: &Program) -> Result<Vec<Program>, BackendError> {
     ir_split::split_on_grid_sync(program).map_err(|error| BackendError::InvalidProgram {
         fix: format!(
@@ -169,8 +164,8 @@ where
 fn reject_empty_grid_sync_split<T>(segments: &[T]) -> Result<(), BackendError> {
     if segments.is_empty() {
         return Err(BackendError::InvalidProgram {
-            fix: "Fix: program contains GridSync barrier but split_on_grid_sync produced 0 \
-                  segments. This is a grid_sync invariant bug  -  split_on_grid_sync must \
+            fix: "Fix: program contains GridSync barrier but try_split_on_grid_sync produced 0 \
+                  segments. This is a grid_sync invariant bug  -  try_split_on_grid_sync must \
                   always return at least one segment."
                 .to_string(),
         });

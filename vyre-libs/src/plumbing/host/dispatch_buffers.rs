@@ -178,6 +178,10 @@ pub fn write_f32_slice_le_bytes(out: &mut Vec<u8>, values: &[f32]) {
 }
 
 /// Return the sole dispatcher output buffer and reject missing or surplus buffers.
+///
+/// Gated to match its callers: the `analysis` cost model and the `solvers` FMM
+/// compression path.
+#[cfg(any(feature = "analysis", feature = "solvers"))]
 pub(crate) fn require_exactly_one_output<'a>(
     outputs: &'a [Vec<u8>],
     context: &str,
@@ -196,6 +200,7 @@ pub(crate) fn require_exactly_one_output<'a>(
 /// Output buffers correspond to non-Workgroup buffers that are either backend-allocated
 /// or declared with `BufferAccess::ReadWrite`, in `program.buffers()` order.
 #[must_use]
+#[cfg(feature = "solvers")]
 pub(crate) fn output_buffer_index(
     program: &vyre_foundation::ir::Program,
     name: &str,
@@ -212,6 +217,9 @@ pub(crate) fn output_buffer_index(
 ///
 /// Accepts programs that return multiple output buffers (such as scratch or write-complete
 /// sibling buffers) and extracts the requested buffer by name.
+///
+/// Gated to match its one caller: the `solvers` QSVT matrix-function fusion path.
+#[cfg(feature = "solvers")]
 pub(crate) fn require_named_output<'a>(
     outputs: &'a [Vec<u8>],
     program: &vyre_foundation::ir::Program,
@@ -355,6 +363,10 @@ mod tests {
         assert_eq!(bytes.as_ptr(), ptr);
     }
 
+    /// The single-output extractor rides the `analysis` and `solvers` dialects,
+    /// so this case does too; without the predicate a build with tests and
+    /// without either dialect cannot compile.
+    #[cfg(any(feature = "analysis", feature = "solvers"))]
     #[test]
     fn dispatcher_output_count_is_exact() {
         let empty: Vec<Vec<u8>> = Vec::new();
@@ -378,6 +390,10 @@ mod tests {
         );
     }
 
+    /// The named-output extractors ride the `solvers` dialect, so this case does
+    /// too; without the predicate a build with tests and without `solvers`
+    /// cannot compile.
+    #[cfg(feature = "solvers")]
     #[test]
     fn require_named_output_extracts_by_name_and_accepts_sibling_scratch() {
         use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};

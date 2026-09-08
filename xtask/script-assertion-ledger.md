@@ -17,8 +17,8 @@ The counts below are generated from the rows and from the tracked files by the
 
 ## Totals
 
-- Rows: 36. Assertions: 140. Findings: 28.
-- Tracked files: 9: 8 shell and 1 Python.
+- Rows: 35. Assertions: 140. Findings: 28.
+- Tracked files: 8: 8 shell and 0 Python.
 - Rows whose script has left the tree: 27.
 - Tracked files nothing invokes: 2.
 
@@ -656,25 +656,6 @@ Findings:
 
 - --list mode checks nothing and exits 0. It is a listing, not a gate mode, and the gate exposes it as a note rather than a pass.
 
-### `scripts/lib/read_toml_values.py`
-
-Subject: present.
-
-Invoked by: toml_reader.sh.
-
-Gate: None of its own: it reads TOML values for a helper sourced by an operator action. The gates read TOML through typed reads in xtask/src/toml_text.rs.
-
-Assertions:
-
-- Every requested dotted key exists in the manifest.
-- Every requested key resolves to a scalar, never a table or array.
-
-Exits nonzero on:
-
-- manifest unreadable
-- key missing
-- key not scalar
-
 ### `scripts/lib/release_train.sh`
 
 Subject: present.
@@ -746,19 +727,22 @@ Subject: present.
 
 Invoked by: release_train.sh, repo_boundary.sh.
 
-Gate: None of its own: it is sourced by two helpers of an operator action. The release gates parse TOML with toml::from_str into a toml::Table.
+Gate: None of its own: it is sourced by two helpers of an operator action. The release gates parse TOML with toml::from_str into a toml::Table. The reader parses the manifest subset in bash so a host whose python3 predates tomllib cannot leave a release loader with an unset tag.
 
 Assertions:
 
 - Caller passed MANIFEST, LABEL, EXPECTED_COUNT and exactly EXPECTED_COUNT keys.
-- python3 is on PATH and read_toml_values.py exists.
+- The manifest exists.
+- Every requested dotted key exists in the manifest.
+- Every requested key resolves to a scalar the reader reads, never a table, an array or a string carrying an escape.
 - The reader produced exactly EXPECTED_COUNT values.
 
 Exits nonzero on:
 
 - argument count mismatch
-- python3 missing
-- reader missing
+- manifest missing
+- key missing
+- key not a scalar the reader reads
 - value count mismatch
 
 ### `scripts/prove-release-shards.sh`

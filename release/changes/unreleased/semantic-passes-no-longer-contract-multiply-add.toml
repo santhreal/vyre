@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The semantic optimizer no longer rewrites `a * b + c` into a fused multiply-add, so a dispatch under `FloatLoweringMode::StrictIeee` receives the two roundings it asked for on every backend."

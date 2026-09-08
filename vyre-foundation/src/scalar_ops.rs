@@ -241,6 +241,31 @@ pub(crate) fn apply_unary(op: &UnOp, operand: Value) -> Result<Value, EvalError>
         };
         return Ok(Value::U32((bits >> shift) & mask));
     }
+    // Bitcast is bit reinterpretation, not arithmetic: it has no rounding and
+    // no canonicalization step. It is handled ahead of the per-width dispatch
+    // because that dispatch canonicalizes an f32 operand and an f32 result,
+    // and a subnormal or NaN word must survive a reinterpretation unchanged.
+    match op {
+        UnOp::BitcastF32ToU32 => {
+            return match operand {
+                Value::F32(value) => Ok(Value::U32(value.to_bits())),
+                Value::U32(_) => Err(unsupported_unary(op, "u32")),
+                Value::I32(_) => Err(unsupported_unary(op, "i32")),
+                Value::U64(_) => Err(unsupported_unary(op, "u64")),
+                Value::Bool(_) => Err(unsupported_unary(op, "bool")),
+            };
+        }
+        UnOp::BitcastU32ToF32 => {
+            return match operand {
+                Value::U32(value) => Ok(Value::F32(f32::from_bits(value))),
+                Value::I32(_) => Err(unsupported_unary(op, "i32")),
+                Value::F32(_) => Err(unsupported_unary(op, "f32")),
+                Value::U64(_) => Err(unsupported_unary(op, "u64")),
+                Value::Bool(_) => Err(unsupported_unary(op, "bool")),
+            };
+        }
+        _ => {}
+    }
     match operand {
         Value::U32(value) => match op {
             UnOp::Negate => Ok(Value::U32(value.wrapping_neg())),

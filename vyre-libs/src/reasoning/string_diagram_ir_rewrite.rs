@@ -156,11 +156,12 @@ pub fn compose_ir_arrows_fixed_via_with_scratch_into(
     let f_cells = checked_product_count(a, b, "a", "b", "compose_ir_arrows_fixed_via f")?;
     let g_cells = checked_product_count(b, c, "b", "c", "compose_ir_arrows_fixed_via g")?;
     let out_cells = checked_product_count(a, c, "a", "c", "compose_ir_arrows_fixed_via out")?;
-    let out_cells_u32 = u32::try_from(out_cells).map_err(|_| {
-    SemanticExecutionError::InvalidRequest(format!(
-        "Fix: compose_ir_arrows_fixed_via a*c exceeds the primitive u32 lane limit for a={a}, c={c}."
-    ))
-})?;
+    // Reject the u32 lane limit here: monoidal_compose recomputes a*c as u32 and traps silently.
+    if u32::try_from(out_cells).is_err() {
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: compose_ir_arrows_fixed_via a*c exceeds the primitive u32 lane limit for a={a}, c={c}."
+        )));
+    }
     if f_fixed.len() != f_cells {
         return Err(SemanticExecutionError::InvalidRequest(format!(
         "Fix: compose_ir_arrows_fixed_via requires f_fixed.len() == a*b, got len={}, expected={f_cells}.",

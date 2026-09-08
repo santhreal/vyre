@@ -29,7 +29,7 @@ pub struct ToposortCsrLayout {
 /// Returns [`ToposortCsrError::BadCsr`] when the CSR shape is malformed and
 /// [`ToposortCsrError::BadOrder`] only if derived state violates the
 /// topological-order contract after input validation.
-#[cfg(test)]
+#[cfg(all(test, feature = "graph-dispatch"))]
 pub(crate) fn toposort_csr(
     node_count: u32,
     offsets: &[u32],

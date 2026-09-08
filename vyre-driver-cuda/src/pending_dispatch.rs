@@ -25,7 +25,6 @@ pub(crate) struct CudaPendingDispatch {
     outputs: Vec<Vec<u8>>,
     timing_start: Option<CudaEvent>,
     timing_end: Option<CudaEvent>,
-    ready_device_ns: Option<u64>,
     telemetry: Arc<CudaTelemetry>,
     completed: AtomicBool,
     /// The module-scope globals lease held across the kernel's execution.
@@ -57,33 +56,6 @@ impl CudaPendingDispatch {
             outputs,
             timing_start: None,
             timing_end: None,
-            ready_device_ns: None,
-            telemetry,
-            completed: AtomicBool::new(true),
-            module_globals: None,
-        }
-    }
-
-    /// Build an already-completed pending dispatch with measured device time.
-    pub(crate) fn new_ready_timed(
-        ctx: Arc<CudaContext>,
-        pool: Arc<CudaLaunchResourcePool>,
-        outputs: Vec<Vec<u8>>,
-        device_ns: Option<u64>,
-        telemetry: Arc<CudaTelemetry>,
-    ) -> Self {
-        Self {
-            ctx,
-            pool,
-            event: None,
-            stream: None,
-            allocations: None,
-            resident_use: None,
-            host_transfers: None,
-            outputs,
-            timing_start: None,
-            timing_end: None,
-            ready_device_ns: device_ns,
             telemetry,
             completed: AtomicBool::new(true),
             module_globals: None,
@@ -142,7 +114,6 @@ impl CudaPendingDispatch {
             outputs,
             timing_start: None,
             timing_end: None,
-            ready_device_ns: None,
             telemetry,
             completed: AtomicBool::new(false),
             module_globals: None,
@@ -175,7 +146,6 @@ impl CudaPendingDispatch {
             outputs,
             timing_start: Some(timing_start),
             timing_end: Some(timing_end),
-            ready_device_ns: None,
             telemetry,
             completed: AtomicBool::new(false),
             module_globals: None,
@@ -324,12 +294,9 @@ impl CudaPendingDispatch {
         mut self,
     ) -> Result<(Vec<Vec<u8>>, Option<u64>), BackendError> {
         self.synchronize()?;
-        let device_ns = match self.ready_device_ns.take() {
-            Some(device_ns) => Some(device_ns),
-            None => match (self.timing_start.as_ref(), self.timing_end.as_ref()) {
-                (Some(start), Some(end)) => Some(start.elapsed_time_ns(end)?),
-                _ => None,
-            },
+        let device_ns = match (self.timing_start.as_ref(), self.timing_end.as_ref()) {
+            (Some(start), Some(end)) => Some(start.elapsed_time_ns(end)?),
+            _ => None,
         };
         self.release_launch_resources();
         self.allocations.take();

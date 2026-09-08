@@ -29,7 +29,7 @@ const LANES: &str = "docs/optimization/OWNERSHIP.toml";
 
 /// Wire version of `docs/generated/OP_SCHEMA.json`.
 ///
-/// `xtask-registry/src/docs/operation_schema.rs` owns the generator and pins the
+/// `xtask-registry/src/docs/operation_schema/mod.rs` owns the generator and pins the
 /// same number. Reading the artifact's own field as the expected value would
 /// make the check vacuous, so the expectation is written here and the
 /// generator's own test compares the two constants directly. That drift shipped

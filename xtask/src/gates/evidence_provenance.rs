@@ -12,6 +12,7 @@
 //! regenerated artifact that is not committed yet has no commit to be checked
 //! against, and the artifact gate already compares its body against the tree.
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -32,29 +33,42 @@ impl crate::gate::GateBehavior for EvidenceProvenance {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let tracked = git(ctx, &["ls-files", "-z", "--", EVIDENCE_DIR])?;
-        let mut judged = 0_usize;
+        let carriers = carrier_commits(ctx)?;
         let mut uncommitted = 0_usize;
         let mut unstamped = 0_usize;
+        let mut judged = 0_usize;
+        let mut committed: Vec<(String, String)> = Vec::new();
         for path in tracked
             .split(|byte| *byte == 0)
             .filter(|path| !path.is_empty())
         {
             let path = String::from_utf8_lossy(path).into_owned();
-            let carrier = git_text(ctx, &["log", "-1", "--format=%H", "--", &path])?;
-            if carrier.is_empty() {
-                uncommitted += 1;
-                continue;
+            match carriers.get(&path) {
+                Some(carrier) => committed.push((path, carrier.clone())),
+                None => uncommitted += 1,
             }
-            let committed = git_text(ctx, &["show", &format!("{carrier}:{path}")])?;
-            let (Some(fingerprint), _) = crate::artifact_gate::split_provenance(&committed) else {
+        }
+        let objects: Vec<String> = committed
+            .iter()
+            .map(|(path, carrier)| format!("{carrier}:{path}"))
+            .collect();
+        let contents = source_provenance::committed_texts(&ctx.root, &objects);
+        for ((path, carrier), content) in committed.iter().zip(contents) {
+            let Some(content) = content else {
+                return Err(GateError::new(
+                    format!("`{carrier}:{path}` could not be read out of the object store"),
+                    "fetch the history that carries the committed evidence",
+                ));
+            };
+            let (Some(fingerprint), _) = crate::artifact_gate::split_provenance(&content) else {
                 unstamped += 1;
                 continue;
             };
             judged += 1;
             if let Err(verdict) =
-                source_provenance::resolves_against(&ctx.root, fingerprint, &carrier)
+                source_provenance::resolves_against(&ctx.root, fingerprint, carrier)
             {
-                report.find(Finding::in_file(PathBuf::from(&path), verdict, FIX));
+                report.find(Finding::in_file(PathBuf::from(path), verdict, FIX));
             }
         }
         report.cover_complete("committed evidence fingerprints", judged);
@@ -64,6 +78,57 @@ impl crate::gate::GateBehavior for EvidenceProvenance {
         ));
         Ok(report)
     }
+}
+
+/// The newest commit touching each committed artifact under [`EVIDENCE_DIR`].
+///
+/// One history walk answers every path. `git log -1 -- <path>` per artifact
+/// walks the whole history again for each one, which is what made this gate
+/// cost tens of minutes on a network checkout: the commits arrive newest-first,
+/// so the first mention of a path is the commit that carries it.
+fn carrier_commits(ctx: &GateCtx) -> Result<BTreeMap<String, String>, GateError> {
+    let log = git(
+        ctx,
+        &[
+            "-c",
+            "core.quotePath=false",
+            "log",
+            "--format=%H",
+            "--name-only",
+            "--no-renames",
+            "--",
+            EVIDENCE_DIR,
+        ],
+    )?;
+    let mut carriers = BTreeMap::new();
+    let mut commit = String::new();
+    for line in String::from_utf8_lossy(&log).lines() {
+        if line.is_empty() {
+            continue;
+        }
+        if is_commit_id(line) {
+            commit = line.to_string();
+            continue;
+        }
+        if commit.is_empty() {
+            return Err(GateError::new(
+                format!("git log reported path `{line}` before any commit"),
+                "read the log as commit-then-paths records",
+            ));
+        }
+        carriers
+            .entry(line.to_string())
+            .or_insert_with(|| commit.clone());
+    }
+    Ok(carriers)
+}
+
+/// Whether a log line is a commit id rather than a path.
+///
+/// A path under `release/evidence` cannot be 40 hex characters, so the two
+/// record kinds are distinguishable without a separator.
+fn is_commit_id(line: &str) -> bool {
+    line.len() == 40 && line.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
 /// Run one git command in the judged tree, or name what could not be read.
@@ -89,12 +154,6 @@ fn git(ctx: &GateCtx, arguments: &[&str]) -> Result<Vec<u8>, GateError> {
         ));
     }
     Ok(output.stdout)
-}
-
-/// The same, as trimmed text.
-fn git_text(ctx: &GateCtx, arguments: &[&str]) -> Result<String, GateError> {
-    let bytes = git(ctx, arguments)?;
-    Ok(String::from_utf8_lossy(&bytes).trim_end().to_string())
 }
 
 #[cfg(test)]
@@ -220,6 +279,46 @@ mod tests {
                 .iter()
                 .any(|note| note.contains("1 artifact(s) carry none")),
             "Fix: the count must state what was left unjudged; notes={:?}",
+            report.notes
+        );
+    }
+
+    #[test]
+    fn each_artifact_is_judged_against_the_commit_that_carries_it() {
+        let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
+        fixture_checkout::seeded(dir.path());
+        let first_base = fixture_checkout::head(dir.path());
+        write_artifact(
+            dir.path(),
+            "first.json",
+            &format!("git:{first_base}:dirty=false"),
+        );
+        fixture_checkout::commit_worktree(dir.path(), "record the first artifact");
+
+        let second_base = fixture_checkout::head(dir.path());
+        write_artifact(
+            dir.path(),
+            "second.json",
+            &format!("git:{second_base}:dirty=false"),
+        );
+        fixture_checkout::commit_worktree(dir.path(), "record the second artifact");
+
+        let report = EvidenceProvenance
+            .run(&GateCtx::new(dir.path().to_path_buf(), Vec::new()))
+            .expect("Fix: the fixture checkout must be judgeable.");
+
+        assert!(
+            report.findings.is_empty(),
+            "Fix: an artifact recorded one commit ago is judged against that commit, not against \
+             the newest one; {}",
+            report.finding_messages()
+        );
+        assert!(
+            report
+                .notes
+                .iter()
+                .any(|note| note.contains("2 committed fingerprint(s) judged")),
+            "Fix: both artifacts must be judged; notes={:?}",
             report.notes
         );
     }

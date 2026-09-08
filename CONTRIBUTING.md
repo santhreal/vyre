@@ -101,9 +101,9 @@ contains it.
 
 ## Backend work needs a device
 
-Backend suites run against a real GPU on the designated execution host
-(`axiomexec`). Before calling a backend failure environmental, prove the
-device is visible and the capability contract holds:
+Backend suites run against a real GPU on the designated execution host. Before
+calling a backend failure environmental, prove the device is visible and the
+capability contract holds:
 
 ```bash
 nvidia-smi

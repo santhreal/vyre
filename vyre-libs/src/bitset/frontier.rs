@@ -376,7 +376,7 @@ pub(crate) fn validate_frontier_shape(
 }
 
 /// Count set bits in a packed u32 frontier with checked overflow reporting.
-#[cfg(test)]
+#[cfg(all(test, feature = "graph-dispatch"))]
 pub(crate) fn checked_frontier_popcount(frontier: &[u32]) -> Result<u32, FrontierError> {
     vyre_reference::composition_witness::frontier_popcount_witness(frontier).map_err(|_| {
         FrontierError::PopcountOverflow {
@@ -849,6 +849,13 @@ mod tests {
                     summary.added_popcount, expected_popcount,
                     "node_count={node_count}"
                 );
+                if words > 0 {
+                    assert_eq!(
+                        visited[tail_index] & !tail_mask,
+                        0,
+                        "node_count={node_count}: absorb set a bit past the last node in the tail word, which the oracle cannot catch when both sides share the mask"
+                    );
+                }
             }
         }
     }

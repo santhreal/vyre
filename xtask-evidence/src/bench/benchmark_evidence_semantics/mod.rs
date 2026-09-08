@@ -67,9 +67,7 @@ pub(crate) use json_reader::{
     duplicate_nonblank_object_array_field_values, duplicate_nonblank_string_array_values,
     metrics_has_any, metrics_has_positive_any, metrics_has_zero_any,
 };
-pub(crate) use optimization_analysis::{
-    benchmark_before_after_semantic_win, inspect_optimization_analysis_fixture,
-};
+pub(crate) use optimization_analysis::benchmark_before_after_semantic_win;
 pub(crate) use release_axes_cpu_sota::cpu_sota_100x_source_artifact_issues;
 pub(crate) use release_axes_cuda::cuda_release_axes_source_artifact_issues;
 pub(crate) use schema_digest_chain::{

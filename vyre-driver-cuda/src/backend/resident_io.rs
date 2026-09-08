@@ -24,14 +24,6 @@ pub(crate) enum ResidentStreamFailure {
     CompletionUnproven(BackendError),
 }
 
-impl ResidentStreamFailure {
-    fn into_error(self) -> BackendError {
-        match self {
-            Self::Completed(error) | Self::CompletionUnproven(error) => error,
-        }
-    }
-}
-
 fn cuda_resident_total_budget_bytes(total_memory: u64) -> u64 {
     let budget = (u128::from(total_memory) * u128::from(CUDA_RESIDENT_BUDGET_NUMERATOR))
         / u128::from(CUDA_RESIDENT_BUDGET_DENOMINATOR);
@@ -53,14 +45,6 @@ fn cuda_resident_live_budget_bytes(
 }
 
 impl CudaBackend {
-    fn with_resident_stream<T>(
-        &self,
-        operation: impl FnOnce(&crate::stream::CudaStream) -> Result<T, BackendError>,
-    ) -> Result<T, BackendError> {
-        self.with_resident_stream_classified(operation)
-            .map_err(ResidentStreamFailure::into_error)
-    }
-
     pub(crate) fn with_resident_stream_classified<T>(
         &self,
         operation: impl FnOnce(&crate::stream::CudaStream) -> Result<T, BackendError>,
@@ -85,14 +69,6 @@ impl CudaBackend {
         self.launch_resources.release_stream(stream);
         result.map_err(ResidentStreamFailure::Completed)
     }
-}
-
-fn add_resident_transfer_bytes(
-    total: &mut u64,
-    bytes: usize,
-    label: &str,
-) -> Result<(), BackendError> {
-    CUDA_RESIDENT_TRANSFER_ACCOUNTING.add_bytes(total, bytes, label)
 }
 
 pub(crate) fn add_resident_copy_count(total: &mut usize, label: &str) -> Result<(), BackendError> {

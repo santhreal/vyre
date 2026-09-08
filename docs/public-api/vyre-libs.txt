@@ -151,6 +151,7 @@ impl vyre_libs::prelude::MatmulBiasTiled
 impl vyre_libs::reasoning::do_calculus_change_impact::DoCalculusImpactScratch
 impl vyre_libs::reasoning::string_diagram_ir_rewrite::StringDiagramRewriteScratch
 impl vyre_libs::reduce::workgroup_tree::WorkgroupFold
+impl vyre_libs::reduction::ReductionComposer
 impl vyre_libs::rule::RuleFormula
 impl vyre_libs::rule::file_size_eq::FileSizeEq
 impl vyre_libs::rule::file_size_gt::FileSizeGt
@@ -340,6 +341,9 @@ pub const vyre_libs::F32_F32_INPUTS: &[vyre_spec::data_type::DataType]
 pub const vyre_libs::F32_INPUTS: &[vyre_spec::data_type::DataType]
 pub const vyre_libs::F32_OUTPUTS: &[vyre_spec::data_type::DataType]
 pub const vyre_libs::I32_OUTPUTS: &[vyre_spec::data_type::DataType]
+pub const vyre_libs::INDEXED_MAP_OP_ID: &str
+pub const vyre_libs::STRIDED_ACCUMULATE_OP_ID: &str
+pub const vyre_libs::STRIDED_WRITEBACK_OP_ID: &str
 pub const vyre_libs::U32_INPUTS: &[vyre_spec::data_type::DataType]
 pub const vyre_libs::U32_OUTPUTS: &[vyre_spec::data_type::DataType]
 pub const vyre_libs::U32_U32_INPUTS: &[vyre_spec::data_type::DataType]
@@ -588,6 +592,7 @@ pub const vyre_libs::graph::program_graph::NAME_EDGE_OFFSETS: &str
 pub const vyre_libs::graph::program_graph::NAME_EDGE_TARGETS: &str
 pub const vyre_libs::graph::program_graph::NAME_NODES: &str
 pub const vyre_libs::graph::program_graph::NAME_NODE_TAGS: &str
+pub const vyre_libs::graph::program_graph::READ_ONLY_BUFFER_NAMES: [&str; 5]
 pub const vyre_libs::graph::reachable::OP_ID: &str
 pub const vyre_libs::graph::scc_decompose::OP_ID: &str
 pub const vyre_libs::graph::scc_decompose::SCC_DECOMPOSE_WORKGROUP_SIZE: [u32; 3]
@@ -1069,6 +1074,7 @@ pub enum vyre_libs::device::device_resident_token_fact_graph::TokenFactNodeKind
 pub enum vyre_libs::device::gpu_probe_contract::GpuProbeContractError
 pub enum vyre_libs::device::memory_ownership_contract::MemoryOwner
 pub enum vyre_libs::device::memory_ownership_contract::MemoryOwnershipError
+pub enum vyre_libs::elementwise::F32MulRhs<'a>
 pub enum vyre_libs::encoding::bitset_mask_algebra::BitsetMaskBinaryOp
 pub enum vyre_libs::encoding::matroid_exact_megakernel::ExactMatroidError
 pub enum vyre_libs::gemm::ContractionEpilogue
@@ -1198,6 +1204,9 @@ pub fn vyre_libs::bitset::xor::bitset_xor(lhs: &str, rhs: &str, out: &str, words
 pub fn vyre_libs::bitset::xor_into::bitset_xor_into(target: &str, operand: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::bitset::zero::bitset_zero(target: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::buffer_names::scoped_generic_name(family_prefix: &str, role: &str, requested: &str, generic_aliases: &[&str]) -> alloc::string::String
+pub fn vyre_libs::build_elementwise_binary<F>(op_id: &'static str, a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, out: vyre_libs::TensorRef, options: vyre_libs::BuildOptions, f: F) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError> where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs::build_elementwise_unary<F>(op_id: &'static str, a: vyre_libs::TensorRef, out: vyre_libs::TensorRef, options: vyre_libs::BuildOptions, f: F) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError> where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs::build_indexed_map<F>(op_id: &'static str, buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, output: &str, count: u32, workgroup_size: [u32; 3], f: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr) -> (vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr)
 pub fn vyre_libs::check_dtype(r: &vyre_libs::TensorRef, expected: vyre_spec::data_type::DataType, op: &'static str) -> core::result::Result<(), vyre_libs::TensorRefError>
 pub fn vyre_libs::check_same_shape(op: &'static str, input: &vyre_libs::TensorRef, output: &vyre_libs::TensorRef) -> core::result::Result<(), vyre_libs::TensorRefError>
 pub fn vyre_libs::check_shape(r: &vyre_libs::TensorRef, expected: &[u32], op: &'static str) -> core::result::Result<(), vyre_libs::TensorRefError>
@@ -1321,6 +1330,11 @@ pub fn vyre_libs::elementwise::ElementwiseComposer::with_anonymous(self, anonymo
 pub fn vyre_libs::elementwise::ElementwiseComposer::with_child_op_id(self, child_op_id: &'static str) -> Self
 pub fn vyre_libs::elementwise::ElementwiseComposer::with_options(self, options: &vyre_libs::BuildOptions) -> Self
 pub fn vyre_libs::elementwise::ElementwiseComposer::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs::elementwise::f32_elementwise_mul(op_id: &'static str, input: &str, rhs: vyre_libs::elementwise::F32MulRhs<'_>, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::elementwise::try_u32_elementwise_binary<F>(op_id: &'static str, a: &str, b: &str, out: &str, size: u32, op: F) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError> where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs::elementwise::try_u32_elementwise_unary<F>(op_id: &'static str, input: &str, out: &str, size: u32, op: F) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError> where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs::elementwise::u32_elementwise_binary<F>(op_id: &'static str, a: &str, b: &str, out: &str, size: u32, op: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs::elementwise::u32_elementwise_unary<F>(op_id: &'static str, input: &str, out: &str, size: u32, op: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::encoding::bitset_mask_algebra::mask_and_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, lhs: &[u32], rhs: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
 pub fn vyre_libs::encoding::bitset_mask_algebra::mask_binary_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, op: vyre_libs::encoding::bitset_mask_algebra::BitsetMaskBinaryOp, lhs: &[u32], rhs: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
 pub fn vyre_libs::encoding::bitset_mask_algebra::mask_binary_via_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, op: vyre_libs::encoding::bitset_mask_algebra::BitsetMaskBinaryOp, lhs: &[u32], rhs: &[u32], out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
@@ -1893,7 +1907,7 @@ pub fn vyre_libs::math::scan::scan_prefix_sum(input: &str, output: &str, n: u32)
 pub fn vyre_libs::math::score_denoise::score_denoise_step(x: &str, score: &str, noise: &str, alpha: &str, beta: &str, sigma: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::semiring_gemm::semiring_gemm(a: &str, b: &str, c: &str, m: u32, n: u32, k: u32, semiring: vyre_spec::semiring::Semiring) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::semiring_gemm::semiring_gemm_wide(a: &str, b: &str, c: &str, seed: core::option::Option<&str>, m: u32, n: u32, k: u32, w: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::math::sheaf_laplacian_eigenvalue::sheaf_laplacian_eigenvalue(restriction_diag: &str, v: &str, lambda: &str, n_nodes: u32, d: u32, iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::math::sheaf_laplacian_eigenvalue::sheaf_laplacian_eigenvalue(restriction_diag: &str, v: &str, lambda: &str, n_nodes: u32, d: u32, _iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::sinkhorn::sinkhorn_scale(target: &str, divisor: &str, out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::sinkhorn_iterate::sinkhorn_iterate(buffers: vyre_libs::math::sinkhorn_iterate::SinkhornBuffers<'_>, extents: vyre_libs::math::sinkhorn_iterate::SinkhornExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::sos_certificate::sos_gram_construct(monomial_pairs: &str, p_coeffs: &str, gram: &str, m: u32, coeff_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -2366,6 +2380,15 @@ pub fn vyre_libs::reduce::workgroup_tree::workgroup_min_u32(values: &str, out: &
 pub fn vyre_libs::reduce::workgroup_tree::workgroup_reduction_child<F>(op_id: &'static str, parent_op_id: &str, tile: u32, scratch: &'static str, scope: vyre_libs::reduce::workgroup_tree::WorkgroupReductionScope, combine: F) -> vyre_foundation::ir_inner::model::generated::Node where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::reduce::workgroup_tree::workgroup_sum_f32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::workgroup_tree::workgroup_sum_u32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduction::ReductionComposer::build(self) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduction::ReductionComposer::new(generator: &'static str, buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, workgroup_size: [u32; 3]) -> Self
+pub fn vyre_libs::reduction::ReductionComposer::tiled_dot(generator: &'static str, lhs: &str, rhs: &str, output: &str, n: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduction::ReductionComposer::tiled_mean(generator: &'static str, input: &str, output: &str, n: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduction::ReductionComposer::tiled_softmax(generator: &'static str, input: &str, output: &str, n: u32, workgroup_size: [u32; 3]) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduction::ReductionComposer::tiled_variance(generator: &'static str, input: &str, output: &str, n: u32, bessel: bool, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduction::ReductionComposer::with_phase(self, phase: vyre_libs::reduction::ReductionPhase) -> Self
+pub fn vyre_libs::reduction::ReductionComposer::with_phases(self, phases: impl core::iter::traits::collect::IntoIterator<Item = vyre_libs::reduction::ReductionPhase>) -> Self
+pub fn vyre_libs::reduction::ReductionComposer::with_writeback(self, writeback: vyre_foundation::ir_inner::model::generated::Node) -> Self
 pub fn vyre_libs::representation::unpack_4bit_f32(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::rule::RuleCondition::eq(&self, other: &Self) -> bool
 pub fn vyre_libs::rule::RuleFormula::and(left: Self, right: Self) -> Self
@@ -2614,6 +2637,9 @@ pub fn vyre_libs::stencil::unpack_channel_expr(pixel: vyre_foundation::ir_inner:
 pub fn vyre_libs::stencil::unpack_rgba(pixel_var: &str) -> (vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr)
 pub fn vyre_libs::stencil::upsample_2x_source_index(oy: &vyre_foundation::ir_inner::model::generated::Expr, ox: &vyre_foundation::ir_inner::model::generated::Expr, in_width: u32) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::stencil::wide_mul_shr_u32(left: vyre_foundation::ir_inner::model::generated::Expr, right: vyre_foundation::ir_inner::model::generated::Expr, shift: u32) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs::strided_accumulate2_child<F1, F2>(parent_op_id: &'static str, tile: u32, chunks: u32, n: u32, first: (&'static str, vyre_foundation::ir_inner::model::generated::Expr, &'static str, F1), second: (&'static str, vyre_foundation::ir_inner::model::generated::Expr, &'static str, F2)) -> vyre_foundation::ir_inner::model::generated::Node where F1: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr, F2: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs::strided_accumulate_child<F>(parent_op_id: &'static str, tile: u32, chunks: u32, n: u32, acc_name: &'static str, initial: vyre_foundation::ir_inner::model::generated::Expr, scratch: &'static str, step: F) -> vyre_foundation::ir_inner::model::generated::Node where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs::strided_writeback_child<F>(parent_op_id: &'static str, tile: u32, chunks: u32, n: u32, output: &str, prelude: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, value: F) -> vyre_foundation::ir_inner::model::generated::Node where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::telemetry::bump(c: &core::sync::atomic::AtomicU64)
 pub fn vyre_libs::telemetry::snapshot_counters() -> alloc::vec::Vec<(&'static str, u64)>
 pub fn vyre_libs::telemetry::total_calls() -> u64
@@ -2956,6 +2982,7 @@ pub mod vyre_libs::reduce::segment_reduce
 pub mod vyre_libs::reduce::sum
 pub mod vyre_libs::reduce::workgroup_any
 pub mod vyre_libs::reduce::workgroup_tree
+pub mod vyre_libs::reduction
 pub mod vyre_libs::representation
 pub mod vyre_libs::rule
 pub mod vyre_libs::rule::condition_op
@@ -3237,6 +3264,8 @@ pub struct vyre_libs::reasoning::do_calculus_change_impact::ImpactedLineageProje
 pub struct vyre_libs::reasoning::string_diagram_ir_rewrite::StringDiagramRewriteScratch
 pub struct vyre_libs::reduce::reduction_metrics::ReductionMetricsGpuScratch
 pub struct vyre_libs::reduce::workgroup_tree::WorkgroupReductionBuilder<'a>
+pub struct vyre_libs::reduction::ReductionComposer
+pub struct vyre_libs::reduction::ReductionPhase
 pub struct vyre_libs::rule::file_size_eq::FileSizeEq
 pub struct vyre_libs::rule::file_size_gt::FileSizeGt
 pub struct vyre_libs::rule::file_size_gte::FileSizeGte
@@ -3560,6 +3589,8 @@ pub vyre_libs::device::memory_ownership_contract::MemoryOwnershipRecord::owner: 
 pub vyre_libs::device::memory_ownership_contract::MemoryOwnershipRecord::production: bool
 pub vyre_libs::device::memory_ownership_contract::MemoryOwnershipRecord::resource: &'a str
 pub vyre_libs::device::memory_ownership_contract::MemoryOwnershipRecord::subsystem: &'a str
+pub vyre_libs::elementwise::F32MulRhs::Buffer(&'a str)
+pub vyre_libs::elementwise::F32MulRhs::SameInput
 pub vyre_libs::encoding::bitset_mask_algebra::BitsetMaskBinaryOp::And
 pub vyre_libs::encoding::bitset_mask_algebra::BitsetMaskBinaryOp::Or
 pub vyre_libs::encoding::bitset_mask_algebra::BitsetMaskBinaryOp::Xor
@@ -4536,6 +4567,9 @@ pub vyre_libs::reduce::workgroup_tree::WorkgroupReductionBuilder::tile: u32
 pub vyre_libs::reduce::workgroup_tree::WorkgroupReductionBuilder::values: &'a str
 pub vyre_libs::reduce::workgroup_tree::WorkgroupReductionScope::EveryWorkgroup
 pub vyre_libs::reduce::workgroup_tree::WorkgroupReductionScope::FirstWorkgroup
+pub vyre_libs::reduction::ReductionPhase::accumulate: vyre_foundation::ir_inner::model::generated::Node
+pub vyre_libs::reduction::ReductionPhase::publish: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub vyre_libs::reduction::ReductionPhase::reductions: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub vyre_libs::rule::RuleBuildError::OpaqueCondition
 pub vyre_libs::rule::RuleBuildError::OpaqueCondition::extension_id: u32
 pub vyre_libs::rule::RuleBuildError::OpaqueCondition::rule_id: u32

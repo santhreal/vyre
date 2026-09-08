@@ -9,8 +9,6 @@ use std::collections::BTreeMap;
 
 pub(super) const BENCHMARK_BUNDLE_SCHEMA: &str = "vyre-bench.bundle.v1";
 pub(super) const MAC_BENCHMARK_BUNDLE_CASE_ID: &str = "foundation.elementwise.add.1m";
-pub(super) const MAC_BENCHMARK_BUNDLE_BASELINE_BACKEND: &str = "wgpu";
-pub(super) const MAC_BENCHMARK_BUNDLE_CANDIDATE_BACKEND: &str = "metal";
 const MAC_BENCHMARK_BUNDLE_COMPARISONS: &[(&str, &str, &str, &str)] = &[
     ("wgpu-vs-metal.json", "wgpu-vs-metal.txt", "wgpu", "metal"),
     (

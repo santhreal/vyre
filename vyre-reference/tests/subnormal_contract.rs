@@ -8,7 +8,7 @@
 //!
 //! Every assertion uses `to_bits()` rather than approximate float equality.
 
-mod flat_expr_eval;
+use crate::flat_expr_eval;
 
 use vyre_foundation::ir::{BinOp, UnOp};
 

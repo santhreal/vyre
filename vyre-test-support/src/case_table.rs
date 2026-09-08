@@ -13,7 +13,7 @@
 //! crate that does not answer for it.
 //!
 //! Two tables already need this ledger (dense byte-tile matvec in
-//! `tests/support/dense_matvec_cases.rs` and the exploded-IFDS reference in
+//! `crate::dense_matvec_cases` and the exploded-IFDS reference in
 //! [`crate::exploded_ifds_cases`]), so it lives here rather than once per table.
 //! The table stays the owner of what its groups are; this type owns only the
 //! bookkeeping and the failure messages.

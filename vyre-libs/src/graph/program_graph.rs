@@ -76,6 +76,21 @@ pub const NAME_EDGE_KIND_MASK: &str = "pg_edge_kind_mask";
 /// Canonical name for `node_tags`.
 pub const NAME_NODE_TAGS: &str = "pg_node_tags";
 
+/// The canonical read-only ProgramGraph buffer names, in binding order.
+///
+/// [`ProgramGraphShape::read_only_buffers`] names its declarations from this
+/// array, so a consumer that recognises producer topology reads the array
+/// rather than a position: a primitive is free to declare its own buffers
+/// before the bundle, and the bundle then sits at no fixed index. A sixth
+/// bundle member reaches every such consumer without an edit.
+pub const READ_ONLY_BUFFER_NAMES: [&str; 5] = [
+    NAME_NODES,
+    NAME_EDGE_OFFSETS,
+    NAME_EDGE_TARGETS,
+    NAME_EDGE_KIND_MASK,
+    NAME_NODE_TAGS,
+];
+
 /// Statically-sized CSR dimensions baked into a primitive's
 /// [`BufferDecl`] counts so the backend can allocate + layout-validate
 /// up front.
@@ -406,17 +421,29 @@ pub fn validate_program_graph(
 mod tests {
     use super::*;
 
+    /// A consumer outside this module recognises bundle topology by name, so
+    /// the emitted declarations and `READ_ONLY_BUFFER_NAMES` are one list.
+    /// Adding a sixth declaration without naming it here fails on the length,
+    /// and renaming one fails on the pair.
     #[test]
-    fn read_only_buffers_has_canonical_layout() {
+    fn read_only_buffers_are_named_by_the_exported_abi_set() {
         let bufs = ProgramGraphShape::new(4, 6).read_only_buffers();
-        assert_eq!(bufs.len(), 5);
-        assert_eq!(bufs[0].name(), NAME_NODES);
-        assert_eq!(bufs[1].name(), NAME_EDGE_OFFSETS);
-        assert_eq!(bufs[2].name(), NAME_EDGE_TARGETS);
-        assert_eq!(bufs[3].name(), NAME_EDGE_KIND_MASK);
-        assert_eq!(bufs[4].name(), NAME_NODE_TAGS);
+        let names: Vec<&str> = bufs.iter().map(BufferDecl::name).collect();
+        assert_eq!(names.as_slice(), READ_ONLY_BUFFER_NAMES.as_slice());
         assert_eq!(bufs[1].count(), 5); // node_count + 1
         assert_eq!(bufs[2].count(), 6); // edge_count
+    }
+
+    /// Two builders emit the read-only bundle: this module's
+    /// [`ProgramGraphShape::read_only_buffers`] and
+    /// `builder::csr::csr_read_only_buffers`, which every CSR traversal calls.
+    /// A consumer recognising topology by name is only correct if both name it
+    /// the same, so a rename in either one fails here.
+    #[test]
+    fn the_csr_builder_names_the_bundle_the_same_way() {
+        let bufs = crate::builder::csr::csr_read_only_buffers(4, 6);
+        let names: Vec<&str> = bufs.iter().map(BufferDecl::name).collect();
+        assert_eq!(names.as_slice(), READ_ONLY_BUFFER_NAMES.as_slice());
     }
 
     #[test]

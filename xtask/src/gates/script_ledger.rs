@@ -622,7 +622,6 @@ mod tests {
         let (_temporary, root) = fixture_checkout::checkout(&[
             ("scripts/apply-branch-protection.sh", "#!/bin/sh\n"),
             ("scripts/final-launch.sh", "#!/bin/sh\n"),
-            ("scripts/lib/read_toml_values.py", "pass\n"),
             ("scripts/lib/release_train.sh", "#!/bin/sh\n"),
             ("scripts/lib/repo_boundary.sh", "#!/bin/sh\n"),
             ("scripts/lib/toml_reader.sh", "#!/bin/sh\n"),

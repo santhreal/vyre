@@ -53,14 +53,11 @@ fn main() {
     let result = gate.run(&ctx);
     let mutations =
         snapshot.detect_mutations(&ctx.root, name, declared_artifacts, gate.writes(&ctx));
-    if !mutations.is_empty() {
-        for mutation in mutations {
-            eprintln!("Fix: {mutation}");
-        }
-        process::exit(1);
-    }
     match result {
         Err(error) => {
+            for mutation in &mutations {
+                eprintln!("Fix: {mutation}");
+            }
             eprintln!("{error}");
             process::exit(1);
         }
@@ -74,14 +71,16 @@ fn main() {
                     process::exit(1);
                 }
             }
-            if ctx.has("--print-toolchain") && report.findings.is_empty() {
-                return;
+            // A mutation in comparison mode is a failure, and so is a finding:
+            // there is no informational mode, because a gate that reported a
+            // problem and exited 0 is how 32 gates judged nothing while reading
+            // as coverage. `finish_run` renders before judging either one.
+            let verdict = gate::finish_run(name, &report, &mutations, ctx.has("--print-toolchain"));
+            print!("{}", verdict.stdout);
+            for line in &verdict.stderr {
+                eprintln!("{line}");
             }
-            print!("{}", gate::render(name, &report));
-            // A finding is a failure. There is no informational mode: a gate
-            // that reported a problem and exited 0 is how 32 gates judged
-            // nothing while reading as coverage.
-            if !report.findings.is_empty() {
+            if verdict.failed {
                 process::exit(1);
             }
         }

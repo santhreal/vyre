@@ -1,0 +1,2 @@
+category = "Added"
+text = "`FloatLoweringMode::StrictIeee` replaces `sin`, `cos`, `sqrt`, `exp` and `log` with f32 expansions built only from correctly-rounded operations and exact integer work on exponent and mantissa fields, so a device and the reference interpreter produce identical bits for the same program; an approximable operation with no expansion fails the dispatch instead of reaching the device as a native approximate instruction."

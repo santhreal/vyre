@@ -9,6 +9,7 @@ use std::sync::OnceLock;
 use super::facts::{ProgramFacts, RegionMeta};
 use super::kind::{kind_mask, BufferRefKind, NodeIndex, NodeKind};
 use crate::ir::{Expr, Ident, Node, Program};
+use crate::visit::expr_parts::{expr_buffer_ref, expr_children, ExprBufferRef};
 
 thread_local! {
     /// Last (program-fingerprint, ProgramFacts) pair the current thread
@@ -368,87 +369,37 @@ fn walk_expr(expr: &Expr, owning_node: NodeIndex, facts: &mut ProgramFacts) {
         Expr::Var(name) => {
             facts.var_reads.push((owning_node, name.duplicate_handle()));
         }
-        Expr::Load { buffer, index } => {
-            facts
-                .buffer_refs
-                .push((owning_node, buffer.duplicate_handle(), BufferRefKind::Read));
-            walk_expr(index, owning_node, facts);
-        }
-        Expr::BufLen { buffer } => {
-            facts
-                .buffer_refs
-                .push((owning_node, buffer.duplicate_handle(), BufferRefKind::Read));
-        }
-        // A callee parameter is a read-only or uniform buffer by
-        // declaration, so passing a buffer to a callee is a read of it.
-        Expr::BufferRef { buffer } => {
-            facts
-                .buffer_refs
-                .push((owning_node, buffer.duplicate_handle(), BufferRefKind::Read));
-        }
-        Expr::Atomic {
-            op,
-            buffer,
-            index,
-            expected,
-            value,
-            ..
-        } => {
+        Expr::Atomic { op, buffer, .. } => {
             facts.buffer_refs.push((
                 owning_node,
                 buffer.duplicate_handle(),
                 BufferRefKind::Atomic(*op),
             ));
-            walk_expr(index, owning_node, facts);
-            if let Some(e) = expected.as_deref() {
-                walk_expr(e, owning_node, facts);
-            }
-            walk_expr(value, owning_node, facts);
         }
-        Expr::BinOp { left, right, .. } => {
-            walk_expr(left, owning_node, facts);
-            walk_expr(right, owning_node, facts);
+        // A callee parameter is a read-only or uniform buffer by
+        // declaration, so passing a buffer to a callee is a read of it.
+        Expr::Load { buffer, .. } | Expr::BufLen { buffer } | Expr::BufferRef { buffer } => {
+            facts
+                .buffer_refs
+                .push((owning_node, buffer.duplicate_handle(), BufferRefKind::Read));
         }
-        Expr::UnOp { operand, .. } => walk_expr(operand, owning_node, facts),
-        Expr::Call { args, .. } => {
-            for arg in args {
-                walk_expr(arg, owning_node, facts);
-            }
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            walk_expr(cond, owning_node, facts);
-            walk_expr(true_val, owning_node, facts);
-            walk_expr(false_val, owning_node, facts);
-        }
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
-            walk_expr(value, owning_node, facts);
-        }
-        Expr::Fma { a, b, c } => {
-            walk_expr(a, owning_node, facts);
-            walk_expr(b, owning_node, facts);
-            walk_expr(c, owning_node, facts);
-        }
-        Expr::SubgroupBallot { cond } => walk_expr(cond, owning_node, facts),
-        Expr::SubgroupShuffle { value, lane } => {
-            walk_expr(value, owning_node, facts);
-            walk_expr(lane, owning_node, facts);
-        }
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::InvocationId { .. }
-        | Expr::LogicalIndex { .. }
-        | Expr::LogicalTileId { .. }
-        | Expr::LogicalWithinTileId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => {}
+        // Every remaining variant names no buffer. `expr_buffer_ref` is the
+        // exhaustive owner of that classification, so it answers rather than
+        // a second list here, and the assertion holds this arm to it: a
+        // variant added to the IR that names a buffer fails the suite instead
+        // of dropping out of the fact table.
+        other => debug_assert!(
+            matches!(
+                expr_buffer_ref(other),
+                ExprBufferRef::None | ExprBufferRef::Unknown
+            ),
+            "Fix: {other:?} names a buffer, so program_soa must record a reference for it"
+        ),
+    }
+    // Operand positions come from `expr_children`, the one enumeration of
+    // which variants hold sub-expressions. A walk that restates it classifies
+    // a new variant as a leaf, which is how an operand stops being counted.
+    for child in expr_children(expr).iter() {
+        walk_expr(child, owning_node, facts);
     }
 }

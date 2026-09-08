@@ -11,8 +11,7 @@
 #![cfg(feature = "fixpoint")]
 #![cfg(feature = "math")]
 
-#[path = "../wire_words/mod.rs"]
-mod wire_words;
+use crate::wire_words;
 use wire_words::toposort;
 
 use std::collections::HashSet;

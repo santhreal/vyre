@@ -1,5 +1,5 @@
 use crate::backend::ordering::{sort_unstable_by_key_if_needed, sort_unstable_if_needed};
-use crate::backend::staging_reserve::reserved_typed_vec;
+use crate::backend::staging_reserve::{reserve_typed_hash_map, reserved_typed_vec};
 use rustc_hash::FxHashMap;
 use vyre_foundation::optimizer::eqsat_gpu::Equivalence;
 
@@ -90,13 +90,11 @@ pub fn plan_cuda_egraph_union_compaction(
         parents.push(index);
     }
     let mut eclass_indices = FxHashMap::<u32, usize>::default();
-    eclass_indices
-        .try_reserve(affected_eclasses.len())
-        .map_err(|error| CudaEGraphKernelPlanError::StorageReserveFailed {
-            field: "egraph union eclass index",
-            requested: affected_eclasses.len(),
-            message: error.to_string(),
-        })?;
+    reserve_typed_hash_map(
+        &mut eclass_indices,
+        affected_eclasses.len(),
+        "egraph union eclass index",
+    )?;
     for (index, &eclass_id) in affected_eclasses.iter().enumerate() {
         eclass_indices.insert(eclass_id, index);
     }

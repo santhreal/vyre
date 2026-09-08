@@ -38,9 +38,9 @@ use vyre_foundation::ir::{BinOp, DataType};
 
 use crate::{
     AsyncWaitSpec, BindingLayout, BindingSlot, BindingVisibility, Dispatch,
-    EmissionTargetCapabilities, FragmentValue, KernelBody, KernelDescriptor, KernelOp,
-    KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec, MatrixTileShape,
-    MemoryClass, SubgroupCapabilities, WorkgroupLimits,
+    EmissionTargetCapabilities, FragmentValue, GridIndexSpace, KernelBody, KernelDescriptor,
+    KernelOp, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec,
+    MatrixTileShape, MemoryClass, SubgroupCapabilities, WorkgroupLimits,
 };
 
 /// An op that produces `result`.
@@ -449,10 +449,17 @@ impl KernelDescriptorBuilder {
         self
     }
 
-    /// Set the workgroup dimensions.
+    /// Set the workgroup dimensions, keeping the index space.
     #[must_use]
     pub fn dispatch(mut self, x: u32, y: u32, z: u32) -> Self {
-        self.dispatch = Dispatch::new(x, y, z);
+        self.dispatch.workgroup_size = [x, y, z];
+        self
+    }
+
+    /// Set the index space lanes derive their element index in.
+    #[must_use]
+    pub fn grid_index(mut self, grid_index: GridIndexSpace) -> Self {
+        self.dispatch.grid_index = grid_index;
         self
     }
 

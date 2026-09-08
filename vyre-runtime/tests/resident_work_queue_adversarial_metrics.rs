@@ -2,9 +2,13 @@
 //! boundaries, misalignment, and region-non-alias contracts.
 
 use vyre_runtime::resident_work_queue::telemetry::{ControlSnapshot, RingTelemetry};
-use vyre_runtime::resident_work_queue::{protocol::control, ResidentWorkQueue};
+use vyre_runtime::resident_work_queue::{
+    protocol::{control, control_byte_len, ProtocolError},
+    ResidentWorkQueue,
+};
 use vyre_runtime::PipelineError;
 
+use crate::ring_expectations::protocol_missing_word;
 use vyre_test_support::le_words::write_word;
 
 // ---------------------------------------------------------------------------
@@ -17,7 +21,17 @@ fn try_read_metrics_rejects_buffer_one_word_short_of_full_window() {
     let short = vec![0u8; words * 4];
     let err = ResidentWorkQueue::try_read_metrics(&short)
         .expect_err("buffer one word short of metrics window must reject");
-    assert!(err.to_string().contains("Fix:"));
+    let (buffer, word_idx, byte_len) = protocol_missing_word(
+        &err,
+        "a truncated metrics window must name the word it could not read",
+    );
+    assert_eq!(buffer, "control");
+    assert_eq!(
+        word_idx,
+        (control::METRICS_BASE + control::METRICS_SLOTS - 1) as usize,
+        "the fault must name the first metrics word past the buffer"
+    );
+    assert_eq!(byte_len, words * 4);
 }
 
 #[test]
@@ -26,7 +40,18 @@ fn try_read_metrics_rejects_misaligned_buffer() {
     buf.push(0xAA);
     let err = ResidentWorkQueue::try_read_metrics(&buf)
         .expect_err("misaligned metrics buffer must reject");
-    assert!(err.to_string().contains("Fix:"));
+    let PipelineError::Protocol(ProtocolError::MisalignedByteLength {
+        buffer, byte_len, ..
+    }) = err
+    else {
+        panic!("a misaligned buffer must reject for alignment, not for truncation, got {err:?}")
+    };
+    assert_eq!(buffer, "control");
+    assert_eq!(
+        byte_len,
+        ((control::METRICS_BASE + control::METRICS_SLOTS) as usize) * 4 + 1,
+        "the fault must report the byte length that was not a whole word count"
+    );
 }
 
 #[test]
@@ -129,5 +154,16 @@ fn strict_ring_telemetry_rejects_control_shorter_than_metrics_window() {
     let ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     let err = RingTelemetry::try_decode(&control, &ring)
         .expect_err("control shorter than fixed metrics window must reject");
-    assert!(matches!(err, PipelineError::Backend(_)));
+    let PipelineError::Backend(message) = err else {
+        panic!("a control buffer short of the metrics window must reject as a control snapshot fault, got {err:?}")
+    };
+    let min_control =
+        control_byte_len(0).expect("the minimum control length must be representable");
+    assert!(
+        message.contains(&format!(
+            "control snapshot has {} bytes, expected at least {min_control} and 4-byte alignment",
+            (control::METRICS_BASE as usize) * 4
+        )),
+        "the fault must report the byte length it received and the minimum it required: {message}"
+    );
 }

@@ -4,6 +4,7 @@
 //! Each statement owns a fixed slot budget, so the whole pass is one launch with
 //! no per-statement allocation.
 
+use crate::builder::trip_count::clamped_by_extents;
 use crate::parsing::composition::child_phase;
 use emit::{binary_token_body, emit_value_leaf, final_sweep_body, rparen_body};
 use operator::{is_assignment_token, is_value_token, precedence};
@@ -116,9 +117,13 @@ fn ast_shunting_yard_program(
         ),
         Node::let_bind(
             "stmt_end",
-            Expr::load(
-                statements,
-                Expr::add(Expr::mul(t.clone(), Expr::u32(2)), Expr::u32(1)),
+            clamped_by_extents(
+                Expr::load(
+                    statements,
+                    Expr::add(Expr::mul(t.clone(), Expr::u32(2)), Expr::u32(1)),
+                ),
+                tok_types,
+                [],
             ),
         ),
         Node::let_bind("v_sp", Expr::u32(0)),

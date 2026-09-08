@@ -30,7 +30,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// Shingle width, matching `xtask/src/dup_scan.rs`: eight consecutive
+/// Shingle width, matching `xtask/src/gates/dup_scan.rs`: eight consecutive
 /// normalized lines are the smallest run this treats as a copy.
 const SHINGLE: usize = 8;
 

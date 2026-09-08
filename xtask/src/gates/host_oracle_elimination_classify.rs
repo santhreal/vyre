@@ -50,49 +50,6 @@ pub(super) fn type_is_data_output(ty: &syn::Type) -> bool {
     }
 }
 
-/// Check if return type is a heap/collection data container.
-pub(super) fn has_data_container_output(sig: &syn::Signature) -> bool {
-    match &sig.output {
-        syn::ReturnType::Default => false,
-        syn::ReturnType::Type(_, ty) => type_is_data_container(ty),
-    }
-}
-
-pub(super) fn type_is_data_container(ty: &syn::Type) -> bool {
-    match ty {
-        syn::Type::Path(type_path) => {
-            if let Some(seg) = type_path.path.segments.last() {
-                let ident = seg.ident.to_string();
-                if ident == "Vec"
-                    || ident == "BTreeSet"
-                    || ident == "HashSet"
-                    || ident == "BTreeMap"
-                    || ident == "HashMap"
-                {
-                    return true;
-                }
-                if ident == "Result"
-                    || ident == "Option"
-                    || ident == "Arc"
-                    || ident == "Box"
-                    || ident == "Rc"
-                {
-                    if let syn::PathArguments::AngleBracketed(args) = &seg.arguments {
-                        if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
-                            return type_is_data_container(inner_ty);
-                        }
-                    }
-                }
-            }
-            false
-        }
-        syn::Type::Tuple(tuple) => tuple.elems.iter().any(type_is_data_container),
-        syn::Type::Array(_) | syn::Type::Slice(_) => true,
-        syn::Type::Reference(r) => type_is_data_container(&r.elem),
-        _ => false,
-    }
-}
-
 /// Check if the signature accepts primitive numeric payload data.
 pub(super) fn has_data_input_ast(sig: &syn::Signature) -> bool {
     sig.inputs.iter().any(|arg| match arg {
@@ -183,13 +140,6 @@ pub(super) fn type_is_scalar_or_payload(ty: &syn::Type) -> bool {
         syn::Type::Reference(r) => type_is_scalar_or_payload(&r.elem),
         syn::Type::Tuple(t) => t.elems.iter().any(type_is_scalar_or_payload),
         _ => false,
-    }
-}
-
-pub(super) fn type_is_data_output_ret(ret: &syn::ReturnType) -> bool {
-    match ret {
-        syn::ReturnType::Default => false,
-        syn::ReturnType::Type(_, ty) => type_is_data_output(ty),
     }
 }
 
@@ -386,17 +336,6 @@ pub(super) fn is_dispatch_sizing_or_validator(sig: &syn::Signature) -> bool {
             _ => false,
         },
     }
-}
-
-/// Check if signature has mutable parameters.
-pub(super) fn has_mutable_params(sig: &syn::Signature) -> bool {
-    sig.inputs.iter().any(|arg| match arg {
-        syn::FnArg::Receiver(r) => r.mutability.is_some(),
-        syn::FnArg::Typed(pat_type) => match &*pat_type.ty {
-            syn::Type::Reference(r) => r.mutability.is_some(),
-            _ => false,
-        },
-    })
 }
 
 /// Check if signature has mutable data output parameters.

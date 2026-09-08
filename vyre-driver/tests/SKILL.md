@@ -26,6 +26,11 @@ crate depends on it. It names no concrete backend and holds no shader knowledge.
   additive fields are not a downstream break.
 - `BackendError` and `ErrorCode` are matched downstream. Renaming or removing a
   variant breaks consumers.
+- Grid inference folds a 1D launch across axes only when the caller states the
+  emitted kernel reads a grid-linearized element index. A per-axis kernel past
+  the ceiling is refused by name, a caller-pinned grid is judged and never
+  reshaped, and a folded grid never spans more invocations than a u32 index
+  reaches.
 
 ## Adversarial surface
 

@@ -7,7 +7,7 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Barrier};
 
-mod harness;
+use crate::harness;
 use harness::selected_adapter;
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
@@ -208,8 +208,14 @@ fn only_the_device_acquisition_module_constructs_a_wgpu_instance() {
         for (index, line) in text.lines().enumerate() {
             let code = line.split_once("//").map_or(line, |(before, _)| before);
             if code.contains("Instance::default") || code.contains("Instance::new(") {
+                // `OWNER` is spelled with `/`, so the recorded site is spelled
+                // the same way before it is compared.
                 let relative = source.strip_prefix(&root).unwrap_or(source);
-                sites.insert(format!("{}:{}", relative.display(), index + 1));
+                sites.insert(format!(
+                    "{}:{}",
+                    relative.to_string_lossy().replace('\\', "/"),
+                    index + 1
+                ));
             }
         }
     }

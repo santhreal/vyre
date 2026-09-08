@@ -33,14 +33,9 @@ use vyre_runtime::pipeline_cache::{
 };
 use vyre_runtime::recovery::{classify_backend_error, recover_artifact_session};
 
-#[path = "../../tests/support/artifact_fixtures.rs"]
-mod artifact_fixtures;
-#[path = "../../tests/support/fixture_instance.rs"]
-mod fixture_instance;
+use vyre_test_support::fixture_instance::{completion, FixtureInstance};
 
-use fixture_instance::{completion, FixtureInstance};
-
-use artifact_fixtures::{
+use vyre_test_support::artifact_fixtures::{
     collective_output_graph, compile_graph, compile_graph_on_mesh, contract, entry_over,
     entry_point, graph_over, neutral_artifact, single_input_graph, two_device_mesh,
     wired_input_graph,

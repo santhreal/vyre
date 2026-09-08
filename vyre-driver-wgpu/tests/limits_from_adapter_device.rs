@@ -12,7 +12,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 use harness::{selected_adapter, shared_live_backend as live_backend};
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};

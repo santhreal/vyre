@@ -13,7 +13,7 @@
 //! (compaction + gather + kept-index map + stride-k block) through the real dispatch boundary.
 #![forbid(unsafe_code)]
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::reasoning::do_calculus_change_impact::{
     intervention_delete_incoming_via, rule2_reverse_incoming_via, rule3_subgraph_via,

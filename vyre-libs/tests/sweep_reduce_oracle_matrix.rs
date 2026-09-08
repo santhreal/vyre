@@ -13,7 +13,7 @@
 #![forbid(unsafe_code)]
 #![cfg(feature = "reduce")]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::{alternating, lcg_u32 as lcg, ramp};
 
 use vyre_reference::composition_witness::{

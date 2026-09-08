@@ -3,7 +3,9 @@ use crate::resident_work_queue::descriptor::WindowClass;
 use crate::resident_work_queue::policy::{
     ResidentExecutionMode, ResidentLaunchRequest, ResidentQueueTopology,
 };
-use crate::resident_work_queue::protocol::{control, opcode, slot, SLOT_WORDS, STATUS_WORD};
+use crate::resident_work_queue::protocol::{
+    control, control_byte_len, opcode, slot, SLOT_WORDS, STATUS_WORD,
+};
 use crate::resident_work_queue::ResidentWorkQueue;
 
 mod decode_contracts {
@@ -27,7 +29,17 @@ mod decode_contracts {
         ring.push(0);
         let err = RingTelemetry::try_decode(&control, &ring)
             .expect_err("Fix: strict telemetry must reject malformed ring snapshots");
-        assert!(matches!(err, PipelineError::Backend(_)));
+        let PipelineError::Backend(message) = err else {
+            panic!("a trailing partial slot must reject as a ring alignment fault, got {err:?}")
+        };
+        let slot_bytes = (SLOT_WORDS as usize) * 4;
+        assert!(
+            message.contains(&format!(
+                "ring snapshot has {} bytes, not a multiple of slot size {slot_bytes}",
+                slot_bytes + 1
+            )),
+            "Fix: the fault must report the byte length it received and the slot width it required: {message}"
+        );
     }
 
     #[test]
@@ -37,7 +49,23 @@ mod decode_contracts {
         let ring = ResidentWorkQueue::try_encode_empty_ring(1).unwrap();
         let err = RingTelemetry::try_decode(&control, &ring)
             .expect_err("Fix: strict telemetry must reject malformed control snapshots");
-        assert!(matches!(err, PipelineError::Backend(_)));
+        // Control is validated before ring geometry, so a well-formed ring cannot
+        // mask this fault.
+        let PipelineError::Backend(message) = err else {
+            panic!(
+                "a control buffer past a word boundary must reject as a control snapshot fault, \
+                 got {err:?}"
+            )
+        };
+        let min_control =
+            control_byte_len(0).expect("Fix: the minimum control length must be representable");
+        assert!(
+            message.contains(&format!(
+                "control snapshot has {} bytes, expected at least {min_control} and 4-byte alignment",
+                min_control + 1
+            )),
+            "Fix: the fault must report the byte length it received and the minimum it required: {message}"
+        );
     }
 
     /// The control decode error path is the only thing standing between a truncated
@@ -101,9 +129,16 @@ mod decode_contracts {
         )
         .expect_err("Fix: strict telemetry decode_into must reject partial ring slots");
 
+        let PipelineError::Backend(message) = err else {
+            panic!("a trailing partial slot must reject as a ring alignment fault, got {err:?}")
+        };
+        let slot_bytes = (SLOT_WORDS as usize) * 4;
         assert!(
-            err.to_string().contains("whole ring slots"),
-            "Fix: strict telemetry decode_into errors must explain partial ring slots: {err}"
+            message.contains(&format!(
+                "ring snapshot has {} bytes, not a multiple of slot size {slot_bytes}",
+                slot_bytes + 1
+            )),
+            "Fix: the fault must report the byte length it received and the slot width it required: {message}"
         );
         assert!(telemetry.slots.is_empty());
     }
@@ -369,9 +404,12 @@ mod sketch_watchdog_contracts {
         let error = current
             .try_health_since(&previous)
             .expect_err("Fix: wrapped done counters must return structured watchdog errors");
+        let PipelineError::Backend(message) = error else {
+            panic!("a done counter that moved backwards must reject as a watchdog fault, got {error:?}")
+        };
         assert!(
-            error.to_string().contains("moved backwards"),
-            "Fix: watchdog wrap errors must identify the counter relationship: {error}"
+            message.contains("done counter moved backwards from 9 to 7"),
+            "Fix: the fault must carry both counter readings: {message}"
         );
     }
 }
@@ -419,8 +457,20 @@ mod window_contracts {
         assert_eq!(window.lookahead_slots, 1);
         assert_eq!(window.published, 3);
         assert!(window.is_active());
-        assert_eq!(telemetry.active_windows().len(), 1);
-        assert_eq!(telemetry.active_slots_for_opcode(window_opcode).len(), 3);
+        assert_eq!(
+            telemetry
+                .try_active_windows()
+                .expect("Fix: active windows must stage")
+                .len(),
+            1
+        );
+        assert_eq!(
+            telemetry
+                .try_active_slots_for_opcode(window_opcode)
+                .expect("Fix: active slots must stage")
+                .len(),
+            3
+        );
         assert_eq!(
             telemetry
                 .active_slots_for_opcode_iter(window_opcode)
@@ -472,12 +522,16 @@ mod window_contracts {
         );
         assert_eq!(telemetry.windows.len(), 2);
         assert_eq!(
-            telemetry.active_slots_for_opcode(first_window_opcode).len(),
+            telemetry
+                .try_active_slots_for_opcode(first_window_opcode)
+                .expect("Fix: active slots must stage")
+                .len(),
             1
         );
         assert_eq!(
             telemetry
-                .active_slots_for_opcode(second_window_opcode)
+                .try_active_slots_for_opcode(second_window_opcode)
+                .expect("Fix: active slots must stage")
                 .len(),
             1
         );
@@ -637,7 +691,13 @@ mod window_contracts {
             RingTelemetry::decode_with_window_opcodes(&control, &ring, &[window_opcode]);
         assert_eq!(telemetry.windows.len(), 1);
         assert!(!telemetry.windows[0].is_active());
-        assert!(telemetry.active_windows().is_empty());
-        assert!(telemetry.active_slots_for_opcode(window_opcode).is_empty());
+        assert!(telemetry
+            .try_active_windows()
+            .expect("Fix: active windows must stage")
+            .is_empty());
+        assert!(telemetry
+            .try_active_slots_for_opcode(window_opcode)
+            .expect("Fix: active slots must stage")
+            .is_empty());
     }
 }

@@ -2,12 +2,13 @@
 //! hostile publish-slot boundary conditions.
 
 use vyre_runtime::resident_work_queue::{
-    protocol::{self, debug, slot, ARGS_PER_SLOT, SLOT_WORDS},
+    protocol::{self, debug, slot, ProtocolError, ARGS_PER_SLOT, SLOT_WORDS},
     telemetry::RingTelemetry,
-    ResidentWorkQueue,
+    ResidentWorkQueue, RingSlotTransition,
 };
-use vyre_runtime::PipelineError;
+use vyre_runtime::{PipelineError, RingEncodingFault};
 
+use crate::ring_expectations::{assert_publish_rejected_by_status, assert_ring_fault};
 use vyre_test_support::le_words::write_word;
 
 // ---------------------------------------------------------------------------
@@ -19,7 +20,11 @@ fn publish_slot_rejects_ring_one_byte_under_slot_multiple() {
     let mut ring = vec![0u8; (SLOT_WORDS as usize * 4) - 1];
     let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[])
         .expect_err("ring one byte under slot multiple must reject");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Geometry,
+        "a ring one byte under a slot multiple is malformed geometry",
+    );
 }
 
 #[test]
@@ -27,7 +32,11 @@ fn publish_slot_rejects_ring_one_byte_over_slot_multiple() {
     let mut ring = vec![0u8; (SLOT_WORDS as usize * 4) + 1];
     let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[])
         .expect_err("ring one byte over slot multiple must reject");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Geometry,
+        "a ring one byte over a slot multiple is malformed geometry",
+    );
 }
 
 #[test]
@@ -36,7 +45,11 @@ fn batch_publish_rejects_truncated_ring_length() {
     let err =
         ResidentWorkQueue::batch_publish(&mut ring, 0, 0, &[(protocol::opcode::NOP, vec![])], 0)
             .expect_err("batch publish on truncated ring must reject");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Geometry,
+        "a half-slot ring is malformed geometry",
+    );
 }
 
 #[test]
@@ -49,7 +62,11 @@ fn publish_packed_slot_rejects_ring_with_non_slot_multiple_length() {
         &[(protocol::opcode::NOP as u8, vec![])],
     )
     .expect_err("packed slot on non-slot-multiple ring must reject");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Geometry,
+        "a non-slot-multiple ring is malformed geometry",
+    );
 }
 
 #[test]
@@ -59,7 +76,17 @@ fn strict_ring_telemetry_rejects_ring_one_byte_under_slot_multiple() {
     ring.pop();
     let err = RingTelemetry::try_decode(&control, &ring)
         .expect_err("ring one byte under slot multiple must reject strict decode");
-    assert!(matches!(err, PipelineError::Backend(_)));
+    let PipelineError::Backend(message) = err else {
+        panic!("a partial trailing slot must reject as a ring alignment fault, got {err:?}")
+    };
+    assert!(
+        message.contains(&format!(
+            "ring snapshot has {} bytes, not a multiple of slot size {}",
+            (SLOT_WORDS as usize * 4) * 2 - 1,
+            SLOT_WORDS as usize * 4
+        )),
+        "the fault must report the byte length it received and the slot width it required: {message}"
+    );
 }
 
 #[test]
@@ -69,7 +96,17 @@ fn strict_ring_telemetry_rejects_ring_one_byte_over_slot_multiple() {
     ring.push(0xAA);
     let err = RingTelemetry::try_decode(&control, &ring)
         .expect_err("ring one byte over slot multiple must reject strict decode");
-    assert!(matches!(err, PipelineError::Backend(_)));
+    let PipelineError::Backend(message) = err else {
+        panic!("a trailing partial byte must reject as a ring alignment fault, got {err:?}")
+    };
+    assert!(
+        message.contains(&format!(
+            "ring snapshot has {} bytes, not a multiple of slot size {}",
+            (SLOT_WORDS as usize * 4) * 2 + 1,
+            SLOT_WORDS as usize * 4
+        )),
+        "the fault must report the byte length it received and the slot width it required: {message}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -83,7 +120,20 @@ fn strict_ring_telemetry_rejects_control_one_byte_over_word_boundary() {
     let ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     let err = RingTelemetry::try_decode(&control, &ring)
         .expect_err("control one byte over word boundary must reject strict decode");
-    assert!(matches!(err, PipelineError::Backend(_)));
+    // Control is validated before ring geometry, so a well-formed ring cannot
+    // mask this fault.
+    let PipelineError::Backend(message) = err else {
+        panic!("a control buffer past a word boundary must reject as a control snapshot fault, got {err:?}")
+    };
+    let min_control =
+        protocol::control_byte_len(0).expect("the minimum control length must be representable");
+    assert!(
+        message.contains(&format!(
+            "control snapshot has {} bytes, expected at least {min_control} and 4-byte alignment",
+            min_control + 1
+        )),
+        "the fault must report the byte length it received and the minimum it required: {message}"
+    );
 }
 
 #[test]
@@ -103,7 +153,10 @@ fn encode_empty_debug_log_with_zero_capacity_produces_minimal_buffer() {
 fn try_encode_empty_debug_log_rejects_overflow_capacity() {
     let err =
         protocol::try_encode_empty_debug_log(u32::MAX).expect_err("u32::MAX records must overflow");
-    assert!(err.to_string().contains("Fix:"));
+    let ProtocolError::ByteLengthOverflow { buffer, .. } = err else {
+        panic!("an oversized record capacity must reject for byte-length overflow, got {err:?}")
+    };
+    assert_eq!(buffer, "debug_log");
 }
 
 // ---------------------------------------------------------------------------
@@ -126,7 +179,11 @@ fn publish_slot_rejects_args_one_over_budget() {
     let args = vec![0u32; ARGS_PER_SLOT as usize + 1];
     let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &args)
         .expect_err("one arg over budget must reject");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Capacity,
+        "one arg over the per-slot budget is a capacity fault",
+    );
 }
 
 #[test]
@@ -136,27 +193,47 @@ fn publish_slot_rejects_slot_count_exactly_at_boundary() {
         .expect("last valid slot must accept");
     let err = ResidentWorkQueue::publish_slot(&mut ring, 4, 0, protocol::opcode::NOP, &[])
         .expect_err("slot_idx == slot_count must reject");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::OutOfBounds,
+        "slot_idx == slot_count is out of bounds",
+    );
 }
 
+/// A slot whose status word is already inflight must never be re-published, and
+/// the rejection must name the status it actually found plus the two statuses
+/// that are publishable. The hostile set is derived from `slot::STATUSES` rather
+/// than listed, so a new status is hostile by default until it is classified.
 #[test]
 fn publish_slot_rejects_on_hostile_inflight_status_garbage() {
+    let publishable = [slot::EMPTY, slot::DONE];
+    let hostile: Vec<(u32, &str)> = slot::STATUSES
+        .iter()
+        .copied()
+        .filter(|(status, _)| !publishable.contains(status))
+        .collect();
+    assert_eq!(
+        hostile.len(),
+        slot::STATUSES.len() - publishable.len(),
+        "every status is either publishable or hostile"
+    );
+
+    assert_eq!(
+        RingSlotTransition::Publish.permitted(),
+        publishable.as_slice(),
+        "publish is legal from EMPTY and DONE only"
+    );
+
     let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
-    // Write a garbage value that happens to map to an inflight status.
-    for hostile_status in [
-        slot::PUBLISHED,
-        slot::CLAIMED,
-        slot::WAIT_IO,
-        slot::YIELD,
-        slot::REQUEUE,
-        slot::FAULT,
-    ] {
+    for (hostile_status, name) in hostile {
         write_word(&mut ring, protocol::STATUS_WORD as usize, hostile_status);
         let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[])
-            .expect_err(&format!(
-                "hostile status {hostile_status} must block re-publish"
-            ));
-        assert!(err.to_string().contains("not publishable"));
+            .expect_err(&format!("hostile status {name} must block re-publish"));
+        assert_publish_rejected_by_status(
+            &err,
+            hostile_status,
+            &format!("a publish from hostile status {name}"),
+        );
     }
 }
 

@@ -1,8 +1,11 @@
 use crate::api::case::BenchError;
 use vyre_foundation::match_result::ByteRange;
+#[cfg(test)]
 use vyre_libs::pattern::classic_ac::ClassicAcAutomaton;
+#[cfg(test)]
 use vyre_reference::composition_witness::classic_ac_bounded_ranges_scan_witness;
 
+#[cfg(test)]
 pub(super) fn cpu_bounded_range_matches(
     ac: &ClassicAcAutomaton,
     pattern_lengths: &[u32],

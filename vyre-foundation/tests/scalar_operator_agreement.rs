@@ -105,10 +105,18 @@ const INTEGER_WIDTH_ASYMMETRY_BIN_OPS: &[(&str, &str)] = &[
 ];
 
 /// Unary operators defined at exactly one of the two 32-bit integer widths.
-const INTEGER_WIDTH_ASYMMETRY_UN_OPS: &[(&str, &str)] = &[(
-    "LogicalNot",
-    "typecheck V100 restricts LogicalNot to u32 and bool",
-)];
+const INTEGER_WIDTH_ASYMMETRY_UN_OPS: &[(&str, &str)] = &[
+    (
+        "LogicalNot",
+        "typecheck V100 restricts LogicalNot to u32 and bool",
+    ),
+    (
+        "BitcastU32ToF32",
+        "typecheck V105 restricts the f32 reinterpretation to a u32 source word: an i32 operand \
+         would name the same 32 bits under a second spelling, and one spelling per bit pattern \
+         keeps the inverse pair total",
+    ),
+];
 
 /// A scalar width that both sides can represent: an `Expr` literal on the
 /// folder side and a `Value` variant on the interpreter side.
@@ -258,6 +266,8 @@ fn un_op_named(name: &str) -> Option<UnOp> {
         "Unpack8Low" => UnOp::Unpack8Low,
         "Unpack8High" => UnOp::Unpack8High,
         "Reciprocal" => UnOp::Reciprocal,
+        "BitcastF32ToU32" => UnOp::BitcastF32ToU32,
+        "BitcastU32ToF32" => UnOp::BitcastU32ToF32,
         _ => return None,
     })
 }

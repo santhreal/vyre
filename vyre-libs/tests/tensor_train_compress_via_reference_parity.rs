@@ -9,7 +9,7 @@
 //! matches the input within an f32 tolerance, the basis-invariant correctness contract for a
 //! decomposition (a stub reconstructs to garbage).
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::tensor_train_compression::compress_cost_tensor_f32_via;
 

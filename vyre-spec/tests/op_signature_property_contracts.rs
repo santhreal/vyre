@@ -1,6 +1,6 @@
 //! Generated property coverage for operation signature byte accounting.
 
-mod spec_variants;
+use crate::spec_variants;
 
 use proptest::prelude::*;
 use spec_variants::data_type_strategy;

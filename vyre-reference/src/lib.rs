@@ -11,7 +11,7 @@ pub mod dual_impls;
 mod dual_registry;
 pub use dual_registry::{dual_op_ids, resolve_dual, DualReferenceFacet};
 mod error;
-pub use error::ReferenceError;
+pub use error::{ReferenceError, StepCeilingExceeded};
 mod reference_facet;
 pub use reference_facet::{reference_facets, reference_fn, ReferenceFacet};
 /// Independent sequential mathematical witnesses for composite operations.
@@ -57,7 +57,7 @@ mod ops;
 /// [`reference_eval_oob_report`].
 pub use oob::OobReport;
 
-pub use execution::{expr, node, op_count, sequential};
+pub use execution::{expr, node, op_count, sequential, step_budget};
 /// The interpreter's ABI: [`is_reference_input`] selects the buffers a caller must
 /// supply a `Value` for, [`is_reference_output`] selects the buffers `reference_eval`
 /// returns, [`output_index`] locates a named output by that predicate, and
@@ -68,7 +68,8 @@ pub use execution::{is_reference_input, is_reference_output, output_index, refer
 /// Execute a vyre Program on the pure Rust reference interpreter.
 pub use execution::{
     reference_eval, reference_eval_lane_reversed, reference_eval_lane_rotated,
-    reference_eval_oob_report, reference_eval_with_dispatch,
-    reference_eval_with_dispatch_oob_report, reference_eval_with_grid, run_arena_reference,
-    run_arena_reference_with_dispatch, run_storage_graph,
+    reference_eval_oob_report, reference_eval_step_count, reference_eval_with_dispatch,
+    reference_eval_with_dispatch_oob_report, reference_eval_with_grid,
+    reference_eval_with_step_ceiling, run_arena_reference, run_arena_reference_with_dispatch,
+    run_storage_graph,
 };

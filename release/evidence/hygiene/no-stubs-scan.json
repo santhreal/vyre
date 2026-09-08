@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:ca5a721355cd1c4e5f29260fad39cea17fcca005:dirty=true:worktree=c6bbe533c6b4fb3e5a379b8b04d4576c008af12c951b908b570b5aec1562d078",
+  "source_fingerprint": "git:3cfaa0ef1ac2f973c5c9b7be833ce2c0d92fbb6a:dirty=true:worktree=2a1cb0a8a68b1071af1018b7631e9eb50b8549b16ba11caabae9cc0ed5f106bc",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -10,10 +10,10 @@
       "text": "/// Construct an unsigned certificate with deterministic placeholder fields."
     },
     {
-      "path": "vyre-bench/src/cases/scan_ac_irregular/mod.rs",
-      "line": 52,
-      "pattern": "TODO",
-      "text": "b\"TODO:\","
+      "path": "vyre-driver/src/backend/vyre_backend.rs",
+      "line": 69,
+      "pattern": "placeholder_text",
+      "text": "/// one is a count the backend rejects rather than a placeholder it skips. A"
     },
     {
       "path": "vyre-driver/src/grid_sync/resident_dispatch.rs",
@@ -22,10 +22,16 @@
       "text": "// unused buffer, so the placeholder is bound but inert (proven equal to"
     },
     {
-      "path": "vyre-driver-cuda/src/backend/stream_ordered_pool.rs",
-      "line": 21,
-      "pattern": "TODO",
-      "text": "//! rather than a pending TODO: on the warm steady state the"
+      "path": "vyre-driver-wgpu/src/engine/record_and_readback/mod.rs",
+      "line": 188,
+      "pattern": "placeholder_text",
+      "text": "// non-trap binding, with a zeroed placeholder for every backend-allocated"
+    },
+    {
+      "path": "vyre-driver-wgpu/src/engine/record_and_readback/mod.rs",
+      "line": 190,
+      "pattern": "placeholder_text",
+      "text": "// interpreter rejects the placeholder shape and cuda never accepted it, so"
     },
     {
       "path": "vyre-foundation/src/ir_inner/model/node/impl_node.rs",
@@ -47,7 +53,7 @@
     },
     {
       "path": "vyre-libs/src/graph/program_graph.rs",
-      "line": 348,
+      "line": 363,
       "pattern": "placeholder_text",
       "text": "// `max(edge_count, 1)`. A zero-edge graph still carries a single placeholder"
     },
@@ -65,25 +71,19 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 226,
+      "line": 234,
       "pattern": "placeholder_text",
       "text": "// op whose fixture carried a placeholder for a backend-allocated output"
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 239,
+      "line": 247,
       "pattern": "placeholder_text",
       "text": "backend-allocated output; a placeholder for one is what the artifact ABI rejects on \\"
     },
     {
-      "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 422,
-      "pattern": "placeholder_text",
-      "text": "/// what a caller-supplied placeholder has to cover."
-    },
-    {
       "path": "vyre-reference/src/execution/mod.rs",
-      "line": 74,
+      "line": 76,
       "pattern": "placeholder_text",
       "text": "// lowering table's placeholder, which cleared the output buffer instead"
     },
@@ -197,9 +197,21 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 263,
+      "line": 284,
       "pattern": "stub_text",
       "text": "/// pattern table row reading `text: \"todo!(\",` is that spelling, not a stub."
+    },
+    {
+      "path": "xtask/src/gates/hygiene_matrix/rules.rs",
+      "line": 313,
+      "pattern": "placeholder_text",
+      "text": "/// The family covers an unfinished item, a placeholder, and the macros and"
+    },
+    {
+      "path": "xtask/src/gates/hygiene_matrix/rules.rs",
+      "line": 321,
+      "pattern": "FIXME",
+      "text": "| \"FIXME\""
     },
     {
       "path": "xtask-evidence/src/report_fixture.rs",

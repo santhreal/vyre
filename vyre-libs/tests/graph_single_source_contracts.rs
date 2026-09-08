@@ -41,7 +41,6 @@ const KNOWN_DISPATCH_INFRASTRUCTURE: &[&str] = &[
     "dispatch_bridge",
     "frontier",
     "mod",
-    "plan_cache",
     "structural_kernel_pipeline",
     "traversal_dispatch_pipeline",
 ];

@@ -2,6 +2,7 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
 fn id(&self) -> &'static str;
 fn version(&self) -> &'static str;
 fn supported_ops(&self) -> &std::collections::HashSet<vyre_foundation::ir::OpId>;
+fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool;
 fn dispatch(
 &self,
 program: &Program,

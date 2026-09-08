@@ -4,7 +4,7 @@
 //! drives every scalar reducer, vector unary bitset map, and binary bitset map
 //! through the same hostile length/value corpus.
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::{alternating, lcg_u32 as lcg, ramp};
 
 type UnaryScalar = fn(&[u32]) -> u32;

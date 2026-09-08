@@ -1,11 +1,12 @@
 //! Overflow at ring/protocol boundaries  -  cumulative and arithmetic edge cases.
 
+use crate::ring_expectations::assert_ring_fault;
 use vyre_runtime::resident_work_queue::{
     descriptor::{BatchDescriptor, BuiltinOpcode, SlotDescriptor, SlotOpcode, WindowDescriptor},
     protocol::{self, control, debug},
     ResidentWorkQueue,
 };
-use vyre_runtime::PipelineError;
+use vyre_runtime::RingEncodingFault;
 
 #[test]
 fn cumulative_batch_publish_rejects_overflow_past_ring_end() {
@@ -30,7 +31,11 @@ fn cumulative_batch_publish_rejects_overflow_past_ring_end() {
     let err = batch2
         .publish_into(&mut ring)
         .expect_err("cumulative overflow past ring end must reject");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::OutOfBounds,
+        "a batch reaching past the ring end is out of bounds",
+    );
 }
 
 #[test]
@@ -43,7 +48,11 @@ fn cumulative_window_publish_rejects_overflow_past_ring_end() {
     let err = w2
         .publish_into(&mut ring)
         .expect_err("cumulative window overflow past ring end must reject");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::OutOfBounds,
+        "a window reaching past the ring end is out of bounds",
+    );
 }
 
 #[test]
@@ -57,7 +66,11 @@ fn batch_publish_fence_slot_index_overflows_cleanly_near_u32_max() {
         0,
     )
     .expect_err("batch publish at u32::MAX must fail gracefully");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Overflow,
+        "start_slot u32::MAX plus the fence slot overflows u32",
+    );
 }
 
 #[test]
@@ -67,7 +80,11 @@ fn strict_io_completion_rejects_slot_beyond_u32_max_mapped_index() {
     let err =
         vyre_runtime::resident_work_queue::io::try_complete_io_request(&mut buf, u32::MAX, true)
             .expect_err("completion at u32::MAX must be rejected on a 1-slot queue");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::OutOfBounds,
+        "a completion slot past the queue length is out of bounds",
+    );
 }
 
 #[test]

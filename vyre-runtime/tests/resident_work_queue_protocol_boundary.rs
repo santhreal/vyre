@@ -4,10 +4,11 @@
 //! that cross the host→GPU boundary. Off-by-one or overflow here
 //! causes silent corruption or OOM.
 
+use crate::ring_expectations::missing_word;
 use vyre_runtime::resident_work_queue::protocol::{
-    control_byte_len, debug_log_byte_len, encode_control, encode_empty_debug_log,
+    control, control_byte_len, debug_log_byte_len, encode_control, encode_empty_debug_log,
     encode_empty_ring, read_done_count, read_epoch, read_metrics, read_observable, ring_byte_len,
-    try_encode_control, try_read_done_count, try_read_epoch, try_read_observable,
+    try_encode_control, try_read_done_count, try_read_epoch, try_read_observable, ProtocolError,
 };
 
 #[test]
@@ -69,7 +70,13 @@ fn encode_control_with_observables() {
 #[test]
 fn try_encode_control_rejects_too_many_observables() {
     let err = try_encode_control(false, 0, u32::MAX).unwrap_err();
-    assert!(err.to_string().contains("Fix:"));
+    // `control_encode_capacity` checks the allocation cap before the protocol
+    // cap, so `u32::MAX` observables land there rather than on the word-offset
+    // addition.
+    let ProtocolError::ByteLengthOverflow { buffer, .. } = err else {
+        panic!("an oversized observable region must reject for byte-length overflow, got {err:?}")
+    };
+    assert_eq!(buffer, "control");
 }
 
 #[test]
@@ -108,13 +115,25 @@ fn read_epoch_from_control() {
 #[test]
 fn try_read_done_count_rejects_short_buffer() {
     let err = try_read_done_count(b"").unwrap_err();
-    assert!(err.to_string().contains("Fix:"));
+    let (buffer, word_idx, byte_len) = missing_word(
+        &err,
+        "an empty control buffer must name the done-count word it could not read",
+    );
+    assert_eq!(buffer, "control");
+    assert_eq!(word_idx, control::DONE_COUNT as usize);
+    assert_eq!(byte_len, 0);
 }
 
 #[test]
 fn try_read_epoch_rejects_short_buffer() {
     let err = try_read_epoch(b"").unwrap_err();
-    assert!(err.to_string().contains("Fix:"));
+    let (buffer, word_idx, byte_len) = missing_word(
+        &err,
+        "an empty control buffer must name the epoch word it could not read",
+    );
+    assert_eq!(buffer, "control");
+    assert_eq!(word_idx, control::EPOCH as usize);
+    assert_eq!(byte_len, 0);
 }
 
 #[test]
@@ -130,7 +149,13 @@ fn read_observable_from_control() {
 fn try_read_observable_rejects_out_of_bounds() {
     let bytes = encode_control(false, 0, 1).unwrap();
     let err = try_read_observable(&bytes, 99).unwrap_err();
-    assert!(err.to_string().contains("Fix:"));
+    let (buffer, word_idx, byte_len) = missing_word(
+        &err,
+        "an observable index past the encoded region must name the missing word",
+    );
+    assert_eq!(buffer, "control");
+    assert_eq!(word_idx, (control::OBSERVABLE_BASE + 99) as usize);
+    assert_eq!(byte_len, bytes.len());
 }
 
 #[test]

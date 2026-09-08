@@ -219,8 +219,7 @@ impl BenchCase for SyntheticCountWorkload {
             timed,
             resident_used,
             reset_bytes: resident_reset_bytes,
-            batch_wall_ns,
-            batch_len,
+            ..
         } = sample;
         let baseline_start = std::time::Instant::now();
         let (baseline_outputs, counted) = match &prepared.baseline {

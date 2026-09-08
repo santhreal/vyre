@@ -24,7 +24,7 @@
 //! insensitive to the multi-round modeling gap. The oracle is `bellman_shortest_path::cpu_ref`, the
 //! authoritative CPU reference. Values are exact integers → BIT-EXACT (no tolerance).
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::bellman_tn_order::bellman_tn_order_via;
 use vyre_megakernel::SemanticExecutionError;

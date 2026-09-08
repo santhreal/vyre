@@ -4,7 +4,7 @@
 
 #[path = "harness/generated_atomic_matrix.rs"]
 mod generated_atomic_matrix;
-mod harness;
+use crate::harness;
 
 use generated_atomic_matrix::{
     assert_two_u32_output_buffers, atomic_compare_exchange_return_value_program,

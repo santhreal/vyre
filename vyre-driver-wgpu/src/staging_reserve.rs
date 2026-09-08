@@ -19,16 +19,6 @@ pub(crate) fn reserve_vec<T>(
     ReservationPolicy::new(context, fix).reserve_vec_additional(vec, additional, item)
 }
 
-pub(crate) fn reserve_vec_exact_for_len<T>(
-    vec: &mut Vec<T>,
-    target_len: usize,
-    context: &'static str,
-    item: &'static str,
-    fix: &'static str,
-) -> Result<(), BackendError> {
-    ReservationPolicy::new(context, fix).reserve_vec_exact_for_len(vec, target_len, item)
-}
-
 pub(crate) fn reserve_smallvec<A>(
     vec: &mut SmallVec<A>,
     additional: usize,
@@ -87,11 +77,11 @@ pub(crate) fn reserve_multi_gpu_vec<T>(
     )
 }
 
-// Inline: covers `reserve_smallvec`, `reserve_vec`, `reserve_vec_exact_for_len`, which no
-// integration test can name.
+// Inline: covers `reserve_smallvec` and `reserve_vec`, which no integration test
+// can name.
 #[cfg(test)]
 mod tests {
-    use super::{reserve_smallvec, reserve_vec, reserve_vec_exact_for_len};
+    use super::{reserve_smallvec, reserve_vec};
     use smallvec::SmallVec;
 
     #[test]
@@ -107,18 +97,6 @@ mod tests {
         .expect("Fix: generated Vec reservation should succeed");
         assert_eq!(vec, vec![1u8, 2, 3]);
         assert!(vec.capacity() >= 20);
-
-        let mut exact = vec![9u8];
-        reserve_vec_exact_for_len(
-            &mut exact,
-            33,
-            "generated WGPU exact reservation test",
-            "slot",
-            "split the generated batch",
-        )
-        .expect("Fix: generated exact Vec reservation should succeed");
-        assert_eq!(exact, vec![9u8]);
-        assert!(exact.capacity() >= 33);
 
         let mut small = SmallVec::<[u8; 2]>::new();
         small.push(7);

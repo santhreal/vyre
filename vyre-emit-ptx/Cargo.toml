@@ -1,6 +1,7 @@
 [package]
 name = "vyre-emit-ptx"
 version = "0.8.0"
+autotests = false
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "PTX text emitter for vyre KernelDescriptor. Produces NVRTC-compatible CUDA assembly."
@@ -42,7 +43,7 @@ nvrtc = []
 [dev-dependencies]
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
 vyre-test-support.workspace = true
-# `tests/support/spec_variant_tables.rs`, shared by every suite that needs the
+# `vyre_test_support::spec_variant_tables`, shared by every suite that needs the
 # frozen operator variant space, names `vyre_spec` directly.
 vyre-spec.workspace = true
 vyre-emit-naga = { path = "../vyre-emit-naga" }
@@ -51,13 +52,5 @@ cudarc = { workspace = true }
 proptest.workspace = true
 
 [[test]]
-name = "pattern_analysis_contracts"
-path = "tests/pattern_analysis_contracts/mod.rs"
-
-[[test]]
-name = "nvrtc_compile_gate"
-path = "tests/nvrtc_compile_gate/mod.rs"
-
-[[test]]
-name = "emit_contracts"
-path = "tests/emit_contracts/mod.rs"
+name = "all_tests"
+path = "tests/all_tests.rs"

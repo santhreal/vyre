@@ -56,9 +56,9 @@ pub(super) fn check_7_trend(report: &mut Report, ops: &[OpInfo]) -> usize {
         (previous, tag.clone())
     } else if let Some(current_baseline) = current_composition_baseline(&root) {
         report.note(format!("  • previous tag `{tag}` predates composition baselines; comparing against the checked-in bootstrap baseline"));
-        (current_baseline, "audits/lego-composition.tsv".to_string())
+        (current_baseline, COMPOSITION_BASELINE_PATH.to_string())
     } else {
-        report.find(violation(format!("  ✗ previous tag `{tag}` has no composition baseline and no bootstrap baseline is checked in. Fix: run `./cargo_full run --bin xtask -- lego-audit --write-baseline` and commit audits/lego-composition.tsv.")));
+        report.find(violation(format!("  ✗ previous tag `{tag}` has no composition baseline and no bootstrap baseline is checked in. Fix: run `./cargo_full run --bin xtask -- lego-trend --write-baseline` and commit {COMPOSITION_BASELINE_PATH}.")));
         return 1;
     };
 
@@ -120,7 +120,7 @@ pub(super) fn composition_fractions(ops: &[OpInfo]) -> BTreeMap<String, f64> {
         .collect()
 }
 
-pub(super) const COMPOSITION_BASELINE_PATH: &str = "audits/lego-composition.tsv";
+pub(super) use xtask::artifact_paths::LEGO_COMPOSITION_BASELINE as COMPOSITION_BASELINE_PATH;
 
 pub(super) fn write_composition_baseline(root: &std::path::Path, ops: &[OpInfo]) -> io::Result<()> {
     let path = root.join(COMPOSITION_BASELINE_PATH);
@@ -242,5 +242,35 @@ mod tests {
                 "`{row}` composes nothing by design, so it must also be a declared Tier-3 leaf or checks 6 and 8 flag it"
             );
         }
+    }
+
+    /// WHY: the trend check compares against a committed table and its fix line
+    /// names a command that rewrites it. While no code called the writer, the
+    /// table could only ever be edited by hand, and a ratchet whose baseline
+    /// cannot be regenerated from the registry pins whatever a human typed.
+    /// This holds the writer to the reader: what one records, the other reads
+    /// back unchanged.
+    ///
+    /// What this does not catch: whether the fractions themselves are right.
+    /// `composition_fractions` owns that and the checks above read it.
+    #[test]
+    fn a_written_baseline_reads_back_as_the_fractions_it_recorded() {
+        let root = tempfile::tempdir().expect("Fix: create a temporary directory.");
+        let mut composed =
+            crate::gates::lego_audit::test_ops::op("vyre-libs::alpha::wide", Tier::T3, &[]);
+        composed.own_nodes = 1;
+        composed.composed_nodes = 3;
+        let flat = crate::gates::lego_audit::test_ops::op("vyre-libs::alpha::flat", Tier::T3, &[]);
+        let ops = vec![composed, flat];
+
+        write_composition_baseline(root.path(), &ops).expect("Fix: write the baseline.");
+        let read = current_composition_baseline(root.path())
+            .expect("Fix: the writer must produce a table its own reader accepts.");
+
+        assert_eq!(
+            read,
+            composition_fractions(&ops),
+            "Fix: a baseline the reader cannot recover is a ratchet against a number nobody can regenerate."
+        );
     }
 }

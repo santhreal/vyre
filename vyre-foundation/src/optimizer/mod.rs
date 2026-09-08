@@ -347,12 +347,11 @@ pub trait ProgramPass: sealed::Sealed + Send + Sync {
 
     /// Transform a program for the adapter the scheduler was built for.
     ///
-    /// The default ignores `caps`, which is the correct answer for a rewrite
-    /// that is valid on every device. Overriding this is what makes a pass
-    /// device-dependent; picking a profile inside [`ProgramPass::transform`]
+    /// The default ignores the adapter, which is the correct answer for a
+    /// rewrite that is valid on every device. Overriding this is what makes a
+    /// pass device-dependent; picking a profile inside [`ProgramPass::transform`]
     /// only hides which device the program was compiled for.
-    fn transform_for_adapter(&self, program: Program, caps: &AdapterCaps) -> PassResult {
-        let _ = caps;
+    fn transform_for_adapter(&self, program: Program, _caps: &AdapterCaps) -> PassResult {
         self.transform(program)
     }
 

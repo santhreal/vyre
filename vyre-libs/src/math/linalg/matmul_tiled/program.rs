@@ -252,9 +252,13 @@ mod tests {
 
     #[test]
     fn a_target_without_descriptor_mma_emits_the_cooperative_body() {
-        let program =
-            build_matmul_tiled_program(f16_mma_spec(MmaCapabilityRecord::no_descriptor_mma()))
-                .expect("Fix: a target without descriptor MMA must fall back to cooperative.");
+        let program = build_matmul_tiled_program(f16_mma_spec(MmaCapabilityRecord {
+            descriptor_mma: false,
+            f16_m16n8k16: false,
+            bf16_m16n8k16: false,
+            tf32_m16n8k4: false,
+        }))
+        .expect("Fix: a target without descriptor MMA must fall back to cooperative.");
         let debug = format!("{:?}", program.entry());
 
         assert!(!debug.contains("mma_c0"));

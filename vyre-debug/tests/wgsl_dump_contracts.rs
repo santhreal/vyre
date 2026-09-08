@@ -2,8 +2,7 @@
 use vyre_debug::{dump_wgsl, dump_wgsl_with_lines};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
-#[path = "program_fixtures/mod.rs"]
-mod program_fixtures;
+use crate::program_fixtures;
 use program_fixtures::minimal_program;
 
 #[test]

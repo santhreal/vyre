@@ -31,5 +31,7 @@ mod program;
 pub mod rewrite_action;
 mod rule_shapes;
 
-pub use driver::{gpu_algebraic_identities, PatternMatchError};
+pub use driver::{
+    gpu_algebraic_identities, gpu_algebraic_identities_with_canonicals, PatternMatchError,
+};
 pub use program::{build_pattern_match_program, build_pattern_match_program_with_cse};

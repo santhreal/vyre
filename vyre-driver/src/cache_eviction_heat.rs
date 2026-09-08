@@ -61,21 +61,13 @@ impl CacheEntryStats {
 /// Entries with identical heat (e.g. two cold entries with the same
 /// `hit_count` and `last_hit_time_s`) are evicted in input order
 /// for determinism  -  bench reproducibility matters here.
-#[must_use]
-pub fn entries_to_evict(
-    entries: &[CacheEntryStats],
-    capacity: usize,
-    current_time_s: f64,
-) -> Vec<u64> {
-    try_entries_to_evict(entries, capacity, current_time_s).unwrap_or_default()
-}
-
-/// Fallible variant of [`entries_to_evict`] for daemon/cache paths that must
-/// report allocator pressure instead of panicking.
 ///
 /// # Errors
 ///
-/// Returns an actionable error when ranking/result staging cannot reserve.
+/// Returns an actionable error when ranking or result staging cannot reserve.
+/// There is no infallible form: an empty list is what a cache under capacity
+/// returns, so allocation pressure reported as one keeps every entry and lets
+/// the cache grow past the capacity it was asked to hold.
 pub fn try_entries_to_evict(
     entries: &[CacheEntryStats],
     capacity: usize,

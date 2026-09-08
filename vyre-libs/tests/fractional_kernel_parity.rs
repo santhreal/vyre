@@ -52,16 +52,6 @@ fn grunwald_letnikov_kernel(alpha: f64, n: u32) -> Vec<f64> {
     vyre_reference::composition_witness::grunwald_letnikov_kernel_witness(alpha, n)
 }
 
-fn grunwald_letnikov_kernel_into(alpha: f64, n: u32, out: &mut Vec<f64>) {
-    if let Err(error) = try_grunwald_letnikov_kernel_into(alpha, n, out) {
-        panic!("Grünwald-Letnikov kernel generation failed: {error}");
-    }
-}
-
-fn try_grunwald_letnikov_kernel_into(alpha: f64, n: u32, out: &mut Vec<f64>) -> Result<(), String> {
-    vyre_reference::composition_witness::try_grunwald_letnikov_kernel_witness_into(alpha, n, out)
-}
-
 #[must_use]
 fn kernel_to_fixed_16_16(kernel: &[f64], step: f64, alpha: f64) -> Vec<u32> {
     vyre_reference::composition_witness::kernel_to_fixed_16_16_witness(kernel, step, alpha)

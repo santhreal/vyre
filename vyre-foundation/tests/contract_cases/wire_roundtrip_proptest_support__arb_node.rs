@@ -54,24 +54,3 @@ fn top_level_body(program: &Program) -> &[Node] {
         _ => program.entry(),
     }
 }
-
-/// Mirror of `serial::wire::encode::put_expr::canonical_f32_bits` so
-/// this crate's tests can compare against the wire's canonical form
-/// without pulling the private encoder helper.
-///
-/// Wire canonicalization is more aggressive than
-/// `vyre_reference::ieee754::canonical_f32`: BOTH subnormal signs
-/// AND -0.0 flush to +0.0. NaN payloads collapse to the single
-/// positive qNaN (0x7FC0_0000).
-fn canonicalize_f32(value: f32) -> f32 {
-    if value.is_nan() {
-        return f32::from_bits(0x7FC0_0000);
-    }
-    if value.is_subnormal() {
-        return 0.0_f32;
-    }
-    if value.to_bits() == (-0.0_f32).to_bits() {
-        return 0.0_f32;
-    }
-    value
-}

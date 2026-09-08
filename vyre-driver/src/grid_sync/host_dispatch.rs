@@ -75,7 +75,15 @@ pub fn dispatch_with_grid_sync_split_timed(
     ))
 }
 
-fn seed_backend_allocated_segment_inputs<'a>(
+/// Zero-fill every segment input no caller supplies.
+///
+/// The rotating map already holds one entry per buffer
+/// `BufferDecl::consumes_host_input` admits, so a segment input still missing
+/// from it is a buffer the host never staged: an output the backend allocates,
+/// or a buffer of a device-resident kind. A later segment may read one before
+/// any segment writes it, and the read has to see zeros rather than fail for
+/// want of bytes nobody was ever going to pass.
+fn seed_segment_inputs_the_host_does_not_stage<'a>(
     program: &Program,
     segments: &[PlannedGridSyncSegment],
     current_inputs: &mut HashMap<Ident, GridSyncInput<'a>>,
@@ -94,27 +102,24 @@ fn seed_backend_allocated_segment_inputs<'a>(
                 ),
             });
         };
-        if !buffer.is_backend_allocated_output() {
-            continue;
-        }
         let static_len =
             buffer
                 .static_byte_len()
                 .map_err(|error| BackendError::InvalidProgram {
-                    fix: format!("Fix: cannot seed grid-sync output `{name}`: {error}"),
+                    fix: format!("Fix: cannot seed grid-sync buffer `{name}`: {error}"),
                 })?;
         let byte_len = static_len
             .or_else(|| buffer.output_byte_range().map(|range| range.end))
             .ok_or_else(|| BackendError::InvalidProgram {
                 fix: format!(
-                    "Fix: grid-sync output `{name}` is read-modify-written before its first split output but has no static byte size. Declare a count or output byte range."
+                    "Fix: grid-sync buffer `{name}` is read before any segment writes it and no caller stages it, but it has no static byte size. Declare a count or output byte range."
                 ),
             })?;
         let mut zeroed = Vec::new();
         reserve_grid_sync_vec(
             &mut zeroed,
             byte_len,
-            "grid-sync backend-allocated output seed",
+            "grid-sync unstaged segment input seed",
         )?;
         zeroed.resize(byte_len, 0);
         current_inputs.insert(name.clone(), GridSyncInput::Owned(zeroed));
@@ -174,7 +179,7 @@ where
     for (name, bytes) in initial_input_names.into_iter().zip(inputs.iter().copied()) {
         current_inputs.insert(name, GridSyncInput::Borrowed(bytes));
     }
-    seed_backend_allocated_segment_inputs(program, &segments, &mut current_inputs)?;
+    seed_segment_inputs_the_host_does_not_stage(program, &segments, &mut current_inputs)?;
     let mut segment_outputs = Vec::new();
     reserve_grid_sync_vec(
         &mut segment_outputs,

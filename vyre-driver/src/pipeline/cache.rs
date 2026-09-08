@@ -384,12 +384,11 @@ impl PipelineFeatureFlags {
 /// layout binds undefined data; wrong workgroup-size launches beyond
 /// guarantees).
 ///
-/// `#[non_exhaustive]` is enforced at the type level via the private
-/// `__phantom` field: external callers construct keys through
-/// [`PipelineCacheKey::new`] and cannot match exhaustively, so additive
-/// key fields do not break downstream matches.
+/// `#[non_exhaustive]` keeps the type additive: external callers construct
+/// keys through [`PipelineCacheKey::new`] and cannot match exhaustively, so an
+/// added key field does not break a downstream match.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-
+#[non_exhaustive]
 pub struct PipelineCacheKey {
     /// Key format version. Bumped to invalidate every cache entry
     /// without an API break.
@@ -411,10 +410,6 @@ pub struct PipelineCacheKey {
     /// Backend identity. Prevents pipelines from different backends from
     /// colliding when they happen to produce identical shader hashes.
     pub backend_id: BackendId,
-    /// Reserved private field so `PipelineCacheKey` cannot be
-    /// constructed by structural literal (forward-compatibility lever).
-    #[allow(dead_code)]
-    __phantom: core::marker::PhantomData<()>,
 }
 
 impl PipelineCacheKey {
@@ -437,7 +432,6 @@ impl PipelineCacheKey {
             workgroup_size,
             feature_flags,
             backend_id,
-            __phantom: core::marker::PhantomData,
         }
     }
 }

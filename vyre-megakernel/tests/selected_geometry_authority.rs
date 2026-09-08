@@ -23,10 +23,9 @@ use vyre_megakernel::{
 
 use vyre_test_support::graph_values::{graph_output, u32_symbolic};
 
-use vyre_test_support::pass_programs::{add_program, copy_program};
+use vyre_test_support::pass_programs::{add_program, atomic_sum_program, copy_program};
 
-#[path = "graph_fixtures/mod.rs"]
-mod graph_fixtures;
+use crate::graph_fixtures;
 
 fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
     u32_symbolic(access, lifetime)
@@ -233,6 +232,66 @@ fn node_programs_are_frozen_at_the_selected_workgroup() {
             program.workgroup_size,
             record_for(&artifact, node.id).workgroup_size,
             "node {} program declares a shape the artifact did not select",
+            node.id.0
+        );
+    }
+}
+
+/// An atomic reduction of `count` elements into a one-element accumulator.
+///
+/// The accumulator is the narrowest value the node binds and the first one a
+/// logical region reads its domain from, so a coverage taken from the region
+/// alone spans one point while the launch has to span `count`.
+fn atomic_reduction_graph(count: u32) -> ProgramGraph {
+    ProgramGraph::from_program("reduce", atomic_sum_program(count, false))
+        .expect("the reduction graph is accepted")
+}
+
+/// WHY: an atomic accumulates over the invocations that ran, so a launch below
+/// the span its program reads returns a partial answer rather than skipping idle
+/// lanes. The selected coverage was read off the region domain, which for this
+/// shape is the one-element accumulator, and the artifact route summed one
+/// workgroup's worth of a 4096-element input while the below-admission dispatch
+/// path summed all of it. The element count is derived from the frozen
+/// declarations of every node the artifact carries, so the contract holds for
+/// whatever program shape a compile records rather than for this one.
+#[test]
+fn every_recorded_launch_covers_the_elements_its_program_reads() {
+    let request = CompileRequest::new(
+        atomic_reduction_graph(4096),
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("the reduction request validates");
+    let artifact = compile(&request).expect("the reduction request compiles");
+
+    for node in artifact.nodes() {
+        let program = Program::from_wire(&node.program).expect("a recorded program decodes");
+        let elements = program
+            .buffers()
+            .iter()
+            .map(|buffer| u64::from(buffer.count()))
+            .max()
+            .expect("the recorded program declares a buffer");
+        let record = record_for(&artifact, node.id);
+        assert!(
+            record.logical_coverage.iter().copied().product::<u64>() >= elements,
+            "node {} covers {:?} logical points and its program reads {elements}",
+            node.id.0,
+            record.logical_coverage
+        );
+        let invocations = record
+            .grid
+            .iter()
+            .zip(record.workgroup_size)
+            .map(|(blocks, lanes)| u64::from(*blocks) * u64::from(lanes))
+            .product::<u64>();
+        assert!(
+            invocations >= elements,
+            "node {} launches {invocations} invocations over {elements} elements",
             node.id.0
         );
     }

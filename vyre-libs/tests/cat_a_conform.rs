@@ -16,7 +16,7 @@
     feature = "pattern-dfa",
 ))]
 
-mod wire_words;
+use crate::wire_words;
 use vyre::ir::Program;
 use vyre_reference::value::Value;
 use wire_words::{decode_u32_words, u32_bytes};

@@ -2,7 +2,7 @@
 
 #![allow(dead_code, unreachable_pub)]
 
-mod fixture_target;
+use crate::fixture_target;
 #[path = "../templates/artifact.rs.tmpl"]
 mod generated_loader;
 

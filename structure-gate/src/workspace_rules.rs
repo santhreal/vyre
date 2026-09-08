@@ -32,7 +32,7 @@ pub(crate) const ALLOWED_MEMBERS: &[&str] = &[
     "vyre-aot",
     // Sole owner of the registry link anchors: it names every crate that submits
     // into an inventory registry so no consumer has to.
-    "vyre-registry-link",
+    REGISTRY_LINK_OWNER,
     "vyre-bench",
     "vyre-debug",
     "vyre-driver",

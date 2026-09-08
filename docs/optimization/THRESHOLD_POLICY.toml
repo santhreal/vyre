@@ -26,7 +26,7 @@ release_rule = "VX-475"
 
 [[threshold]]
 id = "VX475-TIERING_EVENT_CAPACITY_MIN"
-path = "vyre-driver-wgpu/src/buffer/pool.rs"
+path = "vyre-driver-wgpu/src/buffer/tiering.rs"
 name = "TIERING_EVENT_CAPACITY_MIN"
 unit = "tiering events"
 provenance = "Existing minimum event-log capacity for WGPU buffer pool tiering telemetry."
@@ -37,7 +37,7 @@ release_rule = "VX-475"
 
 [[threshold]]
 id = "VX475-TIERING_EVENT_CAPACITY_MAX"
-path = "vyre-driver-wgpu/src/buffer/pool.rs"
+path = "vyre-driver-wgpu/src/buffer/tiering.rs"
 name = "TIERING_EVENT_CAPACITY_MAX"
 unit = "tiering events"
 provenance = "Existing maximum event-log capacity for WGPU buffer pool tiering telemetry."

@@ -6,6 +6,7 @@
 //! `vyre-lower`.
 
 use std::sync::mpsc;
+use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_lower::KernelDescriptor;
 
 mod emitter;
@@ -47,13 +48,35 @@ pub struct BindResultEntry {
 
 /// Emit a `naga::Module` from one verified `KernelDescriptor`.
 ///
+/// The module is emitted under [`FloatLoweringMode::Contracted`], which is
+/// what every caller got before the mode existed and what keeps the emitted
+/// text byte-identical for a program that states no rounding policy.
+///
 /// # Errors
 ///
 /// Returns [`EmitError`] when a binding layout cannot be represented in
 /// Naga IR or when the descriptor contains an operation outside this emitter's
 /// supported lowering set.
 pub fn emit(desc: &KernelDescriptor) -> Result<naga::Module, EmitError> {
-    emitter::emit_uncached(desc)
+    emit_with_float_mode(desc, FloatLoweringMode::Contracted)
+}
+
+/// Emit a `naga::Module` under an explicit f32 rounding policy.
+///
+/// Under [`FloatLoweringMode::StrictIeee`] every f32 multiply publishes its
+/// rounded result through an integer reinterpretation before an adjacent add
+/// reads it, so the target has no multiply-add pair left to contract and the
+/// emitted arithmetic rounds exactly where IEEE-754 says it does. The cost is
+/// paid only by a caller that asks for it.
+///
+/// # Errors
+///
+/// Same as [`emit`].
+pub fn emit_with_float_mode(
+    desc: &KernelDescriptor,
+    float_lowering: FloatLoweringMode,
+) -> Result<naga::Module, EmitError> {
+    emitter::emit_uncached(desc, float_lowering)
 }
 
 /// Emit a Naga module only when `target` supports every descriptor requirement.

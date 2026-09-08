@@ -162,21 +162,25 @@ pub fn is_reference_output(decl: &vyre_foundation::ir::BufferDecl) -> bool {
 
 /// Does the caller have to supply a `Value` for this buffer?
 ///
-/// The other half of the interpreter's ABI, and the source of truth for it:
-/// `reference_eval` consumes exactly one `Value` per matching decl, in
-/// `Program::buffers` order. A workgroup buffer is allocated per dispatch and a
-/// backend-allocated output is zero-filled, so neither is supplied.
+/// The other half of the interpreter's ABI: `reference_eval` consumes exactly
+/// one `Value` per matching decl, in `Program::buffers` order.
 ///
-/// Callers that build an input vector MUST use this rather than re-deriving the
-/// selection. The obvious hand-rolled form, `!decl.is_output()`, is not the same
-/// predicate: `is_backend_allocated_output` is the cross-backend contract, and
-/// the two disagree on a decl that is marked as an output without being
-/// backend-allocated. A copy that drifts shifts every later input by one, which
-/// surfaces as a missing value for whichever buffer the offset ran past rather
-/// than as anything pointing at the copy.
+/// The rule itself is `BufferDecl::consumes_host_input`, which `vyre_driver`'s
+/// binding-role mapping and every backend also read, so the oracle asks for the
+/// same list a device dispatch asks for. This function used to spell the rule
+/// out as `access() != Workgroup && !is_backend_allocated_output()`, which
+/// admitted three declarations no backend stages from the host: a `Shared`-kind
+/// buffer, a `Persistent`-kind buffer, and a `pipeline_live_out` buffer whose
+/// access is not `ReadWrite`. A program declaring one of those could not pass
+/// parity, because the oracle wanted one more value than the device, and the
+/// failure named a missing input rather than the disagreement.
+///
+/// Callers that build an input vector read this rather than re-deriving the
+/// selection. A copy that drifts shifts every later input by one, which surfaces
+/// as a missing value for whichever buffer the offset ran past.
 #[must_use]
 pub fn is_reference_input(decl: &vyre_foundation::ir::BufferDecl) -> bool {
-    decl.access() != BufferAccess::Workgroup && !decl.is_backend_allocated_output()
+    decl.consumes_host_input()
 }
 
 /// Position of the buffer `name` within `reference_eval`'s returned outputs, the
@@ -217,6 +221,10 @@ pub(crate) fn run_hashmap_reference(
     if let Some(source) = validation_report.errors.into_iter().next() {
         return Err(ReferenceError::validation(source));
     }
+    // Every public entry point reaches this function, so the termination
+    // contract is armed once here. A caller that already armed a budget, or an
+    // enclosing evaluation, keeps its own ceiling and this guard is inert.
+    let _budget = crate::execution::step_budget::arm(program);
     let mut storage = FxHashMap::default();
     // The interpreter's ABI is exactly the artifact ABI: one Value per
     // `is_reference_input` buffer. It used to also accept a vector sized to
@@ -356,6 +364,17 @@ pub(crate) fn run_hashmap_reference(
     };
     let [workgroup_count_x, workgroup_count_y, workgroup_count_z] = counts;
     let entry = program.entry();
+    // The budget was armed before the grid was known, so it carries the fixed
+    // floor. Both terms of the program's own declared work are fixed now, so a
+    // program whose extents are constant is admitted at the work it declares
+    // rather than refused against a ceiling sized for a smaller corpus.
+    crate::execution::step_budget::admit_declared_work(
+        entry,
+        u64::from(workgroup_count_x)
+            .saturating_mul(u64::from(workgroup_count_y))
+            .saturating_mul(u64::from(workgroup_count_z))
+            .saturating_mul(u64::from(invocations_per_workgroup)),
+    );
     #[cfg(feature = "subgroup-ops")]
     let uses_subgroup_ops = vyre_foundation::program_caps::scan(program).subgroup_ops;
     // Grid-sync-aware execution: if the body carries `GridSync` barriers (a fused
@@ -412,17 +431,6 @@ pub(crate) fn run_hashmap_reference(
     }
     let mut storage = memory.storage;
     output_decls . into_iter () . map (| decl | { storage . remove (decl . name ()) . map (| buffer | output_value (buffer , & decl)) . ok_or_else (| | { let name = decl . name () ; ReferenceError::new(format ! ("missing output buffer `{name}` after dispatch. Fix: keep buffer declarations unique.")) }) }) . collect ()
-}
-
-/// Bytes of an output buffer a caller actually reads back.
-///
-/// Equals the declared byte length for an ordinary output. For an output whose
-/// declaration carries an explicit byte range, the padding beyond that range
-/// belongs to the kernel's tiling, never to the caller, so the range length is
-/// what a caller-supplied placeholder has to cover.
-fn logical_output_byte_len(decl: &vyre_foundation::ir::BufferDecl, declared_bytes: usize) -> usize {
-    decl.output_byte_range()
-        .map_or(declared_bytes, |range| range.len())
 }
 
 /// Reject a caller-supplied buffer that is smaller than its declaration.
@@ -689,19 +697,15 @@ fn eval_expr(
                 })
             }
         }
+        #[cfg(feature = "subgroup-ops")]
         Expr::SubgroupReduce { op, value } => {
-            #[cfg(feature = "subgroup-ops")]
-            {
-                eval_subgroup_reduce(*op, value, invocation, snapshots, memory)
-            }
-            #[cfg(not(feature = "subgroup-ops"))]
-            {
-                // Single-lane interpreter: a reduction over one lane is that
-                // lane's value for every operator (Add/Mul/Min/Max/And/Or/Xor).
-                let _ = op;
-                eval_expr(value, invocation, memory)
-            }
+            eval_subgroup_reduce(*op, value, invocation, snapshots, memory)
         }
+        // Single-lane interpreter: a reduction over one lane is that lane's
+        // value for every operator (Add/Mul/Min/Max/And/Or/Xor), so the
+        // operator is not read.
+        #[cfg(not(feature = "subgroup-ops"))]
+        Expr::SubgroupReduce { op: _, value } => eval_expr(value, invocation, memory),
         _ => Err(ReferenceError::new("hashmap reference interpreter encountered an unknown expression variant. Fix: add explicit reference semantics for the new ExprNode before dispatch.")),
     }
 }

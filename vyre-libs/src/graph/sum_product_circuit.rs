@@ -31,7 +31,7 @@
 //! | `vyre-libs::ml::probabilistic` | tractable Bayesian inference |
 //! | `vyre-libs::security::risk_score` | calibrated uncertainty on findings |
 //! | `vyre-libs::ml::density` | density estimation / anomaly detection |
-//! | `vyre-driver/src/cost_model/probabilistic.rs` | **vyre's dispatch cost model** as probabilistic circuit over Program features → calibrated runtime + uncertainty (paired with conformal intervals) → feed megakernel scheduler as soft constraints |
+//! | `vyre-megakernel/src/cost/mod.rs` | **vyre's dispatch cost model** as probabilistic circuit over Program features → calibrated runtime + uncertainty (paired with conformal intervals) → feed megakernel scheduler as soft constraints |
 //!
 //! # Encoding
 //!
@@ -42,6 +42,7 @@
 //!
 //! u32 fixed-point 16.16 throughout for outputs and weights.
 
+use crate::builder::trip_count::clamped_by_extents;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -187,7 +188,10 @@ fn sum_product_pass_body(
     let mut body = vec![
         Node::let_bind("kind", Expr::load(kinds, t.clone())),
         Node::let_bind("co", Expr::load(child_offsets, t.clone())),
-        Node::let_bind("cc", Expr::load(child_counts, t.clone())),
+        Node::let_bind(
+            "cc",
+            clamped_by_extents(Expr::load(child_counts, t.clone()), children, [weights]),
+        ),
     ];
     // A wave is only a topological order while every child sits at a strictly
     // smaller depth. Fed a `depths` array that does not describe the circuit,

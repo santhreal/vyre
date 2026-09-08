@@ -21,7 +21,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 use harness::live_backend;
 
 use vyre_driver::parity_harness::u32_binop_parity;

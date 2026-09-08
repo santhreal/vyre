@@ -147,21 +147,6 @@ pub(crate) fn semiring_gemm_cpu(
     c
 }
 
-/// CPU reference using a caller-owned output buffer.
-#[cfg(test)]
-pub(crate) fn semiring_gemm_cpu_into(
-    a: &[u32],
-    b: &[u32],
-    m: u32,
-    n: u32,
-    k: u32,
-    semiring: Semiring,
-    c: &mut Vec<u32>,
-) {
-    try_semiring_gemm_cpu_into(a, b, m, n, k, semiring, c)
-        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - semiring_gemm_cpu_into failed: invalid GEMM shape");
-}
-
 /// Fallible CPU reference using a caller-owned output buffer.
 #[cfg(test)]
 pub(crate) fn try_semiring_gemm_cpu_into(

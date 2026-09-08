@@ -70,8 +70,3 @@ pub(crate) fn single_edge_kind_bit1_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
 pub(crate) fn self_loop_isolated_node_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     (vec![0, 1, 1], vec![0], vec![1])
 }
-
-/// 4-node two-component disjoint graph: 0 -> 1, 2 -> 3.
-pub(crate) fn two_component_disjoint_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    (vec![0, 1, 1, 2, 2], vec![1, 3], vec![1, 1])
-}

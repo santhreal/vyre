@@ -16,6 +16,7 @@
 //!
 //! Composes `matroid_exchange_bfs_step` and `path_reconstruct`.
 
+use crate::builder::trip_count::clamped_by_extents;
 use crate::graph::path_reconstruct::path_reconstruct;
 use std::sync::Arc;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
@@ -228,7 +229,10 @@ pub fn matroid_intersection_full(
         let mut on_sink = vec![
             Node::store("target_node_buf", Expr::u32(0), Expr::var("sink_node")),
             wrap_anonymous_region(OP_ID, recon.entry().to_vec()),
-            Node::let_bind("p_len", Expr::load(path_len, Expr::u32(0))),
+            Node::let_bind(
+                "p_len",
+                clamped_by_extents(Expr::load(path_len, Expr::u32(0)), path_out, []),
+            ),
             // Cardinality bookkeeping for the static-graph termination: as we toggle the path P,
             // count nodes this toggle ADDS (0->1 = `gained`) vs REMOVES (1->0 = `lost`), so the
             // net change |s0^P| - |s0| = gained - lost is known without a second augmentation.

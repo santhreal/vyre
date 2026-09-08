@@ -4,6 +4,7 @@ impl vyre_megakernel::execution::SemanticExecutor for vyre_driver_reference::Ref
 pub const vyre_driver_reference::CPU_REF_BACKEND_ID: &str
 pub const vyre_driver_reference::CPU_REF_TARGET_ID: vyre_foundation::operation::target_facet::TargetId
 pub fn vyre_driver_reference::CpuRefBackend::dispatch_borrowed(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_reference::CpuRefBackend::honors_float_lowering(&self, _mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool
 pub fn vyre_driver_reference::CpuRefBackend::id(&self) -> &'static str
 pub fn vyre_driver_reference::CpuRefBackend::max_compute_workgroups_per_dimension(&self) -> u32
 pub fn vyre_driver_reference::CpuRefBackend::max_workgroup_size(&self) -> [u32; 3]

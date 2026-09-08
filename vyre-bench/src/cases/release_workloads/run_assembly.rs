@@ -22,34 +22,6 @@ pub(super) fn resident_reset_transfer_accounting(
     )
 }
 
-fn bench_run_from_timed(
-    timed: vyre_driver::TimedDispatchResult,
-    inputs: Vec<Vec<u8>>,
-    baseline_outputs: Vec<Vec<u8>>,
-    baseline_wall: u64,
-    custom_name: &str,
-    custom_value: u32,
-) -> Result<BenchRun, BenchError> {
-    let input_bytes = inputs.iter().map(Vec::len).sum::<usize>() as u64;
-    let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
-    let bytes_touched = input_bytes.saturating_add(output_bytes);
-    let accounting = TransferAccounting {
-        bytes_touched,
-        bytes_read: input_bytes,
-        bytes_written: output_bytes,
-    };
-    bench_run_from_timed_with_accounting(
-        timed,
-        input_bytes,
-        baseline_outputs,
-        baseline_wall,
-        custom_name,
-        custom_value,
-        bytes_touched,
-        accounting,
-    )
-}
-
 pub(super) fn bench_run_from_timed_with_accounting(
     timed: vyre_driver::TimedDispatchResult,
     input_bytes: u64,

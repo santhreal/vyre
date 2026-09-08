@@ -15,28 +15,49 @@ use crate::{
     value::Value,
     workgroup::{Frame, InvocationIds},
 };
-use imbl::HashMap;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 use vyre_foundation::ir::{Node, Program};
 
-#[doc = " Local variable environment backed by persistent maps for O(1) subgroup snapshots."]
+/// Local variable environment for one invocation.
+///
+/// A flat hash map, not a persistent one. The persistent map this used to hold
+/// made a subgroup snapshot one reference-count bump, and charged every other
+/// operation for it: a `Let` inside a loop body allocated trie nodes on every
+/// iteration, and `pop_scope` allocated again to unbind. The interpreter is the
+/// parity oracle for every registered operation, so that allocation was on the
+/// hot path of the whole conformance corpus while the snapshot it bought is
+/// taken only by a program that uses subgroup collectives.
+///
+/// A snapshot is now a map clone: one `Arc` copy per live local and no value
+/// payload, because every large [`Value`] is already reference-counted. Every
+/// lane is captured once per round while a collective is reachable, so the
+/// cost a subgroup program pays is live locals rather than a constant, which
+/// is a few entries for the programs that use collectives at all.
+///
+/// Immutability travels with the value rather than in a second map. Reading it
+/// separately meant two hashes of the same name on every assignment.
 pub(crate) struct HashmapLocals {
-    pub(crate) locals: HashMap<Arc<str>, Value>,
-    pub(crate) immutable: HashMap<Arc<str>, bool>,
+    pub(crate) locals: FxHashMap<Arc<str>, Local>,
     pub(crate) scopes: Vec<Vec<Arc<str>>>,
+}
+
+/// One bound local: its value, and whether an assignment may replace it.
+#[derive(Clone)]
+pub(crate) struct Local {
+    pub(crate) value: Value,
+    pub(crate) immutable: bool,
 }
 
 impl HashmapLocals {
     pub(crate) fn new() -> Self {
         Self {
-            locals: HashMap::new(),
-            immutable: HashMap::new(),
+            locals: FxHashMap::default(),
             scopes: vec![Vec::new()],
         }
     }
     pub(crate) fn local(&self, name: &str) -> Option<Value> {
-        self.locals.get(name).cloned()
+        self.locals.get(name).map(|local| local.value.clone())
     }
 
     #[cfg(feature = "subgroup-ops")]
@@ -46,39 +67,43 @@ impl HashmapLocals {
         }
     }
     pub(crate) fn bind(&mut self, name: &str, value: Value) -> Result<Arc<str>, ReferenceError> {
+        self.insert_binding(name, value, false)
+    }
+    /// Bind the induction variable of a loop, which no assignment may replace.
+    pub(crate) fn bind_loop_var(&mut self, name: &str, value: Value) -> Result<(), ReferenceError> {
+        self.insert_binding(name, value, true).map(|_| ())
+    }
+    fn insert_binding(
+        &mut self,
+        name: &str,
+        value: Value,
+        immutable: bool,
+    ) -> Result<Arc<str>, ReferenceError> {
         if self.locals.contains_key(name) {
             return Err(ReferenceError::new(format!(
                 "duplicate local binding `{name}`. Fix: choose a unique local name; shadowing is not allowed."
             )));
         }
         let name: Arc<str> = Arc::from(name);
-        self.locals.insert(Arc::clone(&name), value);
+        self.locals
+            .insert(Arc::clone(&name), Local { value, immutable });
         if let Some(scope) = self.scopes.last_mut() {
             scope.push(Arc::clone(&name));
         }
         Ok(name)
     }
     pub(crate) fn assign(&mut self, name: &str, value: Value) -> Result<(), ReferenceError> {
-        let key = self
-            .locals
-            .get_key_value(name)
-            .map(|(key, _)| Arc::clone(key))
-            .ok_or_else(|| {
-                ReferenceError::new(format!(
-                    "assignment to undeclared variable `{name}`. Fix: add a Let before assigning it."
-                ))
-            })?;
-        if self.immutable.get(name).copied().unwrap_or(false) {
+        let Some(local) = self.locals.get_mut(name) else {
+            return Err(ReferenceError::new(format!(
+                "assignment to undeclared variable `{name}`. Fix: add a Let before assigning it."
+            )));
+        };
+        if local.immutable {
             return Err(ReferenceError::new(format!(
                 "assignment to loop variable `{name}`. Fix: loop variables are immutable."
             )));
         }
-        self.locals.insert(key, value);
-        Ok(())
-    }
-    pub(crate) fn bind_loop_var(&mut self, name: &str, value: Value) -> Result<(), ReferenceError> {
-        let name = self.bind(name, value)?;
-        self.immutable.insert(name, true);
+        local.value = value;
         Ok(())
     }
     pub(crate) fn push_scope(&mut self) {
@@ -88,34 +113,38 @@ impl HashmapLocals {
         if let Some(names) = self.scopes.pop() {
             for name in names {
                 self.locals.remove(&name);
-                self.immutable.remove(&name);
             }
         }
     }
     pub(crate) fn remove(&mut self, name: &str) -> Option<Value> {
-        self.immutable.remove(name);
-        self.locals.remove(name)
+        self.locals.remove(name).map(|local| local.value)
     }
 }
 
 #[cfg(feature = "subgroup-ops")]
-#[doc = " Persistent local value snapshot for subgroup collective evaluation."]
+/// Local values of one lane, as they stood when a collective was reached.
 #[derive(Clone)]
 pub(crate) struct HashmapLocalSnapshot {
-    pub(crate) locals: HashMap<Arc<str>, Value>,
+    pub(crate) locals: FxHashMap<Arc<str>, Local>,
 }
 
 #[cfg(feature = "subgroup-ops")]
 impl HashmapLocalSnapshot {
     #[cfg(test)]
     pub(crate) fn local(&self, name: &str) -> Option<Value> {
-        self.locals.get(name).cloned()
+        self.locals.get(name).map(|local| local.value.clone())
     }
 }
 
 pub(crate) struct HashmapInvocation<'a> {
     pub(crate) ids: InvocationIds,
-    #[cfg_attr(not(feature = "subgroup-ops"), allow(dead_code))]
+    #[cfg_attr(
+        not(feature = "subgroup-ops"),
+        expect(
+            dead_code,
+            reason = "the lane index is read only by the subgroup reductions, so the field has no reader without that feature"
+        )
+    )]
     pub(crate) linear_local_index: u32,
     pub(crate) locals: HashmapLocals,
     pub(crate) returned: bool,
@@ -223,6 +252,9 @@ pub(crate) fn run_invocations(
     #[cfg(feature = "subgroup-ops")] uses_subgroup_ops: bool,
 ) -> Result<(), ReferenceError> {
     while invocations.iter().any(|inv| !inv.done()) {
+        // Charged per round as well as per statement, so a barrier-release
+        // cycle that advances no statement is still bounded.
+        crate::execution::step_budget::charge()?;
         let made_progress = step_round_robin(
             memory,
             invocations,

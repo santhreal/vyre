@@ -233,6 +233,7 @@ impl BenchCase for MicroCase {
 /// A new micro case is added here alongside its `inventory::submit!`, so the
 /// table and the registration cannot drift apart, and the workload-digest pin
 /// below turns red until the new row records its identity.
+#[cfg(test)]
 pub(crate) const MICRO_CASES: &[&MicroCase] = &[
     &crate::cases::attention::ATTENTION,
     &crate::cases::dfa_match::DFA_MATCH,

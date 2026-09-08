@@ -2,7 +2,7 @@ use crate::resident_work_queue::descriptor::PackedOpDescriptor;
 use crate::resident_work_queue::planner::ResidentWorkItem;
 use crate::resident_work_queue::protocol::{self, slot, SLOT_WORDS};
 use crate::resident_work_queue::{scheduler, ResidentWorkQueue};
-use crate::PipelineError;
+use crate::{PipelineError, RingEncodingFault};
 
 const SLOT_WORDS_USIZE: usize = 16;
 const STATUS_WORD_USIZE: usize = 0;
@@ -18,23 +18,27 @@ struct RingPublishView {
     slot_capacity: usize,
 }
 
-/// Explicit host-observable ring slot lifecycle transition.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RingSlotTransition {
-    /// Host publishes a fully written slot.
-    Publish,
-    /// Worker claims a published or scheduler-ready slot.
-    Claim,
-    /// Worker marks a claimed slot done.
-    Done,
-    /// Runtime marks an in-flight slot faulted.
-    Fault,
-    /// Host cancels an unclaimed in-flight slot.
-    Cancel,
+closed_enum! {
+    /// Explicit host-observable ring slot lifecycle transition.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum RingSlotTransition: 5 {
+        /// Host publishes a fully written slot.
+        Publish,
+        /// Worker claims a published or scheduler-ready slot.
+        Claim,
+        /// Worker marks a claimed slot done.
+        Done,
+        /// Runtime marks an in-flight slot faulted.
+        Fault,
+        /// Host cancels an unclaimed in-flight slot.
+        Cancel,
+    }
 }
 
 impl RingSlotTransition {
-    fn label(self) -> &'static str {
+    /// How this transition is named in a rejection message.
+    #[must_use]
+    pub fn label(self) -> &'static str {
         match self {
             Self::Publish => "publish",
             Self::Claim => "claim",
@@ -44,7 +48,9 @@ impl RingSlotTransition {
         }
     }
 
-    fn target_status(self) -> u32 {
+    /// The status word this transition writes on success.
+    #[must_use]
+    pub fn target_status(self) -> u32 {
         match self {
             Self::Publish => slot::PUBLISHED,
             Self::Claim => slot::CLAIMED,
@@ -54,22 +60,42 @@ impl RingSlotTransition {
         }
     }
 
-    fn allows(self, current_status: u32) -> bool {
+    /// The statuses this transition is legal from.
+    ///
+    /// Single source for both the legality predicate and the rejection
+    /// message, so a message can never state a permitted set the predicate
+    /// does not enforce.
+    #[must_use]
+    pub fn permitted(self) -> &'static [u32] {
         match self {
-            Self::Publish => matches!(current_status, slot::EMPTY | slot::DONE),
-            Self::Claim => matches!(
-                current_status,
-                slot::PUBLISHED | slot::YIELD | slot::REQUEUE
-            ),
-            Self::Done => current_status == slot::CLAIMED,
-            Self::Fault => matches!(
-                current_status,
-                slot::PUBLISHED | slot::CLAIMED | slot::WAIT_IO | slot::YIELD | slot::REQUEUE
-            ),
-            Self::Cancel => matches!(
-                current_status,
-                slot::PUBLISHED | slot::WAIT_IO | slot::YIELD | slot::REQUEUE
-            ),
+            Self::Publish => &[slot::EMPTY, slot::DONE],
+            Self::Claim => &[slot::PUBLISHED, slot::YIELD, slot::REQUEUE],
+            Self::Done => &[slot::CLAIMED],
+            Self::Fault => &[
+                slot::PUBLISHED,
+                slot::CLAIMED,
+                slot::WAIT_IO,
+                slot::YIELD,
+                slot::REQUEUE,
+            ],
+            Self::Cancel => &[slot::PUBLISHED, slot::WAIT_IO, slot::YIELD, slot::REQUEUE],
+        }
+    }
+
+    fn allows(self, current_status: u32) -> bool {
+        self.permitted().contains(&current_status)
+    }
+
+    fn illegal_transition_fix(self) -> &'static str {
+        match self {
+            Self::Publish => "recycle the slot to EMPTY, or wait for the lane to report DONE",
+            Self::Claim => {
+                "wait for the host to publish the slot, or for the scheduler to \
+                            yield or requeue it"
+            }
+            Self::Done => "claim the slot before reporting it done",
+            Self::Fault => "fault only a slot that is still in flight",
+            Self::Cancel => "a claimed slot is owned by a lane; wait for it to finish or fault",
         }
     }
 }
@@ -77,13 +103,13 @@ impl RingSlotTransition {
 fn validate_ring_publish_view(ring_bytes: &[u8]) -> Result<RingPublishView, PipelineError> {
     let slot_bytes = SLOT_WORDS_USIZE
         .checked_mul(4)
-        .ok_or(PipelineError::QueueFull {
-            queue: "submission",
+        .ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix: "slot byte width overflowed usize; keep SLOT_WORDS within the u32 ABI",
         })?;
     if ring_bytes.len() % slot_bytes != 0 {
-        return Err(PipelineError::QueueFull {
-            queue: "submission",
+        return Err(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Geometry,
             fix: "ring buffer byte length is not an exact multiple of SLOT_WORDS * 4; rebuild it with Megakernel::encode_empty_ring",
         });
     }
@@ -103,17 +129,18 @@ impl ResidentWorkQueue {
     ///
     /// # Errors
     ///
-    /// Returns [`PipelineError::QueueFull`] when the slot is out of bounds,
-    /// the ring is malformed, or the requested transition is illegal for the
-    /// current status word.
+    /// Returns [`PipelineError::RingEncoding`] when the slot is out of bounds
+    /// or the ring is malformed, and
+    /// [`PipelineError::IllegalSlotTransition`] when the transition is illegal
+    /// for the current status word.
     pub fn transition_slot_status(
         ring_bytes: &mut [u8],
         slot_idx: u32,
         transition: RingSlotTransition,
     ) -> Result<u32, PipelineError> {
         if transition == RingSlotTransition::Publish {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Protocol,
                 fix: "publish transitions must use publish_slot or a batch publisher so payload words are written before PUBLISHED status",
             });
         }
@@ -128,8 +155,9 @@ impl ResidentWorkQueue {
     ///
     /// # Errors
     ///
-    /// [`PipelineError::QueueFull`] when out of bounds, too many args,
-    /// or the slot is still in flight.
+    /// [`PipelineError::RingEncoding`] when out of bounds or given too many
+    /// args, and [`PipelineError::IllegalSlotTransition`] when the slot is
+    /// still in flight.
     pub fn publish_slot(
         ring_bytes: &mut [u8],
         slot_idx: u32,
@@ -151,8 +179,8 @@ impl ResidentWorkQueue {
     ///
     /// # Errors
     ///
-    /// Returns [`PipelineError::QueueFull`] when `slot_count` cannot encode,
-    /// the queue does not fit in the ring, the slot ABI cannot hold a
+    /// Returns [`PipelineError::RingEncoding`] when `slot_count` cannot
+    /// encode, the queue does not fit in the ring, the slot ABI cannot hold a
     /// `ResidentWorkItem`, or an item opcode is not publishable.
     pub fn encode_work_items_ring_into(
         slot_count: u32,
@@ -160,39 +188,39 @@ impl ResidentWorkQueue {
         items: &[ResidentWorkItem],
         ring_bytes: &mut Vec<u8>,
     ) -> Result<(), PipelineError> {
-        let item_count = u32::try_from(items.len()).map_err(|_| PipelineError::QueueFull {
-            queue: "submission",
+        let item_count = u32::try_from(items.len()).map_err(|_| PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix: "work item count exceeds u32::MAX; shard the megakernel queue before publishing",
         })?;
         if item_count > slot_count {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Capacity,
                 fix: "work item count exceeds ring slot count; enlarge the launch geometry before publishing",
             });
         }
         if ARGS_PER_SLOT_USIZE < 3 {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Capacity,
                 fix: "ResidentWorkItem publication requires three argument words; increase ARGS_PER_SLOT",
             });
         }
         for item in items {
             if let Err(fix) = protocol::opcode::validate_publish_opcode(item.op_handle) {
-                return Err(PipelineError::QueueFull {
-                    queue: "submission",
+                return Err(PipelineError::RingEncoding {
+                    fault: RingEncodingFault::Protocol,
                     fix,
                 });
             }
         }
 
         protocol::try_encode_empty_ring_into(slot_count, ring_bytes)
-            .map_err(super::protocol_error)?;
+            .map_err(PipelineError::Protocol)?;
         let view = validate_ring_publish_view(ring_bytes)?;
         debug_assert!(items.len() <= view.slot_capacity);
 
         for (slot_idx, item) in items.iter().enumerate() {
-            let slot_idx = u32::try_from(slot_idx).map_err(|_| PipelineError::QueueFull {
-                queue: "submission",
+            let slot_idx = u32::try_from(slot_idx).map_err(|_| PipelineError::RingEncoding {
+                fault: RingEncodingFault::Overflow,
                 fix: "work item publish slot index exceeds u32::MAX; split the publish batch",
             })?;
             write_work_item_unchecked(ring_bytes, view, slot_idx, tenant_id, item)?;
@@ -212,9 +240,10 @@ impl ResidentWorkQueue {
     ///
     /// # Errors
     ///
-    /// Returns [`PipelineError::QueueFull`] when the target window is outside
-    /// the ring, any slot is still in flight, or an item opcode is not
-    /// publishable.
+    /// Returns [`PipelineError::RingEncoding`] when the target window is
+    /// outside the ring or an item opcode is not publishable, and
+    /// [`PipelineError::IllegalSlotTransition`] when a slot is still in
+    /// flight.
     pub fn publish_work_items(
         ring_bytes: &mut [u8],
         start_slot: u32,
@@ -222,20 +251,20 @@ impl ResidentWorkQueue {
         items: &[ResidentWorkItem],
     ) -> Result<u32, PipelineError> {
         validate_work_items(items)?;
-        let item_count = u32::try_from(items.len()).map_err(|_| PipelineError::QueueFull {
-            queue: "submission",
+        let item_count = u32::try_from(items.len()).map_err(|_| PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix: "work item count exceeds u32::MAX; shard the megakernel queue before publishing",
         })?;
         let view = validate_ring_publish_view(ring_bytes)?;
         let end_slot = start_slot
             .checked_add(item_count)
-            .ok_or(PipelineError::QueueFull {
-                queue: "submission",
+            .ok_or(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Overflow,
                 fix: "work item publish slot index overflowed u32; split the publish batch",
             })?;
         if u32_to_usize(end_slot)? > view.slot_capacity {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Capacity,
                 fix:
                     "work item publish exceeds ring slot count; enlarge the ring or split the batch",
             });
@@ -245,12 +274,14 @@ impl ResidentWorkQueue {
         }
         for (offset, item) in items.iter().enumerate() {
             let slot_idx = start_slot
-                .checked_add(u32::try_from(offset).map_err(|_| PipelineError::QueueFull {
-                    queue: "submission",
-                    fix: "work item publish offset exceeds u32::MAX; split the publish batch",
-                })?)
-                .ok_or(PipelineError::QueueFull {
-                    queue: "submission",
+                .checked_add(
+                    u32::try_from(offset).map_err(|_| PipelineError::RingEncoding {
+                        fault: RingEncodingFault::Overflow,
+                        fix: "work item publish offset exceeds u32::MAX; split the publish batch",
+                    })?,
+                )
+                .ok_or(PipelineError::RingEncoding {
+                    fault: RingEncodingFault::Overflow,
                     fix: "work item publish slot index overflowed u32; split the publish batch",
                 })?;
             write_work_item_unchecked(ring_bytes, view, slot_idx, tenant_id, item)?;
@@ -267,8 +298,8 @@ impl ResidentWorkQueue {
     ///
     /// # Errors
     ///
-    /// Returns [`PipelineError::QueueFull`] when `slot_count` cannot encode,
-    /// the queue does not fit in the ring, the slot ABI cannot hold a
+    /// Returns [`PipelineError::RingEncoding`] when `slot_count` cannot
+    /// encode, the queue does not fit in the ring, the slot ABI cannot hold a
     /// `ResidentWorkItem`, or an item opcode is not publishable.
     pub fn encode_work_items_ring_words_into(
         slot_count: u32,
@@ -311,20 +342,20 @@ impl ResidentWorkQueue {
         args: &[u32],
     ) -> Result<(), PipelineError> {
         if u32_to_usize(slot_idx)? >= view.slot_capacity {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::OutOfBounds,
                 fix: "slot_idx exceeds ring slot count; enlarge the ring via encode_empty_ring",
             });
         }
         if args.len() > ARGS_PER_SLOT_USIZE {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Capacity,
                 fix: "too many args for one slot; 12 u32 args max per slot",
             });
         }
         if let Err(fix) = protocol::opcode::validate_publish_opcode(opcode) {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Protocol,
                 fix,
             });
         }
@@ -332,8 +363,8 @@ impl ResidentWorkQueue {
         let base = slot_base(slot_idx, view)?;
         let read_word = |buf: &[u8], word_idx: usize| -> Result<u32, PipelineError> {
             let off = base + word_idx * 4;
-            let bytes = buf.get(off..off + 4).ok_or(PipelineError::QueueFull {
-                queue: "submission",
+            let bytes = buf.get(off..off + 4).ok_or(PipelineError::RingEncoding {
+                fault: RingEncodingFault::OutOfBounds,
                 fix: "slot word is outside the validated ring buffer; validate ring length before publishing",
             })?;
             let mut word = [0u8; 4];
@@ -371,8 +402,10 @@ impl ResidentWorkQueue {
     ///
     /// # Errors
     ///
-    /// Returns [`PipelineError::QueueFull`] when the packed payload exceeds
-    /// the slot capacity or when the target slot is not publishable.
+    /// Returns [`PipelineError::RingEncoding`] when the packed payload
+    /// exceeds the slot capacity, and
+    /// [`PipelineError::IllegalSlotTransition`] when the target slot is not
+    /// publishable.
     pub fn publish_packed_slot<A>(
         ring_bytes: &mut [u8],
         slot_idx: u32,
@@ -407,21 +440,21 @@ impl ResidentWorkQueue {
         op_count: usize,
         mut op_at: impl FnMut(usize) -> (u8, &'a [u32]),
     ) -> Result<(), PipelineError> {
-        let opcode_count = u8::try_from(op_count).map_err(|_| PipelineError::QueueFull {
-            queue: "submission",
+        let opcode_count = u8::try_from(op_count).map_err(|_| PipelineError::RingEncoding {
+            fault: RingEncodingFault::Capacity,
             fix: "packed slot supports at most 255 inner opcodes",
         })?;
         let metadata_bytes = op_count
             .checked_mul(2)
             .and_then(|bytes| bytes.checked_add(2))
-            .ok_or(PipelineError::QueueFull {
-                queue: "submission",
+            .ok_or(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Overflow,
                 fix: "packed slot metadata length overflowed usize; reduce packed opcode count",
             })?;
         let metadata_words = metadata_bytes.div_ceil(4);
         if metadata_words > ARGS_PER_SLOT_USIZE {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Capacity,
                 fix: "packed slot metadata exceeds the 12-word slot argument budget",
             });
         }
@@ -433,34 +466,35 @@ impl ResidentWorkQueue {
         let metadata_payload_bytes =
             metadata_words
                 .checked_mul(4)
-                .ok_or(PipelineError::QueueFull {
-                queue: "submission",
+                .ok_or(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Overflow,
                 fix:
                     "packed slot metadata byte length overflowed usize; reduce packed opcode count",
             })?;
         for index in 0..op_count {
             let arg_offset =
-                u8::try_from(packed_arg_words).map_err(|_| PipelineError::QueueFull {
-                    queue: "submission",
+                u8::try_from(packed_arg_words).map_err(|_| PipelineError::RingEncoding {
+                    fault: RingEncodingFault::Capacity,
                     fix: "packed slot arg offsets must fit in one u8 word index",
                 })?;
             let (op_id, op_args) = op_at(index);
             let end =
                 packed_arg_words
                     .checked_add(op_args.len())
-                    .ok_or(PipelineError::QueueFull {
-                        queue: "submission",
+                    .ok_or(PipelineError::RingEncoding {
+                        fault: RingEncodingFault::Overflow,
                         fix: "packed slot arg word count overflowed usize; reduce packed args",
                     })?;
-            let total_words = metadata_words
-                .checked_add(end)
-                .ok_or(PipelineError::QueueFull {
-                    queue: "submission",
-                    fix: "packed slot total word count overflowed usize; reduce packed args",
-                })?;
+            let total_words =
+                metadata_words
+                    .checked_add(end)
+                    .ok_or(PipelineError::RingEncoding {
+                        fault: RingEncodingFault::Overflow,
+                        fix: "packed slot total word count overflowed usize; reduce packed args",
+                    })?;
             if total_words > ARGS_PER_SLOT_USIZE {
-                return Err(PipelineError::QueueFull {
-                    queue: "submission",
+                return Err(PipelineError::RingEncoding {
+                    fault: RingEncodingFault::Capacity,
                     fix: "packed slot payload exceeds the 12-word slot argument budget",
                 });
             }
@@ -479,8 +513,8 @@ impl ResidentWorkQueue {
         // contain zero arg values, and rings aren't guaranteed zero
         // after wrap-around).
         let packed_arg_words_u8 =
-            u8::try_from(packed_arg_words).map_err(|_| PipelineError::QueueFull {
-                queue: "submission",
+            u8::try_from(packed_arg_words).map_err(|_| PipelineError::RingEncoding {
+                fault: RingEncodingFault::Capacity,
                 fix: "packed slot total arg words must fit in one u8",
             })?;
         write_packed_metadata_byte(&mut args, 1, packed_arg_words_u8);
@@ -502,7 +536,8 @@ impl ResidentWorkQueue {
     ///
     /// # Errors
     ///
-    /// [`PipelineError::QueueFull`] if any slot rejects.
+    /// [`PipelineError::RingEncoding`] or
+    /// [`PipelineError::IllegalSlotTransition`] if any slot rejects.
     pub fn batch_publish<A>(
         ring_bytes: &mut [u8],
         start_slot: u32,
@@ -513,24 +548,26 @@ impl ResidentWorkQueue {
     where
         A: AsRef<[u32]>,
     {
-        let item_count = u32::try_from(items.len()).map_err(|_| PipelineError::QueueFull {
-            queue: "submission",
+        let item_count = u32::try_from(items.len()).map_err(|_| PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix: "batch item count exceeds u32::MAX; split the publish batch",
         })?;
         let view = validate_ring_publish_view(ring_bytes)?;
-        let total_slots = item_count.checked_add(1).ok_or(PipelineError::QueueFull {
-            queue: "submission",
-            fix: "batch publish slot count overflowed u32; split the publish batch",
-        })?;
+        let total_slots = item_count
+            .checked_add(1)
+            .ok_or(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Overflow,
+                fix: "batch publish slot count overflowed u32; split the publish batch",
+            })?;
         let end_slot = start_slot
             .checked_add(total_slots)
-            .ok_or(PipelineError::QueueFull {
-                queue: "submission",
+            .ok_or(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Overflow,
                 fix: "batch publish slot index overflowed u32; split the publish batch",
             })?;
         if u32_to_usize(end_slot)? > view.slot_capacity {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Capacity,
                 fix: "batch publish exceeds ring slot count; enlarge the ring or split the batch",
             });
         }
@@ -544,12 +581,14 @@ impl ResidentWorkQueue {
 
         for (offset, (opcode, args)) in items.iter().enumerate() {
             let slot_idx = start_slot
-                .checked_add(u32::try_from(offset).map_err(|_| PipelineError::QueueFull {
-                    queue: "submission",
-                    fix: "batch publish offset exceeds u32::MAX; split the publish batch",
-                })?)
-                .ok_or(PipelineError::QueueFull {
-                    queue: "submission",
+                .checked_add(
+                    u32::try_from(offset).map_err(|_| PipelineError::RingEncoding {
+                        fault: RingEncodingFault::Overflow,
+                        fix: "batch publish offset exceeds u32::MAX; split the publish batch",
+                    })?,
+                )
+                .ok_or(PipelineError::RingEncoding {
+                    fault: RingEncodingFault::Overflow,
                     fix: "batch publish slot index overflowed u32; split the publish batch",
                 })?;
             write_slot_unchecked(
@@ -563,8 +602,8 @@ impl ResidentWorkQueue {
         }
         let fence_slot = start_slot
             .checked_add(item_count)
-            .ok_or(PipelineError::QueueFull {
-                queue: "submission",
+            .ok_or(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Overflow,
                 fix: "batch publish fence slot overflowed u32; split the publish batch",
             })?;
         write_slot_unchecked(
@@ -578,8 +617,8 @@ impl ResidentWorkQueue {
         fence_slot
             .checked_add(1)
             .and_then(|end| end.checked_sub(start_slot))
-            .ok_or(PipelineError::QueueFull {
-                queue: "submission",
+            .ok_or(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Overflow,
                 fix: "batch publish consumed-slot count overflowed u32; split the publish batch",
             })
     }
@@ -587,14 +626,14 @@ impl ResidentWorkQueue {
 
 fn validate_publish_payload(opcode: u32, args: &[u32]) -> Result<(), PipelineError> {
     if args.len() > ARGS_PER_SLOT_USIZE {
-        return Err(PipelineError::QueueFull {
-            queue: "submission",
+        return Err(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Capacity,
             fix: "too many args for one slot; 12 u32 args max per slot",
         });
     }
     if let Err(fix) = protocol::opcode::validate_publish_opcode(opcode) {
-        return Err(PipelineError::QueueFull {
-            queue: "submission",
+        return Err(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Protocol,
             fix,
         });
     }
@@ -602,8 +641,8 @@ fn validate_publish_payload(opcode: u32, args: &[u32]) -> Result<(), PipelineErr
 }
 
 fn u32_to_usize(value: u32) -> Result<usize, PipelineError> {
-    usize::try_from(value).map_err(|_| PipelineError::QueueFull {
-        queue: "submission",
+    usize::try_from(value).map_err(|_| PipelineError::RingEncoding {
+        fault: RingEncodingFault::Overflow,
         fix: "u32 slot index cannot fit host usize; shard the megakernel ring for this target",
     })
 }
@@ -611,8 +650,8 @@ fn u32_to_usize(value: u32) -> Result<usize, PipelineError> {
 fn slot_base(slot_idx: u32, view: RingPublishView) -> Result<usize, PipelineError> {
     u32_to_usize(slot_idx)?
         .checked_mul(view.slot_bytes)
-        .ok_or(PipelineError::QueueFull {
-            queue: "submission",
+        .ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix: "slot byte offset overflowed usize; shard the ring before publishing",
         })
 }
@@ -633,28 +672,12 @@ fn validate_slot_transition(
     if transition.allows(current_status) {
         return Ok(());
     }
-    Err(PipelineError::QueueFull {
-        queue: "submission",
-        fix: illegal_transition_fix(transition, current_status),
+    Err(PipelineError::IllegalSlotTransition {
+        transition: transition.label(),
+        permitted: transition.permitted(),
+        current_status,
+        fix: transition.illegal_transition_fix(),
     })
-}
-
-fn illegal_transition_fix(transition: RingSlotTransition, _current_status: u32) -> &'static str {
-    match transition {
-        RingSlotTransition::Publish => {
-            "slot is not publishable; only EMPTY and DONE slots may be written by the host"
-        }
-        RingSlotTransition::Claim => {
-            "illegal ring slot transition: claim requires PUBLISHED, YIELD, or REQUEUE status"
-        }
-        RingSlotTransition::Done => "illegal ring slot transition: done requires CLAIMED status",
-        RingSlotTransition::Fault => {
-            "illegal ring slot transition: fault requires an in-flight slot status"
-        }
-        RingSlotTransition::Cancel => {
-            "illegal ring slot transition: cancel requires an unclaimed in-flight slot status"
-        }
-    }
 }
 
 fn slot_status_offset(slot_idx: u32, view: RingPublishView) -> Result<usize, PipelineError> {
@@ -662,14 +685,14 @@ fn slot_status_offset(slot_idx: u32, view: RingPublishView) -> Result<usize, Pip
     base.checked_add(
         STATUS_WORD_USIZE
             .checked_mul(4)
-            .ok_or(PipelineError::QueueFull {
-            queue: "submission",
+            .ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix:
                 "slot status word byte offset overflowed usize; keep SLOT_WORDS within the u32 ABI",
         })?,
     )
-    .ok_or(PipelineError::QueueFull {
-        queue: "submission",
+    .ok_or(PipelineError::RingEncoding {
+        fault: RingEncodingFault::Overflow,
         fix: "slot status byte offset overflowed usize; shard the ring before publishing",
     })
 }
@@ -682,14 +705,14 @@ fn read_slot_status_word(
     let status_offset = slot_status_offset(slot_idx, view)?;
     let status_end = status_offset
         .checked_add(4)
-        .ok_or(PipelineError::QueueFull {
-            queue: "submission",
+        .ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix: "slot status byte end overflowed usize; shard the ring before publishing",
         })?;
     let status_bytes = ring_bytes
         .get(status_offset..status_end)
-        .ok_or(PipelineError::QueueFull {
-            queue: "submission",
+        .ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::OutOfBounds,
             fix: "slot status is outside the validated ring buffer; validate ring length before publishing",
         })?;
     Ok(u32::from_le_bytes([
@@ -709,14 +732,14 @@ fn write_slot_status_word(
     let status_offset = slot_status_offset(slot_idx, view)?;
     let status_end = status_offset
         .checked_add(4)
-        .ok_or(PipelineError::QueueFull {
-            queue: "submission",
+        .ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix: "slot status byte end overflowed usize; shard the ring before publishing",
         })?;
     let status_bytes = ring_bytes
         .get_mut(status_offset..status_end)
-        .ok_or(PipelineError::QueueFull {
-            queue: "submission",
+        .ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::OutOfBounds,
             fix: "slot status is outside the validated ring buffer; validate ring length before publishing",
         })?;
     status_bytes.copy_from_slice(&value.to_le_bytes());
@@ -780,13 +803,13 @@ fn validate_work_item_batch(
     slot_count: u32,
     items: &[ResidentWorkItem],
 ) -> Result<(), PipelineError> {
-    let item_count = u32::try_from(items.len()).map_err(|_| PipelineError::QueueFull {
-        queue: "submission",
+    let item_count = u32::try_from(items.len()).map_err(|_| PipelineError::RingEncoding {
+        fault: RingEncodingFault::Overflow,
         fix: "work item count exceeds u32::MAX; shard the megakernel queue before publishing",
     })?;
     if item_count > slot_count {
-        return Err(PipelineError::QueueFull {
-            queue: "submission",
+        return Err(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Capacity,
             fix: "work item count exceeds ring slot count; enlarge the launch geometry before publishing",
         });
     }
@@ -795,16 +818,16 @@ fn validate_work_item_batch(
 
 fn validate_work_items(items: &[ResidentWorkItem]) -> Result<(), PipelineError> {
     if ARGS_PER_SLOT_USIZE < 3 {
-        return Err(PipelineError::QueueFull {
-            queue: "submission",
+        return Err(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Capacity,
             fix:
                 "ResidentWorkItem publication requires three argument words; increase ARGS_PER_SLOT",
         });
     }
     for item in items {
         if let Err(fix) = protocol::opcode::validate_publish_opcode(item.op_handle) {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Protocol,
                 fix,
             });
         }
@@ -814,19 +837,19 @@ fn validate_work_items(items: &[ResidentWorkItem]) -> Result<(), PipelineError> 
 
 fn encoded_ring_word_count(slot_count: u32) -> Result<usize, PipelineError> {
     if slot_count > protocol::MAX_ENCODED_RING_SLOTS {
-        return Err(PipelineError::QueueFull {
-            queue: "submission",
+        return Err(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Capacity,
             fix: "split the dispatch into smaller ring shards before encoding; slot_count exceeds the megakernel allocation cap or host address space",
         });
     }
     let words = slot_count
         .checked_mul(SLOT_WORDS)
-        .ok_or(PipelineError::QueueFull {
-            queue: "submission",
+        .ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Capacity,
             fix: "split the dispatch into smaller ring shards before encoding; slot_count exceeds the megakernel protocol cap or host address space",
         })?;
-    usize::try_from(words).map_err(|_| PipelineError::QueueFull {
-        queue: "submission",
+    usize::try_from(words).map_err(|_| PipelineError::RingEncoding {
+        fault: RingEncodingFault::Overflow,
         fix: "split the dispatch into smaller ring shards before encoding; ring word count does not fit usize",
     })
 }
@@ -841,3 +864,9 @@ fn write_packed_metadata_byte(args: &mut [u32; ARGS_PER_SLOT_USIZE], byte_index:
     let shift = ((byte_index % 4) * 8) as u32;
     args[word_index] |= u32::from(value) << shift;
 }
+
+// Inline: `protocol_api::publish` is private, so the ring publication helpers
+// are unreachable from an integration test.
+#[cfg(test)]
+#[path = "publish_tests.rs"]
+mod tests;

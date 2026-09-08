@@ -54,6 +54,7 @@ fn dispatch_config_default_has_no_overrides() {
     let config = DispatchConfig::default();
     assert!(config.workgroup_override.is_none());
     assert!(config.grid_override.is_none());
+    assert!(config.max_workgroups_per_axis.is_none());
     assert!(config.profile.is_none());
     assert!(config.ulp_budget.is_none());
     assert!(config.timeout.is_none());

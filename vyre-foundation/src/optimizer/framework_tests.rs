@@ -133,10 +133,32 @@ fn optimizer_error_unsatisfied_requirement_display() {
     assert!(msg.contains("dead_buffer_elim"));
 }
 
+/// Two separately built copies of one program fingerprint the same.
+///
+/// Asking one `Program` twice proves nothing: `Program::fingerprint` memoizes
+/// into a `OnceLock`, so the second call reads the first call's answer and the
+/// comparison holds however the hash was computed. Two values each compute
+/// once, so a hash that reached a map iteration order, a pointer address, or
+/// uninitialized padding in the wire encoding separates them.
 #[test]
 fn fingerprint_is_deterministic() {
-    let p = trivial_program();
-    assert_eq!(fingerprint_program(&p), fingerprint_program(&p));
+    let first = trivial_program();
+    let second = trivial_program();
+    assert_eq!(fingerprint_program(&first), fingerprint_program(&second));
+}
+
+/// The memoized answer is the answer a fresh computation gives.
+///
+/// A `OnceLock` that is filled from somewhere other than `compute_wire_hash`,
+/// or filled before a mutation the program later applies, would serve a
+/// fingerprint no rebuild reproduces, and every content-addressed cache keyed
+/// on it would hand back another program's artifact.
+#[test]
+fn the_memoized_fingerprint_matches_a_fresh_one() {
+    let warmed = trivial_program();
+    let memoized = fingerprint_program(&warmed);
+    assert_eq!(memoized, fingerprint_program(&warmed));
+    assert_eq!(memoized, fingerprint_program(&trivial_program()));
 }
 
 #[test]

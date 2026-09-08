@@ -8,12 +8,11 @@ use vyre_reference::composition_witness::{
     argmax_of_marginals_witness, argmin_cost_witness, backdoor_descendants_check_witness,
     bellman_shortest_path_witness, betti_persistence_witness, bhattacharyya_coefficient_witness,
     bigint_add_carry_witness, bigint_add_carry_witness_into, bitset_saturation_ratio_witness,
-    bitset_subset_of_witness, canonicalize_union_find_witness, chebyshev_filter_witness,
-    chebyshev_filter_witness_into, cluster_projection_matrix_witness_into,
-    compose_ir_arrows_witness, compose_passes_witness, compose_passes_witness_into,
-    composition_associates_witness, conformal_threshold_witness, conv1d_witness,
-    conv1d_witness_into, count_sketch_query_witness, count_sketch_update_witness, crc32_witness,
-    csr_backward_closure_witness, csr_backward_step_with_change_witness,
+    bitset_subset_of_witness, canonicalize_union_find_witness, chebyshev_filter_witness_into,
+    cluster_projection_matrix_witness_into, compose_ir_arrows_witness, compose_passes_witness,
+    compose_passes_witness_into, composition_associates_witness, conformal_threshold_witness,
+    conv1d_witness, conv1d_witness_into, count_sketch_query_witness, count_sketch_update_witness,
+    crc32_witness, csr_backward_closure_witness, csr_backward_step_with_change_witness,
     csr_backward_traverse_witness, csr_backward_traverse_witness_into, csr_bfs_witness,
     csr_bidirectional_closure_witness, csr_bidirectional_closure_witness_into,
     csr_bidirectional_step_witness, csr_bidirectional_step_witness_into,
@@ -78,8 +77,9 @@ use vyre_reference::composition_witness::{
     toposort_csr_with_scratch_into_witness, toposort_csr_witness, toposort_witness,
     try_amg_solve_to_tolerance_witness_into, try_amg_solve_to_tolerance_witness_with_scratch_into,
     try_amg_v_cycle_witness_with_scratch_into, try_argmin_cost_witness,
-    try_cluster_projection_matrix_witness_into, try_count_sketch_query_into_witness,
-    try_ddnnf_evaluate_witness, try_differentiable_autotune_gradient_witness_into,
+    try_chebyshev_filter_witness, try_cluster_projection_matrix_witness_into,
+    try_count_sketch_query_into_witness, try_ddnnf_evaluate_witness,
+    try_differentiable_autotune_gradient_witness_into,
     try_differentiable_autotune_pick_config_witness_into, try_exploded_ifds_csr_witness_into,
     try_fractional_derivative_witness_into, try_frontier_absorb_witness_into,
     try_gaussian_rdp_step_witness_into, try_grunwald_letnikov_kernel_witness_into,
@@ -1110,7 +1110,8 @@ fn chebyshev_filter_and_kfac_contracts() {
     let laplacian = [1.0_f32, 0.0, 0.0, 1.0];
     let signal = [2.0_f32, 3.0];
     let coeffs = [0.5_f32, 1.0, 0.25];
-    let filtered = chebyshev_filter_witness(&laplacian, &signal, &coeffs, 2, 2);
+    let filtered = try_chebyshev_filter_witness(&laplacian, &signal, &coeffs, 2, 2)
+        .expect("Fix: the 2x2 fixture must produce a filtered signal");
     assert_eq!(filtered.len(), 2);
     // T0 = [2, 3], T1 = L*x = [2, 3], T2 = 2*L*T1 - T0 = [2, 3]
     // filtered = 0.5*[2,3] + 1.0*[2,3] + 0.25*[2,3] = 1.75*[2,3] = [3.5, 5.25]

@@ -114,10 +114,6 @@ impl DispatchAllocations {
             })
     }
 
-    pub(crate) fn params_ptr(&self) -> u64 {
-        self.params.ptr
-    }
-
     pub(crate) fn byte_len(&self, index: usize, context: &str) -> Result<usize, BackendError> {
         let allocation_count = self.ptrs.len();
         self.ptrs

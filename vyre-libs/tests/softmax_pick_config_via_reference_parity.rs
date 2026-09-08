@@ -14,7 +14,7 @@
 //! (a u32 left-shift that keeps the low 32 bits, then integer division). The oracle here replicates
 //! that bit-for-bit → BIT-EXACT (no tolerance).
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::differentiable_autotune::pick_config_pre_exp_fixed_via;
 

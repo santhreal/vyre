@@ -10,6 +10,7 @@ use vyre_primitives::wire::pack_u32_slice as bytes_u32;
 use super::test_operation::TEST_IDENTITY_U32_OP;
 
 /// One canonical bundle: the program and the corpus it is certified over.
+#[cfg(feature = "device-tests")]
 pub(crate) type BundleBuilderFn = fn() -> (Program, Vec<ConformanceCase>);
 
 // ---------------------------------------------------------------------------
@@ -142,6 +143,7 @@ pub(crate) fn bundle_region_chain_intrinsic_dialect() -> (Program, Vec<Conforman
     (program, corpus)
 }
 
+#[cfg(feature = "device-tests")]
 pub(crate) fn bundle_region_chain_backend_witness() -> (Program, Vec<ConformanceCase>) {
     let body = vec![
         Node::let_bind("acc", Expr::u32(0)),

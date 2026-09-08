@@ -1,4 +1,3 @@
 path = "scripts/lib/read_toml_values.py"
-state = "holds_logic"
-destination = "the release train and repository boundary readers in xtask/src/release"
-reason = "reads dotted keys out of a TOML manifest for the release shell helpers"
+state = "retired"
+reason = "toml_reader.sh reads the manifest subset itself in bash; the python3 it shelled into needed tomllib, which a 3.9 host does not have, and a failed import left a release loader with an unset tag"

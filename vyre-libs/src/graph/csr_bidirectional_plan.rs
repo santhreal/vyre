@@ -304,10 +304,14 @@ pub fn plan_csr_bidirectional_step(
 /// program. Initialization, max-iteration handling, frontier merge semantics,
 /// and reusable-buffer reservation stay single-sourced here.
 ///
+/// `graph::dispatch::csr_bidirectional` is the only wrapper that supplies a
+/// step executor, and the inline closure test supplies its own.
+///
 /// # Errors
 ///
 /// Returns caller-mapped errors for malformed seed width, reservation failure,
 /// step execution failure, or frontier shape drift.
+#[cfg(any(test, feature = "graph-dispatch"))]
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn run_csr_bidirectional_closure_plan_with_step<E, MapError, Step>(
     plan: &CsrBidirectionalDispatchPlan,
@@ -565,10 +569,4 @@ pub fn try_merge_frontier_or_changed(current: &mut [u32], next: &[u32]) -> Resul
         *dst = merged;
     }
     Ok(changed)
-}
-
-pub(crate) fn csr_bidir_u32_to_usize(value: u32, label: &'static str) -> Result<usize, String> {
-    usize::try_from(value).map_err(|source| {
-        format!("Fix: csr_bidirectional {label} value {value} cannot fit host usize: {source}.")
-    })
 }

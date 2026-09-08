@@ -41,35 +41,6 @@ pub(crate) const RELEASE_SURFACE_REQUIRED_PATTERNS: &[(&str, &[&str])] = &[
     ),
 ];
 
-/// Required optimization analysis fixture families: fixture id, the A-item it
-/// proves, and the per-family counters that must be non-zero.
-pub(crate) const OPTIMIZATION_ANALYSIS_FIXTURE_FAMILIES: &[(&str, &str, &[&str])] = &[
-    (
-        "A13-coalesce-fixture",
-        "A13",
-        &[
-            "coalesced_unit_stride_sites",
-            "strided_sites",
-            "broadcast_sites",
-        ],
-    ),
-    (
-        "A14-shared-mem-promote-fixture",
-        "A14",
-        &["shared_mem_candidates", "shared_mem_tile_bytes"],
-    ),
-    (
-        "A15-bank-conflict-fixture",
-        "A15",
-        &["bank_conflict_sites", "bank_conflict_critical_sites"],
-    ),
-    (
-        "A16-vec-pack-fixture",
-        "A16",
-        &["vec_pack_chains", "vec_pack_ops_eliminated"],
-    ),
-];
-
 /// CUDA optimization labels and the counters that prove each one ran.
 pub(crate) const CUDA_TELEMETRY_CHECKS: &[(&str, &[&str])] = &[
     (

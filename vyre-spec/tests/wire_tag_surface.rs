@@ -5,8 +5,7 @@
 //! the frozen builtin tag for each core enum and excludes extension ids from
 //! that builtin space.
 
-#[path = "../../tests/support/spec_variant_tables.rs"]
-mod spec_variant_tables;
+use vyre_test_support::spec_variant_tables;
 
 use std::collections::BTreeSet;
 
@@ -179,6 +178,8 @@ fn un_op_builtin_wire_tags_are_exact_and_unique() {
         (UnOp::Unpack8Low, 0x22),
         (UnOp::Unpack8High, 0x23),
         (UnOp::Reciprocal, 0x24),
+        (UnOp::BitcastF32ToU32, 0x25),
+        (UnOp::BitcastU32ToF32, 0x26),
     ];
 
     assert_exact_unique_tags(cases.map(|(kind, tag)| (kind.builtin_wire_tag(), tag)));

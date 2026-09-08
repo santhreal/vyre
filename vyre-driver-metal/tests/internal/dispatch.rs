@@ -1,7 +1,7 @@
 //! One-shot and borrowed dispatch: program lowering, output ranges, config
 //! rejection, grid sizing, threadgroup and trap sidecar allocation.
 
-use crate::*;
+use super::*;
 
 use super::fixtures::{one_word_output, stores_word};
 use vyre_driver::DispatchConfig;

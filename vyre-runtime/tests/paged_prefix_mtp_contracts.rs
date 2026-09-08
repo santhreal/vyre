@@ -21,8 +21,7 @@ use vyre_runtime::paged_residency::{
 use vyre_runtime::prefix_cache::{PrefixCache, PrefixCacheError, PrefixCacheLimits};
 use vyre_runtime::resource_residency::{StateId, StateLease};
 
-#[path = "prefix_cache_fixtures/mod.rs"]
-mod prefix_cache_fixtures;
+use crate::prefix_cache_fixtures;
 
 use prefix_cache_fixtures::prefix_key as test_prefix_key;
 

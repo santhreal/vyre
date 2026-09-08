@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use vyre_foundation::algebraic_reordering::ReorderingClass;
+use vyre_foundation::ir::Program;
 use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_foundation::numeric::{reordering_admitted, NumericContract, NUMERIC_CONTRACT_VERSION};
 use vyre_foundation::schedule::{
@@ -158,6 +159,7 @@ pub(crate) fn plan(inputs: PlanInputs<'_, '_>) -> Result<ArtifactPlan, CompileEr
             let node_id = ArtifactNodeId(node.id.0);
             geometry_record(
                 node_id,
+                &node.program,
                 &schedule,
                 predecessors.get(&node_id).cloned().unwrap_or_default(),
             )
@@ -370,8 +372,12 @@ fn entry_predecessors(
 }
 
 /// Project the selected schedule phase covering one node onto its launch record.
+///
+/// Every geometry record an artifact carries is minted here, so this is where a
+/// launch that does not cover its own program is refused.
 fn geometry_record(
     node: ArtifactNodeId,
+    program: &Program,
     schedule: &SelectedSchedule,
     predecessors: Vec<ArtifactNodeId>,
 ) -> Result<GeometryRecord, CompileError> {
@@ -403,6 +409,7 @@ fn geometry_record(
         persistence: persistence(schedule, phase.id),
     };
     record.validate()?;
+    crate::launch_span::admit_coverage(&record, program)?;
     Ok(record)
 }
 

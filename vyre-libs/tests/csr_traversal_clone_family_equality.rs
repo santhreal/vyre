@@ -561,6 +561,24 @@ fn entry_points_satisfy_semantic_parity_and_clone_family_equivalence() {
         delta_c_next_l, delta_next_l,
         "Fix: capped strided queue delta must produce identical next_len to scalar queue delta."
     );
+    // Accumulator and length agreeing leaves the enqueued set unchecked, which
+    // is the half of the contract a strided enqueue can break on its own. Order
+    // is not part of it: a strided form appends per lane.
+    let enqueued = |queue: &[u32], len: u32| {
+        let mut nodes = queue[..len as usize].to_vec();
+        nodes.sort_unstable();
+        nodes
+    };
+    assert_eq!(
+        enqueued(&delta_s_next_q, delta_s_next_l),
+        enqueued(&delta_next_q, delta_next_l),
+        "Fix: strided queue delta must enqueue the same node set as scalar queue delta."
+    );
+    assert_eq!(
+        enqueued(&delta_c_next_q, delta_c_next_l),
+        enqueued(&delta_next_q, delta_next_l),
+        "Fix: capped strided queue delta must enqueue the same node set as scalar queue delta."
+    );
     // The accumulator must be initial_acc | forward_step_destinations
     let expected_delta_acc = vec![
         initial_acc[0] | fwd_actual[0],

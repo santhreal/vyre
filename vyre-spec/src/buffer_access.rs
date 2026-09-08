@@ -18,3 +18,20 @@ pub enum BufferAccess {
     /// Workgroup-local shared memory.
     Workgroup,
 }
+
+impl BufferAccess {
+    /// Every access mode in the frozen contract.
+    ///
+    /// A fixed-length array, so a variant added to the enum fails to compile
+    /// until it is listed here. Callers outside this crate cannot match the
+    /// enum exhaustively, because it is `#[non_exhaustive]`, so this is how a
+    /// test walks the whole space and how a new mode turns those tests red until
+    /// a decision is recorded for it.
+    pub const ALL: [Self; 5] = [
+        Self::ReadOnly,
+        Self::ReadWrite,
+        Self::Uniform,
+        Self::WriteOnly,
+        Self::Workgroup,
+    ];
+}

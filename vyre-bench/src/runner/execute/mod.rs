@@ -132,7 +132,6 @@ pub fn execute_suite(
         .collect();
 
     for case in selected_cases.iter().copied() {
-        let meta = case.metadata();
         let requirements = case.requirements();
         if let Err(error) = validate_requirements(&environment, &requirements) {
             failed += 1;

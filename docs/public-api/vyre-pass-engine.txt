@@ -127,6 +127,7 @@ pub fn vyre_pass_engine::optimizer::pattern_match_via_encoded::PatternMatchError
 pub fn vyre_pass_engine::optimizer::pattern_match_via_encoded::build_pattern_match_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::pattern_match_via_encoded::build_pattern_match_program_with_cse(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::pattern_match_via_encoded::gpu_algebraic_identities(program: vyre_foundation::ir_inner::model::program::definition::Program, executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_pass_engine::optimizer::pattern_match_via_encoded::PatternMatchError>
+pub fn vyre_pass_engine::optimizer::pattern_match_via_encoded::gpu_algebraic_identities_with_canonicals(program: vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, canonical: &[u32], executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_pass_engine::optimizer::pattern_match_via_encoded::PatternMatchError>
 pub fn vyre_pass_engine::optimizer::pipeline::GpuOptimizeError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_pass_engine::optimizer::pipeline::gpu_optimize(program: vyre_foundation::ir_inner::model::program::definition::Program, executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_pass_engine::optimizer::pipeline::GpuOptimizeError>
 pub fn vyre_pass_engine::optimizer::validate_via_encoded::ValidateError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -192,6 +193,7 @@ pub vyre_pass_engine::optimizer::pattern_match_via_encoded::PatternMatchError::S
 pub vyre_pass_engine::optimizer::pipeline::GpuOptimizeError::AlgebraicIdentities(vyre_pass_engine::optimizer::pattern_match_via_encoded::PatternMatchError)
 pub vyre_pass_engine::optimizer::pipeline::GpuOptimizeError::Canonicalize(vyre_pass_engine::optimizer::canonicalize_via_encoded::CanonicalizeError)
 pub vyre_pass_engine::optimizer::pipeline::GpuOptimizeError::ConstFold(vyre_pass_engine::optimizer::const_fold_via_encoded::ConstFoldError)
+pub vyre_pass_engine::optimizer::pipeline::GpuOptimizeError::Cse(vyre_pass_engine::optimizer::cse_via_encoded::CseError)
 pub vyre_pass_engine::optimizer::pipeline::GpuOptimizeError::Dce(vyre_pass_engine::optimizer::dce_via_encoded::DceError)
 pub vyre_pass_engine::optimizer::validate_via_encoded::ValidateError::Encode(vyre_pass_engine::optimizer::encode::EncodeError)
 pub vyre_pass_engine::optimizer::validate_via_encoded::ValidateError::Semantic(vyre_megakernel::execution::SemanticExecutionError)

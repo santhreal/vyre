@@ -384,13 +384,6 @@ impl RingTelemetry {
         Ok(())
     }
 
-    /// Active slots matching a given opcode.
-    #[must_use]
-    #[cfg(test)]
-    pub fn active_slots_for_opcode(&self, opcode: u32) -> Vec<&RingSlotSnapshot> {
-        self.try_active_slots_for_opcode(opcode).unwrap_or_default()
-    }
-
     /// Active slots matching a given opcode with fallible output staging.
     ///
     /// # Errors
@@ -432,13 +425,6 @@ impl RingTelemetry {
             .filter(|slot| slot.opcode == opcode && slot.status.is_active())
             .for_each(|slot| out.push(slot));
         Ok(())
-    }
-
-    /// Unfinished ticketed windows.
-    #[must_use]
-    #[cfg(test)]
-    pub fn active_windows(&self) -> Vec<&WindowTelemetry> {
-        self.try_active_windows().unwrap_or_default()
     }
 
     /// Unfinished ticketed windows with fallible output staging.

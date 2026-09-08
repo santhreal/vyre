@@ -508,7 +508,7 @@ impl CudaTelemetry {
                     &self.timed_device_ns_total,
                     device_ns,
                 );
-                self.record_max("timed_device_ns_max", &self.timed_device_ns_max, device_ns);
+                self.record_max(&self.timed_device_ns_max, device_ns);
             }
             None => {
                 self.add(
@@ -547,8 +547,9 @@ impl CudaTelemetry {
         true
     }
 
-    fn record_max(&self, name: &'static str, counter: &AtomicU64, value: u64) {
-        let _ = name;
+    /// A max cannot overflow, so this takes no counter name: the name exists in
+    /// `add` for the overflow message.
+    fn record_max(&self, counter: &AtomicU64, value: u64) {
         atomic_max_u64(counter, value, Ordering::Relaxed);
     }
 

@@ -30,8 +30,6 @@ fn execute_slot_body_jit(payload_processor: &[Node]) -> Vec<Node> {
     execute_published_slot_body(claimed_slot_body_jit(payload_processor))
 }
 
-// ---- JIT variant ----
-
 /// The JIT body that runs once per iteration per lane.
 #[must_use]
 pub fn persistent_body_jit(workgroup_size_x: u32, payload_processor: &[Node]) -> Vec<Node> {
@@ -43,7 +41,11 @@ pub fn persistent_body_jit(workgroup_size_x: u32, payload_processor: &[Node]) ->
 }
 
 /// Fallible JIT body builder with explicit staging-allocation reporting.
-pub(super) fn try_persistent_body_jit(
+///
+/// The AOT pair exports both forms, so a caller fusing a payload processor
+/// reports a staging-allocation refusal the same way a caller supplying opcode
+/// handlers does.
+pub fn try_persistent_body_jit(
     workgroup_size_x: u32,
     payload_processor: &[Node],
 ) -> Result<Vec<Node>, String> {

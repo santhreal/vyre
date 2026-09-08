@@ -118,35 +118,6 @@ impl<'a> BodyBuilder<'a> {
             Expression::FunctionArgument(_) => Some(ScalarKind::Uint),
             _ => None,
         }
-        .or_else(|| {
-            // Pointer/Array bases  -  when we can't dereference we fall
-            // back to None.
-            None::<ScalarKind>
-        })
-        .map(|s| match s {
-            // Naga sometimes carries a vec3<u32> whose access yields
-            // u32  -  the recursive map above already covers that.
-            other => other,
-        })
-        .and_then(|s| {
-            // We resolved SOME scalar kind; prefer it.
-            Some(s)
-        })
-        .or_else(|| {
-            // Fallback: try the original handle through the Type arena
-            // if it's a LocalVariable / GlobalVariable shape.
-            None
-        })
-        .map(|s| s)
-        .or(self.fallback_scalar_kind(value))
-    }
-
-    /// Last-ditch: if the expression has a registered handle in
-    /// `binding_types` (for buffer Loads via slot id) or names a
-    /// local variable through a one-step Load chain, return its
-    /// scalar kind. Returns None when no signal is available.
-    fn fallback_scalar_kind(&self, _value: naga::Handle<Expression>) -> Option<naga::ScalarKind> {
-        None
     }
 
     /// Coerce a value to the binding's target type when it differs

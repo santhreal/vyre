@@ -44,6 +44,10 @@ impl core::fmt::Debug for vyre_runtime::prefix_cache::PrefixCacheManager
 impl core::fmt::Debug for vyre_runtime::resource_residency::ArtifactInstanceBinding
 impl core::fmt::Debug for vyre_runtime::resource_residency::ResourceResidency
 impl core::fmt::Debug for vyre_runtime::tenant::TenantHandle
+impl core::fmt::Display for vyre_runtime::CounterArithmetic
+impl core::fmt::Display for vyre_runtime::CounterScope
+impl core::fmt::Display for vyre_runtime::RequestFault
+impl core::fmt::Display for vyre_runtime::RingEncodingFault
 impl core::fmt::Display for vyre_runtime::pipeline_cache::PipelineCacheMetricError
 impl core::marker::Send for vyre_runtime::uring::AsyncUringStream<'_>
 impl core::marker::Send for vyre_runtime::uring::GpuMappedBuffer<'_>
@@ -55,8 +59,11 @@ impl core::ops::drop::Drop for vyre_runtime::resource_residency::ResourceResiden
 impl core::ops::drop::Drop for vyre_runtime::uring::IoUringState
 impl core::ops::drop::Drop for vyre_runtime::uring::ResidentIoLoop
 impl vyre_megakernel::execution::SemanticExecutor for vyre_runtime::RegisteredSemanticExecutor
+impl vyre_runtime::CounterArithmetic
 impl vyre_runtime::PipelineError
 impl vyre_runtime::RegisteredSemanticExecutor
+impl vyre_runtime::RequestFault
+impl vyre_runtime::RingEncodingFault
 impl vyre_runtime::artifact_admission::AdmittedArtifact
 impl vyre_runtime::artifact_admission::AdmittedPortfolio
 impl vyre_runtime::artifact_admission::ArtifactAdmissionError
@@ -91,6 +98,7 @@ impl vyre_runtime::prefix_cache::PrefixCacheManager
 impl vyre_runtime::replay::ReplayFailureEvidence
 impl vyre_runtime::replay::RingLog
 impl vyre_runtime::resident_work_queue::ResidentWorkQueue
+impl vyre_runtime::resident_work_queue::RingSlotTransition
 impl vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex
 impl vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistEvidence
 impl vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistMode
@@ -248,12 +256,16 @@ pub const fn vyre_runtime::resource_residency::ArtifactInstanceBinding::byte_len
 pub const fn vyre_runtime::tenant::TenantQuota::bounded(max_outstanding_slots: u64, max_staging_bytes: u64, max_resident_handles: u64) -> Self
 pub const fn vyre_runtime::tenant::TenantQuota::unbounded() -> Self
 pub const fn vyre_runtime::tenant::TenantSelectionScratch::new() -> Self
+pub const vyre_runtime::CounterArithmetic::ALL: [Self; 2]
+pub const vyre_runtime::RequestFault::ALL: [Self; 3]
+pub const vyre_runtime::RingEncodingFault::ALL: [Self; 5]
 pub const vyre_runtime::paged_residency::PAGED_RESOURCE_MIN_ALIGNMENT_BYTES: usize
 pub const vyre_runtime::replay::HEADER_BYTES: u64
 pub const vyre_runtime::replay::LOG_MAGIC: &[u8; 8]
 pub const vyre_runtime::replay::LOG_VERSION: u32
 pub const vyre_runtime::replay::MAX_REPLAY_RECORDS: u64
 pub const vyre_runtime::replay::RECORD_BYTES: u64
+pub const vyre_runtime::resident_work_queue::RingSlotTransition::ALL: [Self; 5]
 pub const vyre_runtime::resident_work_queue::automata_worklist::AUTOMATA_WORKLIST_EVIDENCE_SCHEMA_VERSION: u32
 pub const vyre_runtime::resident_work_queue::io::IO_DESTINATION_CAPABILITY_TABLE: &str
 pub const vyre_runtime::resident_work_queue::io::IO_QUEUE_DMA_TAG: &str
@@ -337,6 +349,7 @@ pub const vyre_runtime::resident_work_queue::protocol::slot::PRIORITY_LOW: u32
 pub const vyre_runtime::resident_work_queue::protocol::slot::PRIORITY_NORMAL: u32
 pub const vyre_runtime::resident_work_queue::protocol::slot::PUBLISHED: u32
 pub const vyre_runtime::resident_work_queue::protocol::slot::REQUEUE: u32
+pub const vyre_runtime::resident_work_queue::protocol::slot::STATUSES: [(u32, &str); 8]
 pub const vyre_runtime::resident_work_queue::protocol::slot::WAIT_IO: u32
 pub const vyre_runtime::resident_work_queue::protocol::slot::YIELD: u32
 pub const vyre_runtime::resident_work_queue::ring::SLOT_BYTES: usize
@@ -364,6 +377,10 @@ pub const vyre_runtime::tenant::OPCODE_RANGE_PER_TENANT: u32
 pub const vyre_runtime::tenant::TENANT_ID_MAX: u32
 pub const vyre_runtime::tenant::TENANT_OPCODE_BASE: u32
 pub const vyre_runtime::uring::NVME_CMD_READ: u8
+pub enum vyre_runtime::CounterArithmetic
+pub enum vyre_runtime::CounterScope
+pub enum vyre_runtime::RequestFault
+pub enum vyre_runtime::RingEncodingFault
 pub enum vyre_runtime::UringPollState
 pub enum vyre_runtime::artifact_admission::ArtifactSessionError
 pub enum vyre_runtime::artifact_admission::MeshSessionError
@@ -400,10 +417,14 @@ pub enum vyre_runtime::safetensors_transfer::TransferError
 pub enum vyre_runtime::safetensors_transfer::TransferState
 pub enum vyre_runtime::uring::GpuDirectCapability
 pub enum vyre_runtime::uring::NativeReadPath
+pub fn vyre_runtime::CounterArithmetic::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_runtime::CounterScope::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_runtime::PipelineError::from(err: vyre_driver::backend::error::BackendError) -> Self
 pub fn vyre_runtime::PipelineError::from(err: vyre_runtime::replay::ReplayLogError) -> Self
 pub fn vyre_runtime::PipelineError::is_drain_incomplete(&self) -> bool
 pub fn vyre_runtime::RegisteredSemanticExecutor::execute(&self, request: &vyre_megakernel::execution::SemanticExecutionRequest<'_>) -> core::result::Result<vyre_megakernel::execution::SemanticExecutionOutput, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_runtime::RequestFault::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_runtime::RingEncodingFault::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_runtime::UringCompletionPump<'_>::default() -> Self
 pub fn vyre_runtime::UringCompletionPump<'a>::is_shutdown_requested(&self) -> bool
 pub fn vyre_runtime::UringCompletionPump<'a>::new() -> Self
@@ -612,6 +633,9 @@ pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::try_read_epoch(cont
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::try_read_metrics(control_bytes: &[u8]) -> core::result::Result<alloc::vec::Vec<(u32, u32)>, vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::try_read_metrics_into(control_bytes: &[u8], out: &mut alloc::vec::Vec<(u32, u32)>) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::try_read_observable(control_bytes: &[u8], index: u32) -> core::result::Result<u32, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::RingSlotTransition::label(self) -> &'static str
+pub fn vyre_runtime::resident_work_queue::RingSlotTransition::permitted(self) -> &'static [u32]
+pub fn vyre_runtime::resident_work_queue::RingSlotTransition::target_status(self) -> u32
 pub fn vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::HitRingBindings::default() -> Self
 pub fn vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::record_hit_to_ring_hierarchical(is_hit_var: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::record_hit_to_ring_hierarchical_with(is_hit_var: &str, bindings: &vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::HitRingBindings) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
@@ -730,7 +754,6 @@ pub fn vyre_runtime::resident_work_queue::protocol::decode_load_miss(ring_bytes:
 pub fn vyre_runtime::resident_work_queue::protocol::encode_control(shutdown: bool, tenant_count: u32, observable_slots: u32) -> core::result::Result<alloc::vec::Vec<u8>, vyre_runtime::resident_work_queue::protocol::ProtocolError>
 pub fn vyre_runtime::resident_work_queue::protocol::encode_empty_debug_log(record_capacity: u32) -> core::result::Result<alloc::vec::Vec<u8>, vyre_runtime::resident_work_queue::protocol::ProtocolError>
 pub fn vyre_runtime::resident_work_queue::protocol::encode_empty_ring(slot_count: u32) -> core::result::Result<alloc::vec::Vec<u8>, vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::protocol::encode_load_miss(resource_id: u32, prefetch: bool) -> alloc::vec::Vec<u8>
 pub fn vyre_runtime::resident_work_queue::protocol::read_debug_log(debug_bytes: &[u8]) -> alloc::vec::Vec<vyre_runtime::resident_work_queue::protocol::DebugRecord>
 pub fn vyre_runtime::resident_work_queue::protocol::read_debug_log_into(debug_bytes: &[u8], out: &mut alloc::vec::Vec<vyre_runtime::resident_work_queue::protocol::DebugRecord>)
 pub fn vyre_runtime::resident_work_queue::protocol::read_done_count(control_bytes: &[u8]) -> u32
@@ -739,6 +762,7 @@ pub fn vyre_runtime::resident_work_queue::protocol::read_metrics(control_bytes: 
 pub fn vyre_runtime::resident_work_queue::protocol::read_metrics_into(control_bytes: &[u8], out: &mut alloc::vec::Vec<(u32, u32)>)
 pub fn vyre_runtime::resident_work_queue::protocol::read_observable(control_bytes: &[u8], index: u32) -> u32
 pub fn vyre_runtime::resident_work_queue::protocol::ring_byte_len(slot_count: u32) -> core::option::Option<usize>
+pub fn vyre_runtime::resident_work_queue::protocol::slot::status_name(status: u32) -> core::option::Option<&'static str>
 pub fn vyre_runtime::resident_work_queue::protocol::try_count_done_ring_slots(ring_bytes: &[u8], item_count: usize) -> core::result::Result<u64, vyre_runtime::resident_work_queue::protocol::ProtocolError>
 pub fn vyre_runtime::resident_work_queue::protocol::try_encode_control(shutdown: bool, tenant_count: u32, observable_slots: u32) -> core::result::Result<alloc::vec::Vec<u8>, vyre_runtime::resident_work_queue::protocol::ProtocolError>
 pub fn vyre_runtime::resident_work_queue::protocol::try_encode_control_into(shutdown: bool, tenant_count: u32, observable_slots: u32, dst: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_runtime::resident_work_queue::protocol::ProtocolError>
@@ -867,6 +891,7 @@ pub fn vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeScratch::cle
 pub fn vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeScratch::new() -> Self
 pub fn vyre_runtime::resident_work_queue::try_build_program_with_self_loading_miss_handler(workgroup_size_x: u32, slot_count: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_runtime::resident_work_queue::try_persistent_body(workgroup_size_x: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, alloc::string::String>
+pub fn vyre_runtime::resident_work_queue::try_persistent_body_jit(workgroup_size_x: u32, payload_processor: &[vyre_foundation::ir_inner::model::generated::Node]) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, alloc::string::String>
 pub fn vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAdapter::bootstrap_nodes(&self) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAdapter::buffer_decl(&self) -> vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl
 pub fn vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAdapter::dispatch_nodes(&self) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
@@ -924,7 +949,6 @@ pub fn vyre_runtime::safetensors_transfer::TransferLifecycleEngine::progress_tra
 pub fn vyre_runtime::safetensors_transfer::select_transfer_path(caps: &vyre_runtime::safetensors_transfer::DeviceTransferCapabilities, file_offset: u64, fs_supports_direct: bool) -> vyre_runtime::safetensors_transfer::PathSelectionDecision
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::claim_next_unit(&self) -> usize
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::new(backend_ids: alloc::vec::Vec<&'static str>) -> Self
-pub fn vyre_runtime::scheduler::WorkStealingScheduler::partition(&self, total_len: usize) -> alloc::vec::Vec<vyre_runtime::scheduler::Shard>
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::partition_into(&self, total_len: usize, out: &mut alloc::vec::Vec<vyre_runtime::scheduler::Shard>)
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::reset_unit_cursor(&self)
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::try_partition(&self, total_len: usize) -> core::result::Result<alloc::vec::Vec<vyre_runtime::scheduler::Shard>, vyre_driver::backend::error::BackendError>
@@ -1229,21 +1253,96 @@ pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_host_visible_owner<
 pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_host_visible_slice(slice: &'a mut [u8]) -> Self
 pub unsafe fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::submit_native_nvme_read(&mut self, nvme_fd: i32, namespace_id: u32, starting_lba: u64, blocks: u32, bytes_per_block: u32, slot: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub unsafe fn vyre_runtime::uring::UringResidentQueuePump<'a>::submit_file_scan(&mut self, fd: i32, file_offset: u64, len: u32, chunk_idx: u32, slot_idx: u32, tenant_id: u32, opcode: u32, args: [u32; 3]) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub vyre_runtime::CounterArithmetic::Product
+pub vyre_runtime::CounterArithmetic::Sum
+pub vyre_runtime::CounterScope::IoUring
+pub vyre_runtime::CounterScope::Tenant(u32)
+pub vyre_runtime::CounterScope::TenantRegistry
 pub vyre_runtime::PipelineError::Backend(alloc::string::String)
+pub vyre_runtime::PipelineError::CounterOrder
+pub vyre_runtime::PipelineError::CounterOrder::consumed: u64
+pub vyre_runtime::PipelineError::CounterOrder::consumed_counter: &'static str
+pub vyre_runtime::PipelineError::CounterOrder::fix: &'static str
+pub vyre_runtime::PipelineError::CounterOrder::produced: u64
+pub vyre_runtime::PipelineError::CounterOrder::produced_counter: &'static str
+pub vyre_runtime::PipelineError::CounterOrder::scope: vyre_runtime::CounterScope
+pub vyre_runtime::PipelineError::CounterOverflow
+pub vyre_runtime::PipelineError::CounterOverflow::arithmetic: vyre_runtime::CounterArithmetic
+pub vyre_runtime::PipelineError::CounterOverflow::bits: u32
+pub vyre_runtime::PipelineError::CounterOverflow::counter: &'static str
+pub vyre_runtime::PipelineError::CounterOverflow::fix: &'static str
+pub vyre_runtime::PipelineError::CounterOverflow::lhs: u64
+pub vyre_runtime::PipelineError::CounterOverflow::rhs: u64
+pub vyre_runtime::PipelineError::CounterOverflow::scope: vyre_runtime::CounterScope
 pub vyre_runtime::PipelineError::DrainIncomplete
 pub vyre_runtime::PipelineError::DrainIncomplete::claimed: u32
 pub vyre_runtime::PipelineError::DrainIncomplete::descriptor: &'static str
 pub vyre_runtime::PipelineError::DrainIncomplete::expected: u32
 pub vyre_runtime::PipelineError::DrainIncomplete::unit: &'static str
+pub vyre_runtime::PipelineError::IllegalSlotTransition
+pub vyre_runtime::PipelineError::IllegalSlotTransition::current_status: u32
+pub vyre_runtime::PipelineError::IllegalSlotTransition::fix: &'static str
+pub vyre_runtime::PipelineError::IllegalSlotTransition::permitted: &'static [u32]
+pub vyre_runtime::PipelineError::IllegalSlotTransition::transition: &'static str
+pub vyre_runtime::PipelineError::IntegerWidth
+pub vyre_runtime::PipelineError::IntegerWidth::bits: u32
+pub vyre_runtime::PipelineError::IntegerWidth::fix: &'static str
+pub vyre_runtime::PipelineError::IntegerWidth::quantity: &'static str
+pub vyre_runtime::PipelineError::IntegerWidth::value: u128
+pub vyre_runtime::PipelineError::InvalidRequest
+pub vyre_runtime::PipelineError::InvalidRequest::bound: u64
+pub vyre_runtime::PipelineError::InvalidRequest::fault: vyre_runtime::RequestFault
+pub vyre_runtime::PipelineError::InvalidRequest::fix: &'static str
+pub vyre_runtime::PipelineError::InvalidRequest::observed: u64
+pub vyre_runtime::PipelineError::InvalidRequest::quantity: &'static str
 pub vyre_runtime::PipelineError::IoUringSyscall
 pub vyre_runtime::PipelineError::IoUringSyscall::errno: i32
 pub vyre_runtime::PipelineError::IoUringSyscall::fix: &'static str
 pub vyre_runtime::PipelineError::IoUringSyscall::syscall: &'static str
 pub vyre_runtime::PipelineError::NotLinux
 pub vyre_runtime::PipelineError::NvmePassthroughDisabled
+pub vyre_runtime::PipelineError::Protocol(vyre_runtime::resident_work_queue::protocol::ProtocolError)
 pub vyre_runtime::PipelineError::QueueFull
+pub vyre_runtime::PipelineError::QueueFull::depth: u32
 pub vyre_runtime::PipelineError::QueueFull::fix: &'static str
 pub vyre_runtime::PipelineError::QueueFull::queue: &'static str
+pub vyre_runtime::PipelineError::RegionBounds
+pub vyre_runtime::PipelineError::RegionBounds::fix: &'static str
+pub vyre_runtime::PipelineError::RegionBounds::len: u64
+pub vyre_runtime::PipelineError::RegionBounds::offset: u64
+pub vyre_runtime::PipelineError::RegionBounds::region: &'static str
+pub vyre_runtime::PipelineError::RegionBounds::region_len: u64
+pub vyre_runtime::PipelineError::RegionBounds::unit: &'static str
+pub vyre_runtime::PipelineError::ReservedOpcode
+pub vyre_runtime::PipelineError::ReservedOpcode::fix: &'static str
+pub vyre_runtime::PipelineError::ReservedOpcode::global_opcode: u32
+pub vyre_runtime::PipelineError::ReservedOpcode::local_opcode: u32
+pub vyre_runtime::PipelineError::ReservedOpcode::tenant_id: u32
+pub vyre_runtime::PipelineError::RingEncoding
+pub vyre_runtime::PipelineError::RingEncoding::fault: vyre_runtime::RingEncodingFault
+pub vyre_runtime::PipelineError::RingEncoding::fix: &'static str
+pub vyre_runtime::PipelineError::SlotInFlight
+pub vyre_runtime::PipelineError::SlotInFlight::fix: &'static str
+pub vyre_runtime::PipelineError::SlotInFlight::inflight_tag: u32
+pub vyre_runtime::PipelineError::SlotInFlight::slot: u32
+pub vyre_runtime::PipelineError::SlotInFlight::slot_count: u32
+pub vyre_runtime::PipelineError::UnregisteredResource
+pub vyre_runtime::PipelineError::UnregisteredResource::fix: &'static str
+pub vyre_runtime::PipelineError::UnregisteredResource::handle: u32
+pub vyre_runtime::PipelineError::UnregisteredResource::request: &'static str
+pub vyre_runtime::PipelineError::UnregisteredResource::resource: &'static str
+pub vyre_runtime::PipelineError::UnregisteredResource::slot: u32
+pub vyre_runtime::PipelineError::WorkerThreadPanicked
+pub vyre_runtime::PipelineError::WorkerThreadPanicked::fix: &'static str
+pub vyre_runtime::PipelineError::WorkerThreadPanicked::worker: &'static str
+pub vyre_runtime::RequestFault::BelowMinimum
+pub vyre_runtime::RequestFault::Indivisible
+pub vyre_runtime::RequestFault::LengthMismatch
+pub vyre_runtime::RingEncodingFault::Capacity
+pub vyre_runtime::RingEncodingFault::Geometry
+pub vyre_runtime::RingEncodingFault::OutOfBounds
+pub vyre_runtime::RingEncodingFault::Overflow
+pub vyre_runtime::RingEncodingFault::Protocol
 pub vyre_runtime::UringPollState::Completed(u32)
 pub vyre_runtime::UringPollState::Detached
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Admission(vyre_runtime::artifact_admission::ArtifactAdmissionError)

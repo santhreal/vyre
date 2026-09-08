@@ -315,11 +315,6 @@ impl Manifest {
             .unwrap_or_else(|| panic!("Fix: no dependency named `{alias}` in this manifest"))
     }
 
-    /// The package a dependency alias resolves to, after any rename.
-    fn package_of(&self, alias: &str) -> String {
-        self.dependency(alias).package.clone()
-    }
-
     /// Expand `roots` over this package's own feature table.
     ///
     /// Returns the feature names that end up on, and the raw entries that name

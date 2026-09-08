@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The native Metal test tree under `vyre-driver-metal/tests/internal` compiles and runs, where no test target declared the module directory and its seven device-coverage modules for backend registration, dispatch, fixtures, pipeline cache, resident memory, telemetry and wgpu differential were never built."

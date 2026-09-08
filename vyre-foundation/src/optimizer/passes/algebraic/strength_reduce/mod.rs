@@ -10,7 +10,7 @@ mod exact_div;
 
 use arithmetic::{
     div_operand_copies, granlund_montgomery_div, horner_polynomial_int, power_of_two_shift,
-    reciprocal_constant_fold, shift_add_decompose, synthesize_fma_add, synthesize_fma_sub,
+    reciprocal_constant_fold, shift_add_decompose,
 };
 use divisibility::rewrite_divisibility_test;
 use duplication::may_duplicate;
@@ -192,19 +192,17 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
                 Expr::LitU32(d) if *d > 1 && !d.is_power_of_two() => {
                     granlund_montgomery_div(left.as_ref(), *d)
                 }
-                // Float: x / 2.0 → x * 0.5 (mul is cheaper than div).
-                Expr::LitF32(v) if lit_f32_eq(*v, 2.0) => {
-                    Some(Expr::mul(left.as_ref().clone(), Expr::f32(0.5)))
-                }
                 // Float: x / 1.0 → x (identity).
                 Expr::LitF32(v) if lit_f32_eq(*v, 1.0) => Some(left.as_ref().clone()),
-                // Float: x / C → x * (1/C) for any non-zero finite constant.
-                // GPU fdiv is 4-8× slower than fmul; on training workloads
-                // with per-element normalization (LayerNorm, RMSNorm) this
-                // turns a ~32-cycle instruction into a ~4-cycle one.
-                Expr::LitF32(v) if v.is_finite() && f32_nonzero(*v) => {
-                    Some(Expr::mul(left.as_ref().clone(), Expr::f32(1.0 / v)))
-                }
+                // Float: x / C → x * (1/C) when the reciprocal is exact, which
+                // is every power of two that reciprocates to a normal. GPU fdiv
+                // is 4-8x slower than fmul, and the pair computes the same
+                // quotient bit for bit: both round one exact mathematical value
+                // once. A divisor whose reciprocal rounds is left as a division
+                // and offered to the emitter, which owns the ULP budget that
+                // would authorize the trade.
+                Expr::LitF32(v) => exact_f32_reciprocal(*v)
+                    .map(|reciprocal| Expr::mul(left.as_ref().clone(), Expr::f32(reciprocal))),
                 _ => None,
             }
         }
@@ -243,9 +241,6 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
         }
         // Float: x + (-0.0) → x (additive identity).
         BinOp::Add => {
-            if let Some(fma) = synthesize_fma_add(left, right) {
-                return Some(fma);
-            }
             // Only the negative zero is an additive identity under IEEE-754:
             // `-0.0 + 0.0` is `+0.0`, so folding `x + 0.0` away rewrites the
             // sign of a negative-zero input. `lit_f32_eq` compares bit patterns
@@ -284,9 +279,6 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
         }
         // Float: x - (+0.0) → x (subtractive identity).
         BinOp::Sub => {
-            if let Some(fma) = synthesize_fma_sub(left, right) {
-                return Some(fma);
-            }
             // The subtractive identity takes the opposite zero: `-0.0 - -0.0`
             // is `+0.0`, while `x - 0.0` is `x` for every input.
             if matches!(right.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, 0.0)) {
@@ -419,6 +411,39 @@ fn lit_f32_eq(value: f32, expected: f32) -> bool {
 #[inline]
 fn f32_nonzero(value: f32) -> bool {
     value.to_bits() & 0x7FFF_FFFF != 0
+}
+
+/// The reciprocal of `value` when `1.0 / value` carries no rounding error,
+/// which is what makes `x / value` and `x * (1.0 / value)` the same program.
+///
+/// Exactness needs the significand to be one, so the divisor is a power of two.
+/// That alone is not enough at the ends of the range: a divisor below `2^-127`
+/// reciprocates to infinity, which turns every quotient into an infinity or a
+/// NaN, and rejecting a non-finite or zero divisor does not catch it. The
+/// reciprocal is required to be normal, which also declines the two exponents
+/// whose exact reciprocal is subnormal rather than reasoning about underflow.
+///
+/// A divisor whose reciprocal rounds belongs to the emitter, which is where a
+/// declared ULP budget authorizes trading a division for a multiply. The
+/// optimizer states what the program computes, so it only takes the rewrite
+/// that computes the same thing.
+#[inline]
+fn exact_f32_reciprocal(value: f32) -> Option<f32> {
+    if !value.is_finite() || !f32_nonzero(value) {
+        return None;
+    }
+    let bits = value.to_bits();
+    let significand = bits & 0x007F_FFFF;
+    let power_of_two = if bits & 0x7F80_0000 == 0 {
+        significand.is_power_of_two()
+    } else {
+        significand == 0
+    };
+    if !power_of_two {
+        return None;
+    }
+    let reciprocal = 1.0_f32 / value;
+    reciprocal.is_normal().then_some(reciprocal)
 }
 
 #[cfg(test)]

@@ -42,20 +42,6 @@ fn count_blocks(block: &Block) -> usize {
         .sum()
 }
 
-fn previous_line_before<'a>(wgsl: &'a str, needle: &str) -> Option<&'a str> {
-    let mut previous = None;
-    for line in wgsl.lines() {
-        let trimmed = line.trim();
-        if trimmed.contains(needle) {
-            return previous;
-        }
-        if !trimmed.is_empty() {
-            previous = Some(trimmed);
-        }
-    }
-    None
-}
-
 #[test]
 fn large_region_lowers_to_real_naga_block_and_wgsl_scope() {
     let region_body = (0..65)

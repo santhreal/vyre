@@ -8,7 +8,7 @@ use super::host_oracle_elimination_ast::AstAnalysisVisitor;
 use super::host_oracle_elimination_classify::is_byte_unpack_codec_expr;
 use super::host_oracle_elimination_extract::{
     extract_pat_bindings, extract_read_idents_from_expr, extract_root_ident_from_expr,
-    is_pure_decoder_loop, is_reduction_or_arithmetic_method,
+    is_output_slot_transport_loop, is_pure_decoder_loop, is_reduction_or_arithmetic_method,
 };
 use super::host_oracle_elimination_records::{
     base_module_path, extract_use_tree, normalize_qualified_path, ParamCalleeFlow,
@@ -54,7 +54,10 @@ impl<'ast, 'a> syn::visit::Visit<'ast> for SemanticOperationScanner<'a> {
     }
 
     fn visit_expr_for_loop(&mut self, expr: &'ast syn::ExprForLoop) {
-        if !self.visitor.for_loop_dispatches(expr) && !is_pure_decoder_loop(expr) {
+        if !self.visitor.for_loop_dispatches(expr)
+            && !is_pure_decoder_loop(expr)
+            && !is_output_slot_transport_loop(expr)
+        {
             self.has_semantic_op = true;
         }
         syn::visit::visit_expr_for_loop(self, expr);

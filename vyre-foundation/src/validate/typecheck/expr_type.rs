@@ -227,6 +227,14 @@ pub(crate) fn expr_type<E: TypeEnv + ?Sized>(expr: &Expr, env: &mut E) -> Option
                             values.push(Some(DataType::F32));
                             plan(expr, Combine::Drop(1), operand, &mut frames);
                         }
+                        UnOp::BitcastF32ToU32 => {
+                            values.push(Some(DataType::U32));
+                            plan(expr, Combine::Drop(1), operand, &mut frames);
+                        }
+                        UnOp::BitcastU32ToF32 => {
+                            values.push(Some(DataType::F32));
+                            plan(expr, Combine::Drop(1), operand, &mut frames);
+                        }
                         // Lane unpacking and extension operators have no
                         // statically known result type.
                         _ => {

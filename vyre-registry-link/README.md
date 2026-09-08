@@ -20,10 +20,10 @@ Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-registry-link/tests/level_stage_closure.rs`:
+Run the checked-in behavior from `vyre-registry-link/tests/all_tests.rs`:
 
 ```console
-./cargo_full test -p vyre-registry-link --test level_stage_closure
+./cargo_full test -p vyre-registry-link --test all_tests
 ```
 
 ### Features

@@ -75,6 +75,25 @@ pub enum MemoryKind {
     Push,
 }
 
+impl MemoryKind {
+    /// Every memory tier a program region can request.
+    ///
+    /// A fixed-length array, so a tier added to the enum fails to compile until
+    /// it is listed here. The enum is `#[non_exhaustive]`, so no crate outside
+    /// this one can match it exhaustively; this is how a test walks the whole
+    /// space and how a new tier turns those tests red until a decision is
+    /// recorded for it.
+    pub const ALL: [Self; 7] = [
+        Self::Global,
+        Self::Shared,
+        Self::Uniform,
+        Self::Local,
+        Self::Readonly,
+        Self::Persistent,
+        Self::Push,
+    ];
+}
+
 /// Non-binding cache behavior hint for a memory region.
 #[non_exhaustive]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]

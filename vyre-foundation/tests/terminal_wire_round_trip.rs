@@ -1,26 +1,21 @@
 //! Terminal enum variant wire-format round trips.
 //!
 //! Which operator variants exist is owned by
-//! `tests/support/spec_variant_tables.rs`, and what a round trip has to
-//! preserve is owned by `tests/support/wire_round_trip.rs`. That every variant
+//! `vyre_test_support::spec_variant_tables`, and what a round trip has to
+//! preserve is owned by `vyre_test_support::wire_round_trip`. That every variant
 //! survives one is this suite's contract. The `DataType` list below stays
 //! local: a cast target may be `Handle`, `Vec`, `TensorShaped` or `Opaque`,
 //! none of which a buffer element table describes.
 
-#[path = "../../tests/support/spec_variant_tables.rs"]
-mod spec_variant_tables;
-#[path = "../../tests/support/wire_round_trip.rs"]
-mod wire_round_trip;
-
 use smallvec::smallvec;
-use spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_spec::extension::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionUnOpId,
 };
 use vyre_spec::TypeId;
-use wire_round_trip::assert_canonical_wire_round_trip;
+use vyre_test_support::spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
+use vyre_test_support::wire_round_trip::assert_canonical_wire_round_trip;
 
 #[test]
 fn every_terminal_data_type_round_trips_in_cast_targets() {

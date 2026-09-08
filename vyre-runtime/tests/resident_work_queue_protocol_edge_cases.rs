@@ -2,10 +2,14 @@
 //!
 //! Covers:
 //! - Slot publish bounds (exact boundary, empty ring)
-//! - Packed slot overflow (12-word boundary, u8 opcode_count overflow)
+//! - Packed slot overflow (12-word boundary)
 //! - Done/epoch/metrics readback with short buffers
 //! - Queue packing validation (BatchDescriptor/WindowDescriptor overflow)
 //! - No silent CPU fallback (runtime-level explicit GPU mode selection)
+//!
+//! The u8 opcode-count field is bounded by `packed_slot_256_ops_fails` in
+//! `resident_work_queue_protocol_layout_contracts`, which owns the packed-slot
+//! payload budget as one set.
 
 use vyre_runtime::resident_work_queue::{
     descriptor::{BatchDescriptor, BuiltinOpcode, SlotDescriptor, SlotOpcode, WindowDescriptor},
@@ -13,8 +17,9 @@ use vyre_runtime::resident_work_queue::{
     protocol::{self, control, slot, ARGS_PER_SLOT, STATUS_WORD},
     ResidentWorkQueue,
 };
-use vyre_runtime::PipelineError;
+use vyre_runtime::{PipelineError, RingEncodingFault};
 
+use crate::ring_expectations::{assert_ring_fault, missing_word, protocol_missing_word};
 use vyre_test_support::le_words::write_word;
 
 // ---------------------------------------------------------------------------
@@ -28,7 +33,11 @@ fn slot_publish_exact_boundary_last_slot_ok_next_fails() {
         .expect("last slot (slot_count - 1) must be publishable");
     let err = ResidentWorkQueue::publish_slot(&mut ring, 4, 0, protocol::opcode::NOP, &[])
         .expect_err("slot_idx == slot_count must be rejected");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::OutOfBounds,
+        "slot_idx == slot_count is out of bounds",
+    );
 }
 
 #[test]
@@ -36,7 +45,11 @@ fn slot_publish_empty_ring_rejects_any_slot() {
     let mut ring = ResidentWorkQueue::encode_empty_ring(0).unwrap();
     let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[])
         .expect_err("empty ring must reject any slot publish");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::OutOfBounds,
+        "a zero-slot ring has no publishable slot",
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -60,24 +73,20 @@ fn packed_slot_13_word_boundary_fails() {
     let over_ops = vec![(1u8, vec![0u32; 5]), (2u8, vec![0u32; 6])];
     let err = ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &over_ops)
         .expect_err("packed slot with 13 words must fail");
-    assert!(matches!(&err, PipelineError::QueueFull { .. }));
+    assert!(
+        matches!(
+            &err,
+            PipelineError::RingEncoding {
+                fault: RingEncodingFault::Capacity,
+                ..
+            }
+        ),
+        "13 packed words against a 12-word budget is a capacity fault, got {err:?}"
+    );
     let msg = err.to_string();
     assert!(
         msg.contains("12-word") || msg.contains("exceeds") || msg.contains("budget"),
         "error must mention slot argument budget: {msg}"
-    );
-}
-
-#[test]
-fn packed_slot_256_ops_rejects_u8_opcode_count_overflow() {
-    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
-    let max_ops: Vec<_> = (0..256).map(|i| (i as u8, vec![])).collect();
-    let err = ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &max_ops)
-        .expect_err("256 inner ops must fail u8 opcode_count overflow");
-    assert!(matches!(&err, PipelineError::QueueFull { .. }));
-    assert!(
-        err.to_string().contains("255"),
-        "error must mention u8 limit: {err}"
     );
 }
 
@@ -91,14 +100,26 @@ fn try_read_done_count_rejects_buffer_missing_word() {
     let short = vec![0u8; 4];
     let err = protocol::try_read_done_count(&short)
         .expect_err("buffer missing DONE_COUNT word must fail");
-    assert!(err.to_string().contains("Fix:"));
+    let (buffer, word_idx, byte_len) = missing_word(
+        &err,
+        "a buffer ending before DONE_COUNT must name that word",
+    );
+    assert_eq!(buffer, "control");
+    assert_eq!(word_idx, control::DONE_COUNT as usize);
+    assert_eq!(byte_len, 4);
 }
 
 #[test]
 fn try_read_epoch_rejects_buffer_missing_epoch_word() {
     let short = vec![0u8; (control::EPOCH as usize) * 4];
     let err = protocol::try_read_epoch(&short).expect_err("buffer missing EPOCH word must fail");
-    assert!(err.to_string().contains("Fix:"));
+    let (buffer, word_idx, byte_len) = missing_word(
+        &err,
+        "a buffer ending at the epoch word must name that word",
+    );
+    assert_eq!(buffer, "control");
+    assert_eq!(word_idx, control::EPOCH as usize);
+    assert_eq!(byte_len, (control::EPOCH as usize) * 4);
 }
 
 #[test]
@@ -106,7 +127,17 @@ fn try_read_metrics_rejects_short_buffer() {
     let short = vec![0u8; ((control::METRICS_BASE + 1) as usize) * 4];
     let err =
         ResidentWorkQueue::try_read_metrics(&short).expect_err("short metrics buffer must fail");
-    assert!(err.to_string().contains("Fix:"));
+    let (buffer, word_idx, byte_len) = protocol_missing_word(
+        &err,
+        "a short metrics window must name the first word it could not read",
+    );
+    assert_eq!(buffer, "control");
+    assert_eq!(
+        word_idx,
+        (control::METRICS_BASE + 1) as usize,
+        "the strict metrics counter walks the window in order, so the first absent word is the one past the buffer"
+    );
+    assert_eq!(byte_len, ((control::METRICS_BASE + 1) as usize) * 4);
 }
 
 #[test]
@@ -149,7 +180,11 @@ fn batch_descriptor_rejects_items_exceeding_ring_capacity() {
     let err = batch
         .publish_into(&mut ring)
         .expect_err("batch exceeding ring must fail");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::OutOfBounds,
+        "a batch wider than the ring reaches past its end",
+    );
 }
 
 #[test]
@@ -161,7 +196,11 @@ fn batch_publish_rejects_u32_slot_index_overflow() {
     ];
     let err = ResidentWorkQueue::batch_publish(&mut ring, u32::MAX - 1, 0, &batch_items, 0)
         .expect_err("batch publish wrapping u32::MAX must fail on OOB ring");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Overflow,
+        "start_slot near u32::MAX plus the fence slot overflows u32",
+    );
 }
 
 #[test]
@@ -180,7 +219,11 @@ fn window_descriptor_rejects_prefixed_arg_overflow() {
     let err = window
         .publish_into(&mut ring)
         .expect_err("prefixed args exceeding budget must fail");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Capacity,
+        "ticket and class prefix plus a full arg slot exceeds the budget",
+    );
 }
 
 // ---------------------------------------------------------------------------

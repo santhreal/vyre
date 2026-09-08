@@ -16,7 +16,7 @@
 //! which the real backend's strict `validate_input_lengths` would reject. The faithful dispatcher's
 //! strict count check caught it; the consumer now passes exactly six.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::sinkhorn_dispatch_clustering::sinkhorn_clustering_via;
 use vyre_reference::composition_witness::sinkhorn_clustering_witness;

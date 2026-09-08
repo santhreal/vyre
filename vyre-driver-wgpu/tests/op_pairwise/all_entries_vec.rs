@@ -488,35 +488,11 @@ pub(crate) fn needs_input(buf: &BufferDecl) -> bool {
     vyre_reference::is_reference_input(buf)
 }
 
-pub(crate) fn witness_uses_legacy_abi(program: &Program, case_len: usize) -> Option<bool> {
-    let logical_count = program
-        .buffers()
-        .iter()
-        .filter(|buffer| needs_input(buffer))
-        .count();
-    let legacy_count = program
-        .buffers()
-        .iter()
-        .filter(|buffer| buffer.access() != BufferAccess::Workgroup)
-        .count();
-
-    if case_len == legacy_count && case_len != logical_count {
-        Some(true)
-    } else if case_len == logical_count {
-        Some(false)
-    } else {
-        None
-    }
-}
-
 pub(crate) fn input_witness_len(program: &Program, case: &[Vec<u8>], name: &str) -> Option<usize> {
-    let legacy = witness_uses_legacy_abi(program, case.len())?;
     program
         .buffers()
         .iter()
-        .filter(|buffer| {
-            buffer.access() != BufferAccess::Workgroup && (legacy || needs_input(buffer))
-        })
+        .filter(|buffer| needs_input(buffer))
         .zip(case)
         .find(|(buffer, _)| buffer.name() == name)
         .map(|(_, bytes)| bytes.len())

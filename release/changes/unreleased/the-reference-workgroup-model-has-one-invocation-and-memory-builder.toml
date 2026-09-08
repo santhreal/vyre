@@ -1,0 +1,2 @@
+category = "Removed"
+text = "Two superseded `#[cfg(test)]` copies of `create_invocations` and `workgroup_memory` in the reference workgroup model, the second of which sized a workgroup buffer as `count * element_bytes` and so over-allocated every packed sub-byte element; the live builders in the hashmap execution path are the only ones left."

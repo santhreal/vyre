@@ -8,10 +8,13 @@
 //! it existed to catch. The markdown was then deleted outright and the test
 //! failed on a missing file rather than on a wrong id.
 //!
-//! The list is now `ErrorCode::ALL`, and a const assertion in
-//! `backend/error.rs` makes a variant missing from it a compile error. What
-//! remains for a test to prove is that the committed catalog matches the
-//! rendered one, which is what this file does.
+//! The list is now `ErrorCode::ALL`, a const assertion in `backend/error.rs`
+//! holds its order to `stable_id`, and
+//! `every_declared_variant_is_catalogued` below reads the `pub enum ErrorCode`
+//! declaration at run time and holds the membership to it. A variant added to
+//! the enum and not to `ALL` fails that test; a variant added to `ALL` and not
+//! to `summary` does not compile. What remains is that the committed catalog
+//! matches the rendered one, which the first test does.
 //!
 //! Not covered here: whether an id was renumbered between releases. The
 //! committed file makes such a change visible in review; nothing at test time
@@ -141,5 +144,44 @@ fn the_deprecation_warning_is_catalogued() {
         codes.contains(&DEPRECATED_OP_CODE),
         "the only non-validation diagnostic code this crate emits is uncatalogued: \
          have {codes:?}"
+    );
+}
+
+/// Every variant the enum declares reaches the catalog.
+///
+/// WHY: the member set is read from source rather than written here. A
+/// hardwritten roster is what let `CooperativeResidencyExceeded` and
+/// `DeviceLost` go uncovered for as long as they did, and no const assertion
+/// can prove completeness for an enum: a new variant absent from `ALL` is
+/// never evaluated by the const block that walks `ALL`.
+///
+/// Not covered: a variant declared behind `cfg`. The scan reads text, so it
+/// reports every variant in the declaration whichever features the runner
+/// selects, which is the stronger direction for this table.
+#[test]
+fn every_declared_variant_is_catalogued() {
+    let path =
+        vyre_test_support::monorepo::vyre_workspace_root().join("vyre-driver/src/backend/error.rs");
+    let source = fs::read_to_string(&path)
+        .unwrap_or_else(|err| panic!("cannot read the ErrorCode declaration at {path:?}: {err}"));
+    let body =
+        vyre_test_support::braced_body(&source, "pub enum ErrorCode {").unwrap_or_else(|| {
+            panic!("no `pub enum ErrorCode` declaration in {path:?}; update this enumeration")
+        });
+    let declared = vyre_test_support::top_level_variant_names(body);
+
+    assert!(
+        declared.len() >= 8,
+        "the variant scan found {} names, which is a broken scan rather than a small enum",
+        declared.len()
+    );
+
+    let catalogued: std::collections::BTreeSet<String> = ErrorCode::ALL
+        .iter()
+        .map(|code| format!("{code:?}"))
+        .collect();
+    assert_eq!(
+        declared, catalogued,
+        "ErrorCode::ALL and the ErrorCode declaration disagree; every variant must be catalogued"
     );
 }

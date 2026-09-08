@@ -12,6 +12,7 @@ use std::fs;
 use std::io::Read;
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, LazyLock, Mutex, PoisonError};
 
 use walkdir::{DirEntry, WalkDir};
 
@@ -23,21 +24,97 @@ use walkdir::{DirEntry, WalkDir};
 /// a scanner reports what the tree says, and a file it cannot open says
 /// nothing.
 ///
-/// Lazy on purpose. The workspace holds thousands of sources and a scanner
-/// looks at one at a time, so collecting every file's text first would hold the
-/// whole tree in memory to answer a question about one file.
-pub fn rust_sources_with_text(root: &Path) -> impl Iterator<Item = SourceText> + '_ {
-    rust_sources(root).into_iter().map(move |file| {
-        let path = file
-            .strip_prefix(root)
-            .unwrap_or(&file)
-            .to_string_lossy()
-            .replace('\\', "/");
-        match read_source(&file) {
-            Ok(text) => SourceText::Read { path, text },
-            Err(reason) => SourceText::Unread { path, reason },
+/// The read is spread across many lanes. Every caller sweeps the whole corpus,
+/// so a lazy read saved no work and only serialized it: each of the 4495 files
+/// is one round trip, and on a network-mounted checkout that is minutes of
+/// waiting for 37 MiB of text. Holding that text is the cost of not waiting for
+/// it, and it is bounded per file by the same cap a single read is.
+///
+/// The lane count comes from `read_lanes` and exceeds the host's core count on
+/// purpose: a blocked read occupies no core, so the useful width is requests in
+/// flight.
+///
+/// Lanes are contiguous slices of the sorted roster and are joined in order, so
+/// a report names files in the same sequence every run.
+///
+/// The read happens once per process per root. A contract that judges the tree
+/// sweeps the whole corpus, and one consolidated test binary runs dozens of
+/// them in parallel threads, so the read is shared: the caller that finds the
+/// corpus missing reads it while the others wait, and every sweep after that is
+/// a copy out of memory rather than 4495 network round trips. Waiting is the
+/// point. Ten contracts starting together used to mean ten concurrent sweeps of
+/// the same 37 MiB over a network mount.
+///
+/// # Panics
+///
+/// Resumes the panic of a read lane that failed. A lane reads files and records
+/// a refusal per file, so the only way one unwinds is a defect in this module or
+/// an abort of the whole scope; a partial corpus would let a sweep pass on the
+/// files that happened to load, so it ends the process instead.
+pub fn rust_sources_with_text(root: &Path) -> impl Iterator<Item = SourceText> {
+    static READ: LazyLock<Mutex<BTreeMap<PathBuf, Arc<[SourceText]>>>> =
+        LazyLock::new(|| Mutex::new(BTreeMap::new()));
+
+    let mut cache = READ.lock().unwrap_or_else(PoisonError::into_inner);
+    let corpus = match cache.get(root) {
+        Some(found) => Arc::clone(found),
+        None => {
+            let read: Arc<[SourceText]> = read_rust_sources_with_text(root).into();
+            cache.insert(root.to_path_buf(), Arc::clone(&read));
+            read
         }
+    };
+    drop(cache);
+    // The iterator holds the cached corpus and copies one file as it is reached,
+    // so a sweep never holds a second copy of the whole 37 MiB.
+    (0..corpus.len()).map(move |index| corpus[index].clone())
+}
+
+/// The corpus read, without the cache in front of it.
+///
+/// # Panics
+///
+/// Resumes the panic of a read lane. A partial corpus would let a sweep pass on
+/// the files that happened to load.
+fn read_rust_sources_with_text(root: &Path) -> Vec<SourceText> {
+    let tree = crate::workspace_manifest::tree_files(root);
+    let files = tree.rust_sources();
+    let per_lane = files
+        .len()
+        .div_ceil(crate::workspace_manifest::read_lanes(files.len()))
+        .max(1);
+    std::thread::scope(|scope| {
+        let handles: Vec<_> = files
+            .chunks(per_lane)
+            .map(|chunk| {
+                scope.spawn(move || {
+                    chunk
+                        .iter()
+                        .map(|file| source_text(root, file))
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect();
+        handles
+            .into_iter()
+            .flat_map(|handle| {
+                handle.join().expect("a source read lane must not panic. Fix: repair the defect stated by the lane panic printed before this one")
+            })
+            .collect()
     })
+}
+
+/// One file's checkout-relative path and text, or the reason it was refused.
+fn source_text(root: &Path, file: &Path) -> SourceText {
+    let path = file
+        .strip_prefix(root)
+        .unwrap_or(file)
+        .to_string_lossy()
+        .replace('\\', "/");
+    match read_source(file) {
+        Ok(text) => SourceText::Read { path, text },
+        Err(reason) => SourceText::Unread { path, reason },
+    }
 }
 
 /// One tracked source, read or refused.
@@ -105,23 +182,6 @@ fn read_source(path: &Path) -> Result<String, String> {
     Ok(text)
 }
 
-/// Every `.rs` file under `root`, sorted.
-///
-/// Build outputs and hidden directories are skipped, which is what makes the
-/// set the checked-in tree rather than whatever the last build left behind.
-fn rust_sources(root: &Path) -> Vec<PathBuf> {
-    let mut found: Vec<PathBuf> = WalkDir::new(root)
-        .into_iter()
-        .filter_entry(|entry| !is_pruned(entry))
-        .filter_map(Result::ok)
-        .filter(|entry| entry.file_type().is_file())
-        .map(DirEntry::into_path)
-        .filter(|path| path.extension().is_some_and(|extension| extension == "rs"))
-        .collect();
-    found.sort();
-    found
-}
-
 /// Whether `directory` holds a Rust source, at any depth below it.
 ///
 /// The question every placement answer has to ask. Git tracks files, not
@@ -177,7 +237,7 @@ pub fn source_directory_named(root: &Path, name: &str) -> Option<PathBuf> {
 ///
 /// The root itself is never pruned: the checkout may sit in a hidden directory
 /// on a workstation, and pruning it would report an empty workspace.
-fn is_pruned(entry: &DirEntry) -> bool {
+pub(crate) fn is_pruned(entry: &DirEntry) -> bool {
     if entry.depth() == 0 || !entry.file_type().is_dir() {
         return false;
     }

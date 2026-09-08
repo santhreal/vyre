@@ -328,7 +328,7 @@ mod tests {
             assert_ne!(a.finalize(), b.finalize());
             assert_eq!(
                 dispatch_policy_cache_string(&base),
-                "ulp=Some(1):wg=Some([64, 1, 1])"
+                "ulp=Some(1):wg=Some([64, 1, 1]):float=contracted"
             );
         }
 

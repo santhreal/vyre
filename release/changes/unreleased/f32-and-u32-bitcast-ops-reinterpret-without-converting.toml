@@ -1,0 +1,2 @@
+category = "Added"
+text = "`UnOp::BitcastF32ToU32` and `UnOp::BitcastU32ToF32` reinterpret the 32 bits of a value without converting it, with wire tags `0x25` and `0x26`, a reference-interpreter arm that preserves every NaN payload and subnormal, and emitter arms in every backend."

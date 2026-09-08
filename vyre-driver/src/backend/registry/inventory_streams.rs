@@ -10,25 +10,6 @@ use super::grid_sync_split::wrap_grid_sync_split;
 use crate::backend::{ArtifactMaterializer, BackendError, VyreBackend};
 use vyre_megakernel::TargetCompiler;
 
-struct RegisteredOperationSupport {
-    id: &'static str,
-    operations: &'static HashSet<OpId>,
-}
-
-impl crate::backend::Backend for RegisteredOperationSupport {
-    fn id(&self) -> &'static str {
-        self.id
-    }
-
-    fn version(&self) -> &'static str {
-        "registered-target-compiler"
-    }
-
-    fn supported_ops(&self) -> &HashSet<OpId> {
-        self.operations
-    }
-}
-
 /// One backend constructor contributed by a linked backend crate.
 ///
 /// Backend construction can fail (missing GPU adapter, unsupported driver),

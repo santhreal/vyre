@@ -14,12 +14,9 @@
 //! `vyre-spec` and `vyre-foundation/src/visit`, so a new operator or variant
 //! fails to compile there instead of defaulting to reorderable here.
 
-#[path = "support/opaque_echo_extension.rs"]
-mod opaque_echo_extension;
-
 use std::sync::Arc;
 
-use opaque_echo_extension::{EchoExpr, EchoNode};
+use crate::opaque_echo_extension::{EchoExpr, EchoNode};
 
 use vyre_foundation::algebraic_reordering::{reordering_class, ReorderingClass};
 use vyre_foundation::ir::{

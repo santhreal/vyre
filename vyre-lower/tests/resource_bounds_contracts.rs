@@ -39,9 +39,7 @@ fn mock_descriptor() -> KernelDescriptor {
     KernelDescriptor {
         id: "mock_kernel".to_string(),
         bindings: BindingLayout { slots: vec![] },
-        dispatch: vyre_lower::Dispatch {
-            workgroup_size: [64, 1, 1],
-        },
+        dispatch: vyre_lower::Dispatch::new(64, 1, 1),
         body: KernelBody {
             ops: vec![],
             literals: vec![],

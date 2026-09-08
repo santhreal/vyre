@@ -40,8 +40,8 @@ The crate lives at `xtask`. The `release-tooling` owner maintains its
 | `bin` | `scaffold_rule` | `xtask/src/bin/scaffold_rule.rs` | None | `./cargo_full test -p xtask --bin scaffold_rule` |
 | `bin` | `xtask` | `xtask/src/main.rs` | None | `./cargo_full test -p xtask --bin xtask` |
 | `lib` | `xtask` | `xtask/src/lib.rs` | None | `./cargo_full test -p xtask` |
-| `test` | `docs_references` | `xtask/tests/docs_references.rs` | None | `./cargo_full test -p xtask --test docs_references` |
-| `test` | `release_docs` | `xtask/tests/release_docs.rs` | None | `./cargo_full test -p xtask --test release_docs` |
+| `test` | `all_tests` | `xtask/tests/all_tests.rs` | None | `./cargo_full test -p xtask --test all_tests` |
+| `test` | `tree_contracts` | `xtask/tests/tree_contracts/main.rs` | None | `./cargo_full test -p xtask --test tree_contracts` |
 
 ## Test classes
 
@@ -51,7 +51,7 @@ The crate lives at `xtask`. The `release-tooling` owner maintains its
 
 ## Hardware requirements
 
-Most policy tests are host-only. Commands that generate backend evidence inherit the hardware contract of the selected backend on the execution host (axiomexec) and must fail on an unavailable requested device.
+Most policy tests are host-only. Commands that generate backend evidence inherit the hardware contract of the selected backend on the execution host and must fail on an unavailable requested device.
 
 ## Evidence outputs
 

@@ -13,7 +13,7 @@
 
 use std::collections::BTreeMap;
 
-mod harness;
+use crate::harness;
 use harness::add_one_program;
 use vyre_driver_cuda::cuda_factory;
 use vyre_foundation::ir::ProgramGraph;

@@ -8,13 +8,9 @@ use smallvec::SmallVec;
 use vyre_driver::resident_transfer_fusion::{
     fuse_resident_upload_copies as driver_fuse_resident_upload_copies,
     push_resident_upload_copy as driver_push_resident_upload_copy,
-    ResidentUploadBytes as DriverResidentUploadBytes,
     ResidentUploadCopy as DriverResidentUploadCopy,
 };
 use vyre_driver::BackendError;
-
-/// Host bytes for one resident upload interval.
-pub(crate) type ResidentUploadBytes<'a> = DriverResidentUploadBytes<'a>;
 
 /// One validated host-to-device upload request.
 pub(crate) type ResidentUploadCopy<'a> = DriverResidentUploadCopy<'a>;
@@ -38,17 +34,15 @@ pub(crate) fn fuse_resident_upload_copies<'a>(
     driver_fuse_resident_upload_copies(copies)
 }
 
-// Inline: covers `ResidentUploadBytes`, `ResidentUploadCopy`, `fuse_resident_upload_copies`,
+// Inline: covers `ResidentUploadCopy`, `fuse_resident_upload_copies`,
 // `push_resident_upload_copy`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use smallvec::SmallVec;
     use vyre_driver::resident_transfer_fixtures::assert_upload_fusion_preserves_ordered_writes;
+    use vyre_driver::resident_transfer_fusion::ResidentUploadBytes;
 
-    use super::{
-        fuse_resident_upload_copies, push_resident_upload_copy, ResidentUploadBytes,
-        ResidentUploadCopy,
-    };
+    use super::{fuse_resident_upload_copies, push_resident_upload_copy, ResidentUploadCopy};
 
     #[test]
     fn empty_resident_upload_copy_does_not_schedule_dma() {

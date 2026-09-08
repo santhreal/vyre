@@ -19,10 +19,12 @@
 
 /// Mapping an index space onto the lanes of one workgroup.
 ///
-/// Behind `reduce` because the argmax collapses its lane partials with the
-/// workgroup reduction children, which that feature owns. Every consumer of a
-/// cooperative walk already enables it.
-#[cfg(feature = "reduce")]
+/// Behind the two features that compile a consumer: `bitset` for the lane walk
+/// in `bitset::any`, and `math-kernels` for the walk and the argmax in five
+/// `math` kernels. `math-succinct` and `nn-moe` reach the walk's chunk count
+/// and both name `math-kernels`, so neither is named here. `reduce` alone
+/// compiles no caller.
+#[cfg(any(feature = "bitset", feature = "math-kernels"))]
 pub(crate) mod cooperative;
 #[cfg(feature = "graph")]
 pub mod csr;
@@ -33,7 +35,14 @@ pub mod gemm;
 /// Domain-neutral byte-range ordering predicates over the scanner output
 /// contract.
 pub mod range_ordering;
-pub(crate) mod reduction;
+pub mod reduction;
+/// The reduction programs whose scratch fold is a `reduce` child.
+///
+/// Behind `reduce` because that feature owns the workgroup-tree folds and the
+/// atomic scalar reduction every program in it composes. The composer in
+/// `reduction` reaches no dialect and compiles wherever `builder` does.
+#[cfg(feature = "reduce")]
+mod reduction_tree;
 /// The two shared child regions registered as operations in their own right.
 ///
 /// Behind `builder-ops` because `INDEXED_MAP_OP_ID` and
@@ -46,6 +55,8 @@ mod registrations;
 pub mod state_machine;
 /// Canonical 2D grid, coordinate decomposition, stencil, and pixel composer.
 pub mod stencil;
+/// The one clamp a data-derived loop bound passes through.
+pub(crate) mod trip_count;
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
@@ -58,11 +69,11 @@ use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 /// This is the kernel skeleton behind embedding lookup, byte shuffles,
 /// quant pack/unpack, and similar data-layout transforms:
 /// `for i in 0..n { out[dst(i)] = value(i) }`.
-pub(crate) const INDEXED_MAP_OP_ID: &str = "vyre-libs::builder::indexed_map";
+pub const INDEXED_MAP_OP_ID: &str = "vyre-libs::builder::indexed_map";
 /// Shared child region for strided per-lane workgroup accumulators.
-pub(crate) const STRIDED_ACCUMULATE_OP_ID: &str = "vyre-libs::builder::strided_accumulate";
+pub const STRIDED_ACCUMULATE_OP_ID: &str = "vyre-libs::builder::strided_accumulate";
 /// Shared child region for strided writeback after a tiled row reduction.
-pub(crate) const STRIDED_WRITEBACK_OP_ID: &str = "anonymous::vyre-libs::builder::strided_writeback";
+pub const STRIDED_WRITEBACK_OP_ID: &str = "anonymous::vyre-libs::builder::strided_writeback";
 
 /// Shared options every Cat-A builder threads through. Lives here so
 /// every op agrees on the same surface.
@@ -231,7 +242,10 @@ pub fn checked_element_count(op: &'static str, input: &TensorRef) -> Result<u32,
 
 #[cfg(test)]
 mod cat_a_builder_option_macro_tests {
-    #![allow(unreachable_pub)]
+    #![expect(
+        unreachable_pub,
+        reason = "impl_cat_a_builder_options! emits the pub with_* surface a builder crate exports, and this module is private"
+    )]
 
     use super::BuildOptions;
 
@@ -268,7 +282,7 @@ mod cat_a_builder_option_macro_tests {
 /// Callers provide buffer declarations plus the semantic mapping from logical
 /// element `i` to `(dst_index, value)`. The loop, bounds guard, invocation id,
 /// workgroup default, and composition region stay centralized.
-pub(crate) fn build_indexed_map<F>(
+pub fn build_indexed_map<F>(
     op_id: &'static str,
     buffers: Vec<BufferDecl>,
     output: &str,
@@ -305,7 +319,7 @@ where
 /// The parent must bind `local = LogicalWithinTileId(0)` before this child. The child
 /// accumulates `i = chunk * tile + local` for `chunk in 0..chunks`, guards
 /// `i < n`, and stores the lane-local accumulator into `scratch[local]`.
-pub(crate) fn strided_accumulate_child<F>(
+pub fn strided_accumulate_child<F>(
     parent_op_id: &'static str,
     tile: u32,
     chunks: u32,
@@ -342,7 +356,7 @@ where
 ///
 /// This keeps paired reductions such as `(sum, sum_sq)` in one memory pass
 /// instead of forcing two separate scans over the input.
-pub(crate) fn strided_accumulate2_child<F1, F2>(
+pub fn strided_accumulate2_child<F1, F2>(
     parent_op_id: &'static str,
     tile: u32,
     chunks: u32,
@@ -385,7 +399,7 @@ where
 /// The parent must bind `local = LogicalWithinTileId(0)` before this child. Optional
 /// `prelude` nodes run once in workgroup zero before the strided write loop,
 /// which lets row reductions load reduced scalars exactly once per lane.
-pub(crate) fn strided_writeback_child<F>(
+pub fn strided_writeback_child<F>(
     parent_op_id: &'static str,
     tile: u32,
     chunks: u32,
@@ -436,7 +450,7 @@ fn child_region(parent_op_id: &'static str, child_op_id: &'static str, body: Vec
 
 /// Tensor-ref elementwise binary builder, used by `math::avg_floor`,
 /// `math::algebra`, and other binary-arithmetic primitives.
-pub(crate) fn build_elementwise_binary<F>(
+pub fn build_elementwise_binary<F>(
     op_id: &'static str,
     a: crate::plumbing::operand::tensor_ref::TensorRef,
     b: crate::plumbing::operand::tensor_ref::TensorRef,
@@ -450,7 +464,9 @@ where
     ElementwiseComposer::try_binary(op_id, a, b, out, options, f)
 }
 
-pub(crate) fn build_elementwise_unary<F>(
+/// Tensor-ref elementwise unary builder, the one-input counterpart to
+/// [`build_elementwise_binary`].
+pub fn build_elementwise_unary<F>(
     op_id: &'static str,
     a: crate::plumbing::operand::tensor_ref::TensorRef,
     out: crate::plumbing::operand::tensor_ref::TensorRef,

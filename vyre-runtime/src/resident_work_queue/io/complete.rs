@@ -3,7 +3,7 @@
 
 use std::sync::atomic::{fence, Ordering};
 
-use crate::PipelineError;
+use crate::{PipelineError, RingEncodingFault};
 
 use super::super::protocol::slot;
 use super::queue_words::{
@@ -45,8 +45,8 @@ pub fn try_complete_io_requests_batch(
         let base_word = completion_base_word(*slot_idx, view)?;
         let current_status = read_queue_word(io_queue_bytes, base_word, io_word::STATUS)?;
         if current_status != slot::CLAIMED {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Protocol,
                 fix: "io_queue completion requires a CLAIMED request; poll with claim_io_requests_into before completing so the same DMA is not completed without ownership",
             });
         }
@@ -78,8 +78,8 @@ fn complete_io_requests_words(
             ))
         })?);
         if current_status != slot::CLAIMED {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Protocol,
                 fix: "io_queue completion requires a CLAIMED request; poll with claim_io_requests_into before completing so the same DMA is not completed without ownership",
             });
         }
@@ -108,8 +108,8 @@ fn completion_base_word(slot_idx: u32, view: IoQueueView) -> Result<usize, Pipel
         ))
     })?;
     if slot >= view.slot_count {
-        return Err(PipelineError::QueueFull {
-            queue: "submission",
+        return Err(PipelineError::RingEncoding {
+            fault: RingEncodingFault::OutOfBounds,
             fix: "io_queue completion slot exceeds queue length; complete a valid slot id",
         });
     }

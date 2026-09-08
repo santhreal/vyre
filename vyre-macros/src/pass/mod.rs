@@ -315,17 +315,17 @@ pub(crate) fn vyre_pass_impl(args: TokenStream, item: TokenStream) -> TokenStrea
         quote! { Self::analyze_impl(program) }
     };
     // A pass is device-dependent only by saying so. Everything else gets a
-    // `transform_for_adapter` that discards the adapter, which is the honest
+    // `transform_for_adapter` that ignores the adapter, which is the honest
     // statement that its rewrite is the same program on every device; the
     // alternative, letting a pass pick a profile inside `transform`, is how
     // the whole pipeline came to compile against one profile nobody chose.
-    let transform_for_adapter_body = if args.adapter_dependent {
-        quote! { Self::transform_for_adapter(program, caps) }
+    let (adapter_caps_param, transform_for_adapter_body) = if args.adapter_dependent {
+        (
+            quote! { caps },
+            quote! { Self::transform_for_adapter(program, caps) },
+        )
     } else {
-        quote! {
-            let _ = caps;
-            Self::transform(program)
-        }
+        (quote! { _caps }, quote! { Self::transform(program) })
     };
     let metadata = quote! {
         ::vyre::optimizer::PassMetadata {
@@ -368,7 +368,7 @@ pub(crate) fn vyre_pass_impl(args: TokenStream, item: TokenStream) -> TokenStrea
             fn transform_for_adapter(
                 &self,
                 program: ::vyre::ir::Program,
-                caps: &::vyre::optimizer::AdapterCaps,
+                #adapter_caps_param: &::vyre::optimizer::AdapterCaps,
             ) -> ::vyre::optimizer::PassResult {
                 #transform_for_adapter_body
             }

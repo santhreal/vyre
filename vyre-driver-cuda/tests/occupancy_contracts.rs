@@ -1,9 +1,10 @@
 //! Contracts for `vyre_driver_cuda::occupancy`.
 //!
 //! Every item under test is public API, so the suite reaches the crate the way
-//! a consumer does.
-
-#![cfg(feature = "device-tests")]
+//! a consumer does. The estimator is pure and every case here drives the fixed
+//! synthetic envelope, so no case opens a CUDA context and none is gated on a
+//! device: the arithmetic these assert is exactly what a host without a GPU can
+//! still get wrong.
 
 use vyre_driver::validation::blocks_per_compute_unit;
 use vyre_driver_cuda::occupancy::{
@@ -102,6 +103,50 @@ fn no_width_is_runnable_under_impossible_register_pressure() {
         assert!(
             !estimate_occupancy(&caps, usage, width).is_runnable(),
             "width {width} cannot run at 65537 registers per thread"
+        );
+    }
+}
+
+/// WHY: a block width that is not a whole number of warps still occupies a
+/// whole warp slot for its partial warp. Dividing the SM thread budget by the
+/// block width reported more warps resident than the SM has warp slots, a
+/// shape no device can run, and it disagreed with the warp-slot math the
+/// driver-measured path already used.
+///
+/// Does not catch: a wrong warp size reported by the device probe. Both sides
+/// of the comparison read the same `warp_size_u32`.
+#[test]
+fn a_partial_warp_width_occupies_whole_warp_slots() {
+    let caps = synthetic_sm120_envelope_default();
+    let usage = KernelResourceUsage {
+        regs_per_thread: 16,
+        shared_bytes_per_block: 0,
+    };
+    let warp = caps
+        .warp_size_u32()
+        .expect("Fix: synthetic CUDA caps must report a warp size.");
+    let max_warps_per_sm = caps.max_threads_per_sm_u32() / warp;
+
+    let partial = estimate_occupancy(&caps, usage, warp + 1);
+    let padded = estimate_occupancy(&caps, usage, warp * 2);
+    assert_eq!(
+        partial.blocks_per_sm,
+        padded.blocks_per_sm,
+        "Fix: {} threads span the same two warp slots as {} threads and must report the same per-SM block residency.",
+        warp + 1,
+        warp * 2
+    );
+    assert_eq!(
+        partial.warps_per_sm, max_warps_per_sm,
+        "Fix: a partial-warp width must fill the SM warp slots exactly once, not overcommit them."
+    );
+
+    for width in 1..=caps.max_threads_per_block_u32() {
+        let est = estimate_occupancy(&caps, usage, width);
+        assert!(
+            est.warps_per_sm <= max_warps_per_sm,
+            "Fix: width {width} reports {} warps resident on an SM with {max_warps_per_sm} warp slots.",
+            est.warps_per_sm
         );
     }
 }

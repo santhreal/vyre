@@ -71,7 +71,11 @@ fn exceeds_12_args_rejected() {
         ],
     )
     .expect_err("packed slot must reject payloads that exceed 12 words");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Capacity,
+        "a packed payload over 12 words is a capacity fault",
+    );
 }
 
 #[test]

@@ -14,10 +14,10 @@
 
 #![cfg(feature = "pattern-substring")]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::decode_u32_words as decode_u32;
 
-mod presence_oracle;
+use crate::presence_oracle;
 use presence_oracle::{random_haystack, random_literals, random_region_starts, Lcg, PackedCase};
 use std::collections::BTreeSet;
 

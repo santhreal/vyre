@@ -727,17 +727,17 @@ module group FusionGroupId(0)
     setp.lt.u32    %p1, %r3, %r30;
     @!%p1 bra $L_if_end_0;
     mov.u32    %r32, 0;
-    setp.lt.u32    %p2, %r3, %r28;
+    setp.lt.u32    %p2, %r3, %r27;
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
-    add.u64    %rd8, %rd4, %rd7;
+    add.u64    %rd8, %rd2, %rd7;
     ld.global.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
-    setp.lt.u32    %p3, %r3, %r27;
+    setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
-    add.u64    %rd10, %rd2, %rd9;
+    add.u64    %rd10, %rd4, %rd9;
     ld.global.u32    %r36, [%rd10];
     and.b32    %r37, %r33, %r36;
     mov.u32    %r39, 0;
@@ -809,17 +809,17 @@ module group FusionGroupId(0)
     setp.lt.u32    %p1, %r3, %r30;
     @!%p1 bra $L_if_end_0;
     mov.u32    %r32, 0;
-    setp.lt.u32    %p2, %r3, %r28;
+    setp.lt.u32    %p2, %r3, %r27;
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
-    add.u64    %rd8, %rd4, %rd7;
+    add.u64    %rd8, %rd2, %rd7;
     ld.global.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
-    setp.lt.u32    %p3, %r3, %r27;
+    setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
-    add.u64    %rd10, %rd2, %rd9;
+    add.u64    %rd10, %rd4, %rd9;
     ld.global.u32    %r36, [%rd10];
     or.b32    %r37, %r33, %r36;
     mov.u32    %r39, 0;
@@ -891,17 +891,17 @@ module group FusionGroupId(0)
     setp.lt.u32    %p1, %r3, %r30;
     @!%p1 bra $L_if_end_0;
     mov.u32    %r32, 0;
-    setp.lt.u32    %p2, %r3, %r28;
+    setp.lt.u32    %p2, %r3, %r27;
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
-    add.u64    %rd8, %rd4, %rd7;
+    add.u64    %rd8, %rd2, %rd7;
     ld.global.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
-    setp.lt.u32    %p3, %r3, %r27;
+    setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
-    add.u64    %rd10, %rd2, %rd9;
+    add.u64    %rd10, %rd4, %rd9;
     ld.global.u32    %r36, [%rd10];
     xor.b32    %r37, %r33, %r36;
     mov.u32    %r39, 0;

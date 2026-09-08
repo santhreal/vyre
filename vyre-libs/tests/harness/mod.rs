@@ -1,3 +1,21 @@
+//! Source-reading, enum-declaration and IR-fingerprint helpers the `vyre-libs`
+//! contract tests share.
+//!
+//! This module is compiled once per including test binary, and no binary uses
+//! every helper: `scan_cpu_api_boundary` wants only
+//! `assert_no_cpu_named_api_exports`,
+//! `blake3_compress_optimizer_idempotence_contract` only
+//! `optimizer::assert_optimizer_is_idempotent`,
+//! `nn_attention_clone_family_ir_invariance` and `parsing_walker_clone_family`
+//! only `ir_fingerprint::assert_pinned_ir_fingerprints`, and
+//! `attention_layout_launch_domain`, `flash_attention_plan_shared_memory` and
+//! `dedup_conv_ast_walk_family_guard` only the source readers. Each
+//! unused-in-this-binary helper is live in a sibling binary, so `dead_code`
+//! here reports the inclusion shape rather than an item with no caller. An
+//! `expect` cannot state that: the lint fires in some binaries and not others,
+//! and the fulfilled half would fail `unfulfilled_lint_expectations`.
+#![allow(dead_code)]
+
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};

@@ -12,7 +12,7 @@
 #![cfg(feature = "graph")]
 #![forbid(unsafe_code)]
 
-mod harness;
+use crate::harness;
 
 use std::collections::BTreeSet;
 

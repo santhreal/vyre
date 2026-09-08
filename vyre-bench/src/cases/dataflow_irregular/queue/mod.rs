@@ -38,6 +38,7 @@ pub(super) const ACTIVE_QUEUE_EDGE_OFFSETS_INDEX: usize = 2;
 pub(super) const ACTIVE_QUEUE_EDGE_TARGETS_INDEX: usize = 3;
 pub(super) const ACTIVE_QUEUE_EDGE_KIND_INDEX: usize = 4;
 pub(super) const ACTIVE_QUEUE_FRONTIER_OUT_INDEX: usize = 5;
+pub(super) const ACTIVE_QUEUE_INPUT_COUNT: usize = 6;
 
 pub(super) struct DataflowIfdsSkewedActiveQueuePrepared {
     pub(super) step: FrontierStep<IfdsSkewedStats>,

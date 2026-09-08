@@ -158,6 +158,7 @@ impl RunningMean {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_driver::autotune_store::AutotuneKey;
     use vyre_driver::SpecCacheKey;
     use vyre_driver::SpeculativeVariantKind;
 
@@ -170,13 +171,19 @@ mod tests {
         }
     }
 
-    fn record(workgroup: u32) -> AutotuneRecord {
+    /// `unroll` distinguishes the two sides of a race. Both records were
+    /// previously identical, so no assertion could tell the winner's record
+    /// from the loser's once one of them was stored.
+    fn record(unroll: u32) -> AutotuneRecord {
         AutotuneRecord {
-            unroll: 1,
+            unroll,
             tile: [0, 0, 0],
             recorded_at: "2026-05-02".to_string(),
         }
     }
+
+    const CONSERVATIVE_UNROLL: u32 = 2;
+    const SPECULATIVE_UNROLL: u32 = 4;
 
     fn sample(conservative_ns: u64, speculative_ns: u64) -> PairedSpeculationSample {
         PairedSpeculationSample {
@@ -184,8 +191,8 @@ mod tests {
             speculative_dispatch_ns: speculative_ns,
             conservative_compile_ns: 0,
             speculative_compile_ns: 0,
-            conservative_record: record(64),
-            speculative_record: record(128),
+            conservative_record: record(CONSERVATIVE_UNROLL),
+            speculative_record: record(SPECULATIVE_UNROLL),
         }
     }
 
@@ -228,6 +235,13 @@ mod tests {
             SpeculativeVariantKind::Speculative
         );
         assert_eq!(store.len(), 1);
+        let stored = store
+            .get(&AutotuneKey::new(&speculative, "test-adapter"))
+            .expect("the speculative winner's record must be stored under its own key");
+        assert_eq!(
+            stored.unroll, SPECULATIVE_UNROLL,
+            "the winner's record must be stored, not the loser's"
+        );
     }
 
     #[test]

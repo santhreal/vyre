@@ -3,7 +3,7 @@
 #![forbid(unsafe_code)]
 #![cfg(feature = "hash")]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::hostile_bytes;
 
 use vyre_reference::composition_witness::adler32_witness;

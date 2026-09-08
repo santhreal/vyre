@@ -23,7 +23,7 @@ jobs:
     name: Probe real GPU adapter
     # A public repository never executes fork code on the persistent GPU host.
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +38,7 @@ jobs:
   driver-contracts:
     name: WGPU backend contracts
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -46,49 +46,29 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Run documented vyre-wgpu command on a real GPU
         run: ./cargo_full run -p vyre-driver-wgpu --bin vyre-wgpu -- demo
-      - name: capability + async dispatch contracts
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test capability_contract --test async_dispatch_contract -- --test-threads=1 --nocapture
-      - name: cast parity on real GPU (float saturation + integer narrowing)
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test float_to_int_cast_parity --test narrowing_cast_parity -- --test-threads=1 --nocapture
-      - name: 64-bit widening cast (i32/u32 -> i64/u64) sign/zero-extend parity on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test widening_cast_64_parity -- --test-threads=1 --nocapture
-      - name: same-width integer store-coercion parity on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test same_width_store_parity -- --test-threads=1 --nocapture
-      - name: signed integer modulo/division parity on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test signed_modulo_parity -- --test-threads=1 --nocapture
-      - name: signed integer min/max/comparison parity on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test signed_int_op_parity -- --test-threads=1 --nocapture
-      - name: div/mod-by-zero + oversized-shift-mask oracle parity on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test div_zero_shift_mask_parity -- --test-threads=1 --nocapture
-      - name: BLAKE3 compression (real workload, synthetic RotateRight) parity vs blake3 crate on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test blake3_compress_gpu_parity -- --test-threads=1 --nocapture
-      - name: FNV-1a32 (real workload, loop-carried hash state) parity vs reference on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test fnv1a32_gpu_parity -- --test-threads=1 --nocapture
-      - name: FNV-1a64 (real workload, u32-pair explicit-carry 64-bit) parity vs reference on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test fnv1a64_gpu_parity -- --test-threads=1 --nocapture
-      - name: CRC-32 (real workload, nested loop + per-bit conditional polynomial) parity vs reference on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test crc32_gpu_parity -- --test-threads=1 --nocapture
-      - name: Adler-32 (real workload, dual accumulator + u32 mod 65521 in loop) parity vs reference on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test adler32_gpu_parity -- --test-threads=1 --nocapture
-      - name: synthetic u32 binop (mulhi/abs_diff/saturating/rotate) parity vs oracle on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test synthetic_binop_parity -- --test-threads=1 --nocapture
-      - name: integer unary (negate/bitnot/popcount/clz/ctz/reverse_bits) parity vs oracle on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test unary_int_parity -- --test-threads=1 --nocapture
-      - name: async transfer byte-span (unaligned offset + partial tail) parity vs reference on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --release --test async_transfer_byte_span_parity -- --test-threads=1 --nocapture
-      # The lib unit tests that acquire an adapter. Every step above names a
-      # `--test` target, which never builds the lib test binary, so without
-      # this step the in-crate device tests are admitted by a feature no lane
-      # turns on and stop running anywhere.
-      - name: wgpu in-crate device unit tests on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --lib -- --test-threads=1 --nocapture
-      - name: SPIR-V dispatch parity on real Vulkan device
-        run: ./cargo_full test -p vyre-driver-spirv --features device-tests --test dispatch -- --test-threads=1 --nocapture
+      # Every device-acquiring test in this crate is one module of one harness
+      # binary, so naming them step by step compiles the same binary sixteen
+      # times and runs one module of it each time. The package-level run compiles
+      # it once and runs the lib device tests in the same step. Unfiltered on
+      # purpose: a parity target added later is covered without editing this
+      # file, which is how `hostile_input_closure_contract` came to run nowhere.
+      # Release because a debug reference interpreter is the cost of the suite
+      # rather than the cost of the device work being checked.
+      - name: Every wgpu device contract and parity target on a real GPU
+        run: ./cargo_full test --release -p vyre-driver-wgpu --features device-tests -- --test-threads=1 --nocapture
+      # Named without a `--test` filter on purpose. `vyre-driver-spirv` carries
+      # more than one target behind `device-tests`, and a filtered step compiles
+      # only what it names: `hostile_input_closure_contract` was admitted by the
+      # feature and reached by no step, so the adversarial closure it asserts ran
+      # nowhere while this lane reported green. An unfiltered step covers a
+      # target added later without editing this file.
+      - name: Every SPIR-V device target on a real Vulkan device
+        run: ./cargo_full test -p vyre-driver-spirv --features device-tests -- --test-threads=1 --nocapture
 
   cuda-driver-contracts:
     name: CUDA backend contracts
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -96,26 +76,18 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       # The PTX/CUDA backend lowers casts and synthetic binops DIFFERENTLY from
       # naga (native cvt/mul.hi/shf vs vec2/select synthesis), so the wgpu parity
-      # gates above transfer nothing, the CUDA route needs its own live-GPU
-      # differential. These per-test matrices were developer-run only (named in no
-      # workflow); this job gates them on the real device.
-      - name: generated IR-semantics differential matrices vs reference on real CUDA
-        run: ./cargo_full test -p vyre-driver-cuda --features device-tests,cuda --test generated_i32_cuda_reference_matrix --test generated_scalar_cuda_reference_matrix --test generated_cast_fma_cuda_reference_matrix --test generated_atomic_cuda_reference_matrix --test generated_control_cuda_reference_matrix --test generated_f32_cuda_reference_matrix --test generated_memory_cuda_reference_matrix --test generated_resident_cuda_reference_matrix --test generated_resident_sequence_cuda_reference_matrix -- --test-threads=1 --nocapture
-      - name: 64-bit widening cast (i32/u32 -> i64/u64) sign/zero-extend parity on real CUDA
-        run: ./cargo_full test -p vyre-driver-cuda --features device-tests,cuda --test widening_cast_64_cuda_parity -- --test-threads=1 --nocapture
-      - name: integer-narrowing cast (u32 -> u8/u16/i8/i16) truncate/sign-extend parity on real CUDA
-        run: ./cargo_full test -p vyre-driver-cuda --features device-tests,cuda --test narrowing_cast_cuda_parity -- --test-threads=1 --nocapture
-      - name: synthetic u32 binop (mulhi/abs_diff/saturating/rotate) parity vs oracle on real CUDA
-        run: ./cargo_full test -p vyre-driver-cuda --features device-tests,cuda --test synthetic_binop_cuda_parity -- --test-threads=1 --nocapture
-      - name: div/mod-by-zero sentinel + oversized-shift-mask oracle parity on real CUDA
-        run: ./cargo_full test -p vyre-driver-cuda --features device-tests,cuda --test div_zero_shift_mask_cuda_parity -- --test-threads=1 --nocapture
-      - name: async transfer byte-span (unaligned offset + partial tail) parity vs reference on real CUDA
-        run: ./cargo_full test -p vyre-driver-cuda --features device-tests,cuda --test async_transfer_byte_span_parity -- --test-threads=1 --nocapture
+      # gates above transfer nothing and the CUDA route needs its own live-GPU
+      # differential. Every one of those matrices is a module of one harness
+      # binary, and this is the lane that owns the device, so the step runs the
+      # crate rather than a named selection: a matrix added later is covered
+      # without editing this file.
+      - name: Every CUDA device contract and differential matrix on the real device
+        run: ./cargo_full test --release -p vyre-driver-cuda --features device-tests,cuda -- --test-threads=1 --nocapture
 
   cuda-parity-suite:
     name: CUDA parity suite
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
@@ -135,31 +107,33 @@ jobs:
   composition-parity-gpu:
     name: Composition parity on real GPU
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      # The composition cases are modules of the crate's harness binary, so the
+      # selector names the harness and filters to them by module.
       - name: Run composition parity
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --release --test op_pairwise pairwise_composition_parity -- --test-threads=1 --nocapture
+        run: "./cargo_full test -p vyre-driver-wgpu --features device-tests --release --test all_tests op_pairwise:: -- --test-threads=1 --nocapture"
 
   determinism-stress-gpu:
     name: Determinism stress on real GPU
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run determinism stress
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --release --test determinism_contract -- --test-threads=1 --nocapture
+        run: "./cargo_full test -p vyre-driver-wgpu --features device-tests --release --test all_tests determinism_contract:: -- --test-threads=1 --nocapture"
 
   bench-device-tests:
     name: Benchmark harness device tests
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -172,39 +146,30 @@ jobs:
       # the feature on and the whole target set runs. The roster is derived by
       # enabling the feature, not named test by test: a device test added later
       # is covered without editing this file.
-      # Every test in a concrete driver crate acquires the device the crate
-      # drives, so all of them are behind `device-tests` and none of them link
-      # on a hosted runner. That makes this lane the only place they run, so it
-      # runs the whole crate rather than a named selection: a target nobody
-      # named would otherwise be gated into never executing at all.
-      # Release, like every named step above: these lanes run the whole crate,
-      # and a debug reference interpreter is the cost of the suite rather than
-      # the cost of the device work it is checking.
-      - name: Every CUDA driver test on a real device
-        run: ./cargo_full test --release -p vyre-driver-cuda --features device-tests,cuda -- --test-threads=1
-      - name: Every wgpu driver test on a real device
-        run: ./cargo_full test --release -p vyre-driver-wgpu --features device-tests -- --test-threads=1
       - name: Bytecode VM stack-carrier parity on real CUDA and WGPU
-        run: ./cargo_full test --release -p vyre-bench --features device-tests --lib cases::interpreter -- --test-threads=1 --nocapture
+        run: "./cargo_full test --release -p vyre-bench --features device-tests --lib cases::interpreter -- --test-threads=1 --nocapture"
       - name: Benchmark harness suites on a real device
         run: ./cargo_full test --release -p vyre-bench --features device-tests --tests -- --test-threads=1
 
   mandatory-gpu-enforcer:
     name: Mandatory GPU enforcement
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      # Both mandatory contracts are modules of the crate's `device-tests`
+      # harness, so the step names that harness and runs every device contract
+      # in it rather than two of the six.
       - name: Run GPU mandatory tests
-        run: ./cargo_full test -p vyre-conform --release --features device-tests --test parity_matrix --test ulp_audit -- --nocapture
+        run: ./cargo_full test -p vyre-conform --release --features device-tests --test all_tests_device_tests -- --nocapture
 
   cuda-conformance-all-ops:
     name: CUDA conformance all ops
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -216,7 +181,7 @@ jobs:
   wgpu-conformance-all-ops:
     name: WGPU conformance all ops
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -230,7 +195,7 @@ jobs:
     needs:
       - cuda-conformance-all-ops
       - wgpu-conformance-all-ops
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -247,7 +212,7 @@ jobs:
   cuda-release-bench-evidence:
     name: CUDA release benchmark evidence
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
@@ -296,7 +261,7 @@ jobs:
         (github.event_name != 'pull_request' ||
           github.event.pull_request.head.repo.full_name == github.repository)
       }}
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     timeout-minutes: 5
     steps:
       - name: Verify required GPU jobs

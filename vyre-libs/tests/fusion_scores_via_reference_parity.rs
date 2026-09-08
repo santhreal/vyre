@@ -15,10 +15,10 @@
 //! `2·(L̂·T_curr)` dominates `T_prev`) and every intermediate stays < 2^24, where f32 represents integers
 //! EXACTLY. So the u32 GPU output equals the f32 reference cast to integer, bit-for-bit.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::scheduling::spectral_schedule::fusion_scores_fixed_via;
-use vyre_reference::composition_witness::chebyshev_filter_witness as chebyshev_filter_cpu;
+use vyre_reference::composition_witness::try_chebyshev_filter_witness as chebyshev_filter_cpu;
 
 use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
@@ -56,7 +56,8 @@ fn fusion_scores_via_matches_chebyshev_cpu_bit_exact() {
         let lap_f: Vec<f32> = laplacian.iter().map(|&v| v as f32).collect();
         let sig_f: Vec<f32> = signal.iter().map(|&v| v as f32).collect();
         let coeff_f: Vec<f32> = coeffs.iter().map(|&v| v as f32).collect();
-        let want_f = chebyshev_filter_cpu(&lap_f, &sig_f, &coeff_f, n, k_steps);
+        let want_f = chebyshev_filter_cpu(&lap_f, &sig_f, &coeff_f, n, k_steps)
+            .expect("Fix: the parity oracle must filter the fixture Laplacian");
         let want: Vec<u32> = want_f.iter().map(|&v| v.round() as u32).collect();
 
         assert_eq!(
@@ -130,7 +131,8 @@ fn fusion_scores_via_hand_checked_identity_filter() {
         2,
     )
     .unwrap();
-    let want_f = chebyshev_filter_cpu(&[1.0, 1.0, 0.0, 1.0], &[1.0, 1.0], &[0.0, 1.0, 0.0], 2, 2);
+    let want_f = chebyshev_filter_cpu(&[1.0, 1.0, 0.0, 1.0], &[1.0, 1.0], &[0.0, 1.0, 0.0], 2, 2)
+        .expect("Fix: the parity oracle must filter the fixture Laplacian");
     let want: Vec<u32> = want_f.iter().map(|&v| v.round() as u32).collect();
     assert_eq!(got, want, "non-trivial operator matches the CPU reference");
     assert_eq!(

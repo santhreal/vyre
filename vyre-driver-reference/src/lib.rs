@@ -35,6 +35,17 @@ impl VyreBackend for CpuRefBackend {
         env!("CARGO_PKG_VERSION")
     }
 
+    /// Both modes are lowered here.
+    ///
+    /// The interpreter rounds every operation separately, so the contracted
+    /// mode is already satisfied. The strict mode additionally replaces each
+    /// approximable f32 operation with its exact expansion, which is the
+    /// program a strict device kernel executes: the oracle has to run the same
+    /// IR for a bit-identity comparison to mean anything.
+    fn honors_float_lowering(&self, _mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
+        true
+    }
+
     fn dispatch_borrowed(
         &self,
         program: &Program,
@@ -47,6 +58,8 @@ impl VyreBackend for CpuRefBackend {
                 backend: CPU_REF_BACKEND_ID.to_string(),
             });
         }
+        let expanded = strict_expanded(program, config)?;
+        let program = expanded.as_ref().unwrap_or(program);
         let values = reference_values(program, inputs)?;
         // The interpreter infers its grid from buffer SHAPES, which cannot express
         // the per-invocation count of a byte-scan program (the haystack is packed
@@ -88,6 +101,24 @@ impl VyreBackend for CpuRefBackend {
     fn max_compute_workgroups_per_dimension(&self) -> u32 {
         u32::MAX
     }
+}
+
+/// The program with every approximable f32 operation expanded, or `None` when
+/// the dispatch did not ask for strict IEEE lowering.
+fn strict_expanded(
+    program: &Program,
+    config: &DispatchConfig,
+) -> Result<Option<Program>, BackendError> {
+    if !config.float_lowering.blocks_contraction() {
+        return Ok(None);
+    }
+    vyre_foundation::fp_expansion::expand_strict_transcendentals(program).map_err(|error| {
+        BackendError::new(format!(
+            "cpu-ref cannot lower the strict IEEE float mode: {error}. Fix: give the operation an \
+             exact f32 expansion in vyre_foundation::fp_expansion, so the oracle evaluates the \
+             program a strict device kernel executes."
+        ))
+    })
 }
 
 fn reference_values(program: &Program, inputs: &[&[u8]]) -> Result<Vec<Value>, BackendError> {

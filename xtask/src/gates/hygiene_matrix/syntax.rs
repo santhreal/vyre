@@ -361,6 +361,26 @@ impl<'ast> Visit<'ast> for SourceInspectionFunctionCollector {
         }
     }
 
+    /// A static's initializer is a body this walk has to reach.
+    ///
+    /// `static CORPUS: LazyLock<_> = LazyLock::new(read_source_corpus)` moves a
+    /// source read out of every function body. A test that reads the static
+    /// then calls nothing the walk can follow, so the file reports as
+    /// inspecting no source and every source-inspecting test in it stops being
+    /// caught, silently. The initializer is registered under the static's own
+    /// name, which is the identifier `visit_expr_path` records at the use site.
+    fn visit_item_static(&mut self, item: &'ast syn::ItemStatic) {
+        let expression = &*item.expr;
+        let block: syn::Block = syn::parse_quote!({ #expression });
+        self.push_function(
+            item.ident.to_string(),
+            item.ident.span().start().line,
+            false,
+            &block,
+        );
+        syn::visit::visit_item_static(self, item);
+    }
+
     fn visit_impl_item_fn(&mut self, item: &'ast syn::ImplItemFn) {
         self.push_function(
             item.sig.ident.to_string(),

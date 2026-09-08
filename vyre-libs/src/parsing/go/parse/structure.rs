@@ -1,6 +1,7 @@
 //! Go declaration and span extraction, and the record widths a host reader
 //! decodes them with.
 
+use crate::builder::trip_count::clamped_by_extents;
 use crate::parsing::go::parse::token_predicates::{
     emit_keyword_span_record_nodes, emit_span_record_nodes, token_is_ident, token_is_keyword,
     token_len, token_start, token_type_eq,
@@ -138,6 +139,10 @@ pub fn go_extract_packages_and_imports(
     out_imports: &str,
     out_import_counts: &str,
 ) -> Program {
+    // `num_tokens` is the caller's token count and reaches three forward scans
+    // as their trip count, so it is clamped once here to the token array it
+    // indexes.
+    let num_tokens = clamped_by_extents(num_tokens, tok_types, []);
     let t = Expr::logical_index(0);
     let body = vec![
         emit_keyword_span_record_nodes(
@@ -252,6 +257,7 @@ pub fn go_extract_declarations(
     out_decls: &str,
     out_decl_counts: &str,
 ) -> Program {
+    let num_tokens = clamped_by_extents(num_tokens, tok_types, []);
     let t = Expr::logical_index(0);
     let decl_span = GoDeclSpan {
         tok_types,

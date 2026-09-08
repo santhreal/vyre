@@ -31,7 +31,7 @@ type Result<T, E = BackendError> = std::result::Result<T, E>;
 use super::reserve_probe_vec;
 
 /// Stable adapter identity used for deterministic recovery.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct AdapterIdentity {
     name: String,
     vendor: u32,
@@ -443,8 +443,74 @@ fn adapter_index_from_raw(raw: Option<&str>) -> Result<Option<usize>> {
     )))
 }
 
+/// Rank a device type by whether it is a GPU at all, so a CPU adapter can
+/// never outscore hardware on features or limits alone.
+fn real_gpu_rank(device_type: wgpu::DeviceType) -> u8 {
+    match device_type {
+        wgpu::DeviceType::DiscreteGpu => 3,
+        wgpu::DeviceType::IntegratedGpu => 2,
+        wgpu::DeviceType::VirtualGpu => 1,
+        wgpu::DeviceType::Cpu | wgpu::DeviceType::Other => 0,
+    }
+}
+
+/// Order two adapters of the same class by compute capability.
+///
+/// The device rank occupies the high bits, so class dominates; features and
+/// limits break ties below it.
+pub(super) fn gpu_candidate_score(
+    info: &wgpu::AdapterInfo,
+    adapter_features: wgpu::Features,
+    adapter_limits: &wgpu::Limits,
+) -> u128 {
+    let mut feature_score = 0u128;
+    if crate::capabilities::supports_subgroup_for_adapter(adapter_features, adapter_limits) {
+        feature_score |= 1 << 7;
+    }
+    if adapter_features.contains(wgpu::Features::SUBGROUP_BARRIER) {
+        feature_score |= 1 << 6;
+    }
+    if adapter_features.contains(wgpu::Features::SHADER_F16) {
+        feature_score |= 1 << 5;
+    }
+    if adapter_features.contains(wgpu::Features::PIPELINE_CACHE) {
+        feature_score |= 1 << 4;
+    }
+    if adapter_features.contains(wgpu::Features::PUSH_CONSTANTS) {
+        feature_score |= 1 << 3;
+    }
+    if adapter_features.contains(wgpu::Features::INDIRECT_FIRST_INSTANCE) {
+        feature_score |= 1 << 2;
+    }
+    if adapter_features.contains(wgpu::Features::TIMESTAMP_QUERY) {
+        feature_score |= 1 << 1;
+    }
+    if adapter_features.contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS) {
+        feature_score |= 1;
+    }
+
+    let storage_binding_bits = u128::from(adapter_limits.max_storage_buffer_binding_size.ilog2());
+    let buffer_bits = u128::from(adapter_limits.max_buffer_size.max(1).ilog2());
+    let workgroup_invocations = u128::from(adapter_limits.max_compute_invocations_per_workgroup);
+    let workgroup_storage_bits = u128::from(
+        adapter_limits
+            .max_compute_workgroup_storage_size
+            .max(1)
+            .ilog2(),
+    );
+    let storage_buffers = u128::from(adapter_limits.max_storage_buffers_per_shader_stage);
+
+    (u128::from(real_gpu_rank(info.device_type)) << 120)
+        | (feature_score << 96)
+        | (storage_binding_bits << 88)
+        | (buffer_bits << 80)
+        | (workgroup_invocations << 56)
+        | (workgroup_storage_bits << 48)
+        | storage_buffers
+}
+
 // Inline: covers `AdapterIdentity`, `adapter_index_from_raw`, `adapter_is_selectable`,
-// `adapter_name_contains`, which no integration test can name.
+// `adapter_name_contains`, `gpu_candidate_score`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -545,5 +611,50 @@ mod tests {
         assert!(adapter_name_contains("NVIDIA GeForce RTX 5090", "RTX"));
         assert!(!adapter_name_contains("NVIDIA GeForce RTX 5090", "radeon"));
         assert!(adapter_name_contains("Mötley GPU", "mötley"));
+    }
+
+    #[test]
+    fn gpu_candidate_score_prefers_stronger_compute_adapter_within_same_class() {
+        let info = wgpu::AdapterInfo {
+            name: "gpu".to_string(),
+            vendor: 0x10de,
+            device: 0x2c02,
+            device_type: wgpu::DeviceType::DiscreteGpu,
+            driver: "nvidia".to_string(),
+            driver_info: "test".to_string(),
+            backend: wgpu::Backend::Vulkan,
+        };
+        let weak_limits = wgpu::Limits {
+            max_storage_buffer_binding_size: 1 << 20,
+            max_buffer_size: 1 << 28,
+            max_compute_invocations_per_workgroup: 256,
+            max_compute_workgroup_storage_size: 16 << 10,
+            max_storage_buffers_per_shader_stage: 8,
+            ..wgpu::Limits::default()
+        };
+        let strong_limits = wgpu::Limits {
+            max_storage_buffer_binding_size: 1 << 30,
+            max_buffer_size: 1 << 34,
+            max_compute_invocations_per_workgroup: 1024,
+            max_compute_workgroup_storage_size: 64 << 10,
+            max_storage_buffers_per_shader_stage: 16,
+            min_subgroup_size: 32,
+            max_subgroup_size: 32,
+            ..wgpu::Limits::default()
+        };
+        let weak = gpu_candidate_score(&info, wgpu::Features::empty(), &weak_limits);
+        let strong = gpu_candidate_score(
+            &info,
+            wgpu::Features::SUBGROUP
+                | wgpu::Features::SUBGROUP_BARRIER
+                | wgpu::Features::SHADER_F16
+                | wgpu::Features::PIPELINE_CACHE,
+            &strong_limits,
+        );
+
+        assert!(
+            strong > weak,
+            "Fix: automatic GPU acquisition must prefer the stronger same-class compute adapter."
+        );
     }
 }

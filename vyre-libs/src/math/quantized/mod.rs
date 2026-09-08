@@ -31,13 +31,6 @@ pub(crate) use vyre_reference::composition_witness::{
 };
 
 #[cfg(test)]
-pub(crate) fn pack_i4x8_cpu_into(values: &[i32], out: &mut Vec<u32>) {
-    if let Err(error) = try_pack_i4x8_cpu_into(values, out) {
-        panic!("vyre-primitives pack_i4x8 CPU reference failed: {error}");
-    }
-}
-
-#[cfg(test)]
 pub(crate) fn try_pack_i4x8_cpu_into(values: &[i32], out: &mut Vec<u32>) -> Result<(), String> {
     let lane_count = u32::try_from(values.len()).map_err(|_| {
         format!(
@@ -56,11 +49,6 @@ pub(crate) fn try_pack_i4x8_cpu_into(values: &[i32], out: &mut Vec<u32>) -> Resu
     }
     vyre_reference::composition_witness::pack_i4x8_witness_into(values, out);
     Ok(())
-}
-
-#[cfg(test)]
-pub(crate) fn unpack_i4x8_cpu_into(packed: &[u32], lane_count: u32, out: &mut Vec<i32>) {
-    try_unpack_i4x8_cpu_into(packed, lane_count, out).unwrap();
 }
 
 #[cfg(test)]

@@ -23,6 +23,13 @@ interpreter arm.
 
 ## Layers
 
+Every workspace member declares one layer in `docs/CRATE_OWNERSHIP.toml`, and
+every layer declares one rank. A production dependency is legal only when the
+consumer's layer outranks the dependency's layer; two layers share a rank when
+neither depends on the other. `xtask crate-ownership` joins the ranks to the
+resolved cargo graph and rejects a reversal. `docs/CRATE_GRAPH.md` renders the
+ranks and every declared edge.
+
 - `vyre-spec` is the frozen vocabulary. It does not execute.
 - `vyre-foundation` owns validated `ProgramGraph` and schedule-free
   `LogicalProgramGraph` IR, semantic identity, the host optimizer, and the
@@ -100,8 +107,9 @@ schedule inside that artifact, not a second output type. Static and
 persistent routes consume the same artifact class and must produce the same
 bytes. Hardware enters compile as a fact vector, never as a backend name.
 Unmeasured selections are recorded as unmeasured and are never called
-autoroute. GPU execution is capability-based on the designated execution host
-(`axiomexec`). Every release crate enforces a zero panic budget.
+autoroute. GPU execution is capability-based: a lane runs a device case only
+where the probe reports the capability the case declares. Every release crate
+enforces a zero panic budget.
 
 ## Chapters
 

@@ -100,13 +100,11 @@ pub trait NodeVisitor {
     /// Schedule-free logical barrier node.
     fn visit_logical_barrier(&mut self, node: &Node) -> ControlFlow<Self::Break>;
     /// Distributed collective node.
-    fn visit_collective(&mut self, node: &Node) -> ControlFlow<Self::Break> {
-        let _ = node;
+    fn visit_collective(&mut self, _node: &Node) -> ControlFlow<Self::Break> {
         ControlFlow::Continue(())
     }
     /// Tile operation node.
-    fn visit_tile(&mut self, node: &Node) -> ControlFlow<Self::Break> {
-        let _ = node;
+    fn visit_tile(&mut self, _node: &Node) -> ControlFlow<Self::Break> {
         ControlFlow::Continue(())
     }
     /// Block node.

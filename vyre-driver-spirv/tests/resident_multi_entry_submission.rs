@@ -28,7 +28,7 @@ use vyre_driver::{
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload};
 
-mod target_artifacts;
+use crate::target_artifacts;
 use target_artifacts::spirv;
 
 /// One admitted module, as a backend records it.

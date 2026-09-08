@@ -3844,7 +3844,6 @@ name = "vyre-reference"
 version = "0.8.0"
 dependencies = [
  "blake3",
- "imbl",
  "inventory",
  "libm",
  "proptest",
@@ -3932,11 +3931,14 @@ version = "0.8.0"
 dependencies = [
  "blake3",
  "inventory",
+ "proptest",
  "serde",
  "serde_json",
  "smallvec",
  "structure-gate",
  "tempfile",
+ "toml",
+ "vyre-driver",
  "vyre-foundation",
  "vyre-megakernel",
  "vyre-reference",

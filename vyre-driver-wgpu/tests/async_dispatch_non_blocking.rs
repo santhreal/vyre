@@ -9,7 +9,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 
 use harness::{
     assert_dispatch_async_ready_state_observable_for_non_trivial_work,

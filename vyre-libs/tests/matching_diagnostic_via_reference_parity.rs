@@ -24,7 +24,7 @@
 //! `sort_regions_via` (region_sort_program: RO×3 + ReadWrite outs×3 = 6 input-consuming, passes 6,
 //! `outputs[0]=pids_out`) was audited CLEAN and is covered here as a durable guard.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::encoding::matching_diagnostic_compaction::{
     bracket_pairs_via, dedup_region_survivor_flags_via, sort_regions_via,

@@ -12,8 +12,7 @@ use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as
 use vyre_reference::composition_witness::csr_bidirectional_step_witness;
 use vyre_reference::value::Value;
 
-#[path = "../../tests/support/csr_sweep/mod.rs"]
-mod csr_sweep;
+use crate::csr_sweep;
 
 #[test]
 fn csr_bidirectional_matches_independent_union_oracle_matrix() {

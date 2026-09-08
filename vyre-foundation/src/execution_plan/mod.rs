@@ -412,15 +412,6 @@ fn autotune_plan(program: &Program, adapter_caps: &AdapterCaps) -> AutotunePlan 
     }
 }
 
-fn infer_static_problem_size(program: &Program) -> Option<u32> {
-    program
-        .buffers()
-        .iter()
-        .filter(|buffer| buffer.count() > 0 && !matches!(buffer.kind(), MemoryKind::Shared))
-        .map(crate::ir_inner::model::program::BufferDecl::count)
-        .min()
-}
-
 fn track_decisions(
     fusion: &FusionPlan,
     memory: &MemoryPlan,
@@ -582,11 +573,15 @@ mod tests {
         assert_eq!(exec_plan.memory.dynamic_buffers, 0);
     }
 
+    /// Two separately built copies of one program plan to the same fingerprint.
+    ///
+    /// Planning one `Program` twice proves nothing: the fingerprint memoizes
+    /// into a `OnceLock` on the program, so the second plan reads the first
+    /// plan's answer. Two values each compute once.
     #[test]
     fn plan_fingerprint_is_deterministic() {
-        let p = trivial_program();
-        let plan1 = plan(&p).unwrap();
-        let plan2 = plan(&p).unwrap();
+        let plan1 = plan(&trivial_program()).unwrap();
+        let plan2 = plan(&trivial_program()).unwrap();
         assert_eq!(plan1.program_fingerprint, plan2.program_fingerprint);
     }
 

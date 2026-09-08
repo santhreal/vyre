@@ -3,7 +3,7 @@
 #![cfg(feature = "logical")]
 #![allow(deprecated)]
 
-mod wire_words;
+use crate::wire_words;
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 use wire_words::u32_bytes as bytes;

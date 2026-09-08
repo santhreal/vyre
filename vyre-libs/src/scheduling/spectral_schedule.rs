@@ -112,11 +112,12 @@ pub fn fusion_scores_fixed_via_with_scratch_into(
         )));
     }
     let cells = checked_square_cells(n, "fusion_scores_fixed_via")?;
-    let _cells_u32 = u32::try_from(cells).map_err(|_| {
-        SemanticExecutionError::InvalidRequest(format!(
+    // `checked_square_cells` traps silently past the u32 lane limit the builder emits.
+    if u32::try_from(cells).is_err() {
+        return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: fusion_scores_fixed_via n*n exceeds the primitive u32 lane limit for n={n}."
-        ))
-    })?;
+        )));
+    }
     if n > u32::MAX / 2 {
         return Err(SemanticExecutionError::InvalidRequest(format!(
             "Fix: fusion_scores_fixed_via scratch size 2*n overflows u32 for n={n}."
@@ -288,8 +289,8 @@ mod tests {
     use crate::math::spectral_shape::mp_upper_edge;
     use crate::test_parity_oracles::{policy, StaticOutputs};
     use vyre_reference::composition_witness::{
-        chebyshev_filter_witness as reference_chebyshev_filter,
         mp_edge_clip_witness as reference_mp_edge_clip,
+        try_chebyshev_filter_witness as reference_chebyshev_filter,
     };
 
     fn reference_fusion_scores(laplacian: &[f32], n: u32) -> Vec<f32> {
@@ -299,6 +300,7 @@ mod tests {
         let signal: Vec<f32> = (0..n).map(|_| 1.0 / (n as f32).sqrt()).collect();
         let coeffs: Vec<f32> = vec![1.0, 0.5, 0.25];
         reference_chebyshev_filter(laplacian, &signal, &coeffs, n, 2)
+            .expect("Fix: the parity oracle must filter the fixture Laplacian")
     }
 
     fn reference_shape_spectrum(

@@ -128,7 +128,7 @@ fn remote_metadata_allows(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_artifact_fixtures::tiny_artifact;
+    use vyre_test_support::artifact_fixtures::tiny_artifact;
 
     #[test]
     fn remote_cache_owns_reusable_http_agent() {

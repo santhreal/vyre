@@ -57,6 +57,12 @@ pub(crate) fn words_to_bytes(words: &[u32]) -> Vec<u8> {
 /// Decode backend output bytes into little-endian `u32` lanes.
 pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as bytes_u32;
 
+/// Pack little-endian `f32` lanes into backend dispatch bytes.
+pub(crate) use vyre_primitives::wire::pack_f32_slice as f32_bytes;
+
+/// Decode backend output bytes into little-endian `f32` lanes.
+pub(crate) use vyre_primitives::wire::decode_f32_le_bytes_all as bytes_f32;
+
 pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as decode_u32_words;
 
 /// Alias used by C parser integration tests.
@@ -331,6 +337,45 @@ pub(crate) fn cat_a_dispatch_config(program: &Program) -> DispatchConfig {
     );
     config.grid_override = Some([1, 1, 1]);
     config
+}
+
+/// The program a device route runs for the semantic `program`.
+///
+/// Two steps, in this order: the registered optimizer, then schedule
+/// legalization. A composed library program is schedule-free, so it carries
+/// logical identity and, wherever fusion joined two arms, a logical barrier.
+/// Dispatch resolves both on its own, so this is not what makes the program
+/// runnable; it exists because a differential case maps inputs onto the
+/// lowered buffer ABI by binding slot, and needs the lowered program to do it.
+/// Running it here is idempotent against that resolution. The reference
+/// evaluates the semantic program: legalization is semantics-preserving, which
+/// is what makes the pair comparable.
+pub(crate) fn device_program(program: &Program) -> Program {
+    let optimized = vyre_foundation::optimizer::optimize(program.clone())
+        .expect("registered optimizer must converge");
+    let (lowered, _) =
+        vyre_foundation::transform::schedule_lowering::lower_logical_schedule(optimized);
+    let mut surviving: Option<&'static str> = None;
+    vyre_foundation::visit::for_each_node(lowered.entry(), |node| {
+        if matches!(node, Node::LogicalBarrier { .. }) {
+            surviving = Some("Node::LogicalBarrier");
+        }
+    });
+    vyre_foundation::visit::for_each_expr(lowered.entry(), |expr| {
+        surviving = match expr {
+            Expr::LogicalIndex { .. } => Some("Expr::LogicalIndex"),
+            Expr::LogicalTileId { .. } => Some("Expr::LogicalTileId"),
+            Expr::LogicalWithinTileId { .. } => Some("Expr::LogicalWithinTileId"),
+            _ => return,
+        };
+    });
+    assert!(
+        surviving.is_none(),
+        "Fix: `{}` survived schedule lowering in `{}`, so physical lowering will reject the program. Extend vyre_foundation::transform::schedule_lowering to map it.",
+        surviving.unwrap_or_default(),
+        lowered.entry_op_id().unwrap_or("unnamed program")
+    );
+    lowered
 }
 
 /// Pack a slice of bytes into little-endian u32 words.

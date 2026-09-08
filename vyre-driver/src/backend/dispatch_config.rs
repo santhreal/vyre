@@ -64,6 +64,17 @@ pub struct DispatchConfig {
     /// required for megakernels where the work queue length is managed through
     /// storage buffers rather than the primary output slot.
     pub grid_override: Option<[u32; 3]>,
+    /// Per-axis workgroup ceiling this launch is planned against.
+    ///
+    /// `None` plans against what the device reports. `Some(limits)` plans
+    /// against the smaller of the two on each axis, which is how a caller
+    /// targets a portability floor instead of the device in front of it: the
+    /// WebGPU minimum is 65535 workgroups per axis, and a launch planned there
+    /// runs on every conformant implementation rather than only on the one that
+    /// reports a larger ceiling. A launch that no longer fits one axis is folded
+    /// across the others when the program's element index is grid-linearized,
+    /// and refused by name when it fits nowhere.
+    pub max_workgroups_per_axis: Option<[u32; 3]>,
     /// True per-invocation element/byte coverage count for an element-grid
     /// dispatch (e.g. a one-lane-per-byte scan: `Some(haystack_len)`).
     ///
@@ -115,6 +126,16 @@ pub struct DispatchConfig {
     /// A backend MUST reject `cooperative = true` with `UnsupportedFeature`
     /// when its `VyreBackend::supports_grid_sync()` returns `false`.
     pub cooperative: bool,
+    /// Rounding the backend must apply to a chain of f32 arithmetic.
+    ///
+    /// The default admits contraction, which is what every shipped target does
+    /// and what [`vyre_foundation::fp_parity::BACKEND_ELEMENTARY_F32_ULP_BUDGET`]
+    /// is sized for. A caller that needs each operation to round where
+    /// IEEE-754 says it does states
+    /// [`FloatLoweringMode::StrictIeee`](vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee)
+    /// and the emitted module changes; every emitted-artifact cache key carries
+    /// the mode, so the two modules never stand in for each other.
+    pub float_lowering: vyre_foundation::fp_parity::FloatLoweringMode,
 }
 
 impl DispatchConfig {
@@ -137,12 +158,14 @@ impl DispatchConfig {
             launch: None,
             workgroup_override: None,
             grid_override: None,
+            max_workgroups_per_axis: None,
             dispatch_elements: None,
             dispatch_grid: None,
             fixpoint_iterations: None,
             speculation: None,
             persistent_thread: None,
             cooperative: false,
+            float_lowering: vyre_foundation::fp_parity::FloatLoweringMode::default(),
         }
     }
 
@@ -205,12 +228,14 @@ impl DispatchConfig {
             launch,
             workgroup_override,
             grid_override,
+            max_workgroups_per_axis,
             dispatch_elements,
             dispatch_grid,
             fixpoint_iterations: _,
             speculation: _,
             persistent_thread: _,
             cooperative: _,
+            float_lowering: _,
         } = self;
         let Some(launch) = launch else {
             return Ok(());
@@ -218,6 +243,7 @@ impl DispatchConfig {
         for (field, stated) in [
             ("workgroup_override", workgroup_override.is_some()),
             ("grid_override", grid_override.is_some()),
+            ("max_workgroups_per_axis", max_workgroups_per_axis.is_some()),
             ("dispatch_elements", dispatch_elements.is_some()),
             ("dispatch_grid", dispatch_grid.is_some()),
         ] {

@@ -141,8 +141,8 @@ pub fn try_dense_matvec_byte_lut_into(
         ));
     }
 
-    let tile_count = usize_from_u32(tile_count, "tile_count");
-    let dst_words = usize_from_u32(dst_words, "dst_words");
+    let tile_count = usize_from_u32(tile_count);
+    let dst_words = usize_from_u32(dst_words);
     let lut_words = try_checked_dense_lut_words_usize(tile_count, dst_words)?;
     vyre_foundation::allocation::reserve_exact_cleared(lut, lut_words).map_err(|err| {
         format!("dense Four-Russians LUT builder could not reserve {lut_words} output words: {err}")
@@ -339,8 +339,8 @@ pub fn four_russians_dense_matvec_byte_lut(
 }
 
 fn try_checked_dense_column_words(tile_count: u32, dst_words: u32) -> Result<usize, String> {
-    let tile_count = usize_from_u32(tile_count, "tile_count");
-    let dst_words = usize_from_u32(dst_words, "dst_words");
+    let tile_count = usize_from_u32(tile_count);
+    let dst_words = usize_from_u32(dst_words);
     tile_count
         .checked_mul(BYTE_TILE_WIDTH as usize)
         .and_then(|words| words.checked_mul(dst_words))
@@ -358,8 +358,8 @@ fn try_checked_dense_lut_words_usize(tile_count: usize, dst_words: usize) -> Res
         })
 }
 
-fn usize_from_u32(value: u32, field: &'static str) -> usize {
-    let _ = field;
+/// Widen a u32 count to usize, saturating on a target where usize is narrower.
+fn usize_from_u32(value: u32) -> usize {
     usize::try_from(value).unwrap_or(usize::MAX)
 }
 

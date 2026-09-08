@@ -76,14 +76,30 @@ pub(crate) struct RecordAndReadback<'a> {
     pub iterations: u32,
     /// Enable opt-in GPU timestamp query profiling for this dispatch.
     pub timestamp_profile: bool,
-    /// Workgroup shape the grid may be re-inferred from, when it was inferred.
+    /// The launch this dispatch inferred, when it inferred one.
     ///
-    /// `Some(shape)` means `workgroup_count` was derived from the compile-time
+    /// `Some(launch)` means `workgroup_count` was derived from the compile-time
     /// output word count, so it must be recomputed once a runtime-sized output
     /// resolves to its real length. `None` means the caller pinned the launch
     /// through a frozen launch or `DispatchConfig::grid_override`, and it is
     /// dispatched as asked.
-    pub inferred_grid_shape: Option<[u32; 3]>,
+    pub inferred_launch: Option<InferredLaunch>,
+}
+
+/// The launch a dispatch inferred, and what it may re-infer against.
+///
+/// A runtime-sized output resolves its real length after the pipeline was
+/// compiled, so the grid is derived twice from the same three facts. Carrying
+/// them together keeps the second derivation identical to the first.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct InferredLaunch {
+    /// Workgroup shape the grid is inferred over.
+    pub workgroup_shape: [u32; 3],
+    /// Per-axis workgroup ceiling the launch is planned against.
+    pub max_per_axis: [u32; 3],
+    /// The compiled module reads its element index linearized over the grid, so
+    /// a workgroup count past one axis folds onto the others.
+    pub grid_linearized: bool,
 }
 
 impl<'a> RecordAndReadback<'a> {
@@ -112,10 +128,11 @@ impl<'a> RecordAndReadback<'a> {
             labels,
             iterations: config.fixpoint_iterations.unwrap_or(1).max(1),
             timestamp_profile,
-            inferred_grid_shape: config
-                .launch_grid()
-                .is_none()
-                .then_some(pipeline.workgroup_shape),
+            inferred_launch: config.launch_grid().is_none().then(|| InferredLaunch {
+                workgroup_shape: pipeline.workgroup_shape,
+                max_per_axis: pipeline.axis_ceiling(config),
+                grid_linearized: pipeline.grid_linearized,
+            }),
         }
     }
 }
@@ -161,36 +178,45 @@ fn record_dispatch_unsubmitted_impl(
     let pool = request.pool;
     let host_upload_started = Instant::now();
 
-    // Map buffer binding → index into `request.inputs`. Plain outputs are
-    // allocated empty, but read-write state buffers with
+    // Map buffer binding → index into `request.inputs`. One slot per binding
+    // that consumes a host input, in binding order. Plain outputs are allocated
+    // by the backend and take no slot, but read-write state buffers with
     // `preserve_input_contents` are both inputs and outputs: their host bytes
     // must be uploaded before dispatch and read back after dispatch.
+    //
+    // This path used to accept a second shape as well, one slot per non-shared
+    // non-trap binding, with a zeroed placeholder for every backend-allocated
+    // output, and picked between the two by list length. The reference
+    // interpreter rejects the placeholder shape and cuda never accepted it, so
+    // a fixture written against it ran here and failed there. The shorter shape
+    // also ignored a trailing slot instead of rejecting it. One artifact ABI is
+    // documented, so one shape is admitted and every other count is named.
+    //
+    // The count sentence matches `vyre_driver::BindingPlan::validate_inputs`,
+    // which is what cuda refuses a wrong count through, so a caller reads one
+    // sentence whichever backend rejected the list.
     let input_slot_count = request.inputs.len();
     let non_shared_binding_count = request
         .buffer_bindings
         .iter()
         .filter(|info| info.kind != vyre_foundation::ir::MemoryKind::Shared)
         .count();
-    let full_input_order_count = request
+    let consumed_input_count = request
         .buffer_bindings
         .iter()
-        .filter(|info| info.kind != vyre_foundation::ir::MemoryKind::Shared && !info.internal_trap)
+        .filter(|info| consumes_host_input(info))
         .count();
-    let full_input_order = input_slot_count == full_input_order_count;
+    if input_slot_count != consumed_input_count {
+        return Err(BackendError::new(format!(
+            "Fix: dispatch expected {consumed_input_count} input buffer(s) from Program declarations \
+             but received {input_slot_count}. Pass one input per binding that consumes host bytes, \
+             in binding order, and none for a backend-allocated output.",
+        )));
+    }
     let input_idx_by_binding = &mut scratch.input_idx_by_binding;
     let mut next_input = 0usize;
     for info in request.buffer_bindings.iter() {
-        if info.kind == vyre_foundation::ir::MemoryKind::Shared || info.internal_trap {
-            continue;
-        }
         if !consumes_host_input(info) {
-            if full_input_order {
-                next_input = next_input.checked_add(1).ok_or_else(|| {
-                    BackendError::new(
-                        "record-and-readback input binding index overflowed usize. Fix: split the dispatch input list before recording.",
-                    )
-                })?;
-            }
             continue;
         }
         input_idx_by_binding.push(info.binding, next_input)?;
@@ -230,7 +256,7 @@ fn record_dispatch_unsubmitted_impl(
         // wrong-answer the zero-length readback was. Re-infer from the resolved
         // word count, and only when this dispatch inferred its grid: a caller
         // who stated a launch asked for that exact grid and keeps it.
-        if let Some(workgroup_shape) = request.inferred_grid_shape {
+        if let Some(launch) = request.inferred_launch {
             let resolved_words = request
                 .output_bindings
                 .iter()
@@ -245,8 +271,13 @@ fn record_dispatch_unsubmitted_impl(
                 })
                 .transpose()?;
             if let Some(words) = resolved_words {
-                request.workgroup_count =
-                    vyre_driver::infer_dispatch_grid_for_count(words, workgroup_shape)?;
+                request.workgroup_count = vyre_driver::infer_launch_grid(
+                    words,
+                    launch.workgroup_shape,
+                    launch.max_per_axis,
+                    launch.grid_linearized,
+                    crate::WGPU_BACKEND_ID,
+                )?;
             }
         }
     }
@@ -259,11 +290,11 @@ fn record_dispatch_unsubmitted_impl(
     // caught before anything is recorded.
     request.workgroup_count = vyre_driver::admit_dispatch_grid(
         request.workgroup_count,
-        request
+        [request
             .device_queue
             .0
             .limits()
-            .max_compute_workgroups_per_dimension,
+            .max_compute_workgroups_per_dimension; 3],
         crate::WGPU_BACKEND_ID,
     )?;
 

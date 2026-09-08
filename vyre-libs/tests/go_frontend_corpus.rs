@@ -3,7 +3,7 @@
 #![cfg(feature = "go-parser")]
 #![allow(deprecated)]
 
-mod wire_words;
+use crate::wire_words;
 use std::fs;
 use std::path::{Path, PathBuf};
 use wire_words::decode_u32_words;

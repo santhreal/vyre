@@ -57,7 +57,6 @@ use vyre_megakernel::{
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     cluster_projection_matrix_witness_into, mori_zwanzig_coarsen_via_clustering_witness_into,
-    mori_zwanzig_project_witness_into as reference_mz_project_step_into,
 };
 
 /// Caller-owned dispatch scratch for fixed-point Mori-Zwanzig projection.
@@ -124,33 +123,6 @@ pub(crate) fn cluster_projection_matrix_into<'a>(
     &scratch.projection
 }
 
-/// Apply Mori-Zwanzig projection to coarse-grain a per-Region scalar
-/// feature vector. Returns the coarse-grained state where each
-/// Region's value is replaced by its cluster-mean.
-///
-/// # Panics
-///
-/// Panics if `state.len() != n`.
-#[must_use]
-#[cfg(test)]
-pub(crate) fn coarsen_region_state(p_matrix: &[f64], state: &[f64], n: u32) -> Vec<f64> {
-    let mut out = Vec::new();
-    reference_coarsen_region_state_into(p_matrix, state, n, &mut out);
-    out
-}
-
-/// Apply Mori-Zwanzig projection using caller-owned output storage.
-#[cfg(test)]
-pub(crate) fn reference_coarsen_region_state_into(
-    p_matrix: &[f64],
-    state: &[f64],
-    n: u32,
-    out: &mut Vec<f64>,
-) {
-    use crate::telemetry::{bump, mori_zwanzig_region_coarsen_calls};
-    bump(&mori_zwanzig_region_coarsen_calls);
-    reference_mz_project_step_into(p_matrix, state, n, out);
-}
 /// Primitive-native fixed-point production path for applying a
 /// Mori-Zwanzig projection to a per-Region scalar state.
 ///
@@ -228,11 +200,12 @@ pub fn coarsen_region_state_fixed_via_with_scratch_into(
     bump(&mori_zwanzig_region_coarsen_calls);
 
     let cells = checked_square_cells(n, "coarsen_region_state_fixed_via")?;
-    let cells_u32 = u32::try_from(cells).map_err(|_| {
-        SemanticExecutionError::InvalidRequest(format!(
-        "Fix: coarsen_region_state_fixed_via n*n exceeds the primitive u32 lane limit for n={n}."
-    ))
-    })?;
+    // Reject the u32 lane limit here: mz_project_step recomputes n*n as u32 and traps silently.
+    if u32::try_from(cells).is_err() {
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: coarsen_region_state_fixed_via n*n exceeds the primitive u32 lane limit for n={n}."
+        )));
+    }
     if p_matrix_fixed.len() != cells {
         return Err(SemanticExecutionError::InvalidRequest(format!(
         "Fix: coarsen_region_state_fixed_via requires p_matrix_fixed.len() == n*n, got len={}, n={n}, n*n={cells}.",

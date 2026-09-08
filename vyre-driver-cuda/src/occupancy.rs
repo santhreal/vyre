@@ -104,7 +104,7 @@ impl OccupancyEstimate {
 /// minimum of:
 ///   - register-pressure cap: `max_registers_per_sm / (regs_per_thread * workgroup_size)`
 ///   - shared-memory cap: `shared_per_sm / shared_bytes_per_block`
-///   - thread-residence cap: `max_threads_per_sm / workgroup_size`
+///   - warp-slot residence cap: `(max_threads_per_sm / warp_size) / warps_per_block`
 #[must_use]
 pub fn estimate_occupancy(
     caps: &CudaDeviceCaps,
@@ -138,7 +138,11 @@ pub fn estimate_occupancy(
         return OccupancyEstimate::ZERO;
     }
 
-    let blocks_by_threads = max_threads_sm / workgroup_size;
+    // Warp slots, not thread slots: a block whose width is not a whole number
+    // of warps still occupies a whole warp slot for its partial warp, so
+    // dividing the SM thread budget by the block width overstates residency.
+    let warps_per_block = workgroup_size.div_ceil(warp);
+    let blocks_by_warp_slots = (max_threads_sm / warp) / warps_per_block;
     let blocks_by_regs = if regs_per_block == 0 {
         u32::MAX
     } else {
@@ -150,7 +154,9 @@ pub fn estimate_occupancy(
         caps.shared_memory_per_sm_bytes() / usage.shared_bytes_per_block
     };
 
-    let blocks_per_sm = blocks_by_threads.min(blocks_by_regs).min(blocks_by_shared);
+    let blocks_per_sm = blocks_by_warp_slots
+        .min(blocks_by_regs)
+        .min(blocks_by_shared);
     if blocks_per_sm == 0 {
         return OccupancyEstimate::ZERO;
     }

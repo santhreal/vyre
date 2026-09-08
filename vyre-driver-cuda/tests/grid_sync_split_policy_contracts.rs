@@ -20,15 +20,16 @@
 //! split (the grid does not fit) and one reason to refuse (there is no native
 //! barrier at all), and these tests pin both directions.
 //!
-//! Six top-level `GridSync` barriers now ship in
-//! `vyre-libs/src/parsing/c/parse/structure_statement.rs`, which does not gate on
-//! the residency bound the way `exatok` does, so a large enough translation unit
-//! reaches the over-residency path from a shipping frontend. That is why the
+//! Five top-level `GridSync` barriers ship in
+//! `vyre-libs/src/graph/persistent_bfs/program.rs`, which selects the
+//! grid-parallel form from the graph shape and not from the residency bound, so
+//! a large enough frontier reaches the over-residency path from a shipping
+//! composition. That is why the
 //! over-residency route is tested behaviorally here and not assumed.
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 
 use harness::{
     bytes_u32, cross_block_grid_sync_expected, cross_block_grid_sync_inputs,
@@ -43,7 +44,7 @@ use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 /// Grid barriers in [`five_barrier_chain_program`], matching the count shipped in
-/// `vyre-libs/src/parsing/c/parse/structure_statement.rs`.
+/// `vyre-libs/src/graph/persistent_bfs/program.rs`.
 const CHAIN_BARRIERS: u32 = 5;
 
 /// Per-block accumulate iterations in [`five_barrier_chain_program`], the same

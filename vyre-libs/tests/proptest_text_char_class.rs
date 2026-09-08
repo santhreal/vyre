@@ -1,7 +1,7 @@
 //! Property gates for `vyre_reference::composition_witness::char_class_witness`.
 
 #![cfg(feature = "text")]
-mod text_char_class_runner;
+use crate::text_char_class_runner;
 
 use proptest::prelude::*;
 use text_char_class_runner::run_packed_u8_program;

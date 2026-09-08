@@ -1,6 +1,7 @@
 [package]
 name = "external_backend_extension"
 version = "0.1.0"
+autotests = false
 edition = "2021"
 publish = false
 
@@ -11,7 +12,6 @@ vyre-driver = "0.8.0"
 vyre-foundation = "0.8.0"
 vyre-reference = "0.8.0"
 
-
 [workspace]
 
 [patch.crates-io]
@@ -19,3 +19,7 @@ vyre = { path = "../../vyre" }
 vyre-driver = { path = "../../vyre-driver" }
 vyre-foundation = { path = "../../vyre-foundation" }
 vyre-reference = { path = "../../vyre-reference" }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

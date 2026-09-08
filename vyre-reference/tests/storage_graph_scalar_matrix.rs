@@ -37,11 +37,9 @@ use vyre_reference::{run_storage_graph, ReferenceError};
 
 #[path = "support/scalar_corpus.rs"]
 mod scalar_corpus;
-#[path = "../../tests/support/spec_variant_tables.rs"]
-mod spec_variant_tables;
 
 use scalar_corpus::{f32_corpus, i32_corpus, u32_corpus, u64_corpus};
-use spec_variant_tables::{builtin_bin_ops, builtin_un_ops};
+use vyre_test_support::spec_variant_tables::{builtin_bin_ops, builtin_un_ops};
 
 /// Binary cases a sampled row draws.
 const BINARY_DEPTH: usize = 4096;
@@ -188,7 +186,7 @@ fn widths() -> Vec<Width> {
                 addend: 3,
             },
             binary_ops_floor: 29,
-            unary_ops_floor: 11,
+            unary_ops_floor: 12,
             exception: "",
             corpus: || u32_corpus().into_iter().map(NodeStorage::LitU32).collect(),
             binary: u32_binary,
@@ -266,7 +264,7 @@ fn widths() -> Vec<Width> {
                 addend: 7,
             },
             binary_ops_floor: 12,
-            unary_ops_floor: 26,
+            unary_ops_floor: 27,
             exception: "",
             corpus: || f32_corpus().into_iter().map(NodeStorage::LitF32).collect(),
             binary: f32_binary,
@@ -411,6 +409,10 @@ fn u32_unary(op: &UnOp, operand: &NodeStorage) -> Option<Expected> {
         UnOp::Clz => IrValue::U32(value.leading_zeros()),
         UnOp::Ctz => IrValue::U32(value.trailing_zeros()),
         UnOp::ReverseBits => IrValue::U32(value.reverse_bits()),
+        // A bitcast is reinterpretation, not arithmetic: it runs ahead of the
+        // canonicalizing dispatch, so every subnormal and NaN word crosses
+        // width unchanged.
+        UnOp::BitcastU32ToF32 => IrValue::F32(f32::from_bits(value)),
         _ => return None,
     };
     Some(Expected::Value(result))
@@ -560,10 +562,16 @@ fn f32_binary(op: BinOp, left: &NodeStorage, right: &NodeStorage) -> Option<Expe
 }
 
 fn f32_unary(op: &UnOp, operand: &NodeStorage) -> Option<Expected> {
-    let NodeStorage::LitF32(value) = operand else {
+    let NodeStorage::LitF32(raw) = operand else {
         return None;
     };
-    let value = canonical_f32(*value);
+    let raw = *raw;
+    // A bitcast runs ahead of the canonicalizing dispatch, so it is declared
+    // against the literal's own bits: a subnormal or a NaN payload survives it.
+    if matches!(op, UnOp::BitcastF32ToU32) {
+        return Some(Expected::Value(IrValue::U32(raw.to_bits())));
+    }
+    let value = canonical_f32(raw);
     // The transcendental arms name the same canonicalizer the oracle calls
     // rather than a second `libm` call: what this row pins is which operations
     // f32 defines and that each answer comes back canonicalized, not a private
@@ -1024,8 +1032,8 @@ fn operands_of_different_widths_are_refused_as_a_type_mismatch() {
 
 /// The `NodeStorage` literal variants the frozen public-API snapshot records.
 ///
-/// `scripts/check_public_api_snapshot.sh` regenerates the snapshot from rustdoc
-/// and a byte-stability gate holds it equal to the crate's real surface, so a new
+/// The `public-api` gate in `xtask/src/gates/public_api.rs` regenerates the
+/// snapshot from rustdoc under `--write` and holds it byte-equal otherwise, so a new
 /// scalar literal reaches this matrix through the gate that already forces a
 /// snapshot refresh.
 fn frozen_literal_variants() -> BTreeSet<String> {

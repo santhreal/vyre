@@ -27,19 +27,19 @@
 //!
 //! What this scan does not see: an operation id handed to a `macro_rules!`
 //! parameter and registered inside the macro body, when the macro is invoked
-//! from another file. `vyre-primitives/src/bitset/mod.rs` passes
-//! `op_id: "vyre-primitives::bitset::xor"` to a macro defined in
-//! `bitset/binary_word.rs`, and `vyre-libs/src/logical/mod.rs` registers
-//! `vyre-libs::logical::xor` through the same shape, so neither id enters the
-//! model and that identity collision goes unreported. Resolving it needs a
+//! from another file. `vyre-libs/src/bitset/mod.rs` passes
+//! `op_id: "vyre-libs::bitset::xor"` to `define_bitwise_binary_op!`, defined in
+//! `vyre-libs/src/bitset/binary_word.rs`, so the id never enters the model and
+//! a collision against it goes unreported. Resolving it needs a
 //! crate-wide pass pairing macro definitions with their invocation sites, which
 //! a per-file parser cannot do. An id written inline or through a file-local
 //! `const` is read, wherever in the file the `const` sits.
 
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process;
+use std::sync::{LazyLock, Mutex, PoisonError};
 
 pub mod backend_vocabulary;
 pub mod cfg_test;
@@ -56,8 +56,8 @@ pub mod workspace_rules;
 pub use geometry_constants::geometry_constant_failures;
 pub use source_scan::opaque_span;
 pub use workspace_manifest::{
-    crate_ident, discarding_imports, member_directory, submits_registrations, workspace_excludes,
-    workspace_members, workspace_root, workspace_root_from, MAX_SOURCE_BYTES,
+    crate_ident, discarding_imports, member_directory, read_lanes, submits_registrations,
+    workspace_excludes, workspace_members, workspace_root, workspace_root_from, MAX_SOURCE_BYTES,
 };
 pub use workspace_rules::{
     category_home_failures, frontend_owner_failures, materializer_admission_failures,
@@ -66,7 +66,8 @@ pub use workspace_rules::{
 };
 
 use crate::workspace_manifest::{
-    crate_source_roots, read_source_bounded, relative, source_files, source_tree_files, SELF_CRATE,
+    crate_source_roots, member_sources, read_source_bounded, relative, tree_files, MemberSource,
+    SELF_CRATE,
 };
 use crate::workspace_rules::{
     crate_declares_frontend, CATEGORY_A_CRATE, CATEGORY_C_CRATE, FRONTEND_OWNERS,
@@ -115,16 +116,17 @@ pub struct Workspace {
 #[must_use]
 pub fn scan(root: &Path) -> Workspace {
     let members = workspace_members(root);
-    let registrations = scan_registrations(root, &members);
-    let substrate_paths = scan_substrate_paths(root, &members);
-    let frontend_paths = scan_frontend_paths(root, &members);
-    let materializers = scan_materializers(root, &members);
-    let registry_submitters = scan_registry_submitters(root, &members);
-    let discarding_imports = scan_discarding_imports(root, &members);
+    let sources = member_sources(root, &members);
+    let registrations = scan_registrations(&sources);
+    let substrate_paths = scan_substrate_paths(&sources);
+    let frontend_paths = scan_frontend_paths(&sources, &members);
+    let materializers = scan_materializers(&sources);
+    let registry_submitters = scan_registry_submitters(&sources);
+    let discarding_imports = scan_discarding_imports(&sources);
     let crate_roots = scan_crate_roots(root);
-    let module_files = scan_module_files(root, &crate_roots);
     let published_modules = scan_published_modules(root);
     let source_files = scan_source_files(root, &crate_roots);
+    let module_files = scan_module_files(&crate_roots, &source_files);
     let foreign_glob_reexports =
         backend_vocabulary::scan_foreign_glob_reexports(root, &crate_roots);
     Workspace {
@@ -141,6 +143,16 @@ pub fn scan(root: &Path) -> Workspace {
         published_modules,
         foreign_glob_reexports,
     }
+}
+
+/// Every source file of every crate root in the checkout, checkout-relative.
+///
+/// The same roster [`Workspace::source_files`] carries, without the rosters
+/// derived from source text. A reader that wants the file list and reads the
+/// text itself pays one walk here instead of every walk [`scan`] makes.
+#[must_use]
+pub fn source_file_roster(root: &Path) -> Vec<String> {
+    scan_source_files(root, &scan_crate_roots(root))
 }
 
 /// Collect every structural violation in the workspace rooted at `root`.
@@ -238,44 +250,38 @@ pub fn run(args: &[String]) {
 /// case is already stripped per file by [`parse_registrations`]; this is the
 /// other half, where the gate sits in the parent directory instead of an
 /// attribute.
-fn scan_registrations(root: &Path, members: &[String]) -> Vec<Registration> {
+fn scan_registrations(sources: &[MemberSource]) -> Vec<Registration> {
     let mut registrations = Vec::new();
-    for member in members {
-        let crate_name = member.rsplit('/').next().unwrap_or(member).to_string();
-        for path in source_files(root, member) {
-            let file = relative(root, &path);
-            if is_test_source(&file) {
-                continue;
-            }
-            let Ok(text) = read_source_bounded(&path) else {
-                continue;
-            };
-            for parsed in parse_registrations(&text) {
-                registrations.push(Registration {
-                    crate_name: crate_name.clone(),
-                    file: file.clone(),
-                    op_id: parsed.0,
-                    tier: parsed.1,
-                });
-            }
+    for source in sources {
+        if is_test_source(&source.file) {
+            continue;
+        }
+        let Ok(text) = &source.text else {
+            continue;
+        };
+        for parsed in parse_registrations(text) {
+            registrations.push(Registration {
+                crate_name: source.crate_name.clone(),
+                file: source.file.clone(),
+                op_id: parsed.0,
+                tier: parsed.1,
+            });
         }
     }
     registrations
 }
 
-fn scan_substrate_paths(root: &Path, members: &[String]) -> Vec<String> {
-    let mut paths = Vec::new();
-    for member in members {
-        for path in source_files(root, member) {
-            let rel = relative(root, &path);
-            let names_substrate = rel
+fn scan_substrate_paths(sources: &[MemberSource]) -> Vec<String> {
+    let mut paths: Vec<String> = sources
+        .iter()
+        .filter(|source| {
+            source
+                .file
                 .split('/')
-                .any(|segment| segment.contains("substrate") && !segment.ends_with("_test.rs"));
-            if names_substrate {
-                paths.push(rel);
-            }
-        }
-    }
+                .any(|segment| segment.contains("substrate") && !segment.ends_with("_test.rs"))
+        })
+        .map(|source| source.file.clone())
+        .collect();
     paths.sort();
     paths.dedup();
     paths
@@ -285,22 +291,22 @@ fn scan_substrate_paths(root: &Path, members: &[String]) -> Vec<String> {
 ///
 /// A language-named stage directory is one signal; a crate whose name says it
 /// is a frontend is the other, and it is emitted even when the crate keeps a
-/// flat layout with no `lex/` or `preprocess/` directory at all.
-fn scan_frontend_paths(root: &Path, members: &[String]) -> Vec<(String, String)> {
+/// flat layout with no `lex/` or `preprocess/` directory at all, so the members
+/// are read as well as their files.
+fn scan_frontend_paths(sources: &[MemberSource], members: &[String]) -> Vec<(String, String)> {
     let mut paths = Vec::new();
     for member in members {
-        let crate_name = member.rsplit('/').next().unwrap_or(member).to_string();
+        let crate_name = member.rsplit('/').next().unwrap_or(member);
         if FRONTEND_OWNERS
             .iter()
-            .any(|(language, _)| crate_declares_frontend(&crate_name, language))
+            .any(|(language, _)| crate_declares_frontend(crate_name, language))
         {
-            paths.push((crate_name.clone(), member.clone()));
+            paths.push((crate_name.to_string(), member.clone()));
         }
-        for path in source_files(root, member) {
-            let rel = relative(root, &path);
-            if rel.contains("/lex/") || rel.contains("/preprocess/") {
-                paths.push((crate_name.clone(), rel));
-            }
+    }
+    for source in sources {
+        if source.file.contains("/lex/") || source.file.contains("/preprocess/") {
+            paths.push((source.crate_name.clone(), source.file.clone()));
         }
     }
     paths.sort();
@@ -309,21 +315,45 @@ fn scan_frontend_paths(root: &Path, members: &[String]) -> Vec<(String, String)>
 }
 
 /// Every crate the layout rules judge, ordered by directory.
+///
+/// Resolved once per process per root. Discovery reads every manifest in the
+/// checkout, and every contract in a consolidated test binary calls [`scan`],
+/// so the reads happen once for the process rather than once per contract.
 fn scan_crate_roots(root: &Path) -> Vec<CrateRoot> {
+    static RESOLVED: LazyLock<Mutex<BTreeMap<PathBuf, Vec<CrateRoot>>>> =
+        LazyLock::new(|| Mutex::new(BTreeMap::new()));
+
+    let mut cache = RESOLVED.lock().unwrap_or_else(PoisonError::into_inner);
+    if let Some(found) = cache.get(root) {
+        return found.clone();
+    }
     let mut roots = crate_source_roots(root);
     roots.sort_by(|left, right| left.directory.cmp(&right.directory));
     roots.dedup();
+    cache.insert(root.to_path_buf(), roots.clone());
     roots
 }
 
 /// Every `src/` module file of every crate root, checkout-relative.
-fn scan_module_files(root: &Path, crate_roots: &[CrateRoot]) -> Vec<String> {
-    let mut files = Vec::new();
-    for crate_root in crate_roots {
-        for path in source_tree_files(&root.join(&crate_root.directory).join("src")) {
-            files.push(relative(root, &path));
-        }
-    }
+///
+/// Derived from [`scan_source_files`] rather than walked again. `src` is one of
+/// [`SOURCE_TREES`], so walking it a second time reports the same paths and
+/// pays another pass over every crate root to do it.
+fn scan_module_files(crate_roots: &[CrateRoot], source_files: &[String]) -> Vec<String> {
+    let mut files: Vec<String> = crate_roots
+        .iter()
+        .flat_map(|crate_root| {
+            let prefix = if crate_root.directory.is_empty() {
+                "src/".to_string()
+            } else {
+                format!("{}/src/", crate_root.directory)
+            };
+            source_files
+                .iter()
+                .filter(move |file| file.starts_with(&prefix))
+                .cloned()
+        })
+        .collect();
     files.sort();
     files.dedup();
     files
@@ -334,12 +364,19 @@ fn scan_module_files(root: &Path, crate_roots: &[CrateRoot]) -> Vec<String> {
 /// Wider than [`scan_module_files`] by the trees in [`SOURCE_TREES`] other than
 /// `src`: the name rules judge a fixture module the same way they judge a
 /// library module, because a reader looks for one the same way.
+///
+/// Derived from the one tree walk the process makes rather than walked per
+/// crate root. The roster is a prefix range of that walk's sorted file list, so
+/// forty crate roots cost forty binary searches instead of a hundred and sixty
+/// directory walks over a network mount.
 fn scan_source_files(root: &Path, crate_roots: &[CrateRoot]) -> Vec<String> {
+    let tree = tree_files(root);
     let mut files = Vec::new();
     for crate_root in crate_roots {
-        for tree in SOURCE_TREES {
-            for path in source_tree_files(&root.join(&crate_root.directory).join(tree)) {
-                files.push(relative(root, &path));
+        let directory = root.join(&crate_root.directory);
+        for source_tree in SOURCE_TREES {
+            for path in tree.rust_sources_under(&directory.join(source_tree)) {
+                files.push(relative(root, path));
             }
         }
     }
@@ -382,24 +419,19 @@ fn scan_published_modules(root: &Path) -> Vec<String> {
 /// Only `vyre-driver-*` members are scanned. `vyre-driver` itself is the owner
 /// of the shared admission helpers, so finding their definitions there is the
 /// rule being satisfied, not broken.
-fn scan_materializers(root: &Path, members: &[String]) -> Vec<(String, String)> {
+fn scan_materializers(sources: &[MemberSource]) -> Vec<(String, String)> {
     let mut found = Vec::new();
-    for member in members {
-        let crate_name = member.rsplit('/').next().unwrap_or(member);
-        if !crate_name.starts_with("vyre-driver-") {
+    for source in sources {
+        if !source.crate_name.starts_with("vyre-driver-") {
             continue;
         }
-        for path in source_files(root, member) {
-            if path
-                .file_name()
-                .is_some_and(|name| name == "materializer.rs")
-            {
-                let Ok(text) = read_source_bounded(&path) else {
-                    continue;
-                };
-                found.push((relative(root, &path), text));
-            }
+        if source.file.rsplit('/').next() != Some("materializer.rs") {
+            continue;
         }
+        let Ok(text) = &source.text else {
+            continue;
+        };
+        found.push((source.file.clone(), text.clone()));
     }
     found.sort();
     found.dedup();
@@ -411,31 +443,25 @@ fn scan_materializers(root: &Path, members: &[String]) -> Vec<(String, String)> 
 /// Read from the tree rather than listed here: a new submitting crate joins the
 /// set the moment it submits, so the link rule judges it without an edit. The
 /// macros that submit on a caller's behalf are read from the tree the same way,
-/// in a first pass over the same files, because a crate that only invokes one
+/// in a first pass over the same corpus, because a crate that only invokes one
 /// still needs its registrations linked.
-fn scan_registry_submitters(root: &Path, members: &[String]) -> Vec<String> {
+fn scan_registry_submitters(sources: &[MemberSource]) -> Vec<String> {
     let mut definitions: BTreeMap<String, String> = BTreeMap::new();
-    for member in members {
-        for path in source_files(root, member) {
-            let Ok(text) = read_source_bounded(&path) else {
-                continue;
-            };
-            definitions.extend(macro_definitions(&text));
-        }
+    for source in sources {
+        let Ok(text) = &source.text else {
+            continue;
+        };
+        definitions.extend(macro_definitions(text));
     }
     let submitting = submitting_macros(&definitions);
 
     let mut submitters = Vec::new();
-    for member in members {
-        let crate_name = member.rsplit('/').next().unwrap_or(member);
-        for path in source_files(root, member) {
-            let Ok(text) = read_source_bounded(&path) else {
-                continue;
-            };
-            if submits_registrations(&text, &submitting) {
-                submitters.push(crate_name.to_string());
-                break;
-            }
+    for source in sources {
+        let Ok(text) = &source.text else {
+            continue;
+        };
+        if submits_registrations(text, &submitting) {
+            submitters.push(source.crate_name.clone());
         }
     }
     submitters.sort();
@@ -444,20 +470,17 @@ fn scan_registry_submitters(root: &Path, members: &[String]) -> Vec<String> {
 }
 
 /// Every `use <crate> as _;` in member sources.
-fn scan_discarding_imports(root: &Path, members: &[String]) -> Vec<DiscardingImport> {
+fn scan_discarding_imports(sources: &[MemberSource]) -> Vec<DiscardingImport> {
     let mut imports = Vec::new();
-    for member in members {
-        for path in source_files(root, member) {
-            let Ok(text) = read_source_bounded(&path) else {
-                continue;
-            };
-            let file = relative(root, &path);
-            for named in discarding_imports(&text) {
-                imports.push(DiscardingImport {
-                    file: file.clone(),
-                    named,
-                });
-            }
+    for source in sources {
+        let Ok(text) = &source.text else {
+            continue;
+        };
+        for named in discarding_imports(text) {
+            imports.push(DiscardingImport {
+                file: source.file.clone(),
+                named,
+            });
         }
     }
     imports.sort_by(|left, right| (&left.file, &left.named).cmp(&(&right.file, &right.named)));

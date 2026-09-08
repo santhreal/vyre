@@ -6,8 +6,8 @@
 //!
 #![cfg(feature = "math-succinct")]
 #![allow(deprecated)]
-mod succinct_words;
-mod wire_words;
+use crate::succinct_words;
+use crate::wire_words;
 use vyre_reference::value::Value;
 use wire_words::u32_bytes;
 

@@ -1,5 +1,5 @@
 use super::{priority, PRIORITY_LEVELS, PRIORITY_OFFSETS_BASE};
-use crate::PipelineError;
+use crate::{PipelineError, RingEncodingFault};
 
 const PRIORITY_LEVELS_USIZE: usize = 5;
 const PRIORITY_OFFSETS_WITH_SENTINEL: usize = PRIORITY_LEVELS_USIZE + 1;
@@ -37,15 +37,15 @@ fn write_default_priority_offsets_array(
 ///
 /// # Errors
 ///
-/// Returns [`PipelineError::QueueFull`] when the provided control buffer is too
+/// Returns [`PipelineError::RingEncoding`] when the provided control buffer is too
 /// short or not aligned to u32 words.
 pub fn write_default_priority_offsets(
     control_bytes: &mut [u8],
     total_slots: u32,
 ) -> Result<(), PipelineError> {
     if control_bytes.len() % 4 != 0 {
-        return Err(PipelineError::QueueFull {
-            queue: "submission",
+        return Err(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Geometry,
             fix: "control buffer byte length is not 4-byte aligned; rebuild it with Megakernel::encode_control",
         });
     }
@@ -53,21 +53,21 @@ pub fn write_default_priority_offsets(
     write_default_priority_offsets_array(total_slots, &mut offsets);
     for (i, value) in offsets.iter().enumerate() {
         let word_idx = priority_offsets_base_usize()?.checked_add(i).ok_or(
-            PipelineError::QueueFull {
-                queue: "submission",
+            PipelineError::RingEncoding {
+                fault: RingEncodingFault::Overflow,
                 fix: "priority-offset control word index overflowed usize; keep control ABI constants bounded",
             },
         )?;
-        let start = word_idx.checked_mul(4).ok_or(PipelineError::QueueFull {
-            queue: "submission",
+        let start = word_idx.checked_mul(4).ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix: "priority-offset byte index overflowed usize; keep control ABI constants bounded",
         })?;
-        let end = start.checked_add(4).ok_or(PipelineError::QueueFull {
-            queue: "submission",
+        let end = start.checked_add(4).ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix: "priority-offset byte index overflowed usize; keep control ABI constants bounded",
         })?;
-        let dst = control_bytes.get_mut(start..end).ok_or(PipelineError::QueueFull {
-            queue: "submission",
+        let dst = control_bytes.get_mut(start..end).ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Geometry,
             fix: "control buffer is too small for priority partition offsets; rebuild it with Megakernel::encode_control",
         })?;
         dst.copy_from_slice(&value.to_le_bytes());
@@ -76,8 +76,8 @@ pub fn write_default_priority_offsets(
 }
 
 fn priority_offsets_base_usize() -> Result<usize, PipelineError> {
-    usize::try_from(PRIORITY_OFFSETS_BASE).map_err(|_| PipelineError::QueueFull {
-        queue: "submission",
+    usize::try_from(PRIORITY_OFFSETS_BASE).map_err(|_| PipelineError::RingEncoding {
+        fault: RingEncodingFault::Overflow,
         fix: "priority-offset base word cannot fit host usize; keep control ABI constants bounded",
     })
 }

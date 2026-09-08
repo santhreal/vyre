@@ -46,12 +46,7 @@ pub(crate) struct OpInfo {
     pub(crate) capabilities: String,
     pub(crate) required_caps: vyre_foundation::program_caps::RequiredCapabilities,
     pub(crate) callees: BTreeSet<String>,
-    // Kept for future audit passes that need to re-walk the raw IR
-    // (e.g. to verify that Region source_region chains are stable
-    // under re-optimization). The current fingerprint/own_nodes/
-    // composed_nodes/children summary is already derived from the
-    // Program up-front, so downstream prints don't re-read it.
-    #[allow(dead_code)]
+    /// The raw IR the semantic-organization walk reads to attribute each node.
     pub(crate) program: Program,
     pub(crate) tier: Tier,
     pub(crate) buffer_signature: Vec<String>,
@@ -627,16 +622,6 @@ pub(super) fn walk(node: &Node, inside_composed: bool, state: &mut Walk) {
         }
         _ => {}
     }
-}
-
-/// Two op ids share a sub-dialect when their first TWO `::` segments
-/// match. `vyre-libs::math::square` and `vyre-libs::math::broadcast`
-/// both live under `vyre-libs::math`, so structural similarity there
-/// is expected (same shape of elementwise unary op).
-pub(super) fn same_subdialect(a: &str, b: &str) -> bool {
-    let a_prefix: Vec<&str> = a.split("::").take(3).collect();
-    let b_prefix: Vec<&str> = b.split("::").take(3).collect();
-    a_prefix.len() >= 3 && b_prefix.len() >= 3 && a_prefix[..2] == b_prefix[..2]
 }
 
 pub(super) fn read_text_bounded(path: &std::path::Path) -> io::Result<String> {

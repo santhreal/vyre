@@ -13,10 +13,22 @@ program.
 
 ## Envelope
 
-The blob opens with the four magic bytes `VYRE` followed by a
-little-endian `u16` schema version. `from_wire` validates the magic, then
-the version, before it decodes any payload, so a version mismatch reports
-itself instead of surfacing as an arbitrary parse failure further in.
+The header is 40 bytes: the four magic bytes `VYRE`, a little-endian `u16`
+schema version, a little-endian `u16` flag word, and the 32-byte BLAKE3 digest
+of the body. A blob larger than `MAX_PROGRAM_BYTES` is rejected before the
+header is read.
+
+`from_wire` checks the header one condition at a time, before it decodes any
+payload, and each condition reports its own class:
+
+| Condition | Class |
+|---|---|
+| fewer bytes than the magic | `TruncatedPayload` |
+| first four bytes other than `VYRE` | `MagicMismatch` |
+| fewer bytes than the 40-byte header | `TruncatedPayload` |
+| schema version outside the supported range | `UnknownSchemaVersion` |
+| a reserved, compressed or sealed flag, or a clear `OPAQUE_ENDIAN_FIXED` flag | `InvalidDiscriminant` |
+| a body digest other than the one the header states | `IntegrityMismatch` |
 
 | Constant | Value |
 |---|---|
@@ -58,6 +70,17 @@ rejected before the stack frame is pushed.
 Lengths are written as `u32` rather than `usize` so the blob does not
 depend on the pointer width of the host that produced it.
 
+## Float literals encode a canonical bit pattern
+
+An `f32` literal encodes through `vyre_foundation::fp_parity::canonical_f32`,
+the same normalization the parity contract applies to every f32 it compares.
+Every NaN payload encodes as the quiet NaN `0x7FC0_0000`, and every subnormal
+encodes as a zero of its own sign. Every other value encodes its own bits.
+
+The sign of a zero is preserved. `1.0 / -0.0` is negative infinity and
+`1.0 / 0.0` is positive, so `0.0` and `-0.0` are two literals, with two
+encodings and two program digests.
+
 ## Tile values and nodes
 
 Version 7 introduces first-class tile values and dedicated tile nodes (`TileLoad`,
@@ -72,6 +95,15 @@ Version 8 adds schedule-free logical domain, tile, and within-tile identities
 plus logical barriers. Selected-schedule lowering replaces every logical marker
 with its physical invocation, workgroup, local, or barrier form before
 descriptor construction. A logical marker at physical lowering is rejected.
+
+## Operator tags
+
+Every builtin unary and binary operator carries one frozen `u8` tag. Version 8
+allocates `0x25` to `UnOp::BitcastF32ToU32` and `0x26` to
+`UnOp::BitcastU32ToF32`, which reinterpret the 32 bits of a value without
+converting it. `vyre_foundation::serial::wire::tags::builtin_un_ops` states the
+builtin unary set in tag order, so a consumer enumerates it instead of keeping
+its own list.
 
 ## What is proved
 

@@ -18,7 +18,7 @@
 //! arithmetic, any divergence is a real IR/dispatch defect, not a rounding artifact.
 #![forbid(unsafe_code)]
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::natural_gradient_autotuner::precondition_autotune_gradient_fixed_via;
 

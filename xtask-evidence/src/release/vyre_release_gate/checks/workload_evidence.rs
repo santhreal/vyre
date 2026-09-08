@@ -1,16 +1,5 @@
 use super::*;
 
-pub(crate) fn check_optimization_analysis_fixture_manifest(
-    value: &serde_json::Value,
-    failures: &mut Vec<String>,
-) {
-    crate::bench::benchmark_evidence_semantics::inspect_optimization_analysis_fixture(
-        "requirement `optimization-corpus-4096` analysis fixture manifest",
-        value,
-        failures,
-    );
-}
-
 pub(crate) fn first_json_evidence(
     requirement: &Requirement,
     base_dir: &Path,
@@ -569,45 +558,6 @@ mod workload_evidence_tests {
                 "workload matrix cpu_sota_100x_family_count=10, but derived row evidence has 1"
             )),
             "Fix: release gate must reject inflated 100x family counts; failures={failures:?}"
-        );
-    }
-
-    #[test]
-    fn optimization_analysis_fixture_rejects_duplicate_family_rows() {
-        let manifest = serde_json::json!({
-            "missing_required_families": [],
-            "total_fixture_cases": 512,
-            "total_triggered_cases": 512,
-            "families": [
-                {
-                    "family": "A13-coalesce-fixture",
-                    "cases": 128,
-                    "triggered_cases": 128,
-                    "analysis_sites": 128,
-                    "coalesced_unit_stride_sites": 1,
-                    "strided_sites": 1,
-                    "broadcast_sites": 1
-                },
-                {
-                    "family": "A13-coalesce-fixture",
-                    "cases": 128,
-                    "triggered_cases": 128,
-                    "analysis_sites": 128,
-                    "coalesced_unit_stride_sites": 1,
-                    "strided_sites": 1,
-                    "broadcast_sites": 1
-                }
-            ]
-        });
-        let mut failures = Vec::new();
-
-        check_optimization_analysis_fixture_manifest(&manifest, &mut failures);
-
-        assert!(
-            failures
-                .iter()
-                .any(|failure| failure.contains("duplicate analysis fixture family rows: A13-coalesce-fixture")),
-            "Fix: release gate must reject duplicate analysis fixture family rows before totals can prove A13-A16 coverage; failures={failures:?}"
         );
     }
 

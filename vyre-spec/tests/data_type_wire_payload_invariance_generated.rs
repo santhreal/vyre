@@ -5,7 +5,7 @@
 //! the variant family only; changing a payload must never allocate a new core
 //! tag or enter the high-bit extension-id space.
 
-mod spec_variants;
+use crate::spec_variants;
 
 use std::collections::{BTreeMap, BTreeSet};
 

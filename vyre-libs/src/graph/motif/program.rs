@@ -3,6 +3,7 @@
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 
+use crate::builder::trip_count::clamped_by_extents;
 use crate::graph::program_graph::{
     word_buffer, ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_TARGETS,
 };
@@ -106,7 +107,11 @@ pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -
             scan_edges.push(Node::loop_for(
                 &edge_index,
                 Expr::var(&edge_start),
-                Expr::var(&edge_end),
+                clamped_by_extents(
+                    Expr::var(&edge_end),
+                    NAME_EDGE_TARGETS,
+                    [NAME_EDGE_KIND_MASK],
+                ),
                 vec![
                     Node::let_bind(
                         &actual_dst,

@@ -378,7 +378,8 @@ fn run_lint(cli: &Cli, lint: &Lint, overrides: &[PathBuf]) -> Result<()> {
     for root in &roots {
         if !root.exists() {
             anyhow::bail!(
-                "{} not found: {}. {}",
+                "--{}: {} not found: {}. {}",
+                lint.flag,
                 lint.root_noun,
                 root.display(),
                 lint.missing_root_fix
@@ -387,11 +388,25 @@ fn run_lint(cli: &Cli, lint: &Lint, overrides: &[PathBuf]) -> Result<()> {
     }
     let root_refs: Vec<&Path> = roots.iter().map(PathBuf::as_path).collect();
     let violations = (lint.scan)(&root_refs).context(lint.context)?;
-    report(cli, &violations)
+    report(cli, lint.kinds, &violations)
 }
 
 /// Emit violations in the requested format and set the process exit status.
-fn report(cli: &Cli, violations: &[Violation]) -> Result<()> {
+///
+/// `declared` is the kind list the running lint records. A violation outside it
+/// means the registry and the scan disagree about what this lint reports, which
+/// would let a kind reach output that no flag claims.
+fn report(cli: &Cli, declared: &[ViolationKind], violations: &[Violation]) -> Result<()> {
+    if let Some(undeclared) = violations
+        .iter()
+        .find(|violation| !declared.contains(&violation.kind))
+    {
+        anyhow::bail!(
+            "Fix: the scan reported `{}`, which the selected lint does not declare. Record the \
+             kind on the lint that reports it.",
+            undeclared.kind.as_str()
+        );
+    }
     match cli.format {
         Format::Text => emit_text(violations),
         Format::Json => emit_json(violations)?,
@@ -465,7 +480,7 @@ fn main() -> Result<()> {
     let violations =
         run_raw_ir_in_libs(&root_refs, allowlist_arg).context("running raw_ir_in_libs lint")?;
 
-    report(&cli, &violations)
+    report(&cli, DEFAULT_RUN_KINDS, &violations)
 }
 
 fn run_drift(

@@ -24,44 +24,11 @@ pub(super) fn build_synthetic_release_program(pattern: SyntheticPattern, records
     }
 }
 
-fn synthetic_count_program(pattern: SyntheticPattern, records: u32) -> Program {
-    let mut buffers = vec![BufferDecl::output("out_count", 0, DataType::U32).with_count(1)];
-    for (binding, name) in pattern_buffers(pattern).iter().enumerate() {
-        buffers.push(
-            BufferDecl::storage(
-                name,
-                (binding + 1) as u32,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(records),
-        );
-    }
-    Program::wrapped(
-        buffers,
-        [256, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::and(
-                    Expr::lt(Expr::var("idx"), Expr::u32(records)),
-                    pattern_condition(pattern),
-                ),
-                vec![Node::let_bind(
-                    "_slot",
-                    Expr::atomic_add("out_count", Expr::u32(0), Expr::u32(1)),
-                )],
-            ),
-        ],
-    )
-}
-
 fn condition_eval_program(records: u32) -> Program {
     triple_mask_threshold_count_program(
         records,
         ["match_mask", "rule_mask", "metadata_mask"],
         ["match_word", "rule_word", "metadata_word"],
-        "condition_hits",
         TripleMaskPredicate::AllSet,
         CONDITION_LANES,
         CONDITION_THRESHOLD,
@@ -128,7 +95,6 @@ fn triple_mask_threshold_count_program(
     records: u32,
     buffers: [&'static str; 3],
     words: [&'static str; 3],
-    _hits: &'static str,
     predicate: TripleMaskPredicate,
     lanes: u32,
     threshold: u32,
@@ -184,7 +150,6 @@ fn offset_count_aggregation_program(records: u32) -> Program {
         records,
         ["offset_mask", "length_mask", "count_mask"],
         ["offset_word", "length_word", "count_word"],
-        "aggregation_hits",
         TripleMaskPredicate::AllSet,
         AGGREGATION_LANES,
         AGGREGATION_THRESHOLD,
@@ -196,7 +161,6 @@ fn entropy_window_program(records: u32) -> Program {
         records,
         ["byte_class_mask", "transition_mask", "rarity_mask"],
         ["byte_class_word", "transition_word", "rarity_word"],
-        "entropy_score",
         TripleMaskPredicate::FirstAndEither,
         ENTROPY_LANES,
         ENTROPY_THRESHOLD,
@@ -250,7 +214,6 @@ fn alias_reaching_def_program(records: u32) -> Program {
         records,
         ["def_mask", "use_mask", "kill_mask"],
         ["def_word", "use_word", "kill_word"],
-        "reaching_aliases",
         TripleMaskPredicate::FirstTwoSetThirdClear,
         ALIAS_LANES,
         ALIAS_THRESHOLD,
@@ -262,7 +225,6 @@ fn ifds_witness_program(records: u32) -> Program {
         records,
         ["frontier_mask", "transfer_mask", "witness_mask"],
         ["frontier_word", "transfer_word", "witness_word"],
-        "witness_hits",
         TripleMaskPredicate::AllSet,
         IFDS_LANES,
         IFDS_THRESHOLD,
@@ -274,7 +236,6 @@ fn ast_motif_traversal_program(records: u32) -> Program {
         records,
         ["node_kind_mask", "depth_mask", "motif_mask"],
         ["node_kind_word", "depth_word", "motif_word"],
-        "ast_hits",
         TripleMaskPredicate::AllSet,
         C_AST_LANES,
         C_AST_THRESHOLD,
@@ -286,7 +247,6 @@ fn megakernel_queue_program(records: u32) -> Program {
         records,
         ["queue_mask", "predicate_mask", "dispatch_mask"],
         ["queue_word", "predicate_word", "dispatch_word"],
-        "queued_hits",
         TripleMaskPredicate::AllSet,
         MEGAKERNEL_QUEUE_LANES,
         MEGAKERNEL_QUEUE_THRESHOLD,
@@ -298,66 +258,10 @@ fn egraph_saturation_program(records: u32) -> Program {
         records,
         ["opcode_mask", "lhs_class_mask", "rhs_class_mask"],
         ["opcode_word", "lhs_word", "rhs_word"],
-        "rewrite_hits",
         TripleMaskPredicate::AllSet,
         EGRAPH_LANES,
         EGRAPH_THRESHOLD,
     )
-}
-
-fn pattern_condition(pattern: SyntheticPattern) -> Expr {
-    match pattern {
-        SyntheticPattern::ConditionEval => Expr::and(
-            Expr::gt(load_u32("match_count"), Expr::u32(3)),
-            Expr::and(
-                Expr::eq(load_u32("rule_bitmap"), Expr::u32(7)),
-                Expr::ne(load_u32("metadata_gate"), Expr::u32(0)),
-            ),
-        ),
-        SyntheticPattern::StringBitmapScatter => Expr::and(
-            Expr::ne(load_u32("pattern_bitmap"), Expr::u32(0)),
-            Expr::ne(load_u32("rule_bitmap"), Expr::u32(0)),
-        ),
-        SyntheticPattern::OffsetCountAggregation => Expr::and(
-            Expr::gt(load_u32("offset"), Expr::u32(128)),
-            Expr::and(
-                Expr::gt(load_u32("length"), Expr::u32(4)),
-                Expr::gt(load_u32("count"), Expr::u32(1)),
-            ),
-        ),
-        SyntheticPattern::EntropyWindow => Expr::gt(load_u32("entropy_x1000"), Expr::u32(7200)),
-        SyntheticPattern::QuantifiedLoops => Expr::and(
-            Expr::ne(load_u32("any_hit"), Expr::u32(0)),
-            Expr::and(
-                Expr::ne(load_u32("all_hit"), Expr::u32(0)),
-                Expr::gt(load_u32("n_hit"), Expr::u32(2)),
-            ),
-        ),
-        SyntheticPattern::AliasReachingDef => Expr::and(
-            Expr::eq(load_u32("def_id"), load_u32("use_id")),
-            Expr::ne(load_u32("alias_mask"), Expr::u32(0)),
-        ),
-        SyntheticPattern::IfdsWitness => Expr::and(
-            Expr::ne(load_u32("frontier"), Expr::u32(0)),
-            Expr::eq(load_u32("edge_kind"), Expr::u32(1)),
-        ),
-        SyntheticPattern::AstMotifTraversal => Expr::and(
-            Expr::eq(load_u32("node_kind"), Expr::u32(42)),
-            Expr::gt(load_u32("depth"), Expr::u32(3)),
-        ),
-        SyntheticPattern::MegakernelQueuedBatch => Expr::and(
-            Expr::eq(load_u32("queue_state"), Expr::u32(1)),
-            Expr::ne(load_u32("predicate"), Expr::u32(0)),
-        ),
-        SyntheticPattern::EgraphSaturation => Expr::and(
-            Expr::eq(load_u32("opcode"), Expr::u32(3)),
-            Expr::eq(load_u32("lhs_class"), load_u32("rhs_class")),
-        ),
-    }
-}
-
-fn load_u32(name: &'static str) -> Expr {
-    Expr::load(name, Expr::var("idx"))
 }
 
 pub(super) fn pattern_buffers(pattern: SyntheticPattern) -> &'static [&'static str] {

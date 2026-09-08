@@ -158,11 +158,12 @@ pub fn diffuse_dispatch_stalks_fixed_via_with_scratch_into(
         "d",
         "diffuse_dispatch_stalks_fixed_via",
     )?;
-    let cells_u32 = u32::try_from(cells).map_err(|_| {
-    SemanticExecutionError::InvalidRequest(format!(
-        "Fix: diffuse_dispatch_stalks_fixed_via n_nodes*d exceeds the primitive u32 lane limit for n_nodes={n_nodes}, d={d}."
-    ))
-})?;
+    // Reject the u32 lane limit here: sheaf_diffusion_step recomputes n_nodes*d as u32 and traps silently.
+    if u32::try_from(cells).is_err() {
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: diffuse_dispatch_stalks_fixed_via n_nodes*d exceeds the primitive u32 lane limit for n_nodes={n_nodes}, d={d}."
+        )));
+    }
     if stalks_fixed.len() != cells {
         return Err(SemanticExecutionError::InvalidRequest(format!(
         "Fix: diffuse_dispatch_stalks_fixed_via requires stalks_fixed.len() == n_nodes*d, got len={}, n_nodes={n_nodes}, d={d}, cells={cells}.",
@@ -237,25 +238,6 @@ pub(crate) fn diffuse_to_equilibrium(
         &mut next,
     );
     (current, iters)
-}
-
-/// Iterate sheaf diffusion into caller-owned storage.
-///
-/// `out` receives the final stalk vector and `scratch` is reused for each
-/// intermediate step.
-#[cfg(test)]
-pub(crate) fn reference_diffuse_dispatch_stalks_into(
-    stalks: &[f64],
-    restriction_diag: &[f64],
-    damping: f64,
-    out: &mut Vec<f64>,
-) {
-    vyre_reference::composition_witness::sheaf_diffusion_step_witness_into(
-        stalks,
-        restriction_diag,
-        damping,
-        out,
-    );
 }
 
 #[cfg(test)]

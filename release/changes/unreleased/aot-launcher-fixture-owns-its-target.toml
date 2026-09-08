@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The AOT launcher end-to-end test registers its emitter under a target of its own. `inventory::submit!` registers at link time wherever it is written, so an emitter submitted inside a test body for the shared fixture target was visible to the whole test binary and turned the two bundle contracts that prove packaging refuses an unregistered launcher into passes that never ran."

@@ -5,10 +5,10 @@
 //! lowering. This matrix covers edge values and generated lanes beyond one
 //! workgroup.
 
-mod gate_fixtures;
-
-use gate_fixtures::{generated_f32_with_edges, inverse_sqrt_f32_ref, run_eval_single};
 use vyre_primitives::wire::pack_f32_slice as pack;
+use vyre_test_support::hardware_oracle::{
+    generated_f32_with_edges, inverse_sqrt_f32_ref, run_eval_single,
+};
 
 const FINITE_EDGES: [f32; 12] = [
     -8.0,

@@ -593,6 +593,7 @@ pub(super) fn metric_key(prefix: &'static str, name: &str) -> Option<&'static st
     }
 }
 
+#[cfg(test)]
 pub(crate) const SYNTHETIC_COUNT_METRIC_NAMES: &[&str] = &[
     "condition_records",
     "quantified_records",

@@ -18,7 +18,7 @@ mod cache_contracts {
         cache.insert(key, rec);
         cache.insert(key, rec);
 
-        assert_eq!(cache.len(), 1);
+        assert_eq!(cache.stats().entries, 1);
     }
 
     #[test]
@@ -60,7 +60,7 @@ mod cache_contracts {
 
         assert!(cache.get(&hot_key).is_some());
         assert_eq!(cache.hits, 2);
-        assert_eq!(cache.len(), 128);
+        assert_eq!(cache.stats().entries, 128);
     }
 
     #[test]
@@ -74,7 +74,7 @@ mod cache_contracts {
 
         assert_eq!(cache.hits, 0);
         assert_eq!(cache.misses, 1);
-        assert_eq!(cache.len(), 0);
+        assert_eq!(cache.stats().entries, 0);
     }
 
     #[test]

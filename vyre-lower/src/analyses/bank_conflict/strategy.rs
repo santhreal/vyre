@@ -80,6 +80,36 @@ pub enum BankConflictMitigation {
     },
 }
 
+/// Every mitigation [`select_bank_conflict_strategy`] ranks.
+///
+/// One definition, so a target that must prove a property of every strategy the
+/// selector can return reads this set rather than restating it. A candidate
+/// added here is judged by those proofs on the next run instead of silently
+/// escaping them.
+///
+/// `NoRewrite` is first and stays in the set: the unpermuted baseline is always
+/// a candidate.
+pub const CANDIDATE_MITIGATIONS: [BankConflictMitigation; 6] = [
+    BankConflictMitigation::NoRewrite,
+    BankConflictMitigation::PadLines {
+        pad_elements_per_row: 1,
+    },
+    BankConflictMitigation::PadLines {
+        pad_elements_per_row: 2,
+    },
+    BankConflictMitigation::PadLines {
+        pad_elements_per_row: 4,
+    },
+    BankConflictMitigation::XorSwizzle {
+        swizzle_bits: 2,
+        stride_shift: 3,
+    },
+    BankConflictMitigation::XorSwizzle {
+        swizzle_bits: 3,
+        stride_shift: 4,
+    },
+];
+
 /// Conflict report for a single access phase under a candidate strategy.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PhaseConflictReport {
@@ -215,26 +245,7 @@ pub fn select_bank_conflict_strategy(
     );
     let baseline_worst = baseline.worst_severity;
 
-    let candidates = [
-        BankConflictMitigation::NoRewrite,
-        BankConflictMitigation::PadLines {
-            pad_elements_per_row: 1,
-        },
-        BankConflictMitigation::PadLines {
-            pad_elements_per_row: 2,
-        },
-        BankConflictMitigation::PadLines {
-            pad_elements_per_row: 4,
-        },
-        BankConflictMitigation::XorSwizzle {
-            swizzle_bits: 2,
-            stride_shift: 3,
-        },
-        BankConflictMitigation::XorSwizzle {
-            swizzle_bits: 3,
-            stride_shift: 4,
-        },
-    ];
+    let candidates = CANDIDATE_MITIGATIONS;
 
     let mut best = baseline;
 
@@ -284,6 +295,10 @@ pub enum SharedPermutationBlock {
     AsyncTransaction,
     /// An atomic reaches the binding.
     Atomic,
+    /// A bulk copy stages the binding: a global load feeds the shared store
+    /// that immediately follows it at the same index, which a target may issue
+    /// as one transfer against the allocation instead of a scalar store.
+    FusedBulkCopy,
     /// An access reaches the binding that classification proved no stride for,
     /// or that does not route through the scalar address site.
     UnprovenAccess,
@@ -303,8 +318,9 @@ pub struct SharedBindingAccessProfile {
     /// phase then stride.
     pub phases: Vec<AccessPhaseProfile>,
     /// Why the index cannot be rewritten. `None` means every access to the
-    /// binding is a scalar shared load or store with a proven stride, so a
-    /// rewrite at the address site rewrites all of them.
+    /// binding is a scalar shared load or store with a proven stride, and no
+    /// asynchronous transaction or fused bulk copy reaches it, so a rewrite at
+    /// the address site rewrites all of them.
     pub blocked_by: Option<SharedPermutationBlock>,
 }
 
@@ -474,6 +490,34 @@ impl SharedAccessCollector {
 }
 
 impl<'a> StructuredVisitor<'a> for SharedAccessCollector {
+    /// A bulk copy is a global load whose value feeds the shared store that
+    /// immediately follows it at the same index. The pair is one transfer a
+    /// target may issue against the allocation, so the scalar address site does
+    /// not carry all of the binding's traffic and no index rewrite there is
+    /// sound. The shape is a fact of the op stream, not a target's decision to
+    /// fuse, so the verdict holds for every target the descriptor reaches.
+    fn enter_body(&mut self, body: &'a KernelBody, _op_index_offset: usize) {
+        for pair in body.ops.windows(2) {
+            let [source, store] = pair else {
+                continue;
+            };
+            if !matches!(source.kind, KernelOpKind::LoadGlobal)
+                || !matches!(store.kind, KernelOpKind::StoreShared)
+            {
+                continue;
+            }
+            if source.result.is_none() || source.result != store.operands.get(2).copied() {
+                continue;
+            }
+            if source.operands.get(1) != store.operands.get(1) {
+                continue;
+            }
+            if let Some(slot) = store.operands.first().copied() {
+                self.block(slot, SharedPermutationBlock::FusedBulkCopy);
+            }
+        }
+    }
+
     fn visit_op(
         &mut self,
         body: &'a KernelBody,

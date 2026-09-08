@@ -113,6 +113,10 @@ inventory::submit! {
     }
 }
 
-#[cfg(test)]
-#[path = "../tests/internal/mod.rs"]
-mod tests;
+// One module of `tests/internal` names a private item of `runtime`, so the
+// library compiles that file itself. The rest of the tree reaches the backend
+// through the public trait and is compiled by the `all_tests` harness, which is
+// what keeps every test case in one target.
+#[cfg(all(test, any(target_os = "macos", target_os = "ios")))]
+#[path = "../tests/internal/resident_table_metrics.rs"]
+mod resident_table_metrics;

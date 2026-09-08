@@ -1,6 +1,6 @@
 //! Runtime cache blob contracts over the public `vyre_aot` surface.
 
-mod fixture_target;
+use crate::fixture_target;
 
 use vyre_aot::cache::*;
 use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};

@@ -138,7 +138,7 @@ mod tests {
         try_claim_io_requests_into, try_encode_empty_io_queue_into, try_poll_io_requests,
         try_poll_io_requests_into, ResidentIoQueue, IO_SLOT_COUNT, IO_SLOT_WORDS,
     };
-    use crate::PipelineError;
+    use crate::{PipelineError, RingEncodingFault};
 
     #[test]
     fn empty_io_queue_has_no_requests() {
@@ -375,11 +375,14 @@ mod tests {
         let error = complete_io_requests_batch(&mut buf, &[(0, true), (1, true)])
             .expect_err("batch completion must reject unclaimed slots before writing any status");
         match error {
-            PipelineError::QueueFull { fix, .. } => assert!(
+            PipelineError::RingEncoding {
+                fault: RingEncodingFault::Protocol,
+                fix,
+            } => assert!(
                 fix.contains("CLAIMED request"),
                 "batch ownership error must be actionable, got `{fix}`"
             ),
-            other => panic!("expected QueueFull for unclaimed batch slot, got {other:?}"),
+            other => panic!("expected a Protocol fault for an unclaimed batch slot, got {other:?}"),
         }
         assert_eq!(buf, before);
 
@@ -402,11 +405,14 @@ mod tests {
         let error = complete_io_request(&mut buf, 0, true)
             .expect_err("unclaimed IO slots must not be completed");
         match error {
-            PipelineError::QueueFull { fix, .. } => assert!(
+            PipelineError::RingEncoding {
+                fault: RingEncodingFault::Protocol,
+                fix,
+            } => assert!(
                 fix.contains("CLAIMED request"),
                 "completion ownership error must be actionable, got `{fix}`"
             ),
-            other => panic!("expected QueueFull for unclaimed completion, got {other:?}"),
+            other => panic!("expected a Protocol fault for an unclaimed completion, got {other:?}"),
         }
     }
 
@@ -502,13 +508,16 @@ mod tests {
         let error = ResidentIoQueue::new(IO_SLOT_COUNT + 1)
             .expect_err("queues larger than the compiled 64-slot poll window must fail");
         match error {
-            PipelineError::QueueFull { fix, .. } => {
+            PipelineError::RingEncoding {
+                fault: RingEncodingFault::Capacity,
+                fix,
+            } => {
                 assert!(
                     fix.contains("64 slots"),
-                    "overflow error must explain the compiled queue limit, got `{fix}`"
+                    "capacity error must state the compiled queue limit, got `{fix}`"
                 );
             }
-            other => panic!("expected QueueFull overflow error, got {other:?}"),
+            other => panic!("expected a Capacity fault for an oversized queue, got {other:?}"),
         }
     }
 
@@ -525,13 +534,16 @@ mod tests {
             .publish_slot(IO_SLOT_COUNT, IO_SLOT_COUNT, 4096, IO_SLOT_COUNT)
             .expect_err("the 65th published completion must fail loudly");
         match error {
-            PipelineError::QueueFull { fix, .. } => {
+            PipelineError::RingEncoding {
+                fault: RingEncodingFault::OutOfBounds,
+                fix,
+            } => {
                 assert!(
                     fix.contains("valid slot id"),
-                    "overflow error must stay actionable, got `{fix}`"
+                    "bounds error must stay actionable, got `{fix}`"
                 );
             }
-            other => panic!("expected QueueFull on 65th publish, got {other:?}"),
+            other => panic!("expected an OutOfBounds fault on the 65th publish, got {other:?}"),
         }
     }
 
@@ -581,8 +593,14 @@ mod tests {
         queue.submit_dma_read(1, 10, 20, 4096, 99).unwrap();
         let err = queue.submit_dma_read(1, 11, 21, 8192, 100).unwrap_err();
         assert!(
-            matches!(err, PipelineError::QueueFull { .. }),
-            "Fix: re-submitting to an in-flight slot must return QueueFull"
+            matches!(
+                err,
+                PipelineError::RingEncoding {
+                    fault: RingEncodingFault::Protocol,
+                    ..
+                }
+            ),
+            "Fix: re-submitting to an in-flight slot must report a Protocol fault, got {err:?}"
         );
     }
 
@@ -683,13 +701,20 @@ mod tests {
         let before: Vec<u8> = queue.as_bytes().to_vec();
 
         // Attempt to publish into a slot beyond the queue's capacity, this must
-        // return QueueFull from the bounds guard without touching any queue storage.
-        let err = queue.publish_slot(IO_SLOT_COUNT, 99, 4096, 42).expect_err(
-            "publishing beyond slot_count must return QueueFull, not silently redirect",
-        );
+        // return an OutOfBounds fault from the bounds guard without touching any
+        // queue storage.
+        let err = queue
+            .publish_slot(IO_SLOT_COUNT, 99, 4096, 42)
+            .expect_err("publishing beyond slot_count must be rejected, not silently redirected");
         assert!(
-            matches!(err, PipelineError::QueueFull { .. }),
-            "out-of-bounds publish must return QueueFull, got {err:?}"
+            matches!(
+                err,
+                PipelineError::RingEncoding {
+                    fault: RingEncodingFault::OutOfBounds,
+                    ..
+                }
+            ),
+            "out-of-bounds publish must report an OutOfBounds fault, got {err:?}"
         );
 
         // The entire queue buffer must be byte-for-byte identical to before the

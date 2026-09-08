@@ -50,7 +50,6 @@ use vyre_megakernel::{
 use vyre_reference::composition_witness::{
     identity_matrix_witness_into, natural_gradient_autotune_step_witness_into,
     natural_gradient_block_apply_witness as reference_natural_gradient_block_apply,
-    natural_gradient_block_apply_witness_into as reference_natural_gradient_block_apply_into,
 };
 
 /// Caller-owned dispatch scratch for fixed-point natural-gradient preconditioning.
@@ -79,19 +78,6 @@ pub(crate) fn reference_precondition_autotune_gradient(
     use crate::telemetry::{bump, natural_gradient_autotuner_calls};
     bump(&natural_gradient_autotuner_calls);
     reference_natural_gradient_block_apply(m_inv_sqrt, grad, n)
-}
-
-/// Apply the inverse-Fisher preconditioner into caller-owned output.
-#[cfg(test)]
-pub(crate) fn reference_precondition_autotune_gradient_into(
-    m_inv_sqrt: &[f64],
-    grad: &[f64],
-    n: u32,
-    out: &mut Vec<f64>,
-) {
-    use crate::telemetry::{bump, natural_gradient_autotuner_calls};
-    bump(&natural_gradient_autotuner_calls);
-    reference_natural_gradient_block_apply_into(m_inv_sqrt, grad, n, out);
 }
 
 /// Primitive-native fixed-point natural-gradient preconditioning.

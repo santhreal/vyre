@@ -1,19 +1,29 @@
 use super::*;
 use crate::facts::DataflowEdge;
+use crate::grammar::{DerivationStep, ScheduleProduction};
 use vyre_foundation::algebraic_reordering::ReorderingClass;
+use vyre_foundation::schedule::{SchedulePhaseId, ScheduleTransform};
 use vyre_foundation::validate::BackendCapabilities;
+
+/// Bytes of traffic one nanosecond moves on the device these fixtures price
+/// against.
+///
+/// `foundation.elementwise.add.1m` records `device_gb_s_x1000` 3787878
+/// (`vyre-bench/snapshots/59a7d71f36292424c99b7530da59f7361bfab607.json`), so
+/// every figure asserted below is a figure a recorded device produces.
+const FIXTURE_BYTES_PER_NS: u64 = 3_788;
 
 fn device(registers_per_invocation: u32) -> DeviceFacts {
     DeviceFacts::new(BackendCapabilities::default(), 256)
         .with_occupancy(registers_per_invocation, 0)
-        .with_bandwidth_facts(TRAFFIC_BYTES_PER_NS, TRAFFIC_BYTES_PER_NS)
+        .with_bandwidth_facts(FIXTURE_BYTES_PER_NS, FIXTURE_BYTES_PER_NS)
 }
 
 /// A device with no register budget and the given workgroup scratch budget.
 fn scratch_device(shared_scratch_bytes_per_workgroup: u32) -> DeviceFacts {
     DeviceFacts::new(BackendCapabilities::default(), 256)
         .with_occupancy(0, shared_scratch_bytes_per_workgroup)
-        .with_bandwidth_facts(TRAFFIC_BYTES_PER_NS, TRAFFIC_BYTES_PER_NS)
+        .with_bandwidth_facts(FIXTURE_BYTES_PER_NS, FIXTURE_BYTES_PER_NS)
 }
 
 /// Two nodes, one value of `value_bytes` between them, each holding
@@ -60,6 +70,23 @@ fn dependencies() -> Vec<DependencyEdge> {
     }]
 }
 
+/// The two-node baseline with both nodes contracted into one group.
+///
+/// The plan is derived by applying the fusion production through
+/// `CandidatePlan::derive`, so a cost test prices a grouping the search reaches
+/// rather than one the test assembled.
+fn fuse_both_nodes(facts: &PlanningFacts) -> CandidatePlan {
+    let step = DerivationStep {
+        production: ScheduleProduction::Fusion,
+        transforms: vec![ScheduleTransform::Fuse {
+            phases: vec![SchedulePhaseId(0), SchedulePhaseId(1)],
+        }],
+    };
+    CandidatePlan::baseline(2)
+        .derive(&step, facts)
+        .expect("contracting the two synthetic phases must be legal")
+}
+
 /// WHY: 150.13. Fusion is not free. When the fused group needs more registers
 /// than one invocation holds, the device runs the group's traffic in more than
 /// one resident pass, and past that cliff the unfused pair is cheaper even
@@ -76,7 +103,7 @@ fn occupancy_cliff_ranks_the_unfused_candidate_first() {
     let facts = two_node_facts(96, 64 * 1024 * 1024);
     let dependencies = dependencies();
     let device = device(128);
-    let fused = CandidatePlan::from_edges(2, &facts.dataflow);
+    let fused = fuse_both_nodes(&facts);
     let unfused = CandidatePlan::baseline(2);
     assert_eq!(fused.group_count(), 1, "fixture must fuse both nodes");
     assert_eq!(unfused.group_count(), 2);
@@ -107,12 +134,7 @@ fn fusion_wins_when_the_group_fits_the_register_budget() {
     let facts = two_node_facts(64, 4 * 1024 * 1024);
     let dependencies = dependencies();
     let device = device(128);
-    let fused = evaluate(
-        &CandidatePlan::from_edges(2, &facts.dataflow),
-        &facts,
-        &dependencies,
-        device,
-    );
+    let fused = evaluate(&fuse_both_nodes(&facts), &facts, &dependencies, device);
     let unfused = evaluate(&CandidatePlan::baseline(2), &facts, &dependencies, device);
     assert_eq!(
         fused.occupancy_passes_peak, 1,
@@ -140,7 +162,7 @@ fn fusion_wins_when_the_group_fits_the_register_budget() {
 fn a_measured_launch_overhead_reranks_a_fusion_the_floor_accepts() {
     let facts = two_node_facts(96, 4 * 1024 * 1024);
     let dependencies = dependencies();
-    let fused_plan = CandidatePlan::from_edges(2, &facts.dataflow);
+    let fused_plan = fuse_both_nodes(&facts);
     let unfused_plan = CandidatePlan::baseline(2);
 
     let unmeasured = device(128);
@@ -175,12 +197,7 @@ fn a_measured_launch_overhead_reranks_a_fusion_the_floor_accepts() {
 fn unknown_occupancy_budget_charges_nothing() {
     let facts = two_node_facts(1_000_000, 4 * 1024 * 1024);
     let dependencies = dependencies();
-    let cost = evaluate(
-        &CandidatePlan::from_edges(2, &facts.dataflow),
-        &facts,
-        &dependencies,
-        device(0),
-    );
+    let cost = evaluate(&fuse_both_nodes(&facts), &facts, &dependencies, device(0));
     assert_eq!(cost.occupancy_passes_peak, 1);
     assert_eq!(cost.occupancy_ns, 0);
 }
@@ -211,12 +228,7 @@ fn a_tile_two_members_share_is_charged_once() {
     let facts = tiled_facts(&[("tile", 32 * 1024)], &[("tile", 32 * 1024)]);
     let dependencies = dependencies();
     let device = scratch_device(48 * 1024);
-    let fused = evaluate(
-        &CandidatePlan::from_edges(2, &facts.dataflow),
-        &facts,
-        &dependencies,
-        device,
-    );
+    let fused = evaluate(&fuse_both_nodes(&facts), &facts, &dependencies, device);
     assert_eq!(
         fused.shared_scratch_bytes,
         32 * 1024,
@@ -243,12 +255,7 @@ fn two_tiles_of_different_names_are_charged_together() {
     let facts = tiled_facts(&[("score", 32 * 1024)], &[("weights", 32 * 1024)]);
     let dependencies = dependencies();
     let device = scratch_device(48 * 1024);
-    let fused = evaluate(
-        &CandidatePlan::from_edges(2, &facts.dataflow),
-        &facts,
-        &dependencies,
-        device,
-    );
+    let fused = evaluate(&fuse_both_nodes(&facts), &facts, &dependencies, device);
     assert_eq!(fused.shared_scratch_bytes, 64 * 1024);
     assert_eq!(
         fused.occupancy_passes_peak, 2,
@@ -262,12 +269,7 @@ fn two_tiles_of_different_names_are_charged_together() {
 #[test]
 fn a_shared_name_of_two_sizes_holds_the_larger() {
     let facts = tiled_facts(&[("tile", 16 * 1024)], &[("tile", 32 * 1024)]);
-    let cost = evaluate(
-        &CandidatePlan::from_edges(2, &facts.dataflow),
-        &facts,
-        &dependencies(),
-        device(0),
-    );
+    let cost = evaluate(&fuse_both_nodes(&facts), &facts, &dependencies(), device(0));
     assert_eq!(cost.shared_scratch_bytes, 32 * 1024);
 }
 
@@ -328,12 +330,13 @@ fn recorded(metric: &str) -> Vec<(std::path::PathBuf, String, u64)> {
     found
 }
 
-/// WHY: both weights are durations read off a recording, and a constant that
-/// drifts from the recording it cites prices every fusion decision against a
-/// device nothing measured. This derives both from the files at run time, so a
-/// cheaper recorded dispatch or a re-measured rate turns the suite red instead
-/// of leaving a stale weight behind a doc comment. It proves nothing about
-/// whether the model ranks a real plan correctly.
+/// WHY: the launch floor is a weight of the model and the fixture rate is the
+/// device these tests price against, and a figure that drifts from the recording
+/// it cites prices every fusion decision against a device nothing measured. This
+/// derives both from the files at run time, so a cheaper recorded dispatch or a
+/// re-measured rate turns the suite red instead of leaving a stale figure behind
+/// a doc comment. It proves nothing about whether the model ranks a real plan
+/// correctly.
 #[test]
 fn the_cost_weights_are_the_figures_the_recordings_hold() {
     let dispatches = recorded("dispatch_ns");
@@ -357,9 +360,9 @@ fn the_cost_weights_are_the_figures_the_recordings_hold() {
             )
         });
     assert_eq!(
-        TRAFFIC_BYTES_PER_NS,
+        FIXTURE_BYTES_PER_NS,
         rate.saturating_add(500).div_euclid(1_000),
-        "the traffic rate must be the rate that case recorded, to the nearest byte"
+        "the fixture device rate must be the rate that case recorded, to the nearest byte"
     );
 }
 
@@ -410,7 +413,7 @@ fn launch_and_bandwidth_ratios_favor_different_candidates_across_devices() {
     // Two nodes with 16MB dataflow.
     let facts = two_node_facts(64, 16 * 1024 * 1024);
     let dependencies = dependencies();
-    let fused_plan = CandidatePlan::from_edges(2, &facts.dataflow);
+    let fused_plan = fuse_both_nodes(&facts);
     let unfused_plan = CandidatePlan::baseline(2);
 
     // Device A: High launch cost (50,000 ns), high bandwidth (10,000 B/ns).
@@ -430,7 +433,7 @@ fn launch_and_bandwidth_ratios_favor_different_candidates_across_devices() {
     // Device B: Low launch cost (100 ns), very low bandwidth (10 B/ns).
     // If fused group incurs extra occupancy pass on 128 live values:
     let occupancy_facts = two_node_facts(96, 16 * 1024 * 1024);
-    let fused_occ = CandidatePlan::from_edges(2, &occupancy_facts.dataflow);
+    let fused_occ = fuse_both_nodes(&occupancy_facts);
     let unfused_occ = CandidatePlan::baseline(2);
     let device_b = DeviceFacts::new(BackendCapabilities::default(), 256)
         .with_launch_costs(100, 0)
@@ -579,7 +582,7 @@ fn a_replayed_pass_the_cache_holds_is_not_charged_as_traffic() {
     let dependencies = dependencies();
     let uncached = device(128);
     let cached = device(128).with_cache_capacity(64 * 1024 * 1024);
-    let fused = CandidatePlan::from_edges(2, &facts.dataflow);
+    let fused = fuse_both_nodes(&facts);
     let uncached_cost = evaluate(&fused, &facts, &dependencies, uncached);
     let cached_cost = evaluate(&fused, &facts, &dependencies, cached);
     assert_eq!(uncached_cost.occupancy_passes_peak, 2);
@@ -608,7 +611,7 @@ fn a_replayed_pass_the_cache_holds_is_not_charged_as_traffic() {
 fn registers_above_the_occupancy_budget_are_recorded_as_spilled() {
     let facts = two_node_facts(96, 4 * 1024 * 1024);
     let dependencies = dependencies();
-    let fused = CandidatePlan::from_edges(2, &facts.dataflow);
+    let fused = fuse_both_nodes(&facts);
     let spilling = evaluate(&fused, &facts, &dependencies, device(128));
     assert_eq!(
         spilling.spill_registers_peak, 64,

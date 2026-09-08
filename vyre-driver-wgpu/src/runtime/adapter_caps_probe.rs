@@ -24,6 +24,12 @@ pub fn probe(adapter: &wgpu::Adapter) -> AdapterCaps {
 }
 
 /// Probe a live adapter and return the neutral driver profile.
+///
+/// Device timestamps are reported as absent here whatever the adapter
+/// advertises. Admitting them takes a resolve on a created device, which this
+/// function does not have: an adapter can advertise both timestamp features and
+/// still resolve a zero end-of-pass tick. [`from_backend_profile`] reports the
+/// capability that device acquisition proved.
 #[must_use]
 pub fn probe_profile(adapter: &wgpu::Adapter) -> DeviceProfile {
     let features = adapter.features();
@@ -40,8 +46,6 @@ pub fn probe_profile(adapter: &wgpu::Adapter) -> DeviceProfile {
         limits.max_compute_workgroup_size_y,
         limits.max_compute_workgroup_size_z,
     ]);
-    let timestamp_queries = features.contains(wgpu::Features::TIMESTAMP_QUERY)
-        && features.contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS);
     let subgroup_caps = crate::capabilities::subgroup_caps_for_adapter(features, &limits);
     let profile = DeviceProfile {
         backend: backend_id_for(info.backend),
@@ -79,12 +83,10 @@ pub fn probe_profile(adapter: &wgpu::Adapter) -> DeviceProfile {
         l1_cache_bytes: 0,
         l2_cache_bytes: 0,
         mem_bw_gbps: 0,
-        timing_quality: if timestamp_queries {
-            DeviceTimingQuality::DeviceTimestamps
-        } else {
-            DeviceTimingQuality::HostEnqueueWait
-        },
-        supports_device_timestamps: timestamp_queries,
+        // An adapter's timestamp features are not a proof that its resolve
+        // works, and this projection has no device to resolve on.
+        timing_quality: DeviceTimingQuality::HostEnqueueWait,
+        supports_device_timestamps: false,
         supports_hardware_counters: false,
         ideal_unroll_depth: 0,
         ideal_vector_pack_bits: 0,
@@ -190,6 +192,51 @@ fn backend_id_for(backend: wgpu::Backend) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn unit_adapter_info() -> wgpu::AdapterInfo {
+        wgpu::AdapterInfo {
+            name: "Unit Test Adapter".to_string(),
+            vendor: 0,
+            device: 0,
+            device_type: wgpu::DeviceType::DiscreteGpu,
+            driver: "unit".to_string(),
+            driver_info: "unit".to_string(),
+            backend: wgpu::Backend::Vulkan,
+        }
+    }
+
+    /// Both timestamp features, and only both, admit device timing. The pair is
+    /// driven over every combination so a projection that reads one bit alone
+    /// turns this red.
+    #[test]
+    fn device_timing_is_admitted_only_when_both_timestamp_features_survived_acquisition() {
+        let adapter_info = unit_adapter_info();
+        let limits = wgpu::Limits::default();
+        for query in [false, true] {
+            for inside_encoders in [false, true] {
+                let enabled = EnabledFeatures {
+                    timestamp_query: query,
+                    timestamp_query_inside_encoders: inside_encoders,
+                    ..EnabledFeatures::default()
+                };
+                let profile = from_backend_profile(&adapter_info, &limits, &enabled);
+                let expected = query && inside_encoders;
+                assert_eq!(
+                    profile.supports_device_timestamps, expected,
+                    "Fix: timestamp_query={query} inside_encoders={inside_encoders} must report device timestamps as {expected}"
+                );
+                assert_eq!(
+                    profile.timing_quality,
+                    if expected {
+                        DeviceTimingQuality::DeviceTimestamps
+                    } else {
+                        DeviceTimingQuality::HostEnqueueWait
+                    },
+                    "Fix: timing quality and the timestamp capability must not disagree"
+                );
+            }
+        }
+    }
 
     #[test]
     fn backend_id_maps_every_wgpu_backend() {

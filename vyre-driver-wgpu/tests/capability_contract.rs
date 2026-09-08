@@ -2,7 +2,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 use harness::{selected_adapter, shared_live_backend as live_backend, SUBGROUP_PROBE_WGSL};
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
@@ -123,6 +123,26 @@ fn adapter_caps_probe_matches_live_backend_capability_contract() {
         live_caps.subgroup_size,
         backend.subgroup_size().unwrap_or(0),
         "Fix: optimizer caps built from WgpuBackend must use the dispatch-planning subgroup width"
+    );
+}
+
+/// An adapter that advertises both timestamp features may still resolve a zero
+/// end-of-pass tick, so the adapter-level projection reports no device timing
+/// whatever the adapter claims. Device acquisition resolves once and reports
+/// the capability it proved.
+#[test]
+fn the_adapter_level_projection_reports_no_device_timing() {
+    let backend = live_backend();
+    let adapter = selected_adapter(&backend);
+    let profile = vyre_driver_wgpu::runtime::adapter_caps_probe::probe_profile(&adapter);
+    assert!(
+        !profile.supports_device_timestamps,
+        "Fix: admitting device timestamps takes a resolve on a created device, which an adapter projection cannot perform"
+    );
+    assert_eq!(
+        profile.timing_quality,
+        vyre_driver::DeviceTimingQuality::HostEnqueueWait,
+        "Fix: an unproven timestamp capability must not report device-timestamp timing quality"
     );
 }
 

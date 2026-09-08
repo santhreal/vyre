@@ -1,8 +1,8 @@
 {
-  "source_fingerprint": "git:f7531aecea5a6a1270eb3cec465a72da335f5304:dirty=false",
+  "source_fingerprint": "git:3cfaa0ef1ac2f973c5c9b7be833ce2c0d92fbb6a:dirty=true:worktree=1a84f9b42d0ec3966c0bdfb981195799375b3803273dd0c87c96e1bc6c4cb782",
   "schema_version": 3,
   "command_count": 16,
-  "artifact_count": 74,
+  "artifact_count": 75,
   "commands": [
     {
       "generator_command": "xtask docs-check",
@@ -65,6 +65,7 @@
         "release/evidence/benchmarks/megakernel-condition-100x-proof.json",
         "release/evidence/benchmarks/megakernel-condition-cuda.json",
         "release/evidence/benchmarks/megakernel-latency-cuda.json",
+        "release/evidence/benchmarks/resident-optimizer-pipeline.json",
         "release/evidence/benchmarks/workload-01-condition-eval.json",
         "release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",
         "release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
@@ -213,7 +214,7 @@
       "artifact_contracts": []
     },
     {
-      "generator_command": "xtask lego-audit --report-only --duplicate-report-json release/evidence/dedup/lego-audit-duplicates.json",
+      "generator_command": "xtask lego-duplicate-report --write",
       "command_mode": "spawned",
       "required": true,
       "expected_artifacts": [

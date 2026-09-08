@@ -1,15 +1,20 @@
+use super::queue::{
+    ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX, ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX,
+    ACTIVE_QUEUE_EDGE_TARGETS_INDEX, ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_INPUT_COUNT,
+    ACTIVE_QUEUE_LEN_INDEX,
+};
 use crate::api::case::BenchError;
 use crate::cases::mix32;
 use crate::cases::queue_closure_oracle::{
     queue_closure_oracle, QueueClosureGraph, QueueClosureOracle,
 };
 use crate::cases::skewed_graph::{
-    active_high_degree_sources, build_skewed_csr_arrays, skewed_degree as shared_skewed_degree,
-    SkewedCsrShape,
+    active_high_degree_sources, build_skewed_csr_arrays, SkewedCsrShape,
 };
 use vyre_libs::predicate::edge_kind;
 
 pub(super) const NODE_COUNT: u32 = 1_048_576;
+#[cfg(test)]
 pub(super) const FRONTIER_WORDS: usize = NODE_COUNT.div_ceil(32) as usize;
 pub(super) const IFDS_REACH_MASK: u32 = edge_kind::ASSIGNMENT
     | edge_kind::CALL_ARG
@@ -143,14 +148,19 @@ pub(super) fn ifds_active_queue_inputs(
         materialize_ifds_active_queue(fixture, capacity, "IFDS active-queue fixture")?;
     active_queue.resize(capacity, 0);
 
-    Ok(vec![
-        vyre_primitives::wire::pack_u32_slice(&active_queue),
-        vyre_primitives::wire::pack_u32_slice(&[fixture.stats.active_sources as u32]),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_offsets),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_targets),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask),
-        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_out_seed),
-    ])
+    let mut inputs = vec![Vec::new(); ACTIVE_QUEUE_INPUT_COUNT];
+    inputs[ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX] = vyre_primitives::wire::pack_u32_slice(&active_queue);
+    inputs[ACTIVE_QUEUE_LEN_INDEX] =
+        vyre_primitives::wire::pack_u32_slice(&[fixture.stats.active_sources as u32]);
+    inputs[ACTIVE_QUEUE_EDGE_OFFSETS_INDEX] =
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_offsets);
+    inputs[ACTIVE_QUEUE_EDGE_TARGETS_INDEX] =
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_targets);
+    inputs[ACTIVE_QUEUE_EDGE_KIND_INDEX] =
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask);
+    inputs[ACTIVE_QUEUE_FRONTIER_OUT_INDEX] =
+        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_out_seed);
+    Ok(inputs)
 }
 
 pub(in crate::cases::dataflow_irregular) fn materialize_ifds_active_queue(
@@ -347,10 +357,6 @@ fn expand_one_launch_wave(
         }
     }
     changed
-}
-
-fn skewed_degree(src: u32) -> u32 {
-    shared_skewed_degree(src, UGLY_HUB_DEGREE)
 }
 
 fn ifds_edge_kind(src: u32, edge: u32) -> u32 {

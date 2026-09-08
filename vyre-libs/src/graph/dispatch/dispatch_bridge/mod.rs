@@ -18,6 +18,7 @@ pub(crate) use inputs::{
 };
 pub(crate) use u32_outputs::{
     dispatch_single_u32_output_from_prepared_into, dispatch_two_u32_outputs_from_prepared_into,
+    dispatch_u32_outputs_from_prepared_into, U32Readback,
 };
 
 use vyre_foundation::ir::Program;

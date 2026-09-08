@@ -2,7 +2,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 
 use harness::bytes_u32;
 use harness::{bytes_f32, cuda_reference_outputs, f32_bytes, live_backend};

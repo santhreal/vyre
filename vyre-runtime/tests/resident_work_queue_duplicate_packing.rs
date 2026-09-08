@@ -3,13 +3,13 @@
 //! Covers behavior when the same opcode, ticket, or task identity appears
 //! more than once in a packed batch or window.
 
+use crate::ring_expectations::assert_publish_rejected_by_status;
 use vyre_runtime::resident_work_queue::{
     descriptor::{BatchDescriptor, SlotDescriptor, SlotOpcode, WindowDescriptor},
     protocol::{self, slot},
     telemetry::RingTelemetry,
     ResidentWorkQueue,
 };
-use vyre_runtime::PipelineError;
 
 #[test]
 fn batch_descriptor_counts_duplicate_items_independently() {
@@ -89,7 +89,10 @@ fn duplicate_window_tickets_aggregate_in_telemetry() {
 
 #[test]
 fn duplicate_batch_publish_to_same_inflight_slot_is_rejected() {
-    let mut ring = ResidentWorkQueue::encode_empty_ring(2).unwrap();
+    // Four slots so the batch window (one item plus its fence) fits. On a
+    // two-slot ring this call was rejected for capacity before the in-flight
+    // check ran, so the assertion could not observe the contract it names.
+    let mut ring = ResidentWorkQueue::encode_empty_ring(4).unwrap();
     ResidentWorkQueue::publish_slot(&mut ring, 1, 0, protocol::opcode::NOP, &[]).unwrap();
 
     let err = ResidentWorkQueue::batch_publish(
@@ -100,5 +103,9 @@ fn duplicate_batch_publish_to_same_inflight_slot_is_rejected() {
         0,
     )
     .expect_err("double-publishing into an inflight slot must be rejected");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_publish_rejected_by_status(
+        &err,
+        slot::PUBLISHED,
+        "a batch publish into a PUBLISHED slot",
+    );
 }

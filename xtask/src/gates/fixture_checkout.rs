@@ -64,3 +64,59 @@ pub fn checkout_with_roots(roots: &[&str]) -> (TempDir, PathBuf) {
         .collect();
     checkout(&borrowed)
 }
+
+/// Where a report placed each finding, as `path:line`.
+///
+/// Three gate test modules wrote this projection out, and an assertion over it
+/// is the usual way a test states which sites a rule reached. A missing file or
+/// line reads as empty rather than being dropped: a finding that names neither
+/// is still one the rule produced, and silently omitting it would let a test
+/// assert an exact list that the report does not contain.
+pub fn sites(report: &crate::gate::Report) -> Vec<String> {
+    report
+        .findings
+        .iter()
+        .map(|finding| {
+            format!(
+                "{}:{}",
+                finding
+                    .file
+                    .as_ref()
+                    .map(|path| path.display().to_string())
+                    .unwrap_or_default(),
+                finding.line.unwrap_or_default()
+            )
+        })
+        .collect()
+}
+
+/// The files a report named, in report order.
+///
+/// The projection three gate tests asserted against, each with its own copy.
+/// A finding with no file reads as empty for the same reason as in [`sites`].
+pub fn files(report: &crate::gate::Report) -> Vec<String> {
+    report
+        .findings
+        .iter()
+        .map(|finding| {
+            finding
+                .file
+                .as_ref()
+                .map(|path| path.display().to_string())
+                .unwrap_or_default()
+        })
+        .collect()
+}
+
+/// What a report said, in order.
+///
+/// The companion to [`sites`]: an assertion names the sites and reports the
+/// messages when it fails, because a bare list of paths does not say why the
+/// rule fired on them.
+pub fn messages(report: &crate::gate::Report) -> Vec<String> {
+    report
+        .findings
+        .iter()
+        .map(|finding| finding.message.clone())
+        .collect()
+}

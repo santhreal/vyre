@@ -235,12 +235,15 @@ fn a_frozen_launch_beside_any_dispatch_shape_override_is_rejected() {
     let frozen = vyre_driver::LaunchDirective::stated([64, 1, 1], [2, 1, 1], 0)
         .expect("the stated fixture launch is positive");
 
-    let overrides: [(&str, fn(&mut DispatchConfig)); 4] = [
+    let overrides: [(&str, fn(&mut DispatchConfig)); 5] = [
         ("workgroup_override", |config| {
             config.workgroup_override = Some([64, 1, 1]);
         }),
         ("grid_override", |config| {
             config.grid_override = Some([2, 1, 1]);
+        }),
+        ("max_workgroups_per_axis", |config| {
+            config.max_workgroups_per_axis = Some([65_535; 3]);
         }),
         ("dispatch_elements", |config| {
             config.dispatch_elements = Some(128);

@@ -93,6 +93,11 @@ constructs a `PhysicalKernel`.
 physical invocation, workgroup, local, and barrier IR before descriptor
 construction. `lower_physical` rejects any unresolved logical marker.
 
+Capability validation resolves logical markers before it checks backend
+operation support, so a program carrying a logical barrier and no selected
+schedule is legalized instead of being refused for an operation no backend
+implements.
+
 `PHYSICAL_SCHEDULE_VERSION = 1` authenticates the projection the same call
 attaches to the verified kernel. A target reads the frozen phase, logical
 coverage, workgroup, vector width, axis mapping levels, pipeline role groups,
@@ -421,6 +426,13 @@ node at its declared launch width and no specialization. Every production has to
 earn its place against that baseline on the objective's metric vector, and a tie
 on every ordering metric is broken toward the shorter derivation, so an accepted transform is one that paid for itself. An
 exhausted budget degrades to the best proved candidate instead of to nothing.
+
+A node's declared launch width is the wider of its region domain and the
+coverage its own program requires. A region domain is read from one declared
+value, so a program whose result depends on how many invocations ran, through an
+atomic, a subgroup collective or a workgroup-scoped buffer, states the wider
+span. A geometry record covering fewer logical points than its program states is
+refused where the record is minted.
 
 ## A declared law derives candidates of its own
 

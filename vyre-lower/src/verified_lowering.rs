@@ -162,8 +162,22 @@ fn reject_logical_markers(program: &Program) -> Result<(), PhysicalLoweringError
     Ok(())
 }
 
-fn prepare_expanded_physical_program(expanded: Program) -> Result<Program, PhysicalLoweringError> {
-    reject_logical_markers(&expanded)?;
+/// Whether logical execution markers are resolved here or refused.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Legalization {
+    /// The program is physical already, so a marker is a caller defect.
+    Refuse,
+    /// Resolve markers through the identity mapping after optimization.
+    Identity,
+}
+
+fn prepare_expanded_physical_program(
+    expanded: Program,
+    legalization: Legalization,
+) -> Result<Program, PhysicalLoweringError> {
+    if legalization == Legalization::Refuse {
+        reject_logical_markers(&expanded)?;
+    }
     let optimized = vyre_foundation::optimizer::optimize(expanded).map_err(|error| {
         PhysicalLoweringError::new(format!(
             "registered semantic optimization failed before descriptor lowering: {error}. Fix: repair pass registration, legality, or convergence instead of emitting unoptimized IR."
@@ -175,12 +189,23 @@ fn prepare_expanded_physical_program(expanded: Program) -> Result<Program, Physi
                 "unresolved call remained after semantic optimization: {error}. Fix: register its composition body or eliminate the dead call before backend emission."
             ))
         })?;
-    reject_logical_markers(&prepared)?;
-    Ok(prepared)
+    // Fusion joins two arms with a logical barrier and inlining pulls in bodies
+    // that are themselves schedule-free, so markers appear at this point even
+    // when the input carried none. Legalizing before the optimizer left those
+    // to reach a backend as the unsupported op `vyre.node.logical_barrier`;
+    // the guard below is what proves this closed every one of them.
+    let legalized = match legalization {
+        Legalization::Refuse => prepared,
+        Legalization::Identity => {
+            vyre_foundation::transform::schedule_lowering::lower_logical_schedule(prepared).0
+        }
+    };
+    reject_logical_markers(&legalized)?;
+    Ok(legalized)
 }
 
 fn prepare_physical_program(program: &Program) -> Result<Program, PhysicalLoweringError> {
-    prepare_expanded_physical_program(expand_semantic_program(program)?)
+    prepare_expanded_physical_program(expand_semantic_program(program)?, Legalization::Refuse)
 }
 
 fn lower_single_rank_collectives_for_emit(
@@ -226,17 +251,39 @@ pub fn lower_scheduled(
                 phase.0
             ))
         })?;
-    let expanded = expand_semantic_program(program)?;
-    let (mut scheduled, _) =
-        vyre_foundation::transform::schedule_lowering::lower_logical_schedule(expanded);
+    let mut scheduled = expand_semantic_program(program)?;
     scheduled.set_workgroup_size(selected.workgroup);
     let projected = PhysicalSchedule::project(schedule, phase).map_err(|error| {
         PhysicalLoweringError::new(format!(
             "selected schedule projection failed before physical lowering: {error}"
         ))
     })?;
-    let prepared = prepare_expanded_physical_program(scheduled)?;
+    let prepared = prepare_expanded_physical_program(scheduled, Legalization::Identity)?;
     lower_prepared_physical(prepared, Some(projected))
+}
+
+/// Construct verified physical kernel IR from a schedule-free semantic [`Program`].
+///
+/// Compositions are written schedule-free, so a dispatch that never ran the
+/// bounded schedule search still has to resolve their logical identities. The
+/// identity mapping is the unfused baseline the model always keeps in the
+/// candidate set: one logical element per invocation, one tile per workgroup,
+/// and a logical barrier as a workgroup barrier. The program's own workgroup
+/// policy is kept and no fusion is projected.
+///
+/// A caller holding a validated [`SelectedSchedule`] uses [`lower_scheduled`].
+/// This entry point cannot know which schedule was selected, so reaching it
+/// with one already chosen would emit the baseline in its place, which is why
+/// [`lower_physical`] still refuses a logical marker rather than assuming one.
+///
+/// # Errors
+///
+/// Returns [`PhysicalLoweringError`] when composition expansion, semantic
+/// optimization, descriptor lowering, canonicalization, or verification fails.
+pub fn lower_baseline(program: &Program) -> Result<PhysicalLowering, PhysicalLoweringError> {
+    let expanded = expand_semantic_program(program)?;
+    let prepared = prepare_expanded_physical_program(expanded, Legalization::Identity)?;
+    lower_prepared_physical(prepared, None)
 }
 
 /// Construct verified physical kernel IR from a physical [`Program`].
@@ -436,6 +483,57 @@ mod tests {
                 logical_barriers: 0,
                 physical_orderings: vec![MemoryOrdering::Acquire],
             }
+        );
+    }
+
+    /// WHY: compositions are written schedule-free, so `vyre-libs` bodies carry
+    /// logical markers by design, and every driver dispatch gate lowered with
+    /// the schedule-free entry point that refuses them. 330 CUDA device tests
+    /// failed on one message. The baseline has to close the same marker set
+    /// `lower_physical` refuses, or dispatch is refused for a program nothing
+    /// is wrong with.
+    ///
+    /// Asserted against the same `logical_marker_sum()` body the selected-
+    /// schedule closure uses, so both paths are held to one marker population.
+    ///
+    /// It does not catch a marker added to the rejecter and not to the identity
+    /// mapping: that population lives in two matches, and closing it needs one
+    /// enum both arms are exhaustive over.
+    #[test]
+    fn baseline_lowering_closes_every_logical_execution_marker() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(64),
+            ],
+            [64, 1, 1],
+            vec![
+                Node::store("out", Expr::logical_index(0), logical_marker_sum()),
+                Node::logical_barrier(MemoryOrdering::Acquire),
+            ],
+        );
+
+        let refused = lower_physical(&program).unwrap_err();
+        assert!(
+            refused.message().contains("schedule-free logical identity"),
+            "Fix: the schedule-free entry point must keep refusing an unresolved marker: {}",
+            refused.message()
+        );
+
+        let lowered = lower_baseline(&program).unwrap();
+        assert_eq!(
+            census(lowered.program.entry()),
+            MarkerCensus {
+                logical: 0,
+                physical_axes: [2, 1, 1],
+                logical_barriers: 0,
+                physical_orderings: vec![MemoryOrdering::Acquire],
+            }
+        );
+        assert_eq!(
+            lowered.program.workgroup_size(),
+            [64, 1, 1],
+            "Fix: the unfused baseline keeps the program's own workgroup policy."
         );
     }
 

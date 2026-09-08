@@ -17,7 +17,6 @@ pub(super) fn cooperative_matmul_body_mma(
     _a_tile_name: &str,
     _b_tile_name: &str,
 ) -> Vec<Node> {
-    let local = Expr::var("local");
     let col = Expr::var("col");
     let row0 = Expr::var("row0");
     let row1 = Expr::var("row1");

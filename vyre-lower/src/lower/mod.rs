@@ -19,7 +19,9 @@ mod scope;
 use rustc_hash::{FxHashMap, FxHashSet};
 use scope::VarScope;
 
-use crate::descriptor::{BindingLayout, BindingSlot, Dispatch, KernelDescriptor, MemoryClass};
+use crate::descriptor::{
+    BindingLayout, BindingSlot, Dispatch, GridIndexSpace, KernelDescriptor, MemoryClass,
+};
 use crate::error::LowerError;
 use vyre_foundation::ir::{Ident, Program};
 
@@ -85,6 +87,7 @@ pub fn lower(program: &Program) -> Result<KernelDescriptor, LowerError> {
         },
         dispatch: Dispatch {
             workgroup_size: program.workgroup_size(),
+            grid_index: GridIndexSpace::PerAxis,
         },
         body,
     })

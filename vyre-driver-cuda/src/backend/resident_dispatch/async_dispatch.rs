@@ -515,6 +515,7 @@ impl CudaBackend {
                 stream_raw,
                 "resident async dispatch launch",
                 |module_globals| {
+                    probe::open_kernel_window(stream_raw);
                     probe::measure(probe::Phase::LaunchLoop, || {
                         self.replay_fixpoint_launches(
                             module_globals,
@@ -524,6 +525,7 @@ impl CudaBackend {
                             stream_raw,
                         )
                     })?;
+                    probe::close_kernel_window(stream_raw);
                     if let Some((_, end_event)) = guards.timing_events()? {
                         end_event.record(stream_raw)?;
                     }

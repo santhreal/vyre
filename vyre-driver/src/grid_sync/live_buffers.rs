@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 
 use smallvec::SmallVec;
-use vyre_foundation::ir::{Ident, Program};
+use vyre_foundation::ir::Ident;
 
 use super::reserve_grid_sync_vec;
 use super::segment_buffers::PlannedGridSyncSegment;
@@ -38,22 +38,6 @@ impl GridSyncInput<'_> {
         }
         Ok(())
     }
-}
-
-fn borrowed_grid_sync_inputs<'a>(
-    inputs: &'a [GridSyncInput<'a>],
-) -> Result<SmallVec<[&'a [u8]; 8]>, BackendError> {
-    let mut borrowed = SmallVec::<[&[u8]; 8]>::new();
-    borrowed.try_reserve(inputs.len()).map_err(|error| {
-        BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: failed to reserve grid-sync borrowed input slices for {} input(s): {error}. Split the program into fewer grid-sync live buffers or run on a backend with native grid sync.",
-                inputs.len()
-            ),
-        }
-    })?;
-    borrowed.extend(inputs.iter().map(GridSyncInput::as_slice));
-    Ok(borrowed)
 }
 
 pub(super) fn borrowed_grid_sync_inputs_by_name<'a>(
@@ -177,79 +161,40 @@ pub(super) fn collect_final_named_outputs<'a>(
     Ok(())
 }
 
-/// After each segment dispatch, overwrite every ReadWrite buffer's
-/// slot in `inputs` with the freshly-read bytes from `outputs`. The
-/// backend returns one Vec<u8> per ReadWrite buffer in declaration
-/// order; this function locates each ReadWrite buffer's input-slot
-/// index and overwrites it. ReadOnly buffers stay untouched between
-/// segments.
-fn refresh_readwrite_inputs(
-    segment: &Program,
-    outputs: &mut Vec<Vec<u8>>,
-    inputs: &mut [GridSyncInput<'_>],
-) -> Result<(), BackendError> {
-    use vyre_foundation::ir::BufferAccess;
-    // Walk the segment's buffer table twice in lockstep  -  once for the
-    // input slice, once for the output readback. Both paths must
-    // mirror the convention `dispatch_borrowed` uses: input position
-    // skips Workgroup AND `is_output` buffers; output position emits
-    // one slot per ReadWrite buffer (whether or not is_output).
-    let mut input_idx = 0usize;
-    let mut output_idx = 0usize;
-    for buffer in segment.buffers() {
-        if matches!(buffer.access(), BufferAccess::Workgroup) {
-            continue;
-        }
-        let is_output_buffer = buffer.is_output();
-        let is_readwrite = matches!(buffer.access(), BufferAccess::ReadWrite);
-
-        // Refresh the input slot from the readback if this buffer
-        // appears in BOTH input and output positions (i.e. ReadWrite
-        // and NOT is_output  -  the rule scratch / `gets` case).
-        if is_readwrite && !is_output_buffer {
-            if let (Some(slot), Some(bytes)) =
-                (inputs.get_mut(input_idx), outputs.get_mut(output_idx))
-            {
-                slot.refresh_from_output(bytes)?;
-            }
-        }
-
-        // Advance the input cursor for every non-output buffer.
-        if !is_output_buffer {
-            input_idx += 1;
-        }
-        // Advance the output cursor for every ReadWrite buffer (output
-        // or not  -  the backend includes them all in the readback).
-        if is_readwrite {
-            output_idx += 1;
-        }
-    }
-    for output in outputs {
-        output.clear();
-    }
-    Ok(())
-}
-
-// Inline: covers `GridSyncInput`, `refresh_readwrite_inputs`, which no integration test can name.
+// Inline: covers `GridSyncInput` and the allocation reuse `refresh_named_outputs`
+// depends on, neither of which an integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::grid_sync::test_programs::buffer;
-    use vyre_foundation::ir::Node;
+    use vyre_foundation::ir::{Node, Program};
 
+    /// The ReadWrite slot takes the backend's output allocation instead of copying.
+    ///
+    /// WHY: the segment loop refreshes every live buffer after each dispatch, so a
+    /// copy per segment is a copy per iteration of the whole fixpoint. The first
+    /// refresh promotes a borrowed slot to owned; every later one swaps the two
+    /// allocations, which is why the assertions compare pointers rather than only
+    /// bytes.
     #[test]
-    fn refresh_readwrite_inputs_swaps_owned_buffers_after_first_segment() {
-        let segment = Program::wrapped(vec![buffer()], [1, 1, 1], vec![Node::Return]);
+    fn refreshing_a_named_output_takes_the_backend_allocation_instead_of_copying() {
+        let name = Ident::from("acc");
+        let segment = PlannedGridSyncSegment {
+            program: Program::wrapped(vec![buffer()], [1, 1, 1], vec![Node::Return]),
+            input_names: vec![name.clone()],
+            output_names: vec![name.clone()],
+        };
         let initial = [1u8, 0, 0, 0];
-        let mut inputs = [GridSyncInput::Borrowed(initial.as_slice())];
+        let mut inputs = HashMap::new();
+        inputs.insert(name.clone(), GridSyncInput::Borrowed(initial.as_slice()));
         let mut outputs = vec![Vec::with_capacity(8)];
         let output_ptr = outputs[0].as_ptr() as usize;
         outputs[0].extend_from_slice(&[2, 0, 0, 0]);
 
-        refresh_readwrite_inputs(&segment, &mut outputs, &mut inputs)
-            .expect("Fix: test readwrite refresh should fit borrowed promotion storage");
+        refresh_named_outputs(&segment, &mut outputs, &mut inputs)
+            .expect("Fix: borrowed promotion storage must fit the refreshed output");
 
-        let first_owned_ptr = match &inputs[0] {
+        let first_owned_ptr = match &inputs[&name] {
             GridSyncInput::Owned(bytes) => {
                 assert_eq!(bytes, &[2, 0, 0, 0]);
                 bytes.as_ptr() as usize
@@ -261,10 +206,10 @@ mod tests {
 
         outputs[0].extend_from_slice(&[3, 0, 0, 0]);
         let second_output_ptr = outputs[0].as_ptr() as usize;
-        refresh_readwrite_inputs(&segment, &mut outputs, &mut inputs)
-            .expect("Fix: test readwrite refresh should reuse owned storage");
+        refresh_named_outputs(&segment, &mut outputs, &mut inputs)
+            .expect("Fix: owned storage must be reused by the refreshed output");
 
-        match &inputs[0] {
+        match &inputs[&name] {
             GridSyncInput::Owned(bytes) => {
                 assert_eq!(bytes, &[3, 0, 0, 0]);
                 assert_eq!(

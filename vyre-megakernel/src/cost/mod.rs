@@ -19,7 +19,7 @@
 //! measured nothing.
 //!
 //! `the_cost_weights_are_the_figures_the_recordings_hold` reads those files at
-//! run time and derives both weights from them, so a weight that drifts from
+//! run time and derives the launch floor from them, so a floor that drifts from
 //! its citation, or a cheaper dispatch landing in a new recording, is a red
 //! test rather than a stale doc comment.
 //!
@@ -93,19 +93,6 @@ use crate::{
 /// that floor. A device that did measure is priced at its own figure by
 /// [`launch_cost_ns`].
 const LAUNCH_COST_FLOOR_NS: u64 = 4_224;
-
-/// Bytes of traffic one nanosecond moves.
-///
-/// The same dispatch moves 12 MB in and 4 MB out (`bytes_read` 12000000,
-/// `bytes_written` 4000000) inside those 4224 ns, and the snapshot records the
-/// resulting rate directly as `device_gb_s_x1000` 3787878, which is 3788 bytes
-/// per nanosecond. The same figure prices both the bytes a materialization
-/// writes and the bytes an occupancy loss moves a second time.
-///
-/// The rate is the recorded one and carries no safety factor. A factor that
-/// nothing measured would reprice traffic against launches, and the ratio
-/// between those two terms is the whole question a fusion decision asks.
-const TRAFFIC_BYTES_PER_NS: u64 = 3_788;
 
 mod provenance;
 

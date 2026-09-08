@@ -32,7 +32,7 @@ use vyre_megakernel::{
 use graph_fixtures::producer_consumer_pair;
 use vyre_test_support::pass_programs::copy_program;
 
-mod graph_fixtures;
+use crate::graph_fixtures;
 
 /// The floor the cost model prices a launch at when the device measured none.
 ///

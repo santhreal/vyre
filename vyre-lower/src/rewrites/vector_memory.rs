@@ -360,9 +360,8 @@ fn apply_vector_chain(
 
     match candidate.kind {
         VectorAccessKind::Load => {
-            let start_op = &body.ops[anchor_idx];
-            let slot = start_op.operands[0];
-            let start_index_op_id = start_op.operands[1];
+            let start_index_op_id = body.ops[anchor_idx].operands[1];
+            let slot = candidate.slot;
             let vec_result_id = *next_result_id;
             *next_result_id = next_result_id.saturating_add(1);
 
@@ -384,9 +383,8 @@ fn apply_vector_chain(
             }
         }
         VectorAccessKind::Store => {
-            let start_op = &body.ops[anchor_idx];
-            let slot = start_op.operands[0];
-            let start_index_op_id = start_op.operands[1];
+            let start_index_op_id = body.ops[anchor_idx].operands[1];
+            let slot = candidate.slot;
 
             let mut operands = Vec::with_capacity(2 + width);
             operands.push(slot);
@@ -522,9 +520,7 @@ mod tests {
                     element_count: Some(1024),
                 }],
             },
-            dispatch: Dispatch {
-                workgroup_size: [64, 1, 1],
-            },
+            dispatch: Dispatch::new(64, 1, 1),
             body: KernelBody {
                 ops,
                 literals,

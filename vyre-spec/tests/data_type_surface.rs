@@ -2,7 +2,7 @@
 //!
 //! Covers variant distinctness, size calculations, and float-family detection.
 
-mod spec_variants;
+use crate::spec_variants;
 
 use vyre_spec::{DataType, QuantizationScale, QuantizationZeroPoint};
 

@@ -154,6 +154,16 @@ pub(crate) fn with_live_backend<R>(_test_name: &str, run: impl FnOnce(&CudaBacke
     run(&backend)
 }
 
+/// The artifact-byte bound every dispatch in this crate compiles under.
+///
+/// Matches what the production dispatch path states, so a program this crate
+/// refuses is one production refuses too. The shared policy used to state
+/// `60_000`, which is the bound `vyre-bench` pins on the optimizer arena
+/// kernel; applied to every parity suite it refused CSR and toposort programs
+/// that assemble to 159KB and 484KB, and the arena kernel's compactness claim
+/// is the benchmark's to make, not a side effect of a shared test policy.
+const PARITY_ARTIFACT_BYTES: u64 = 1_000_000;
+
 pub(crate) fn cuda_semantic_execution() -> (RegisteredSemanticExecutor, SemanticExecutionPolicy) {
     let _ = vyre_driver_cuda::registered_backend_id();
     let registration = vyre_driver::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
@@ -163,7 +173,8 @@ pub(crate) fn cuda_semantic_execution() -> (RegisteredSemanticExecutor, Semantic
     let policy = SemanticExecutionPolicy::new(
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         device.device_profile().compile_facts(),
-        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 60_000),
+        CompileObjective::minimize_latency()
+            .with_bound(ObjectiveMetric::ArtifactBytes, PARITY_ARTIFACT_BYTES),
         SearchBudget::new(128, 128, 0, 0, 128),
     );
     (executor, policy)
@@ -198,27 +209,18 @@ pub(crate) fn reference_outputs(
 }
 
 /// Compile and dispatch through the authenticated CUDA artifact route.
+///
+/// There is no dispatch-config parameter and no place to put one. An artifact
+/// carries the launch geometry the compiler's search admitted, `submit` takes a
+/// binding set and nothing else, and a config that reached this route would be a
+/// second launch authority over a module compiled for one shape. A variant of
+/// this function did take a `&DispatchConfig` and drop it on the floor, which
+/// let a case assert that a hostile override lost when the override never
+/// travelled far enough to compete.
 pub(crate) fn compiled_cuda_outputs(
-    backend: &CudaBackend,
-    program: &Program,
-    inputs: &[Vec<u8>],
-    case_name: &str,
-) -> Vec<Vec<u8>> {
-    compiled_cuda_outputs_with_config(
-        backend,
-        program,
-        inputs,
-        &DispatchConfig::default(),
-        case_name,
-    )
-}
-
-/// Compile and dispatch through the authenticated CUDA artifact route.
-pub(crate) fn compiled_cuda_outputs_with_config(
     _backend: &CudaBackend,
     program: &Program,
     inputs: &[Vec<u8>],
-    _config: &DispatchConfig,
     case_name: &str,
 ) -> Vec<Vec<u8>> {
     let lowered_program =
@@ -251,7 +253,10 @@ pub(crate) fn compiled_cuda_outputs_with_config(
         compile_facts,
         vyre_megakernel::SearchBudget::new(128, 128, 0, 0, 128),
         vyre_megakernel::CompileObjective::minimize_latency()
-            .with_bound(vyre_megakernel::ObjectiveMetric::ArtifactBytes, 60_000),
+            .with_bound(
+                vyre_megakernel::ObjectiveMetric::ArtifactBytes,
+                PARITY_ARTIFACT_BYTES,
+            ),
     )
     .validate()
     .unwrap_or_else(|error| {
@@ -369,7 +374,11 @@ pub(crate) fn cuda_reference_outputs(
     )
 }
 
-/// Run one generated matrix case through direct CUDA, compiled CUDA, and reference paths with explicit config.
+/// Run one generated matrix case through direct CUDA, compiled CUDA, and
+/// reference paths, with `config` stated to the direct dispatch.
+///
+/// The artifact route takes no config: it submits the geometry the compiler
+/// admitted, so a caller-stated launch has nowhere to enter it.
 pub(crate) fn cuda_reference_outputs_with_config(
     backend: &CudaBackend,
     program: &Program,
@@ -382,8 +391,7 @@ pub(crate) fn cuda_reference_outputs_with_config(
         .unwrap_or_else(|error| {
             panic!("Fix: CUDA generated case `{case_name}` direct dispatch failed: {error}")
         });
-    let compiled_cuda =
-        compiled_cuda_outputs_with_config(backend, program, inputs, config, case_name);
+    let compiled_cuda = compiled_cuda_outputs(backend, program, inputs, case_name);
     let reference = reference_outputs(program, inputs, case_name);
     GeneratedCudaReferenceOutputs {
         direct_cuda,

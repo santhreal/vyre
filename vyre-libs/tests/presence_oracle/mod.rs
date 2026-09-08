@@ -39,11 +39,13 @@ pub type PresenceCase = (String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>);
 pub struct Lcg(pub u64);
 
 impl Lcg {
+    /// Seed the generator.
     #[must_use]
     pub fn new(seed: u64) -> Self {
         Self(seed)
     }
 
+    /// Advance the state and return the next 32 bits.
     pub fn next_u32(&mut self) -> u32 {
         self.0 = self
             .0
@@ -52,6 +54,7 @@ impl Lcg {
         (self.0 >> 33) as u32
     }
 
+    /// A value in `0..n`, or `0` when `n` is zero.
     pub fn below(&mut self, n: u32) -> u32 {
         if n == 0 {
             0
@@ -165,6 +168,7 @@ pub fn assert_presence_matches(
 /// shared prefixes, suffix2/suffix3 candidate gating, and overlapping matches.
 pub const ALPHABET: &[u8] = b"abcAB_0/-";
 
+/// One to eight distinct literals of one to six [`ALPHABET`] bytes.
 #[must_use]
 pub fn random_literals(rng: &mut Lcg) -> Vec<Vec<u8>> {
     use std::collections::BTreeSet;
@@ -181,6 +185,7 @@ pub fn random_literals(rng: &mut Lcg) -> Vec<Vec<u8>> {
     set.into_iter().collect()
 }
 
+/// A haystack of 8 to 167 [`ALPHABET`] bytes, never empty.
 #[must_use]
 pub fn random_haystack(rng: &mut Lcg) -> Vec<u8> {
     let len = 8 + rng.below(160);
@@ -188,6 +193,8 @@ pub fn random_haystack(rng: &mut Lcg) -> Vec<u8> {
         .map(|_| ALPHABET[rng.below(ALPHABET.len() as u32) as usize])
         .collect()
 }
+
+/// A haystack of up to 159 [`ALPHABET`] bytes, possibly empty.
 #[must_use]
 pub fn random_haystack_unbounded(rng: &mut Lcg) -> Vec<u8> {
     let len = rng.below(160);
@@ -196,6 +203,7 @@ pub fn random_haystack_unbounded(rng: &mut Lcg) -> Vec<u8> {
         .collect()
 }
 
+/// Up to four ascending region starts over `haystack_len`, always including 0.
 #[must_use]
 pub fn random_region_starts(rng: &mut Lcg, haystack_len: usize) -> Vec<u32> {
     use std::collections::BTreeSet;

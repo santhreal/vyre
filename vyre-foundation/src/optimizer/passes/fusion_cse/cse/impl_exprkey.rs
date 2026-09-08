@@ -202,6 +202,8 @@ fn un_op_key(op: &UnOp) -> Option<u8> {
         UnOp::Unpack4High => Some(33),
         UnOp::Unpack8Low => Some(34),
         UnOp::Unpack8High => Some(35),
+        UnOp::BitcastF32ToU32 => Some(36),
+        UnOp::BitcastU32ToF32 => Some(37),
         _ => None,
     }
 }

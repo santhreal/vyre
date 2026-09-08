@@ -112,6 +112,18 @@ dispatch.
 """
 
 [[gate]]
+file = "vyre-libs/tests/shared_owner_closure.rs"
+tests = ["no_graph_dispatch_wrapper_derives_its_own_result_set"]
+reason = """
+Asserts that no wrapper under the dispatch tree derives its own result set by
+position or count instead of reading each buffer by the name the Program
+declares. A wrapper that counts results returns the right values for the arity
+it was written against, so the defect surfaces only once another op changes the
+returned set. The subject is the set of wrapper files, which a running program
+cannot enumerate without reflection.
+"""
+
+[[gate]]
 file = "xtask-registry/tests/registry_contracts/registration_visibility.rs"
 tests = ["every_submitted_registration_is_reachable_from_this_walker"]
 reason = """
@@ -617,4 +629,62 @@ classification, owner attribution and the source walk key off that list rather
 than the literal name `xtask`. A crate added to the manifest is text until a
 build selects it, so no running process can report that a fourth xtask crate
 inherited production thresholds.
+"""
+
+[[gate]]
+file = "structure-gate/src/workspace_manifest.rs"
+tests = [
+    "a_second_request_for_the_tree_does_not_walk_it_again",
+    "a_subtree_range_holds_exactly_the_sources_under_it",
+    "a_second_request_for_the_same_roster_shares_the_first_read",
+    "a_narrower_roster_is_not_served_the_wider_read",
+]
+reason = """
+The subject is the walk itself: whether one checkout walk is shared, whether a
+subtree range holds exactly the files under it, and whether a narrower roster is
+served the wider read. Each asserts pointer identity or set membership over the
+corpus, not the text of any file in it. Reading source is what the code under
+test does, so a version of these contracts that reads nothing would exercise
+nothing.
+"""
+
+[[gate]]
+file = "vyre-driver/tests/error_code_catalog.rs"
+tests = ["every_declared_variant_is_catalogued"]
+reason = """
+Derives the error variant space from the enum at run time so a variant added
+without a catalogue row turns the suite red. A hardcoded member list is the
+failure this replaces: it goes stale in silence, which is the same as having no
+test. No running process enumerates the variants, so the declaration site is the
+only place the set exists.
+"""
+
+[[gate]]
+file = "vyre-runtime/tests/ring_fault_selection_is_typed.rs"
+tests = ["no_assertion_selects_a_pipeline_error_by_shape_or_by_fix_clause"]
+reason = """
+The contract is over the assertions themselves: no test may select a pipeline
+error by message shape or by its `Fix:` clause instead of by type. The
+population is every assertion in the crate, which exists only as source, and a
+new one has to turn this red rather than be counted against a recorded number.
+"""
+
+[[gate]]
+file = "vyre-test-support/tests/path_modules_stay_inside_their_package.rs"
+tests = ["every_path_module_resolves_inside_its_own_package"]
+reason = """
+A `#[path]` target crossing a package boundary compiles a file into a second
+crate, which is the defect. The attribute is resolved by the compiler before any
+observable behavior exists, so the declaration is the only artifact that carries
+it and the roster is derived from the tree rather than listed.
+"""
+
+[[gate]]
+file = "xtask/tests/lint_policy_mutations.rs"
+tests = ["the_workspace_lint_floor_rejects_every_mutation_and_accepts_clean_source"]
+reason = """
+Writes mutated crates into the target temp directory and checks the lint floor
+rejects each one and accepts the clean copy. The source it reads is the fixture
+it just generated, not the checkout, and the assertion is the compiler's verdict
+on that fixture.
 """

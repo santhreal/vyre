@@ -3,7 +3,7 @@
 use vyre_driver::{acquire, backend_dispatches};
 use vyre_foundation::ir::{Expr, Node, Program};
 
-mod dispatch_fixtures;
+use crate::dispatch_fixtures;
 use dispatch_fixtures::u32_out_buffer;
 
 /// The backend id comes from [`vyre_driver_reference::registered_backend_id`]

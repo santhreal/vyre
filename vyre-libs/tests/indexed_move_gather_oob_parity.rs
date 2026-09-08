@@ -1,7 +1,7 @@
 //! GPU-IR vs CPU-ref parity for `reduce::gather` on an OUT-OF-RANGE index.
 //!
 //! The gather GPU IR guards the store with `if idx < count` and has NO else
-//! branch (`vyre-primitives/src/reduce/indexed_move.rs`), so an out-of-range
+//! branch (`vyre-libs/src/reduce/indexed_move.rs`), so an out-of-range
 //! index SKIPS the store, leaving `dst[lane]` at whatever it held before. The
 //! CPU reference writes 0 on an out-of-range index (`src.get(idx).unwrap_or(0)`).
 //! If `dst` is reused with residual data, these DIVERGE, the same class as the

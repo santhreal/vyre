@@ -1,6 +1,6 @@
 //! Generated canonical envelope and AOT packaging-manifest matrix.
 
-mod fixture_target;
+use crate::fixture_target;
 
 use vyre_aot::Manifest;
 

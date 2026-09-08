@@ -38,30 +38,9 @@ The crate lives at `conform/vyre-conform`. The `conformance` owner maintains its
 | `bin` | `vyre-conform` | `conform/vyre-conform/src/main.rs` | None | `./cargo_full test -p vyre-conform --bin vyre-conform` |
 | `example` | `vyre_conform_runner_release_surface` | `conform/vyre-conform/examples/vyre_conform_runner_release_surface.rs` | None | `./cargo_full test -p vyre-conform --example vyre_conform_runner_release_surface` |
 | `lib` | `vyre_conform` | `conform/vyre-conform/src/lib.rs` | None | `./cargo_full test -p vyre-conform` |
-| `test` | `cert_artifact` | `conform/vyre-conform/tests/cert_artifact/mod.rs` | None | `./cargo_full test -p vyre-conform --test cert_artifact` |
-| `test` | `cert_regression_pin` | `conform/vyre-conform/tests/cert_regression_pin/mod.rs` | None | `./cargo_full test -p vyre-conform --test cert_regression_pin` |
-| `test` | `composition_discipline` | `conform/vyre-conform/tests/composition_discipline.rs` | None | `./cargo_full test -p vyre-conform --test composition_discipline` |
-| `test` | `countless_readwrite_output_parity` | `conform/vyre-conform/tests/countless_readwrite_output_parity/mod.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test countless_readwrite_output_parity` |
-| `test` | `fp_parity_ul_policy_contracts` | `conform/vyre-conform/tests/fp_parity_ul_policy_contracts.rs` | None | `./cargo_full test -p vyre-conform --test fp_parity_ul_policy_contracts` |
-| `test` | `invariants` | `conform/vyre-conform/tests/invariants.rs` | None | `./cargo_full test -p vyre-conform --test invariants` |
-| `test` | `lens_buffer_state_contracts` | `conform/vyre-conform/tests/lens_buffer_state_contracts.rs` | None | `./cargo_full test -p vyre-conform --test lens_buffer_state_contracts` |
-| `test` | `lens_fixpoint_contracts` | `conform/vyre-conform/tests/lens_fixpoint_contracts.rs` | None | `./cargo_full test -p vyre-conform --test lens_fixpoint_contracts` |
-| `test` | `lens_parity` | `conform/vyre-conform/tests/lens_parity.rs` | None | `./cargo_full test -p vyre-conform --test lens_parity` |
-| `test` | `lens_parity_device` | `conform/vyre-conform/tests/lens_parity_device.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test lens_parity_device` |
-| `test` | `library_contracts` | `conform/vyre-conform/tests/library_contracts/mod.rs` | None | `./cargo_full test -p vyre-conform --test library_contracts` |
-| `test` | `mesh_placement_contracts` | `conform/vyre-conform/tests/mesh_placement_contracts.rs` | None | `./cargo_full test -p vyre-conform --test mesh_placement_contracts` |
-| `test` | `minimizer_contract` | `conform/vyre-conform/tests/minimizer_contract.rs` | None | `./cargo_full test -p vyre-conform --test minimizer_contract` |
-| `test` | `numeric_contract_conformance` | `conform/vyre-conform/tests/numeric_contract_conformance.rs` | None | `./cargo_full test -p vyre-conform --test numeric_contract_conformance` |
-| `test` | `op_matrix_truth` | `conform/vyre-conform/tests/op_matrix_truth/mod.rs` | None | `./cargo_full test -p vyre-conform --test op_matrix_truth` |
-| `test` | `parity_matrix` | `conform/vyre-conform/tests/parity_matrix.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test parity_matrix` |
-| `test` | `production_route` | `conform/vyre-conform/tests/production_route.rs` | None | `./cargo_full test -p vyre-conform --test production_route` |
-| `test` | `production_route_device` | `conform/vyre-conform/tests/production_route_device.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test production_route_device` |
-| `test` | `quantized_contract_conformance` | `conform/vyre-conform/tests/quantized_contract_conformance.rs` | None | `./cargo_full test -p vyre-conform --test quantized_contract_conformance` |
-| `test` | `reference_parity_classes` | `conform/vyre-conform/tests/reference_parity_classes/mod.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test reference_parity_classes` |
-| `test` | `replay_capsule_contract` | `conform/vyre-conform/tests/replay_capsule_contract.rs` | None | `./cargo_full test -p vyre-conform --test replay_capsule_contract` |
-| `test` | `schema_compatibility` | `conform/vyre-conform/tests/schema_compatibility.rs` | None | `./cargo_full test -p vyre-conform --test schema_compatibility` |
-| `test` | `semantic_execution_contracts` | `conform/vyre-conform/tests/semantic_execution_contracts.rs` | None | `./cargo_full test -p vyre-conform --test semantic_execution_contracts` |
-| `test` | `ulp_audit` | `conform/vyre-conform/tests/ulp_audit.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test ulp_audit` |
+| `test` | `all_tests` | `conform/vyre-conform/tests/all_tests.rs` | None | `./cargo_full test -p vyre-conform --test all_tests` |
+| `test` | `all_tests_device_tests` | `conform/vyre-conform/tests/all_tests_device_tests.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test all_tests_device_tests` |
+| `test` | `cert_regression_pin` | `conform/vyre-conform/tests/cert_regression_pin/main.rs` | None | `./cargo_full test -p vyre-conform --test cert_regression_pin` |
 
 ## Test classes
 
@@ -71,7 +50,7 @@ The crate lives at `conform/vyre-conform`. The `conformance` owner maintains its
 
 ## Hardware requirements
 
-Cross-backend certificates require every selected physical backend on the execution host (axiomexec). Missing selected hardware is a failed conformance run.
+Cross-backend certificates require every selected physical backend on the execution host. Missing selected hardware is a failed conformance run.
 
 ## Evidence outputs
 
@@ -80,6 +59,6 @@ Cross-backend certificates require every selected physical backend on the execut
 
 ## Skips and failures
 
-The default command omits tests marked `#[ignore]`. The ignored command is the explicit physical-backend run on the execution host (axiomexec) and cannot silently skip a selected backend.
+The default command omits tests marked `#[ignore]`. The ignored command is the explicit physical-backend run on the execution host and cannot silently skip a selected backend.
 
 A failed assertion, build error, backend acquisition error, or malformed fixture returns a nonzero status with the failing test and contract in the diagnostic.

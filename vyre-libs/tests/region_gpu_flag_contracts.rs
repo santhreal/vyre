@@ -3,7 +3,7 @@
 
 #![cfg(feature = "pattern")]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::reference_dedup_regions;
 
 use vyre_libs::pattern::{dedup_regions_flag_program, RegionTriple};

@@ -3,6 +3,7 @@
 use vyre_runtime::resident_work_queue::protocol::{control, opcode, slot, SLOT_WORDS, STATUS_WORD};
 use vyre_runtime::resident_work_queue::telemetry::{CountMinSketch, RingTelemetry};
 use vyre_runtime::resident_work_queue::ResidentWorkQueue;
+use vyre_runtime::{PipelineError, RingEncodingFault};
 
 fn write_slot_status(ring: &mut [u8], slot_idx: usize, status: u32) {
     let off = slot_idx * (SLOT_WORDS as usize) * 4 + (STATUS_WORD as usize) * 4;
@@ -36,20 +37,22 @@ fn count_min_sketch_estimates_inserted_keys_without_under_counting() {
 #[test]
 fn count_min_sketch_rejects_invalid_dimensions() {
     let depth_err = CountMinSketch::new(0, 64).expect_err("depth zero is invalid");
-    assert!(
-        depth_err.to_string().contains("depth") || depth_err.to_string().contains("Fix:"),
-        "depth-zero error: {depth_err}"
-    );
+    let PipelineError::RingEncoding { fault, .. } = depth_err else {
+        panic!("a zero depth must report a ring encode fault, got {depth_err:?}")
+    };
+    assert_eq!(fault, RingEncodingFault::Geometry);
     let width_err = CountMinSketch::new(4, 0).expect_err("width zero is invalid");
-    assert!(
-        width_err.to_string().contains("width") || width_err.to_string().contains("Fix:"),
-        "width-zero error: {width_err}"
-    );
+    let PipelineError::RingEncoding { fault, .. } = width_err else {
+        panic!("a zero width must report a ring encode fault, got {width_err:?}")
+    };
+    assert_eq!(fault, RingEncodingFault::Geometry);
+    // A dimension product past the host address space is a distinct fault from
+    // a zero dimension, so the two must not collapse into one class.
     let overflow_err = CountMinSketch::new(usize::MAX, 2).expect_err("overflow is invalid");
-    assert!(
-        overflow_err.to_string().contains("overflow"),
-        "dimension-overflow error: {overflow_err}"
-    );
+    let PipelineError::RingEncoding { fault, .. } = overflow_err else {
+        panic!("an overflowing dimension product must report a ring encode fault, got {overflow_err:?}")
+    };
+    assert_eq!(fault, RingEncodingFault::Overflow);
 }
 
 #[test]

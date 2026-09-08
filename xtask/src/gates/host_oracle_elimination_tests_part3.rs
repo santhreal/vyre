@@ -1316,3 +1316,137 @@ pub fn run_demo_traversal(
         "host bytes computed outside the seam are convicted even when the caller binds them: {findings:?}"
     );
 }
+
+/// The readback wrapper shape, and the four ways a reduction hides in it.
+///
+/// A wrapper that reads back several named buffers walks its own output slots,
+/// resolves each slot's bytes and hands them to a byte decoder that fills that
+/// slot's sink. Every byte lands in one word of one caller-owned output, so the
+/// loop computes nothing and the number of iterations is the number of outputs.
+/// Judging every post-dispatch loop a reduction convicted it.
+///
+/// `slot_loop` builds the wrapper with a loop body the case chooses, so the
+/// only difference between the permitted shape and each convicted one is what
+/// the body does with the slot's bytes.
+fn slot_loop(body: &str) -> String {
+    format!(
+        "use vyre_megakernel::{{SemanticExecutionError, SemanticExecutor}};
+
+pub struct U32Readback<'a> {{
+    pub buffer: &'a str,
+    pub words: usize,
+    pub out: &'a mut Vec<u32>,
+}}
+
+fn named_output(
+    _output: &[Vec<u8>],
+    _buffer: &str,
+) -> Result<&'static [u8], SemanticExecutionError> {{
+    Ok(&[])
+}}
+
+fn decode_u32_output_exact(
+    _bytes: &[u8],
+    _words: usize,
+    _context: &str,
+    _out: &mut Vec<u32>,
+) -> Result<(), SemanticExecutionError> {{
+    Ok(())
+}}
+
+pub fn dispatch_u32_outputs_into(
+    dispatcher: &dyn SemanticExecutor,
+    readbacks: &mut [U32Readback<'_>],
+) -> Result<(), SemanticExecutionError> {{
+    let output = dispatcher.execute(&vec![], &[vec![]], None)?;
+    for readback in readbacks {{
+{body}
+    }}
+    Ok(())
+}}
+"
+    )
+}
+
+/// The file every case in this family is analyzed as.
+const SLOT_LOOP_FILE: &str = "vyre-libs/src/graph/dispatch/dispatch_bridge/u32_outputs.rs";
+
+#[test]
+fn clean_dispatcher_allows_named_output_slot_transport_loop() {
+    let code = slot_loop(
+        "        let bytes = named_output(&output, readback.buffer)?;
+        decode_u32_output_exact(bytes, readback.words, readback.buffer, readback.out)?;",
+    );
+    let findings = analyze_files(&[(SLOT_LOOP_FILE, code.as_str())]);
+    assert!(
+        findings.is_empty(),
+        "a loop that routes each named output slot to a byte decoder is readback plumbing: {findings:?}"
+    );
+}
+
+#[test]
+fn mutation_catches_output_slot_loop_that_accumulates() {
+    let code = r#"use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
+
+pub fn total_words_via(
+    dispatcher: &dyn SemanticExecutor,
+    slots: &[usize],
+) -> Result<u32, SemanticExecutionError> {
+    let _ = dispatcher.execute(&vec![], &[vec![]], None)?;
+    let mut total = 0u32;
+    for slot in slots {
+        total += *slot as u32;
+    }
+    Ok(total)
+}
+"#;
+    let findings = analyze_files(&[(SLOT_LOOP_FILE, code)]);
+    assert!(
+        findings.iter().any(
+            |f| f.message.contains("post-dispatch host loop/accumulation")
+                || f.message.contains("post-dispatch host arithmetic")
+        ),
+        "a slot loop that accumulates across iterations must be convicted: {findings:?}"
+    );
+}
+
+#[test]
+fn mutation_catches_output_slot_loop_that_reduces_through_a_method() {
+    let code = slot_loop(
+        "        let bytes = named_output(&output, readback.buffer)?;
+        readback.out.push(bytes.iter().map(|&b| u32::from(b)).sum());",
+    );
+    let findings = analyze_files(&[(SLOT_LOOP_FILE, code.as_str())]);
+    assert!(
+        !findings.is_empty(),
+        "a slot loop that folds the slot's bytes through an iterator method must be convicted: {findings:?}"
+    );
+}
+
+#[test]
+fn mutation_catches_output_slot_loop_that_gathers_by_index() {
+    let code = slot_loop(
+        "        let bytes = named_output(&output, readback.buffer)?;
+        readback.out.push(u32::from(bytes[readback.words]));",
+    );
+    let findings = analyze_files(&[(SLOT_LOOP_FILE, code.as_str())]);
+    assert!(
+        !findings.is_empty(),
+        "a slot loop that gathers a data-indexed element must be convicted: {findings:?}"
+    );
+}
+
+#[test]
+fn mutation_catches_output_slot_loop_that_compares_slot_bytes() {
+    let code = slot_loop(
+        "        let bytes = named_output(&output, readback.buffer)?;
+        if bytes.len() > readback.words {
+            decode_u32_output_exact(bytes, readback.words, readback.buffer, readback.out)?;
+        }",
+    );
+    let findings = analyze_files(&[(SLOT_LOOP_FILE, code.as_str())]);
+    assert!(
+        !findings.is_empty(),
+        "a slot loop that branches on the slot's own bytes must be convicted: {findings:?}"
+    );
+}

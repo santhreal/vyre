@@ -33,12 +33,9 @@ The crate lives at `vyre-driver-spirv`. The `spirv-driver` owner maintains its
 | --- | --- | --- | --- | --- |
 | `example` | `vulkan_probe` | `vyre-driver-spirv/examples/vulkan_probe.rs` | None | `./cargo_full test -p vyre-driver-spirv --example vulkan_probe` |
 | `lib` | `vyre_driver_spirv` | `vyre-driver-spirv/src/lib.rs` | None | `./cargo_full test -p vyre-driver-spirv` |
-| `test` | `dispatch` | `vyre-driver-spirv/tests/dispatch.rs` | `device-tests` | `./cargo_full test -p vyre-driver-spirv --test dispatch` |
-| `test` | `hostile_input_closure_contract` | `vyre-driver-spirv/tests/hostile_input_closure_contract.rs` | `device-tests` | `./cargo_full test -p vyre-driver-spirv --test hostile_input_closure_contract` |
-| `test` | `resident_multi_entry_submission` | `vyre-driver-spirv/tests/resident_multi_entry_submission.rs` | None | `./cargo_full test -p vyre-driver-spirv --test resident_multi_entry_submission` |
-| `test` | `shared_target_contract_discrimination` | `vyre-driver-spirv/tests/shared_target_contract_discrimination.rs` | None | `./cargo_full test -p vyre-driver-spirv --test shared_target_contract_discrimination` |
-| `test` | `spirv_parity` | `vyre-driver-spirv/tests/spirv_parity.rs` | `spirv-val` | `./cargo_full test -p vyre-driver-spirv --test spirv_parity` |
-| `test` | `target_payload_admission_contract` | `vyre-driver-spirv/tests/target_payload_admission_contract.rs` | None | `./cargo_full test -p vyre-driver-spirv --test target_payload_admission_contract` |
+| `test` | `all_tests` | `vyre-driver-spirv/tests/all_tests.rs` | None | `./cargo_full test -p vyre-driver-spirv --test all_tests` |
+| `test` | `all_tests_device_tests` | `vyre-driver-spirv/tests/all_tests_device_tests.rs` | `device-tests` | `./cargo_full test -p vyre-driver-spirv --test all_tests_device_tests` |
+| `test` | `all_tests_spirv_val` | `vyre-driver-spirv/tests/all_tests_spirv_val.rs` | `spirv-val` | `./cargo_full test -p vyre-driver-spirv --test all_tests_spirv_val` |
 
 ## Test classes
 
@@ -48,7 +45,7 @@ The crate lives at `vyre-driver-spirv`. The `spirv-driver` owner maintains its
 
 ## Hardware requirements
 
-The default suite validates lowering without a device. Physical Vulkan-style execution tests require a compatible adapter on the execution host (axiomexec) and must report acquisition failure.
+The default suite validates lowering without a device. Physical Vulkan-style execution tests require a compatible adapter on the execution host and must report acquisition failure.
 
 ## Evidence outputs
 

@@ -16,12 +16,9 @@
 //! operator got the RIGHT class, so the one case where the two answers differ
 //! is pinned by name.
 
-#[path = "../../tests/support/spec_variant_tables.rs"]
-mod spec_variant_tables;
-
-use spec_variant_tables::builtin_bin_ops;
 use vyre_spec::extension::ExtensionBinOpId;
 use vyre_spec::{BinOp, BinOpResult};
+use vyre_test_support::spec_variant_tables::builtin_bin_ops;
 
 /// The case that made two lists necessary and then let them drift.
 #[test]

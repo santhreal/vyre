@@ -24,6 +24,7 @@
 //! 4. Tiled decode-to-scan bodies with ping-pong buffering (`tiled_decode_scan_body`).
 //! 5. Host-side flat index calculators (`flat_index`, `flat_byte_index`).
 
+use crate::builder::trip_count::clamped_by_extents;
 use vyre_foundation::ir::{DataType, Expr, Node};
 
 /// Default alphabet size for byte-driven DFAs (0..=255).
@@ -150,12 +151,15 @@ impl<'a> TableStateMachineComposer<'a> {
     }
 
     /// Emit a loop loading symbols from `input` and advancing state for each index in `start..end`.
+    ///
+    /// `end` is caller data on every scanner path, so it is clamped to the
+    /// extent of the buffer the loop variable indexes.
     #[must_use]
     pub fn walk_input_slice(&self, loop_var: &str, input: &str, start: Expr, end: Expr) -> Node {
         Node::loop_for(
             loop_var,
             start,
-            end,
+            clamped_by_extents(end, input, []),
             vec![self.advance_node(Expr::load(input, Expr::var(loop_var)))],
         )
     }
@@ -179,7 +183,7 @@ impl<'a> TableStateMachineComposer<'a> {
                 Node::loop_for(
                     "decode_scan_step",
                     Expr::u32(0),
-                    valid_len,
+                    clamped_by_extents(valid_len, input, [matches]),
                     vec![
                         Node::let_bind("byte", Expr::load(input, Expr::var("decode_scan_step"))),
                         self.advance_node(Expr::var("byte")),
@@ -250,6 +254,7 @@ impl<'a> TableStateMachineComposer<'a> {
         StoreDecoded: FnMut(Expr, Expr) -> Option<Node>,
     {
         let tile_width = tile_width.max(1).next_power_of_two();
+        let valid_len = clamped_by_extents(valid_len, matches, []);
         let tile_count = tiled_scan_tile_count_expr(valid_len.clone(), tile_width);
         vec![Node::if_then(
             Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0)),

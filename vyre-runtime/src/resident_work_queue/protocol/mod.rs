@@ -123,17 +123,13 @@ pub use codec::{
 /// - priority = 0
 /// - arg0 = resource_id (opaque to vyre; consumer-defined)
 /// - arg1 = prefetch as u32
-#[must_use]
-pub fn encode_load_miss(resource_id: u32, prefetch: bool) -> Vec<u8> {
-    try_encode_load_miss(resource_id, prefetch).unwrap_or_default()
-}
-
-/// Strictly encode a single ring-buffer slot for a load-miss request.
 ///
 /// # Errors
 ///
 /// Returns [`ProtocolError`] when slot sizing, word indexing, or host staging
-/// reservation fails.
+/// reservation fails. There is no infallible form: an empty vector is not a
+/// slot, and a ring that publishes one hands the device a request with no
+/// opcode.
 pub fn try_encode_load_miss(resource_id: u32, prefetch: bool) -> Result<Vec<u8>, ProtocolError> {
     let total_bytes = try_slot_byte_len()?;
     let mut bytes = Vec::new();

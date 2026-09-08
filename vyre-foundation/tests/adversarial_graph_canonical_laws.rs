@@ -17,8 +17,7 @@ use vyre_foundation::ir::{BinOp, Expr, Node, Program};
 use vyre_foundation::optimizer::passes::algebraic::canonicalize_engine as canonicalize;
 use vyre_foundation::visit::for_each_node;
 
-#[path = "contract_cases/optimizer_program_corpus.rs"]
-mod corpus;
+use crate::corpus;
 
 use corpus::{output_only_store, program_strategy, program_with_body, test_output_buffer};
 

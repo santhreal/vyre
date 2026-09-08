@@ -21,7 +21,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 
 use vyre_foundation::visit::walk_exprs;
 

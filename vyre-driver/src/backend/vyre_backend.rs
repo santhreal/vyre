@@ -46,11 +46,30 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
         default_supported_ops()
     }
 
+    /// Whether this backend lowers `mode` end to end.
+    ///
+    /// The default admits only the mode that permits contraction. A mode this
+    /// backend does not lower is refused where the request enters the registry
+    /// wrapper, because answering it with the mode the backend does lower
+    /// returns contracted arithmetic under a bit-identity request. A backend
+    /// that implements a mode overrides this and states it.
+    fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
+        !mode.blocks_contraction()
+    }
+
     // Raw backend shader text is a concrete-driver implementation
     // detail, not part of the substrate-neutral `VyreBackend`
     // contract.
 
     /// Executes the program with the given input buffers and returns the output buffers.
+    ///
+    /// `inputs` carries one value per buffer that consumes host bytes, in
+    /// binding order: every non-workgroup buffer the backend does not allocate
+    /// itself. A backend-allocated output takes no slot, so a value passed for
+    /// one is a count the backend rejects rather than a placeholder it skips. A
+    /// read-write buffer whose contents are preserved across the dispatch is
+    /// both an input and an output and does take a slot. Any other count is
+    /// refused with both numbers named.
     ///
     /// On success the returned bytes must match the pure-Rust reference
     /// implementation bit-for-bit. On failure the backend must return a
@@ -157,10 +176,7 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
     /// Returns [`BackendError`] when the backend cannot allocate a resident
     /// resource of the requested size.
     fn allocate_resident(&self, _byte_len: usize) -> Result<Resource, BackendError> {
-        Err(BackendError::UnsupportedFeature {
-            name: "resident buffer allocation".to_string(),
-            backend: self.id().to_string(),
-        })
+        BackendError::unsupported(self.id(), "resident buffer allocation")
     }
 
     /// Upload bytes into a backend-resident resource.
@@ -170,10 +186,7 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
     /// Returns [`BackendError`] when the resource is not owned by this backend
     /// or the byte length does not match the resident allocation.
     fn upload_resident(&self, _resource: &Resource, _bytes: &[u8]) -> Result<(), BackendError> {
-        Err(BackendError::UnsupportedFeature {
-            name: "resident buffer upload".to_string(),
-            backend: self.id().to_string(),
-        })
+        BackendError::unsupported(self.id(), "resident buffer upload")
     }
 
     /// Upload several backend-resident resources as one logical staging
@@ -189,10 +202,7 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
     /// Returns [`BackendError`] when the backend cannot batch resident uploads
     /// or when any resource/byte length is invalid.
     fn upload_resident_many(&self, _uploads: &[(&Resource, &[u8])]) -> Result<(), BackendError> {
-        Err(BackendError::UnsupportedFeature {
-            name: "resident buffer batch upload".to_string(),
-            backend: self.id().to_string(),
-        })
+        BackendError::unsupported(self.id(), "resident buffer batch upload")
     }
 
     /// Upload bytes into a subrange of a backend-resident resource.
@@ -211,10 +221,7 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
         _dst_offset_bytes: usize,
         _bytes: &[u8],
     ) -> Result<(), BackendError> {
-        Err(BackendError::UnsupportedFeature {
-            name: "resident buffer ranged upload".to_string(),
-            backend: self.id().to_string(),
-        })
+        BackendError::unsupported(self.id(), "resident buffer ranged upload")
     }
 
     /// Upload several resident subranges as one logical staging operation.
@@ -231,10 +238,7 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
         &self,
         _uploads: &[(&Resource, usize, &[u8])],
     ) -> Result<(), BackendError> {
-        Err(BackendError::UnsupportedFeature {
-            name: "resident buffer ranged batch upload".to_string(),
-            backend: self.id().to_string(),
-        })
+        BackendError::unsupported(self.id(), "resident buffer ranged batch upload")
     }
 
     /// Download a backend-resident resource into a new host buffer.
@@ -266,10 +270,7 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
         _resource: &Resource,
         _out: &mut Vec<u8>,
     ) -> Result<(), BackendError> {
-        Err(BackendError::UnsupportedFeature {
-            name: "resident buffer download".to_string(),
-            backend: self.id().to_string(),
-        })
+        BackendError::unsupported(self.id(), "resident buffer download")
     }
 
     /// Download a byte range from a backend-resident resource into a new host
@@ -309,10 +310,7 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
         _byte_len: usize,
         _out: &mut Vec<u8>,
     ) -> Result<(), BackendError> {
-        Err(BackendError::UnsupportedFeature {
-            name: "resident buffer ranged download".to_string(),
-            backend: self.id().to_string(),
-        })
+        BackendError::unsupported(self.id(), "resident buffer ranged download")
     }
 
     /// Download several byte ranges from backend-resident resources into
@@ -342,10 +340,7 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
     ///
     /// Returns [`BackendError`] when the resource is unknown or still in use.
     fn free_resident(&self, _resource: Resource) -> Result<(), BackendError> {
-        Err(BackendError::UnsupportedFeature {
-            name: "resident buffer free".to_string(),
-            backend: self.id().to_string(),
-        })
+        BackendError::unsupported(self.id(), "resident buffer free")
     }
 
     /// Dispatch using backend-resident resources and return backend-owned
@@ -361,10 +356,7 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
         _resources: &[Resource],
         _config: &DispatchConfig,
     ) -> Result<TimedDispatchResult, BackendError> {
-        Err(BackendError::UnsupportedFeature {
-            name: "resident timed dispatch".to_string(),
-            backend: self.id().to_string(),
-        })
+        BackendError::unsupported(self.id(), "resident timed dispatch")
     }
 
     /// Start a dispatch against backend-resident resources without waiting for
@@ -896,10 +888,7 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
     /// that implement recovery return any error encountered during
     /// re-acquisition.
     fn try_recover(&self) -> Result<(), BackendError> {
-        Err(BackendError::UnsupportedFeature {
-            name: "device recovery".to_string(),
-            backend: self.id().to_string(),
-        })
+        BackendError::unsupported(self.id(), "device recovery")
     }
 
     /// Allocate a backend-owned device buffer of `byte_len` bytes.

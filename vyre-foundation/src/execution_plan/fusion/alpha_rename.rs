@@ -134,11 +134,6 @@ impl<'a> ArmRenamer<'a> {
         )))
     }
 
-    /// [`Self::renamed`] with the original name kept when nothing changed.
-    fn ident(&self, name: &Ident) -> Ident {
-        self.renamed(name).unwrap_or_else(|| name.clone())
-    }
-
     fn node(&mut self, node: &Node) -> Node {
         rewrite_walk::rewrite_node(node, self).unwrap_or_else(|| node.clone())
     }
@@ -237,7 +232,9 @@ mod tests {
 
     #[test]
     fn bare_temp_is_prefixed_once() {
-        let out = ArmRenamer::isolated(0).ident(&Ident::from("cmp_5"));
+        let out = ArmRenamer::isolated(0)
+            .binding(&Ident::from("cmp_5"))
+            .expect("an isolated arm renames every binding it declares");
         assert_eq!(out.as_str(), "__vyre_fuse_a0_cmp_5");
         assert!(out.as_str().starts_with(FUSION_ARM_PREFIX));
     }
@@ -246,23 +243,27 @@ mod tests {
     fn already_qualified_temp_is_not_re_prefixed() {
         // A temp produced by a prior/nested fusion level is already globally
         // unique; re-prefixing it at the next level desyncs the use from its
-        // decl (the csrf_missing_token miscompile). Renaming it again must be
-        // an identity.
-        let inner = ArmRenamer::isolated(0).ident(&Ident::from("cmp_5"));
-        let outer = ArmRenamer::isolated(1).ident(&inner);
-        assert_eq!(
-            outer.as_str(),
-            inner.as_str(),
+        // decl (the csrf_missing_token miscompile). Renaming it again must
+        // report no change so the shared walk leaves it in place.
+        let inner = ArmRenamer::isolated(0)
+            .binding(&Ident::from("cmp_5"))
+            .expect("a bare temp is renamed");
+        assert!(
+            ArmRenamer::isolated(1).binding(&inner).is_none(),
             "fusion temp must not accumulate a second arm prefix"
         );
-        let outer2 = ArmRenamer::isolated(2).ident(&outer);
-        assert_eq!(outer2.as_str(), inner.as_str());
+        assert!(ArmRenamer::isolated(2).binding(&inner).is_none());
     }
 
     #[test]
     fn distinct_bare_temps_in_distinct_arms_stay_distinct() {
-        let a0 = ArmRenamer::isolated(0).ident(&Ident::from("x"));
-        let a1 = ArmRenamer::isolated(1).ident(&Ident::from("x"));
+        let name = Ident::from("x");
+        let a0 = ArmRenamer::isolated(0)
+            .binding(&name)
+            .expect("an isolated arm renames every binding it declares");
+        let a1 = ArmRenamer::isolated(1)
+            .binding(&name)
+            .expect("an isolated arm renames every binding it declares");
         assert_ne!(a0.as_str(), a1.as_str());
     }
 
@@ -270,13 +271,16 @@ mod tests {
     fn single_declared_name_is_left_unrenamed_in_every_arm() {
         // The csrf invariant: a value declared in exactly one arm and consumed
         // in another must keep ONE name. Such a name is NOT in the
-        // multiply-declared set, so it is never prefixed regardless of arm
-        // index (the consumer's `Var` matches the producer's `Let`).
+        // multiply-declared set, so no arm index reports a rename and the
+        // consumer's `Var` still matches the producer's `Let`.
         let multiply_declared = names([]); // `__cmp_5` declared in only one arm
-        let producer = ArmRenamer::shared(1, &multiply_declared).ident(&Ident::from("__cmp_5"));
-        let consumer = ArmRenamer::shared(0, &multiply_declared).ident(&Ident::from("__cmp_5"));
-        assert_eq!(producer.as_str(), "__cmp_5");
-        assert_eq!(consumer.as_str(), producer.as_str());
+        let name = Ident::from("__cmp_5");
+        assert!(ArmRenamer::shared(1, &multiply_declared)
+            .binding(&name)
+            .is_none());
+        assert!(ArmRenamer::shared(0, &multiply_declared)
+            .binding(&name)
+            .is_none());
     }
 
     #[test]
@@ -285,8 +289,13 @@ mod tests {
         // primitives) collides once arms splice into one flat scope, so it is
         // prefixed per arm.
         let multiply_declared = names(["acc"]);
-        let a0 = ArmRenamer::shared(0, &multiply_declared).ident(&Ident::from("acc"));
-        let a1 = ArmRenamer::shared(1, &multiply_declared).ident(&Ident::from("acc"));
+        let name = Ident::from("acc");
+        let a0 = ArmRenamer::shared(0, &multiply_declared)
+            .binding(&name)
+            .expect("a multiply-declared name is renamed");
+        let a1 = ArmRenamer::shared(1, &multiply_declared)
+            .binding(&name)
+            .expect("a multiply-declared name is renamed");
         assert_eq!(a0.as_str(), "__vyre_fuse_a0_acc");
         assert_ne!(a0.as_str(), a1.as_str());
     }

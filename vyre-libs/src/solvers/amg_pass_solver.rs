@@ -308,39 +308,6 @@ mod tests {
         )
     }
 
-    /// Execute one AMG V-cycle into caller-owned storage.
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn reference_smooth_matroid_flow_into(
-        a: &[f64],
-        b: &[f64],
-        x: &[f64],
-        r_mat: &[f64],
-        p_mat: &[f64],
-        a_c: &[f64],
-        n_fine: u32,
-        n_coarse: u32,
-        scratch: &mut AmgVcycleScratch,
-        out: &mut Vec<f64>,
-    ) {
-        if n_fine == 0 {
-            out.clear();
-            return;
-        }
-        vyre_reference::composition_witness::amg_v_cycle_witness_with_scratch_into(
-            a,
-            b,
-            x,
-            r_mat,
-            p_mat,
-            a_c,
-            DEFAULT_OMEGA,
-            n_fine,
-            n_coarse,
-            &mut scratch.inner.v_cycle,
-            out,
-        );
-    }
-
     /// Run V-cycles until residual norm `||A·x − b||_∞` drops below `tol`
     /// or `max_cycles` is reached. Returns `(x_final, cycles_run)`.
     #[must_use]

@@ -8,7 +8,7 @@
 #![cfg(feature = "graph")]
 #![allow(deprecated)]
 
-mod wire_words;
+use crate::wire_words;
 use vyre_libs::graph::pack_branching_fixture;
 
 fn pack_spine_fixture(node_count: u32) -> (Vec<u8>, Vec<u8>) {

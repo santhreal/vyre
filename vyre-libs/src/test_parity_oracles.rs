@@ -19,6 +19,7 @@ use vyre_megakernel::{
 /// request declares how many the node has. Fifteen solver oracles each padded
 /// and projected in their own copy of the same epilogue, so a change to how a
 /// short result is padded reached one of them and not the rest.
+#[cfg(feature = "solvers")]
 pub(crate) fn semantic_output_padded(
     request: &SemanticExecutionRequest<'_>,
     mut ordered: Vec<Vec<u8>>,
@@ -65,6 +66,7 @@ pub(crate) fn policy() -> SemanticExecutionPolicy {
 ///
 /// Buffers and entry nodes are appended in argument order, which is the
 /// order a multi-stage parity suite dispatches them in.
+#[cfg(any(feature = "encoding", feature = "solvers"))]
 #[must_use]
 pub(crate) fn wrap_program_sequence(programs: &[&Program], workgroup_size: [u32; 3]) -> Program {
     let buffer_count = programs.iter().map(|program| program.buffers().len()).sum();
@@ -138,12 +140,14 @@ impl StaticOutputs {
 
     /// Records the input at `index`, decoded as little-endian `u32`s, once per
     /// dispatch.
+    #[cfg(any(feature = "scheduling", feature = "graph-dispatch"))]
     pub(crate) fn recording_input(mut self, index: usize) -> Self {
         self.record_input = Some(index);
         self
     }
 
     /// The recorded inputs in dispatch order.
+    #[cfg(any(feature = "scheduling", feature = "graph-dispatch"))]
     pub(crate) fn recorded(&self) -> Vec<Vec<u32>> {
         self.recorded
             .lock()
@@ -191,13 +195,18 @@ impl SemanticExecutor for StaticOutputs {
 }
 
 /// A dispatcher that returns sequential output buffers across multiple dispatches.
-#[allow(dead_code)]
+///
+/// The one consumer is the motif dispatch suite, which the `graph` and
+/// `graph-dispatch` features carry, so this is declared on the same pair. A
+/// blanket `dead_code` allowance is what stood here before, and it hid the
+/// unselected configurations from the only lint that reports them.
+#[cfg(all(feature = "graph", feature = "graph-dispatch"))]
 pub(crate) struct SequentialOutputs {
     contract: &'static str,
     steps: std::sync::Mutex<Vec<Vec<Vec<u8>>>>,
 }
 
-#[allow(dead_code)]
+#[cfg(all(feature = "graph", feature = "graph-dispatch"))]
 impl SequentialOutputs {
     pub(crate) fn new(contract: &'static str, steps: Vec<Vec<Vec<u8>>>) -> Self {
         Self {
@@ -207,6 +216,7 @@ impl SequentialOutputs {
     }
 }
 
+#[cfg(all(feature = "graph", feature = "graph-dispatch"))]
 impl SemanticExecutor for SequentialOutputs {
     fn execute(
         &self,
@@ -252,9 +262,9 @@ pub(crate) fn canonical_inputs(
         .collect()
 }
 
-/// Map a positional output list onto the graph values every node writes.
+/// Map a positional output list onto the graph values a completion returns.
 ///
-/// A backend returns one buffer per writable graph value, so a test double owes
+/// A backend returns one buffer per returned graph value, so a test double owes
 /// the same set. The list is positional in Program buffer declaration order and
 /// repeats for each node, which is what a per-iteration oracle produced before
 /// a loop became one multi-node graph. Any writable value the list does not
@@ -276,7 +286,9 @@ pub(crate) fn semantic_output(
             "Fix: semantic test executor requires one graph node.".to_string(),
         ));
     }
-    let mut outputs = BTreeMap::new();
+    let returned = vyre_megakernel::returned_graph_values(graph);
+    let mut outputs: BTreeMap<_, Vec<u8>> =
+        returned.iter().map(|value| (*value, Vec::new())).collect();
     for node in graph.nodes() {
         let written = vyre_megakernel::writable_graph_values(node);
         if ordered.len() > written.len() {
@@ -288,7 +300,10 @@ pub(crate) fn semantic_output(
         }
         let mut supplied = ordered.iter();
         for value in written {
-            outputs.insert(value, supplied.next().cloned().unwrap_or_default());
+            let bytes = supplied.next().cloned().unwrap_or_default();
+            if let Some(slot) = outputs.get_mut(&value) {
+                *slot = bytes;
+            }
         }
     }
     Ok(SemanticExecutionOutput {
@@ -298,12 +313,13 @@ pub(crate) fn semantic_output(
     })
 }
 
-/// Map named Program buffers onto the graph values every node writes.
+/// Map named Program buffers onto the graph values a completion returns.
 ///
 /// Every writable value the caller does not name is empty, which is what a
 /// backend leaves in read-write working storage a wrapper never reads. A name
 /// the program does not write is rejected: it is a stale test, not a backend
 /// that returned too much.
+#[cfg(feature = "graph-dispatch")]
 pub(crate) fn semantic_output_named(
     request: &SemanticExecutionRequest<'_>,
     named: Vec<(&str, Vec<u8>)>,
@@ -314,7 +330,9 @@ pub(crate) fn semantic_output_named(
             "Fix: semantic test executor requires one graph node.".to_string(),
         ));
     }
-    let mut outputs = BTreeMap::new();
+    let returned = vyre_megakernel::returned_graph_values(graph);
+    let mut outputs: BTreeMap<_, Vec<u8>> =
+        returned.iter().map(|value| (*value, Vec::new())).collect();
     let mut matched = vec![false; named.len()];
     for node in graph.nodes() {
         for (value, buffer) in vyre_megakernel::writable_graph_value_buffers(node) {
@@ -322,13 +340,10 @@ pub(crate) fn semantic_output_named(
                 .iter()
                 .zip(matched.iter_mut())
                 .find(|((name, _), _)| *name == buffer.as_str());
-            match supplied {
-                Some(((_, bytes), seen)) => {
-                    *seen = true;
-                    outputs.insert(value, bytes.clone());
-                }
-                None => {
-                    outputs.insert(value, Vec::new());
+            if let Some(((_, bytes), seen)) = supplied {
+                *seen = true;
+                if let Some(slot) = outputs.get_mut(&value) {
+                    *slot = bytes.clone();
                 }
             }
         }

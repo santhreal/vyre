@@ -138,10 +138,18 @@ fn ptx_emits_float_arithmetic() {
             Expr::mul(Expr::load("input", Expr::u32(0)), Expr::f32(3.0)),
             "mul.f32",
         ),
+        // Strength reduction to a multiply is sound only when the reciprocal
+        // is exact. `1/4` is; `1/3` is not, and reducing it changes the result,
+        // so the divisor decides the instruction and both directions are pinned.
         (
-            "fdiv",
-            Expr::div(Expr::load("input", Expr::u32(0)), Expr::f32(3.0)),
+            "fdiv_exact_reciprocal",
+            Expr::div(Expr::load("input", Expr::u32(0)), Expr::f32(4.0)),
             "mul.f32",
+        ),
+        (
+            "fdiv_inexact_reciprocal",
+            Expr::div(Expr::load("input", Expr::u32(0)), Expr::f32(3.0)),
+            "div.rn.f32",
         ),
     ];
     for (name, expr, expected_insn) in ops {

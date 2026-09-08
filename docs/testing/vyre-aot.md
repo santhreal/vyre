@@ -33,16 +33,7 @@ The crate lives at `vyre-aot`. The `aot-artifacts` owner maintains its
 | --- | --- | --- | --- | --- |
 | `example` | `vyre_aot_release_surface` | `vyre-aot/examples/vyre_aot_release_surface.rs` | None | `./cargo_full test -p vyre-aot --example vyre_aot_release_surface` |
 | `lib` | `vyre_aot` | `vyre-aot/src/lib.rs` | None | `./cargo_full test -p vyre-aot` |
-| `test` | `artifact_contracts` | `vyre-aot/tests/artifact_contracts.rs` | None | `./cargo_full test -p vyre-aot --test artifact_contracts` |
-| `test` | `bundle_contracts` | `vyre-aot/tests/bundle_contracts.rs` | None | `./cargo_full test -p vyre-aot --test bundle_contracts` |
-| `test` | `cache_contracts` | `vyre-aot/tests/cache_contracts.rs` | None | `./cargo_full test -p vyre-aot --test cache_contracts` |
-| `test` | `canonical_package` | `vyre-aot/tests/canonical_package.rs` | None | `./cargo_full test -p vyre-aot --test canonical_package` |
-| `test` | `compile_smoke` | `vyre-aot/tests/compile_smoke.rs` | None | `./cargo_full test -p vyre-aot --test compile_smoke` |
-| `test` | `generated_artifact_manifest_matrix` | `vyre-aot/tests/generated_artifact_manifest_matrix.rs` | None | `./cargo_full test -p vyre-aot --test generated_artifact_manifest_matrix` |
-| `test` | `generated_loader_contracts` | `vyre-aot/tests/generated_loader_contracts.rs` | None | `./cargo_full test -p vyre-aot --test generated_loader_contracts` |
-| `test` | `launcher_contracts` | `vyre-aot/tests/launcher_contracts.rs` | None | `./cargo_full test -p vyre-aot --test launcher_contracts` |
-| `test` | `launcher_registry_closure_contracts` | `vyre-aot/tests/launcher_registry_closure_contracts.rs` | None | `./cargo_full test -p vyre-aot --test launcher_registry_closure_contracts` |
-| `test` | `manifest_round_trip` | `vyre-aot/tests/manifest_round_trip.rs` | None | `./cargo_full test -p vyre-aot --test manifest_round_trip` |
+| `test` | `all_tests` | `vyre-aot/tests/all_tests.rs` | None | `./cargo_full test -p vyre-aot --test all_tests` |
 
 ## Test classes
 

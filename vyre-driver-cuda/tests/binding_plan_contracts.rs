@@ -2,7 +2,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 use harness::u32_bytes;
 use vyre_driver::{BindingPlan, BindingRole};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -133,6 +133,33 @@ fn binding_plan_rejects_wrong_input_count() {
     assert!(
         err.to_string().contains("expected 1 input buffer"),
         "Fix: CUDA input-count errors must be actionable, got: {err}"
+    );
+}
+
+/// A placeholder for a backend-allocated output is one input too many.
+///
+/// This is the shape the wgpu record-and-readback path used to accept, by
+/// choosing between two ABIs on list length, so a fixture written against it
+/// ran there and was refused here and by the reference interpreter. The program
+/// declares one read-only input and one backend-allocated output, so the plan
+/// admits exactly one input and the second value has no binding to land on.
+#[test]
+fn binding_plan_rejects_a_placeholder_for_a_backend_allocated_output() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(1),
+            BufferDecl::output("out", 1, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        Vec::new(),
+    );
+
+    let err = BindingPlan::from_program(&program, &[u32_bytes(&[1]), u32_bytes(&[0])])
+        .expect_err("Fix: a placeholder for a backend-allocated output must be rejected.");
+    assert!(
+        err.to_string()
+            .contains("expected 1 input buffer(s) from Program declarations but received 2"),
+        "Fix: the refusal must name both counts, got: {err}"
     );
 }
 

@@ -20,7 +20,7 @@ jobs:
     # It runs on the host that records the device evidence, because the
     # artifact gates regenerate that evidence and compare it line by line: a
     # sweep on a second adapter reports every device fact as divergent.
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     steps:
       # docs-coupling compares this head against the base branch, so this job
       # reads history rather than one tree. Every other job here clones shallow.
@@ -95,7 +95,7 @@ jobs:
   tree-rules:
     name: Rules the sweep owns, named by domain
     # contract-rules owns bench-smoke-runtime, which dispatches on a device.
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -170,7 +170,7 @@ jobs:
     # The oracle matrices dispatch their cases, and a GPU-required case fails
     # closed on a probe with no devices rather than skipping, so a hosted runner
     # reports a missing accelerator instead of a parity verdict.
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -198,7 +198,7 @@ jobs:
     # The parity target validates the emission and then materializes it on a
     # Vulkan device, and it refuses a software implementation, so the job needs
     # a host with a real compute queue.
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

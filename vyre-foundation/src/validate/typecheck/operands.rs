@@ -314,6 +314,23 @@ pub(crate) fn validate_unop_operand(
                     ), "cast or rewrite the operand to produce F32.".to_string()));
                 }
             }
+            crate::ir_inner::model::op_signature::UnOp::BitcastF32ToU32 => {
+                // Bit reinterpretation is total on the source width and has no
+                // rounding, so the operand width is the whole contract: an f32
+                // word in, a u32 word out.
+                if ty != DataType::F32 {
+                    errors.push(err("V105", ValidationPhase::Type, ValidationLocation::Program, format!(
+                        "unary operation `{op:?}` operand has type `{ty}`; reinterpreting bits as `u32` requires an `f32` source word"
+                    ), "cast or rewrite the operand to produce F32.".to_string()));
+                }
+            }
+            crate::ir_inner::model::op_signature::UnOp::BitcastU32ToF32 => {
+                if ty != DataType::U32 {
+                    errors.push(err("V105", ValidationPhase::Type, ValidationLocation::Program, format!(
+                        "unary operation `{op:?}` operand has type `{ty}`; reinterpreting bits as `f32` requires a `u32` source word"
+                    ), "cast or rewrite the operand to produce U32.".to_string()));
+                }
+            }
             crate::ir_inner::model::op_signature::UnOp::Unpack4Low
             | crate::ir_inner::model::op_signature::UnOp::Unpack4High
             | crate::ir_inner::model::op_signature::UnOp::Unpack8Low
@@ -334,7 +351,7 @@ pub(crate) fn validate_unop_operand(
             _ => {
                 errors.push(err("V104", ValidationPhase::Type, ValidationLocation::Program, format!(
                     "unary operation `{op:?}` is not recognized"
-                ), "use a known UnOp variant from this enum (`Negate`, `LogicalNot`, `BitNot`, `Popcount`, `Clz`, `Ctz`, `ReverseBits`, `Sin`, `Cos`, `Exp`, `Log`, `Log2`, `Exp2`, `Tan`, `Acos`, `Asin`, `Atan`, `Tanh`, `Sinh`, `Cosh`, `Abs`, `Sqrt`, `InverseSqrt`, `Reciprocal`, `Floor`, `Ceil`, `Round`, `Trunc`, `Sign`, `IsNan`, `IsInf`, `IsFinite`, `Unpack4Low`, `Unpack4High`, `Unpack8Low`, `Unpack8High`).".to_string()));
+                ), "use a known UnOp variant from this enum (`Negate`, `LogicalNot`, `BitNot`, `Popcount`, `Clz`, `Ctz`, `ReverseBits`, `Sin`, `Cos`, `Exp`, `Log`, `Log2`, `Exp2`, `Tan`, `Acos`, `Asin`, `Atan`, `Tanh`, `Sinh`, `Cosh`, `Abs`, `Sqrt`, `InverseSqrt`, `Reciprocal`, `Floor`, `Ceil`, `Round`, `Trunc`, `Sign`, `IsNan`, `IsInf`, `IsFinite`, `Unpack4Low`, `Unpack4High`, `Unpack8Low`, `Unpack8High`, `BitcastF32ToU32`, `BitcastU32ToF32`).".to_string()));
             }
         }
     }

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The host-oracle gate reports a post-dispatch loop only when its body computes, so a loop that walks a wrapper's named output slots and hands each slot's bytes to a byte decoder that fills that slot's own sink is readback plumbing, while a body that accumulates across iterations, indexes into the bytes, branches on them or folds them through a method is still reported."

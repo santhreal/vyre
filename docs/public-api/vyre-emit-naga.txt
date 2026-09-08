@@ -14,6 +14,7 @@ pub enum vyre_emit_naga::patterns::vec_pack::PackKind
 pub fn vyre_emit_naga::emit(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>
 pub fn vyre_emit_naga::emit_many(descs: &[vyre_lower::descriptor::KernelDescriptor]) -> alloc::vec::Vec<core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>>
 pub fn vyre_emit_naga::emit_with_capabilities(desc: &vyre_lower::descriptor::KernelDescriptor, target: &vyre_lower::target::EmissionTargetCapabilities) -> core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>
+pub fn vyre_emit_naga::emit_with_float_mode(desc: &vyre_lower::descriptor::KernelDescriptor, float_lowering: vyre_foundation::fp_parity::FloatLoweringMode) -> core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>
 pub fn vyre_emit_naga::patterns::NagaAuditReport::finding_count(&self) -> usize
 pub fn vyre_emit_naga::patterns::NagaAuditReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_emit_naga::patterns::NagaAuditReport::kernel_id(&self) -> &str

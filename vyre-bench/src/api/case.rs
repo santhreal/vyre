@@ -80,7 +80,8 @@ impl BaselineClass {
     }
 
     /// This class's position in [`Self::ALL`].
-    const fn index(self) -> usize {
+    #[must_use]
+    pub const fn index(self) -> usize {
         match self {
             Self::CpuSota => 0,
             Self::GpuSota => 1,
@@ -89,6 +90,11 @@ impl BaselineClass {
     }
 }
 
+/// `ALL` lists every class once, in index order.
+///
+/// A free const body is evaluated eagerly, so a class added to the enum without
+/// a slot in `ALL`, or a slot out of order, fails the build. An inherent
+/// associated const would be evaluated lazily and check nothing.
 const _: () = {
     let mut position = 0;
     while position < BaselineClass::ALL.len() {

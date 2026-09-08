@@ -14,12 +14,10 @@ const REPO_BOUNDARY_TOML: &str = include_str!("../../../release/repo-boundary.to
 struct RepoBoundaryData {
     public_repository: String,
     public_evidence_repositories: Vec<String>,
-    private_repository: String,
     public_repository_field: String,
     legacy_public_repositories_field: String,
     legacy_plural_release_repo_variable: String,
     verify_public_repo_action: String,
-    boundary_description: String,
 }
 
 static REPO_BOUNDARY: OnceLock<Result<RepoBoundaryData, String>> = OnceLock::new();
@@ -66,10 +64,6 @@ pub(crate) fn verify_public_repo_evidence() -> &'static str {
         .as_str()
 }
 
-pub(crate) fn repo_boundary_description() -> &'static str {
-    data().boundary_description.as_str()
-}
-
 /// Whether an artifact names exactly the public repository, with no legacy
 /// plural field beside it.
 pub fn has_single_public_repository(value: &serde_json::Value) -> bool {
@@ -78,17 +72,6 @@ pub fn has_single_public_repository(value: &serde_json::Value) -> bool {
             .get(public_repository_field())
             .and_then(serde_json::Value::as_str)
             == Some(vyre_public_repository())
-}
-
-pub(crate) fn public_repository_field_is_singular(value: &serde_json::Value) -> bool {
-    value.get(legacy_public_repositories_field()).is_none()
-}
-
-pub(crate) fn touches_private_santh_visibility(line: &str) -> bool {
-    let lower = line.to_ascii_lowercase();
-    lower.contains(&data().private_repository.to_ascii_lowercase())
-        || (lower.contains("gh repo edit") && lower.contains("santh"))
-        || line.contains(data().legacy_plural_release_repo_variable.as_str())
 }
 
 /// Everything in a public artifact that names something private.

@@ -77,15 +77,18 @@ fn wgpu_cell(build: Option<fn() -> Program>) -> &'static str {
     "supported"
 }
 
-/// Every op id the live registry declares.
+/// The tier the live registry declares for every op id it mints.
 ///
 /// The matrix is checked against this rather than against the rows it just
 /// built, so a row that names something the registry never registered is a
-/// blocker instead of an unremarkable line in a generated document.
-pub(super) fn live_operation_ids() -> BTreeSet<&'static str> {
+/// blocker instead of an unremarkable line in a generated document. It is
+/// returned to the caller rather than read inside the rule, so a test can state
+/// the registry it judges a row against; a rule that reads the live registry
+/// itself can only be tested against whatever this checkout happens to mint.
+pub(super) fn live_operation_tiers() -> BTreeMap<&'static str, OpTier> {
     vyre_registry_link::operation::live_operation_registry()
         .iter()
-        .map(|entry| entry.id)
+        .map(|entry| (entry.id, entry.tier))
         .collect()
 }
 
@@ -237,12 +240,6 @@ fn resolve_source_dir(root: &Path, crate_name: &str, domain: &str) -> String {
         }
     }
     minted
-}
-
-fn namespace_domain<'a>(id: &'a str, prefix: &str) -> &'a str {
-    id.strip_prefix(prefix)
-        .and_then(|rest| rest.split("::").next())
-        .unwrap_or("unknown")
 }
 
 /// Suites that judge one operation, per tier.

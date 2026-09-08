@@ -1,4 +1,13 @@
-//! Dispatch helpers that decode a fixed number of u32 output buffers.
+//! Dispatch helpers that decode named u32 output buffers.
+//!
+//! Every readback names the Program buffer it reads.
+//! `vyre_megakernel::execute_single_program` returns one buffer per written
+//! declaration and pairs each with its name, so selecting by name reads what
+//! the program declares. A wrapper that instead matched the result list by
+//! position, or checked its length against a number of its own, would be
+//! answering "which buffers does this program write" a second time, and the
+//! read-write working storage a program writes but no caller reads is exactly
+//! where the two answers part.
 //!
 //! The expected word count is passed in and checked, so a short readback is an
 //! error rather than a silently truncated result.
@@ -10,11 +19,38 @@ use vyre_megakernel::{
     SingleProgramExecutionOutput,
 };
 
+/// One u32 output buffer a wrapper reads back.
+pub(crate) struct U32Readback<'a> {
+    /// Program buffer to read, not a diagnostic label.
+    pub(crate) buffer: &'a str,
+    /// Words the buffer's bytes must decode to exactly.
+    pub(crate) words: usize,
+    /// Where the decoded words land.
+    pub(crate) out: &'a mut Vec<u32>,
+}
+
+/// Dispatch already-prepared inputs and decode every named u32 output buffer.
+///
+/// A program with read-write working storage writes more buffers than the
+/// wrapper reads; the ones no readback names are left alone.
+pub(crate) fn dispatch_u32_outputs_from_prepared_into(
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
+    program: Program,
+    scratch_inputs: &[Vec<u8>],
+    readbacks: &mut [U32Readback<'_>],
+) -> Result<(), SemanticExecutionError> {
+    let output =
+        execute_single_program(executor, HOST_WRAPPER_NODE, program, scratch_inputs, policy)?;
+    for readback in readbacks {
+        let bytes = named_output(&output, readback.buffer)?;
+        decode_u32_output_exact(bytes, readback.words, readback.buffer, readback.out)?;
+    }
+    Ok(())
+}
+
 /// Dispatch already-prepared inputs and decode one named u32 output buffer
 /// into `out`.
-///
-/// `buffer` is the Program buffer to read, not a diagnostic label: a program
-/// with read-write working storage writes more buffers than the wrapper reads.
 pub(crate) fn dispatch_single_u32_output_from_prepared_into(
     executor: &dyn SemanticExecutor,
     policy: &SemanticExecutionPolicy,
@@ -24,10 +60,17 @@ pub(crate) fn dispatch_single_u32_output_from_prepared_into(
     buffer: &str,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    let output =
-        execute_single_program(executor, HOST_WRAPPER_NODE, program, scratch_inputs, policy)?;
-    let bytes = named_output(&output, buffer)?;
-    decode_u32_output_exact(bytes, expected_output_words, buffer, out)
+    dispatch_u32_outputs_from_prepared_into(
+        executor,
+        policy,
+        program,
+        scratch_inputs,
+        &mut [U32Readback {
+            buffer,
+            words: expected_output_words,
+            out,
+        }],
+    )
 }
 
 /// Dispatch already-prepared inputs and decode two named u32 output buffers.
@@ -44,16 +87,23 @@ pub(crate) fn dispatch_two_u32_outputs_from_prepared_into(
     second_buffer: &str,
     second_out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    let output =
-        execute_single_program(executor, HOST_WRAPPER_NODE, program, scratch_inputs, policy)?;
-    let first_bytes = named_output(&output, first_buffer)?;
-    let second_bytes = named_output(&output, second_buffer)?;
-    decode_u32_output_exact(first_bytes, first_expected_words, first_buffer, first_out)?;
-    decode_u32_output_exact(
-        second_bytes,
-        second_expected_words,
-        second_buffer,
-        second_out,
+    dispatch_u32_outputs_from_prepared_into(
+        executor,
+        policy,
+        program,
+        scratch_inputs,
+        &mut [
+            U32Readback {
+                buffer: first_buffer,
+                words: first_expected_words,
+                out: first_out,
+            },
+            U32Readback {
+                buffer: second_buffer,
+                words: second_expected_words,
+                out: second_out,
+            },
+        ],
     )
 }
 

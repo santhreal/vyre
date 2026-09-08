@@ -121,7 +121,8 @@ mod tests {
             .iter()
             .map(|&(class, op, start, len)| (class, op, &child_storage[start..start + len]))
             .collect::<Vec<_>>();
-        let snapshot = GpuEGraphSnapshot::build(build_rows);
+        let snapshot = GpuEGraphSnapshot::try_build(build_rows)
+            .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
         let plan = plan_cuda_egraph_device_upload(&snapshot).expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - synthetic plan must pack");
         CudaEGraphDeviceKernelView::from_checked_parts(0x1000, plan.byte_len(), plan.byte_layout())
             .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - synthetic view must be valid")
@@ -200,14 +201,15 @@ mod tests {
 
         #[test]
         fn consuming_launch_artifact_matches_borrowed_artifact_without_plan_clone_contract() {
-            let snapshot = GpuEGraphSnapshot::build([
+            let snapshot = GpuEGraphSnapshot::try_build([
                 (0u32, "lit", &[][..]),
                 (1u32, "lit", &[][..]),
                 (2u32, "add", &[0u32, 1u32][..]),
                 (3u32, "add", &[0u32, 1u32][..]),
                 (4u32, "mul", &[0u32, 1u32][..]),
                 (5u32, "mul", &[0u32, 1u32][..]),
-            ]);
+            ])
+            .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
@@ -231,12 +233,13 @@ mod tests {
 
         #[test]
         fn resident_snapshot_try_constructors_match_infallible_snapshots() {
-            let snapshot = GpuEGraphSnapshot::build([
+            let snapshot = GpuEGraphSnapshot::try_build([
                 (0u32, "lit", &[][..]),
                 (1u32, "lit", &[][..]),
                 (2u32, "add", &[0u32, 1u32][..]),
                 (3u32, "mul", &[1u32, 2u32][..]),
-            ]);
+            ])
+            .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
@@ -389,14 +392,15 @@ mod tests {
 
         #[test]
         fn signature_bucket_planner_groups_only_candidate_duplicate_rows() {
-            let snapshot = GpuEGraphSnapshot::build([
+            let snapshot = GpuEGraphSnapshot::try_build([
                 (0u32, "lit", &[][..]),
                 (1u32, "lit", &[][..]),
                 (2u32, "add", &[0u32, 1u32][..]),
                 (3u32, "add", &[0u32, 1u32][..]),
                 (4u32, "add", &[1u32, 0u32][..]),
                 (5u32, "mul", &[0u32, 1u32][..]),
-            ]);
+            ])
+            .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
@@ -434,7 +438,8 @@ mod tests {
         #[test]
         fn structural_equivalence_planner_rejects_divergent_language_op_ids() {
             let snapshot =
-                GpuEGraphSnapshot::build([(10u32, "lit", &[][..]), (20u32, "opaque", &[][..])]);
+                GpuEGraphSnapshot::try_build([(10u32, "lit", &[][..]), (20u32, "opaque", &[][..])])
+                    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: valid divergent-op egraph image must pack");
@@ -477,7 +482,7 @@ mod tests {
         #[test]
 
         fn signature_bucket_planner_rejects_mismatched_image_and_view() {
-            let image = GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "lit", &[][..])])
+            let image = GpuEGraphSnapshot::try_build([(0u32, "lit", &[][..]), (1u32, "lit", &[][..])]).expect("Fix: fixture rows must fit the 32-bit GPU column ABI")
                 .try_pack_device_image()
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
             let mismatched_view = synthetic_view(1, 0, 1);
@@ -503,13 +508,14 @@ mod tests {
 
         #[test]
         fn signature_bucket_planner_splits_large_candidate_bucket() {
-            let snapshot = GpuEGraphSnapshot::build([
+            let snapshot = GpuEGraphSnapshot::try_build([
                 (0u32, "lit", &[][..]),
                 (1u32, "lit", &[][..]),
                 (2u32, "lit", &[][..]),
                 (3u32, "lit", &[][..]),
                 (4u32, "lit", &[][..]),
-            ]);
+            ])
+            .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
@@ -558,13 +564,14 @@ mod tests {
 
         #[test]
         fn signature_pair_ordinals_decode_to_row_pairs_without_materialized_pairs() {
-            let snapshot = GpuEGraphSnapshot::build([
+            let snapshot = GpuEGraphSnapshot::try_build([
                 (0u32, "lit", &[][..]),
                 (1u32, "lit", &[][..]),
                 (2u32, "lit", &[][..]),
                 (3u32, "lit", &[][..]),
                 (4u32, "lit", &[][..]),
-            ]);
+            ])
+            .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
@@ -602,7 +609,8 @@ mod tests {
         #[test]
         fn signature_pair_decoder_rejects_out_of_bounds_ordinals() {
             let snapshot =
-                GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "lit", &[][..])]);
+                GpuEGraphSnapshot::try_build([(0u32, "lit", &[][..]), (1u32, "lit", &[][..])])
+                    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
@@ -636,7 +644,8 @@ mod tests {
         #[test]
         fn signature_pair_decoder_rejects_malformed_bucket_row_ranges() {
             let snapshot =
-                GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "lit", &[][..])]);
+                GpuEGraphSnapshot::try_build([(0u32, "lit", &[][..]), (1u32, "lit", &[][..])])
+                    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
@@ -672,14 +681,15 @@ mod tests {
 
         #[test]
         fn structural_equivalence_plan_emits_unique_exact_eclass_merges() {
-            let snapshot = GpuEGraphSnapshot::build([
+            let snapshot = GpuEGraphSnapshot::try_build([
                 (10u32, "lit", &[][..]),
                 (20u32, "lit", &[][..]),
                 (30u32, "add", &[10u32, 20u32][..]),
                 (40u32, "add", &[10u32, 20u32][..]),
                 (50u32, "add", &[20u32, 10u32][..]),
                 (30u32, "add", &[10u32, 20u32][..]),
-            ]);
+            ])
+            .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
@@ -716,7 +726,8 @@ mod tests {
         #[test]
         fn structural_equivalence_collection_filters_signature_collision_bucket() {
             let snapshot =
-                GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "add", &[0u32][..])]);
+                GpuEGraphSnapshot::try_build([(0u32, "lit", &[][..]), (1u32, "add", &[0u32][..])])
+                    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
@@ -752,11 +763,12 @@ mod tests {
 
         #[test]
         fn signature_bucket_device_image_packs_fixed_width_records() {
-            let snapshot = GpuEGraphSnapshot::build([
+            let snapshot = GpuEGraphSnapshot::try_build([
                 (0u32, "lit", &[][..]),
                 (1u32, "lit", &[][..]),
                 (2u32, "lit", &[][..]),
-            ]);
+            ])
+            .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
@@ -785,12 +797,13 @@ mod tests {
 
         #[test]
         fn structural_equivalence_launch_artifact_sizes_worst_case_output() {
-            let snapshot = GpuEGraphSnapshot::build([
+            let snapshot = GpuEGraphSnapshot::try_build([
                 (0u32, "lit", &[][..]),
                 (1u32, "lit", &[][..]),
                 (2u32, "lit", &[][..]),
                 (3u32, "lit", &[][..]),
-            ]);
+            ])
+            .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");

@@ -612,7 +612,6 @@ impl ContractionComposer {
                             1,
                         ];
                         build_matmul_2d_linear(
-                            self.op_id,
                             generator,
                             self.a.name_str(),
                             self.b.name_str(),
@@ -678,7 +677,6 @@ impl ContractionComposer {
                         }
                     }
                     ContractionTiling::Block1D { tile } => build_block_1d_contraction(
-                        self.op_id,
                         generator,
                         self.a.name_str(),
                         self.b.name_str(),
@@ -695,7 +693,6 @@ impl ContractionComposer {
             ContractionGeometry::BatchedMatmul3D { batch, m, k, n } => {
                 let wg = self.options.workgroup_size.unwrap_or([256, 1, 1]);
                 build_batched_3d_contraction(
-                    self.op_id,
                     generator,
                     self.a.name_str(),
                     self.b.name_str(),
@@ -716,7 +713,6 @@ impl ContractionComposer {
             } => {
                 let wg = self.options.workgroup_size.unwrap_or([64, 1, 1]);
                 build_batched_rows_contraction(
-                    self.op_id,
                     generator,
                     self.a.name_str(),
                     self.b.name_str(),
@@ -734,7 +730,6 @@ impl ContractionComposer {
             ContractionGeometry::Matvec { n, matrix_cells } => {
                 let wg = self.options.workgroup_size.unwrap_or([256, 1, 1]);
                 build_matvec_contraction(
-                    self.op_id,
                     generator,
                     self.a.name_str(),
                     self.b.name_str(),
@@ -747,14 +742,12 @@ impl ContractionComposer {
                 )
             }
             ContractionGeometry::Strassen2x2 => build_strassen_2x2(
-                self.op_id,
                 generator,
                 self.a.name_str(),
                 self.b.name_str(),
                 self.out.name_str(),
             ),
             ContractionGeometry::StrassenOneLevel { n } => build_strassen_one_level(
-                self.op_id,
                 generator,
                 self.a.name_str(),
                 self.b.name_str(),

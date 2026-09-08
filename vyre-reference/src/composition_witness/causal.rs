@@ -186,12 +186,6 @@ pub fn reachability_closure_witness_into(adjacency: &[u32], n: usize, closure: &
     }
 }
 
-fn reachability_closure_witness(adjacency: &[u32], n: usize) -> Vec<u32> {
-    let mut closure = Vec::with_capacity(n * n);
-    reachability_closure_witness_into(adjacency, n, &mut closure);
-    closure
-}
-
 /// Sequential impact from surgery witness writing into caller storage.
 pub fn impact_from_surgery_witness_into(
     surgery: &[u32],
@@ -217,19 +211,6 @@ pub fn impact_from_surgery_witness_into(
             }
         }
     }
-}
-
-fn impact_from_surgery_witness(surgery: &[u32], intervention_mask: &[u32], n: usize) -> Vec<u32> {
-    let mut closure_scratch = Vec::with_capacity(n * n);
-    let mut impact = Vec::with_capacity(n);
-    impact_from_surgery_witness_into(
-        surgery,
-        intervention_mask,
-        n,
-        &mut closure_scratch,
-        &mut impact,
-    );
-    impact
 }
 
 /// Sequential intervention-form change-impact witness into caller-owned storage.

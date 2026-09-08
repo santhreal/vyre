@@ -5,9 +5,7 @@
 //! through the public decoder and asserts the decoder never panics or silently
 //! produces an un-reencodable program.
 
-mod wire_decode_hostile_inputs;
-
-use wire_decode_hostile_inputs::{
+use vyre_test_support::wire_hostile_inputs::{
     assert_decode_is_safe, hostile_bytes, minimal_program_bytes, mutation_dictionary, next_u64,
 };
 

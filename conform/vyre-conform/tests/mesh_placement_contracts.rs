@@ -18,10 +18,7 @@ use vyre_foundation::logical::LogicalExchangeKind;
 use vyre_megakernel::mesh::{MeshTopologyPlan, TransferOrigin};
 use vyre_reference::value::Value;
 
-#[path = "../../../tests/support/artifact_fixtures.rs"]
-mod artifact_fixtures;
-
-use artifact_fixtures::{
+use vyre_test_support::artifact_fixtures::{
     atomic_output_graph, chained_graph, compile_graph, compile_graph_on_mesh,
     compile_graph_on_mesh_for_memory, in_place_input_graph, two_device_mesh,
 };

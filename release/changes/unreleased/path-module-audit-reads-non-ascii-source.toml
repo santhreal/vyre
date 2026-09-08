@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The `#[path]` module audit parses the root manifest as a document rather than as a single value expression, and masks comments by whole characters, so a manifest opening with a comment and a source holding a non-ASCII string literal are judged instead of aborting the scan."

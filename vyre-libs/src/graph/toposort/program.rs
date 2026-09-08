@@ -1,5 +1,6 @@
 //! The emitted program: Kahn on lane zero, one invocation.
 
+use crate::builder::trip_count::clamped_by_extents;
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -43,7 +44,7 @@ pub fn toposort_program(
         Node::loop_for(
             "e",
             Expr::var("edge_start"),
-            Expr::var("edge_end"),
+            clamped_by_extents(Expr::var("edge_end"), targets_buf, []),
             vec![
                 Node::let_bind("u", Expr::load(targets_buf, Expr::var("e"))),
                 Node::let_bind(
@@ -73,8 +74,16 @@ pub fn toposort_program(
             Expr::u32(node_count),
             vec![Node::store(indeg_scratch, Expr::var("i"), Expr::u32(0))],
         ),
-        // Fill indegrees from edges. Edge count = offsets_buf[node_count].
-        Node::let_bind("edge_count", Expr::load(offsets_buf, Expr::u32(node_count))),
+        // Fill indegrees from edges. Edge count = offsets_buf[node_count], which
+        // is producer data, so it is clamped to the extent it indexes.
+        Node::let_bind(
+            "edge_count",
+            clamped_by_extents(
+                Expr::load(offsets_buf, Expr::u32(node_count)),
+                targets_buf,
+                [],
+            ),
+        ),
         Node::loop_for(
             "e",
             Expr::u32(0),

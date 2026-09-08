@@ -35,17 +35,6 @@ pub(crate) fn fnv1a32_packed_u32_low8(words: &[u32]) -> u32 {
     h
 }
 
-#[cfg(test)]
-#[must_use]
-pub(crate) const fn fnv1a32_const(bytes: &[u8]) -> u32 {
-    let mut h = fnv1a32_initial_state();
-    let mut idx = 0usize;
-    while idx < bytes.len() {
-        h = fnv1a32_update_byte(h, bytes[idx]);
-        idx += 1;
-    }
-    h
-}
 /// Initial FNV-1a32 CPU state.
 #[cfg(test)]
 #[must_use]

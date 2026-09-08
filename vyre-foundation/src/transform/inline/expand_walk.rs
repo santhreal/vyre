@@ -57,14 +57,13 @@ pub(super) trait ExpandPolicy {
         None
     }
 
-    /// The statement this policy writes in place of `node`, whose own positions
-    /// are already expanded.
+    /// The statement this policy writes in place of the node, whose own
+    /// positions are already expanded.
     ///
     /// This is where a statement changes kind rather than contents: the callee
     /// side turns a store to the callee's output buffer into an assignment to
     /// the caller's result binding, because the caller has no such buffer.
-    fn replace(&mut self, node: &Node) -> Option<Node> {
-        let _ = node;
+    fn replace(&mut self, _node: &Node) -> Option<Node> {
         None
     }
 }
@@ -178,8 +177,7 @@ impl<P: ExpandPolicy> NodeRewrite for Positions<'_, P> {
         self.policy.binding(binding, name)
     }
 
-    fn body(&mut self, parent: &Node, body: &[Node]) -> Option<Vec<Node>> {
-        let _ = parent;
+    fn body(&mut self, _parent: &Node, body: &[Node]) -> Option<Vec<Node>> {
         if self.failure.is_some() {
             return None;
         }

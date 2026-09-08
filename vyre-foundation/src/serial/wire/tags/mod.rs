@@ -15,6 +15,9 @@ pub(crate) const FLAG_OPAQUE_ENDIAN_FIXED: u16 = 1 << 2;
 
 mod op_tag_decode;
 
+/// Every builtin `UnOp` the frozen wire-tag table names, in tag order.
+pub use op_tag_decode::builtin_un_ops;
+
 /// Decode an atomic operation tag from the wire stream.
 ///
 /// Atomic op tags live inside `Expr::Atomic` wire payloads. An unrecognized

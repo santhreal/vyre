@@ -61,18 +61,6 @@ pub fn configure_jit_cache_default() -> Result<(), String> {
         .clone()
 }
 
-/// Plumb the JIT cache to an explicit directory. Restricted to `pub(crate)` so
-/// external callers cannot mutate the CUDA JIT cache environment variables after
-/// the backend has already frozen them via [`configure_jit_cache_default`].
-/// Use [`configure_jit_cache_default`] from outside this crate; that path is
-/// idempotent and guarded by [`CONFIGURED`].
-pub(crate) fn configure_jit_cache(cache_dir: PathBuf, max_bytes: u64) -> Result<(), String> {
-    #[cfg(test)]
-    let _env_guard = lock_test_env();
-
-    configure_jit_cache_unlocked(cache_dir, max_bytes)
-}
-
 fn configure_jit_cache_unlocked(cache_dir: PathBuf, max_bytes: u64) -> Result<(), String> {
     if max_bytes == 0 {
         return Err(

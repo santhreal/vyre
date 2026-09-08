@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:f658f200d51392c80a1428e5510b0a9f393f295a:dirty=true:worktree=bf785dfcf8b63ff05bed1b7cd34da330ec1ea4c9a043b8d4bd39309e9f276b60",
+  "source_fingerprint": "git:e6b8a488d48bb8076217b25e91279ba53e809a5f:dirty=false",
   "schema_version": 3,
   "publishable_package_count": 25,
   "vyre_package_count": 25,

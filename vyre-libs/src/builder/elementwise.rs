@@ -565,7 +565,7 @@ impl ElementwiseComposer {
 
 /// Right-hand side source for an elementwise F32 multiply.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum F32MulRhs<'a> {
+pub enum F32MulRhs<'a> {
     /// Reuse the left input as RHS, producing `x * x`.
     SameInput,
     /// Read RHS from a second buffer.
@@ -574,7 +574,7 @@ pub(crate) enum F32MulRhs<'a> {
 
 /// Build `output[i] = input[i] * rhs[i]` over F32 lanes.
 #[must_use]
-pub(crate) fn f32_elementwise_mul(
+pub fn f32_elementwise_mul(
     op_id: &'static str,
     input: &str,
     rhs: F32MulRhs<'_>,
@@ -603,7 +603,7 @@ pub(crate) fn f32_elementwise_mul(
 }
 
 /// Build a checked elementwise unary u32 operation.
-pub(crate) fn try_u32_elementwise_unary<F>(
+pub fn try_u32_elementwise_unary<F>(
     op_id: &'static str,
     input: &str,
     out: &str,
@@ -624,7 +624,7 @@ where
 
 /// Build an elementwise unary u32 operation with a diagnostic invalid-program fallback.
 #[must_use]
-pub(crate) fn u32_elementwise_unary<F>(
+pub fn u32_elementwise_unary<F>(
     op_id: &'static str,
     input: &str,
     out: &str,
@@ -640,7 +640,7 @@ where
 }
 
 /// Build a checked elementwise binary u32 operation.
-pub(crate) fn try_u32_elementwise_binary<F>(
+pub fn try_u32_elementwise_binary<F>(
     op_id: &'static str,
     a: &str,
     b: &str,
@@ -663,7 +663,7 @@ where
 
 /// Build an elementwise binary u32 operation with a diagnostic invalid-program fallback.
 #[must_use]
-pub(crate) fn u32_elementwise_binary<F>(
+pub fn u32_elementwise_binary<F>(
     op_id: &'static str,
     a: &str,
     b: &str,

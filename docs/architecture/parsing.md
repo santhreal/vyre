@@ -71,6 +71,19 @@ subgroup runs the same handler, which is what keeps an interpreter loop
 convergent. Neither states a device: the property is subgroup divergence, and a
 target that reports no subgroup at all still runs the same arithmetic.
 
+## A data-derived loop bound is clamped
+
+A loop whose trip count is a load runs for as many iterations as the loaded
+word states, so one out-of-contract `u32` asks for four billion. Every such
+bound under `vyre-libs/src/parsing` passes through one clamp against the
+extents of the buffers the body indexes. The shunting-yard statement pass
+clamps its statement end offset to the token array, and the Go extractors clamp
+the caller's token count once per program. An in-contract bound is at or below
+that extent, so the clamp leaves it unchanged.
+
+A bounds check on a store inside the body is not that clamp. It discards the
+result of an iteration that already ran.
+
 ## Why the stages are separate registered operations
 
 A lexer that is one registered operation and an extractor that is another

@@ -188,13 +188,6 @@ inventory::submit! {
     )
 }
 
-/// Helper: f64 matrix-matrix multiply (for the CPU reference test
-/// driver below). Not an op  -  testing convenience.
-#[cfg(test)]
-fn matmul_dense(a: &[f64], b: &[f64], n: usize) -> Vec<f64> {
-    vyre_reference::composition_witness::dense_matrix_multiply_witness(a, b, n, n, n)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -45,7 +45,6 @@ pub mod pattern_audit;
 /// Test-only, like `descriptor_builder`: enable `test-fixtures` to reach it.
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod program_stability_corpus;
-pub(crate) mod result_id_remap;
 pub mod rewrites;
 pub(crate) mod target;
 mod verified_lowering;
@@ -236,13 +235,13 @@ pub use descriptor::{
     AsyncWaitSpec, BarrierPhase, BindingLayout, BindingSlot, BindingVisibility, DescriptorIntent,
     DescriptorIntentError, DescriptorIntentEvidence, DescriptorIntentKind, DescriptorIntentSet,
     DescriptorIntentStrategy, DescriptorTrapTag, Dispatch, FragmentOperand, FragmentValue,
-    IntentAnnotatedDescriptor, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
-    MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec, MatrixSpecError, MatrixTileShape,
-    MemoryClass, MemoryProxyFence, OpaqueExprData, OpaqueNodeData, PhysicalSchedule,
-    ScanConstructIntentClass, ScanConstructIntentMapping, StageSlot, StorageLayout,
-    StorageLayoutError, StorageLifetime, StorageRegion, TensorAccessMap, TransactionScope,
-    DESCRIPTOR_INTENT_SCHEMA_VERSION, PHYSICAL_SCHEDULE_VERSION, SCAN_CONSTRUCT_INTENT_MAPPINGS,
-    STORAGE_LAYOUT_VERSION, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
+    GridIndexSpace, IntentAnnotatedDescriptor, KernelBody, KernelDescriptor, KernelOp,
+    KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec, MatrixSpecError,
+    MatrixTileShape, MemoryClass, MemoryProxyFence, OpaqueExprData, OpaqueNodeData,
+    PhysicalSchedule, ScanConstructIntentClass, ScanConstructIntentMapping, StageSlot,
+    StorageLayout, StorageLayoutError, StorageLifetime, StorageRegion, TensorAccessMap,
+    TransactionScope, DESCRIPTOR_INTENT_SCHEMA_VERSION, PHYSICAL_SCHEDULE_VERSION,
+    SCAN_CONSTRUCT_INTENT_MAPPINGS, STORAGE_LAYOUT_VERSION, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
 };
 pub use descriptor::{KernelOpsIter, Name};
 pub use equivalence::{check_effects, BindingEffects, EffectSignature, EquivalenceError};
@@ -259,7 +258,8 @@ pub use target::{
     SubgroupCapabilities, WorkgroupLimitViolation, WorkgroupLimits,
 };
 pub use verified_lowering::{
-    lower_physical, lower_scheduled, PhysicalKernel, PhysicalLowering, PhysicalLoweringError,
+    lower_baseline, lower_physical, lower_scheduled, PhysicalKernel, PhysicalLowering,
+    PhysicalLoweringError,
 };
 /// Re-exported so consumers matching/constructing `KernelOpKind::SubgroupReduce`
 /// can name the reduction operator without depending on `vyre-foundation`.

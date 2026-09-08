@@ -24,7 +24,7 @@
     feature = "pattern-dfa",
 ))]
 
-mod harness;
+use crate::harness;
 
 use harness::{decode_u32_words, u32_bytes};
 use proptest::prelude::*;

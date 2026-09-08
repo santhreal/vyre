@@ -1,22 +1,15 @@
 //! PassScheduler run methods + invalidation propagation.
 //! Audit cleanup A21 (2026-04-30): split from monolithic scheduler.rs.
 
-#![allow(unused_imports)]
-
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashSet;
 use std::collections::BTreeSet;
-use std::sync::OnceLock;
 
 use super::{
     estimate_ir_allocations, IrAllocationEstimate, OptimizerRunReport, PassRunDecision,
     PassRunMetric, PassScheduler,
 };
-use crate::ir::{BufferDecl, Expr, Node};
 use crate::ir_inner::model::program::Program;
-use crate::optimizer::{
-    registered_passes, requirements_satisfied, OptimizerError, PassMetadata, ProgramPassKind,
-    ProgramPassRegistration,
-};
+use crate::optimizer::{requirements_satisfied, OptimizerError};
 use crate::perf::PerfScope;
 
 fn introduces_forbidden_effects(
@@ -161,43 +154,6 @@ impl GateFactState {
 }
 
 impl PassScheduler {
-    /// `tag → pass names that depend on it` (their own name OR a `requires`
-    /// entry equals the tag). Computed once per scheduler. Replaces the
-    /// linear pass-list scan that the previous implementation ran on every
-    /// invalidation event.
-    fn dirty_trigger_index(&self) -> &FxHashMap<&'static str, Vec<usize>> {
-        self.dirty_trigger_index_cache.get_or_init(|| {
-            let mut index: FxHashMap<&'static str, Vec<usize>> = FxHashMap::default();
-            index.reserve(self.passes.len() * 2);
-            for (pass_index, pass) in self.passes.iter().enumerate() {
-                let metadata = pass.metadata();
-                index.entry(metadata.name).or_default().push(pass_index);
-                for &req in metadata.requires {
-                    index.entry(req).or_default().push(pass_index);
-                }
-            }
-            index
-        })
-    }
-
-    #[cfg(test)]
-    pub(crate) fn mark_invalidated_passes(
-        &self,
-        invalidated: &[&'static str],
-        next_dirty: &mut FxHashSet<&'static str>,
-    ) {
-        let index = self.dirty_trigger_index();
-        for &tag in invalidated {
-            if let Some(triggered) = index.get(tag) {
-                for &pass_index in triggered {
-                    if let Some(pass) = self.passes.get(pass_index) {
-                        next_dirty.insert(pass.metadata().name);
-                    }
-                }
-            }
-        }
-    }
-
     /// Execute the scheduled passes repeatedly until convergence or max iterations are reached.
     ///
     /// # Errors

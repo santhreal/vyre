@@ -9,7 +9,7 @@
 //! given seed means. CPU reference paths only - no mock dispatchers.
 
 #![forbid(unsafe_code)]
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_libs::graph::dispatch::exploded::build_ifds_csr_via;
@@ -32,10 +32,9 @@ const PRIMITIVE_CSR_CASES: u64 = 4096;
 /// Shapes per primitive batch family (path reconstruction, motif matching).
 const PRIMITIVE_BATCH_CASES: u64 = 2048;
 
-#[path = "../../tests/support/csr_sweep/mod.rs"]
-mod csr_sweep;
+use crate::csr_sweep;
 
-use csr_sweep::Rng;
+use crate::csr_sweep::Rng;
 
 fn bitset_words(node_count: u32) -> usize {
     node_count.div_ceil(32) as usize
@@ -370,8 +369,6 @@ fn generated_csr_backward_or_changed_oracles_cover_4096_shapes() {
         0x8ACC_1234_D00D_0007,
         0x9E37_79B9,
     ) {
-        let max_iters = node_count.saturating_add(2);
-
         // 1. The production reverse-or-changed fixed point == the independent reverse-BFS
         //    closure. This is the op's real contract: a single node-parallel pass reads the
         //    live accumulator and is order-dependent for multi-hop chains, but the CONVERGED

@@ -1,6 +1,6 @@
 //! Generated property coverage for `DataType` layout and serde contracts.
 
-mod spec_variants;
+use crate::spec_variants;
 
 use proptest::prelude::*;
 use spec_variants::{data_type_strategy, quantized_storage_strategy};

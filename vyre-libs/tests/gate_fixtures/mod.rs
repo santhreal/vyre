@@ -3,7 +3,9 @@
 //! The over-fire dispatch floor, the dominator-tree oracle helper, and the
 //! adversarial case macros. ONE home so no two gates can drift on the floor and
 //! no suite writes its own case loop.
-#![allow(unused_imports, unused_macros)]
+// The set every including binary used to restate at its own `mod` declaration.
+#![allow(clippy::assertions_on_constants, clippy::identity_op, dead_code)]
+#![allow(unused_imports, unused_macros, unused_mut, unused_variables)]
 
 use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;

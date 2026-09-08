@@ -3,16 +3,6 @@
 use super::{CaptureMode, CaptureModeContract};
 
 impl CaptureMode {
-    /// Every mode, in contract order. One owner for iteration + coherence checks.
-    pub const ALL: [CaptureMode; 6] = [
-        CaptureMode::NonCapture,
-        CaptureMode::Count,
-        CaptureMode::Span,
-        CaptureMode::NamedCapture,
-        CaptureMode::RepeatedCapture,
-        CaptureMode::GroupExtraction,
-    ];
-
     /// The contract row for this mode, the single code-side source of truth for
     /// its `mode_id`, `output_shape`, routing bits, and null policy.
     #[must_use]

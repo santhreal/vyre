@@ -8,8 +8,8 @@
 //! round trip and a parity window nobody ever exercised.
 //!
 //! So the expectation is not a count written here. It is derived at run time
-//! from `docs/public-api/vyre-spec.txt`, which `scripts/check_public_api_snapshot.sh`
-//! regenerates from rustdoc and holds byte-stable, so a new variant reaches
+//! from `docs/public-api/vyre-spec.txt`, which the `public-api` gate in
+//! `xtask/src/gates/public_api.rs` regenerates from rustdoc and holds byte-stable, so a new variant reaches
 //! this test through the same gate that already forces a snapshot refresh and
 //! turns it red until the tables record a decision for it.
 //!
@@ -21,10 +21,7 @@
 
 use std::collections::BTreeSet;
 
-#[path = "../../tests/support/spec_variant_tables.rs"]
-mod spec_variant_tables;
-
-use spec_variant_tables::{
+use vyre_test_support::spec_variant_tables::{
     builtin_atomic_ops, builtin_bin_ops, builtin_ternary_ops, builtin_un_ops,
     public_api_variant_names,
 };
@@ -48,14 +45,14 @@ fn assert_table_matches_surface<T: std::fmt::Debug>(enum_name: &str, table: &[T]
     let missing: Vec<&String> = frozen.difference(&listed).collect();
     assert!(
         missing.is_empty(),
-        "Fix: tests/support/spec_variant_tables.rs omits {enum_name} variant(s) {missing:?}. \
+        "Fix: vyre_test_support::spec_variant_tables omits {enum_name} variant(s) {missing:?}. \
          Add each one, then check whether the suites that read this table (wire round trips, \
          wire tag pins, the random-IR corpus, the f32 parity window) need a decision for it."
     );
     let unknown: Vec<&String> = listed.difference(&frozen).collect();
     assert!(
         unknown.is_empty(),
-        "Fix: tests/support/spec_variant_tables.rs lists {enum_name} name(s) {unknown:?} that the \
+        "Fix: vyre_test_support::spec_variant_tables lists {enum_name} name(s) {unknown:?} that the \
          frozen public surface does not have. Remove them or refresh the snapshot."
     );
 }

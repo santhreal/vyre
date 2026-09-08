@@ -20,7 +20,7 @@
 //! f32 GPU (three chained stages) vs f64 oracle → small numeric TOLERANCE. Distances are kept in [1, 4)
 //! so the M2L reciprocal is well-conditioned and rounding stays far below tolerance.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::fmm_polyhedral_compress::fmm_compress_pairwise_via;
 

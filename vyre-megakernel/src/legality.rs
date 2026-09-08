@@ -78,24 +78,6 @@ pub(crate) enum TopologyRejectionReason {
     OccupancyExceeded,
 }
 
-impl TopologyRejectionReason {
-    /// Stable machine-readable diagnostic code.
-    #[must_use]
-    pub(crate) const fn code(self) -> &'static str {
-        match self {
-            Self::InsufficientConcurrentQueues => "MKL010_INSUFFICIENT_CONCURRENT_QUEUES",
-            Self::InsufficientComputeUnits => "MKL011_INSUFFICIENT_COMPUTE_UNITS",
-            Self::UnenforceableSpatialMasking => "MKL012_UNENFORCEABLE_SPATIAL_MASKING",
-            Self::RequiresCooperativeLaunch => "MKL013_REQUIRES_COOPERATIVE_LAUNCH",
-            Self::ResourceConflict => "MKL014_RESOURCE_CONFLICT",
-            Self::ControlDependencyOrEffect => "MKL015_CONTROL_DEPENDENCY_OR_EFFECT",
-            Self::IllegalAsymmetricJoin => "MKL016_ILLEGAL_ASYMMETRIC_JOIN",
-            Self::NoIndependentConcurrency => "MKL017_NO_INDEPENDENT_CONCURRENCY",
-            Self::OccupancyExceeded => "MKL018_OCCUPANCY_EXCEEDED",
-        }
-    }
-}
-
 /// Legality result for one proposed candidate execution topology.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum TopologyDecision {
@@ -482,35 +464,6 @@ mod tests {
                 }
             }
         }
-    }
-
-    #[test]
-    fn topology_rejection_reasons_have_stable_unique_codes() {
-        let reasons = [
-            TopologyRejectionReason::InsufficientConcurrentQueues,
-            TopologyRejectionReason::InsufficientComputeUnits,
-            TopologyRejectionReason::UnenforceableSpatialMasking,
-            TopologyRejectionReason::RequiresCooperativeLaunch,
-            TopologyRejectionReason::ResourceConflict,
-            TopologyRejectionReason::ControlDependencyOrEffect,
-            TopologyRejectionReason::IllegalAsymmetricJoin,
-            TopologyRejectionReason::NoIndependentConcurrency,
-            TopologyRejectionReason::OccupancyExceeded,
-        ];
-
-        let mut codes = std::collections::BTreeSet::new();
-        for reason in reasons {
-            let code = reason.code();
-            assert!(
-                code.starts_with("MKL0"),
-                "diagnostic code must follow MKL convention: {code}"
-            );
-            assert!(
-                codes.insert(code),
-                "diagnostic code must be unique across reasons: {code}"
-            );
-        }
-        assert_eq!(codes.len(), reasons.len());
     }
 
     fn bindings() -> BTreeMap<String, u64> {

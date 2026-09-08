@@ -37,6 +37,10 @@ pub(crate) struct CachedPipelineArtifact {
     pub(crate) output: OutputLayout,
     pub(crate) output_word_count: usize,
     pub(crate) workgroup_shape: [u32; 3],
+    /// The compiled module reads its element index linearized over the grid, so
+    /// the launch planner may fold a workgroup count past one axis onto the
+    /// others. A per-axis module is refused there instead.
+    pub(crate) grid_linearized: bool,
     pub(crate) workgroup_size: u32,
     pub(crate) indirect: Option<IndirectDispatch>,
     pub(crate) trap_tags: Arc<[TrapTag]>,

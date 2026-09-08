@@ -5,7 +5,8 @@
 
 use vyre_runtime::resident_work_queue::{protocol, ResidentWorkQueue};
 
-use vyre_test_support::le_words::write_word;
+use crate::ring_expectations::protocol_missing_word;
+use vyre_test_support::le_words::{read_word, write_word};
 
 #[test]
 fn strict_control_readers_reject_misaligned_buffers() {
@@ -39,10 +40,13 @@ fn strict_metrics_reader_requires_complete_metrics_window() {
     let truncated = vec![0u8; protocol::control::METRICS_BASE as usize * 4];
     let err = ResidentWorkQueue::try_read_metrics(&truncated)
         .expect_err("strict metrics reader must reject missing metrics window");
-    assert!(
-        err.to_string().contains("Fix:"),
-        "metrics error must be actionable: {err}"
+    let (buffer, word_idx, byte_len) = protocol_missing_word(
+        &err,
+        "a control buffer ending at the metrics base must name the first metrics word",
     );
+    assert_eq!(buffer, "control");
+    assert_eq!(word_idx, protocol::control::METRICS_BASE as usize);
+    assert_eq!(byte_len, (protocol::control::METRICS_BASE as usize) * 4);
 }
 
 #[test]
@@ -90,33 +94,24 @@ fn strict_encoders_reject_overflow_without_panicking() {
     }
 }
 
+/// The publishable half of the slot status space. The hostile half is owned by
+/// `resident_work_queue_adversarial_buffers`; between them the two cover every
+/// entry in `slot::STATUSES`, so a new status fails one side or the other until
+/// it is classified.
 #[test]
-fn publish_slot_rejects_every_inflight_status() {
+fn publish_slot_accepts_every_publishable_status() {
     let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
-    for status in [
-        protocol::slot::PUBLISHED,
-        protocol::slot::CLAIMED,
-        protocol::slot::WAIT_IO,
-        protocol::slot::YIELD,
-        protocol::slot::REQUEUE,
-        protocol::slot::FAULT,
-    ] {
+    for status in [protocol::slot::EMPTY, protocol::slot::DONE] {
         write_word(&mut ring, protocol::STATUS_WORD as usize, status);
-        let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[])
-            .expect_err("host must not overwrite in-flight slot state");
-        assert!(
-            err.to_string().contains("not publishable"),
-            "slot status {status} must produce actionable publication error: {err}"
+        let name = protocol::slot::status_name(status).expect("publishable status is catalogued");
+        ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[])
+            .unwrap_or_else(|error| panic!("a {name} slot must accept a publish, got {error}"));
+        assert_eq!(
+            read_word(&ring, protocol::STATUS_WORD as usize),
+            protocol::slot::PUBLISHED,
+            "a published slot must land in PUBLISHED, not stay {name}"
         );
     }
-
-    write_word(
-        &mut ring,
-        protocol::STATUS_WORD as usize,
-        protocol::slot::DONE,
-    );
-    ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[])
-        .expect("DONE slot may be recycled");
 }
 
 #[test]

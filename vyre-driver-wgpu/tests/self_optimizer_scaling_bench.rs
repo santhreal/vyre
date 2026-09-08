@@ -6,7 +6,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 use harness::self_optimizer::semantic_execution;
 
 use vyre::ir::Program;

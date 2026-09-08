@@ -10,7 +10,6 @@ use vyre_driver::{sealed, BackendError, DispatchConfig, LaunchPlan};
 use vyre_foundation::ir::Program;
 
 use crate::backend::allocations::DeviceAllocation;
-use crate::backend::module_cache::PtxSourceCacheKey;
 use crate::backend::{CachedCudaGraph, CudaBackend, CudaDispatchPlan, ModuleCacheKey};
 use crate::device::CudaDeviceCaps;
 
@@ -87,27 +86,6 @@ fn cuda_compiled_pipeline_identity_key(
 }
 
 impl CudaCompiledPipeline {
-    /// Construct a pipeline from compiler-generated PTX.
-    pub(crate) fn new(
-        backend: CudaBackend,
-        program: Arc<Program>,
-        ptx_src: Arc<str>,
-        ptx_source_key: PtxSourceCacheKey,
-        module_key: ModuleCacheKey,
-        config: &DispatchConfig,
-        prepared: CudaDispatchPlan,
-    ) -> Result<Self, BackendError> {
-        Self::new_with_source_identity(
-            backend,
-            program,
-            ptx_src,
-            *ptx_source_key.as_bytes(),
-            module_key,
-            config,
-            prepared,
-        )
-    }
-
     /// Construct a pipeline from authenticated immutable target PTX.
     pub(crate) fn new_from_target_payload(
         backend: CudaBackend,

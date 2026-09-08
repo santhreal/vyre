@@ -15,7 +15,7 @@
 //! slot. The faithful dispatcher consumes one input per input-consuming buffer in buffer order,
 //! matching the real backend, so kfac's already-correct 3-input consumer now runs.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::kfac_autotune_step::kfac_autotune_step_via;
 

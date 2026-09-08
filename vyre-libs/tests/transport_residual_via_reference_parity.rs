@@ -18,10 +18,10 @@
 //! `got[i] as i32 == want_f32[i].round() as i32` bit-for-bit. INCLUDING the negative-coefficient recurrence
 //! `T_next = 2·(M·T_curr) − T_prev` that distinguishes transport from the positive-only fusion filter.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::qsvt_matrix_function_fusion::transport_residual_fixed_via;
-use vyre_reference::composition_witness::chebyshev_filter_witness as chebyshev_filter_cpu;
+use vyre_reference::composition_witness::try_chebyshev_filter_witness as chebyshev_filter_cpu;
 
 use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
@@ -69,7 +69,8 @@ fn transport_residual_via_matches_chebyshev_cpu_signed_bit_exact() {
         let lap_f: Vec<f32> = dispatch_cost.iter().map(|&v| as_i32(v) as f32).collect();
         let sig_f: Vec<f32> = weights.iter().map(|&v| as_i32(v) as f32).collect();
         let coeff_f: Vec<f32> = coeffs.iter().map(|&v| as_i32(v) as f32).collect();
-        let want_f = chebyshev_filter_cpu(&lap_f, &sig_f, &coeff_f, n, chebyshev_order);
+        let want_f = chebyshev_filter_cpu(&lap_f, &sig_f, &coeff_f, n, chebyshev_order)
+            .expect("Fix: the parity oracle must filter the fixture Laplacian");
 
         let got_signed: Vec<i32> = got.iter().map(|&v| as_i32(v)).collect();
         let want_signed: Vec<i32> = want_f.iter().map(|&v| v.round() as i32).collect();
@@ -120,7 +121,8 @@ fn transport_residual_via_hand_checked_negative_coefficient() {
         "a -1 leading coefficient negates the signal"
     );
 
-    let want_f = chebyshev_filter_cpu(&[1.0, 0.0, 0.0, 1.0], &[1.0, 2.0], &[-1.0, 0.0, 0.0], 2, 2);
+    let want_f = chebyshev_filter_cpu(&[1.0, 0.0, 0.0, 1.0], &[1.0, 2.0], &[-1.0, 0.0, 0.0], 2, 2)
+        .expect("Fix: the parity oracle must filter the fixture Laplacian");
     let want_signed: Vec<i32> = want_f.iter().map(|&v| v.round() as i32).collect();
     assert_eq!(
         got_signed, want_signed,

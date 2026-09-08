@@ -58,6 +58,10 @@ pub static GATES: &[(&str, &'static dyn GateBehavior)] = &[
     ),
     ("lego-cross-dialect", &gates::lego_audit::LegoCrossDialect),
     (
+        "lego-duplicate-report",
+        &gates::lego_audit::LegoDuplicateReport,
+    ),
+    (
         "lego-exemption-liveness",
         &gates::lego_audit::LegoExemptionLiveness,
     ),

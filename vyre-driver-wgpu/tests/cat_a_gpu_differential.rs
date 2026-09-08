@@ -34,11 +34,10 @@
 
 #![cfg(feature = "device-tests")]
 #![allow(deprecated)]
-mod harness;
+use crate::harness;
 use harness::{cat_a_dispatch_config, f32_to_ordered};
 use std::sync::OnceLock;
 
-use vyre::ir::BufferAccess;
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity::effective_tolerance;
@@ -60,13 +59,13 @@ fn run_cpu(program: &Program, inputs: Vec<Value>) -> Vec<Vec<u8>> {
 }
 
 /// Run the standard optimizer pipeline (canonicalize + region_inline +
-/// CSE + DCE) before handing off to the backend. Cat-A compositions
-/// wrap their body in [`vyre::ir::Node::Region`] for debuggability;
-/// the `region_inline` pass is what unrolls those wrappers into the
-/// primitive nodes the wgpu backend actually knows how to lower.
+/// CSE + DCE) and schedule legalization before handing off to the backend.
+/// Cat-A compositions wrap their body in [`vyre::ir::Node::Region`] for
+/// debuggability; the `region_inline` pass is what unrolls those wrappers into
+/// the primitive nodes the wgpu backend lowers, and `harness::device_program`
+/// owns both steps for every device sweep in this crate.
 fn lower_for_gpu(program: &Program) -> Program {
-    vyre_foundation::optimizer::optimize(program.clone())
-        .expect("registered optimizer must converge")
+    harness::device_program(program)
 }
 
 /// Maps canonical logical inputs from the original program to the lowered program ABI by exact binding slot.
@@ -84,7 +83,7 @@ fn map_inputs_for_lowered(
     let logical_buffers: Vec<_> = original_program
         .buffers()
         .iter()
-        .filter(|buf| buf.access() != BufferAccess::Workgroup && !buf.is_backend_allocated_output())
+        .filter(|buf| vyre_reference::is_reference_input(buf))
         .collect();
 
     assert_eq!(
@@ -112,7 +111,7 @@ fn map_inputs_for_lowered(
     let lowered_input_buffers: Vec<_> = lowered
         .buffers()
         .iter()
-        .filter(|buf| buf.access() != BufferAccess::Workgroup && !buf.is_backend_allocated_output())
+        .filter(|buf| vyre_reference::is_reference_input(buf))
         .collect();
 
     let mut lowered_inputs = Vec::with_capacity(lowered_input_buffers.len());
@@ -230,31 +229,6 @@ fn run_entry_diff(entry: &vyre_foundation::operation::SemanticOperation) {
     let input_cases = entry
         .test_inputs
         .expect("Fix: regression entry must provide test_inputs")();
-    for inputs in input_cases {
-        assert_diff(
-            entry.id,
-            effective_tolerance(entry.id, &program),
-            &program,
-            inputs,
-        );
-    }
-}
-fn primitive_entry_by_id(op_id: &str) -> vyre_foundation::operation::SemanticOperation {
-    vyre_primitives::operation_catalog::all_entries()
-        .find(|entry| entry.id == op_id)
-        .expect("Fix: expected canonical primitive operation registration")
-}
-
-fn run_primitive_entry_diff(entry: &vyre_foundation::operation::SemanticOperation) {
-    let program = entry.program().unwrap_or_else(|| {
-        panic!(
-            "Fix: executable operation `{}` must provide a program",
-            entry.id
-        )
-    });
-    let input_cases = entry
-        .test_inputs
-        .expect("Fix: primitive regression entry must provide test_inputs")();
     for inputs in input_cases {
         assert_diff(
             entry.id,

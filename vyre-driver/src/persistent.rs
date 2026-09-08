@@ -163,6 +163,16 @@ pub struct PersistentEngine {
     ring_size: u32,
 }
 
+/// A ring position already reduced to a slot. Only `PersistentEngine::slot_of`
+/// produces one, and it masks with `ring_size - 1`, so both members address a
+/// live element of every per-slot array the constructor sized from that same
+/// `ring_size`.
+#[derive(Debug, Clone, Copy)]
+struct RingSlot {
+    index: u32,
+    offset: usize,
+}
+
 impl PersistentEngine {
     /// Construct an engine with a ring capacity of `ring_size`
     /// slots. Must be a nonzero power of two so
@@ -222,17 +232,30 @@ impl PersistentEngine {
         self.ring_size
     }
 
+    /// Reduce a monotonic head or tail counter to the slot it addresses.
+    ///
+    /// `try_with_valid_ring_size` builds `slots`, `ready` and `done` with
+    /// `ring_size` elements each and only ever runs on a nonzero power of two,
+    /// so the mask below cannot name an element that is absent. The three
+    /// lookups used to be fallible and disagreed about what a missing element
+    /// meant: two reported a full queue, one reported an empty one, and the
+    /// rest indexed directly. None of them had observed the condition it named.
+    fn slot_of(&self, sequence: u64) -> RingSlot {
+        let index = (sequence as u32) & (self.ring_size - 1);
+        RingSlot {
+            index,
+            offset: index as usize,
+        }
+    }
+
     /// Enqueue a PersistentWorkItem. Returns `Ok(slot_index)` on success, or
     /// `Err(QueueFull)` if the ring is full. Thread-safe under
     /// concurrent producers (lock-free CAS on `head`).
     pub fn enqueue(&self, item: PersistentWorkItem) -> Result<u32, QueueFull> {
         loop {
             let head = self.atomics.head.load(Ordering::Acquire);
-            let slot_idx = (head as u32) & (self.ring_size - 1);
-            let slot_offset = slot_idx as usize;
-            let Some(ready) = self.atomics.ready.get(slot_offset) else {
-                return Err(QueueFull);
-            };
+            let slot = self.slot_of(head);
+            let ready = &self.atomics.ready[slot.offset];
             match ring_sequence_order(ready.load(Ordering::Acquire), head) {
                 RingSequenceOrder::Free => {}
                 RingSequenceOrder::Behind => return Err(QueueFull),
@@ -248,13 +271,10 @@ impl PersistentEngine {
                 Ordering::Acquire,
             ) {
                 Ok(_) => {
-                    let Some(slot) = self.slots.get(slot_offset) else {
-                        return Err(QueueFull);
-                    };
-                    slot.store(item);
-                    self.atomics.done[slot_offset].store(0, Ordering::Release);
-                    self.atomics.ready[slot_offset].store(head.wrapping_add(1), Ordering::Release);
-                    return Ok(slot_idx);
+                    self.slots[slot.offset].store(item);
+                    self.atomics.done[slot.offset].store(0, Ordering::Release);
+                    self.atomics.ready[slot.offset].store(head.wrapping_add(1), Ordering::Release);
+                    return Ok(slot.index);
                 }
                 Err(_) => continue,
             }
@@ -267,10 +287,9 @@ impl PersistentEngine {
     pub fn claim(&self) -> Option<PersistentWorkItem> {
         loop {
             let tail = self.atomics.tail.load(Ordering::Acquire);
-            let slot_idx = (tail as u32) & (self.ring_size - 1);
-            let slot_offset = slot_idx as usize;
+            let slot = self.slot_of(tail);
             let published = tail.wrapping_add(1);
-            let ready = self.atomics.ready.get(slot_offset)?;
+            let ready = &self.atomics.ready[slot.offset];
             match ring_sequence_order(ready.load(Ordering::Acquire), published) {
                 RingSequenceOrder::Free => {}
                 RingSequenceOrder::Behind => {
@@ -292,9 +311,8 @@ impl PersistentEngine {
                 Ordering::Acquire,
             ) {
                 Ok(_) => {
-                    let slot = self.slots.get(slot_offset)?;
-                    let item = slot.load();
-                    self.atomics.ready[slot_offset].store(
+                    let item = self.slots[slot.offset].load();
+                    self.atomics.ready[slot.offset].store(
                         tail.wrapping_add(u64::from(self.ring_size)),
                         Ordering::Release,
                     );

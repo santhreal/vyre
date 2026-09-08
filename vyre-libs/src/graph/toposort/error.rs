@@ -51,7 +51,3 @@ pub enum ToposortCsrError {
 pub(super) fn toposort_csr_allocation(message: String) -> ToposortCsrError {
     ToposortCsrError::BadCsr { message }
 }
-
-pub(super) fn toposort_allocation(message: String) -> ToposortError {
-    ToposortError::InconsistentState { message }
-}

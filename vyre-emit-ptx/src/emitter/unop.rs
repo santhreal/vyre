@@ -37,6 +37,8 @@ fn unop_name(op: &UnOp) -> &'static str {
         UnOp::IsNan => "is_nan",
         UnOp::IsInf => "is_inf",
         UnOp::IsFinite => "is_finite",
+        UnOp::BitcastF32ToU32 => "bitcast_f32_to_u32",
+        UnOp::BitcastU32ToF32 => "bitcast_u32_to_f32",
         _ => "unknown",
     }
 }
@@ -209,6 +211,18 @@ impl BodyCtx<'_> {
                 let _ = writeln!(self.text, "    mov.b32    {bits}, {operand};");
                 let _ = writeln!(self.text, "    and.b32    {abs}, {bits}, 0x7fffffff;");
                 let _ = writeln!(self.text, "    setp.eq.u32    {out}, {abs}, 0x7f800000;");
+                out
+            }
+            (UnOp::BitcastF32ToU32, PtxType::F32) => {
+                // `mov.b32` is a bit-preserving register move: no rounding, no
+                // conversion, every NaN payload and subnormal carried through.
+                let out = self.alloc(PtxType::U32);
+                let _ = writeln!(self.text, "    mov.b32    {out}, {operand};");
+                out
+            }
+            (UnOp::BitcastU32ToF32, PtxType::U32) => {
+                let out = self.alloc(PtxType::F32);
+                let _ = writeln!(self.text, "    mov.b32    {out}, {operand};");
                 out
             }
             (UnOp::IsFinite, PtxType::F32) => {

@@ -2,10 +2,9 @@
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(feature = "graph")]
-mod graph_sweep_fixtures;
+use crate::csr_sweep;
+use crate::graph_sweep_fixtures;
 use graph_sweep_fixtures::bitset_words;
-#[path = "../../tests/support/csr_sweep/mod.rs"]
-mod csr_sweep;
 
 use vyre_reference::composition_witness::scc_decompose_witness;
 

@@ -22,7 +22,7 @@
 //!   `nat[t]  = Σ_j fixed_mul_16_16(M[t*n+j], prob[j])`   (SIGNED `((a as i32 as i64 * b as i32 as
 //!   i64) >> 16) as i32 as u32`, wrapping u32 add)
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::differentiable_autotune::natural_config_gradient_magnitude_pre_exp_fixed_via;
 

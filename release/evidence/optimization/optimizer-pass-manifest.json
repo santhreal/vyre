@@ -1,8 +1,8 @@
 {
-  "source_fingerprint": "git:ca5a721355cd1c4e5f29260fad39cea17fcca005:dirty=true:worktree=c6bbe533c6b4fb3e5a379b8b04d4576c008af12c951b908b570b5aec1562d078",
+  "source_fingerprint": "git:3cfaa0ef1ac2f973c5c9b7be833ce2c0d92fbb6a:dirty=true:worktree=7704794d625fc04513f97df46da6feea0eb40b617a37affc6eb4675c82dbca50",
   "schema_version": 1,
   "executable_passes": 39,
-  "catalog_entries": 172,
+  "catalog_entries": 168,
   "entries": [
     {
       "id": "branch_coalesce",
@@ -1552,66 +1552,6 @@
       "benchmark": "foundation.optimizer.scalar.rules"
     },
     {
-      "id": "const_fold.binop.add_fma_left",
-      "kind": "supplemental-rule",
-      "owner": "vyre-foundation-rules",
-      "phase": "ScalarAlgebra",
-      "boundary": "AbiPreserving",
-      "requires": [],
-      "invalidates": [],
-      "capabilities": [],
-      "preserves_abi": true,
-      "invariant": "preserves scalar expression value while reducing redundant GPU work",
-      "termination": "bounded by its owning registered executable pass",
-      "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
-    },
-    {
-      "id": "const_fold.binop.add_fma_right",
-      "kind": "supplemental-rule",
-      "owner": "vyre-foundation-rules",
-      "phase": "ScalarAlgebra",
-      "boundary": "AbiPreserving",
-      "requires": [],
-      "invalidates": [],
-      "capabilities": [],
-      "preserves_abi": true,
-      "invariant": "preserves scalar expression value while reducing redundant GPU work",
-      "termination": "bounded by its owning registered executable pass",
-      "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
-    },
-    {
-      "id": "const_fold.binop.sub_fma_left",
-      "kind": "supplemental-rule",
-      "owner": "vyre-foundation-rules",
-      "phase": "ScalarAlgebra",
-      "boundary": "AbiPreserving",
-      "requires": [],
-      "invalidates": [],
-      "capabilities": [],
-      "preserves_abi": true,
-      "invariant": "preserves scalar expression value while reducing redundant GPU work",
-      "termination": "bounded by its owning registered executable pass",
-      "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
-    },
-    {
-      "id": "const_fold.binop.sub_fma_right",
-      "kind": "supplemental-rule",
-      "owner": "vyre-foundation-rules",
-      "phase": "ScalarAlgebra",
-      "boundary": "AbiPreserving",
-      "requires": [],
-      "invalidates": [],
-      "capabilities": [],
-      "preserves_abi": true,
-      "invariant": "preserves scalar expression value while reducing redundant GPU work",
-      "termination": "bounded by its owning registered executable pass",
-      "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
-    },
-    {
       "id": "const_fold.binop.add_zero_left",
       "kind": "supplemental-rule",
       "owner": "vyre-foundation-rules",
@@ -1897,7 +1837,7 @@
       "benchmark": "foundation.optimizer.scalar.rules"
     },
     {
-      "id": "strength_reduce.shift_negation_fma",
+      "id": "strength_reduce.shift_negation",
       "kind": "supplemental-rule",
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",

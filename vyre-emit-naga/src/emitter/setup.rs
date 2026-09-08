@@ -14,10 +14,11 @@ use naga::{
     GlobalVariable, Module, ResourceBinding, Scalar, ScalarKind, ShaderStage, Span, StorageAccess,
     Type, TypeInner, VectorSize,
 };
+use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_foundation::ir::DataType;
 use vyre_lower::{
-    BindingSlot, BindingVisibility, KernelBody, KernelDescriptor, KernelOpKind, MemoryClass,
-    TRAP_SIDECAR_NAME,
+    BindingSlot, BindingVisibility, GridIndexSpace, KernelBody, KernelDescriptor, KernelOpKind,
+    MemoryClass, TRAP_SIDECAR_NAME,
 };
 
 use super::BodyBuilder;
@@ -55,12 +56,20 @@ pub(super) struct Builtins {
     pub(super) global: u32,
     pub(super) workgroup: u32,
     pub(super) local: u32,
+    /// Workgroup count per grid axis. Pushed only for a grid-linearized index
+    /// space, which is the only lowering that reads the grid's extent.
+    pub(super) num_workgroups: Option<u32>,
     pub(super) subgroup_local: Option<u32>,
     pub(super) subgroup_size: Option<u32>,
 }
 
 impl Builtins {
-    fn push(function: &mut Function, types: TypeHandles, uses_subgroup: bool) -> Self {
+    fn push(
+        function: &mut Function,
+        types: TypeHandles,
+        uses_subgroup: bool,
+        grid_index: GridIndexSpace,
+    ) -> Self {
         let subgroup_local = uses_subgroup.then(|| {
             push_builtin_arg(
                 function,
@@ -96,6 +105,14 @@ impl Builtins {
                 types.vec3_u32_ty,
                 BuiltIn::LocalInvocationId,
             ),
+            num_workgroups: matches!(grid_index, GridIndexSpace::GridLinearized).then(|| {
+                push_builtin_arg(
+                    function,
+                    "_vyre_num_workgroups",
+                    types.vec3_u32_ty,
+                    BuiltIn::NumWorkGroups,
+                )
+            }),
             subgroup_local,
             subgroup_size,
         }
@@ -531,7 +548,17 @@ fn descriptor_trap_tag_codes(
         .collect())
 }
 
-pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, EmitError> {
+pub(crate) fn emit_uncached(
+    desc: &KernelDescriptor,
+    float_lowering: FloatLoweringMode,
+) -> Result<naga::Module, EmitError> {
+    let grid_index = desc.dispatch.grid_index;
+    if matches!(grid_index, GridIndexSpace::GridLinearized) && !desc.admits_grid_linearized_index()
+    {
+        return Err(EmitError::InvalidDescriptor(
+            "descriptor declares a grid-linearized index space but reads the grid's shape through the global invocation id on y or z, or through the workgroup id. Fix: plan this launch on one grid axis, or address it from the global invocation id x axis alone.".to_owned(),
+        ));
+    }
     let mut builder = ModuleBuilder::new();
     let atomic_slots = collect_atomic_binding_slots(desc);
     for binding in &desc.bindings.slots {
@@ -542,7 +569,12 @@ pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, Emi
 
     let mut function = Function::default();
     function.name = Some("main".to_owned());
-    let builtins = Builtins::push(&mut function, builder.types, body_uses_subgroup(&desc.body));
+    let builtins = Builtins::push(
+        &mut function,
+        builder.types,
+        body_uses_subgroup(&desc.body),
+        grid_index,
+    );
     let mut body_builder = BodyBuilder {
         function: &mut function,
         values: FxHashMap::default(),
@@ -552,6 +584,8 @@ pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, Emi
         binding_counts: &builder.binding_counts,
         binding_data_types: &builder.binding_data_types,
         builtins,
+        grid_index,
+        workgroup_size: desc.dispatch.workgroup_size,
         types: builder.types,
         loop_locals: FxHashMap::default(),
         loop_types: FxHashMap::default(),
@@ -566,6 +600,7 @@ pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, Emi
         trap_sidecar_slot,
         trap_tag_codes,
         op_dispatch_routes: Default::default(),
+        float_lowering,
     };
     body_builder.emit_body(&desc.body)?;
 
@@ -605,8 +640,8 @@ mod tests {
         let descriptor = vyre_lower::lower_physical(&program)
             .map(|lowered| lowered.into_descriptor())
             .expect("Fix: counted storage buf_len program must lower");
-        let module =
-            emit_uncached(&descriptor).expect("Fix: counted storage buf_len descriptor must emit");
+        let module = emit_uncached(&descriptor, FloatLoweringMode::default())
+            .expect("Fix: counted storage buf_len descriptor must emit");
         let function = &module.entry_points[0].function;
 
         assert!(

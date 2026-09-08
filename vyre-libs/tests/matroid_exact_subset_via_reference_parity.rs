@@ -34,7 +34,7 @@
 //!      agree at EVERY `max_augmentations`; `via_multi_augmentation_matches_reference` locks the >1 case
 //!      and the main sweep exercises varying `max_augmentations` (1..4).
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::encoding::matroid_exact_megakernel::select_optimal_subset_via;
 use vyre_reference::composition_witness::matroid_select_optimal_subset_witness as reference_select_optimal_subset;

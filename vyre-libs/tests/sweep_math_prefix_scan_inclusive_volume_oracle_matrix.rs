@@ -3,7 +3,7 @@
 #![forbid(unsafe_code)]
 #![cfg(feature = "math")]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::{lcg_u32, prefix_scan_cpu_ref as cpu_ref};
 
 use vyre_libs::math::prefix_scan::ScanKind;

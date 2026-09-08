@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A corpus read spreads over at most 32 lanes instead of eight per core, so a ten-core host no longer exhausts its 256 process descriptors and fails every tree contract in the binary with `Too many open files`."

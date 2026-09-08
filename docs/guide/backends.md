@@ -97,3 +97,15 @@ it does not lower or optimize the source program again.
 A positive capability answer is a promise that the live device and the
 concrete lowering path both support the thing. A backend that cannot decide
 answers no.
+
+## A float lowering mode the backend does not lower is refused
+
+`DispatchConfig::float_lowering` states the rounding the caller requires, and
+`VyreBackend::honors_float_lowering` states which modes a backend lowers. The
+default admits only `contracted`, the mode that permits a target to fold a
+multiply and an add into one rounding. Every dispatch entry point that carries
+a `DispatchConfig` checks the mode against the selected backend before it
+forwards, and a mode that backend does not lower is refused as
+`BackendError::UnsupportedFeature` naming the mode and the backend id. See
+[add a backend](../extending/backend.md) for the contract a driver declares its
+modes under.

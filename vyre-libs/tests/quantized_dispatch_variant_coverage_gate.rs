@@ -22,7 +22,7 @@
 //! `vyre_libs::solvers::quantized_dispatch` at run time, so an entry point
 //! added without a row here fails rather than going uncovered.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Mutex;

@@ -9,6 +9,7 @@ use crate::cases::queue_closure::{delta_lanes_per_source, QUEUE_CLOSURE_WORKGROU
 use crate::cases::queue_closure_profile::{
     queue_closure_launch_lanes_per_wave, QueueClosureLaneProfile,
 };
+use crate::cases::queue_stage::queue_closure_repeated_plan;
 
 pub(super) fn queue_closure_metric_points(
     prepared: &DataflowIfdsSkewedQueueClosurePrepared,
@@ -65,7 +66,7 @@ fn append_queue_closure_points(
     });
     metrics.push(MetricPoint {
         name: "dataflow_ifds_closure_dispatch_count".to_string(),
-        value: u64::from(1 + prepared.closure_iterations.saturating_mul(2)),
+        value: u64::from(queue_closure_repeated_plan(prepared.closure_iterations).dispatch_count()),
     });
     metrics.push(MetricPoint {
         name: "dataflow_ifds_closure_total_queue_pops".to_string(),

@@ -40,7 +40,9 @@ pub use do_calculus_rules::*;
 #[path = "do_calculus_oracle.rs"]
 mod do_calculus_oracle;
 
-/// Impact mask op id.
+/// Impact mask op id. The projection below is the compiler's own change-impact
+/// composition, so it rides the dialect that consumes it.
+#[cfg(feature = "reasoning")]
 pub(crate) const IMPACT_MASK_OP_ID: &str = "vyre-libs::graph::do_impact_mask_from_closure";
 
 /// Emit a Program that zeros all incoming edges to nodes marked
@@ -171,6 +173,11 @@ mod tests {
         let p = intervention_delete_incoming("a", "m", "out", 4);
         assert_eq!(p.workgroup_size, [256, 1, 1]);
         let names: Vec<&str> = p.buffers.iter().map(|b| b.name()).collect();
+        assert_eq!(
+            names,
+            ["a", "m", "out"],
+            "the binding order is the dispatch ABI: adjacency, then the intervention mask, then the output"
+        );
         assert_eq!(p.buffers[0].count(), 16); // n*n
         assert_eq!(p.buffers[1].count(), 4); // n
         assert_eq!(p.buffers[2].count(), 16); // n*n
@@ -212,6 +219,7 @@ mod tests {
 
 /// Emit a Program that projects a reachability closure matrix and intervention mask
 /// into an n-element impact mask on device.
+#[cfg(feature = "reasoning")]
 #[must_use]
 pub(crate) fn impact_mask_from_closure(
     intervention_mask: &str,
@@ -226,6 +234,7 @@ pub(crate) fn impact_mask_from_closure(
 }
 
 /// Emit an impact-mask projection Program with checked input shapes.
+#[cfg(feature = "reasoning")]
 pub(crate) fn try_impact_mask_from_closure(
     intervention_mask: &str,
     closure: &str,

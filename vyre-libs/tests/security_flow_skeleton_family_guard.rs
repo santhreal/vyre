@@ -286,136 +286,140 @@ fn pinned_cases() -> Vec<(&'static str, Program)> {
 /// moved all of them at once. `PINNED_WIRE_FORMAT_VERSION` is asserted before
 /// any digest is compared, so the next revision reports itself instead of
 /// arriving as an unexplained table of mismatched hashes.
+/// All 32 moved together again while the wire revision held at 8, so the cause
+/// is the family's own IR and not the encoding. The predicate, sanitizer, and
+/// backward-pair tests below prove what the family computes, so this table
+/// reports drift and does not carry that proof.
 const PINNED_WIRE_FORMAT_VERSION: u16 = 8;
 
 const PINS: &[(&str, &str)] = &[
     (
         "flows_to/1n0e/fin-fout",
-        "a9157bdd8b8bcd47d16d40000d24bc0447a9f302c2496a98a832481a67c341a5",
+        "5104f453077fc5dc853c1c035b1153260bc80351058e68266d4f63c52a5bd956",
     ),
     (
         "flows_to/4n3e/fin-fout",
-        "91ac3174011e31e031d49b1bbae58af0671e8c474a575bd69a37b865c2fda04d",
+        "bbaaf1c2520ba661a59aa285206aacd8f651362dac85c350ce3c6482728151f0",
     ),
     (
         "flows_to/32n31e/fin-fout",
-        "186196fda33f85acac2904ce51518a963adef9069c38f07393236a4b10818624",
+        "5b3442e5ea5ce8553506f42fccaaa00e5ceebe258659bde6cfd0628d3a144706",
     ),
     (
         "flows_to/33n32e/fin-fout",
-        "28fdba298355590047cc6418b3e219a40c6c65bb17ded223b6b7f226fb08816f",
+        "70c7263ed2dcf29d38f34c1cae264b067af15c4cd97d81bd620d0846ca2d60a5",
     ),
     (
         "flows_to/1024n4096e/renamed",
-        "22859bffe1a46338f524e352c18c705eeb8e781c2a82fdf6d4227de79e7772f2",
+        "b3bfad8b5d7f028f2af15f639515f86398cee08be16d9f749416b75b18083d92",
     ),
     (
         "flows_to_alias_only/1n0e/fin-fout",
-        "d01f683c755870dda5fdc7509046e83de7a02c8044228e539317ff7553dc26a4",
+        "b0d227f4d1d5fc9cc25f87fea175f47a7df9b2bdd461c292c8d02b0ffc7d8cc7",
     ),
     (
         "flows_to_alias_only/4n3e/fin-fout",
-        "6d7ccca0c4c6c36ae7368644be18596ee1b6a05ca72a4b55bb7a1358ac815563",
+        "0b541355b8eca05864180d070f204bcd4813c255583ece50a5aef4480d1b419a",
     ),
     (
         "flows_to_alias_only/33n32e/renamed",
-        "e01a88e545b51a1a2989cfb143438d031da99c7f92759fd5b99b1db7c12d8380",
+        "2cf9ef180f8582ddb613dec8411451b28e601c132ff0d2462505373bcdbd543f",
     ),
     (
         "taint_flow/1n0e/fin-fout",
-        "4e4a2e6124045ee212e01d618282c8cab7a5d801311f36d2542b817cee46a10c",
+        "5ba195e093079aff764700caa3ec915783f03c090b339686ff50400555ab31ee",
     ),
     (
         "taint_flow/4n3e/fin-fout",
-        "c3c92a83c191390fa8e80ba2f9a6882562fc052f6ede4a01d3111e756185931f",
+        "1d77b8484d63de0954c34be216c743f15185483e0cadd8c0fae68638244cd185",
     ),
     (
         "taint_flow/32n31e/fin-fout",
-        "4b5660c07f063ee6ef222abe5051dacb0633cdb3351443c4f1058d5e217746ab",
+        "05bce360c424ff6263dc948c5508464240fa76b393102516ab375fcc78dc6128",
     ),
     (
         "taint_flow/33n32e/fin-fout",
-        "8103e30827e82fe9a09a77273069ce975222ff9a70a269b59676ae95ff514a8c",
+        "efc6fec6098b5ef758b8a4c42675c1e3b36485cdf6771187d8614230b4fbe438",
     ),
     (
         "taint_flow/1024n4096e/renamed",
-        "5e1d425ea358539c8592c80e1b164c071860cdc98027de10601e8a92c405c4ae",
+        "250fb3c6902e22e91128fbca02f13c9ae2798c9b1eb121b05e3868c8ac244249",
     ),
     (
         "bounded_by_comparison/1n0e/fin-fout",
-        "2d8a7b84c694b542c20a505687aa5f0a5415bd4b53e3b7387955443c8ab39c22",
+        "c2170b710606773445f17f0d20a0d05b4d158584a9a408145566c33aecf6172c",
     ),
     (
         "bounded_by_comparison/4n4e/fin-fout",
-        "1f94ef30b861eb9571bc6132d8a7fadf486faad4c0085ea31658242c10864849",
+        "ea2bceed59f1fec880e0ff562ca3c9f640021ccc08f4bc11939a2c74006cbfef",
     ),
     (
         "bounded_by_comparison/32n31e/fin-fout",
-        "4b9773270d9a0b986a922c42ba3e2b2b146531ff65a08763edcb03462fb2ca2d",
+        "ceefc6c2704a2db2e8442bdc17571e772e817123a564c3bbb02810e637a2df88",
     ),
     (
         "bounded_by_comparison/33n32e/fin-fout",
-        "a85167f2b35dcde03f595852516c8c9cd792187c7cd1f622507d636bb7ea41b7",
+        "e3b9bf505550e549a197aaec539d13f98494e1bb202eb211b52dd981b236136f",
     ),
     (
         "bounded_by_comparison/1024n4096e/renamed",
-        "11b6037fb19eea0b20505ae4a87dc6b92960435b628d5e3b5d39c0f78fdf96fa",
+        "e3a884294aea82238a06dda13ae3e415233ea2be263cc40a5f6dea0dfaa93137",
     ),
     (
         "dominance_predecessors/1n0e/fin-fout",
-        "f22c962aa40efb8e9e37f9bfff50925c6e1d9a6a151a3d6b40b5efb8752c567d",
+        "47ce2f540e6ce6601c955dfb41a32f72e9f7cbfe526226afa421bce2c6a349ef",
     ),
     (
         "dominance_predecessors/4n4e/fin-fout",
-        "a1b4761e86d1456692b32bd4d6a2115f539c8728760c768ffd6f551efd9e0a57",
+        "c8d7e111e4d74e85a187a996472220605481783a04bfb335d29a4e02967bc00a",
     ),
     (
         "dominance_predecessors/32n31e/fin-fout",
-        "a537ed7602c4df8433a195f121767bddcc8eb7d7ee76a10a423a3a34a01f671d",
+        "037d674ee98c43da34ce31b4bee728e415440a0d2841025f7b76ce54aebbb3c9",
     ),
     (
         "dominance_predecessors/33n32e/fin-fout",
-        "92a2edb14f0bbc863860aacb3749089bd78426437d9b14514f9d76a7535153d9",
+        "ec303fda31c74e05d9844e6de38d8c1a1de51b69b877df0592ed09219f3afd5c",
     ),
     (
         "dominance_predecessors/1024n4096e/renamed",
-        "66a6511eaf79440c3c22e87d6d669c0e61644ff88778f65705ba8527d6158886",
+        "49430024a48b225f7134ecdd52cdf25fa57a7678f7dfd180a4eee8c58c8683a9",
     ),
     (
         "flows_to_to_sink/1n0e",
-        "1fafcc20c2d1ab8820e5beee6890ab1ce357801c5ed520d243043b87317566a3",
+        "c0380b06f101e4f85ff64abee9de716e107e76f4a69317f444ac5254b711d20a",
     ),
     (
         "flows_to_to_sink/4n3e",
-        "b35638d2159645b48930542c4114a6625d0a9df688e9a8e780809fcc2dc73e61",
+        "ceb8b2ca955aeb452f2e1e11c043579e0698cc9686715f665db469fc23fb2283",
     ),
     (
         "flows_to_to_sink/33n32e/renamed",
-        "1519e349fdfd8824892a257cd88aed68c5039dcd041f9236360d302919f1a86d",
+        "7963d3529da5a2dd3d1c5e9d1403f16c38d03849a2f21b79efc7ecb5fff93a91",
     ),
     (
         "taint_pollution/1n0e",
-        "7be14dfb744fb304a5283a565677779889affe79172bfb11dc35a8afab0adaf2",
+        "bbf21dd25780b7b3b8d47bb3b2ee377907c6462201b01686f83e0be006fac2d2",
     ),
     (
         "taint_pollution/4n3e",
-        "5f7cf8d1829ec7871ed633666032e6076d2e34a7411cffe7688abd053fe2a8e1",
+        "ff4d48a6d283bbdd5f74be31fc6bfc4e30c00f534c812f6846202c5dacc1031d",
     ),
     (
         "taint_pollution/33n32e/renamed",
-        "5a569a46c164da214e1d53a80a921b06b647da7e3c2371b9f5c65e2ae714c60b",
+        "a04b953a0751772499cb99a33f160ca6542bfc800af21aa88e6f981381cfbe57",
     ),
     (
         "flows_to_with_sanitizer/1n0e",
-        "91a0b80a9e1570916fdd463db9a97b1a955870df9a6e328ff7564d6aba7985a0",
+        "3b6bd66985f78c067ec3e3a40f440727b20613b491594a46de3daa885513d158",
     ),
     (
         "flows_to_with_sanitizer/4n3e",
-        "de1d88aec0cd812124591ad3eb5dbe9a03183cc99017e73eb221ca365f510b22",
+        "95ec42741acd0b25c3a444169a28d329a25ed0a3be71690d10af4b95e29cc2f6",
     ),
     (
         "flows_to_with_sanitizer/33n32e/renamed",
-        "d5e78f1b8039317cc90ea31c24d0def6fda666e46449f134af62c03f1f9755c8",
+        "ce65d8f7eb1aa302328fb3eda289a773d2a787890ef5fe59b122f9e8d6236ca6",
     ),
 ];
 

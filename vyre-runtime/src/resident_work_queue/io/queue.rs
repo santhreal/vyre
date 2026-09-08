@@ -2,7 +2,7 @@
 
 use std::sync::atomic::{fence, Ordering};
 
-use crate::PipelineError;
+use crate::{PipelineError, RingEncodingFault};
 
 use super::super::protocol::slot;
 use super::queue_words::try_queue_word_index;
@@ -21,27 +21,28 @@ impl ResidentIoQueue {
     ///
     /// # Errors
     ///
-    /// Returns [`PipelineError::QueueFull`] when `slot_count` is zero or
+    /// Returns [`PipelineError::RingEncoding`] when `slot_count` is zero or
     /// exceeds the IR/program's fixed poll window of [`IO_SLOT_COUNT`].
     pub fn new(slot_count: u32) -> Result<Self, PipelineError> {
         if slot_count == 0 {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Geometry,
                 fix: "ResidentIoQueue requires at least one slot",
             });
         }
         if slot_count > IO_SLOT_COUNT {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Capacity,
                 fix: "ResidentIoQueue exceeds the compiled IO poll window of 64 slots; enlarge IO_SLOT_COUNT and rebuild the megakernel before publishing more than 64 completions",
             });
         }
-        let word_count = slot_count
-            .checked_mul(IO_SLOT_WORDS)
-            .ok_or(PipelineError::QueueFull {
-                queue: "submission",
-                fix: "io_queue word count overflows u32; shard the queue before allocating",
-            })?;
+        let word_count =
+            slot_count
+                .checked_mul(IO_SLOT_WORDS)
+                .ok_or(PipelineError::RingEncoding {
+                    fault: RingEncodingFault::Overflow,
+                    fix: "io_queue word count overflows u32; shard the queue before allocating",
+                })?;
         let word_count = usize::try_from(word_count).map_err(|error| {
             PipelineError::Backend(format!(
                 "io_queue word count cannot fit host usize: {error}. Fix: shard the queue before allocating."
@@ -78,7 +79,7 @@ impl ResidentIoQueue {
     ///
     /// # Errors
     ///
-    /// Returns [`PipelineError::QueueFull`] when the slot is out of bounds or
+    /// Returns [`PipelineError::RingEncoding`] when the slot is out of bounds or
     /// still owned by the GPU/host from a prior ingest.
     pub fn publish_slot(
         &mut self,
@@ -106,7 +107,7 @@ impl ResidentIoQueue {
     ///
     /// # Errors
     ///
-    /// Returns [`PipelineError::QueueFull`] when the slot is out of bounds or
+    /// Returns [`PipelineError::RingEncoding`] when the slot is out of bounds or
     /// not empty.
     pub fn submit_dma_read(
         &mut self,
@@ -139,14 +140,14 @@ impl ResidentIoQueue {
         in_flight_fix: &'static str,
     ) -> Result<(), PipelineError> {
         if queue_slot >= self.slot_count {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::OutOfBounds,
                 fix: out_of_bounds_fix,
             });
         }
         if self.read_word(queue_slot, io_word::STATUS)? != slot::EMPTY {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
+            return Err(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Protocol,
                 fix: in_flight_fix,
             });
         }

@@ -10,8 +10,9 @@ use vyre_runtime::resident_work_queue::{
     protocol::{self, control, debug},
     ResidentWorkQueue,
 };
-use vyre_runtime::PipelineError;
+use vyre_runtime::RingEncodingFault;
 
+use crate::ring_expectations::assert_ring_fault;
 use vyre_test_support::le_words::write_word;
 
 // ---------------------------------------------------------------------------
@@ -29,7 +30,11 @@ fn publish_slot_rejects_zero_slot_ring() {
     let mut ring = protocol::encode_empty_ring(0).unwrap();
     let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[])
         .expect_err("empty ring must reject publish");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::OutOfBounds,
+        "a zero-slot ring has no publishable slot",
+    );
 }
 
 #[test]

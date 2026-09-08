@@ -3,17 +3,13 @@
 //! Three of this crate's test targets assert against the registered SPIR-V
 //! target compiler, and each had restated the same expectation literal. The
 //! payload format identity, its version and the neutral entry point are one
-//! decision about this backend, so they are stated here once and the shared
-//! contract is reached through this module.
+//! decision about this backend, so they are stated here once and every target
+//! reads them from here.
 
 #![allow(dead_code)]
 
 use vyre_foundation::ir::BufferAccess;
-
-#[path = "../../../tests/support/target_compiler_contract.rs"]
-pub(crate) mod target_compiler_contract;
-
-use target_compiler_contract::{single_lane_artifact, TargetExpectation};
+use vyre_test_support::target_compiler_contract::{single_lane_artifact, TargetExpectation};
 
 /// What this backend declares about the payload its registered compiler produces.
 ///

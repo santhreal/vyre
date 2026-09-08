@@ -4,6 +4,7 @@ mod bind_group_cache;
 mod handle;
 mod pool;
 mod staging;
+mod tiering;
 
 pub use bind_group_cache::{BindGroupCache, BindGroupCacheStats};
 pub use handle::GpuBufferHandle;

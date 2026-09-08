@@ -2,7 +2,7 @@
 
 use std::collections::BTreeSet;
 
-mod measurement_registry;
+use crate::measurement_registry;
 
 use measurement_registry::Registry;
 

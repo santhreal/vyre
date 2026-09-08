@@ -70,9 +70,6 @@ pub(crate) const PORTFOLIO: Frame = Frame {
     digest_mismatch: CompilerFailureKind::DigestMismatch,
 };
 
-/// Every frame this crate emits, so a rule can be proved against all of them.
-pub(crate) const FRAMES: &[&Frame] = &[&ARTIFACT, &ENVELOPE, &TARGET_PAYLOAD, &PORTFOLIO];
-
 /// Framed bytes and the identity stamped into them.
 pub(crate) struct Framed {
     /// Complete frame, ready to write.
@@ -217,6 +214,9 @@ impl Frame {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every frame this crate emits, so a rule can be proved against all of them.
+    const FRAMES: &[&Frame] = &[&ARTIFACT, &ENVELOPE, &TARGET_PAYLOAD, &PORTFOLIO];
 
     fn code_of(error: &CompileError) -> String {
         error.diagnostic.code.as_str().to_string()

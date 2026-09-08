@@ -111,38 +111,127 @@ pub fn infer_dispatch_grid_for_count(
 /// command is recorded, and the refusal names the axis, the extent asked for and
 /// the ceiling, because those three are what a caller needs to reshape the launch.
 ///
-/// `max_per_axis == 0` means the caller has no ceiling to enforce (no device was
-/// probed), and the grid passes: inventing one here would refuse launches the
-/// target accepts.
+/// A zero ceiling on an axis means the caller has no ceiling to enforce there (no
+/// device was probed), and that axis passes: inventing one here would refuse
+/// launches the target accepts.
 ///
-/// This does NOT fold the excess into the other axes. Folding changes which
-/// invocation id a lane observes, so it is only sound for a program whose lane
-/// addressing is linear across the whole grid, and that is a property of the
-/// emitted kernel rather than of the launch. Until a target declares that
-/// property, an over-wide grid is refused with the reason.
+/// This judges a grid a caller pinned. A grid the launch planner infers reaches
+/// the ceiling through [`infer_launch_grid`], which folds the excess across the
+/// remaining axes when the kernel reads a grid-linearized index.
 ///
 /// # Errors
 ///
-/// Returns when any axis of `grid` exceeds `max_per_axis`.
+/// Returns when any axis of `grid` exceeds its ceiling.
 pub fn admit_dispatch_grid(
     grid: [u32; 3],
-    max_per_axis: u32,
+    max_per_axis: [u32; 3],
     backend_id: &str,
 ) -> Result<[u32; 3], BackendError> {
-    if max_per_axis == 0 {
-        return Ok(grid);
-    }
     for (axis, extent) in grid.iter().copied().enumerate() {
-        if extent > max_per_axis {
+        let ceiling = max_per_axis[axis];
+        if ceiling != 0 && extent > ceiling {
             let axis_name = ["x", "y", "z"][axis];
             return Err(BackendError::InvalidProgram {
                 fix: format!(
-                    "Fix: dispatch grid {grid:?} asks for {extent} workgroups on axis {axis_name}, above the {max_per_axis} that `{backend_id}` reported as its per-axis maximum. Reshape the launch so no axis exceeds {max_per_axis}: give the program a larger workgroup, split the work into several dispatches, or set DispatchConfig::grid_override to a shape whose axes all fit. A program cannot declare a grid the target rejects."
+                    "Fix: dispatch grid {grid:?} asks for {extent} workgroups on axis {axis_name}, above the {ceiling} that `{backend_id}` reported as its per-axis maximum. Reshape the launch so no axis exceeds {ceiling}: give the program a larger workgroup, split the work into several dispatches, or set DispatchConfig::grid_override to a shape whose axes all fit. A program cannot declare a grid the target rejects."
                 ),
             });
         }
     }
     Ok(grid)
+}
+
+/// Infer the launch grid for `element_count` lanes, folding across grid axes
+/// when one axis cannot hold the launch.
+///
+/// A one-dimensional program whose workgroup count exceeds the per-axis ceiling
+/// has a launch the target accepts: the excess belongs on y, then on z. Folding
+/// it there moves which invocation id a lane observes, so it is sound only when
+/// the emitted kernel reads its element index linearized over the whole grid,
+/// which `grid_linearized` states. A kernel that reads the x axis alone keeps its
+/// single-axis grid and is refused past the ceiling, because folding it would
+/// recompute the first row of elements once per row of the grid.
+///
+/// A launch that fits one axis is never folded: it gets exactly the grid
+/// [`infer_dispatch_grid_for_count`] derives, whatever `grid_linearized` says.
+///
+/// # Errors
+///
+/// Returns when the workgroup shape is degenerate, when the launch does not fit
+/// even folded across every axis, or when a kernel that indexes per axis asks
+/// for more workgroups on one axis than the target admits.
+pub fn infer_launch_grid(
+    element_count: u32,
+    workgroup: [u32; 3],
+    max_per_axis: [u32; 3],
+    grid_linearized: bool,
+    backend_id: &str,
+) -> Result<[u32; 3], BackendError> {
+    let grid = infer_dispatch_grid_for_count(element_count, workgroup)?;
+    let fits = grid
+        .iter()
+        .zip(max_per_axis)
+        .all(|(extent, ceiling)| ceiling == 0 || *extent <= ceiling);
+    if fits || !grid_linearized {
+        return admit_dispatch_grid(grid, max_per_axis, backend_id);
+    }
+    fold_launch_grid(element_count, workgroup, max_per_axis, backend_id)
+}
+
+/// Spread `element_count` lanes across every grid axis, filling each axis to its
+/// ceiling before opening the next.
+///
+/// Filling in order is what keeps the fold readable from inside the kernel: the
+/// x extent is the row stride the linearized index multiplies y by, and the
+/// kernel reads it from the workgroup count the launch states rather than from a
+/// constant, so one compiled module serves every folded shape.
+fn fold_launch_grid(
+    element_count: u32,
+    workgroup: [u32; 3],
+    max_per_axis: [u32; 3],
+    backend_id: &str,
+) -> Result<[u32; 3], BackendError> {
+    let count = u64::from(element_count.max(1));
+    // A linear index is a u32, so the whole folded grid may span at most 2^32
+    // invocations however many the ceilings would otherwise admit. An
+    // invocation past that computes a wrapped index, and a wrapped index passes
+    // a bounds guard that cannot see the wrap and stores over a live element.
+    let index_space = u64::from(u32::MAX) + 1;
+    let mut grid = [1_u32; 3];
+    // Lanes every axis below this one already covers, so the extent this axis
+    // needs is the whole count divided by what one step of it adds.
+    let mut covered = 1_u64;
+    for axis in 0..3 {
+        let ceiling = match max_per_axis[axis] {
+            0 => u64::from(u32::MAX),
+            ceiling => u64::from(ceiling),
+        };
+        let lanes_per_group = covered.saturating_mul(u64::from(workgroup[axis])).max(1);
+        let addressable = (index_space / lanes_per_group).max(1);
+        let taken = count
+            .div_ceil(lanes_per_group)
+            .max(1)
+            .min(ceiling)
+            .min(addressable);
+        grid[axis] = u32::try_from(taken).map_err(|_| {
+            BackendError::new(format!(
+                "folded dispatch grid axis {axis} extent {taken} overflowed u32. Fix: split the Program into smaller dispatches."
+            ))
+        })?;
+        covered = lanes_per_group.saturating_mul(taken);
+        if covered >= count {
+            return Ok(grid);
+        }
+    }
+    // Every axis is filled to the smaller of its ceiling and what a u32 index
+    // reaches, so `covered` is the largest launch this target runs in one
+    // dispatch. Saturating here would run a fraction of the lanes and report
+    // success.
+    Err(BackendError::InvalidProgram {
+        fix: format!(
+            "Fix: a launch of {element_count} element(s) needs more invocations than `{backend_id}` admits in one dispatch. A workgroup of {workgroup:?} across at most {max_per_axis:?} workgroups per axis covers {covered} lane(s). Split the work into several dispatches, or give the program a larger workgroup."
+        ),
+    })
 }
 
 fn ceil_div_u64(value: u64, divisor: u64) -> Result<u32, BackendError> {

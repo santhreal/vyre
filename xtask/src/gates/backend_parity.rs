@@ -59,6 +59,14 @@ impl crate::gate::GateBehavior for SpirvParity {
         }
 
         let gated = gated_targets(&manifest, SPIRV_FEATURE);
+        let mut gated_sources = BTreeSet::new();
+        for harness in gated_harnesses(&manifest, SPIRV_CRATE, SPIRV_FEATURE) {
+            gated_sources.insert(harness.clone());
+            let Ok(text) = tree.read(Path::new(&harness)) else {
+                continue;
+            };
+            gated_sources.extend(harness_modules(&text, &harness));
+        }
         for path in tree.paths() {
             let Some(target) = test_target(path, SPIRV_CRATE) else {
                 continue;
@@ -67,13 +75,16 @@ impl crate::gate::GateBehavior for SpirvParity {
             if !text.contains(SPIRV_VALIDATOR) {
                 continue;
             }
-            if !gated.contains(&target) {
+            let compiled_behind_feature = path
+                .to_str()
+                .is_some_and(|source| gated_sources.contains(source));
+            if !compiled_behind_feature {
                 report.find(Finding::in_file(
                     path.clone(),
                     format!(
-                        "`{target}` validates with `{SPIRV_VALIDATOR}` and is not registered behind `required-features = [\"{SPIRV_FEATURE}\"]`, so a host without the validator runs it and decides for itself what to do"
+                        "`{target}` validates with `{SPIRV_VALIDATOR}` and no target registered behind `required-features = [\"{SPIRV_FEATURE}\"]` compiles it, so a host without the validator runs it and decides for itself what to do"
                     ),
-                    format!("register the target with required-features = [\"{SPIRV_FEATURE}\"], so the run that cannot validate does not happen at all"),
+                    format!("compile it behind required-features = [\"{SPIRV_FEATURE}\"], as its own [[test]] entry or as a module of a harness registered that way, so the run that cannot validate does not happen at all"),
                 ));
             }
         }
@@ -230,6 +241,61 @@ fn gated_targets(manifest: &toml::Table, feature: &str) -> BTreeSet<String> {
         .collect()
 }
 
+/// Every harness source a `[[test]]` target registered behind `feature`
+/// compiles from, taking the cargo default path when the entry names none.
+fn gated_harnesses(manifest: &toml::Table, crate_dir: &str, feature: &str) -> BTreeSet<String> {
+    let Some(entries) = manifest.get("test").and_then(toml::Value::as_array) else {
+        return BTreeSet::new();
+    };
+    entries
+        .iter()
+        .filter(|entry| {
+            entry
+                .get("required-features")
+                .and_then(toml::Value::as_array)
+                .is_some_and(|features| {
+                    features.iter().any(|value| value.as_str() == Some(feature))
+                })
+        })
+        .filter_map(|entry| {
+            let relative = match entry.get("path").and_then(toml::Value::as_str) {
+                Some(path) => path.to_string(),
+                None => format!(
+                    "tests/{}.rs",
+                    entry.get("name").and_then(toml::Value::as_str)?
+                ),
+            };
+            Some(format!("{crate_dir}/{relative}"))
+        })
+        .collect()
+}
+
+/// Every module source a harness includes, resolved against its directory.
+///
+/// A harness registered behind a feature compiles each module it includes, so
+/// that module is behind the same feature as the target. Reading membership
+/// from the manifest alone missed it: one target per test file became one
+/// target per feature set, and a file that is now a module names no target.
+fn harness_modules(text: &str, harness: &str) -> BTreeSet<String> {
+    let Ok(file) = syn::parse_file(text) else {
+        return BTreeSet::new();
+    };
+    let directory = Path::new(harness).parent().unwrap_or(Path::new(""));
+    file.items
+        .iter()
+        .filter_map(|item| match item {
+            syn::Item::Mod(module) => crate::gates::scan::declared_module_path(&module.attrs),
+            _ => None,
+        })
+        .map(|relative| {
+            directory
+                .join(relative)
+                .to_string_lossy()
+                .replace('\\', "/")
+        })
+        .collect()
+}
+
 /// What a required host tool reports about itself, or why it cannot be used.
 fn tool_version(tool: &str, args: &[&str]) -> Result<String, String> {
     let output = Command::new(tool)
@@ -283,6 +349,51 @@ mod tests {
         let gated = gated_targets(&manifest, "spirv-val");
         assert_eq!(gated.len(), 1);
         assert!(gated.contains("spirv_parity"));
+    }
+
+    /// WHY: consolidation replaced one target per test file with one target per
+    /// feature set, so the validated suite is a module of a harness and names no
+    /// target of its own. Reading registration from the file name reported the
+    /// registered suite as unregistered, a finding against a correct tree.
+    #[test]
+    fn a_module_of_a_gated_harness_counts_as_registered() {
+        let manifest: toml::Table = toml::from_str(
+            "[[test]]\nname = \"all_tests\"\npath = \"tests/all_tests.rs\"\n\n[[test]]\nname = \"all_tests_spirv_val\"\npath = \"tests/all_tests_spirv_val.rs\"\nrequired-features = [\"spirv-val\"]\n",
+        )
+        .expect("table");
+        let harnesses = gated_harnesses(&manifest, "vyre-driver-spirv", "spirv-val");
+        assert_eq!(
+            harnesses,
+            BTreeSet::from(["vyre-driver-spirv/tests/all_tests_spirv_val.rs".to_string()])
+        );
+        let modules = harness_modules(
+            "#[path = \"spirv_parity.rs\"]\npub mod spirv_parity;\n",
+            "vyre-driver-spirv/tests/all_tests_spirv_val.rs",
+        );
+        assert!(modules.contains("vyre-driver-spirv/tests/spirv_parity.rs"));
+    }
+
+    /// WHY: a harness the manifest leaves ungated must not launder its modules
+    /// into the gated set, or the suite runs on a host with no validator and
+    /// decides for itself what to do.
+    #[test]
+    fn a_module_of_an_ungated_harness_is_not_registered() {
+        let manifest: toml::Table =
+            toml::from_str("[[test]]\nname = \"all_tests\"\npath = \"tests/all_tests.rs\"\n")
+                .expect("table");
+        assert!(gated_harnesses(&manifest, "vyre-driver-spirv", "spirv-val").is_empty());
+    }
+
+    /// WHY: a target that names no `path` takes the cargo default, and reading
+    /// only an explicit `path` misses every target spelled that way.
+    #[test]
+    fn a_gated_target_without_a_path_takes_the_cargo_default() {
+        let manifest: toml::Table = toml::from_str(
+            "[[test]]\nname = \"all_tests_spirv_val\"\nrequired-features = [\"spirv-val\"]\n",
+        )
+        .expect("table");
+        assert!(gated_harnesses(&manifest, "vyre-driver-spirv", "spirv-val")
+            .contains("vyre-driver-spirv/tests/all_tests_spirv_val.rs"));
     }
 
     /// WHY: a support module under `tests/` is not a cargo target, and passing

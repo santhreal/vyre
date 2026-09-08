@@ -2,7 +2,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 use harness::cat_a_dispatch_config;
 
 use std::sync::OnceLock;

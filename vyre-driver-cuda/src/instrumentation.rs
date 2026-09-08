@@ -143,6 +143,9 @@ fn compute_resident_borrowed_fallback_policy() -> ResidentBorrowedFallbackPolicy
     }
 }
 
+// The only production caller is the release-build refusal above: a debug build
+// enables the fallback without consulting the explicit-true override.
+#[cfg(any(not(debug_assertions), test))]
 fn env_value_enables_explicit_true(value: &str) -> bool {
     matches!(value, "1" | "true" | "TRUE" | "on" | "ON")
 }

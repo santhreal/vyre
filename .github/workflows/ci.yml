@@ -98,19 +98,16 @@ jobs:
         continue-on-error: true
         run: ./cargo_full clippy --workspace
 
-      # Run the suite one package at a time and drop each package's test
-      # executables before the next. This workspace declares 1219 integration
-      # test files, each of which links its own binary at roughly 56 MiB, so a
-      # single `test --workspace` leaves well over 100 GiB behind and the runner
-      # dies mid-compile reporting only that it received a shutdown signal. No
-      # test binary is shared between packages, so nothing is rebuilt; rlibs and
-      # build-script outputs are kept.
-      # Every package is run before the step decides. `bash -e` aborted the loop
-      # at the first failure, so a package early in the sort order hid every
-      # package after it: two teardown failures in `vyre-driver-cuda` kept
-      # `vyre-primitives` and everything alphabetically past it from ever
-      # running here, and the mismatch they carried surfaced in a coverage job
-      # that was pinned to an offline runner.
+      # One package per invocation. Every package runs before the step decides:
+      # `bash -e` aborted the loop at the first failure, so a package early in
+      # the sort order hid every package after it. Two teardown failures in
+      # `vyre-driver-cuda` once kept `vyre-primitives` and everything
+      # alphabetically past it from ever running here, and the mismatch they
+      # carried surfaced in a coverage job pinned to an offline runner.
+      #
+      # Each package's integration tests link one harness binary per
+      # required-feature set, so the whole workspace leaves under a hundred test
+      # executables behind and the step no longer deletes them between packages.
       - name: cargo_full test
         shell: bash
         run: |
@@ -119,16 +116,9 @@ jobs:
           # trailing carriage return and cargo rejected `structure-gate\r` as a
           # package name containing an invalid character.
           metadata="$(./cargo_full metadata --format-version 1 --no-deps)"
-          target_dir="$(printf '%s' "$metadata" | jq -r .target_directory | tr -d '\r')"
           failed=""
           for package in $(printf '%s' "$metadata" | jq -r '.packages[].name' | tr -d '\r' | sort); do
             ./cargo_full test -p "$package" || failed="$failed $package"
-            # A test executable is the only artifact in deps/ with no file
-            # extension (or `.exe` on Windows). Every rlib, rmeta and depfile
-            # carries one and is kept, and build scripts are excluded by name so
-            # cargo does not re-run them.
-            find "$target_dir/debug/deps" -maxdepth 1 -type f \
-              \( ! -name '*.*' -o -name '*.exe' \) ! -name 'build_script_*' -delete
           done
           if [ -n "$failed" ]; then
             echo "packages with failing tests:$failed" >&2
@@ -147,58 +137,23 @@ jobs:
 
       - name: composition-library reference-parity tests
         shell: bash
-        # The `--workspace` default-feature run above compiles NONE of the
-        # `_via` end-to-end reference-parity suites (which run each production
-        # dispatch form through a reference-eval dispatcher against its
-        # direct vyre-reference witness: do-calculus surgery, functor_apply,
-        # hypervector xor-bind, and the Mori-Zwanzig fixed-point projection).
-        # Wire the specific integration binaries so a composition parity
-        # regression fails the main PR check, not only the slower --all-features job.
-        # (Scoped to `--test` targets rather than `-p` so this step is not coupled
-        # to unrelated `--lib` release-evidence state.)
+        # The default-feature run above compiles none of vyre-libs' feature-gated
+        # suites, and every end-to-end reference-parity test lives in one of them:
+        # each runs a production dispatch form through a reference-eval dispatcher
+        # against its direct vyre-reference witness. Naming the suites keeps a
+        # composition parity regression on the main PR check rather than only the
+        # slower --all-features job.
         run: >-
           ./cargo_full test -p vyre-libs
-          --features analysis,encoding,graph-dispatch,reasoning,scheduling,solvers,test-fixtures
-          --test sweep_graph_cpu_oracle_matrix
-          --test do_calculus_surgery_via_reference_parity
-          --test functor_apply_via_reference_parity
-          --test vsa_fingerprint_via_reference_parity
-          --test mz_project_via_reference_parity
-          --test sheaf_spectrum_via_reference_parity
-          --test vietoris_rips_via_reference_parity
-          --test natural_gradient_via_reference_parity
-          --test tensor_train_compress_via_reference_parity
-          --test kfac_via_reference_parity
-          --test sinkhorn_via_reference_parity
-          --test matching_diagnostic_via_reference_parity
-          --test quantized_via_reference_parity
-          --test tensor_train_chain_fusion_via_reference_parity
-          --test sheaf_heterophilic_via_reference_parity
-          --test string_diagram_via_reference_parity
-          --test planar_rewrite_via_reference_parity
-          --test multigrid_matroid_via_reference_parity
-          --test semiring_gemm_via_reference_parity
-          --test bellman_shortest_path_via_reference_parity
-          --test reduction_metrics_via_reference_parity
-          --test bitset_mask_algebra_via_reference_parity
-          --test bitset_summary_via_reference_parity
-          --test scallop_provenance_via_reference_parity
-          --test softmax_pick_config_via_reference_parity
-          --test fmm_polyhedral_via_reference_parity
-          --test natural_config_gradient_via_reference_parity
-          --test cost_model_predict_runtime_via_reference_parity
-          --test union_find_alias_via_reference_parity
-          --test matroid_exact_subset_via_reference_parity
-          --test submodular_retention_via_reference_parity
-          --test fmm_compress_pairwise_via_reference_parity
-          --test fusion_scores_via_reference_parity
-          --test shape_spectrum_via_reference_parity
-          --test smooth_latency_trace_via_reference_parity
-          --test predict_impact_via_reference_parity
-          --test transport_residual_via_reference_parity
-          --test reconstruct_path_via_reference_parity
-          --test match_motif_via_reference_parity
-          --test smooth_matroid_flow_via_reference_parity
+          --features analysis,encoding,graph,graph-dispatch,reasoning,reduce,scheduling,solvers,telemetry,test-fixtures
+          --test all_tests_analysis
+          --test all_tests_encoding
+          --test all_tests_graph
+          --test all_tests_graph_dispatch
+          --test all_tests_reasoning
+          --test all_tests_reduce_telemetry
+          --test all_tests_scheduling
+          --test all_tests_solvers
 
       - name: pass-engine reference-parity tests
         shell: bash
@@ -206,7 +161,7 @@ jobs:
         # is likewise invisible to the default-feature workspace run.
         run: >-
           ./cargo_full test -p vyre-pass-engine --features all-solvers
-          --test optimizer_bfs_and_softmax_parity
+          --test all_tests_all_solvers
 
       - name: cargo_full doc
         shell: bash

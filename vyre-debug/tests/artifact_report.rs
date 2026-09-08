@@ -4,10 +4,7 @@ use vyre::compiler::ArtifactEnvelope;
 use vyre_debug::ArtifactReport;
 use vyre_foundation::ir::{BufferAccess, DataType, ValueLifetime};
 
-#[path = "../../tests/support/artifact_fixtures.rs"]
-mod artifact_fixtures;
-
-use artifact_fixtures::{compile_graph, contract, graph_over};
+use vyre_test_support::artifact_fixtures::{compile_graph, contract, graph_over};
 
 #[test]
 fn report_round_trips_compiler_owned_identity_plan_and_abi() {

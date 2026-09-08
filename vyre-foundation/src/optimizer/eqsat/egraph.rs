@@ -134,18 +134,8 @@ impl<L: ENodeLang> EGraph<L> {
         Ok(cur)
     }
 
-    /// Canonicalize a node by replacing each child with its current
-    /// canonical `EClass`.
-    fn canonicalize(&self, node: &L) -> L {
-        match self.try_canonicalize(node) {
-            Ok(canonical) => canonical,
-            Err(error) => {
-                log_egraph_compat_error("egraph canonicalize", &error);
-                node.clone()
-            }
-        }
-    }
-
+    /// Canonicalize a node by replacing each child with its current canonical
+    /// `EClass`.
     fn try_canonicalize(&self, node: &L) -> Result<L, EGraphError> {
         let canon_children: EChildren = node
             .children()

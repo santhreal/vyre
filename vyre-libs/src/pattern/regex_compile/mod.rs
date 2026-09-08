@@ -115,6 +115,24 @@ pub enum CaptureMode {
     GroupExtraction,
 }
 
+impl CaptureMode {
+    /// Every mode, in declaration order.
+    ///
+    /// Beside the enum rather than with the contract rows in
+    /// `capture_mode.rs`: adding a variant breaks `contract_row`'s exhaustive
+    /// match and walks the author to that file, and a roster kept anywhere but
+    /// here is not on that path. It keeps its old contents at its old length,
+    /// and every sweep driven by it skips the new mode without a red run.
+    pub const ALL: [CaptureMode; 6] = [
+        CaptureMode::NonCapture,
+        CaptureMode::Count,
+        CaptureMode::Span,
+        CaptureMode::NamedCapture,
+        CaptureMode::RepeatedCapture,
+        CaptureMode::GroupExtraction,
+    ];
+}
+
 /// Static per-mode contract row mirroring one `[[mode]]` entry of
 /// `REGEX_CAPTURE_MODE_CONTRACTS.toml`. The [`CaptureMode::contract_row`] table
 /// is the single code-side owner; `regex_capture_mode_contracts.rs` locks it to

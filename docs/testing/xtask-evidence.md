@@ -27,8 +27,7 @@ This crate declares no Cargo features.
 | --- | --- | --- | --- | --- |
 | `bin` | `xtask-evidence` | `xtask-evidence/src/main.rs` | None | `./cargo_full test -p xtask-evidence --bin xtask-evidence` |
 | `lib` | `xtask_evidence` | `xtask-evidence/src/lib.rs` | None | `./cargo_full test -p xtask-evidence` |
-| `test` | `release_evidence_dispatch` | `xtask-evidence/tests/release_evidence_dispatch.rs` | None | `./cargo_full test -p xtask-evidence --test release_evidence_dispatch` |
-| `test` | `source_fingerprint_producers` | `xtask-evidence/tests/source_fingerprint_producers.rs` | None | `./cargo_full test -p xtask-evidence --test source_fingerprint_producers` |
+| `test` | `all_tests` | `xtask-evidence/tests/all_tests.rs` | None | `./cargo_full test -p xtask-evidence --test all_tests` |
 
 ## Test classes
 

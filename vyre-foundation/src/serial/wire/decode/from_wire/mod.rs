@@ -19,9 +19,9 @@ const METADATA_OP_ID: &str = "vyre.program.metadata";
 /// # Decode-time invariants
 ///
 /// The input must be a well-formed VIR0 blob:
-/// 1. **Magic & version** – consumed and validated by `Reader::expect_magic`.
-///    Wrong magic, truncated header, or mismatched `WIRE_FORMAT_VERSION` are
-///    rejected immediately.
+/// 1. **Magic & version** – validated inline below, each condition reported
+///    apart: too short to hold the magic, magic present but not VIR0, header
+///    shorter than `HEADER_LEN`, and an unsupported `WIRE_FORMAT_VERSION`.
 /// 2. **Entry-point tag** – a leading `u8`: `0` means no entry op, `1` means a
 ///    `Reader::string` follows; any other tag is rejected as unknown.
 /// 3. **Buffer table** – `Reader::bounded_len` against `MAX_BUFFERS` gives the
@@ -69,14 +69,15 @@ pub fn from_wire(bytes: &[u8]) -> Result<Program, String> {
             MAX_PROGRAM_BYTES,
         ));
     }
-    let mut header_reader = Reader {
-        bytes,
-        pos: 0,
-        depth: 0,
-    };
-    header_reader.expect_magic()?;
-    if bytes.len() < MAGIC.len() || &bytes[..MAGIC.len()] != MAGIC {
-        let found = bytes.get(..bytes.len().min(MAGIC.len())).unwrap_or(bytes);
+    if bytes.len() < MAGIC.len() {
+        return Err(format!(
+            "TruncatedPayload: the magic requires {} bytes, got {}. Fix: provide the complete Program bytes.",
+            MAGIC.len(),
+            bytes.len()
+        ));
+    }
+    if &bytes[..MAGIC.len()] != MAGIC {
+        let found = &bytes[..MAGIC.len()];
         return Err(format!(
             "MagicMismatch: found {found:?}. Fix: serialize Program with Program::to_wire() using the VYRE wire format."
         ));

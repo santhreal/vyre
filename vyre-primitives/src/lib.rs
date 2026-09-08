@@ -48,14 +48,6 @@ pub mod wire;
 
 pub use dispatch_grid::lane_grid;
 
-/// One classification of every Cargo feature this crate declares.
-///
-/// A domain feature that is in neither list is how a third admission category
-/// returns, so the module's own tests hold the lists to the manifest. The lists
-/// are crate-private: they describe which compositions are still parked here,
-/// and nothing outside may depend on that.
-mod organization;
-
 pub use markers::{
     ArithAdd, ArithMul, BitwiseAnd, BitwiseOr, BitwiseXor, Clz, CombineOp, CompareEq, CompareLt,
     Gather, HashBlake3, HashFnv1a, PatternMatchDfa, PatternMatchLiteral, Popcount, Reduce,

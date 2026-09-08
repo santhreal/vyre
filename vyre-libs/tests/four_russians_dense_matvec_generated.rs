@@ -5,7 +5,7 @@
 //! destination word, then tiles are OR-reduced across the active frontier.
 //!
 //! Which cases exist, and what the answer is, belong to
-//! `tests/support/dense_matvec_cases.rs`. This file pins only what
+//! `crate::dense_matvec_cases`. This file pins only what
 //! `vyre_libs::bitset::four_russians` owes for those cases: the byte-LUT
 //! builder, its word-count helper, the CPU reference, and the dispatch Program.
 
@@ -14,10 +14,7 @@ use vyre_libs::bitset::four_russians::{
 };
 use vyre_reference::composition_witness::four_russians_dense_matvec_witness as dense_matvec_cpu_ref;
 
-#[path = "../../tests/support/dense_matvec_cases.rs"]
-mod dense_matvec_cases;
-
-use dense_matvec_cases::{
+use crate::dense_matvec_cases::{
     arm_coverage, assert_program_overwrites_dirty_output, declared_groups, DenseMatvecCase,
     LutCache,
 };

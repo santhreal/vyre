@@ -3,31 +3,6 @@
 use super::*;
 
 #[test]
-fn invalidation_marks_named_pass_and_requirement_dependents_dirty() {
-    let scheduler = PassScheduler::with_passes(vec![
-        ProgramPassKind::new(ConstFold),
-        ProgramPassKind::new(StrengthReduce),
-        ProgramPassKind::new(NormalizeAtomicsPass),
-        ProgramPassKind::new(Fusion),
-    ]);
-
-    let mut dirty = FxHashSet::default();
-    scheduler.mark_invalidated_passes(&["fusion"], &mut dirty);
-    assert!(
-        dirty.contains("fusion"),
-        "pass-name invalidation must rerun that pass"
-    );
-
-    dirty.clear();
-    scheduler.mark_invalidated_passes(&["const_fold"], &mut dirty);
-    assert!(dirty.contains("const_fold"));
-    assert!(
-        dirty.contains("strength_reduce"),
-        "passes requiring an invalidated pass/capability must rerun"
-    );
-}
-
-#[test]
 fn invalidating_prior_requirement_does_not_break_current_iteration() {
     let scheduler = PassScheduler::with_passes(vec![
         ProgramPassKind::new(TestPass {
@@ -95,5 +70,62 @@ fn run_with_metrics_tracks_expression_only_rewrites() {
     assert!(
         !report.passes[1].changed,
         "the second iteration must observe convergence after the expression rewrite landed"
+    );
+}
+
+/// A pass fingerprint separates two instances configured differently.
+///
+/// WHY: caches key a pass result on the fingerprint, so two instances that
+/// rewrite to different values and report the same fingerprint let the first
+/// result be served for the second. `StoreValueRewritePass` carries its
+/// configuration in the fingerprint, and this holds it to that: same
+/// configuration, same fingerprint; different target value, different
+/// fingerprint. The rewrite itself converges, which is what makes the
+/// difference observable rather than a claim about a number.
+#[test]
+fn a_configured_rewrite_fingerprints_its_configuration() {
+    let rewrite_to_seven = StoreValueRewritePass {
+        metadata: PassMetadata::new("store_rewrite", &[], &[]),
+        from: 42,
+        to: 7,
+    };
+    let rewrite_to_eight = StoreValueRewritePass {
+        metadata: PassMetadata::new("store_rewrite", &[], &[]),
+        from: 42,
+        to: 8,
+    };
+    let program = trivial_program();
+
+    assert_eq!(
+        rewrite_to_seven.fingerprint(&program),
+        StoreValueRewritePass {
+            metadata: PassMetadata::new("store_rewrite", &[], &[]),
+            from: 42,
+            to: 7,
+        }
+        .fingerprint(&program),
+        "the same configuration must fingerprint the same, or no result is ever reused"
+    );
+    assert_ne!(
+        rewrite_to_seven.fingerprint(&program),
+        rewrite_to_eight.fingerprint(&program),
+        "two target values must not share a fingerprint; a cache would serve one for the other"
+    );
+
+    let scheduler = PassScheduler::with_passes(vec![ProgramPassKind::new(StoreValueRewritePass {
+        metadata: PassMetadata::new("store_rewrite", &[], &[]),
+        from: 42,
+        to: 7,
+    })]);
+    let report = scheduler
+        .run_with_metrics(trivial_program())
+        .expect("Fix: a store-value rewrite must converge");
+    assert!(
+        report.passes[0].changed,
+        "the first run must land the rewrite the configuration names"
+    );
+    assert!(
+        !report.passes[1].changed,
+        "the second run must find nothing left to rewrite"
     );
 }

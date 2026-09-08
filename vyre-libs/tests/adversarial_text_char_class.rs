@@ -1,7 +1,7 @@
 //! Adversarial oracle tests for `text::char_class` reference mapping.
 #![cfg(feature = "text")]
 
-mod text_char_class_runner;
+use crate::text_char_class_runner;
 
 use text_char_class_runner::run_packed_u8_program;
 use vyre_foundation::ir::DataType;

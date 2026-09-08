@@ -6,7 +6,7 @@
 //! over the existing wire protocol.
 
 use super::staging_reserve::reserve_vec_capacity as reserve_descriptor_vec;
-use crate::PipelineError;
+use crate::{PipelineError, RingEncodingFault};
 
 use smallvec::SmallVec;
 
@@ -182,15 +182,16 @@ impl BatchDescriptor {
     ///
     /// Propagates any slot publication error.
     pub fn publish_into(&self, ring_bytes: &mut [u8]) -> Result<u32, PipelineError> {
-        let item_count = u32::try_from(self.items.len()).map_err(|_| PipelineError::QueueFull {
-            queue: "submission",
-            fix: "batch size exceeds u32::MAX slots",
-        })?;
+        let item_count =
+            u32::try_from(self.items.len()).map_err(|_| PipelineError::RingEncoding {
+                fault: RingEncodingFault::Overflow,
+                fix: "batch size exceeds u32::MAX slots",
+            })?;
         if item_count > 0 {
             self.start_slot
                 .checked_add(item_count - 1)
-                .ok_or(PipelineError::QueueFull {
-                    queue: "submission",
+                .ok_or(PipelineError::RingEncoding {
+                    fault: RingEncodingFault::Overflow,
                     fix: "batch start plus item count overflows u32; split the descriptor batch before publishing",
                 })?;
         }
@@ -198,8 +199,8 @@ impl BatchDescriptor {
             let slot_idx = self
                 .start_slot
                 .checked_add(slot_offset)
-                .ok_or(PipelineError::QueueFull {
-                queue: "submission",
+                .ok_or(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Overflow,
                 fix:
                     "batch slot index overflowed u32; split the descriptor batch before publishing",
             })?;
@@ -297,22 +298,22 @@ impl WindowDescriptor {
             .required
             .len()
             .checked_add(self.lookahead.len())
-            .ok_or(PipelineError::QueueFull {
-            queue: "submission",
+            .ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix:
                 "window item count overflowed usize; split the window before materializing a batch",
         })?;
         let mut items = Vec::new();
         reserve_descriptor_vec(&mut items, item_count, "window batch item")?;
         for payload in &self.required {
-            let mut args = window_payload_args(self.ticket, WindowClass::Required, payload)?;
+            let mut args = window_payload_args(payload)?;
             args.push(self.ticket);
             args.push(WindowClass::Required.into_wire());
             args.extend(payload.iter().copied());
             items.push(SlotDescriptor::single(self.tenant_id, self.opcode, args));
         }
         for payload in &self.lookahead {
-            let mut args = window_payload_args(self.ticket, WindowClass::Lookahead, payload)?;
+            let mut args = window_payload_args(payload)?;
             args.push(self.ticket);
             args.push(WindowClass::Lookahead.into_wire());
             args.extend(payload.iter().copied());
@@ -327,12 +328,12 @@ impl WindowDescriptor {
             .required
             .len()
             .checked_add(self.lookahead.len())
-            .ok_or(PipelineError::QueueFull {
-                queue: "submission",
+            .ok_or(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Overflow,
                 fix: "window item count overflowed usize; split the window before publishing",
             })?;
-        let consumed_u32 = u32::try_from(consumed).map_err(|_| PipelineError::QueueFull {
-            queue: "submission",
+        let consumed_u32 = u32::try_from(consumed).map_err(|_| PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix: "window size exceeds u32::MAX slots; split the window before publishing",
         })?;
         if consumed_u32 == 0 {
@@ -340,8 +341,8 @@ impl WindowDescriptor {
         }
         self.start_slot
             .checked_add(consumed_u32 - 1)
-            .ok_or(PipelineError::QueueFull {
-                queue: "submission",
+            .ok_or(PipelineError::RingEncoding {
+                fault: RingEncodingFault::Overflow,
                 fix: "window start plus item count overflows u32; split the window before publishing",
             })?;
 
@@ -377,21 +378,19 @@ impl WindowDescriptor {
     }
 }
 
-fn window_payload_args(
-    _ticket: u32,
-    _class: WindowClass,
-    payload: &[u32],
-) -> Result<Vec<u32>, PipelineError> {
+/// The argument vector one window payload needs: the payload plus the two
+/// prefix words a window slot always carries, the ticket and the class.
+fn window_payload_args(payload: &[u32]) -> Result<Vec<u32>, PipelineError> {
     let required_args = payload
         .len()
         .checked_add(2)
-        .ok_or(PipelineError::QueueFull {
-            queue: "submission",
+        .ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix: "window payload argument count overflowed usize; split the payload before materializing a batch",
         })?;
     if required_args > ARGS_PER_SLOT_USIZE {
-        return Err(PipelineError::QueueFull {
-            queue: "submission",
+        return Err(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Capacity,
             fix: "too many args for one window payload; ticket plus class plus payload must fit in 12 u32 args",
         });
     }
@@ -413,21 +412,21 @@ fn publish_window_payload(
 ) -> Result<(), PipelineError> {
     let slot_idx = start_slot
         .checked_add(*slot_offset)
-        .ok_or(PipelineError::QueueFull {
-            queue: "submission",
+        .ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
             fix: "window slot index overflowed u32; split the window before publishing",
         })?;
     args.clear();
     let required_args = payload
         .len()
         .checked_add(2)
-        .ok_or(PipelineError::QueueFull {
-        queue: "submission",
+        .ok_or(PipelineError::RingEncoding {
+        fault: RingEncodingFault::Overflow,
         fix: "window payload argument count overflowed usize; split the payload before publishing",
     })?;
     if required_args > ARGS_PER_SLOT_USIZE {
-        return Err(PipelineError::QueueFull {
-            queue: "submission",
+        return Err(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Capacity,
             fix: "too many args for one window payload; ticket plus class plus payload must fit in 12 u32 args",
         });
     }
@@ -435,10 +434,12 @@ fn publish_window_payload(
     args.push(class.into_wire());
     args.extend_from_slice(payload);
     ResidentWorkQueue::publish_slot(ring_bytes, slot_idx, tenant_id, opcode.into_wire(), args)?;
-    *slot_offset = slot_offset.checked_add(1).ok_or(PipelineError::QueueFull {
-        queue: "submission",
-        fix: "window slot count overflowed u32; split the window before publishing",
-    })?;
+    *slot_offset = slot_offset
+        .checked_add(1)
+        .ok_or(PipelineError::RingEncoding {
+            fault: RingEncodingFault::Overflow,
+            fix: "window slot count overflowed u32; split the window before publishing",
+        })?;
     Ok(())
 }
 
@@ -458,8 +459,8 @@ mod tests {
     ///
     /// Concretely: a payload with 11 u32 args plus the 2-word [ticket, class]
     /// prefix = 13 words > ARGS_PER_SLOT_USIZE (12), so try_into_batch returns
-    /// QueueFull.  The old into_batch silently dropped everything; the new one
-    /// panics.
+    /// a Capacity fault. The old into_batch silently dropped everything; the
+    /// new one panics.
     #[test]
     #[should_panic(expected = "WindowDescriptor::into_batch failed")]
     fn into_batch_oversized_payload_panics_not_silent_drop() {
@@ -567,10 +568,10 @@ mod tests {
         );
 
         let err = batch.publish_into(&mut ring).unwrap_err();
-        assert!(
-            err.to_string().contains("overflows u32"),
-            "overflowing descriptor batch must fail with an actionable message: {err}"
-        );
+        let PipelineError::RingEncoding { fault, .. } = err else {
+            panic!("a batch whose last slot index wraps u32 must report a ring encode fault, got {err:?}")
+        };
+        assert_eq!(fault, RingEncodingFault::Overflow);
         assert_eq!(
             ring, before,
             "overflow preflight must not partially publish slots before failing"
@@ -586,7 +587,10 @@ mod tests {
             vec![0; ARGS_PER_SLOT as usize + 1],
         );
         let err = slot.publish_into(&mut ring, 0).unwrap_err();
-        assert!(matches!(err, PipelineError::QueueFull { .. }));
+        let PipelineError::RingEncoding { fault, .. } = err else {
+            panic!("one arg over the wire budget must report a ring encode fault, got {err:?}")
+        };
+        assert_eq!(fault, RingEncodingFault::Capacity);
     }
 
     #[test]
@@ -629,10 +633,10 @@ mod tests {
             vec![],
         );
         let err = window.publish_into(&mut ring).unwrap_err();
-        assert!(
-            err.to_string().contains("overflows u32"),
-            "overflowing window must fail with an actionable message: {err}"
-        );
+        let PipelineError::RingEncoding { fault, .. } = err else {
+            panic!("a window whose last slot index wraps u32 must report a ring encode fault, got {err:?}")
+        };
+        assert_eq!(fault, RingEncodingFault::Overflow);
         assert_eq!(ring, before);
     }
 
@@ -649,10 +653,10 @@ mod tests {
             vec![],
         );
         let err = window.publish_into(&mut ring).unwrap_err();
-        assert!(
-            err.to_string().contains("too many args"),
-            "oversized window payload must fail with an actionable message: {err}"
-        );
+        let PipelineError::RingEncoding { fault, .. } = err else {
+            panic!("a payload that leaves no room for the ticket and class prefix must report a ring encode fault, got {err:?}")
+        };
+        assert_eq!(fault, RingEncodingFault::Capacity);
         assert_eq!(ring, before);
     }
 }

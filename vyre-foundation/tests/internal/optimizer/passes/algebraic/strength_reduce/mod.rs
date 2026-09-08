@@ -21,4 +21,4 @@ mod reciprocal;
 mod scheduler_smoke;
 mod self_inverse_select;
 mod shift_add_horner;
-mod shift_negation_fma;
+mod shift_negation;

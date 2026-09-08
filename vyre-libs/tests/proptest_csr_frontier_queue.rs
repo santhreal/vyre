@@ -2,9 +2,9 @@
 
 #![cfg(feature = "graph")]
 
-mod graph_sweep_fixtures;
+use crate::graph_sweep_fixtures;
+use crate::wire_words;
 use graph_sweep_fixtures::{active_nodes, generated_csr, generated_frontier_words, max_row_degree};
-mod wire_words;
 use wire_words::queue_forward_oracle;
 
 use proptest::prelude::*;

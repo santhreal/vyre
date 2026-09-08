@@ -7,10 +7,11 @@ fn single_string_matches_only_its_suffix() {
     let dfa = dfa_compile(&[b"abc"]);
     let input = b"xxabcxx";
 
-    // Walk to the state immediately after scanning "xxabc" (before the trailing xx).
-    // We can't stop mid-scan in a loop; trace the exact 5-byte prefix instead.
+    // Walk to the state immediately after scanning "xxabc" (before the trailing
+    // xx). The scan cannot stop mid-loop, so it takes the 5-byte prefix of the
+    // declared input rather than a second copy of it.
     let mut s = 0usize;
-    for &b in b"xxabc" {
+    for &b in &input[..5] {
         s = dfa.transitions[s * 256 + b as usize] as usize;
     }
     // Pattern 0 encodes as accept = pid+1 = 0+1 = 1. Asserting == 1 catches both

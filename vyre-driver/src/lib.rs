@@ -44,7 +44,7 @@ pub mod bindless_policy;
 pub mod cache_eviction;
 /// N5 substrate: spec-cache eviction with frequency × recency heat
 /// decay. Used by F1/F3 cache layers when capacity pressure
-/// triggers  -  `entries_to_evict(stats, capacity, now)` returns the
+/// triggers  -  `try_entries_to_evict(stats, capacity, now)` returns the
 /// evictable IDs in eviction order (lowest heat first).
 pub mod cache_eviction_heat;
 /// Backend-neutral cache invalidation policy.
@@ -205,6 +205,8 @@ pub(crate) mod launch_facts;
 pub mod launch_fixtures;
 /// Backend-neutral adjacent-stage launch fusion planning.
 pub mod launch_fusion;
+/// The failure domain of a poisoned lock, and the two answers an owner may give.
+pub mod lock_policy;
 /// Backend-neutral megakernel wave barrier planning.
 pub mod megakernel_barrier;
 /// Backend-neutral persistent megakernel execution planning.
@@ -299,10 +301,10 @@ pub use program_walks::{
     admit_dispatch_grid, coerce_to_pow2_with_tail_mask, dispatch_element_count,
     dispatch_element_count_for_program, dispatch_param_words_into, element_size_bytes,
     enforce_actual_output_budget, find_indirect_dispatch, infer_dispatch_grid,
-    infer_dispatch_grid_for_count, output_binding_layout, output_binding_layout_parts,
-    output_binding_layouts, output_layout_from_program, try_coerce_to_pow2_with_tail_mask,
-    try_dispatch_param_words, try_dispatch_param_words_into, IndirectDispatch, OutputBindingLayout,
-    OutputLayout, TailMaskPolicy,
+    infer_dispatch_grid_for_count, infer_launch_grid, output_binding_layout,
+    output_binding_layout_parts, output_binding_layouts, output_layout_from_program,
+    try_coerce_to_pow2_with_tail_mask, try_dispatch_param_words, try_dispatch_param_words_into,
+    IndirectDispatch, OutputBindingLayout, OutputLayout, TailMaskPolicy,
 };
 pub use program_walks::{auto_grid, enforce_output_budget, output_binding_layouts_into};
 pub use registry::DEPRECATED_OP_CODE;

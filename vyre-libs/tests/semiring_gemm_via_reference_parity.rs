@@ -18,7 +18,7 @@
 //! u32. The generated systems bound finite entries so every `a+b` stays well under u32::MAX, and inject
 //! `u32::MAX` (∞ / no-edge) to exercise the guarded branch and the `min` accumulate against ∞.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::analysis::dataflow_fixpoint::{
     semiring_gemm_via_bool_or, semiring_gemm_via_lineage, semiring_gemm_via_min_plus,

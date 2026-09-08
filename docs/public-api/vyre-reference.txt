@@ -114,6 +114,10 @@ pub const vyre_reference::ieee754::BACKEND_ELEMENTARY_F32_ULP_BUDGET: u32
 pub const vyre_reference::ieee754::BACKEND_TRANSCENDENTAL_ULP_BUDGET: u32
 pub const vyre_reference::ieee754::REFERENCE_TRANSCENDENTAL_ULP_BUDGET: u32
 pub const vyre_reference::sequential::MAX_SHARED_BYTES: usize
+pub const vyre_reference::step_budget::DECLARED_WORK_HEADROOM: u64
+pub const vyre_reference::step_budget::MAX_REFERENCE_STEPS: u64
+pub const vyre_reference::step_budget::MEASURED_HEAVIEST_CORPUS_STEPS: u64
+pub const vyre_reference::step_budget::STEP_CEILING_HEADROOM: u64
 pub const vyre_reference::workgroup::InvocationIds::ZERO: Self
 pub const vyre_reference::workgroup::MAX_WORKGROUP_BYTES: usize
 pub enum vyre_reference::composition_witness::Base64DecodeWitnessError
@@ -150,6 +154,8 @@ pub fn vyre_reference::ReferenceError::fmt(&self, formatter: &mut core::fmt::For
 pub fn vyre_reference::ReferenceError::from(source: vyre_foundation::validate::validation_error::ValidationError) -> Self
 pub fn vyre_reference::ReferenceError::new(message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_reference::ReferenceError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+pub fn vyre_reference::ReferenceError::step_ceiling(source: vyre_reference::StepCeilingExceeded) -> Self
+pub fn vyre_reference::ReferenceError::step_ceiling_source(&self) -> core::option::Option<&vyre_reference::StepCeilingExceeded>
 pub fn vyre_reference::ReferenceError::validation(source: vyre_foundation::validate::validation_error::ValidationError) -> Self
 pub fn vyre_reference::ReferenceError::validation_source(&self) -> core::option::Option<&vyre_foundation::validate::validation_error::ValidationError>
 pub fn vyre_reference::atomics::apply(op: vyre_spec::atomic_op::AtomicOp, old: u32, expected: core::option::Option<u32>, value: u32) -> core::result::Result<(u32, u32), vyre_reference::ReferenceError>
@@ -249,7 +255,6 @@ pub fn vyre_reference::composition_witness::byte_histogram_witness(input: &[u8])
 pub fn vyre_reference::composition_witness::canonicalize_union_find_witness(parents: &[u32]) -> alloc::vec::Vec<u32>
 pub fn vyre_reference::composition_witness::cap_regions_per_pattern_survivors_witness(pattern_ids: &[u32], limit: u32) -> alloc::vec::Vec<u32>
 pub fn vyre_reference::composition_witness::char_class_witness(input: &[u8], table: &[u32; 256]) -> alloc::vec::Vec<u32>
-pub fn vyre_reference::composition_witness::chebyshev_filter_witness(laplacian: &[f32], signal: &[f32], coefficients: &[f32], n: u32, k_steps: u32) -> alloc::vec::Vec<f32>
 pub fn vyre_reference::composition_witness::chebyshev_filter_witness_into(laplacian: &[f32], signal: &[f32], coefficients: &[f32], n: u32, k_steps: u32, out: &mut alloc::vec::Vec<f32>, t_prev: &mut alloc::vec::Vec<f32>, t_curr: &mut alloc::vec::Vec<f32>, t_next: &mut alloc::vec::Vec<f32>)
 pub fn vyre_reference::composition_witness::classic_ac_bounded_ranges_scan_witness(transitions: &[u32], output_offsets: &[u32], output_records: &[u32], pattern_lengths: &[u32], haystack: &[u8]) -> alloc::vec::Vec<(u32, u32, u32)>
 pub fn vyre_reference::composition_witness::classic_ac_candidate_end_byte_mask_words_witness(transitions: &[u32], output_offsets: &[u32], state_count: u32) -> [u32; 8]
@@ -746,9 +751,11 @@ pub fn vyre_reference::reference_eval(program: &vyre_foundation::ir_inner::model
 pub fn vyre_reference::reference_eval_lane_reversed(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
 pub fn vyre_reference::reference_eval_lane_rotated(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], by: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
 pub fn vyre_reference::reference_eval_oob_report(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>
+pub fn vyre_reference::reference_eval_step_count(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, u64), vyre_reference::ReferenceError>
 pub fn vyre_reference::reference_eval_with_dispatch(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
 pub fn vyre_reference::reference_eval_with_dispatch_oob_report(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>
 pub fn vyre_reference::reference_eval_with_grid(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], grid: [u32; 3]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::reference_eval_with_step_ceiling(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], ceiling: u64) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, u64), vyre_reference::ReferenceError>
 pub fn vyre_reference::reference_facets() -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &'static vyre_reference::ReferenceFacet>
 pub fn vyre_reference::reference_fn(operation_id: &str) -> core::option::Option<vyre_spec::intrinsic_descriptor::CpuFn>
 pub fn vyre_reference::reference_inputs(program: &vyre_foundation::ir_inner::model::program::definition::Program, buffers: alloc::vec::Vec<alloc::vec::Vec<u8>>) -> alloc::vec::Vec<vyre_reference::value::Value>
@@ -879,6 +886,7 @@ pub mod vyre_reference::ieee754
 pub mod vyre_reference::node
 pub mod vyre_reference::op_count
 pub mod vyre_reference::sequential
+pub mod vyre_reference::step_budget
 pub mod vyre_reference::subgroup
 pub mod vyre_reference::value
 pub mod vyre_reference::workgroup
@@ -886,6 +894,7 @@ pub struct vyre_reference::DualReferenceFacet
 pub struct vyre_reference::OobReport
 pub struct vyre_reference::ReferenceError
 pub struct vyre_reference::ReferenceFacet
+pub struct vyre_reference::StepCeilingExceeded
 pub struct vyre_reference::composition_witness::AdjointPair
 pub struct vyre_reference::composition_witness::Adler32ChunkWitness
 pub struct vyre_reference::composition_witness::AmgSolveScratchWitness
@@ -969,6 +978,8 @@ pub vyre_reference::OobReport::oob_loads: u64
 pub vyre_reference::OobReport::oob_stores: u64
 pub vyre_reference::ReferenceFacet::execute: vyre_spec::intrinsic_descriptor::CpuFn
 pub vyre_reference::ReferenceFacet::operation_id: &'static str
+pub vyre_reference::StepCeilingExceeded::ceiling: u64
+pub vyre_reference::StepCeilingExceeded::program: alloc::string::String
 pub vyre_reference::composition_witness::AdjointPair::is_adjoint: bool
 pub vyre_reference::composition_witness::AdjointPair::witness: core::option::Option<(u32, u32)>
 pub vyre_reference::composition_witness::Adler32ChunkWitness::a: u32

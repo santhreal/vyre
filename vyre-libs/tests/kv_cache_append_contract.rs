@@ -2,7 +2,7 @@
 
 #![forbid(unsafe_code)]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::{f32_bytes as bytes, f32_words_of as decode, kv_cache_append_test_spec as spec};
 
 use vyre::ir::DataType;

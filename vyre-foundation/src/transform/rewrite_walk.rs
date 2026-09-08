@@ -38,8 +38,7 @@ pub trait NodeRewrite {
     ///
     /// The replacement is final and is not traversed again. Use this only when
     /// one semantic node lowers directly to one representation node.
-    fn whole_node(&mut self, node: &Node) -> Option<Node> {
-        let _ = node;
+    fn whole_node(&mut self, _node: &Node) -> Option<Node> {
         None
     }
 
@@ -50,9 +49,7 @@ pub trait NodeRewrite {
     /// or which slot of an external per-node table the node occupies. The pass
     /// engine's CSE passes index a GPU-built expression arena that way, and
     /// the arena numbers nodes in exactly this order.
-    fn enter(&mut self, node: &Node) {
-        let _ = node;
-    }
+    fn enter(&mut self, _node: &Node) {}
 
     /// Rewrite one operand expression of a node.
     ///
@@ -70,8 +67,7 @@ pub trait NodeRewrite {
     /// program's buffer table, not bound by a node, and are carried through
     /// unchanged; a pass that renames a buffer rewrites that table with
     /// `Program::with_rewritten_buffers`.
-    fn binding(&mut self, name: &Ident) -> Option<Ident> {
-        let _ = name;
+    fn binding(&mut self, _name: &Ident) -> Option<Ident> {
         None
     }
 
@@ -88,22 +84,20 @@ pub trait NodeRewrite {
     /// `transform::inline` carried a per-node copy of the binding
     /// `node_scalars` reports for no other purpose, and a renamer that skipped
     /// that step renamed a tag that happened to share a variable's name.
-    fn tag(&mut self, name: &Ident) -> Option<Ident> {
-        let _ = name;
+    fn tag(&mut self, _name: &Ident) -> Option<Ident> {
         None
     }
 
-    /// Rewrite one child body of `parent`.
+    /// Rewrite one child body of a node.
     ///
-    /// `parent` is the node that owns the body, so a policy can act on the
+    /// The parent is the node the body belongs to, so a policy can act on the
     /// binding it introduces: substitution stops at a `Loop` whose induction
     /// variable shadows the substituted name. The default recurses with the
     /// same policy.
-    fn body(&mut self, parent: &Node, body: &[Node]) -> Option<Vec<Node>>
+    fn body(&mut self, _parent: &Node, body: &[Node]) -> Option<Vec<Node>>
     where
         Self: Sized,
     {
-        let _ = parent;
         rewrite_body(body, self)
     }
 }

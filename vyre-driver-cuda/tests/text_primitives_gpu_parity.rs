@@ -4,7 +4,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 use harness::{
     bytes_to_u32_per_lane, bytes_u32, find_output_buffer_index, is_required_input_buffer,
     u32_bytes, with_live_backend,

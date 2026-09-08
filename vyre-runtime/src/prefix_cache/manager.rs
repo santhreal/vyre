@@ -37,7 +37,6 @@ impl PrefixCacheManager {
             pages.insert(
                 page_id,
                 PhysicalPageRecord {
-                    page_id,
                     generation: initial_generation,
                     allocated: false,
                     pinned: false,

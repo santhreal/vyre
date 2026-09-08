@@ -20,8 +20,7 @@ use vyre_foundation::optimizer::{
     registered_pass_registrations, PassScheduler, ProgramPassKind, ProgramPassRegistration,
 };
 
-#[path = "contract_cases/optimizer_program_corpus.rs"]
-mod corpus;
+use crate::corpus;
 
 use corpus::{
     assert_fixed_point_and_semantics, canonical_wire, output_only_store, program_strategy,

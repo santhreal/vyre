@@ -3,7 +3,7 @@
 #![forbid(unsafe_code)]
 #![cfg(feature = "hash")]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::oracle_blake3_g;
 
 use vyre_libs::hash::blake3::MSG_SCHEDULE;

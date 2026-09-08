@@ -91,7 +91,7 @@ impl SemanticExecutor for RecordingExecutor {
                 .collect::<Vec<_>>()
         };
         let payloads = match stage {
-            "canonicalize" | "pattern-match" => vec![encoded(vec![0; first_words])],
+            "canonicalize" => vec![encoded(vec![0; first_words])],
             "const-fold" => vec![encoded(vec![0; first_words]), encoded(vec![0; first_words])],
             "dce" => {
                 let frontier_words = first_words.div_ceil(32).max(1);
@@ -101,6 +101,16 @@ impl SemanticExecutor for RecordingExecutor {
                     encoded(vec![1]),
                 ]
             }
+            // The CSE hash column, the canonical column and the canonical-aware
+            // rewrite column are each one output of one word per Expr. Zero is
+            // the `NONE` rewrite action, and a canonical id equal to its own row
+            // is the neutral CSE answer: no two Exprs are equivalent, so the
+            // dedupe and the equal-operand rules leave the program alone and
+            // this contract stays about DCE binding.
+            "cse-structural-hash" | "pattern-match-cse" => {
+                vec![encoded(vec![0; first_words])]
+            }
+            "cse-canonical-id" => vec![encoded((0..first_words as u32).collect())],
             other => panic!("unexpected semantic optimizer stage {other}"),
         };
         let output_ids = if node.outputs.is_empty() {
@@ -166,7 +176,16 @@ fn input_program() -> Program {
 fn full_pipeline_stage_order_and_graph_value_inputs_are_closed() {
     let executor = RecordingExecutor::new(false);
     let optimized = gpu_optimize(input_program(), &executor, &policy()).expect("pipeline succeeds");
-    assert_eq!(optimized, input_program());
+    // Host const folding reduces the literal add before lowering, and the `dce`
+    // fixture returns an all-ones frontier, so the binding survives folded.
+    assert_eq!(
+        optimized,
+        Program::wrapped(
+            Vec::new(),
+            [1, 1, 1],
+            vec![Node::let_bind("sum", Expr::u32(5))]
+        )
+    );
 
     let snapshots = executor.snapshots();
     assert_eq!(
@@ -174,7 +193,15 @@ fn full_pipeline_stage_order_and_graph_value_inputs_are_closed() {
             .iter()
             .map(|request| request.stage.as_str())
             .collect::<Vec<_>>(),
-        ["canonicalize", "const-fold", "dce", "pattern-match"]
+        [
+            "canonicalize",
+            "const-fold",
+            "cse-structural-hash",
+            "cse-canonical-id",
+            "pattern-match-cse",
+            "dce",
+            "dce"
+        ]
     );
     for request in snapshots {
         assert!(!request.semantic_graph.is_empty());
@@ -216,7 +243,7 @@ fn final_stage_decoding_requires_the_canonical_graph_output_identity() {
     let executor = RecordingExecutor {
         hostile_route_preference: false,
         fail_stage: None,
-        miskey_stage: Some("pattern-match"),
+        miskey_stage: Some("pattern-match-cse"),
         requests: Mutex::new(Vec::new()),
     };
     let error =

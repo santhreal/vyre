@@ -265,7 +265,65 @@ impl BodyBuilder<'_> {
             value
         };
         let ty = self.binary_result_type(op, binop)?;
+        // Strict IEEE rounding: an f32 product is published through an integer
+        // reinterpretation so the rounded 32-bit result is the only thing a
+        // consumer can read. Nothing in the IR asks for fusion, but WGSL
+        // permits a target to fold `a * b + c` into one rounding, and every
+        // shipped target does: measured on hardware, the witness `a = b =
+        // 1 + 2^-12`, `c = -1` returns `0x3a000400` where two roundings give
+        // `0x3a000000`. A round trip through `u32` leaves no product for the
+        // following add to absorb.
+        //
+        // The multiply is the only side of the pair that needs the barrier: a
+        // contraction always consumes an unrounded product, so denying the
+        // product denies every `a * b ± c` and `c ± a * b` shape at once.
+        // `Expr::Fma` is untouched, because that op asks for one rounding.
+        let value = if self.float_lowering.blocks_contraction()
+            && matches!(binop, BinOp::Mul)
+            && ty == self.types.f32_ty
+        {
+            self.round_barrier_f32(value)
+        } else {
+            value
+        };
         self.bind_result_typed(op, value, ty)
+    }
+
+    /// Publish one f32 value through a `u32` reinterpretation and back, as a
+    /// statement of its own.
+    ///
+    /// Two mechanisms, because the reinterpretation alone was measured
+    /// insufficient. The pair denies a target the unrounded product inside one
+    /// expression: an integer view can only be taken of a rounded 32-bit float.
+    /// A target compiler that folds `as_type<float>(as_type<uint>(x))` back to
+    /// `x` before it decides on contraction is left holding `a * b + c` in a
+    /// single expression again, which is precisely where every contraction rule
+    /// permits fusion, and a Metal adapter answered the strict witness with the
+    /// contracted bits for that reason.
+    ///
+    /// Naming the result is the second mechanism. A named expression is written
+    /// as its own `let`, so the product is a value the following add reads
+    /// rather than a subexpression it contains, and a contraction rule stated
+    /// per expression no longer reaches across the pair. The name is unique by
+    /// construction: an expression handle is appended once.
+    pub(in crate::emitter) fn round_barrier_f32(
+        &mut self,
+        value: naga::Handle<Expression>,
+    ) -> naga::Handle<Expression> {
+        let bits = self.append_expr(Expression::As {
+            expr: value,
+            kind: naga::ScalarKind::Uint,
+            convert: None,
+        });
+        let published = self.append_expr(Expression::As {
+            expr: bits,
+            kind: naga::ScalarKind::Float,
+            convert: None,
+        });
+        self.function
+            .named_expressions
+            .insert(published, format!("vyre_rounded_{}", published.index()));
+        published
     }
 
     fn emit_synthetic_binop(

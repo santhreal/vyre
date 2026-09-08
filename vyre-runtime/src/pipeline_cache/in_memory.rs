@@ -406,7 +406,7 @@ impl PipelineCacheStore for InMemoryPipelineCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_artifact_fixtures::tiny_artifact;
+    use vyre_test_support::artifact_fixtures::tiny_artifact;
 
     #[test]
     fn in_memory_cache_roundtrip() {

@@ -45,6 +45,11 @@ const FIX: &str = "remove the upward dependency, or move the crate to the layer 
 /// lowering stage, while the composition library and the pass engine reach a
 /// device only through that seam. A composition that selected its own launch
 /// geometry used to make the edge point the other way; it no longer can.
+///
+/// `test-tooling` sits above `backend-neutral` because the shared fixtures state
+/// the driver-registry and target-compiler contracts, which name the driver
+/// boundary crate. Nothing depends on the fixture crate in production, so its
+/// position is bounded from below only, by the deepest layer its fixtures reach.
 pub(super) const LAYER_ORDER: &[&str] = &[
     "standalone-tooling",
     "foundation",
@@ -53,10 +58,10 @@ pub(super) const LAYER_ORDER: &[&str] = &[
     "compiler-boundary",
     "libraries",
     "semantics",
-    "test-tooling",
     "pass-engine",
     "emitter",
     "backend-neutral",
+    "test-tooling",
     "concrete-backend",
     "runtime",
     "packaging",
@@ -88,6 +93,7 @@ impl crate::gate::GateBehavior for CheckTierDeps {
             manifests.push((package, table));
         }
         let members_by_package: BTreeSet<&str> = packages.keys().map(String::as_str).collect();
+        let ranks = registry_layer_ranks(root, &mut failures);
         let mut claimed: BTreeSet<&str> = BTreeSet::new();
         for (package, table) in &manifests {
             let Some(&layer) = layers.get(package) else {
@@ -103,6 +109,7 @@ impl crate::gate::GateBehavior for CheckTierDeps {
                 &layers,
                 &members_by_package,
                 &workspace_deps,
+                &ranks,
                 table,
                 &mut failures,
             );
@@ -200,6 +207,61 @@ fn declared_layers(root: &Path, failures: &mut Vec<String>) -> BTreeMap<String, 
     layers
 }
 
+/// The rank each `[[layer]]` in the ownership registry declares.
+///
+/// This gate orders layers by position in [`LAYER_ORDER`]; `crate-registry`
+/// orders the same layers by these ranks. Two statements of one contract
+/// diverge the first time a layer moves in one and not the other, and the
+/// divergence is silent: each gate keeps passing on its own statement while
+/// the two judge the same dependency edge differently. Reading the ranks here
+/// is what lets [`scan_manifest`] hold a real edge to both.
+///
+/// The two are not the same shape and are not required to agree everywhere.
+/// `LAYER_ORDER` is a total order; `rank` is a partial one, and two layers
+/// share a rank when neither depends on the other. A pair the two order
+/// differently is only a defect once an edge between them exists, so the
+/// roster is checked here and the direction is checked per edge.
+fn registry_layer_ranks(root: &Path, failures: &mut Vec<String>) -> BTreeMap<String, i64> {
+    let path = root.join("docs/CRATE_OWNERSHIP.toml");
+    let text = read_bounded(&path);
+    let table = parse_toml(&path, &text);
+    let mut ranks = BTreeMap::new();
+    let Some(entries) = table.get("layer").and_then(Value::as_array) else {
+        failures.push(
+            "docs/CRATE_OWNERSHIP.toml declares no `[[layer]]` entries to order against"
+                .to_string(),
+        );
+        return ranks;
+    };
+    for entry in entries {
+        let Some(name) = entry.get("name").and_then(Value::as_str) else {
+            failures.push("a docs/CRATE_OWNERSHIP.toml `[[layer]]` declares no `name`".to_string());
+            continue;
+        };
+        let Some(rank) = entry.get("rank").and_then(Value::as_integer) else {
+            failures.push(format!(
+                "layer `{name}` declares no integer `rank` in docs/CRATE_OWNERSHIP.toml"
+            ));
+            continue;
+        };
+        if !LAYER_ORDER.contains(&name) {
+            failures.push(format!(
+                "docs/CRATE_OWNERSHIP.toml declares layer `{name}` and it holds no position in the layer order"
+            ));
+            continue;
+        }
+        ranks.insert(name.to_string(), rank);
+    }
+    for name in LAYER_ORDER {
+        if !ranks.contains_key(*name) {
+            failures.push(format!(
+                "layer `{name}` holds a position in the layer order and docs/CRATE_OWNERSHIP.toml declares no `[[layer]]` for it"
+            ));
+        }
+    }
+    ranks
+}
+
 /// Package name a workspace member publishes, which is what a dependency names.
 ///
 /// # Panics
@@ -251,17 +313,25 @@ fn dep_package(key: &str, value: &Value, workspace_deps: &BTreeMap<String, Strin
     key.to_string()
 }
 
-/// Report every production dependency that climbs to a later layer.
+/// Report every production dependency that climbs to a later layer, and every
+/// one the two statements of the layer order judge differently.
 ///
 /// Dev-dependencies are exempt: a contract test legitimately drives its own
 /// crate through a backend or the facade, and that edge is absent from anything
 /// a consumer builds.
+///
+/// An edge the position order permits and the registry rank refuses is not a
+/// third rule; it is the two encodings contradicting each other on a dependency
+/// that exists, which is the point at which `crate-registry` and this gate stop
+/// answering the same question. Reporting it here is what keeps the pair from
+/// drifting silently, and it stays quiet while no such edge is written.
 fn scan_manifest(
     package: &str,
     layer: Layer,
     layers: &BTreeMap<String, Layer>,
     members: &BTreeSet<&str>,
     workspace_deps: &BTreeMap<String, String>,
+    ranks: &BTreeMap<String, i64>,
     table: &Value,
     failures: &mut Vec<String>,
 ) {
@@ -280,6 +350,18 @@ fn scan_manifest(
             if dep_layer.rank > layer.rank {
                 failures.push(format!(
                     "{package} ({}) must not depend on {dep} ({}) via `{key}` in {dep_kind}",
+                    layer.name, dep_layer.name
+                ));
+                continue;
+            }
+            let (Some(&source_rank), Some(&dep_rank)) =
+                (ranks.get(layer.name), ranks.get(dep_layer.name))
+            else {
+                continue;
+            };
+            if layer.name != dep_layer.name && source_rank <= dep_rank {
+                failures.push(format!(
+                    "{package} ({}) depends on {dep} ({}) via `{key}` in {dep_kind}: the layer order permits it and docs/CRATE_OWNERSHIP.toml ranks them {source_rank} and {dep_rank}, which does not",
                     layer.name, dep_layer.name
                 ));
             }
@@ -409,6 +491,15 @@ mod dependency_kind_tests {
         BTreeSet::from(["vyre-primitives", "vyre-driver"])
     }
 
+    /// The registry ranks the fixture layers hold, so a fixture edge is judged
+    /// by both statements of the order exactly as a real one is.
+    fn fixture_ranks() -> BTreeMap<String, i64> {
+        BTreeMap::from([
+            ("primitives".to_string(), 1),
+            ("backend-neutral".to_string(), 4),
+        ])
+    }
+
     fn scan(manifest: &str) -> Vec<String> {
         let table = parse_toml(Path::new("fixture/Cargo.toml"), manifest);
         let layers = fixture_layers();
@@ -422,6 +513,7 @@ mod dependency_kind_tests {
             &layers,
             &members,
             &workspace_deps,
+            &fixture_ranks(),
             &table,
             &mut failures,
         );
@@ -471,11 +563,89 @@ mod dependency_kind_tests {
             &fixture_layers(),
             &fixture_members(),
             &BTreeMap::from([("vyre-primitives".to_string(), "vyre-primitives".to_string())]),
+            &fixture_ranks(),
             &table,
             &mut failures,
         );
 
         assert!(failures.is_empty(), "{failures:?}");
+    }
+
+    /// WHY: `LAYER_ORDER` and the registry `rank` are two statements of one
+    /// contract, and they already order two pairs differently. `semantics` sits
+    /// after `libraries` in the position order, which lets the oracle read the
+    /// compositions, while the registry ranks it below, which forbids exactly
+    /// that edge. Neither gate can see the contradiction on its own: each keeps
+    /// passing on its own statement.
+    ///
+    /// No manifest writes that edge today, so the rule is silent on this tree
+    /// and speaks the moment one does. Reported rather than resolved here,
+    /// because which statement is wrong is a decision about the layer DAG.
+    #[test]
+    fn an_edge_the_two_statements_of_the_order_judge_differently_is_reported() {
+        let table = parse_toml(
+            Path::new("fixture/Cargo.toml"),
+            "[dependencies]\nvyre-libs.workspace = true\n",
+        );
+        let layers = BTreeMap::from([
+            ("vyre-reference".to_string(), fixture_layer("semantics")),
+            ("vyre-libs".to_string(), fixture_layer("libraries")),
+        ]);
+        let mut failures = Vec::new();
+        scan_manifest(
+            "vyre-reference",
+            fixture_layer("semantics"),
+            &layers,
+            &BTreeSet::from(["vyre-reference", "vyre-libs"]),
+            &BTreeMap::from([("vyre-libs".to_string(), "vyre-libs".to_string())]),
+            &BTreeMap::from([("semantics".to_string(), 2), ("libraries".to_string(), 3)]),
+            &table,
+            &mut failures,
+        );
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(
+            failures[0].contains("ranks them 2 and 3, which does not"),
+            "{failures:?}"
+        );
+    }
+
+    /// WHY: two layers sharing a rank is the registry saying neither depends on
+    /// the other, so an edge between them is a disagreement even though the
+    /// position order permits it. An equal rank used to read as permission.
+    #[test]
+    fn an_edge_between_two_layers_of_equal_rank_is_reported() {
+        let table = parse_toml(
+            Path::new("fixture/Cargo.toml"),
+            "[dependencies]\nvyre-megakernel.workspace = true\n",
+        );
+        let layers = BTreeMap::from([
+            ("vyre-emit-ptx".to_string(), fixture_layer("emitter")),
+            (
+                "vyre-megakernel".to_string(),
+                fixture_layer("compiler-boundary"),
+            ),
+        ]);
+        let mut failures = Vec::new();
+        scan_manifest(
+            "vyre-emit-ptx",
+            fixture_layer("emitter"),
+            &layers,
+            &BTreeSet::from(["vyre-emit-ptx", "vyre-megakernel"]),
+            &BTreeMap::from([("vyre-megakernel".to_string(), "vyre-megakernel".to_string())]),
+            &BTreeMap::from([
+                ("emitter".to_string(), 2),
+                ("compiler-boundary".to_string(), 2),
+            ]),
+            &table,
+            &mut failures,
+        );
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(
+            failures[0].contains("ranks them 2 and 2, which does not"),
+            "{failures:?}"
+        );
     }
 
     /// Every layer named in the registry must hold a position, so a new layer

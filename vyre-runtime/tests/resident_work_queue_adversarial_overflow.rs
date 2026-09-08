@@ -2,10 +2,11 @@
 //! control-buffer encoding boundaries.
 
 use vyre_runtime::resident_work_queue::{
-    protocol::{self, control, control::OBSERVABLE_BASE},
+    protocol::{self, control, control::OBSERVABLE_BASE, ProtocolError},
     telemetry::RingOccupancy,
     ResidentWorkQueue,
 };
+use vyre_runtime::PipelineError;
 
 use vyre_test_support::le_words::write_word;
 
@@ -48,7 +49,13 @@ fn try_read_observable_rejects_index_that_overflows_u32_addition() {
     let bad_index = u32::MAX - OBSERVABLE_BASE + 1;
     let err = ResidentWorkQueue::try_read_observable(&ctrl, bad_index)
         .expect_err("observable index causing u32 addition overflow must reject");
-    assert!(err.to_string().contains("Fix:"));
+    let PipelineError::Protocol(ProtocolError::ByteLengthOverflow { buffer, .. }) = err else {
+        panic!(
+            "an observable index that wraps the word offset must reject for sizing, not for a \
+             missing word, got {err:?}"
+        )
+    };
+    assert_eq!(buffer, "control");
 }
 
 #[test]
@@ -87,7 +94,12 @@ fn control_byte_len_overflows_when_observable_base_plus_slots_wraps() {
 fn try_encode_control_rejects_overflow_observable_slots() {
     let err = protocol::try_encode_control(false, 1, u32::MAX)
         .expect_err("observable_slots = u32::MAX must overflow");
-    assert!(err.to_string().contains("Fix:"));
+    // `control_encode_capacity` checks the allocation cap before the protocol
+    // cap, so both of this file's oversized observable counts land there.
+    let ProtocolError::ByteLengthOverflow { buffer, .. } = err else {
+        panic!("an oversized observable region must reject for byte-length overflow, got {err:?}")
+    };
+    assert_eq!(buffer, "control");
 }
 
 #[test]
@@ -95,7 +107,10 @@ fn try_encode_control_rejects_exactly_one_beyond_max_safe_observable() {
     let max_safe = u32::MAX - OBSERVABLE_BASE;
     let err = protocol::try_encode_control(false, 1, max_safe + 1)
         .expect_err("one beyond max safe observable slots must overflow");
-    assert!(err.to_string().contains("Fix:"));
+    let ProtocolError::ByteLengthOverflow { buffer, .. } = err else {
+        panic!("one slot past the safe observable bound must reject for byte-length overflow, got {err:?}")
+    };
+    assert_eq!(buffer, "control");
 }
 
 #[test]
@@ -126,14 +141,12 @@ fn an_occupancy_summing_past_u32_is_reported_rather_than_clamped() {
     let error = occupancy
         .total_slots()
         .expect_err("Fix: an occupancy wider than u32 must be reported");
-    let text = error.to_string();
+    let PipelineError::Backend(message) = error else {
+        panic!("an impossible occupancy must reject as a telemetry sum overflow, got {error:?}")
+    };
     assert!(
-        text.contains("total ring slots"),
-        "Fix: the overflow must name the sum it came from: {text}"
-    );
-    assert!(
-        text.contains("Fix:"),
-        "Fix: the overflow must state the corrective action: {text}"
+        message.contains("total ring slots overflowed u32"),
+        "the fault must name the sum it came from: {message}"
     );
 }
 

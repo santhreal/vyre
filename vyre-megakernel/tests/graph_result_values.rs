@@ -126,9 +126,7 @@ fn a_pipeline_live_out_read_write_buffer_is_returned_as_an_output() {
 #[test]
 fn the_access_matrix_names_every_frozen_access_variant() {
     let source = std::fs::read_to_string(
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("..")
-            .join(ACCESS_SOURCE),
+        vyre_test_support::monorepo::vyre_workspace_root().join(ACCESS_SOURCE),
     )
     .expect("frozen access enum source. Fix: keep ACCESS_SOURCE pointing at the enum.");
     let body = source

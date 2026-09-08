@@ -6,7 +6,7 @@
 //! greedy raster-order disjoint selection: a candidate cell is chosen iff no already-chosen cell
 //! lies in its k×k above-left footprint. The oracle is exact.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via;
 use vyre_reference::composition_witness::planar_rewrite_schedule_witness as reference_planar_rewrite_schedule;

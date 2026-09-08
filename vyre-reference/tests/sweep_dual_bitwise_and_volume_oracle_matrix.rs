@@ -2,7 +2,7 @@
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 
-mod dual_volume;
+use crate::dual_volume;
 
 #[test]
 fn sweep_dual_bitwise_and_volume_oracle_matrix() {

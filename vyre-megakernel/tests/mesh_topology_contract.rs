@@ -21,10 +21,7 @@ use vyre_megakernel::mesh::{
 };
 use vyre_megakernel::{ArtifactNodeId, CompileError};
 
-#[path = "../../tests/support/artifact_fixtures.rs"]
-mod artifact_fixtures;
-
-use artifact_fixtures::{
+use vyre_test_support::artifact_fixtures::{
     atomic_output_graph, chained_graph, collective_output_graph, compile_graph,
     compile_graph_on_mesh, compile_graph_on_mesh_for_memory, in_place_input_graph, mesh_axis,
     mesh_device, mesh_link, mesh_request, two_device_mesh, wired_input_graph,

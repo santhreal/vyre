@@ -8,7 +8,10 @@
 
 pub mod dispatch_buffers;
 
-#[cfg(feature = "device")]
+// `device` was too broad: `analysis`, `encoding` and `scheduling` all name it
+// and none of them consults a cache. The two that do are `graph-dispatch`
+// (seven CSR wrappers) and `solvers` (six quantized dispatch scratch types).
+#[cfg(any(feature = "graph-dispatch", feature = "solvers"))]
 pub(crate) mod program_cache;
 
 #[cfg(any(feature = "device", feature = "graph", feature = "math-kernels"))]

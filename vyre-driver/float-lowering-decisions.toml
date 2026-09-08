@@ -1,0 +1,43 @@
+# What each backend does with each float lowering mode.
+#
+# A dispatch carries a `FloatLoweringMode`. A backend that does not lower the
+# requested mode is refused by name, because answering with the mode it does
+# lower returns contracted arithmetic under a request for one rounding per
+# operation. The registry wrapper refuses for any wrapped backend, and a backend
+# that admits its own config refuses there too, which is what covers a direct
+# dispatch that never reaches the wrapper. Each row below states that decision, and
+# `vyre-registry-link/tests/float_lowering_decisions.rs` reads the backend
+# registry and the mode roster at run time and fails when a backend or a mode
+# has no row here.
+#
+# One key per `FloatLoweringMode::cache_label`. A value of `true` or `false` is
+# a property of the backend's own emitter. `"measured"` is for a backend whose
+# answer belongs to the device: the module leaves the emitter contraction-free
+# and the platform compiles it a second time, so the decision is taken on the
+# adapter at run time. `reason` states what in the backend makes the answer
+# what it is, so a row that flips carries the change that earned it.
+
+[cpu-ref]
+contracted = true
+strict-ieee = true
+reason = "The interpreter rounds every operation separately, and under the strict mode it evaluates the same neutral expansion a strict device kernel runs, which is what makes a bit-identity comparison against a device mean anything."
+
+[wgpu]
+contracted = true
+strict-ieee = "measured"
+reason = "`emit::strict_expanded` replaces every approximable f32 operation with its exact expansion and the emitter publishes each f32 product through an integer reinterpretation emitted as its own statement, so the module is contraction-free. The platform shader compiler then compiles that module, and one running under relaxed floating-point rules folds the reinterpretation, fuses across statements and substitutes approximate transcendentals: a Metal adapter answered the strict witness with the fused value and returned 4096.001 for an exp whose value is 6410.825. `strict_float` dispatches a multiply-add witness once per adapter and refuses the mode by name where the witness comes back fused."
+
+[cuda]
+contracted = true
+strict-ieee = false
+reason = "The PTX emitter selects the native approximate transcendentals and leaves the multiply-add pair for the assembler to contract. Nothing in it materializes an intermediate rounding, so a strict request is refused rather than answered with contracted arithmetic."
+
+[metal]
+contracted = true
+strict-ieee = false
+reason = "The Metal emitter calls the target's fast math intrinsics and does not force an intermediate f32 result, so a strict request is refused."
+
+[spirv]
+contracted = true
+strict-ieee = false
+reason = "The SPIR-V emitter carries no strict decoration and no expansion, so the driver stack may contract and may select an approximate transcendental; a strict request is refused."

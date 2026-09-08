@@ -7,7 +7,7 @@ use vyre_driver::validation::LaunchGeometryLimits;
 #[cfg(feature = "device-tests")]
 use vyre_driver::BackendError;
 #[cfg(feature = "device-tests")]
-use vyre_driver::DEFAULT_PIPELINE_CACHE_ENTRIES;
+use vyre_driver::{DEFAULT_PIPELINE_CACHE_BYTES, DEFAULT_PIPELINE_CACHE_ENTRIES};
 use vyre_foundation::execution_plan::{self, ReadbackStrategy};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryKind, Node, Program};
 
@@ -49,7 +49,10 @@ impl PipelineHarness {
             adapter_info,
             enabled_features,
             config: DispatchConfig::default(),
-            pipeline_cache: Arc::new(LruPipelineCache::new(DEFAULT_PIPELINE_CACHE_ENTRIES as u32)),
+            pipeline_cache: Arc::new(LruPipelineCache::with_limits(
+                DEFAULT_PIPELINE_CACHE_ENTRIES as u32,
+                DEFAULT_PIPELINE_CACHE_BYTES,
+            )),
             layout_cache: Arc::new(BindGroupLayoutCache::with_hasher(BuildHasherDefault::<
                 rustc_hash::FxHasher,
             >::default())),
@@ -139,7 +142,7 @@ fn record_once(
         labels,
         iterations: 1,
         timestamp_profile: false,
-        inferred_grid_shape: None,
+        inferred_launch: None,
     })
 }
 
@@ -223,25 +226,48 @@ mod bind_group_cache_contracts {
         );
     }
 
+    /// A timed dispatch is admitted by the capability the backend reports, not
+    /// by the feature bits an adapter advertises. An adapter whose timestamp
+    /// resolve produces no monotonic pair reports no timestamp capability, and
+    /// the dispatch must name that rather than underflow a delta.
     #[test]
     fn compiled_borrowed_timed_dispatch_reports_device_ns() {
         use vyre_driver::CompiledPipeline;
 
         let harness = PipelineHarness::new("compiled timing test");
         let device = &harness.device_queue.0;
-        assert!(
-            device.features().contains(wgpu::Features::TIMESTAMP_QUERY)
-                && device
-                    .features()
-                    .contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS),
-            "Fix: WGPU compiled timing test requires timestamp query features to be negotiated."
+        let profile = crate::runtime::adapter_caps_probe::from_backend_profile(
+            &harness.adapter_info,
+            &device.limits(),
+            &harness.enabled_features,
         );
-        let arena = harness.arena();
+        let device_advertises = device.features().contains(wgpu::Features::TIMESTAMP_QUERY)
+            && device
+                .features()
+                .contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS);
+        assert_eq!(
+            profile.supports_device_timestamps, device_advertises,
+            "Fix: the reported timestamp capability and the created device's feature set must describe one device"
+        );
 
+        let arena = harness.arena();
         let program = stores_u32("out", 1, 7);
         let pipeline = harness
             .compile_on_arena(&program, &arena)
             .expect("Fix: compiled timed dispatch test pipeline must compile.");
+
+        if !profile.supports_device_timestamps {
+            let error = pipeline
+                .dispatch_borrowed_timed(&[], &harness.config)
+                .expect_err(
+                    "Fix: a timed dispatch on an adapter with no timestamp capability must be refused, not attempted.",
+                );
+            assert!(
+                error.to_string().contains("no timestamp capability"),
+                "Fix: refusing a timed dispatch must name the missing capability, got {error}"
+            );
+            return;
+        }
 
         let timed = pipeline
             .dispatch_borrowed_timed(&[], &harness.config)

@@ -1,0 +1,456 @@
+# Declared algebraic laws that carry no executable proof, one row per
+# (operation, law) pair, with the payload the law's statement needs.
+#
+# A row is not a pass. It records that the prover derived no witness and names
+# why, so the pair reads as unproven rather than proven. `unproven_cap` equals
+# the number of such pairs the live registry reports: making a law provable
+# deletes its row and lowers the cap, and the cap only ever moves down.
+#
+# `kind` is drawn from `UnprovenKind`: missing-element, missing-partner,
+# missing-order, shape-not-composable, no-check-declared, nothing-to-execute.
+
+unproven_cap = 74
+
+[[decision]]
+op = "vyre-libs::graph::csr_backward_traverse"
+law = "inverse-of"
+kind = "missing-partner"
+reason = "the statement names the operation this one inverts and the registration names no partner operation; the declared shape is 7 host input buffer(s), 6 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::graph::csr_forward_traverse"
+law = "monotonic"
+kind = "missing-order"
+reason = "the statement compares two ordered inputs and the registration declares no order over its element type; the declared shape is 7 host input buffer(s), 6 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::graph::csr_forward_traverse_excluding"
+law = "monotonic"
+kind = "missing-order"
+reason = "the statement compares two ordered inputs and the registration declares no order over its element type; the declared shape is 8 host input buffer(s), 7 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::graph::csr_frontier_degree_sum"
+law = "bounded"
+kind = "missing-element"
+reason = "the statement names the bound the result may not cross and the registration declares no such value; the declared shape is 7 host input buffer(s), 6 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::graph::monoidal_compose"
+law = "identity"
+kind = "missing-element"
+reason = "the statement names an identity element and the registration declares no element to substitute; the declared shape is 2 host input buffer(s), 2 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::graph::tensor_flow_forward"
+law = "distributive"
+kind = "missing-partner"
+reason = "the statement names a second operation to distribute over and the registration names no partner operation; the declared shape is 7 host input buffer(s), 6 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::graph::vast_walk_preorder"
+law = "monotonic"
+kind = "missing-order"
+reason = "the statement compares two ordered inputs and the registration declares no order over its element type; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::label::nodeset_filter"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::label::resolve_family"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_add_u32"
+law = "associative"
+kind = "shape-not-composable"
+reason = "regrouping needs three interchangeable read-only operands of one element type, and this operation does not declare them; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_add_u32"
+law = "commutative"
+kind = "shape-not-composable"
+reason = "exchanging operands needs exactly two read-only inputs of one element type and equal length, and this operation does not declare them; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_add_u32"
+law = "identity"
+kind = "missing-element"
+reason = "the statement names an identity element and the registration declares no element to substitute; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_and_u32"
+law = "associative"
+kind = "shape-not-composable"
+reason = "regrouping needs three interchangeable read-only operands of one element type, and this operation does not declare them; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_and_u32"
+law = "commutative"
+kind = "shape-not-composable"
+reason = "exchanging operands needs exactly two read-only inputs of one element type and equal length, and this operation does not declare them; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_and_u32"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_exchange_u32"
+law = "custom"
+kind = "no-check-declared"
+reason = "the law is a free-form name outside the executable families, so the prover has no check to run for it; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_max_u32"
+law = "absorbing"
+kind = "missing-element"
+reason = "the statement names an absorbing element and the registration declares no element to substitute, so there is nothing to execute the law against; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_max_u32"
+law = "associative"
+kind = "shape-not-composable"
+reason = "regrouping needs three interchangeable read-only operands of one element type, and this operation does not declare them; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_max_u32"
+law = "commutative"
+kind = "shape-not-composable"
+reason = "exchanging operands needs exactly two read-only inputs of one element type and equal length, and this operation does not declare them; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_max_u32"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_max_u32"
+law = "identity"
+kind = "missing-element"
+reason = "the statement names an identity element and the registration declares no element to substitute; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_min_u32"
+law = "absorbing"
+kind = "missing-element"
+reason = "the statement names an absorbing element and the registration declares no element to substitute, so there is nothing to execute the law against; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_min_u32"
+law = "associative"
+kind = "shape-not-composable"
+reason = "regrouping needs three interchangeable read-only operands of one element type, and this operation does not declare them; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_min_u32"
+law = "commutative"
+kind = "shape-not-composable"
+reason = "exchanging operands needs exactly two read-only inputs of one element type and equal length, and this operation does not declare them; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_min_u32"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_min_u32"
+law = "left-absorbing"
+kind = "missing-element"
+reason = "the statement names a left absorbing element and the registration declares no element to substitute; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_or_u32"
+law = "absorbing"
+kind = "missing-element"
+reason = "the statement names an absorbing element and the registration declares no element to substitute, so there is nothing to execute the law against; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_or_u32"
+law = "associative"
+kind = "shape-not-composable"
+reason = "regrouping needs three interchangeable read-only operands of one element type, and this operation does not declare them; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_or_u32"
+law = "commutative"
+kind = "shape-not-composable"
+reason = "exchanging operands needs exactly two read-only inputs of one element type and equal length, and this operation does not declare them; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_or_u32"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_xor_u32"
+law = "associative"
+kind = "shape-not-composable"
+reason = "regrouping needs three interchangeable read-only operands of one element type, and this operation does not declare them; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_xor_u32"
+law = "commutative"
+kind = "shape-not-composable"
+reason = "exchanging operands needs exactly two read-only inputs of one element type and equal length, and this operation does not declare them; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::atomic::atomic_xor_u32"
+law = "self-inverse"
+kind = "shape-not-composable"
+reason = "applying the operation twice needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 2 host input buffer(s), 1 read-only, and 2 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::math::semiring_gemm"
+law = "distributive"
+kind = "missing-partner"
+reason = "the statement names a second operation to distribute over and the registration names no partner operation; the declared shape is 2 host input buffer(s), 2 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::predicate::arg_of"
+law = "inverse-of"
+kind = "missing-partner"
+reason = "the statement names the operation this one inverts and the registration names no partner operation; the declared shape is 7 host input buffer(s), 6 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::predicate::call_to"
+law = "monotonic"
+kind = "missing-order"
+reason = "the statement compares two ordered inputs and the registration declares no order over its element type; the declared shape is 7 host input buffer(s), 6 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::predicate::edge"
+law = "distributive"
+kind = "missing-partner"
+reason = "the statement names a second operation to distribute over and the registration names no partner operation; the declared shape is 7 host input buffer(s), 6 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::predicate::in_file"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::predicate::in_function"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::predicate::in_package"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::predicate::literal_of"
+law = "absorbing"
+kind = "missing-element"
+reason = "the statement names an absorbing element and the registration declares no element to substitute, so there is nothing to execute the law against; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::predicate::node_kind_eq"
+law = "identity"
+kind = "missing-element"
+reason = "the statement names an identity element and the registration declares no element to substitute; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::predicate::return_value_of"
+law = "monotonic"
+kind = "missing-order"
+reason = "the statement compares two ordered inputs and the registration declares no order over its element type; the declared shape is 7 host input buffer(s), 6 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::predicate::size_argument_of"
+law = "complement"
+kind = "missing-element"
+reason = "the statement names a complement element and the registration declares no element to substitute; the declared shape is 7 host input buffer(s), 6 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::all"
+law = "absorbing"
+kind = "missing-element"
+reason = "the statement names an absorbing element and the registration declares no element to substitute, so there is nothing to execute the law against; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::all"
+law = "distributive"
+kind = "missing-partner"
+reason = "the statement names a second operation to distribute over and the registration names no partner operation; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::all"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::any"
+law = "absorbing"
+kind = "missing-element"
+reason = "the statement names an absorbing element and the registration declares no element to substitute, so there is nothing to execute the law against; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::any"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::any"
+law = "lattice-absorption"
+kind = "missing-partner"
+reason = "the statement names the meet or join this one absorbs and the registration names no partner operation; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::count"
+law = "bounded"
+kind = "missing-element"
+reason = "the statement names the bound the result may not cross and the registration declares no such value; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::count_non_zero"
+law = "bounded"
+kind = "missing-element"
+reason = "the statement names the bound the result may not cross and the registration declares no such value; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::count_non_zero"
+law = "monotonic"
+kind = "missing-order"
+reason = "the statement compares two ordered inputs and the registration declares no order over its element type; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::gather"
+law = "monotonic"
+kind = "missing-order"
+reason = "the statement compares two ordered inputs and the registration declares no order over its element type; the declared shape is 3 host input buffer(s), 2 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::grid_stride_tree_sum_u32"
+law = "identity"
+kind = "missing-element"
+reason = "the statement names an identity element and the registration declares no element to substitute; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::max"
+law = "absorbing"
+kind = "missing-element"
+reason = "the statement names an absorbing element and the registration declares no element to substitute, so there is nothing to execute the law against; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::max"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::max"
+law = "identity"
+kind = "missing-element"
+reason = "the statement names an identity element and the registration declares no element to substitute; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::min"
+law = "absorbing"
+kind = "missing-element"
+reason = "the statement names an absorbing element and the registration declares no element to substitute, so there is nothing to execute the law against; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::min"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::scatter"
+law = "inverse-of"
+kind = "missing-partner"
+reason = "the statement names the operation this one inverts and the registration names no partner operation; the declared shape is 3 host input buffer(s), 2 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::sum"
+law = "identity"
+kind = "missing-element"
+reason = "the statement names an identity element and the registration declares no element to substitute; the declared shape is 2 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::workgroup_max_f32"
+law = "absorbing"
+kind = "missing-element"
+reason = "the statement names an absorbing element and the registration declares no element to substitute, so there is nothing to execute the law against; the declared shape is 1 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::workgroup_max_f32"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 1 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::workgroup_max_f32"
+law = "identity"
+kind = "missing-element"
+reason = "the statement names an identity element and the registration declares no element to substitute; the declared shape is 1 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::workgroup_max_u32"
+law = "absorbing"
+kind = "missing-element"
+reason = "the statement names an absorbing element and the registration declares no element to substitute, so there is nothing to execute the law against; the declared shape is 1 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::workgroup_max_u32"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 1 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::workgroup_max_u32"
+law = "identity"
+kind = "missing-element"
+reason = "the statement names an identity element and the registration declares no element to substitute; the declared shape is 1 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::workgroup_min_f32"
+law = "absorbing"
+kind = "missing-element"
+reason = "the statement names an absorbing element and the registration declares no element to substitute, so there is nothing to execute the law against; the declared shape is 1 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::workgroup_min_f32"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 1 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::workgroup_min_u32"
+law = "absorbing"
+kind = "missing-element"
+reason = "the statement names an absorbing element and the registration declares no element to substitute, so there is nothing to execute the law against; the declared shape is 1 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::workgroup_min_u32"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs one read-only input whose supplied extent equals the output extent, and no fixture case of this operation has that shape; the declared shape is 1 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::workgroup_sum_f32"
+law = "identity"
+kind = "missing-element"
+reason = "the statement names an identity element and the registration declares no element to substitute; the declared shape is 1 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::reduce::workgroup_sum_u32"
+law = "identity"
+kind = "missing-element"
+reason = "the statement names an identity element and the registration declares no element to substitute; the declared shape is 1 host input buffer(s), 1 read-only, and 1 output buffer(s)"

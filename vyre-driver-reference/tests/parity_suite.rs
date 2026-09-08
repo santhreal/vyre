@@ -10,7 +10,7 @@ use vyre_driver::VyreBackend;
 use vyre_driver_reference::CpuRefBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-mod dispatch_fixtures;
+use crate::dispatch_fixtures;
 use dispatch_fixtures::{binary_program, dispatch_no_input, dispatch_with_inputs, u32_out_buffer};
 
 // ---------------------------------------------------------------

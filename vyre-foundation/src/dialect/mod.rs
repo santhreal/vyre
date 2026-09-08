@@ -34,6 +34,23 @@ pub use version::{
 #[cfg(test)]
 mod tests;
 
+/// Expand to the single expression in `[...]`, or to `default` when it is empty.
+///
+/// `define_dialect!` carries optional per-operation clauses. Writing the default
+/// as a binding the clause then shadows leaves the default binding unread on
+/// every operation that supplies the clause, which is dead code in the
+/// expansion. Selecting the expression before it is bound has no unread half.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __dialect_default {
+    ([], $default:expr) => {
+        $default
+    };
+    ([$supplied:expr], $default:expr) => {
+        $supplied
+    };
+}
+
 /// Declarative macro to generate a complete versioned dialect module from a single definition.
 #[macro_export]
 macro_rules! define_dialect {
@@ -182,11 +199,10 @@ macro_rules! define_dialect {
                 pub fn declared_fields(self) -> &'static [$crate::dialect::FieldContract] {
                     match self {
                         $(
-                            Self::$op_variant => {
-                                let fields: &'static [$crate::dialect::FieldContract] = &[];
-                                $( let fields = $op_fields; )?
-                                fields
-                            }
+                            Self::$op_variant => $crate::__dialect_default!(
+                                [$( $op_fields )?],
+                                &[]
+                            ),
                         )*
                     }
                 }
@@ -196,12 +212,10 @@ macro_rules! define_dialect {
                 pub fn resource_abi(self) -> &'static $crate::dialect::ResourceAbi {
                     match self {
                         $(
-                            Self::$op_variant => {
-                                static DEFAULT_ABI: $crate::dialect::ResourceAbi = $crate::dialect::ResourceAbi::EMPTY;
-                                let abi = &DEFAULT_ABI;
-                                $( let abi = &$op_resource_abi; )?
-                                abi
-                            }
+                            Self::$op_variant => $crate::__dialect_default!(
+                                [$( &$op_resource_abi )?],
+                                &$crate::dialect::ResourceAbi::EMPTY
+                            ),
                         )*
                     }
                 }

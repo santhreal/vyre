@@ -44,19 +44,21 @@ fn inspect() -> Inspection {
     inspection
 }
 
-/// Write the matrix from the case registry, returning everything that found.
+/// Check the committed matrix against the case registry without writing it.
 ///
-/// The benchmark generator regenerates the matrix before it measures against it,
-/// and it is the same derivation as the gate: one producer, reached from both
-/// callers, so the document cannot depend on which one ran.
-pub(crate) fn regenerate(root: &Path) -> Vec<Finding> {
+/// A caller that measures against the matrix needs it to be current, not to
+/// make it current. Writing it here would settle a path this caller's gate does
+/// not declare, which the artifact gate reports as an unowned write, and it
+/// would move the document the measurement is compared against mid-run. The
+/// owning gate's `--write` is the only producer.
+pub(crate) fn verify(root: &Path) -> Vec<Finding> {
     let inspection = inspect();
     let mut findings = inspection.findings;
     findings.extend(xtask::artifact_gate::settle(
         root,
         "release-workload-matrix",
         &inspection.artifacts,
-        true,
+        false,
     ));
     findings
 }

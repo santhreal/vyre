@@ -1,10 +1,7 @@
 //! Frozen RFC-0004 collective operation contracts.
 
-#[path = "../../tests/support/spec_variant_tables.rs"]
-mod spec_variant_tables;
-
-use spec_variant_tables::builtin_collective_ops;
 use vyre_spec::CollectiveOp;
+use vyre_test_support::spec_variant_tables::builtin_collective_ops;
 
 #[test]
 fn collective_op_wire_tags_are_dense_and_frozen() {

@@ -32,7 +32,7 @@ use toml::Value;
 use crate::cfg_test::cfg_test_line_mask;
 use crate::crate_ownership::{Registry, REGISTRY as OWNERSHIP_REGISTRY};
 use crate::source_scan::mask_comments_and_strings;
-use crate::{read_source_bounded, relative, source_tree_files};
+use crate::{read_source_bounded, relative};
 
 /// The contract data, inside the directory of the crate that owns the rule.
 const DATA_FILE: &str = "backend-vocabulary.toml";
@@ -564,12 +564,18 @@ pub fn neutral_vocabulary_failures(root: &Path) -> Vec<String> {
 /// is skipped by path, and a line inside a `#[cfg(test)]` item is skipped by the
 /// span reader this crate already owns. A backend name in a test is the test
 /// naming the backend it drives, which is what a backend test is for.
+#[expect(
+    clippy::unnecessary_to_owned,
+    reason = "the returned iterator outlives the cached tree the roster slice borrows from"
+)]
 fn production_lines<'a>(
     root: &'a Path,
     prefix: &str,
 ) -> impl Iterator<Item = (String, u32, String)> + 'a {
     let directory = root.join(prefix.trim_end_matches('/'));
-    source_tree_files(&directory)
+    let tree = crate::workspace_manifest::tree_files(root);
+    tree.rust_sources_under(&directory)
+        .to_vec()
         .into_iter()
         .filter_map(move |path| {
             let file = relative(root, &path);
@@ -629,11 +635,13 @@ pub fn scan_foreign_glob_reexports(
     crate_roots: &[crate::module_layout::CrateRoot],
 ) -> Vec<(String, String, u32, String)> {
     let idents: BTreeSet<&str> = crate_roots.iter().map(|root| root.ident.as_str()).collect();
+    let tree = crate::workspace_manifest::tree_files(root);
     let mut found = Vec::new();
     for crate_root in crate_roots {
-        for path in source_tree_files(&root.join(&crate_root.directory).join("src")) {
-            let file = relative(root, &path);
-            let Ok(text) = read_source_bounded(&path) else {
+        let directory = root.join(&crate_root.directory).join("src");
+        for path in tree.rust_sources_under(&directory) {
+            let file = relative(root, path);
+            let Ok(text) = read_source_bounded(path) else {
                 continue;
             };
             let masked = mask_comments_and_strings(&text);

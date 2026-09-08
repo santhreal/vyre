@@ -59,12 +59,11 @@ pub fn sheaf_laplacian_eigenvalue(
     lambda: &str,
     n_nodes: u32,
     d: u32,
-    iterations: u32,
+    _iterations: u32,
 ) -> Program {
-    // `iterations` is accepted for interface stability. The dominant eigenpair of a diagonal
-    // operator is the closed form below regardless of iteration count (a power iteration converges
-    // to it immediately), so it does not influence the emitted program.
-    let _ = iterations;
+    // The iteration count is accepted and not read: the dominant eigenpair of a diagonal operator
+    // is the closed form below, which a power iteration reaches on its first pass. The parameter
+    // stays because the op's argument shape is pinned in the generated conformance evidence.
     if n_nodes == 0 || d == 0 {
         return trap_program(OP_ID, Some((lambda, DataType::U32)), format!(
             "Fix: sheaf_laplacian_eigenvalue requires n_nodes > 0 and d > 0, got n_nodes={n_nodes}, d={d}."

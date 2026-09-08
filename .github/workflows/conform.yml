@@ -28,7 +28,7 @@ jobs:
     # A public repository never executes fork code on the persistent GPU host.
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     needs: operation-registry
-    runs-on: [self-hosted, axiomexec, gpu]
+    runs-on: [self-hosted, gpu]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -44,30 +44,21 @@ jobs:
         run: >-
           ./cargo_full test -p vyre-primitives
           --features hardware,inventory-registry
-          --test registry_oob_clean
+          --test all_tests
 
       # The graph and fixpoint oracle sweeps moved to vyre-libs with their
-      # domains. These are the features those targets declare as
+      # domains. These are the features those suites declare as
       # required-features, and a target whose required feature is absent is
       # skipped without a word, so the selection is named rather than left to
       # the default set. `graph-dispatch` implies `graph`; the persistent-BFS
-      # volume sweep addresses `graph::dispatch` and needs it.
+      # volume sweep addresses `graph::dispatch` and is in that suite.
       - name: Verify graph and fixpoint oracle sweeps
         run: >-
           ./cargo_full test -p vyre-libs
-          --features graph-dispatch
-          --test sweep_graph_motif_oracle_matrix
-          --test sweep_graph_path_reconstruct_oracle_matrix
-          --test sweep_graph_csr_bidirectional_oracle_matrix
-          --test sweep_graph_csr_forward_traverse_volume_oracle_matrix
-          --test sweep_graph_csr_backward_traverse_volume_oracle_matrix
-          --test sweep_graph_reachable_volume_oracle_matrix
-          --test sweep_graph_csr_forward_or_changed_volume_oracle_matrix
-          --test sweep_graph_persistent_bfs_volume_oracle_matrix
-          --test sweep_graph_scc_decompose_volume_oracle_matrix
-          --test graph_fixpoint_adversarial_generated
-          --test csr_backward_or_changed_ir_fixpoint
-          --test graph_builders_emit_valid_ir
+          --features graph,graph-dispatch
+          --test all_tests
+          --test all_tests_graph
+          --test all_tests_graph_dispatch
 
       - name: Generate conformance matrix evidence
         run: >-

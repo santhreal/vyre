@@ -13,7 +13,7 @@
 //! in binding order) executes the actual quantized kernel IR for the first time and proves the fixed
 //! consumers match their `_cpu` oracles. The pre-fix over-feed surfaces here as a hard dispatch error.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::quantized_dispatch::{
     i4x8_batched_matmul_f32_scaled_via, i4x8_batched_matmul_top1_f32_scaled_via,

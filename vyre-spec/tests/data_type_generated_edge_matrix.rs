@@ -12,8 +12,7 @@ use vyre_spec::extension::{
 };
 use vyre_spec::{DataType, QuantizationScale, QuantizationZeroPoint};
 
-mod data_type_edge_matrix_cases;
-mod spec_variants;
+use crate::data_type_edge_matrix_cases;
 
 use data_type_edge_matrix_cases::{
     assert_layout_invariants, assert_quantized_layout_matches_storage, assert_serde_round_trip,

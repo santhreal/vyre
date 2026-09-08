@@ -58,12 +58,7 @@ mod tests {
             .map(|i| ((i as i32 % 31) - 15) as f32 / 5.0)
             .collect::<Vec<_>>();
         let program = leaky_relu_sq_backward("input", "grad_out", "grad_in", n as u32);
-        let actual = eval_unary_f32_backward(
-            &program,
-            &input,
-            &grad_out,
-            "Fix: leaky_relu_sq_backward must execute in the reference interpreter.",
-        );
+        let actual = eval_unary_f32_backward(&program, &input, &grad_out, "leaky_relu_sq_backward");
         for (index, ((actual, x), dy)) in actual
             .iter()
             .copied()

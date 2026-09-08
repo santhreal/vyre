@@ -42,33 +42,36 @@ fn expected_column_snapshot_bytes(layout: CudaEGraphDeviceByteLayout) -> usize {
 /// the smallest snapshot with a shared e-class and a nonempty child list, which
 /// is what pins the byte layout.
 fn shared_eclass_add_snapshot() -> GpuEGraphSnapshot {
-    GpuEGraphSnapshot::build([
+    GpuEGraphSnapshot::try_build([
         (2u32, "lit", &[][..]),
         (1u32, "lit", &[][..]),
         (2u32, "add", &[1u32, 2u32][..]),
     ])
+    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI")
 }
 
 /// Two literals and two `add` rows over the same operands in the same order, so
 /// rows 30 and 40 are structurally equivalent and nothing else is.
 fn duplicate_add_snapshot() -> GpuEGraphSnapshot {
-    GpuEGraphSnapshot::build([
+    GpuEGraphSnapshot::try_build([
         (10u32, "lit", &[][..]),
         (20u32, "lit", &[][..]),
         (30u32, "add", &[10u32, 20u32][..]),
         (40u32, "add", &[10u32, 20u32][..]),
     ])
+    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI")
 }
 
 /// [`duplicate_add_snapshot`] with row 30 fed both operands from e-class 10, so
 /// the two `add` rows differ in their child list and no pair is equivalent.
 fn distinct_add_snapshot() -> GpuEGraphSnapshot {
-    GpuEGraphSnapshot::build([
+    GpuEGraphSnapshot::try_build([
         (10u32, "lit", &[][..]),
         (20u32, "lit", &[][..]),
         (30u32, "add", &[10u32, 10u32][..]),
         (40u32, "add", &[10u32, 20u32][..]),
     ])
+    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI")
 }
 
 fn assert_span_matches_foundation(

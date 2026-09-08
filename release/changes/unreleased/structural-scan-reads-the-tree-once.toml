@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The structural scan reads every member source once and derives all six text rosters from that one pass instead of walking and re-reading the tree for each, skips `target/` and hidden directories while locating crate roots and source trees, derives the `src/` module roster from the source roster rather than walking it again, and reads a source corpus over `structure_gate::read_lanes` lanes so a network-mounted checkout is bounded by requests in flight rather than by core count."

@@ -634,7 +634,7 @@ mod tests {
                 request: &vyre_megakernel::SemanticExecutionRequest<'_>,
             ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError>
             {
-                let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+                crate::test_parity_oracles::canonical_inputs(request)?;
                 let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                     panic!("invalid zero-region inputs must fail before dispatch");
                 };

@@ -34,7 +34,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 
 use harness::{live_dispatcher, reference_outputs};
 use vyre_driver::DispatchConfig;

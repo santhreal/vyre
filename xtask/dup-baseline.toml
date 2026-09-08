@@ -52,11 +52,6 @@ duplicate_lines = 0
 total_lines = 1955
 
 [[crate]]
-name = "tests"
-duplicate_lines = 0
-total_lines = 5031
-
-[[crate]]
 name = "vyre"
 duplicate_lines = 0
 total_lines = 248

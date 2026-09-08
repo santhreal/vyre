@@ -26,10 +26,18 @@ pub const MAX_FACT_ID: u32 = (1 << FACT_BITS) - 1;
 /// NFA window sizing in `nfa::subgroup_nfa` so both subsystems
 /// share occupancy budget.
 pub const FACTS_PER_WORKGROUP: usize = 1024;
+// Shift and mask decomposition of the public bit layout above, read only by the
+// test-only `encode_node` / `decode_node` pair; production packs the dense
+// `(proc, block, fact)` index in IR instead.
+#[cfg(test)]
 const BLOCK_SHIFT: u32 = FACT_BITS;
+#[cfg(test)]
 const PROC_SHIFT: u32 = FACT_BITS + BLOCK_BITS;
+#[cfg(test)]
 const FACT_MASK: u32 = MAX_FACT_ID;
+#[cfg(test)]
 const BLOCK_MASK: u32 = MAX_BLOCK_ID;
+#[cfg(test)]
 const PROC_MASK: u32 = MAX_PROC_ID;
 /// Pack a `(proc_id, block_id, fact_id)` triple into a 32-bit
 /// node id.

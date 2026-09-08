@@ -40,10 +40,6 @@ impl LaunchRecommendationCache {
         self.entries.insert(key, value);
     }
 
-    pub(super) fn len(&self) -> usize {
-        self.entries.len()
-    }
-
     pub(super) fn stats(&self) -> ResidentLaunchCacheStats {
         ResidentLaunchCacheStats {
             entries: self.entries.len(),

@@ -272,6 +272,10 @@ name = "lego-cross-dialect"
 findings = 0
 
 [[gate]]
+name = "lego-duplicate-report"
+findings = 0
+
+[[gate]]
 name = "lego-exemption-liveness"
 findings = 0
 
@@ -309,6 +313,10 @@ findings = 0
 
 [[gate]]
 name = "lint-expect-fix"
+findings = 0
+
+[[gate]]
+name = "lint-liveness-evasion"
 findings = 0
 
 [[gate]]
@@ -484,11 +492,19 @@ name = "spirv-parity"
 findings = 0
 
 [[gate]]
+name = "test-harness-isolation"
+findings = 0
+
+[[gate]]
 name = "test-material-placement"
 findings = 0
 
 [[gate]]
 name = "test-only-capability"
+findings = 0
+
+[[gate]]
+name = "test-target-membership"
 findings = 0
 
 [[gate]]
@@ -501,6 +517,10 @@ findings = 0
 
 [[gate]]
 name = "unification"
+findings = 0
+
+[[gate]]
+name = "variant-list-closure"
 findings = 0
 
 [[gate]]

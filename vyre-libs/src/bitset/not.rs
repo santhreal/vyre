@@ -62,6 +62,8 @@ mod tests {
     fn empty_bitset() {
         assert_eq!(reference_bitset_not(&[]), Vec::<u32>::new());
     }
+
+    #[test]
     fn single_word_all_bits() {
         assert_eq!(reference_bitset_not(&[0xFFFF_FFFF]), vec![0x0000_0000]);
         assert_eq!(reference_bitset_not(&[0x0000_0000]), vec![0xFFFF_FFFF]);

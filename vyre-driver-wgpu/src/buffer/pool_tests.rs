@@ -44,6 +44,73 @@ fn oversized_size_classes_return_errors_instead_of_panicking() {
     );
 }
 
+/// A pool built without tiering has no event queue, so it can never fall
+/// behind. Reporting anything but zero there would read as a degradation that
+/// did not happen.
+#[test]
+fn a_pool_without_tiering_reports_no_dropped_events() {
+    assert_eq!(
+        super::BufferPoolStats::default().dropped_tiering_events,
+        0,
+        "Fix: the untiered pool's dropped-event count must start and stay at zero"
+    );
+}
+
+/// The tiering event queue is bounded and its enqueue is `try_send`, so a
+/// caller that outruns the metadata worker loses events. That loss is only
+/// tolerable because it is counted: an uncounted drop degrades reuse with no
+/// counter a caller can read.
+///
+/// The drain thread is what makes saturation racy, so this drives the counting
+/// half through `PoolTiering::from_sender` against a receiver held open and
+/// never drained. The queue is therefore full after exactly `capacity` sends,
+/// and every send past it is a drop with a known count.
+#[test]
+fn a_full_event_queue_counts_every_drop_and_never_blocks_the_caller() {
+    const CAPACITY: usize = 4;
+    const OVERFLOW: usize = 7;
+
+    let (sender, receiver) = crossbeam_channel::bounded(CAPACITY);
+    let pending = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let tiering = super::PoolTiering::from_sender(sender, std::sync::Arc::clone(&pending));
+
+    for key in 0..CAPACITY as u64 {
+        tiering.record_retained(key, 64);
+    }
+    assert_eq!(
+        tiering.dropped_events(),
+        0,
+        "Fix: sends that fit the queue must not be counted as drops"
+    );
+    assert_eq!(
+        pending.load(std::sync::atomic::Ordering::Acquire),
+        CAPACITY,
+        "Fix: an accepted event must stay pending until the worker drains it"
+    );
+
+    for key in 0..OVERFLOW as u64 {
+        tiering.record_access(key);
+    }
+    assert_eq!(
+        tiering.dropped_events(),
+        OVERFLOW,
+        "Fix: every send past a full queue must raise the dropped-event count"
+    );
+    assert_eq!(
+        pending.load(std::sync::atomic::Ordering::Acquire),
+        CAPACITY,
+        "Fix: a dropped event must not be left counted as pending"
+    );
+
+    drop(receiver);
+    tiering.record_access(u64::MAX);
+    assert_eq!(
+        tiering.dropped_events(),
+        OVERFLOW + 1,
+        "Fix: a disconnected worker must be counted as a drop, not silently ignored"
+    );
+}
+
 #[cfg(feature = "device-tests")]
 #[test]
 fn acquire_release_reuses_power_of_two_classes() {
@@ -144,7 +211,7 @@ fn tiering_acquire_release_is_nonblocking_under_contention() {
     }
     tiering.drain_all_for_test();
     assert_eq!(
-        tiering.dropped_events_for_test(),
+        pool.stats().dropped_tiering_events,
         0,
         "Fix: normal contention must not drop tiering metadata events"
     );

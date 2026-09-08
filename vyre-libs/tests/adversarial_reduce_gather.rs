@@ -12,8 +12,7 @@
     clippy::assertions_on_constants
 )]
 
-#[macro_use]
-mod gate_fixtures;
+use crate::gate_fixtures;
 
 use vyre_libs::reduce::gather::*;
 use vyre_reference::composition_witness::gather_witness as cpu_ref;

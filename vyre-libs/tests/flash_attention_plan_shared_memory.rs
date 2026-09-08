@@ -12,7 +12,7 @@
 //! their sum. It does not catch a wrong `count()` on a buffer, since both sides
 //! read the same declaration.
 
-mod harness;
+use crate::harness;
 
 use std::collections::BTreeSet;
 

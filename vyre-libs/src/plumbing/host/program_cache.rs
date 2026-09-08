@@ -49,6 +49,11 @@ impl<K: Eq, V> ProgramCache<K, V> {
     }
 
     /// Return the cached value for `key`, building and inserting it on a miss using a fallible constructor.
+    ///
+    /// Narrower than the module's own gate: `solvers` reaches this cache only
+    /// through the infallible constructor above, so under `solvers` alone this
+    /// method is dead and the crate's lint policy rejects it.
+    #[cfg(feature = "graph-dispatch")]
     pub(crate) fn try_get_or_insert_with<E>(
         &mut self,
         key: K,
@@ -136,6 +141,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "graph-dispatch")]
     fn failed_fallible_build_preserves_both_cache_slots() {
         let mut cache = ProgramCache::<u32, u32>::default();
         assert_eq!(*cache.get_or_insert_with(1, || 10), 10);

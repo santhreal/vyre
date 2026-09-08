@@ -23,8 +23,7 @@ use vyre_test_support::graph_values::{graph_output, u32_symbolic};
 
 use vyre_test_support::pass_programs::{add_program, copy_program, workgroup_scratch_program};
 
-#[path = "graph_fixtures/mod.rs"]
-mod graph_fixtures;
+use crate::graph_fixtures;
 
 const LIMIT: u64 = 1_000_000;
 

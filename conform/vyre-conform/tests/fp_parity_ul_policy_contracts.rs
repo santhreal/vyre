@@ -122,10 +122,7 @@ fn transcendental_inside_nested_region_is_detected() {
     );
 }
 
-#[path = "../../../tests/support/spec_variant_tables.rs"]
-mod spec_variant_tables;
-
-use spec_variant_tables::builtin_un_ops;
+use vyre_test_support::spec_variant_tables::builtin_un_ops;
 
 /// `UnOp` variants a backend is allowed to lower to an approximate native
 /// instruction, so a program containing one gets the wide backend window.
@@ -149,7 +146,10 @@ const APPROXIMATE_UN_OPS: &[&str] = &[
 
 /// `UnOp` variants every backend must match the reference on within the
 /// elementary window. `Reciprocal` sits here because cuda and wgpu both lower
-/// it to a division rather than to an approximate reciprocal instruction.
+/// it to a division rather than to an approximate reciprocal instruction. The
+/// two bitcasts sit here because they compute nothing: each reinterprets the
+/// same 32 bits under the other type, so a backend that rounds one has
+/// mislowered it.
 const EXACT_UN_OPS: &[&str] = &[
     "Negate",
     "BitNot",
@@ -172,6 +172,8 @@ const EXACT_UN_OPS: &[&str] = &[
     "Unpack8Low",
     "Unpack8High",
     "Reciprocal",
+    "BitcastF32ToU32",
+    "BitcastU32ToF32",
 ];
 
 /// A program that applies `op` to an f32 load, so the policy scan sees exactly
@@ -243,7 +245,7 @@ fn no_ulp_classification_entry_names_a_variant_that_no_longer_exists() {
     assert!(
         stale.is_empty(),
         "Fix: drop {stale:?} from the ULP classification tables; \
-         tests/support/spec_variant_tables.rs no longer lists those UnOp variants"
+         vyre_test_support::spec_variant_tables no longer lists those UnOp variants"
     );
 }
 

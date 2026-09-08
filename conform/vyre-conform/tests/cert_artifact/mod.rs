@@ -29,6 +29,7 @@ fn write_signed_shard(
     execution_hash: &str,
     program_hash: &str,
     pairs: Value,
+    laws: Value,
 ) {
     let pairs_array = pairs
         .as_array()
@@ -53,23 +54,25 @@ fn write_signed_shard(
     });
     let key = SigningKey::from_bytes(&[7u8; 32]);
     let signable = serde_json::json!({
-        "wire_format_version": 1u32,
+        "wire_format_version": 2u32,
         "program_hash": program_hash,
         "backend_id": "all",
         "plan": plan,
         "pairs": pairs,
+        "laws": laws,
     });
     let signable_bytes =
         serde_json::to_vec(&signable).expect("Fix: synthetic shard should serialize");
     let signature = key.sign(&signable_bytes);
     let artifact = serde_json::json!({
-        "wire_format_version": 1u32,
+        "wire_format_version": 2u32,
         "program_hash": program_hash,
         "backend_id": "all",
         "plan": signable["plan"].clone(),
         "signature": hex::encode(signature.to_bytes()),
         "public_key": hex::encode(key.verifying_key().to_bytes()),
         "pairs": signable["pairs"].clone(),
+        "laws": signable["laws"].clone(),
     });
     std::fs::write(
         path,
@@ -103,6 +106,7 @@ fn verify_certificate_signature(parsed: &Value) {
         "backend_id": parsed["backend_id"].clone(),
         "plan": parsed["plan"].clone(),
         "pairs": parsed["pairs"].clone(),
+        "laws": parsed["laws"].clone(),
     });
     let signable_bytes =
         serde_json::to_vec(&signable).expect("Fix: certificate signable body must serialize");

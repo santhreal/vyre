@@ -14,10 +14,9 @@ use vyre_megakernel::{
     TargetResourceMemory, TARGET_PAYLOAD_SCHEMA_VERSION,
 };
 
-#[path = "../../tests/support/artifact_fixtures.rs"]
-mod artifact_fixtures;
+use vyre_test_support::artifact_fixtures;
 
-use artifact_fixtures::{entry_over, entry_point, neutral_artifact};
+use vyre_test_support::artifact_fixtures::{entry_over, entry_point, neutral_artifact};
 
 fn diagnostic_path(error: &CompileError) -> Option<&str> {
     error

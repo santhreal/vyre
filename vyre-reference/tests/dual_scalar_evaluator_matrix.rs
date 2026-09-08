@@ -282,8 +282,8 @@ fn every_reference_evaluator_is_swept_or_recorded_as_non_scalar() {
 /// The markers that implement `ReferenceEvaluator`, from the frozen public-API
 /// snapshot.
 ///
-/// `scripts/check_public_api_snapshot.sh` regenerates the snapshot from rustdoc
-/// and a byte-stability gate holds it equal to the crate's real surface, so a
+/// The `public-api` gate in `xtask/src/gates/public_api.rs` regenerates the
+/// snapshot from rustdoc under `--write` and holds it byte-equal otherwise, so a
 /// new evaluator reaches this sweep through the gate that already forces a
 /// snapshot refresh.
 fn evaluator_markers() -> BTreeSet<String> {

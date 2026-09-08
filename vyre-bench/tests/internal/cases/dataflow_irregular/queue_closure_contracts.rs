@@ -123,14 +123,15 @@ fn ifds_queue_closure_prepare_builds_delta_fixpoint_sequence() {
     );
     assert_eq!(prepared.queue_capacity, prepared.max_wave_queue_len);
     assert!(prepared.queue_capacity < NODE_COUNT);
-    assert_eq!(prepared.inputs.len(), 11);
     assert_eq!(
-        prepared.inputs[QUEUE_CLOSURE_SEED_QUEUE_INDEX].len(),
-        prepared.seed_queue_len as usize * std::mem::size_of::<u32>()
+        prepared.reset_program.buffers()[1].count,
+        prepared.seed_queue_len,
+        "the seed queue is bound at the length prepare materialized"
     );
     assert_eq!(
-        prepared.inputs[QUEUE_CLOSURE_QUEUE_A_INDEX].len(),
-        prepared.queue_capacity as usize * std::mem::size_of::<u32>()
+        prepared.reset_program.buffers()[3].count,
+        prepared.queue_capacity,
+        "the active queue is bound at the capacity the oracle's widest wave justified"
     );
     assert_eq!(prepared.baseline_output.len(), FRONTIER_WORDS * 4);
     assert_eq!(prepared.closure_changed, 1);

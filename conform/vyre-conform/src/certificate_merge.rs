@@ -20,6 +20,7 @@ struct MergedProveArtifact {
     pub(crate) signature: String,
     pub(crate) public_key: String,
     pub(crate) pairs: Vec<serde_json::Value>,
+    pub(crate) laws: Vec<serde_json::Value>,
 }
 
 struct VerifiedShard {
@@ -61,6 +62,7 @@ pub(crate) fn merge_certificates(args: impl IntoIterator<Item = String>) -> Resu
     let mut unique_backends = BTreeSet::<String>::new();
     let mut unique_ops = BTreeSet::<String>::new();
     let mut witness_case_count = 0usize;
+    let mut law_map = BTreeMap::<(String, String), serde_json::Value>::new();
     let mut universe_backend_count = 0usize;
     let mut universe_op_count = 0usize;
     let mut merge_hasher = blake3::Hasher::new();
@@ -128,6 +130,31 @@ pub(crate) fn merge_certificates(args: impl IntoIterator<Item = String>) -> Resu
                 ));
             }
         }
+
+        // Sharding may split by backend, in which case two shards prove the
+        // same reference-oracle law. A repeated pair is therefore admitted, and
+        // a repeated pair whose proof differs is a disagreement about the
+        // oracle.
+        let laws = value_field(&shard.value, "laws", &shard.path)?
+            .as_array()
+            .ok_or_else(|| {
+                format!(
+                    "certificate `{}` has non-array `laws`. Fix: only merge prove artifacts.",
+                    shard.path
+                )
+            })?;
+        for law in laws {
+            let op = string_field(law, "op_id", &shard.path)?.to_string();
+            let name = string_field(law, "law", &shard.path)?.to_string();
+            if let Some(existing) = law_map.insert((op.clone(), name.clone()), law.clone()) {
+                if &existing != law {
+                    return Err(format!(
+                        "merge refused law ({op}, {name}) from `{}`: shards disagree about its proof. Fix: re-run prove on one registry revision.",
+                        shard.path
+                    ));
+                }
+            }
+        }
     }
 
     let catalog_hash = catalog_hash.ok_or_else(|| {
@@ -135,6 +162,7 @@ pub(crate) fn merge_certificates(args: impl IntoIterator<Item = String>) -> Resu
             .to_string()
     })?;
     let pairs = pair_map.into_values().collect::<Vec<_>>();
+    let laws = law_map.into_values().collect::<Vec<_>>();
     for pair in &pairs {
         merge_hasher.update(string_field(pair, "backend_id", "merged artifact")?.as_bytes());
         merge_hasher.update(string_field(pair, "op_id", "merged artifact")?.as_bytes());
@@ -164,12 +192,17 @@ pub(crate) fn merge_certificates(args: impl IntoIterator<Item = String>) -> Resu
     };
 
     let mut program_hasher = blake3::Hasher::new();
-    program_hasher.update(b"vyre-conform/merge/v1");
+    program_hasher.update(b"vyre-conform/merge/v2");
     hash_proof_plan(&mut program_hasher, &plan);
     for pair in &pairs {
         program_hasher.update(string_field(pair, "backend_id", "merged artifact")?.as_bytes());
         program_hasher.update(string_field(pair, "op_id", "merged artifact")?.as_bytes());
         program_hasher.update(string_field(pair, "message", "merged artifact")?.as_bytes());
+    }
+    for law in &laws {
+        program_hasher.update(string_field(law, "op_id", "merged artifact")?.as_bytes());
+        program_hasher.update(string_field(law, "law", "merged artifact")?.as_bytes());
+        program_hasher.update(string_field(law, "witness", "merged artifact")?.as_bytes());
     }
     let program_hash = program_hasher.finalize().to_hex().to_string();
 
@@ -178,24 +211,26 @@ pub(crate) fn merge_certificates(args: impl IntoIterator<Item = String>) -> Resu
     rand_core::OsRng.fill_bytes(&mut seed);
     let key = SigningKey::from_bytes(&seed);
     let signable = serde_json::json!({
-        "wire_format_version": 1u32,
+        "wire_format_version": 2u32,
         "program_hash": program_hash,
         "backend_id": "merged",
         "plan": &plan,
         "pairs": &pairs,
+        "laws": &laws,
     });
     let signable_bytes = serde_json::to_vec(&signable).map_err(|error| {
         format!("failed to serialize merged prove artifact body: {error}. Fix: keep certificate fields JSON-serializable.")
     })?;
     let signature = key.sign(&signable_bytes);
     let artifact = MergedProveArtifact {
-        wire_format_version: 1,
+        wire_format_version: 2,
         program_hash,
         backend_id: "merged".to_string(),
         plan,
         signature: hex::encode(signature.to_bytes()),
         public_key: hex::encode(key.verifying_key().to_bytes()),
         pairs,
+        laws,
     };
     let json = serde_json::to_string_pretty(&artifact).map_err(|error| {
         format!("failed to serialize merged prove artifact: {error}. Fix: keep certificate fields JSON-serializable.")
@@ -211,9 +246,9 @@ fn read_and_verify_shard(path: &str) -> Result<VerifiedShard, String> {
         )
     })?;
     let wire_format_version = u32_field(&value, "wire_format_version", path)?;
-    if wire_format_version != 1 {
+    if wire_format_version != 2 {
         return Err(format!(
-            "certificate `{path}` has wire_format_version {wire_format_version}. Fix: merge only v1 prove artifacts."
+            "certificate `{path}` has wire_format_version {wire_format_version}. Fix: merge only v2 prove artifacts, which carry the proven-law roster."
         ));
     }
     let program_hash = string_field(&value, "program_hash", path)?.to_string();
@@ -242,6 +277,7 @@ fn read_and_verify_shard(path: &str) -> Result<VerifiedShard, String> {
         "backend_id": value["backend_id"].clone(),
         "plan": value["plan"].clone(),
         "pairs": value["pairs"].clone(),
+        "laws": value["laws"].clone(),
     });
     let signable_bytes = serde_json::to_vec(&signable).map_err(|error| {
         format!("failed to serialize certificate `{path}` signable body: {error}. Fix: regenerate the shard.")

@@ -31,12 +31,6 @@ pub fn verify_bundle_with_backend(
     if corpus.is_empty() {
         return Err(BundleCertError::EmptyCorpus);
     }
-    let input_plan = WitnessInputPlan::for_program(program).map_err(|message| {
-        BundleCertError::WitnessPlanningFailed {
-            witness: "certificate-verification".to_string(),
-            message,
-        }
-    })?;
     let production = ProductionSession::from_registration(program, backend).map_err(|error| {
         BundleCertError::ProductionFailed {
             witness: "certificate-verification".to_string(),

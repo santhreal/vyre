@@ -227,9 +227,11 @@ pub enum PrefixCacheError {
 }
 
 /// Record of one physical page in the runtime pool.
+///
+/// The pool is keyed by page id, so the record states everything about a page
+/// except which page it is.
 #[derive(Debug, Clone)]
 pub(super) struct PhysicalPageRecord {
-    pub(super) page_id: u32,
     pub(super) generation: u64,
     pub(super) allocated: bool,
     pub(super) pinned: bool,

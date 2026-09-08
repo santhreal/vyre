@@ -309,6 +309,11 @@ mod primitive_tests {
             "Fix: hex decode setup must reuse the immutable primitive table instead of rebuilding it per dispatch."
         );
         assert_eq!(*first, hex_decode_table());
+        assert_eq!(
+            hex_decode_table(),
+            build_hex_decode_table(),
+            "Fix: the 256-entry hex decode literal disagrees with the ASCII nibble alphabet."
+        );
     }
 
     #[test]

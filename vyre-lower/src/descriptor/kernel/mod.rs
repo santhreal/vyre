@@ -1,13 +1,16 @@
 //! Kernel descriptor behavior: dispatch construction, body hashing, and the
 //! read-only analyses emitters run over nested bodies.
 
-use super::{Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, KernelOpsIter};
+use super::{
+    Dispatch, GridIndexSpace, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, KernelOpsIter,
+};
 
 impl Dispatch {
-    /// Create a workgroup dispatch shape.
+    /// Create a workgroup dispatch shape whose lanes index per axis.
     pub const fn new(x: u32, y: u32, z: u32) -> Self {
         Self {
             workgroup_size: [x, y, z],
+            grid_index: GridIndexSpace::PerAxis,
         }
     }
 }
@@ -257,6 +260,75 @@ impl KernelDescriptor {
             b.child_bodies.iter().any(walk)
         }
         walk(&self.body)
+    }
+
+    /// True iff every lane of this kernel can read its element index from a
+    /// grid-linearized global invocation id.
+    ///
+    /// A linearized index collapses the three grid axes into one number, so it
+    /// is only the same index the kernel reads today when the kernel does not
+    /// also observe the grid's shape. Reading the global invocation id on y or
+    /// z, or reading the workgroup id at all, is such an observation: a folded
+    /// launch moves those values without moving the element they belong to.
+    /// Everything inside one workgroup, and every subgroup collective, is
+    /// unmoved by a fold, so those admit it.
+    ///
+    /// The match carries no catch-all arm. A new op that reads a launch builtin
+    /// would otherwise be admitted by default and silently read a value the fold
+    /// moved; here it does not compile until someone records which side it is on.
+    #[must_use]
+    pub fn admits_grid_linearized_index(&self) -> bool {
+        self.ops_iter().all(|op| match op.kind {
+            // Axis 0 carries the linearized index and is preserved by
+            // construction; y and z are the axes a fold opens.
+            KernelOpKind::GlobalInvocationId => op.operands.first().copied().unwrap_or(0) == 0,
+            KernelOpKind::WorkgroupId => false,
+            KernelOpKind::Literal
+            | KernelOpKind::Copy
+            | KernelOpKind::LocalInvocationId
+            | KernelOpKind::SubgroupLocalId
+            | KernelOpKind::SubgroupSize
+            | KernelOpKind::LoopIndex { .. }
+            | KernelOpKind::LoopCarrierInit { .. }
+            | KernelOpKind::LoopCarrier { .. }
+            | KernelOpKind::LoopCarrierEnd { .. }
+            | KernelOpKind::LoadGlobal
+            | KernelOpKind::LoadShared
+            | KernelOpKind::LoadConstant
+            | KernelOpKind::BufferLength
+            | KernelOpKind::StoreGlobal
+            | KernelOpKind::StoreShared
+            | KernelOpKind::VectorLoadGlobal { .. }
+            | KernelOpKind::VectorStoreGlobal { .. }
+            | KernelOpKind::ExtractLane { .. }
+            | KernelOpKind::BinOpKind(..)
+            | KernelOpKind::UnOpKind(..)
+            | KernelOpKind::Fma
+            | KernelOpKind::MatrixMma(..)
+            | KernelOpKind::Select
+            | KernelOpKind::Cast { .. }
+            | KernelOpKind::Atomic { .. }
+            | KernelOpKind::SubgroupBallot
+            | KernelOpKind::SubgroupShuffle
+            | KernelOpKind::SubgroupBroadcast
+            | KernelOpKind::SubgroupReduce { .. }
+            | KernelOpKind::StructuredIfThen
+            | KernelOpKind::StructuredIfThenElse
+            | KernelOpKind::StructuredForLoop { .. }
+            | KernelOpKind::StructuredBlock
+            | KernelOpKind::Return
+            | KernelOpKind::Barrier { .. }
+            | KernelOpKind::Region { .. }
+            | KernelOpKind::AsyncLoad(..)
+            | KernelOpKind::AsyncStore(..)
+            | KernelOpKind::AsyncWait(..)
+            | KernelOpKind::Trap { .. }
+            | KernelOpKind::Resume { .. }
+            | KernelOpKind::IndirectDispatch { .. }
+            | KernelOpKind::Call { .. }
+            | KernelOpKind::OpaqueExpr(..)
+            | KernelOpKind::OpaqueNode(..) => true,
+        })
     }
 }
 

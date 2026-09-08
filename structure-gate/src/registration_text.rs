@@ -626,7 +626,7 @@ inventory::submit! {
     /// cursor served both "where to search next" and "what is still uncopied".
     /// The deleted span held the `const` the id resolved through, so a real
     /// registration became no registration. This is the shape of
-    /// `vyre-primitives/src/hash/adler32.rs`: a const id, a feature-gated
+    /// `vyre-libs/src/hash/adler32.rs`: a const id, a feature-gated
     /// production registration, then a test module.
     #[test]
     fn a_non_test_cfg_attribute_keeps_the_text_before_it() {

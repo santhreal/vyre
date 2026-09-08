@@ -69,8 +69,8 @@ pub enum VisitOrder {
 
 pub use evaluatable::Evaluatable;
 pub use expr_parts::{
-    any_subexpr, expr_buffer_ref, expr_children, expr_combine, for_each_subexpr, ExprBufferRef,
-    ExprChildren, ExprCombine,
+    any_subexpr, bin_op_magnitude, expr_buffer_ref, expr_children, expr_combine, expr_magnitude,
+    for_each_subexpr, un_op_magnitude, ExprBufferRef, ExprChildren, ExprCombine, ExprMagnitude,
 };
 pub use expr_visitor::{
     visit_expr, visit_expr_buffer_accesses, visit_postorder, visit_preorder,

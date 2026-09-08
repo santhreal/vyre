@@ -26,13 +26,6 @@ pub(crate) fn store_words(buffer: &str, base_var: &str, words: &[Expr]) -> Vec<N
         .collect()
 }
 
-pub(crate) fn write_words(dst: &mut [u8], words: &[u32]) {
-    for (idx, word) in words.iter().enumerate() {
-        let base = idx * 4;
-        dst[base..base + 4].copy_from_slice(&word.to_le_bytes());
-    }
-}
-
 pub(crate) fn load_u32(buffer: &str, index: Expr) -> Expr {
     Expr::load(buffer, index)
 }

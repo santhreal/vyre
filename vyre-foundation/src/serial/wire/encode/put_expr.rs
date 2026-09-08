@@ -255,18 +255,20 @@ pub fn put_expr(out: &mut Vec<u8>, expr: &Expr) -> Result<(), WireEncodeErr> {
     Ok(())
 }
 
+/// The bit pattern the canonical wire form records for `value`.
+///
+/// The rule is [`canonical_f32`](crate::fp_parity::canonical_f32), which is the
+/// same normalization the parity contract applies to every f32 it compares, so
+/// program identity and parity answer one question about a float. It quiets a
+/// NaN, whose payload no target preserves, and flushes a subnormal to a zero of
+/// its own sign.
+///
+/// The sign of a zero is not normalized away. It is observable: `1.0 / -0.0` is
+/// negative infinity and `1.0 / 0.0` is positive, and this encoding is the key
+/// a compiled artifact is cached under, so collapsing the two served one
+/// program the other one's device code while the reference interpreter, which
+/// reads the literal as written, disagreed with it.
 #[inline]
 fn canonical_f32_bits(value: f32) -> u32 {
-    if value.is_nan() {
-        return 0x7FC0_0000;
-    }
-    if value.is_subnormal() {
-        return 0.0f32.to_bits();
-    }
-    let bits = value.to_bits();
-    if bits == (-0.0f32).to_bits() {
-        0.0f32.to_bits()
-    } else {
-        bits
-    }
+    crate::fp_parity::canonical_f32(value).to_bits()
 }

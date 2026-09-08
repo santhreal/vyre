@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
-use crate::gates::scan::Tree;
+use crate::gates::scan::{Code, CodeCursor, Tree};
 
 /// Edition the parser reads files under.
 const EDITION: &str = "2021";
@@ -161,6 +161,24 @@ impl crate::gate::GateBehavior for SourceReachability {
                     ));
                     continue;
                 };
+                if declaration.path_attr.is_some() {
+                    let from = owning_package(&rel, &manifests);
+                    let into = owning_package(&hit, &manifests);
+                    if from != into {
+                        report.find(Finding::in_file(
+                            &rel,
+                            format!(
+                                "`#[path]` on `mod {}` resolves to `{hit}`, which {} owns",
+                                declaration.name,
+                                into.as_deref().unwrap_or("no package")
+                            ),
+                            "move the shared source into a package both sides depend on: a file \
+                             pulled across a package boundary compiles once per consumer, under \
+                             each one's feature unification, and is absent from the archive the \
+                             consumer publishes",
+                        ));
+                    }
+                }
                 if !reached.contains_key(&hit) {
                     let trace = format!("{label} -> {rel}");
                     let child_base = if file_name(Path::new(&hit)) == Some("mod.rs") {
@@ -538,44 +556,41 @@ enum Token {
 fn tokenize(text: &str) -> Vec<Token> {
     let mut tokens = Vec::new();
     let bytes = text.as_bytes();
-    let mut at = 0usize;
-    while at < text.len() {
-        if !text.is_char_boundary(at) {
-            at += 1;
-            continue;
-        }
-        if let Some(span) = structure_gate::source_scan::opaque_span(text, at) {
-            let mut end = (at + span.get()).min(text.len());
-            while end < text.len() && !text.is_char_boundary(end) {
-                end += 1;
+    let mut cursor = CodeCursor::new(text);
+    while let Some((at, span)) = cursor.step() {
+        match span {
+            Code::Opaque(piece) => {
+                if let Some(body) = literal_body(piece) {
+                    tokens.push(Token::Str(body));
+                }
             }
-            let piece = &text[at..end];
-            if let Some(body) = literal_body(piece) {
-                tokens.push(Token::Str(body));
+            Code::Byte(byte) if byte == b'_' || byte.is_ascii_alphabetic() => {
+                let mut end = at;
+                while end < bytes.len()
+                    && (bytes[end] == b'_' || bytes[end].is_ascii_alphanumeric())
+                {
+                    end += 1;
+                }
+                tokens.push(Token::Ident(text[at..end].to_string()));
+                cursor.seek(end);
             }
-            at = end;
-            continue;
-        }
-        let byte = bytes[at];
-        if byte == b'_' || byte.is_ascii_alphabetic() {
-            let start = at;
-            while at < bytes.len() && (bytes[at] == b'_' || bytes[at].is_ascii_alphanumeric()) {
-                at += 1;
+            Code::Byte(byte) if byte.is_ascii_digit() => {
+                let mut end = at;
+                while end < bytes.len()
+                    && (bytes[end].is_ascii_alphanumeric() || bytes[end] == b'.')
+                {
+                    end += 1;
+                }
+                cursor.seek(end);
             }
-            tokens.push(Token::Ident(text[start..at].to_string()));
-            continue;
-        }
-        if byte.is_ascii_digit() {
-            while at < bytes.len() && (bytes[at].is_ascii_alphanumeric() || bytes[at] == b'.') {
-                at += 1;
+            Code::Byte(_) => {
+                let character = text[at..].chars().next().unwrap_or(' ');
+                if !character.is_whitespace() {
+                    tokens.push(Token::Punct(character));
+                }
+                cursor.seek(at + character.len_utf8());
             }
-            continue;
         }
-        let character = text[at..].chars().next().unwrap_or(' ');
-        if !character.is_whitespace() {
-            tokens.push(Token::Punct(character));
-        }
-        at += character.len_utf8();
     }
     tokens
 }
@@ -1188,6 +1203,119 @@ mod include_module_tests {
             messages,
             ["include! pastes the tracked file crate/src/sibling.rs into this one"],
             "only the hand-written include is a finding: {messages:?}"
+        );
+    }
+}
+
+/// The package directory owning a file: the nearest ancestor with a manifest.
+///
+/// Nearest, not first: a package nested inside a workspace directory that also
+/// carries a `Cargo.toml` is the owner of its own files, and answering with the
+/// outer directory would make every include inside it look like an escape.
+fn owning_package(path: &str, manifests: &[String]) -> Option<String> {
+    manifests
+        .iter()
+        .map(|manifest| parent_of(manifest))
+        .filter(|directory| {
+            if directory.is_empty() {
+                return true;
+            }
+            path.starts_with(&format!("{directory}/"))
+        })
+        .max_by_key(|directory| directory.len())
+}
+
+#[cfg(test)]
+mod package_escape_tests {
+    use super::*;
+    use crate::gate::GateBehavior;
+    use crate::gates::fixture_checkout::{checkout, messages};
+
+    /// A manifest declaring one library, enough for a target root to resolve.
+    fn library(name: &str) -> String {
+        format!("[package]\nname = \"{name}\"\nversion = \"0.0.0\"\nedition = \"2021\"\n")
+    }
+
+    /// WHY: ten support sources under the workspace root were textually pulled
+    /// into 39 test files across packages. Each consumer compiled its own copy
+    /// under its own feature unification, so one shared contract could behave
+    /// differently per consumer, and none of the copies travelled in the archive
+    /// the consumer publishes. The tree is at zero of these and nothing held it
+    /// there: reachability is satisfied by an escaping include, because the file
+    /// is reached.
+    #[test]
+    fn a_path_attribute_leaving_the_package_is_reported() {
+        let (_directory, root) = checkout(&[
+            ("alpha/Cargo.toml", &library("alpha")),
+            (
+                "alpha/src/lib.rs",
+                "#[path = \"../../shared/fixture.rs\"]\nmod fixture;\n",
+            ),
+            ("shared/fixture.rs", "pub fn fixture() {}\n"),
+        ]);
+
+        let report = SourceReachability
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate reads the fixture tree");
+        let reported = messages(&report);
+        assert!(
+            reported
+                .iter()
+                .any(|message| message.contains("resolves to `shared/fixture.rs`")),
+            "an include reaching outside the package must be reported: {reported:?}"
+        );
+    }
+
+    /// WHY: `#[path]` inside a package is ordinary module layout, and vyre-aot
+    /// uses it to compile a shipped template that is not named `.rs`. Reporting
+    /// that would make the rule about the attribute rather than the boundary,
+    /// and the repair it recommends would be to stop using a supported feature.
+    #[test]
+    fn a_path_attribute_staying_inside_the_package_is_not_reported() {
+        let (_directory, root) = checkout(&[
+            ("alpha/Cargo.toml", &library("alpha")),
+            (
+                "alpha/src/lib.rs",
+                "#[path = \"../templates/artifact.rs.tmpl\"]\nmod artifact;\n",
+            ),
+            ("alpha/templates/artifact.rs.tmpl", "pub fn rendered() {}\n"),
+        ]);
+
+        let report = SourceReachability
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate reads the fixture tree");
+        let reported = messages(&report);
+        assert!(
+            !reported.iter().any(|message| message.contains("owns")),
+            "a climb that stays inside the package is layout, not an escape: {reported:?}"
+        );
+    }
+
+    /// WHY: the owner is the nearest manifest, not the first one found. A
+    /// package nested under a directory that also carries a manifest would
+    /// otherwise resolve to the outer one for both sides, and every escape out
+    /// of the inner package would compare equal and pass.
+    #[test]
+    fn the_nearest_manifest_owns_the_file() {
+        let manifests = vec![
+            "Cargo.toml".to_string(),
+            "outer/Cargo.toml".to_string(),
+            "outer/inner/Cargo.toml".to_string(),
+        ];
+        assert_eq!(
+            owning_package("outer/inner/src/lib.rs", &manifests).as_deref(),
+            Some("outer/inner"),
+            "the innermost package owns its own source"
+        );
+        assert_eq!(
+            owning_package("outer/src/lib.rs", &manifests).as_deref(),
+            Some("outer"),
+            "a file above the inner package belongs to the outer one"
+        );
+        assert_eq!(
+            owning_package("shared/fixture.rs", &manifests).as_deref(),
+            Some(""),
+            "a file under no package directory belongs to the workspace root"
         );
     }
 }

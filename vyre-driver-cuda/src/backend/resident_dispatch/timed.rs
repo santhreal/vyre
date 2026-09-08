@@ -64,6 +64,10 @@ impl CudaBackend {
             prepared.fixpoint_iterations as usize,
             prepared.launch.grid,
         );
+        // Held for the rest of this dispatch: the launch loop records the inner
+        // pair into it, and the guard clears it here rather than leaving it
+        // armed for the next dispatch on this thread.
+        let _kernel_window = probe::arm_kernel_window(&self.launch_resources);
         let resident_dispatch = self.dispatch_resident_async_concrete_with_ptx_key(
             program, bindings, config, &ptx_src, module_key, true, None, true, &prepared,
         )?;
@@ -78,6 +82,7 @@ impl CudaBackend {
         self.telemetry
             .record_timed_dispatch(wall_ns, device_ns, Some(enqueue_ns), Some(wait_ns));
         if probe::enabled() {
+            probe::charge_kernel_window();
             let ptx_cache = self.ptx_source_cache_snapshot();
             probe::emit(
                 self.telemetry.snapshot().timed_dispatches,

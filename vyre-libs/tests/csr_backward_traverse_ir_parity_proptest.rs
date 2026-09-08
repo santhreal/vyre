@@ -13,10 +13,9 @@
 #![forbid(unsafe_code)]
 #![cfg(feature = "graph")]
 
-mod graph_sweep_fixtures;
+use crate::csr_sweep;
+use crate::graph_sweep_fixtures;
 use graph_sweep_fixtures::{bitset_words, gpu_step};
-#[path = "../../tests/support/csr_sweep/mod.rs"]
-mod csr_sweep;
 
 use proptest::prelude::*;
 use vyre_libs::graph::csr_backward_traverse::csr_backward_traverse;

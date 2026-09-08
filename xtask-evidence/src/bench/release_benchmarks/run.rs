@@ -158,7 +158,7 @@ fn read_matrix(workspace_root: &Path, report: &mut Report) -> Option<ReleaseWork
 /// child truncates the report the parent reads off stdout. They are findings.
 fn measure(root: &Path, config: &Config, report: &mut Report) {
     let workspace_root = root.to_path_buf();
-    let matrix_findings = crate::release::release_workload_matrix::regenerate(&workspace_root);
+    let matrix_findings = crate::release::release_workload_matrix::verify(&workspace_root);
     let matrix_clean = matrix_findings.is_empty();
     for finding in matrix_findings {
         report.find(finding);

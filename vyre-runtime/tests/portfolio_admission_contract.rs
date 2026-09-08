@@ -27,10 +27,7 @@ use vyre_megakernel::{
 };
 use vyre_runtime::artifact_admission::{admit_portfolio, ArtifactAdmissionError};
 
-#[path = "../../tests/support/artifact_fixtures.rs"]
-mod artifact_fixtures;
-
-use artifact_fixtures::{compile_graph, entry_over, single_input_graph};
+use vyre_test_support::artifact_fixtures::{compile_graph, entry_over, single_input_graph};
 
 /// The axis every fixture guard reads.
 fn tokens() -> SpecializationAxis {

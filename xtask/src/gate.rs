@@ -873,6 +873,46 @@ pub fn render(name: &str, report: &Report) -> String {
     text
 }
 
+/// What one completed gate run emits, and whether the process must fail.
+#[derive(Debug, Eq, PartialEq)]
+pub struct Verdict {
+    /// The rendered report. Empty only when a clean run asked for silence.
+    pub stdout: String,
+    /// One line per mutation violation, prefixed as the caller prints it.
+    pub stderr: Vec<String>,
+    /// Whether the process must exit nonzero.
+    pub failed: bool,
+}
+
+/// The verdict for a gate that ran to completion, with its report emitted
+/// before either failing condition is judged.
+///
+/// A mutation in comparison mode is a failure and so is a finding. Both are
+/// decided after the report is rendered, because a run that exits ahead of its
+/// own report discards every finding it computed, and an edit to any workspace
+/// file while the gate reads the tree is enough to cause that exit.
+#[must_use]
+pub fn finish_run(
+    name: &str,
+    report: &Report,
+    mutations: &[String],
+    quiet_when_clean: bool,
+) -> Verdict {
+    let clean = report.findings.is_empty() && mutations.is_empty();
+    Verdict {
+        stdout: if quiet_when_clean && clean {
+            String::new()
+        } else {
+            render(name, report)
+        },
+        stderr: mutations
+            .iter()
+            .map(|mutation| format!("Fix: {mutation}"))
+            .collect(),
+        failed: !clean,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

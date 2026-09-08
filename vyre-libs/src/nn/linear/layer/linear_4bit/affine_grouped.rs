@@ -161,7 +161,6 @@ fn linear_4bit_affine_grouped_batch_impl(
     let tile = AFFINE_GROUPED_LANES_PER_OUTPUT;
     let chunks = in_dim.div_ceil(tile);
     let out_idx = Expr::var("out_idx");
-    let local = Expr::var("local");
     let lane = Expr::var("lane");
     let k = Expr::var("k");
     let activation_idx = Expr::add(

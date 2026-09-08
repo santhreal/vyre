@@ -29,7 +29,7 @@ pub(crate) fn validate_and_analyze(
 fn lower_for_cuda_emit(program: &Program) -> Result<vyre_lower::KernelDescriptor, String> {
     let trace = crate::instrumentation::cuda_stage_trace_enabled();
     let start = std::time::Instant::now();
-    let descriptor = vyre_lower::lower_physical(program)
+    let descriptor = vyre_lower::lower_baseline(program)
         .map_err(|error| {
             format!(
                 "physical lowering failed before CUDA PTX emission: {error}. Fix: repair the source Program or add the missing neutral mapping before PTX emission."

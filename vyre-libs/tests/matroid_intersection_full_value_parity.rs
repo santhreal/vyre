@@ -23,7 +23,7 @@
 //!    sink is a length-0 path).
 #![cfg(all(feature = "math-kernels", feature = "graph"))]
 
-mod wire_words;
+use crate::wire_words;
 use vyre_reference::composition_witness::matroid_intersection_augmentation_witness as cpu_ref;
 use wire_words::{matroid_intersection_eval, next_u32};
 

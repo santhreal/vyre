@@ -96,6 +96,10 @@ crate: one typed builder over `TensorRef`, the validation helpers
 against `vyre_reference::reference_eval`. Its placeholders are
 `{{crate_name}}`, `{{crate_name_snake}}` and `{{gh_org}}`.
 
+It depends on `vyre-libs` with `default-features = false` and the `builder`
+feature, which publishes those helpers and `BuildOptions`. No dialect of
+`vyre-libs` is compiled into the scaffold.
+
 The `example-capability` gate renders it, patches every dependency this
 checkout provides at the checkout, and runs its conformance test, so the
 scaffold cannot drift from the surface it is written against.

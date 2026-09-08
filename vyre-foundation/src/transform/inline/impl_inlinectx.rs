@@ -10,11 +10,6 @@ use crate::optimizer::rewrite::rewrite_expr;
 
 impl InlineCtx {
     #[inline]
-    pub(crate) fn new(resolver: OpResolver) -> Self {
-        Self::new_with_mode(resolver, UnresolvedCalls::Reject)
-    }
-
-    #[inline]
     pub(crate) fn new_with_mode(resolver: OpResolver, unresolved: UnresolvedCalls) -> Self {
         Self {
             resolver,
@@ -41,30 +36,14 @@ impl InlineCtx {
         Ok(expand_body(nodes, &mut policy)?.into_owned())
     }
 
-    /// `expr` with every `Expr::Call` replaced by the value its callee produces,
-    /// plus the statements that value needs in front of it.
-    ///
-    /// Operand positions come from [`rewrite_expr`], the one owner. The match
-    /// this replaces enumerated them itself and put `SubgroupBallot`,
-    /// `SubgroupShuffle` and `SubgroupReduce` in its inert arm, so a call inside
-    /// a subgroup operand was handed back verbatim: under
-    /// `UnresolvedCalls::Reject` the program kept an `Expr::Call` that inlining
-    /// exists to refuse, and under `Keep` that call's own arguments were never
-    /// inlined either.
-    ///
-    /// The walk is bottom-up, so a call reaches [`Self::expand_call`] with its
-    /// arguments already inlined and no argument is walked twice.
-    pub(crate) fn inline_expr(&mut self, expr: &Expr) -> Result<(Vec<Node>, Expr)> {
-        let mut prefix = Vec::new();
-        let inlined = self.inline_expr_into(expr, &mut prefix)?;
-        Ok((prefix, inlined.unwrap_or_else(|| expr.clone())))
-    }
-
     /// `expr` with every `Expr::Call` replaced by the value its callee
     /// produces, hoisting the statements that value needs onto `prefix`.
     ///
     /// Reports `None` when the expression held no call, so a call-free operand
     /// is not cloned.
+    ///
+    /// Operand positions come from [`rewrite_expr`], the one owner, so a call
+    /// in a subgroup operand cannot be handed back unexpanded.
     fn inline_expr_into(&mut self, expr: &Expr, prefix: &mut Vec<Node>) -> Result<Option<Expr>> {
         let mut failure = None;
         let inlined = rewrite_expr(expr, &mut |candidate| {

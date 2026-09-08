@@ -289,15 +289,6 @@ fn gate_sites(
     sites
 }
 
-/// Every `(gate name, run body)` pair an `impl GateBehavior for` block declares.
-///
-/// Production names come from the behavior registration table. The empty-map
-/// fallback keeps parser unit fixtures independent while a real unregistered
-/// behavior still leaves its authoritative descriptor without a matching site.
-fn gate_run_bodies(text: &str) -> Vec<(String, String)> {
-    gate_run_bodies_registered(text, &BTreeMap::new())
-}
-
 fn gate_run_bodies_registered(
     text: &str,
     registrations: &BTreeMap<String, String>,
@@ -784,7 +775,7 @@ impl crate::gate::GateBehavior for Judges {
 }
 "#;
         let functions = functions(source);
-        let verdicts: Vec<(String, bool)> = gate_run_bodies(source)
+        let verdicts: Vec<(String, bool)> = gate_run_bodies_registered(source, &BTreeMap::new())
             .into_iter()
             .map(|(gate, run)| (gate, emits(&run, &functions, 0)))
             .collect();
@@ -912,7 +903,7 @@ fn judge(tree: &Tree) -> Result<Report, GateError> {
 }
 "#;
         let functions = functions(source);
-        let verdicts: Vec<(String, bool)> = gate_run_bodies(source)
+        let verdicts: Vec<(String, bool)> = gate_run_bodies_registered(source, &BTreeMap::new())
             .into_iter()
             .map(|(gate, run)| (gate, emits(&run, &functions, 0)))
             .collect();
@@ -953,10 +944,11 @@ mod tests {
         );
 
         let functions = functions(&production);
-        let verdicts: Vec<(String, bool)> = gate_run_bodies(&production)
-            .into_iter()
-            .map(|(gate, run)| (gate, emits(&run, &functions, 0)))
-            .collect();
+        let verdicts: Vec<(String, bool)> =
+            gate_run_bodies_registered(&production, &BTreeMap::new())
+                .into_iter()
+                .map(|(gate, run)| (gate, emits(&run, &functions, 0)))
+                .collect();
         assert_eq!(verdicts, vec![("reports".to_string(), false)]);
     }
 

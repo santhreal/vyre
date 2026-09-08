@@ -1,6 +1,6 @@
 //! Reference-oracle coverage for substrate-neutral single-rank collectives.
 
-mod wire_words;
+use crate::wire_words;
 use proptest::prelude::*;
 use vyre_foundation::ir::{BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Node, Program};
 use vyre_reference::{reference_eval, value::Value};

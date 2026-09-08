@@ -19,8 +19,7 @@ use vyre_reference::composition_witness::{
     motif_witness, motif_witness_into, reduce_any_witness, reduce_count_non_zero_witness,
 };
 
-#[path = "../../tests/support/csr_sweep/mod.rs"]
-mod csr_sweep;
+use crate::csr_sweep;
 
 fn reference_witness(
     node_count: u32,

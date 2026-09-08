@@ -17,7 +17,7 @@
 //! faithful boundary (unlike the data-dependent indirect-scatter fixpoints, see
 //! `BUG-reference-eval-indirect-scatter-fixpoint-1round`).
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::reasoning::do_calculus_change_impact::{
     predict_impact_observation_form_via, predict_impact_via,

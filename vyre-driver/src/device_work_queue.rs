@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 //! Backend-neutral device-side work queue planning for dependent dataflow execution.
 
 use crate::numeric::BackendNumericPolicy;

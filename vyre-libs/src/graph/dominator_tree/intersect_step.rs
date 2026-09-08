@@ -23,6 +23,7 @@
 //! from. Recomputing it is `dominator_tree_depth`'s query, and the fixpoint
 //! runs that one first.
 
+use crate::builder::trip_count::clamped_by_extents;
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -64,7 +65,11 @@ pub fn dominator_tree_intersect_step_body(
                 Node::let_bind("p_start", Expr::load("pred_offsets", Expr::var("v"))),
                 Node::let_bind(
                     "p_end",
-                    Expr::load("pred_offsets", Expr::add(Expr::var("v"), Expr::u32(1))),
+                    clamped_by_extents(
+                        Expr::load("pred_offsets", Expr::add(Expr::var("v"), Expr::u32(1))),
+                        "pred_targets",
+                        [],
+                    ),
                 ),
                 Node::loop_for(
                     "p_idx",

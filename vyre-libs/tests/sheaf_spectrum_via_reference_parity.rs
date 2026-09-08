@@ -10,7 +10,7 @@
 //! consumer's dispatch path.
 #![forbid(unsafe_code)]
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::sheaf_spectral_clustering::dominant_spectrum_fixed_via;
 

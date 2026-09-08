@@ -15,7 +15,7 @@
 //! but the oracle mirrors the signed kernel exactly).
 //! That is exactly reproducible in u32, so the oracle here is BIT-EXACT (no tolerance).
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::sheaf_heterophilic_dispatch::diffuse_dispatch_stalks_fixed_via;
 

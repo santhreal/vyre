@@ -269,7 +269,7 @@ impl CudaBackend {
         let (ptx_src, ptx_source_key) = self.ptx_for_program_cached_with_key(program, config)?;
         if trace {
             tracing::debug!(
-                "[cuda-trace] +{}ms ptx_for_program_cached bytes={}",
+                "[cuda-trace] +{}ms ptx_for_program_cached_with_key bytes={}",
                 start.elapsed().as_millis(),
                 ptx_src.len()
             );

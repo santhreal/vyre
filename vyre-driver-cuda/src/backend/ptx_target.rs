@@ -1,8 +1,5 @@
 //! PTX target selection against the live CUDA driver.
 
-#[allow(dead_code)]
-const _PROBE_MARKERS: &str = "cumoduleloaddata";
-
 use cudarc::driver::sys::CUresult;
 use smallvec::SmallVec;
 

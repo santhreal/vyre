@@ -1,6 +1,6 @@
 //! WGPU's arguments to the shared registered-target-compiler contract.
 //!
-//! The contract itself is `tests/support/target_compiler_contract.rs`. Only what
+//! The contract itself is `vyre_test_support::target_compiler_contract`. Only what
 //! is genuinely WGPU-native stays here: the payload format this backend
 //! registers, the shape of a WGSL module, and the target operation facets this
 //! backend publishes.
@@ -9,9 +9,7 @@
 
 use vyre_foundation::ir::BufferAccess;
 
-#[path = "../../tests/support/target_compiler_contract.rs"]
-mod target_compiler_contract;
-use target_compiler_contract::{
+use vyre_test_support::target_compiler_contract::{
     assert_materializer_executes_payload, assert_materializer_executes_resident_binding,
     assert_target_compiler_emits_bundle, TargetExpectation,
 };

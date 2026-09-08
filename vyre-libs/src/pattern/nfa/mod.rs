@@ -443,10 +443,17 @@ pub fn nfa_scan_with_plan(
             initial_eps_body,
         ));
     }
+    // `scan_end_expr` mins against `haystack_len`, which is itself a buffer
+    // load, so it is not an extent. The body reads `input_buf` through
+    // `load_packed_byte_expr`, which packs four bytes per word, so the real
+    // ceiling is four times that buffer's extent.
     body.push(Node::loop_for(
         "cursor",
         start_u32(),
-        scan_end_expr(),
+        Expr::min(
+            scan_end_expr(),
+            Expr::mul(Expr::buf_len(input_buf), Expr::u32(4)),
+        ),
         cursor_body,
     ));
 

@@ -14,7 +14,7 @@
 //! The input set is derived from the single Program-to-emitter boundary rather
 //! than guessed. `vyre_lower::lower_physical` is the only production
 //! Program-to-physical-kernel boundary, and every emitter reads only its verified
-//! `KernelDescriptor`. `vyre-lower/src/lower.rs` reads exactly these program
+//! `KernelDescriptor`. `vyre-lower/src/verified_lowering.rs` reads exactly these program
 //! inputs into that descriptor:
 //!
 //! - `Program::workgroup_size` into `Dispatch`

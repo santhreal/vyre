@@ -82,8 +82,8 @@ fn put_leb_u64(out: &mut Vec<u8>, mut value: u64) {
     }
 }
 
-#[path = "../support/opaque_echo_extension.rs"]
-mod opaque_echo_extension;
+// Re-exported so the child case reaches it through `use super::*`.
+pub(crate) use crate::opaque_echo_extension;
 
 use opaque_echo_extension::{EchoExpr, EchoNode};
 

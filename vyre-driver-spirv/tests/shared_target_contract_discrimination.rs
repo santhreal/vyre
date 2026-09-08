@@ -14,15 +14,13 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use vyre_driver_spirv::SpirvBackend;
 
-mod target_artifacts;
+use crate::target_artifacts;
 use target_artifacts::spirv as truthful;
-use target_artifacts::target_compiler_contract::{
+use vyre_test_support::target_compiler_contract::{
     assert_target_compiler_emits_bundle, TargetExpectation,
 };
 
-#[path = "../../tests/support/preferred_dispatch_backend_contract.rs"]
-mod preferred_dispatch_contract;
-use preferred_dispatch_contract::assert_backend_registry_metadata;
+use vyre_test_support::preferred_dispatch_backend_contract::assert_backend_registry_metadata;
 
 /// Require a contract call to fail, and name what the falsified expectation was.
 fn must_reject(falsified: &str, case: impl FnOnce()) {

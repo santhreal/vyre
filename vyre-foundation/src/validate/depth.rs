@@ -85,25 +85,6 @@ pub(crate) fn check_expr_depth(depth: usize, errors: &mut Vec<ValidationError>) 
     true
 }
 
-/// Compute the maximum call depth reachable from `op_id`.
-///
-/// Returns `Ok(max_depth)` when within [`DEFAULT_MAX_CALL_DEPTH`], or
-/// `Err(depth)` if the limit is exceeded.
-///
-/// # Errors
-///
-/// Returns the offending `depth` when it exceeds [`DEFAULT_MAX_CALL_DEPTH`].
-#[inline]
-#[must_use]
-pub(crate) fn max_call_depth(_op_id: &str, depth: usize) -> Result<usize, usize> {
-    if depth > DEFAULT_MAX_CALL_DEPTH {
-        return Err(depth);
-    }
-    // The caller supplies the measured semantic call depth. Graph construction
-    // and verified lowering reject unresolved calls before target compilation.
-    Ok(depth)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -148,19 +129,5 @@ mod tests {
         assert!(!check_expr_depth(DEFAULT_MAX_EXPR_DEPTH + 1, &mut errors));
         assert_eq!(errors.len(), 1);
         assert!(errors[0].code().as_str() == "V033");
-    }
-
-    #[test]
-    fn max_call_depth_within_bounds() {
-        assert_eq!(max_call_depth("my_op", 10), Ok(10));
-    }
-
-    #[test]
-    fn max_call_depth_exceeded() {
-        let limit = max_call_depth("my_op", DEFAULT_MAX_CALL_DEPTH + 1)
-            .expect_err("depth over limit must fail");
-        // Contract (see `max_call_depth` docs): Err carries the OFFENDING
-        // depth, not the limit.
-        assert_eq!(limit, DEFAULT_MAX_CALL_DEPTH + 1);
     }
 }

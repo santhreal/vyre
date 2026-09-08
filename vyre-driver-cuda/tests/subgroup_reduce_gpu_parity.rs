@@ -14,7 +14,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 
 use harness::{bytes_f32, bytes_u32, with_live_backend};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};

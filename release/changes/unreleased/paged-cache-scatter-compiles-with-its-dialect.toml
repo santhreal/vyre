@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The paged key-value cache scatter map compiles with the language-model dialect that constructs it, so selecting the attention dialect on its own no longer fails the build on an element map no source reaches."

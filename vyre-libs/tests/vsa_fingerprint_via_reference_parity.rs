@@ -13,7 +13,7 @@
 //! equal the host bit-for-bit.
 #![forbid(unsafe_code)]
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::encoding::vsa_fingerprint::fingerprint_via;
 use vyre_reference::composition_witness::hypervector_xor_bind_witness;

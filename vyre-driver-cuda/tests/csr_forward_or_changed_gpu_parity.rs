@@ -2,8 +2,8 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
+use crate::harness;
 use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
-mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_cuda_optimizer_dispatcher, with_live_backend};
 use vyre_driver::DispatchConfig;

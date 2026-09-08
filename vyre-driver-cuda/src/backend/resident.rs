@@ -124,17 +124,6 @@ pub(crate) enum CudaDispatchBinding<'a> {
     Borrowed(&'a [u8]),
 }
 
-impl CudaDispatchBinding<'_> {
-    /// Resident handle behind this binding, or `None` when it is staged from
-    /// host bytes and therefore has no device identity that outlives the call.
-    pub(crate) fn resident(self) -> Option<CudaResidentBuffer> {
-        match self {
-            Self::Resident(handle) => Some(handle),
-            Self::Borrowed(_) => None,
-        }
-    }
-}
-
 pub(crate) type ResidentViewCache = SmallVec<[(CudaResidentBuffer, ResidentBufferView); 8]>;
 
 #[derive(Debug)]

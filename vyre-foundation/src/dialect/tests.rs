@@ -3,7 +3,10 @@
 //! `define_dialect!` emits the public surface a dialect crate exports. Invoked
 //! in a private test module that surface is unreachable, which the lint reports
 //! once per generated item.
-#![allow(unreachable_pub)]
+#![expect(
+    unreachable_pub,
+    reason = "the define_dialect! invocation below emits that surface, so removing the invocation from this file has to remove this line with it"
+)]
 
 use crate::dialect::descriptor::DialectRegistry;
 use crate::dialect::schema::{
@@ -131,6 +134,44 @@ fn test_unit_dialect_ops() {
     assert_eq!(match_op_id("vyre-unit::dialect::alpha"), Some(Op::Alpha));
     assert_eq!(match_op_id("vyre-unit::dialect::beta"), Some(Op::Beta));
     assert_eq!(match_op_id("vyre-unit::dialect::gamma"), None);
+}
+
+/// The taxonomy strings, the identifier roster and the call surface a dialect
+/// generates are part of what a consumer reads, so each is asserted here.
+///
+/// WHY: they had no reader. A generated item nothing reads is one nothing holds
+/// to a shape either, and a declaration order or an identifier could change
+/// without a single case going red.
+#[test]
+fn test_unit_dialect_generated_surface() {
+    use unit_dialect::{call_alpha, call_beta, match_call, ALL_OP_IDS, CATEGORY, SUMMARY};
+
+    assert_eq!(CATEGORY, "unit_test");
+    assert_eq!(SUMMARY, "Unit test dialect definition.");
+    assert_eq!(
+        ALL_OP_IDS,
+        ["vyre-unit::dialect::alpha", "vyre-unit::dialect::beta"].as_slice(),
+        "the roster is declaration order, which the wire discriminants follow"
+    );
+
+    let alpha = call_alpha(vec![Expr::u32(7)]);
+    let (matched, args) = match_call(&alpha).expect("a call this dialect declares must match");
+    assert_eq!(matched, unit_dialect::Op::Alpha);
+    assert_eq!(args, [Expr::u32(7)].as_slice());
+
+    let beta = call_beta(Vec::new());
+    let (matched, args) = match_call(&beta).expect("the second builder must match too");
+    assert_eq!(matched, unit_dialect::Op::Beta);
+    assert!(args.is_empty());
+
+    assert!(
+        match_call(&Expr::u32(0)).is_none(),
+        "an expression that is not a call matches nothing"
+    );
+    assert!(
+        match_call(&Expr::call("vyre-unit::dialect::gamma", Vec::new())).is_none(),
+        "a call this dialect does not declare matches nothing"
+    );
 }
 
 #[test]

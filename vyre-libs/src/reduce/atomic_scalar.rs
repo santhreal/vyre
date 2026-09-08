@@ -37,50 +37,6 @@ pub(crate) enum AtomicReduceKind {
     AllNonZero,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum AtomicBoolReduceKind {
-    AnyNonZero,
-    AllNonZero,
-}
-
-impl From<AtomicBoolReduceKind> for AtomicReduceKind {
-    fn from(kind: AtomicBoolReduceKind) -> Self {
-        match kind {
-            AtomicBoolReduceKind::AnyNonZero => Self::AnyNonZero,
-            AtomicBoolReduceKind::AllNonZero => Self::AllNonZero,
-        }
-    }
-}
-
-impl AtomicBoolReduceKind {
-    pub(crate) fn identity(self) -> u32 {
-        AtomicReduceKind::from(self).identity()
-    }
-
-    pub(crate) fn atomic(self, out: &str, value: Expr) -> Expr {
-        AtomicReduceKind::from(self).atomic(out, value)
-    }
-
-    pub(crate) const fn laws(self) -> &'static [&'static str] {
-        match self {
-            Self::AnyNonZero => &[
-                "absorbing",
-                "associative",
-                "commutative",
-                "idempotent",
-                "lattice-absorption",
-            ],
-            Self::AllNonZero => &[
-                "absorbing",
-                "associative",
-                "commutative",
-                "distributive",
-                "idempotent",
-            ],
-        }
-    }
-}
-
 impl AtomicReduceKind {
     pub(crate) fn identity(self) -> u32 {
         match self {
@@ -160,40 +116,6 @@ impl AtomicReduceKind {
     }
 }
 
-/// Typed builder for atomic scalar reductions over a u32 input buffer.
-#[derive(Debug, Clone)]
-pub(crate) struct AtomicReductionBuilder<'a> {
-    pub(crate) op_id: &'static str,
-    pub(crate) input: &'a str,
-    pub(crate) out: &'a str,
-    pub(crate) count: u32,
-    pub(crate) kind: AtomicReduceKind,
-}
-
-impl<'a> AtomicReductionBuilder<'a> {
-    #[must_use]
-    pub(crate) const fn new(
-        op_id: &'static str,
-        input: &'a str,
-        out: &'a str,
-        count: u32,
-        kind: AtomicReduceKind,
-    ) -> Self {
-        Self {
-            op_id,
-            input,
-            out,
-            count,
-            kind,
-        }
-    }
-
-    #[must_use]
-    pub(crate) fn build(self) -> Program {
-        atomic_reduce_u32(self.input, self.out, self.count, self.kind, self.op_id)
-    }
-}
-
 pub(crate) fn atomic_reduce_u32(
     input: &str,
     out: &str,
@@ -210,16 +132,6 @@ pub(crate) fn atomic_reduce_u32(
         |out, value| kind.atomic(out, value),
         op_id,
     )
-}
-
-pub(crate) fn atomic_nonzero_bool_reduce_u32(
-    input: &str,
-    out: &str,
-    count: u32,
-    kind: AtomicBoolReduceKind,
-    op_id: &'static str,
-) -> Program {
-    atomic_reduce_u32(input, out, count, kind.into(), op_id)
 }
 /// Build a grid-stride loop that folds one value per element into `out[0]`
 /// through a single atomic.

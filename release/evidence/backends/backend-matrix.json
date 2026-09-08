@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:24b6787218f58a17d5385c7390750b02f68f1f50:dirty=false",
+  "source_fingerprint": "git:3cfaa0ef1ac2f973c5c9b7be833ce2c0d92fbb6a:dirty=true:worktree=c271d273d54fd2dd87e24ee290e8ff3f88faf33e60dedd5c946a0d9415b355a6",
   "schema_version": 3,
   "cuda_first": true,
   "wgpu_fallback_present": true,
@@ -8,15 +8,15 @@
   "gpu_probe": {
     "nvidia_smi_ok": true,
     "nvidia_smi_devices": [
-      "GPU 0: NVIDIA GeForce RTX 4090 (UUID: GPU-8859fa47-56e3-5c4c-27dd-f537b778ca37)"
+      "GPU 0: NVIDIA GeForce RTX 3080 Ti (UUID: GPU-1a712ff2-2809-aae9-3889-68a9e34c2a4e)"
     ],
     "nvidia_smi_device_details": [
       {
-        "name": "NVIDIA GeForce RTX 4090",
+        "name": "NVIDIA GeForce RTX 3080 Ti",
         "driver_version": "580.173.02",
-        "memory_total_mib": 24564,
+        "memory_total_mib": 12288,
         "compute_capability_major": 8,
-        "compute_capability_minor": 9
+        "compute_capability_minor": 6
       }
     ],
     "nvidia_driver_version": "580.173.02",
@@ -86,7 +86,7 @@
       "path": "vyre-emit-ptx/src/emitter/body.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 17725,
+      "source_bytes": 17721,
       "implementation_tokens": [
         "vector-load gap",
         "find_latency_filler_avoiding_results"
@@ -100,7 +100,7 @@
       "path": "vyre-emit-ptx/src/emitter/schedule.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 4059,
+      "source_bytes": 4043,
       "implementation_tokens": [
         "KernelOpKind::Fma",
         "KernelOpKind::MatrixMma",
@@ -143,7 +143,7 @@
       "path": "vyre-emit-ptx/src/emitter/async_copy.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 25763,
+      "source_bytes": 27501,
       "implementation_tokens": [
         "cp.async",
         "commit_group"
@@ -157,7 +157,7 @@
       "path": "vyre-emit-ptx/src/emitter/mma.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 3470,
+      "source_bytes": 4365,
       "implementation_tokens": [
         "mma",
         "sync"
@@ -168,13 +168,14 @@
     },
     {
       "id": "cuda-resident-dispatch",
-      "path": "vyre-driver-cuda/src/backend/resident_dispatch/mod.rs",
+      "path": "vyre-driver-cuda/src/backend/resident_dispatch/sync.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 128092,
+      "source_bytes": 1712,
       "implementation_tokens": [
-        "dispatch_resident",
-        "ptx"
+        "fn dispatch_resident",
+        "ptx_for_program_cached_with_key",
+        "module_cache_key_for_ptx_source_key"
       ],
       "missing_tokens": [],
       "unresolved_markers": [],
@@ -185,7 +186,7 @@
       "path": "vyre-driver-cuda/src/backend/resident_io.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 18954,
+      "source_bytes": 18284,
       "implementation_tokens": [
         "upload_resident_at_many",
         "resident_device_ptr"
@@ -199,7 +200,7 @@
       "path": "vyre-driver-cuda/src/backend/resident_io_download.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 24136,
+      "source_bytes": 24168,
       "implementation_tokens": [
         "download_resident_readbacks_many",
         "download_resident_readbacks_many_into"
@@ -213,7 +214,7 @@
       "path": "vyre-driver-cuda/src/backend/cuda_graph.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 29108,
+      "source_bytes": 28425,
       "implementation_tokens": [
         "record_cuda_graph",
         "cugraph"
@@ -259,10 +260,10 @@
       "path": "vyre-driver-cuda/src/backend/ptx_target.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 4094,
+      "source_bytes": 4024,
       "implementation_tokens": [
         "select_loadable_ptx_target_sm",
-        "cumoduleloaddata"
+        "load_cuda_module_data"
       ],
       "missing_tokens": [],
       "unresolved_markers": [],
@@ -273,7 +274,7 @@
       "path": "vyre-runtime/src/resident_work_queue/speculation.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 9517,
+      "source_bytes": 10157,
       "implementation_tokens": [
         "PairedSpeculationWindow",
         "record_sample",
@@ -291,7 +292,7 @@
       "path": "vyre-driver-wgpu/src/materializer.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 16729,
+      "source_bytes": 16730,
       "implementation_tokens": [
         "impl ArtifactMaterializer",
         "fn materialize",
@@ -306,7 +307,7 @@
       "path": "vyre-runtime/src/artifact_admission/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 44275,
+      "source_bytes": 69528,
       "implementation_tokens": [
         "ArtifactSession",
         "materialize"
@@ -334,7 +335,7 @@
       "path": "vyre-driver-wgpu/src/async_dispatch.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 14521,
+      "source_bytes": 14523,
       "implementation_tokens": [
         "dispatch_borrowed_async",
         "PipelinePrefetch"
@@ -362,7 +363,7 @@
       "path": "vyre-driver-wgpu/src/pipeline/disk_cache/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 23823,
+      "source_bytes": 24373,
       "implementation_tokens": [
         "cache",
         "pipeline",
@@ -392,7 +393,7 @@
       "path": "vyre-driver-wgpu/src/runtime/device/selector.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 19598,
+      "source_bytes": 19604,
       "implementation_tokens": [
         "has_real_gpu_adapter",
         "DeviceType::Cpu"
@@ -406,7 +407,7 @@
       "path": "vyre-runtime/src/resident_work_queue/speculation.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 9517,
+      "source_bytes": 10157,
       "implementation_tokens": [
         "PairedSpeculationWindow",
         "record_sample",
@@ -441,7 +442,7 @@
       "backend_id": "cuda",
       "capability_id": "live-sm-release-floor",
       "probe_source": "nvidia-smi --query-gpu=compute_cap",
-      "probed_value": "sm_89",
+      "probed_value": "sm_86",
       "supported": true,
       "unsupported_reason": null,
       "fix": "Fix: repair CUDA driver/device visibility or route release benchmarks to a supported NVIDIA GPU."
@@ -450,7 +451,7 @@
       "backend_id": "cuda",
       "capability_id": "live-memory-release-floor",
       "probe_source": "nvidia-smi --query-gpu=memory.total",
-      "probed_value": "24564 MiB",
+      "probed_value": "12288 MiB",
       "supported": true,
       "unsupported_reason": null,
       "fix": "Fix: run release benchmark evidence on a CUDA GPU with at least 2048 MiB VRAM, which is the largest registered workload plus its CUDA context."

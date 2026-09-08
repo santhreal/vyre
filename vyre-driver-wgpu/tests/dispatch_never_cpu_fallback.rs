@@ -8,7 +8,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 use harness::{
     acquire_live_backend as live_backend, assert_actionable_error, assert_non_cpu_backend,
 };

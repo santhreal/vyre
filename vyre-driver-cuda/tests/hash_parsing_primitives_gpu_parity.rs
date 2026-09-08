@@ -3,7 +3,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 #[path = "harness/hash_parsing_fnv.rs"]
 mod hash_parsing_fnv;
 

@@ -47,6 +47,7 @@ mod graph_fixtures;
 /// Whole-grid fence detection, and the planner cut that removes it.
 pub mod grid_sync;
 mod identity;
+mod launch_span;
 mod law_candidates;
 /// Stable semantic legality decisions for whole-program fusion.
 pub mod legality;

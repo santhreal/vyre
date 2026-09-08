@@ -1316,7 +1316,7 @@ fn uniform_and_constant_bindings_both_emit_read_only_storage_not_uniform() {
             .dispatch(64, 1, 1)
             .build();
 
-        let module = crate::emit(&desc).expect("Fix: single-binding descriptor must emit");
+        let module = vyre_emit_naga::emit(&desc).expect("Fix: single-binding descriptor must emit");
         let spaces: Vec<naga::AddressSpace> = module
             .global_variables
             .iter()

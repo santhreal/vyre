@@ -92,19 +92,6 @@ pub(super) fn is_authorized_domain_contract_or_type(rel_path: &str) -> bool {
     is_recognized_domain(first)
 }
 
-/// Single-role classification helper for simple lookups.
-pub(super) fn classify_file_role(
-    path: &str,
-    registered_sources: &BTreeSet<&str>,
-) -> Option<FileRole> {
-    let roles = classify_file_roles(path, registered_sources);
-    if roles.len() == 1 {
-        Some(roles[0])
-    } else {
-        None
-    }
-}
-
 /// Judge semantic ownership in both directions: every attributed child must
 /// exist, every operation with the same semantic body must have one owner, and
 /// every file in `vyre-libs` must have exactly one mechanically checkable role.
@@ -559,7 +546,6 @@ mod tests {
             roles.is_empty(),
             "new unclassified file must have zero recognized roles"
         );
-        assert_eq!(classify_file_role(new_file, &registered), None);
 
         let dumping_ground = "vyre-libs/src/unauthorized_root_copy.rs";
         let root_roles = classify_file_roles(dumping_ground, &registered);
@@ -578,10 +564,6 @@ mod tests {
             roles,
             vec![FileRole::OperationImplementation, FileRole::SharedBuilder],
             "file claiming both operation implementation and shared builder must report overlapping roles"
-        );
-        assert_eq!(
-            classify_file_role("vyre-libs/src/builder/elementwise.rs", &registered),
-            None
         );
     }
 

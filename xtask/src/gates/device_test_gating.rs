@@ -31,10 +31,21 @@
 //! and the subcommand that acquires is an argv fact no source scan can settle.
 //!
 //! The other half of the rule is that the admission has to lead somewhere. A
-//! test moved behind `device-tests` in a package no lane builds with that
-//! feature is not gated, it is deleted, and every remaining lane stays green
-//! while the coverage is gone. So every member declaring the feature must be
-//! named by a workflow step that turns it on.
+//! test moved behind `device-tests` and compiled by no lane is not gated, it is
+//! deleted, and every remaining lane stays green while the coverage is gone. So
+//! every test target the feature admits must be named by a workflow step that
+//! turns it on, and every member declaring the feature must be built with it.
+//!
+//! Coverage is asked per target, not per package. A step that filters with
+//! `--test` compiles the targets it names and no others, so a package named by
+//! several device steps can still carry a target no step reaches, and package
+//! granularity reads that as covered. Asking per target is what makes the
+//! property checked instead of maintained by hand.
+//!
+//! A test file is a module of a harness target rather than a target of its own,
+//! so the admission a file carries is its own inner cfg plus the required
+//! features of every target that compiles it, and the target a lane has to name
+//! is that harness. `test-target-membership` owns the mapping.
 //!
 //! The third rule is that an admission has to exclude something. A test target
 //! gated on a feature the package turns on by default compiles in every lane,
@@ -53,6 +64,7 @@ use quote::ToTokens;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
+use crate::gates::test_target_membership;
 
 /// The feature that admits a device-acquiring test.
 const FEATURE: &str = "device-tests";
@@ -112,7 +124,9 @@ impl crate::gate::GateBehavior for DeviceTestGating {
                 ));
             }
         }
+        let coverage = enabling_lanes(&tree)?;
         let mut judged = 0usize;
+        let mut gated = 0usize;
         for member in tree.member_manifests()? {
             let Some(features) = member
                 .manifest
@@ -125,16 +139,67 @@ impl crate::gate::GateBehavior for DeviceTestGating {
                 continue;
             }
             let on_by_default = default_feature_closure(features);
-            let declared = declared_test_admissions(&member.manifest, &member.path);
+            // A test file is a module of a harness target, so its admission is
+            // its own inner cfg plus the required features of every target that
+            // compiles it, and the target a lane has to name is that harness.
+            let ownership = test_target_membership::ownership(&tree, &member);
             let root = format!("{}/tests/", member.path);
             for (path, file) in &parsed {
-                if !is_test_target_root(path, &root) {
+                if !path.starts_with(&root) {
                     continue;
                 }
                 judged += 1;
+                let key = path.to_string_lossy().replace('\\', "/");
+                let compiled_by: Vec<&test_target_membership::TestTarget> = ownership
+                    .owners
+                    .get(&key)
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|name| ownership.targets.iter().find(|target| target.name == *name))
+                    .collect();
                 let mut named = cfg_features(&file.attrs);
-                if let Some(required) = declared.get(path) {
-                    named.extend(required.iter().cloned());
+                for target in &compiled_by {
+                    named.extend(target.required_features.iter().cloned());
+                }
+                if named.contains(FEATURE) {
+                    gated += 1;
+                    for target in &compiled_by {
+                        if coverage.covers_target(&member.name, &target.name) {
+                            continue;
+                        }
+                        report.find(Finding::new(
+                            format!(
+                                "{}: test target `{}` is admitted by `{FEATURE}` and no \
+                                 workflow step compiles it",
+                                path.display(),
+                                target.name
+                            ),
+                            format!(
+                                "name it in a step on a runner that owns a device, either as \
+                                 `./cargo_full test -p {} --features {FEATURE} --test {}` \
+                                 or by dropping the `--test` filter from a step that already \
+                                 builds the package with the feature; a step that filters with \
+                                 `--test` compiles the targets it names and no others, so a \
+                                 covered package is not a covered target",
+                                member.name, target.name
+                            ),
+                        ));
+                    }
+                    if compiled_by.is_empty() {
+                        report.find(Finding::new(
+                            format!(
+                                "{}: the file is admitted by `{FEATURE}` and no test target \
+                                 compiles it",
+                                path.display()
+                            ),
+                            format!(
+                                "declare it as a module of the harness for `{FEATURE}` in {}, or \
+                                 give it a [[test]] row; an admission no target carries runs \
+                                 nowhere",
+                                root.trim_end_matches('/')
+                            ),
+                        ));
+                    }
                 }
                 if !admits_every_lane(&named, &on_by_default) {
                     continue;
@@ -161,9 +226,9 @@ impl crate::gate::GateBehavior for DeviceTestGating {
             }
         }
         report.note(format!(
-            "{judged} test target root(s) in members declaring `{FEATURE}`"
+            "{judged} test target root(s) in members declaring `{FEATURE}`, {gated} admitted by it"
         ));
-        for finding in unenabled_admissions(&tree)? {
+        for finding in unenabled_admissions(&tree, &coverage)? {
             report.find(finding);
         }
         Ok(report)
@@ -313,7 +378,7 @@ fn normalize(path: &Path) -> PathBuf {
 }
 
 /// Every member declaring the admission feature is built with it somewhere.
-fn unenabled_admissions(tree: &Tree) -> Result<Vec<Finding>, GateError> {
+fn unenabled_admissions(tree: &Tree, coverage: &Coverage) -> Result<Vec<Finding>, GateError> {
     let mut declaring = Vec::new();
     for member in tree.member_manifests()? {
         if member
@@ -325,7 +390,7 @@ fn unenabled_admissions(tree: &Tree) -> Result<Vec<Finding>, GateError> {
             declaring.push(member.name);
         }
     }
-    let enabling = enabling_lanes(tree)?;
+    let enabling = coverage.packages();
     Ok(declaring
         .into_iter()
         .filter(|package| !enabling.contains(package))
@@ -367,56 +432,6 @@ fn default_feature_closure(features: &toml::Table) -> BTreeSet<String> {
     closure
 }
 
-/// Whether the path is one cargo test target's root file.
-///
-/// Cargo compiles `tests/<name>.rs` and `tests/<dir>/main.rs`; every other file
-/// under `tests/` is a module of one of those and carries no attributes of its
-/// own.
-fn is_test_target_root(path: &Path, tests_root: &str) -> bool {
-    let Ok(rest) = path.strip_prefix(tests_root) else {
-        return false;
-    };
-    let parts: Vec<_> = rest.components().collect();
-    match parts.len() {
-        1 => path.extension().is_some_and(|ext| ext == "rs"),
-        2 => path.file_name().is_some_and(|name| name == "main.rs"),
-        _ => false,
-    }
-}
-
-/// The features each declared `[[test]]` target requires, by source path.
-///
-/// Cargo reads the manifest and nothing else, so a target listed here with
-/// `required-features` is admitted by those names whether or not the file
-/// repeats them. A path defaults to `tests/<name>.rs`, which is the same file
-/// [`is_test_target_root`] recognizes.
-fn declared_test_admissions(
-    manifest: &toml::Table,
-    member_path: &str,
-) -> BTreeMap<PathBuf, BTreeSet<String>> {
-    let mut declared = BTreeMap::new();
-    let Some(targets) = manifest.get("test").and_then(toml::Value::as_array) else {
-        return declared;
-    };
-    for target in targets {
-        let Some(table) = target.as_table() else {
-            continue;
-        };
-        let Some(name) = table.get("name").and_then(toml::Value::as_str) else {
-            continue;
-        };
-        let relative = table
-            .get("path")
-            .and_then(toml::Value::as_str)
-            .map_or_else(|| format!("tests/{name}.rs"), str::to_string);
-        let required = crate::toml_text::string_array(table.get("required-features"))
-            .into_iter()
-            .collect();
-        declared.insert(PathBuf::from(format!("{member_path}/{relative}")), required);
-    }
-    declared
-}
-
 /// The features named by a file's inner `#![cfg(...)]` attributes.
 fn cfg_features(attrs: &[syn::Attribute]) -> BTreeSet<String> {
     let mut named = BTreeSet::new();
@@ -449,9 +464,54 @@ fn admits_every_lane(named: &BTreeSet<String>, on_by_default: &BTreeSet<String>)
         && named.iter().all(|name| on_by_default.contains(name))
 }
 
-/// The packages some workflow step builds with the admission feature.
-fn enabling_lanes(tree: &Tree) -> Result<BTreeSet<String>, GateError> {
-    let mut enabled = BTreeSet::new();
+/// What the workflow steps build with the admission feature.
+///
+/// A step naming no target builds every target of its packages. One naming
+/// `--test <name>` builds exactly those, so a device-gated target the step does
+/// not name is compiled by nothing even while its package reads as covered.
+/// Package granularity cannot see that. `vyre-driver-wgpu` carries twenty-one
+/// device-admitted targets and every step that names one filters with `--test`;
+/// what compiles the rest is a single unfiltered step in another job, which is
+/// argv, not a rule.
+#[derive(Debug, Default, PartialEq, Eq)]
+struct Coverage {
+    /// Packages some step builds with every target.
+    whole: BTreeSet<String>,
+    /// Test targets some step builds by name, per package.
+    named: BTreeMap<String, BTreeSet<String>>,
+}
+
+impl Coverage {
+    /// Every package some step builds with the feature, at any granularity.
+    fn packages(&self) -> BTreeSet<String> {
+        self.whole
+            .iter()
+            .chain(self.named.keys())
+            .cloned()
+            .collect()
+    }
+
+    /// Whether some step compiles this package's test target.
+    fn covers_target(&self, package: &str, target: &str) -> bool {
+        self.whole.contains(package)
+            || self
+                .named
+                .get(package)
+                .is_some_and(|named| named.contains(target))
+    }
+
+    /// Merge another lane's coverage into this one.
+    fn absorb(&mut self, other: Self) {
+        self.whole.extend(other.whole);
+        for (package, targets) in other.named {
+            self.named.entry(package).or_default().extend(targets);
+        }
+    }
+}
+
+/// What some workflow step builds with the admission feature.
+fn enabling_lanes(tree: &Tree) -> Result<Coverage, GateError> {
+    let mut coverage = Coverage::default();
     let mut workflows: Vec<&std::path::Path> = tree
         .paths()
         .iter()
@@ -460,34 +520,69 @@ fn enabling_lanes(tree: &Tree) -> Result<BTreeSet<String>, GateError> {
         .collect();
     workflows.sort_unstable();
     for path in workflows {
-        enabled.extend(packages_built_with_the_feature(&tree.read(path)?));
+        coverage.absorb(coverage_of(&tree.read(path)?));
     }
-    Ok(enabled)
+    Ok(coverage)
 }
 
-/// The packages one workflow's steps build with the admission feature.
+/// What one workflow's steps build with the admission feature.
 ///
 /// Every invocation in these workflows begins `./cargo_full`, so splitting on
 /// it yields one command per segment. A segment is cut at the next step header
-/// so a `-p` in one step cannot borrow a `--features` from the next.
-fn packages_built_with_the_feature(text: &str) -> BTreeSet<String> {
-    let mut enabled = BTreeSet::new();
-    let collapsed = text.split_whitespace().collect::<Vec<_>>().join(" ");
+/// so a `-p` in one step cannot borrow a `--features` from the next. `--test`
+/// takes the next token as a target name; `--tests` is a different token and
+/// selects every test target, which is the unfiltered case.
+///
+/// Comment lines are dropped before the split. These workflows explain their
+/// steps in prose, and prose quotes commands: reading a commented command as
+/// coverage lets a sentence satisfy the rule while no lane runs anything, which
+/// is the one way a gate can certify what it never checked. Dropping whole
+/// comment lines cannot break a folded scalar, whose continuation lines are
+/// argv and never start with `#`.
+fn coverage_of(text: &str) -> Coverage {
+    let mut coverage = Coverage::default();
+    let collapsed = text
+        .lines()
+        .filter(|line| !line.trim_start().starts_with('#'))
+        .flat_map(str::split_whitespace)
+        .collect::<Vec<_>>()
+        .join(" ");
     for segment in collapsed.split("./cargo_full").skip(1) {
         let command = segment.split("- name:").next().unwrap_or(segment);
         if !command.contains(FEATURE) {
             continue;
         }
+        let mut packages = BTreeSet::new();
+        let mut targets = BTreeSet::new();
         let mut tokens = command.split(' ');
         while let Some(token) = tokens.next() {
-            if token == "-p" {
-                if let Some(package) = tokens.next() {
-                    enabled.insert(package.to_string());
+            match token {
+                "-p" | "--package" => {
+                    if let Some(package) = tokens.next() {
+                        packages.insert(package.to_string());
+                    }
                 }
+                "--test" => {
+                    if let Some(target) = tokens.next() {
+                        targets.insert(target.to_string());
+                    }
+                }
+                _ => {}
+            }
+        }
+        for package in packages {
+            if targets.is_empty() {
+                coverage.whole.insert(package);
+            } else {
+                coverage
+                    .named
+                    .entry(package)
+                    .or_default()
+                    .extend(targets.iter().cloned());
             }
         }
     }
-    enabled
+    coverage
 }
 
 /// Where the live workflows are.
@@ -802,9 +897,14 @@ jobs:\n\
     steps:\n\
       - name: certificates on a real device\n\
         run: ./cargo_full test -p vyre-conform --features device-tests\n";
+        let coverage = coverage_of(workflow);
         assert_eq!(
-            packages_built_with_the_feature(workflow),
+            coverage.packages(),
             BTreeSet::from(["vyre-conform".to_string()])
+        );
+        assert!(
+            coverage.covers_target("vyre-conform", "any_target_at_all"),
+            "Fix: a step naming no target compiles every target the package has"
         );
     }
 
@@ -818,9 +918,14 @@ jobs:\n\
         run: >-\n\
           ./cargo_full test -p vyre-bench\n\
           --features cuda,device-tests --tests\n";
+        let coverage = coverage_of(workflow);
         assert_eq!(
-            packages_built_with_the_feature(workflow),
+            coverage.packages(),
             BTreeSet::from(["vyre-bench".to_string()])
+        );
+        assert!(
+            coverage.covers_target("vyre-bench", "release_macro_cuda_live"),
+            "Fix: `--tests` is every test target, not a target named `s`"
         );
     }
 
@@ -836,9 +941,49 @@ jobs:\n\
       - name: somebody else's device lane\n\
         run: ./cargo_full test -p vyre-bench --features device-tests\n";
         assert_eq!(
-            packages_built_with_the_feature(workflow),
+            coverage_of(workflow).packages(),
             BTreeSet::from(["vyre-bench".to_string()])
         );
+    }
+
+    /// WHY: these workflows explain their steps in prose, and prose quotes the
+    /// command it is explaining. Reading a commented command as coverage is the
+    /// one failure that makes this gate certify what it never checked: a
+    /// sentence would satisfy the rule for a package no lane builds. The tree
+    /// already carries such a comment, which read as a package named
+    /// ``vyre-conform` `` with a trailing backtick.
+    #[test]
+    fn a_command_quoted_in_a_comment_is_not_a_lane() {
+        let workflow = "\
+      # The device lane runs `./cargo_full test -p vyre-conform --features\n\
+      # device-tests` on the runner that owns the adapter.\n\
+      - name: hosted matrix\n\
+        run: ./cargo_full test -p vyre-conform\n";
+        assert!(
+            coverage_of(workflow).packages().is_empty(),
+            "Fix: only a `run:` command is a lane; a comment describing one compiles nothing"
+        );
+    }
+
+    /// WHY: dropping comment lines must not drop argv. A folded `>-` scalar's
+    /// continuation lines carry the rest of the command, and a step that runs a
+    /// commented shell block still runs the uncommented lines around it.
+    #[test]
+    fn a_comment_beside_a_folded_command_leaves_the_command_intact() {
+        let workflow = "\
+      - name: harness suites\n\
+        # why this lane exists\n\
+        run: >-\n\
+          ./cargo_full test -p vyre-bench\n\
+          --features device-tests --tests\n";
+        let coverage = coverage_of(workflow);
+        assert_eq!(
+            coverage.packages(),
+            BTreeSet::from(["vyre-bench".to_string()]),
+            "Fix: a comment between the step header and the command must not take the command \
+             with it"
+        );
+        assert!(coverage.covers_target("vyre-bench", "any_target"));
     }
 
     /// WHY: a workflow that builds nothing with the feature must derive to the
@@ -851,7 +996,52 @@ jobs:\n\
         run: ./cargo_full test -p vyre-conform\n\
       - name: docs\n\
         run: ./cargo_full doc --workspace\n";
-        assert!(packages_built_with_the_feature(workflow).is_empty());
+        assert!(coverage_of(workflow).packages().is_empty());
+    }
+
+    /// WHY: this is what package granularity cannot see. A filtered step proves
+    /// its package is enabled somewhere and proves nothing about the targets it
+    /// does not name, so folding the two into one set answers the coverage
+    /// question for a target no step compiles.
+    #[test]
+    fn a_step_filtering_with_test_covers_only_the_targets_it_names() {
+        let workflow = "\
+      - name: one suite\n\
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test op_pairwise\n";
+        let coverage = coverage_of(workflow);
+        assert_eq!(
+            coverage.packages(),
+            BTreeSet::from(["vyre-driver-wgpu".to_string()]),
+            "Fix: a filtered step still builds its package, so the package is not unenabled"
+        );
+        assert!(coverage.covers_target("vyre-driver-wgpu", "op_pairwise"));
+        assert!(
+            !coverage.covers_target("vyre-driver-wgpu", "every_op_random_inputs"),
+            "Fix: a target no step names is compiled by nothing, whatever its package"
+        );
+    }
+
+    /// WHY: coverage accumulates across steps and across workflow files, so a
+    /// target named by one lane and a target named by another are both covered,
+    /// and a later whole-package step subsumes an earlier filtered one.
+    #[test]
+    fn coverage_accumulates_across_steps_and_files() {
+        let filtered = "\
+      - name: sweep a\n\
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test sweep_a\n\
+      - name: sweep b\n\
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test sweep_b\n";
+        let mut coverage = coverage_of(filtered);
+        assert!(coverage.covers_target("vyre-driver-wgpu", "sweep_a"));
+        assert!(coverage.covers_target("vyre-driver-wgpu", "sweep_b"));
+        assert!(!coverage.covers_target("vyre-driver-wgpu", "sweep_c"));
+        coverage.absorb(coverage_of(
+            "      - name: whole package\n        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests\n",
+        ));
+        assert!(
+            coverage.covers_target("vyre-driver-wgpu", "sweep_c"),
+            "Fix: an unfiltered step in any workflow covers every target of its package"
+        );
     }
 }
 
@@ -1066,31 +1256,6 @@ mod default_admission_tests {
     }
 
     #[test]
-    fn a_test_target_root_is_the_file_cargo_compiles() {
-        let root = "conform/vyre-conform/tests/";
-        assert!(is_test_target_root(
-            Path::new("conform/vyre-conform/tests/production_route.rs"),
-            root
-        ));
-        assert!(is_test_target_root(
-            Path::new("conform/vyre-conform/tests/suite/main.rs"),
-            root
-        ));
-        assert!(
-            !is_test_target_root(Path::new("conform/vyre-conform/tests/suite/case.rs"), root),
-            "Fix: a module under a target carries no attributes of its own"
-        );
-        assert!(!is_test_target_root(
-            Path::new("conform/vyre-conform/src/lib.rs"),
-            root
-        ));
-        assert!(!is_test_target_root(
-            Path::new("vyre-driver-wgpu/tests/hit_buffer.rs"),
-            root
-        ));
-    }
-
-    #[test]
     fn a_cfg_admission_is_read_from_the_inner_attributes() {
         let file = syn::parse_file(
             "#![cfg(all(not(target_os = \"macos\"), feature = \"device-tests\"))]\n#[cfg(feature = \"item-only\")]\n#[test]\nfn t() {}\n",
@@ -1122,28 +1287,5 @@ mod default_admission_tests {
             !admits_every_lane(&BTreeSet::new(), &on_by_default),
             "Fix: a target with no cfg claims no admission, so it states nothing false"
         );
-    }
-
-    #[test]
-    fn a_manifest_admission_is_read_from_the_declared_targets() {
-        let manifest = features(
-            "[[test]]\nname = \"parity_matrix\"\npath = \"tests/parity_matrix.rs\"\nrequired-features = [\"device-tests\"]\n\n[[test]]\nname = \"routes\"\nrequired-features = [\"gpu\"]\n\n[[test]]\nname = \"plain\"\n",
-        );
-        let declared = declared_test_admissions(&manifest, "conform/vyre-conform");
-        assert_eq!(
-            declared.get(Path::new("conform/vyre-conform/tests/parity_matrix.rs")),
-            Some(&named(&[FEATURE]))
-        );
-        assert_eq!(
-            declared.get(Path::new("conform/vyre-conform/tests/routes.rs")),
-            Some(&named(&["gpu"])),
-            "Fix: a target with no explicit path is compiled from `tests/<name>.rs`"
-        );
-        assert_eq!(
-            declared.get(Path::new("conform/vyre-conform/tests/plain.rs")),
-            Some(&BTreeSet::new()),
-            "Fix: a target declaring no required feature claims no admission"
-        );
-        assert!(declared_test_admissions(&features("[package]\nname = \"x\"\n"), "x").is_empty());
     }
 }

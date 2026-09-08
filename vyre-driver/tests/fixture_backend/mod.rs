@@ -51,6 +51,11 @@ pub(crate) fn no_supported_ops() -> &'static HashSet<OpId> {
 /// `$oracle` is the `reference_oracle` flag, which is the whole subject of the
 /// gates that use this: it is the only field that may differ between a backend
 /// preferred dispatch selects and one it refuses.
+///
+/// Exported so a test module reaches it by path. Every test file here is a
+/// module of a harness binary, and textual macro scope between siblings depends
+/// on declaration order; a path does not.
+#[macro_export]
 macro_rules! register_dispatchable_backend {
     (id: $id:expr, oracle: $oracle:expr, rank: $rank:expr, factory: $factory:path $(,)?) => {
         inventory::submit! {

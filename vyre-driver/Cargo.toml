@@ -1,6 +1,7 @@
 [package]
 name = "vyre-driver"
 version = "0.8.0"
+autotests = false
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -17,23 +18,6 @@ exclude = ["**/SKILL.md"]
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
-
-[[test]]
-name = "cache_invalidation_default"
-path = "tests/cache_invalidation_default.rs"
-required-features = ["libs-compositions"]
-
-[[test]]
-name = "sweep_dispatch_shape_oracle_matrix"
-path = "tests/sweep_dispatch_shape_oracle_matrix.rs"
-
-[[test]]
-name = "sweep_numeric_oracle_matrix"
-path = "tests/sweep_numeric_oracle_matrix.rs"
-
-[[test]]
-name = "driver_lifecycle_e2e"
-path = "tests/driver_lifecycle_e2e.rs"
 
 [features]
 default = []
@@ -83,3 +67,28 @@ vyre-driver-reference = { path = "../vyre-driver-reference" }
 vyre-reference = { path = "../vyre-reference" }
 vyre-primitives = { path = "../vyre-primitives", features = ["hardware"] }
 tempfile.workspace = true
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"
+
+[[test]]
+name = "backend_registry_duplicate_provider"
+path = "tests/backend_registry_duplicate_provider.rs"
+
+[[test]]
+name = "gap_duplicate_op_id"
+path = "tests/gap_duplicate_op_id.rs"
+
+[[test]]
+name = "backend_registry"
+path = "tests/backend_registry.rs"
+
+[[test]]
+name = "reference_oracle_is_never_implicit"
+path = "tests/reference_oracle_is_never_implicit.rs"
+
+[[test]]
+name = "all_tests_libs_compositions"
+path = "tests/all_tests_libs_compositions.rs"
+required-features = ["libs-compositions"]

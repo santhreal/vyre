@@ -13,8 +13,7 @@
 
 #![cfg(feature = "device-tests")]
 
-#[path = "../harness/mod.rs"]
-mod harness;
+use crate::harness;
 mod latency_cache_contracts;
 mod replay_parity_contracts;
 mod telemetry_shape_contracts;

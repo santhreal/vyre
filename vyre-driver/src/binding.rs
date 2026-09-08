@@ -430,6 +430,14 @@ fn binding_role_counts(
         })
 }
 
+/// Classify one declaration into the binding role a backend ABI binds it as.
+///
+/// Whether the role consumes a host input slot is decided by
+/// `BufferDecl::consumes_host_input`, the single definition of that half of the
+/// ABI, rather than by re-deriving it from kind and access here. The role is
+/// still needed on top of it: two declarations that both take a slot bind
+/// differently, a uniform through a uniform binding and a read-write through a
+/// storage binding that is also read back.
 fn role_for_buffer(buffer: &BufferDecl) -> Result<BindingRole, BackendError> {
     if buffer.kind() == MemoryKind::Shared || buffer.access() == BufferAccess::Workgroup {
         return Ok(BindingRole::Shared);
@@ -437,21 +445,30 @@ fn role_for_buffer(buffer: &BufferDecl) -> Result<BindingRole, BackendError> {
     if buffer.kind() == MemoryKind::Persistent {
         return Ok(BindingRole::Persistent);
     }
-    if buffer.is_output || buffer.pipeline_live_out {
-        return Ok(BindingRole::Output);
-    }
-    match buffer.access() {
-        BufferAccess::ReadOnly => Ok(BindingRole::Input),
-        BufferAccess::ReadWrite => Ok(BindingRole::InputOutput),
-        BufferAccess::WriteOnly => Ok(BindingRole::Output),
-        BufferAccess::Uniform => Ok(BindingRole::Uniform),
-        BufferAccess::Workgroup => Ok(BindingRole::Shared),
-        _ => Err(BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: binding `{}` uses an unknown BufferAccess variant; update vyre-driver binding role mapping.",
-                buffer.name()
-            ),
-        }),
+    // The role a slot-consuming declaration binds through. An unrecognized
+    // access is an error rather than an output, so a variant added to the frozen
+    // `BufferAccess` contract cannot be classified by silence: reading the
+    // slot-consuming answer first and defaulting the rest to `Output` is exactly
+    // how a new variant would become a buffer no caller can ever fill.
+    let slot_role = match buffer.access() {
+        BufferAccess::ReadOnly => BindingRole::Input,
+        BufferAccess::ReadWrite => BindingRole::InputOutput,
+        BufferAccess::Uniform => BindingRole::Uniform,
+        BufferAccess::WriteOnly => BindingRole::Output,
+        BufferAccess::Workgroup => BindingRole::Shared,
+        other => {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: binding `{}` uses BufferAccess::{other:?}, which the binding role mapping does not bind; update vyre-driver role_for_buffer alongside BufferDecl::consumes_host_input.",
+                    buffer.name()
+                ),
+            })
+        }
+    };
+    if buffer.consumes_host_input() {
+        Ok(slot_role)
+    } else {
+        Ok(BindingRole::Output)
     }
 }
 

@@ -473,6 +473,48 @@ impl BufferDecl {
             || (self.is_pipeline_live_out() && matches!(self.access, BufferAccess::ReadWrite))
     }
 
+    /// True when a dispatch supplies this buffer's contents from one host input
+    /// slot.
+    ///
+    /// The other half of [`Self::is_backend_allocated_output`], and the single
+    /// definition of the host input ABI: `inputs` carries one value per buffer
+    /// this returns true for, in binding order. `vyre_driver`'s binding-role
+    /// mapping, `vyre_reference::is_reference_input`, and every backend read
+    /// this rather than re-deriving it. Three copies of the rule existed, and
+    /// they disagreed on a `Shared`-kind buffer, a `Persistent`-kind buffer and
+    /// a `pipeline_live_out` buffer whose access is not `ReadWrite`: the oracle
+    /// demanded a value for each, no backend did, so those programs could not
+    /// pass parity and nothing named why.
+    ///
+    /// A plain `ReadWrite` buffer returns true for both this and the readback
+    /// side: its host bytes are uploaded before the dispatch and read back
+    /// after it.
+    #[must_use]
+    #[inline]
+    pub fn consumes_host_input(&self) -> bool {
+        // Exhaustive with no catch-all, and `MemoryKind` is defined in this
+        // crate, so a kind added to it fails to compile here until someone
+        // records whether it is staged from the host.
+        let kind_is_host_staged = match self.kind {
+            MemoryKind::Global
+            | MemoryKind::Uniform
+            | MemoryKind::Local
+            | MemoryKind::Readonly
+            | MemoryKind::Push => true,
+            // Allocated by the dispatch, not carried across the host boundary.
+            MemoryKind::Shared => false,
+            // Reached through `AsyncLoad` from device-side storage.
+            MemoryKind::Persistent => false,
+        };
+        kind_is_host_staged
+            && !self.is_output
+            && !self.pipeline_live_out
+            && matches!(
+                self.access,
+                BufferAccess::ReadOnly | BufferAccess::ReadWrite | BufferAccess::Uniform
+            )
+    }
+
     /// Refuse this buffer when it is backend-allocated and has no static size.
     ///
     /// A buffer selected by [`Self::is_backend_allocated_output`] never receives

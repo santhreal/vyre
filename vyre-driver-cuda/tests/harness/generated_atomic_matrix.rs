@@ -273,7 +273,6 @@ pub(crate) fn generated_old_sentinel_values() -> Vec<u32> {
 }
 
 pub(crate) fn atomic_exchange_single_writer_program() -> Program {
-    let idx = Expr::var("idx");
     Program::wrapped(
         vec![
             BufferDecl::storage("acc", 0, BufferAccess::ReadWrite, DataType::U32)

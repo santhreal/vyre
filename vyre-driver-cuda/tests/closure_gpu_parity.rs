@@ -2,7 +2,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 
 use harness::with_cuda_optimizer_dispatcher;
 use vyre_foundation::pass_substrate::semiring_closure::{

@@ -1,22 +1,18 @@
-//! Program fixtures shared by the `vyre` facade wire tests.
+//! The program fixture the `vyre` facade wire tests must agree on.
 //!
 //! The round-trip suite and the malformed-wire suite must agree on what a
 //! valid program is: the first proves such a program survives an encode and a
 //! decode byte for byte, the second proves hostile bytes never decode into
 //! one. Two copies of the fixture let the two halves of that claim drift.
-
-#![allow(dead_code, unreachable_pub)]
+//!
+//! Only the shared fixture lives here. A fixture one suite reads is that
+//! suite's, so this module needs no dead-code suppression.
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 
-/// A program with no buffers and no body, at the smallest workgroup size.
-pub fn empty_program() -> Program {
-    Program::wrapped(Vec::new(), [1, 1, 1], Vec::new())
-}
-
 /// The smallest program that exercises a buffer, an index and a literal:
 /// one store of 42 into a read-write `u32` buffer named `out`.
-pub fn one_store_program() -> Program {
+pub(crate) fn one_store_program() -> Program {
     Program::wrapped(
         vec![BufferDecl::read_write("out", 0, DataType::U32)],
         [64, 1, 1],

@@ -13,7 +13,7 @@
 
 #![cfg(feature = "crypto-blake3")]
 #![allow(deprecated)]
-mod wire_words;
+use crate::wire_words;
 use vyre::ir::Program;
 use vyre_libs::hash::blake3_compress;
 use vyre_reference::value::Value;

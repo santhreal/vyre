@@ -5,8 +5,6 @@
 //! inputs are defined once. A second copy would have to be kept identical for
 //! assertions that compare derivations across the two suites to keep meaning
 //! what they say.
-//!
-//! Included with `#[path]` the same way as `tests/support/artifact_fixtures.rs`.
 
 #![allow(dead_code)]
 

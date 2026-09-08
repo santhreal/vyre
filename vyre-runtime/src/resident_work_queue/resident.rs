@@ -176,8 +176,9 @@ impl ResidentQueueBuffers {
     ///
     /// # Errors
     ///
-    /// Returns [`PipelineError::QueueFull`] when the slot is out of bounds or
-    /// still in flight.
+    /// Returns [`PipelineError::RingEncoding`] when the slot is out of bounds,
+    /// and [`PipelineError::IllegalSlotTransition`] when it is still in
+    /// flight.
     pub fn publish_slot(
         &mut self,
         slot_idx: u32,
@@ -193,8 +194,10 @@ impl ResidentQueueBuffers {
     ///
     /// # Errors
     ///
-    /// Returns [`PipelineError::QueueFull`] when the target slots are outside
-    /// the resident ring, still in flight, or contain an unpublished opcode.
+    /// Returns [`PipelineError::RingEncoding`] when the target slots are
+    /// outside the resident ring or contain an unpublished opcode, and
+    /// [`PipelineError::IllegalSlotTransition`] when a slot is still in
+    /// flight.
     pub fn publish_work_items(
         &mut self,
         start_slot: u32,

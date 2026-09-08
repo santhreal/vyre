@@ -129,13 +129,13 @@ pub struct BellmanExtents {
 /// [`persistent_fixpoint_grid`]: crate::fixpoint::persistent_fixpoint::persistent_fixpoint_grid
 #[must_use]
 pub fn bellman_shortest_path(buffers: BellmanBuffers<'_>, extents: BellmanExtents) -> Program {
+    // `src`/`dst`/`weight` are read by `bellman_transfer_body`, which destructures
+    // `buffers` itself; this scope needs only the ping-pong and flag names.
     let BellmanBuffers {
-        src,
-        dst,
-        weight,
         dist,
         next_dist,
         changed,
+        ..
     } = buffers;
     let BellmanExtents {
         n_nodes,

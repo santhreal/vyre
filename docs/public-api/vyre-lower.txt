@@ -164,6 +164,7 @@ pub const vyre_lower::STORAGE_LAYOUT_VERSION: u16
 pub const vyre_lower::TRAP_SIDECAR_NAME: &str
 pub const vyre_lower::TRAP_SIDECAR_WORDS: u32
 pub const vyre_lower::WORKGROUP_SLOT_BASE: u32
+pub const vyre_lower::analyses::CANDIDATE_MITIGATIONS: [vyre_lower::analyses::BankConflictMitigation; 6]
 pub const vyre_lower::pattern_audit::PatternAudit::FINDING_NOUN: &'static str
 pub const vyre_lower::pattern_audit::UNNAMED_KERNEL: &str
 pub const vyre_lower::program_stability_corpus::LANES: u32
@@ -176,6 +177,7 @@ pub enum vyre_lower::DescriptorIntentKind
 pub enum vyre_lower::DescriptorIntentStrategy
 pub enum vyre_lower::EquivalenceError
 pub enum vyre_lower::FragmentOperand
+pub enum vyre_lower::GridIndexSpace
 pub enum vyre_lower::KernelOpKind
 pub enum vyre_lower::LiteralValue
 pub enum vyre_lower::LowerError
@@ -245,6 +247,7 @@ pub fn vyre_lower::IntentAnnotatedDescriptor::preserve_intents_after_rewrite(sel
 pub fn vyre_lower::IntentAnnotatedDescriptor::try_new(descriptor: vyre_lower::KernelDescriptor, intents: vyre_lower::DescriptorIntentSet) -> core::result::Result<Self, vyre_lower::DescriptorIntentError>
 pub fn vyre_lower::KernelBody::from(builder: vyre_lower::descriptor_builder::KernelBodyBuilder) -> Self
 pub fn vyre_lower::KernelBody::hash<H: core::hash::Hasher>(&self, state: &mut H)
+pub fn vyre_lower::KernelDescriptor::admits_grid_linearized_index(&self) -> bool
 pub fn vyre_lower::KernelDescriptor::body_at(&self, path: &[usize]) -> core::option::Option<&vyre_lower::KernelBody>
 pub fn vyre_lower::KernelDescriptor::body_count(&self) -> usize
 pub fn vyre_lower::KernelDescriptor::dispatch_total_threads(&self) -> u32
@@ -408,6 +411,7 @@ pub fn vyre_lower::descriptor_builder::KernelBodyBuilder::ops(self, ops: impl co
 pub fn vyre_lower::descriptor_builder::KernelDescriptorBuilder::body(self, body: impl core::convert::Into<vyre_lower::KernelBody>) -> Self
 pub fn vyre_lower::descriptor_builder::KernelDescriptorBuilder::build(self) -> vyre_lower::KernelDescriptor
 pub fn vyre_lower::descriptor_builder::KernelDescriptorBuilder::dispatch(self, x: u32, y: u32, z: u32) -> Self
+pub fn vyre_lower::descriptor_builder::KernelDescriptorBuilder::grid_index(self, grid_index: vyre_lower::GridIndexSpace) -> Self
 pub fn vyre_lower::descriptor_builder::KernelDescriptorBuilder::ops(self, ops: impl core::iter::traits::collect::IntoIterator<Item = vyre_lower::KernelOp>) -> Self
 pub fn vyre_lower::descriptor_builder::KernelDescriptorBuilder::slot(self, slot: vyre_lower::BindingSlot) -> Self
 pub fn vyre_lower::descriptor_builder::KernelDescriptorBuilder::slots(self, slots: impl core::iter::traits::collect::IntoIterator<Item = vyre_lower::BindingSlot>) -> Self
@@ -451,6 +455,7 @@ pub fn vyre_lower::facts_for(kind: &vyre_lower::KernelOpKind) -> vyre_lower::OpF
 pub fn vyre_lower::format_verify_errors(errors: &[vyre_lower::VerifyError]) -> alloc::string::String
 pub fn vyre_lower::full_report(desc: &vyre_lower::KernelDescriptor, facts: &vyre_lower::analyses::AnalysisFacts) -> vyre_lower::FullReport
 pub fn vyre_lower::lower(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_lower::KernelDescriptor, vyre_lower::LowerError>
+pub fn vyre_lower::lower_baseline(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_lower::PhysicalLowering, vyre_lower::PhysicalLoweringError>
 pub fn vyre_lower::lower_physical(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_lower::PhysicalLowering, vyre_lower::PhysicalLoweringError>
 pub fn vyre_lower::lower_scheduled(program: &vyre_foundation::ir_inner::model::program::definition::Program, schedule: &vyre_foundation::schedule::SelectedSchedule, phase: vyre_foundation::schedule::SchedulePhaseId) -> core::result::Result<vyre_lower::PhysicalLowering, vyre_lower::PhysicalLoweringError>
 pub fn vyre_lower::operand_class::classify_operand(kind: &vyre_lower::KernelOpKind, pos: usize) -> vyre_lower::operand_class::OperandClass
@@ -673,6 +678,7 @@ pub vyre_lower::DescriptorIntentStrategy::Streaming
 pub vyre_lower::DescriptorIntentStrategy::Verifier
 pub vyre_lower::DescriptorTrapTag::code: u32
 pub vyre_lower::DescriptorTrapTag::tag: vyre_lower::Name
+pub vyre_lower::Dispatch::grid_index: vyre_lower::GridIndexSpace
 pub vyre_lower::Dispatch::workgroup_size: [u32; 3]
 pub vyre_lower::EmissionTargetCapabilities::subgroup: vyre_lower::SubgroupCapabilities
 pub vyre_lower::EmissionTargetCapabilities::workgroup: vyre_lower::WorkgroupLimits
@@ -698,6 +704,8 @@ pub vyre_lower::FullReport::histogram: vyre_lower::analyses::OpHistogram
 pub vyre_lower::FullReport::perf: vyre_lower::PerfAuditReport
 pub vyre_lower::FullReport::summary: alloc::string::String
 pub vyre_lower::FullReport::verify: vyre_lower::VerifyResult
+pub vyre_lower::GridIndexSpace::GridLinearized
+pub vyre_lower::GridIndexSpace::PerAxis
 pub vyre_lower::IntentAnnotatedDescriptor::descriptor: vyre_lower::KernelDescriptor
 pub vyre_lower::IntentAnnotatedDescriptor::intents: vyre_lower::DescriptorIntentSet
 pub vyre_lower::KernelBody::child_bodies: alloc::vec::Vec<vyre_lower::KernelBody>
@@ -1173,6 +1181,7 @@ pub vyre_lower::analyses::SharedBindingAccessProfile::element_count: u32
 pub vyre_lower::analyses::SharedBindingAccessProfile::phases: alloc::vec::Vec<vyre_lower::analyses::AccessPhaseProfile>
 pub vyre_lower::analyses::SharedPermutationBlock::AsyncTransaction
 pub vyre_lower::analyses::SharedPermutationBlock::Atomic
+pub vyre_lower::analyses::SharedPermutationBlock::FusedBulkCopy
 pub vyre_lower::analyses::SharedPermutationBlock::NoDeclaredExtent
 pub vyre_lower::analyses::SharedPermutationBlock::UnprovenAccess
 pub vyre_lower::analyses::SharedStoreLegality::IllegalMultiInvocationConstantStore

@@ -6,7 +6,7 @@
 //! pin that surface, require a justification beside every unsafe block, and
 //! require corrective guidance in every panic message a caller can hit.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
@@ -289,6 +289,330 @@ impl crate::gate::GateBehavior for UnsafeJustification {
     }
 }
 
+/// A liveness lint cannot be satisfied by pretending.
+///
+/// `dead_code = "deny"` in the workspace table is the cheapest signal this tree
+/// has for code with no owner, and two writes silence it without giving the code
+/// one. A discarded read counts as a use, so `let _ = MARKER;` keeps a constant
+/// nothing consults. A `#[cfg(test)]` caller counts as a use too, so an item
+/// whose only caller is a test ships with no production owner and nothing is
+/// red. In both the lint reports what it was told rather than what the tree
+/// does, which is worse than the lint being off: the tree now certifies
+/// liveness it never checked.
+///
+/// # What is reported
+///
+/// A production statement whose whole effect is discarding a path or field read.
+/// `let _ = fallible();` discards a real result, and `let _ = &guard;` borrows
+/// something whose drop is the point, so a read carrying a call, a macro, a
+/// borrow or `?` is left alone.
+///
+/// A private, `pub(crate)` or `pub(super)` production item whose every reference
+/// in the tree is a test one. Bare `pub` is out of scope: its callers are in
+/// other checkouts, so this one cannot answer whether it has any.
+///
+/// # What it does not catch
+///
+/// References are matched by identifier, so only a name declared exactly once in
+/// the workspace is judged. A second declaration makes an identifier match
+/// ambiguous, and a gate that guesses is worse than one that declines. The
+/// declared-once set is derived from the tree on each run, so a name that
+/// becomes unique becomes judged. A self-recursive item references itself from
+/// production and is left to the compiler.
+pub struct LivenessEvasion;
+
+impl crate::gate::GateBehavior for LivenessEvasion {
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let tree = Tree::open(&ctx.root)?;
+        let mut report = Report::clean();
+        let all_rust = tree.all_rust();
+        report.cover_complete("source files", all_rust.len());
+        if let Some(note) = tree.absence_note() {
+            report.note(note);
+        }
+        let test_modules = scan::test_module_files(&tree, &all_rust)?;
+        // One read per file, kept for both halves: the discarded-read scan wants
+        // production lines, and the reference count wants every line of every
+        // file, including the test trees that are what make an item look live.
+        let mut sources = Vec::with_capacity(all_rust.len());
+        for path in all_rust {
+            let text = tree.read(&path)?;
+            let production = !is_outside_production(&path) && !test_modules.contains(&path);
+            let test_only = scan::cfg_test_lines(&text.lines().collect::<Vec<&str>>());
+            sources.push(Source {
+                path,
+                text,
+                production,
+                test_only,
+            });
+        }
+
+        let mut declarations: BTreeMap<String, Vec<Declaration>> = BTreeMap::new();
+        for source in &sources {
+            for (index, line) in source.text.lines().enumerate() {
+                if scan::is_comment(line) {
+                    continue;
+                }
+                let test_side = source.test_side(index);
+                if let Some(name) = declared_item_name(line) {
+                    declarations.entry(name).or_default().push(Declaration {
+                        file: source.path.clone(),
+                        line: index,
+                        test_side,
+                    });
+                }
+                if test_side {
+                    continue;
+                }
+                if let Some(read) = discarded_read(line) {
+                    report.find(Finding::at(
+                        source.path.clone(),
+                        u32::try_from(index + 1).unwrap_or(u32::MAX),
+                        format!("statement discards `{read}` and does nothing with it"),
+                        "delete the statement, then give what it kept alive a real caller or \
+                         delete that too; a discarded read satisfies dead_code without giving \
+                         the item an owner",
+                    ));
+                }
+            }
+        }
+
+        let candidates: BTreeMap<String, Declaration> = declarations
+            .into_iter()
+            .filter_map(|(name, mut sites)| {
+                if sites.len() != 1 {
+                    return None;
+                }
+                let site = sites.pop()?;
+                (!site.test_side).then_some((name, site))
+            })
+            .collect();
+        if candidates.is_empty() {
+            return Err(GateError::new(
+                "no uniquely declared restricted production item found",
+                "run this gate inside the workspace checkout; a reference scan over an empty \
+                 candidate set reports success forever",
+            ));
+        }
+        report.note(format!(
+            "{} uniquely declared restricted production item(s) reference-counted",
+            candidates.len()
+        ));
+
+        let mut counts: BTreeMap<&str, (u32, u32)> = candidates
+            .keys()
+            .map(|name| (name.as_str(), (0, 0)))
+            .collect();
+        for source in &sources {
+            for (index, line) in source.text.lines().enumerate() {
+                if scan::is_comment(line) {
+                    continue;
+                }
+                let test_side = source.test_side(index);
+                for word in identifiers(line) {
+                    let Some(entry) = counts.get_mut(word) else {
+                        continue;
+                    };
+                    let site = &candidates[word];
+                    if site.file == source.path && site.line == index {
+                        continue;
+                    }
+                    if test_side {
+                        entry.1 += 1;
+                    } else {
+                        entry.0 += 1;
+                    }
+                }
+            }
+        }
+
+        for (name, (production_references, test_references)) in &counts {
+            if *production_references > 0 || *test_references == 0 {
+                continue;
+            }
+            let site = &candidates[*name];
+            report.find(Finding::at(
+                site.file.clone(),
+                u32::try_from(site.line + 1).unwrap_or(u32::MAX),
+                format!(
+                    "`{name}` is referenced {test_references} time(s), every one of them from \
+                     test code"
+                ),
+                "give the item a production caller or delete it; dead_code counts a \
+                 #[cfg(test)] call as a use, so a test-only caller keeps an unowned item quiet",
+            ));
+        }
+        Ok(report)
+    }
+}
+
+/// One tracked Rust file, read once and classified once.
+struct Source {
+    /// Path relative to the checkout root.
+    path: PathBuf,
+    /// File contents.
+    text: String,
+    /// Whether the file is production source at all.
+    production: bool,
+    /// Which of its lines belong to a test-only item, by 0-based index.
+    test_only: Vec<bool>,
+}
+
+impl Source {
+    /// Whether a line is test code, whichever of the two ways makes it so.
+    fn test_side(&self, index: usize) -> bool {
+        !self.production || self.test_only.get(index).copied().unwrap_or(false)
+    }
+}
+
+/// Where a candidate item is declared.
+struct Declaration {
+    /// File holding the declaration.
+    file: PathBuf,
+    /// 0-based line of the declaration.
+    line: usize,
+    /// Whether the declaration itself is test code.
+    test_side: bool,
+}
+
+/// The item a line declares, when it declares a restricted one.
+///
+/// Restricted visibility closes over this tree, so `pub(crate)` and `pub(super)`
+/// are judged like a private item. Bare `pub` returns nothing: whether it has a
+/// caller is a question about other checkouts.
+fn declared_item_name(line: &str) -> Option<String> {
+    let mut rest = line.trim();
+    match strip_restricted_visibility(rest) {
+        Some(tail) => rest = tail,
+        None if rest.starts_with("pub ") || rest.starts_with("pub(") => return None,
+        None => {}
+    }
+    // Modifiers that can precede an item keyword. `const` is both a modifier and
+    // an item keyword, so it is read below rather than stripped blindly.
+    loop {
+        let stripped = ["default ", "async ", "unsafe "]
+            .iter()
+            .find_map(|prefix| rest.strip_prefix(prefix));
+        match stripped {
+            Some(tail) => rest = tail.trim_start(),
+            None => break,
+        }
+    }
+    if let Some(tail) = rest.strip_prefix("const ") {
+        let tail = tail.trim_start();
+        return item_name(tail.strip_prefix("fn ").unwrap_or(tail));
+    }
+    for keyword in [
+        "fn ", "static ", "struct ", "enum ", "trait ", "type ", "union ",
+    ] {
+        if let Some(tail) = rest.strip_prefix(keyword) {
+            return item_name(tail);
+        }
+    }
+    None
+}
+
+/// The remainder of a line after a restricted visibility qualifier.
+fn strip_restricted_visibility(line: &str) -> Option<&str> {
+    let rest = line.strip_prefix("pub(")?;
+    let close = rest.find(')')?;
+    Some(rest[close + 1..].trim_start())
+}
+
+/// The leading identifier of a declaration's remainder.
+fn item_name(rest: &str) -> Option<String> {
+    let rest = rest.trim_start();
+    let rest = rest.strip_prefix("mut ").map_or(rest, str::trim_start);
+    let name: String = rest
+        .chars()
+        .take_while(|character| character.is_ascii_alphanumeric() || *character == '_')
+        .collect();
+    if name.is_empty() || name.starts_with(|character: char| character.is_ascii_digit()) {
+        return None;
+    }
+    Some(name)
+}
+
+/// The path a statement discards, when discarding it is the whole statement.
+fn discarded_read(line: &str) -> Option<String> {
+    let rest = line.trim().strip_prefix("let _")?;
+    let rest = match rest.strip_prefix(':') {
+        Some(typed) => typed.split_once('=')?.1,
+        None => rest.trim_start().strip_prefix('=')?,
+    };
+    let value = rest.trim().strip_suffix(';')?.trim();
+    if value.is_empty() || value.contains(['(', ')', '!', '?', '&', '*', '[', '{', ' ']) {
+        return None;
+    }
+    Some(value.to_string())
+}
+
+/// The identifiers of a line's code, with comments, string literals and
+/// keywords removed.
+///
+/// A name inside prose or inside a message is not a reference to the item, and a
+/// gate that counted one would report an item live because its own doc comment
+/// mentions it. A keyword is not a name either: no item can be called `let`, so
+/// a token that only the grammar can produce is not a reference to anything.
+fn identifiers(line: &str) -> Vec<&str> {
+    let mut found = Vec::new();
+    let bytes = line.as_bytes();
+    let mut index = 0usize;
+    let mut in_string = false;
+    while index < bytes.len() {
+        let byte = bytes[index];
+        if in_string {
+            index += if byte == b'\\' { 2 } else { 1 };
+            if byte == b'"' {
+                in_string = false;
+            }
+            continue;
+        }
+        if byte == b'"' {
+            in_string = true;
+            index += 1;
+            continue;
+        }
+        if byte == b'/' && bytes.get(index + 1) == Some(&b'/') {
+            break;
+        }
+        if byte.is_ascii_alphabetic() || byte == b'_' {
+            let start = index;
+            while index < bytes.len()
+                && (bytes[index].is_ascii_alphanumeric() || bytes[index] == b'_')
+            {
+                index += 1;
+            }
+            let token = &line[start..index];
+            if !is_keyword(token) {
+                found.push(token);
+            }
+            continue;
+        }
+        index += 1;
+    }
+    found
+}
+
+/// Every strict and reserved Rust keyword, sorted.
+///
+/// A keyword cannot name an item, so a token the grammar owns is never a
+/// reference to one. The contextual keywords are absent on purpose: `union`
+/// and `macro_rules` are legal item names, and dropping a token that names a
+/// real item would report that item dead.
+const KEYWORDS: &[&str] = &[
+    "Self", "abstract", "as", "async", "await", "become", "box", "break", "const", "continue",
+    "crate", "do", "dyn", "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl",
+    "in", "let", "loop", "macro", "match", "mod", "move", "mut", "override", "priv", "pub", "ref",
+    "return", "self", "static", "struct", "super", "trait", "true", "try", "type", "typeof",
+    "unsafe", "unsized", "use", "virtual", "where", "while", "yield",
+];
+
+/// Whether `token` is a Rust keyword rather than a name.
+fn is_keyword(token: &str) -> bool {
+    KEYWORDS.binary_search(&token).is_ok()
+}
+
 /// Whether a path sits outside production sources.
 ///
 /// Test and benchmark trees are not production, and neither is the fragment
@@ -449,7 +773,7 @@ fn is_attribute_path_byte(character: char) -> bool {
 mod tests {
     use super::*;
     use crate::gate::GateBehavior;
-    use crate::gates::fixture_checkout::checkout;
+    use crate::gates::fixture_checkout::{checkout, files, messages, sites};
 
     /// WHY: the policy is crate-wide, and three neighbours of the defect must
     /// stay unreported: the module-scoped `#[allow]` on a generated module, the
@@ -571,11 +895,7 @@ mod tests {
             lines,
             [2],
             "only the production site owes a corrective action: {:?}",
-            report
-                .findings
-                .iter()
-                .map(|finding| finding.message.clone())
-                .collect::<Vec<_>>()
+            messages(&report)
         );
     }
 
@@ -605,30 +925,12 @@ mod tests {
         let report = ExpectHasFix
             .run(&GateCtx::new(root, Vec::new()))
             .expect("Fix: the gate must read the fixture tree; check the fixture git step");
-        let reported: Vec<String> = report
-            .findings
-            .iter()
-            .map(|finding| {
-                format!(
-                    "{}:{}",
-                    finding
-                        .file
-                        .as_ref()
-                        .map(|path| path.display().to_string())
-                        .unwrap_or_default(),
-                    finding.line.unwrap_or_default()
-                )
-            })
-            .collect();
+        let reported = sites(&report);
         assert_eq!(
             reported,
             ["lib.rs:2"],
             "only the production site owes a corrective action: {:?}",
-            report
-                .findings
-                .iter()
-                .map(|finding| finding.message.clone())
-                .collect::<Vec<_>>()
+            messages(&report)
         );
     }
 
@@ -743,7 +1045,7 @@ mod tests {
             .run(&GateCtx::new(root, Vec::new()))
             .expect("the gate reads the fixture tree");
         assert_eq!(
-            reported_files(&report),
+            files(&report),
             [
                 "own-table/Cargo.toml",
                 "own-table/Cargo.toml",
@@ -752,26 +1054,161 @@ mod tests {
             "the divergent member is reported twice, once for the missing inheritance and once \
              for the table it declared instead, and the crate-root override is reported once: \
              {:?}",
-            report
-                .findings
-                .iter()
-                .map(|finding| finding.message.clone())
-                .collect::<Vec<_>>()
+            messages(&report)
         );
     }
 
-    /// The files a report names, in the order it named them.
-    fn reported_files(report: &Report) -> Vec<String> {
-        report
+    /// WHY: a discarded read is how `dead_code = "deny"` gets satisfied without
+    /// giving anything an owner, and the neighbouring writes that look like one
+    /// are not: a discarded `Result` is a real discard, and a discarded borrow
+    /// exists for the drop. A scanner that could not tell them apart would
+    /// either miss the marker reads, which is the shape the defect takes, or
+    /// forbid discarding a fallible call.
+    #[test]
+    fn a_discarded_path_read_is_told_apart_from_a_discarded_call() {
+        assert_eq!(
+            discarded_read("        let _ = CU_STREAM_CAPTURE_MODE_THREAD_LOCAL;"),
+            Some("CU_STREAM_CAPTURE_MODE_THREAD_LOCAL".to_string())
+        );
+        assert_eq!(
+            discarded_read("    let _: u32 = PROBE_MARKER;"),
+            Some("PROBE_MARKER".to_string())
+        );
+        assert_eq!(
+            discarded_read("    let _ = self.retained_field;"),
+            Some("self.retained_field".to_string())
+        );
+        assert_eq!(discarded_read("    let _ = write_all(&mut sink);"), None);
+        assert_eq!(discarded_read("    let _ = &guard;"), None);
+        assert_eq!(discarded_read("    let _ = try_read()?;"), None);
+        assert_eq!(discarded_read("    let _unused = MARKER;"), None);
+        assert_eq!(discarded_read("    let value = MARKER;"), None);
+    }
+
+    /// WHY: the reference count is what makes a test-only caller visible, and it
+    /// must read code rather than text. A name in a doc comment, in a trailing
+    /// comment, or inside a panic message is not a call, and counting one would
+    /// report an item live because its own documentation mentions it.
+    #[test]
+    fn identifiers_are_read_from_code_and_not_from_prose_or_messages() {
+        assert_eq!(identifiers("    marker_probe();"), vec!["marker_probe"]);
+        assert_eq!(
+            identifiers("    let value = holder.marker_probe; // marker_probe again"),
+            vec!["value", "holder", "marker_probe"]
+        );
+        assert_eq!(
+            identifiers("    panic!(\"marker_probe is missing\");"),
+            vec!["panic"]
+        );
+        assert!(identifiers("/// marker_probe is documented here").is_empty());
+    }
+
+    /// WHY: `is_keyword` binary-searches the table, so an unsorted entry is not
+    /// found and the keyword it names is counted as a reference to an item. The
+    /// miss is silent: the gate keeps passing and reports a dead item live.
+    #[test]
+    fn every_keyword_is_reachable_by_the_search_that_reads_them() {
+        assert!(
+            KEYWORDS.windows(2).all(|pair| pair[0] < pair[1]),
+            "Fix: KEYWORDS must be sorted and free of duplicates for `binary_search`."
+        );
+        for keyword in KEYWORDS {
+            assert!(
+                is_keyword(keyword),
+                "Fix: `{keyword}` is in the table and the search cannot find it."
+            );
+        }
+        assert!(
+            !is_keyword("union"),
+            "Fix: a contextual keyword is a legal item name and must stay countable."
+        );
+    }
+
+    /// WHY: bare `pub` cannot be judged from one checkout, and restricted
+    /// visibility can. The keyword forms also have to be told apart, because
+    /// `const fn` and `const` both start with `const` and only one of them
+    /// declares a function.
+    #[test]
+    fn a_restricted_declaration_is_named_and_a_public_one_is_not() {
+        assert_eq!(
+            declared_item_name("fn helper(value: u32) -> u32 {"),
+            Some("helper".to_string())
+        );
+        assert_eq!(
+            declared_item_name("    pub(crate) const PROBE: u32 = 1;"),
+            Some("PROBE".to_string())
+        );
+        assert_eq!(
+            declared_item_name("pub(super) const fn folded() -> u32 {"),
+            Some("folded".to_string())
+        );
+        assert_eq!(
+            declared_item_name("    static mut COUNTER: u32 = 0;"),
+            Some("COUNTER".to_string())
+        );
+        assert_eq!(declared_item_name("pub fn exported() {"), None);
+        assert_eq!(declared_item_name("mod inner;"), None);
+        assert_eq!(declared_item_name("    self.helper();"), None);
+    }
+
+    /// WHY: this is the mutation the gate exists for. `dead_code` counts the
+    /// `#[cfg(test)]` call as a use, so the compiler is green on a production
+    /// item no production caller reaches. The item beside it with a production
+    /// caller must stay unreported, or the gate rejects every private helper the
+    /// tree has.
+    #[test]
+    fn an_item_only_test_code_calls_is_reported_and_an_owned_one_is_not() {
+        let (_directory, root) = checkout(&[(
+            "lib.rs",
+            "fn owned_helper() -> u32 {\n    7\n}\n\n\
+             fn test_only_helper() -> u32 {\n    9\n}\n\n\
+             pub fn entry() -> u32 {\n    owned_helper()\n}\n\n\
+             #[cfg(test)]\nmod tests {\n    #[test]\n    fn it_runs() {\n        \
+             assert_eq!(super::test_only_helper(), 9);\n        \
+             assert_eq!(super::entry(), 7);\n    }\n}\n",
+        )]);
+
+        let report = LivenessEvasion
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("Fix: the gate must read the fixture tree; check the fixture git step");
+        let reported = messages(&report);
+        assert_eq!(
+            reported.len(),
+            1,
+            "exactly one item is unowned: {reported:?}"
+        );
+        assert!(
+            reported[0].contains("test_only_helper"),
+            "the unowned item is the one only the test calls: {reported:?}"
+        );
+    }
+
+    /// WHY: a marker read in production is the other half of the class, and the
+    /// same write inside a test item is a fixture rather than a shipped
+    /// pretence, so only the production one is reported.
+    #[test]
+    fn a_production_marker_read_is_reported_and_a_test_one_is_not() {
+        let (_directory, root) = checkout(&[(
+            "lib.rs",
+            "const PROBE: u32 = 1;\n\n\
+             pub fn entry() {\n    let _ = PROBE;\n}\n\n\
+             #[cfg(test)]\nmod tests {\n    #[test]\n    fn it_runs() {\n        \
+             let _ = super::PROBE;\n    }\n}\n",
+        )]);
+
+        let report = LivenessEvasion
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("Fix: the gate must read the fixture tree; check the fixture git step");
+        let lines: Vec<u32> = report
             .findings
             .iter()
-            .map(|finding| {
-                finding
-                    .file
-                    .as_ref()
-                    .map(|path| path.display().to_string())
-                    .unwrap_or_default()
-            })
-            .collect()
+            .filter_map(|finding| finding.line)
+            .collect();
+        assert_eq!(
+            lines,
+            [4],
+            "only the production discard is reported: {:?}",
+            messages(&report)
+        );
     }
 }

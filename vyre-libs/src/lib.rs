@@ -41,6 +41,7 @@
 pub mod prelude;
 
 /// Shared builder helpers every Cat-A composition reuses.
+#[cfg(feature = "builder")]
 pub(crate) mod builder;
 
 /// Shared plumbing every composition needs and no dialect owns: what a buffer
@@ -50,12 +51,34 @@ pub(crate) mod plumbing;
 
 #[cfg(feature = "graph")]
 pub use builder::csr;
+#[cfg(feature = "builder")]
 pub use builder::elementwise;
+#[cfg(feature = "builder")]
 pub use builder::gemm;
+#[cfg(feature = "builder")]
 pub use builder::range_ordering;
+#[cfg(feature = "builder")]
+pub use builder::reduction;
+#[cfg(feature = "builder")]
 pub use builder::state_machine;
+#[cfg(feature = "builder")]
 pub use builder::stencil;
+/// The shared child-region skeletons a dialect composes.
+///
+/// These are the Cat-A composition surface: a dialect builds an op out of them
+/// rather than restating the loop. They are public because that is what they
+/// are for, and because a `pub(crate)` helper is dead code in every feature
+/// selection whose dialects happen not to call it, which is a property of the
+/// selection rather than a defect in the helper.
+#[cfg(feature = "builder")]
+pub use builder::{
+    build_elementwise_binary, build_elementwise_unary, build_indexed_map,
+    strided_accumulate2_child, strided_accumulate_child, strided_writeback_child,
+    INDEXED_MAP_OP_ID, STRIDED_ACCUMULATE_OP_ID, STRIDED_WRITEBACK_OP_ID,
+};
+#[cfg(feature = "builder")]
 pub use builder::{check_same_shape, checked_element_count};
+#[cfg(feature = "builder")]
 pub use builder::{check_tensors, BuildOptions};
 pub use plumbing::host::dispatch_buffers;
 pub use plumbing::operand::buffer_names;
@@ -261,6 +284,10 @@ pub use plumbing::registration::signatures::{
     U32_OUTPUTS, U32_U32_INPUTS,
 };
 /// Owner-local byte fixtures for semantic operation registrations and tests.
+///
+/// Every witness here answers for an operation some dialect registers, so the
+/// module is live exactly when a dialect is compiled.
+#[cfg(feature = "builder")]
 pub(crate) mod fixture_bytes;
 
 /// Dispatcher doubles and program sequencing for this crate's own unit tests.

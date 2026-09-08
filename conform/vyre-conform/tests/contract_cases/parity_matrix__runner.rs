@@ -10,9 +10,15 @@ use vyre_reference::value::Value;
 
 use super::parity_matrix_divergence::Summary;
 
-#[cfg_attr(not(feature = "gpu"), allow(dead_code))]
 pub(crate) enum BackendKind {
     ReferenceBackend,
+    // Only the device lane constructs this. Without `gpu` the variant still
+    // exists for the match arm below, and nothing builds it, so the suppression
+    // names that one variant and expires with the feature.
+    #[cfg_attr(
+        not(feature = "gpu"),
+        expect(dead_code, reason = "constructed only by the gpu-gated device lane")
+    )]
     Registered(&'static BackendRegistration),
 }
 
@@ -22,77 +28,35 @@ pub(crate) struct BackendRunner {
 }
 
 impl BackendRunner {
-    pub(crate) fn execute(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        values: &mut Vec<Value>,
-    ) -> Result<Vec<Vec<u8>>, String> {
-        match &self.kind {
-            BackendKind::ReferenceBackend => {
-                values.clear();
-                for bytes in inputs {
-                    values.push(Value::from(bytes.as_slice()));
-                }
-                vyre_reference::reference_eval(program, values)
-                    .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
-                    .map_err(|error| format!("reference dispatch failed: {error}"))
-            }
-            BackendKind::Registered(_) => {
-                let mut backend_inputs = Vec::new();
-                self.execute_with_plan(program, inputs, values, None, &mut backend_inputs)
-            }
-        }
-    }
-
     pub(crate) fn execute_with_plan<'a>(
         &self,
         program: &Program,
         inputs: &'a [Vec<u8>],
         values: &mut Vec<Value>,
-        plan: Option<&'a WitnessInputPlan>,
+        plan: &'a WitnessInputPlan,
         backend_inputs: &mut Vec<&'a [u8]>,
     ) -> Result<Vec<Vec<u8>>, String> {
+        plan_witness_inputs_into(inputs, plan, backend_inputs)?;
         match &self.kind {
             BackendKind::ReferenceBackend => {
                 values.clear();
-                if let Some(plan) = plan {
-                    plan_witness_inputs_into(inputs, plan, backend_inputs)?;
-                    for bytes in backend_inputs.iter() {
-                        values.push(Value::from(*bytes));
-                    }
-                } else {
-                    for bytes in inputs {
-                        values.push(Value::from(bytes.as_slice()));
-                    }
+                for bytes in backend_inputs.iter() {
+                    values.push(Value::from(*bytes));
                 }
                 vyre_reference::reference_eval(program, values)
                     .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
                     .map_err(|error| format!("reference dispatch failed: {error}"))
             }
             BackendKind::Registered(registration) => {
-                let run_submission = |planned_inputs: &[&[u8]]| -> Result<Vec<Vec<u8>>, String> {
-                    let production =
-                        vyre_conform::production::ProductionSession::from_registration(
-                            program,
-                            registration,
-                        )
-                        .map_err(|error| error.to_string())?;
-                    production
-                        .submit(planned_inputs)
-                        .map(|execution| execution.outputs)
-                        .map_err(|error| error.to_string())
-                };
-
-                if let Some(plan) = plan {
-                    plan_witness_inputs_into(inputs, plan, backend_inputs)?;
-                    run_submission(backend_inputs)
-                } else {
-                    let plan_storage = WitnessInputPlan::for_program(program)?;
-                    let mut local_inputs = Vec::new();
-                    plan_witness_inputs_into(inputs, &plan_storage, &mut local_inputs)?;
-                    run_submission(&local_inputs)
-                }
+                let production = vyre_conform::production::ProductionSession::from_registration(
+                    program,
+                    registration,
+                )
+                .map_err(|error| error.to_string())?;
+                production
+                    .submit(backend_inputs)
+                    .map(|execution| execution.outputs)
+                    .map_err(|error| error.to_string())
             }
         }
     }

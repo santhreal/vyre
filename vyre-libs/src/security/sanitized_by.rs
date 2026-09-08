@@ -59,11 +59,6 @@ pub(crate) fn sanitized_by_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
 }
 
 #[cfg(test)]
-pub(crate) fn sanitized_by_fixture_expected() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![EXPECTED_SANITIZED_BY_OUTPUT_BYTES.to_vec()]]
-}
-
-#[cfg(test)]
 mod tests {
     use super::*;
     use crate::fixture_bytes::eval_bytes;

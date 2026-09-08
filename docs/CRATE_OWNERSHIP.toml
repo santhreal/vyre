@@ -1,4 +1,108 @@
-schema_version = 2
+schema_version = 3
+
+# The layer DAG, and the whole of the direction contract.
+#
+# `rank` is dependency depth: the longest chain of cross-layer production edges
+# from a layer down to one that depends on nothing outside itself. A production
+# edge is legal when the source rank is strictly greater than the destination
+# rank, and same-layer edges are always legal. That single comparison rejects a
+# reversal and makes a layer cycle unrepresentable, so there is no roster of
+# permitted layer pairs to keep in agreement with the manifests.
+#
+# Two layers share a rank when neither depends on the other. A new edge between
+# two such layers fails the direction rule, which is the decision worth
+# stopping on: one of the two ranks is then wrong and the manifest records
+# which.
+
+[[layer]]
+name = "foundation"
+rank = 0
+purpose = "Typed IR, logical domains, specification records, diagnostics, and the derive macros that generate them."
+
+[[layer]]
+name = "standalone-tooling"
+rank = 0
+purpose = "Source-structure gates that read the tree and depend on no compiler crate."
+
+[[layer]]
+name = "lowering"
+rank = 1
+purpose = "One verified selected-module representation between semantic IR and target emission."
+
+[[layer]]
+name = "primitives"
+rank = 1
+purpose = "Intrinsic operations, each with its own emitter arm in every backend and its own reference arm."
+
+[[layer]]
+name = "compiler-boundary"
+rank = 2
+purpose = "Schedule search, artifact identity, and authenticated target-payload construction."
+
+[[layer]]
+name = "emitter"
+rank = 2
+purpose = "Target text and binary emission for one dialect each."
+
+[[layer]]
+name = "semantics"
+rank = 2
+purpose = "The independent semantic oracle. Never a production execution route."
+
+[[layer]]
+name = "libraries"
+rank = 3
+purpose = "Domain-neutral compositions built from existing IR."
+
+[[layer]]
+name = "test-tooling"
+rank = 5
+purpose = "Shared verification fixtures and harness support, private to the workspace."
+
+[[layer]]
+name = "backend-neutral"
+rank = 4
+purpose = "The dispatch, binding, and capability contract every concrete backend implements."
+
+[[layer]]
+name = "pass-engine"
+rank = 4
+purpose = "Pass scheduling and rewrite application over semantic IR."
+
+[[layer]]
+name = "concrete-backend"
+rank = 5
+purpose = "One device family each: capability probing, module loading, and dispatch."
+
+[[layer]]
+name = "packaging"
+rank = 5
+purpose = "Ahead-of-time artifact packaging and load."
+
+[[layer]]
+name = "runtime"
+rank = 5
+purpose = "Submission, admission, tenancy, and lifecycle policy over a compiled artifact."
+
+[[layer]]
+name = "facade"
+rank = 6
+purpose = "The single curated consumer surface over the layers below it."
+
+[[layer]]
+name = "registry-link"
+rank = 6
+purpose = "Link anchors that pull registration submissions into a final binary."
+
+[[layer]]
+name = "conformance"
+rank = 7
+purpose = "Parity harnesses that join a production result to an independently produced oracle result."
+
+[[layer]]
+name = "tooling"
+rank = 7
+purpose = "Gates, benchmarks, and generators that read the whole workspace."
 
 [[crate]]
 package = "vyre-megakernel"
@@ -794,7 +898,16 @@ optional = false
 default_features = true
 boundary = "private"
 seam = "release-tooling"
-
+[[crate.dependency]]
+package = "vyre-driver"
+purpose = "the backend-neutral driver registry contract every backend fixture is stated against, behind the driver-contracts feature"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "backend-contract"
 [[crate.dependency]]
 package = "vyre-foundation"
 purpose = "IR statement fixtures for the run-time variant enumeration, behind the ir-fixtures feature"
@@ -805,7 +918,6 @@ optional = true
 default_features = true
 boundary = "private"
 seam = "foundation-ir"
-
 [[crate.dependency]]
 package = "vyre-megakernel"
 purpose = "the semantic execution request every backend contract shares, behind the semantic-requests feature"
@@ -816,8 +928,6 @@ optional = true
 default_features = true
 boundary = "private"
 seam = "megakernel-compiler"
-
-
 [[crate.dependency]]
 package = "vyre-reference"
 purpose = "reference interpreter oracle evaluation and canonical ULP distance calculation for the differential execution matrix, behind the ir-fixtures feature"

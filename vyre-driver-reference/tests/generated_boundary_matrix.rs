@@ -8,7 +8,7 @@ use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_reference::CpuRefBackend;
 use vyre_foundation::ir::Expr;
 
-mod dispatch_fixtures;
+use crate::dispatch_fixtures;
 use dispatch_fixtures::{binary_program, dispatch_with_inputs};
 
 #[derive(Clone, Copy)]

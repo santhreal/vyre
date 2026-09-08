@@ -4,7 +4,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 #[path = "harness/line_splice_generated_corpus.rs"]
 mod line_splice_generated_corpus;
 

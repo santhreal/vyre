@@ -2,10 +2,7 @@ use std::collections::BTreeMap;
 
 use serde::Serialize;
 
-use xtask::artifact_paths::{
-    FRONTIER_LEADERBOARD_ARTIFACT, LEGO_AUDIT_DUPLICATES_ARTIFACT,
-    REGISTERED_OP_DUPLICATES_ARTIFACT,
-};
+use xtask::artifact_paths::{FRONTIER_LEADERBOARD_ARTIFACT, REGISTERED_OP_DUPLICATES_ARTIFACT};
 
 pub(crate) const EXPECTED_ARTIFACT_REGISTRY: &str =
     "release/evidence/final/expected-artifacts.json";
@@ -47,9 +44,13 @@ pub(crate) fn expected_artifacts_for_args(args: &[&str]) -> Vec<&'static str> {
             })
             .collect();
     }
+    // `whats-similar` fixes its report path behind a `--duplicate-report-json`
+    // flag, so the artifact it produces depends on the arguments rather than on
+    // the descriptor. `lego-duplicate-report` owns its artifact through the
+    // descriptor and needs no arm here; the arm it used to have named a
+    // `lego-audit` flag nothing parsed.
     let duplicate_report = match subcommand {
         "whats-similar" => Some(REGISTERED_OP_DUPLICATES_ARTIFACT),
-        "lego-audit" => Some(LEGO_AUDIT_DUPLICATES_ARTIFACT),
         _ => None,
     };
     if let Some(expected_report) = duplicate_report {

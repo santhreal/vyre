@@ -16,7 +16,9 @@ use super::workspace_adapter::ResidentWorkspaceAdapter;
 mod cache;
 mod jit;
 mod priority;
-pub use jit::{build_program_jit, build_program_jit_slots, persistent_body_jit};
+pub use jit::{
+    build_program_jit, build_program_jit_slots, persistent_body_jit, try_persistent_body_jit,
+};
 pub use priority::{
     build_program_priority, build_program_priority_slots, persistent_body_priority,
     persistent_body_priority_slots,

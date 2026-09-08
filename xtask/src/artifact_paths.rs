@@ -13,6 +13,8 @@ pub const REGISTERED_OP_DUPLICATES_ARTIFACT: &str =
 /// Duplicate source families the lego audit records.
 pub const LEGO_AUDIT_DUPLICATES_ARTIFACT: &str =
     "release/evidence/dedup/lego-audit-duplicates.json";
+/// Per-operation composed fraction the lego trend ratchet compares against.
+pub const LEGO_COMPOSITION_BASELINE: &str = "audits/lego-composition.tsv";
 
 /// Exact benchmark evidence artifacts written and audited by `release-benchmarks`.
 pub const RELEASE_BENCHMARKS_ARTIFACTS: &[&str] = &[

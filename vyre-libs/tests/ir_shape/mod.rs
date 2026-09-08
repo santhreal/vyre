@@ -5,13 +5,68 @@
 //! that forgets an `Expr` arm silently answers "no" and turns the assertion
 //! green. Keeping one walker per question means a new IR node is fixed in one
 //! place for every suite that asks.
+//!
+//! Every question is answered through [`shape_of`], one record per program.
+//! A suite that asked one question directly left the other walkers with no
+//! caller in that binary, so the shape is read whole and each suite states the
+//! facts it pins.
 
-/// Does the program contain any loop, at any nesting depth?
-///
-/// A builder that lowers to a serial loop where the contract promises a
-/// parallel multi-block chain answers `true` here.
-pub(crate) fn contains_loop(program: &vyre_foundation::ir::Program) -> bool {
-    program.entry().iter().any(node_contains_loop)
+use std::fmt;
+
+/// The structural facts a suite pins about a built program.
+pub(crate) struct ProgramShape {
+    /// Contains a loop at any nesting depth.
+    ///
+    /// A builder that lowers to a serial loop where the contract promises a
+    /// parallel multi-block chain reports `true`.
+    pub(crate) loops: bool,
+    /// Reads `invocation_id` anywhere.
+    ///
+    /// A parallel builder must; a builder that lost its lane indexing reads
+    /// none and would otherwise still pass a value comparison on a one-element
+    /// input.
+    pub(crate) reads_invocation_id: bool,
+    /// Gates work behind `invocation_id.x == 0`.
+    ///
+    /// That gate serializes a dispatch onto one lane, so a builder that claims
+    /// to expose parallel work must not contain one.
+    pub(crate) gates_on_invocation_zero: bool,
+    /// Number of grid-wide barriers.
+    ///
+    /// The multi-block scan chain is exactly Pass-A / Pass-B / Pass-C, so it
+    /// needs exactly two. A dropped barrier reads as a lost cross-block
+    /// dependency.
+    pub(crate) grid_sync_barriers: usize,
+}
+
+impl fmt::Display for ProgramShape {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "loops={} invocation_id={} invocation_zero_gate={} grid_sync_barriers={}",
+            self.loops,
+            self.reads_invocation_id,
+            self.gates_on_invocation_zero,
+            self.grid_sync_barriers
+        )
+    }
+}
+
+/// Read every structural fact of `program` in one walk per question.
+pub(crate) fn shape_of(program: &vyre_foundation::ir::Program) -> ProgramShape {
+    ProgramShape {
+        loops: program.entry().iter().any(node_contains_loop),
+        reads_invocation_id: program.entry().iter().any(node_contains_invocation_id),
+        gates_on_invocation_zero: program
+            .entry()
+            .iter()
+            .any(node_contains_invocation_zero_gate),
+        grid_sync_barriers: program
+            .entry()
+            .iter()
+            .map(node_grid_sync_barrier_count)
+            .sum(),
+    }
 }
 
 fn node_contains_loop(node: &vyre_foundation::ir::Node) -> bool {
@@ -25,17 +80,6 @@ fn node_contains_loop(node: &vyre_foundation::ir::Node) -> bool {
         Node::Region { body, .. } => body.iter().any(node_contains_loop),
         _ => false,
     }
-}
-
-/// Does the program gate work behind `invocation_id.x == 0`?
-///
-/// That gate serializes a dispatch onto one lane, so a builder that claims to
-/// expose parallel work must not contain one.
-pub(crate) fn contains_invocation_zero_gate(program: &vyre_foundation::ir::Program) -> bool {
-    program
-        .entry()
-        .iter()
-        .any(node_contains_invocation_zero_gate)
 }
 
 fn node_contains_invocation_zero_gate(node: &vyre_foundation::ir::Node) -> bool {
@@ -99,14 +143,6 @@ fn expr_is_invocation_zero(expr: &vyre_foundation::ir::Expr) -> bool {
         Expr::Call { args, .. } => args.iter().any(expr_is_invocation_zero),
         _ => false,
     }
-}
-
-/// Does the program read `invocation_id` anywhere?
-///
-/// A parallel builder must; a builder that lost its lane indexing reads none
-/// and would otherwise still pass a value comparison on a one-element input.
-pub(crate) fn contains_invocation_id(program: &vyre_foundation::ir::Program) -> bool {
-    program.entry().iter().any(node_contains_invocation_id)
 }
 
 fn node_contains_invocation_id(node: &vyre_foundation::ir::Node) -> bool {
@@ -176,18 +212,6 @@ fn expr_contains_invocation_id(expr: &vyre_foundation::ir::Expr) -> bool {
         }
         _ => false,
     }
-}
-
-/// How many grid-wide barriers does the program contain?
-///
-/// The multi-block scan chain is exactly Pass-A / Pass-B / Pass-C, so it needs
-/// exactly two. A dropped barrier reads as a lost cross-block dependency.
-pub(crate) fn grid_sync_barrier_count(program: &vyre_foundation::ir::Program) -> usize {
-    program
-        .entry()
-        .iter()
-        .map(node_grid_sync_barrier_count)
-        .sum()
 }
 
 fn node_grid_sync_barrier_count(node: &vyre_foundation::ir::Node) -> usize {

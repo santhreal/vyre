@@ -1,6 +1,7 @@
 [package]
 name = "vyre-lower"
 version = "0.8.0"
+autotests = false
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Substrate-neutral lowering: vyre Program → KernelDescriptor consumed by vyre-emit-* crates."
@@ -51,5 +52,5 @@ toml = { workspace = true }
 bincode = { workspace = true }
 
 [[test]]
-name = "lowering_contracts"
-path = "tests/lowering_contracts/mod.rs"
+name = "all_tests"
+path = "tests/all_tests.rs"

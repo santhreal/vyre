@@ -7,8 +7,8 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
+use crate::harness;
 use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
-mod harness;
 
 use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::graph::dispatch::persistent_bfs::bfs_expand_via;

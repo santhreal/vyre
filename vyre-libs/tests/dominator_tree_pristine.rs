@@ -8,7 +8,7 @@
 //! Differential     → LT vs CHK vs external algorithm path.
 #![cfg(feature = "graph")]
 
-mod gate_fixtures;
+use crate::gate_fixtures;
 
 use gate_fixtures::reference_eval_idoms;
 use vyre_libs::graph::dominator_tree::*;

@@ -11,10 +11,7 @@ use vyre_megakernel::{
 };
 use vyre_megakernel::{TargetCompileError, TargetCompiler};
 
-#[path = "../../../tests/support/artifact_fixtures.rs"]
-mod artifact_fixtures;
-
-use artifact_fixtures::{compile_graph, contract, graph_over};
+use vyre_test_support::artifact_fixtures::{compile_graph, contract, graph_over};
 
 pub(crate) const FIXTURE_TARGET_ID: vyre_aot::TargetId =
     vyre_aot::TargetId::expect_valid("fixture-target");
@@ -92,6 +89,77 @@ inventory::submit! {
     }
 }
 
+/// Payload format owned by [`FIXTURE_TARGET_ID`].
+pub(crate) const FIXTURE_FORMAT: &str = "fixture-target-format";
+
+/// Payload format owned by [`LAUNCHER_FIXTURE_TARGET_ID`].
+pub(crate) const LAUNCHER_FIXTURE_FORMAT: &str = "fixture-launcher-format";
+
+/// A second fixture target that does own a launcher emitter.
+///
+/// [`FIXTURE_TARGET_ID`] must stay launcher-unregistered, because the bundle
+/// contracts assert that packaging refuses a target with no linked emitter and
+/// writes nothing first. `inventory::submit!` registers at link time even when
+/// it is written inside a function body, so a launcher emitter submitted for
+/// the shared fixture is visible to every test in the binary and turns those
+/// two refusals into passes that never ran. The launcher tests get their own
+/// target instead, and the two contracts stop competing for one registration.
+pub(crate) const LAUNCHER_FIXTURE_TARGET_ID: vyre_aot::TargetId =
+    vyre_aot::TargetId::expect_valid("fixture-launcher-target");
+
+pub(crate) fn launcher_fixture_target() -> vyre_aot::TargetId {
+    LAUNCHER_FIXTURE_TARGET_ID.clone()
+}
+
+fn launcher_fixture_compiler() -> Result<Box<dyn TargetCompiler>, vyre_driver::BackendError> {
+    let format = TargetPayloadFormat::new(LAUNCHER_FIXTURE_FORMAT, 1).map_err(|error| {
+        vyre_driver::BackendError::new(format!(
+            "launcher fixture format is invalid: {error}. Fix: repair the fixture format."
+        ))
+    })?;
+    let profile = TargetProfile::new(LAUNCHER_FIXTURE_FORMAT, 1, [64, 1, 1], 64, 0, 0)
+        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+    Ok(Box::new(FixtureTargetCompiler { format, profile }))
+}
+
+fn emit_launcher_fixture(
+    request: &vyre_driver::AotLauncherRequest<'_>,
+) -> Result<vyre_driver::AotLauncherFiles, String> {
+    let mut files = std::collections::BTreeMap::new();
+    files.insert(
+        std::path::PathBuf::from("src/main.rs"),
+        format!(
+            "// Generated launcher for {}\nfn main() {{ println!(\"ok\"); }}",
+            request.crate_name
+        ),
+    );
+    Ok(vyre_driver::AotLauncherFiles {
+        dependencies: vec![],
+        files,
+    })
+}
+
+inventory::submit! {
+    vyre_driver::BackendRegistration {
+        id: "fixture-launcher-target",
+        target_id: LAUNCHER_FIXTURE_TARGET_ID,
+        payload_format: Some(LAUNCHER_FIXTURE_FORMAT),
+        reference_oracle: false,
+        factory: unavailable_backend,
+        supported_ops: no_operations,
+        semantic_operations: no_operations,
+        target_compiler: Some(launcher_fixture_compiler),
+        materializer: None,
+    }
+}
+
+inventory::submit! {
+    vyre_driver::AotLauncherEmitter {
+        target: LAUNCHER_FIXTURE_TARGET_ID,
+        emit: emit_launcher_fixture,
+    }
+}
+
 /// The launch geometry `neutral` recorded for `node`.
 fn recorded_launch(
     neutral: &vyre_megakernel::Artifact,
@@ -105,6 +173,15 @@ fn recorded_launch(
 }
 
 pub(crate) fn compiled_artifact() -> ArtifactEnvelope {
+    compiled_artifact_with_format(FIXTURE_FORMAT)
+}
+
+/// An envelope whose payload format is owned by the launcher fixture target.
+pub(crate) fn compiled_artifact_for_launcher() -> ArtifactEnvelope {
+    compiled_artifact_with_format(LAUNCHER_FIXTURE_FORMAT)
+}
+
+fn compiled_artifact_with_format(format_name: &str) -> ArtifactEnvelope {
     let neutral = compile_graph(
         graph_over(
             "main",
@@ -166,8 +243,8 @@ pub(crate) fn compiled_artifact() -> ArtifactEnvelope {
     .unwrap();
     let payload = TargetPayload::new(
         &neutral,
-        TargetPayloadFormat::new("fixture-target-format", 1).unwrap(),
-        TargetProfile::new("fixture-target-format", 1, [64, 1, 1], 64, 0, 0).unwrap(),
+        TargetPayloadFormat::new(format_name, 1).unwrap(),
+        TargetProfile::new(format_name, 1, [64, 1, 1], 64, 0, 0).unwrap(),
         vec![TargetEntryPoint {
             name: "main".into(),
             node,

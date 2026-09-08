@@ -28,11 +28,7 @@ This crate declares no Cargo features.
 | `bin` | `vyre-lints` | `vyre-lints/src/main.rs` | None | `./cargo_full test -p vyre-lints --bin vyre-lints` |
 | `example` | `vyre_lints_release_surface` | `vyre-lints/examples/vyre_lints_release_surface.rs` | None | `./cargo_full test -p vyre-lints --example vyre_lints_release_surface` |
 | `lib` | `vyre_lints` | `vyre-lints/src/lib.rs` | None | `./cargo_full test -p vyre-lints` |
-| `test` | `consumer_coupling` | `vyre-lints/tests/consumer_coupling.rs` | None | `./cargo_full test -p vyre-lints --test consumer_coupling` |
-| `test` | `gpu_skip_guards` | `vyre-lints/tests/gpu_skip_guards.rs` | None | `./cargo_full test -p vyre-lints --test gpu_skip_guards` |
-| `test` | `module_forks` | `vyre-lints/tests/module_forks.rs` | None | `./cargo_full test -p vyre-lints --test module_forks` |
-| `test` | `production_cpu_fallbacks` | `vyre-lints/tests/production_cpu_fallbacks.rs` | None | `./cargo_full test -p vyre-lints --test production_cpu_fallbacks` |
-| `test` | `raw_ir_in_libs` | `vyre-lints/tests/raw_ir_in_libs.rs` | None | `./cargo_full test -p vyre-lints --test raw_ir_in_libs` |
+| `test` | `all_tests` | `vyre-lints/tests/all_tests.rs` | None | `./cargo_full test -p vyre-lints --test all_tests` |
 
 ## Test classes
 

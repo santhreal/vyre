@@ -83,7 +83,8 @@ fn a_loop_nested_grid_sync_fence_is_preserved_through_the_split() {
          would route this program down the non-grid path with no fence and no error"
     );
 
-    let segments = vyre_driver::grid_sync::split_on_grid_sync(&program);
+    let segments = vyre_driver::grid_sync::try_split_on_grid_sync(&program)
+        .expect("Fix: the fixture program must split at its grid-sync fences");
     assert_eq!(
         segments.len(),
         1,
@@ -122,7 +123,8 @@ fn a_dispatch_level_grid_sync_fence_becomes_a_launch_boundary() {
             ]),
         }],
     );
-    let segments = vyre_driver::grid_sync::split_on_grid_sync(&program);
+    let segments = vyre_driver::grid_sync::try_split_on_grid_sync(&program)
+        .expect("Fix: the fixture program must split at its grid-sync fences");
     assert_eq!(
         segments.len(),
         2,

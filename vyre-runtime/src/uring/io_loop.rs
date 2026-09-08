@@ -99,23 +99,16 @@ impl ResidentIoLoop {
                 while let Some(cqe) = stream.ring_state.peek_cqe() {
                     let res = cqe.res;
                     let slot_idx = cqe.user_data;
-                    stream.ring_state.advance_cq();
-                    stream.inflight =
-                        stream
-                            .inflight
-                            .checked_sub(1)
-                            .ok_or(PipelineError::QueueFull {
-                                queue: "io_uring",
-                                fix: "megakernel IO loop completion arrived with no inflight SQE; rebuild the IO stream state",
-                            })?;
-                    let slot_idx = u32::try_from(slot_idx).map_err(|error| {
-                        PipelineError::QueueFull {
-                            queue: "completion",
-                            fix: match error {
-                                _ => "io_uring completion user_data does not fit megakernel IO slot index; keep user_data in u32 slot-id range",
-                            },
-                        }
-                    })?;
+                    stream.reap_completion(
+                        "rebuild the megakernel IO stream state before reusing it",
+                    )?;
+                    let slot_idx =
+                        u32::try_from(slot_idx).map_err(|_| PipelineError::IntegerWidth {
+                            quantity: "io_uring completion user_data",
+                            value: u128::from(slot_idx),
+                            bits: 32,
+                            fix: "keep user_data inside the megakernel u32 slot-id range",
+                        })?;
                     complete_io_request(io_queue_mapped, slot_idx, res >= 0)?;
                     backoff.reset();
                 }
@@ -162,14 +155,17 @@ impl ResidentIoLoop {
                                 ) {
                                     let _ =
                                         complete_io_request(io_queue_mapped, req.slot_idx, false);
-                                    return Err(PipelineError::Backend(e.to_string()));
+                                    return Err(e);
                                 }
                             } else {
                                 complete_io_request(io_queue_mapped, req.slot_idx, false)?;
-                                return Err(PipelineError::Backend(format!(
-                                    "megakernel IO READ requested unregistered GPU destination handle {} in slot {}. Fix: register the destination with ResidentIoLoop::spawn_with_registered_destinations before publishing READ requests.",
-                                    req.dst_handle, req.slot_idx
-                                )));
+                                return Err(PipelineError::UnregisteredResource {
+                                    request: "megakernel IO READ",
+                                    resource: "GPU destination",
+                                    handle: req.dst_handle,
+                                    slot: req.slot_idx,
+                                    fix: "register the destination with ResidentIoLoop::spawn_with_registered_destinations before publishing READ requests",
+                                });
                             }
                         },
                         io_op::FENCE => complete_io_request(io_queue_mapped, req.slot_idx, true)?,
@@ -206,7 +202,10 @@ impl ResidentIoLoop {
             handle.thread().unpark();
             handle
                 .join()
-                .map_err(|_| PipelineError::Backend("IO loop thread panicked".to_string()))?
+                .map_err(|_| PipelineError::WorkerThreadPanicked {
+                    worker: "IO loop",
+                    fix: "read the panic message the thread printed, repair the fault it names, and respawn the loop",
+                })?
         } else {
             Ok(())
         }

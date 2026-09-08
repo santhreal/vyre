@@ -72,9 +72,9 @@ pub(crate) fn eval_qkv_program(
         .iter()
         .find(|b| b.name() == "out")
         .map(|b| b.count() as usize * core::mem::size_of::<f32>())
-        .expect("Fix: output buffer present");
+        .unwrap_or_else(|| panic!("{on_failure}: program declares no `out` buffer"));
     let outputs = eval_bytes(
-        "attention",
+        on_failure,
         program,
         vec![
             f32_bytes(q),

@@ -19,7 +19,7 @@
 //! immediately, whatever the state ends up being.
 //!
 //! That is the whole reason this file exists next to the structural tests in
-//! `vyre-primitives/tests/persistent_fixpoint_loop_contracts.rs`. Those prove the
+//! `vyre-libs/tests/persistent_fixpoint_loop_contracts.rs`. Those prove the
 //! barrier is in the IR. This one proves the barrier is doing something real on
 //! the device, so the structural tests cannot degrade into pinning a node nobody
 //! needs.
@@ -35,7 +35,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;

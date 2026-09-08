@@ -21,6 +21,7 @@
 
 use vyre_foundation::ir::{Expr, Node};
 
+#[cfg(feature = "math-kernels")]
 use crate::reduce::workgroup_tree::{
     max_f32_child, max_u32_child, min_u32_child, WorkgroupReductionScope,
 };
@@ -34,6 +35,7 @@ use crate::reduce::workgroup_tree::{
 /// ships to, so the reduction tree's first strides stay within a subgroup and
 /// the scratch traffic is smallest. A kernel needing a different width states
 /// why at its own constant rather than editing this one.
+#[cfg(feature = "math-kernels")]
 pub(crate) const LANES: u32 = 64;
 
 /// Chunks a workgroup of `tile` lanes needs to cover `count` indices.
@@ -86,6 +88,7 @@ pub(crate) fn for_each_index(count: u32, tile: u32, var: &str, body: Vec<Node>) 
 /// from, and which reduction child collapses the lane partials. Both callers
 /// score non-negative keys, so the neutral is zero and an index outside the
 /// space never wins.
+#[cfg(feature = "math-kernels")]
 #[derive(Clone, Copy)]
 pub(crate) enum KeyKind {
     /// f32 keys, reduced by `max_f32_child`.
@@ -94,6 +97,7 @@ pub(crate) enum KeyKind {
     U32,
 }
 
+#[cfg(feature = "math-kernels")]
 impl KeyKind {
     /// The value a lane's key slot starts at.
     fn neutral(self) -> Expr {
@@ -125,6 +129,7 @@ impl KeyKind {
 /// the reduction takes the maximum key and then the smallest index whose key
 /// equals it, which is the same answer for every input including a space whose
 /// keys are all equal.
+#[cfg(feature = "math-kernels")]
 pub(crate) struct Argmax<'a> {
     /// Op id the emitted reduction children record as their parent.
     pub(crate) op_id: &'static str,
@@ -142,6 +147,7 @@ pub(crate) struct Argmax<'a> {
     pub(crate) var: &'a str,
 }
 
+#[cfg(feature = "math-kernels")]
 impl Argmax<'_> {
     /// Nodes that leave `key_scratch[0]` holding the maximum key and
     /// `index_scratch[0]` the lowest index attaining it.

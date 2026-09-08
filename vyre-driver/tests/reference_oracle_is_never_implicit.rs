@@ -11,14 +11,20 @@
 //! reference oracle whose factory SUCCEEDS. There is nothing wrong with the
 //! host, nothing to probe, and nothing to fail: the only reason to refuse is the
 //! `reference_oracle` flag. Deleting the flag check in
-//! `registry/acquire.rs` turns this red.
+//! `vyre-driver/src/backend/registry/acquire.rs` turns this red.
 //!
 //! Not caught here: a concrete driver crate that computes on the host inside its
 //! own `dispatch`. That is a different contract, pinned by
 //! `no_backend_crate_links_host_arithmetic.rs`.
 
+/// Shared fixture module from `tests/fixture_backend/mod.rs`.
+///
+/// This file is a target root rather than a module of the crate harness: the
+/// contract is what the registry holds, and a sibling registering a device
+/// fixture makes the only backend here stop being the only backend.
 #[macro_use]
-mod fixture_backend;
+#[path = "fixture_backend/mod.rs"]
+pub mod fixture_backend;
 
 use fixture_backend::FixtureBackend;
 use vyre_driver::{acquire, acquire_preferred_dispatch_backend};
@@ -33,7 +39,7 @@ fn acquire_oracle() -> Result<Box<dyn VyreBackend>, BackendError> {
 // Rank 0 is the best rank in the table. A reference oracle at the front of the
 // precedence order must still lose, because precedence orders eligible
 // backends and an oracle is not one.
-register_dispatchable_backend! {
+crate::register_dispatchable_backend! {
     id: ORACLE_ID,
     oracle: true,
     rank: 0,

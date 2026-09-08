@@ -5,7 +5,7 @@
 //! oracle across generated graph shapes and frontier densities.
 #![cfg(feature = "graph")]
 
-mod gate_fixtures;
+use crate::gate_fixtures;
 use gate_fixtures::u32_bytes;
 use vyre_libs::bitset::bitset_words;
 use vyre_libs::graph::adaptive_traverse::{

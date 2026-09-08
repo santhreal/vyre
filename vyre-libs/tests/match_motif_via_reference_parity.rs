@@ -13,7 +13,7 @@
 //! `motif_witness` from `vyre-reference` is the authoritative witness;
 //! values are integer witnesses / bool / counts → BIT-EXACT (no tolerance).
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::graph::dispatch::motif::{
     match_motif_via, motif_matches_via, motif_participation_count_via,

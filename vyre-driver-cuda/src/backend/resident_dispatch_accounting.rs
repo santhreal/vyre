@@ -82,13 +82,6 @@ pub(crate) fn add_resident_dispatch_bytes(
     CUDA_RESIDENT_DISPATCH_ACCOUNTING.add_bytes(total, bytes, label)
 }
 
-pub(crate) fn add_resident_dispatch_usize_count(
-    total: &mut usize,
-    label: &str,
-) -> Result<(), BackendError> {
-    CUDA_RESIDENT_DISPATCH_ACCOUNTING.add_usize_counter(total, 1, label, "count")
-}
-
 pub(crate) fn add_resident_dispatch_u64_count(
     total: &mut u64,
     label: &str,

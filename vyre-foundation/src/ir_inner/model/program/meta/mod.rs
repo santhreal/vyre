@@ -296,6 +296,13 @@ impl Program {
     }
 
     /// Stable BLAKE3 fingerprint of the canonical wire-format bytes.
+    ///
+    /// The first call computes and every later call on the same value reads
+    /// the `OnceLock`, and `Program::clone` carries an already-computed
+    /// fingerprint across. A determinism assertion therefore needs two values
+    /// that are both cold: build the program twice, or clone before either
+    /// side is asked. Asking one value twice compares a cached scalar with
+    /// itself and holds however the hash was computed.
     #[must_use]
     #[inline]
     pub fn fingerprint(&self) -> [u8; 32] {

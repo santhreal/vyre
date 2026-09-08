@@ -100,6 +100,7 @@ impl core::default::Default for vyre_foundation::optimizer::region_law::RegionDe
 impl core::default::Default for vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudget
 impl core::error::Error for vyre_foundation::GeometryConstraintConflict
 impl core::error::Error for vyre_foundation::execution_plan::fusion::FusionError
+impl core::error::Error for vyre_foundation::fp_expansion::StrictExpansionError
 impl core::error::Error for vyre_foundation::graph_view::GraphValidateError
 impl core::error::Error for vyre_foundation::ir::EvalError
 impl core::error::Error for vyre_foundation::lower::LoweringError
@@ -131,6 +132,7 @@ impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionError
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionOverDispatchError
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionSelfAliasingError
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+impl core::fmt::Display for vyre_foundation::fp_expansion::StrictExpansionError
 impl core::fmt::Display for vyre_foundation::graph_view::GraphValidateError
 impl core::fmt::Display for vyre_foundation::ir::EvalError
 impl core::fmt::Display for vyre_foundation::ir::Ident
@@ -194,6 +196,8 @@ impl vyre_foundation::execution_plan::DeviceMemoryBudget
 impl vyre_foundation::execution_plan::ExecutionPlan
 impl vyre_foundation::execution_plan::ReadbackStrategy
 impl vyre_foundation::execution_plan::SchedulingPolicy
+impl vyre_foundation::fp_expansion::StrictExpansionError
+impl vyre_foundation::fp_parity::FloatLoweringMode
 impl vyre_foundation::graph_view::DataEdge
 impl vyre_foundation::graph_view::GraphNode
 impl vyre_foundation::graph_view::NodeGraph
@@ -204,6 +208,7 @@ impl vyre_foundation::ir::Ident
 impl vyre_foundation::ir::InterpCtx
 impl vyre_foundation::ir::Layout
 impl vyre_foundation::ir::LinearType
+impl vyre_foundation::ir::MemoryKind
 impl vyre_foundation::ir::MemoryOrdering
 impl vyre_foundation::ir::Node
 impl vyre_foundation::ir::NodeStorage
@@ -437,6 +442,9 @@ pub const fn vyre_foundation::execution_plan::SchedulingPolicy::select_unroll_de
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::select_vector_pack_bits(&self, element_bits: u32, caps: &vyre_foundation::optimizer::AdapterCaps) -> u32
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::standard() -> Self
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::worker_workgroup_size(&self, worker_count: u32, max_workgroup_size_x: u32) -> u32
+pub const fn vyre_foundation::fp_parity::FloatLoweringMode::blocks_contraction(self) -> bool
+pub const fn vyre_foundation::fp_parity::FloatLoweringMode::cache_label(self) -> &'static str
+pub const fn vyre_foundation::fp_parity::FloatLoweringMode::roster_index(self) -> usize
 pub const fn vyre_foundation::ir::Expr::logical_index(axis: u8) -> Self
 pub const fn vyre_foundation::ir::Expr::logical_tile_index(axis: u8) -> Self
 pub const fn vyre_foundation::ir::Expr::logical_within_tile_index(axis: u8) -> Self
@@ -558,10 +566,19 @@ pub const vyre_foundation::algebraic_reordering::ReorderingClass::ALL: &'static 
 pub const vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES: [&str; 2]
 pub const vyre_foundation::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str
 pub const vyre_foundation::dialect::ResourceAbi::EMPTY: Self
+pub const vyre_foundation::fp_expansion::EXP_OVERFLOW_ABOVE_BITS: u32
+pub const vyre_foundation::fp_expansion::EXP_UNDERFLOW_BELOW_BITS: u32
+pub const vyre_foundation::fp_expansion::MIN_NORMAL_BITS: u32
+pub const vyre_foundation::fp_expansion::NAN_RESULT_BITS: u32
+pub const vyre_foundation::fp_expansion::SIN_COS_DOMAIN_BITS: u32
+pub const vyre_foundation::fp_expansion::SIN_COS_SMALL_ARGUMENT_BITS: u32
 pub const vyre_foundation::fp_parity::BACKEND_ELEMENTARY_F32_ULP_BUDGET: u32
 pub const vyre_foundation::fp_parity::BACKEND_TRANSCENDENTAL_ULP_BUDGET: u32
+pub const vyre_foundation::fp_parity::FLOAT_LOWERING_CONTRACT_VERSION: u32
+pub const vyre_foundation::fp_parity::FloatLoweringMode::EVERY: &'static [Self]
 pub const vyre_foundation::fp_parity::REFERENCE_TRANSCENDENTAL_ULP_BUDGET: u32
 pub const vyre_foundation::ir::EXPR_VARIANT_NAMES: &[&str]
+pub const vyre_foundation::ir::MemoryKind::ALL: [Self; 7]
 pub const vyre_foundation::ir::NODE_VARIANT_NAMES: &[&str]
 pub const vyre_foundation::ir::NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION: &str
 pub const vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS: u32
@@ -697,6 +714,7 @@ pub enum vyre_foundation::execution_plan::PlanError
 pub enum vyre_foundation::execution_plan::ProvenanceStrategy
 pub enum vyre_foundation::execution_plan::ReadbackStrategy
 pub enum vyre_foundation::fp_parity::BufferParity
+pub enum vyre_foundation::fp_parity::FloatLoweringMode
 pub enum vyre_foundation::ir::Layout
 pub enum vyre_foundation::ir::NodeStorage
 pub enum vyre_foundation::ir::ProgramGraphError
@@ -775,6 +793,7 @@ pub enum vyre_foundation::vast::VastError
 pub enum vyre_foundation::visit::ExprBufferAccess
 pub enum vyre_foundation::visit::ExprBufferRef<'a>
 pub enum vyre_foundation::visit::ExprCombine<'a>
+pub enum vyre_foundation::visit::ExprMagnitude<'a>
 pub enum vyre_foundation::visit::NameBinding
 pub enum vyre_foundation::visit::NodeCombine<'a>
 pub enum vyre_foundation::visit::VisitOrder
@@ -903,13 +922,21 @@ pub fn vyre_foundation::extension::try_resolve_atomic_op(id: vyre_spec::extensio
 pub fn vyre_foundation::extension::try_resolve_bin_op(id: vyre_spec::extension::ExtensionBinOpId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionBinOp>, alloc::string::String>
 pub fn vyre_foundation::extension::try_resolve_data_type(id: vyre_spec::extension::ExtensionDataTypeId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionDataType>, alloc::string::String>
 pub fn vyre_foundation::extension::try_resolve_un_op(id: vyre_spec::extension::ExtensionUnOpId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionUnOp>, alloc::string::String>
+pub fn vyre_foundation::fp_expansion::StrictExpansionError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::fp_expansion::StrictExpansionError::operation(&self) -> &str
+pub fn vyre_foundation::fp_expansion::expand_strict_transcendentals(program: &vyre_foundation::ir::Program) -> core::result::Result<core::option::Option<vyre_foundation::ir::Program>, vyre_foundation::fp_expansion::StrictExpansionError>
+pub fn vyre_foundation::fp_expansion::is_strict_expandable(op: &vyre_spec::un_op::UnOp) -> bool
+pub fn vyre_foundation::fp_expansion::strict_expansion(op: &vyre_spec::un_op::UnOp, operand: &vyre_foundation::ir::Expr) -> core::option::Option<vyre_foundation::ir::Expr>
+pub fn vyre_foundation::fp_expansion::strict_unexpandable_unary_ops() -> alloc::vec::Vec<vyre_spec::un_op::UnOp>
 pub fn vyre_foundation::fp_parity::approximable_operations(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<alloc::string::String>
+pub fn vyre_foundation::fp_parity::approximable_unary_ops() -> alloc::vec::Vec<vyre_spec::un_op::UnOp>
 pub fn vyre_foundation::fp_parity::canonical_f32(value: f32) -> f32
 pub fn vyre_foundation::fp_parity::compare_operation_outputs(op_id: &str, program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> vyre_foundation::fp_parity::BufferParity
 pub fn vyre_foundation::fp_parity::compare_output_buffers(program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> vyre_foundation::fp_parity::BufferParity
 pub fn vyre_foundation::fp_parity::effective_tolerance(op_id: &str, program: &vyre_foundation::ir::Program) -> u32
 pub fn vyre_foundation::fp_parity::f32_buffer_matches(bytes_a: &[u8], bytes_b: &[u8], tolerance: u32) -> bool
 pub fn vyre_foundation::fp_parity::f32_ulp_tolerance(program: &vyre_foundation::ir::Program) -> u32
+pub fn vyre_foundation::fp_parity::is_approximable_unary_op(op: &vyre_spec::un_op::UnOp) -> bool
 pub fn vyre_foundation::fp_parity::max_output_ulp(program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> core::option::Option<u32>
 pub fn vyre_foundation::fp_parity::ulp_distance(left: f32, right: f32) -> core::option::Option<u32>
 pub fn vyre_foundation::graph_view::DataEdge::new(from: u32, to: u32, kind: vyre_foundation::graph_view::EdgeKind) -> Self
@@ -925,6 +952,7 @@ pub fn vyre_foundation::guarded_logical_span(program: &vyre_foundation::ir::Prog
 pub fn vyre_foundation::hashing::update_length_delimited_field(hasher: &mut blake3::Hasher, label: &[u8], value: &[u8])
 pub fn vyre_foundation::ir::BufferDecl::access(&self) -> vyre_spec::buffer_access::BufferAccess
 pub fn vyre_foundation::ir::BufferDecl::binding(&self) -> u32
+pub fn vyre_foundation::ir::BufferDecl::consumes_host_input(&self) -> bool
 pub fn vyre_foundation::ir::BufferDecl::count(&self) -> u32
 pub fn vyre_foundation::ir::BufferDecl::element(&self) -> vyre_spec::data_type::DataType
 pub fn vyre_foundation::ir::BufferDecl::has_static_element_count(&self) -> bool
@@ -976,6 +1004,8 @@ pub fn vyre_foundation::ir::Expr::atomic_min(buffer: &str, index: vyre_foundatio
 pub fn vyre_foundation::ir::Expr::atomic_or(buffer: &str, index: vyre_foundation::ir::Expr, value: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::atomic_xor(buffer: &str, index: vyre_foundation::ir::Expr, value: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bitand(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::bitcast_f32_to_u32(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::bitcast_u32_to_f32(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bitnot(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bitor(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bitxor(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
@@ -1277,6 +1307,8 @@ pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::regions(&self) -> &[vy
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::semantic_wire(&self) -> &[u8]
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::validate(graph: &'a vyre_foundation::ir::ProgramGraph, bindings: &alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>) -> core::result::Result<Self, vyre_foundation::logical::LogicalProgramError>
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::value_budget(&self, value: vyre_foundation::ir::GraphValueId) -> core::result::Result<vyre_foundation::numeric::NumericContract, vyre_foundation::logical::LogicalProgramError>
+pub fn vyre_foundation::loop_bounds::data_derived_loop_bounds(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::loop_bounds::DataDerivedLoopBound>
+pub fn vyre_foundation::loop_bounds::data_derived_loop_bounds_in(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<vyre_foundation::loop_bounds::DataDerivedLoopBound>
 pub fn vyre_foundation::lower::LoweringError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::lower::LoweringError::invalid(message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::lower::LoweringError::message(&self) -> &str
@@ -1498,7 +1530,7 @@ pub fn vyre_foundation::optimizer::ProgramPass::preserves(&self) -> &'static [&'
 pub fn vyre_foundation::optimizer::ProgramPass::rewrite_candidates(&self, _program: &vyre_foundation::ir::Program) -> vyre_foundation::optimizer::RewriteBatchCandidates
 pub fn vyre_foundation::optimizer::ProgramPass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::ProgramPass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::ProgramPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::ProgramPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::ProgramPass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::ProgramPass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::ProgramPassKind::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -1628,10 +1660,8 @@ pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImage::words(&self)
 pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError::from(error: vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError) -> Self
 pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError::from(error: vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotIntegrityError) -> Self
-pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshot::build<'a, I>(rows: I) -> Self where I: core::iter::traits::collect::IntoIterator<Item = (u32, &'a str, &'a [u32])>
 pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshot::child_count(&self) -> usize
 pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshot::children_of(&self, row_idx: usize) -> core::option::Option<&[u32]>
-pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshot::from_egraph_with<L, F, S>(egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>, op_name: F) -> Self where L: vyre_foundation::optimizer::eqsat::ENodeLang, F: core::ops::function::FnMut(&L) -> S, S: core::convert::AsRef<str>
 pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshot::is_empty(&self) -> bool
 pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshot::node_count(&self) -> usize
 pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshot::rows_by_eclass(&self) -> rustc_hash::FxHashMap<u32, alloc::vec::Vec<usize>>
@@ -1762,7 +1792,7 @@ pub fn vyre_foundation::optimizer::passes::algebraic::atomic_minimize::AtomicMin
 pub fn vyre_foundation::optimizer::passes::algebraic::atomic_minimize::AtomicMinimizePass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::algebraic::atomic_minimize::AtomicMinimizePass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::algebraic::atomic_minimize::AtomicMinimizePass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::algebraic::atomic_minimize::AtomicMinimizePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::algebraic::atomic_minimize::AtomicMinimizePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::algebraic::atomic_minimize::AtomicMinimizePass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::algebraic::atomic_minimize::AtomicMinimizePass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::algebraic::canonicalize::Canonicalize::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -1777,7 +1807,7 @@ pub fn vyre_foundation::optimizer::passes::algebraic::canonicalize::Canonicalize
 pub fn vyre_foundation::optimizer::passes::algebraic::canonicalize::Canonicalize::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::algebraic::canonicalize::Canonicalize::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::algebraic::canonicalize::Canonicalize::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::algebraic::canonicalize::Canonicalize::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::algebraic::canonicalize::Canonicalize::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::algebraic::canonicalize::Canonicalize::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::algebraic::canonicalize::Canonicalize::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::algebraic::canonicalize_engine::run(program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
@@ -1794,7 +1824,7 @@ pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::ConstFold::rew
 pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::ConstFold::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::ConstFold::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::ConstFold::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::ConstFold::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::ConstFold::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::ConstFold::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::ConstFold::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::reaching_def_propagate::ReachingDefPropagatePass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -1809,7 +1839,7 @@ pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::reaching_def_p
 pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::reaching_def_propagate::ReachingDefPropagatePass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::reaching_def_propagate::ReachingDefPropagatePass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::reaching_def_propagate::ReachingDefPropagatePass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::reaching_def_propagate::ReachingDefPropagatePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::reaching_def_propagate::ReachingDefPropagatePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::reaching_def_propagate::ReachingDefPropagatePass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::algebraic::const_fold::reaching_def_propagate::ReachingDefPropagatePass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::algebraic::normalize_atomics::NormalizeAtomicsPass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -1824,7 +1854,7 @@ pub fn vyre_foundation::optimizer::passes::algebraic::normalize_atomics::Normali
 pub fn vyre_foundation::optimizer::passes::algebraic::normalize_atomics::NormalizeAtomicsPass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::algebraic::normalize_atomics::NormalizeAtomicsPass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::algebraic::normalize_atomics::NormalizeAtomicsPass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::algebraic::normalize_atomics::NormalizeAtomicsPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::algebraic::normalize_atomics::NormalizeAtomicsPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::algebraic::normalize_atomics::NormalizeAtomicsPass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::algebraic::normalize_atomics::NormalizeAtomicsPass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::algebraic::precision_hint::PrecisionHints::is_empty(&self) -> bool
@@ -1845,7 +1875,7 @@ pub fn vyre_foundation::optimizer::passes::algebraic::strength_reduce::StrengthR
 pub fn vyre_foundation::optimizer::passes::algebraic::strength_reduce::StrengthReduce::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::algebraic::strength_reduce::StrengthReduce::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::algebraic::strength_reduce::StrengthReduce::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::algebraic::strength_reduce::StrengthReduce::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::algebraic::strength_reduce::StrengthReduce::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::algebraic::strength_reduce::StrengthReduce::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::algebraic::strength_reduce::StrengthReduce::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::branch_coalesce::BranchCoalesce::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -1860,7 +1890,7 @@ pub fn vyre_foundation::optimizer::passes::cleanup::branch_coalesce::BranchCoale
 pub fn vyre_foundation::optimizer::passes::cleanup::branch_coalesce::BranchCoalesce::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::cleanup::branch_coalesce::BranchCoalesce::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::branch_coalesce::BranchCoalesce::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::cleanup::branch_coalesce::BranchCoalesce::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::cleanup::branch_coalesce::BranchCoalesce::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::branch_coalesce::BranchCoalesce::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::branch_coalesce::BranchCoalesce::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::branch_value_hoist::BranchValueHoistPass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -1875,7 +1905,7 @@ pub fn vyre_foundation::optimizer::passes::cleanup::branch_value_hoist::BranchVa
 pub fn vyre_foundation::optimizer::passes::cleanup::branch_value_hoist::BranchValueHoistPass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::cleanup::branch_value_hoist::BranchValueHoistPass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::branch_value_hoist::BranchValueHoistPass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::cleanup::branch_value_hoist::BranchValueHoistPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::cleanup::branch_value_hoist::BranchValueHoistPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::branch_value_hoist::BranchValueHoistPass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::branch_value_hoist::BranchValueHoistPass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::buffer_decl_sort::BufferDeclSortPass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -1890,7 +1920,7 @@ pub fn vyre_foundation::optimizer::passes::cleanup::buffer_decl_sort::BufferDecl
 pub fn vyre_foundation::optimizer::passes::cleanup::buffer_decl_sort::BufferDeclSortPass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::cleanup::buffer_decl_sort::BufferDeclSortPass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::buffer_decl_sort::BufferDeclSortPass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::cleanup::buffer_decl_sort::BufferDeclSortPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::cleanup::buffer_decl_sort::BufferDeclSortPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::buffer_decl_sort::BufferDeclSortPass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::buffer_decl_sort::BufferDeclSortPass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::empty_block_collapse::EmptyBlockCollapsePass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -1905,7 +1935,7 @@ pub fn vyre_foundation::optimizer::passes::cleanup::empty_block_collapse::EmptyB
 pub fn vyre_foundation::optimizer::passes::cleanup::empty_block_collapse::EmptyBlockCollapsePass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::cleanup::empty_block_collapse::EmptyBlockCollapsePass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::empty_block_collapse::EmptyBlockCollapsePass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::cleanup::empty_block_collapse::EmptyBlockCollapsePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::cleanup::empty_block_collapse::EmptyBlockCollapsePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::empty_block_collapse::EmptyBlockCollapsePass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::empty_block_collapse::EmptyBlockCollapsePass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::if_constant_branch_eliminate::IfConstantBranchEliminatePass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -1920,7 +1950,7 @@ pub fn vyre_foundation::optimizer::passes::cleanup::if_constant_branch_eliminate
 pub fn vyre_foundation::optimizer::passes::cleanup::if_constant_branch_eliminate::IfConstantBranchEliminatePass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::cleanup::if_constant_branch_eliminate::IfConstantBranchEliminatePass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::if_constant_branch_eliminate::IfConstantBranchEliminatePass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::cleanup::if_constant_branch_eliminate::IfConstantBranchEliminatePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::cleanup::if_constant_branch_eliminate::IfConstantBranchEliminatePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::if_constant_branch_eliminate::IfConstantBranchEliminatePass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::if_constant_branch_eliminate::IfConstantBranchEliminatePass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::noop_assign_eliminate::NoopAssignEliminatePass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -1935,7 +1965,7 @@ pub fn vyre_foundation::optimizer::passes::cleanup::noop_assign_eliminate::NoopA
 pub fn vyre_foundation::optimizer::passes::cleanup::noop_assign_eliminate::NoopAssignEliminatePass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::cleanup::noop_assign_eliminate::NoopAssignEliminatePass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::noop_assign_eliminate::NoopAssignEliminatePass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::cleanup::noop_assign_eliminate::NoopAssignEliminatePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::cleanup::noop_assign_eliminate::NoopAssignEliminatePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::noop_assign_eliminate::NoopAssignEliminatePass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::noop_assign_eliminate::NoopAssignEliminatePass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::region_fusion_hint::RegionFusionHintPass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -1950,7 +1980,7 @@ pub fn vyre_foundation::optimizer::passes::cleanup::region_fusion_hint::RegionFu
 pub fn vyre_foundation::optimizer::passes::cleanup::region_fusion_hint::RegionFusionHintPass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::cleanup::region_fusion_hint::RegionFusionHintPass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::region_fusion_hint::RegionFusionHintPass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::cleanup::region_fusion_hint::RegionFusionHintPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::cleanup::region_fusion_hint::RegionFusionHintPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::region_fusion_hint::RegionFusionHintPass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::region_fusion_hint::RegionFusionHintPass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::region_inline::RegionInlinePass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -1965,7 +1995,7 @@ pub fn vyre_foundation::optimizer::passes::cleanup::region_inline::RegionInlineP
 pub fn vyre_foundation::optimizer::passes::cleanup::region_inline::RegionInlinePass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::cleanup::region_inline::RegionInlinePass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::region_inline::RegionInlinePass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::cleanup::region_inline::RegionInlinePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::cleanup::region_inline::RegionInlinePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::region_inline::RegionInlinePass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::region_inline::RegionInlinePass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::region_inline_engine::run(program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
@@ -1982,7 +2012,7 @@ pub fn vyre_foundation::optimizer::passes::cleanup::region_promote_singleton_blo
 pub fn vyre_foundation::optimizer::passes::cleanup::region_promote_singleton_block::RegionPromoteSingletonBlockPass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::cleanup::region_promote_singleton_block::RegionPromoteSingletonBlockPass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::region_promote_singleton_block::RegionPromoteSingletonBlockPass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::cleanup::region_promote_singleton_block::RegionPromoteSingletonBlockPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::cleanup::region_promote_singleton_block::RegionPromoteSingletonBlockPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::region_promote_singleton_block::RegionPromoteSingletonBlockPass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::region_promote_singleton_block::RegionPromoteSingletonBlockPass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::rematerialize_cheap_let::RematerializeCheapLetPass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -1997,7 +2027,7 @@ pub fn vyre_foundation::optimizer::passes::cleanup::rematerialize_cheap_let::Rem
 pub fn vyre_foundation::optimizer::passes::cleanup::rematerialize_cheap_let::RematerializeCheapLetPass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::cleanup::rematerialize_cheap_let::RematerializeCheapLetPass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::rematerialize_cheap_let::RematerializeCheapLetPass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::cleanup::rematerialize_cheap_let::RematerializeCheapLetPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::cleanup::rematerialize_cheap_let::RematerializeCheapLetPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::rematerialize_cheap_let::RematerializeCheapLetPass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::rematerialize_cheap_let::RematerializeCheapLetPass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplicationPass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2012,7 +2042,7 @@ pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplic
 pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplicationPass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplicationPass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplicationPass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplicationPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplicationPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplicationPass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplicationPass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::expr_is_atomic_free(expr: &vyre_foundation::ir::Expr) -> bool
@@ -2029,7 +2059,7 @@ pub fn vyre_foundation::optimizer::passes::fusion_cse::cse::CsePass::rewrite_can
 pub fn vyre_foundation::optimizer::passes::fusion_cse::cse::CsePass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::fusion_cse::cse::CsePass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::fusion_cse::cse::CsePass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::fusion_cse::cse::CsePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::fusion_cse::cse::CsePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::fusion_cse::cse::CsePass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::fusion_cse::cse::CsePass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::fusion_cse::cse::cse(program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
@@ -2047,7 +2077,7 @@ pub fn vyre_foundation::optimizer::passes::fusion_cse::dce::DcePass::rewrite_can
 pub fn vyre_foundation::optimizer::passes::fusion_cse::dce::DcePass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::fusion_cse::dce::DcePass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::fusion_cse::dce::DcePass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::fusion_cse::dce::DcePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::fusion_cse::dce::DcePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::fusion_cse::dce::DcePass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::fusion_cse::dce::DcePass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::fusion_cse::dce::dce(program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
@@ -2066,7 +2096,7 @@ pub fn vyre_foundation::optimizer::passes::fusion_cse::fusion::Fusion::rewrite_c
 pub fn vyre_foundation::optimizer::passes::fusion_cse::fusion::Fusion::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::fusion_cse::fusion::Fusion::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::fusion_cse::fusion::Fusion::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::fusion_cse::fusion::Fusion::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::fusion_cse::fusion::Fusion::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::fusion_cse::fusion::Fusion::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::fusion_cse::fusion::Fusion::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::bound_names(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<vyre_foundation::ir::Ident>
@@ -2082,7 +2112,7 @@ pub fn vyre_foundation::optimizer::passes::loops::loop_bound_tighten::LoopBoundT
 pub fn vyre_foundation::optimizer::passes::loops::loop_bound_tighten::LoopBoundTighten::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::loops::loop_bound_tighten::LoopBoundTighten::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_bound_tighten::LoopBoundTighten::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::loops::loop_bound_tighten::LoopBoundTighten::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::loops::loop_bound_tighten::LoopBoundTighten::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_bound_tighten::LoopBoundTighten::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_bound_tighten::LoopBoundTighten::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_fission::LoopFission::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2097,7 +2127,7 @@ pub fn vyre_foundation::optimizer::passes::loops::loop_fission::LoopFission::rew
 pub fn vyre_foundation::optimizer::passes::loops::loop_fission::LoopFission::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::loops::loop_fission::LoopFission::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_fission::LoopFission::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::loops::loop_fission::LoopFission::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::loops::loop_fission::LoopFission::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_fission::LoopFission::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_fission::LoopFission::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_fusion::LoopFusion::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2112,7 +2142,7 @@ pub fn vyre_foundation::optimizer::passes::loops::loop_fusion::LoopFusion::rewri
 pub fn vyre_foundation::optimizer::passes::loops::loop_fusion::LoopFusion::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::loops::loop_fusion::LoopFusion::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_fusion::LoopFusion::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::loops::loop_fusion::LoopFusion::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::loops::loop_fusion::LoopFusion::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_fusion::LoopFusion::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_fusion::LoopFusion::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_licm::LoopLicm::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2127,7 +2157,7 @@ pub fn vyre_foundation::optimizer::passes::loops::loop_licm::LoopLicm::rewrite_c
 pub fn vyre_foundation::optimizer::passes::loops::loop_licm::LoopLicm::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::loops::loop_licm::LoopLicm::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_licm::LoopLicm::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::loops::loop_licm::LoopLicm::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::loops::loop_licm::LoopLicm::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_licm::LoopLicm::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_licm::LoopLicm::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_lower_bound_normalize::LoopLowerBoundNormalize::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2142,7 +2172,7 @@ pub fn vyre_foundation::optimizer::passes::loops::loop_lower_bound_normalize::Lo
 pub fn vyre_foundation::optimizer::passes::loops::loop_lower_bound_normalize::LoopLowerBoundNormalize::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::loops::loop_lower_bound_normalize::LoopLowerBoundNormalize::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_lower_bound_normalize::LoopLowerBoundNormalize::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::loops::loop_lower_bound_normalize::LoopLowerBoundNormalize::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::loops::loop_lower_bound_normalize::LoopLowerBoundNormalize::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_lower_bound_normalize::LoopLowerBoundNormalize::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_lower_bound_normalize::LoopLowerBoundNormalize::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_peel::LoopPeelPass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2157,7 +2187,7 @@ pub fn vyre_foundation::optimizer::passes::loops::loop_peel::LoopPeelPass::rewri
 pub fn vyre_foundation::optimizer::passes::loops::loop_peel::LoopPeelPass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::loops::loop_peel::LoopPeelPass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_peel::LoopPeelPass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::loops::loop_peel::LoopPeelPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::loops::loop_peel::LoopPeelPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_peel::LoopPeelPass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_peel::LoopPeelPass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_redundant_bound_check_elide::LoopRedundantBoundCheckElidePass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2172,7 +2202,7 @@ pub fn vyre_foundation::optimizer::passes::loops::loop_redundant_bound_check_eli
 pub fn vyre_foundation::optimizer::passes::loops::loop_redundant_bound_check_elide::LoopRedundantBoundCheckElidePass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::loops::loop_redundant_bound_check_elide::LoopRedundantBoundCheckElidePass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_redundant_bound_check_elide::LoopRedundantBoundCheckElidePass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::loops::loop_redundant_bound_check_elide::LoopRedundantBoundCheckElidePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::loops::loop_redundant_bound_check_elide::LoopRedundantBoundCheckElidePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_redundant_bound_check_elide::LoopRedundantBoundCheckElidePass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_redundant_bound_check_elide::LoopRedundantBoundCheckElidePass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_software_pipeline::LoopSoftwarePipeline::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2187,7 +2217,7 @@ pub fn vyre_foundation::optimizer::passes::loops::loop_software_pipeline::LoopSo
 pub fn vyre_foundation::optimizer::passes::loops::loop_software_pipeline::LoopSoftwarePipeline::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::loops::loop_software_pipeline::LoopSoftwarePipeline::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_software_pipeline::LoopSoftwarePipeline::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::loops::loop_software_pipeline::LoopSoftwarePipeline::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::loops::loop_software_pipeline::LoopSoftwarePipeline::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_software_pipeline::LoopSoftwarePipeline::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_software_pipeline::LoopSoftwarePipeline::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_strip_mine::LoopStripMine::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2202,7 +2232,7 @@ pub fn vyre_foundation::optimizer::passes::loops::loop_strip_mine::LoopStripMine
 pub fn vyre_foundation::optimizer::passes::loops::loop_strip_mine::LoopStripMine::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::loops::loop_strip_mine::LoopStripMine::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_strip_mine::LoopStripMine::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::loops::loop_strip_mine::LoopStripMine::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::loops::loop_strip_mine::LoopStripMine::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_strip_mine::LoopStripMine::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_strip_mine::LoopStripMine::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_trip_zero_eliminate::LoopTripZeroEliminatePass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2217,7 +2247,7 @@ pub fn vyre_foundation::optimizer::passes::loops::loop_trip_zero_eliminate::Loop
 pub fn vyre_foundation::optimizer::passes::loops::loop_trip_zero_eliminate::LoopTripZeroEliminatePass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::loops::loop_trip_zero_eliminate::LoopTripZeroEliminatePass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_trip_zero_eliminate::LoopTripZeroEliminatePass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::loops::loop_trip_zero_eliminate::LoopTripZeroEliminatePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::loops::loop_trip_zero_eliminate::LoopTripZeroEliminatePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_trip_zero_eliminate::LoopTripZeroEliminatePass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_trip_zero_eliminate::LoopTripZeroEliminatePass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_unroll::LoopUnroll::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2232,7 +2262,7 @@ pub fn vyre_foundation::optimizer::passes::loops::loop_unroll::LoopUnroll::rewri
 pub fn vyre_foundation::optimizer::passes::loops::loop_unroll::LoopUnroll::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::loops::loop_unroll::LoopUnroll::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_unroll::LoopUnroll::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::loops::loop_unroll::LoopUnroll::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::loops::loop_unroll::LoopUnroll::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_unroll::LoopUnroll::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_unroll::LoopUnroll::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_var_range_fold::LoopVarRangeFoldPass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2247,7 +2277,7 @@ pub fn vyre_foundation::optimizer::passes::loops::loop_var_range_fold::LoopVarRa
 pub fn vyre_foundation::optimizer::passes::loops::loop_var_range_fold::LoopVarRangeFoldPass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::loops::loop_var_range_fold::LoopVarRangeFoldPass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_var_range_fold::LoopVarRangeFoldPass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::loops::loop_var_range_fold::LoopVarRangeFoldPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::loops::loop_var_range_fold::LoopVarRangeFoldPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::loops::loop_var_range_fold::LoopVarRangeFoldPass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::loop_var_range_fold::LoopVarRangeFoldPass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::loops::touched_buffers(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<vyre_foundation::ir::Ident>
@@ -2265,7 +2295,7 @@ pub fn vyre_foundation::optimizer::passes::memory::dead_buffer_elim::DeadBufferE
 pub fn vyre_foundation::optimizer::passes::memory::dead_buffer_elim::DeadBufferElim::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::memory::dead_buffer_elim::DeadBufferElim::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::memory::dead_buffer_elim::DeadBufferElim::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::memory::dead_buffer_elim::DeadBufferElim::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::memory::dead_buffer_elim::DeadBufferElim::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::memory::dead_buffer_elim::DeadBufferElim::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::memory::dead_buffer_elim::DeadBufferElim::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::memory::dead_store_elim::DeadStoreElim::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2280,7 +2310,7 @@ pub fn vyre_foundation::optimizer::passes::memory::dead_store_elim::DeadStoreEli
 pub fn vyre_foundation::optimizer::passes::memory::dead_store_elim::DeadStoreElim::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::memory::dead_store_elim::DeadStoreElim::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::memory::dead_store_elim::DeadStoreElim::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::memory::dead_store_elim::DeadStoreElim::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::memory::dead_store_elim::DeadStoreElim::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::memory::dead_store_elim::DeadStoreElim::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::memory::dead_store_elim::DeadStoreElim::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::memory::decode_scan_fuse::DecodeScanFuse::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2314,7 +2344,7 @@ pub fn vyre_foundation::optimizer::passes::memory::read_only_load_hoist::ReadOnl
 pub fn vyre_foundation::optimizer::passes::memory::read_only_load_hoist::ReadOnlyLoadHoistPass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::memory::read_only_load_hoist::ReadOnlyLoadHoistPass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::memory::read_only_load_hoist::ReadOnlyLoadHoistPass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::memory::read_only_load_hoist::ReadOnlyLoadHoistPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::memory::read_only_load_hoist::ReadOnlyLoadHoistPass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::memory::read_only_load_hoist::ReadOnlyLoadHoistPass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::memory::read_only_load_hoist::ReadOnlyLoadHoistPass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::memory::store_to_load_forward::StoreToLoadForward::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2329,7 +2359,7 @@ pub fn vyre_foundation::optimizer::passes::memory::store_to_load_forward::StoreT
 pub fn vyre_foundation::optimizer::passes::memory::store_to_load_forward::StoreToLoadForward::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::memory::store_to_load_forward::StoreToLoadForward::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::memory::store_to_load_forward::StoreToLoadForward::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::memory::store_to_load_forward::StoreToLoadForward::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::memory::store_to_load_forward::StoreToLoadForward::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::memory::store_to_load_forward::StoreToLoadForward::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::memory::store_to_load_forward::StoreToLoadForward::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::memory::vectorization::Vectorization::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2344,7 +2374,7 @@ pub fn vyre_foundation::optimizer::passes::memory::vectorization::Vectorization:
 pub fn vyre_foundation::optimizer::passes::memory::vectorization::Vectorization::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::memory::vectorization::Vectorization::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::memory::vectorization::Vectorization::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::memory::vectorization::Vectorization::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::memory::vectorization::Vectorization::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::memory::vectorization::Vectorization::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::memory::vectorization::Vectorization::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::sync::barrier_coalesce::BarrierCoalescePass::allowed_effect_additions(&self) -> vyre_foundation::lower::ProgramEffects
@@ -2359,7 +2389,7 @@ pub fn vyre_foundation::optimizer::passes::sync::barrier_coalesce::BarrierCoales
 pub fn vyre_foundation::optimizer::passes::sync::barrier_coalesce::BarrierCoalescePass::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::sync::barrier_coalesce::BarrierCoalescePass::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::sync::barrier_coalesce::BarrierCoalescePass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::sync::barrier_coalesce::BarrierCoalescePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::sync::barrier_coalesce::BarrierCoalescePass::transform_for_adapter(&self, program: vyre_foundation::ir::Program, _caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::sync::barrier_coalesce::BarrierCoalescePass::try_batch_apply(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::sync::barrier_coalesce::BarrierCoalescePass::try_transform(&self, program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::pipeline_fingerprint_bytes(program: &vyre_foundation::ir::Program) -> [u8; 32]
@@ -2552,6 +2582,7 @@ pub fn vyre_foundation::serial::wire::framing::put_string(out: &mut alloc::vec::
 pub fn vyre_foundation::serial::wire::framing::put_u32(out: &mut alloc::vec::Vec<u8>, value: u32)
 pub fn vyre_foundation::serial::wire::framing::put_u8(out: &mut alloc::vec::Vec<u8>, value: u8)
 pub fn vyre_foundation::serial::wire::framing::wire_format_version_is_supported(version: u16) -> bool
+pub fn vyre_foundation::serial::wire::tags::builtin_un_ops() -> alloc::vec::Vec<vyre_spec::un_op::UnOp>
 pub fn vyre_foundation::serial::wire::tags::data_type_tag(value: &vyre_spec::data_type::DataType) -> core::result::Result<u8, vyre_foundation::serial::wire::encode::WireEncodeErr>
 pub fn vyre_foundation::serial::wire_round_trip::WireRoundTrip::from_bytes(bytes: &[u8]) -> core::result::Result<Self, Self::DecodeError>
 pub fn vyre_foundation::serial::wire_round_trip::WireRoundTrip::structurally_eq(&self, other: &Self) -> bool
@@ -2598,12 +2629,12 @@ pub fn vyre_foundation::transform::inline::output_buffer<'a>(op_id: &str, progra
 pub fn vyre_foundation::transform::inline::zero_value(ty: &vyre_spec::data_type::DataType) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::transform::licm::apply_licm(program: &vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
 pub fn vyre_foundation::transform::parallelism::detect_parallelism(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<vyre_foundation::transform::parallelism::DispatchGroup>
-pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::binding(&mut self, name: &vyre_foundation::ir::Ident) -> core::option::Option<vyre_foundation::ir::Ident>
-pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::body(&mut self, parent: &vyre_foundation::ir::Node, body: &[vyre_foundation::ir::Node]) -> core::option::Option<alloc::vec::Vec<vyre_foundation::ir::Node>> where Self: core::marker::Sized
-pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::enter(&mut self, node: &vyre_foundation::ir::Node)
+pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::binding(&mut self, _name: &vyre_foundation::ir::Ident) -> core::option::Option<vyre_foundation::ir::Ident>
+pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::body(&mut self, _parent: &vyre_foundation::ir::Node, body: &[vyre_foundation::ir::Node]) -> core::option::Option<alloc::vec::Vec<vyre_foundation::ir::Node>> where Self: core::marker::Sized
+pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::enter(&mut self, _node: &vyre_foundation::ir::Node)
 pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::operand(&mut self, expr: &vyre_foundation::ir::Expr) -> core::option::Option<vyre_foundation::ir::Expr>
-pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::tag(&mut self, name: &vyre_foundation::ir::Ident) -> core::option::Option<vyre_foundation::ir::Ident>
-pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::whole_node(&mut self, node: &vyre_foundation::ir::Node) -> core::option::Option<vyre_foundation::ir::Node>
+pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::tag(&mut self, _name: &vyre_foundation::ir::Ident) -> core::option::Option<vyre_foundation::ir::Ident>
+pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::whole_node(&mut self, _node: &vyre_foundation::ir::Node) -> core::option::Option<vyre_foundation::ir::Node>
 pub fn vyre_foundation::transform::rewrite_walk::extend_with_rewritten_scope<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R, out: &mut alloc::vec::Vec<vyre_foundation::ir::Node>)
 pub fn vyre_foundation::transform::rewrite_walk::reachable_prefix(body: &[vyre_foundation::ir::Node]) -> &[vyre_foundation::ir::Node]
 pub fn vyre_foundation::transform::rewrite_walk::rewrite_body<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R) -> core::option::Option<alloc::vec::Vec<vyre_foundation::ir::Node>>
@@ -2613,6 +2644,7 @@ pub fn vyre_foundation::transform::rewrite_walk::rewrite_scope<R: vyre_foundatio
 pub fn vyre_foundation::transform::rewrite_walk::rewrite_scope_opt<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R) -> core::option::Option<alloc::vec::Vec<vyre_foundation::ir::Node>>
 pub fn vyre_foundation::transform::rewrite_walk::visit_scope<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R)
 pub fn vyre_foundation::transform::schedule_lowering::lower_logical_schedule(program: vyre_foundation::ir::Program) -> (vyre_foundation::ir::Program, bool)
+pub fn vyre_foundation::transform::schedule_lowering::lower_logical_schedule_borrowed(program: &vyre_foundation::ir::Program) -> core::option::Option<vyre_foundation::ir::Program>
 pub fn vyre_foundation::validate::BackendValidationCapabilities::backend_capabilities(&self) -> vyre_foundation::validate::BackendCapabilities
 pub fn vyre_foundation::validate::BackendValidationCapabilities::backend_name(&self) -> &'static str
 pub fn vyre_foundation::validate::BackendValidationCapabilities::max_shared_memory_bytes(&self) -> u32
@@ -2712,7 +2744,7 @@ pub fn vyre_foundation::visit::NodeVisitor::visit_async_store(&mut self, node: &
 pub fn vyre_foundation::visit::NodeVisitor::visit_async_wait(&mut self, node: &vyre_foundation::ir::Node, tag: &vyre_foundation::ir::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_barrier(&mut self, node: &vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_block(&mut self, node: &vyre_foundation::ir::Node, body: &[vyre_foundation::ir::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
-pub fn vyre_foundation::visit::NodeVisitor::visit_collective(&mut self, node: &vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_foundation::visit::NodeVisitor::visit_collective(&mut self, _node: &vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_if(&mut self, node: &vyre_foundation::ir::Node, cond: &vyre_foundation::ir::Expr, then_nodes: &[vyre_foundation::ir::Node], otherwise: &[vyre_foundation::ir::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_indirect_dispatch(&mut self, node: &vyre_foundation::ir::Node, count_buffer: &vyre_foundation::ir::Ident, count_offset: u64) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_let(&mut self, node: &vyre_foundation::ir::Node, name: &vyre_foundation::ir::Ident, value: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
@@ -2723,18 +2755,20 @@ pub fn vyre_foundation::visit::NodeVisitor::visit_region(&mut self, node: &vyre_
 pub fn vyre_foundation::visit::NodeVisitor::visit_resume(&mut self, node: &vyre_foundation::ir::Node, tag: &vyre_foundation::ir::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_return(&mut self, node: &vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_store(&mut self, node: &vyre_foundation::ir::Node, buffer: &vyre_foundation::ir::Ident, index: &vyre_foundation::ir::Expr, value: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
-pub fn vyre_foundation::visit::NodeVisitor::visit_tile(&mut self, node: &vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_foundation::visit::NodeVisitor::visit_tile(&mut self, _node: &vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_trap(&mut self, node: &vyre_foundation::ir::Node, address: &vyre_foundation::ir::Expr, tag: &vyre_foundation::ir::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::walk_children_default(&mut self, node: &vyre_foundation::ir::Node, order: vyre_foundation::visit::VisitOrder) -> core::ops::control_flow::ControlFlow<Self::Break> where Self: core::marker::Sized
 pub fn vyre_foundation::visit::any_descendant(node: &vyre_foundation::ir::Node, pred: &mut impl core::ops::function::FnMut(&vyre_foundation::ir::Node) -> bool) -> bool
 pub fn vyre_foundation::visit::any_expr_in(nodes: &[vyre_foundation::ir::Node], pred: &mut impl core::ops::function::FnMut(&vyre_foundation::ir::Expr) -> bool) -> bool
 pub fn vyre_foundation::visit::any_subexpr(expr: &vyre_foundation::ir::Expr, pred: &mut impl core::ops::function::FnMut(&vyre_foundation::ir::Expr) -> bool) -> bool
+pub fn vyre_foundation::visit::bin_op_magnitude(op: &vyre_spec::bin_op::BinOp) -> vyre_foundation::visit::ExprMagnitude<'static>
 pub fn vyre_foundation::visit::child_bodies(node: &vyre_foundation::ir::Node) -> [&[vyre_foundation::ir::Node]; 2]
 pub fn vyre_foundation::visit::child_bodies_mut(node: &mut vyre_foundation::ir::Node) -> smallvec::SmallVec<[&mut alloc::vec::Vec<vyre_foundation::ir::Node>; 2]>
 pub fn vyre_foundation::visit::collect_call_op_ids(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<alloc::sync::Arc<str>>
 pub fn vyre_foundation::visit::expr_buffer_ref(expr: &vyre_foundation::ir::Expr) -> vyre_foundation::visit::ExprBufferRef<'_>
 pub fn vyre_foundation::visit::expr_children(expr: &vyre_foundation::ir::Expr) -> vyre_foundation::visit::ExprChildren<'_>
 pub fn vyre_foundation::visit::expr_combine(expr: &vyre_foundation::ir::Expr) -> core::option::Option<vyre_foundation::visit::ExprCombine<'_>>
+pub fn vyre_foundation::visit::expr_magnitude(expr: &vyre_foundation::ir::Expr) -> vyre_foundation::visit::ExprMagnitude<'_>
 pub fn vyre_foundation::visit::for_each_expr<'a>(nodes: &'a [vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&'a vyre_foundation::ir::Expr))
 pub fn vyre_foundation::visit::for_each_node<'a>(nodes: &'a [vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&'a vyre_foundation::ir::Node))
 pub fn vyre_foundation::visit::for_each_subexpr<'a>(expr: &'a vyre_foundation::ir::Expr, visit: &mut impl core::ops::function::FnMut(&'a vyre_foundation::ir::Expr))
@@ -2751,6 +2785,7 @@ pub fn vyre_foundation::visit::node_variadic_operands(node: &vyre_foundation::ir
 pub fn vyre_foundation::visit::referenced_buffers(program: &vyre_foundation::ir::Program) -> std::collections::hash::set::HashSet<vyre_foundation::ir::Ident>
 pub fn vyre_foundation::visit::try_for_each_expr<B>(nodes: &[vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<B>) -> core::ops::control_flow::ControlFlow<B>
 pub fn vyre_foundation::visit::try_for_each_node<'a, B>(nodes: &'a [vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&'a vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<B>) -> core::ops::control_flow::ControlFlow<B>
+pub fn vyre_foundation::visit::un_op_magnitude(op: &vyre_spec::un_op::UnOp) -> vyre_foundation::visit::ExprMagnitude<'static>
 pub fn vyre_foundation::visit::visit_expr<V: vyre_foundation::visit::ExprVisitor>(visitor: &mut V, expr: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::ExprVisitor>::Break>
 pub fn vyre_foundation::visit::visit_expr_buffer_accesses(expr: &vyre_foundation::ir::Expr, visitor: impl core::ops::function::FnMut(vyre_foundation::visit::ExprBufferAccess, &vyre_foundation::ir::Ident))
 pub fn vyre_foundation::visit::visit_node<V: vyre_foundation::visit::NodeVisitor>(visitor: &mut V, node: &vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::NodeVisitor>::Break>
@@ -2778,6 +2813,7 @@ pub mod vyre_foundation::dialect_lookup
 pub mod vyre_foundation::execution_plan
 pub mod vyre_foundation::execution_plan::fusion
 pub mod vyre_foundation::extension
+pub mod vyre_foundation::fp_expansion
 pub mod vyre_foundation::fp_parity
 pub mod vyre_foundation::graph_view
 pub mod vyre_foundation::hashing
@@ -2785,6 +2821,7 @@ pub mod vyre_foundation::ir
 pub mod vyre_foundation::ir::eval
 pub mod vyre_foundation::ir::stats
 pub mod vyre_foundation::logical
+pub mod vyre_foundation::loop_bounds
 pub mod vyre_foundation::lower
 pub mod vyre_foundation::match_result
 pub mod vyre_foundation::numeric
@@ -2953,6 +2990,7 @@ pub struct vyre_foundation::extension::ExtensionDataTypeRegistration
 pub struct vyre_foundation::extension::ExtensionUnOpRegistration
 pub struct vyre_foundation::extension::OpaqueExprResolver
 pub struct vyre_foundation::extension::OpaqueNodeResolver
+pub struct vyre_foundation::fp_expansion::StrictExpansionError
 pub struct vyre_foundation::ir::BufferDecl
 pub struct vyre_foundation::ir::EvalError
 pub struct vyre_foundation::ir::GraphInput
@@ -2985,6 +3023,7 @@ pub struct vyre_foundation::logical::LogicalPartitionAxis
 pub struct vyre_foundation::logical::LogicalPartitionFacts
 pub struct vyre_foundation::logical::LogicalProgramGraph<'a>
 pub struct vyre_foundation::logical::LogicalRegion
+pub struct vyre_foundation::loop_bounds::DataDerivedLoopBound
 pub struct vyre_foundation::lower::LoweringError
 pub struct vyre_foundation::lower::ProgramEffects(_)
 pub struct vyre_foundation::numeric::CalibrationIdentity
@@ -3581,6 +3620,8 @@ pub vyre_foundation::extension::OpaqueNodeResolver::deserialize: vyre_foundation
 pub vyre_foundation::extension::OpaqueNodeResolver::kind: &'static str
 pub vyre_foundation::fp_parity::BufferParity::Mismatch(alloc::string::String)
 pub vyre_foundation::fp_parity::BufferParity::Ok
+pub vyre_foundation::fp_parity::FloatLoweringMode::Contracted
+pub vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee
 pub vyre_foundation::graph_view::DataEdge::from: u32
 pub vyre_foundation::graph_view::DataEdge::kind: vyre_foundation::graph_view::EdgeKind
 pub vyre_foundation::graph_view::DataEdge::to: u32
@@ -4032,6 +4073,8 @@ pub vyre_foundation::logical::LogicalRegionKind::Parallel
 pub vyre_foundation::logical::LogicalRegionKind::Reduction
 pub vyre_foundation::logical::LogicalRegionKind::RetainedState
 pub vyre_foundation::logical::LogicalRegionKind::Sequential
+pub vyre_foundation::loop_bounds::DataDerivedLoopBound::source: core::option::Option<vyre_foundation::ir::Ident>
+pub vyre_foundation::loop_bounds::DataDerivedLoopBound::var: vyre_foundation::ir::Ident
 pub vyre_foundation::match_result::ByteRange::end: u32
 pub vyre_foundation::match_result::ByteRange::start: u32
 pub vyre_foundation::match_result::ByteRange::tag: u32
@@ -5486,6 +5529,15 @@ pub vyre_foundation::visit::ExprCombine::Atomic::op: &'a vyre_spec::atomic_op::A
 pub vyre_foundation::visit::ExprCombine::Subgroup
 pub vyre_foundation::visit::ExprCombine::Subgroup::op: vyre_spec::subgroup_reduce_op::SubgroupReduceOp
 pub vyre_foundation::visit::ExprCombine::Unknown
+pub vyre_foundation::visit::ExprMagnitude::AllOperands
+pub vyre_foundation::visit::ExprMagnitude::Binding(&'a vyre_foundation::ir::Ident)
+pub vyre_foundation::visit::ExprMagnitude::BitCount
+pub vyre_foundation::visit::ExprMagnitude::BufferElement(&'a vyre_foundation::ir::Ident)
+pub vyre_foundation::visit::ExprMagnitude::BufferExtent(&'a vyre_foundation::ir::Ident)
+pub vyre_foundation::visit::ExprMagnitude::HostFact
+pub vyre_foundation::visit::ExprMagnitude::LeastOperand
+pub vyre_foundation::visit::ExprMagnitude::Predicate
+pub vyre_foundation::visit::ExprMagnitude::Unknown
 pub vyre_foundation::visit::NameBinding::Declare
 pub vyre_foundation::visit::NameBinding::Induction
 pub vyre_foundation::visit::NameBinding::Reassign

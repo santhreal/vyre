@@ -183,11 +183,12 @@ pub fn dominant_spectrum_fixed_via_with_scratch_into(
     bump(&sheaf_spectral_clustering_calls);
 
     let cells = checked_product_count(n_nodes, d, "n_nodes", "d", "dominant_spectrum_fixed_via")?;
-    let cells_u32 = u32::try_from(cells).map_err(|_| {
-    SemanticExecutionError::InvalidRequest(format!(
-        "Fix: dominant_spectrum_fixed_via n_nodes*d exceeds the primitive u32 lane limit for n_nodes={n_nodes}, d={d}."
-    ))
-})?;
+    // Reject the u32 lane limit here: sheaf_laplacian_eigenvalue recomputes n_nodes*d as u32 and traps silently.
+    if u32::try_from(cells).is_err() {
+        return Err(SemanticExecutionError::InvalidRequest(format!(
+            "Fix: dominant_spectrum_fixed_via n_nodes*d exceeds the primitive u32 lane limit for n_nodes={n_nodes}, d={d}."
+        )));
+    }
     if restriction_diag_fixed.len() != cells {
         return Err(SemanticExecutionError::InvalidRequest(format!(
         "Fix: dominant_spectrum_fixed_via requires restriction_diag_fixed.len() == n_nodes*d, got len={}, n_nodes={n_nodes}, d={d}, cells={cells}.",
@@ -428,7 +429,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            crate::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![
                     u32_slice_to_le_bytes(&[1]),
@@ -447,7 +448,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            crate::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![u32_slice_to_le_bytes(&[1]), vec![1, 0, 0, 0, 2]])
             };

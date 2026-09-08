@@ -6,11 +6,11 @@
 //! asserts on the result. Ten separate integration targets linked the crate ten
 //! times and carried ten copies of the same three helpers.
 //!
-//! `docs_references` and `release_docs` stay separate targets so each can be
-//! run by name: they are the two suites a documentation or release change
-//! re-runs on its own, and folding them in here would make that a filter over
-//! the whole tree-contract link unit. They reach the same harness through
-//! `tests/common`.
+//! `docs_references` and `release_docs` are modules of the crate's `all_tests`
+//! harness rather than of this one: they are the two suites a documentation or
+//! release change re-runs on its own, and a filter over that harness selects
+//! them without linking every tree contract here. They reach the same helpers
+//! through `tests/workspace_sources`.
 
 #![forbid(unsafe_code)]
 
@@ -35,6 +35,9 @@ mod nested_byte_rows;
 #[cfg(feature = "public-api-tool")]
 mod public_api_snapshot_inventory;
 mod relation_import_certificates;
+/// Unix only: the subject is a shell script, and the release hosts run it.
+#[cfg(unix)]
+mod release_shell_toml_reader;
 mod subcommand_dispatch;
 mod test_mutation_hygiene;
 mod testing_guides;

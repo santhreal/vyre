@@ -114,18 +114,12 @@ impl GpuEGraphSnapshot {
     /// internal shape; the `EGraph` crate's adapter calls this
     /// builder to materialise the GPU mirror.
     ///
-    /// Returns an empty snapshot if the input exceeds the current 32-bit GPU
-    /// column ABI. Use [`Self::try_build`] for actionable overflow diagnostics.
-    #[must_use]
-    pub fn build<'a, I>(rows: I) -> Self
-    where
-        I: IntoIterator<Item = (u32, &'a str, &'a [u32])>,
-    {
-        Self::try_build(rows).unwrap_or_default()
-    }
-
-    /// Fallible form of [`Self::build`] that rejects snapshots too large for
-    /// the current 32-bit GPU column ABI.
+    /// # Errors
+    ///
+    /// Returns [`GpuEGraphSnapshotError`] when the rows exceed the 32-bit GPU
+    /// column ABI. There is no infallible form: an empty snapshot on overflow
+    /// reads as an e-graph with nothing to rewrite, so a pass reports no
+    /// rewrites and a fixture asserts against columns it never built.
     pub fn try_build<'a, I>(rows: I) -> Result<Self, GpuEGraphSnapshotError>
     where
         I: IntoIterator<Item = (u32, &'a str, &'a [u32])>,
@@ -156,21 +150,10 @@ impl GpuEGraphSnapshot {
     /// `Debug` or a string identity. Child ids are canonicalized during the
     /// copy so the GPU columns match the CPU graph's current union-find state.
     ///
-    /// Returns an empty snapshot if the CPU e-graph exceeds the current 32-bit
-    /// GPU column ABI. Use [`Self::try_from_egraph_with`] for actionable
-    /// overflow diagnostics.
-    #[must_use]
-    pub fn from_egraph_with<L, F, S>(egraph: &EGraph<L>, mut op_name: F) -> Self
-    where
-        L: ENodeLang,
-        F: FnMut(&L) -> S,
-        S: AsRef<str>,
-    {
-        Self::try_from_egraph_with(egraph, &mut op_name).unwrap_or_default()
-    }
-
-    /// Fallible form of [`Self::from_egraph_with`] that rejects CPU e-graphs
-    /// whose node or child-column counts exceed the current 32-bit GPU ABI.
+    /// # Errors
+    ///
+    /// Returns [`GpuEGraphSnapshotError`] when the CPU e-graph exceeds the
+    /// 32-bit GPU column ABI.
     pub fn try_from_egraph_with<L, F, S>(
         egraph: &EGraph<L>,
         mut op_name: F,

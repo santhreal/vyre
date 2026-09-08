@@ -19,7 +19,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 
 use harness::cuda_semantic_execution;
 use vyre::ir::{Expr, Node, Program};

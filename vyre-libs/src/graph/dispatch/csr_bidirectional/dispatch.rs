@@ -9,10 +9,10 @@ use crate::graph::csr_bidirectional::{
 };
 use vyre_foundation::ir::Program;
 
-use crate::graph::dispatch::dispatch_bridge::{refresh_keyed_dispatch_inputs, DispatchInput};
-use vyre_megakernel::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+use crate::graph::dispatch::dispatch_bridge::{
+    dispatch_single_u32_output_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
 };
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Dispatcher-backed bidirectional CSR step.
 ///
@@ -140,26 +140,11 @@ pub(super) fn bidirectional_step_dispatch_prepared_inputs_into(
     inputs: &[Vec<u8>],
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    let outputs = execute_single_program(
+    dispatch_single_u32_output_from_prepared_into(
         dispatcher,
-        "csr_bidirectional_step",
+        policy,
         program.clone(),
         inputs,
-        policy,
-    )?
-    .outputs;
-    let [frontier_out] = match outputs.as_slice() {
-        [frontier_out] => [frontier_out],
-        _ => {
-            return Err(SemanticExecutionError::Backend(format!(
-                "Fix: {} expected exactly one u32 output buffer, got {}.",
-                CSR_BIDIRECTIONAL_FRONTIER_OUT_BUFFER,
-                outputs.len()
-            )));
-        }
-    };
-    crate::dispatch_buffers::decode_u32_output_exact(
-        frontier_out,
         plan.frontier_words,
         CSR_BIDIRECTIONAL_FRONTIER_OUT_BUFFER,
         out,

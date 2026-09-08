@@ -170,19 +170,6 @@ inventory::submit! {
 /// path, which is the shape the sub-region generators resolve against.
 const SCAN_FIXTURE_LEN: u32 = 64;
 
-fn try_multi_block_prefix_scan_sum_u32(
-    input: &str,
-    output: &str,
-    n: u32,
-) -> Result<Program, String> {
-    try_multi_block_prefix_scan_sum_u32_with_block_lanes(
-        input,
-        output,
-        n,
-        PORTABLE_WORKGROUP_INVOCATIONS,
-    )
-}
-
 fn try_multi_block_prefix_scan_sum_u32_with_block_lanes(
     input: &str,
     output: &str,
@@ -262,19 +249,6 @@ pub fn multi_block_prefix_scan_sum_exclusive_u32_with_geometry(
         output,
         n,
         geometry.workgroup[0],
-    )
-}
-
-fn try_multi_block_prefix_scan_sum_exclusive_u32(
-    input: &str,
-    output: &str,
-    n: u32,
-) -> Result<Program, String> {
-    try_multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(
-        input,
-        output,
-        n,
-        PORTABLE_WORKGROUP_INVOCATIONS,
     )
 }
 

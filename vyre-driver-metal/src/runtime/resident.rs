@@ -22,8 +22,8 @@ pub(crate) type MetalResidentBufferTable = Arc<Mutex<HashMap<ResidentHandle, Met
 pub(super) enum ResolvedMetalResource<'a> {
     Borrowed(&'a [u8]),
     Resident {
-        /// Owner-carrying handle, kept so diagnostics never name a bare id.
-        #[allow(dead_code)]
+        /// Owner-carrying handle, named by the resident sizing diagnostics in
+        /// `buffer_plan` so a rejection reports which handle was too small.
         id: ResidentHandle,
         buffer: Buffer,
         byte_len: usize,

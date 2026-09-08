@@ -312,6 +312,128 @@ pub(super) fn is_exact_from_le_bytes_expr(
     }
 }
 
+/// Whether a `for` loop only routes each output slot to a decoder.
+///
+/// A wrapper that reads back several named buffers walks its own list of output
+/// slots, one iteration per slot, and each iteration resolves the slot's bytes
+/// and hands them to a byte decoder that writes into the slot's own sink. Every
+/// byte reaches exactly one word of exactly one caller-owned output, so nothing
+/// is accumulated, compared, folded or gathered: the loop is the readback
+/// plumbing, and the number of iterations is the number of outputs rather than
+/// the number of elements. Judging every post-dispatch loop a reduction
+/// convicted that plumbing, so the shape it has is stated here.
+///
+/// The admitted shape is a closed whitelist, which is what keeps it from
+/// admitting a reduction that happens to be written as calls. The sequence is a
+/// named collection, every statement is a call or a `let` bound from one, and
+/// every operand is a path, a field, a literal, a reference or another such
+/// call. An arithmetic or comparison operator, a compound assignment, an index
+/// into data, a method call, a closure, a branch, a `match` or a nested loop is
+/// none of those, so each one leaves the shape and the loop is reported. A
+/// callee that computes is convicted where it is defined, by the same walk that
+/// reads this file.
+pub(super) fn is_output_slot_transport_loop(expr: &syn::ExprForLoop) -> bool {
+    if !iterates_named_collection(&expr.expr) {
+        return false;
+    }
+    let mut bound = BTreeSet::new();
+    extract_pat_bindings(&expr.pat, &mut bound);
+    if bound.is_empty() {
+        return false;
+    }
+    let mut transported = 0usize;
+    for stmt in &expr.body.stmts {
+        match stmt {
+            syn::Stmt::Local(local) => {
+                let Some(init) = &local.init else {
+                    return false;
+                };
+                if init.diverge.is_some() {
+                    return false;
+                }
+                if !is_transport_call(&init.expr) {
+                    return false;
+                }
+                let mut names = BTreeSet::new();
+                extract_pat_bindings(&local.pat, &mut names);
+                if names.is_empty() {
+                    return false;
+                }
+                transported += 1;
+            }
+            syn::Stmt::Expr(value, _) => {
+                if !is_transport_call(value) {
+                    return false;
+                }
+                transported += 1;
+            }
+            syn::Stmt::Item(_) | syn::Stmt::Macro(_) => return false,
+        }
+    }
+    transported > 0
+}
+
+/// Whether the loop walks a named collection rather than a computed sequence.
+///
+/// A slot list is a binding, a field of one, or one of the three iterator
+/// constructors over either. A range, a `zip`, an `enumerate` or a chain that
+/// derives its sequence from data is a different loop and is judged as one.
+fn iterates_named_collection(expr: &syn::Expr) -> bool {
+    match expr {
+        syn::Expr::Path(_) => true,
+        syn::Expr::Field(field) => iterates_named_collection(&field.base),
+        syn::Expr::Reference(reference) => iterates_named_collection(&reference.expr),
+        syn::Expr::Paren(paren) => iterates_named_collection(&paren.expr),
+        syn::Expr::Group(group) => iterates_named_collection(&group.expr),
+        syn::Expr::Unary(unary) => {
+            matches!(unary.op, syn::UnOp::Deref(_)) && iterates_named_collection(&unary.expr)
+        }
+        syn::Expr::MethodCall(call) => {
+            matches!(
+                call.method.to_string().as_str(),
+                "iter" | "iter_mut" | "into_iter"
+            ) && call.args.is_empty()
+                && iterates_named_collection(&call.receiver)
+        }
+        _ => false,
+    }
+}
+
+/// Whether the expression is a plain function call over transport operands.
+///
+/// A method call is not one of these. A reduction spells itself as a method far
+/// more often than as a free function (`.sum()`, `.max()`, `.wrapping_add()`),
+/// and a transport loop needs none, so refusing the whole form closes that
+/// class without a list of method names to keep current.
+fn is_transport_call(expr: &syn::Expr) -> bool {
+    match expr {
+        syn::Expr::Try(inner) => is_transport_call(&inner.expr),
+        syn::Expr::Paren(paren) => is_transport_call(&paren.expr),
+        syn::Expr::Group(group) => is_transport_call(&group.expr),
+        syn::Expr::Call(call) => {
+            matches!(&*call.func, syn::Expr::Path(_)) && call.args.iter().all(is_transport_operand)
+        }
+        _ => false,
+    }
+}
+
+/// Whether the expression names a value without computing one.
+fn is_transport_operand(expr: &syn::Expr) -> bool {
+    match expr {
+        syn::Expr::Path(_) | syn::Expr::Lit(_) => true,
+        syn::Expr::Field(field) => is_transport_operand(&field.base),
+        syn::Expr::Reference(reference) => is_transport_operand(&reference.expr),
+        syn::Expr::Paren(paren) => is_transport_operand(&paren.expr),
+        syn::Expr::Group(group) => is_transport_operand(&group.expr),
+        syn::Expr::Unary(unary) => {
+            matches!(unary.op, syn::UnOp::Deref(_)) && is_transport_operand(&unary.expr)
+        }
+        syn::Expr::Try(inner) => is_transport_call(&inner.expr),
+        syn::Expr::Call(_) => is_transport_call(expr),
+        _ => false,
+    }
+}
+
 pub(super) fn is_pure_decoder_loop(expr: &syn::ExprForLoop) -> bool {
     let chunk_len = match &*expr.expr {
         syn::Expr::MethodCall(mc) => {

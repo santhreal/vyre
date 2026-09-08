@@ -5,8 +5,6 @@
 //! they assert, so the guards are declared once. A second copy would have to be
 //! kept identical for a precedence case in one suite to mean what a coverage
 //! case in the other says.
-//!
-//! Included with `#[path]` the same way as `tests/support/artifact_fixtures.rs`.
 
 #![allow(dead_code)]
 

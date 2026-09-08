@@ -12,7 +12,9 @@ use smallvec::SmallVec;
 use vyre_driver::accounting::checked_add_usize_lazy;
 use vyre_driver::{BackendError, OutputBuffers};
 
-use vyre_driver::input_identity::{exact_input_key, ExactInputKey};
+#[cfg(test)]
+use vyre_driver::input_identity::exact_input_key;
+use vyre_driver::input_identity::ExactInputKey;
 
 use super::MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE;
 
@@ -25,26 +27,6 @@ pub(crate) struct MaterializedPipelineOutputCache {
 }
 
 impl MaterializedPipelineOutputCache {
-    pub(crate) fn hit_into(
-        &self,
-        inputs: &[&[u8]],
-        outputs: &mut OutputBuffers,
-    ) -> Result<bool, BackendError> {
-        let Some(snapshot) = self.snapshot(inputs)? else {
-            return Ok(false);
-        };
-        snapshot.copy_into(outputs)?;
-        Ok(true)
-    }
-
-    pub(crate) fn snapshot(
-        &self,
-        inputs: &[&[u8]],
-    ) -> Result<Option<MaterializedOutputSnapshot>, BackendError> {
-        let input_key = exact_input_key(inputs)?;
-        Ok(self.snapshot_with_key(inputs, &input_key))
-    }
-
     pub(crate) fn snapshot_with_key(
         &self,
         inputs: &[&[u8]],
@@ -56,18 +38,6 @@ impl MaterializedPipelineOutputCache {
             }
         }
         None
-    }
-
-    pub(crate) fn remember(
-        &mut self,
-        inputs: &[&[u8]],
-        outputs: &OutputBuffers,
-    ) -> Result<(), BackendError> {
-        let Some(entry) = MaterializedPipelineOutputCacheEntry::new_if_cacheable(inputs, outputs)?
-        else {
-            return Ok(());
-        };
-        self.remember_entry(entry)
     }
 
     pub(crate) fn remember_entry(
@@ -95,10 +65,14 @@ impl MaterializedPipelineOutputCache {
         Ok(())
     }
 
+    /// Entry and byte counts. The production path enforces both budgets inside
+    /// `remember_entry`; only the budget tests read them back.
+    #[cfg(test)]
     pub(crate) fn len(&self) -> usize {
         self.entries.len()
     }
 
+    #[cfg(test)]
     pub(crate) fn byte_len(&self) -> usize {
         self.byte_len
     }
@@ -118,6 +92,44 @@ impl MaterializedPipelineOutputCache {
     }
 }
 
+// Unkeyed convenience over the keyed cache API, for this crate's cache contract
+// suite. A production replay computes the input key once per dispatch and calls
+// the keyed methods with it.
+#[cfg(test)]
+impl MaterializedPipelineOutputCache {
+    pub(crate) fn hit_into(
+        &self,
+        inputs: &[&[u8]],
+        outputs: &mut OutputBuffers,
+    ) -> Result<bool, BackendError> {
+        let Some(snapshot) = self.snapshot(inputs)? else {
+            return Ok(false);
+        };
+        snapshot.copy_into(outputs)?;
+        Ok(true)
+    }
+
+    pub(crate) fn snapshot(
+        &self,
+        inputs: &[&[u8]],
+    ) -> Result<Option<MaterializedOutputSnapshot>, BackendError> {
+        let input_key = exact_input_key(inputs)?;
+        Ok(self.snapshot_with_key(inputs, &input_key))
+    }
+
+    pub(crate) fn remember(
+        &mut self,
+        inputs: &[&[u8]],
+        outputs: &OutputBuffers,
+    ) -> Result<(), BackendError> {
+        let Some(entry) = MaterializedPipelineOutputCacheEntry::new_if_cacheable(inputs, outputs)?
+        else {
+            return Ok(());
+        };
+        self.remember_entry(entry)
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct MaterializedPipelineOutputCacheEntry {
     input_key: ExactInputKey,
@@ -127,20 +139,6 @@ pub(crate) struct MaterializedPipelineOutputCacheEntry {
 }
 
 impl MaterializedPipelineOutputCacheEntry {
-    pub(crate) fn new_if_cacheable(
-        inputs: &[&[u8]],
-        outputs: &[Vec<u8>],
-    ) -> Result<Option<Self>, BackendError> {
-        let input_key = exact_input_key(inputs)?;
-        let Some(byte_len) = materialized_cache_entry_byte_len_if_admissible(inputs, outputs)?
-        else {
-            return Ok(None);
-        };
-        Ok(Some(Self::new_with_key_and_byte_len(
-            inputs, input_key, outputs, byte_len,
-        )?))
-    }
-
     pub(crate) fn new_with_key_if_cacheable(
         inputs: &[&[u8]],
         input_key: &ExactInputKey,
@@ -153,20 +151,6 @@ impl MaterializedPipelineOutputCacheEntry {
         Ok(Some(Self::new_with_key_and_byte_len(
             inputs, *input_key, outputs, byte_len,
         )?))
-    }
-
-    pub(crate) fn new(inputs: &[&[u8]], outputs: &[Vec<u8>]) -> Result<Self, BackendError> {
-        let input_key = exact_input_key(inputs)?;
-        Self::new_with_key(inputs, &input_key, outputs)
-    }
-
-    pub(crate) fn new_with_key(
-        inputs: &[&[u8]],
-        input_key: &ExactInputKey,
-        outputs: &[Vec<u8>],
-    ) -> Result<Self, BackendError> {
-        let byte_len = materialized_cache_entry_byte_len(inputs, outputs)?;
-        Self::new_with_key_and_byte_len(inputs, *input_key, outputs, byte_len)
     }
 
     fn new_with_key_and_byte_len(
@@ -229,6 +213,40 @@ impl MaterializedPipelineOutputCacheEntry {
 
     pub(crate) fn byte_len(&self) -> usize {
         self.byte_len
+    }
+}
+
+// Unkeyed and unchecked entry construction, for this crate's cache contract
+// suite. A production replay builds an entry from the key it already computed
+// and admits it only when it fits the per-pipeline byte cap.
+#[cfg(test)]
+impl MaterializedPipelineOutputCacheEntry {
+    pub(crate) fn new_if_cacheable(
+        inputs: &[&[u8]],
+        outputs: &[Vec<u8>],
+    ) -> Result<Option<Self>, BackendError> {
+        let input_key = exact_input_key(inputs)?;
+        let Some(byte_len) = materialized_cache_entry_byte_len_if_admissible(inputs, outputs)?
+        else {
+            return Ok(None);
+        };
+        Ok(Some(Self::new_with_key_and_byte_len(
+            inputs, input_key, outputs, byte_len,
+        )?))
+    }
+
+    pub(crate) fn new(inputs: &[&[u8]], outputs: &[Vec<u8>]) -> Result<Self, BackendError> {
+        let input_key = exact_input_key(inputs)?;
+        Self::new_with_key(inputs, &input_key, outputs)
+    }
+
+    pub(crate) fn new_with_key(
+        inputs: &[&[u8]],
+        input_key: &ExactInputKey,
+        outputs: &[Vec<u8>],
+    ) -> Result<Self, BackendError> {
+        let byte_len = materialized_cache_entry_byte_len(inputs, outputs)?;
+        Self::new_with_key_and_byte_len(inputs, *input_key, outputs, byte_len)
     }
 }
 
@@ -303,6 +321,9 @@ fn clone_materialized_cache_bytes(
     Ok(cloned)
 }
 
+// Unchecked total, reachable only from the test-only entry constructors: a
+// production admission stops at the byte cap instead of totalling past it.
+#[cfg(test)]
 fn materialized_cache_entry_byte_len(
     inputs: &[&[u8]],
     outputs: &[Vec<u8>],

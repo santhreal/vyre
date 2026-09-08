@@ -15,9 +15,7 @@ fn mock_async_copy_desc() -> (KernelDescriptor, AsyncCopyPlan) {
     let desc = KernelDescriptor {
         id: "mock_gemm_tile".to_string(),
         bindings: BindingLayout { slots: vec![] },
-        dispatch: vyre_lower::Dispatch {
-            workgroup_size: [128, 1, 1],
-        },
+        dispatch: vyre_lower::Dispatch::new(128, 1, 1),
         body: KernelBody {
             ops: vec![],
             literals: vec![],

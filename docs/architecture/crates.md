@@ -261,6 +261,18 @@ by default and regenerates only when asked.
 
 Not here: an exemption. A gate that is allowed to be red is not a gate.
 
+## Workspace lints
+
+Every member inherits one lint table from the root manifest. `unsafe_code`,
+`missing_docs`, `unexpected_cfgs`, `unreachable_pub`, `unused_variables`,
+`dead_code`, `unfulfilled_lint_expectations` and `rustdoc::broken_intra_doc_links`
+are denied, so an item no caller reaches, a binding nothing reads and a
+suppression that has stopped applying each fail the build.
+
+A narrow exception is `#[expect(lint, reason = "...")]` at the smallest item,
+which fails once the lint stops firing there. A crate-wide or file-wide `allow`
+is not an exception, it is a crate opting out of the policy.
+
 ## Outside the workspace
 
 The root manifest excludes four directories. Each resolves against its own

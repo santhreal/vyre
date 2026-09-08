@@ -7,7 +7,7 @@
 
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::expr::Ident;
-use crate::ir_inner::model::op_signature::{AtomicOp, SubgroupReduceOp};
+use crate::ir_inner::model::op_signature::{AtomicOp, BinOp, SubgroupReduceOp, UnOp};
 use smallvec::SmallVec;
 
 /// What an expression does to the buffer it names.
@@ -125,6 +125,143 @@ pub fn expr_combine(expr: &Expr) -> Option<ExprCombine<'_>> {
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize => None,
         Expr::Opaque(_) => Some(ExprCombine::Unknown),
+    }
+}
+
+/// Where the magnitude of an expression's value comes from.
+///
+/// The question a loop bound asks. `Node::Loop` runs for as many iterations as
+/// its `to` expression states, so a bound that reaches a buffer element runs
+/// for as long as that element says, and one out-of-contract `u32` read from a
+/// producer buffer asks for four billion iterations: hours in the reference
+/// interpreter, a watchdog reset on a device.
+///
+/// The classification is provenance, not size. A value derived only from
+/// literals, launch geometry and declared buffer extents is fixed when the
+/// program is built, however large it is. A value derived from buffer contents
+/// is fixed by whatever ran before it.
+#[derive(Debug, Clone, Copy)]
+pub enum ExprMagnitude<'a> {
+    /// Fixed when the program is built: a literal, a launch-geometry index, or
+    /// a subgroup fact the target declares.
+    HostFact,
+    /// The declared extent of the named buffer.
+    BufferExtent(&'a Ident),
+    /// Whatever the named buffer holds.
+    BufferElement(&'a Ident),
+    /// The value the named binding carries.
+    Binding(&'a Ident),
+    /// At most the number of bits in one element, whatever the operand holds.
+    BitCount,
+    /// Zero or one, whatever the operands hold.
+    Predicate,
+    /// At most the smallest operand, so the result is fixed at build time when
+    /// any one operand is. This is the arm a clamp against a buffer extent
+    /// relies on.
+    LeastOperand,
+    /// A function of every operand, so the result is fixed at build time only
+    /// when all of them are.
+    AllOperands,
+    /// Core cannot attribute the value: an out-of-tree extension, a call whose
+    /// callee this crate does not resolve, or an operator with no recorded
+    /// decision in [`bin_op_magnitude`] or [`un_op_magnitude`].
+    Unknown,
+}
+
+/// Where the magnitude of `expr` comes from.
+///
+/// Exhaustive with no catch-all arm, for the reason [`expr_children`] is: a new
+/// `Expr` variant defaulting to [`ExprMagnitude::HostFact`] would let a loop
+/// bound built from it read as fixed when the program is built.
+#[inline]
+#[must_use]
+pub fn expr_magnitude(expr: &Expr) -> ExprMagnitude<'_> {
+    match expr {
+        Expr::LitU32(_)
+        | Expr::LitI32(_)
+        | Expr::LitF32(_)
+        | Expr::LitBool(_)
+        | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
+        | Expr::WorkgroupId { .. }
+        | Expr::LocalId { .. }
+        | Expr::SubgroupLocalId
+        | Expr::SubgroupSize => ExprMagnitude::HostFact,
+        Expr::BufLen { buffer } => ExprMagnitude::BufferExtent(buffer),
+        Expr::Var(name) => ExprMagnitude::Binding(name),
+        Expr::Load { buffer, .. } | Expr::Atomic { buffer, .. } => {
+            ExprMagnitude::BufferElement(buffer)
+        }
+        Expr::UnOp { op, .. } => un_op_magnitude(op),
+        Expr::BinOp { op, .. } => bin_op_magnitude(op),
+        Expr::Cast { .. }
+        | Expr::Select { .. }
+        | Expr::Fma { .. }
+        | Expr::SubgroupShuffle { .. } => ExprMagnitude::AllOperands,
+        Expr::BufferRef { .. }
+        | Expr::Call { .. }
+        | Expr::SubgroupBallot { .. }
+        | Expr::SubgroupReduce { .. }
+        | Expr::Opaque(_) => ExprMagnitude::Unknown,
+    }
+}
+
+/// Where the magnitude of a binary operator's result comes from.
+///
+/// `BinOp` is `#[non_exhaustive]` and owned by another crate, so this match
+/// carries a catch-all. The catch-all answers [`ExprMagnitude::Unknown`], so an
+/// operator added without a decision here makes every loop bound built from it
+/// unattributable, which is a finding rather than silence.
+#[must_use]
+pub fn bin_op_magnitude(op: &BinOp) -> ExprMagnitude<'static> {
+    match op {
+        BinOp::BitAnd | BinOp::Mod | BinOp::Min => ExprMagnitude::LeastOperand,
+        BinOp::Eq
+        | BinOp::Ne
+        | BinOp::Lt
+        | BinOp::Gt
+        | BinOp::Le
+        | BinOp::Ge
+        | BinOp::And
+        | BinOp::Or => ExprMagnitude::Predicate,
+        BinOp::Add
+        | BinOp::Sub
+        | BinOp::Mul
+        | BinOp::Div
+        | BinOp::WrappingAdd
+        | BinOp::WrappingSub
+        | BinOp::BitOr
+        | BinOp::BitXor
+        | BinOp::Shl
+        | BinOp::Shr
+        | BinOp::AbsDiff
+        | BinOp::Max
+        | BinOp::SaturatingAdd
+        | BinOp::SaturatingSub
+        | BinOp::SaturatingMul
+        | BinOp::RotateLeft
+        | BinOp::RotateRight
+        | BinOp::MulHigh => ExprMagnitude::AllOperands,
+        _ => ExprMagnitude::Unknown,
+    }
+}
+
+/// Where the magnitude of a unary operator's result comes from.
+///
+/// Catch-all for the same reason [`bin_op_magnitude`] carries one.
+#[must_use]
+pub fn un_op_magnitude(op: &UnOp) -> ExprMagnitude<'static> {
+    match op {
+        UnOp::Popcount | UnOp::Clz | UnOp::Ctz => ExprMagnitude::BitCount,
+        UnOp::LogicalNot | UnOp::IsNan | UnOp::IsInf | UnOp::IsFinite | UnOp::Sign => {
+            ExprMagnitude::Predicate
+        }
+        UnOp::Negate | UnOp::Abs | UnOp::Floor | UnOp::Ceil | UnOp::Round | UnOp::Trunc => {
+            ExprMagnitude::AllOperands
+        }
+        _ => ExprMagnitude::Unknown,
     }
 }
 

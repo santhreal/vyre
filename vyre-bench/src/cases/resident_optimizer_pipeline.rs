@@ -1,11 +1,13 @@
 //! The resident optimizer pipeline against the host optimizer pipeline.
 //!
-//! The claim this case carries is a speedup: running canonicalization, constant
-//! folding, dead-code elimination and algebraic identities as device programs
-//! over a resident IR image beats running the same passes on the host. That is
-//! a release-path performance claim, so it is a registered case with a declared
-//! host baseline and a recorded floor rather than an assertion inside a device
-//! test.
+//! This case records a ratio. Canonicalization, constant folding, dead-code
+//! elimination and algebraic identities run as device programs over a resident
+//! IR image, timed against the same four passes on the host. At the fixture
+//! size below the device arm is the slower of the two, and the recorded floor
+//! detects a regression in the device arm relative to the host arm rather than
+//! certifying a speedup. The ratio is a release-path performance claim, so it
+//! is a registered case with a declared host baseline and a recorded floor
+//! rather than an assertion inside a device test.
 //!
 //! Both arms optimize the same fixture and both results are dispatched, so the
 //! measurement is only admitted when the two pipelines agree on what the

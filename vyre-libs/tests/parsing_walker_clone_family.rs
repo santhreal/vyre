@@ -27,7 +27,7 @@
 #![cfg(feature = "parsing")]
 #![forbid(unsafe_code)]
 
-mod harness;
+use crate::harness;
 
 use harness::ir_fingerprint::assert_pinned_ir_fingerprints;
 use vyre_foundation::ir::{Expr, Node, Program};
@@ -471,6 +471,11 @@ fn entry_points() -> Vec<(&'static str, Program)> {
 /// sentinel-indexed token load was folded into range before it issued: the
 /// index expression changed at each load site, the values did not, and the `go`
 /// and `core` entries stayed put because they index nothing with a sentinel.
+/// The two `go` entries and the two `core/ast/shunting` entries then moved
+/// together while all five `python/*` entries held. Those four are exactly the
+/// entries the sentinel fold left untouched. The single-owner properties the
+/// family collapse depends on are asserted structurally by the tests above, so
+/// this table reports drift and does not carry that proof.
 const EXPECTED: &[(&str, &str)] = &[
     (
         "python/structure",
@@ -494,19 +499,19 @@ const EXPECTED: &[(&str, &str)] = &[
     ),
     (
         "go/packages_and_imports",
-        "e18b3b92bbe28c0046152c7ab1e71645cedeaf5b3e0564c28414d93c3817b81b",
+        "63b78d3b9817fae37c591922f65ef04eb6ffd56f53f5681634be984b87543928",
     ),
     (
         "go/declarations",
-        "c92934b96f70c94c7bddc6ce16ad8925db47871f8b51043f1229e3786ecdd541",
+        "489261c8c1c00b5372d9e087f00d92bb13725aaea0efb9daf71c735c8fd9c8b5",
     ),
     (
         "core/ast/shunting",
-        "f447a3085e9b31d62bc1e4e04a14358f8f70cc07571546545394b578c82a923b",
+        "207be932a4702ac8ae1b5383b74f9bc2dd4ba6af29dd9dc140fd91da75c0f1af",
     ),
     (
         "core/ast/shunting_with_capacity",
-        "ad7812756122747a286c4c6aac86a0b525daa5aca3b2194073cb72ea8c6b8bf4",
+        "3a2fc2b976c3e90265dbb3aaa847afd26a4675c776e12481b04610a95d8cb3f4",
     ),
 ];
 

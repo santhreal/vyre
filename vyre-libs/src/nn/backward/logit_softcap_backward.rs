@@ -71,12 +71,7 @@ mod tests {
             .map(|i| ((i as i32 % 43) - 21) as f32 / 9.0)
             .collect::<Vec<_>>();
         let program = logit_softcap_backward("input", "grad_out", "grad_in", n as u32, cap);
-        let actual = eval_unary_f32_backward(
-            &program,
-            &input,
-            &grad_out,
-            "Fix: logit_softcap_backward must execute in the reference interpreter.",
-        );
+        let actual = eval_unary_f32_backward(&program, &input, &grad_out, "logit_softcap_backward");
         for (index, ((actual, x), dy)) in actual
             .iter()
             .copied()

@@ -20,7 +20,7 @@ use vyre_megakernel::{
     TargetProfile,
 };
 
-mod target_artifacts;
+use crate::target_artifacts;
 use target_artifacts::{foreign_artifact, spirv};
 
 /// A real artifact and the real payload a target compiler produced for it.

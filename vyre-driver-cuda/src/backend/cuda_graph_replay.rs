@@ -28,14 +28,6 @@ impl CachedCudaGraph {
                 })
     }
 
-    pub(crate) fn materialized_output_cache_matches(
-        &self,
-        inputs: &[&[u8]],
-    ) -> Result<bool, BackendError> {
-        let input_state = prepare_cuda_graph_replay_input_state(self, inputs)?;
-        self.materialized_output_cache_matches_with_input_state(inputs, &input_state)
-    }
-
     pub(crate) fn materialized_output_cache_matches_with_input_state(
         &self,
         inputs: &[&[u8]],
@@ -118,14 +110,6 @@ fn synchronize_cuda_graph_replay_stream(cached: &CachedCudaGraph) -> Result<(), 
     )
 }
 
-fn cached_input_bytes_match(
-    cached: &CachedCudaGraph,
-    inputs: &[&[u8]],
-) -> Result<bool, BackendError> {
-    let input_key = exact_input_key(inputs)?;
-    cached_input_bytes_match_with_key(cached, inputs, &input_key)
-}
-
 fn cached_input_bytes_match_with_key(
     cached: &CachedCudaGraph,
     inputs: &[&[u8]],
@@ -182,21 +166,6 @@ fn cached_input_bytes_match_after_key_match(
 }
 
 impl CudaBackend {
-    pub(crate) fn try_cuda_graph_materialized_cache_into(
-        &self,
-        cached: &mut CachedCudaGraph,
-        inputs: &[&[u8]],
-        outputs: &mut Vec<Vec<u8>>,
-    ) -> Result<bool, BackendError> {
-        let input_state = self.prepare_cuda_graph_replay_input_state(cached, inputs)?;
-        self.try_cuda_graph_materialized_cache_with_input_state_into(
-            cached,
-            inputs,
-            &input_state,
-            outputs,
-        )
-    }
-
     pub(crate) fn try_cuda_graph_materialized_cache_with_input_state_into(
         &self,
         cached: &mut CachedCudaGraph,
@@ -210,15 +179,6 @@ impl CudaBackend {
             return Ok(true);
         }
         Ok(false)
-    }
-
-    pub(crate) fn enqueue_cuda_graph_replay(
-        &self,
-        cached: &mut CachedCudaGraph,
-        inputs: &[&[u8]],
-    ) -> Result<CudaGraphReplayStats, BackendError> {
-        let input_state = self.prepare_cuda_graph_replay_input_state(cached, inputs)?;
-        self.enqueue_cuda_graph_replay_with_input_state(cached, inputs, &input_state)
     }
 
     pub(crate) fn enqueue_cuda_graph_replay_with_input_state(

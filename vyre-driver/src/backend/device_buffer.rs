@@ -61,14 +61,10 @@ pub trait DeviceBuffer: std::any::Any + Send + Sync + std::fmt::Debug {
 /// `Result::is_err` check, no separate trait.
 pub const DEVICE_BUFFER_FEATURE: &str = "DeviceBuffer";
 
-/// Convenience helper for default `VyreBackend::allocate_device_buffer`
-/// impls  -  every shipped backend returns this variant until they
-/// implement persistent device-buffer allocation.
+/// The error every default device-buffer method returns until a backend
+/// implements persistent device-buffer allocation.
 pub(crate) fn unsupported_device_buffer(backend_id: &'static str) -> BackendError {
-    BackendError::UnsupportedFeature {
-        name: DEVICE_BUFFER_FEATURE.to_string(),
-        backend: backend_id.to_string(),
-    }
+    BackendError::unsupported_feature(backend_id, DEVICE_BUFFER_FEATURE)
 }
 
 /// Implementor of [`DeviceBuffer`] for compatibility tests and explicit

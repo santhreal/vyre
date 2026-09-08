@@ -1,6 +1,6 @@
 //! Semantic execution of the forward-or-changed fixpoint graph.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::graph::csr_closure_inputs::CsrClosureInputs;
 use crate::graph::csr_forward_or_changed::{
@@ -17,7 +17,8 @@ use vyre_foundation::ir::{
 };
 use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_megakernel::{
-    SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
+    returned_graph_values, SemanticExecutionError, SemanticExecutionPolicy,
+    SemanticExecutionRequest, SemanticExecutor,
 };
 
 /// Caller-owned GPU dispatch scratch for `csr_forward_or_changed` fixpoint loops.
@@ -268,7 +269,6 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
             )
         })?;
 
-    let mut stage_frontiers = Vec::with_capacity(max_iters as usize);
     let mut stage_changed = Vec::with_capacity(max_iters as usize);
     for iter in 0..max_iters {
         let changed_input = graph
@@ -347,7 +347,6 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
                 ))
             })?;
         current_frontier = outputs[0];
-        stage_frontiers.push(outputs[0]);
         stage_changed.push(outputs[1]);
     }
 
@@ -357,14 +356,15 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
                 "forward fixpoint logical graph is invalid: {error}"
             ))
         })?;
+    let retained = returned_graph_values(logical.graph());
     let request = SemanticExecutionRequest::new(&logical, request_inputs, policy.clone())?;
     crate::telemetry::bump(&crate::telemetry::graph_dispatch_calls);
     let outputs = dispatcher.execute(&request)?.outputs;
     decode_forward_fixpoint_outputs(
         outputs,
         &ForwardFixpointReadback {
+            retained: &retained,
             final_frontier: current_frontier,
-            stage_frontiers: &stage_frontiers,
             stage_changed: &stage_changed,
             frontier_words,
             changed_words,
@@ -378,8 +378,8 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
 /// Which graph values one forward-fixpoint submission retains, and the widths
 /// their bytes decode to.
 struct ForwardFixpointReadback<'a> {
+    retained: &'a BTreeSet<GraphValueId>,
     final_frontier: GraphValueId,
-    stage_frontiers: &'a [GraphValueId],
     stage_changed: &'a [GraphValueId],
     frontier_words: usize,
     changed_words: usize,
@@ -390,19 +390,24 @@ struct ForwardFixpointReadback<'a> {
 ///
 /// The submission seam returns retained values keyed by identity, so decoding
 /// is a separate step from submitting: this reads declared widths out of the
-/// returned bytes and rejects a value the graph never retained. It derives
-/// nothing the device did not compute.
+/// returned bytes and rejects a result set that is not exactly the one
+/// `returned_graph_values` names for this graph. The expected identities come
+/// from that owner, never from a count this layer sums itself, because a
+/// retained seed the artifact writes back is a result too.
 fn decode_forward_fixpoint_outputs(
     mut outputs: BTreeMap<GraphValueId, Vec<u8>>,
     readback: &ForwardFixpointReadback<'_>,
     frontier: &mut Vec<u32>,
     changed_out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    let expected_output_count = readback.stage_frontiers.len() + readback.stage_changed.len();
-    if outputs.len() != expected_output_count {
+    let received = outputs.keys().copied().collect::<BTreeSet<_>>();
+    if received != *readback.retained {
         return Err(SemanticExecutionError::Backend(format!(
-            "forward fixpoint executor returned {} graph values, expected {expected_output_count}. Fix: return every retained stage value exactly once",
-            outputs.len()
+            "forward fixpoint executor returned graph values [{}], expected [{}]: omitted [{}], undeclared [{}]. Fix: return every graph value the graph retains exactly once",
+            render_graph_values(&received),
+            render_graph_values(readback.retained),
+            render_graph_values(&readback.retained.difference(&received).copied().collect()),
+            render_graph_values(&received.difference(readback.retained).copied().collect()),
         )));
     }
     let frontier_bytes = outputs.remove(&readback.final_frontier).ok_or_else(|| {
@@ -438,16 +443,15 @@ fn decode_forward_fixpoint_outputs(
         validate_csr_forward_or_changed_flag(changed_out[changed_index])
             .map_err(SemanticExecutionError::Backend)?;
     }
-    for value in readback.stage_frontiers {
-        outputs.remove(value);
-    }
-    if !outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "forward fixpoint executor returned {} undeclared graph value(s)",
-            outputs.len()
-        )));
-    }
     Ok(())
+}
+
+fn render_graph_values(values: &BTreeSet<GraphValueId>) -> String {
+    values
+        .iter()
+        .map(|value| value.0.to_string())
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn refresh_forward_changed_inputs(
@@ -562,9 +566,19 @@ mod semantic_tests {
 
     use super::*;
 
+    /// Which result set the fake executor returns, relative to the one
+    /// `returned_graph_values` names for the submitted graph.
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    enum ResultSet {
+        Owned,
+        OmitFinalFrontier,
+        AddUnretained,
+    }
+
     struct InspectingGraphExecutor {
         calls: AtomicUsize,
-        omit_final_frontier: bool,
+        results: ResultSet,
+        divergent_value: AtomicUsize,
     }
 
     impl SemanticExecutor for InspectingGraphExecutor {
@@ -583,16 +597,20 @@ mod semantic_tests {
                 .all(|value| request.inputs().contains_key(&value.id)));
 
             let mut outputs = BTreeMap::new();
-            for value in graph.values().iter().filter(|value| {
-                value.producer.is_some() && value.contract.lifetime == ValueLifetime::Retained
-            }) {
-                if self.omit_final_frontier && value.name == "frontier_2" {
+            for id in returned_graph_values(graph) {
+                let value = graph
+                    .values()
+                    .iter()
+                    .find(|value| value.id == id)
+                    .expect("a returned graph value belongs to the submitted graph");
+                if self.results == ResultSet::OmitFinalFrontier && value.name == "frontier_2" {
+                    self.divergent_value.store(id.0 as usize, Ordering::SeqCst);
                     continue;
                 }
                 let [ShapeDim::Known(words)] = value.contract.shape.as_slice() else {
                     panic!("test graph values use one known dimension")
                 };
-                let word = if value.name.starts_with("frontier_") {
+                let word = if value.name.starts_with("frontier") {
                     0b1111_u32
                 } else {
                     0_u32
@@ -601,7 +619,17 @@ mod semantic_tests {
                 for _ in 0..*words {
                     bytes.extend_from_slice(&word.to_le_bytes());
                 }
-                outputs.insert(value.id, bytes);
+                outputs.insert(id, bytes);
+            }
+            if self.results == ResultSet::AddUnretained {
+                let unretained = graph
+                    .values()
+                    .iter()
+                    .find(|value| value.contract.lifetime == ValueLifetime::Invocation)
+                    .expect("the fixpoint graph declares invocation-scoped inputs");
+                self.divergent_value
+                    .store(unretained.id.0 as usize, Ordering::SeqCst);
+                outputs.insert(unretained.id, Vec::new());
             }
             Ok(SemanticExecutionOutput {
                 artifact: Digest([1; 32]),
@@ -623,12 +651,17 @@ mod semantic_tests {
         CsrClosureInputs::new(4, &[0, 1, 2, 3, 3], &[1, 2, 3], &[1, 1, 1], u32::MAX, 3)
     }
 
+    fn executor(results: ResultSet) -> InspectingGraphExecutor {
+        InspectingGraphExecutor {
+            calls: AtomicUsize::new(0),
+            results,
+            divergent_value: AtomicUsize::new(usize::MAX),
+        }
+    }
+
     #[test]
     fn fixpoint_builds_one_retained_graph_and_executes_once() {
-        let executor = InspectingGraphExecutor {
-            calls: AtomicUsize::new(0),
-            omit_final_frontier: false,
-        };
+        let executor = executor(ResultSet::Owned);
         let frontier =
             forward_closure_via_change_flag_gpu(&executor, &policy(), chain_inputs(), &[1])
                 .expect("semantic fixpoint graph should execute");
@@ -638,13 +671,29 @@ mod semantic_tests {
 
     #[test]
     fn fixpoint_rejects_any_omitted_retained_stage_value() {
-        let executor = InspectingGraphExecutor {
-            calls: AtomicUsize::new(0),
-            omit_final_frontier: true,
-        };
+        let executor = executor(ResultSet::OmitFinalFrontier);
         let error = forward_closure_via_change_flag_gpu(&executor, &policy(), chain_inputs(), &[1])
-            .expect_err("missing canonical output must fail closed");
-        assert!(error.to_string().contains("expected 6"));
+            .expect_err("an omitted retained value must fail closed");
+        let omitted = executor.divergent_value.load(Ordering::SeqCst);
+        assert!(
+            error.to_string().contains(&format!("omitted [{omitted}]")),
+            "error must name the omitted graph value: {error}"
+        );
+        assert_eq!(executor.calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn fixpoint_rejects_a_value_the_graph_does_not_retain() {
+        let executor = executor(ResultSet::AddUnretained);
+        let error = forward_closure_via_change_flag_gpu(&executor, &policy(), chain_inputs(), &[1])
+            .expect_err("an unretained value must fail closed");
+        let undeclared = executor.divergent_value.load(Ordering::SeqCst);
+        assert!(
+            error
+                .to_string()
+                .contains(&format!("undeclared [{undeclared}]")),
+            "error must name the undeclared graph value: {error}"
+        );
         assert_eq!(executor.calls.load(Ordering::SeqCst), 1);
     }
 }

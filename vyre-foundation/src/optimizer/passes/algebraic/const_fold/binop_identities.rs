@@ -12,37 +12,6 @@ use crate::optimizer::algebraic_rules::{
     binop_identity_replacement, IdentityReplacement, ScalarLiteral,
 };
 
-/// Check if an expression is known to produce a float type.
-/// Used by FMA synthesis to avoid integer→float promotion.
-pub(crate) fn is_float_expr(expr: &Expr) -> bool {
-    match expr {
-        Expr::LitF32(_) | Expr::Fma { .. } => true,
-        // BinOp with float evidence produces float.
-        Expr::BinOp { left, right, .. } => is_float_expr(left) || is_float_expr(right),
-        // UnOp preserves type
-        Expr::UnOp { operand, .. } => is_float_expr(operand),
-        // Cast to float
-        Expr::Cast { target, .. } => {
-            matches!(target, crate::ir::DataType::F32 | crate::ir::DataType::F64)
-        }
-        // Without a type system we cannot prove float-ness of
-        // variables/loads. Be conservative: do not synthesize FMA
-        // unless an operand provides real float evidence.
-        _ => false,
-    }
-}
-
-pub(super) fn mul_operands(expr: &Expr) -> Option<(&Expr, &Expr)> {
-    match expr {
-        Expr::BinOp {
-            op: crate::ir::BinOp::Mul,
-            left,
-            right,
-        } => Some((left, right)),
-        _ => None,
-    }
-}
-
 /// True iff `expr` is an integer literal (u32 or i32). Used by the
 /// distributive expansion rule to gate the rewrite so
 /// it only fires when one of the new sub-multiplications will fold
@@ -164,24 +133,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
     }
 
     match op {
-        // ─── FMA synthesis ───────────────────────────────────
-        // (a * b) + c  →  Fma(a, b, c)
-        // c + (a * b)  →  Fma(a, b, c)
-        // (a * b) - c  →  Fma(a, b, -c)
-        // c - (a * b)  →  Fma(-a, b, c)
-        // Maps to a single GPU FMA instruction: 1 cycle vs 2 for mul+add.
         BinOp::Add => {
-            if let Some((a, b)) = mul_operands(left) {
-                if is_float_expr(right) {
-                    return Some(Expr::fma(a.clone(), b.clone(), right.clone()));
-                }
-            }
-            if let Some((a, b)) = mul_operands(right) {
-                if is_float_expr(left) {
-                    return Some(Expr::fma(a.clone(), b.clone(), left.clone()));
-                }
-            }
-
             // ─── Algebraic Reassociation ─────────────────────────
             // (a + K1) + K2 → a + (K1 + K2)
             if let Expr::BinOp {
@@ -264,16 +216,6 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         BinOp::Sub => {
             if left == right && is_reflexive_cmp_safe(left) {
                 return Some(Expr::u32(0));
-            }
-            if let Some((a, b)) = mul_operands(left) {
-                if is_float_expr(right) {
-                    return Some(Expr::fma(a.clone(), b.clone(), Expr::negate(right.clone())));
-                }
-            }
-            if let Some((a, b)) = mul_operands(right) {
-                if is_float_expr(left) {
-                    return Some(Expr::fma(Expr::negate(a.clone()), b.clone(), left.clone()));
-                }
             }
 
             // ─── Distributive Law ──────────────────────────────────────────

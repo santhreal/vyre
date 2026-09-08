@@ -7,7 +7,7 @@
 
 #![cfg(feature = "pattern")]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::{reference_dedup_regions, reference_dedup_regions_in_place};
 
 use std::time::Instant;

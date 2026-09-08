@@ -2,8 +2,7 @@
 use vyre_debug::{dump_descriptor, DescriptorDumpOptions};
 use vyre_foundation::ir::{Expr, Ident, Node};
 
-#[path = "program_fixtures/mod.rs"]
-mod program_fixtures;
+use crate::program_fixtures;
 use program_fixtures::minimal_program;
 
 #[test]

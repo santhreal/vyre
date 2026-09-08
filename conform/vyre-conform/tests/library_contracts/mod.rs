@@ -2,7 +2,6 @@
 
 mod bundle_cert;
 mod cert;
-mod prover;
 mod witness_plan;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 

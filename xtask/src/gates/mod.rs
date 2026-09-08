@@ -84,11 +84,14 @@ pub mod script_ledger;
 pub mod shader_source;
 pub mod source_reachability;
 pub mod sweep;
+pub mod test_harness_isolation;
 pub mod test_material;
 pub mod test_only_capability;
+pub mod test_target_membership;
 pub mod testing_guides;
 pub mod unification;
 pub mod use_paths;
+pub mod variant_list_closure;
 pub mod wire_determinism;
 pub mod workspace_build;
 pub mod worktree_lifetime;
@@ -157,6 +160,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("neutral-crates", &layering::NeutralCrates),
     ("lego-quick", &lego_quick::LegoQuick),
     ("lint-expect-fix", &lint_hygiene::ExpectHasFix),
+    ("lint-liveness-evasion", &lint_hygiene::LivenessEvasion),
     ("lint-one-policy", &lint_hygiene::OneLintPolicy),
     ("lint-unsafe-budget", &lint_hygiene::UnsafeBudget),
     (
@@ -208,6 +212,10 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
         &source_reachability::SourceReachability,
     ),
     (
+        "test-harness-isolation",
+        &test_harness_isolation::TestHarnessIsolation,
+    ),
+    (
         "test-material-placement",
         &test_material::TestMaterialPlacement,
     ),
@@ -215,8 +223,16 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
         "test-only-capability",
         &test_only_capability::TestOnlyCapability,
     ),
+    (
+        "test-target-membership",
+        &test_target_membership::TestTargetMembership,
+    ),
     ("testing-guides", &testing_guides::TestingGuides),
     ("unification", &unification::Unification),
+    (
+        "variant-list-closure",
+        &variant_list_closure::VariantListClosure,
+    ),
     ("wire-determinism", &wire_determinism::WireDeterminism),
     ("workspace-check", &workspace_build::WorkspaceCheck),
     ("workspace-clippy", &workspace_build::WorkspaceClippy),

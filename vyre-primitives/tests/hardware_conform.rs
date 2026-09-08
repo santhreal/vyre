@@ -6,10 +6,8 @@
 //! gate; GPU conform tests run separately through the backend lowering
 //! and dispatch suites.
 
-mod gate_fixtures;
-
-use gate_fixtures::run_cpu;
 use vyre_primitives::hardware::all_entries;
+use vyre_test_support::hardware_oracle::run_cpu;
 
 #[test]
 fn hardware_intrinsics_match_expected_output() {

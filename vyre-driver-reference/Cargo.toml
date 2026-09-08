@@ -1,6 +1,7 @@
 [package]
 name = "vyre-driver-reference"
 version = "0.8.0"
+autotests = false
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -32,3 +33,7 @@ vyre-driver = { workspace = true, features = ["test-fixtures"] }
 # The shared semantic-execution graph, bindings, and request every backend
 # contract proves the seam with.
 vyre-test-support = { workspace = true, features = ["semantic-requests"] }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

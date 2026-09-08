@@ -14,9 +14,11 @@
 //! can be wrong, and it is wrong for all three at once instead of for the one
 //! nobody updated.
 //!
-//! Each consumer includes this file with `#[path]`, so every test binary gets
-//! its own `inventory` registration. That is required rather than incidental:
-//! the resolver table is per-binary.
+//! One module in the test binary owns this file, declared in `all_tests.rs`,
+//! and the suites reach the pair through `crate::opaque_echo_extension`. A
+//! second `#[path]` include of it inside the same binary submits the same
+//! extension kind twice, `OpaqueExprResolver` rejects that, and the rejection
+//! becomes the answer every later `Program::from_wire` in the binary receives.
 
 #![allow(dead_code)]
 

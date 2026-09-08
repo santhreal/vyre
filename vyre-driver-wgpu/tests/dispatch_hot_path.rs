@@ -14,7 +14,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 use harness::{acquire_live_backend as live_backend, add_one_program};
 
 use std::sync::{Mutex, MutexGuard};

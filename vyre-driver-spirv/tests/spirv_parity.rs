@@ -1,7 +1,7 @@
 //! SPIR-V driver contracts through canonical verified lowering and emission.
 //!
 //! The registry, payload-format and authenticated-execution statements are the
-//! shared contract in `tests/support/target_compiler_contract.rs`. What stays
+//! shared contract in `vyre_test_support::target_compiler_contract`. What stays
 //! here is SPIR-V specific: structural validation of emitted words through
 //! `spirv-val`, determinism of the SPIR-V writer, and the perturbation cases that
 //! prove this materializer refuses a payload before it touches Vulkan.
@@ -15,12 +15,12 @@ use vyre_driver_spirv::SpirvBackend;
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{TargetModuleBundle, TargetPayload, TargetPayloadFormat};
 
-mod target_artifacts;
-use target_artifacts::target_compiler_contract::{
+use crate::target_artifacts;
+use target_artifacts::{artifact, foreign_artifact, spirv};
+use vyre_test_support::target_compiler_contract::{
     assert_materializer_executes_payload, assert_target_compiler_emits_bundle, registration,
     store_one_program,
 };
-use target_artifacts::{artifact, foreign_artifact, spirv};
 
 /// First word of every well-formed SPIR-V module.
 const SPIRV_MAGIC: u32 = 0x0723_0203;

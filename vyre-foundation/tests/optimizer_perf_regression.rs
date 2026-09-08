@@ -4,7 +4,7 @@
 //! End-to-end optimizer performance regression tests.
 //!
 //! These tests verify that the full `optimize()` pipeline fires all critical
-//! passes (const_fold, strength_reduce, FMA synthesis, CSE, DCE) and that the
+//! passes (const_fold, strength_reduce, CSE, DCE) and that the
 //! output instruction count is strictly less than the input. Any regression
 //! that inflates the output IR is a performance bug.
 
@@ -163,9 +163,14 @@ fn contains_shl(expr: &Expr) -> bool {
     }
 }
 
+/// The optimizer leaves a multiply-add as two roundings.
+///
+/// An FMA rounds once. Introducing one changes what the program computes, and
+/// on a strict-IEEE dispatch it changes it after the caller asked for exactly
+/// the opposite. Contraction is the target's decision under the dispatch's
+/// float lowering mode, and the emitters make it.
 #[test]
-fn optimize_synthesizes_fma_from_mul_add() {
-    // (a * b) + c where c is float should become Fma(a, b, c)
+fn optimize_leaves_a_multiply_add_as_two_roundings() {
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)],
         [1, 1, 1],
@@ -183,8 +188,8 @@ fn optimize_synthesizes_fma_from_mul_add() {
         _ => false,
     });
     assert!(
-        has_fma,
-        "Fix: const_fold must synthesize FMA from (a*b)+c with float addend. Body: {body:?}"
+        !has_fma,
+        "Fix: a semantic pass contracted (a*b)+c into one rounding. Body: {body:?}"
     );
 }
 

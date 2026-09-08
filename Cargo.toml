@@ -222,10 +222,14 @@ dropping_copy_types = "allow"
 unexpected_cfgs = "deny"
 unsafe_code = "deny"
 missing_docs = "deny"
-unreachable_pub = "warn"
-# WIP modules have staged variables/methods for upcoming passes.
-unused_variables = "allow"
-dead_code = "allow"
+unreachable_pub = "deny"
+# An unused binding or an item no caller reaches is either work the tree does
+# not do yet, which does not ship, or code with no owner. A narrow generated or
+# harness exception is `#[expect(..., reason = "...")]` at the smallest item,
+# and an expectation that stops applying fails the build rather than lingering.
+unused_variables = "deny"
+dead_code = "deny"
+unfulfilled_lint_expectations = "deny"
 nonstandard_style = { level = "warn", priority = -1 }
 rust_2018_idioms = { level = "warn", priority = -1 }
 

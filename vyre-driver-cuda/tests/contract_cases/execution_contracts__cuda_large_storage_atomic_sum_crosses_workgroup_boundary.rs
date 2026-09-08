@@ -20,27 +20,53 @@ fn cuda_large_storage_atomic_sum_crosses_workgroup_boundary() {
     );
 }
 
+/// The artifact route launches the geometry the compiler admitted, and a caller
+/// grid cannot reach it.
+///
+/// `submit` takes a binding set and nothing else, so a hostile grid has no
+/// channel into the artifact route. It is applied here through the direct
+/// dispatch route on the same program to pin what that grid actually computes:
+/// one workgroup, a sum strictly short of `count`. An artifact route that
+/// adopted a caller grid would return that partial sum instead of the full one.
+///
+/// A grid override beside a frozen launch is refused rather than ranked, and
+/// that rule is owned by `vyre-driver/tests/backend_launch_validation.rs`. This
+/// config carries no frozen launch, so it is a legal dispatch.
 #[test]
-fn cuda_artifact_dispatch_uses_admitted_geometry_over_hostile_caller_config() {
+fn cuda_artifact_dispatch_launches_admitted_geometry_not_a_caller_grid() {
     let count = 4096u32;
     let program = make_atomic_sum_program(count, false);
     let backend = acquire_cuda_backend();
     let values = u32_bytes(&vec![1; count as usize]);
     let initial_sum = u32_bytes(&[0]);
+
     let mut hostile_config = DispatchConfig::default();
     hostile_config.grid_override = Some([1, 1, 1]);
-    let outputs = compiled_cuda_outputs_with_config(
+    let hostile_outputs = backend
+        .dispatch(
+            &program,
+            &[initial_sum.clone(), values.clone()],
+            &hostile_config,
+        )
+        .expect("Fix: a grid override with no frozen launch must be a legal dispatch.");
+    let hostile_sum = bytes_u32(&hostile_outputs[0]);
+    assert!(
+        hostile_sum[0] < count,
+        "Fix: grid override [1,1,1] must launch one workgroup, so its sum is short of {count}; got {}.",
+        hostile_sum[0]
+    );
+
+    let outputs = compiled_cuda_outputs(
         &backend,
         &program,
         &[initial_sum, values],
-        &hostile_config,
         "CUDA artifact admitted geometry",
     );
-
     assert_eq!(
         bytes_u32(&outputs[0]),
         vec![count],
-        "Fix: CUDA artifact dispatch must retain admitted geometry instead of caller launch config."
+        "Fix: the artifact route must launch its admitted geometry; {} is the caller grid's own answer.",
+        hostile_sum[0]
     );
 }
 

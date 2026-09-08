@@ -12,7 +12,7 @@
 
 #![cfg(feature = "math-kernels")]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::prefix_scan_cpu_ref as cpu_ref;
 
 use std::collections::HashMap;

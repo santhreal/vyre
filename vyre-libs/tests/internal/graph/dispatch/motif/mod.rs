@@ -1,71 +1,9 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::graph::dispatch::motif::{motif_matches_via, motif_participation_count_via};
-use crate::graph::motif::{
-    match_motif, motif_matches, motif_participation_count, plan_motif_launch, try_match_motif,
-    try_motif_matches, try_motif_participation_count, MotifEdge,
-};
+use crate::graph::motif::{plan_motif_launch, validate_motif_inputs, MotifEdge};
 use crate::test_parity_oracles::{policy, SequentialOutputs, StaticOutputs};
 use vyre_megakernel::SemanticExecutionError;
-use vyre_reference::composition_witness::motif_witness;
-
-fn reference_motif(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_masks: &[u32],
-    motif_edges: &[MotifEdge],
-) -> Vec<u32> {
-    let edges = motif_edges
-        .iter()
-        .map(|edge| (edge.from, edge.kind_mask, edge.to))
-        .collect::<Vec<_>>();
-    motif_witness(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_masks,
-        &edges,
-    )
-}
-
-fn reference_motif_matches(
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_masks: &[u32],
-    motif_edges: &[MotifEdge],
-) -> bool {
-    let node_count = edge_offsets.len().saturating_sub(1) as u32;
-    motif_edges.is_empty()
-        || reference_motif(
-            node_count,
-            edge_offsets,
-            edge_targets,
-            edge_kind_masks,
-            motif_edges,
-        )
-        .into_iter()
-        .any(|value| value != 0)
-}
-
-fn reference_motif_participation_count(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_masks: &[u32],
-    motif_edges: &[MotifEdge],
-) -> u32 {
-    reference_motif(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_masks,
-        motif_edges,
-    )
-    .into_iter()
-    .filter(|&value| value != 0)
-    .count() as u32
-}
 
 const MOTIF_CONTRACT: &str = "motif match dispatch";
 
@@ -90,30 +28,20 @@ fn chain_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>, Vec<MotifEdge>) {
 }
 
 #[test]
-fn matches_primitive_directly() {
-    let (offsets, targets, masks, motif) = chain_graph();
-    let via_substrate = match_motif(3, &offsets, &targets, &masks, &motif);
-    let via_primitive = reference_motif(3, &offsets, &targets, &masks, &motif);
-    assert_eq!(via_substrate, via_primitive);
-}
-
-#[test]
-fn checked_reference_wrappers_surface_bad_motif_endpoints() {
+fn a_motif_endpoint_outside_the_graph_is_rejected_with_its_index() {
     let bad_motif = [MotifEdge {
         from: 0,
         kind_mask: 1,
         to: 3,
     }];
 
-    let err = try_motif_participation_count(3, &[0, 1, 1, 1], &[1], &[1], &bad_motif)
-        .expect_err("bad motif endpoint must fail through substrate wrapper");
+    let err = validate_motif_inputs(3, &[0, 1, 1, 1], &[1], &[1], &bad_motif)
+        .expect_err("a motif endpoint outside the graph must be rejected");
 
     assert!(
         err.contains("motif_edges[0].to=3 is outside node_count 3"),
-        "Fix: substrate motif wrapper must preserve primitive endpoint diagnostics, got: {err}"
+        "Fix: motif validation must name the offending edge index and endpoint, got: {err}"
     );
-    assert!(try_match_motif(3, &[0, 1, 1, 1], &[1], &[1], &bad_motif).is_err());
-    assert!(try_motif_matches(3, &[0, 1, 1, 1], &[1], &[1], &bad_motif).is_err());
 }
 
 #[test]
@@ -132,34 +60,6 @@ fn launch_plan_matches_primitive_dispatch_plan() {
     let dispatch_program = dispatch.program();
     assert_eq!(launch_program.entry_op_id, dispatch_program.entry_op_id);
     assert_eq!(launch_program.buffers.len(), dispatch_program.buffers.len());
-}
-
-#[test]
-fn predicate_and_count_match_primitive_output() {
-    let (offsets, targets, masks, motif) = chain_graph();
-    assert_eq!(
-        motif_matches(3, &offsets, &targets, &masks, &motif),
-        reference_motif_matches(&offsets, &targets, &masks, &motif)
-            && reference_motif_participation_count(3, &offsets, &targets, &masks, &motif) != 0
-    );
-    assert_eq!(
-        motif_participation_count(3, &offsets, &targets, &masks, &motif),
-        reference_motif_participation_count(3, &offsets, &targets, &masks, &motif)
-    );
-}
-
-#[test]
-fn missing_edge_clears_match_and_participation() {
-    let motif = [MotifEdge {
-        from: 1,
-        kind_mask: 1,
-        to: 2,
-    }];
-    assert!(!motif_matches(3, &[0, 1, 1, 1], &[1], &[1], &motif));
-    assert_eq!(
-        motif_participation_count(3, &[0, 1, 1, 1], &[1], &[1], &motif),
-        0
-    );
 }
 
 #[test]

@@ -1,6 +1,6 @@
 //! AOT contracts for canonical compiler artifact envelopes.
 
-mod fixture_target;
+use crate::fixture_target;
 
 use vyre_aot::TargetId;
 

@@ -14,6 +14,29 @@ enum VariantData {
     Named(Vec<FieldDef>),
 }
 
+/// How one field of an AST variant is compared.
+///
+/// A float field compares by bit pattern, never by `==`. IEEE equality is the
+/// wrong relation for a literal held in compiler IR: it reports that a NaN
+/// literal differs from itself, so a program carrying one is never equal to
+/// itself and every pass that rebuilds the tree reports a rewrite it did not
+/// make, which spun the optimizer fixpoint to its iteration cap and failed the
+/// compile. It also reports that `0.0` and `-0.0` are the same literal, which
+/// they are not: the sign survives division and copysign. Bit comparison is
+/// what the canonical wire fingerprint already uses, so structural equality
+/// and program identity now answer the same question.
+fn field_eq(left: &syn::Ident, right: &syn::Ident, ty: &Type) -> proc_macro2::TokenStream {
+    let float = matches!(
+        ty,
+        Type::Path(path) if path.qself.is_none() && (path.path.is_ident("f32") || path.path.is_ident("f64"))
+    );
+    if float {
+        quote! { #left.to_bits() == #right.to_bits() }
+    } else {
+        quote! { #left == #right }
+    }
+}
+
 struct AstVariant {
     attrs: Vec<Attribute>,
     ident: Ident,
@@ -237,7 +260,7 @@ pub(crate) fn vyre_ast_registry_impl(item: TokenStream) -> TokenStream {
                     VariantData::Unnamed(types) => {
                         let lefts: Vec<_> = (0..types.len()).map(|i| syn::Ident::new(&format!("l{i}"), proc_macro2::Span::call_site())).collect();
                         let rights: Vec<_> = (0..types.len()).map(|i| syn::Ident::new(&format!("r{i}"), proc_macro2::Span::call_site())).collect();
-                        let checks = lefts.iter().zip(rights.iter()).map(|(l, r)| quote! { #l == #r });
+                        let checks = lefts.iter().zip(rights.iter()).zip(types.iter()).map(|((l, r), ty)| field_eq(l, r, ty));
                         quote! {
                             (Self::#ident(#(#lefts),*), Self::#ident(#(#rights),*)) => { #(#checks)&&* },
                         }
@@ -247,7 +270,7 @@ pub(crate) fn vyre_ast_registry_impl(item: TokenStream) -> TokenStream {
                         let rights: Vec<_> = fields.iter().map(|f| syn::Ident::new(&format!("r_{}", f.name), proc_macro2::Span::call_site())).collect();
                         let f_names = fields.iter().map(|f| &f.name);
                         let f_names2 = fields.iter().map(|f| &f.name);
-                        let checks = lefts.iter().zip(rights.iter()).map(|(l, r)| quote! { #l == #r });
+                        let checks = lefts.iter().zip(rights.iter()).zip(fields.iter()).map(|((l, r), field)| field_eq(l, r, &field.ty));
                         quote! {
                             (Self::#ident { #(#f_names: #lefts),* }, Self::#ident { #(#f_names2: #rights),* }) => { #(#checks)&&* },
                         }

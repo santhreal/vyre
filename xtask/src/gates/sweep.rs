@@ -532,7 +532,6 @@ pub fn run(args: &[String]) {
     });
 
     if args.iter().any(|argument| argument == "--write-baseline") {
-        let recorded = baselines_or_exit(&root);
         let mut rows = Vec::new();
         let mut failing = Vec::new();
         let mut red = Vec::new();

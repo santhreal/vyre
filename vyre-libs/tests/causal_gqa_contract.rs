@@ -2,7 +2,7 @@
 
 #![forbid(unsafe_code)]
 
-mod wire_words;
+use crate::wire_words;
 use vyre_libs::nn::attention::gqa_attention_causal;
 use wire_words::execute_causal_gqa as execute;
 

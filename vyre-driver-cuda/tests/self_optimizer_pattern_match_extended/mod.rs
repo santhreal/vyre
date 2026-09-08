@@ -9,8 +9,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-#[path = "../harness/mod.rs"]
-mod harness;
+use crate::harness;
 
 pub(crate) use harness::self_optimizer::{
     assert_branch_folded_to, assert_cond_not_headed_by, assert_lit_bool, assert_lit_u32,

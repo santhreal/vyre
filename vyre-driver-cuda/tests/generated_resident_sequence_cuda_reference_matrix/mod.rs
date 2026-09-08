@@ -3,8 +3,7 @@
 #![cfg(feature = "device-tests")]
 
 mod basic_sequence_contracts;
-#[path = "../harness/mod.rs"]
-mod harness;
+use crate::harness;
 mod repeated_sequence_contracts;
 
 use harness::{

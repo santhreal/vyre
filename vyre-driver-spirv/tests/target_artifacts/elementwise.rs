@@ -1,7 +1,6 @@
 //! The element-wise programs the SPIR-V dispatch test and the Vulkan probe run.
 //!
-//! Shared the same way as `tests/support/preferred_dispatch_backend_contract.rs`:
-//! each consumer includes this file with `#[path]`.
+//! Both consumers include this file with `#[path]` from inside this crate.
 //!
 //! One owner matters here because the two consumers ask the same question from
 //! opposite sides. The test dispatches the program and compares it against the

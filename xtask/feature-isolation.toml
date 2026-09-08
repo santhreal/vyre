@@ -337,6 +337,10 @@ feature = "bitset"
 
 [[pair]]
 member = "vyre-libs"
+feature = "builder"
+
+[[pair]]
+member = "vyre-libs"
 feature = "builder-ops"
 
 [[pair]]
@@ -769,11 +773,23 @@ feature = "(default)"
 
 [[pair]]
 member = "vyre-test-support"
+feature = "(default),driver-artifact-contracts,ir-fixtures"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default),driver-artifact-contracts,ir-fixtures,semantic-requests"
+
+[[pair]]
+member = "vyre-test-support"
 feature = "(default),ir-fixtures"
 
 [[pair]]
 member = "vyre-test-support"
 feature = "(default),ir-fixtures,semantic-requests"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default),ir-fixtures,spec-strategies"
 
 [[pair]]
 member = "vyre-test-support"
@@ -785,11 +801,23 @@ feature = "(none)"
 
 [[pair]]
 member = "vyre-test-support"
+feature = "driver-artifact-contracts"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "driver-contracts"
+
+[[pair]]
+member = "vyre-test-support"
 feature = "ir-fixtures"
 
 [[pair]]
 member = "vyre-test-support"
 feature = "semantic-requests"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "spec-strategies"
 
 [[pair]]
 member = "xtask"

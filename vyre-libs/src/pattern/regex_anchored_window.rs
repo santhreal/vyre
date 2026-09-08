@@ -100,14 +100,6 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
         }
     }
 
-    /// The longest byte window any single candidate can consume, the DFA's
-    /// `max_pattern_len`. A consumer sizing a GPU per-candidate replay buffer
-    /// reads this to bound the work per origin.
-    #[must_use]
-    pub(crate) fn window_len(&self) -> u32 {
-        self.dfa.max_pattern_len
-    }
-
     /// Replay the anchored DFA seeded at a single candidate `origin`, appending
     /// every `(pattern_id, origin, end)` it accepts to `out`.
     ///

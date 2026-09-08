@@ -6,7 +6,7 @@ use std::fmt::Write as _;
 use naga::{BinaryOperator, Expression, Literal, LocalVariable, ScalarKind, Span, Statement};
 use smallvec::SmallVec;
 use vyre_foundation::ir::{DataType, UnOp};
-use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
+use vyre_lower::{GridIndexSpace, KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
 use super::super::op_lookup::{
     barrier_flags, naga_literal, unary_math_function, unary_operator, unpack_shift_mask,
@@ -27,6 +27,15 @@ macro_rules! with_route_kind {
             _ => Err(route_mismatch($route)),
         }
     };
+}
+
+/// Scalar kind one reinterpretation op produces, `None` for every other UnOp.
+fn bitcast_target_kind(op: &UnOp) -> Option<ScalarKind> {
+    match op {
+        UnOp::BitcastF32ToU32 => Some(ScalarKind::Uint),
+        UnOp::BitcastU32ToF32 => Some(ScalarKind::Float),
+        _ => None,
+    }
 }
 
 fn route_mismatch(route: OpDispatchRoute) -> EmitError {
@@ -76,7 +85,7 @@ impl BodyBuilder<'_> {
                 self.bind_result_typed(op, handle, ty)
             }
             OpDispatchRoute::LocalInvocationId => self.emit_builtin_axis(op, self.builtins.local),
-            OpDispatchRoute::GlobalInvocationId => self.emit_builtin_axis(op, self.builtins.global),
+            OpDispatchRoute::GlobalInvocationId => self.emit_global_invocation_id(op),
             OpDispatchRoute::WorkgroupId => self.emit_builtin_axis(op, self.builtins.workgroup),
             OpDispatchRoute::SubgroupLocalId => {
                 self.emit_scalar_builtin(op, self.builtins.subgroup_local, "SubgroupLocalId")
@@ -272,6 +281,11 @@ impl BodyBuilder<'_> {
                     UnOp::LogicalNot | UnOp::IsNan | UnOp::IsInf | UnOp::IsFinite => {
                         self.types.bool_ty
                     }
+                    // A reinterpretation keeps the width and changes the type,
+                    // so the result type is the target of the cast and not the
+                    // operand's type.
+                    UnOp::BitcastF32ToU32 => self.types.u32_ty,
+                    UnOp::BitcastU32ToF32 => self.types.f32_ty,
                     _ => self.value_type_operand(op, 0)?,
                 };
                 // 64-bit gate (mirrors the binop gate): U64/I64 are backed by
@@ -339,6 +353,15 @@ impl BodyBuilder<'_> {
                         op,
                         left: abs,
                         right: max,
+                    })
+                } else if let Some(kind) = bitcast_target_kind(unop) {
+                    // Naga's `As { convert: None }` is a reinterpretation, not a
+                    // conversion: the 32 bits are carried through unchanged, so
+                    // every zero, infinity, NaN payload and subnormal survives.
+                    self.append_expr(Expression::As {
+                        expr,
+                        kind,
+                        convert: None,
                     })
                 } else if let Some((shift, mask)) = unpack_shift_mask(unop) {
                     // Nibble/byte unpack has no Naga intrinsic; lower to an
@@ -577,12 +600,108 @@ impl BodyBuilder<'_> {
         }
     }
 
+    /// The global invocation id on `axis`, in this kernel's index space.
+    ///
+    /// Under a grid-linearized index space the x axis is the whole grid's
+    /// linear element index, so a launch folded onto y or z names the same
+    /// element a single-axis launch named. The other two axes are the folding
+    /// itself and are not readable as element coordinates; the descriptor that
+    /// reads one is rejected before emission.
     pub(in crate::emitter) fn global_invocation_axis(
         &mut self,
         axis: u32,
-    ) -> naga::Handle<Expression> {
+    ) -> Result<naga::Handle<Expression>, EmitError> {
         let base = self.append_expr(Expression::FunctionArgument(self.builtins.global));
-        self.append_expr(Expression::AccessIndex { base, index: axis })
+        if axis != 0 || !matches!(self.grid_index, GridIndexSpace::GridLinearized) {
+            return Ok(self.append_expr(Expression::AccessIndex { base, index: axis }));
+        }
+        self.grid_linearized_index(base)
+    }
+
+    /// `x + y * x_extent + z * x_extent * y_extent` over the whole grid.
+    ///
+    /// Each extent is the workgroup count the launch states on that axis times
+    /// the workgroup size declared on it, read from `num_workgroups` so one
+    /// compiled module serves every grid the launch planner folds to.
+    ///
+    /// A grid-linearized index space needs the `num_workgroups` builtin. Its
+    /// absence is refused rather than folded over one workgroup, which would
+    /// emit a module that computes the wrong elements instead of one that
+    /// fails to compile.
+    fn grid_linearized_index(
+        &mut self,
+        global: naga::Handle<Expression>,
+    ) -> Result<naga::Handle<Expression>, EmitError> {
+        let Some(num_workgroups) = self.builtins.num_workgroups else {
+            return Err(EmitError::InvalidDescriptor(
+                "a grid-linearized index space requires the num_workgroups builtin, which this \
+                 descriptor did not push"
+                    .to_string(),
+            ));
+        };
+        let groups = self.append_expr(Expression::FunctionArgument(num_workgroups));
+        let x = self.append_expr(Expression::AccessIndex {
+            base: global,
+            index: 0,
+        });
+        let y = self.append_expr(Expression::AccessIndex {
+            base: global,
+            index: 1,
+        });
+        let z = self.append_expr(Expression::AccessIndex {
+            base: global,
+            index: 2,
+        });
+        let x_extent = self.axis_extent(groups, 0);
+        let y_extent = self.axis_extent(groups, 1);
+        let row = self.append_expr(Expression::Binary {
+            op: BinaryOperator::Multiply,
+            left: y,
+            right: x_extent,
+        });
+        let plane_stride = self.append_expr(Expression::Binary {
+            op: BinaryOperator::Multiply,
+            left: x_extent,
+            right: y_extent,
+        });
+        let plane = self.append_expr(Expression::Binary {
+            op: BinaryOperator::Multiply,
+            left: z,
+            right: plane_stride,
+        });
+        let rows = self.append_expr(Expression::Binary {
+            op: BinaryOperator::Add,
+            left: x,
+            right: row,
+        });
+        Ok(self.append_expr(Expression::Binary {
+            op: BinaryOperator::Add,
+            left: rows,
+            right: plane,
+        }))
+    }
+
+    /// Invocation extent of one grid axis: workgroups on it times the
+    /// workgroup size on it. A unit workgroup size contributes no multiply.
+    fn axis_extent(
+        &mut self,
+        groups: naga::Handle<Expression>,
+        axis: u32,
+    ) -> naga::Handle<Expression> {
+        let count = self.append_expr(Expression::AccessIndex {
+            base: groups,
+            index: axis,
+        });
+        let width = self.workgroup_size[axis as usize];
+        if width == 1 {
+            return count;
+        }
+        let width = self.append_expr(Expression::Literal(Literal::U32(width)));
+        self.append_expr(Expression::Binary {
+            op: BinaryOperator::Multiply,
+            left: count,
+            right: width,
+        })
     }
 
     pub(in crate::emitter) fn emit_opaque_expr(

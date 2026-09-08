@@ -1,35 +1,34 @@
 //! PassScheduler fusion-query methods + remaining constructor helpers.
 //! Audit cleanup A21 (2026-04-30): split from monolithic scheduler.rs.
 
-#![allow(unused_imports)]
-
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
-use std::collections::VecDeque;
-use std::sync::OnceLock;
 
 use super::topo::{
     reserve_hash_map_capacity, reserve_vec_capacity, schedule_pass_metadata_indices,
-    schedule_passes,
 };
-use super::{PassResearchTrace, PassScheduler, PassSchedulingError, DEFAULT_MAX_ITERATIONS};
-use crate::optimizer::{
-    registered_passes, requirements_satisfied, AdapterCaps, OptimizerError, PassMetadata,
-    ProgramPassKind, ProgramPassRegistration,
-};
+use super::{PassResearchTrace, PassScheduler, PassSchedulingError};
+use crate::optimizer::{AdapterCaps, ProgramPassKind, ProgramPassRegistration};
 
 impl PassScheduler {
     /// Create a new `PassScheduler` from an explicit list of passes.
+    ///
+    /// # Panics
+    ///
+    /// Panics when constructor scratch cannot be reserved. The scheduler this
+    /// builds is the only thing that runs a pass, so an empty one compiles the
+    /// program with no optimization at all and returns it under an `Ok`. That
+    /// answer is indistinguishable from a program the pipeline decided not to
+    /// change, which is why allocation failure ends the compile instead of
+    /// quietly emptying it. Callers that can report the failure themselves use
+    /// [`Self::try_with_passes`].
+    #[must_use]
     pub fn with_passes(passes: Vec<ProgramPassKind>) -> Self {
         match Self::try_with_passes(passes) {
             Ok(scheduler) => scheduler,
-            Err(error) => {
-                tracing::error!(
-                    error = %error,
-                    "PassScheduler::with_passes could not reserve constructor scratch; continuing with an empty scheduler"
-                );
-                Self::empty_fallback()
-            }
+            Err(error) => panic!(
+                "PassScheduler could not reserve constructor scratch: {error}. Fix: lower the pass count for this compile, or call try_with_passes and report the failure."
+            ),
         }
     }
 
@@ -91,43 +90,12 @@ impl PassScheduler {
                 .enumerate()
                 .map(|(i, pass)| (pass.metadata().name, i)),
         );
-        Ok(Self {
+        Ok(Self::over(
             passes,
             pass_index,
-            research_traces: FxHashMap::default(),
             execution_order,
             requirements_prevalidated,
-            max_iterations: DEFAULT_MAX_ITERATIONS,
-            adapter: AdapterCaps::conservative(),
-            invalidation_adjacency_cache: OnceLock::new(),
-            invalidation_closure_cache: OnceLock::new(),
-            dirty_trigger_index_cache: OnceLock::new(),
-            initial_dirty_flags_cache: OnceLock::new(),
-            enforce_cost_monotone: false,
-            enforce_effect_handlers: false,
-            enforce_linear_types: false,
-            enforce_shape_predicates: false,
-        })
-    }
-
-    fn empty_fallback() -> Self {
-        Self {
-            passes: Vec::new(),
-            pass_index: FxHashMap::default(),
-            research_traces: FxHashMap::default(),
-            execution_order: Vec::new(),
-            requirements_prevalidated: true,
-            max_iterations: DEFAULT_MAX_ITERATIONS,
-            adapter: AdapterCaps::conservative(),
-            invalidation_adjacency_cache: OnceLock::new(),
-            invalidation_closure_cache: OnceLock::new(),
-            dirty_trigger_index_cache: OnceLock::new(),
-            initial_dirty_flags_cache: OnceLock::new(),
-            enforce_cost_monotone: false,
-            enforce_effect_handlers: false,
-            enforce_linear_types: false,
-            enforce_shape_predicates: false,
-        }
+        ))
     }
 
     /// Set the maximum number of iterations the scheduler will allow before giving up.
@@ -554,9 +522,4 @@ impl PassScheduler {
             closure
         })
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
 }

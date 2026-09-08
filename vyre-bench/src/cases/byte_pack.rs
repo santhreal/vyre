@@ -7,16 +7,6 @@ pub(crate) fn u32_input_bytes<const N: usize>(inputs: [&[u32]; N]) -> Vec<Vec<u8
     inputs.into_iter().map(u32_bytes).collect()
 }
 
-pub(crate) fn decode_u64_words(bytes: &[u8], context: &str) -> Result<Vec<u64>, BenchError> {
-    if bytes.len() % 8 != 0 {
-        return Err(BenchError::CorrectnessViolation(format!(
-            "{context} metric payload length {} is not divisible by 8",
-            bytes.len()
-        )));
-    }
-    Ok(vyre_primitives::wire::decode_u64_le_bytes_all(bytes))
-}
-
 /// Read one little-endian `u32` at a word index, bounds- and overflow-checked.
 ///
 /// `context` names the buffer in the error, so a case that reads several

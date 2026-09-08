@@ -6,7 +6,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 
 use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::encoding::bitset_summary::{

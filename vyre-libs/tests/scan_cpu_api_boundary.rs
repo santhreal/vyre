@@ -1,6 +1,6 @@
 //! API-boundary regression tests for production scan paths.
 
-mod harness;
+use crate::harness;
 
 #[test]
 fn scan_layer_does_not_export_cpu_named_execution_paths() {

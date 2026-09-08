@@ -486,11 +486,12 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 - Path: `vyre-test-support`
 - Owner: `test-support`
 - Layer: `test-tooling`
-- Internal production dependencies: `structure-gate`, `vyre-foundation`, `vyre-megakernel`, `vyre-reference`, `vyre-spec`
+- Internal production dependencies: `structure-gate`, `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-reference`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | `private` | `release-tooling` |
+| `vyre-driver` | the backend-neutral driver registry contract every backend fixture is stated against, behind the driver-contracts feature | `private` | `backend-contract` |
 | `vyre-foundation` | IR statement fixtures for the run-time variant enumeration, behind the ir-fixtures feature | `private` | `foundation-ir` |
 | `vyre-megakernel` | the semantic execution request every backend contract shares, behind the semantic-requests feature | `private` | `megakernel-compiler` |
 | `vyre-reference` | reference interpreter oracle evaluation and canonical ULP distance calculation for the differential execution matrix, behind the ir-fixtures feature | `private` | `reference-semantics` |

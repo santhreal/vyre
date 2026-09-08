@@ -9,7 +9,7 @@
 #![cfg(feature = "device-tests")]
 #![allow(clippy::assertions_on_constants)]
 
-mod harness;
+use crate::harness;
 use harness::{
     add_one_program, assert_actionable_error, assert_non_cpu_backend, selected_adapter,
     shared_live_backend as live_backend,

@@ -14,11 +14,11 @@ use crate::graph::exploded::{
     IFDS_CSR_KILL_PROC_BUFFER, IFDS_CSR_ROW_CURSOR_BUFFER, IFDS_CSR_ROW_PTR_BUFFER,
 };
 
-use crate::dispatch_buffers::decode_u32_output_exact;
-use crate::graph::dispatch::dispatch_bridge::{refresh_keyed_dispatch_inputs, DispatchInput};
-use vyre_megakernel::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+use crate::graph::dispatch::dispatch_bridge::{
+    dispatch_u32_outputs_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
+    U32Readback,
 };
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// GPU dispatch wrapper around the `build_cpu_reference` CPU oracle.
 ///
@@ -228,18 +228,13 @@ pub fn build_ifds_csr_via_with_scratch_into(
         policy,
         &cached.program,
         &scratch.inputs,
-        &plan,
         plan.row_ptr_words,
-        IFDS_CSR_ROW_PTR_BUFFER,
         row_ptr_out,
         plan.row_cursor_words,
-        IFDS_CSR_ROW_CURSOR_BUFFER,
         &mut scratch.row_cursor,
         plan.col_idx_words,
-        IFDS_CSR_COL_IDX_BUFFER,
         col_idx_out,
         plan.col_len_words,
-        IFDS_CSR_COL_LEN_BUFFER,
         &mut scratch.col_len_words,
     )?;
     let col_len = validate_ifds_csr_readback(
@@ -254,83 +249,54 @@ pub fn build_ifds_csr_via_with_scratch_into(
     Ok(())
 }
 
+/// Read the four CSR buffers the IFDS build declares as its result.
+///
+/// Each readback names a declared Program buffer, so the kill bitmap the
+/// program also writes needs no attention here: it is written storage no caller
+/// reads, and a position in the result list is not a name.
 #[allow(clippy::too_many_arguments)]
 fn dispatch_ifds_csr_outputs_from_prepared_into(
     dispatcher: &dyn SemanticExecutor,
     policy: &SemanticExecutionPolicy,
     program: &vyre_foundation::ir::Program,
     scratch_inputs: &[Vec<u8>],
-    plan: &IfdsCsrDispatchPlan,
     row_ptr_expected_words: usize,
-    row_ptr_context: &str,
     row_ptr_out: &mut Vec<u32>,
     row_cursor_expected_words: usize,
-    row_cursor_context: &str,
     row_cursor_out: &mut Vec<u32>,
     col_idx_expected_words: usize,
-    col_idx_context: &str,
     col_idx_out: &mut Vec<u32>,
     col_len_expected_words: usize,
-    col_len_context: &str,
     col_len_out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    let expected_killed_bytes = plan.killed_words * std::mem::size_of::<u32>();
-    let outputs = execute_single_program(
+    dispatch_u32_outputs_from_prepared_into(
         dispatcher,
-        "build_ifds_csr",
+        policy,
         program.clone(),
         scratch_inputs,
-        policy,
-    )?
-    .outputs;
-    let (row_ptr_bytes, row_cursor_bytes, col_idx_bytes, col_len_bytes) = match outputs.as_slice() {
-        [b0, b1, b2, b3] => (b0.as_slice(), b1.as_slice(), b2.as_slice(), b3.as_slice()),
-        [killed, b0, b1, b2, b3] => {
-            validate_ifds_csr_killed_scratch_bytes(killed.len(), expected_killed_bytes)?;
-            (b0.as_slice(), b1.as_slice(), b2.as_slice(), b3.as_slice())
-        }
-        _ => {
-            return Err(SemanticExecutionError::Backend(format!(
-                "Fix: {row_ptr_context} expected four u32 output buffers or killed scratch plus four u32 output buffers, got {}.",
-                outputs.len()
-            )));
-        }
-    };
-    decode_u32_output_exact(
-        row_ptr_bytes,
-        row_ptr_expected_words,
-        row_ptr_context,
-        row_ptr_out,
-    )?;
-    decode_u32_output_exact(
-        row_cursor_bytes,
-        row_cursor_expected_words,
-        row_cursor_context,
-        row_cursor_out,
-    )?;
-    decode_u32_output_exact(
-        col_idx_bytes,
-        col_idx_expected_words,
-        col_idx_context,
-        col_idx_out,
-    )?;
-    decode_u32_output_exact(
-        col_len_bytes,
-        col_len_expected_words,
-        col_len_context,
-        col_len_out,
+        &mut [
+            U32Readback {
+                buffer: "row_ptr",
+                words: row_ptr_expected_words,
+                out: row_ptr_out,
+            },
+            U32Readback {
+                buffer: "row_cursor",
+                words: row_cursor_expected_words,
+                out: row_cursor_out,
+            },
+            U32Readback {
+                buffer: "col_idx",
+                words: col_idx_expected_words,
+                out: col_idx_out,
+            },
+            U32Readback {
+                buffer: "col_len",
+                words: col_len_expected_words,
+                out: col_len_out,
+            },
+        ],
     )
-}
-fn validate_ifds_csr_killed_scratch_bytes(
-    actual_len: usize,
-    expected_len: usize,
-) -> Result<(), SemanticExecutionError> {
-    if actual_len != expected_len {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: {IFDS_CSR_KILLED_BUFFER} expected {expected_len} byte(s), got {actual_len}.",
-        )));
-    }
-    Ok(())
 }
 
 fn canonicalize_csr_within_rows_in_place(

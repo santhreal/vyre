@@ -145,6 +145,11 @@ pub(crate) enum IndexMap {
     /// paging exists to avoid. The map has to be injective for the move to
     /// write each destination once; every caller here derives the destination
     /// from distinct source coordinates through one block table lookup.
+    ///
+    /// Only the paged key-value cache writes this direction, so the variant
+    /// compiles with the dialect that owns that cache rather than with the
+    /// attention layout helpers it shares an emitter with.
+    #[cfg(feature = "llm")]
     Scatter {
         /// Buffer the value is read from, indexed by the guarded index.
         read: String,
@@ -196,6 +201,7 @@ pub(crate) fn layout_move_program(spec: LayoutMove<'_>) -> Program {
             vec![store(Expr::load(&patch, patch_index))],
             vec![store(Expr::load(&base, index.clone()))],
         )],
+        #[cfg(feature = "llm")]
         IndexMap::Scatter { read, destination } => vec![Node::Store {
             buffer: spec.write.into(),
             index: destination,

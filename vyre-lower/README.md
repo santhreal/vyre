@@ -71,7 +71,11 @@ A `KernelDescriptor` is:
 - `id: String`: diagnostic.
 - `bindings: BindingLayout { slots: Vec<BindingSlot> }`: buffers
   bound at the kernel boundary, looked up by `BindingSlot.slot` field.
-- `dispatch: Dispatch { workgroup_size }`: thread-group geometry.
+- `dispatch: Dispatch { workgroup_size, grid_index }`: thread-group geometry,
+  and the index space a lane derives its element index in. `PerAxis` reads the
+  x component of the global invocation id; `GridLinearized` reads that id
+  linearized over the whole grid, which is what a launch folded across grid
+  axes needs.
 - `body: KernelBody`: the program.
 
 A `KernelBody` is:

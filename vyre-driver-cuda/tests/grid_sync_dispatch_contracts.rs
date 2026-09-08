@@ -6,7 +6,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 use harness::{
     bytes_u32, cross_block_grid_sync_expected, cross_block_grid_sync_inputs,
     cross_block_grid_sync_program, CROSS_BLOCK_GRID_SYNC_WORKGROUP,
@@ -122,17 +122,6 @@ fn assert_grid_sync_output(out_bytes: &[u8], context: &str) {
             lanes() / CROSS_BLOCK_GRID_SYNC_WORKGROUP
         );
     }
-}
-
-/// The last output buffer of the fixture program is `out`. Taking it positionally
-/// keeps the assertion honest if a buffer is ever added ahead of it.
-fn out_buffer(outputs: &[Vec<u8>], context: &str) -> Vec<u8> {
-    outputs
-        .last()
-        .unwrap_or_else(|| {
-            panic!("Fix: {context} returned no output buffers; the fixture declares `out`.")
-        })
-        .clone()
 }
 
 /// The resident launch route must reset the barrier counter between launches.

@@ -1,39 +1,6 @@
-use super::{
-    wire_format_version_is_supported, MAGIC, MIN_SUPPORTED_WIRE_FORMAT_VERSION, WIRE_FORMAT_VERSION,
-};
 use crate::serial::wire::{Reader, MAX_STRING_LEN};
 
 impl<'a> Reader<'a> {
-    #[inline]
-    pub(crate) fn expect_magic(&mut self) -> Result<(), String> {
-        if self.bytes.len() < MAGIC.len() || &self.bytes[..MAGIC.len()] != MAGIC {
-            return Err(
-                "invalid IR wire-format header. Fix: serialize Program with Program::to_wire()."
-                    .to_string(),
-            );
-        }
-        self.pos = MAGIC.len();
-        // L.1.47: consume and validate the schema version immediately
-        // after the magic. Only the compiled-in version is accepted;
-        // newer blobs surface an actionable error pointing the caller
-        // at the version mismatch rather than producing an opaque
-        // downstream tag failure.
-        if self.bytes.len() < self.pos + 2 {
-            return Err(
-                "IR wire-format truncated before schema version. Fix: serialize Program with Program::to_wire()."
-                    .to_string(),
-            );
-        }
-        let version = u16::from_le_bytes([self.bytes[self.pos], self.bytes[self.pos + 1]]);
-        if !wire_format_version_is_supported(version) {
-            return Err(format!(
-                "IR wire-format version {version} is not supported by this decoder (reads {MIN_SUPPORTED_WIRE_FORMAT_VERSION} through {WIRE_FORMAT_VERSION}). Fix: upgrade the consumer or re-serialize with a compatible Program::to_wire()."
-            ));
-        }
-        self.pos += 2;
-        Ok(())
-    }
-
     #[inline]
     pub(crate) fn take(&mut self, len: usize) -> Result<&'a [u8], String> {
         let end = self.pos.checked_add(len).ok_or_else(|| {

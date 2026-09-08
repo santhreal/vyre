@@ -25,8 +25,11 @@
 //! tree it describes would make every recorded fingerprint dirty by
 //! construction.
 
-use std::path::Path;
-use std::process::Command;
+use std::collections::BTreeMap;
+use std::io::{BufRead, BufReader, Read, Write};
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::sync::{LazyLock, Mutex};
 
 /// Largest file this module digests whole.
 const MAX_UNTRACKED_FILE_BYTES: u64 = 64 * 1024 * 1024;
@@ -204,8 +207,7 @@ pub fn resolves_against(
             "source_fingerprint `{source_fingerprint}` names no commit"
         ));
     };
-    let changed = changed_between(root, base, carrier)?;
-    let expected = fingerprint_of(base, &changed);
+    let expected = expected_fingerprint(root, base, carrier)?;
     if expected == source_fingerprint {
         return Ok(());
     }
@@ -213,6 +215,32 @@ pub fn resolves_against(
         "source_fingerprint `{source_fingerprint}` does not name the source `{carrier}` carries, \
          which is `{expected}`"
     ))
+}
+
+/// The fingerprint the source `carrier` carries produces, against `base`.
+///
+/// Memoized on the tree and the pair. An evidence sweep judges every committed
+/// artifact, and artifacts generated from one tree and committed together share
+/// both commits, so the diff and its object reads are asked for once per pair
+/// instead of once per artifact.
+fn expected_fingerprint(root: &Path, base: &str, carrier: &str) -> Result<String, String> {
+    type Key = (PathBuf, String, String);
+    static EXPECTED: LazyLock<Mutex<BTreeMap<Key, String>>> =
+        LazyLock::new(|| Mutex::new(BTreeMap::new()));
+
+    // Two fixture checkouts can reach the same commit id from the same seeded
+    // content, so the tree is part of the identity of an answer about it.
+    let key = (root.to_path_buf(), base.to_string(), carrier.to_string());
+    if let Ok(cache) = EXPECTED.lock() {
+        if let Some(expected) = cache.get(&key) {
+            return Ok(expected.clone());
+        }
+    }
+    let expected = fingerprint_of(base, &changed_between(root, base, carrier)?);
+    if let Ok(mut cache) = EXPECTED.lock() {
+        cache.insert(key, expected.clone());
+    }
+    Ok(expected)
 }
 
 /// The fingerprint text for a base commit and what the source differs from it by.
@@ -295,6 +323,10 @@ fn changed_in_worktree(root: &Path) -> Option<Vec<ChangedPath>> {
 }
 
 /// Every non-evidence path two commits differ by, as `carrier` holds it.
+///
+/// One object read serves every changed path: the pair can differ by hundreds
+/// of files, and a `cat-file` process per file was what made judging one
+/// artifact cost minutes on a network checkout.
 fn changed_between(root: &Path, base: &str, carrier: &str) -> Result<Vec<ChangedPath>, String> {
     let names = git_bytes(
         root,
@@ -311,29 +343,125 @@ fn changed_between(root: &Path, base: &str, carrier: &str) -> Result<Vec<Changed
         ],
     )
     .map_err(|error| format!("git cannot compare `{base}` with `{carrier}`: {error}"))?;
-    Ok(ordered_paths(&[&names])
+    let paths = ordered_paths(&[&names]);
+    let objects: Vec<String> = paths
+        .iter()
+        .map(|path| format!("{carrier}:{path}"))
+        .collect();
+    Ok(paths
         .into_iter()
-        .map(|path| {
-            let content = committed_content(root, carrier, &path);
-            ChangedPath { path, content }
-        })
+        .zip(committed_objects(root, &objects))
+        .map(|(path, content)| ChangedPath { path, content })
         .collect())
 }
 
-/// What `carrier` holds at `path`, or `None` when it holds nothing there.
-fn committed_content(root: &Path, carrier: &str, path: &str) -> Option<Content> {
-    let object = format!("{carrier}:{path}");
-    let size: u64 = git_text(root, &["cat-file", "-s", &object])
-        .ok()?
-        .trim()
-        .parse()
-        .ok()?;
-    if size > MAX_UNTRACKED_FILE_BYTES {
-        return Some(Content::Oversized);
+/// What `carrier` holds at each requested `<commit>:<path>` object, in order.
+///
+/// One `git cat-file --batch` answers every request. The batch protocol frames
+/// each response, so a missing object is reported as missing rather than
+/// guessed at, and the whole set costs one process instead of two per path.
+fn committed_objects(root: &Path, objects: &[String]) -> Vec<Option<Content>> {
+    if objects.is_empty() {
+        return Vec::new();
     }
-    git_bytes(root, &["cat-file", "blob", &object])
-        .ok()
-        .map(Content::Bytes)
+    match batch_objects(root, objects, Some(MAX_UNTRACKED_FILE_BYTES)) {
+        Ok(contents) => contents,
+        // A batch that cannot start says nothing about any single object, so
+        // every request is answered as holding nothing, which is what a failed
+        // per-object read reported before.
+        Err(_) => objects.iter().map(|_| None).collect(),
+    }
+}
+
+/// What each requested `<commit>:<path>` object holds, as text, in order.
+///
+/// `None` names an object git does not resolve. Committed text is read whole:
+/// the size cap on [`committed_objects`] bounds what a source digest reads, and
+/// a caller judging one artifact needs all of it.
+#[must_use]
+pub fn committed_texts(root: &Path, objects: &[String]) -> Vec<Option<String>> {
+    if objects.is_empty() {
+        return Vec::new();
+    }
+    match batch_objects(root, objects, None) {
+        Ok(contents) => contents
+            .into_iter()
+            .map(|content| match content {
+                Some(Content::Bytes(bytes)) => Some(String::from_utf8_lossy(&bytes).into_owned()),
+                Some(Content::Oversized) | None => None,
+            })
+            .collect(),
+        Err(_) => objects.iter().map(|_| None).collect(),
+    }
+}
+
+/// Drive one `git cat-file --batch` over `objects`.
+fn batch_objects(
+    root: &Path,
+    objects: &[String],
+    cap: Option<u64>,
+) -> Result<Vec<Option<Content>>, String> {
+    let mut child = Command::new("git")
+        .args(["cat-file", "--batch"])
+        .current_dir(root)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|error| error.to_string())?;
+    let mut stdin = child.stdin.take().ok_or("git cat-file has no stdin")?;
+    let mut stdout = BufReader::new(child.stdout.take().ok_or("git cat-file has no stdout")?);
+
+    let mut contents = Vec::with_capacity(objects.len());
+    for object in objects {
+        // One request, one response: the reply is bounded by the object it
+        // names, so writing and reading in lockstep cannot fill a pipe.
+        writeln!(stdin, "{object}").map_err(|error| error.to_string())?;
+        stdin.flush().map_err(|error| error.to_string())?;
+        contents.push(read_batch_response(&mut stdout, cap)?);
+    }
+    drop(stdin);
+    let _ = child.wait();
+    Ok(contents)
+}
+
+/// Read one `cat-file --batch` response.
+fn read_batch_response(
+    stdout: &mut impl BufRead,
+    cap: Option<u64>,
+) -> Result<Option<Content>, String> {
+    let mut header = String::new();
+    if stdout
+        .read_line(&mut header)
+        .map_err(|error| error.to_string())?
+        == 0
+    {
+        return Err("git cat-file closed its output early".to_string());
+    }
+    let header = header.trim_end();
+    let mut fields = header.rsplitn(3, ' ');
+    let Some(size) = fields.next().and_then(|size| size.parse::<u64>().ok()) else {
+        // `<object> missing` and `<object> ambiguous` carry no body.
+        return Ok(None);
+    };
+    if cap.is_some_and(|cap| size > cap) {
+        // The body is still on the pipe and has to be consumed to keep the
+        // stream framed for the next request.
+        let mut sink = std::io::sink();
+        let mut body = stdout.take(size.saturating_add(1));
+        std::io::copy(&mut body, &mut sink).map_err(|error| error.to_string())?;
+        return Ok(Some(Content::Oversized));
+    }
+    let size = usize::try_from(size).map_err(|error| error.to_string())?;
+    let mut bytes = vec![0_u8; size];
+    stdout
+        .read_exact(&mut bytes)
+        .map_err(|error| error.to_string())?;
+    let mut terminator = [0_u8; 1];
+    stdout
+        .read_exact(&mut terminator)
+        .map_err(|error| error.to_string())?;
+    Ok(Some(Content::Bytes(bytes)))
 }
 
 /// Sort and deduplicate the NUL-separated path lists, so order is the source's.
@@ -527,5 +655,32 @@ mod tests {
         );
         assert!(issues("git:abc:dirty=false").is_empty());
         assert!(issues(&format!("git:abc:dirty=true:worktree={}", "a".repeat(64))).is_empty());
+    }
+
+    #[test]
+    fn a_recording_over_added_changed_and_deleted_paths_resolves_after_it_is_committed() {
+        let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
+        crate::fixture_checkout::seeded(dir.path());
+        std::fs::write(dir.path().join("deleted.txt"), "gone soon\n")
+            .expect("Fix: write the path the recording deletes.");
+        crate::fixture_checkout::commit_worktree(dir.path(), "add a second tracked path");
+
+        // One diff carrying a change, an addition and a deletion: the deleted
+        // path resolves to no object in the carrier, so the batch stream frames
+        // a body-less response between two bodies.
+        std::fs::write(dir.path().join("tracked.txt"), "changed\n")
+            .expect("Fix: change the tracked path.");
+        std::fs::write(dir.path().join("added.txt"), "new\n").expect("Fix: add an untracked path.");
+        std::fs::remove_file(dir.path().join("deleted.txt"))
+            .expect("Fix: delete the tracked path.");
+
+        let fingerprint = capture(dir.path()).expect("Fix: a dirty checkout still names a commit.");
+        crate::fixture_checkout::commit_worktree(dir.path(), "commit the recorded source");
+        let carrier = crate::fixture_checkout::head(dir.path());
+
+        resolves_against(dir.path(), &fingerprint, &carrier).expect(
+            "Fix: the digest of what a commit carries must equal the digest of the worktree it \
+             was committed from, across added, changed and deleted paths.",
+        );
     }
 }

@@ -201,9 +201,7 @@ fn const_buffer_promotion_rewrite_transforms_eligible_bindings_and_loads() {
                 },
             ],
         },
-        dispatch: Dispatch {
-            workgroup_size: [128, 1, 1],
-        },
+        dispatch: Dispatch::new(128, 1, 1),
         body: KernelBody {
             ops: vec![
                 lit(0, 0), // index 0 (result 0)
@@ -942,6 +940,46 @@ fn kernel_family_surfaces_have_single_reexport_schedule_and_evidence_contracts()
                     "{} schedule evidence_policy is blank",
                     family.family_id
                 ));
+            }
+        }
+    }
+
+    for family in &manifest.family {
+        let mut sources = Vec::new();
+        vyre_test_support::collect_rust_files(&root.join(&family.root), &mut sources);
+        for path in sources {
+            let text = read(&path);
+            let rel = path
+                .strip_prefix(&root)
+                .unwrap_or(&path)
+                .display()
+                .to_string();
+            if family.forbid_section_dividers {
+                for (index, line) in text.lines().enumerate() {
+                    let trimmed = line.trim();
+                    let divider = trimmed
+                        .strip_prefix("//")
+                        .map(str::trim_start)
+                        .is_some_and(|body| body.starts_with("----") || body.starts_with("===="));
+                    if divider {
+                        failures.push(format!(
+                            "{} {rel}:{} is a section divider, which this family forbids",
+                            family.family_id,
+                            index + 1
+                        ));
+                    }
+                }
+            }
+            for prefix in &family.forbidden_private_import_prefixes {
+                for (index, line) in text.lines().enumerate() {
+                    if line.trim_start().starts_with("use ") && line.contains(prefix.as_str()) {
+                        failures.push(format!(
+                            "{} {rel}:{} imports `{prefix}`, which this family forbids",
+                            family.family_id,
+                            index + 1
+                        ));
+                    }
+                }
             }
         }
     }

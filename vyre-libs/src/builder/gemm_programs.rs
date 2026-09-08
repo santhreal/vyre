@@ -9,7 +9,6 @@ use crate::plumbing::operand::tensor_ref::TensorRefError;
 
 /// Assemble 2D GEMM with 1D linear dispatch.
 pub(crate) fn build_matmul_2d_linear(
-    op_id: &'static str,
     generator: &'static str,
     a: &str,
     b: &str,
@@ -131,7 +130,6 @@ pub(crate) fn build_matmul_2d_linear(
 
 /// Assemble 3D batched GEMM: `out[b, i, j] = sum_k a[b, i, k] * b[b, k, j]`.
 pub(crate) fn build_batched_3d_contraction(
-    _op_id: &'static str,
     generator: &'static str,
     a: &str,
     b: &str,
@@ -264,7 +262,6 @@ pub(crate) fn build_batched_3d_contraction(
 /// Assemble row-batched affine projection with F32 accumulation.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn build_batched_rows_contraction(
-    _op_id: &'static str,
     generator: &'static str,
     x: &str,
     w: &str,
@@ -384,7 +381,6 @@ pub(crate) fn build_batched_rows_contraction(
 /// Assemble 1D block-tiled reference contraction loop.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn build_block_1d_contraction(
-    _op_id: &'static str,
     generator: &'static str,
     x: &str,
     w: &str,
@@ -490,7 +486,6 @@ pub(crate) fn build_block_1d_contraction(
 
 /// Assemble Matrix-Vector contraction.
 pub(crate) fn build_matvec_contraction(
-    _op_id: &'static str,
     generator: &'static str,
     matrix: &str,
     vector: &str,
@@ -543,7 +538,6 @@ pub(crate) fn build_matvec_contraction(
 
 /// Assemble 2x2 Strassen 7-multiplication closed-form Program.
 pub(crate) fn build_strassen_2x2(
-    _op_id: &'static str,
     generator: &'static str,
     a: &str,
     b: &str,
@@ -657,7 +651,6 @@ pub(crate) fn build_strassen_2x2(
 
 /// Assemble 1-level recursive Strassen 7-multiplication block Program.
 pub(crate) fn build_strassen_one_level(
-    _op_id: &'static str,
     generator: &'static str,
     a: &str,
     b: &str,

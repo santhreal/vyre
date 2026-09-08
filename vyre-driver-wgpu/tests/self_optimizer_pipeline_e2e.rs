@@ -10,7 +10,7 @@
 
 #![cfg(all(test, feature = "device-tests"))]
 
-mod harness;
+use crate::harness;
 use harness::acquire_live_backend as live_backend;
 use harness::self_optimizer::semantic_execution;
 

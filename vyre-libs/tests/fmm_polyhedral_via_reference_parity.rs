@@ -16,7 +16,7 @@
 //! sinkhorn f32 suites do). Inputs are bounded (and M2L distances kept >= 1 so the reciprocal is
 //! well-conditioned) so rounding stays far below tolerance while a wrong kernel fails by orders.
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::fmm_polyhedral_compress::{
     aggregate_to_cells_via, evaluate_at_regions_via, translate_to_targets_via,

@@ -13,7 +13,7 @@
 //! arithmetic, so the u32 oracle mirrors the IR bit-for-bit and any divergence is a real defect.
 #![forbid(unsafe_code)]
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::persistent_homology_loop_signature::region_loop_skeleton_fixed_via;
 

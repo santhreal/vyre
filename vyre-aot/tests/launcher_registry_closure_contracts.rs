@@ -6,13 +6,11 @@
 //! - Rejects unsupported or duplicate target payloads.
 //! - Verifies a generated package through compile, load, materialize, and dispatch.
 
-mod fixture_target;
+use crate::fixture_target;
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 use vyre_aot::{emit_launcher_rust, ArtifactEnvelope, LauncherError, LauncherOpts, TargetId};
-use vyre_driver::{
-    registered_aot_launcher_emitters, AotLauncherEmitter, AotLauncherFiles, AotLauncherRequest,
-};
+use vyre_driver::registered_aot_launcher_emitters;
 
 #[test]
 fn launcher_registry_has_unique_owner_per_target() {
@@ -26,6 +24,29 @@ fn launcher_registry_has_unique_owner_per_target() {
             "Fix: duplicate AOT launcher emitter detected for target `{target}`"
         );
     }
+}
+
+/// The shared fixture target must stay launcher-unregistered for this binary.
+///
+/// `inventory::submit!` registers at link time wherever it is written, so an
+/// emitter added for the shared fixture anywhere in this test binary silently
+/// converts the bundle refusal contracts into passes that assert nothing. This
+/// fails first and names the cause, instead of leaving that to a packaging test
+/// two files away that reports only an unexpected success.
+#[test]
+fn shared_fixture_target_owns_no_launcher_emitter() {
+    let shared = fixture_target::fixture_target();
+    let owned: Vec<_> = registered_aot_launcher_emitters()
+        .into_iter()
+        .filter(|emitter| emitter.target == shared)
+        .map(|emitter| emitter.target.to_string())
+        .collect();
+    assert!(
+        owned.is_empty(),
+        "Fix: `{shared}` is the target the bundle contracts use to prove packaging refuses an \
+         unregistered launcher, so it must own no emitter. Register the new emitter under a \
+         target of its own, as `fixture-launcher-target` does. Found: {owned:?}"
+    );
 }
 
 #[test]
@@ -61,34 +82,15 @@ fn launcher_rejects_missing_target_payload_in_envelope() {
     );
 }
 
+/// The launcher fixture target owns an emitter, so generation must succeed.
+///
+/// It is a target of its own rather than the shared fixture, because the
+/// registration is link-time and the bundle contracts assert the shared fixture
+/// has no emitter.
 #[test]
 fn launcher_end_to_end_package_generation_and_dispatch_simulation() {
-    let artifact = fixture_target::compiled_artifact();
-    let target = fixture_target::fixture_target();
-
-    // Submit mock emitter for fixture target if not already present
-    fn emit_fixture_launcher(req: &AotLauncherRequest<'_>) -> Result<AotLauncherFiles, String> {
-        let mut files = BTreeMap::new();
-        files.insert(
-            std::path::PathBuf::from("src/main.rs"),
-            format!(
-                "// Generated launcher for {}\nfn main() {{ println!(\"ok\"); }}",
-                req.crate_name
-            ),
-        );
-        Ok(AotLauncherFiles {
-            dependencies: vec![],
-            files,
-        })
-    }
-
-    // Register emitter statically
-    inventory::submit! {
-        AotLauncherEmitter {
-            target: fixture_target::FIXTURE_TARGET_ID,
-            emit: emit_fixture_launcher,
-        }
-    }
+    let artifact = fixture_target::compiled_artifact_for_launcher();
+    let target = fixture_target::launcher_fixture_target();
 
     let opts = LauncherOpts {
         crate_name: "test-model-launcher".to_string(),

@@ -5,10 +5,7 @@
 //! `OpaqueExprResolver` / `OpaqueNodeResolver`, then the program round-trips
 //! through `to_wire` → `from_wire` and is asserted byte-identical.
 
-#[path = "support/opaque_echo_extension.rs"]
-mod opaque_echo_extension;
-
-use opaque_echo_extension::{EchoExpr, EchoNode};
+use crate::opaque_echo_extension::{EchoExpr, EchoNode};
 
 use std::sync::Arc;
 

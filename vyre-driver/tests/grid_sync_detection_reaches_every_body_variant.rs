@@ -35,7 +35,7 @@
 //! division is pinned by `grid_sync_nested_fence_survives_split.rs`. Here the
 //! claim is narrower and load-bearing: the fence is never reported as absent.
 
-use vyre_driver::grid_sync::{contains_grid_sync, split_on_grid_sync};
+use vyre_driver::grid_sync::{contains_grid_sync, try_split_on_grid_sync};
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
 use vyre_foundation::visit::child_bodies;
@@ -134,7 +134,8 @@ fn detects_a_fence_nested_two_levels_deep() {
 fn a_fence_in_any_body_slot_survives_the_split() {
     for sample in node_body_slot_samples(&grid_fence()) {
         let program = program_with(vec![sample.node.clone()]);
-        let segments = split_on_grid_sync(&program);
+        let segments = try_split_on_grid_sync(&program)
+            .expect("Fix: the fixture program must split at its grid-sync fences");
         assert!(
             !segments.is_empty(),
             "{}: the split must always produce at least one segment",

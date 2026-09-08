@@ -324,7 +324,8 @@ fn the_split_path_launches_every_wave_because_return_is_per_segment() {
 
     // Two GridSync barriers per wave, so the wave list splits into
     // 2 * budget + 1 segments. Every one of these is a launch the host issues.
-    let segments = vyre_driver::grid_sync::split_on_grid_sync(&program);
+    let segments = vyre_driver::grid_sync::try_split_on_grid_sync(&program)
+        .expect("Fix: the fixture program must split at its grid-sync fences");
     assert_eq!(
         segments.len(),
         2 * budget as usize + 1,

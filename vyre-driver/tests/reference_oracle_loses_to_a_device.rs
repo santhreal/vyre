@@ -10,8 +10,7 @@
 //! Both factories succeed, so the only thing separating them is the
 //! `reference_oracle` flag.
 
-#[macro_use]
-mod fixture_backend;
+use crate::fixture_backend;
 
 use fixture_backend::FixtureBackend;
 use vyre_driver::acquire_preferred_dispatch_backend;
@@ -28,14 +27,14 @@ fn acquire_device() -> Result<Box<dyn VyreBackend>, BackendError> {
     Ok(Box::new(FixtureBackend(DEVICE_ID)))
 }
 
-register_dispatchable_backend! {
+crate::register_dispatchable_backend! {
     id: ORACLE_ID,
     oracle: true,
     rank: 0,
     factory: acquire_oracle,
 }
 
-register_dispatchable_backend! {
+crate::register_dispatchable_backend! {
     id: DEVICE_ID,
     oracle: false,
     rank: 500,

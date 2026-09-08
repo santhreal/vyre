@@ -18,10 +18,10 @@
 //! against the real wgpu backend, the actual production path, so a
 //! subgroup-divergence under-fire that only manifests on device is caught there.
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::decode_u32_words as decode_u32;
 
-mod presence_oracle;
+use crate::presence_oracle;
 
 use presence_oracle::{
     assert_presence_matches, edge_cases, random_haystack, random_literals, random_region_starts,

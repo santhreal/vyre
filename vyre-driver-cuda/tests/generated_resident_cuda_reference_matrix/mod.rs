@@ -2,8 +2,7 @@
 
 #![cfg(feature = "device-tests")]
 
-#[path = "../harness/mod.rs"]
-mod harness;
+use crate::harness;
 
 mod case_defs;
 mod case_tables;

@@ -2209,7 +2209,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "builder-ops"
+        "builder"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -2311,7 +2311,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "builder-ops"
+        "builder"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:4",

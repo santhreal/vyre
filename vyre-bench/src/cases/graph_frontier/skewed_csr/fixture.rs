@@ -5,8 +5,7 @@ use crate::cases::queue_closure_oracle::{
     queue_closure_oracle, QueueClosureGraph, QueueClosureOracle,
 };
 use crate::cases::skewed_graph::{
-    active_high_degree_sources, build_skewed_csr_arrays, skewed_degree as shared_skewed_degree,
-    sparse_queue_capacity, SkewedCsrShape,
+    active_high_degree_sources, build_skewed_csr_arrays, sparse_queue_capacity, SkewedCsrShape,
 };
 
 pub(super) const CSR_NODE_COUNT: u32 = 1_048_576;
@@ -222,10 +221,6 @@ pub(super) fn skewed_csr_queue_closure_oracle(
         "skewed CSR",
         "raise the closure wave bound",
     )
-}
-
-fn skewed_degree(src: u32) -> u32 {
-    shared_skewed_degree(src, UGLY_HUB_DEGREE)
 }
 
 fn skewed_edge_kind(src: u32, edge: u32) -> u32 {

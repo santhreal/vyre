@@ -168,9 +168,13 @@ const CUDA_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
     },
     BackendFeatureRequirement {
         id: "cuda-resident-dispatch",
-        relative: "vyre-driver-cuda/src/backend/resident_dispatch/mod.rs",
+        relative: "vyre-driver-cuda/src/backend/resident_dispatch/sync.rs",
         role: "CUDA resident dispatch release path",
-        tokens: &["dispatch_resident", "ptx"],
+        tokens: &[
+            "fn dispatch_resident",
+            "ptx_for_program_cached_with_key",
+            "module_cache_key_for_ptx_source_key",
+        ],
     },
     BackendFeatureRequirement {
         id: "cuda-resident-io",
@@ -216,7 +220,7 @@ const CUDA_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
         id: "cuda-ptx-target-probe",
         relative: "vyre-driver-cuda/src/backend/ptx_target.rs",
         role: "CUDA loadable PTX target probing",
-        tokens: &["select_loadable_ptx_target_sm", "cumoduleloaddata"],
+        tokens: &["select_loadable_ptx_target_sm", "load_cuda_module_data"],
     },
     BackendFeatureRequirement {
         id: "megakernel-paired-speculation",

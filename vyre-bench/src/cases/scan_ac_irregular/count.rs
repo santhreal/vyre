@@ -228,6 +228,7 @@ pub(super) fn prepare_scan_ac_irregular_count(
     })
 }
 
+#[cfg(test)]
 pub(super) fn scan_ac_count_inputs(ac: &ClassicAcAutomaton, haystack: &[u8]) -> Vec<Vec<u8>> {
     let (candidate_end_mask, candidate_suffix2_mask, candidate_suffix3_bloom) =
         super::scan_ac_candidate_masks(ac);

@@ -5,10 +5,9 @@
 //! oracle, so the public builders must stay byte-exact over edge-heavy and
 //! generated lanes, including dispatch extents larger than one workgroup.
 
-mod gate_fixtures;
-
-use gate_fixtures::{generated_u32_with_edges, run_eval_single};
 use vyre_foundation::ir::Program;
+use vyre_test_support::hardware_oracle::{generated_u32_with_edges, run_eval_single};
+
 struct U32Case {
     name: &'static str,
     build: fn(&str, &str, u32) -> Program,

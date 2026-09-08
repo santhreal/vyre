@@ -1,7 +1,7 @@
 //! Resident timed-dispatch output contracts for the WGPU backend.
 //!
 //! The asynchronous overlap statement is the shared contract in
-//! `tests/support/resident_async_overlap_contract.rs`. The timed readback below
+//! `vyre_test_support::resident_async_overlap_contract`. The timed readback below
 //! is WGPU's own: it pins that a resident timed dispatch returns exactly the
 //! public read-write outputs and attributes GPU time to the WGPU timestamp query.
 
@@ -9,9 +9,7 @@
 
 use vyre_driver::VyreBackend;
 
-#[path = "../../tests/support/resident_async_overlap_contract.rs"]
-mod resident_async_overlap_contract;
-use resident_async_overlap_contract::{
+use vyre_test_support::resident_async_overlap_contract::{
     add_program, assert_resident_async_slots_retire_independently, DeviceTiming,
 };
 

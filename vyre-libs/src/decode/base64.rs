@@ -478,6 +478,11 @@ mod primitive_tests {
     #[test]
     fn standard_table_is_the_primitive_table() {
         assert_eq!(*standard_decode_table_ref(), standard_decode_table());
+        assert_eq!(
+            standard_decode_table(),
+            build_standard_decode_table(),
+            "Fix: the 256-entry base64 decode literal disagrees with the RFC 4648 alphabet."
+        );
         assert_eq!(standard_decode_table()[b'/' as usize], 63);
         assert_eq!(standard_decode_table()[b'*' as usize], INVALID);
     }

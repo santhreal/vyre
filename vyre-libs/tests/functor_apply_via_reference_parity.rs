@@ -14,7 +14,7 @@
 //! last-wins tie-break and OOB-drop are actually exercised (not a vacuous injective identity).
 #![forbid(unsafe_code)]
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::reasoning::functorial_pass_composition::apply_pass_functor_via;
 use vyre_reference::composition_witness::functor_apply_witness as apply_pass_functor;

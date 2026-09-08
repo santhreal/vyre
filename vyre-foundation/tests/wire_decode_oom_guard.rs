@@ -9,9 +9,7 @@
 //! Paired with `vyre-foundation/fuzz/fuzz_targets/program_wire.rs` for
 //! continuous fuzz coverage.
 
-mod wire_decode_hostile_inputs;
-
-use wire_decode_hostile_inputs::decode_error_string;
+use vyre_test_support::wire_hostile_inputs::decode_error_string;
 
 #[test]
 fn wire_decoder_rejects_oversized_declared_length() {

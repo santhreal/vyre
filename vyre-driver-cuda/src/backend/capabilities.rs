@@ -224,15 +224,6 @@ impl CudaBackend {
         flags
     }
 
-    pub(crate) fn ptx_for_program_cached(
-        &self,
-        program: &Program,
-        config: &DispatchConfig,
-    ) -> Result<Arc<str>, BackendError> {
-        self.ptx_for_program_cached_with_key(program, config)
-            .map(|(ptx, _)| ptx)
-    }
-
     pub(crate) fn ptx_for_program_cached_with_key(
         &self,
         program: &Program,

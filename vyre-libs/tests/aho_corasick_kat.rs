@@ -11,7 +11,7 @@
 
 #![cfg(feature = "pattern-dfa")]
 #![allow(deprecated)]
-mod wire_words;
+use crate::wire_words;
 use vyre_libs::pattern::aho_corasick;
 use vyre_libs::pattern::{dfa_compile, CompiledDfa};
 use vyre_reference::value::Value;

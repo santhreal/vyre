@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The declared-law prover selects a witness from the fixture cases that can carry it and proves the law over those, so a single-element or extent-mismatched case is skipped instead of turning the whole declaration into a proof that failed to execute."

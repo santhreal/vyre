@@ -8,9 +8,10 @@ use crate::pattern::regex_dfa::REGEX_DFA_OP_ID;
 use vyre_foundation::composition::wrap_child_region;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Ident, Node, Program};
 
-use super::{ac_output_span_nodes, ac_transition_step_nodes, AcInputBindings};
+use super::{
+    ac_output_span_nodes, ac_transition_step_nodes, output_record_loop_node, AcInputBindings,
+};
 use crate::pattern::builders::{append_match, append_match_subgroup};
-const REGION_GENERATOR: &str = "anonymous::vyre-libs::matching::regex_exact_ranges";
 
 /// Build the regex whole-buffer program with exact origin-derived starts.
 ///
@@ -28,7 +29,14 @@ pub(in crate::pattern) fn regex_exact_ranges_program(
     let haystack_len = inputs.haystack_len;
     let replay_limit = max_pattern_len.max(1);
     let origin = Expr::var("origin");
-    let remaining = Expr::sub(Expr::load(haystack_len, Expr::u32(0)), origin.clone());
+    // `haystack_len` is a live load, not an extent. The step body reads
+    // `haystack` through `load_packed_byte`, four bytes per word, so the real
+    // ceiling is four times its extent.
+    let scan_limit = Expr::min(
+        Expr::load(haystack_len, Expr::u32(0)),
+        Expr::mul(Expr::buf_len(inputs.haystack), Expr::u32(4)),
+    );
+    let remaining = Expr::sub(Expr::var("scan_limit"), origin.clone());
     let replay_len = Expr::select(
         Expr::lt(remaining.clone(), Expr::u32(replay_limit)),
         remaining,
@@ -36,10 +44,7 @@ pub(in crate::pattern) fn regex_exact_ranges_program(
     );
     let window_end = Expr::add(origin.clone(), replay_len);
 
-    let mut emit_body = vec![Node::let_bind(
-        "pattern_id",
-        Expr::load(inputs.output_records, Expr::var("out_idx")),
-    )];
+    let mut emit_body: Vec<Node> = Vec::new();
     if use_subgroup_coalesce {
         emit_body.extend(append_match_subgroup(
             matches,
@@ -62,17 +67,13 @@ pub(in crate::pattern) fn regex_exact_ranges_program(
     let mut walk_step =
         ac_transition_step_nodes(inputs.haystack, inputs.transitions, Expr::var("step"));
     walk_step.extend(ac_output_span_nodes(inputs.output_offsets));
-    walk_step.push(Node::loop_for(
-        "out_idx",
-        Expr::var("out_begin"),
-        Expr::var("out_end"),
-        emit_body,
-    ));
+    walk_step.push(output_record_loop_node(inputs.output_records, emit_body));
 
     let invocation = vec![
         Node::let_bind("origin", Expr::LogicalIndex { axis: 0 }),
+        Node::let_bind("scan_limit", scan_limit),
         Node::if_then(
-            Expr::lt(origin.clone(), Expr::load(haystack_len, Expr::u32(0))),
+            Expr::lt(origin.clone(), Expr::var("scan_limit")),
             vec![
                 Node::let_bind("state", Expr::u32(0)),
                 Node::let_bind("window_end", window_end),

@@ -21,7 +21,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 use harness::{add_one_program, u32_bytes};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;

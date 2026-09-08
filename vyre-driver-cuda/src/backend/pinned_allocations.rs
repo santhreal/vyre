@@ -175,7 +175,9 @@ impl PinnedHostAllocation {
         byte_len: usize,
         dst: &mut Vec<u8>,
     ) -> Result<(), BackendError> {
-        let end = vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+        // The bounds check is the point: it rejects an out-of-range slice
+        // before the pointer arithmetic below.
+        vyre_driver::accounting::checked_usize_byte_range_end_lazy(
             byte_offset,
             byte_len,
             self.byte_len,
@@ -547,6 +549,9 @@ impl HostTransferAllocations {
         self.collect_output_slots_into(outputs.iter_mut().enumerate())
     }
 
+    // Test-only: the resident readback path collects borrowed slots one range at
+    // a time through `collect_output_range_into`.
+    #[cfg(test)]
     pub(crate) fn collect_borrowed_outputs_into(
         &self,
         outputs: &mut [&mut Vec<u8>],
@@ -672,7 +677,9 @@ impl HostTransferAllocations {
                 ),
             });
         };
-        let end = vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+        // The bounds check is the point: it rejects a range past the transfer
+        // length before any copy is attempted.
+        vyre_driver::accounting::checked_usize_byte_range_end_lazy(
             byte_offset,
             byte_len,
             transfer.byte_len,

@@ -1,6 +1,7 @@
 [package]
 name = "vyre-reference"
 version = "0.8.0"
+autotests = false
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -23,7 +24,6 @@ vyre-spec.workspace = true
 blake3.workspace = true
 rustc-hash.workspace = true
 smallvec.workspace = true
-imbl.workspace = true
 libm.workspace = true
 regex.workspace = true
 
@@ -47,43 +47,5 @@ subgroup-ops = []
 workspace = true
 
 [[test]]
-name = "test_fnv1a32_zero"
-path = "tests/fnv1a32_zero.rs"
-
-[[test]]
-name = "sweep_dual_arith_oracle_matrix"
-path = "tests/sweep_dual_arith_oracle_matrix.rs"
-[[test]]
-name = "sweep_dual_bitwise_xor_volume_oracle_matrix"
-path = "tests/sweep_dual_bitwise_xor_volume_oracle_matrix.rs"
-[[test]]
-name = "sweep_dual_bitwise_and_volume_oracle_matrix"
-path = "tests/sweep_dual_bitwise_and_volume_oracle_matrix.rs"
-[[test]]
-name = "sweep_dual_bitwise_or_volume_oracle_matrix"
-path = "tests/sweep_dual_bitwise_or_volume_oracle_matrix.rs"
-[[test]]
-name = "sweep_dual_bitwise_not_volume_oracle_matrix"
-path = "tests/sweep_dual_bitwise_not_volume_oracle_matrix.rs"
-[[test]]
-name = "sweep_dual_bitwise_shift_left_volume_oracle_matrix"
-path = "tests/sweep_dual_bitwise_shift_left_volume_oracle_matrix.rs"
-[[test]]
-name = "sweep_dual_bitwise_shift_right_volume_oracle_matrix"
-path = "tests/sweep_dual_bitwise_shift_right_volume_oracle_matrix.rs"
-[[test]]
-name = "sweep_dual_bitwise_popcount_volume_oracle_matrix"
-path = "tests/sweep_dual_bitwise_popcount_volume_oracle_matrix.rs"
-[[test]]
-name = "sweep_dual_bitwise_clz_volume_oracle_matrix"
-path = "tests/sweep_dual_bitwise_clz_volume_oracle_matrix.rs"
-[[test]]
-name = "sweep_dual_compare_eq_volume_oracle_matrix"
-path = "tests/sweep_dual_compare_eq_volume_oracle_matrix.rs"
-[[test]]
-name = "sweep_dual_compare_lt_volume_oracle_matrix"
-path = "tests/sweep_dual_compare_lt_volume_oracle_matrix.rs"
-
-[[test]]
-name = "core_contracts"
-path = "tests/core_contracts/mod.rs"
+name = "all_tests"
+path = "tests/all_tests.rs"

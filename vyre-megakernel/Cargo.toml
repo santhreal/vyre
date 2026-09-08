@@ -1,6 +1,7 @@
 [package]
 name = "vyre-megakernel"
 version = "0.8.0"
+autotests = false
 edition.workspace = true
 rust-version.workspace = true
 description = "Backend-neutral compiler for canonical Vyre megakernel artifacts"
@@ -29,4 +30,8 @@ thiserror.workspace = true
 workspace = true
 
 [dev-dependencies]
-vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
+vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

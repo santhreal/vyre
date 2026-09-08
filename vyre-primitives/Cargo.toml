@@ -1,6 +1,7 @@
 [package]
 name = "vyre-primitives"
 version = "0.8.0"
+autotests = false
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -58,36 +59,15 @@ rustdoc-args = ["--cfg", "docsrs"]
 [lints]
 workspace = true
 
-[[test]]
-name = "integration"
-path = "tests/integration.rs"
-required-features = ["hardware"]
-
 [[bench]]
 name = "wire_throughput"
 harness = false
 
 [[test]]
-name = "hardware_conform"
-path = "tests/hardware_conform.rs"
-required-features = ["hardware"]
+name = "all_tests"
+path = "tests/all_tests.rs"
 
 [[test]]
-name = "hardware_registry_contract"
-path = "tests/hardware_registry_contract.rs"
-required-features = ["hardware"]
-
-[[test]]
-name = "generated_hardware_f32_matrix"
-path = "tests/generated_hardware_f32_matrix.rs"
-required-features = ["hardware"]
-
-[[test]]
-name = "generated_hardware_u32_matrix"
-path = "tests/generated_hardware_u32_matrix.rs"
-required-features = ["hardware"]
-
-[[test]]
-name = "generated_hardware_registry_matrix"
-path = "tests/generated_hardware_registry_matrix.rs"
+name = "all_tests_hardware"
+path = "tests/all_tests_hardware.rs"
 required-features = ["hardware"]

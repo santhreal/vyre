@@ -1,5 +1,5 @@
 use super::all_entries_vec::*;
-use super::harness::bounded_oracle::{bounded_oracle, oracle_deadline, Oracle};
+use super::harness::bounded_oracle::{bounded_oracle, unbounded_reason, Oracle};
 use super::harness::f32_to_ordered;
 use proptest::prelude::*;
 use std::collections::BTreeMap;
@@ -67,21 +67,21 @@ fn pair_space() -> &'static PairSpace {
                     );
                 }
                 let mut answered = true;
-                let mut timed_out = false;
+                let mut refused = false;
                 for a_case in &cases[a_idx] {
                     for b_case in &cases[b_idx] {
                         let inputs = build_fused_inputs(&composition, a_case, b_case);
-                        match bounded_run_reference(a.id, b.id, &composition.program, &inputs) {
+                        match bounded_run_reference(&composition.program, &inputs) {
                             Oracle::Answered(_) => {}
                             Oracle::Declined(_) => answered = false,
-                            Oracle::TimedOut => {
+                            Oracle::Unbounded { .. } => {
                                 answered = false;
-                                timed_out = true;
+                                refused = true;
                             }
                         }
                     }
                 }
-                if timed_out {
+                if refused {
                     unbounded.push((a.id, b.id));
                 } else if answered {
                     pairs.push((a_idx, b_idx));
@@ -105,7 +105,7 @@ fn compatible_pair_count() -> usize {
     compatible_pairs().len()
 }
 
-/// Every fused pair whose reference passed the ceiling during enumeration.
+/// Every fused pair the interpreter refused at its work ceiling.
 ///
 /// Reported by its own contract rather than by whichever proptest happened to
 /// draw it: the enumeration touches the whole pair space, so it sees offenders
@@ -122,14 +122,13 @@ fn unbounded_pairs() -> &'static [(&'static str, &'static str)] {
 /// exactly as it does in the interpreter. Bound the trip count by the extents of
 /// the buffer the body indexes.
 #[test]
-fn every_fused_pair_answers_inside_the_oracle_ceiling() {
+fn every_fused_pair_answers_inside_the_interpreter_step_ceiling() {
     let unbounded = unbounded_pairs();
     assert!(
         unbounded.is_empty(),
-        "Fix: {} fused pair(s) did not answer inside {:?}: {}. The trip count comes from computed \
-         data, so bound it by the extents of the buffer the body indexes.",
+        "Fix: the interpreter refused {} fused pair(s) at its work ceiling: {}. The trip count \
+         comes from computed data, so bound it by the extents of the buffer the body indexes.",
         unbounded.len(),
-        oracle_deadline(),
         unbounded
             .iter()
             .map(|(a, b)| format!("{a} -> {b}"))
@@ -150,35 +149,29 @@ fn compatible_pair_by_index(idx: usize) -> (&'static UnifiedEntry, &'static Unif
 
 /// Pair each of an op's witness buffers with the name it was declared under.
 ///
-/// Registry witnesses support the current logical ABI and the legacy ABI that
-/// includes a placeholder for each backend-allocated output. Selecting the
-/// declaration set from the witness length preserves later inputs when a legacy
-/// output appears before them.
+/// One value per `needs_input` buffer, in declaration order, which is the
+/// artifact ABI the reference interpreter and every backend accept. A witness
+/// sized to every non-workgroup buffer, carrying a zeroed placeholder for each
+/// backend-allocated output, is refused by count rather than zipped short: that
+/// shape shifted every later input onto the wrong declaration, and only the
+/// wgpu record-and-readback path ever accepted it.
 fn witness_by_name(prog: &Program, case: &[Vec<u8>]) -> Vec<(String, Vec<u8>)> {
-    let legacy = witness_uses_legacy_abi(prog, case.len()).unwrap_or_else(|| {
-        let logical_count = prog
-            .buffers()
-            .iter()
-            .filter(|buffer| needs_input(buffer))
-            .count();
-        let legacy_count = prog
-            .buffers()
-            .iter()
-            .filter(|buffer| buffer.access() != BufferAccess::Workgroup)
-            .count();
-        panic!(
-            "Fix: witness supplies {} buffers, but the program accepts {logical_count} logical or {legacy_count} legacy buffers.",
-            case.len()
-        )
-    });
-    prog.buffers()
+    let names = prog
+        .buffers()
         .iter()
-        .filter(|buffer| {
-            buffer.access() != BufferAccess::Workgroup && (legacy || needs_input(buffer))
-        })
+        .filter(|buffer| needs_input(buffer))
         .map(|buffer| buffer.name().to_string())
-        .zip(case.iter().cloned())
-        .collect()
+        .collect::<Vec<_>>();
+    assert_eq!(
+        case.len(),
+        names.len(),
+        "Fix: witness supplies {} buffer(s) for the {} reference input declaration(s) {names:?}; \
+         pass one value per buffer accepted by `vyre_reference::is_reference_input`, and none for \
+         a backend-allocated output.",
+        case.len(),
+        names.len(),
+    );
+    names.into_iter().zip(case.iter().cloned()).collect()
 }
 
 fn witness_abi_program() -> Program {
@@ -193,21 +186,20 @@ fn witness_abi_program() -> Program {
     )
 }
 
-/// Legacy output placeholders must not shift a later caller-supplied state
-/// buffer onto the output declaration.
+/// A witness carrying a placeholder for a backend-allocated output is refused
+/// by count instead of shifting every later input onto the wrong declaration.
+///
+/// `witness_abi_program` declares one read-only input, one backend-allocated
+/// output and one read-write state buffer, so the placeholder shape is three
+/// values and the logical shape is two. Under the shape-selecting version the
+/// three-value list bound `output` to the state witness.
 #[test]
-fn legacy_witness_output_placeholder_preserves_trailing_input() {
+#[should_panic(expected = "3 buffer(s) for the 2 reference input declaration(s)")]
+fn placeholder_shaped_witness_is_refused_by_count() {
     let program = witness_abi_program();
     let witness = vec![vec![1; 4], vec![2; 8], vec![3; 4]];
 
-    assert_eq!(
-        witness_by_name(&program, &witness),
-        vec![
-            ("input".to_string(), vec![1; 4]),
-            ("output".to_string(), vec![2; 8]),
-            ("state".to_string(), vec![3; 4]),
-        ]
-    );
+    let _ = witness_by_name(&program, &witness);
 }
 
 /// Logical witnesses omit backend-allocated outputs while retaining declaration
@@ -226,14 +218,14 @@ fn logical_witness_skips_backend_allocated_output() {
     );
 }
 
-/// A witness count matching neither supported ABI must be rejected instead of
-/// silently truncating the declaration-to-byte association.
+/// A witness count matching neither shape is refused for the same reason, so the
+/// rejection is a count contract rather than a deny list of one wrong shape.
 #[test]
-fn malformed_witness_count_has_no_supported_abi() {
+#[should_panic(expected = "4 buffer(s) for the 2 reference input declaration(s)")]
+fn witness_count_matching_no_declaration_set_is_refused() {
     let program = witness_abi_program();
 
-    assert_eq!(witness_uses_legacy_abi(&program, 1), None);
-    assert_eq!(witness_uses_legacy_abi(&program, 4), None);
+    let _ = witness_by_name(&program, &vec![vec![0; 4]; 4]);
 }
 
 /// A launch-dependent producer followed by a whole-buffer consumer must retain
@@ -303,10 +295,10 @@ fn substring_self_composition_does_not_seed_output_from_downstream_input() {
     assert_eq!(gpu, vec![expected_intermediate, expected_final]);
 }
 
-/// A legacy placeholder for an upstream backend-allocated output must not
-/// become the real initializer after that output is demoted into the pipe.
+/// An upstream backend-allocated output, once demoted into the pipe, keeps op_a
+/// as the owner of its storage: op_b's witness for it is discarded.
 #[test]
-fn attention_to_cross_entropy_discards_legacy_output_placeholder() {
+fn attention_to_cross_entropy_keeps_upstream_ownership_of_the_wired_output() {
     let entries = all_entries_vec();
     let attention = entries
         .iter()
@@ -512,49 +504,39 @@ fn build_fused_inputs(comp: &Composition, a_case: &[Vec<u8>], b_case: &[Vec<u8>]
 // Execution wrappers
 // ------------------------------------------------------------------
 
+/// Evaluate a fused program on the reference under the interpreter's ceiling.
+fn eval_reference(
+    program: &Program,
+    inputs: &[Vec<u8>],
+) -> Result<Vec<Vec<u8>>, vyre_reference::ReferenceError> {
+    let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
+    vyre_reference::reference_eval(program, &values)
+        .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
+}
+
 fn try_run_reference(
     op_a: &str,
     op_b: &str,
     program: &Program,
     inputs: &[Vec<u8>],
 ) -> Result<Vec<Vec<u8>>, String> {
-    let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
-    vyre_reference::reference_eval(program, &values)
-        .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
+    eval_reference(program, inputs)
         .map_err(|error| format!("Fix: {op_a} -> {op_b} reference_eval failed: {error}"))
 }
 
-/// Run the reference on a fused program under the shared oracle ceiling.
+/// Run the reference on a fused program, classifying a work-ceiling refusal.
 ///
 /// A fusion wires a producer's output into a consumer's input, so a consumer
 /// whose loop trip count is read from that input takes its bound from computed
 /// data rather than from a fixture. One such pair held this target for over an
 /// hour with the interpreter at 100% of one core and the device idle, and the
-/// job it runs in was cancelled with no finding. The ceiling turns that into a
-/// failure naming the pair.
-fn bounded_run_reference(
-    op_a: &'static str,
-    op_b: &'static str,
-    program: &Program,
-    inputs: &[Vec<u8>],
-) -> Oracle<Vec<Vec<u8>>> {
-    let program = program.clone();
-    let inputs = inputs.to_vec();
-    bounded_oracle(move || try_run_reference(op_a, op_b, &program, &inputs))
+/// job it runs in was cancelled with no finding. The interpreter's own ceiling
+/// turns that into a failure naming the pair.
+fn bounded_run_reference(program: &Program, inputs: &[Vec<u8>]) -> Oracle<Vec<Vec<u8>>> {
+    bounded_oracle(|| eval_reference(program, inputs))
 }
 
-/// Fail with the pair and the case that passed the ceiling.
-fn oracle_timeout(op_a: &str, op_b: &str, case: &str) -> String {
-    format!(
-        "Fix: {op_a} -> {op_b} {case}: the reference did not answer inside {:?}. The fused \
-         program's work is bounded by a value the producer computed, so bound the trip count by \
-         the extents of the buffer the body indexes; a count taken from data spins on the device \
-         as well as here.",
-        oracle_deadline()
-    )
-}
-
-/// The named-pair fixtures require an answer, so a decline or a timeout is a
+/// The named-pair fixtures require an answer, so a decline or a refusal is a
 /// failure rather than a case with no oracle.
 fn run_reference(
     op_a: &'static str,
@@ -562,10 +544,19 @@ fn run_reference(
     program: &Program,
     inputs: &[Vec<u8>],
 ) -> Vec<Vec<u8>> {
-    match bounded_run_reference(op_a, op_b, program, inputs) {
+    match bounded_run_reference(program, inputs) {
         Oracle::Answered(outputs) => outputs,
-        Oracle::Declined(reason) => panic!("{reason}"),
-        Oracle::TimedOut => panic!("{}", oracle_timeout(op_a, op_b, "named-pair fixture")),
+        Oracle::Declined(reason) => {
+            panic!("Fix: {op_a} -> {op_b} reference_eval failed: {reason}")
+        }
+        Oracle::Unbounded { program, ceiling } => panic!(
+            "{}",
+            unbounded_reason(
+                &program,
+                ceiling,
+                &format!("{op_a} -> {op_b} named-pair fixture")
+            )
+        ),
     }
 }
 
@@ -961,8 +952,9 @@ fn assert_outputs_equal(
 ///
 /// Every case here compiles a fused program, dispatches it and evaluates the
 /// reference, so a shrink pass costs as much as a case. Shrinking a case that
-/// passed the oracle ceiling would cost the ceiling again per attempt, which is
-/// how a bounded failure turns back into a job that never reports.
+/// the interpreter refused would charge the whole step ceiling again per
+/// attempt, which is how a bounded failure turns back into a job that never
+/// reports.
 fn proptest_config() -> ProptestConfig {
     let cases = if std::env::var("CI_EXHAUSTIVE").is_ok() {
         50_000
@@ -1020,12 +1012,19 @@ proptest! {
         let fused_inputs = build_fused_inputs(&comp, a_case, b_case);
 
         // CPU reference oracle.
-        let cpu = match bounded_run_reference(a.id, b.id, composed, &fused_inputs) {
+        let cpu = match bounded_run_reference(composed, &fused_inputs) {
             Oracle::Answered(cpu) => cpu,
-            Oracle::Declined(reason) => panic!("{reason}"),
-            Oracle::TimedOut => {
-                panic!("{}", oracle_timeout(a.id, b.id, &format!("case {case_idx}")))
+            Oracle::Declined(reason) => {
+                panic!("Fix: {} -> {} case {case_idx}: {reason}", a.id, b.id)
             }
+            Oracle::Unbounded { program, ceiling } => panic!(
+                "{}",
+                unbounded_reason(
+                    &program,
+                    ceiling,
+                    &format!("{} -> {} case {case_idx}", a.id, b.id)
+                )
+            ),
         };
 
         // GPU backend.
@@ -1117,7 +1116,7 @@ proptest! {
 
                 let fused_inputs = build_fused_inputs(&comp, a_case, b_case);
 
-                match bounded_run_reference(a.id, b.id, composed, &fused_inputs) {
+                match bounded_run_reference(composed, &fused_inputs) {
                     Oracle::Answered(cpu) => {
                         let gpu = run_gpu(composed, &fused_inputs).unwrap_or_else(|reason| {
                             panic!(
@@ -1146,8 +1145,15 @@ proptest! {
                             reason
                         );
                     }
-                    Oracle::TimedOut => {
-                        panic!("{}", oracle_timeout(a.id, b.id, &format!("case {case_idx}")));
+                    Oracle::Unbounded { program, ceiling } => {
+                        panic!(
+                            "{}",
+                            unbounded_reason(
+                                &program,
+                                ceiling,
+                                &format!("{} -> {} case {case_idx}", a.id, b.id)
+                            )
+                        );
                     }
                 }
             }

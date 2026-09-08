@@ -5,7 +5,7 @@
 
 #![forbid(unsafe_code)]
 
-mod wire_words;
+use crate::wire_words;
 use wire_words::{lcg_u32 as lcg, ramp};
 
 type SegmentReduce = fn(&[u32], &[u32]) -> Vec<u32>;

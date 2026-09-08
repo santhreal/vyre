@@ -681,8 +681,7 @@ fn reject_cycle(edges: &[(DeviceSlot, DeviceSlot)], stage: u32) -> Result<(), Co
     let mut settled = 0usize;
     while let Some(node) = ready.pop() {
         settled += 1;
-        for (from, to) in edges.iter().filter(|(from, _)| *from == node) {
-            let _ = from;
+        for (_, to) in edges.iter().filter(|(from, _)| *from == node) {
             if let Some(count) = outstanding.get_mut(to) {
                 *count -= 1;
                 if *count == 0 {

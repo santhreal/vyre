@@ -137,6 +137,8 @@ fn operation_wire_tags_are_frozen_unique_and_reserved_below_extension_space() {
         ("Unpack8Low", UnOp::Unpack8Low, 0x22),
         ("Unpack8High", UnOp::Unpack8High, 0x23),
         ("Reciprocal", UnOp::Reciprocal, 0x24),
+        ("BitcastF32ToU32", UnOp::BitcastF32ToU32, 0x25),
+        ("BitcastU32ToF32", UnOp::BitcastU32ToF32, 0x26),
     ];
     let un_tags = un
         .iter()

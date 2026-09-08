@@ -16,7 +16,7 @@
 //! divergence is a real IR/dispatch defect, not a rounding artifact.
 #![forbid(unsafe_code)]
 
-mod bounded_compile_policy;
+use crate::bounded_compile_policy;
 
 use vyre_libs::solvers::mori_zwanzig_region_coarsen::coarsen_region_state_fixed_via;
 

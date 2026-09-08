@@ -1,7 +1,6 @@
 use std::fmt::Write as _;
 use std::num::NonZeroU32;
 
-use rustc_hash::FxHashSet;
 use vyre_foundation::ir::DataType;
 use vyre_lower::analyses::{
     derive_shared_access_profiles, select_bank_conflict_strategy, BankConflictMitigation,
@@ -11,7 +10,6 @@ use vyre_lower::KernelDescriptor;
 use vyre_lower::MemoryClass;
 
 use super::BodyCtx;
-use crate::patterns::ldmatrix_cp_async;
 use crate::reg::{PtxType, Reg};
 use crate::EmitError;
 
@@ -740,20 +738,17 @@ impl BodyCtx<'_> {
     /// Called before any shared declaration is written, because a padded
     /// binding is declared at its grown extent. A binding is permutable only
     /// when the neutral derivation proved every access to it is a scalar load
-    /// or store with a known stride, and no fused bulk copy claims it: both
-    /// route around the single address site the rewrite happens at.
+    /// or store with a known stride, and that no asynchronous transaction or
+    /// fused bulk copy reaches it: both route around the single address site
+    /// the rewrite happens at, and the derivation states that verdict so this
+    /// crate keeps no second copy of the rule.
     pub(super) fn plan_shared_permutations(&mut self, desc: &KernelDescriptor) {
         let geometry = bank_geometry();
         let Some(banks) = NonZeroU32::new(geometry.bank_count) else {
             return;
         };
-        let bulk_copy_slots: FxHashSet<u32> = ldmatrix_cp_async::analyze(desc, self.options.target)
-            .candidates
-            .iter()
-            .map(|candidate| candidate.shared_binding_slot)
-            .collect();
         for profile in derive_shared_access_profiles(desc, banks) {
-            if profile.blocked_by.is_some() || bulk_copy_slots.contains(&profile.binding_slot) {
+            if profile.blocked_by.is_some() {
                 continue;
             }
             let selection = select_bank_conflict_strategy(&profile.phases, &geometry);
@@ -832,7 +827,8 @@ impl BodyCtx<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_lower::analyses::{AccessPhase, AccessPhaseProfile};
+    use rustc_hash::FxHashSet;
+    use vyre_lower::analyses::{AccessPhase, AccessPhaseProfile, CANDIDATE_MITIGATIONS};
 
     /// A profile stating one phase per entry of `strides`, all full width.
     fn profile(element_count: u32, strides: &[u32]) -> SharedBindingAccessProfile {
@@ -855,54 +851,67 @@ mod tests {
     /// Two lanes whose element indices differ must still differ after the
     /// rewrite, and no rewritten index may leave the allocation. Either failure
     /// is a kernel that computes different values than the unpermuted one, so
-    /// both arms are checked over the whole declared range rather than sampled.
+    /// every index in the declared range is checked rather than sampled.
+    ///
+    /// The strategies come from [`CANDIDATE_MITIGATIONS`], the same set
+    /// `select_bank_conflict_strategy` ranks, so a candidate added there is
+    /// proven here on the next run instead of reaching an emitted kernel
+    /// unproven. The extents are the tile shapes a strategy's preconditions
+    /// accept or refuse: powers of two of several row counts, and one extent
+    /// that is not a whole number of rows.
+    ///
+    /// `PERMUTATION_FLOOR` is what makes a derivation that stops producing
+    /// permutations fail instead of reporting a clean sweep of an empty set.
     #[test]
-    fn both_permutations_are_one_to_one_inside_the_extent_they_declare() {
-        let cases = [
-            (
-                SharedPermutation::PadRows {
-                    row_log2: 5,
-                    pad_elements: 1,
-                },
-                1024_u32,
-            ),
-            (
-                SharedPermutation::PadRows {
-                    row_log2: 3,
-                    pad_elements: 4,
-                },
-                256,
-            ),
-            (
-                SharedPermutation::XorSwizzle {
-                    stride_shift: 3,
-                    mask: 3,
-                },
-                1024,
-            ),
-            (
-                SharedPermutation::XorSwizzle {
-                    stride_shift: 5,
-                    mask: 7,
-                },
-                2048,
-            ),
-        ];
-        for (permutation, element_count) in cases {
-            let extent = permutation.extent(element_count);
-            let mut seen = FxHashSet::default();
-            for index in 0..element_count {
-                let mapped = permutation.apply(index);
-                assert!(
-                    mapped < extent,
-                    "{permutation:?} maps {index} to {mapped}, outside an extent of {extent}"
-                );
-                assert!(
-                    seen.insert(mapped),
-                    "{permutation:?} maps two indices to {mapped}"
-                );
+    fn every_selectable_strategy_is_one_to_one_inside_the_extent_it_declares() {
+        /// Fewer accepted permutations than the two arms times the two padding
+        /// widths and the two swizzle widths that the current extents admit.
+        const PERMUTATION_FLOOR: usize = 8;
+
+        let extents = [256_u32, 1000, 1024, 2048, 4096];
+        let mut accepted = 0_usize;
+        let mut arms = FxHashSet::default();
+
+        for element_count in extents {
+            for strategy in CANDIDATE_MITIGATIONS {
+                let binding = profile(element_count, &[32]);
+                let Some(permutation) = shared_permutation_for(&binding, strategy) else {
+                    continue;
+                };
+                accepted += 1;
+                arms.insert(std::mem::discriminant(&permutation));
+
+                let extent = permutation.extent(element_count);
+                let mut seen = FxHashSet::default();
+                for index in 0..element_count {
+                    let mapped = permutation.apply(index);
+                    assert!(
+                        mapped < extent,
+                        "{strategy:?} over {element_count} elements became {permutation:?}, \
+                         which maps {index} to {mapped}, outside an extent of {extent}"
+                    );
+                    assert!(
+                        seen.insert(mapped),
+                        "{strategy:?} over {element_count} elements became {permutation:?}, \
+                         which maps two indices to {mapped}"
+                    );
+                }
             }
         }
+
+        assert!(
+            accepted >= PERMUTATION_FLOOR,
+            "the derivation accepted {accepted} permutations over {} candidates and {} extents, \
+             below the floor of {PERMUTATION_FLOOR}: a refusal that admits nothing proves nothing",
+            CANDIDATE_MITIGATIONS.len(),
+            extents.len()
+        );
+        assert_eq!(
+            arms.len(),
+            2,
+            "both permutation arms must be exercised, and {} was",
+            arms.len()
+        );
     }
 
     /// The chain from bank geometry to emitted rewrite. A column walk over 32

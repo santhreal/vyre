@@ -1,6 +1,6 @@
 //! GPU-visible memory region wrappers and ABI structures for io_uring.
 
-use crate::PipelineError;
+use crate::{CounterArithmetic, CounterScope, PipelineError};
 use core::marker::PhantomData;
 
 /// Minimal `iovec` struct matching the Linux ABI for `readv`.
@@ -18,6 +18,11 @@ pub(crate) const IORING_OP_READV: u8 = 1;
 /// `IORING_OP_READ_FIXED`  -  read into a pre-registered buffer.
 pub(crate) const IORING_OP_READ_FIXED: u8 = 22;
 /// `IORING_OP_URING_CMD`  -  vendor-specific passthrough (NVMe). Kernel 6.0+.
+///
+/// Gated on the same feature as its only submitter in `stream.rs`, so the
+/// definition and the use cannot disagree about when the passthrough path is
+/// compiled.
+#[cfg(feature = "uring-cmd-nvme")]
 pub(crate) const IORING_OP_URING_CMD: u8 = 46;
 
 /// GPU-visible memory region that io_uring is allowed to DMA into.
@@ -25,6 +30,7 @@ pub(crate) const IORING_OP_URING_CMD: u8 = 46;
 /// Compatibility constructors cover host-visible shared mappings. The BAR1
 /// constructor covers the native GPUDirect path where NVMe DMA lands directly
 /// in GPU-owned memory.
+#[derive(Debug)]
 pub struct GpuMappedBuffer<'a> {
     ptr: *mut u8,
     len: usize,
@@ -106,24 +112,33 @@ impl<'a> GpuMappedBuffer<'a> {
     ///
     /// # Errors
     ///
-    /// Returns [`PipelineError::QueueFull`] when `offset + len`
-    /// exceeds the mapped buffer bounds.
+    /// Returns [`PipelineError::CounterOverflow`] when `offset + len` leaves
+    /// the host address range, and [`PipelineError::RegionBounds`] when the
+    /// range ends past the mapped buffer.
     pub fn sub_region(&self, offset: usize, len: usize) -> Result<Self, PipelineError> {
+        let offset_u64 = mapped_byte_count(offset, "GpuMappedBuffer sub-region offset")?;
+        let len_u64 = mapped_byte_count(len, "GpuMappedBuffer sub-region length")?;
+        let region_len = mapped_byte_count(self.len, "GpuMappedBuffer mapped length")?;
         let _end = vyre_driver::accounting::checked_usize_byte_range_end_lazy(
             offset,
             len,
             self.len,
-            || {
-                PipelineError::QueueFull {
-                queue: "submission",
-                fix: "GpuMappedBuffer::sub_region offset + len overflows usize; reduce slot size or enlarge the staging buffer",
-            }
+            || PipelineError::CounterOverflow {
+                scope: CounterScope::IoUring,
+                counter: "GpuMappedBuffer sub-region end offset",
+                arithmetic: CounterArithmetic::Sum,
+                lhs: offset_u64,
+                rhs: len_u64,
+                bits: usize::BITS,
+                fix: "reduce the slot size or its offset; their sum leaves the host address range",
             },
-            |_| {
-                PipelineError::QueueFull {
-                queue: "submission",
-                fix: "GpuMappedBuffer::sub_region exceeds the mapped allocation; reduce slot size or enlarge the staging buffer",
-            }
+            |_| PipelineError::RegionBounds {
+                region: "GpuMappedBuffer mapped allocation",
+                offset: offset_u64,
+                len: len_u64,
+                region_len,
+                unit: "bytes",
+                fix: "reduce the slot size or enlarge the staging buffer",
             },
         )?;
         Ok(Self {
@@ -174,6 +189,17 @@ impl<'a> GpuMappedBuffer<'a> {
     );
 }
 
+/// Widen a host byte count into the `u64` an error field carries, so a bounds
+/// or overflow report states the values it observed.
+fn mapped_byte_count(value: usize, quantity: &'static str) -> Result<u64, PipelineError> {
+    u64::try_from(value).map_err(|_| PipelineError::IntegerWidth {
+        quantity,
+        value: value as u128,
+        bits: 64,
+        fix: "shard the mapped allocation so its byte counts fit u64",
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -188,5 +214,54 @@ mod tests {
         slice[0] = 9;
         slice[3] = 7;
         assert_eq!(backing, [9, 2, 3, 7]);
+    }
+
+    #[test]
+    fn sub_region_past_the_mapping_reports_the_range_and_the_region() {
+        let mut backing = [0_u8; 16];
+        // SAFETY: `backing` stays live and uniquely borrowed for the mapped buffer lifetime.
+        let mapped = unsafe { GpuMappedBuffer::from_host_visible_slice(&mut backing) };
+
+        let error = mapped
+            .sub_region(8, 16)
+            .expect_err("a sub-region ending past the mapping must be rejected");
+
+        assert!(
+            matches!(
+                error,
+                PipelineError::RegionBounds {
+                    offset: 8,
+                    len: 16,
+                    region_len: 16,
+                    unit: "bytes",
+                    ..
+                }
+            ),
+            "Fix: a sub-region past the mapping must report its own range and the mapped length: {error}"
+        );
+    }
+
+    #[test]
+    fn sub_region_whose_end_wraps_the_address_range_reports_the_overflow() {
+        let mut backing = [0_u8; 16];
+        // SAFETY: `backing` stays live and uniquely borrowed for the mapped buffer lifetime.
+        let mapped = unsafe { GpuMappedBuffer::from_host_visible_slice(&mut backing) };
+
+        let error = mapped
+            .sub_region(usize::MAX, 1)
+            .expect_err("an end offset past usize::MAX must be rejected");
+
+        assert!(
+            matches!(
+                error,
+                PipelineError::CounterOverflow {
+                    scope: CounterScope::IoUring,
+                    arithmetic: CounterArithmetic::Sum,
+                    rhs: 1,
+                    ..
+                }
+            ),
+            "Fix: an end-offset overflow must report the sum it could not hold: {error}"
+        );
     }
 }

@@ -42,7 +42,7 @@ pub const SLOT_BYTES: usize = SLOT_WORDS_USIZE * 4;
 /// Producer half of the megakernel ring contract.
 ///
 /// Implementations write encoded slot bytes (from
-/// [`protocol::encode_load_miss`] et al.) into a ring of `slot_count`
+/// [`protocol::try_encode_load_miss`] et al.) into a ring of `slot_count`
 /// fixed-size slots. The mapping from logical slot index to physical
 /// storage is the implementation's concern; consumers only see slot
 /// indices and the byte layout the protocol module defines.
@@ -303,7 +303,8 @@ mod tests {
     #[test]
     fn host_ring_publishes_and_round_trips_a_load_miss() {
         let mut ring = HostRing::new(4).expect("Fix: ring constructs");
-        let encoded = protocol::encode_load_miss(123, true);
+        let encoded = protocol::try_encode_load_miss(123, true)
+            .expect("Fix: a load-miss slot must encode into its fixed 64-byte layout");
 
         RingProducer::publish(&mut ring, 1, &encoded).expect("Fix: publish");
 
@@ -320,7 +321,8 @@ mod tests {
     #[test]
     fn host_ring_rejects_out_of_range_slot() {
         let mut ring = HostRing::new(2).unwrap();
-        let encoded = protocol::encode_load_miss(0, false);
+        let encoded = protocol::try_encode_load_miss(0, false)
+            .expect("Fix: a load-miss slot must encode into its fixed 64-byte layout");
         let err_hi = RingProducer::publish(&mut ring, 2, &encoded).expect_err("slot 2 OOB");
         assert!(
             matches!(err_hi, ProtocolError::MissingWord { .. }),

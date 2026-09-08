@@ -1,8 +1,9 @@
 #![allow(missing_docs)]
 
-extern crate self as vyre;
+use crate::expansion_fixtures;
 
-mod expansion_fixtures;
+#[path = "expansion_fixtures/default_metadata.rs"]
+mod default_metadata;
 
 pub use expansion_fixtures::{ir, optimizer};
 
@@ -92,7 +93,7 @@ fn vyre_pass_analyze_always_skips_missing_analyze_impl_requirement() {
 #[test]
 fn vyre_pass_defaults_are_abi_preserving_unknown_metadata() {
     let metadata = optimizer::ProgramPass::metadata(&DefaultedPass);
-    expansion_fixtures::assert_default_metadata(&metadata, "macro_defaulted_pass");
+    default_metadata::assert_default_metadata(&metadata, "macro_defaulted_pass");
 }
 
 #[test]

@@ -4,7 +4,7 @@
 
 use std::sync::atomic::{fence, Ordering};
 
-use crate::PipelineError;
+use crate::{PipelineError, RingEncodingFault};
 
 use vyre_foundation::ir::{Expr, Node};
 
@@ -301,8 +301,8 @@ fn reserve_target_capacity<T>(
     target_capacity: usize,
 ) -> Result<(), PipelineError> {
     vyre_foundation::allocation::try_reserve_vec_to_capacity(out, target_capacity).map_err(|_| {
-        PipelineError::QueueFull {
-            queue: "io_poll_requests",
+        PipelineError::RingEncoding {
+            fault: RingEncodingFault::Capacity,
             fix: "host IO polling could not reserve request records; reduce IO_SLOT_COUNT or drain the megakernel IO queue more frequently",
         }
     })

@@ -1,33 +1,16 @@
-//! One wall-clock ceiling for every lane that uses the reference as a
-//! differential oracle.
+//! One outcome shape for every lane that uses the reference as a differential
+//! oracle.
 //!
 //! A program whose loop trip count is read from its own input runs for as long
 //! as that value says, and a fused program can take that value from an upstream
-//! op's output. One `u32` is enough to ask for four billion iterations, which
-//! turns a suite into a process that never returns and a job into a cancelled
-//! run with no finding. Every oracle call here is bounded, and a call that
-//! passes the ceiling is a failure that names what it was evaluating.
+//! op's output. One `u32` is enough to ask for four billion iterations. The
+//! interpreter now bounds the work it will do and refuses such a run with the
+//! program and the ceiling it exceeded, so a lane reports the offender from that
+//! refusal instead of racing it against a wall clock on a thread it abandons.
 
 use std::panic::AssertUnwindSafe;
-use std::sync::mpsc::{channel, RecvTimeoutError};
-use std::time::Duration;
 
-/// Wall-clock ceiling on one oracle evaluation, in seconds.
-///
-/// Far above the milliseconds a bounded program needs on fixture extents.
-/// `VYRE_ORACLE_DEADLINE_SECS` raises it, which is how a suspected offender is
-/// measured rather than guessed at.
-pub(crate) const ORACLE_DEADLINE_SECS: u64 = 20;
-
-/// The ceiling this run enforces.
-pub(crate) fn oracle_deadline() -> Duration {
-    let seconds = std::env::var("VYRE_ORACLE_DEADLINE_SECS")
-        .ok()
-        .and_then(|value| value.parse::<u64>().ok())
-        .filter(|&value| value > 0)
-        .unwrap_or(ORACLE_DEADLINE_SECS);
-    Duration::from_secs(seconds)
-}
+use vyre_reference::ReferenceError;
 
 /// What the oracle said about one case.
 pub(crate) enum Oracle<T> {
@@ -36,35 +19,45 @@ pub(crate) enum Oracle<T> {
     /// Rejected or panicked, so this case has no oracle. The reason is carried
     /// because a lane that requires an actionable rejection asserts on it.
     Declined(String),
-    /// Still running at the ceiling, which is a defect in the program under
-    /// test rather than a property of the input.
-    TimedOut,
+    /// The interpreter refused the run at its work ceiling, which is a defect in
+    /// the program under test rather than a property of the input.
+    Unbounded {
+        /// Program the interpreter refused, as it named it.
+        program: String,
+        /// Steps the interpreter admitted for the run.
+        ceiling: u64,
+    },
 }
 
-/// Evaluate one case on its own thread, bounded by [`oracle_deadline`].
+/// The refusal a lane reports for a program the interpreter would not finish.
+pub(crate) fn unbounded_reason(program: &str, ceiling: u64, case: &str) -> String {
+    format!(
+        "Fix: {case}: the reference refused program `{program}` after {ceiling} interpreter \
+         steps. The trip count comes from data rather than from a declared extent, so bound it \
+         by the extents of the buffer the body indexes; a count taken from data spins on the \
+         device as well as here."
+    )
+}
+
+/// Evaluate one case, classifying a work-ceiling refusal apart from a rejection.
 ///
-/// A thread past the ceiling is left to the process exit: interrupting the
-/// interpreter mid-step would need a cancellation path the oracle deliberately
-/// does not have. The closure owns its inputs so the caller does not keep a
-/// borrow alive across the abandonment.
+/// The evaluation runs on the calling thread: the interpreter's own ceiling ends
+/// a runaway program, so there is nothing left for an outer thread to abandon.
+/// A panic is still caught, because a lane treats one as a case with no oracle.
 pub(crate) fn bounded_oracle<T, F>(evaluate: F) -> Oracle<T>
 where
-    F: FnOnce() -> Result<T, String> + Send + 'static,
-    T: Send + 'static,
+    F: FnOnce() -> Result<T, ReferenceError>,
 {
-    let (sender, receiver) = channel();
-    std::thread::spawn(move || {
-        let outcome = std::panic::catch_unwind(AssertUnwindSafe(evaluate));
-        let _ = sender.send(outcome);
-    });
-    match receiver.recv_timeout(oracle_deadline()) {
-        Ok(Ok(Ok(value))) => Oracle::Answered(value),
-        Ok(Ok(Err(reason))) => Oracle::Declined(reason),
-        Ok(Err(payload)) => Oracle::Declined(panic_reason(&payload)),
-        Err(RecvTimeoutError::Disconnected) => {
-            Oracle::Declined("the oracle thread ended without answering".to_string())
-        }
-        Err(RecvTimeoutError::Timeout) => Oracle::TimedOut,
+    match std::panic::catch_unwind(AssertUnwindSafe(evaluate)) {
+        Ok(Ok(value)) => Oracle::Answered(value),
+        Ok(Err(error)) => match error.step_ceiling_source() {
+            Some(source) => Oracle::Unbounded {
+                program: source.program.clone(),
+                ceiling: source.ceiling,
+            },
+            None => Oracle::Declined(error.to_string()),
+        },
+        Err(payload) => Oracle::Declined(panic_reason(&payload)),
     }
 }
 

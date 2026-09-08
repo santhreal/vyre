@@ -155,10 +155,6 @@ fn fixture_f32_bytes(values: &[f32]) -> Vec<u8> {
     vyre_primitives::wire::pack_f32_slice(values)
 }
 
-fn fixture_u32_bytes(values: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(values)
-}
-
 fn softmax_top_k_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     let scores: [f32; 8] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
     vec![vec![

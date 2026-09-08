@@ -171,71 +171,23 @@ fn validation_rejects_unsupported_operation() {
         }
     }
 
-    let program = Program::wrapped(vec![], [1, 1, 1], vec![Node::Return]);
+    // A raw entry, not `Program::wrapped`: wrapping puts a `Node::Region` in
+    // front of the body, and a backend that declares nothing refuses that first,
+    // so the rejection would name the wrapper rather than the node under test.
+    let program = Program::from_raw_parts(vec![], [1, 1, 1], vec![Node::Return]);
     let err = validate_program(&program, &UnsupportedOpsBackend).unwrap_err();
     let msg = err.to_string();
     assert!(
+        msg.contains("vyre.node.return"),
+        "the rejection must name the operation the backend does not declare, or a caller cannot \
+         tell which node to change; got: {msg}"
+    );
+    assert!(
+        msg.contains("unsupported-ops-contract"),
+        "the rejection must name the backend that refused; got: {msg}"
+    );
+    assert!(
         msg.contains("Fix:"),
         "validation rejection must carry actionable Fix: guidance; got: {msg}"
-    );
-}
-
-// ---------------------------------------------------------------------------
-// Test fixtures are external rather than inline
-// ---------------------------------------------------------------------------
-
-/// Integration tests load fixtures from external files.
-/// This verifies the fixture directory exists and is readable.
-#[test]
-fn external_fixture_is_loadable() {
-    let fixture = vyre_test_support::monorepo::vyre_workspace_root()
-        .join("vyre-driver/tests/fixtures/unsupported_op.txt");
-    assert!(
-        fixture.exists(),
-        "external fixture must exist at {fixture:?}"
-    );
-    let content = std::fs::read_to_string(&fixture).unwrap();
-    assert!(!content.trim().is_empty(), "fixture must not be empty");
-}
-
-/// A test that actually uses the external fixture to drive behavior.
-#[test]
-fn external_fixture_drives_validation_rejection() {
-    let fixture = vyre_test_support::monorepo::vyre_workspace_root()
-        .join("vyre-driver/tests/fixtures/unsupported_op.txt");
-    let op_id = std::fs::read_to_string(&fixture)
-        .unwrap()
-        .trim()
-        .to_string();
-
-    struct DenyAllBackend;
-
-    impl vyre_driver::sealed::Sealed for DenyAllBackend {}
-
-    impl VyreBackend for DenyAllBackend {
-        fn id(&self) -> &'static str {
-            "deny_all"
-        }
-        fn supported_ops(&self) -> &HashSet<OpId> {
-            static EMPTY: std::sync::OnceLock<HashSet<OpId>> = std::sync::OnceLock::new();
-            EMPTY.get_or_init(HashSet::new)
-        }
-        fn dispatch_borrowed(
-            &self,
-            _program: &Program,
-            _inputs: &[&[u8]],
-            _config: &vyre_driver::DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, BackendError> {
-            Ok(vec![])
-        }
-    }
-
-    let program = Program::wrapped(vec![], [1, 1, 1], vec![Node::Return]);
-    let err = validate_program(&program, &DenyAllBackend)
-        .expect_err("validation must reject unsupported ops (fixture op={op_id})");
-    let msg = err.to_string();
-    assert!(
-        msg.contains("Fix:"),
-        "fixture-driven validation rejection must carry Fix: guidance; got: {msg}"
     );
 }

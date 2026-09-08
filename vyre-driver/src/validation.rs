@@ -260,7 +260,7 @@ pub fn validate_program_contract(
     supported_ops: &HashSet<OpId>,
     caps: ProgramValidationCaps,
 ) -> Result<(), BackendError> {
-    let lowered_program = if caps.supports_distributed_collectives {
+    let collectives_lowered = if caps.supports_distributed_collectives {
         None
     } else {
         vyre_foundation::transform::collectives::lower_single_rank_collectives(program).map_err(
@@ -269,7 +269,17 @@ pub fn validate_program_contract(
             },
         )?
     };
-    let program = lowered_program.as_ref().unwrap_or(program);
+    let program = collectives_lowered.as_ref().unwrap_or(program);
+    // Logical execution markers are resolved by schedule lowering before any
+    // backend receives the program, exactly as an unsupported collective is
+    // resolved above. Validating them against the backend's operation set
+    // asked whether a backend executes `vyre.node.logical_barrier`, which none
+    // does and none needs to; `reject_logical_markers` in `vyre-lower` is what
+    // proves lowering actually closed them. Costs no allocation for a program
+    // that is already physical.
+    let schedule_lowered =
+        vyre_foundation::transform::schedule_lowering::lower_logical_schedule_borrowed(program);
+    let program = schedule_lowered.as_ref().unwrap_or(program);
     let report = vyre_foundation::validate::validate_with_options(program, validation_options);
     if let Some(source) = report.errors.into_iter().next() {
         return Err(BackendError::Validation { source });

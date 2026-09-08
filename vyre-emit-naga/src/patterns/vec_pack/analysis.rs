@@ -23,7 +23,7 @@
 use super::plan::{PackGroup, PackKind, PackingPlan};
 use vyre_foundation::ir::BinOp;
 use vyre_lower::analyses::AccessKind;
-use vyre_lower::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
+use vyre_lower::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
 
 /// Run vec-packing analysis.
 #[must_use]
@@ -49,7 +49,6 @@ fn walk_body(body: &KernelBody, groups: &mut Vec<PackGroup>) {
             }
             let buffer_slot = op.operands[0];
             let index_id = op.operands[1];
-            let value_id = op.operands.get(2).copied();
             if let Some((base, offset)) = decompose_index(body, index_id) {
                 accesses.push(AccessRecord {
                     op_index: op_idx,
@@ -57,7 +56,6 @@ fn walk_body(body: &KernelBody, groups: &mut Vec<PackGroup>) {
                     buffer_slot,
                     base,
                     offset,
-                    value_id,
                 });
             }
         }
@@ -95,11 +93,16 @@ fn walk_body(body: &KernelBody, groups: &mut Vec<PackGroup>) {
             {
                 break;
             }
-            // Hazard check: if this is a Load group and a Store to the
-            // same buffer happened between prev and next, abort.
-            if start.kind == AccessKind::Load
-                && hazard_store_between(&accesses, i + size - 1, i + size, start.buffer_slot)
-            {
+            // Hazard check: the group steps over every op between prev and
+            // next, so one it cannot be reordered against stops it here.
+            if hazard_between(
+                body,
+                &accesses,
+                start.kind,
+                i + size - 1,
+                i + size,
+                start.buffer_slot,
+            ) {
                 break;
             }
             size += 1;
@@ -131,8 +134,6 @@ struct AccessRecord {
     buffer_slot: u32,
     base: u32,
     offset: u32,
-    #[allow(dead_code)]
-    value_id: Option<u32>,
 }
 
 fn access_kind(kind: &KernelOpKind) -> Option<AccessKind> {
@@ -143,22 +144,98 @@ fn access_kind(kind: &KernelOpKind) -> Option<AccessKind> {
     }
 }
 
-/// Check whether a Store to `buffer_slot` exists in `accesses` at any
-/// position strictly between `prev_idx` and `next_idx` (exclusive).
-fn hazard_store_between(
+/// Whether an op the group cannot be reordered against sits strictly between
+/// two consecutive members.
+///
+/// Members are adjacent entries of `accesses`, which records every global load
+/// and store in the body, so no other global load or store can sit between
+/// them. What can sit between them is a barrier, an atomic, a vector access, a
+/// branch, or a cross-lane op, and fusing the group moves both members to one
+/// point in the stream past all of it. The version before this one scanned
+/// `accesses` instead of the op stream and therefore never reported anything:
+/// the only records in that window were the two members it was called with.
+fn hazard_between(
+    body: &KernelBody,
     accesses: &[AccessRecord],
+    group_kind: AccessKind,
     prev_idx: usize,
     next_idx: usize,
     buffer_slot: u32,
 ) -> bool {
-    let prev_op_pos = accesses[prev_idx].op_index;
-    let next_op_pos = accesses[next_idx].op_index;
-    accesses.iter().any(|a| {
-        a.kind == AccessKind::Store
-            && a.buffer_slot == buffer_slot
-            && a.op_index > prev_op_pos
-            && a.op_index < next_op_pos
-    })
+    let first = accesses[prev_idx].op_index + 1;
+    let last = accesses[next_idx].op_index;
+    body.ops[first..last]
+        .iter()
+        .any(|op| !reorder_safe_over_group(op, group_kind, buffer_slot))
+}
+
+/// Whether a fused access of `group_kind` on `buffer_slot` may cross `op`.
+///
+/// A load group may cross a read of its own binding, because two reads of one
+/// buffer commute. A store group may cross neither a read nor a write of it: an
+/// intervening read would observe a value the fused store writes later, and an
+/// intervening write would land out of order at an index this analysis cannot
+/// prove distinct. Neither kind may cross a barrier, an atomic, an async
+/// transaction, a branch, a loop-carrier boundary, or a cross-lane op.
+///
+/// Every kind whose verdict differs from the one `vyre_lower::facts_for`
+/// implies has an arm of its own, and every remaining kind is graded by that
+/// fact table, which is the workspace's only enumeration of `KernelOpKind`. A
+/// kind added there without a fact stops `vyre-lower` from compiling, and a
+/// cross-lane kind added to its removable arm has to be named below too,
+/// because the fact table reads "no memory effect" and this analysis also
+/// needs "no ordering meaning".
+fn reorder_safe_over_group(op: &KernelOp, group_kind: AccessKind, buffer_slot: u32) -> bool {
+    /// Whether `op` names `buffer_slot` as the binding it accesses.
+    ///
+    /// Every global memory op carries the binding slot as operand 0.
+    fn same_slot(op: &KernelOp, buffer_slot: u32) -> bool {
+        op.operands.first() == Some(&buffer_slot)
+    }
+
+    match op.kind {
+        // Reads of the group's own binding. A load group commutes with them; a
+        // store group would change what they observe.
+        KernelOpKind::LoadGlobal | KernelOpKind::VectorLoadGlobal { .. } => {
+            group_kind == AccessKind::Load || !same_slot(op, buffer_slot)
+        }
+
+        // Writes and read-modify-writes of the group's own binding.
+        KernelOpKind::StoreGlobal
+        | KernelOpKind::VectorStoreGlobal { .. }
+        | KernelOpKind::Atomic { .. } => !same_slot(op, buffer_slot),
+
+        // Workgroup-shared memory is a separate address space and never
+        // aliases a global binding, so a global group crosses it freely. The
+        // barrier that makes a shared write visible is graded by the fact
+        // table, which retains it.
+        KernelOpKind::LoadShared | KernelOpKind::StoreShared => true,
+
+        // Cross-lane communication and a loop-carrier read produce a value and
+        // write nothing, so the fact table grades them removable, but a fused
+        // access still may not cross them: a shuffle reads a neighbour lane
+        // whose access this fusion moves, and a carrier read is an iteration
+        // boundary.
+        KernelOpKind::SubgroupBallot
+        | KernelOpKind::SubgroupShuffle
+        | KernelOpKind::SubgroupBroadcast
+        | KernelOpKind::SubgroupReduce { .. }
+        | KernelOpKind::LoopCarrier { .. } => false,
+
+        // A region names a child body this analysis does not walk, which is
+        // why the fact table retains it. The fused access is emitted on the
+        // same side of the region as the scalar accesses it replaces, so it
+        // crosses one freely.
+        KernelOpKind::Region { .. } => true,
+
+        // Ordering, control flow, iteration boundaries, opaque effects, and
+        // pure value production. A kind the fact table retains carries a
+        // nested body, a memory effect or a backend contract, and a fused
+        // access crosses none of those whatever binding it names. A kind it
+        // reports removable when its results are unused computes or reads a
+        // value and nothing else.
+        _ => !vyre_lower::facts_for(&op.kind).retained_effect,
+    }
 }
 
 /// Decompose an index expression into `(base_operand_id, constant_offset)`.

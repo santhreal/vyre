@@ -13,7 +13,9 @@ use super::host_oracle_elimination_classify::{
     is_dispatch_sizing_or_validator, is_fmt_signature, is_wire_codec_ast, returns_result_unit,
     returns_unit, BodyFeatureVisitor,
 };
-use super::host_oracle_elimination_extract::{extract_read_idents_from_expr, is_pure_decoder_loop};
+use super::host_oracle_elimination_extract::{
+    extract_read_idents_from_expr, is_output_slot_transport_loop, is_pure_decoder_loop,
+};
 use super::host_oracle_elimination_records::{
     extract_use_tree, FunctionRecord, StaticConstRecord, FIX, SCALAR_TYPES,
 };
@@ -177,6 +179,8 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
         if is_fmt_trait {
             self.fmt_impl_depth -= 1;
         }
+
+        self.current_impl_self_is_dispatcher = prev_self_is_dispatcher;
 
         if is_test_impl {
             self.test_impl_depth -= 1;
@@ -377,12 +381,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                 && returns_data
                 && is_data_processing_ast(&item.sig, &item.block));
         let has_canonical_dispatcher_param = !self.dispatcher_params.is_empty();
-        let mut param_custom_types = BTreeSet::new();
-        for input in &item.sig.inputs {
-            if let syn::FnArg::Typed(pat_type) = input {
-                self.extract_qualified_custom_types(&pat_type.ty, &mut param_custom_types);
-            }
-        }
         let mut return_custom_types = BTreeSet::new();
         if let syn::ReturnType::Type(_, ret_ty) = &item.sig.output {
             self.extract_qualified_custom_types(ret_ty, &mut return_custom_types);
@@ -425,7 +423,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             returns_data_output: returns_data,
             is_explicit_oracle_name: is_explicit,
             has_canonical_dispatcher_param,
-            param_custom_types,
             return_custom_types,
             has_collection_payload_inputs,
             params,
@@ -510,12 +507,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                 && returns_data
                 && is_data_processing_ast(&item.sig, &item.block));
         let has_canonical_dispatcher_param = !self.dispatcher_params.is_empty();
-        let mut param_custom_types = BTreeSet::new();
-        for input in &item.sig.inputs {
-            if let syn::FnArg::Typed(pat_type) = input {
-                self.extract_qualified_custom_types(&pat_type.ty, &mut param_custom_types);
-            }
-        }
         let mut return_custom_types = BTreeSet::new();
         if let syn::ReturnType::Type(_, ret_ty) = &item.sig.output {
             self.extract_qualified_custom_types(ret_ty, &mut return_custom_types);
@@ -558,7 +549,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             returns_data_output: returns_data,
             is_explicit_oracle_name: is_explicit,
             has_canonical_dispatcher_param,
-            param_custom_types,
             return_custom_types,
             has_collection_payload_inputs,
             params,
@@ -652,12 +642,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                 false
             });
         let has_canonical_dispatcher_param = !self.dispatcher_params.is_empty();
-        let mut param_custom_types = BTreeSet::new();
-        for input in &item.sig.inputs {
-            if let syn::FnArg::Typed(pat_type) = input {
-                self.extract_qualified_custom_types(&pat_type.ty, &mut param_custom_types);
-            }
-        }
         let mut return_custom_types = BTreeSet::new();
         if let syn::ReturnType::Type(_, ret_ty) = &item.sig.output {
             self.extract_qualified_custom_types(ret_ty, &mut return_custom_types);
@@ -703,7 +687,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             returns_data_output: returns_data,
             is_explicit_oracle_name: is_explicit,
             has_canonical_dispatcher_param,
-            param_custom_types,
             return_custom_types,
             has_collection_payload_inputs,
             params,
@@ -823,7 +806,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             if feature_visitor.has_semantic_operation() {
                 let line = expr.span().start().line as u32;
                 let name = format!("<inline expected_output closure at line {line}>");
-                let fn_idx = self.fn_index_offset + self.functions.len();
                 self.functions.push(FunctionRecord {
                     name: name.clone(),
                     file: self.file.clone(),
@@ -839,7 +821,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     returns_data_output: true,
                     is_explicit_oracle_name: false,
                     has_canonical_dispatcher_param: false,
-                    param_custom_types: BTreeSet::new(),
                     return_custom_types: BTreeSet::new(),
                     has_collection_payload_inputs: false,
                     params: Vec::new(),
@@ -857,7 +838,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             if feature_visitor.has_semantic_operation() {
                 let line = expr.span().start().line as u32;
                 let name = format!("<inline fallback closure at line {line}>");
-                let fn_idx = self.fn_index_offset + self.functions.len();
                 self.functions.push(FunctionRecord {
                     name: name.clone(),
                     file: self.file.clone(),
@@ -873,7 +853,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     returns_data_output: true,
                     is_explicit_oracle_name: false,
                     has_canonical_dispatcher_param: false,
-                    param_custom_types: BTreeSet::new(),
                     return_custom_types: BTreeSet::new(),
                     has_collection_payload_inputs: false,
                     params: Vec::new(),
@@ -914,7 +893,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             if feature_visitor.has_semantic_operation() {
                 let line = expr.span().start().line as u32;
                 let name = format!("<inline expected_output block at line {line}>");
-                let fn_idx = self.fn_index_offset + self.functions.len();
                 self.functions.push(FunctionRecord {
                     name: name.clone(),
                     file: self.file.clone(),
@@ -930,7 +908,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     returns_data_output: true,
                     is_explicit_oracle_name: false,
                     has_canonical_dispatcher_param: false,
-                    param_custom_types: BTreeSet::new(),
                     return_custom_types: BTreeSet::new(),
                     has_collection_payload_inputs: false,
                     params: Vec::new(),
@@ -949,7 +926,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             if feature_visitor.has_semantic_operation() {
                 let line = expr.span().start().line as u32;
                 let name = format!("<inline fallback block at line {line}>");
-                let fn_idx = self.fn_index_offset + self.functions.len();
                 self.functions.push(FunctionRecord {
                     name: name.clone(),
                     file: self.file.clone(),
@@ -965,7 +941,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     returns_data_output: true,
                     is_explicit_oracle_name: false,
                     has_canonical_dispatcher_param: false,
-                    param_custom_types: BTreeSet::new(),
                     return_custom_types: BTreeSet::new(),
                     has_collection_payload_inputs: false,
                     params: Vec::new(),
@@ -982,7 +957,10 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     }
 
     fn visit_expr_for_loop(&mut self, expr: &'ast syn::ExprForLoop) {
-        if !self.for_loop_dispatches(expr) && !is_pure_decoder_loop(expr) {
+        if !self.for_loop_dispatches(expr)
+            && !is_pure_decoder_loop(expr)
+            && !is_output_slot_transport_loop(expr)
+        {
             self.report_post_dispatch_host_loop(expr.span());
         }
         syn::visit::visit_expr_for_loop(self, expr);

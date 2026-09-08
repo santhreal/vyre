@@ -47,12 +47,12 @@ pub(crate) fn enforce_budget(
         return Ok(());
     };
     let elapsed = started.elapsed();
-    if elapsed > budget {
-        return Err(BackendError::new(format!(
-            "{phase}: took {elapsed:?}, budget {budget:?}. Fix: raise DispatchConfig.timeout or split the program into smaller chunks."
-        )));
+    if elapsed <= budget {
+        return Ok(());
     }
-    Ok(())
+    Err(BackendError::new(format!(
+        "{phase}: took {elapsed:?}, budget {budget:?}. Fix: raise DispatchConfig.timeout or split the program into smaller chunks."
+    )))
 }
 
 // Inline: covers `SERVICEABLE_FLOOR`, `deadline`, `enforce_budget`, `reject_unserviceable`, which

@@ -1,18 +1,15 @@
 //! Generated property coverage for builtin and opaque operation wire tags.
 //!
 //! The operator strategies each proptest draws from are owned by
-//! `tests/support/spec_op_strategies.rs`. The round trip and the reserved-tag
+//! `vyre_test_support::spec_op_strategies`. The round trip and the reserved-tag
 //! bound asserted below are this suite's own contract.
 
-mod spec_variants;
-
-#[path = "../../tests/support/spec_op_strategies.rs"]
-mod spec_op_strategies;
+use crate::spec_variants;
 
 use proptest::prelude::*;
-use spec_op_strategies::{arb_atomic_op, arb_bin_op, arb_ternary_op, arb_un_op};
 use spec_variants::collective_op_strategy;
 use vyre_spec::{AtomicOp, BinOp, CollectiveOp, TernaryOp, UnOp};
+use vyre_test_support::spec_op_strategies::{arb_atomic_op, arb_bin_op, arb_ternary_op, arb_un_op};
 
 fn assert_builtin_tag_is_reserved(tag: Option<u8>) -> Result<(), TestCaseError> {
     if let Some(tag) = tag {

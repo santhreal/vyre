@@ -7,7 +7,7 @@ use vyre_lower::pattern_audit::PatternAudit;
 pub(crate) fn validate_and_analyze(
     program: &Program,
 ) -> Result<vyre_lower::KernelDescriptor, LoweringError> {
-    let lowered = vyre_lower::lower_physical(program).map_err(|error| {
+    let lowered = vyre_lower::lower_baseline(program).map_err(|error| {
         LoweringError::invalid(format!(
             "physical lowering failed before wgpu emission: {error}. Fix: add the missing neutral mapping to vyre-lower instead of concrete-driver lowering."
         ))

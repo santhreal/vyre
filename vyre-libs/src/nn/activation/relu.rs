@@ -13,6 +13,9 @@ pub(crate) fn relu_u32_expr(x: Expr) -> Expr {
 }
 
 /// Shared floating-point ReLU expression used by fused activation builders.
+///
+/// `nn-linear` compiles the only caller, `nn/linear/layer/fused_activation.rs`.
+#[cfg(feature = "nn-linear")]
 #[must_use]
 pub(crate) fn relu_f32_expr(x: Expr) -> Expr {
     Expr::max(Expr::f32(0.0), x)

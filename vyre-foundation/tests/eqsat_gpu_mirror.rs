@@ -70,11 +70,12 @@ fn empty_snapshot() {
 /// row layout + children column line up.
 #[test]
 fn build_three_node_snapshot() {
-    let snap = GpuEGraphSnapshot::build([
+    let snap = GpuEGraphSnapshot::try_build([
         (0u32, "lit_u32", &[][..]),
         (1u32, "lit_u32", &[][..]),
         (2u32, "binop_add", &[0u32, 1u32][..]),
-    ]);
+    ])
+    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
     assert_eq!(snap.node_count(), 3);
     assert_eq!(snap.child_count(), 2);
     let empty: &[u32] = &[];
@@ -103,11 +104,12 @@ fn op_id_intern_dedups() {
 /// `rows_by_eclass` groups multi-row e-classes.
 #[test]
 fn rows_by_eclass_groups_correctly() {
-    let snap = GpuEGraphSnapshot::build([
+    let snap = GpuEGraphSnapshot::try_build([
         (0u32, "lit_u32", &[][..]),
         (0u32, "var", &[][..]),
         (1u32, "binop_add", &[0u32][..]),
-    ]);
+    ])
+    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
     let groups = snap.rows_by_eclass();
     assert_eq!(groups.len(), 2);
     assert_eq!(groups.get(&0).unwrap().len(), 2);
@@ -138,7 +140,8 @@ fn generated_snapshot_integrity_accepts_pack_boundaries_and_forward_children() {
             .iter()
             .map(|&(class, op, start, len)| (class, op, &child_storage[start..start + len]))
             .collect::<Vec<_>>();
-        let snapshot = GpuEGraphSnapshot::build(build_rows);
+        let snapshot = GpuEGraphSnapshot::try_build(build_rows)
+            .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
 
         snapshot
             .validate_integrity()
@@ -148,7 +151,8 @@ fn generated_snapshot_integrity_accepts_pack_boundaries_and_forward_children() {
 
 #[test]
 fn snapshot_integrity_rejects_unknown_op_id() {
-    let mut snapshot = GpuEGraphSnapshot::build([(0u32, "lit", &[][..])]);
+    let mut snapshot = GpuEGraphSnapshot::try_build([(0u32, "lit", &[][..])])
+        .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
     snapshot.rows[0].language_op_id = 99;
 
     let error = snapshot
@@ -162,7 +166,8 @@ fn snapshot_integrity_rejects_unknown_op_id() {
 
 #[test]
 fn snapshot_integrity_rejects_out_of_bounds_child_range() {
-    let mut snapshot = GpuEGraphSnapshot::build([(0u32, "lit", &[][..])]);
+    let mut snapshot = GpuEGraphSnapshot::try_build([(0u32, "lit", &[][..])])
+        .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
     snapshot.rows[0].children_offset = 1;
     snapshot.rows[0].children_len = 1;
 
@@ -177,7 +182,8 @@ fn snapshot_integrity_rejects_out_of_bounds_child_range() {
 #[test]
 fn snapshot_integrity_rejects_dangling_child_eclass() {
     let snapshot =
-        GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "add", &[0u32, 99u32][..])]);
+        GpuEGraphSnapshot::try_build([(0u32, "lit", &[][..]), (1u32, "add", &[0u32, 99u32][..])])
+            .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
 
     let error = snapshot
         .validate_integrity()
@@ -190,11 +196,12 @@ fn snapshot_integrity_rejects_dangling_child_eclass() {
 
 #[test]
 fn device_image_packs_single_upload_slab_with_sorted_group_index() {
-    let snapshot = GpuEGraphSnapshot::build([
+    let snapshot = GpuEGraphSnapshot::try_build([
         (2u32, "lit", &[][..]),
         (1u32, "lit", &[][..]),
         (2u32, "add", &[1u32, 2u32][..]),
-    ]);
+    ])
+    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
 
     let image = snapshot
         .try_pack_device_image()
@@ -249,7 +256,8 @@ fn generated_device_image_pack_accepts_empty_and_power_boundaries() {
             .iter()
             .map(|&(class, op, start, len)| (class, op, &child_storage[start..start + len]))
             .collect::<Vec<_>>();
-        let snapshot = GpuEGraphSnapshot::build(build_rows);
+        let snapshot = GpuEGraphSnapshot::try_build(build_rows)
+            .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
 
         let image = snapshot
             .try_pack_device_image()
@@ -266,14 +274,15 @@ fn generated_device_image_pack_accepts_empty_and_power_boundaries() {
 
 #[test]
 fn row_signatures_group_structural_duplicates_without_eclass_identity() {
-    let snapshot = GpuEGraphSnapshot::build([
+    let snapshot = GpuEGraphSnapshot::try_build([
         (1u32, "lit", &[][..]),
         (2u32, "lit", &[][..]),
         (10u32, "add", &[1u32, 2u32][..]),
         (11u32, "add", &[1u32, 2u32][..]),
         (12u32, "add", &[2u32, 1u32][..]),
         (13u32, "mul", &[1u32, 2u32][..]),
-    ]);
+    ])
+    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
 
     let image = snapshot
         .try_pack_device_image()
@@ -286,7 +295,8 @@ fn row_signatures_group_structural_duplicates_without_eclass_identity() {
 
 #[test]
 fn device_image_rejects_malformed_snapshot_before_pack() {
-    let mut snapshot = GpuEGraphSnapshot::build([(0u32, "lit", &[][..])]);
+    let mut snapshot = GpuEGraphSnapshot::try_build([(0u32, "lit", &[][..])])
+        .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
     snapshot.rows[0].language_op_id = 42;
 
     let error = snapshot
@@ -315,10 +325,11 @@ fn snapshot_from_egraph_uses_canonical_children() {
     let add = egraph.add(TinyLang::Add(a, b));
     assert_eq!(add.0, 2);
 
-    let snap = GpuEGraphSnapshot::from_egraph_with(&egraph, |node| match node {
+    let snap = GpuEGraphSnapshot::try_from_egraph_with(&egraph, |node| match node {
         TinyLang::Lit(_) => "lit",
         TinyLang::Add(_, _) => "add",
-    });
+    })
+    .expect("Fix: fixture e-graph must fit the 32-bit GPU column ABI");
 
     assert_eq!(snap.node_count(), 3);
     assert_eq!(snap.child_count(), 2);

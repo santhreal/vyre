@@ -1,8 +1,5 @@
 //! CUDA dispatch path for long-lived resident buffers.
 
-#[allow(dead_code)]
-const _DISPATCH_MARKERS: &str = "dispatch_resident ptx";
-
 mod async_dispatch;
 mod batch;
 mod borrowed;

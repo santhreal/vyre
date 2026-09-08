@@ -14,6 +14,7 @@
 //! | `vyre-libs::ml::probabilistic_logic` | neuro-symbolic systems |
 //! | `vyre-libs::security::policy_engine` | rule-conflict resolution as probabilistic logic |
 
+use crate::builder::trip_count::clamped_by_extents;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -111,7 +112,10 @@ pub fn try_ddnnf_evaluate(
             Node::let_bind("kind", Expr::load(node_kinds, lane.clone())),
             Node::let_bind("var_id", Expr::load(node_var, lane.clone())),
             Node::let_bind("child_base", Expr::load(child_offsets, lane.clone())),
-            Node::let_bind("child_count", Expr::load(child_counts, lane.clone())),
+            Node::let_bind(
+                "child_count",
+                clamped_by_extents(Expr::load(child_counts, lane.clone()), children, []),
+            ),
             Node::if_then(
                 Expr::eq(Expr::var("kind"), Expr::u32(LITERAL_TRUE)),
                 vec![

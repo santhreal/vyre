@@ -5,6 +5,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, Expr, MemoryOrdering, Node, 
 
 use super::*;
 use crate::bitset::bitset_words;
+use crate::builder::trip_count::clamped_by_extents;
 
 /// Canonical CSR traversal composer and builder.
 #[derive(Clone, Debug)]
@@ -128,6 +129,19 @@ impl<'a> CsrTraversalComposer<'a> {
         ]
     }
 
+    /// Clamp a row-offset edge bound to the extent of the edge buffers a
+    /// traversal body indexes with the edge variable.
+    ///
+    /// `offsets` is producer data, so `offsets[src + 1]` is an unbounded trip
+    /// count. The CSR contract keeps every row offset at or below the edge
+    /// count, which is the extent of `targets`.
+    fn clamped_edge_bound(&self, requested: Expr, also_indexed: Option<&str>) -> Expr {
+        match also_indexed {
+            Some(name) => clamped_by_extents(requested, self.buffers.targets, [name]),
+            None => clamped_by_extents(requested, self.buffers.targets, []),
+        }
+    }
+
     /// Emit a bounded loop over the CSR edges of source node `src`.
     #[must_use]
     pub fn emit_row_bounds_and_loop(
@@ -145,7 +159,7 @@ impl<'a> CsrTraversalComposer<'a> {
             Node::loop_for(
                 edge_var,
                 Expr::var(edge_start.as_str()),
-                Expr::var(edge_end.as_str()),
+                self.clamped_edge_bound(Expr::var(edge_end.as_str()), self.buffers.edge_kind_mask),
                 loop_body,
             ),
         ]
@@ -279,7 +293,7 @@ impl<'a> CsrTraversalComposer<'a> {
             Node::loop_for(
                 edge_iter.as_str(),
                 Expr::var(edge_start.as_str()),
-                Expr::var(edge_end.as_str()),
+                self.clamped_edge_bound(Expr::var(edge_end.as_str()), Some(kind_buf)),
                 vec![
                     Node::let_bind(
                         kind_mask.as_str(),
@@ -389,7 +403,7 @@ impl<'a> CsrTraversalComposer<'a> {
             Node::loop_for(
                 edge_iter.as_str(),
                 Expr::var(edge_start.as_str()),
-                Expr::var(edge_end.as_str()),
+                self.clamped_edge_bound(Expr::var(edge_end.as_str()), Some(kind_buf)),
                 vec![Node::if_then(
                     Expr::eq(Expr::var(hit.as_str()), Expr::u32(0)),
                     vec![

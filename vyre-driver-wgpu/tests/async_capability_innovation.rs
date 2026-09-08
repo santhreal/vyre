@@ -10,7 +10,7 @@
 
 #![cfg(feature = "device-tests")]
 
-mod harness;
+use crate::harness;
 use harness::{
     add_one_expected, add_one_input, add_one_program, assert_non_cpu_backend, long_running_program,
     shared_live_backend as live_backend,

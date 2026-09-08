@@ -56,6 +56,14 @@ file before its requirement closes. Every filesystem path cited inside
 release evidence is checked to resolve, and to be reachable rather than
 gitignored, by the `evidence-paths` gate.
 
+Each artifact records the source it was generated from as
+`source_fingerprint`, either `git:<commit>:dirty=false` or that commit plus a
+digest of the content every non-evidence path differs from it by. The
+`evidence-provenance` gate recomputes that value from the commit carrying the
+artifact, so an artifact recorded against a tree its own commit does not hold is
+a finding. Regenerate an artifact on a tree whose remaining changes the next
+commit captures, and commit both together.
+
 ## Changelog
 
 An observable change adds one fragment under

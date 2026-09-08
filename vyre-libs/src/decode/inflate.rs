@@ -317,13 +317,6 @@ fn fused_scan_program(
         vec![wrap_anonymous_region(FUSED_SCAN_OP_ID, entry)],
     )
 }
-#[cfg(test)]
-pub(super) fn reference_inflate_stored_bytes(input: &[u8]) -> Result<(Vec<u32>, u32), String> {
-    let words: Vec<u32> = input.iter().map(|&b| u32::from(b)).collect();
-    vyre_reference::composition_witness::inflate_stored_witness(&words)
-        .map(|result| (result.data, result.inflated_len))
-}
-
 fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
         pack_words(&[

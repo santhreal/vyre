@@ -10,6 +10,7 @@
 #[non_exhaustive] pub enum vyre_driver::Target
 #[non_exhaustive] pub enum vyre_driver::fusion::FusionDecision
 #[non_exhaustive] pub struct vyre_driver::DispatchConfig
+#[non_exhaustive] pub struct vyre_driver::PipelineCacheKey
 #[repr(C)] pub struct vyre_driver::persistent::PersistentWorkItem
 impl core::convert::From<alloc::vec::Vec<u8>> for vyre_driver::Resource
 impl core::convert::From<vyre_driver::DeviceProfile> for vyre_foundation::optimizer::ctx::AdapterCaps
@@ -361,8 +362,6 @@ pub fn T::dispatch_f32(&self, program: &vyre_foundation::ir_inner::model::progra
 pub fn T::dispatch_f32_into(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[f32]], config: &vyre_driver::DispatchConfig, raw_outputs: &mut vyre_driver::OutputBuffers, typed_outputs: &mut alloc::vec::Vec<alloc::vec::Vec<f32>>) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn T::dispatch_pod<T: bytemuck::pod::Pod>(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[T]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<T>>, vyre_driver::BackendError>
 pub fn T::dispatch_pod_into<T: bytemuck::pod::Pod>(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[T]], config: &vyre_driver::DispatchConfig, raw_outputs: &mut vyre_driver::OutputBuffers, typed_outputs: &mut alloc::vec::Vec<alloc::vec::Vec<T>>) -> core::result::Result<(), vyre_driver::BackendError>
-pub fn T::dispatch_u32(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u32]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u32>>, vyre_driver::BackendError>
-pub fn T::dispatch_u32_into(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u32]], config: &vyre_driver::DispatchConfig, raw_outputs: &mut vyre_driver::OutputBuffers, typed_outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u32>>) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn T::id(&self) -> &'static str
 pub fn T::supported_ops(&self) -> &std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub fn T::version(&self) -> &'static str
@@ -586,8 +585,6 @@ pub fn vyre_driver::TypedDispatchExt::dispatch_f32(&self, program: &vyre_foundat
 pub fn vyre_driver::TypedDispatchExt::dispatch_f32_into(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[f32]], config: &vyre_driver::DispatchConfig, raw_outputs: &mut vyre_driver::OutputBuffers, typed_outputs: &mut alloc::vec::Vec<alloc::vec::Vec<f32>>) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::TypedDispatchExt::dispatch_pod<T: bytemuck::pod::Pod>(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[T]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<T>>, vyre_driver::BackendError>
 pub fn vyre_driver::TypedDispatchExt::dispatch_pod_into<T: bytemuck::pod::Pod>(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[T]], config: &vyre_driver::DispatchConfig, raw_outputs: &mut vyre_driver::OutputBuffers, typed_outputs: &mut alloc::vec::Vec<alloc::vec::Vec<T>>) -> core::result::Result<(), vyre_driver::BackendError>
-pub fn vyre_driver::TypedDispatchExt::dispatch_u32(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u32]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u32>>, vyre_driver::BackendError>
-pub fn vyre_driver::TypedDispatchExt::dispatch_u32_into(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u32]], config: &vyre_driver::DispatchConfig, raw_outputs: &mut vyre_driver::OutputBuffers, typed_outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u32>>) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::VyreBackend::allocate_device_buffer(&self, _byte_len: usize) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::DeviceBuffer>, vyre_driver::BackendError>
 pub fn vyre_driver::VyreBackend::allocate_resident(&self, _byte_len: usize) -> core::result::Result<vyre_driver::Resource, vyre_driver::BackendError>
 pub fn vyre_driver::VyreBackend::allows_host_grid_sync_split(&self) -> bool
@@ -616,6 +613,7 @@ pub fn vyre_driver::VyreBackend::download_resident_ranges_into(&self, ranges: &[
 pub fn vyre_driver::VyreBackend::flush(&self) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::VyreBackend::free_device_buffer(&self, _buffer: alloc::boxed::Box<dyn vyre_driver::DeviceBuffer>) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::VyreBackend::free_resident(&self, _resource: vyre_driver::Resource) -> core::result::Result<(), vyre_driver::BackendError>
+pub fn vyre_driver::VyreBackend::honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool
 pub fn vyre_driver::VyreBackend::id(&self) -> &'static str
 pub fn vyre_driver::VyreBackend::is_distributed(&self) -> bool
 pub fn vyre_driver::VyreBackend::max_compute_invocations_per_workgroup(&self) -> u32
@@ -689,7 +687,7 @@ pub fn vyre_driver::accounting::repair_atomic_sub_usize_fetch_with_order(counter
 pub fn vyre_driver::accounting::repair_atomic_sub_usize_with_order(counter: &core::sync::atomic::AtomicUsize, value: usize, load_order: core::sync::atomic::Ordering, success_order: core::sync::atomic::Ordering, failure_order: core::sync::atomic::Ordering, on_repair: impl core::ops::function::FnMut(usize, usize))
 pub fn vyre_driver::acquire(id: &str) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError>
 pub fn vyre_driver::acquire_preferred_dispatch_backend() -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError>
-pub fn vyre_driver::admit_dispatch_grid(grid: [u32; 3], max_per_axis: u32, backend_id: &str) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
+pub fn vyre_driver::admit_dispatch_grid(grid: [u32; 3], max_per_axis: [u32; 3], backend_id: &str) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
 pub fn vyre_driver::allocation::reserve_hash_map_to_capacity<K, V, S>(map: &mut std::collections::hash::map::HashMap<K, V, S>, target_capacity: usize, context: &'static str, item: &'static str, fix: &'static str) -> core::result::Result<(), vyre_driver::BackendError> where K: core::cmp::Eq + core::hash::Hash, S: core::hash::BuildHasher
 pub fn vyre_driver::allocation::reserve_hash_set_to_capacity<T, S>(set: &mut std::collections::hash::set::HashSet<T, S>, target_capacity: usize, context: &'static str, item: &'static str, fix: &'static str) -> core::result::Result<(), vyre_driver::BackendError> where T: core::cmp::Eq + core::hash::Hash, S: core::hash::BuildHasher
 pub fn vyre_driver::allocation::reserve_smallvec_additional<A>(vec: &mut smallvec::SmallVec<A>, additional: usize, context: &'static str, item: &'static str, fix: &'static str) -> core::result::Result<(), vyre_driver::BackendError> where A: smallvec::Array
@@ -741,7 +739,6 @@ pub fn vyre_driver::cache_eviction::select_retention_set_into(gains: &mut [u32],
 pub fn vyre_driver::cache_eviction::try_select_retention_set(gains: &mut [u32], n: u32, k: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_driver::cache_eviction::CacheEvictionAllocationError>
 pub fn vyre_driver::cache_eviction::try_select_retention_set_into(gains: &mut [u32], n: u32, k: u32, picked: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_driver::cache_eviction::CacheEvictionAllocationError>
 pub fn vyre_driver::cache_eviction_heat::CacheEntryStats::heat(&self, current_time_s: f64) -> f64
-pub fn vyre_driver::cache_eviction_heat::entries_to_evict(entries: &[vyre_driver::cache_eviction_heat::CacheEntryStats], capacity: usize, current_time_s: f64) -> alloc::vec::Vec<u64>
 pub fn vyre_driver::cache_eviction_heat::try_entries_to_evict(entries: &[vyre_driver::cache_eviction_heat::CacheEntryStats], capacity: usize, current_time_s: f64) -> core::result::Result<alloc::vec::Vec<u64>, alloc::string::String>
 pub fn vyre_driver::cache_invalidation::CacheInvalidationError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver::cache_invalidation::CacheInvalidationError::from(error: vyre_megakernel::execution::SemanticExecutionError) -> Self
@@ -808,7 +805,6 @@ pub fn vyre_driver::grid_sync::dispatch_with_grid_sync_split_timed(backend: &dyn
 pub fn vyre_driver::grid_sync::dispatch_with_grid_sync_split_via<F>(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig, dispatch: &F) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError> where F: core::ops::function::Fn(&vyre_foundation::ir_inner::model::program::definition::Program, &[&[u8]], core::option::Option<[u32; 3]>, &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::grid_sync::dispatch_with_grid_sync_split_via_into<F>(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig, dispatch: &F, outputs: &mut vyre_driver::OutputBuffers) -> core::result::Result<(), vyre_driver::BackendError> where F: core::ops::function::Fn(&vyre_foundation::ir_inner::model::program::definition::Program, &[&[u8]], core::option::Option<[u32; 3]>, &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::grid_sync::plan_host_grid_sync_segment_programs(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::program::definition::Program>, vyre_driver::BackendError>
-pub fn vyre_driver::grid_sync::split_on_grid_sync(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::program::definition::Program>
 pub fn vyre_driver::grid_sync::try_split_on_grid_sync(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::program::definition::Program>, vyre_driver::BackendError>
 pub fn vyre_driver::hex_encode(bytes: &[u8]) -> alloc::string::String
 pub fn vyre_driver::hex_short(bytes: &[u8; 32]) -> alloc::string::String
@@ -820,6 +816,7 @@ pub fn vyre_driver::hostile_input_closure::single_output_program(output_init: u3
 pub fn vyre_driver::hostile_input_closure::zero_workgroup_program() -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_driver::infer_dispatch_grid(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::DispatchConfig) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
 pub fn vyre_driver::infer_dispatch_grid_for_count(element_count: u32, workgroup: [u32; 3]) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
+pub fn vyre_driver::infer_launch_grid(element_count: u32, workgroup: [u32; 3], max_per_axis: [u32; 3], grid_linearized: bool, backend_id: &str) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
 pub fn vyre_driver::input_identity::domain_separated_exact_input_key(domain_tag: &[u8], domain_id: u64, feature_key: u64, inputs: &[&[u8]]) -> core::result::Result<vyre_driver::input_identity::ExactInputKey, vyre_driver::BackendError>
 pub fn vyre_driver::input_identity::exact_input_key(inputs: &[&[u8]]) -> core::result::Result<vyre_driver::input_identity::ExactInputKey, vyre_driver::BackendError>
 pub fn vyre_driver::launch_fusion::LaunchFusionError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -829,6 +826,8 @@ pub fn vyre_driver::launch_fusion::LaunchFusionScratch::try_with_capacity(stage_
 pub fn vyre_driver::launch_fusion::plan_launch_fusion(stages: &[vyre_driver::launch_fusion::LaunchFusionStage], max_group_bytes: u64) -> core::result::Result<vyre_driver::launch_fusion::LaunchFusionPlan, vyre_driver::launch_fusion::LaunchFusionError>
 pub fn vyre_driver::launch_fusion::plan_launch_fusion_with_scratch(stages: &[vyre_driver::launch_fusion::LaunchFusionStage], max_group_bytes: u64, scratch: &mut vyre_driver::launch_fusion::LaunchFusionScratch) -> core::result::Result<vyre_driver::launch_fusion::LaunchFusionPlan, vyre_driver::launch_fusion::LaunchFusionError>
 pub fn vyre_driver::launch_width_measurements(program: &vyre_foundation::ir_inner::model::program::definition::Program, limits: vyre_driver::validation::LaunchGeometryLimits, element_count: u32) -> alloc::collections::btree::map::BTreeMap<[u32; 3], u64>
+pub fn vyre_driver::lock_policy::process_fatal_poison(owner: &str, state: &str) -> never
+pub fn vyre_driver::lock_policy::recoverable_poison<T>(result: core::result::Result<T, std::sync::poison::PoisonError<T>>) -> core::result::Result<T, vyre_driver::BackendError>
 pub fn vyre_driver::lowering::LowerableOp::lower_binary(&self, ctx: &mut (), program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::lowering::LowerableOp::lower_expression(&self, ctx: &mut dyn vyre_driver::lowering::TargetGenCtx, program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::lowering::TargetGenCtx::register_expression(&mut self, format: &str) -> core::result::Result<(), ()>
@@ -1202,6 +1201,7 @@ pub mod vyre_driver::hostile_input_closure
 pub mod vyre_driver::input_identity
 pub mod vyre_driver::launch_fixtures
 pub mod vyre_driver::launch_fusion
+pub mod vyre_driver::lock_policy
 pub mod vyre_driver::lowering
 pub mod vyre_driver::materialize
 pub mod vyre_driver::megakernel_barrier
@@ -1277,7 +1277,6 @@ pub struct vyre_driver::PeerTransferRequest
 pub struct vyre_driver::PipelineCacheAudit
 pub struct vyre_driver::PipelineCacheAuditReport
 pub struct vyre_driver::PipelineCacheIdentity
-pub struct vyre_driver::PipelineCacheKey
 pub struct vyre_driver::PipelineCacheMissEvidence
 pub struct vyre_driver::PipelineCacheSnapshot
 pub struct vyre_driver::PipelineDeviceFingerprint
@@ -1613,10 +1612,12 @@ pub vyre_driver::DispatchConfig::cooperative: bool
 pub vyre_driver::DispatchConfig::dispatch_elements: core::option::Option<u32>
 pub vyre_driver::DispatchConfig::dispatch_grid: core::option::Option<[u32; 3]>
 pub vyre_driver::DispatchConfig::fixpoint_iterations: core::option::Option<u32>
+pub vyre_driver::DispatchConfig::float_lowering: vyre_foundation::fp_parity::FloatLoweringMode
 pub vyre_driver::DispatchConfig::grid_override: core::option::Option<[u32; 3]>
 pub vyre_driver::DispatchConfig::label: core::option::Option<alloc::string::String>
 pub vyre_driver::DispatchConfig::launch: core::option::Option<vyre_driver::LaunchDirective>
 pub vyre_driver::DispatchConfig::max_output_bytes: core::option::Option<usize>
+pub vyre_driver::DispatchConfig::max_workgroups_per_axis: core::option::Option<[u32; 3]>
 pub vyre_driver::DispatchConfig::persistent_thread: core::option::Option<vyre_driver::persistent::PersistentThreadMode>
 pub vyre_driver::DispatchConfig::profile: core::option::Option<alloc::string::String>
 pub vyre_driver::DispatchConfig::speculation: core::option::Option<vyre_driver::SpeculationMode>

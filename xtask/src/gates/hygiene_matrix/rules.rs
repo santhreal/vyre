@@ -153,9 +153,21 @@ pub(crate) fn has_documented_panic_contract(text: &str, line_index: usize) -> bo
             continue;
         }
         let mut doc = cursor;
+        // A `#[cfg(all(\n test,\n ...\n))]` spans lines, and only its first ends
+        // with the `#[` this walk recognises. Counting unmatched brackets from
+        // below steps over the whole attribute; without it the walk stops on
+        // `))]`, never reaches the doc block, and reports a documented contract
+        // as undocumented.
+        let mut bracket_depth = 0usize;
         while doc > 0 {
             doc -= 1;
             let previous = lines[doc].trim();
+            if bracket_depth > 0 {
+                bracket_depth = bracket_depth
+                    .saturating_add(previous.matches(']').count())
+                    .saturating_sub(previous.matches('[').count());
+                continue;
+            }
             if previous.starts_with("///") || previous.starts_with("//!") {
                 if previous.contains("# Panics") {
                     return true;
@@ -168,6 +180,15 @@ pub(crate) fn has_documented_panic_contract(text: &str, line_index: usize) -> bo
             // block is never reached.
             if previous.is_empty() || previous.starts_with("#[") || previous.starts_with("//") {
                 continue;
+            }
+            if previous.ends_with(']') {
+                bracket_depth = previous
+                    .matches(']')
+                    .count()
+                    .saturating_sub(previous.matches('[').count());
+                if bracket_depth > 0 {
+                    continue;
+                }
             }
             break;
         }
@@ -576,27 +597,28 @@ pub(crate) fn is_word_end(text: &str, index: usize) -> bool {
         .is_none_or(|ch| !ch.is_ascii_alphanumeric() && ch != '_')
 }
 
+/// Brace depth across a file, carrying the lexical state a line ends in.
+///
+/// A raw string and a block comment already spanned lines. A plain string does
+/// too, both through a `\` continuation and through a bare newline, and a
+/// `"...{\n...\` fixture that resumed as code on the next line spent its
+/// braces on the enclosing block: one `#[cfg(test)] mod tests` closed early and
+/// the production scan resumed inside it, so panics in the test module were
+/// scanned as shipping code until the next `{` pushed the depth back.
 #[derive(Default)]
 pub(crate) struct BraceDepthState {
     pub(crate) depth: usize,
     pub(crate) block_comment_depth: usize,
     pub(crate) raw_string_hashes: Option<usize>,
+    in_string: bool,
+    escaped: bool,
 }
 
 impl BraceDepthState {
-    pub(crate) fn with_depth(depth: usize) -> Self {
-        Self {
-            depth,
-            ..Self::default()
-        }
-    }
-
     pub(crate) fn update(&mut self, line: &str) {
         let bytes = line.as_bytes();
         let mut index = 0usize;
-        let mut in_string = false;
         let mut in_char = false;
-        let mut escaped = false;
 
         while index < bytes.len() {
             if let Some(hashes) = self.raw_string_hashes {
@@ -620,11 +642,11 @@ impl BraceDepthState {
                 }
                 continue;
             }
-            if in_string {
+            if self.in_string {
                 match bytes[index] {
-                    _ if escaped => escaped = false,
-                    b'\\' => escaped = true,
-                    b'"' => in_string = false,
+                    _ if self.escaped => self.escaped = false,
+                    b'\\' => self.escaped = true,
+                    b'"' => self.in_string = false,
                     _ => {}
                 }
                 index += 1;
@@ -632,8 +654,8 @@ impl BraceDepthState {
             }
             if in_char {
                 match bytes[index] {
-                    _ if escaped => escaped = false,
-                    b'\\' => escaped = true,
+                    _ if self.escaped => self.escaped = false,
+                    b'\\' => self.escaped = true,
                     b'\'' => in_char = false,
                     _ => {}
                 }
@@ -656,7 +678,7 @@ impl BraceDepthState {
             }
 
             match bytes[index] {
-                b'"' => in_string = true,
+                b'"' => self.in_string = true,
                 b'\'' if bytes[index + 1..].contains(&b'\'') => in_char = true,
                 b'{' => self.depth = self.depth.saturating_add(1),
                 b'}' => self.depth = self.depth.saturating_sub(1),
@@ -696,10 +718,4 @@ pub(crate) fn raw_string_end_at(bytes: &[u8], index: usize, hashes: usize) -> bo
 
 pub(crate) fn read_text_bounded(path: &Path) -> io::Result<String> {
     crate::output_arg::read_text_bounded(path, MAX_HYGIENE_SCAN_FILE_BYTES, "hygiene scan")
-}
-
-pub(crate) fn update_brace_depth(current: usize, line: &str) -> usize {
-    let mut state = BraceDepthState::with_depth(current);
-    state.update(line);
-    state.depth
 }

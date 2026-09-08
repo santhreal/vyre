@@ -4,10 +4,9 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use super::{build_indexed_map, strided_accumulate_child};
-
-const INDEXED_MAP_OP_ID: &str = "vyre-libs::builder::indexed_map";
-const STRIDED_ACCUMULATE_OP_ID: &str = "vyre-libs::builder::strided_accumulate";
+use super::{
+    build_indexed_map, strided_accumulate_child, INDEXED_MAP_OP_ID, STRIDED_ACCUMULATE_OP_ID,
+};
 
 fn u32s(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)

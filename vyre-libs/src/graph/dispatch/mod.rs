@@ -15,7 +15,6 @@ pub(crate) mod frontier;
 pub mod motif;
 pub mod path_reconstruct;
 pub mod persistent_bfs;
-pub(crate) mod plan_cache;
 pub(crate) mod structural_kernel_pipeline;
 pub mod toposort;
 pub(crate) mod traversal_dispatch_pipeline;

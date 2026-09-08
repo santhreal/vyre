@@ -27,12 +27,9 @@ use vyre_megakernel::{
 };
 use vyre_runtime::artifact_admission::ArtifactSession;
 
-#[path = "../../tests/support/artifact_fixtures.rs"]
-mod artifact_fixtures;
-#[path = "../../tests/support/fixture_instance.rs"]
-mod fixture_instance;
+use vyre_test_support::artifact_fixtures;
 
-use fixture_instance::FixtureInstance;
+use vyre_test_support::fixture_instance::FixtureInstance;
 
 const FORMAT: &str = "workspace.target";
 const MIDDLE: &str = "middle";

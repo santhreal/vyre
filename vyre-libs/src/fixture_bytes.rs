@@ -3,10 +3,29 @@
 //! A witness answer written twice is a witness that can disagree with itself,
 //! so the shared ones are stated here once.
 
+/// Every registration checked against u32 bytes is a hash, linalg, pattern-dfa
+/// or representation op. `nn-attention` and `nn-linear` both name
+/// `math-linalg`, and `pattern-substring` names `pattern-dfa`, so their
+/// witnesses compile only in a selection already named here. `math-scan` and
+/// `nn-activation` pack u32 bytes in tests and register no u32 witness.
+#[cfg(any(
+    feature = "hash",
+    feature = "math-linalg",
+    feature = "pattern-dfa",
+    feature = "representation"
+))]
 pub(crate) fn u32_bytes(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
 
+/// `math/linalg/matmul_tiled` and `math/semiring_gemm` are the only matmul
+/// witnesses. The first is `math-linalg`, the second `math-kernels`, and
+/// `math-algebra` reaches the first through its own registrations.
+#[cfg(any(
+    feature = "math-linalg",
+    feature = "math-algebra",
+    feature = "math-kernels"
+))]
 pub(crate) const MATMUL_2X2_EXPECTED_BYTES: [u8; 16] = [
     0x13, 0x00, 0x00, 0x00, // 19
     0x16, 0x00, 0x00, 0x00, // 22
@@ -14,12 +33,12 @@ pub(crate) const MATMUL_2X2_EXPECTED_BYTES: [u8; 16] = [
     0x32, 0x00, 0x00, 0x00, // 50
 ];
 
-#[cfg(test)]
-#[must_use]
-pub(crate) fn matmul_2x2_expected() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![MATMUL_2X2_EXPECTED_BYTES.to_vec()]]
-}
-
+/// Every registration checked against f32 bytes is a conv, fft, weighted-sum,
+/// strassen or fused-activation op, and the first three are `math-dialect`
+/// modules. `math-linalg` covers strassen and `nn-linear` covers fused
+/// activation, and both name `math-dialect`, so one feature states the whole
+/// set. `nn-activation` alone registers no f32 witness.
+#[cfg(feature = "math-dialect")]
 pub(crate) fn f32_bytes(values: &[f32]) -> Vec<u8> {
     vyre_primitives::wire::pack_f32_slice(values)
 }
@@ -130,7 +149,19 @@ pub(crate) fn eval_bytes_oob_report(
 /// buffers. Which entry point runs is the thing under test there, so the
 /// probe cannot go through [`eval_bytes`], which only knows the default
 /// order.
-#[cfg(test)]
+///
+/// # Panics
+///
+/// Panics when the reference interpreter rejects the program. A fixture whose
+/// program does not execute proves nothing about the bytes a backend produces,
+/// so the expectation is refused rather than compared against a default.
+#[cfg(all(
+    test,
+    any(
+        feature = "analysis",
+        all(feature = "math-kernels", feature = "fixpoint")
+    )
+))]
 pub(crate) fn eval_bytes_lane_order(
     label: &str,
     program: &vyre_foundation::ir::Program,

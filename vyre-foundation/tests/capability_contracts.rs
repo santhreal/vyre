@@ -571,9 +571,9 @@ fn enforcement_cases() -> Vec<EnforcementCase> {
 
 /// The checked-in public-API snapshot of this crate, as text.
 ///
-/// The snapshot is regenerated from rustdoc by
-/// `scripts/check_public_api_snapshot.sh` and a byte-stability gate keeps it
-/// equal to the crate's real surface, so it is the one place a new capability
+/// The `public-api` gate in `xtask/src/gates/public_api.rs` regenerates the
+/// snapshot from rustdoc under `--write` and holds it byte-equal to the crate's
+/// real surface otherwise, so it is the one place a new capability
 /// field or a new advertised parameter is guaranteed to appear.
 fn snapshot_text() -> String {
     vyre_test_support::public_api::snapshot_text(env!("CARGO_PKG_NAME"))

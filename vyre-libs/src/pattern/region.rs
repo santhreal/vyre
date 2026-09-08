@@ -100,12 +100,6 @@ pub(crate) fn reference_dedup_regions(regions: Vec<RegionTriple>) -> Vec<RegionT
 }
 
 #[cfg(test)]
-pub(crate) fn reference_dedup_regions_in_place(regions: &mut Vec<RegionTriple>) {
-    let deduped = reference_dedup_regions(std::mem::take(regions));
-    *regions = deduped;
-}
-
-#[cfg(test)]
 pub(crate) fn reference_sort_regions(regions: &mut [RegionTriple]) {
     regions.sort();
 }

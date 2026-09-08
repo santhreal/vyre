@@ -11,6 +11,7 @@
 //! via `vyre-libs::dataflow::ssa::compute_dominators`).
 
 use crate::bitset::bitset_words;
+use crate::builder::trip_count::clamped_by_extents;
 use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
@@ -111,7 +112,11 @@ pub fn try_dominator_frontier(
                 ),
                 Node::let_bind(
                     "dom_end_candidate",
-                    Expr::load("dom_offsets", Expr::add(Expr::var("n"), Expr::u32(1))),
+                    clamped_by_extents(
+                        Expr::load("dom_offsets", Expr::add(Expr::var("n"), Expr::u32(1))),
+                        "dom_targets",
+                        [],
+                    ),
                 ),
                 Node::loop_for(
                     "d_candidate",
@@ -228,9 +233,10 @@ pub fn dominator_frontier_pred_check_body(candidate: Expr, n: Expr) -> Vec<Node>
         Node::let_bind("pred_start", Expr::load("pred_offsets", candidate.clone())),
         Node::let_bind(
             "pred_end",
-            Expr::min(
+            clamped_by_extents(
                 Expr::load("pred_offsets", Expr::add(candidate, Expr::u32(1))),
-                Expr::buf_len("pred_targets"),
+                "pred_targets",
+                [],
             ),
         ),
         Node::loop_for(
@@ -244,9 +250,10 @@ pub fn dominator_frontier_pred_check_body(candidate: Expr, n: Expr) -> Vec<Node>
                     Node::let_bind("dom_start_pred", Expr::load("dom_offsets", n.clone())),
                     Node::let_bind(
                         "dom_end_pred",
-                        Expr::min(
+                        clamped_by_extents(
                             Expr::load("dom_offsets", Expr::add(n, Expr::u32(1))),
-                            Expr::buf_len("dom_targets"),
+                            "dom_targets",
+                            [],
                         ),
                     ),
                     Node::loop_for(

@@ -11,6 +11,7 @@
 //! shape. The gate widths and the program assembly built on top of them belong
 //! to the `prefilter` submodule, and the ungated scan below is one of its rows.
 
+use crate::builder::trip_count::clamped_by_extents;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::pattern::builders::{
@@ -99,7 +100,13 @@ pub(in crate::pattern) fn bounded_walk_prologue_nodes(
     let mut nodes = vec![
         Node::let_bind("state", Expr::u32(0)),
         Node::let_bind("scan_start", scan_start),
-        Node::let_bind("scan_end", end),
+        // `end` derives from the live `haystack_len` load, which is not an
+        // extent. The step body reads `haystack` through `load_packed_byte`,
+        // four bytes per word, so the real ceiling is four times its extent.
+        Node::let_bind(
+            "scan_end",
+            Expr::min(end, Expr::mul(Expr::buf_len(haystack), Expr::u32(4))),
+        ),
         Node::loop_for(
             "step",
             Expr::var("scan_start"),
@@ -234,27 +241,6 @@ impl<'a> AcInputBindings<'a> {
             output_records_len,
             pattern_count,
         }
-    }
-
-    pub(in crate::pattern) const fn new(
-        names: [&'a str; 6],
-        state_count: u32,
-        output_records_len: u32,
-        pattern_count: u32,
-    ) -> Self {
-        let [haystack, transitions, output_offsets, output_records, pattern_lengths, haystack_len] =
-            names;
-        Self::from_names(
-            haystack,
-            transitions,
-            output_offsets,
-            output_records,
-            pattern_lengths,
-            haystack_len,
-            state_count,
-            output_records_len,
-            pattern_count,
-        )
     }
 
     /// The six declarations, in binding order.
@@ -551,6 +537,8 @@ pub(in crate::pattern) fn region_search_prologue_nodes(
 ///
 /// Every AC emit path iterates this one span identically and differs only in
 /// what it does with `pattern_id`, so the record layout is read in one place.
+/// That also makes this the one place `out_end`, which comes from the compiled
+/// table's `output_offsets`, is clamped to the extent it indexes.
 pub(in crate::pattern) fn output_record_loop_node(
     output_records: &str,
     per_record: Vec<Node>,
@@ -563,7 +551,7 @@ pub(in crate::pattern) fn output_record_loop_node(
     Node::loop_for(
         "out_idx",
         Expr::var("out_begin"),
-        Expr::var("out_end"),
+        clamped_by_extents(Expr::var("out_end"), output_records, []),
         body,
     )
 }

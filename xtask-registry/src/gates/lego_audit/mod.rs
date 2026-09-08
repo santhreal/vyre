@@ -65,6 +65,7 @@ use self::composability::*;
 use self::composition_chain::*;
 use self::cross_dialect::*;
 use self::depth_of_composition::*;
+pub use self::duplicates::LegoDuplicateReport;
 use self::exemptions::*;
 use self::fingerprint::*;
 pub use self::fingerprint::{fingerprint_program, MIN_COMPARABLE_FINGERPRINT_BYTES};
@@ -172,11 +173,44 @@ impl xtask::gate::GateBehavior for LegoCompositionChains {
 pub struct LegoTrend;
 
 impl xtask::gate::GateBehavior for LegoTrend {
-    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+    fn usage(&self) -> &'static [&'static str] {
+        &["--write-baseline    rewrite audits/lego-composition.tsv from the live registry"]
+    }
+
+    fn write_arguments(&self) -> &'static [&'static str] {
+        &["--write-baseline"]
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let ops = collect_ops(&mut report);
         report.cover(Coverage::complete("registered operations", ops.len()));
-        check_7_trend(&mut report, &ops);
+        // The gate owns this table in both directions: a comparison run reads it
+        // as the ratchet's floor, a write run rewrites it from the registry.
+        report.produced(COMPOSITION_BASELINE_PATH);
+        let flagged = check_7_trend(&mut report, &ops);
+        let writing = ctx.write
+            || ctx
+                .args
+                .iter()
+                .any(|argument| argument == "--write-baseline");
+        if !writing {
+            return Ok(report);
+        }
+        if flagged > 0 {
+            report.find(Finding::new(
+                "the composition baseline was not rewritten because the trend check reports a regression".to_string(),
+                "fix the regression the check names, then rerun `xtask lego-trend --write-baseline`; a baseline that records a failure certifies it",
+            ));
+            return Ok(report);
+        }
+        write_composition_baseline(&ctx.root, &ops).map_err(|error| {
+            GateError::new(
+                format!("write {COMPOSITION_BASELINE_PATH}: {error}"),
+                "check the checkout is writable, then rerun `xtask lego-trend --write-baseline`",
+            )
+        })?;
+        report.note(format!("  ✓ rewrote {COMPOSITION_BASELINE_PATH}"));
         Ok(report)
     }
 }

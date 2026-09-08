@@ -8,13 +8,18 @@ pub(crate) const DEFAULT_INTRUSIVE_LRU_CAPACITY: usize = 65_536;
 /// Intrusive doubly-linked LRU over a slab allocator.
 ///
 /// O(1) record, remove, and hottest/coldest iteration.
+///
+/// The live set is never self-bounded. Every consumer of this type stores
+/// metadata for entries an owning cache holds, and that cache decides when an
+/// entry dies; a node dropped while its entry is still live would lose the
+/// promotion stats the cache ranks on. Capacity is therefore a reservation,
+/// and the bound is the owning cache's index.
 pub(crate) struct IntrusiveLru<K, V> {
     nodes: Vec<Node<K, V>>,
     indices: FxHashMap<K, usize>,
     free: Vec<usize>,
     head: Option<usize>,
     tail: Option<usize>,
-    live_limit: Option<usize>,
 }
 
 struct Node<K, V> {
@@ -30,7 +35,7 @@ where
     K: std::hash::Hash + Eq + Copy,
     V: Default,
 {
-    /// Create an LRU with the default live-node capacity.
+    /// Create an LRU with the default node reservation.
     #[inline]
     pub(crate) fn new() -> Self {
         match Self::try_new() {
@@ -40,7 +45,7 @@ where
                     error = %error,
                     "wgpu intrusive LRU default reservation failed; continuing with grow-on-use storage"
                 );
-                Self::empty_with_policy(None)
+                Self::empty()
             }
         }
     }
@@ -56,47 +61,11 @@ where
         Self::try_with_reserved_capacity(DEFAULT_INTRUSIVE_LRU_CAPACITY)
     }
 
-    /// Create an LRU with a fixed live-node capacity.
+    /// Create an LRU that reserves `capacity` nodes up front.
     ///
-    /// A zero capacity is clamped to one so externally-derived
-    /// capacity budgets cannot disable the LRU by accident.
-    #[inline]
-    pub(crate) fn with_capacity(capacity: usize) -> Self {
-        let capacity = capacity.max(1);
-        match Self::try_with_capacity(capacity) {
-            Ok(lru) => lru,
-            Err(error) => {
-                tracing::error!(
-                    capacity,
-                    error = %error,
-                    "wgpu intrusive LRU bounded reservation failed; continuing with grow-on-use storage"
-                );
-                Self::empty_with_policy(Some(capacity))
-            }
-        }
-    }
-
-    /// Fallible version of [`Self::with_capacity`].
-    ///
-    /// # Errors
-    ///
-    /// Returns [`vyre_driver::BackendError`] if LRU backing storage cannot be
-    /// reserved.
-    #[inline]
-    pub(crate) fn try_with_capacity(capacity: usize) -> Result<Self, vyre_driver::BackendError> {
-        // Defensive: a capacity of 0 would make the LRU unusable; clamp to 1
-        // so callers that compute capacity from external config never panic.
-        let capacity = capacity.max(1);
-        Self::try_with_capacity_policy(capacity, Some(capacity))
-    }
-
-    /// Create an LRU that reserves `capacity` slots but does not silently evict
-    /// live nodes when the reservation is exceeded.
-    ///
-    /// Cache metadata uses this path because the owning cache, not the LRU
-    /// backing store, defines when an entry is evicted. Dropping metadata while
-    /// the cache entry is still live would make promotion stats disappear and
-    /// force cold-path scans at scale.
+    /// The reservation is a hint for the steady-state size, not a bound: the
+    /// owning cache decides when an entry dies, so exceeding it grows the slab
+    /// rather than dropping a live entry's stats.
     #[inline]
     pub(crate) fn with_reserved_capacity(capacity: usize) -> Self {
         match Self::try_with_reserved_capacity(capacity) {
@@ -107,7 +76,7 @@ where
                     error = %error,
                     "wgpu intrusive LRU reservation failed; continuing with grow-on-use storage"
                 );
-                Self::empty_with_policy(None)
+                Self::empty()
             }
         }
     }
@@ -123,13 +92,6 @@ where
         capacity: usize,
     ) -> Result<Self, vyre_driver::BackendError> {
         let capacity = capacity.max(1);
-        Self::try_with_capacity_policy(capacity, None)
-    }
-
-    fn try_with_capacity_policy(
-        capacity: usize,
-        live_limit: Option<usize>,
-    ) -> Result<Self, vyre_driver::BackendError> {
         let mut nodes = Vec::new();
         reserve_vec_to_capacity(
             &mut nodes,
@@ -160,18 +122,16 @@ where
             free,
             head: None,
             tail: None,
-            live_limit,
         })
     }
 
-    fn empty_with_policy(live_limit: Option<usize>) -> Self {
+    fn empty() -> Self {
         Self {
             nodes: Vec::new(),
             indices: FxHashMap::default(),
             free: Vec::new(),
             head: None,
             tail: None,
-            live_limit,
         }
     }
 
@@ -259,12 +219,6 @@ where
     }
 
     fn alloc_node(&mut self, key: K) -> usize {
-        if self.live_limit == Some(self.indices.len()) {
-            if let Some(coldest) = self.tail {
-                let evicted_key = self.nodes[coldest].key;
-                self.remove(&evicted_key);
-            }
-        }
         let index = if let Some(index) = self.free.pop() {
             self.nodes[index] = Node {
                 key,
@@ -291,9 +245,11 @@ where
 
     /// Return backing-store capacities for cache diagnostics.
     ///
-    /// This is intentionally public rather than test-only so structure
-    /// contracts do not need inline test-only hooks in production modules.
-    #[doc(hidden)]
+    /// Gated on `test` because the inline module below is the only caller and no
+    /// production path reads a capacity. Compiled into the library it is dead in
+    /// every build that is not a test build, which is an error under the
+    /// workspace lints rather than a warning.
+    #[cfg(test)]
     pub(crate) fn reserved_capacity_for_diagnostics(&self) -> (usize, usize, usize) {
         (
             self.nodes.capacity(),
@@ -379,7 +335,7 @@ impl AccessTracker {
                     "wgpu access tracker reservation failed; continuing with grow-on-use storage"
                 );
                 Self {
-                    lru: IntrusiveLru::empty_with_policy(None),
+                    lru: IntrusiveLru::empty(),
                     tick: 0,
                 }
             }
@@ -548,20 +504,6 @@ mod tests {
     }
 
     #[test]
-    fn capacity_evicts_coldest_without_growing_live_set() {
-        let mut lru = IntrusiveLru::<u32, u32>::with_capacity(2);
-        *lru.ensure(1) = 10;
-        *lru.ensure(2) = 20;
-        lru.touch(1);
-        *lru.ensure(3) = 30;
-
-        assert_eq!(lru.get(&1), Some(&10));
-        assert_eq!(lru.get(&2), None);
-        assert_eq!(lru.get(&3), Some(&30));
-        assert_eq!(lru.hottest(3), vec![3, 1]);
-    }
-
-    #[test]
     fn reserved_capacity_does_not_evict_live_metadata() {
         let mut lru = IntrusiveLru::<u32, u32>::with_reserved_capacity(2);
         *lru.ensure(1) = 10;
@@ -593,8 +535,8 @@ mod tests {
     }
 
     #[test]
-    fn with_capacity_reserves_full_slab_and_index_budget() {
-        let lru = IntrusiveLru::<u32, u32>::with_capacity(4096);
+    fn a_reservation_covers_the_slab_the_index_and_the_free_list() {
+        let lru = IntrusiveLru::<u32, u32>::with_reserved_capacity(4096);
         let (nodes, indices, free) = lru.reserved_capacity_for_diagnostics();
 
         assert!(

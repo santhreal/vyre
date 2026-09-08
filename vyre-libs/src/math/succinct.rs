@@ -14,6 +14,7 @@ use vyre_foundation::ir::{
 };
 
 use crate::builder::cooperative::chunks;
+use crate::builder::trip_count::clamped_by_extents;
 use crate::reduce::workgroup_scan::blelloch_inclusive_sum_nodes;
 
 const RANK_SUPERBLOCKS_OP_ID: &str = "vyre-libs::math::succinct::rank1_superblocks";
@@ -322,7 +323,7 @@ pub fn try_rank1_query(
             Node::loop_for(
                 "rank_word",
                 Expr::var("block_start_word"),
-                Expr::var("word_index"),
+                clamped_by_extents(Expr::var("word_index"), bits, []),
                 vec![Node::assign(
                     "rank_acc",
                     Expr::add(

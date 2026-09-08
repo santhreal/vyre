@@ -5,7 +5,7 @@
 //! semantics or the documented error contract.
 #![allow(dead_code)]
 
-mod flat_expr_eval;
+use crate::flat_expr_eval;
 
 use proptest::prelude::*;
 use vyre_foundation::ir::MemoryOrdering;

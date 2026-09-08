@@ -5,16 +5,16 @@
 
 use super::scratch::{copy_frontier_seed_into, PersistentBfsGpuScratch};
 
-use crate::dispatch_buffers::decode_u32_output_exact;
 use crate::graph::csr_closure_inputs::CsrClosureInputs;
-use crate::graph::dispatch::dispatch_bridge::{refresh_keyed_dispatch_inputs, DispatchInput};
+use crate::graph::dispatch::dispatch_bridge::{
+    dispatch_u32_outputs_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
+    U32Readback,
+};
 use crate::graph::persistent_bfs::{
     plan_persistent_bfs_dispatch, validate_persistent_bfs_changed_flag,
     validate_persistent_bfs_converged_flag,
 };
-use vyre_megakernel::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Dispatcher-backed persistent BFS expansion. Returns the saturated frontier,
 /// the sticky changed-flag, and the device converged word.
@@ -144,40 +144,28 @@ pub fn bfs_expand_via_with_scratch_into(
             ),
         ],
     )?;
-    let outputs = execute_single_program(
+    dispatch_u32_outputs_from_prepared_into(
         dispatcher,
-        "persistent_bfs_expand",
+        policy,
         program,
         &scratch.inputs,
-        policy,
-    )?
-    .outputs;
-    let [frontier_buf, changed_buf, converged_buf] = match outputs.as_slice() {
-        [frontier_buf, changed_buf, converged_buf] => [frontier_buf, changed_buf, converged_buf],
-        _ => {
-            return Err(SemanticExecutionError::Backend(format!(
-                "Fix: bfs_expand_via expected exactly three u32 output buffers (frontier_out, changed, converged), got {}.",
-                outputs.len()
-            )));
-        }
-    };
-    decode_u32_output_exact(
-        frontier_buf,
-        words,
-        "bfs_expand_via frontier_out",
-        frontier_out,
-    )?;
-    decode_u32_output_exact(
-        changed_buf,
-        changed_words,
-        "bfs_expand_via changed",
-        &mut scratch.changed,
-    )?;
-    decode_u32_output_exact(
-        converged_buf,
-        1,
-        "bfs_expand_via converged",
-        &mut scratch.converged,
+        &mut [
+            U32Readback {
+                buffer: "frontier_out",
+                words,
+                out: frontier_out,
+            },
+            U32Readback {
+                buffer: "changed",
+                words: changed_words,
+                out: &mut scratch.changed,
+            },
+            U32Readback {
+                buffer: "converged",
+                words: 1,
+                out: &mut scratch.converged,
+            },
+        ],
     )?;
     let changed = scratch.changed[0];
     validate_persistent_bfs_changed_flag(changed).map_err(SemanticExecutionError::Backend)?;

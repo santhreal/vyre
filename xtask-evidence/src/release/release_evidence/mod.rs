@@ -26,9 +26,9 @@ use expected_artifacts::{
     ReleaseExpectedArtifactRegistry, COMMAND_MODE_EXTERNAL_ARTIFACTS_ONLY, COMMAND_MODE_SPAWNED,
     EXPECTED_ARTIFACT_REGISTRY, RELEASE_EVIDENCE_GENERATOR_COMMAND, RELEASE_EVIDENCE_RUN_ARTIFACT,
 };
+use xtask::artifact_paths::REGISTERED_OP_DUPLICATES_ARTIFACT;
 #[cfg(test)]
-use xtask::artifact_paths::FRONTIER_LEADERBOARD_ARTIFACT;
-use xtask::artifact_paths::{LEGO_AUDIT_DUPLICATES_ARTIFACT, REGISTERED_OP_DUPLICATES_ARTIFACT};
+use xtask::artifact_paths::{FRONTIER_LEADERBOARD_ARTIFACT, LEGO_AUDIT_DUPLICATES_ARTIFACT};
 
 /// Bumped from 5: command identity and artifact ownership now use the complete
 /// argument vector, including backend-specific measured-evidence invocations.
@@ -68,12 +68,7 @@ const COMMANDS: &[EvidenceCommand] = &[
         "--duplicate-report-json",
         REGISTERED_OP_DUPLICATES_ARTIFACT,
     ]),
-    EvidenceCommand::required(&[
-        "lego-audit",
-        "--report-only",
-        "--duplicate-report-json",
-        LEGO_AUDIT_DUPLICATES_ARTIFACT,
-    ]),
+    EvidenceCommand::required(&["lego-duplicate-report", "--write"]),
 ];
 
 /// Every subcommand this table names, in table order.
@@ -136,14 +131,6 @@ impl EvidenceCommand {
             args,
             required: true,
             in_sweep: false,
-        }
-    }
-
-    /// The subcommand this row names, which is what an artifact list is keyed on.
-    const fn subcommand(&self) -> &'static str {
-        match self.args.first() {
-            Some(first) => first,
-            None => "",
         }
     }
 
@@ -658,13 +645,10 @@ mod tests {
             ]),
         );
 
+        // The lego duplicate evidence is owned by its gate's descriptor, not by
+        // a flag on the command line, so the expectation follows the descriptor.
         assert_eq!(
-            expected_artifacts_for_args(&[
-                "lego-audit",
-                "--report-only",
-                "--duplicate-report-json",
-                LEGO_AUDIT_DUPLICATES_ARTIFACT,
-            ]),
+            expected_artifacts_for_args(&["lego-duplicate-report", "--write"]),
             vec![LEGO_AUDIT_DUPLICATES_ARTIFACT]
         );
         assert_eq!(statuses.len(), 1);
@@ -686,16 +670,16 @@ mod tests {
     /// exact artifact set is declared.
     #[test]
     fn every_required_generator_declares_the_artifacts_it_owes() {
-        let undeclared: Vec<&str> = COMMANDS
+        let undeclared: Vec<String> = COMMANDS
             .iter()
             .filter(|command| {
                 command.required && expected_artifacts_for_args(command.args).is_empty()
             })
-            .map(EvidenceCommand::subcommand)
+            .map(|command| command.args.join(" "))
             .collect();
         assert_eq!(
             undeclared,
-            Vec::<&str>::new(),
+            Vec::<String>::new(),
             "Fix: list the artifacts each exact generator invocation owes in expected_artifacts_for_args"
         );
     }
@@ -1093,11 +1077,12 @@ mod tests {
         let required = COMMANDS
             .iter()
             .find(|command| command.required)
-            .map(EvidenceCommand::subcommand)
+            .map(|command| command.args)
             .unwrap();
+        let label = format!("xtask {}", required.join(" "));
         let mut run = clean_committed_run();
         let commands = run["commands"].as_array_mut().unwrap();
-        commands.retain(|record| record["args"][0].as_str() != Some(required));
+        commands.retain(|record| !record_matches_args(record, required));
 
         let failures = judge(&run);
 
@@ -1105,7 +1090,7 @@ mod tests {
             failures
                 .iter()
                 .any(|failure| failure.contains("missing required generator")
-                    && failure.contains(required)),
+                    && failure.contains(&label)),
             "{failures:?}"
         );
     }
@@ -1401,6 +1386,6 @@ mod tests {
             "disjoint artifact ownership failed: {blockers:?}"
         );
         assert_eq!(registry.command_count, 16);
-        assert_eq!(registry.artifact_count, 74);
+        assert_eq!(registry.artifact_count, 75);
     }
 }

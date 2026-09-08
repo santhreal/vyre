@@ -251,7 +251,6 @@ pub fn crc32_program(input: &str, out: &str, n: u32) -> Program {
 #[must_use]
 pub fn crc32_chunk_program(input: &str, out: &str, n: u32, chunk_size: NonZeroU32) -> Program {
     let chunk_size = chunk_size.get();
-    let chunk_count = crc32_chunk_count(n, chunk_size);
     let output_words = match crc32_chunk_output_words(n, chunk_size) {
         Some(words) => words,
         None => u32::MAX,

@@ -8,20 +8,20 @@
 //! unchecked `Vec::reserve` variant and keeps allocation failures actionable.
 //! Nothing here truncates or saturates on overflow.
 
-#[cfg(all(test, feature = "device"))]
-use std::collections::HashSet;
-#[cfg(all(test, feature = "device"))]
-use std::hash::{BuildHasher, Hash};
 #[cfg(feature = "device")]
 use vyre_megakernel::SemanticExecutionError;
 
 /// Reserve additional items in a scratch vector with a standard, actionable
 /// allocation diagnostic.
 ///
+/// Gated to match its callers: the `graph` dispatch plans reserve through this
+/// on the production path, and the `math-kernels` CPU parity oracles reserve
+/// through it only in a test build.
+///
 /// # Errors
 ///
 /// Returns a message naming `owner`, `context`, and the allocator failure.
-#[cfg(any(feature = "graph", feature = "math-kernels"))]
+#[cfg(any(feature = "graph", all(test, feature = "math-kernels")))]
 pub(crate) fn reserve_items<T>(
     buffer: &mut Vec<T>,
     additional: usize,
@@ -41,7 +41,7 @@ pub(crate) fn reserve_items<T>(
 /// # Errors
 ///
 /// Returns the mapped allocation error when `Vec::try_reserve` fails.
-#[cfg(any(feature = "graph", feature = "math-kernels"))]
+#[cfg(any(feature = "graph", all(test, feature = "math-kernels")))]
 pub(crate) fn reserve_items_with<T, E>(
     buffer: &mut Vec<T>,
     additional: usize,
@@ -56,7 +56,15 @@ pub(crate) fn reserve_items_with<T, E>(
 ///
 /// # Errors
 /// Returns the allocator's refusal rendered as a message.
-#[cfg(feature = "device")]
+// The callers are `analysis`, `encoding` and `solvers` builders, plus the
+// panicking wrapper below under `scheduling`. `device` admitted this on a
+// feature set that compiles none of them, where it was dead code.
+#[cfg(any(
+    feature = "analysis",
+    feature = "encoding",
+    feature = "solvers",
+    all(test, feature = "scheduling")
+))]
 pub(crate) fn try_reserve_vec_capacity<T>(
     buffer: &mut Vec<T>,
     capacity: usize,
@@ -67,9 +75,13 @@ pub(crate) fn try_reserve_vec_capacity<T>(
 
 /// Reserve room for `additional` more items in `buffer`.
 ///
+/// `graph::dispatch::csr_forward_or_changed` is the sole caller, so this takes
+/// `graph-dispatch` rather than the `graph` gate its `reserve_items` siblings
+/// carry.
+///
 /// # Errors
 /// Returns a [`SemanticExecutionError::Backend`] naming `context` and the count.
-#[cfg(feature = "device")]
+#[cfg(feature = "graph-dispatch")]
 pub(crate) fn reserve_vec<T>(
     buffer: &mut Vec<T>,
     additional: usize,
@@ -89,7 +101,7 @@ pub(crate) fn reserve_vec<T>(
 ///
 /// # Errors
 /// Returns a [`SemanticExecutionError::Backend`] naming `context` and the capacity.
-#[cfg(feature = "device")]
+#[cfg(any(feature = "analysis", feature = "encoding", feature = "solvers"))]
 pub(crate) fn reserve_vec_capacity<T>(
     buffer: &mut Vec<T>,
     capacity: usize,
@@ -107,7 +119,9 @@ pub(crate) fn reserve_vec_capacity<T>(
 /// # Panics
 /// Panics when the reservation fails. Continuing with a short buffer would let a pass
 /// write past the scratch it believes it owns.
-#[cfg(all(test, feature = "device"))]
+// `scheduling` rather than `device`: the eviction-set inversion in
+// `scheduling::submodular_cache_eviction` is the only caller that wants a panic.
+#[cfg(all(test, feature = "scheduling"))]
 pub(crate) fn reserve_vec_capacity_or_panic<T>(
     buffer: &mut Vec<T>,
     capacity: usize,
@@ -122,37 +136,10 @@ pub(crate) fn reserve_vec_capacity_or_panic<T>(
     }
 }
 
-/// Reserve room for `additional` more entries in `set`.
-///
-/// # Errors
-/// Returns a [`SemanticExecutionError::Backend`] when the target capacity
-/// overflows or the allocator rejects it.
-#[cfg(all(test, feature = "device"))]
-pub(crate) fn reserve_hash_set<T, S>(
-    set: &mut HashSet<T, S>,
-    additional: usize,
-    context: &'static str,
-) -> Result<(), SemanticExecutionError>
-where
-    T: Eq + Hash,
-    S: BuildHasher,
-{
-    if additional == 0 {
-        return Ok(());
-    }
-    let target_capacity = set.len().checked_add(additional).ok_or_else(|| {
-        SemanticExecutionError::Backend(format!(
-            "Fix: {context} hash scratch reservation overflowed for {additional} additional slot(s). Split the dispatch window before retrying."
-        ))
-    })?;
-    vyre_foundation::allocation::try_reserve_hash_set_to_capacity(set, target_capacity).map_err(|error| {
-        SemanticExecutionError::Backend(format!(
-            "Fix: {context} could not reserve {additional} additional hash slot(s): {error}. Split the dispatch window before retrying."
-        ))
-    })
-}
-
-#[cfg(all(test, feature = "device"))]
+#[cfg(all(
+    test,
+    any(feature = "analysis", feature = "encoding", feature = "solvers")
+))]
 mod dispatch_tests {
     use super::*;
 
@@ -174,6 +161,9 @@ mod dispatch_tests {
         assert!(message.contains("Fix:"));
     }
 
+    /// `reserve_vec` rides `graph-dispatch`, so this case does too; without the
+    /// predicate a `device` build without `graph-dispatch` cannot compile it.
+    #[cfg(feature = "graph-dispatch")]
     #[test]
     fn reserve_vec_additional_reports_context_on_overflow() {
         let mut scratch = Vec::<u8>::new();

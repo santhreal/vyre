@@ -1,6 +1,8 @@
 //! The `prove` subcommand: certificate defaults, proof execution, and Ed25519 signing of
 //! the emitted artifact.
 
+use std::collections::BTreeSet;
+
 use crate::artifact_json::write_json_artifact;
 use crate::backend_selection::{select_backends, semantic_execution_backends};
 use crate::operation_selection::{select_entries, unified_entries};
@@ -12,6 +14,7 @@ use crate::proof_scheduler::{
 use crate::proof_timing::{emit_proof_timing, ProofTimingReport};
 use ed25519_dalek::{Signer, SigningKey};
 use serde::Serialize;
+use vyre_conform::law_proof::{prove_declared_laws, LawVerdict};
 use vyre_conform_spec::ConformanceResult;
 
 pub(crate) const DEFAULT_CERTIFICATE_DIR: &str = ".internals/certs/";
@@ -27,6 +30,65 @@ struct ProveArtifact {
     pub(crate) signature: String,
     pub(crate) public_key: String,
     pub(crate) pairs: Vec<ConformanceResult>,
+    pub(crate) laws: Vec<LawRecord>,
+}
+
+/// One declared law and the witness that proved it on the reference oracle.
+#[derive(Debug, Serialize)]
+struct LawRecord {
+    pub(crate) op_id: String,
+    pub(crate) law: String,
+    pub(crate) witness: String,
+    pub(crate) cases: usize,
+}
+
+/// Prove every declared law of every selected operation, refusing the
+/// certificate when the oracle refutes one.
+///
+/// A law the declared buffer shape cannot exercise is not recorded here: the
+/// roster of those pairs, and the payload each one is missing, is a source
+/// contract the conformance suite judges. What belongs in a certificate is what
+/// this run executed.
+fn prove_selected_laws(selected: &[&'static str]) -> Result<Vec<LawRecord>, String> {
+    let selected: BTreeSet<&str> = selected.iter().copied().collect();
+    let mut records = Vec::new();
+    let mut rejected = Vec::new();
+    for entry in vyre_registry_link::operation::live_operation_registry().iter() {
+        if !selected.contains(entry.id) {
+            continue;
+        }
+        for proof in prove_declared_laws(&entry) {
+            match proof.verdict {
+                LawVerdict::Holds { cases } => records.push(LawRecord {
+                    op_id: proof.op_id.to_string(),
+                    law: proof.law.to_string(),
+                    witness: proof
+                        .witness
+                        .map_or("none", vyre_conform::LawWitness::name)
+                        .to_string(),
+                    cases,
+                }),
+                LawVerdict::Refuted { case, detail } => rejected.push(format!(
+                    "  - ({}, {}): refuted on fixture case {case}: {detail}",
+                    proof.op_id, proof.law
+                )),
+                LawVerdict::Unrunnable { reason } => rejected.push(format!(
+                    "  - ({}, {}): proof could not run: {reason}",
+                    proof.op_id, proof.law
+                )),
+                LawVerdict::Unproven { .. } => {}
+            }
+        }
+    }
+    if rejected.is_empty() {
+        Ok(records)
+    } else {
+        Err(format!(
+            "{} declared law(s) did not survive the reference oracle:\n{}\nFix: correct the operation, correct its fixtures, or remove a declaration the oracle refutes.",
+            rejected.len(),
+            rejected.join("\n")
+        ))
+    }
 }
 
 pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String> {
@@ -106,6 +168,13 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
         ));
     }
 
+    let selected_ops: Vec<&'static str> = prepared_entries
+        .iter()
+        .map(|prepared| prepared.id)
+        .collect();
+    let laws = prove_selected_laws(&selected_ops)
+        .map_err(|reason| format!("prove refused to emit `{out}`: {reason}"))?;
+
     let plan = proof_plan_summary(
         &all_backends,
         &all_entries,
@@ -117,13 +186,19 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
 
     let signing_started = std::time::Instant::now();
     let mut hasher = blake3::Hasher::new();
-    hasher.update(b"vyre-conform/prove/v1");
+    hasher.update(b"vyre-conform/prove/v2");
     hash_proof_plan(&mut hasher, &plan);
     for pair in &pairs {
         hasher.update(pair.op_id.as_bytes());
         hasher.update(pair.backend_id.as_bytes());
         hasher.update(&[u8::from(pair.passed)]);
         hasher.update(pair.message.as_bytes());
+    }
+    for law in &laws {
+        hasher.update(law.op_id.as_bytes());
+        hasher.update(law.law.as_bytes());
+        hasher.update(law.witness.as_bytes());
+        hasher.update(&law.cases.to_le_bytes());
     }
     let program_hash = hasher.finalize().to_hex().to_string();
 
@@ -146,11 +221,12 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
     rand_core::OsRng.fill_bytes(&mut seed);
     let key = SigningKey::from_bytes(&seed);
     let signable = serde_json::json!({
-        "wire_format_version": 1u32,
+        "wire_format_version": 2u32,
         "program_hash": program_hash,
         "backend_id": "all",
         "plan": &plan,
         "pairs": &pairs,
+        "laws": &laws,
     });
     let signable_bytes = serde_json::to_vec(&signable).map_err(|error| {
         format!("failed to serialize prove artifact body: {error}. Fix: keep certificate fields JSON-serializable.")
@@ -158,13 +234,14 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
     let signature = key.sign(&signable_bytes);
     let emitted_pair_count = pairs.len();
     let artifact = ProveArtifact {
-        wire_format_version: 1,
+        wire_format_version: 2,
         program_hash,
         backend_id: "all".to_string(),
         plan,
         signature: hex::encode(signature.to_bytes()),
         public_key: hex::encode(key.verifying_key().to_bytes()),
         pairs,
+        laws,
     };
     let json = serde_json::to_string_pretty(&artifact).map_err(|error| {
         format!("failed to serialize prove artifact: {error}. Fix: keep certificate fields JSON-serializable.")

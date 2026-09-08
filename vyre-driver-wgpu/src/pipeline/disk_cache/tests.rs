@@ -96,6 +96,28 @@ mod cache_key_contracts {
         assert_ne!(k_a, k_b);
     }
 
+    /// WHY: the disk entry holds compiled WGSL, and a rounding mode changes the
+    /// text that was compiled. Two modes sharing one key would answer a strict
+    /// dispatch with a contracted pipeline, which is a wrong result rather than
+    /// a slow one. The roster is swept, so a mode added later is covered here
+    /// without this case being edited.
+    #[test]
+    fn a_float_lowering_mode_change_invalidates_cache_match() {
+        let wire = b"some-wire-bytes".as_slice();
+        let mut keys: Vec<[u8; 32]> = Vec::new();
+        for &mode in vyre_foundation::fp_parity::FloatLoweringMode::EVERY {
+            let mut config = DispatchConfig::default();
+            config.float_lowering = mode;
+            let key = wgsl_cache_key(wire, "adapter-alpha", &config);
+            assert!(
+                !keys.contains(&key),
+                "Fix: mix the float lowering mode into the WGSL disk cache key; `{}` collides with an earlier mode.",
+                mode.cache_label()
+            );
+            keys.push(key);
+        }
+    }
+
     #[test]
     fn manual_cache_key_strings_preserve_stable_format() {
         let adapter_info = wgpu::AdapterInfo {
@@ -117,7 +139,7 @@ mod cache_key_contracts {
         config.workgroup_override = Some([8, 16, 32]);
         assert_eq!(
             vyre_driver::dispatch_policy_cache_string(&config),
-            "ulp=Some(7):wg=Some([8, 16, 32])"
+            "ulp=Some(7):wg=Some([8, 16, 32]):float=contracted"
         );
     }
 

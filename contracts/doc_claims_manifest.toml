@@ -46,7 +46,7 @@ description = "In-memory pipeline-cache entry-count enforcement (audit item #18)
 id = "primitives_feature_classification"
 doc = "vyre-primitives/README.md"
 phrase = "every_cargo_feature_is_classified_exactly_once"
-test = "vyre-primitives/src/organization.rs"
+test = "vyre-primitives/tests/feature_organization.rs"
 description = "Every Cargo feature is classified exactly once by the crate's own feature table."
 
 # aot_no_runtime_dependency removed. It required vyre-aot/README.md to contain

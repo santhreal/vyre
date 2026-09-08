@@ -51,6 +51,7 @@ impl vyre_spec::BackendAvailability for vyre_spec::BackendAvailabilityPredicate
 impl vyre_spec::BackendAvailabilityPredicate
 impl vyre_spec::BackendId
 impl vyre_spec::BinOp
+impl vyre_spec::BufferAccess
 impl vyre_spec::CapabilityId
 impl vyre_spec::Category
 impl vyre_spec::CollectiveOp
@@ -161,6 +162,7 @@ pub const fn vyre_spec::extension::ExtensionUnOpId::is_extension(self) -> bool
 pub const fn vyre_spec::soundness::PrimitiveSoundness::new(op_id: &'static str, soundness: vyre_spec::soundness::Soundness) -> Self
 pub const fn vyre_spec::soundness::PrimitiveSoundness::with_sanitizer_filter(self) -> Self
 pub const fn vyre_spec::soundness::Soundness::join(self, other: vyre_spec::soundness::Soundness) -> vyre_spec::soundness::Soundness
+pub const vyre_spec::BufferAccess::ALL: [Self; 5]
 pub const vyre_spec::CombineKind::ALL: [Self; 7]
 pub const vyre_spec::CommGroup::WORLD: Self
 pub const vyre_spec::DataType::QUANTIZED_STORAGE: [Self; 9]
@@ -942,6 +944,8 @@ pub vyre_spec::UnOp::Acos
 pub vyre_spec::UnOp::Asin
 pub vyre_spec::UnOp::Atan
 pub vyre_spec::UnOp::BitNot
+pub vyre_spec::UnOp::BitcastF32ToU32
+pub vyre_spec::UnOp::BitcastU32ToF32
 pub vyre_spec::UnOp::Ceil
 pub vyre_spec::UnOp::Clz
 pub vyre_spec::UnOp::Cos

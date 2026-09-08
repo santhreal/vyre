@@ -2,8 +2,6 @@
 //! `PassSchedulingError` + `next_ready_pass` helper.
 //! Audit cleanup A21 (2026-04-30): split from monolithic scheduler.rs.
 
-#![allow(unused_imports)]
-
 use rustc_hash::FxHashMap;
 use std::collections::VecDeque;
 use std::hash::{BuildHasher, Hash};

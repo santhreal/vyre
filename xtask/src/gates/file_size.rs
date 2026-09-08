@@ -43,7 +43,7 @@ const CORE_MEASURED: &[(&str, usize)] = &[
         "vyre-driver-wgpu/src/engine/record_and_readback/mod.rs",
         829,
     ),
-    ("vyre-reference/src/workgroup.rs", 810),
+    ("vyre-reference/src/workgroup.rs", 669),
     ("vyre-driver-wgpu/src/engine/multi_gpu/mod.rs", 808),
     ("vyre-foundation/src/optimizer/fact_cache/mod.rs", 570),
     ("vyre-runtime/src/tenant/handle.rs", 443),

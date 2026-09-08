@@ -9,7 +9,7 @@
 //! * **Shape facts**  -  [`ProgramShapeFacts`] per buffer (already existed).
 //! * **Use facts**  -  variable-use counts and buffer read/write sets.
 //! * **Type facts**  -  best-effort expression-type map for float/int
-//!   discrimination (used by FMA synthesis and vectorization).
+//!   discrimination (used by vectorization).
 //!
 //! The substrate is keyed by the canonical 256-bit program fingerprint so
 //! stale entries are never reused across fixpoint iterations.

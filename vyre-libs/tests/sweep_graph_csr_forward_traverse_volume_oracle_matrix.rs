@@ -2,9 +2,7 @@
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(feature = "graph")]
-#[path = "../../tests/support/csr_sweep/mod.rs"]
-mod csr_sweep;
-mod graph_sweep_fixtures;
+use crate::csr_sweep;
 
 use vyre_reference::composition_witness::csr_forward_traverse_witness;
 

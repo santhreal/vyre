@@ -48,12 +48,6 @@ pub struct PassScheduler {
     adapter: AdapterCaps,
     invalidation_adjacency_cache: OnceLock<Vec<u32>>,
     invalidation_closure_cache: OnceLock<FxHashMap<&'static str, FxHashSet<&'static str>>>,
-    /// Tag → pass indices that should be re-marked dirty when the tag is
-    /// invalidated. A tag matches a pass if it equals the pass's `name`
-    /// OR appears in its `requires` list. Replaces the per-iteration
-    /// O(passes × invalidates × requires) scan inside
-    /// `mark_invalidated_passes` with O(invalidates × dependents).
-    dirty_trigger_index_cache: OnceLock<FxHashMap<&'static str, Vec<usize>>>,
     /// Indexed variant of `initial_dirty_cache` used by the hot `run()` path.
     /// This avoids rebuilding/cloning a string hash set and turns dirty checks
     /// into direct indexed loads.
@@ -518,23 +512,38 @@ impl PassScheduler {
             .map(|(i, pass)| (pass.metadata().name, i))
             .collect();
         let execution_order = (0..passes.len()).collect();
-        Ok(Self {
+        Ok(Self::over(passes, pass_index, execution_order, true))
+    }
+
+    /// A scheduler over `passes` with every enforcement gate off, every cache
+    /// cold, no research trace, the default iteration budget and no adapter.
+    ///
+    /// The one place the field set is spelled out. Two constructors listed all
+    /// fourteen fields each, so a field that arrived with a non-default
+    /// starting value in one of them was a scheduler that behaved differently
+    /// depending on which entry point built it.
+    fn over(
+        passes: Vec<ProgramPassKind>,
+        pass_index: FxHashMap<&'static str, usize>,
+        execution_order: Vec<usize>,
+        requirements_prevalidated: bool,
+    ) -> Self {
+        Self {
             passes,
             pass_index,
             research_traces: FxHashMap::default(),
             execution_order,
-            requirements_prevalidated: true,
+            requirements_prevalidated,
             max_iterations: DEFAULT_MAX_ITERATIONS,
             adapter: AdapterCaps::conservative(),
             invalidation_adjacency_cache: OnceLock::new(),
             invalidation_closure_cache: OnceLock::new(),
-            dirty_trigger_index_cache: OnceLock::new(),
             initial_dirty_flags_cache: OnceLock::new(),
             enforce_cost_monotone: false,
             enforce_effect_handlers: false,
             enforce_linear_types: false,
             enforce_shape_predicates: false,
-        })
+        }
     }
 
     /// Toggle the cost-monotone-down post-condition gate. See the field docs on
@@ -621,7 +630,7 @@ mod topo;
 mod queries;
 
 /// Run methods on PassScheduler: run, run_with_metrics, run_once,
-/// run_once_with_metrics, mark_invalidated_passes.
+/// run_once_with_metrics.
 mod run;
 
 pub(crate) use topo::schedule_pass_metadata_indices;

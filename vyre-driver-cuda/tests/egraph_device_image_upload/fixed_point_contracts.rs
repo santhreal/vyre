@@ -4,14 +4,15 @@ use super::*;
 fn egraph_structural_canonicalization_fixed_point_chases_chained_cuda_duplicates() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let snapshot = GpuEGraphSnapshot::build([
+    let snapshot = GpuEGraphSnapshot::try_build([
         (10u32, "lit", &[][..]),
         (20u32, "lit", &[][..]),
         (30u32, "add", &[10u32, 10u32][..]),
         (40u32, "add", &[10u32, 20u32][..]),
         (50u32, "mul", &[30u32, 30u32][..]),
         (60u32, "mul", &[30u32, 40u32][..]),
-    ]);
+    ])
+    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
     let image = snapshot
         .try_pack_device_image()
         .expect("Fix: valid foundation e-graph image must pack.");
@@ -110,14 +111,15 @@ fn egraph_structural_canonicalization_fixed_point_chases_chained_cuda_duplicates
 fn egraph_fixed_point_signature_readback_skips_full_final_snapshot() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let snapshot = GpuEGraphSnapshot::build([
+    let snapshot = GpuEGraphSnapshot::try_build([
         (10u32, "lit", &[][..]),
         (20u32, "lit", &[][..]),
         (30u32, "add", &[10u32, 10u32][..]),
         (40u32, "add", &[10u32, 20u32][..]),
         (50u32, "mul", &[30u32, 30u32][..]),
         (60u32, "mul", &[30u32, 40u32][..]),
-    ]);
+    ])
+    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
     let image = snapshot
         .try_pack_device_image()
         .expect("Fix: valid foundation e-graph image must pack.");

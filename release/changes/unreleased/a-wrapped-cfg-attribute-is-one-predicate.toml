@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Gate scans read a #[cfg(all(test, ...))] attribute wrapped across several lines as one predicate, so an item under a wrapped attribute is no longer reported as production code whose only callers are tests."

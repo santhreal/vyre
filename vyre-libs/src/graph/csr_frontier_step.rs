@@ -6,8 +6,10 @@
 //! `dst` while scanning a source row.
 //!
 
+use crate::builder::trip_count::clamped_by_extents;
 use crate::graph::program_graph::{
     ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS,
+    NAME_EDGE_TARGETS,
 };
 use vyre_foundation::ir::{Expr, Node, Program};
 
@@ -116,7 +118,11 @@ fn edge_bounds_and_loop(loop_body: Vec<Node>) -> Vec<Node> {
         Node::loop_for(
             "e",
             Expr::var("edge_start"),
-            Expr::var("edge_end"),
+            clamped_by_extents(
+                Expr::var("edge_end"),
+                NAME_EDGE_TARGETS,
+                [NAME_EDGE_KIND_MASK],
+            ),
             loop_body,
         ),
     ]

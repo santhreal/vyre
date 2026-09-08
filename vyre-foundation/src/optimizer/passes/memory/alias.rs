@@ -43,13 +43,6 @@ pub(super) fn node_interferes(node: &Node, buffer: &Ident, question: Interferenc
     })
 }
 
-/// True when any node in `nodes`, at any depth, interferes with `buffer`.
-pub(super) fn any_node_interferes(nodes: &[Node], buffer: &Ident, question: Interference) -> bool {
-    nodes
-        .iter()
-        .any(|node| node_interferes(node, buffer, question))
-}
-
 /// True when `expr` reads, writes, or measures `buffer`, at any depth.
 ///
 /// Operand positions come from `visit::expr_children`, so a new

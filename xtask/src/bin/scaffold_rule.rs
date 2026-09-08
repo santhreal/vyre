@@ -19,16 +19,14 @@ fn fatal(message: &str) -> ! {
 fn create_dir(path: &Path) {
     rule_tree::require_inside_repository(path);
     if let Err(error) = fs::create_dir_all(path) {
-        eprintln!("Fix: failed to create `{}`: {error}", path.display());
-        std::process::exit(1);
+        fatal(&format!("failed to create `{}`: {error}", path.display()));
     }
 }
 
 fn write_file(path: &Path, contents: &str) {
     rule_tree::require_inside_repository(path);
     if let Err(error) = fs::write(path, contents) {
-        eprintln!("Fix: failed to write `{}`: {error}", path.display());
-        std::process::exit(1);
+        fatal(&format!("failed to write `{}`: {error}", path.display()));
     }
 }
 
