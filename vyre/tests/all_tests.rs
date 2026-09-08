@@ -13,6 +13,10 @@ pub mod program_fixtures;
 #[path = "artifact_workflow.rs"]
 pub mod artifact_workflow;
 
+/// Integration tests from `tests/connected_graph_execution.rs`.
+#[path = "connected_graph_execution.rs"]
+pub mod connected_graph_execution;
+
 /// Integration tests from `tests/ir_surface.rs`.
 #[path = "ir_surface.rs"]
 pub mod ir_surface;

@@ -9,6 +9,10 @@
 #[path = "ann_research_planners.rs"]
 pub mod ann_research_planners;
 
+/// Integration tests from `tests/application_domain_release_evidence_contracts.rs`.
+#[path = "application_domain_release_evidence_contracts.rs"]
+pub mod application_domain_release_evidence_contracts;
+
 /// Integration tests from `tests/baseline_determinism.rs`.
 #[cfg(feature = "device-tests")]
 #[allow(clippy::field_reassign_with_default)]

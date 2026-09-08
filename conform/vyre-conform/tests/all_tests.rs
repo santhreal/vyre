@@ -13,6 +13,10 @@ pub mod cert_artifact;
 #[path = "composition_discipline.rs"]
 pub mod composition_discipline;
 
+/// Integration tests from `tests/connected_graph_conformance.rs`.
+#[path = "connected_graph_conformance.rs"]
+pub mod connected_graph_conformance;
+
 /// Integration tests from `tests/declared_law_proof.rs`.
 #[path = "declared_law_proof.rs"]
 pub mod declared_law_proof;
