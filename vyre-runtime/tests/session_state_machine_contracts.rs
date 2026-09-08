@@ -53,7 +53,7 @@ impl SmMaterializer {
                     .expect("profile"),
             })
             .expect("device"),
-            owner: ResidentOwner::new("sm-backend", "sm-device"),
+            owner: ResidentOwner::new().expect("owner"),
             next: AtomicU64::new(0),
             allocated: Mutex::new(Vec::new()),
             freed: Mutex::new(Vec::new()),
@@ -226,32 +226,25 @@ fn single_entry_payload(artifact: &Artifact) -> TargetPayload {
         .entries
         .iter()
         .map(|entry| {
-            let recorded = artifact
-                .geometry()
-                .iter()
-                .find(|record| record.node == entry.node)
-                .expect("geometry");
             let bindings = entry
-                .resources
+                .inputs
                 .iter()
+                .chain(entry.outputs.iter())
                 .enumerate()
-                .map(|(slot, resource)| TargetResourceBinding {
-                    resource: resource.value,
+                .map(|(slot, &resource)| TargetResourceBinding {
+                    resource,
                     group: 0,
                     slot: slot as u32,
                     memory: TargetResourceMemory::Global,
-                    access: match resource.access {
-                        AbiAccess::ReadOnly => TargetResourceAccess::ReadOnly,
-                        AbiAccess::WriteOnly => TargetResourceAccess::WriteOnly,
-                        AbiAccess::ReadWrite => TargetResourceAccess::ReadWrite,
-                        AbiAccess::WorkgroupLocal => TargetResourceAccess::WorkgroupLocal,
-                    },
+                    access: TargetResourceAccess::ReadWrite,
                 })
                 .collect();
             TargetEntryPoint {
-                name: entry.name.clone(),
+                name: format!("entry_{}", entry.node.0),
                 node: entry.node,
-                geometry: recorded.workgroup,
+                workgroup_size: [64, 1, 1],
+                grid_size: [1, 1, 1],
+                dynamic_shared_bytes: 0,
                 resource_bindings: bindings,
             }
         })
@@ -271,7 +264,8 @@ fn single_entry_payload(artifact: &Artifact) -> TargetPayload {
 fn retained_session_manages_state_machine_generations_atomically() {
     let artifact = stateful_accumulator_artifact();
     let payload = single_entry_payload(&artifact);
-    let envelope = ArtifactEnvelope::new(artifact.clone(), payload).expect("envelope");
+    let mut envelope = ArtifactEnvelope::new(artifact.clone());
+    envelope.insert_payload(payload).expect("payload");
     let materializer = SmMaterializer::new();
 
     let session = ArtifactSession::from_envelope_with_materializer(
@@ -285,12 +279,7 @@ fn retained_session_manages_state_machine_generations_atomically() {
 
     // 1. Missing initial retained state must fail
     let bad_init = RetainedArtifactSession::new(
-        ArtifactSession::from_envelope_with_materializer(
-            &SM_REGISTRATION,
-            ArtifactEnvelope::new(artifact.clone(), single_entry_payload(&artifact)).unwrap(),
-            materializer.clone(),
-        )
-        .unwrap(),
+        session.clone(),
         BTreeMap::new(),
     );
     assert!(bad_init.is_err(), "must reject empty initial retained state");
@@ -325,20 +314,21 @@ fn backend_error_classification_exhaustive_closure() {
             BackendError::DeviceLost {
                 backend: "test".into(),
                 device: "gpu".into(),
+                generation: 1,
+                message: "lost".into(),
             },
             RetryClass::NewDevice,
         ),
         (
             BackendError::DeviceOutOfMemory {
-                device: "gpu".into(),
-                requested_bytes: 1024,
-                free_bytes: 512,
+                requested: 1024,
+                available: 512,
             },
             RetryClass::SameDevice,
         ),
         (
             BackendError::PoisonedLock {
-                lock: "state".into(),
+                lock_error: "state".into(),
             },
             RetryClass::SameDevice,
         ),

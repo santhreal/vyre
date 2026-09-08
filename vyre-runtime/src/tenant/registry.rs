@@ -90,7 +90,14 @@ impl TenantRegistry {
         quota: TenantQuota,
     ) -> Result<TenantHandle, TenantError> {
         let (id, generation) = {
-            let mut free = self.free_list.lock().unwrap_or_else(|e| e.into_inner());
+            let mut free = match self.free_list.lock() {
+                Ok(guard) => guard,
+                Err(e) => {
+                    let mut guard = e.into_inner();
+                    guard.clear();
+                    guard
+                }
+            };
             if let Some(recycled_id) = free.pop() {
                 let mut entry = self.generations.entry(recycled_id).or_insert(1);
                 *entry = entry.wrapping_add(1).max(1);
@@ -188,7 +195,14 @@ impl TenantRegistry {
         let (_, handle) = self.tenants.remove(&tenant_id)?;
         handle.state.revoked.store(1, Ordering::Release);
         handle.release_all_resource_reservations();
-        let mut free = self.free_list.lock().unwrap_or_else(|e| e.into_inner());
+        let mut free = match self.free_list.lock() {
+            Ok(guard) => guard,
+            Err(e) => {
+                let mut guard = e.into_inner();
+                guard.clear();
+                guard
+            }
+        };
         free.push(tenant_id);
         Some(handle)
     }

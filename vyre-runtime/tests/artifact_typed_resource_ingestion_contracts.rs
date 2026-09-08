@@ -50,7 +50,7 @@ impl IngestMaterializer {
                     .expect("profile"),
             })
             .expect("device"),
-            owner: ResidentOwner::new("ingest-backend", "ingest-device"),
+            owner: ResidentOwner::new().expect("owner"),
             next: AtomicU64::new(0),
             allocated: Mutex::new(Vec::new()),
             freed: Mutex::new(Vec::new()),
@@ -264,32 +264,25 @@ fn multi_entry_payload(artifact: &Artifact) -> TargetPayload {
         .entries
         .iter()
         .map(|entry| {
-            let recorded = artifact
-                .geometry()
-                .iter()
-                .find(|record| record.node == entry.node)
-                .expect("geometry");
             let bindings = entry
-                .resources
+                .inputs
                 .iter()
+                .chain(entry.outputs.iter())
                 .enumerate()
-                .map(|(slot, resource)| TargetResourceBinding {
-                    resource: resource.value,
+                .map(|(slot, &resource)| TargetResourceBinding {
+                    resource,
                     group: 0,
                     slot: slot as u32,
                     memory: TargetResourceMemory::Global,
-                    access: match resource.access {
-                        AbiAccess::ReadOnly => TargetResourceAccess::ReadOnly,
-                        AbiAccess::WriteOnly => TargetResourceAccess::WriteOnly,
-                        AbiAccess::ReadWrite => TargetResourceAccess::ReadWrite,
-                        AbiAccess::WorkgroupLocal => TargetResourceAccess::WorkgroupLocal,
-                    },
+                    access: TargetResourceAccess::ReadWrite,
                 })
                 .collect();
             TargetEntryPoint {
-                name: entry.name.clone(),
+                name: format!("entry_{}", entry.node.0),
                 node: entry.node,
-                geometry: recorded.workgroup,
+                workgroup_size: [64, 1, 1],
+                grid_size: [1, 1, 1],
+                dynamic_shared_bytes: 0,
                 resource_bindings: bindings,
             }
         })
@@ -309,9 +302,9 @@ fn multi_entry_payload(artifact: &Artifact) -> TargetPayload {
 fn typed_resource_ingestion_validates_abi_and_workspace_bindings() {
     let artifact = multi_entry_stateful_artifact();
     let payload = multi_entry_payload(&artifact);
-    let envelope = ArtifactEnvelope::new(artifact.clone(), payload).expect("envelope");
+    let mut envelope = ArtifactEnvelope::new(artifact.clone());
+    envelope.insert_payload(payload).expect("payload");
     let materializer = IngestMaterializer::new();
-
     let session = ArtifactSession::from_envelope_with_materializer(
         &INGEST_REGISTRATION,
         envelope,
@@ -388,14 +381,14 @@ fn lifetime_and_access_exhaustive_closure() {
         AbiAccess::ReadOnly,
         AbiAccess::WriteOnly,
         AbiAccess::ReadWrite,
-        AbiAccess::WorkgroupLocal,
+        AbiAccess::Uniform,
     ];
     for acc in accesses {
         match acc {
             AbiAccess::ReadOnly => assert_eq!(acc, AbiAccess::ReadOnly),
             AbiAccess::WriteOnly => assert_eq!(acc, AbiAccess::WriteOnly),
             AbiAccess::ReadWrite => assert_eq!(acc, AbiAccess::ReadWrite),
-            AbiAccess::WorkgroupLocal => assert_eq!(acc, AbiAccess::WorkgroupLocal),
+            AbiAccess::Uniform => assert_eq!(acc, AbiAccess::Uniform),
         }
     }
 }

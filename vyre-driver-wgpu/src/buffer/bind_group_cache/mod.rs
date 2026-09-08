@@ -49,12 +49,19 @@ impl Default for BindGroupCache {
 
 impl BindGroupCache {
     fn lock_cache(&self) -> MutexGuard<'_, BindGroupCacheInner> {
-        self.cache.lock().unwrap_or_else(|error| {
-            tracing::error!(
-                "Vyre WGPU bind-group cache lock was poisoned: {error}. Fix: discard the cache after a panic; continuing with recovered state."
-            );
-            error.into_inner()
-        })
+        match self.cache.lock() {
+            Ok(guard) => guard,
+            Err(error) => {
+                tracing::error!(
+                    "Vyre WGPU bind-group cache lock was poisoned: {error}. Fix: discard the cache after a panic; continuing with clean state."
+                );
+                let mut inner = error.into_inner();
+                inner.entries.clear();
+                inner.lru.clear();
+                inner.next_generation = 0;
+                inner
+            }
+        }
     }
 
     /// Create a bind-group cache with the default 256-entry cap.

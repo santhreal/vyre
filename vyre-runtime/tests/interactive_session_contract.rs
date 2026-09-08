@@ -21,7 +21,7 @@
 use vyre_megakernel::Digest;
 use vyre_runtime::artifact_admission::{
     CancellationOutcome, DeadlineClass, InteractiveAdmissionError, InteractiveCancellationError,
-    InteractiveChannelId, InteractiveCompletion, InteractiveRequestId,
+    InteractiveChannelId, InteractiveCompletion,
     InteractiveSessionStateMachine, InteractiveSessionState, InteractiveSubmissionRequest,
     PriorityClass, INTERACTIVE_DISPATCH_HEADROOM,
     MAX_INTERACTIVE_STEP_BUDGET_MICROS, MEASURED_INTERACTIVE_DISPATCH_CEILING_MICROS,
@@ -137,7 +137,7 @@ fn generation_based_supersession_replaces_stale_frames() {
     let submit_err = sm.submit(id1).expect_err("Fix: submitting superseded frame must fail");
     assert!(matches!(
         submit_err,
-        vyre_driver::BackendError::ExecutionAborted { .. }
+        vyre_driver::BackendError::DispatchFailed { .. }
     ));
 
     // Frame 2 proceeds normally

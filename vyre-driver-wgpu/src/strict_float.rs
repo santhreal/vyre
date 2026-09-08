@@ -176,20 +176,29 @@ fn measure(backend: &WgpuBackend) -> Verdict {
 /// admission check reads never changes between two calls.
 fn verdict(backend: &WgpuBackend) -> Verdict {
     let key = AdapterIdentity::from_info(&backend.adapter_info);
-    if let Some(known) = VERDICTS
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .get(&key)
     {
-        return known.clone();
+        let mut verdicts = match VERDICTS.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                let mut guard = poisoned.into_inner();
+                guard.clear();
+                guard
+            }
+        };
+        if let Some(known) = verdicts.get(&key) {
+            return known.clone();
+        }
     }
     let measured = measure(backend);
-    VERDICTS
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .entry(key)
-        .or_insert(measured)
-        .clone()
+    let mut verdicts = match VERDICTS.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => {
+            let mut guard = poisoned.into_inner();
+            guard.clear();
+            guard
+        }
+    };
+    verdicts.entry(key).or_insert(measured).clone()
 }
 
 /// Whether a strict dispatch on this adapter returns IEEE-rounded arithmetic.
