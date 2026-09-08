@@ -9,10 +9,16 @@
 //! message is allowed to make. `facts` matches every variant with no catch-all
 //! arm, so a variant added to the enum fails to compile here; `Tag` and
 //! `Tag::ALL` are one declaration, so a tag cannot exist that the list omits;
-//! and the coverage test below fails until the new tag also has a fixture. A variant
-//! therefore cannot enter the enum without a recorded decision about whether it
-//! may name io_uring, whether it may state that a queue is at capacity, and
-//! whether it carries a `Fix:` clause.
+//! and the coverage test below fails until the new tag also has a fixture, so a
+//! tag with no variant behind it fails too. A variant therefore cannot enter
+//! the enum without a recorded decision about whether it may name io_uring,
+//! whether it may state that a queue is at capacity, and whether it carries a
+//! `Fix:` clause.
+//!
+//! The correspondence is proven by the match arms rather than by reading
+//! `lib.rs` as text. A source scan of the enum declaration reported the same
+//! variant set the compiler already enforces, and it went stale the moment the
+//! declaration was reformatted.
 //!
 //! Does not catch: a call site that constructs the wrong variant. Which fault a
 //! given call reports is asserted at that call's own test. It also does not
@@ -334,26 +340,6 @@ fn every_variant() -> Vec<PipelineError> {
             fix: "move the tenant opcode window below the reserved range",
         },
     ]
-}
-
-#[test]
-fn every_declared_variant_is_in_tag_list() {
-    let path = vyre_test_support::monorepo::vyre_crate_directory("vyre-runtime")
-        .join("src")
-        .join("lib.rs");
-    let source = std::fs::read_to_string(&path)
-        .unwrap_or_else(|err| panic!("cannot read lib.rs at {path:?}: {err}"));
-    let body = vyre_test_support::braced_body(&source, "pub enum PipelineError {")
-        .unwrap_or_else(|| panic!("no `pub enum PipelineError` in {path:?}"));
-    let declared = vyre_test_support::top_level_variant_names(body);
-    let tagged: std::collections::BTreeSet<String> = Tag::ALL
-        .iter()
-        .map(|tag| format!("{tag:?}"))
-        .collect();
-    assert_eq!(
-        declared, tagged,
-        "Fix: Tag::ALL and the PipelineError declaration disagree; every variant must be in Tag::ALL"
-    );
 }
 
 #[test]

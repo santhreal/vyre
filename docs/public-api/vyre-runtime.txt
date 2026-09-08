@@ -24,6 +24,7 @@ impl core::convert::From<vyre_driver::backend::error::BackendError> for vyre_run
 impl core::convert::From<vyre_megakernel::error::CompileError> for vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl core::convert::From<vyre_runtime::replay::ReplayLogError> for vyre_runtime::PipelineError
 impl core::default::Default for vyre_runtime::UringCompletionPump<'_>
+impl core::default::Default for vyre_runtime::artifact_admission::InteractiveSessionStateMachine
 impl core::default::Default for vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits
 impl core::default::Default for vyre_runtime::mtp::MtpConfig
 impl core::default::Default for vyre_runtime::pipeline_cache::InMemoryPipelineCache
@@ -69,6 +70,8 @@ impl vyre_runtime::artifact_admission::AdmittedPortfolio
 impl vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl vyre_runtime::artifact_admission::ArtifactSession
 impl vyre_runtime::artifact_admission::ArtifactWorkspace
+impl vyre_runtime::artifact_admission::DeadlineClass
+impl vyre_runtime::artifact_admission::InteractiveSessionStateMachine
 impl vyre_runtime::artifact_admission::MeshSession
 impl vyre_runtime::artifact_admission::MeshSubmission
 impl vyre_runtime::artifact_admission::RetainedArtifactSession
@@ -187,6 +190,7 @@ pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::neutral(&self) 
 pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::contract(&self) -> &vyre_megakernel::specialization::SpecializationContract
 pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::remainder(&self) -> core::option::Option<&vyre_runtime::artifact_admission::AdmittedArtifact>
 pub const fn vyre_runtime::artifact_admission::ArtifactAdmissionError::diagnostic(&self) -> &vyre_foundation::diagnostics::Diagnostic
+pub const fn vyre_runtime::artifact_admission::DeadlineClass::budget_ns(&self) -> u64
 pub const fn vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange::accounting(&self) -> &vyre_driver::peer_transfer::PeerTransferAccounting
 pub const fn vyre_runtime::mtp::MtpCoordinator::config(&self) -> &vyre_runtime::mtp::MtpConfig
 pub const fn vyre_runtime::pipeline_cache::PipelineCacheMetricError::field(&self) -> &'static str
@@ -259,6 +263,9 @@ pub const fn vyre_runtime::tenant::TenantSelectionScratch::new() -> Self
 pub const vyre_runtime::CounterArithmetic::ALL: [Self; 2]
 pub const vyre_runtime::RequestFault::ALL: [Self; 3]
 pub const vyre_runtime::RingEncodingFault::ALL: [Self; 5]
+pub const vyre_runtime::artifact_admission::INTERACTIVE_DISPATCH_HEADROOM: u64
+pub const vyre_runtime::artifact_admission::MAX_INTERACTIVE_STEP_BUDGET_MICROS: u64
+pub const vyre_runtime::artifact_admission::MEASURED_INTERACTIVE_DISPATCH_CEILING_MICROS: u64
 pub const vyre_runtime::paged_residency::PAGED_RESOURCE_MIN_ALIGNMENT_BYTES: usize
 pub const vyre_runtime::replay::HEADER_BYTES: u64
 pub const vyre_runtime::replay::LOG_MAGIC: &[u8; 8]
@@ -383,7 +390,14 @@ pub enum vyre_runtime::RequestFault
 pub enum vyre_runtime::RingEncodingFault
 pub enum vyre_runtime::UringPollState
 pub enum vyre_runtime::artifact_admission::ArtifactSessionError
+pub enum vyre_runtime::artifact_admission::CancellationOutcome
+pub enum vyre_runtime::artifact_admission::DeadlineClass
+pub enum vyre_runtime::artifact_admission::InteractiveAdmissionError
+pub enum vyre_runtime::artifact_admission::InteractiveCancellationError
+pub enum vyre_runtime::artifact_admission::InteractiveCompletion
+pub enum vyre_runtime::artifact_admission::InteractiveSessionState
 pub enum vyre_runtime::artifact_admission::MeshSessionError
+pub enum vyre_runtime::artifact_admission::PriorityClass
 pub enum vyre_runtime::expert_scheduling::ExpertSchedulingError
 pub enum vyre_runtime::mtp::MtpError
 pub enum vyre_runtime::mtp::MtpStorageCandidate
@@ -471,6 +485,20 @@ pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::bindings(&self) -> &
 pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::buffers(&self) -> &[vyre_driver::backend::resource::Resource]
 pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::owns(&self, value: vyre_megakernel::identity::ArtifactValueId) -> bool
 pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::total_bytes(&self) -> u64
+pub fn vyre_runtime::artifact_admission::InteractiveSessionStateMachine::admit(&self, request: vyre_runtime::artifact_admission::InteractiveSubmissionRequest, current_time_ns: u64) -> core::result::Result<vyre_runtime::artifact_admission::InteractiveRequestId, vyre_runtime::artifact_admission::InteractiveAdmissionError>
+pub fn vyre_runtime::artifact_admission::InteractiveSessionStateMachine::apply_priority_inheritance(&self, blocking_id: vyre_runtime::artifact_admission::InteractiveRequestId, waiting_priority: vyre_runtime::artifact_admission::PriorityClass) -> core::result::Result<vyre_runtime::artifact_admission::PriorityClass, vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::artifact_admission::InteractiveSessionStateMachine::cancel(&self, request_id: vyre_runtime::artifact_admission::InteractiveRequestId) -> core::result::Result<vyre_runtime::artifact_admission::CancellationOutcome, vyre_runtime::artifact_admission::InteractiveCancellationError>
+pub fn vyre_runtime::artifact_admission::InteractiveSessionStateMachine::complete(&self, request_id: vyre_runtime::artifact_admission::InteractiveRequestId, completion_time_ns: u64) -> core::result::Result<vyre_runtime::artifact_admission::InteractiveCompletion, vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::artifact_admission::InteractiveSessionStateMachine::default() -> Self
+pub fn vyre_runtime::artifact_admission::InteractiveSessionStateMachine::effective_priority_of(&self, request_id: vyre_runtime::artifact_admission::InteractiveRequestId) -> core::result::Result<core::option::Option<vyre_runtime::artifact_admission::PriorityClass>, vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::artifact_admission::InteractiveSessionStateMachine::fault_all(&self, reason: &str) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::artifact_admission::InteractiveSessionStateMachine::fault_reason(&self) -> core::result::Result<core::option::Option<alloc::string::String>, vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::artifact_admission::InteractiveSessionStateMachine::max_queue_depth(&self) -> usize
+pub fn vyre_runtime::artifact_admission::InteractiveSessionStateMachine::new() -> Self
+pub fn vyre_runtime::artifact_admission::InteractiveSessionStateMachine::prepare(&self, request_id: vyre_runtime::artifact_admission::InteractiveRequestId) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::artifact_admission::InteractiveSessionStateMachine::state_of(&self, request_id: vyre_runtime::artifact_admission::InteractiveRequestId) -> core::result::Result<core::option::Option<vyre_runtime::artifact_admission::InteractiveSessionState>, vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::artifact_admission::InteractiveSessionStateMachine::submit(&self, request_id: vyre_runtime::artifact_admission::InteractiveRequestId) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::artifact_admission::InteractiveSessionStateMachine::with_max_queue_depth(max_queue_depth: usize) -> Self
 pub fn vyre_runtime::artifact_admission::MeshSession::bindings(&self, device: vyre_megakernel::allocation::DeviceSlot) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::BindingSet, vyre_runtime::artifact_admission::MeshSessionError>
 pub fn vyre_runtime::artifact_admission::MeshSession::devices(&self) -> alloc::vec::Vec<vyre_megakernel::allocation::DeviceSlot>
 pub fn vyre_runtime::artifact_admission::MeshSession::new(envelope: vyre_megakernel::envelope::ArtifactEnvelope, devices: alloc::vec::Vec<(vyre_megakernel::allocation::DeviceSlot, alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>)>, peers: &vyre_driver::peer_transfer::PeerTopology) -> core::result::Result<Self, vyre_runtime::artifact_admission::MeshSessionError>
@@ -1088,6 +1116,10 @@ pub struct vyre_runtime::artifact_admission::AdmittedPortfolio
 pub struct vyre_runtime::artifact_admission::ArtifactAdmissionError
 pub struct vyre_runtime::artifact_admission::ArtifactSession
 pub struct vyre_runtime::artifact_admission::ArtifactWorkspace
+pub struct vyre_runtime::artifact_admission::InteractiveChannelId(pub u64)
+pub struct vyre_runtime::artifact_admission::InteractiveRequestId(pub u64)
+pub struct vyre_runtime::artifact_admission::InteractiveSessionStateMachine
+pub struct vyre_runtime::artifact_admission::InteractiveSubmissionRequest
 pub struct vyre_runtime::artifact_admission::MeshSession
 pub struct vyre_runtime::artifact_admission::MeshSubmission
 pub struct vyre_runtime::artifact_admission::RetainedArtifactSession
@@ -1350,6 +1382,58 @@ pub vyre_runtime::artifact_admission::ArtifactSessionError::Backend(vyre_driver:
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Compile(vyre_megakernel::error::CompileError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::State(alloc::string::String)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Target(vyre_megakernel::target::TargetCompileError)
+pub vyre_runtime::artifact_admission::CancellationOutcome::AlreadyCompleted
+pub vyre_runtime::artifact_admission::CancellationOutcome::AlreadySuperseded
+pub vyre_runtime::artifact_admission::CancellationOutcome::Cancelled
+pub vyre_runtime::artifact_admission::DeadlineClass::Background
+pub vyre_runtime::artifact_admission::DeadlineClass::Background::max_latency_ns: u64
+pub vyre_runtime::artifact_admission::DeadlineClass::HardRealTime
+pub vyre_runtime::artifact_admission::DeadlineClass::HardRealTime::deadline_ns: u64
+pub vyre_runtime::artifact_admission::DeadlineClass::HardRealTime::max_jitter_ns: u64
+pub vyre_runtime::artifact_admission::DeadlineClass::InteractiveFrame
+pub vyre_runtime::artifact_admission::DeadlineClass::InteractiveFrame::frame_target_ns: u64
+pub vyre_runtime::artifact_admission::DeadlineClass::InteractiveFrame::target_fps: u32
+pub vyre_runtime::artifact_admission::InteractiveAdmissionError::DeadlineUnachievable
+pub vyre_runtime::artifact_admission::InteractiveAdmissionError::DeadlineUnachievable::estimated_ns: u64
+pub vyre_runtime::artifact_admission::InteractiveAdmissionError::DeadlineUnachievable::remaining_ns: u64
+pub vyre_runtime::artifact_admission::InteractiveAdmissionError::DeviceLoss
+pub vyre_runtime::artifact_admission::InteractiveAdmissionError::Poisoned(alloc::string::String)
+pub vyre_runtime::artifact_admission::InteractiveAdmissionError::QueueSaturated
+pub vyre_runtime::artifact_admission::InteractiveAdmissionError::QueueSaturated::capacity: usize
+pub vyre_runtime::artifact_admission::InteractiveAdmissionError::StaleGeneration
+pub vyre_runtime::artifact_admission::InteractiveAdmissionError::StaleGeneration::channel: vyre_runtime::artifact_admission::InteractiveChannelId
+pub vyre_runtime::artifact_admission::InteractiveAdmissionError::StaleGeneration::current: u64
+pub vyre_runtime::artifact_admission::InteractiveAdmissionError::StaleGeneration::provided: u64
+pub vyre_runtime::artifact_admission::InteractiveCancellationError::IrreversibleSubmission(vyre_runtime::artifact_admission::InteractiveRequestId)
+pub vyre_runtime::artifact_admission::InteractiveCancellationError::Poisoned(alloc::string::String)
+pub vyre_runtime::artifact_admission::InteractiveCancellationError::UnknownRequest(vyre_runtime::artifact_admission::InteractiveRequestId)
+pub vyre_runtime::artifact_admission::InteractiveCompletion::Cancelled
+pub vyre_runtime::artifact_admission::InteractiveCompletion::Cancelled::request_id: vyre_runtime::artifact_admission::InteractiveRequestId
+pub vyre_runtime::artifact_admission::InteractiveCompletion::Faulted
+pub vyre_runtime::artifact_admission::InteractiveCompletion::Faulted::reason: alloc::string::String
+pub vyre_runtime::artifact_admission::InteractiveCompletion::Faulted::request_id: vyre_runtime::artifact_admission::InteractiveRequestId
+pub vyre_runtime::artifact_admission::InteractiveCompletion::Success
+pub vyre_runtime::artifact_admission::InteractiveCompletion::Success::elapsed_ns: u64
+pub vyre_runtime::artifact_admission::InteractiveCompletion::Success::frame_generation: u64
+pub vyre_runtime::artifact_admission::InteractiveCompletion::Success::request_id: vyre_runtime::artifact_admission::InteractiveRequestId
+pub vyre_runtime::artifact_admission::InteractiveCompletion::Superseded
+pub vyre_runtime::artifact_admission::InteractiveCompletion::Superseded::request_id: vyre_runtime::artifact_admission::InteractiveRequestId
+pub vyre_runtime::artifact_admission::InteractiveCompletion::Superseded::stale_generation: u64
+pub vyre_runtime::artifact_admission::InteractiveCompletion::Superseded::superseded_by_generation: u64
+pub vyre_runtime::artifact_admission::InteractiveSessionState::Admitted
+pub vyre_runtime::artifact_admission::InteractiveSessionState::Cancelled
+pub vyre_runtime::artifact_admission::InteractiveSessionState::Completed
+pub vyre_runtime::artifact_admission::InteractiveSessionState::Faulted
+pub vyre_runtime::artifact_admission::InteractiveSessionState::Idle
+pub vyre_runtime::artifact_admission::InteractiveSessionState::Prepared
+pub vyre_runtime::artifact_admission::InteractiveSessionState::Submitted
+pub vyre_runtime::artifact_admission::InteractiveSessionState::Superseded
+pub vyre_runtime::artifact_admission::InteractiveSubmissionRequest::artifact: vyre_megakernel::identity::Digest
+pub vyre_runtime::artifact_admission::InteractiveSubmissionRequest::channel_id: vyre_runtime::artifact_admission::InteractiveChannelId
+pub vyre_runtime::artifact_admission::InteractiveSubmissionRequest::deadline: vyre_runtime::artifact_admission::DeadlineClass
+pub vyre_runtime::artifact_admission::InteractiveSubmissionRequest::estimated_duration_ns: u64
+pub vyre_runtime::artifact_admission::InteractiveSubmissionRequest::frame_generation: u64
+pub vyre_runtime::artifact_admission::InteractiveSubmissionRequest::priority: vyre_runtime::artifact_admission::PriorityClass
 pub vyre_runtime::artifact_admission::MeshSessionError::Admission(vyre_runtime::artifact_admission::ArtifactAdmissionError)
 pub vyre_runtime::artifact_admission::MeshSessionError::Backend(vyre_driver::backend::error::BackendError)
 pub vyre_runtime::artifact_admission::MeshSessionError::DeviceFailure
@@ -1371,6 +1455,10 @@ pub vyre_runtime::artifact_admission::MeshSessionError::UnroutableTransfer
 pub vyre_runtime::artifact_admission::MeshSessionError::UnroutableTransfer::bytes: u64
 pub vyre_runtime::artifact_admission::MeshSessionError::UnroutableTransfer::from: u16
 pub vyre_runtime::artifact_admission::MeshSessionError::UnroutableTransfer::to: u16
+pub vyre_runtime::artifact_admission::PriorityClass::High = 2
+pub vyre_runtime::artifact_admission::PriorityClass::Low = 0
+pub vyre_runtime::artifact_admission::PriorityClass::Normal = 1
+pub vyre_runtime::artifact_admission::PriorityClass::Urgent = 3
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExchangeError(alloc::string::String)
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds::expert_id: u32

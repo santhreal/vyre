@@ -497,7 +497,6 @@ mod tests {
 
     #[test]
     fn tenant_registry_recovers_after_poisoned_free_list() {
-        use std::sync::atomic::Ordering;
         let reg = Arc::new(TenantRegistry::new());
         let t1 = reg.register("t1").unwrap();
         let id1 = t1.id();
@@ -512,18 +511,29 @@ mod tests {
         .join();
 
         // The free_list mutex is now poisoned. register and unregister must still succeed.
-        let t2 = reg.register("t2").expect("Fix: register must recover poisoned free_list");
-        assert_eq!(t2.id(), id1, "recycled id must still be popped from poisoned free_list");
+        let t2 = reg
+            .register("t2")
+            .expect("Fix: register must recover poisoned free_list");
+        assert_eq!(
+            t2.id(),
+            id1,
+            "recycled id must still be popped from poisoned free_list"
+        );
         let unreg = reg.unregister(t2.id());
-        assert!(unreg.is_some(), "Fix: unregister must recover poisoned free_list");
+        assert!(
+            unreg.is_some(),
+            "Fix: unregister must recover poisoned free_list"
+        );
     }
 
     #[test]
     fn tenant_registry_exhaustion_reports_registry_full() {
         use std::sync::atomic::Ordering;
         let reg = TenantRegistry::new();
-        reg.next_id
-            .store(crate::tenant::registry::MAX_TENANT_OPCODE_WINDOWS, Ordering::SeqCst);
+        reg.next_id.store(
+            crate::tenant::registry::MAX_TENANT_OPCODE_WINDOWS,
+            Ordering::SeqCst,
+        );
 
         let err = reg
             .register("overflow")

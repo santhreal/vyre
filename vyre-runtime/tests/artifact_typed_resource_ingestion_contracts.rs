@@ -6,114 +6,21 @@
 
 #![forbid(unsafe_code)]
 
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
-
-use vyre_driver::materialize::{DeviceSpec, MaterializerDevice};
-use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, BoundResource,
-    Device, ResidentOwner, Resource, VyreBackend,
-};
+use vyre_driver::BackendRegistration;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{
-    AbiAccess, Artifact, ArtifactEnvelope, ArtifactValueId, ResourceLifetime, TargetEntryPoint,
-    TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
-    TargetResourceMemory,
-};
+use vyre_megakernel::{AbiAccess, Artifact, ArtifactEnvelope, ResourceLifetime};
 use vyre_runtime::artifact_admission::ArtifactSession;
 
 use vyre_test_support::artifact_fixtures;
-use vyre_test_support::fixture_instance::FixtureInstance;
 
-const FORMAT: &str = "ingest.target";
-
-struct IngestMaterializer {
-    device: MaterializerDevice,
-    owner: ResidentOwner,
-    next: AtomicU64,
-    allocated: Mutex<Vec<usize>>,
-    freed: Mutex<Vec<Resource>>,
-}
-
-impl IngestMaterializer {
-    fn new() -> Arc<Self> {
-        Arc::new(Self {
-            device: MaterializerDevice::acquire(DeviceSpec {
-                backend: "ingest-backend",
-                device: "ingest-device".to_string(),
-                format_extension: FORMAT,
-                format_version: 1,
-                profile: TargetProfile::new(FORMAT, 1, [64, 1, 1], 64, 1_024, 0)
-                    .expect("profile"),
-            })
-            .expect("device"),
-            owner: ResidentOwner::new("ingest-backend", "ingest-device"),
-            next: AtomicU64::new(0),
-            allocated: Mutex::new(Vec::new()),
-            freed: Mutex::new(Vec::new()),
-        })
-    }
-}
-
-impl ArtifactMaterializer for IngestMaterializer {
-    fn device(&self) -> &dyn Device {
-        &self.device
-    }
-
-    fn materialize(
-        &self,
-        artifact: &Artifact,
-        payload: &TargetPayload,
-    ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
-        Ok(FixtureInstance::neutral(
-            artifact,
-            payload,
-            self.device.identity(),
-        ))
-    }
-
-    fn allocate_resident(&self, byte_len: usize) -> Result<Resource, BackendError> {
-        self.allocated
-            .lock()
-            .expect("allocation log")
-            .push(byte_len);
-        let id = self.next.fetch_add(1, Ordering::AcqRel);
-        Ok(Resource::Resident(self.owner.handle(id)))
-    }
-
-    fn free_resident(&self, resource: Resource) -> Result<(), BackendError> {
-        self.freed.lock().expect("free log").push(resource);
-        Ok(())
-    }
-}
-
-fn ingest_backend_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
-    Err(BackendError::UnsupportedFeature {
-        name: "raw Program backend".to_string(),
-        backend: "ingest-artifact".to_string(),
-    })
-}
-
-fn ingest_supported_ops() -> &'static std::collections::HashSet<vyre_foundation::ir::OpId> {
-    static OPS: std::sync::LazyLock<std::collections::HashSet<vyre_foundation::ir::OpId>> =
-        std::sync::LazyLock::new(std::collections::HashSet::new);
-    &OPS
-}
-
-static INGEST_REGISTRATION: BackendRegistration = BackendRegistration {
-    id: "ingest-artifact",
-    target_id: vyre_foundation::operation::TargetId::expect_valid("ingest-artifact"),
-    payload_format: None,
-    reference_oracle: false,
-    factory: ingest_backend_factory,
-    supported_ops: ingest_supported_ops,
-    semantic_operations: ingest_supported_ops,
-    target_compiler: None,
-    materializer: None,
+use crate::artifact_session_fixtures::{
+    fixture_backend_registration, fixture_target_payload, SessionFixtureMaterializer,
 };
+const FORMAT: &str = "ingest.target";
+static INGEST_REGISTRATION: BackendRegistration = fixture_backend_registration("ingest-artifact");
 
 fn multi_entry_stateful_artifact() -> Artifact {
     let mut graph = ProgramGraph::new();
@@ -148,7 +55,8 @@ fn multi_entry_stateful_artifact() -> Artifact {
             Program::wrapped(
                 vec![
                     BufferDecl::read("weights", 0, DataType::F32).with_count(16),
-                    BufferDecl::storage("state", 1, BufferAccess::ReadWrite, DataType::F32).with_count(16),
+                    BufferDecl::storage("state", 1, BufferAccess::ReadWrite, DataType::F32)
+                        .with_count(16),
                     BufferDecl::output("intermediate", 2, DataType::F32).with_count(16),
                 ],
                 [16, 1, 1],
@@ -156,7 +64,10 @@ fn multi_entry_stateful_artifact() -> Artifact {
                     Node::store(
                         "state",
                         Expr::gid_x(),
-                        Expr::add(Expr::load("state", Expr::gid_x()), Expr::load("weights", Expr::gid_x())),
+                        Expr::add(
+                            Expr::load("state", Expr::gid_x()),
+                            Expr::load("weights", Expr::gid_x()),
+                        ),
                     ),
                     Node::store(
                         "intermediate",
@@ -258,64 +169,18 @@ fn multi_entry_stateful_artifact() -> Artifact {
     artifact_fixtures::compile_graph(graph, 0)
 }
 
-fn multi_entry_payload(artifact: &Artifact) -> TargetPayload {
-    let entries = artifact
-        .abi()
-        .entries
-        .iter()
-        .map(|entry| {
-            let recorded = artifact
-                .geometry()
-                .iter()
-                .find(|record| record.node == entry.node)
-                .expect("geometry");
-            let bindings = entry
-                .resources
-                .iter()
-                .enumerate()
-                .map(|(slot, resource)| TargetResourceBinding {
-                    resource: resource.value,
-                    group: 0,
-                    slot: slot as u32,
-                    memory: TargetResourceMemory::Global,
-                    access: match resource.access {
-                        AbiAccess::ReadOnly => TargetResourceAccess::ReadOnly,
-                        AbiAccess::WriteOnly => TargetResourceAccess::WriteOnly,
-                        AbiAccess::ReadWrite => TargetResourceAccess::ReadWrite,
-                        AbiAccess::WorkgroupLocal => TargetResourceAccess::WorkgroupLocal,
-                    },
-                })
-                .collect();
-            TargetEntryPoint {
-                name: entry.name.clone(),
-                node: entry.node,
-                geometry: recorded.workgroup,
-                resource_bindings: bindings,
-            }
-        })
-        .collect();
-
-    TargetPayload::new(
-        artifact,
-        TargetPayloadFormat::new(FORMAT, 1).expect("format"),
-        TargetProfile::new(FORMAT, 1, [64, 1, 1], 64, 1_024, 0).expect("profile"),
-        entries,
-        vec![1, 2, 3, 4],
-    )
-    .expect("payload")
-}
-
 #[test]
 fn typed_resource_ingestion_validates_abi_and_workspace_bindings() {
     let artifact = multi_entry_stateful_artifact();
-    let payload = multi_entry_payload(&artifact);
-    let envelope = ArtifactEnvelope::new(artifact.clone(), payload).expect("envelope");
-    let materializer = IngestMaterializer::new();
+    let payload = fixture_target_payload(&artifact, FORMAT, vec![1, 2, 3, 4]);
+    let mut envelope = ArtifactEnvelope::new(artifact.clone());
+    envelope.attach_target_payload(payload).expect("payload");
+    let materializer = SessionFixtureMaterializer::new("ingest-backend", "ingest-device", FORMAT);
 
     let session = ArtifactSession::from_envelope_with_materializer(
         &INGEST_REGISTRATION,
         envelope,
-        materializer.clone(),
+        materializer,
     )
     .expect("session");
 
@@ -347,7 +212,9 @@ fn typed_resource_ingestion_validates_abi_and_workspace_bindings() {
             [("weights", &weights_res), ("state.0", &state_res)],
         )
         .expect_err("must reject missing final_result");
-    assert!(missing_err.to_string().contains("requires resident resource"));
+    assert!(missing_err
+        .to_string()
+        .contains("requires resident resource"));
 
     // 3. Reject caller supplying workspace-owned value
     let workspace_override_err = session
@@ -361,7 +228,9 @@ fn typed_resource_ingestion_validates_abi_and_workspace_bindings() {
             ],
         )
         .expect_err("must reject caller overriding workspace value");
-    assert!(workspace_override_err.to_string().contains("workspace-owned"));
+    assert!(workspace_override_err
+        .to_string()
+        .contains("workspace-owned"));
 
     // Clean up
     session.free_workspace(workspace).expect("free workspace");
@@ -376,26 +245,47 @@ fn lifetime_and_access_exhaustive_closure() {
         ResourceLifetime::Output,
     ];
     for lt in lifetimes {
-        match lt {
-            ResourceLifetime::Constant => assert_eq!(lt, ResourceLifetime::Constant),
-            ResourceLifetime::Invocation => assert_eq!(lt, ResourceLifetime::Invocation),
-            ResourceLifetime::Retained => assert_eq!(lt, ResourceLifetime::Retained),
-            ResourceLifetime::Output => assert_eq!(lt, ResourceLifetime::Output),
-        }
+        let matched = match lt {
+            ResourceLifetime::Constant => "constant",
+            ResourceLifetime::Invocation => "invocation",
+            ResourceLifetime::Retained => "retained",
+            ResourceLifetime::Output => "output",
+        };
+        assert!(!matched.is_empty());
     }
 
     let accesses = [
         AbiAccess::ReadOnly,
         AbiAccess::WriteOnly,
         AbiAccess::ReadWrite,
-        AbiAccess::WorkgroupLocal,
+        AbiAccess::Uniform,
     ];
     for acc in accesses {
+        let is_read = match acc {
+            AbiAccess::ReadOnly | AbiAccess::ReadWrite | AbiAccess::Uniform => true,
+            AbiAccess::WriteOnly => false,
+        };
+        let is_write = match acc {
+            AbiAccess::WriteOnly | AbiAccess::ReadWrite => true,
+            AbiAccess::ReadOnly | AbiAccess::Uniform => false,
+        };
         match acc {
-            AbiAccess::ReadOnly => assert_eq!(acc, AbiAccess::ReadOnly),
-            AbiAccess::WriteOnly => assert_eq!(acc, AbiAccess::WriteOnly),
-            AbiAccess::ReadWrite => assert_eq!(acc, AbiAccess::ReadWrite),
-            AbiAccess::WorkgroupLocal => assert_eq!(acc, AbiAccess::WorkgroupLocal),
+            AbiAccess::ReadOnly => {
+                assert!(is_read);
+                assert!(!is_write);
+            }
+            AbiAccess::WriteOnly => {
+                assert!(!is_read);
+                assert!(is_write);
+            }
+            AbiAccess::ReadWrite => {
+                assert!(is_read);
+                assert!(is_write);
+            }
+            AbiAccess::Uniform => {
+                assert!(is_read);
+                assert!(!is_write);
+            }
         }
     }
 }

@@ -1,14 +1,14 @@
 //! Regression contracts for canonical runtime artifact admission.
 
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 
 use vyre_driver::materialize::{DeviceSpec, MaterializerDevice};
 use vyre_driver::BackendRegistration;
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource, Completion,
-    Device, PeerAccessCapability, PeerLinkKind, PeerTopology, ResidentOwner, Resource, VyreBackend,
+    Device, PeerAccessCapability, PeerLinkKind, PeerTopology, ResidentOwner, Resource,
 };
 use vyre_foundation::diagnostics::{DiagnosticStage, RetryClass};
 use vyre_foundation::ir::{
@@ -27,6 +27,8 @@ use vyre_runtime::artifact_admission::{
     admit_artifact, admit_cached_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession,
     MeshSession, MeshSessionError, RetainedArtifactSession,
 };
+
+use crate::artifact_session_fixtures::{fixture_backend_factory, fixture_supported_ops};
 use vyre_runtime::persistent_executor::{PersistentExecutor, ResidentQueueState};
 use vyre_runtime::pipeline_cache::{
     InMemoryPipelineCache, PipelineCacheStore, PipelineFingerprint,
@@ -564,8 +566,6 @@ fn cached_envelope_payload_admits_and_miss_is_none() {
 }
 
 static MATERIALIZER_CALLS: AtomicU64 = AtomicU64::new(0);
-static TEST_SUPPORTED_OPS: LazyLock<HashSet<vyre_foundation::ir::OpId>> =
-    LazyLock::new(HashSet::new);
 
 struct TestMaterializer {
     device: MaterializerDevice,
@@ -643,17 +643,6 @@ fn increment_retained(
     })
 }
 
-fn test_backend_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
-    Err(BackendError::UnsupportedFeature {
-        name: "legacy raw Program backend".to_string(),
-        backend: "test-artifact".to_string(),
-    })
-}
-
-fn test_supported_ops() -> &'static HashSet<vyre_foundation::ir::OpId> {
-    &TEST_SUPPORTED_OPS
-}
-
 fn test_materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
     MATERIALIZER_CALLS.fetch_add(1, Ordering::AcqRel);
     Ok(Box::new(TestMaterializer {
@@ -672,9 +661,9 @@ static TEST_REGISTRATION: BackendRegistration = BackendRegistration {
     target_id: vyre_foundation::operation::TargetId::expect_valid("test-artifact"),
     payload_format: None,
     reference_oracle: false,
-    factory: test_backend_factory,
-    supported_ops: test_supported_ops,
-    semantic_operations: test_supported_ops,
+    factory: fixture_backend_factory,
+    supported_ops: fixture_supported_ops,
+    semantic_operations: fixture_supported_ops,
     target_compiler: None,
     materializer: Some(test_materializer_factory),
 };
@@ -779,9 +768,9 @@ static RECORDING_REGISTRATION: BackendRegistration = BackendRegistration {
     target_id: vyre_foundation::operation::TargetId::expect_valid("test-artifact"),
     payload_format: Some("test.cache-target"),
     reference_oracle: false,
-    factory: test_backend_factory,
-    supported_ops: test_supported_ops,
-    semantic_operations: test_supported_ops,
+    factory: fixture_backend_factory,
+    supported_ops: fixture_supported_ops,
+    semantic_operations: fixture_supported_ops,
     target_compiler: Some(recording_compiler_factory),
     materializer: Some(recording_materializer_factory),
 };
