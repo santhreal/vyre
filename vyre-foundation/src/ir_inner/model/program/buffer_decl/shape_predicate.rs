@@ -88,6 +88,93 @@ impl ShapePredicate {
         self.holds(count)
     }
 
+    /// Lower this predicate into canonical interned [`ShapeConstraint`](crate::types::ShapeConstraint)s
+    /// using a [`ShapeInterner`](crate::types::ShapeInterner).
+    #[must_use]
+    pub fn to_interned_constraints(
+        &self,
+        interner: &crate::types::ShapeInterner,
+        count_expr: crate::types::ShapeExprId,
+    ) -> Vec<crate::types::ShapeConstraint> {
+        use crate::types::ShapeConstraint;
+        match self {
+            Self::AtLeast(n) => {
+                let n_expr = interner.constant(*n as i128);
+                vec![ShapeConstraint::LessEqual(n_expr, count_expr)]
+            }
+            Self::AtMost(n) => {
+                let n_expr = interner.constant(*n as i128);
+                vec![ShapeConstraint::LessEqual(count_expr, n_expr)]
+            }
+            Self::Exactly(n) => {
+                let n_expr = interner.constant(*n as i128);
+                vec![ShapeConstraint::Equal(count_expr, n_expr)]
+            }
+            Self::MultipleOf(n) => {
+                vec![ShapeConstraint::DivisibleBy {
+                    expr: count_expr,
+                    divisor: *n as u64,
+                }]
+            }
+            Self::ModEquals { modulus, remainder } => {
+                vec![ShapeConstraint::ModuloEqual {
+                    expr: count_expr,
+                    modulus: *modulus as u64,
+                    remainder: *remainder as u64,
+                }]
+            }
+            Self::AffineRange { scale, offset, min, max } => {
+                let scale_expr = interner.constant(*scale as i128);
+                let offset_expr = interner.constant(*offset as i128);
+                let scaled = interner.mul(count_expr, scale_expr);
+                let affine = interner.add(scaled, offset_expr);
+                vec![ShapeConstraint::Range {
+                    expr: affine,
+                    min: *min as i128,
+                    max: *max as i128,
+                }]
+            }
+            Self::And(a, b) => {
+                let mut res = a.to_interned_constraints(interner, count_expr);
+                res.extend(b.to_interned_constraints(interner, count_expr));
+                res
+            }
+            Self::Or(a, b) => {
+                let mut res = a.to_interned_constraints(interner, count_expr);
+                res.extend(b.to_interned_constraints(interner, count_expr));
+                res
+            }
+            Self::Not(inner) => inner.to_interned_constraints(interner, count_expr),
+        }
+    }
+
+    /// Evaluate this predicate using the canonical [`ShapeInterner`](crate::types::ShapeInterner)
+    /// and [`ShapeSolver`](crate::types::ShapeSolver).
+    #[must_use]
+    pub fn evaluate_with_interner(
+        &self,
+        interner: &crate::types::ShapeInterner,
+        count: u32,
+    ) -> bool {
+        match self {
+            Self::Or(a, b) => {
+                a.evaluate_with_interner(interner, count) || b.evaluate_with_interner(interner, count)
+            }
+            Self::Not(inner) => !inner.evaluate_with_interner(interner, count),
+            _ => {
+                let count_expr = interner.constant(count as i128);
+                let constraints = self.to_interned_constraints(interner, count_expr);
+                for c in &constraints {
+                    let (holds, _) = crate::types::ShapeSolver::prove_constraint(interner, c, None);
+                    if !holds {
+                        return false;
+                    }
+                }
+                true
+            }
+        }
+    }
+
     /// Whether this predicate proves that the count cannot be zero.
     #[must_use]
     pub fn proves_non_empty(&self) -> bool {
