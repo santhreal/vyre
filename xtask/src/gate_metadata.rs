@@ -1713,6 +1713,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         proof: "crate::gates::backend_parity::tests::only_a_target_requiring_the_feature_counts_as_gated",
     },
     GateDescriptor {
+        name: "supported-api",
+        help: "Enforce that all public API items are classified by publication class, stability, and wire compatibility",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "workspace manifests",
+        artifacts: &["docs/SUPPORTED_API.toml"],
+        prerequisites: &[],
+        proof: "crate::gates::supported_api::tests::classify_line_identifies_kinds_and_stability",
+    },
+    GateDescriptor {
         name: "test-harness-isolation",
         help: "Enforce that every test naming a process-global API records a grouping decision",
         package: "xtask",

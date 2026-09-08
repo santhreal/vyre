@@ -673,6 +673,7 @@ mod tests {
             path: "conform/vyre-conform-spec".to_string(),
             owner: "conform".to_string(),
             layer: "spec".to_string(),
+            publication_class: "conformance-tooling".to_string(),
             responsibility: String::new(),
             dependencies: Vec::new(),
         };
@@ -704,6 +705,7 @@ mod tests {
             path: "demo".to_string(),
             owner: "core".to_string(),
             layer: "driver".to_string(),
+            publication_class: "concrete-backend".to_string(),
             responsibility: String::new(),
             dependencies: Vec::new(),
         };
@@ -732,6 +734,7 @@ mod tests {
             path: "demo".to_string(),
             owner: "core".to_string(),
             layer: "driver".to_string(),
+            publication_class: "concrete-backend".to_string(),
             responsibility: String::new(),
             dependencies: Vec::new(),
         };

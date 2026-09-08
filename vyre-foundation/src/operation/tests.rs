@@ -136,3 +136,32 @@ fn an_id_naming_no_crate_is_refused_whatever_it_declares() {
         );
     }
 }
+
+/// Catalog bundle collects registered descriptors and lowering providers and computes a stable digest.
+#[test]
+fn catalog_bundle_assembly_and_descriptor_lookup() {
+    let bundle = super::CatalogBundle::from_registry();
+    assert!(!bundle.is_empty());
+    assert!(bundle.len() > 0);
+    let digest = bundle.digest();
+    assert_ne!(*digest, [0u8; 32]);
+
+    static REG: OperationRegistration = OperationRegistration::new_unconstrained(
+        "vyre-primitives::hardware::popcount_u32",
+        OperationTier::Intrinsic,
+        None,
+        None,
+        None,
+    );
+    let desc = REG.descriptor();
+    assert_eq!(desc.id, "vyre-primitives::hardware::popcount_u32");
+    assert_eq!(desc.tier, OperationTier::Intrinsic);
+
+    let lowering = REG.lowering_provider();
+    assert_eq!(lowering.id, "vyre-primitives::hardware::popcount_u32");
+    assert!(lowering.build.is_none());
+
+    let conf = REG.conformance_provider();
+    assert_eq!(conf.id, "vyre-primitives::hardware::popcount_u32");
+    assert!(conf.test_inputs.is_none());
+}

@@ -87,6 +87,7 @@ pub mod script_ledger;
 pub mod shader_source;
 pub mod source_reachability;
 pub mod scorecard;
+pub mod supported_api;
 pub mod sweep;
 pub mod test_harness_isolation;
 pub mod test_material;
@@ -222,6 +223,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
         "source-reachability",
         &source_reachability::SourceReachability,
     ),
+    ("supported-api", &supported_api::SupportedApi),
     (
         "test-harness-isolation",
         &test_harness_isolation::TestHarnessIsolation,

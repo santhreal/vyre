@@ -106,6 +106,7 @@ purpose = "Gates, benchmarks, and generators that read the whole workspace."
 
 [[crate]]
 package = "vyre-megakernel"
+publication_class = "internal-engine"
 path = "vyre-megakernel"
 owner = "megakernel-compiler"
 layer = "compiler-boundary"
@@ -146,6 +147,7 @@ seam = "specification"
 
 [[crate]]
 package = "structure-gate"
+publication_class = "conformance-tooling"
 path = "structure-gate"
 owner = "release-tooling"
 layer = "standalone-tooling"
@@ -153,6 +155,7 @@ responsibility = "Enforce the crate roster, one operation identity per semantic 
 
 [[crate]]
 package = "vyre"
+publication_class = "stable-consumer-sdk"
 path = "vyre"
 owner = "public-facade"
 layer = "facade"
@@ -237,6 +240,7 @@ seam = "specification"
 
 [[crate]]
 package = "vyre-foundation"
+publication_class = "extension-sdk"
 path = "vyre-foundation"
 owner = "foundation-ir"
 layer = "foundation"
@@ -266,6 +270,7 @@ seam = "specification"
 
 [[crate]]
 package = "vyre-driver"
+publication_class = "extension-sdk"
 path = "vyre-driver"
 owner = "backend-contract"
 layer = "backend-neutral"
@@ -317,6 +322,7 @@ seam = "specification"
 
 [[crate]]
 package = "vyre-driver-metal"
+publication_class = "concrete-backend"
 path = "vyre-driver-metal"
 owner = "metal-driver"
 layer = "concrete-backend"
@@ -379,6 +385,7 @@ seam = "megakernel-compiler"
 
 [[crate]]
 package = "vyre-driver-wgpu"
+publication_class = "concrete-backend"
 path = "vyre-driver-wgpu"
 owner = "portable-driver"
 layer = "concrete-backend"
@@ -474,6 +481,7 @@ seam = "specification"
 
 [[crate]]
 package = "vyre-driver-spirv"
+publication_class = "concrete-backend"
 path = "vyre-driver-spirv"
 owner = "spirv-driver"
 layer = "concrete-backend"
@@ -536,6 +544,7 @@ seam = "megakernel-compiler"
 
 [[crate]]
 package = "vyre-driver-cuda"
+publication_class = "concrete-backend"
 path = "vyre-driver-cuda"
 owner = "cuda-driver"
 layer = "concrete-backend"
@@ -620,6 +629,7 @@ seam = "pass-engine"
 
 [[crate]]
 package = "vyre-driver-reference"
+publication_class = "concrete-backend"
 path = "vyre-driver-reference"
 owner = "reference-driver"
 layer = "concrete-backend"
@@ -671,6 +681,7 @@ seam = "reference-semantics"
 
 [[crate]]
 package = "vyre-registry-link"
+publication_class = "internal-engine"
 path = "vyre-registry-link"
 owner = "registry-link"
 layer = "registry-link"
@@ -810,6 +821,7 @@ seam = "primitive-library"
 
 [[crate]]
 package = "vyre-reference"
+publication_class = "internal-engine"
 path = "vyre-reference"
 owner = "reference-semantics"
 layer = "semantics"
@@ -851,6 +863,7 @@ seam = "specification"
 
 [[crate]]
 package = "vyre-spec"
+publication_class = "extension-sdk"
 path = "vyre-spec"
 owner = "specification"
 layer = "foundation"
@@ -858,6 +871,7 @@ responsibility = "Own stable schemas, operation definitions, and compatibility c
 
 [[crate]]
 package = "vyre-macros"
+publication_class = "extension-sdk"
 path = "vyre-macros"
 owner = "registration-macros"
 layer = "foundation"
@@ -865,6 +879,7 @@ responsibility = "Provide compile-time registration and declaration macros witho
 
 [[crate]]
 package = "vyre-primitives"
+publication_class = "extension-sdk"
 path = "vyre-primitives"
 owner = "primitive-library"
 layer = "primitives"
@@ -883,6 +898,7 @@ seam = "foundation-ir"
 
 [[crate]]
 package = "vyre-test-support"
+publication_class = "private-test-support"
 path = "vyre-test-support"
 owner = "test-support"
 layer = "test-tooling"
@@ -951,6 +967,7 @@ seam = "specification"
 
 [[crate]]
 package = "vyre-pass-engine"
+publication_class = "internal-engine"
 path = "vyre-pass-engine"
 owner = "pass-engine"
 layer = "pass-engine"
@@ -1002,6 +1019,7 @@ seam = "primitive-library"
 
 [[crate]]
 package = "vyre-conform-spec"
+publication_class = "conformance-tooling"
 path = "conform/vyre-conform-spec"
 owner = "conformance"
 layer = "conformance"
@@ -1020,6 +1038,7 @@ seam = "specification"
 
 [[crate]]
 package = "vyre-conform"
+publication_class = "conformance-tooling"
 path = "conform/vyre-conform"
 owner = "conformance"
 layer = "conformance"
@@ -1170,6 +1189,7 @@ seam = "registry-link"
 
 [[crate]]
 package = "xtask"
+publication_class = "conformance-tooling"
 path = "xtask"
 owner = "release-tooling"
 layer = "tooling"
@@ -1188,6 +1208,7 @@ seam = "release-tooling"
 
 [[crate]]
 package = "xtask-registry"
+publication_class = "conformance-tooling"
 path = "xtask-registry"
 owner = "release-tooling"
 layer = "tooling"
@@ -1316,6 +1337,7 @@ seam = "registry-link"
 
 [[crate]]
 package = "xtask-evidence"
+publication_class = "conformance-tooling"
 path = "xtask-evidence"
 owner = "release-tooling"
 layer = "tooling"
@@ -1378,6 +1400,7 @@ seam = "registry-link"
 
 [[crate]]
 package = "vyre-runtime"
+publication_class = "internal-engine"
 path = "vyre-runtime"
 owner = "runtime"
 layer = "runtime"
@@ -1429,6 +1452,7 @@ seam = "megakernel-compiler"
 
 [[crate]]
 package = "vyre-safetensors"
+publication_class = "stable-consumer-sdk"
 path = "vyre-safetensors"
 owner = "safetensors-adapter"
 layer = "runtime"
@@ -1436,6 +1460,7 @@ responsibility = "Validate safetensors metadata, shard indexes, compiler require
 
 [[crate]]
 package = "vyre-libs"
+publication_class = "stable-consumer-sdk"
 path = "vyre-libs"
 owner = "product-libraries"
 layer = "libraries"
@@ -1487,6 +1512,7 @@ seam = "specification"
 
 [[crate]]
 package = "vyre-aot"
+publication_class = "internal-engine"
 path = "vyre-aot"
 owner = "aot-artifacts"
 layer = "packaging"
@@ -1527,6 +1553,7 @@ seam = "megakernel-compiler"
 
 [[crate]]
 package = "vyre-alloc-probe"
+publication_class = "conformance-tooling"
 path = "vyre-alloc-probe"
 owner = "benchmarks"
 layer = "standalone-tooling"
@@ -1534,6 +1561,7 @@ responsibility = "Count heap traffic per thread behind a GlobalAlloc wrapper, so
 
 [[crate]]
 package = "vyre-bench"
+publication_class = "conformance-tooling"
 path = "vyre-bench"
 owner = "benchmarks"
 layer = "tooling"
@@ -1739,6 +1767,7 @@ seam = "release-tooling"
 
 [[crate]]
 package = "vyre-lints"
+publication_class = "conformance-tooling"
 path = "vyre-lints"
 owner = "lint-policy"
 layer = "tooling"
@@ -1746,6 +1775,7 @@ responsibility = "Enforce source-level project policies without depending on run
 
 [[crate]]
 package = "vyre-lower"
+publication_class = "internal-engine"
 path = "vyre-lower"
 owner = "lowering"
 layer = "lowering"
@@ -1775,6 +1805,7 @@ seam = "specification"
 
 [[crate]]
 package = "vyre-emit-naga"
+publication_class = "internal-engine"
 path = "vyre-emit-naga"
 owner = "primary-text-emitter"
 layer = "emitter"
@@ -1804,6 +1835,7 @@ seam = "lowering"
 
 [[crate]]
 package = "vyre-emit-ptx"
+publication_class = "internal-engine"
 path = "vyre-emit-ptx"
 owner = "primary-binary-emitter"
 layer = "emitter"
@@ -1833,6 +1865,7 @@ seam = "lowering"
 
 [[crate]]
 package = "vyre-emit-spirv"
+publication_class = "internal-engine"
 path = "vyre-emit-spirv"
 owner = "spirv-emitter"
 layer = "emitter"
@@ -1862,6 +1895,7 @@ seam = "lowering"
 
 [[crate]]
 package = "vyre-emit-metal"
+publication_class = "internal-engine"
 path = "vyre-emit-metal"
 owner = "metal-emitter"
 layer = "emitter"
@@ -1902,6 +1936,7 @@ seam = "lowering"
 
 [[crate]]
 package = "vyre-debug"
+publication_class = "internal-engine"
 path = "vyre-debug"
 owner = "debugging"
 layer = "tooling"

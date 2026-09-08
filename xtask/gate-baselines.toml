@@ -511,6 +511,10 @@ findings = 0
 name = "spirv-parity"
 findings = 0
 
+
+[[gate]]
+name = "supported-api"
+findings = 0
 [[gate]]
 name = "test-harness-isolation"
 findings = 0
