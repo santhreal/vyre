@@ -137,10 +137,7 @@ fn ingests_file_and_surfaces_hash_through_live_backend() {
     let gpu_bytes = backend
         .dispatch(
             &copy_hash_program(),
-            &[
-                cpu_hash.as_bytes().to_vec(),
-                vec![0_u8; cpu_hash.as_bytes().len()],
-            ],
+            &[cpu_hash.as_bytes().to_vec()],
             &DispatchConfig::default(),
         )
         .expect("VYRE hash-copy dispatch")

@@ -190,17 +190,27 @@ fn async_dispatch_is_non_blocking_for_real_gpu_work() {
     let program = add_one_program(256 * 1024);
     let input: Vec<u8> = (0..256 * 1024u32).flat_map(u32::to_le_bytes).collect();
 
-    // Warm the pipeline cache so the measurement is about execution,
-    // not shader compilation on the first dispatch.
-    let warm_start = Instant::now();
+    // Warm the pipeline cache so the measurement is about submission, not
+    // shader compilation on the first dispatch.
     let _ = backend
         .dispatch(&program, &[input.clone()], &DispatchConfig::default())
         .expect("Fix: warm-up dispatch must succeed");
-    let warm_elapsed = warm_start.elapsed();
 
-    // Two back-to-back async dispatches should submit quickly.
-    // A synchronous backend would block until GPU completion, so
-    // two calls would take ~2x the warm-up time.
+    // Two async submissions must cost less than two synchronous dispatches. A
+    // synchronous dispatch_async blocks until GPU completion and so matches the
+    // sequential cost. A single dispatch is not a valid bound here: every test
+    // in this binary shares one backend, so the pipeline is often already warm
+    // and one dispatch then measures little more than the staging the two
+    // async submissions also pay for.
+    let sequential_start = Instant::now();
+    let _ = backend
+        .dispatch(&program, &[input.clone()], &DispatchConfig::default())
+        .expect("Fix: sequential dispatch #1 must succeed");
+    let _ = backend
+        .dispatch(&program, &[input.clone()], &DispatchConfig::default())
+        .expect("Fix: sequential dispatch #2 must succeed");
+    let sequential_elapsed = sequential_start.elapsed();
+
     let start = Instant::now();
     let pending1 = backend
         .dispatch_async(&program, &[input.clone()], &DispatchConfig::default())
@@ -211,13 +221,10 @@ fn async_dispatch_is_non_blocking_for_real_gpu_work() {
     let submit_elapsed = start.elapsed();
 
     assert!(
-        submit_elapsed < warm_elapsed,
-        "Fix: two back-to-back dispatch_async calls took {:?}, \
-         but a single synchronous dispatch takes {:?}. \
-         If the backend were synchronous, the total would be at least \
-         2x the single dispatch time.",
-        submit_elapsed,
-        warm_elapsed
+        submit_elapsed < sequential_elapsed,
+        "Fix: two back-to-back dispatch_async calls took {submit_elapsed:?}, but two \
+         sequential synchronous dispatches take {sequential_elapsed:?}. A synchronous \
+         backend would block until GPU completion and match the sequential cost."
     );
 
     // Both must complete correctly.

@@ -33,12 +33,11 @@ fn gpu_fnv1a64(backend: &WgpuBackend, bytes: &[u8]) -> u64 {
     let program = fnv1a64_program_n("input", "out", n);
     let input_words: Vec<u32> = bytes.iter().map(|&b| u32::from(b)).collect();
     let input_b = u32_bytes(&input_words);
-    let out_init = u32_bytes(&[0u32, 0u32]);
 
     let outputs = backend
         .dispatch_borrowed(
             &program,
-            &[input_b.as_slice(), out_init.as_slice()],
+            &[input_b.as_slice()],
             &DispatchConfig::default(),
         )
         .expect("Fix: WGPU must dispatch the FNV-1a64 u32-pair-carry loop program.");

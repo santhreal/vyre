@@ -16,7 +16,7 @@
 #![cfg(feature = "device-tests")]
 
 use crate::harness;
-use harness::{byte_stream_input_bytes, dispatch_single_u32_output, u32_bytes};
+use harness::{byte_stream_input_bytes, dispatch_single_u32_output};
 
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::hash::adler32::adler32_program;
@@ -31,11 +31,10 @@ fn gpu_adler32(backend: &WgpuBackend, bytes: &[u8]) -> u32 {
     let n = bytes.len() as u32;
     let program = adler32_program("input", "out", n);
     let input_b = byte_stream_input_bytes(bytes);
-    let out_init = u32_bytes(&[0u32]);
     dispatch_single_u32_output(
         backend,
         &program,
-        &[input_b.as_slice(), out_init.as_slice()],
+        &[input_b.as_slice()],
         "Fix: WGPU must dispatch the Adler-32 dual-accumulator loop program.",
     )
 }

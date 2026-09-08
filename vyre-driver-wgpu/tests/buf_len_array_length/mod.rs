@@ -78,6 +78,29 @@ fn dispatch_and_read_first_word_lowered(program: &Program, input_bytes: Vec<u8>)
     dispatch_and_read_first_word_with_lowering(program, input_bytes, true)
 }
 
+/// One slot per binding that consumes host bytes, in binding order.
+///
+/// The caller's bytes fill the first such binding. A read-write target consumes
+/// a slot of its own, because its contents are uploaded before the dispatch and
+/// read back after it, so a program declaring one needs a zeroed slot sized from
+/// its own declaration rather than a literal the helper carries.
+fn host_input_slots(program: &Program, input_bytes: Vec<u8>) -> Vec<Vec<u8>> {
+    let mut slots = vec![input_bytes];
+    for buffer in program
+        .buffers()
+        .iter()
+        .filter(|buffer| buffer.consumes_host_input())
+        .skip(1)
+    {
+        let declared = buffer
+            .static_byte_len()
+            .expect("Fix: a host-fed binding must declare a valid static byte length")
+            .expect("Fix: a host-fed binding must declare a static element count");
+        slots.push(vec![0u8; declared]);
+    }
+    slots
+}
+
 fn dispatch_and_read_first_word_with_lowering(
     program: &Program,
     input_bytes: Vec<u8>,
@@ -91,7 +114,7 @@ fn dispatch_and_read_first_word_with_lowering(
     } else {
         program
     };
-    let inputs = vec![input_bytes, vec![0u8; 4]];
+    let inputs = host_input_slots(prog, input_bytes);
     let outputs = backend()
         .dispatch(prog, &inputs, &DispatchConfig::default())
         .expect("Fix: backend.dispatch must succeed for the buf_len writer program");
@@ -104,7 +127,7 @@ fn dispatch_and_read_first_word_with_lowering(
 }
 
 fn dispatch_and_read_words(program: &Program, input_bytes: Vec<u8>) -> Vec<u32> {
-    let inputs = vec![input_bytes, vec![0u8; 16]];
+    let inputs = host_input_slots(program, input_bytes);
     let outputs = backend()
         .dispatch(program, &inputs, &DispatchConfig::default())
         .expect("Fix: backend.dispatch must succeed for the word writer program");

@@ -88,6 +88,13 @@ fn dispatch_async_never_returns_synchronous_cpu_result() {
         ],
     );
 
+    // Compile the pipeline first. A cold shader compile is real work on the
+    // caller's thread, and measuring it here reads as synchronous execution
+    // while proving nothing about whether the handle is returned early.
+    let _ = backend
+        .dispatch(&program, &[], &DispatchConfig::default())
+        .expect("Fix: warm-up dispatch must succeed");
+
     let start = Instant::now();
     let pending = backend
         .dispatch_async(&program, &[], &DispatchConfig::default())

@@ -61,10 +61,14 @@ fn newton_schulz_ir_shape_stays_linear() {
 /// A shape pin on its own proves nothing about lowering: the op could stay small
 /// and still fail to emit. Lowering it here is what makes the ceiling above a
 /// statement about this backend's compile cost rather than about the IR alone.
+///
+/// The composition is schedule-free and carries logical identity, which physical
+/// lowering rejects, so this routes through `harness::device_program` for the
+/// same optimizer and schedule legalization a device dispatch applies.
 #[test]
 fn newton_schulz_lowers_through_the_wgpu_emitter() {
     let program = vyre_libs::nn::optim::newton_schulz_5step("mat", "output", 2, 2);
-    let wgsl = harness::emit_validated_wgsl(&program);
+    let wgsl = harness::emit_validated_wgsl(&harness::device_program(&program));
     assert!(
         wgsl.contains("fn main"),
         "Fix: the emitted module must carry a compute entry point; got {} bytes of WGSL",

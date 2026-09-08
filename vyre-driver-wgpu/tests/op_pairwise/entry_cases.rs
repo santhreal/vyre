@@ -1240,21 +1240,75 @@ fn a_narrow_scan_is_not_fused_behind_a_wide_elementwise_op() {
 
 /// A fixed-size producer cannot feed a runtime-sized consumer whose witness
 /// proves a different byte extent.
+///
+/// The consumer is derived from the live registry rather than named. The witness
+/// comparison in `try_compose` is only reachable when the wired input declares
+/// no static count, so a named entry that later gained one would leave this
+/// asserting a message that can never fire. An empty candidate set fails here
+/// rather than passing on nothing.
 #[test]
 fn runtime_sized_input_witness_must_match_upstream_extent() {
     let a = entry_named("vyre-libs::math::avg_floor");
-    let b = entry_named("vyre-libs::parsing::ast_shunting_yard");
-
-    let reason = match try_compose(a, b) {
-        Ok(_) => {
-            panic!("a four-lane producer must not feed a runtime-sized 64 Ki-lane parser input")
-        }
-        Err(reason) => reason,
+    let prog_a = (a.build)();
+    let [a_out_index] = prog_a.output_buffer_indices() else {
+        panic!("Fix: the producer fixture must have exactly one writable result");
     };
+    let a_out = &prog_a.buffers()[*a_out_index as usize];
+    let element_bytes = a_out
+        .element()
+        .size_bytes()
+        .expect("Fix: the producer output element must have a fixed size");
+    let upstream_bytes = usize::try_from(a_out.count())
+        .expect("Fix: the producer output count must fit the host address space")
+        * element_bytes;
+
+    let mut checked = 0usize;
+    for index in 0..entry_count() {
+        let b = entry_by_index(index);
+        let prog_b = (b.build)();
+        let Some(b_in) = prog_b
+            .buffers()
+            .iter()
+            .find(|buf| matches!(buf.access(), BufferAccess::ReadOnly | BufferAccess::Uniform))
+        else {
+            continue;
+        };
+        // A static count or a dtype gap refuses earlier, so neither reaches the
+        // witness comparison this case exists to prove.
+        if b_in.count() != 0 || b_in.element() != a_out.element() {
+            continue;
+        }
+        let Some(test_inputs) = b.test_inputs else {
+            continue;
+        };
+        let differs = test_inputs().iter().any(|case| {
+            input_witness_len(&prog_b, case, b_in.name())
+                .is_some_and(|bytes| bytes != upstream_bytes)
+        });
+        if !differs {
+            continue;
+        }
+
+        checked += 1;
+        let reason = match try_compose(a, b) {
+            Ok(_) => panic!(
+                "Fix: {} produces {upstream_bytes} bytes and must not feed {}'s runtime-sized input `{}` at a different witness extent",
+                a.id, b.id, b_in.name()
+            ),
+            Err(reason) => reason,
+        };
+        assert!(
+            reason.contains("runtime-sized input byte mismatch"),
+            "Fix: the refusal must identify the runtime witness extent mismatch for {}: {reason}",
+            b.id
+        );
+    }
 
     assert!(
-        reason.contains("runtime-sized input byte mismatch"),
-        "Fix: the refusal must identify the runtime witness extent mismatch: {reason}"
+        checked > 0,
+        "Fix: no registry entry declares a runtime-sized {:?} input whose witness extent differs from {}'s {upstream_bytes} bytes, so the witness comparison in try_compose is unproven. Add such a fixture or retire the branch.",
+        a_out.element(),
+        a.id
     );
 }
 
