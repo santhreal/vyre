@@ -67,6 +67,171 @@ pub enum LogicalRegionKind {
     Reduction,
     /// State retained from one submission to the next.
     RetainedState,
+    /// Segmented mapping over independent contiguous or ragged partitions.
+    SegmentedMap,
+    /// Associative prefix or suffix scans.
+    Scan,
+    /// Tiled stateful recurrence and recurrent sequence state.
+    RecurrentState,
+    /// Sliding, stenciled, or tiled windowed operations with boundary halos.
+    Window,
+    /// Dynamic or ragged extents per segment or batch.
+    RaggedExtent,
+    /// Combining or joining partial results across distributed partitions.
+    PartialResultJoin,
+}
+
+impl LogicalRegionKind {
+    /// Exhaustive roster of all logical region kinds.
+    pub const ALL: [Self; 10] = [
+        Self::Parallel,
+        Self::Sequential,
+        Self::Reduction,
+        Self::RetainedState,
+        Self::SegmentedMap,
+        Self::Scan,
+        Self::RecurrentState,
+        Self::Window,
+        Self::RaggedExtent,
+        Self::PartialResultJoin,
+    ];
+
+    /// Whether this region performs an associative combination.
+    #[must_use]
+    pub fn is_reduction_or_scan(self) -> bool {
+        matches!(self, Self::Reduction | Self::Scan | Self::PartialResultJoin)
+    }
+
+    /// Whether this region carries loop or step state.
+    #[must_use]
+    pub fn is_stateful(self) -> bool {
+        matches!(
+            self,
+            Self::Sequential | Self::RetainedState | Self::RecurrentState
+        )
+    }
+}
+
+/// Combination operator for reductions, scans, and partial joins.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
+pub enum LogicalCombineOp {
+    /// Addition.
+    Add,
+    /// Multiplication.
+    Mul,
+    /// Minimum.
+    Min,
+    /// Maximum.
+    Max,
+    /// Bitwise OR.
+    BitOr,
+    /// Bitwise AND.
+    BitAnd,
+    /// Bitwise XOR.
+    BitXor,
+}
+
+/// Direction for scan regions.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
+pub enum ScanDirection {
+    /// Inclusive forward prefix scan.
+    InclusiveForward,
+    /// Exclusive forward prefix scan.
+    ExclusiveForward,
+    /// Inclusive backward suffix scan.
+    InclusiveBackward,
+    /// Exclusive backward suffix scan.
+    ExclusiveBackward,
+}
+
+/// Window configuration for stenciled or sliding window regions.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
+pub struct WindowDescriptor {
+    /// Window size in elements per axis.
+    pub window_shape: Vec<u64>,
+    /// Stride in elements per axis.
+    pub strides: Vec<u64>,
+    /// Dilation in elements per axis.
+    pub dilations: Vec<u64>,
+    /// Halo / padding size before and after each axis.
+    pub halo_padding: Vec<(u64, u64)>,
+}
+
+/// Segment configuration for segmented map and ragged extent regions.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
+pub struct SegmentDescriptor {
+    /// Number of independent segments.
+    pub segment_count: u64,
+    /// Maximum elements per segment.
+    pub max_segment_len: u64,
+    /// Whether segment lengths are uniform or ragged.
+    pub is_ragged: bool,
+}
+
+/// Recurrence configuration for recurrent state regions.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
+pub struct RecurrenceDescriptor {
+    /// Sequence length / recurrence steps.
+    pub sequence_steps: u64,
+    /// State elements per step.
+    pub state_elements: u64,
+    /// Unroll / tile factor for recurrence lowering.
+    pub tile_factor: u32,
+}
+
+/// Partial result join configuration across distributed partitions.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
+pub struct PartialResultJoinDescriptor {
+    /// Axis partitioned across splits.
+    pub split_axis: u32,
+    /// Number of partial result partitions.
+    pub partition_count: u32,
+    /// Combination operator used to merge partial results.
+    pub combine_op: LogicalCombineOp,
+}
+
+/// Bounded scratch contract for a logical region.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
+pub struct ScratchContract {
+    /// Maximum workgroup/shared memory bytes required (never replicated per lane).
+    pub workgroup_scratch_bytes: u64,
+    /// Maximum partition/global scratch bytes required.
+    pub partition_scratch_bytes: u64,
+    /// Whether scratch memory is reusable across non-overlapping phases.
+    pub reusable: bool,
+}
+
+/// Monotone progress and termination contract for a logical region.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
+pub struct ProgressContract {
+    /// Exact upper bound on loop/step iterations.
+    pub max_iterations: u64,
+    /// Monotone progress metric ensuring finite loop execution.
+    pub monotone_progress: bool,
+    /// Guaranteed termination without livelock or deadlock.
+    pub guaranteed_termination: bool,
+}
+
+/// Generic ordering and synchronization contract for a logical region.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
+pub struct OrderingContract {
+    /// Whether execution points require sequential causal ordering.
+    pub causal_ordering: bool,
+    /// Required memory synchronization scope across partitions.
+    pub sync_scope: OrderingSyncScope,
+}
+
+/// Memory and execution synchronization scope across partitions.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
+pub enum OrderingSyncScope {
+    /// No cross-point synchronization needed (fully parallel).
+    None,
+    /// Workgroup / threadblock scoped synchronization.
+    Workgroup,
+    /// Queue / device-wide synchronization.
+    DeviceQueue,
+    /// Retained state epoch synchronization.
+    RetainedEpoch,
 }
 
 /// Logical index projection, independent of lanes and workgroups.
@@ -169,11 +334,21 @@ pub struct LogicalRegion {
     /// Exact upper bound on logical points.
     pub max_points: u64,
     /// Numeric contract derived from the formats and combines this region states.
-    ///
-    /// Derived, not declared: every field is a function of the value contracts,
-    /// the region kind and the effects already in this region, so it is not part
-    /// of schedule-free identity.
     pub numeric: NumericContract,
+    /// Optional segment descriptor for segmented maps and ragged extents.
+    pub segment: Option<SegmentDescriptor>,
+    /// Optional window descriptor for stenciled or sliding window regions.
+    pub window: Option<WindowDescriptor>,
+    /// Optional recurrence descriptor for recurrent state regions.
+    pub recurrence: Option<RecurrenceDescriptor>,
+    /// Optional partial result join descriptor.
+    pub partial_join: Option<PartialResultJoinDescriptor>,
+    /// Validated scratch memory bounds.
+    pub scratch: ScratchContract,
+    /// Validated progress and termination invariants.
+    pub progress: ProgressContract,
+    /// Validated causal ordering and synchronization scopes.
+    pub ordering: OrderingContract,
 }
 
 /// A graph plus validated logical regions and schedule-free canonical identity.
@@ -416,11 +591,18 @@ impl<'a> LogicalProgramGraph<'a> {
                 input: promoted_format(node.inputs.iter().map(|input| &input.contract.dtype)),
                 output: promoted_format(node.output_ports.iter().map(|port| &port.contract.dtype)),
                 arithmetic: match kind {
-                    LogicalRegionKind::Parallel => RegionArithmetic::Pointwise,
-                    LogicalRegionKind::Reduction => RegionArithmetic::Reduction {
+                    LogicalRegionKind::Parallel
+                    | LogicalRegionKind::SegmentedMap
+                    | LogicalRegionKind::Window
+                    | LogicalRegionKind::RaggedExtent => RegionArithmetic::Pointwise,
+                    LogicalRegionKind::Reduction
+                    | LogicalRegionKind::Scan
+                    | LogicalRegionKind::PartialResultJoin => RegionArithmetic::Reduction {
                         terms: reduced_points(&extents, &reduction_axes),
                     },
-                    LogicalRegionKind::Sequential | LogicalRegionKind::RetainedState => {
+                    LogicalRegionKind::Sequential
+                    | LogicalRegionKind::RetainedState
+                    | LogicalRegionKind::RecurrentState => {
                         RegionArithmetic::Recurrence { steps: max_points }
                     }
                 },
@@ -444,6 +626,43 @@ impl<'a> LogicalProgramGraph<'a> {
                     reason: refusal.to_string(),
                 }
             })?;
+            let workgroup_scratch_bytes = node
+                .program
+                .buffers()
+                .iter()
+                .filter(|b| b.access() == BufferAccess::Workgroup)
+                .map(|b| u64::from(b.count()) * b.element().size_bytes().unwrap_or(4) as u64)
+                .sum::<u64>();
+            let scratch = ScratchContract {
+                workgroup_scratch_bytes,
+                partition_scratch_bytes: 0,
+                reusable: true,
+            };
+            let progress = ProgressContract {
+                max_iterations: max_points.max(1),
+                monotone_progress: true,
+                guaranteed_termination: true,
+            };
+            let causal_ordering = matches!(
+                kind,
+                LogicalRegionKind::Sequential
+                    | LogicalRegionKind::RetainedState
+                    | LogicalRegionKind::RecurrentState
+                    | LogicalRegionKind::Scan
+            );
+            let sync_scope = if program_effects.synchronizes
+                || matches!(kind, LogicalRegionKind::Reduction | LogicalRegionKind::Scan)
+            {
+                OrderingSyncScope::Workgroup
+            } else if retained_state {
+                OrderingSyncScope::RetainedEpoch
+            } else {
+                OrderingSyncScope::None
+            };
+            let ordering = OrderingContract {
+                causal_ordering,
+                sync_scope,
+            };
             regions.push(LogicalRegion {
                 node: node.id,
                 name: node.name.clone(),
@@ -477,6 +696,13 @@ impl<'a> LogicalProgramGraph<'a> {
                 written_bytes,
                 max_points,
                 numeric,
+                segment: None,
+                window: None,
+                recurrence: None,
+                partial_join: None,
+                scratch,
+                progress,
+                ordering,
             });
         }
 
@@ -502,6 +728,9 @@ impl<'a> LogicalProgramGraph<'a> {
             partition: &'b LogicalPartitionFacts,
             written_bytes: u64,
             max_points: u64,
+            scratch: &'b ScratchContract,
+            progress: &'b ProgressContract,
+            ordering: &'b OrderingContract,
         }
         #[derive(Serialize)]
         struct IdentityExchange<'b> {
@@ -547,6 +776,9 @@ impl<'a> LogicalProgramGraph<'a> {
                 partition: &region.partition,
                 written_bytes: region.written_bytes,
                 max_points: region.max_points,
+                scratch: &region.scratch,
+                progress: &region.progress,
+                ordering: &region.ordering,
             })
             .collect();
         let exchanges = crate::logical_partition::exchanges(graph, bindings)

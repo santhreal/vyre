@@ -31,6 +31,8 @@ pub enum ResourceLifetime {
     Retained,
     /// Caller-visible graph output.
     Output,
+    /// Streaming channel value transferred between pipeline stages.
+    Stream,
 }
 
 /// Canonical resource and liveness fact for one typed graph value.

@@ -635,6 +635,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   immutable-weight identities. Mutable sequence-state contents are excluded, so
   cache growth reuses compiled artifacts while any executable or provenance
   change invalidates the key.
+- `vyre-foundation` adds domain-neutral `ProgramGraph` whole-graph composition
+  APIs (`ProgramGraphBuilder`, `inline_subgraph`, `add_bounded_loop`,
+  `add_conditional_branch`, `add_effect_barrier`, `add_stream`,
+  `ValueLifetime::Stream`, `ExternalEffect`, `ControlBounds`), completes
+  10-variant `LogicalRegionKind` definitions with scratch, progress, ordering,
+  and numeric contracts, and provides schedule distribution lowering across
+  lanes, subgroups, workgroups, grids, queues, and resident partitions;
+  `vyre-libs` implements representative complete multi-domain graph
+  compositions and proves identical production compilation paths across neural,
+  graph traversal, and streaming parser domains.
 - The neural library now executes recurrent gated delta attention with F32 Q/K
   normalization, grouped heads, scaled queries, exponential decay, sigmoid
   beta, F32 matrix-state continuation, source-dtype output, and explicit

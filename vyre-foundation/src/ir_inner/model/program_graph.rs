@@ -39,6 +39,32 @@ pub enum ValueLifetime {
     Retained,
     /// Caller-visible graph result.
     Output,
+    /// Streaming data transferred through channels or queues across stages.
+    Stream,
+}
+
+/// Domain-neutral external effect class attached to graph nodes and boundaries.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum ExternalEffect {
+    /// Host or device I/O transfer (e.g. socket, disk, or host-device bridge).
+    Io,
+    /// Asynchronous device event or synchronization signal.
+    DeviceEvent,
+    /// Memory ordering or storage barrier across graph execution phases.
+    StorageBarrier,
+    /// Host trace or observability telemetry marker.
+    TraceMarker,
+    /// Custom domain-neutral external effect with an authenticated token tag.
+    Custom(String),
+}
+
+/// Bounded iteration and control-flow constraints.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ControlBounds {
+    /// Maximum iteration step bound (must be nonzero).
+    pub max_steps: u64,
+    /// Whether the loop is statically guaranteed to terminate within `max_steps`.
+    pub guaranteed_termination: bool,
 }
 
 /// Complete semantic contract for a connected graph value.
@@ -208,6 +234,25 @@ pub enum ProgramGraphError {
         output: String,
         /// Unconsumed prior retained value.
         prior: GraphValueId,
+    },
+    /// Bounded loop bounds were invalid.
+    #[error("invalid loop bounds: {0}")]
+    InvalidLoopBounds(String),
+    /// Subgraph port mapping was missing or incompatible.
+    #[error("subgraph port mapping error for `{subgraph}`: {reason}")]
+    SubgraphMapping {
+        /// Subgraph prefix.
+        subgraph: String,
+        /// Incompatibility reason.
+        reason: String,
+    },
+    /// External effect specification was invalid.
+    #[error("invalid external effect on node `{node}`: {reason}")]
+    InvalidEffect {
+        /// Node name.
+        node: String,
+        /// Failure reason.
+        reason: String,
     },
     /// Graph identity exceeded the wire-stable u32 range.
     #[error("ProgramGraph has more than {0} addressable values or nodes")]
@@ -851,7 +896,502 @@ impl ProgramGraph {
             }
         }
     }
+
+    /// Register a streaming dataflow value (FIFO channel or queue).
+    pub fn add_stream(
+        &mut self,
+        name: impl Into<String>,
+        contract: ValueContract,
+    ) -> Result<GraphValueId, ProgramGraphError> {
+        let mut stream_contract = contract;
+        stream_contract.lifetime = ValueLifetime::Stream;
+        self.push_value(name.into(), stream_contract, None, None)
+    }
+
+    /// Add an operation node with declared inputs and outputs.
+    pub fn add_operation_node(
+        &mut self,
+        name: impl Into<String>,
+        program: Program,
+        inputs: Vec<GraphInput>,
+        outputs: Vec<GraphOutput>,
+    ) -> Result<(GraphNodeId, Vec<GraphValueId>), ProgramGraphError> {
+        self.add_node(name, program, inputs, outputs)
+    }
+
+    /// Inline a nested reusable [`ProgramGraph`] into `self`.
+    ///
+    /// `name_prefix` namespaces every node and produced value of the subgraph.
+    /// `input_mapping` maps each external input value ID of `subgraph` to an existing
+    /// value ID in `self`.
+    /// Returns the mapped value IDs in `self` corresponding to the subgraph's output values.
+    pub fn inline_subgraph(
+        &mut self,
+        name_prefix: &str,
+        subgraph: &ProgramGraph,
+        input_mapping: &BTreeMap<GraphValueId, GraphValueId>,
+    ) -> Result<Vec<GraphValueId>, ProgramGraphError> {
+        let mut value_map = BTreeMap::<GraphValueId, GraphValueId>::new();
+
+        for sub_val in subgraph.values() {
+            if sub_val.producer.is_none() {
+                let mapped_in_self = input_mapping.get(&sub_val.id).copied().ok_or_else(|| {
+                    ProgramGraphError::SubgraphMapping {
+                        subgraph: name_prefix.to_string(),
+                        reason: format!(
+                            "missing input mapping for subgraph external value `{}` ({:?})",
+                            sub_val.name, sub_val.id
+                        ),
+                    }
+                })?;
+                let self_val = self
+                    .values
+                    .get(mapped_in_self.0 as usize)
+                    .ok_or(ProgramGraphError::MissingValue(mapped_in_self))?;
+                if self_val.contract.dtype != sub_val.contract.dtype
+                    || self_val.contract.shape != sub_val.contract.shape
+                {
+                    return Err(ProgramGraphError::SubgraphMapping {
+                        subgraph: name_prefix.to_string(),
+                        reason: format!(
+                            "input contract mismatch on `{}`: expected {:?}, got {:?}",
+                            sub_val.name, sub_val.contract, self_val.contract
+                        ),
+                    });
+                }
+                value_map.insert(sub_val.id, mapped_in_self);
+            }
+        }
+
+        for sub_node in subgraph.nodes() {
+            let namespaced_node_name = format!("{name_prefix}_{}", sub_node.name);
+            let mut node_inputs = Vec::with_capacity(sub_node.inputs.len());
+            for in_port in &sub_node.inputs {
+                let self_val_id = value_map.get(&in_port.value).copied().ok_or_else(|| {
+                    ProgramGraphError::SubgraphMapping {
+                        subgraph: name_prefix.to_string(),
+                        reason: format!(
+                            "unresolved input value {:?} for port `{}` in node `{}`",
+                            in_port.value, in_port.buffer, sub_node.name
+                        ),
+                    }
+                })?;
+                node_inputs.push(GraphInput {
+                    buffer: in_port.buffer.clone(),
+                    value: self_val_id,
+                    contract: in_port.contract.clone(),
+                });
+            }
+
+            let mut node_outputs = Vec::with_capacity(sub_node.output_ports.len());
+            for out_port in &sub_node.output_ports {
+                let namespaced_out_name = format!("{name_prefix}_{}", out_port.name);
+                let mapped_retained = match out_port.retained_successor_of {
+                    Some(prior) => Some(*value_map.get(&prior).ok_or_else(|| {
+                        ProgramGraphError::SubgraphMapping {
+                            subgraph: name_prefix.to_string(),
+                            reason: format!(
+                                "unresolved retained predecessor {:?} for output `{}`",
+                                prior, out_port.name
+                            ),
+                        }
+                    })?),
+                    None => None,
+                };
+                node_outputs.push(GraphOutput {
+                    buffer: out_port.buffer.clone(),
+                    name: namespaced_out_name,
+                    contract: out_port.contract.clone(),
+                    retained_successor_of: mapped_retained,
+                });
+            }
+
+            let (_, self_out_ids) = self.add_node(
+                namespaced_node_name,
+                sub_node.program.clone(),
+                node_inputs,
+                node_outputs,
+            )?;
+
+            for (sub_out_id, self_out_id) in sub_node.outputs.iter().zip(self_out_ids.iter()) {
+                value_map.insert(*sub_out_id, *self_out_id);
+            }
+        }
+
+        let mut results = Vec::new();
+        for sub_val in subgraph.values() {
+            if sub_val.contract.lifetime == ValueLifetime::Output {
+                if let Some(mapped) = value_map.get(&sub_val.id) {
+                    results.push(*mapped);
+                }
+            }
+        }
+        if results.is_empty() {
+            if let Some(last_node) = subgraph.nodes().last() {
+                for out_id in &last_node.outputs {
+                    if let Some(mapped) = value_map.get(out_id) {
+                        results.push(*mapped);
+                    }
+                }
+            }
+        }
+        Ok(results)
+    }
+
+    /// Add a bounded loop by unrolling the step body subgraph for `bounds.max_steps`.
+    pub fn add_bounded_loop(
+        &mut self,
+        name_prefix: &str,
+        body: &ProgramGraph,
+        loop_carried_inputs: &[GraphValueId],
+        step_inputs: &[GraphValueId],
+        bounds: ControlBounds,
+    ) -> Result<Vec<GraphValueId>, ProgramGraphError> {
+        if bounds.max_steps == 0 {
+            return Err(ProgramGraphError::InvalidLoopBounds(
+                "bounded loop max_steps must be greater than zero".to_string(),
+            ));
+        }
+
+        let mut current_state = loop_carried_inputs.to_vec();
+        for step in 0..bounds.max_steps {
+            let step_prefix = format!("{name_prefix}_step{step}");
+            let mut input_map = BTreeMap::new();
+            let ext_values: Vec<_> = body.values().iter().filter(|v| v.producer.is_none()).collect();
+            
+            for (idx, state_val) in current_state.iter().enumerate() {
+                if let Some(ext_val) = ext_values.get(idx) {
+                    input_map.insert(ext_val.id, *state_val);
+                }
+            }
+            for (idx, step_in) in step_inputs.iter().enumerate() {
+                let ext_idx = current_state.len() + idx;
+                if let Some(ext_val) = ext_values.get(ext_idx) {
+                    input_map.insert(ext_val.id, *step_in);
+                }
+            }
+
+            let step_outs = self.inline_subgraph(&step_prefix, body, &input_map)?;
+            current_state = step_outs;
+        }
+
+        Ok(current_state)
+    }
+
+    /// Add a conditional branch by inlining then/else subgraphs and joining outputs with a select node.
+    pub fn add_conditional_branch(
+        &mut self,
+        name_prefix: &str,
+        condition: GraphValueId,
+        then_graph: &ProgramGraph,
+        else_graph: &ProgramGraph,
+        inputs: &[GraphValueId],
+    ) -> Result<Vec<GraphValueId>, ProgramGraphError> {
+        let mut then_in_map = BTreeMap::new();
+        let mut else_in_map = BTreeMap::new();
+        let then_exts: Vec<_> = then_graph.values().iter().filter(|v| v.producer.is_none()).collect();
+        let else_exts: Vec<_> = else_graph.values().iter().filter(|v| v.producer.is_none()).collect();
+        for (i, val) in inputs.iter().enumerate() {
+            if let Some(te) = then_exts.get(i) {
+                then_in_map.insert(te.id, *val);
+            }
+            if let Some(ee) = else_exts.get(i) {
+                else_in_map.insert(ee.id, *val);
+            }
+        }
+
+        let then_outs = self.inline_subgraph(&format!("{name_prefix}_then"), then_graph, &then_in_map)?;
+        let else_outs = self.inline_subgraph(&format!("{name_prefix}_else"), else_graph, &else_in_map)?;
+
+        if then_outs.len() != else_outs.len() {
+            return Err(ProgramGraphError::SubgraphMapping {
+                subgraph: name_prefix.to_string(),
+                reason: format!(
+                    "then branch produced {} outputs but else branch produced {}",
+                    then_outs.len(), else_outs.len()
+                ),
+            });
+        }
+
+        let mut joined_outs = Vec::with_capacity(then_outs.len());
+        for (idx, (t_out, e_out)) in then_outs.iter().zip(else_outs.iter()).enumerate() {
+            let t_val = &self.values[t_out.0 as usize];
+            let e_val = &self.values[e_out.0 as usize];
+            if t_val.contract.dtype != e_val.contract.dtype || t_val.contract.shape != e_val.contract.shape {
+                return Err(ProgramGraphError::SubgraphMapping {
+                    subgraph: name_prefix.to_string(),
+                    reason: format!(
+                        "branch output {idx} contract mismatch: then is {:?}, else is {:?}",
+                        t_val.contract, e_val.contract
+                    ),
+                });
+            }
+
+            let join_name = format!("{name_prefix}_join{idx}");
+            let out_name = format!("{name_prefix}_cond_out{idx}");
+            let contract = t_val.contract.clone();
+            let count = match contract.shape.first() {
+                Some(ShapeDim::Known(k)) => *k as u32,
+                _ => 1,
+            };
+
+            let join_prog = Program::wrapped(
+                vec![
+                    crate::ir::BufferDecl::read("cond", 0, DataType::U32).with_count(1),
+                    crate::ir::BufferDecl::read("then_buf", 1, contract.dtype.clone()).with_count(count),
+                    crate::ir::BufferDecl::read("else_buf", 2, contract.dtype.clone()).with_count(count),
+                    crate::ir::BufferDecl::output("out", 3, contract.dtype.clone()).with_count(count),
+                ],
+                [count.max(1), 1, 1],
+                vec![
+                    crate::ir::Node::if_then_else(
+                        crate::ir::Expr::ne(crate::ir::Expr::load("cond", crate::ir::Expr::u32(0)), crate::ir::Expr::u32(0)),
+                        vec![crate::ir::Node::store("out", crate::ir::Expr::gid_x(), crate::ir::Expr::load("then_buf", crate::ir::Expr::gid_x()))],
+                        vec![crate::ir::Node::store("out", crate::ir::Expr::gid_x(), crate::ir::Expr::load("else_buf", crate::ir::Expr::gid_x()))],
+                    )
+                ],
+            );
+
+            let (_, outs) = self.add_node(
+                join_name,
+                join_prog,
+                vec![
+                    GraphInput {
+                        buffer: "cond".to_string(),
+                        value: condition,
+                        contract: ValueContract {
+                            dtype: DataType::U32,
+                            shape: vec![ShapeDim::Known(1)],
+                            access: BufferAccess::ReadOnly,
+                            lifetime: self.values[condition.0 as usize].contract.lifetime,
+                        },
+                    },
+                    GraphInput {
+                        buffer: "then_buf".to_string(),
+                        value: *t_out,
+                        contract: contract.clone(),
+                    },
+                    GraphInput {
+                        buffer: "else_buf".to_string(),
+                        value: *e_out,
+                        contract: contract.clone(),
+                    },
+                ],
+                vec![
+                    GraphOutput {
+                        buffer: "out".to_string(),
+                        name: out_name,
+                        contract,
+                        retained_successor_of: None,
+                    }
+                ],
+            )?;
+            joined_outs.extend(outs);
+        }
+
+        Ok(joined_outs)
+    }
+
+    /// Add an external effect barrier node enforcing synchronization and ordering.
+    pub fn add_effect_barrier(
+        &mut self,
+        name: impl Into<String>,
+        _effect: ExternalEffect,
+        inputs: Vec<GraphInput>,
+        outputs: Vec<GraphOutput>,
+    ) -> Result<(GraphNodeId, Vec<GraphValueId>), ProgramGraphError> {
+        let node_name = name.into();
+        let count = inputs.first().map(|i| match i.contract.shape.first() {
+            Some(ShapeDim::Known(k)) => *k as u32,
+            _ => 1,
+        }).unwrap_or(1);
+
+        let mut buffer_decls = Vec::new();
+        let mut stmts = vec![crate::ir::Node::LogicalBarrier { ordering: crate::ir::MemoryOrdering::SeqCst }];
+        for (i, inp) in inputs.iter().enumerate() {
+            buffer_decls.push(crate::ir::BufferDecl::read(&inp.buffer, i as u32, inp.contract.dtype.clone()).with_count(count));
+        }
+        for (j, out) in outputs.iter().enumerate() {
+            buffer_decls.push(crate::ir::BufferDecl::output(&out.buffer, (inputs.len() + j) as u32, out.contract.dtype.clone()).with_count(count));
+            if let Some(inp) = inputs.get(j) {
+                stmts.push(crate::ir::Node::store(&out.buffer, crate::ir::Expr::gid_x(), crate::ir::Expr::load(&inp.buffer, crate::ir::Expr::gid_x())));
+            }
+        }
+
+        let prog = Program::wrapped(
+            buffer_decls,
+            [count.max(1), 1, 1],
+            stmts,
+        );
+
+        self.add_node(node_name, prog, inputs, outputs)
+    }
 }
+
+/// Transactional, fluent domain-neutral builder for whole [`ProgramGraph`] compositions.
+#[derive(Debug, Default, Clone)]
+pub struct ProgramGraphBuilder {
+    graph: ProgramGraph,
+}
+
+impl ProgramGraphBuilder {
+    /// Create a new empty builder.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Register an invocation input value.
+    pub fn input(
+        &mut self,
+        name: impl Into<String>,
+        dtype: DataType,
+        shape: Vec<ShapeDim>,
+    ) -> Result<GraphValueId, ProgramGraphError> {
+        self.graph.add_external_value(
+            name,
+            ValueContract {
+                dtype,
+                shape,
+                access: BufferAccess::ReadOnly,
+                lifetime: ValueLifetime::Invocation,
+            },
+        )
+    }
+
+    /// Register an immutable constant value.
+    pub fn constant(
+        &mut self,
+        name: impl Into<String>,
+        dtype: DataType,
+        shape: Vec<ShapeDim>,
+    ) -> Result<GraphValueId, ProgramGraphError> {
+        self.graph.add_external_value(
+            name,
+            ValueContract {
+                dtype,
+                shape,
+                access: BufferAccess::ReadOnly,
+                lifetime: ValueLifetime::Constant,
+            },
+        )
+    }
+
+    /// Register a mutable retained state value.
+    pub fn retained_state(
+        &mut self,
+        name: impl Into<String>,
+        dtype: DataType,
+        shape: Vec<ShapeDim>,
+    ) -> Result<GraphValueId, ProgramGraphError> {
+        self.graph.add_external_value(
+            name,
+            ValueContract {
+                dtype,
+                shape,
+                access: BufferAccess::ReadWrite,
+                lifetime: ValueLifetime::Retained,
+            },
+        )
+    }
+
+    /// Register a streaming dataflow value (FIFO channel or queue).
+    pub fn stream(
+        &mut self,
+        name: impl Into<String>,
+        dtype: DataType,
+        shape: Vec<ShapeDim>,
+    ) -> Result<GraphValueId, ProgramGraphError> {
+        self.graph.add_stream(
+            name,
+            ValueContract {
+                dtype,
+                shape,
+                access: BufferAccess::ReadWrite,
+                lifetime: ValueLifetime::Stream,
+            },
+        )
+    }
+
+    /// Add an executable Program node.
+    pub fn add_node(
+        &mut self,
+        name: impl Into<String>,
+        program: Program,
+        inputs: Vec<GraphInput>,
+        outputs: Vec<GraphOutput>,
+    ) -> Result<(GraphNodeId, Vec<GraphValueId>), ProgramGraphError> {
+        self.graph.add_node(name, program, inputs, outputs)
+    }
+
+    /// Add a registered operation node.
+    pub fn add_registered_operation(
+        &mut self,
+        name: impl Into<String>,
+        program: Program,
+        inputs: Vec<GraphInput>,
+        outputs: Vec<GraphOutput>,
+    ) -> Result<(GraphNodeId, Vec<GraphValueId>), ProgramGraphError> {
+        self.graph.add_operation_node(name, program, inputs, outputs)
+    }
+
+    /// Inline a nested reusable subgraph.
+    pub fn inline_subgraph(
+        &mut self,
+        name_prefix: &str,
+        subgraph: &ProgramGraph,
+        input_mapping: &BTreeMap<GraphValueId, GraphValueId>,
+    ) -> Result<Vec<GraphValueId>, ProgramGraphError> {
+        self.graph.inline_subgraph(name_prefix, subgraph, input_mapping)
+    }
+
+    /// Add a bounded loop.
+    pub fn add_bounded_loop(
+        &mut self,
+        name_prefix: &str,
+        body: &ProgramGraph,
+        loop_carried_inputs: &[GraphValueId],
+        step_inputs: &[GraphValueId],
+        bounds: ControlBounds,
+    ) -> Result<Vec<GraphValueId>, ProgramGraphError> {
+        self.graph.add_bounded_loop(name_prefix, body, loop_carried_inputs, step_inputs, bounds)
+    }
+
+    /// Add a conditional branch.
+    pub fn add_conditional_branch(
+        &mut self,
+        name_prefix: &str,
+        condition: GraphValueId,
+        then_graph: &ProgramGraph,
+        else_graph: &ProgramGraph,
+        inputs: &[GraphValueId],
+    ) -> Result<Vec<GraphValueId>, ProgramGraphError> {
+        self.graph.add_conditional_branch(name_prefix, condition, then_graph, else_graph, inputs)
+    }
+
+    /// Add an external effect barrier.
+    pub fn add_effect_barrier(
+        &mut self,
+        name: impl Into<String>,
+        effect: ExternalEffect,
+        inputs: Vec<GraphInput>,
+        outputs: Vec<GraphOutput>,
+    ) -> Result<(GraphNodeId, Vec<GraphValueId>), ProgramGraphError> {
+        self.graph.add_effect_barrier(name, effect, inputs, outputs)
+    }
+
+    /// Finish building and return the validated [`ProgramGraph`].
+    pub fn finish(self) -> Result<ProgramGraph, ProgramGraphError> {
+        self.graph.analyze().map_err(|err| ProgramGraphError::Wire(err.to_string()))?;
+        Ok(self.graph)
+    }
+
+    /// Build and return the [`ProgramGraph`].
+    pub fn build(self) -> Result<ProgramGraph, ProgramGraphError> {
+        self.finish()
+    }
+}
+
 
 #[derive(Debug, Clone, Copy)]
 enum PortRole {
