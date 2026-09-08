@@ -111,6 +111,8 @@ pub mod level_pipeline;
 pub mod megakernel;
 /// Contributor-facing optimizer catalog derived from the live pass registry.
 pub mod pass_catalog;
+/// Proof-producing multi-level equality saturation and Pareto-optimal extraction.
+pub mod multi_level_eqsat;
 /// Stable pass-explanation records derived from scheduler metrics and the live
 /// optimizer catalog.
 pub(crate) mod pass_explain;
