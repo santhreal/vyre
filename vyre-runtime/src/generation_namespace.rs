@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::format;
 use std::string::String;
 
-use vyre_foundation::compatibility::{
+use vyre_foundation::{
     CompatibilityMatrix, ProtocolDomain, ProtocolVersion,
 };
 

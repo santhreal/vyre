@@ -10,8 +10,9 @@
 
 use crate::dialect::descriptor::DialectRegistry;
 use crate::dialect::schema::{
-    validate_schema_identity, ExternalSchemaNode, FieldContract, FieldType, ResourceAbi,
-    ResourceBinding, SchemaTranslationError,
+    validate_external_schema, validate_schema_identity, ExternalLayoutDeclaration,
+    ExternalResourceDeclaration, ExternalSchema, ExternalSchemaNode, FieldContract, FieldType,
+    ResourceAbi, ResourceBinding, SchemaTranslationError,
 };
 use crate::dialect::traits::Dialect;
 use crate::dialect::version::{validate_dialect_version, DialectVersionError};

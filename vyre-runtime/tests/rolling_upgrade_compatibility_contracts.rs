@@ -10,7 +10,7 @@
 use vyre_runtime::generation_namespace::{
     GenerationScopedNamespace, RollingUpgradeCoordinator, UpgradePhase,
 };
-use vyre_foundation::compatibility::{ProtocolDomain, ProtocolVersion};
+use vyre_foundation::{ProtocolDomain, ProtocolVersion};
 
 #[test]
 fn generation_scoped_namespace_prevents_key_collisions() {

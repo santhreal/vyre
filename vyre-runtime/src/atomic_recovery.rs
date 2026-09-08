@@ -177,8 +177,9 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
     ///
     /// Returns error if the ticket does not match the prepared entry.
     pub fn commit(&self, key: K, ticket: PrepareTicket) -> Result<V, String> {
+        let mut prepared = self.prepared.lock().unwrap();
         let (saved_ticket, val) = prepared.remove(&key).ok_or_else(|| {
-            format!("Fix: no prepared transaction found for key during commit phase.")
+            String::from("Fix: no prepared transaction found for key during commit phase.")
         })?;
 
         if saved_ticket != ticket {
