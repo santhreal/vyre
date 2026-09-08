@@ -219,9 +219,18 @@ pub fn project_resources(artifact: &Artifact) -> ResourceProjection {
     for resource in artifact.resources() {
         match resource.lifetime {
             ResourceLifetime::Output => {
-                projection.outputs.insert(resource.value);
+                // A resource that succeeds a retained one is the same buffer at a
+                // later segment. As a public output it would deliver one buffer
+                // several times under different ids, so only the head of a
+                // retained chain is an output.
+                if resource.retained_predecessor.is_none() {
+                    projection.outputs.insert(resource.value);
+                }
             }
             ResourceLifetime::Retained => {
+                // Every id in a retained chain names readable state, and a caller
+                // holds whichever one its segment produced, so the successors stay
+                // projected.
                 projection.retained.insert(resource.value);
             }
             _ => {}
