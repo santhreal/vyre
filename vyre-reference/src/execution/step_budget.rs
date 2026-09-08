@@ -38,7 +38,8 @@ use crate::error::{ReferenceError, StepCeilingExceeded};
 /// Steps the heaviest legitimate reference run in the registered operation
 /// fixture corpus charges.
 ///
-/// Measured, not chosen. `the_reference_step_ceiling_is_derived_from_the_corpus`
+/// Measured, not chosen: 911,388 steps on `vyre-libs::math::symmetric_eigen_jacobi`.
+/// `the_reference_step_ceiling_is_derived_from_the_corpus`
 /// in `vyre-libs` evaluates every registered fixture case through
 /// [`crate::reference_eval_step_count`] and fails when a run charges more than
 /// this, printing the number to record here. Raise it only to a value that test
