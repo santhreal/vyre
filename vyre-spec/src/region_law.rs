@@ -6,7 +6,7 @@
 //! the laws a construct exposes, not a list of kernels somebody anticipated.
 
 /// Family of declarative law a rewrite cites to authorize itself.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub enum RegionLawFamily {
     /// Value-level algebra: commutativity, associativity, identity,

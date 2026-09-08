@@ -31,6 +31,9 @@ pub use geometry::{
     ElementPolicy, GeometryConstraintConflict, GeometryRequirements, LaunchGeometry, Uniformity,
 };
 
+/// Typed region-based SSA intermediate representation (Row 103).
+pub mod region_ssa;
+
 pub mod ir {
     //! The vyre intermediate representation.
     /// Backend-neutral literal evaluation for optimizer passes and lowerings.
@@ -86,6 +89,7 @@ pub mod ir {
     };
     pub use crate::ir_inner::model::program::ProgramStats;
     pub use crate::memory_model::MemoryOrdering;
+    pub use crate::region_ssa;
 }
 
 /// CPU reference registration contract.

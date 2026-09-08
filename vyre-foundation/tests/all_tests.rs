@@ -753,3 +753,6 @@ pub mod wire_version_mismatch;
 /// Integration tests from `tests/workspace_naming_footguns.rs`.
 #[path = "workspace_naming_footguns.rs"]
 pub mod workspace_naming_footguns;
+/// Integration tests from `tests/region_ssa_contracts.rs` (Row 103).
+#[path = "region_ssa_contracts.rs"]
+pub mod region_ssa_contracts;
