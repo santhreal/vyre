@@ -1,5 +1,4 @@
 use std::future::Future;
-use std::ops::Deref;
 use std::pin::Pin;
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
 use std::task::{Context, Poll, Wake, Waker};
@@ -13,14 +12,13 @@ use super::features::{enabled_features_for_adapter, subgroup_smoke_compiles, Ena
 use super::reserve_probe_vec;
 use super::selector::gpu_candidate_score;
 
-/// Excludes concurrent Vulkan loader startup and shutdown across the process.
+/// Excludes concurrent Vulkan loader startup across the process.
 ///
 /// A `wgpu::Instance` starts the Vulkan loader, and loader startup is not
 /// reentrant. While one thread is inside `vkCreateInstance` negotiating an ICD,
 /// the loader dispatch table is half written, and a second thread entering
 /// `vkEnumerateInstanceExtensionProperties` at that moment calls through a null
-/// function pointer and the process dies with SIGSEGV. `vkDestroyInstance`
-/// rewrites the same loader state, so it is held under the same lock.
+/// function pointer and the process dies with SIGSEGV.
 static LOADER_STARTUP: Mutex<()> = Mutex::new(());
 
 /// A resolve on a created device already waited for its submission, so the
@@ -32,12 +30,10 @@ const TIMESTAMP_PROBE_READBACK_TIMEOUT: Duration = Duration::from_secs(10);
 /// Take the loader lock, or end the process.
 ///
 /// Poison here is the exact state the lock excludes. A thread that panicked
-/// inside `vkCreateInstance` or `vkDestroyInstance` left the loader dispatch
-/// table half written, `PoisonError::into_inner` hands that table to the next
-/// caller, and what the caller gets is the SIGSEGV the comment above describes,
-/// in an ICD frame that names no vyre code. Loader state is also not this
-/// process's to rebuild, and `LoaderInstance::drop` takes the same lock, so no
-/// caller could be handed an error even where one would help.
+/// inside `vkCreateInstance` left the loader dispatch table half written,
+/// `PoisonError::into_inner` hands that table to the next caller, and what the
+/// caller gets is the SIGSEGV the comment above describes, in an ICD frame that
+/// names no vyre code. Loader state is also not this process's to rebuild.
 fn loader_startup() -> MutexGuard<'static, ()> {
     match LOADER_STARTUP.lock() {
         Ok(guard) => guard,
@@ -70,42 +66,33 @@ pub(crate) const COMPUTE_BACKENDS: wgpu::Backends = wgpu::Backends::VULKAN
     .union(wgpu::Backends::DX12)
     .union(wgpu::Backends::BROWSER_WEBGPU);
 
-/// One wgpu instance, created and destroyed with no other loader work in flight.
+/// One wgpu instance for the whole process.
 ///
-/// The instance stays per acquisition rather than shared, so that two backends
-/// can hold two physical devices and device-loss recovery can replace one.
-pub(crate) struct LoaderInstance(Option<wgpu::Instance>);
-
-impl Deref for LoaderInstance {
-    type Target = wgpu::Instance;
-
-    /// # Panics
-    ///
-    /// Panics if the instance has already been taken, which happens only inside
-    /// `Drop` while the loader lock is held. `Deref` cannot report that as an
-    /// error, and a caller cannot observe the emptied state, because nothing
-    /// holds a reference to the guard after its drop begins.
-    fn deref(&self) -> &wgpu::Instance {
-        self.0
-            .as_ref()
-            .expect("Fix: a LoaderInstance is only empty while it is being dropped")
-    }
-}
-
-impl Drop for LoaderInstance {
-    fn drop(&mut self) {
-        let _startup = loader_startup();
-        drop(self.0.take());
-    }
-}
-
-/// Construct one wgpu instance, with no other loader transition in flight.
-pub(crate) fn new_instance() -> LoaderInstance {
+/// Creating an instance starts the Vulkan loader, which dlopens every installed
+/// ICD, and destroying it unloads them again. glibc reserves a fixed static TLS
+/// surplus for dlopened libraries and does not return the NVIDIA driver's
+/// initial-exec block when the ICD unloads, so the tenth loader cycle in one
+/// process fails to load `libGLX_nvidia.so.0` with "cannot allocate memory in
+/// static TLS block" and every enumeration after it reports the software
+/// rasterizer alone. A conformance run measured that exactly: 9 of 349
+/// operations dispatched and the remaining 340 were refused for want of a real
+/// adapter on a host holding an idle RTX 3080 Ti.
+///
+/// One instance for the process removes the cycle. An adapter and a device are
+/// still acquired per backend, so two backends still hold two physical devices
+/// and device-loss recovery still replaces one device without disturbing the
+/// other.
+static INSTANCE: LazyLock<wgpu::Instance> = LazyLock::new(|| {
     let _startup = loader_startup();
-    LoaderInstance(Some(wgpu::Instance::new(&wgpu::InstanceDescriptor {
+    wgpu::Instance::new(&wgpu::InstanceDescriptor {
         backends: COMPUTE_BACKENDS,
         ..Default::default()
-    })))
+    })
+});
+
+/// The process-wide wgpu instance every adapter and device comes from.
+pub(crate) fn shared_instance() -> &'static wgpu::Instance {
+    &INSTANCE
 }
 
 pub(crate) fn poll_device_once(
@@ -257,7 +244,7 @@ pub async fn acquire_gpu() -> Result<(
         return super::selector::acquire_gpu_for_adapter(index).await;
     }
 
-    let instance = new_instance();
+    let instance = shared_instance();
     let adapters = instance.enumerate_adapters(COMPUTE_BACKENDS);
     let mut candidates = Vec::new();
     reserve_probe_vec(

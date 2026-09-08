@@ -251,6 +251,11 @@ pub mod limits_from_adapter_device;
 #[path = "live_capability_honesty.rs"]
 pub mod live_capability_honesty;
 
+/// Integration tests from `tests/loader_instance_reuse.rs`.
+#[cfg(feature = "device-tests")]
+#[path = "loader_instance_reuse.rs"]
+pub mod loader_instance_reuse;
+
 /// Integration tests from `tests/loop_carrier_three_level_if_real_dispatch.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "loop_carrier_three_level_if_real_dispatch.rs"]
