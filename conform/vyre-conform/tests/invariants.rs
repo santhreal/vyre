@@ -614,12 +614,11 @@ fn linked_backend_sources_honor_feature_boundary() {
 
 /// Registry-link driver features vyre-conform never enables, and why.
 ///
-/// `spirv` is validated through `vyre-driver-spirv`'s own suite with
-/// `spirv-val`; conformance proving reaches the dialect through the backends
-/// its `gpu` feature links. A driver added to `vyre-registry-link` is in
-/// neither this record nor the enabled set, which turns the comparison below
+/// The `gpu` feature enables every driver feature `vyre-registry-link`
+/// declares, so this record is empty. A driver added to `vyre-registry-link` is
+/// in neither this record nor the enabled set, which turns the comparison below
 /// red until someone records the decision.
-const DRIVER_FEATURES_CONFORM_DOES_NOT_ENABLE: &[&str] = &["spirv"];
+const DRIVER_FEATURES_CONFORM_DOES_NOT_ENABLE: &[&str] = &[];
 
 /// WHY: The set of registry-link driver features vyre-conform declines is a
 /// manifest fact, and the only place it can be observed without a
@@ -627,9 +626,15 @@ const DRIVER_FEATURES_CONFORM_DOES_NOT_ENABLE: &[&str] = &["spirv"];
 #[test]
 fn conform_manifest_records_every_driver_feature_decision() {
     let drivers = registry_link_driver_features();
-    assert!(
-        drivers.contains_key("spirv"),
-        "vyre-registry-link must still declare the spirv driver feature this record names"
+    // An empty record makes the comparison below pass on an empty scan, so the
+    // scan is pinned against the driver crates the workspace declares.
+    let expected: std::collections::BTreeSet<&str> =
+        ["cuda", "metal", "spirv", "wgpu"].into_iter().collect();
+    let found: std::collections::BTreeSet<&str> = drivers.keys().map(String::as_str).collect();
+    assert_eq!(
+        found, expected,
+        "vyre-registry-link's driver feature set changed. Fix: update this pin and record the \
+         decision for the new driver in DRIVER_FEATURES_CONFORM_DOES_NOT_ENABLE or enable it."
     );
 
     let manifest: toml::Value = toml::from_str(include_str!("../Cargo.toml"))

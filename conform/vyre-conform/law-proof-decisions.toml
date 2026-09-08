@@ -3,13 +3,15 @@
 #
 # A row is not a pass. It records that the prover derived no witness and names
 # why, so the pair reads as unproven rather than proven. `unproven_cap` equals
-# the number of such pairs the live registry reports: making a law provable
-# deletes its row and lowers the cap, and the cap only ever moves down.
+# the number of such pairs the live registry reports. Making a law provable
+# deletes its row and lowers the cap; a registration that declares a law this
+# prover cannot exercise raises it and carries its own row. The cap is never
+# edited to make a run pass.
 #
 # `kind` is drawn from `UnprovenKind`: missing-element, missing-partner,
 # missing-order, shape-not-composable, no-check-declared, nothing-to-execute.
 
-unproven_cap = 74
+unproven_cap = 76
 
 [[decision]]
 op = "vyre-libs::graph::csr_backward_traverse"
@@ -454,3 +456,15 @@ op = "vyre-libs::reduce::workgroup_sum_u32"
 law = "identity"
 kind = "missing-element"
 reason = "the statement names an identity element and the registration declares no element to substitute; the declared shape is 1 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::bitset::popcount"
+law = "bounded"
+kind = "missing-element"
+reason = "the statement names the bound the per-word count may not cross and the registration declares no such value; the declared shape is 1 host input buffer(s), 1 read-only, and 1 output buffer(s)"
+
+[[decision]]
+op = "vyre-libs::bitset::zero"
+law = "idempotent"
+kind = "shape-not-composable"
+reason = "reapplying the operation to its own result needs a read-only host input to carry that result back, and the program writes a constant into one write-only output without reading anything; the declared shape is 0 host input buffer(s) and 1 output buffer(s)"
