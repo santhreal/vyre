@@ -42,7 +42,7 @@ impl VyreBackend for GridSyncSplitBackend {
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
-        self.require_lowered_float_mode(config)?;
+        self.require_lowered_float_mode(program, config)?;
         if crate::grid_sync::contains_grid_sync(program) {
             let borrowed = borrowed_inputs_from_owned(inputs)?;
             if self.should_split_grid_sync_for(program, &borrowed, config)? {
@@ -63,7 +63,7 @@ impl VyreBackend for GridSyncSplitBackend {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
-        self.require_lowered_float_mode(config)?;
+        self.require_lowered_float_mode(program, config)?;
         if self.should_split_grid_sync_for(program, inputs, config)? {
             return crate::grid_sync::dispatch_with_grid_sync_split(
                 self.inner.as_ref(),
@@ -81,7 +81,7 @@ impl VyreBackend for GridSyncSplitBackend {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<TimedDispatchResult, BackendError> {
-        self.require_lowered_float_mode(config)?;
+        self.require_lowered_float_mode(program, config)?;
         if self.should_split_grid_sync_for(program, inputs, config)? {
             return crate::grid_sync::dispatch_with_grid_sync_split_timed(
                 self.inner.as_ref(),
@@ -100,7 +100,7 @@ impl VyreBackend for GridSyncSplitBackend {
         config: &DispatchConfig,
         outputs: &mut OutputBuffers,
     ) -> Result<(), BackendError> {
-        self.require_lowered_float_mode(config)?;
+        self.require_lowered_float_mode(program, config)?;
         if self.should_split_grid_sync_for(program, inputs, config)? {
             return crate::grid_sync::dispatch_with_grid_sync_split_into(
                 self.inner.as_ref(),
@@ -120,7 +120,7 @@ impl VyreBackend for GridSyncSplitBackend {
         resources: &[Resource],
         config: &DispatchConfig,
     ) -> Result<TimedDispatchResult, BackendError> {
-        self.require_lowered_float_mode(config)?;
+        self.require_lowered_float_mode(program, config)?;
         if self.should_split_grid_sync(program) {
             return crate::grid_sync::dispatch_resident_with_grid_sync_split_timed(
                 self.inner.as_ref(),
@@ -185,7 +185,7 @@ impl VyreBackend for GridSyncSplitBackend {
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
     ) -> Result<Box<dyn PendingDispatch>, BackendError> {
-        self.require_lowered_float_mode(config)?;
+        self.require_lowered_float_mode(program, config)?;
         if self.should_split_grid_sync(program) {
             let borrowed = borrowed_inputs_from_owned(inputs)?;
             let outputs = crate::grid_sync::dispatch_with_grid_sync_split(
@@ -207,7 +207,7 @@ impl VyreBackend for GridSyncSplitBackend {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<Box<dyn PendingDispatch>, BackendError> {
-        self.require_lowered_float_mode(config)?;
+        self.require_lowered_float_mode(program, config)?;
         if self.should_split_grid_sync(program) {
             let outputs = crate::grid_sync::dispatch_with_grid_sync_split(
                 self.inner.as_ref(),
@@ -229,7 +229,7 @@ impl VyreBackend for GridSyncSplitBackend {
         outputs: &mut [&mut dyn DeviceBuffer],
         config: &DispatchConfig,
     ) -> Result<(), BackendError> {
-        self.require_lowered_float_mode(config)?;
+        self.require_lowered_float_mode(program, config)?;
         if self.should_split_grid_sync(program) {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
@@ -257,13 +257,27 @@ impl GridSyncSplitBackend {
     /// backend that does not implement a mode would otherwise emit the mode it
     /// does implement and return contracted arithmetic under a request for one
     /// rounding per operation, which is a wrong answer rather than a slow one.
-    fn require_lowered_float_mode(&self, config: &DispatchConfig) -> Result<(), BackendError> {
+    fn require_lowered_float_mode(
+        &self,
+        program: &Program,
+        config: &DispatchConfig,
+    ) -> Result<(), BackendError> {
         let mode = config.float_lowering;
         if self.inner.honors_float_lowering(mode) {
             return Ok(());
         }
+        let ops = vyre_foundation::fp_parity::approximable_operations(program);
+        let name = if ops.is_empty() {
+            format!("float lowering mode `{}`", mode.cache_label())
+        } else {
+            format!(
+                "float lowering mode `{}` for operation(s) {}",
+                mode.cache_label(),
+                ops.join(", ")
+            )
+        };
         Err(BackendError::UnsupportedFeature {
-            name: format!("float lowering mode `{}`", mode.cache_label()),
+            name,
             backend: self.inner.id().to_string(),
         })
     }

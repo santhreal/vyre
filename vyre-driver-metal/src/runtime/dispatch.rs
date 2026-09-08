@@ -379,17 +379,28 @@ fn new_buffer_sizes_buffer(
 }
 
 pub(super) fn validate_metal_dispatch_config(
+    program: &Program,
     config: &DispatchConfig,
     cooperative_feature: &'static str,
     repeated_feature: &'static str,
     zero_iteration_context: &'static str,
 ) -> Result<(), BackendError> {
     if config.float_lowering.blocks_contraction() {
-        return Err(BackendError::UnsupportedFeature {
-            name: format!(
+        let ops = vyre_foundation::fp_parity::approximable_operations(program);
+        let name = if ops.is_empty() {
+            format!(
                 "float lowering mode `{}`",
                 config.float_lowering.cache_label()
-            ),
+            )
+        } else {
+            format!(
+                "float lowering mode `{}` for operation(s) {}",
+                config.float_lowering.cache_label(),
+                ops.join(", ")
+            )
+        };
+        return Err(BackendError::UnsupportedFeature {
+            name,
             backend: METAL_BACKEND_ID.to_string(),
         });
     }

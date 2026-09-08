@@ -484,6 +484,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   structured `InteractiveSessionStateMachine` in `vyre-runtime` with typed
   deadline classes, priority inheritance, generation-based supersession,
   cooperative cancellation points, and measured dispatch ceilings.
+- Real-time interactive compilation and execution architecture is established
+  with versioned real-time objectives and input-to-visible latency boundaries
+  in `vyre-megakernel`, domain-neutral semantic resource ABI with zero-copy
+  import/export and timeline synchronization in `vyre-driver`, transactional
+  `GraphDelta` derivation with million-node scale closure bounding in
+  `vyre-foundation`, and structured `InteractiveSessionStateMachine` in
+  `vyre-runtime`.
 - Five operations now own the pieces the Jacobi eigensolver used to spell
   inline: `givens_rotate_pair` rotates one strided element pair,
   `jacobi_apply_rotation` applies one rotation at a pivot to a matrix and its
@@ -676,6 +683,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `vyre-libs` implements representative complete multi-domain graph
   compositions and proves identical production compilation paths across neural,
   graph traversal, and streaming parser domains.
+- The vyre GPU compiler adds explicit protocol compatibility and rollout
+  matrices, a declarative schema registry with canonical deterministic binary
+  codecs and domain-separated identity digests, typed failure domains with
+  atomic state recovery and prepare-commit journals, and a typed configuration
+  schema partitioned by semantic compile input, operational policy,
+  diagnostics, and credentials with secret redaction and behavioral hashing.
 - The neural library now executes recurrent gated delta attention with F32 Q/K
   normalization, grouped heads, scaled queries, exponential decay, sigmoid
   beta, F32 matrix-state continuation, source-dtype output, and explicit
@@ -8141,6 +8154,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `#[error(..)]` derives the full member set instead of an empty one.
 - The WGPU stream-sharding error is now nameable as
   `engine::multi_gpu::StreamShardError` without changing existing signatures.
+- Every registered backend either honors strict-IEEE float lowering or refuses
+  the dispatch with an actionable diagnostic naming the mode and the
+  unexpandable or approximable operations, closing row 142 across CUDA, Metal,
+  SPIR-V, and WGPU drivers. The resident optimizer pipeline benchmark contract
+  and evidence are aligned with the measured floor, and bank conflict strategy
+  resolution contracts are validated across all backends.
 - A dispatch asking for a float lowering mode the selected backend does not
   lower is refused by name at compilation across all backends rather than
   silently producing contracted arithmetic or creating distinct cache entries
