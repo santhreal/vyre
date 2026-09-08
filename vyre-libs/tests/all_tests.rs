@@ -961,6 +961,11 @@ pub mod security_flows_to_alias_only_parity;
 #[path = "security_privacy_path_corpus_guards.rs"]
 pub mod security_privacy_path_corpus_guards;
 
+/// Integration tests from `tests/security_terminal_output_closure.rs`.
+#[cfg(feature = "security")]
+#[path = "security_terminal_output_closure.rs"]
+pub mod security_terminal_output_closure;
+
 /// Integration tests from `tests/segment_reduce_ir_parity_proptest.rs`.
 #[cfg(feature = "reduce")]
 #[path = "segment_reduce_ir_parity_proptest.rs"]

@@ -171,3 +171,111 @@ fn project_resources_derives_values_from_canonical_values_by_name() {
         "projected outputs must not be empty"
     );
 }
+
+/// WHY: fused multi-node or split completions must match returned_graph_values
+/// and exclude internal intermediate carriers.
+#[test]
+fn project_resources_multi_node_fused_matches_returned_graph_values() {
+    let mut graph = ProgramGraph::new();
+    let input = graph
+        .add_external_value(
+            "input",
+            ValueContract {
+                dtype: DataType::U32,
+                shape: vec![ShapeDim::Known(16)],
+                access: BufferAccess::ReadOnly,
+                lifetime: ValueLifetime::Invocation,
+            },
+        )
+        .expect("adding external input value must succeed");
+    let (_node_a, produced) = graph
+        .add_node(
+            "node_a",
+            Program::wrapped(
+                vec![
+                    BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(16),
+                    BufferDecl::output("intermediate", 1, DataType::U32).with_count(16),
+                ],
+                [16, 1, 1],
+                vec![Node::store("intermediate", Expr::u32(0), Expr::load("input", Expr::u32(0)))],
+            ),
+            vec![GraphInput {
+                buffer: "input".into(),
+                value: input,
+                contract: ValueContract {
+                    dtype: DataType::U32,
+                    shape: vec![ShapeDim::Known(16)],
+                    access: BufferAccess::ReadOnly,
+                    lifetime: ValueLifetime::Invocation,
+                },
+            }],
+            vec![GraphOutput {
+                buffer: "intermediate".into(),
+                name: "intermediate".into(),
+                contract: ValueContract {
+                    dtype: DataType::U32,
+                    shape: vec![ShapeDim::Known(16)],
+                    access: BufferAccess::ReadWrite,
+                    lifetime: ValueLifetime::Invocation,
+                },
+                retained_successor_of: None,
+            }],
+        )
+        .expect("adding node_a must succeed");
+
+    graph
+        .add_node(
+            "node_b",
+            Program::wrapped(
+                vec![
+                    BufferDecl::storage("intermediate", 0, BufferAccess::ReadOnly, DataType::U32).with_count(16),
+                    BufferDecl::output("out", 1, DataType::U32).with_count(16),
+                ],
+                [16, 1, 1],
+                vec![Node::store("out", Expr::u32(0), Expr::load("intermediate", Expr::u32(0)))],
+            ),
+            vec![GraphInput {
+                buffer: "intermediate".into(),
+                value: produced[0],
+                contract: ValueContract {
+                    dtype: DataType::U32,
+                    shape: vec![ShapeDim::Known(16)],
+                    access: BufferAccess::ReadOnly,
+                    lifetime: ValueLifetime::Invocation,
+                },
+            }],
+            vec![GraphOutput {
+                buffer: "out".into(),
+                name: "out".into(),
+                contract: ValueContract {
+                    dtype: DataType::U32,
+                    shape: vec![ShapeDim::Known(16)],
+                    access: BufferAccess::ReadWrite,
+                    lifetime: ValueLifetime::Output,
+                },
+                retained_successor_of: None,
+            }],
+        )
+        .expect("adding node_b must succeed");
+
+    let expected = vyre_megakernel::returned_graph_values(&graph);
+    let request = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0xB5; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        SearchBudget::new(1, 100_000, 1, 0, 100_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("compile request must validate");
+
+    let artifact = compile(&request).expect("artifact compilation must succeed");
+    let projection = project_resources(&artifact);
+
+    let projected_outputs: std::collections::BTreeSet<_> = projection
+        .outputs
+        .into_iter()
+        .map(|v| vyre_foundation::ir::GraphValueId(v.0))
+        .collect();
+    assert_eq!(projected_outputs, expected);
+}

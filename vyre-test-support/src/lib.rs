@@ -262,10 +262,16 @@ use std::path::{Path, PathBuf};
 /// memory during a test run, so each file is capped and an over-cap file is a
 /// loud failure rather than a silent truncation (a truncated file would drop
 /// builders from the enumeration and quietly weaken the closure gate).
-const MAX_SOURCE_FILE_BYTES: u64 = 4_194_304;
+pub const MAX_SOURCE_FILE_BYTES: u64 = 4_194_304;
 
 /// Read one source file as text, bounded by [`MAX_SOURCE_FILE_BYTES`].
-pub(crate) fn read_source_file_bounded(path: &Path) -> std::io::Result<String> {
+///
+/// The reader every source-derived closure test shares with
+/// [`top_level_variant_names`] and [`braced_body`]. A silent truncation drops
+/// members from a derived variant set, and a short set agrees with a
+/// containment assertion, so the cap is enforced as an error here rather than
+/// left to each caller.
+pub fn read_source_file_bounded(path: &Path) -> std::io::Result<String> {
     read_source_file_with_cap(path, MAX_SOURCE_FILE_BYTES)
 }
 
