@@ -63,6 +63,11 @@ subsets = ["prepublish"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
+name = "change-closure"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "check-tier-deps"
 subsets = ["contract-rules"]
 workflows = ["gates.yml"]
@@ -193,6 +198,11 @@ subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "engineering-scorecard"
+subsets = ["release-evidence"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
 name = "error-codes"
 subsets = ["prepublish"]
 workflows = ["gates.yml", "release-evidence.yml"]
@@ -241,6 +251,11 @@ workflows = ["gates.yml"]
 name = "gate-canon"
 subsets = ["prepublish"]
 workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "gate-dag"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
 
 [[gate]]
 name = "gate1"

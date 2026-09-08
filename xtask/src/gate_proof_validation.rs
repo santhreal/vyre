@@ -374,8 +374,10 @@ mod tests {
             package: "xtask",
             areas: &["prepublish"],
             subject: "test subjects",
+            inputs: &[],
             artifacts: &[],
             prerequisites: &[],
+            resource_class: crate::gate::ResourceClass::Cpu,
             proof: "crate::gates::architecture_contract::tests::nonexistent_symbol_xyz",
         };
         let failures = validate_proof_symbol(&root, &descriptor);
@@ -406,8 +408,10 @@ mod tests {
             package: "xtask",
             areas: &["prepublish"],
             subject: "test subjects",
+            inputs: &[],
             artifacts: &[],
             prerequisites: &[],
+            resource_class: crate::gate::ResourceClass::Cpu,
             proof: "crate::gates::alpha::tests::duplicate_proof",
         };
         let failures = validate_proof_symbol(&root, &descriptor);
@@ -432,8 +436,10 @@ mod tests {
             package: "xtask",
             areas: &["prepublish"],
             subject: "test subjects",
+            inputs: &[],
             artifacts: &[],
             prerequisites: &[],
+            resource_class: crate::gate::ResourceClass::Cpu,
             proof: "crate::gate_metadata::owned_by",
         };
         let failures = validate_proof_symbol(&root, &descriptor);
@@ -458,8 +464,10 @@ mod tests {
             package: "xtask",
             areas: &["prepublish"],
             subject: "test subjects",
+            inputs: &[],
             artifacts: &[],
             prerequisites: &[],
+            resource_class: crate::gate::ResourceClass::Cpu,
             proof: "xtask_registry::gates::abstraction_gate::tests::a_finding_under_every_nesting_variant_is_reported",
         };
         let failures = validate_proof_symbol(&root, &descriptor);
@@ -484,8 +492,10 @@ mod tests {
             package: "xtask",
             areas: &["prepublish"],
             subject: "test subjects",
+            inputs: &[],
             artifacts: &[],
             prerequisites: &[],
+            resource_class: crate::gate::ResourceClass::Cpu,
             proof: "crate::gates::architecture_contract::tests::enforces_invariants",
         };
         let failures = validate_proof_symbol(&root, &descriptor);

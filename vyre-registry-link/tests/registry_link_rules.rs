@@ -93,13 +93,22 @@ fn submits(text: &str, registration_type: &str) -> bool {
     let lines: Vec<&str> = text.lines().collect();
     for (index, line) in lines.iter().enumerate() {
         let trimmed = line.trim_start();
-        if trimmed.starts_with("//") || !trimmed.contains("inventory::submit!") {
+        if trimmed.starts_with("//") {
+            continue;
+        }
+        if registration_type == "BackendRegistration"
+            && (trimmed.starts_with("register_backend!")
+                || trimmed.starts_with("vyre_driver::register_backend!"))
+        {
+            return true;
+        }
+        if !trimmed.contains("inventory::submit!") || trimmed.contains("$crate::") {
             continue;
         }
         let opens = format!("{registration_type} {{");
         if lines[index..lines.len().min(index + 4)]
             .iter()
-            .any(|candidate| candidate.contains(&opens))
+            .any(|candidate| candidate.contains(&opens) && !candidate.contains("$crate::"))
         {
             return true;
         }
