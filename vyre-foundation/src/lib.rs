@@ -56,9 +56,9 @@ pub mod ir {
         ShapePredicate, NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION, PORTABLE_WORKGROUP_INVOCATIONS,
     };
     pub use crate::ir_inner::model::program_graph::{
-        GraphInput, GraphNodeId, GraphOutput, GraphValueId, LivenessInterval, ProgramGraph,
-        ProgramGraphError, ProgramGraphNode, ProgramGraphValue, ShapeDim, ValueContract,
-        ValueLifetime,
+        ControlBounds, ExternalEffect, GraphInput, GraphNodeId, GraphOutput, GraphValueId,
+        LivenessInterval, ProgramGraph, ProgramGraphBuilder, ProgramGraphError, ProgramGraphNode,
+        ProgramGraphValue, ShapeDim, ValueContract, ValueLifetime,
     };
     pub use crate::ir_inner::model::program_graph_delta::{
         AffectedGraphClosure, GraphDelta, GraphDeltaError, GraphDeltaOp, GRAPH_DELTA_VERSION,

@@ -217,6 +217,7 @@ fn put_contract(bytes: &mut Vec<u8>, contract: &ValueContract) -> Result<(), Pro
         ValueLifetime::Invocation => 1,
         ValueLifetime::Retained => 2,
         ValueLifetime::Output => 3,
+        ValueLifetime::Stream => 4,
     });
     Ok(())
 }
@@ -358,6 +359,7 @@ impl<'a> Reader<'a> {
             1 => ValueLifetime::Invocation,
             2 => ValueLifetime::Retained,
             3 => ValueLifetime::Output,
+            4 => ValueLifetime::Stream,
             tag => return Err(wire_error(format!("unknown value lifetime tag {tag}"))),
         };
         Ok(ValueContract {

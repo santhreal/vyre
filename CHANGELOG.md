@@ -223,6 +223,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   gets switched off. The conformance lenses spent the first three: an expect on
   a missing neutral builder, in three functions that already had a failure
   channel, now returns that failure with the operation named.
+- `vyre-aot` exposes `compile_request` accepting a validated compiler request
+  and registered target identity, allowing AOT compilation to consume the
+  canonical `ValidatedCompileRequest` without inventing default parameters.
 - The reference and SPIR-V backends carry a tracked hostile-input closure
   target, `vyre-driver-reference/tests/hostile_input_closure_contract.rs` and
   `vyre-driver-spirv/tests/hostile_input_closure_contract.rs`. Both backends
@@ -628,6 +631,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   immutable-weight identities. Mutable sequence-state contents are excluded, so
   cache growth reuses compiled artifacts while any executable or provenance
   change invalidates the key.
+- `vyre-foundation` adds domain-neutral `ProgramGraph` whole-graph composition
+  APIs (`ProgramGraphBuilder`, `inline_subgraph`, `add_bounded_loop`,
+  `add_conditional_branch`, `add_effect_barrier`, `add_stream`,
+  `ValueLifetime::Stream`, `ExternalEffect`, `ControlBounds`), completes
+  10-variant `LogicalRegionKind` definitions with scratch, progress, ordering,
+  and numeric contracts, and provides schedule distribution lowering across
+  lanes, subgroups, workgroups, grids, queues, and resident partitions;
+  `vyre-libs` implements representative complete multi-domain graph
+  compositions and proves identical production compilation paths across neural,
+  graph traversal, and streaming parser domains.
 - The neural library now executes recurrent gated delta attention with F32 Q/K
   normalization, grouped heads, scaled queries, exponential decay, sigmoid
   beta, F32 matrix-state continuation, source-dtype output, and explicit
@@ -638,6 +651,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   identity with step position can be made reversal-symmetric and stay wrong; a
   rotation separates the two and catches a subgroup collective that resolves
   its peers by physical step position.
+- The reference interpreter bounds execution by a step ceiling that refuses
+  data-derived unbounded trip counts with a typed `ReferenceError` naming the
+  program and ceiling. Step counts are charged at statement evaluation and
+  invocation boundaries, the ceiling is derived from the heaviest measured
+  fixture in the registered corpus with 64x headroom, and the caller-side
+  timeout workaround in the stress sweep is removed.
 - Recurrence, reduction, layout, and numerical laws now derive equivalent
   programs through a bounded composition of the registered rewrites that
   realize them, and a law family with no derivation fails its closure suite.
@@ -6954,6 +6973,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   allocation. A kernel body restated per primitive drifts where no per-op
   oracle looks, because an oracle compares evaluated output and never sees the
   grid or the allocation size.
+- Graph and delta wire decoding checks bounds on operation, port, rank, and
+  string lengths before allocation and caps capacity pre-reservations by
+  remaining payload bytes.
 - Megakernel admission contracts cover both whole-grid fence outcomes: a fence
   the planner cuts compiles into fence-free segments, and a fence that survives
   the cut is refused on a device that cannot launch a cooperative grid.
@@ -7586,6 +7608,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   including read-write pipeline live-outs, as an output. Artifact submission no
   longer asks callers to provide internal fused-pipeline storage as a host
   input.
+- Process-owned caches, staging buffer pools, and tenant registries in
+  `vyre-driver-wgpu` and `vyre-runtime` now discard and clear half-mutated
+  internal state on lock poison recovery instead of reusing unvalidated
+  entries.
 - The structural-gate registry now declares every post-dispatch oracle mutation
   and decoder-boundary test added to the host-oracle elimination gate.
 - The `types` feature of `vyre-primitives` now depends on `vyre-foundation`,
@@ -8598,6 +8624,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   against the `WGPU pipeline` label and directs the caller to split the
   dispatch batch before readback, plus the grow, hold, shrink and empty
   boundaries of the resize itself.
+- The wgpu record-and-readback path binds exactly the host inputs
+  `BufferDecl::consumes_host_input` admits and refuses any other input count,
+  eliminating the length-based selection that accepted an output placeholder.
 - The WGPU release suite now completes on the portable target limits it
   records. The metadata workload uses a 256-lane workgroup, the grouped INT4
   workload keeps its one-dimensional dispatch below 65,535 workgroups without
