@@ -109,8 +109,15 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         package: "xtask",
         areas: &["prepublish"],
         subject: "whole-application execution readiness",
+        inputs: &[
+            "conform/vyre-conform/tests/connected_graph_conformance.rs",
+            "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
+            "vyre-foundation/src/dialect/schema.rs",
+            "vyre-foundation/tests/dialect_schema_translation_closure_contracts.rs",
+        ],
         artifacts: &[],
         prerequisites: &[],
+        resource_class: ResourceClass::Io,
         proof: "crate::gates::application_runnable::tests::application_runnable_proves_closure_and_receipts",
     },
     GateDescriptor {

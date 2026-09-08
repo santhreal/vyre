@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use crate::{AtomicOp, BinOp, CollectiveOp, SubgroupReduceOp};
 
 /// Every combine, in law-id order, with the lower-case spelling, the frozen
@@ -31,7 +32,7 @@ macro_rules! define_combine_kind {
         /// One kind answers for all three vocabularies, so a consumer asking
         /// whether an order of application is observable consults one law table
         /// instead of three.
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
         pub enum CombineKind {
             $(
                 #[doc = concat!("The `", $spelling, "` combine.")]

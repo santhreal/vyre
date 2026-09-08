@@ -24,6 +24,7 @@ mod ci_required_contexts;
 mod ci_workflow_references;
 mod cli_surface;
 mod codeowners_paths;
+mod config_space_contracts;
 mod crate_ownership_registry;
 mod crate_readmes;
 mod docs_manifest_completeness;
@@ -38,6 +39,7 @@ mod relation_import_certificates;
 /// Unix only: the subject is a shell script, and the release hosts run it.
 #[cfg(unix)]
 mod release_shell_toml_reader;
+mod release_provenance_contracts;
 mod subcommand_dispatch;
 mod test_mutation_hygiene;
 mod testing_guides;

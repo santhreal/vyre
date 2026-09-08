@@ -105,6 +105,45 @@ impl TenantHandle {
     pub fn label(&self) -> &str {
         &self.state.label
     }
+    /// Return the 128-bit typed TenantId representation.
+    #[must_use]
+    pub fn tenant_id_128(&self) -> vyre_foundation::security::TenantId {
+        vyre_foundation::security::TenantId::new(self.state.id as u128)
+    }
+
+    /// Issue an unforgeable capability handle for a given resource.
+    pub fn issue_capability(
+        &self,
+        authenticator: &vyre_foundation::security::CapabilityAuthenticator,
+        device_id: u64,
+        resource_id: u64,
+        permissions: std::collections::BTreeSet<vyre_foundation::security::Permission>,
+    ) -> vyre_foundation::security::UnforgeableCapability {
+        authenticator.issue_handle(
+            self.tenant_id_128(),
+            device_id,
+            resource_id,
+            vyre_foundation::security::GenerationId::new(self.state.generation as u64),
+            permissions,
+        )
+    }
+
+    /// Validate an unforgeable capability handle presented to this tenant.
+    pub fn validate_capability(
+        &self,
+        authenticator: &vyre_foundation::security::CapabilityAuthenticator,
+        handle: &vyre_foundation::security::UnforgeableCapability,
+        device_id: u64,
+        required_permission: &vyre_foundation::security::Permission,
+    ) -> Result<(), vyre_foundation::security::SecurityError> {
+        authenticator.validate_handle(
+            handle,
+            self.tenant_id_128(),
+            device_id,
+            vyre_foundation::security::GenerationId::new(self.state.generation as u64),
+            required_permission,
+        )
+    }
 
     /// First opcode this tenant owns.
     #[must_use]

@@ -25,6 +25,8 @@ pub(crate) mod sanitizer;
 pub mod source_assignments;
 /// WGSL emission and source-line mapping.
 pub(crate) mod wgsl;
+/// Causal receipt and critical-path inspection report (Row 117).
+pub(crate) mod causal_report;
 
 pub use artifact_report::{ArtifactReport, TargetPayloadReport};
 pub use capability::{
@@ -42,3 +44,4 @@ pub use sanitizer::{
     PmuExpectation, PmuMeasurement, PmuWarning, PmuWorkloadClass, SanitizerFailure, SanitizerKind,
 };
 pub use wgsl::{dump_wgsl, dump_wgsl_with_lines, WgslDump};
+pub use causal_report::CausalReceiptReport;

@@ -22,6 +22,8 @@ pub mod cargo_runner;
 pub mod checkout;
 pub mod cli;
 pub mod delegate;
+pub mod config_space;
+pub mod provenance;
 pub mod docs;
 pub mod fixture_checkout;
 pub mod gate;

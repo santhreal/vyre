@@ -1,0 +1,2 @@
+category = "Added"
+text = "The xtask tooling layer now provides a typed configuration space model with minimal covering set feature isolation scheduling, build script determinism auditing, and capability-based feature naming."

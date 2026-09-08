@@ -60,3 +60,6 @@ pub mod well_formed_lowering_contracts;
 /// Integration tests from `tests/wgsl_dump_contracts.rs`.
 #[path = "wgsl_dump_contracts.rs"]
 pub mod wgsl_dump_contracts;
+/// Integration tests from `tests/causal_report_contracts.rs` (Row 117).
+#[path = "causal_report_contracts.rs"]
+pub mod causal_report_contracts;

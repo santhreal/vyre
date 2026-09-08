@@ -786,3 +786,14 @@ pub mod wire_version_mismatch;
 #[path = "workspace_naming_footguns.rs"]
 pub mod workspace_naming_footguns;
 
+/// Integration tests from `tests/causal_contracts.rs` (Row 117).
+#[path = "causal_contracts.rs"]
+pub mod causal_contracts;
+
+/// Integration tests from `tests/platform_support_matrix.rs` (Row 118).
+#[path = "platform_support_matrix.rs"]
+pub mod platform_support_matrix;
+
+/// Integration tests from `tests/security_contracts.rs` (Row 119).
+#[path = "security_contracts.rs"]
+pub mod security_contracts;
