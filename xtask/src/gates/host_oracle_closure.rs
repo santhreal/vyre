@@ -162,6 +162,7 @@ mod tests {
             path: format!("crates/{package}"),
             owner: "test".to_string(),
             layer: layer.to_string(),
+            publication_class: "internal-engine".to_string(),
             responsibility: "a fixture".to_string(),
             dependencies: Vec::new(),
         }

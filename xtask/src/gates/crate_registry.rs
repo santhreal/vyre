@@ -42,6 +42,15 @@ pub const SCHEMA_VERSION: i64 = 3;
 /// What a caller does about any disagreement this gate reports.
 const FIX: &str = "change the manifest and its `[[crate.dependency]]` record together, then run `xtask crate-ownership --write`";
 
+/// Valid publication classes for workspace crates.
+pub const VALID_PUBLICATION_CLASSES: &[&str] = &[
+    "stable-consumer-sdk",
+    "extension-sdk",
+    "concrete-backend",
+    "internal-engine",
+    "conformance-tooling",
+    "private-test-support",
+];
 /// One declared layer, and its position in the dependency DAG.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LayerRecord {
@@ -88,6 +97,8 @@ pub struct CrateRecord {
     pub owner: String,
     /// Layer the crate sits in.
     pub layer: String,
+    /// Explicit publication classification.
+    pub publication_class: String,
     /// What the crate is for, in the registry's own words.
     pub responsibility: String,
     /// Declared edges, sorted by destination package.
@@ -381,11 +392,20 @@ pub fn load_registry(tree: &Tree, report: &mut Report) -> Result<Vec<CrateRecord
                 FIX,
             ));
         }
+        let pub_class = text(row, "publication_class", &context, report);
+        if !pub_class.is_empty() && !VALID_PUBLICATION_CLASSES.contains(&pub_class.as_str()) {
+            report.find(Finding::in_file(
+                REGISTRY,
+                format!("{context} declares invalid publication_class `{pub_class}`"),
+                "declare one of: stable-consumer-sdk, extension-sdk, concrete-backend, internal-engine, conformance-tooling, private-test-support",
+            ));
+        }
         records.push(CrateRecord {
             package: text(row, "package", &context, report),
             path: text(row, "path", &context, report),
             owner: text(row, "owner", &context, report),
             layer: text(row, "layer", &context, report),
+            publication_class: pub_class,
             responsibility: text(row, "responsibility", &context, report),
             dependencies,
         });
@@ -1118,6 +1138,7 @@ pub fn render_ownership(records: &[CrateRecord]) -> String {
             format!("- Path: `{}`", record.path),
             format!("- Owner: `{}`", record.owner),
             format!("- Layer: `{}`", record.layer),
+            format!("- Publication class: `{}`", record.publication_class),
             format!(
                 "- Internal production dependencies: {}",
                 format_list(&record.allowed_dependencies())
@@ -1215,6 +1236,7 @@ mod tests {
                 path: "consumer".to_string(),
                 owner: "consumer-seam".to_string(),
                 layer: source_layer.to_string(),
+                publication_class: "internal-engine".to_string(),
                 responsibility: "consume".to_string(),
                 dependencies: Vec::new(),
             },
@@ -1223,6 +1245,7 @@ mod tests {
                 path: "dependency".to_string(),
                 owner: "dependency-seam".to_string(),
                 layer: destination_layer.to_string(),
+                publication_class: "internal-engine".to_string(),
                 responsibility: "be consumed".to_string(),
                 dependencies: Vec::new(),
             },
@@ -1296,6 +1319,7 @@ mod tests {
             path: "consumer".to_string(),
             owner: "consumer-seam".to_string(),
             layer: "undeclared".to_string(),
+            publication_class: "internal-engine".to_string(),
             responsibility: "consume".to_string(),
             dependencies: Vec::new(),
         }];
@@ -1320,6 +1344,7 @@ mod tests {
                 path: "vyre-bench".to_string(),
                 owner: "benchmarks".to_string(),
                 layer: "tooling".to_string(),
+                publication_class: "conformance-tooling".to_string(),
                 responsibility: "benchmarks".to_string(),
                 dependencies: vec![DependencyRecord {
                     package: "vyre-driver-cuda".to_string(),
@@ -1338,6 +1363,7 @@ mod tests {
                 path: "vyre-driver-cuda".to_string(),
                 owner: "cuda-driver".to_string(),
                 layer: "concrete-backend".to_string(),
+                publication_class: "concrete-backend".to_string(),
                 responsibility: "cuda driver".to_string(),
                 dependencies: vec![],
             },

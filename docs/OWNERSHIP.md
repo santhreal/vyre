@@ -18,6 +18,7 @@ Enforce the crate roster, one operation identity per semantic operation, one hom
 - Path: `structure-gate`
 - Owner: `release-tooling`
 - Layer: `standalone-tooling`
+- Publication class: `conformance-tooling`
 - Internal production dependencies: None
 
 ### `vyre`
@@ -27,6 +28,7 @@ Public facade. Re-export IR, driver, runtime, and the artifact compiler. Own no 
 - Path: `vyre`
 - Owner: `public-facade`
 - Layer: `facade`
+- Publication class: `stable-consumer-sdk`
 - Internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-megakernel`, `vyre-runtime`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -46,6 +48,7 @@ Count heap traffic per thread behind a GlobalAlloc wrapper, so an allocation bud
 - Path: `vyre-alloc-probe`
 - Owner: `benchmarks`
 - Layer: `standalone-tooling`
+- Publication class: `conformance-tooling`
 - Internal production dependencies: None
 
 ### `vyre-aot`
@@ -55,6 +58,7 @@ Package the same megakernel artifact class ahead of time. Not a second compile p
 - Path: `vyre-aot`
 - Owner: `aot-artifacts`
 - Layer: `packaging`
+- Publication class: `internal-engine`
 - Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-megakernel`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -70,6 +74,7 @@ Own reproducible workload benchmarks against the best available native baseline 
 - Path: `vyre-bench`
 - Owner: `benchmarks`
 - Layer: `tooling`
+- Publication class: `conformance-tooling`
 - Internal production dependencies: `vyre`, `vyre-alloc-probe`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`, `xtask`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -100,6 +105,7 @@ Execute production artifacts against independent reference semantics, minimize c
 - Path: `conform/vyre-conform`
 - Owner: `conformance`
 - Layer: `conformance`
+- Publication class: `conformance-tooling`
 - Internal production dependencies: `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -125,6 +131,7 @@ Define conformance case, result, and certificate schemas against the public faca
 - Path: `conform/vyre-conform-spec`
 - Owner: `conformance`
 - Layer: `conformance`
+- Publication class: `conformance-tooling`
 - Internal production dependencies: `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -138,6 +145,7 @@ Inspect, explain, and diagnose typed programs, lowering, and product-library com
 - Path: `vyre-debug`
 - Owner: `debugging`
 - Layer: `tooling`
+- Publication class: `internal-engine`
 - Internal production dependencies: `vyre`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -155,6 +163,7 @@ Define backend-neutral device, target compiler registration, artifact materializ
 - Path: `vyre-driver`
 - Owner: `backend-contract`
 - Layer: `backend-neutral`
+- Publication class: `extension-sdk`
 - Internal production dependencies: `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -171,6 +180,7 @@ Own pure PTX target compilation, native device acquisition, materialization, dis
 - Path: `vyre-driver-cuda`
 - Owner: `cuda-driver`
 - Layer: `concrete-backend`
+- Publication class: `concrete-backend`
 - Internal production dependencies: `vyre-driver`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -190,6 +200,7 @@ Own pure MSL target compilation, native Apple device acquisition, materializatio
 - Path: `vyre-driver-metal`
 - Owner: `metal-driver`
 - Layer: `concrete-backend`
+- Publication class: `concrete-backend`
 - Internal production dependencies: `vyre-driver`, `vyre-emit-metal`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -207,6 +218,7 @@ Adapt the reference interpreter to the backend contract for deterministic confor
 - Path: `vyre-driver-reference`
 - Owner: `reference-driver`
 - Layer: `concrete-backend`
+- Publication class: `concrete-backend`
 - Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-reference`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -223,6 +235,7 @@ Own SPIR-V target compilation, immutable module-bundle emission, Vulkan material
 - Path: `vyre-driver-spirv`
 - Owner: `spirv-driver`
 - Layer: `concrete-backend`
+- Publication class: `concrete-backend`
 - Internal production dependencies: `vyre-driver`, `vyre-emit-spirv`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -240,6 +253,7 @@ Own pure WGSL target compilation, portable GPU acquisition, materialization, dis
 - Path: `vyre-driver-wgpu`
 - Owner: `portable-driver`
 - Layer: `concrete-backend`
+- Publication class: `concrete-backend`
 - Internal production dependencies: `vyre-driver`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -260,6 +274,7 @@ Consume verified lowering products and emit native Apple shader source through t
 - Path: `vyre-emit-metal`
 - Owner: `metal-emitter`
 - Layer: `emitter`
+- Publication class: `internal-engine`
 - Internal production dependencies: `vyre-emit-naga`, `vyre-foundation`, `vyre-lower`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -275,6 +290,7 @@ Consume verified lowering products and emit the primary text representation and 
 - Path: `vyre-emit-naga`
 - Owner: `primary-text-emitter`
 - Layer: `emitter`
+- Publication class: `internal-engine`
 - Internal production dependencies: `vyre-foundation`, `vyre-lower`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -289,6 +305,7 @@ Consume verified lowering products and emit the primary binary backend text arti
 - Path: `vyre-emit-ptx`
 - Owner: `primary-binary-emitter`
 - Layer: `emitter`
+- Publication class: `internal-engine`
 - Internal production dependencies: `vyre-foundation`, `vyre-lower`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -303,6 +320,7 @@ Consume verified lowering products and emit SPIR-V artifacts through the shared 
 - Path: `vyre-emit-spirv`
 - Owner: `spirv-emitter`
 - Layer: `emitter`
+- Publication class: `internal-engine`
 - Internal production dependencies: `vyre-emit-naga`, `vyre-lower`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -317,6 +335,7 @@ Own validated ProgramGraph, versioned schedule-free LogicalProgramGraph domains,
 - Path: `vyre-foundation`
 - Owner: `foundation-ir`
 - Layer: `foundation`
+- Publication class: `extension-sdk`
 - Internal production dependencies: `vyre-macros`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -331,6 +350,7 @@ Own every composition in the workspace: consumer dialects and compiler-internal 
 - Path: `vyre-libs`
 - Owner: `product-libraries`
 - Layer: `libraries`
+- Publication class: `stable-consumer-sdk`
 - Internal production dependencies: `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -347,6 +367,7 @@ Enforce source-level project policies without depending on runtime crates.
 - Path: `vyre-lints`
 - Owner: `lint-policy`
 - Layer: `tooling`
+- Publication class: `conformance-tooling`
 - Internal production dependencies: None
 
 ### `vyre-lower`
@@ -356,6 +377,7 @@ Consume validated selected schedule phases and semantic programs, then own the s
 - Path: `vyre-lower`
 - Owner: `lowering`
 - Layer: `lowering`
+- Publication class: `internal-engine`
 - Internal production dependencies: `vyre-foundation`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -370,6 +392,7 @@ Provide compile-time registration and declaration macros without depending on ru
 - Path: `vyre-macros`
 - Owner: `registration-macros`
 - Layer: `foundation`
+- Publication class: `extension-sdk`
 - Internal production dependencies: None
 
 ### `vyre-megakernel`
@@ -379,6 +402,7 @@ Construct foundation-owned selected schedules through bounded whole-ProgramGraph
 - Path: `vyre-megakernel`
 - Owner: `megakernel-compiler`
 - Layer: `compiler-boundary`
+- Publication class: `internal-engine`
 - Internal production dependencies: `vyre-foundation`, `vyre-lower`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -394,6 +418,7 @@ Execute optimizer passes as Vyre Programs through compiler-owned semantic compil
 - Path: `vyre-pass-engine`
 - Owner: `pass-engine`
 - Layer: `pass-engine`
+- Publication class: `internal-engine`
 - Internal production dependencies: `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -410,6 +435,7 @@ Own marker types and uncomposable hardware intrinsics. A composition belongs in 
 - Path: `vyre-primitives`
 - Owner: `primitive-library`
 - Layer: `primitives`
+- Publication class: `extension-sdk`
 - Internal production dependencies: `vyre-foundation`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -423,6 +449,7 @@ The only crate permitted to compute on the CPU: the pure-Rust IR oracle. Not a b
 - Path: `vyre-reference`
 - Owner: `reference-semantics`
 - Layer: `semantics`
+- Publication class: `internal-engine`
 - Internal production dependencies: `vyre-foundation`, `vyre-primitives`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -438,6 +465,7 @@ Own every inventory registry link anchor, report which sources a build links, an
 - Path: `vyre-registry-link`
 - Owner: `registry-link`
 - Layer: `registry-link`
+- Publication class: `internal-engine`
 - Internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -462,6 +490,7 @@ Execute the artifact's selected persistence: sessions, recovery, residency, sche
 - Path: `vyre-runtime`
 - Owner: `runtime`
 - Layer: `runtime`
+- Publication class: `internal-engine`
 - Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -478,6 +507,7 @@ Validate safetensors metadata, shard indexes, compiler requirements, trusted sha
 - Path: `vyre-safetensors`
 - Owner: `safetensors-adapter`
 - Layer: `runtime`
+- Publication class: `stable-consumer-sdk`
 - Internal production dependencies: None
 
 ### `vyre-spec`
@@ -487,6 +517,7 @@ Own stable schemas, operation definitions, and compatibility contracts without r
 - Path: `vyre-spec`
 - Owner: `specification`
 - Layer: `foundation`
+- Publication class: `extension-sdk`
 - Internal production dependencies: None
 
 ### `vyre-test-support`
@@ -496,6 +527,7 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 - Path: `vyre-test-support`
 - Owner: `test-support`
 - Layer: `test-tooling`
+- Publication class: `private-test-support`
 - Internal production dependencies: `structure-gate`, `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-reference`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -514,6 +546,7 @@ Own the subcommand registry and every gate that judges the tree from source text
 - Path: `xtask`
 - Owner: `release-tooling`
 - Layer: `tooling`
+- Publication class: `conformance-tooling`
 - Internal production dependencies: `structure-gate`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -527,6 +560,7 @@ Own the xtask subcommands that decide whether a recorded benchmark or release me
 - Path: `xtask-evidence`
 - Owner: `release-tooling`
 - Layer: `tooling`
+- Publication class: `conformance-tooling`
 - Internal production dependencies: `vyre-bench`, `vyre-driver`, `vyre-foundation`, `vyre-registry-link`, `xtask`
 
 | Dependency | Purpose | Boundary | Owning seam |
@@ -544,6 +578,7 @@ Own the xtask subcommands that must observe the live operation registry, the pri
 - Path: `xtask-registry`
 - Owner: `release-tooling`
 - Layer: `tooling`
+- Publication class: `conformance-tooling`
 - Internal production dependencies: `structure-gate`, `vyre`, `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-spec`, `xtask`
 
 | Dependency | Purpose | Boundary | Owning seam |
