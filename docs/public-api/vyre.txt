@@ -12,9 +12,15 @@ pub use vyre::CompileRequest
 pub use vyre::Completion
 pub use vyre::DeviceIdentity
 pub use vyre::ExternalFacts
+pub use vyre::GeneratedDataSource
 pub use vyre::ObjectiveMetric
 pub use vyre::PersistentExecutor
 pub use vyre::Program
+pub use vyre::ResourceDataSource
+pub use vyre::ResourceIngestionError
+pub use vyre::ResourceManifest
+pub use vyre::ResourceManifestEntry
+pub use vyre::ResourceManifestSource
 pub use vyre::RetainedArtifactSession
 pub use vyre::RetryClass
 pub use vyre::SearchBudget
@@ -22,6 +28,8 @@ pub use vyre::Submission
 pub use vyre::TargetPayload
 pub use vyre::TargetPayloadFormat
 pub use vyre::TargetProfile
+pub use vyre::TypedResource
+pub use vyre::TypedResourceDataset
 pub use vyre::ValidatedCompileRequest
 pub use vyre::admit_artifact
 pub use vyre::admit_envelope
