@@ -444,6 +444,10 @@ pub mod optimizer_pass_borrow_preservation;
 #[path = "optimizer_perf_regression.rs"]
 pub mod optimizer_perf_regression;
 
+/// Integration tests from `tests/optimizer_proof_contracts.rs`.
+#[path = "optimizer_proof_contracts.rs"]
+pub mod optimizer_proof_contracts;
+
 /// Integration tests from `tests/optimizer_reference_parity_smoke.rs`.
 #[path = "optimizer_reference_parity_smoke.rs"]
 pub mod optimizer_reference_parity_smoke;
@@ -576,6 +580,10 @@ pub mod scalar_operator_agreement;
 /// Integration tests from `tests/scan_database_wire_contract.rs`.
 #[path = "scan_database_wire_contract.rs"]
 pub mod scan_database_wire_contract;
+
+/// Integration tests from `tests/schedule_calculus_contracts.rs`.
+#[path = "schedule_calculus_contracts.rs"]
+pub mod schedule_calculus_contracts;
 
 /// Integration tests from `tests/schedule_ir_contracts.rs`.
 #[path = "schedule_ir_contracts.rs"]
