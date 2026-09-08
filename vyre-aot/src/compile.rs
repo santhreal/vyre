@@ -8,7 +8,7 @@ use vyre_foundation::transform::inline::inline_calls_with_resolver;
 use vyre_foundation::transform::inline::OpResolver;
 use vyre_megakernel::{
     Artifact, ArtifactEnvelope, CompileObjective, CompileRequest, DeviceFacts, Digest,
-    ExternalFacts, ObjectiveMetric, SearchBudget, TargetCompiler,
+    ExternalFacts, ObjectiveMetric, SearchBudget, TargetCompiler, ValidatedCompileRequest,
 };
 
 use crate::artifact::{registration, TargetId};
@@ -51,6 +51,20 @@ pub enum CompileError {
 pub fn compile(program: &Program, target: TargetId) -> Result<ArtifactEnvelope, CompileError> {
     compile_with_resolver(program, target, None)
 }
+/// Compile one validated compiler request through the canonical graph compiler and a registered target facet.
+pub fn compile_request(
+    request: &ValidatedCompileRequest,
+    target: TargetId,
+) -> Result<ArtifactEnvelope, CompileError> {
+    let artifact = vyre_megakernel::compile(request).map_err(|source| CompileError::CanonicalArtifact {
+        stage: "canonical-compile",
+        source,
+    })?;
+    let compiler = registered_target_compiler(&target)?;
+    vyre_megakernel::attach_target(artifact, compiler.as_ref())
+        .map_err(|error| CompileError::TargetCompilation(error.to_string()))
+}
+
 
 /// Compile with a caller-supplied resolver to inline `Expr::Call` nodes.
 pub fn compile_with_resolver(
