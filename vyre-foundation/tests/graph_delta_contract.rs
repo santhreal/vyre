@@ -354,6 +354,67 @@ fn stale_or_corrupt_graph_delta_version_is_rejected() {
     assert!(matches!(err_magic, GraphDeltaError::Wire(_)));
 }
 
+/// Prevents hostile operation count fields from allocating unbounded memory.
+#[test]
+fn oversized_graph_delta_operation_count_fails_before_allocation() {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(b"VGD0");
+    bytes.extend_from_slice(&1_u16.to_le_bytes());
+    bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+    let err = GraphDelta::from_wire(&bytes)
+        .expect_err("Fix: hostile delta operation count must fail before allocation");
+    let msg = match err {
+        GraphDeltaError::Wire(m) => m,
+        other => panic!("expected Wire error, got {other:?}"),
+    };
+    assert!(
+        msg.contains("operation count is 4294967295; maximum is 1000000"),
+        "got: {msg}"
+    );
+}
+
+/// Prevents hostile string length fields from triggering huge allocations.
+#[test]
+fn oversized_graph_delta_string_length_fails() {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(b"VGD0");
+    bytes.extend_from_slice(&1_u16.to_le_bytes());
+    bytes.extend_from_slice(&1_u32.to_le_bytes()); // 1 op
+    bytes.push(1); // InsertExternalValue
+    bytes.extend_from_slice(&100_000_u32.to_le_bytes()); // string len exceeds MAX_NAME_BYTES (4096)
+    let err = GraphDelta::from_wire(&bytes)
+        .expect_err("Fix: hostile string length must be rejected");
+    let msg = match err {
+        GraphDeltaError::Wire(m) => m,
+        other => panic!("expected Wire error, got {other:?}"),
+    };
+    assert!(msg.contains("string length 100000 exceeds limit 4096"), "got: {msg}");
+}
+
+/// Prevents hostile port counts in graph delta operations from allocating unbounded memory.
+#[test]
+fn oversized_graph_delta_port_count_fails() {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(b"VGD0");
+    bytes.extend_from_slice(&1_u16.to_le_bytes());
+    bytes.extend_from_slice(&1_u32.to_le_bytes()); // 1 op
+    bytes.push(2); // InsertNode
+    bytes.extend_from_slice(&4_u32.to_le_bytes()); // name len
+    bytes.extend_from_slice(b"node");
+    let prog = vyre_foundation::ir::Program::wrapped(vec![], [1, 1, 1], vec![]);
+    let prog_bytes = prog.to_wire().expect("program wire");
+    bytes.extend_from_slice(&(prog_bytes.len() as u32).to_le_bytes());
+    bytes.extend_from_slice(&prog_bytes);
+    bytes.extend_from_slice(&2_000_000_u32.to_le_bytes()); // in_count exceeds MAX_PORTS_PER_NODE
+    let err = GraphDelta::from_wire(&bytes)
+        .expect_err("Fix: hostile port count must be rejected");
+    let msg = match err {
+        GraphDeltaError::Wire(m) => m,
+        other => panic!("expected Wire error, got {other:?}"),
+    };
+    assert!(msg.contains("input port count is 2000000; maximum is 1000000"), "got: {msg}");
+}
+
 #[test]
 fn scale_closure_bounding_one_node_in_large_graph() {
     let mut graph = ProgramGraph::new();

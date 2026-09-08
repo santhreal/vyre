@@ -920,6 +920,41 @@ fn oversized_graph_wire_counts_fail_before_allocation() {
         .contains("external value count is 4294967295; maximum is 1000000"));
 }
 
+/// Prevents hostile node count fields from reserving unbounded memory before decoding.
+#[test]
+fn oversized_graph_wire_node_count_fails_before_allocation() {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(b"VGR0");
+    bytes.extend_from_slice(&2_u16.to_le_bytes());
+    bytes.extend_from_slice(&0_u32.to_le_bytes()); // 0 external values
+    bytes.extend_from_slice(&u32::MAX.to_le_bytes()); // node count exceeds MAX_GRAPH_ITEMS
+    let error = ProgramGraph::from_wire(&bytes)
+        .expect_err("Fix: hostile node count must fail before allocation");
+    assert!(error
+        .to_string()
+        .contains("node count is 4294967295; maximum is 1000000"));
+}
+
+/// Prevents hostile tensor rank from allocating huge vectors during contract decode.
+#[test]
+fn oversized_graph_wire_tensor_rank_fails_before_allocation() {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(b"VGR0");
+    bytes.extend_from_slice(&2_u16.to_le_bytes());
+    bytes.extend_from_slice(&1_u32.to_le_bytes()); // 1 external value
+    bytes.extend_from_slice(&4_u32.to_le_bytes()); // name len
+    bytes.extend_from_slice(b"val0");
+    let dtype_json = serde_json::to_vec(&DataType::F32).expect("dtype json");
+    bytes.extend_from_slice(&(dtype_json.len() as u32).to_le_bytes());
+    bytes.extend_from_slice(&dtype_json);
+    bytes.extend_from_slice(&10_000_u32.to_le_bytes()); // rank exceeds MAX_RANK (256)
+    let error = ProgramGraph::from_wire(&bytes)
+        .expect_err("Fix: hostile tensor rank must fail before allocation");
+    assert!(error
+        .to_string()
+        .contains("tensor rank is 10000; maximum is 256"));
+}
+
 /// Prevents wire data from introducing a retained edge to a nonexistent value.
 #[test]
 fn graph_wire_dangling_retained_identity_fails_validation() {
