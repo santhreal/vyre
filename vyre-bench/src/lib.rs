@@ -12,6 +12,9 @@ pub mod api;
 /// Reference test cases and standard regression suites.
 #[allow(missing_docs)]
 pub mod cases;
+/// Versioned benchmark protocol and content-addressed evidence store.
+#[allow(missing_docs)]
+pub mod evidence;
 /// Target device capability and telemetry probes.
 #[allow(missing_docs)]
 pub mod probes;

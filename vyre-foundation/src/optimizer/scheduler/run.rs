@@ -166,11 +166,12 @@ impl PassScheduler {
         let mut dirty = self.initial_dirty_flags();
         let mut next_dirty = vec![false; self.passes.len()];
         let mut gates = GateFactState::default();
+        let mut budget = self.budget.clone();
 
         for _ in 0..self.max_iterations {
             next_dirty.fill(false);
             let (next, changed, changed_by) =
-                self.run_once_flags(program, &dirty, &mut next_dirty, &mut gates)?;
+                self.run_once_flags(program, &dirty, &mut next_dirty, &mut gates, budget.as_mut())?;
             program = next;
             if let Some(name) = changed_by {
                 last_pass = name;
@@ -201,6 +202,7 @@ impl PassScheduler {
         let mut dirty = self.initial_dirty_flags();
         let mut next_dirty = vec![false; self.passes.len()];
         let mut gates = GateFactState::default();
+        let mut budget = self.budget.clone();
         let mut metrics = Vec::with_capacity(
             self.execution_order
                 .len()
@@ -216,6 +218,7 @@ impl PassScheduler {
                 iteration,
                 &mut metrics,
                 &mut gates,
+                budget.as_mut(),
             )?;
             program = next;
             if let Some(name) = changed_by {
@@ -333,6 +336,7 @@ impl PassScheduler {
         dirty: &[bool],
         next_dirty: &mut [bool],
         gates: &mut GateFactState,
+        mut budget: Option<&mut crate::optimizer::compile_budget::CompileBudget>,
     ) -> Result<(Program, bool, Option<&'static str>), OptimizerError> {
         let mut available = (!self.requirements_prevalidated).then(|| {
             let mut available = FxHashSet::default();
@@ -364,6 +368,11 @@ impl PassScheduler {
 
             if dirty.get(pass_index).copied().unwrap_or(false) && pass.analyze(&program).should_run
             {
+                if let Some(b) = &mut budget {
+                    if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded { resource, budget, consumed }) = b.charge_cpu_steps(1) {
+                        return Err(OptimizerError::BudgetExceeded { resource, budget, consumed });
+                    }
+                }
                 // One snapshot serves both the gate rollback and the check for a
                 // pass that reports a rewrite it did not make.
                 let snapshot = program.clone();
@@ -396,6 +405,9 @@ impl PassScheduler {
                             gates.store(&snapshot, before);
                             (carry_warm(snapshot, result.program), false)
                         }
+                        Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded { resource, budget, consumed }) => {
+                            return Err(OptimizerError::BudgetExceeded { resource, budget, consumed });
+                        }
                         Err(_refusal) => {
                             gates.store(&snapshot, before);
                             (snapshot, false)
@@ -412,6 +424,19 @@ impl PassScheduler {
                     }
                 };
                 if landed {
+                    if let Some(b) = &mut budget {
+                        if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded { resource, budget, consumed }) = b.charge_transform_steps(1) {
+                            return Err(OptimizerError::BudgetExceeded { resource, budget, consumed });
+                        }
+                        let allocs = estimate_ir_allocations(&next_program);
+                        if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded { resource, budget, consumed }) = b.charge_memory_bytes(allocs.bytes as u64) {
+                            return Err(OptimizerError::BudgetExceeded { resource, budget, consumed });
+                        }
+                        let code_size = (next_program.entry().len() + allocs.allocations) as u64;
+                        if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded { resource, budget, consumed }) = b.check_code_size(code_size) {
+                            return Err(OptimizerError::BudgetExceeded { resource, budget, consumed });
+                        }
+                    }
                     changed = true;
                     changed_by = Some(pass.pass_id());
                 }
@@ -437,6 +462,7 @@ impl PassScheduler {
         iteration: usize,
         metrics: &mut Vec<PassRunMetric>,
         gates: &mut GateFactState,
+        mut budget: Option<&mut crate::optimizer::compile_budget::CompileBudget>,
     ) -> Result<(Program, bool, Option<&'static str>), OptimizerError> {
         let mut available = (!self.requirements_prevalidated).then(|| {
             let mut available = FxHashSet::default();
@@ -518,6 +544,11 @@ impl PassScheduler {
                     }
                     continue;
                 }
+                if let Some(b) = &mut budget {
+                    if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded { resource, budget, consumed }) = b.charge_cpu_steps(1) {
+                        return Err(OptimizerError::BudgetExceeded { resource, budget, consumed });
+                    }
+                }
                 // One snapshot serves both the gate rollback and the check for a
                 // pass that reports a rewrite it did not make.
                 let snapshot = program.clone();
@@ -578,6 +609,9 @@ impl PassScheduler {
                             (result.program, false)
                         }
                         Err(refusal) => {
+                            if let crate::optimizer::pass_result::RefusalReason::BudgetExceeded { resource, budget, consumed } = refusal {
+                                return Err(OptimizerError::BudgetExceeded { resource, budget, consumed });
+                            }
                             metric.decision = PassRunDecision::Refused;
                             metric.refusal_kind = Some(refusal.kind());
                             metric.effect_bits_after = before.effect_bits();
@@ -599,6 +633,21 @@ impl PassScheduler {
                     };
                     (result.program, landed)
                 };
+                if landed_changed {
+                    if let Some(b) = &mut budget {
+                        if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded { resource, budget, consumed }) = b.charge_transform_steps(1) {
+                            return Err(OptimizerError::BudgetExceeded { resource, budget, consumed });
+                        }
+                        let allocs = estimate_ir_allocations(&next_program);
+                        if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded { resource, budget, consumed }) = b.charge_memory_bytes(allocs.bytes as u64) {
+                            return Err(OptimizerError::BudgetExceeded { resource, budget, consumed });
+                        }
+                        let code_size = (next_program.entry().len() + allocs.allocations) as u64;
+                        if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded { resource, budget, consumed }) = b.check_code_size(code_size) {
+                            return Err(OptimizerError::BudgetExceeded { resource, budget, consumed });
+                        }
+                    }
+                }
                 program = next_program;
                 let after_stats = *program.stats();
                 let after_allocations = if landed_changed {

@@ -45,7 +45,7 @@ impl TenantRegistry {
         Self::default()
     }
 
-    /// Register a new tenant with the given diagnostic label.
+    /// Register a new tenant with the standard finite quota policy.
     /// Returns a handle whose opcode range is reserved until
     /// [`unregister`](Self::unregister) is called.
     ///
@@ -54,25 +54,33 @@ impl TenantRegistry {
     /// Returns [`TenantError::RegistryFull`] when the tenant id or
     /// opcode space is exhausted.
     pub fn register(&self, label: impl Into<String>) -> Result<TenantHandle, TenantError> {
-        self.register_with_backpressure(label, u64::MAX)
+        self.register_with_quotas(label, TenantQuota::standard())
     }
 
     /// Register a new tenant with a bounded outstanding-slot budget.
     ///
     /// # Errors
     ///
-    /// Returns [`TenantError::RegistryFull`] when the tenant id or opcode space
-    /// is exhausted.
+    /// Returns [`TenantError::NonFiniteQuota`] if `max_outstanding_slots` is not
+    /// finite (`u64::MAX`). Returns [`TenantError::RegistryFull`] when the tenant
+    /// id or opcode space is exhausted.
     pub fn register_with_backpressure(
         &self,
         label: impl Into<String>,
         max_outstanding_slots: u64,
     ) -> Result<TenantHandle, TenantError> {
+        if max_outstanding_slots == u64::MAX {
+            return Err(TenantError::NonFiniteQuota {
+                field: "max_outstanding_slots",
+                value: max_outstanding_slots,
+                fix: "register tenants with a finite outstanding-slot limit",
+            });
+        }
         self.register_with_quotas(
             label,
             TenantQuota {
                 max_outstanding_slots,
-                ..TenantQuota::unbounded()
+                ..TenantQuota::standard()
             },
         )
     }
@@ -82,6 +90,7 @@ impl TenantRegistry {
     ///
     /// # Errors
     ///
+    /// Returns [`TenantError::NonFiniteQuota`] if any quota limit is not finite (`u64::MAX`).
     /// Returns [`TenantError::RegistryFull`] when the tenant id or opcode space
     /// is exhausted.
     pub fn register_with_quotas(
@@ -89,6 +98,27 @@ impl TenantRegistry {
         label: impl Into<String>,
         quota: TenantQuota,
     ) -> Result<TenantHandle, TenantError> {
+        if quota.max_outstanding_slots == u64::MAX {
+            return Err(TenantError::NonFiniteQuota {
+                field: "max_outstanding_slots",
+                value: quota.max_outstanding_slots,
+                fix: "register tenants with a finite outstanding-slot limit",
+            });
+        }
+        if quota.max_staging_bytes == u64::MAX {
+            return Err(TenantError::NonFiniteQuota {
+                field: "max_staging_bytes",
+                value: quota.max_staging_bytes,
+                fix: "register tenants with a finite staging-byte limit",
+            });
+        }
+        if quota.max_resident_handles == u64::MAX {
+            return Err(TenantError::NonFiniteQuota {
+                field: "max_resident_handles",
+                value: quota.max_resident_handles,
+                fix: "register tenants with a finite resident-handle limit",
+            });
+        }
         let (id, generation) = {
             let mut free = self.free_list.lock().unwrap_or_else(|e| e.into_inner());
             if let Some(recycled_id) = free.pop() {

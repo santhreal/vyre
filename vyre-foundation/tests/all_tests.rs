@@ -444,6 +444,10 @@ pub mod optimizer_pass_borrow_preservation;
 #[path = "optimizer_perf_regression.rs"]
 pub mod optimizer_perf_regression;
 
+/// Integration tests from `tests/optimizer_proof_contracts.rs`.
+#[path = "optimizer_proof_contracts.rs"]
+pub mod optimizer_proof_contracts;
+
 /// Integration tests from `tests/optimizer_reference_parity_smoke.rs`.
 #[path = "optimizer_reference_parity_smoke.rs"]
 pub mod optimizer_reference_parity_smoke;
@@ -577,6 +581,10 @@ pub mod scalar_operator_agreement;
 #[path = "scan_database_wire_contract.rs"]
 pub mod scan_database_wire_contract;
 
+/// Integration tests from `tests/schedule_calculus_contracts.rs`.
+#[path = "schedule_calculus_contracts.rs"]
+pub mod schedule_calculus_contracts;
+
 /// Integration tests from `tests/schedule_ir_contracts.rs`.
 #[path = "schedule_ir_contracts.rs"]
 pub mod schedule_ir_contracts;
@@ -620,6 +628,10 @@ pub mod source_tree_digest;
 /// Integration tests from `tests/store_to_load_forward_value_invalidation.rs`.
 #[path = "store_to_load_forward_value_invalidation.rs"]
 pub mod store_to_load_forward_value_invalidation;
+
+/// Integration tests from `tests/structural_sharing_and_bounded_compilation_contracts.rs`.
+#[path = "structural_sharing_and_bounded_compilation_contracts.rs"]
+pub mod structural_sharing_and_bounded_compilation_contracts;
 
 /// Integration tests from `tests/strength_reduce_shift_fusion_overflow.rs`.
 #[path = "strength_reduce_shift_fusion_overflow.rs"]

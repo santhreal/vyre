@@ -230,6 +230,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   review it. The obligations come from `vyre_driver::hostile_input_closure`,
   and the ignore rule that asked for a crate-owned name is now satisfied for
   these two crates.
+- The benchmark harness defines a versioned benchmark receipt schema and
+  content-addressed evidence store capturing workload, semantic graph,
+  resources, binaries, objectives, budgets, target facts, environment,
+  portfolio, samples, uncertainty, and parity.
 - `vyre_test_support::binop_parity::assert_covers_every_synthetic_op` and
   `assert_covers_every_total_op` fail when a backend parity suite has no
   reference arm for an op the shared table declares, or names one the table
@@ -305,6 +309,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   a neighbouring step's package. Nothing is listed in the test: a workflow
   added tomorrow is judged tomorrow, and renaming a target without updating its
   workflow is red locally instead of in CI.
+- The foundation layer now provides a compositional schedule calculus with
+  dependency preservation certificates and cost modeling alongside a
+  proof-producing multi-level optimization framework with typed hardware rules,
+  Pareto extraction, and replayable step proofs.
 - The xtask tooling layer now provides a typed configuration space model with
   minimal covering set feature isolation scheduling, build script determinism
   auditing, and capability-based feature naming.
@@ -651,6 +659,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   immutable-weight identities. Mutable sequence-state contents are excluded, so
   cache growth reuses compiled artifacts while any executable or provenance
   change invalidates the key.
+- `vyre-foundation` adds domain-neutral `ProgramGraph` whole-graph composition
+  APIs (`ProgramGraphBuilder`, `inline_subgraph`, `add_bounded_loop`,
+  `add_conditional_branch`, `add_effect_barrier`, `add_stream`,
+  `ValueLifetime::Stream`, `ExternalEffect`, `ControlBounds`), completes
+  10-variant `LogicalRegionKind` definitions with scratch, progress, ordering,
+  and numeric contracts, and provides schedule distribution lowering across
+  lanes, subgroups, workgroups, grids, queues, and resident partitions;
+  `vyre-libs` implements representative complete multi-domain graph
+  compositions and proves identical production compilation paths across neural,
+  graph traversal, and streaming parser domains.
 - The neural library now executes recurrent gated delta attention with F32 Q/K
   normalization, grouped heads, scaled queries, exponential decay, sigmoid
   beta, F32 matrix-state continuation, source-dtype output, and explicit
@@ -851,6 +869,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   intermediate representation with dominance verification and Program lowering
   alongside declarative catalog bundle extension schemas with namespace,
   semver, and digest identity.
+- Artifact admission performs bounded transactional typed external-resource
+  ingestion against artifact ABI schemas with rollback on failure.
 - `vyre-foundation` closes `Expr` variant traversal, child operand
   reachability, magnitude classification, buffer reference classification, and
   cross-invocation combine classification against `EXPR_VARIANT_NAMES` in
@@ -3591,6 +3611,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `ExecutionTopology` and a per-module `TargetArmAssignment`, both covered by
   the bundle digest, and admission rejects a bundle whose arm records are not
   the selected topology's assignment.
+- Tenant registration requires finite resource quotas through
+  TenantQuota::standard or explicit bounded limits; TenantQuota::unbounded is
+  removed, and RetainedArtifactSession manages mutable generations through
+  typed state machine transitions.
 - A test-only IR extension payload is declared through
   `vyre_test_support::test_expr_extension!` or `test_node_extension!` instead
   of six hand-written trait methods. Five of the six are the same in every test

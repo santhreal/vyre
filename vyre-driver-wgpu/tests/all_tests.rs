@@ -434,11 +434,6 @@ pub mod signed_modulo_parity;
 #[path = "sinkhorn_iterate_contract.rs"]
 pub mod sinkhorn_iterate_contract;
 
-/// Integration tests from `tests/spirv_backend_contracts.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "spirv_backend_contracts.rs"]
-pub mod spirv_backend_contracts;
-
 /// Integration tests from `tests/stream_shard_public_error_contracts.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "stream_shard_public_error_contracts.rs"]

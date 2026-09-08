@@ -293,7 +293,7 @@ pub fn returned_graph_values(graph: &ProgramGraph) -> BTreeSet<GraphValueId> {
         .filter(|value| match value.contract.lifetime {
             ValueLifetime::Retained => true,
             ValueLifetime::Output => value.producer.is_some(),
-            ValueLifetime::Constant | ValueLifetime::Invocation => false,
+            ValueLifetime::Constant | ValueLifetime::Invocation | ValueLifetime::Stream => false,
         })
         .map(|value| value.id)
         .collect()

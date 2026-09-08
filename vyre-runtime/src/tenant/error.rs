@@ -6,6 +6,18 @@ use crate::PipelineError;
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum TenantError {
+    /// Tenant registration failed because the provided quota was not finite or was zero.
+    #[error(
+        "tenant quota field '{field}' has non-finite or zero value {value}. Fix: {fix}"
+    )]
+    NonFiniteQuota {
+        /// Quota field that violated the finite-bound requirement.
+        field: &'static str,
+        /// Value provided.
+        value: u64,
+        /// Suggested resolution.
+        fix: &'static str,
+    },
     /// The registry has reached its maximum tenant capacity.
     #[error("tenant registry capacity exceeded (max {cap} tenants). Fix: unregister unused tenants or raise max tenant limit.")]
     CapacityExceeded {

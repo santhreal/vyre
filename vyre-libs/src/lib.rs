@@ -40,6 +40,9 @@
 /// The declared seam one dialect crosses to compose another.
 pub mod prelude;
 
+/// Multi-domain whole-graph compositions (BACKLOG rows 48 and 51).
+pub mod graph_compositions;
+
 /// Shared builder helpers every Cat-A composition reuses.
 #[cfg(feature = "builder")]
 pub(crate) mod builder;

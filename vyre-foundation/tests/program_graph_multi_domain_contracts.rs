@@ -641,6 +641,7 @@ fn lifetime_and_shape_enum_exhaustive_closure() {
         ValueLifetime::Invocation,
         ValueLifetime::Retained,
         ValueLifetime::Output,
+        ValueLifetime::Stream,
     ];
     for lt in lifetimes {
         match lt {
@@ -648,6 +649,7 @@ fn lifetime_and_shape_enum_exhaustive_closure() {
             ValueLifetime::Invocation => assert_eq!(lt, ValueLifetime::Invocation),
             ValueLifetime::Retained => assert_eq!(lt, ValueLifetime::Retained),
             ValueLifetime::Output => assert_eq!(lt, ValueLifetime::Output),
+            ValueLifetime::Stream => assert_eq!(lt, ValueLifetime::Stream),
         }
     }
 

@@ -55,6 +55,7 @@ impl core::borrow::Borrow<str> for vyre_foundation::ir::Ident
 impl core::clone::Clone for vyre_foundation::ir::Program
 impl core::clone::Clone for vyre_foundation::optimizer::hot_path_hints::HotPathHints
 impl core::cmp::Eq for vyre_foundation::ir::Program
+impl core::cmp::Eq for vyre_foundation::region_ssa::ScalarLiteral
 impl core::cmp::Ord for vyre_foundation::ir::Ident
 impl core::cmp::PartialEq for vyre_foundation::ir::Expr
 impl core::cmp::PartialEq for vyre_foundation::ir::Node
@@ -154,6 +155,9 @@ impl core::fmt::Display for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnap
 impl core::fmt::Display for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotIntegrityError
 impl core::fmt::Display for vyre_foundation::optimizer::rewrite_contract::BoundedExpansion
 impl core::fmt::Display for vyre_foundation::program_caps::MissingCapability
+impl core::fmt::Display for vyre_foundation::region_ssa::BlockId
+impl core::fmt::Display for vyre_foundation::region_ssa::RegionId
+impl core::fmt::Display for vyre_foundation::region_ssa::ValueId
 impl core::fmt::Display for vyre_foundation::serial::EnvelopeError
 impl core::fmt::Display for vyre_foundation::serial::text::TextParseError
 impl core::fmt::Display for vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError
@@ -164,6 +168,7 @@ impl core::fmt::Display for vyre_foundation::validate::ValidationCode
 impl core::fmt::Display for vyre_foundation::validate::ValidationError
 impl core::fmt::Display for vyre_foundation::vast::VastEditCorpusError
 impl core::hash::Hash for vyre_foundation::ir::Ident
+impl core::hash::Hash for vyre_foundation::region_ssa::ScalarLiteral
 impl core::ops::bit::BitOr for vyre_foundation::lower::ProgramEffects
 impl core::ops::bit::BitOrAssign for vyre_foundation::lower::ProgramEffects
 impl core::ops::deref::Deref for vyre_foundation::ir::Ident
@@ -198,6 +203,7 @@ impl vyre_foundation::execution_plan::DeviceMemoryBudget
 impl vyre_foundation::execution_plan::ExecutionPlan
 impl vyre_foundation::execution_plan::ReadbackStrategy
 impl vyre_foundation::execution_plan::SchedulingPolicy
+impl vyre_foundation::extension::CatalogBundle
 impl vyre_foundation::fp_expansion::StrictExpansionError
 impl vyre_foundation::fp_parity::FloatLoweringMode
 impl vyre_foundation::graph_view::DataEdge
@@ -406,6 +412,17 @@ impl vyre_foundation::optimizer::rewrite_proof::ProofExpr
 impl vyre_foundation::optimizer::rewrite_proof::RewriteProofObligation
 impl vyre_foundation::perf::PerfScope
 impl vyre_foundation::program_caps::RequiredCapabilities
+impl vyre_foundation::region_ssa::BlockArg
+impl vyre_foundation::region_ssa::RegionFunction
+impl vyre_foundation::region_ssa::RegionModule
+impl vyre_foundation::region_ssa::ScalarLiteral
+impl vyre_foundation::region_ssa::builder::RegionBuilder
+impl vyre_foundation::region_ssa::builder::ScopeContext
+impl vyre_foundation::region_ssa::dominance::DominanceVerifier
+impl vyre_foundation::region_ssa::opt::RegionSsaConstProp
+impl vyre_foundation::region_ssa::opt::RegionSsaDce
+impl vyre_foundation::region_ssa::opt::RegionSsaOptimizer
+impl vyre_foundation::region_ssa::opt::ValueRemap
 impl vyre_foundation::schedule::ScheduleTransform
 impl vyre_foundation::schedule::SelectedSchedule
 impl vyre_foundation::serial::WireWriter
@@ -685,6 +702,7 @@ pub const fn vyre_foundation::optimizer::rewrite_proof::ProofExpr::sort(&self) -
 pub const fn vyre_foundation::optimizer::rewrite_proof::RewriteProofObligation::with_domain(self, domain: vyre_foundation::optimizer::rewrite_proof::ProofDomain) -> Self
 pub const fn vyre_foundation::program_caps::RequiredCapabilities::none() -> Self
 pub const fn vyre_foundation::program_caps::RequiredCapabilities::with_subgroup_ops(self) -> Self
+pub const fn vyre_foundation::region_ssa::ScalarLiteral::data_type(&self) -> vyre_spec::data_type::DataType
 pub const fn vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::within_budget(&self) -> bool
 pub const fn vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::within_budget(&self) -> bool
 pub const fn vyre_foundation::serial::wire::encode::WireEncodeErr::static_msg(msg: &'static str) -> Self
@@ -848,6 +866,7 @@ pub enum vyre_foundation::execution_plan::LayoutStrategy
 pub enum vyre_foundation::execution_plan::PlanError
 pub enum vyre_foundation::execution_plan::ProvenanceStrategy
 pub enum vyre_foundation::execution_plan::ReadbackStrategy
+pub enum vyre_foundation::extension::ExtensionCatalogError
 pub enum vyre_foundation::fp_parity::BufferParity
 pub enum vyre_foundation::fp_parity::FloatLoweringMode
 pub enum vyre_foundation::ir::AsyncTransactionLifecycle
@@ -891,6 +910,15 @@ pub enum vyre_foundation::ir::contract::SaturationMode
 pub enum vyre_foundation::ir::declarative::VerificationError
 pub enum vyre_foundation::ir::ownership::OwnershipMutability
 pub enum vyre_foundation::ir::quantization::QuantizationMeaning
+pub enum vyre_foundation::ir::region_ssa::DominanceError
+pub enum vyre_foundation::ir::region_ssa::RegionKind
+pub enum vyre_foundation::ir::region_ssa::RegionOpKind
+pub enum vyre_foundation::ir::region_ssa::RegionSsaError
+pub enum vyre_foundation::ir::region_ssa::ScalarLiteral
+pub enum vyre_foundation::ir::region_ssa::Terminator
+pub enum vyre_foundation::ir::region_ssa::ViewOp
+pub enum vyre_foundation::ir::region_ssa::builder::DominanceError
+pub enum vyre_foundation::ir::region_ssa::lower::RegionSsaError
 pub enum vyre_foundation::ir::scalar::ScalarType
 pub enum vyre_foundation::ir::shape::ShapeConstraint
 pub enum vyre_foundation::ir::shape::SymbolicDim
@@ -952,6 +980,15 @@ pub enum vyre_foundation::optimizer::region_law::RegionDerivationStop
 pub enum vyre_foundation::optimizer::rewrite_proof::ProofDomain
 pub enum vyre_foundation::optimizer::rewrite_proof::ProofSort
 pub enum vyre_foundation::optimizer::rewrite_proof::ProofStatus
+pub enum vyre_foundation::region_ssa::DominanceError
+pub enum vyre_foundation::region_ssa::RegionKind
+pub enum vyre_foundation::region_ssa::RegionOpKind
+pub enum vyre_foundation::region_ssa::RegionSsaError
+pub enum vyre_foundation::region_ssa::ScalarLiteral
+pub enum vyre_foundation::region_ssa::Terminator
+pub enum vyre_foundation::region_ssa::ViewOp
+pub enum vyre_foundation::region_ssa::builder::DominanceError
+pub enum vyre_foundation::region_ssa::lower::RegionSsaError
 pub enum vyre_foundation::schedule::CombineOrder
 pub enum vyre_foundation::schedule::MappingLevel
 pub enum vyre_foundation::schedule::MemoryPlacement
@@ -1121,6 +1158,16 @@ pub fn vyre_foundation::execution_plan::plan(program: &vyre_foundation::ir::Prog
 pub fn vyre_foundation::execution_plan::plan_for_adapter(program: &vyre_foundation::ir::Program, adapter_caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::execution_plan::ExecutionPlan, vyre_foundation::execution_plan::PlanError>
 pub fn vyre_foundation::execution_plan::plan_with_options(program: &vyre_foundation::ir::Program, options: vyre_foundation::validate::ValidationOptions<'_>) -> core::result::Result<vyre_foundation::execution_plan::ExecutionPlan, vyre_foundation::execution_plan::PlanError>
 pub fn vyre_foundation::execution_plan::plan_with_options_for_adapter(program: &vyre_foundation::ir::Program, options: vyre_foundation::validate::ValidationOptions<'_>, adapter_caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::execution_plan::ExecutionPlan, vyre_foundation::execution_plan::PlanError>
+pub fn vyre_foundation::extension::CatalogBundle::canonical_fingerprint(&self) -> [u8; 32]
+pub fn vyre_foundation::extension::CatalogBundle::get(&self, identity: &vyre_spec::extension::ExtensionIdentity) -> core::option::Option<&vyre_spec::extension::ExtensionSchema>
+pub fn vyre_foundation::extension::CatalogBundle::get_by_namespace(&self, namespace: &str) -> alloc::vec::Vec<&vyre_spec::extension::ExtensionSchema>
+pub fn vyre_foundation::extension::CatalogBundle::get_latest(&self, namespace: &str) -> core::option::Option<&vyre_spec::extension::ExtensionSchema>
+pub fn vyre_foundation::extension::CatalogBundle::is_empty(&self) -> bool
+pub fn vyre_foundation::extension::CatalogBundle::len(&self) -> usize
+pub fn vyre_foundation::extension::CatalogBundle::merge(&mut self, other: vyre_foundation::extension::CatalogBundle) -> core::result::Result<(), vyre_foundation::extension::ExtensionCatalogError>
+pub fn vyre_foundation::extension::CatalogBundle::new(bundle_id: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_foundation::extension::CatalogBundle::register(&mut self, schema: vyre_spec::extension::ExtensionSchema) -> core::result::Result<(), vyre_foundation::extension::ExtensionCatalogError>
+pub fn vyre_foundation::extension::CatalogBundle::validate(&self) -> core::result::Result<(), vyre_foundation::extension::ExtensionCatalogError>
 pub fn vyre_foundation::extension::RuleConditionExt::evaluate_opaque(&self, ctx: &dyn core::any::Any) -> bool
 pub fn vyre_foundation::extension::RuleConditionExt::extension_id(&self) -> vyre_spec::extension::ExtensionRuleConditionId
 pub fn vyre_foundation::extension::RuleConditionExt::required_buffers(&self) -> alloc::vec::Vec<vyre_foundation::ir::BufferDecl>
@@ -1549,6 +1596,12 @@ pub fn vyre_foundation::ir::module::SemanticModule::with_shape_constraint(self, 
 pub fn vyre_foundation::ir::module::SemanticModule::with_type(self, ty: vyre_foundation::ir::SemanticType) -> Self
 pub fn vyre_foundation::ir::node_op_id(node: &vyre_foundation::ir::Node) -> &'static str
 pub fn vyre_foundation::ir::node_variant_name(item: &vyre_foundation::ir::Node) -> &'static str
+pub fn vyre_foundation::ir::region_ssa::dominance::verify_dominance(func: &vyre_foundation::region_ssa::RegionFunction) -> core::result::Result<(), vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::ir::region_ssa::lower::lower_program_to_region_ssa(program: &vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::region_ssa::RegionModule, vyre_foundation::region_ssa::lower::RegionSsaError>
+pub fn vyre_foundation::ir::region_ssa::lower::lower_region_ssa_to_program(module: &vyre_foundation::region_ssa::RegionModule) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::region_ssa::lower::RegionSsaError>
+pub fn vyre_foundation::ir::region_ssa::lower_program_to_region_ssa(program: &vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::region_ssa::RegionModule, vyre_foundation::region_ssa::lower::RegionSsaError>
+pub fn vyre_foundation::ir::region_ssa::lower_region_ssa_to_program(module: &vyre_foundation::region_ssa::RegionModule) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::region_ssa::lower::RegionSsaError>
+pub fn vyre_foundation::ir::region_ssa::verify_dominance(func: &vyre_foundation::region_ssa::RegionFunction) -> core::result::Result<(), vyre_foundation::region_ssa::builder::DominanceError>
 pub fn vyre_foundation::ir::shape::ShapeInterner::add(&self, lhs: vyre_foundation::ir::shape::ShapeExprId, rhs: vyre_foundation::ir::shape::ShapeExprId) -> vyre_foundation::ir::shape::ShapeExprId
 pub fn vyre_foundation::ir::shape::ShapeInterner::align_to(&self, expr: vyre_foundation::ir::shape::ShapeExprId, alignment: u64) -> vyre_foundation::ir::shape::ShapeExprId
 pub fn vyre_foundation::ir::shape::ShapeInterner::constant(&self, value: i128) -> vyre_foundation::ir::shape::ShapeExprId
@@ -2809,6 +2862,59 @@ pub fn vyre_foundation::program_caps::RequiredCapabilities::join(self, other: vy
 pub fn vyre_foundation::program_caps::RequiredCapabilities::union(self, other: vyre_foundation::program_caps::RequiredCapabilities) -> Self
 pub fn vyre_foundation::program_caps::check_backend_capabilities(backend_id: &str, support: &vyre_foundation::program_caps::BackendSupport, required: &vyre_foundation::program_caps::RequiredCapabilities) -> core::result::Result<(), vyre_foundation::program_caps::MissingCapability>
 pub fn vyre_foundation::program_caps::scan(program: &vyre_foundation::ir::Program) -> vyre_foundation::program_caps::RequiredCapabilities
+pub fn vyre_foundation::region_ssa::BlockArg::new(id: vyre_foundation::region_ssa::ValueId, ty: vyre_spec::data_type::DataType, name_hint: core::option::Option<alloc::string::String>) -> Self
+pub fn vyre_foundation::region_ssa::BlockId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::region_ssa::RegionFunction::get_block(&self, id: vyre_foundation::region_ssa::BlockId) -> core::option::Option<&vyre_foundation::region_ssa::Block>
+pub fn vyre_foundation::region_ssa::RegionFunction::get_block_mut(&mut self, id: vyre_foundation::region_ssa::BlockId) -> core::option::Option<&mut vyre_foundation::region_ssa::Block>
+pub fn vyre_foundation::region_ssa::RegionFunction::value_type(&self, val: vyre_foundation::region_ssa::ValueId) -> core::option::Option<vyre_spec::data_type::DataType>
+pub fn vyre_foundation::region_ssa::RegionId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::region_ssa::RegionModule::add_function(&mut self, function: vyre_foundation::region_ssa::RegionFunction)
+pub fn vyre_foundation::region_ssa::RegionModule::get_function(&self, name: &str) -> core::option::Option<&vyre_foundation::region_ssa::RegionFunction>
+pub fn vyre_foundation::region_ssa::RegionModule::new(name: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_foundation::region_ssa::ScalarLiteral::hash<H: core::hash::Hasher>(&self, state: &mut H)
+pub fn vyre_foundation::region_ssa::ValueId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::alloc_block_id(&mut self) -> vyre_foundation::region_ssa::BlockId
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::alloc_region_id(&mut self) -> vyre_foundation::region_ssa::RegionId
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::alloc_value(&mut self) -> vyre_foundation::region_ssa::ValueId
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::build(self) -> core::result::Result<vyre_foundation::region_ssa::RegionFunction, vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::build_map_region<F>(&mut self, inputs: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>, domain_shape: alloc::vec::Vec<u64>, input_elem_types: alloc::vec::Vec<vyre_spec::data_type::DataType>, yield_types: alloc::vec::Vec<vyre_spec::data_type::DataType>, body: F) -> core::result::Result<alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>, vyre_foundation::region_ssa::builder::DominanceError> where F: core::ops::function::FnOnce(&mut Self, alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>) -> core::result::Result<alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>, vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::build_recurrence_region<F>(&mut self, init_state: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>, state_types: alloc::vec::Vec<vyre_spec::data_type::DataType>, trip_count_bound: u64, body: F) -> core::result::Result<alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>, vyre_foundation::region_ssa::builder::DominanceError> where F: core::ops::function::FnOnce(&mut Self, vyre_foundation::region_ssa::ValueId, alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>) -> core::result::Result<alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>, vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::build_reduce_region<F>(&mut self, input: vyre_foundation::region_ssa::ValueId, axis: usize, neutral: vyre_foundation::region_ssa::ValueId, combine: vyre_spec::combine::CombineKind, elem_type: vyre_spec::data_type::DataType, body: F) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::builder::DominanceError> where F: core::ops::function::FnOnce(&mut Self, vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::ValueId) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::create_block(&mut self, arg_types: alloc::vec::Vec<(vyre_spec::data_type::DataType, core::option::Option<alloc::string::String>)>) -> vyre_foundation::region_ssa::BlockId
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::emit_binary(&mut self, op: vyre_spec::bin_op::BinOp, left: vyre_foundation::region_ssa::ValueId, right: vyre_foundation::region_ssa::ValueId, result_type: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::emit_buffer_load(&mut self, buffer: impl core::convert::Into<alloc::string::String>, index: vyre_foundation::region_ssa::ValueId, element_type: vyre_spec::data_type::DataType, effect_in: core::option::Option<vyre_foundation::region_ssa::EffectToken>) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::emit_buffer_store(&mut self, buffer: impl core::convert::Into<alloc::string::String>, index: vyre_foundation::region_ssa::ValueId, value: vyre_foundation::region_ssa::ValueId, effect_in: core::option::Option<vyre_foundation::region_ssa::EffectToken>) -> core::result::Result<(), vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::emit_cast(&mut self, input: vyre_foundation::region_ssa::ValueId, target_type: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::emit_constant(&mut self, lit: vyre_foundation::region_ssa::ScalarLiteral) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::emit_coordinate_query(&mut self, name: impl core::convert::Into<alloc::string::String>, result_type: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::emit_ternary(&mut self, op: vyre_spec::ternary_op::TernaryOp, a: vyre_foundation::region_ssa::ValueId, b: vyre_foundation::region_ssa::ValueId, c: vyre_foundation::region_ssa::ValueId, result_type: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::emit_unary(&mut self, op: vyre_spec::un_op::UnOp, input: vyre_foundation::region_ssa::ValueId, result_type: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::emit_view(&mut self, input: vyre_foundation::region_ssa::ValueId, view: vyre_foundation::region_ssa::ViewOp, result_type: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::new_function(name: impl core::convert::Into<alloc::string::String>, param_types: alloc::vec::Vec<(vyre_spec::data_type::DataType, core::option::Option<alloc::string::String>)>, return_types: alloc::vec::Vec<vyre_spec::data_type::DataType>) -> Self
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::set_current_block(&mut self, block_id: vyre_foundation::region_ssa::BlockId) -> core::result::Result<(), vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::terminate_branch(&mut self, target: vyre_foundation::region_ssa::BlockId, args: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>) -> core::result::Result<(), vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::terminate_cond_branch(&mut self, cond: vyre_foundation::region_ssa::ValueId, true_dest: vyre_foundation::region_ssa::BlockId, true_args: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>, false_dest: vyre_foundation::region_ssa::BlockId, false_args: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>) -> core::result::Result<(), vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::RegionBuilder::terminate_return(&mut self, values: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>) -> core::result::Result<(), vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::builder::ScopeContext::define(&mut self, val: vyre_foundation::region_ssa::ValueId)
+pub fn vyre_foundation::region_ssa::builder::ScopeContext::is_visible(&self, val: vyre_foundation::region_ssa::ValueId) -> bool
+pub fn vyre_foundation::region_ssa::builder::ScopeContext::new() -> Self
+pub fn vyre_foundation::region_ssa::builder::ScopeContext::pop_region(&mut self)
+pub fn vyre_foundation::region_ssa::builder::ScopeContext::push_region(&mut self)
+pub fn vyre_foundation::region_ssa::dominance::DominanceVerifier::new() -> Self
+pub fn vyre_foundation::region_ssa::dominance::DominanceVerifier::verify_function(&mut self, func: &vyre_foundation::region_ssa::RegionFunction) -> core::result::Result<(), vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::dominance::verify_dominance(func: &vyre_foundation::region_ssa::RegionFunction) -> core::result::Result<(), vyre_foundation::region_ssa::builder::DominanceError>
+pub fn vyre_foundation::region_ssa::lower::lower_program_to_region_ssa(program: &vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::region_ssa::RegionModule, vyre_foundation::region_ssa::lower::RegionSsaError>
+pub fn vyre_foundation::region_ssa::lower::lower_region_ssa_to_program(module: &vyre_foundation::region_ssa::RegionModule) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::region_ssa::lower::RegionSsaError>
+pub fn vyre_foundation::region_ssa::lower_program_to_region_ssa(program: &vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::region_ssa::RegionModule, vyre_foundation::region_ssa::lower::RegionSsaError>
+pub fn vyre_foundation::region_ssa::lower_region_ssa_to_program(module: &vyre_foundation::region_ssa::RegionModule) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::region_ssa::lower::RegionSsaError>
+pub fn vyre_foundation::region_ssa::opt::RegionSsaConstProp::run_function(func: &vyre_foundation::region_ssa::RegionFunction) -> (vyre_foundation::region_ssa::RegionFunction, vyre_foundation::region_ssa::opt::ValueRemap)
+pub fn vyre_foundation::region_ssa::opt::RegionSsaDce::run_function(func: &vyre_foundation::region_ssa::RegionFunction) -> vyre_foundation::region_ssa::RegionFunction
+pub fn vyre_foundation::region_ssa::opt::RegionSsaOptimizer::optimize_module(module: &vyre_foundation::region_ssa::RegionModule) -> (vyre_foundation::region_ssa::RegionModule, vyre_foundation::region_ssa::opt::ValueRemap)
+pub fn vyre_foundation::region_ssa::opt::ValueRemap::insert(&mut self, old_val: vyre_foundation::region_ssa::ValueId, new_val: vyre_foundation::region_ssa::ValueId)
+pub fn vyre_foundation::region_ssa::opt::ValueRemap::is_stable(&self, val: vyre_foundation::region_ssa::ValueId) -> bool
+pub fn vyre_foundation::region_ssa::opt::ValueRemap::new() -> Self
+pub fn vyre_foundation::region_ssa::opt::ValueRemap::resolve(&self, val: vyre_foundation::region_ssa::ValueId) -> vyre_foundation::region_ssa::ValueId
+pub fn vyre_foundation::region_ssa::verify_dominance(func: &vyre_foundation::region_ssa::RegionFunction) -> core::result::Result<(), vyre_foundation::region_ssa::builder::DominanceError>
 pub fn vyre_foundation::schedule::ScheduleTransform::combine_order(&self) -> vyre_foundation::schedule::CombineOrder
 pub fn vyre_foundation::schedule::SelectedSchedule::apply(&mut self, transform: vyre_foundation::schedule::ScheduleTransform) -> core::result::Result<(), vyre_foundation::schedule::ScheduleLegalityError>
 pub fn vyre_foundation::schedule::SelectedSchedule::canonical_wire(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::schedule::ScheduleLegalityError>
@@ -3121,6 +3227,11 @@ pub mod vyre_foundation::ir::lifetime
 pub mod vyre_foundation::ir::module
 pub mod vyre_foundation::ir::ownership
 pub mod vyre_foundation::ir::quantization
+pub mod vyre_foundation::ir::region_ssa
+pub mod vyre_foundation::ir::region_ssa::builder
+pub mod vyre_foundation::ir::region_ssa::dominance
+pub mod vyre_foundation::ir::region_ssa::lower
+pub mod vyre_foundation::ir::region_ssa::opt
 pub mod vyre_foundation::ir::scalar
 pub mod vyre_foundation::ir::shape
 pub mod vyre_foundation::ir::shape::solver
@@ -3231,6 +3342,11 @@ pub mod vyre_foundation::pass_substrate::string_diagram_ir_rewrite
 pub mod vyre_foundation::pass_substrate::tensor_network_fusion_order
 pub mod vyre_foundation::perf
 pub mod vyre_foundation::program_caps
+pub mod vyre_foundation::region_ssa
+pub mod vyre_foundation::region_ssa::builder
+pub mod vyre_foundation::region_ssa::dominance
+pub mod vyre_foundation::region_ssa::lower
+pub mod vyre_foundation::region_ssa::opt
 pub mod vyre_foundation::schedule
 pub mod vyre_foundation::serial
 pub mod vyre_foundation::serial::output_set
@@ -3313,6 +3429,7 @@ pub struct vyre_foundation::execution_plan::fusion::FusionAliasingError
 pub struct vyre_foundation::execution_plan::fusion::FusionOverDispatchError
 pub struct vyre_foundation::execution_plan::fusion::FusionSelfAliasingError
 pub struct vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+pub struct vyre_foundation::extension::CatalogBundle
 pub struct vyre_foundation::extension::ExtensionAtomicOpRegistration
 pub struct vyre_foundation::extension::ExtensionBinOpRegistration
 pub struct vyre_foundation::extension::ExtensionDataTypeRegistration
@@ -3378,6 +3495,33 @@ pub struct vyre_foundation::ir::contract::NumericalContract
 pub struct vyre_foundation::ir::declarative::DeclarativeVerifier
 pub struct vyre_foundation::ir::lifetime::LifetimeEpoch
 pub struct vyre_foundation::ir::module::SemanticModule
+pub struct vyre_foundation::ir::region_ssa::Block
+pub struct vyre_foundation::ir::region_ssa::BlockArg
+pub struct vyre_foundation::ir::region_ssa::BlockId(pub u32)
+pub struct vyre_foundation::ir::region_ssa::EffectParam
+pub struct vyre_foundation::ir::region_ssa::EffectToken(pub u32)
+pub struct vyre_foundation::ir::region_ssa::GlobalDecl
+pub struct vyre_foundation::ir::region_ssa::RegionBuilder
+pub struct vyre_foundation::ir::region_ssa::RegionFunction
+pub struct vyre_foundation::ir::region_ssa::RegionId(pub u32)
+pub struct vyre_foundation::ir::region_ssa::RegionModule
+pub struct vyre_foundation::ir::region_ssa::RegionOp
+pub struct vyre_foundation::ir::region_ssa::RegionSsaConstProp
+pub struct vyre_foundation::ir::region_ssa::RegionSsaDce
+pub struct vyre_foundation::ir::region_ssa::RegionSsaOptimizer
+pub struct vyre_foundation::ir::region_ssa::ScopeContext
+pub struct vyre_foundation::ir::region_ssa::ShapeParam
+pub struct vyre_foundation::ir::region_ssa::StructuredRegion
+pub struct vyre_foundation::ir::region_ssa::TypeParam
+pub struct vyre_foundation::ir::region_ssa::ValueId(pub u32)
+pub struct vyre_foundation::ir::region_ssa::ValueRemap
+pub struct vyre_foundation::ir::region_ssa::builder::RegionBuilder
+pub struct vyre_foundation::ir::region_ssa::builder::ScopeContext
+pub struct vyre_foundation::ir::region_ssa::dominance::DominanceVerifier
+pub struct vyre_foundation::ir::region_ssa::opt::RegionSsaConstProp
+pub struct vyre_foundation::ir::region_ssa::opt::RegionSsaDce
+pub struct vyre_foundation::ir::region_ssa::opt::RegionSsaOptimizer
+pub struct vyre_foundation::ir::region_ssa::opt::ValueRemap
 pub struct vyre_foundation::ir::shape::ShapeExprId(pub u32)
 pub struct vyre_foundation::ir::shape::ShapeId(pub u32)
 pub struct vyre_foundation::ir::shape::ShapeInterner
@@ -3551,6 +3695,33 @@ pub struct vyre_foundation::perf::PerfScope
 pub struct vyre_foundation::perf::SpanGuard
 pub struct vyre_foundation::program_caps::BackendSupport
 pub struct vyre_foundation::program_caps::MissingCapability
+pub struct vyre_foundation::region_ssa::Block
+pub struct vyre_foundation::region_ssa::BlockArg
+pub struct vyre_foundation::region_ssa::BlockId(pub u32)
+pub struct vyre_foundation::region_ssa::EffectParam
+pub struct vyre_foundation::region_ssa::EffectToken(pub u32)
+pub struct vyre_foundation::region_ssa::GlobalDecl
+pub struct vyre_foundation::region_ssa::RegionBuilder
+pub struct vyre_foundation::region_ssa::RegionFunction
+pub struct vyre_foundation::region_ssa::RegionId(pub u32)
+pub struct vyre_foundation::region_ssa::RegionModule
+pub struct vyre_foundation::region_ssa::RegionOp
+pub struct vyre_foundation::region_ssa::RegionSsaConstProp
+pub struct vyre_foundation::region_ssa::RegionSsaDce
+pub struct vyre_foundation::region_ssa::RegionSsaOptimizer
+pub struct vyre_foundation::region_ssa::ScopeContext
+pub struct vyre_foundation::region_ssa::ShapeParam
+pub struct vyre_foundation::region_ssa::StructuredRegion
+pub struct vyre_foundation::region_ssa::TypeParam
+pub struct vyre_foundation::region_ssa::ValueId(pub u32)
+pub struct vyre_foundation::region_ssa::ValueRemap
+pub struct vyre_foundation::region_ssa::builder::RegionBuilder
+pub struct vyre_foundation::region_ssa::builder::ScopeContext
+pub struct vyre_foundation::region_ssa::dominance::DominanceVerifier
+pub struct vyre_foundation::region_ssa::opt::RegionSsaConstProp
+pub struct vyre_foundation::region_ssa::opt::RegionSsaDce
+pub struct vyre_foundation::region_ssa::opt::RegionSsaOptimizer
+pub struct vyre_foundation::region_ssa::opt::ValueRemap
 pub struct vyre_foundation::schedule::AxisMapping
 pub struct vyre_foundation::schedule::PipelineRoleGroup
 pub struct vyre_foundation::schedule::ScheduleAxis
@@ -3692,6 +3863,18 @@ pub type vyre_foundation::visit::ExprVisitor::Break
 pub type vyre_foundation::visit::NodeVisitor::Break
 pub use vyre_foundation::algebraic_law_registry::AlgebraicLaw
 pub use vyre_foundation::cpu_op::CpuFn
+pub use vyre_foundation::extension::DeclExtensionField
+pub use vyre_foundation::extension::DeclExtensionFieldType
+pub use vyre_foundation::extension::DeclExtensionIdentity
+pub use vyre_foundation::extension::DeclExtensionNamespace
+pub use vyre_foundation::extension::DeclExtensionNumericalContract
+pub use vyre_foundation::extension::DeclExtensionOperand
+pub use vyre_foundation::extension::DeclExtensionOperandKind
+pub use vyre_foundation::extension::DeclExtensionResourceBounds
+pub use vyre_foundation::extension::DeclExtensionSchema
+pub use vyre_foundation::extension::DeclExtensionSchemaDigest
+pub use vyre_foundation::extension::DeclExtensionSemVer
+pub use vyre_foundation::extension::DeclExtensionShapeRule
 pub use vyre_foundation::ir::AtomicOp
 pub use vyre_foundation::ir::BinOp
 pub use vyre_foundation::ir::BufferAccess
@@ -4022,10 +4205,18 @@ pub vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::arm_w
 pub vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::fix: &'static str
 pub vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::fused_workgroup: [u32; 3]
 pub vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::reason: &'static str
+pub vyre_foundation::extension::CatalogBundle::bundle_id: alloc::string::String
+pub vyre_foundation::extension::CatalogBundle::schemas: rustc_hash::FxHashMap<vyre_spec::extension::ExtensionIdentity, vyre_spec::extension::ExtensionSchema>
 pub vyre_foundation::extension::ExtensionAtomicOpRegistration::id: vyre_spec::extension::ExtensionAtomicOpId
 pub vyre_foundation::extension::ExtensionAtomicOpRegistration::vtable: &'static dyn vyre_spec::extension::ExtensionAtomicOp
 pub vyre_foundation::extension::ExtensionBinOpRegistration::id: vyre_spec::extension::ExtensionBinOpId
 pub vyre_foundation::extension::ExtensionBinOpRegistration::vtable: &'static dyn vyre_spec::extension::ExtensionBinOp
+pub vyre_foundation::extension::ExtensionCatalogError::DigestMismatch
+pub vyre_foundation::extension::ExtensionCatalogError::DigestMismatch::actual: vyre_spec::extension::ExtensionSchemaDigest
+pub vyre_foundation::extension::ExtensionCatalogError::DigestMismatch::expected: vyre_spec::extension::ExtensionSchemaDigest
+pub vyre_foundation::extension::ExtensionCatalogError::DigestMismatch::identity: vyre_spec::extension::ExtensionIdentity
+pub vyre_foundation::extension::ExtensionCatalogError::DuplicateIdentity(vyre_spec::extension::ExtensionIdentity)
+pub vyre_foundation::extension::ExtensionCatalogError::InvalidSchema(alloc::string::String, alloc::string::String)
 pub vyre_foundation::extension::ExtensionDataTypeRegistration::id: vyre_spec::extension::ExtensionDataTypeId
 pub vyre_foundation::extension::ExtensionDataTypeRegistration::vtable: &'static dyn vyre_spec::extension::ExtensionDataType
 pub vyre_foundation::extension::ExtensionUnOpRegistration::id: vyre_spec::extension::ExtensionUnOpId
@@ -4783,6 +4974,182 @@ pub vyre_foundation::ir::quantization::QuantizationMeaning::Microscaling::bits: 
 pub vyre_foundation::ir::quantization::QuantizationMeaning::Symmetric
 pub vyre_foundation::ir::quantization::QuantizationMeaning::Symmetric::bits: u8
 pub vyre_foundation::ir::quantization::QuantizationMeaning::Symmetric::scale_symbol: alloc::string::String
+pub vyre_foundation::ir::region_ssa::Block::args: alloc::vec::Vec<vyre_foundation::region_ssa::BlockArg>
+pub vyre_foundation::ir::region_ssa::Block::id: vyre_foundation::region_ssa::BlockId
+pub vyre_foundation::ir::region_ssa::Block::ops: alloc::vec::Vec<vyre_foundation::region_ssa::RegionOp>
+pub vyre_foundation::ir::region_ssa::Block::terminator: vyre_foundation::region_ssa::Terminator
+pub vyre_foundation::ir::region_ssa::BlockArg::id: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::BlockArg::name_hint: core::option::Option<alloc::string::String>
+pub vyre_foundation::ir::region_ssa::BlockArg::ty: vyre_spec::data_type::DataType
+pub vyre_foundation::ir::region_ssa::DominanceError::InvalidTerminator(alloc::string::String)
+pub vyre_foundation::ir::region_ssa::DominanceError::NoSuchBlock(vyre_foundation::region_ssa::BlockId)
+pub vyre_foundation::ir::region_ssa::DominanceError::NoSuchRegion(vyre_foundation::region_ssa::RegionId)
+pub vyre_foundation::ir::region_ssa::DominanceError::OutOfScopeValue(vyre_foundation::region_ssa::ValueId)
+pub vyre_foundation::ir::region_ssa::DominanceError::UseBeforeDef(vyre_foundation::region_ssa::ValueId)
+pub vyre_foundation::ir::region_ssa::DominanceError::YieldCountMismatch(vyre_foundation::region_ssa::RegionId, usize, usize)
+pub vyre_foundation::ir::region_ssa::EffectParam::effect_class: vyre_spec::op_contract::SideEffectClass
+pub vyre_foundation::ir::region_ssa::EffectParam::name: alloc::string::String
+pub vyre_foundation::ir::region_ssa::GlobalDecl::binding: core::option::Option<u32>
+pub vyre_foundation::ir::region_ssa::GlobalDecl::name: alloc::string::String
+pub vyre_foundation::ir::region_ssa::GlobalDecl::size_bytes: u64
+pub vyre_foundation::ir::region_ssa::GlobalDecl::ty: vyre_spec::data_type::DataType
+pub vyre_foundation::ir::region_ssa::RegionFunction::blocks: alloc::vec::Vec<vyre_foundation::region_ssa::Block>
+pub vyre_foundation::ir::region_ssa::RegionFunction::effect_params: alloc::vec::Vec<vyre_foundation::region_ssa::EffectParam>
+pub vyre_foundation::ir::region_ssa::RegionFunction::entry_block: vyre_foundation::region_ssa::BlockId
+pub vyre_foundation::ir::region_ssa::RegionFunction::name: alloc::string::String
+pub vyre_foundation::ir::region_ssa::RegionFunction::params: alloc::vec::Vec<vyre_foundation::region_ssa::BlockArg>
+pub vyre_foundation::ir::region_ssa::RegionFunction::return_types: alloc::vec::Vec<vyre_spec::data_type::DataType>
+pub vyre_foundation::ir::region_ssa::RegionFunction::shape_params: alloc::vec::Vec<vyre_foundation::region_ssa::ShapeParam>
+pub vyre_foundation::ir::region_ssa::RegionFunction::type_params: alloc::vec::Vec<vyre_foundation::region_ssa::TypeParam>
+pub vyre_foundation::ir::region_ssa::RegionKind::Condition
+pub vyre_foundation::ir::region_ssa::RegionKind::Condition::cond: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionKind::Contraction
+pub vyre_foundation::ir::region_ssa::RegionKind::Contraction::contracted_axes: alloc::vec::Vec<usize>
+pub vyre_foundation::ir::region_ssa::RegionKind::Contraction::left: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionKind::Contraction::right: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionKind::Custom
+pub vyre_foundation::ir::region_ssa::RegionKind::Custom::extension_id: vyre_spec::extension::ExtensionIdentity
+pub vyre_foundation::ir::region_ssa::RegionKind::Custom::operands: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::ir::region_ssa::RegionKind::Gather
+pub vyre_foundation::ir::region_ssa::RegionKind::Gather::axis: usize
+pub vyre_foundation::ir::region_ssa::RegionKind::Gather::indices: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionKind::Gather::source: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionKind::Map
+pub vyre_foundation::ir::region_ssa::RegionKind::Map::domain_shape: alloc::vec::Vec<u64>
+pub vyre_foundation::ir::region_ssa::RegionKind::Map::inputs: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::ir::region_ssa::RegionKind::Recurrence
+pub vyre_foundation::ir::region_ssa::RegionKind::Recurrence::init_state: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::ir::region_ssa::RegionKind::Recurrence::trip_count_bound: u64
+pub vyre_foundation::ir::region_ssa::RegionKind::Reduce
+pub vyre_foundation::ir::region_ssa::RegionKind::Reduce::axis: usize
+pub vyre_foundation::ir::region_ssa::RegionKind::Reduce::combine: vyre_spec::combine::CombineKind
+pub vyre_foundation::ir::region_ssa::RegionKind::Reduce::input: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionKind::Reduce::neutral: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionKind::Scan
+pub vyre_foundation::ir::region_ssa::RegionKind::Scan::axis: usize
+pub vyre_foundation::ir::region_ssa::RegionKind::Scan::input: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionKind::Scan::is_inclusive: bool
+pub vyre_foundation::ir::region_ssa::RegionKind::Scan::neutral: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionKind::Scatter
+pub vyre_foundation::ir::region_ssa::RegionKind::Scatter::axis: usize
+pub vyre_foundation::ir::region_ssa::RegionKind::Scatter::indices: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionKind::Scatter::target: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionKind::Scatter::updates: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionKind::Segmented
+pub vyre_foundation::ir::region_ssa::RegionKind::Segmented::input: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionKind::Segmented::segment_offsets: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionKind::Stencil
+pub vyre_foundation::ir::region_ssa::RegionKind::Stencil::input: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionKind::Stencil::strides: alloc::vec::Vec<u64>
+pub vyre_foundation::ir::region_ssa::RegionKind::Stencil::window_shape: alloc::vec::Vec<u64>
+pub vyre_foundation::ir::region_ssa::RegionModule::catalog: core::option::Option<vyre_foundation::extension::CatalogBundle>
+pub vyre_foundation::ir::region_ssa::RegionModule::functions: alloc::vec::Vec<vyre_foundation::region_ssa::RegionFunction>
+pub vyre_foundation::ir::region_ssa::RegionModule::globals: alloc::vec::Vec<vyre_foundation::region_ssa::GlobalDecl>
+pub vyre_foundation::ir::region_ssa::RegionModule::name: alloc::string::String
+pub vyre_foundation::ir::region_ssa::RegionOp::id: u32
+pub vyre_foundation::ir::region_ssa::RegionOp::kind: vyre_foundation::region_ssa::RegionOpKind
+pub vyre_foundation::ir::region_ssa::RegionOp::location: core::option::Option<alloc::string::String>
+pub vyre_foundation::ir::region_ssa::RegionOp::results: alloc::vec::Vec<vyre_foundation::region_ssa::BlockArg>
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Binary
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Binary::left: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Binary::op: vyre_spec::bin_op::BinOp
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Binary::right: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionOpKind::BufferAlloc
+pub vyre_foundation::ir::region_ssa::RegionOpKind::BufferAlloc::element_type: vyre_spec::data_type::DataType
+pub vyre_foundation::ir::region_ssa::RegionOpKind::BufferAlloc::name: alloc::string::String
+pub vyre_foundation::ir::region_ssa::RegionOpKind::BufferAlloc::size_bytes: u64
+pub vyre_foundation::ir::region_ssa::RegionOpKind::BufferLoad
+pub vyre_foundation::ir::region_ssa::RegionOpKind::BufferLoad::buffer: alloc::string::String
+pub vyre_foundation::ir::region_ssa::RegionOpKind::BufferLoad::effect_in: core::option::Option<vyre_foundation::region_ssa::EffectToken>
+pub vyre_foundation::ir::region_ssa::RegionOpKind::BufferLoad::index: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionOpKind::BufferStore
+pub vyre_foundation::ir::region_ssa::RegionOpKind::BufferStore::buffer: alloc::string::String
+pub vyre_foundation::ir::region_ssa::RegionOpKind::BufferStore::effect_in: core::option::Option<vyre_foundation::region_ssa::EffectToken>
+pub vyre_foundation::ir::region_ssa::RegionOpKind::BufferStore::index: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionOpKind::BufferStore::value: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Call
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Call::args: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Call::callee: alloc::string::String
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Cast
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Cast::input: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Cast::target_type: vyre_spec::data_type::DataType
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Constant(vyre_foundation::region_ssa::ScalarLiteral)
+pub vyre_foundation::ir::region_ssa::RegionOpKind::CoordinateQuery
+pub vyre_foundation::ir::region_ssa::RegionOpKind::CoordinateQuery::name: alloc::string::String
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Custom
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Custom::extension_id: vyre_spec::extension::ExtensionIdentity
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Custom::operands: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Region(alloc::boxed::Box<vyre_foundation::region_ssa::StructuredRegion>)
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Ternary
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Ternary::a: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Ternary::b: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Ternary::c: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Ternary::op: vyre_spec::ternary_op::TernaryOp
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Unary
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Unary::input: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionOpKind::Unary::op: vyre_spec::un_op::UnOp
+pub vyre_foundation::ir::region_ssa::RegionOpKind::View
+pub vyre_foundation::ir::region_ssa::RegionOpKind::View::input: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::RegionOpKind::View::view: vyre_foundation::region_ssa::ViewOp
+pub vyre_foundation::ir::region_ssa::RegionSsaError::Dominance(vyre_foundation::region_ssa::builder::DominanceError)
+pub vyre_foundation::ir::region_ssa::RegionSsaError::UnboundVariable(alloc::string::String)
+pub vyre_foundation::ir::region_ssa::RegionSsaError::Unsupported(alloc::string::String)
+pub vyre_foundation::ir::region_ssa::ScalarLiteral::Bool(bool)
+pub vyre_foundation::ir::region_ssa::ScalarLiteral::F32(f32)
+pub vyre_foundation::ir::region_ssa::ScalarLiteral::F64(f64)
+pub vyre_foundation::ir::region_ssa::ScalarLiteral::I32(i32)
+pub vyre_foundation::ir::region_ssa::ScalarLiteral::I64(i64)
+pub vyre_foundation::ir::region_ssa::ScalarLiteral::U32(u32)
+pub vyre_foundation::ir::region_ssa::ScalarLiteral::U64(u64)
+pub vyre_foundation::ir::region_ssa::ShapeParam::name: alloc::string::String
+pub vyre_foundation::ir::region_ssa::ShapeParam::rank: core::option::Option<usize>
+pub vyre_foundation::ir::region_ssa::StructuredRegion::blocks: alloc::vec::Vec<vyre_foundation::region_ssa::Block>
+pub vyre_foundation::ir::region_ssa::StructuredRegion::entry_args: alloc::vec::Vec<vyre_foundation::region_ssa::BlockArg>
+pub vyre_foundation::ir::region_ssa::StructuredRegion::id: vyre_foundation::region_ssa::RegionId
+pub vyre_foundation::ir::region_ssa::StructuredRegion::kind: vyre_foundation::region_ssa::RegionKind
+pub vyre_foundation::ir::region_ssa::StructuredRegion::yielded_types: alloc::vec::Vec<vyre_spec::data_type::DataType>
+pub vyre_foundation::ir::region_ssa::Terminator::Branch
+pub vyre_foundation::ir::region_ssa::Terminator::Branch::args: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::ir::region_ssa::Terminator::Branch::target: vyre_foundation::region_ssa::BlockId
+pub vyre_foundation::ir::region_ssa::Terminator::CondBranch
+pub vyre_foundation::ir::region_ssa::Terminator::CondBranch::cond: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::ir::region_ssa::Terminator::CondBranch::false_args: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::ir::region_ssa::Terminator::CondBranch::false_dest: vyre_foundation::region_ssa::BlockId
+pub vyre_foundation::ir::region_ssa::Terminator::CondBranch::true_args: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::ir::region_ssa::Terminator::CondBranch::true_dest: vyre_foundation::region_ssa::BlockId
+pub vyre_foundation::ir::region_ssa::Terminator::Return
+pub vyre_foundation::ir::region_ssa::Terminator::Return::values: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::ir::region_ssa::Terminator::Trap
+pub vyre_foundation::ir::region_ssa::Terminator::Trap::code: u32
+pub vyre_foundation::ir::region_ssa::Terminator::Trap::message: alloc::string::String
+pub vyre_foundation::ir::region_ssa::Terminator::Unreachable
+pub vyre_foundation::ir::region_ssa::Terminator::Yield
+pub vyre_foundation::ir::region_ssa::Terminator::Yield::values: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::ir::region_ssa::TypeParam::bounds: alloc::vec::Vec<alloc::string::String>
+pub vyre_foundation::ir::region_ssa::TypeParam::name: alloc::string::String
+pub vyre_foundation::ir::region_ssa::ViewOp::Broadcast
+pub vyre_foundation::ir::region_ssa::ViewOp::Broadcast::target_shape: alloc::vec::Vec<u64>
+pub vyre_foundation::ir::region_ssa::ViewOp::Pad
+pub vyre_foundation::ir::region_ssa::ViewOp::Pad::high: alloc::vec::Vec<u64>
+pub vyre_foundation::ir::region_ssa::ViewOp::Pad::low: alloc::vec::Vec<u64>
+pub vyre_foundation::ir::region_ssa::ViewOp::Permute
+pub vyre_foundation::ir::region_ssa::ViewOp::Permute::axes: alloc::vec::Vec<usize>
+pub vyre_foundation::ir::region_ssa::ViewOp::Reshape
+pub vyre_foundation::ir::region_ssa::ViewOp::Reshape::new_shape: alloc::vec::Vec<u64>
+pub vyre_foundation::ir::region_ssa::ViewOp::Slice
+pub vyre_foundation::ir::region_ssa::ViewOp::Slice::axis: usize
+pub vyre_foundation::ir::region_ssa::ViewOp::Slice::length: u64
+pub vyre_foundation::ir::region_ssa::ViewOp::Slice::start: u64
+pub vyre_foundation::ir::region_ssa::ViewOp::Slice::stride: u64
+pub vyre_foundation::ir::region_ssa::builder::DominanceError::InvalidTerminator(alloc::string::String)
+pub vyre_foundation::ir::region_ssa::builder::DominanceError::NoSuchBlock(vyre_foundation::region_ssa::BlockId)
+pub vyre_foundation::ir::region_ssa::builder::DominanceError::NoSuchRegion(vyre_foundation::region_ssa::RegionId)
+pub vyre_foundation::ir::region_ssa::builder::DominanceError::OutOfScopeValue(vyre_foundation::region_ssa::ValueId)
+pub vyre_foundation::ir::region_ssa::builder::DominanceError::UseBeforeDef(vyre_foundation::region_ssa::ValueId)
+pub vyre_foundation::ir::region_ssa::builder::DominanceError::YieldCountMismatch(vyre_foundation::region_ssa::RegionId, usize, usize)
+pub vyre_foundation::ir::region_ssa::lower::RegionSsaError::Dominance(vyre_foundation::region_ssa::builder::DominanceError)
+pub vyre_foundation::ir::region_ssa::lower::RegionSsaError::UnboundVariable(alloc::string::String)
+pub vyre_foundation::ir::region_ssa::lower::RegionSsaError::Unsupported(alloc::string::String)
 pub vyre_foundation::ir::scalar::ScalarType::Bool
 pub vyre_foundation::ir::scalar::ScalarType::Complex
 pub vyre_foundation::ir::scalar::ScalarType::Complex::bits: u16
@@ -5931,6 +6298,182 @@ pub vyre_foundation::program_caps::RequiredCapabilities::subgroup_ops: bool
 pub vyre_foundation::program_caps::RequiredCapabilities::tensor_ops: bool
 pub vyre_foundation::program_caps::RequiredCapabilities::transport_collectives: usize
 pub vyre_foundation::program_caps::RequiredCapabilities::trap: bool
+pub vyre_foundation::region_ssa::Block::args: alloc::vec::Vec<vyre_foundation::region_ssa::BlockArg>
+pub vyre_foundation::region_ssa::Block::id: vyre_foundation::region_ssa::BlockId
+pub vyre_foundation::region_ssa::Block::ops: alloc::vec::Vec<vyre_foundation::region_ssa::RegionOp>
+pub vyre_foundation::region_ssa::Block::terminator: vyre_foundation::region_ssa::Terminator
+pub vyre_foundation::region_ssa::BlockArg::id: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::BlockArg::name_hint: core::option::Option<alloc::string::String>
+pub vyre_foundation::region_ssa::BlockArg::ty: vyre_spec::data_type::DataType
+pub vyre_foundation::region_ssa::DominanceError::InvalidTerminator(alloc::string::String)
+pub vyre_foundation::region_ssa::DominanceError::NoSuchBlock(vyre_foundation::region_ssa::BlockId)
+pub vyre_foundation::region_ssa::DominanceError::NoSuchRegion(vyre_foundation::region_ssa::RegionId)
+pub vyre_foundation::region_ssa::DominanceError::OutOfScopeValue(vyre_foundation::region_ssa::ValueId)
+pub vyre_foundation::region_ssa::DominanceError::UseBeforeDef(vyre_foundation::region_ssa::ValueId)
+pub vyre_foundation::region_ssa::DominanceError::YieldCountMismatch(vyre_foundation::region_ssa::RegionId, usize, usize)
+pub vyre_foundation::region_ssa::EffectParam::effect_class: vyre_spec::op_contract::SideEffectClass
+pub vyre_foundation::region_ssa::EffectParam::name: alloc::string::String
+pub vyre_foundation::region_ssa::GlobalDecl::binding: core::option::Option<u32>
+pub vyre_foundation::region_ssa::GlobalDecl::name: alloc::string::String
+pub vyre_foundation::region_ssa::GlobalDecl::size_bytes: u64
+pub vyre_foundation::region_ssa::GlobalDecl::ty: vyre_spec::data_type::DataType
+pub vyre_foundation::region_ssa::RegionFunction::blocks: alloc::vec::Vec<vyre_foundation::region_ssa::Block>
+pub vyre_foundation::region_ssa::RegionFunction::effect_params: alloc::vec::Vec<vyre_foundation::region_ssa::EffectParam>
+pub vyre_foundation::region_ssa::RegionFunction::entry_block: vyre_foundation::region_ssa::BlockId
+pub vyre_foundation::region_ssa::RegionFunction::name: alloc::string::String
+pub vyre_foundation::region_ssa::RegionFunction::params: alloc::vec::Vec<vyre_foundation::region_ssa::BlockArg>
+pub vyre_foundation::region_ssa::RegionFunction::return_types: alloc::vec::Vec<vyre_spec::data_type::DataType>
+pub vyre_foundation::region_ssa::RegionFunction::shape_params: alloc::vec::Vec<vyre_foundation::region_ssa::ShapeParam>
+pub vyre_foundation::region_ssa::RegionFunction::type_params: alloc::vec::Vec<vyre_foundation::region_ssa::TypeParam>
+pub vyre_foundation::region_ssa::RegionKind::Condition
+pub vyre_foundation::region_ssa::RegionKind::Condition::cond: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionKind::Contraction
+pub vyre_foundation::region_ssa::RegionKind::Contraction::contracted_axes: alloc::vec::Vec<usize>
+pub vyre_foundation::region_ssa::RegionKind::Contraction::left: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionKind::Contraction::right: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionKind::Custom
+pub vyre_foundation::region_ssa::RegionKind::Custom::extension_id: vyre_spec::extension::ExtensionIdentity
+pub vyre_foundation::region_ssa::RegionKind::Custom::operands: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::region_ssa::RegionKind::Gather
+pub vyre_foundation::region_ssa::RegionKind::Gather::axis: usize
+pub vyre_foundation::region_ssa::RegionKind::Gather::indices: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionKind::Gather::source: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionKind::Map
+pub vyre_foundation::region_ssa::RegionKind::Map::domain_shape: alloc::vec::Vec<u64>
+pub vyre_foundation::region_ssa::RegionKind::Map::inputs: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::region_ssa::RegionKind::Recurrence
+pub vyre_foundation::region_ssa::RegionKind::Recurrence::init_state: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::region_ssa::RegionKind::Recurrence::trip_count_bound: u64
+pub vyre_foundation::region_ssa::RegionKind::Reduce
+pub vyre_foundation::region_ssa::RegionKind::Reduce::axis: usize
+pub vyre_foundation::region_ssa::RegionKind::Reduce::combine: vyre_spec::combine::CombineKind
+pub vyre_foundation::region_ssa::RegionKind::Reduce::input: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionKind::Reduce::neutral: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionKind::Scan
+pub vyre_foundation::region_ssa::RegionKind::Scan::axis: usize
+pub vyre_foundation::region_ssa::RegionKind::Scan::input: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionKind::Scan::is_inclusive: bool
+pub vyre_foundation::region_ssa::RegionKind::Scan::neutral: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionKind::Scatter
+pub vyre_foundation::region_ssa::RegionKind::Scatter::axis: usize
+pub vyre_foundation::region_ssa::RegionKind::Scatter::indices: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionKind::Scatter::target: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionKind::Scatter::updates: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionKind::Segmented
+pub vyre_foundation::region_ssa::RegionKind::Segmented::input: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionKind::Segmented::segment_offsets: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionKind::Stencil
+pub vyre_foundation::region_ssa::RegionKind::Stencil::input: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionKind::Stencil::strides: alloc::vec::Vec<u64>
+pub vyre_foundation::region_ssa::RegionKind::Stencil::window_shape: alloc::vec::Vec<u64>
+pub vyre_foundation::region_ssa::RegionModule::catalog: core::option::Option<vyre_foundation::extension::CatalogBundle>
+pub vyre_foundation::region_ssa::RegionModule::functions: alloc::vec::Vec<vyre_foundation::region_ssa::RegionFunction>
+pub vyre_foundation::region_ssa::RegionModule::globals: alloc::vec::Vec<vyre_foundation::region_ssa::GlobalDecl>
+pub vyre_foundation::region_ssa::RegionModule::name: alloc::string::String
+pub vyre_foundation::region_ssa::RegionOp::id: u32
+pub vyre_foundation::region_ssa::RegionOp::kind: vyre_foundation::region_ssa::RegionOpKind
+pub vyre_foundation::region_ssa::RegionOp::location: core::option::Option<alloc::string::String>
+pub vyre_foundation::region_ssa::RegionOp::results: alloc::vec::Vec<vyre_foundation::region_ssa::BlockArg>
+pub vyre_foundation::region_ssa::RegionOpKind::Binary
+pub vyre_foundation::region_ssa::RegionOpKind::Binary::left: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionOpKind::Binary::op: vyre_spec::bin_op::BinOp
+pub vyre_foundation::region_ssa::RegionOpKind::Binary::right: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionOpKind::BufferAlloc
+pub vyre_foundation::region_ssa::RegionOpKind::BufferAlloc::element_type: vyre_spec::data_type::DataType
+pub vyre_foundation::region_ssa::RegionOpKind::BufferAlloc::name: alloc::string::String
+pub vyre_foundation::region_ssa::RegionOpKind::BufferAlloc::size_bytes: u64
+pub vyre_foundation::region_ssa::RegionOpKind::BufferLoad
+pub vyre_foundation::region_ssa::RegionOpKind::BufferLoad::buffer: alloc::string::String
+pub vyre_foundation::region_ssa::RegionOpKind::BufferLoad::effect_in: core::option::Option<vyre_foundation::region_ssa::EffectToken>
+pub vyre_foundation::region_ssa::RegionOpKind::BufferLoad::index: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionOpKind::BufferStore
+pub vyre_foundation::region_ssa::RegionOpKind::BufferStore::buffer: alloc::string::String
+pub vyre_foundation::region_ssa::RegionOpKind::BufferStore::effect_in: core::option::Option<vyre_foundation::region_ssa::EffectToken>
+pub vyre_foundation::region_ssa::RegionOpKind::BufferStore::index: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionOpKind::BufferStore::value: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionOpKind::Call
+pub vyre_foundation::region_ssa::RegionOpKind::Call::args: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::region_ssa::RegionOpKind::Call::callee: alloc::string::String
+pub vyre_foundation::region_ssa::RegionOpKind::Cast
+pub vyre_foundation::region_ssa::RegionOpKind::Cast::input: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionOpKind::Cast::target_type: vyre_spec::data_type::DataType
+pub vyre_foundation::region_ssa::RegionOpKind::Constant(vyre_foundation::region_ssa::ScalarLiteral)
+pub vyre_foundation::region_ssa::RegionOpKind::CoordinateQuery
+pub vyre_foundation::region_ssa::RegionOpKind::CoordinateQuery::name: alloc::string::String
+pub vyre_foundation::region_ssa::RegionOpKind::Custom
+pub vyre_foundation::region_ssa::RegionOpKind::Custom::extension_id: vyre_spec::extension::ExtensionIdentity
+pub vyre_foundation::region_ssa::RegionOpKind::Custom::operands: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::region_ssa::RegionOpKind::Region(alloc::boxed::Box<vyre_foundation::region_ssa::StructuredRegion>)
+pub vyre_foundation::region_ssa::RegionOpKind::Ternary
+pub vyre_foundation::region_ssa::RegionOpKind::Ternary::a: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionOpKind::Ternary::b: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionOpKind::Ternary::c: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionOpKind::Ternary::op: vyre_spec::ternary_op::TernaryOp
+pub vyre_foundation::region_ssa::RegionOpKind::Unary
+pub vyre_foundation::region_ssa::RegionOpKind::Unary::input: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionOpKind::Unary::op: vyre_spec::un_op::UnOp
+pub vyre_foundation::region_ssa::RegionOpKind::View
+pub vyre_foundation::region_ssa::RegionOpKind::View::input: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::RegionOpKind::View::view: vyre_foundation::region_ssa::ViewOp
+pub vyre_foundation::region_ssa::RegionSsaError::Dominance(vyre_foundation::region_ssa::builder::DominanceError)
+pub vyre_foundation::region_ssa::RegionSsaError::UnboundVariable(alloc::string::String)
+pub vyre_foundation::region_ssa::RegionSsaError::Unsupported(alloc::string::String)
+pub vyre_foundation::region_ssa::ScalarLiteral::Bool(bool)
+pub vyre_foundation::region_ssa::ScalarLiteral::F32(f32)
+pub vyre_foundation::region_ssa::ScalarLiteral::F64(f64)
+pub vyre_foundation::region_ssa::ScalarLiteral::I32(i32)
+pub vyre_foundation::region_ssa::ScalarLiteral::I64(i64)
+pub vyre_foundation::region_ssa::ScalarLiteral::U32(u32)
+pub vyre_foundation::region_ssa::ScalarLiteral::U64(u64)
+pub vyre_foundation::region_ssa::ShapeParam::name: alloc::string::String
+pub vyre_foundation::region_ssa::ShapeParam::rank: core::option::Option<usize>
+pub vyre_foundation::region_ssa::StructuredRegion::blocks: alloc::vec::Vec<vyre_foundation::region_ssa::Block>
+pub vyre_foundation::region_ssa::StructuredRegion::entry_args: alloc::vec::Vec<vyre_foundation::region_ssa::BlockArg>
+pub vyre_foundation::region_ssa::StructuredRegion::id: vyre_foundation::region_ssa::RegionId
+pub vyre_foundation::region_ssa::StructuredRegion::kind: vyre_foundation::region_ssa::RegionKind
+pub vyre_foundation::region_ssa::StructuredRegion::yielded_types: alloc::vec::Vec<vyre_spec::data_type::DataType>
+pub vyre_foundation::region_ssa::Terminator::Branch
+pub vyre_foundation::region_ssa::Terminator::Branch::args: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::region_ssa::Terminator::Branch::target: vyre_foundation::region_ssa::BlockId
+pub vyre_foundation::region_ssa::Terminator::CondBranch
+pub vyre_foundation::region_ssa::Terminator::CondBranch::cond: vyre_foundation::region_ssa::ValueId
+pub vyre_foundation::region_ssa::Terminator::CondBranch::false_args: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::region_ssa::Terminator::CondBranch::false_dest: vyre_foundation::region_ssa::BlockId
+pub vyre_foundation::region_ssa::Terminator::CondBranch::true_args: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::region_ssa::Terminator::CondBranch::true_dest: vyre_foundation::region_ssa::BlockId
+pub vyre_foundation::region_ssa::Terminator::Return
+pub vyre_foundation::region_ssa::Terminator::Return::values: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::region_ssa::Terminator::Trap
+pub vyre_foundation::region_ssa::Terminator::Trap::code: u32
+pub vyre_foundation::region_ssa::Terminator::Trap::message: alloc::string::String
+pub vyre_foundation::region_ssa::Terminator::Unreachable
+pub vyre_foundation::region_ssa::Terminator::Yield
+pub vyre_foundation::region_ssa::Terminator::Yield::values: alloc::vec::Vec<vyre_foundation::region_ssa::ValueId>
+pub vyre_foundation::region_ssa::TypeParam::bounds: alloc::vec::Vec<alloc::string::String>
+pub vyre_foundation::region_ssa::TypeParam::name: alloc::string::String
+pub vyre_foundation::region_ssa::ViewOp::Broadcast
+pub vyre_foundation::region_ssa::ViewOp::Broadcast::target_shape: alloc::vec::Vec<u64>
+pub vyre_foundation::region_ssa::ViewOp::Pad
+pub vyre_foundation::region_ssa::ViewOp::Pad::high: alloc::vec::Vec<u64>
+pub vyre_foundation::region_ssa::ViewOp::Pad::low: alloc::vec::Vec<u64>
+pub vyre_foundation::region_ssa::ViewOp::Permute
+pub vyre_foundation::region_ssa::ViewOp::Permute::axes: alloc::vec::Vec<usize>
+pub vyre_foundation::region_ssa::ViewOp::Reshape
+pub vyre_foundation::region_ssa::ViewOp::Reshape::new_shape: alloc::vec::Vec<u64>
+pub vyre_foundation::region_ssa::ViewOp::Slice
+pub vyre_foundation::region_ssa::ViewOp::Slice::axis: usize
+pub vyre_foundation::region_ssa::ViewOp::Slice::length: u64
+pub vyre_foundation::region_ssa::ViewOp::Slice::start: u64
+pub vyre_foundation::region_ssa::ViewOp::Slice::stride: u64
+pub vyre_foundation::region_ssa::builder::DominanceError::InvalidTerminator(alloc::string::String)
+pub vyre_foundation::region_ssa::builder::DominanceError::NoSuchBlock(vyre_foundation::region_ssa::BlockId)
+pub vyre_foundation::region_ssa::builder::DominanceError::NoSuchRegion(vyre_foundation::region_ssa::RegionId)
+pub vyre_foundation::region_ssa::builder::DominanceError::OutOfScopeValue(vyre_foundation::region_ssa::ValueId)
+pub vyre_foundation::region_ssa::builder::DominanceError::UseBeforeDef(vyre_foundation::region_ssa::ValueId)
+pub vyre_foundation::region_ssa::builder::DominanceError::YieldCountMismatch(vyre_foundation::region_ssa::RegionId, usize, usize)
+pub vyre_foundation::region_ssa::lower::RegionSsaError::Dominance(vyre_foundation::region_ssa::builder::DominanceError)
+pub vyre_foundation::region_ssa::lower::RegionSsaError::UnboundVariable(alloc::string::String)
+pub vyre_foundation::region_ssa::lower::RegionSsaError::Unsupported(alloc::string::String)
 pub vyre_foundation::schedule::AxisMapping::axis: vyre_foundation::schedule::ScheduleAxis
 pub vyre_foundation::schedule::AxisMapping::level: vyre_foundation::schedule::MappingLevel
 pub vyre_foundation::schedule::CombineOrder::Changed

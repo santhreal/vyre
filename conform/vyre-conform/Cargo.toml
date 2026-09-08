@@ -20,19 +20,25 @@ workspace = true
 [lib]
 path = "src/lib.rs"
 
-# The whole suite compares the reference path against cuda and wgpu, so it needs
-# the concrete driver crates the `gpu` feature pulls in. Declared here rather
-# than wrapped in a file-level `cfg`: cargo then skips the target when the
-# feature is off, which is what `--no-default-features --all-targets` needs from
-# any consumer, instead of compiling 606 lines down to an empty test binary.
+# The suite compares the reference path against every concrete driver, so it
+# needs the driver crates the `gpu` feature pulls in. Declared here rather than
+# wrapped in a file-level `cfg`: cargo then skips the target when the feature is
+# off, which is what `--no-default-features --all-targets` needs from any
+# consumer, instead of compiling 606 lines down to an empty test binary.
+#
+# spirv is linked for the same reason as the rest. Without it `--backend spirv`
+# resolved to no registration and the run wrote one `unknown backend` row per
+# op: 349 rows that read as a judged backend with 349 defects.
 
 [features]
 default = ["gpu"]
 gpu = [
     "dep:vyre-driver-cuda",
+    "dep:vyre-driver-spirv",
     "dep:vyre-driver-wgpu",
     "vyre-registry-link/cuda",
     "vyre-registry-link/metal",
+    "vyre-registry-link/spirv",
     "vyre-registry-link/wgpu",
 ]
 # A test that drives the built binary through a real device is compiled only
@@ -56,6 +62,7 @@ vyre = { workspace = true }
 vyre-conform-spec = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-driver-cuda = { workspace = true, optional = true }
+vyre-driver-spirv = { workspace = true, optional = true }
 vyre-driver-wgpu = { workspace = true, optional = true }
 vyre-foundation = { workspace = true }
 vyre-libs = { workspace = true, features = ["full"] }
