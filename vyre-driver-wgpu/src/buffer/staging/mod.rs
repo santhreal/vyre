@@ -44,12 +44,17 @@ struct StagingBufferPoolInner {
 
 impl StagingBufferPool {
     fn lock_inner(&self) -> MutexGuard<'_, StagingBufferPoolInner> {
-        self.inner.lock().unwrap_or_else(|error| {
-            tracing::error!(
-                "Vyre WGPU staging buffer pool lock was poisoned: {error}. Fix: discard the pool after a panic; continuing with recovered state."
-            );
-            error.into_inner()
-        })
+        match self.inner.lock() {
+            Ok(guard) => guard,
+            Err(error) => {
+                tracing::error!(
+                    "Vyre WGPU staging buffer pool lock was poisoned: {error}. Fix: discard the pool after a panic; continuing with clean state."
+                );
+                let mut inner = error.into_inner();
+                inner.free.clear();
+                inner
+            }
+        }
     }
 
     /// Create an empty staging buffer pool.
@@ -187,8 +192,9 @@ mod tests {
         .join();
 
         std::panic::catch_unwind(|| {
-            let _ = pool.stats();
+            let inner = pool.lock_inner();
+            assert!(inner.free.is_empty(), "recovered staging pool free list must be empty after poison");
         })
-        .expect("Fix: poisoned staging pool must recover so GPU readback pooling does not abort");
+        .expect("Fix: poisoned staging pool must recover cleanly so GPU readback pooling does not abort");
     }
 }
