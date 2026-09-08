@@ -5,6 +5,10 @@
 //! binary for the whole set. A test that cannot share a process stays its own
 //! target and states why in `xtask/test-harness-isolation.toml`.
 
+/// Shared fixture module from `tests/float_lowering/mod.rs`.
+#[path = "float_lowering/mod.rs"]
+pub mod float_lowering;
+
 /// Integration tests from `tests/level_stage_closure.rs`.
 #[path = "level_stage_closure.rs"]
 pub mod level_stage_closure;
