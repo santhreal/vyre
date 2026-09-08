@@ -71,9 +71,12 @@ pub struct BankAccessSite {
     pub binding_slot: u32,
     /// Detected conflict pattern.
     pub conflict: BankConflictKind,
+    /// Stride between consecutive threads in elements, when proven.
+    pub stride_elements: Option<u32>,
 }
 
-/// Bank-conflict analysis for one kernel.
+/// Classified shared-memory access sites for one kernel against a stated bank
+/// geometry.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BankConflictReport {
     /// Stable kernel identifier.
@@ -203,18 +206,21 @@ mod tests {
                     kind: AccessKind::Load,
                     binding_slot: 0,
                     conflict: BankConflictKind::NoConflict,
+                    stride_elements: Some(1),
                 },
                 BankAccessSite {
                     op_index: 1,
                     kind: AccessKind::Load,
                     binding_slot: 0,
                     conflict: BankConflictKind::Conflict { way_count: 4 },
+                    stride_elements: Some(4),
                 },
                 BankAccessSite {
                     op_index: 2,
                     kind: AccessKind::Store,
                     binding_slot: 1,
                     conflict: BankConflictKind::Conflict { way_count: 32 },
+                    stride_elements: Some(32),
                 },
             ],
         };

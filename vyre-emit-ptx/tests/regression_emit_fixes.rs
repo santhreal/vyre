@@ -282,3 +282,58 @@ fn a_tile_that_is_not_a_whole_number_of_rows_is_not_padded() {
          for. PTX emitted:\n{ptx}"
     );
 }
+
+/// A real lowered program with a strided shared tile lowers and emits PTX
+/// with the permuted address computation and grown shared memory declaration.
+#[test]
+fn a_real_lowered_conflicting_program_emits_permuted_ptx() {
+    use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, Expr, Node, Program};
+    let buffers = vec![
+        BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32),
+        BufferDecl::workgroup("tile", 1024, DataType::U32),
+    ];
+    let tid = Expr::InvocationId { axis: 0 };
+    let stride_32 = Expr::from(32_u32);
+    let index = Expr::BinOp {
+        op: BinOp::Mul,
+        left: Box::new(tid.clone()),
+        right: Box::new(stride_32),
+    };
+    let nodes = vec![
+        Node::Store {
+            buffer: "tile".into(),
+            index: index.clone(),
+            value: tid.clone(),
+        },
+        Node::Barrier {
+            ordering: MemoryOrdering::SeqCst,
+        },
+        Node::Store {
+            buffer: "out".into(),
+            index: tid,
+            value: Expr::Load {
+                buffer: "tile".into(),
+                index,
+                data_type: DataType::U32,
+            },
+        },
+    ];
+    let program = Program::wrapped(buffers, [32, 1, 1], nodes);
+    let descriptor = vyre_lower::lower(&program).expect("program lowers to descriptor");
+    let ptx = emit(&descriptor, "real lowered conflicting program");
+
+    assert!(
+        ptx.contains(".shared .align 4 .b8 shared_buf_"),
+        "PTX must declare shared memory. Emitted PTX:\n{ptx}"
+    );
+    assert!(
+        ptx.contains("[4224]"),
+        "the 1024-element U32 tile is grown to 4224 bytes under +1 padding per 32-element row. Emitted PTX:\n{ptx}"
+    );
+    for instruction in ["shr.u32", "and.b32", "mul.lo.u32", "add.u32"] {
+        assert!(
+            ptx.contains(instruction),
+            "the permuted address calculation emits `{instruction}`. Emitted PTX:\n{ptx}"
+        );
+    }
+}

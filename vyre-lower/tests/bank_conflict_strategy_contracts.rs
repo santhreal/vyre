@@ -7,7 +7,11 @@
 //! - Non-promising of universal zero conflicts (honestly reporting remaining conflicts).
 
 use std::num::NonZeroU32;
-use vyre_foundation::ir::{AtomicOp, BinOp, DataType, MemoryOrdering};
+
+use vyre_foundation::ir::{
+    AtomicOp, BinOp, BufferAccess, BufferDecl, DataType, Expr, MemoryOrdering, Node, Program,
+};
+use vyre_lower::lower;
 use vyre_lower::analyses::{
     derive_shared_access_profiles, evaluate_mitigation_candidate, select_bank_conflict_strategy,
     AccessPhase, AccessPhaseProfile, BankConflictMitigation, ConflictSeverity,
@@ -281,4 +285,101 @@ fn the_derivation_states_shared_bindings_only() {
         .map(|profile| profile.binding_slot)
         .collect();
     assert_eq!(slots, vec![1]);
+}
+
+/// Build a real `Program` with a shared tile and strided load/store.
+fn real_lowered_strided_tile_program() -> Program {
+    let buffers = vec![
+        BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32),
+        BufferDecl::workgroup("tile", 1024, DataType::U32),
+    ];
+    let tid = Expr::InvocationId { axis: 0 };
+    let stride_32 = Expr::from(32_u32);
+    let index = Expr::BinOp {
+        op: BinOp::Mul,
+        left: Box::new(tid.clone()),
+        right: Box::new(stride_32),
+    };
+    let nodes = vec![
+        Node::Store {
+            buffer: "tile".into(),
+            index: index.clone(),
+            value: tid.clone(),
+        },
+        Node::Barrier {
+            ordering: MemoryOrdering::SeqCst,
+        },
+        Node::Store {
+            buffer: "out".into(),
+            index: tid,
+            value: Expr::Load {
+                buffer: "tile".into(),
+                index,
+                data_type: DataType::U32,
+            },
+        },
+    ];
+    Program::wrapped(buffers, [32, 1, 1], nodes)
+}
+
+/// The neutral derivation produces per-phase strides from a real lowered
+/// descriptor produced by `lower(&program)`.
+#[test]
+fn the_derivation_produces_per_phase_strides_from_a_real_lowered_descriptor() {
+    let program = real_lowered_strided_tile_program();
+    let descriptor = lower(&program).expect("a strided tile program lowers to a descriptor");
+
+    let banks = NonZeroU32::new(32).expect("32 is not zero");
+    let profiles = derive_shared_access_profiles(&descriptor, banks);
+    assert_eq!(profiles.len(), 1, "exactly one shared binding profile");
+
+    let profile = &profiles[0];
+    assert_eq!(profile.element_count, 1024);
+    assert_eq!(profile.blocked_by, None);
+
+    let phases: Vec<(AccessPhase, u32, u32)> = profile
+        .phases
+        .iter()
+        .map(|phase| (phase.phase, phase.stride_elements, phase.active_threads))
+        .collect();
+    assert_eq!(
+        phases,
+        vec![
+            (AccessPhase::LoadStage, 32, 32),
+            (AccessPhase::ComputeRead, 32, 32),
+        ],
+        "the lowered descriptor derives a staging store and compute read both at stride 32"
+    );
+}
+
+/// A descriptor whose access pattern the analysis classifies as conflicting
+/// yields a mitigation strategy other than `NoRewrite`.
+#[test]
+fn conflicting_access_pattern_yields_strategy_other_than_no_rewrite() {
+    let program = real_lowered_strided_tile_program();
+    let descriptor = lower(&program).expect("a strided tile program lowers to a descriptor");
+
+    let banks = NonZeroU32::new(32).expect("32 is not zero");
+    let report = vyre_lower::analyses::analyze_bank_conflict(&descriptor, banks);
+    assert!(
+        report.critical_count() > 0,
+        "the strided access pattern is classified as conflicting"
+    );
+
+    let profiles = derive_shared_access_profiles(&descriptor, banks);
+    let geom = stated_geometry();
+    let selection = select_bank_conflict_strategy(&profiles[0].phases, &geom);
+
+    assert!(selection.accepted);
+    assert_ne!(
+        selection.strategy,
+        BankConflictMitigation::NoRewrite,
+        "a conflicting 32-way pattern must yield a mitigation strategy other than NoRewrite"
+    );
+    assert_eq!(
+        selection.strategy,
+        BankConflictMitigation::PadLines {
+            pad_elements_per_row: 1
+        }
+    );
 }
