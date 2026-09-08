@@ -386,7 +386,10 @@ pub(super) fn validate_metal_dispatch_config(
 ) -> Result<(), BackendError> {
     if config.float_lowering.blocks_contraction() {
         return Err(BackendError::UnsupportedFeature {
-            name: format!("float lowering mode `{}`", config.float_lowering.cache_label()),
+            name: format!(
+                "float lowering mode `{}`",
+                config.float_lowering.cache_label()
+            ),
             backend: METAL_BACKEND_ID.to_string(),
         });
     }

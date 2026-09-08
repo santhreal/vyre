@@ -9,6 +9,7 @@ use vyre_foundation::composition::{wrap_child_region, wrap_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
+use crate::plumbing::operand::element_zero::element_zero;
 use crate::plumbing::operand::tensor_ref::TensorRefError;
 
 use super::body::cooperative_matmul_body;
@@ -65,10 +66,19 @@ pub(crate) fn build_matmul_tiled_program(
         });
     }
 
+    // A tiled contraction seeds an accumulator and pads a partial tile, so an
+    // element type with no scalar zero has no valid program on this path.
+    let zero = element_zero(&dtype).ok_or_else(|| TensorRefError::DtypeMismatch {
+        name: out.to_string(),
+        found: dtype.clone(),
+        expected: DataType::F32,
+        op: op_id,
+    })?;
+
     let matrix_shape = MatrixShape { m, k, n };
     let selected_kernel = select_matmul_kernel(&dtype, matrix_shape, tile);
     let mma_gate = gate_mma_path(selected_kernel, mma_capabilities);
-    let (a_tile_count, b_tile_count, padded_out_count, dispatch_wg, kernel_body) =
+    let (workgroup_tiles, padded_out_count, dispatch_wg, kernel_body) =
         if mma_gate.selected_path == MatmulKernelPath::TensorCoreF16M16N8K16 {
             let mma_wg = [32, 1, 1];
             let mma_out_rows = 16u32;
@@ -104,10 +114,10 @@ pub(crate) fn build_matmul_tiled_program(
                     b_values: mma_b_tile,
                 },
                 dtype.clone(),
-                a_tile_name,
-                b_tile_name,
             );
-            (mma_a_tile, mma_b_tile, out_count, mma_wg, body_nodes)
+            // The MMA body reads A and B from global memory, so this path
+            // stages no tiles and declares no workgroup buffers.
+            (None, out_count, mma_wg, body_nodes)
         } else {
             let (out_tile_cols, out_tile_rows, lane_count) = output_tile_shape(workgroup)?;
             let a_tile_count = out_tile_rows.checked_mul(tile).ok_or_else(|| {
@@ -141,10 +151,12 @@ pub(crate) fn build_matmul_tiled_program(
                     a_values: a_tile_count,
                     b_values: b_tile_count,
                 },
+                a_tile_name,
+                b_tile_name,
+                &zero,
             );
             (
-                a_tile_count,
-                b_tile_count,
+                Some((a_tile_count, b_tile_count)),
                 padded_out_count,
                 flat_workgroup,
                 body_nodes,
@@ -184,16 +196,18 @@ pub(crate) fn build_matmul_tiled_program(
     } else {
         2
     };
-    buffers.push(BufferDecl::workgroup(
-        a_tile_name,
-        a_tile_count,
-        dtype.clone(),
-    ));
-    buffers.push(BufferDecl::workgroup(
-        b_tile_name,
-        b_tile_count,
-        dtype.clone(),
-    ));
+    if let Some((a_tile_count, b_tile_count)) = workgroup_tiles {
+        buffers.push(BufferDecl::workgroup(
+            a_tile_name,
+            a_tile_count,
+            dtype.clone(),
+        ));
+        buffers.push(BufferDecl::workgroup(
+            b_tile_name,
+            b_tile_count,
+            dtype.clone(),
+        ));
+    }
     buffers.push(
         BufferDecl::output(out, out_slot, dtype)
             .with_count(padded_out_count)
@@ -280,5 +294,85 @@ mod tests {
 
         assert!(!debug.contains("mma_c0"));
         assert_ne!(program.workgroup_size(), [32, 1, 1]);
+    }
+
+    /// A tiled program must declare exactly the workgroup buffers its body
+    /// stages tiles through, under the names the spec supplied.
+    ///
+    /// Every other test in this module passes the default `matmul_a_tile` and
+    /// `matmul_b_tile`, which a body hardcoding those names satisfies by
+    /// coincidence. Custom names are what separate a body reading its spec from
+    /// one ignoring it. The validator rejects an access to a buffer the program
+    /// never declared; the count assertion rejects the reverse, a workgroup
+    /// allocation no body reads.
+    #[test]
+    fn every_kernel_path_stages_tiles_through_the_buffers_the_spec_names() {
+        // Exhaustive with no catch-all: a new kernel path fails to compile here
+        // until its element type and capability record are recorded.
+        let paths = [
+            MatmulKernelPath::Cooperative,
+            MatmulKernelPath::TensorCoreF16M16N8K16,
+            MatmulKernelPath::TensorCoreBf16M16N8K16,
+            MatmulKernelPath::TensorCoreTf32M16N8K4,
+        ]
+        .map(|path| {
+            let (dtype, capabilities) = match path {
+                MatmulKernelPath::Cooperative => (
+                    DataType::U32,
+                    MmaCapabilityRecord {
+                        descriptor_mma: false,
+                        f16_m16n8k16: false,
+                        bf16_m16n8k16: false,
+                        tf32_m16n8k4: false,
+                    },
+                ),
+                MatmulKernelPath::TensorCoreF16M16N8K16 => (
+                    DataType::F16,
+                    MmaCapabilityRecord::all_descriptor_mma_shapes(),
+                ),
+                MatmulKernelPath::TensorCoreBf16M16N8K16 => (
+                    DataType::BF16,
+                    MmaCapabilityRecord::all_descriptor_mma_shapes(),
+                ),
+                MatmulKernelPath::TensorCoreTf32M16N8K4 => (
+                    DataType::F32,
+                    MmaCapabilityRecord::all_descriptor_mma_shapes(),
+                ),
+            };
+            (path, dtype, capabilities)
+        });
+
+        for (path, dtype, capabilities) in paths {
+            let mut spec = f16_mma_spec(capabilities);
+            spec.dtype = dtype;
+            spec.a_tile_name = "custom_a_stage";
+            spec.b_tile_name = "custom_b_stage";
+            let program = build_matmul_tiled_program(spec)
+                .unwrap_or_else(|error| panic!("Fix: {path:?} must build: {error}"));
+
+            // The MMA body reads A and B from global memory, so it stages
+            // nothing. Every other path stages both operand tiles.
+            let expected: &[&str] = if path == MatmulKernelPath::TensorCoreF16M16N8K16 {
+                &[]
+            } else {
+                &["custom_a_stage", "custom_b_stage"]
+            };
+            let workgroup: Vec<&str> = program
+                .buffers()
+                .iter()
+                .filter(|decl| matches!(decl.access, BufferAccess::Workgroup))
+                .map(|decl| decl.name())
+                .collect();
+            assert_eq!(
+                workgroup, expected,
+                "{path:?} must declare exactly the workgroup tiles its body stages"
+            );
+
+            let errors = vyre_foundation::validate::validate(&program);
+            assert!(
+                errors.is_empty(),
+                "{path:?} accessed a tile buffer it never declared: {errors:?}"
+            );
+        }
     }
 }

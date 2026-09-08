@@ -11,11 +11,10 @@
 //! while preserving unchanged nodes, values, compiled entries, and resource
 //! residency allocations.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use thiserror::Error;
 
-use super::op_signature::{BufferAccess, DataType};
 use super::program::Program;
 use super::program_graph::{
     GraphInput, GraphNodeId, GraphOutput, GraphValueId, ProgramGraph, ProgramGraphError, ShapeDim,
@@ -132,15 +131,26 @@ pub enum GraphDeltaError {
         /// Dependent consumer node.
         dependent: GraphNodeId,
     },
-    /// Shape bound update specified an incorrect prior bound.
-    #[error("shape symbol `{symbol}` expected old bound {expected}, found {found}")]
-    ShapeBoundMismatch {
+    /// Shape bound update named a symbol no value in the graph declares.
+    ///
+    /// A symbol's concrete extent is supplied by the caller's binding map at
+    /// allocation time and is not stored in the graph, so a delta can be
+    /// checked against the symbols the graph declares and not against their
+    /// prior values.
+    #[error("shape symbol `{symbol}` is not declared by any value in the graph")]
+    UnknownShapeSymbol {
+        /// Symbol name the delta named.
+        symbol: String,
+    },
+    /// Shape bound update states a new bound that is not a change, or is zero.
+    #[error("shape symbol `{symbol}` bound update from {old_bound} to {new_bound} is not a legal change")]
+    IllegalShapeBound {
         /// Symbol name.
         symbol: String,
-        /// Expected old bound.
-        expected: u64,
-        /// Actual bound.
-        found: u64,
+        /// Bound the delta states the symbol had.
+        old_bound: u64,
+        /// Bound the delta states the symbol takes.
+        new_bound: u64,
     },
     /// Resource generation specified an incorrect prior generation.
     #[error("resource `{resource_name}` expected prior generation {expected}, found {found}")]
@@ -277,12 +287,8 @@ impl GraphDelta {
                 } => {
                     is_pure_shape_update = false;
                     is_pure_generation_bump = false;
-                    let (node_id, val_ids) = mutated.add_node(
-                        name,
-                        program.clone(),
-                        inputs.clone(),
-                        outputs.clone(),
-                    )?;
+                    let (node_id, val_ids) =
+                        mutated.add_node(name, program.clone(), inputs.clone(), outputs.clone())?;
                     dirty_nodes.insert(node_id);
                     for vid in val_ids {
                         dirty_values.insert(vid);
@@ -296,19 +302,27 @@ impl GraphDelta {
                 } => {
                     is_pure_shape_update = false;
                     is_pure_generation_bump = false;
-                    if (node_id.0 as usize) >= mutated.nodes().len() {
-                        return Err(GraphDeltaError::MissingNode(*node_id));
-                    }
                     dirty_nodes.insert(*node_id);
-                    // Check inputs and outputs exist and are well-formed
-                    for input in inputs {
-                        if (input.value.0 as usize) >= mutated.values().len() {
-                            return Err(GraphDeltaError::MissingValue(input.value));
-                        }
-                    }
                     for output in outputs {
                         affected_resource_names.insert(output.name.clone());
                     }
+                    for value in mutated
+                        .nodes()
+                        .get(node_id.0 as usize)
+                        .ok_or(GraphDeltaError::MissingNode(*node_id))?
+                        .outputs
+                        .clone()
+                    {
+                        dirty_values.insert(value);
+                    }
+                    // The graph owns port validation and consumer rewiring. A
+                    // bounds check followed by a dirty mark left the node's
+                    // program and inputs exactly as they were, so applying a
+                    // replacement produced a graph identical to the one it was
+                    // applied to.
+                    mutated
+                        .replace_node(*node_id, program.clone(), inputs.clone(), outputs.clone())
+                        .map_err(|error| GraphDeltaError::Wire(error.to_string()))?;
                 }
                 GraphDeltaOp::DeleteNode { node_id } => {
                     is_pure_shape_update = false;
@@ -337,6 +351,18 @@ impl GraphDelta {
                     new_bound,
                 } => {
                     is_pure_generation_bump = false;
+                    // A symbol's extent lives in the caller's binding map, so
+                    // the prior bound cannot be read back from the graph. What
+                    // the op states about itself is checkable: a zero extent is
+                    // not a legal dimension, and a bound that does not move is
+                    // a delta claiming a shape change it does not make.
+                    if *new_bound == 0 || new_bound == old_bound {
+                        return Err(GraphDeltaError::IllegalShapeBound {
+                            symbol: symbol.clone(),
+                            old_bound: *old_bound,
+                            new_bound: *new_bound,
+                        });
+                    }
                     let mut found_symbol = false;
                     for value in mutated.values() {
                         for dim in &value.contract.shape {
@@ -355,10 +381,8 @@ impl GraphDelta {
                         }
                     }
                     if !found_symbol {
-                        return Err(GraphDeltaError::ShapeBoundMismatch {
+                        return Err(GraphDeltaError::UnknownShapeSymbol {
                             symbol: symbol.clone(),
-                            expected: *old_bound,
-                            found: 0,
                         });
                     }
                     affected_resource_names.insert(symbol.clone());
@@ -756,8 +780,8 @@ impl GraphDelta {
 }
 
 fn put_string(bytes: &mut Vec<u8>, s: &str) -> Result<(), GraphDeltaError> {
-    let len = u32::try_from(s.len())
-        .map_err(|_| GraphDeltaError::Wire("string too long".into()))?;
+    let len =
+        u32::try_from(s.len()).map_err(|_| GraphDeltaError::Wire("string too long".into()))?;
     bytes.extend_from_slice(&len.to_le_bytes());
     bytes.extend_from_slice(s.as_bytes());
     Ok(())
@@ -778,11 +802,11 @@ fn put_contract(bytes: &mut Vec<u8>, contract: &ValueContract) -> Result<(), Gra
     let dtype_code = crate::serial::wire::tags::data_type_tag(&contract.dtype)
         .map_err(|error| GraphDeltaError::Wire(error.to_string()))?;
     bytes.push(dtype_code);
-    let access_code: u8 = match contract.access {
-        BufferAccess::ReadOnly => 1,
-        BufferAccess::ReadWrite => 2,
-        BufferAccess::Workgroup => 3,
-    };
+    // `BufferAccess` is non-exhaustive, so a match here is a compile error the
+    // moment an access is added, and the tag is owned by the same module the
+    // data-type tag is.
+    let access_code = crate::serial::wire::tags::access_tag::access_tag(&contract.access)
+        .map_err(GraphDeltaError::Wire)?;
     bytes.push(access_code);
     let lifetime_code: u8 = match contract.lifetime {
         ValueLifetime::Constant => 1,

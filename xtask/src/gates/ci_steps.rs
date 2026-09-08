@@ -702,40 +702,46 @@ pub fn findings(step: &Step, packages: &BTreeMap<String, Package>) -> Vec<Findin
         }
     }
 
-    findings.extend(device_thread_findings(step));
+    findings.extend(device_thread_findings(step, packages));
     findings
 }
 
-/// Packages whose device tests each acquire their own device context.
-///
-/// A test in one of these builds its own adapter, queue and pipeline set rather
-/// than sharing a fixture, so a parallel harness has several threads in one
-/// process driving the same device at once. The vendor userspace driver
-/// busy-spins under that shape: one target was observed spending 96% of its
-/// wall time inside the vendor GL library with the device idle and two sibling
-/// test threads blocked, for over half an hour, having produced no output. A
-/// step that hangs is worse than a step that fails, because it holds the runner
-/// until the job timeout and reports nothing about what it was proving.
-const DEVICE_SERIAL_PACKAGES: [&str; 4] = [
-    "vyre-bench",
-    "vyre-driver-cuda",
-    "vyre-driver-spirv",
-    "vyre-driver-wgpu",
-];
+/// The feature a package declares when its tests reach hardware.
+const DEVICE_FEATURE: &str = "device-tests";
 
 /// Why a device-test step leaves the harness free to run device tests in
 /// parallel.
-fn device_thread_findings(step: &Step) -> Vec<Finding> {
+///
+/// A device test builds its own adapter, queue and pipeline set rather than
+/// sharing a fixture, so a parallel harness has several threads in one process
+/// driving the same device at once. The vendor userspace driver busy-spins
+/// under that shape: one target was observed spending 96% of its wall time
+/// inside the vendor GL library with the device idle and two sibling test
+/// threads blocked, for over half an hour, having produced no output; another
+/// spent six hours of user CPU inside a vendor thread-local destructor after
+/// its cases had finished. A step that hangs is worse than a step that fails,
+/// because it holds the runner until the job timeout and reports nothing about
+/// what it was proving.
+///
+/// The package set is every member declaring `device-tests`, read from the
+/// manifests. It was a list of four here, and it was two members behind the
+/// tree: `vyre-driver-metal` and `vyre-registry-link` both acquire a device and
+/// neither was covered.
+fn device_thread_findings(step: &Step, packages: &BTreeMap<String, Package>) -> Vec<Finding> {
     if !step.tests || step.one_test_thread {
         return Vec::new();
     }
-    let device = step.all_features || step.features.iter().any(|name| name == "device-tests");
+    let device = step.all_features || step.features.iter().any(|name| name == DEVICE_FEATURE);
     if !device {
         return Vec::new();
     }
     step.packages
         .iter()
-        .filter(|name| DEVICE_SERIAL_PACKAGES.contains(&name.as_str()))
+        .filter(|name| {
+            packages
+                .get(name.as_str())
+                .is_some_and(|package| package.has_feature(DEVICE_FEATURE))
+        })
         .map(|name| {
             Finding::at(
                 step.origin.clone(),
@@ -1217,16 +1223,37 @@ mod tests {
         assert!(findings(&step, &BTreeMap::new()).is_empty());
     }
 
-    /// WHY: a device test in one of these packages acquires its own adapter and
-    /// queue, so a parallel harness puts several threads of one process on the
-    /// same device and the step hangs rather than failing. The variant space is
-    /// the package list itself, so a package added to it is covered here
-    /// without editing this test. Both spellings of the harness flag count as
-    /// serialized, and neither a hosted step nor a `cargo run` is this rule's
-    /// business.
+    /// WHY: a device test acquires its own adapter and queue, so a parallel
+    /// harness puts several threads of one process on the same device and the
+    /// step hangs rather than failing. The roster is read from the manifests at
+    /// run time, so a member that declares `device-tests` later is judged here
+    /// without anyone editing this test; a hardcoded list of four was two
+    /// members behind the tree and let both of them run parallel. Both
+    /// spellings of the harness flag count as serialized, and neither a step
+    /// without the feature nor a `cargo run` is this rule's business.
     #[test]
     fn a_device_test_step_that_leaves_the_harness_parallel_fails() {
-        for name in DEVICE_SERIAL_PACKAGES {
+        let tree = Tree::open(&structure_gate::workspace_root()).expect("the checkout opens");
+        let all = packages(&tree).expect("the workspace manifests parse");
+        let roster: Vec<&Package> = all
+            .values()
+            .filter(|package| package.has_feature(DEVICE_FEATURE))
+            .collect();
+        assert!(
+            !roster.is_empty(),
+            "no workspace member declares `{DEVICE_FEATURE}`, so this rule judges nothing"
+        );
+        let outside: Vec<&Package> = all
+            .values()
+            .filter(|package| !package.has_feature(DEVICE_FEATURE))
+            .collect();
+        assert!(
+            !outside.is_empty(),
+            "every member declares `{DEVICE_FEATURE}`, so the rule excludes nothing"
+        );
+
+        for package in &roster {
+            let name = &package.name;
             let parallel = read_command(
                 "gpu-parity.yml",
                 7,
@@ -1236,7 +1263,7 @@ mod tests {
             )
             .expect("a command");
             assert!(
-                messages(&device_thread_findings(&parallel)).contains("--test-threads=1"),
+                messages(&device_thread_findings(&parallel, &all)).contains("--test-threads=1"),
                 "{name} runs device tests in parallel and is not reported"
             );
             let wide = read_command(
@@ -1246,7 +1273,7 @@ mod tests {
             )
             .expect("a command");
             assert_eq!(
-                device_thread_findings(&wide).len(),
+                device_thread_findings(&wide, &all).len(),
                 1,
                 "{name} all-features"
             );
@@ -1263,7 +1290,7 @@ mod tests {
                 )
                 .expect("a command");
                 assert!(
-                    device_thread_findings(&serial).is_empty(),
+                    device_thread_findings(&serial, &all).is_empty(),
                     "{name} serialized with `{harness}` is reported anyway"
                 );
             }
@@ -1274,24 +1301,35 @@ mod tests {
             )
             .expect("a command");
             assert!(
-                device_thread_findings(&hosted).is_empty(),
+                device_thread_findings(&hosted, &all).is_empty(),
                 "{name} without device tests is reported"
             );
         }
-        let outside = read_command(
-            "conform.yml",
-            41,
-            "./cargo_full test -p vyre-conform --features device-tests",
-        )
-        .expect("a command");
-        assert!(device_thread_findings(&outside).is_empty());
+
+        for package in outside {
+            let step = read_command(
+                "gpu-parity.yml",
+                7,
+                &format!(
+                    "./cargo_full test -p {} --features device-tests -- --nocapture",
+                    package.name
+                ),
+            )
+            .expect("a command");
+            assert!(
+                device_thread_findings(&step, &all).is_empty(),
+                "{} declares no `{DEVICE_FEATURE}` and is reported anyway",
+                package.name
+            );
+        }
+
         let demo = read_command(
             "gpu-parity.yml",
             48,
             "./cargo_full run -p vyre-driver-wgpu --bin vyre-wgpu -- demo",
         )
         .expect("a command");
-        assert!(device_thread_findings(&demo).is_empty());
+        assert!(device_thread_findings(&demo, &all).is_empty());
     }
 
     /// WHY: a package that ships two binaries and declares no `default-run`

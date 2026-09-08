@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The CUDA and SPIR-V backends no longer override `VyreBackend::honors_float_lowering`. Both overrides restated the trait default verbatim, so each backend answers the same modes it did before: contracted arithmetic is lowered and strict IEEE is refused."

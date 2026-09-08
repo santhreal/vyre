@@ -318,6 +318,12 @@ impl<'a> ExprChildren<'a> {
     pub fn iter(self) -> impl DoubleEndedIterator<Item = &'a Expr> + Clone {
         self.direct.into_iter().flatten().chain(self.args.iter())
     }
+
+    /// True when the expression has no child operands.
+    #[must_use]
+    pub const fn is_empty(self) -> bool {
+        self.direct[0].is_none() && self.args.is_empty()
+    }
 }
 
 /// The operands of `expr`, in source order.
@@ -412,4 +418,16 @@ pub fn for_each_subexpr<'a>(expr: &'a Expr, visit: &mut impl FnMut(&'a Expr)) {
         visit(current);
         stack.extend(expr_children(current).iter().rev());
     }
+}
+
+/// True when `expr` has no operand expressions.
+#[inline]
+#[must_use]
+pub fn expr_is_leaf(expr: &Expr) -> bool {
+    expr_children(expr).is_empty()
+}
+
+/// Push every operand of `expr` onto an order-insensitive worklist.
+pub fn push_expr_children<'a>(expr: &'a Expr, stack: &mut SmallVec<[&'a Expr; 16]>) {
+    stack.extend(expr_children(expr).iter());
 }

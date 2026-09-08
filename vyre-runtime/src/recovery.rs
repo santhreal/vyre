@@ -19,7 +19,14 @@ pub fn classify_backend_error(error: &BackendError) -> RetryClass {
         | ErrorCode::InvalidProgram
         | ErrorCode::CooperativeResidencyExceeded
         | ErrorCode::DispatchFailed
+        // An aborted request is dead: the caller submits the next generation
+        // rather than retrying this one.
+        | ErrorCode::ExecutionAborted
         | ErrorCode::Unknown => RetryClass::Never,
+        // `ErrorCode` is non-exhaustive, so the compiler cannot force a
+        // decision here. `backend_error_classification_exhaustive_closure` in
+        // `vyre-runtime/tests/session_state_machine_contracts.rs` walks
+        // `ErrorCode::ALL` and fails until a new code is listed above.
         _ => RetryClass::Never,
     }
 }

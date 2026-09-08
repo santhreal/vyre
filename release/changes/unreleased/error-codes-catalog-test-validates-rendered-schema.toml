@@ -1,2 +1,2 @@
-category = "Quality"
-text = "`xtask-registry` tests the `error-codes` gate output by validating that both the driver and validation error catalogs produce valid TOML containing all declared variants and rules with header regeneration comments, replacing a self-equality assertion."
+category = "Fixed"
+text = "The `error-codes` gate test validates that the driver and validation catalogs render valid TOML naming every declared variant and rule with their regeneration headers, replacing an assertion that a function equalled itself."

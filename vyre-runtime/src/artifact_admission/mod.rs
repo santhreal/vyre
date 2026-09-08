@@ -1,23 +1,23 @@
 mod finalist;
+mod interactive_session;
 mod mesh;
 mod portfolio;
 mod retained;
 mod session;
 mod workspace;
-mod interactive_session;
 
+pub use interactive_session::{
+    CancellationOutcome, DeadlineClass, InteractiveAdmissionError, InteractiveCancellationError,
+    InteractiveChannelId, InteractiveCompletion, InteractiveRequestId, InteractiveSessionState,
+    InteractiveSessionStateMachine, InteractiveSubmissionRequest, PriorityClass,
+    INTERACTIVE_DISPATCH_HEADROOM, MAX_INTERACTIVE_STEP_BUDGET_MICROS,
+    MEASURED_INTERACTIVE_DISPATCH_CEILING_MICROS,
+};
 pub use mesh::{MeshSession, MeshSessionError, MeshSubmission};
 pub use portfolio::{admit_portfolio, AdmittedPortfolio};
 pub use retained::RetainedArtifactSession;
 pub use session::{ArtifactSession, ArtifactSessionError};
 pub use workspace::ArtifactWorkspace;
-pub use interactive_session::{
-    CancellationOutcome, DeadlineClass, InteractiveAdmissionError, InteractiveCancellationError,
-    InteractiveChannelId, InteractiveCompletion, InteractiveRequestId,
-    InteractiveSessionStateMachine, InteractiveSessionState, InteractiveSubmissionRequest,
-    PriorityClass, INTERACTIVE_DISPATCH_HEADROOM,
-    MAX_INTERACTIVE_STEP_BUDGET_MICROS, MEASURED_INTERACTIVE_DISPATCH_CEILING_MICROS,
-};
 
 use thiserror::Error;
 use vyre_megakernel::allocation::DeviceSlot;

@@ -64,6 +64,13 @@ jobs:
       # target added later without editing this file.
       - name: Every SPIR-V device target on a real Vulkan device
         run: ./cargo_full test -p vyre-driver-spirv --features device-tests -- --test-threads=1 --nocapture
+      # The float lowering ledger claims what each registered backend does with
+      # each mode. This step is the only lane that compares a claim against a
+      # constructed backend, and it links every driver, so it belongs on the
+      # runner that owns the devices. Unfiltered so a device target added to the
+      # crate later is covered without editing this file.
+      - name: Every registry float lowering decision against a constructed backend
+        run: ./cargo_full test -p vyre-registry-link --features device-tests -- --test-threads=1 --nocapture
 
   cuda-driver-contracts:
     name: CUDA backend contracts
@@ -164,7 +171,7 @@ jobs:
       # harness, so the step names that harness and runs every device contract
       # in it rather than two of the six.
       - name: Run GPU mandatory tests
-        run: ./cargo_full test -p vyre-conform --release --features device-tests --test all_tests_device_tests -- --nocapture
+        run: ./cargo_full test -p vyre-conform --release --features device-tests --test all_tests_device_tests -- --test-threads=1 --nocapture
 
   cuda-conformance-all-ops:
     name: CUDA conformance all ops

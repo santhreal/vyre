@@ -8,32 +8,28 @@
 //! buffer the compiler never planned for. These contracts pin the plan as the
 //! only authority over that storage.
 
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-use vyre_driver::materialize::{DeviceSpec, MaterializerDevice};
-use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, BoundResource,
-    Device, ResidentOwner, Resource, VyreBackend,
-};
+use vyre_driver::{BackendRegistration, BoundResource};
+
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{
-    Artifact, ArtifactEnvelope, ArtifactValueId, TargetEntryPoint, TargetPayload,
-    TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
-    TargetResourceMemory,
-};
+use vyre_megakernel::{Artifact, ArtifactEnvelope, ArtifactValueId};
 use vyre_runtime::artifact_admission::ArtifactSession;
 
 use vyre_test_support::artifact_fixtures;
 
-use vyre_test_support::fixture_instance::FixtureInstance;
+use crate::artifact_session_fixtures::{
+    fixture_backend_registration, fixture_target_payload, SessionFixtureMaterializer,
+};
 
 const FORMAT: &str = "workspace.target";
 const MIDDLE: &str = "middle";
 const OUTPUT: &str = "out";
+static WORKSPACE_REGISTRATION: BackendRegistration =
+    fixture_backend_registration("workspace-artifact");
 
 /// A two-stage artifact: the first entry's output is the second entry's input.
 ///
@@ -103,148 +99,8 @@ fn value(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
     }
 }
 
-fn profile() -> TargetProfile {
-    TargetProfile::new(FORMAT, 1, [64, 1, 1], 64, 1_024, 0).expect("fixture profile must be valid")
-}
-
-/// A payload with one entry per recorded node, binding that entry's own values.
-///
-/// The geometry is read out of the artifact: admission accepts only the
-/// geometry the compiler selected, so a stated shape would never seal.
-fn two_stage_payload(artifact: &Artifact) -> TargetPayload {
-    let entries = artifact
-        .abi()
-        .entries
-        .iter()
-        .map(|entry| {
-            let recorded = artifact
-                .geometry()
-                .iter()
-                .find(|record| record.node == entry.node)
-                .expect("the artifact records geometry for every entry");
-            let resource_bindings = entry
-                .inputs
-                .iter()
-                .chain(entry.outputs.iter())
-                .enumerate()
-                .map(|(slot, resource)| TargetResourceBinding {
-                    resource: *resource,
-                    group: 0,
-                    slot: u32::try_from(slot).expect("fixture entries bind few resources"),
-                    memory: TargetResourceMemory::Global,
-                    access: TargetResourceAccess::ReadWrite,
-                })
-                .collect();
-            TargetEntryPoint {
-                name: format!("entry{}", entry.node.0),
-                node: entry.node,
-                workgroup_size: recorded.workgroup_size,
-                grid_size: recorded.grid,
-                dynamic_shared_bytes: recorded.dynamic_shared_bytes,
-                resource_bindings,
-            }
-        })
-        .collect();
-    TargetPayload::new(
-        artifact,
-        TargetPayloadFormat::new(FORMAT, 1).expect("fixture format must be valid"),
-        profile(),
-        entries,
-        vec![1, 2, 3, 4],
-    )
-    .expect("the two-stage fixture payload must seal")
-}
-
-/// A materializer that records every resident allocation and release.
-struct WorkspaceMaterializer {
-    device: MaterializerDevice,
-    owner: ResidentOwner,
-    next: AtomicU64,
-    allocated: Mutex<Vec<usize>>,
-    freed: Mutex<Vec<Resource>>,
-}
-
-impl WorkspaceMaterializer {
-    fn new() -> Arc<Self> {
-        Arc::new(Self {
-            device: MaterializerDevice::acquire(DeviceSpec {
-                backend: "workspace-artifact",
-                device: "workspace-device".to_string(),
-                format_extension: FORMAT,
-                format_version: 1,
-                profile: profile(),
-            })
-            .expect("the fixture device must acquire"),
-            owner: ResidentOwner::new().expect("the process must mint a resident owner"),
-            next: AtomicU64::new(0),
-            allocated: Mutex::new(Vec::new()),
-            freed: Mutex::new(Vec::new()),
-        })
-    }
-}
-
-impl ArtifactMaterializer for WorkspaceMaterializer {
-    fn device(&self) -> &dyn Device {
-        &self.device
-    }
-
-    fn materialize(
-        &self,
-        artifact: &Artifact,
-        payload: &TargetPayload,
-    ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
-        Ok(FixtureInstance::neutral(
-            artifact,
-            payload,
-            self.device.identity(),
-        ))
-    }
-
-    fn allocate_resident(&self, byte_len: usize) -> Result<Resource, BackendError> {
-        self.allocated
-            .lock()
-            .expect("the fixture allocation log must not be poisoned")
-            .push(byte_len);
-        let id = self.next.fetch_add(1, Ordering::AcqRel);
-        Ok(Resource::Resident(self.owner.handle(id)))
-    }
-
-    fn free_resident(&self, resource: Resource) -> Result<(), BackendError> {
-        self.freed
-            .lock()
-            .expect("the fixture release log must not be poisoned")
-            .push(resource);
-        Ok(())
-    }
-}
-
-fn workspace_backend_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
-    Err(BackendError::UnsupportedFeature {
-        name: "raw Program backend".to_string(),
-        backend: "workspace-artifact".to_string(),
-    })
-}
-
-fn workspace_supported_ops() -> &'static std::collections::HashSet<vyre_foundation::ir::OpId> {
-    static OPS: std::sync::LazyLock<std::collections::HashSet<vyre_foundation::ir::OpId>> =
-        std::sync::LazyLock::new(std::collections::HashSet::new);
-    &OPS
-}
-
-static WORKSPACE_REGISTRATION: BackendRegistration = BackendRegistration {
-    id: "workspace-artifact",
-    target_id: vyre_foundation::operation::TargetId::expect_valid("workspace-artifact"),
-    payload_format: None,
-    reference_oracle: false,
-    factory: workspace_backend_factory,
-    supported_ops: workspace_supported_ops,
-    semantic_operations: workspace_supported_ops,
-    target_compiler: None,
-    materializer: None,
-};
-
 /// A session over the two-stage artifact and the recording materializer.
-fn session() -> (Artifact, Arc<WorkspaceMaterializer>, ArtifactSession) {
+fn session() -> (Artifact, Arc<SessionFixtureMaterializer>, ArtifactSession) {
     let artifact = two_stage_artifact();
     assert!(
         artifact.allocation().owned().next().is_some(),
@@ -253,9 +109,10 @@ fn session() -> (Artifact, Arc<WorkspaceMaterializer>, ArtifactSession) {
     );
     let mut envelope = ArtifactEnvelope::new(artifact.clone());
     envelope
-        .attach_target_payload(two_stage_payload(&artifact))
+        .attach_target_payload(fixture_target_payload(&artifact, FORMAT, vec![1, 2, 3, 4]))
         .expect("the fixture payload must attach");
-    let materializer = WorkspaceMaterializer::new();
+    let materializer =
+        SessionFixtureMaterializer::new("workspace-artifact", "workspace-device", FORMAT);
     let session = ArtifactSession::from_envelope_with_materializer(
         &WORKSPACE_REGISTRATION,
         envelope,

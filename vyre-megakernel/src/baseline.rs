@@ -34,7 +34,12 @@ pub fn baseline_schedule(logical: &LogicalProgramGraph<'_>) -> SelectedSchedule 
         .graph()
         .nodes()
         .iter()
-        .map(|node| (node.id, crate::launch_span::required_coverage(&node.program)))
+        .map(|node| {
+            (
+                node.id,
+                crate::launch_span::required_coverage(&node.program),
+            )
+        })
         .collect::<BTreeMap<_, _>>();
     let phases = logical
         .regions()

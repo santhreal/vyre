@@ -76,9 +76,6 @@ impl ExprVisitor for OrderVisitor {
     fn visit_call(&mut self, _: &Expr, _: &str, _: &[Expr]) -> ControlFlow<Self::Break> {
         self.unexpected()
     }
-    fn visit_sequence(&mut self, _: &[Expr]) -> ControlFlow<Self::Break> {
-        self.unexpected()
-    }
     fn visit_fma(&mut self, _: &Expr, _: &Expr, _: &Expr, _: &Expr) -> ControlFlow<Self::Break> {
         self.unexpected()
     }

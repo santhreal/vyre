@@ -89,6 +89,7 @@ impl core::default::Default for vyre_foundation::ElementPolicy
 impl core::default::Default for vyre_foundation::LaunchGeometry
 impl core::default::Default for vyre_foundation::Uniformity
 impl core::default::Default for vyre_foundation::execution_plan::SchedulingPolicy
+impl core::default::Default for vyre_foundation::ir::GraphDelta
 impl core::default::Default for vyre_foundation::ir::MemoryHints
 impl core::default::Default for vyre_foundation::ir::MemoryOrdering
 impl core::default::Default for vyre_foundation::ir::Program
@@ -204,6 +205,7 @@ impl vyre_foundation::graph_view::NodeGraph
 impl vyre_foundation::ir::BufferDecl
 impl vyre_foundation::ir::EvalError
 impl vyre_foundation::ir::Expr
+impl vyre_foundation::ir::GraphDelta
 impl vyre_foundation::ir::Ident
 impl vyre_foundation::ir::InterpCtx
 impl vyre_foundation::ir::Layout
@@ -448,6 +450,7 @@ pub const fn vyre_foundation::fp_parity::FloatLoweringMode::roster_index(self) -
 pub const fn vyre_foundation::ir::Expr::logical_index(axis: u8) -> Self
 pub const fn vyre_foundation::ir::Expr::logical_tile_index(axis: u8) -> Self
 pub const fn vyre_foundation::ir::Expr::logical_within_tile_index(axis: u8) -> Self
+pub const fn vyre_foundation::ir::GraphDelta::version(&self) -> u16
 pub const fn vyre_foundation::ir::LinearType::forbids_drop(self) -> bool
 pub const fn vyre_foundation::ir::LinearType::forbids_reuse(self) -> bool
 pub const fn vyre_foundation::ir::MemoryOrdering::is_valid_for_atomic_rmw(self) -> bool
@@ -562,6 +565,7 @@ pub const fn vyre_foundation::validate::ValidationError::location(&self) -> &vyr
 pub const fn vyre_foundation::validate::ValidationError::phase(&self) -> vyre_foundation::validate::ValidationPhase
 pub const fn vyre_foundation::validate::ValidationError::retry(&self) -> vyre_foundation::diagnostics::RetryClass
 pub const fn vyre_foundation::validate::ValidationPhase::as_str(self) -> &'static str
+pub const fn vyre_foundation::visit::ExprChildren<'a>::is_empty(self) -> bool
 pub const vyre_foundation::algebraic_reordering::ReorderingClass::ALL: &'static [Self]
 pub const vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES: [&str; 2]
 pub const vyre_foundation::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str
@@ -578,6 +582,7 @@ pub const vyre_foundation::fp_parity::FLOAT_LOWERING_CONTRACT_VERSION: u32
 pub const vyre_foundation::fp_parity::FloatLoweringMode::EVERY: &'static [Self]
 pub const vyre_foundation::fp_parity::REFERENCE_TRANSCENDENTAL_ULP_BUDGET: u32
 pub const vyre_foundation::ir::EXPR_VARIANT_NAMES: &[&str]
+pub const vyre_foundation::ir::GRAPH_DELTA_VERSION: u16
 pub const vyre_foundation::ir::MemoryKind::ALL: [Self; 7]
 pub const vyre_foundation::ir::NODE_VARIANT_NAMES: &[&str]
 pub const vyre_foundation::ir::NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION: &str
@@ -612,6 +617,7 @@ pub const vyre_foundation::ir::stats::NODE_KIND_TILE_REDUCE: u32
 pub const vyre_foundation::ir::stats::NODE_KIND_TILE_STORE: u32
 pub const vyre_foundation::ir::stats::NODE_KIND_TRAP: u32
 pub const vyre_foundation::logical::LOGICAL_ALGORITHM_VERSION: u16
+pub const vyre_foundation::logical::LogicalExchangeKind::ALL: [Self; 5]
 pub const vyre_foundation::lower::ProgramEffects::ASYNC_LOAD: Self
 pub const vyre_foundation::lower::ProgramEffects::ATOMIC: Self
 pub const vyre_foundation::lower::ProgramEffects::BARRIER: Self
@@ -715,6 +721,8 @@ pub enum vyre_foundation::execution_plan::ProvenanceStrategy
 pub enum vyre_foundation::execution_plan::ReadbackStrategy
 pub enum vyre_foundation::fp_parity::BufferParity
 pub enum vyre_foundation::fp_parity::FloatLoweringMode
+pub enum vyre_foundation::ir::GraphDeltaError
+pub enum vyre_foundation::ir::GraphDeltaOp
 pub enum vyre_foundation::ir::Layout
 pub enum vyre_foundation::ir::NodeStorage
 pub enum vyre_foundation::ir::ProgramGraphError
@@ -1116,6 +1124,17 @@ pub fn vyre_foundation::ir::ExprNode::result_type(&self) -> core::option::Option
 pub fn vyre_foundation::ir::ExprNode::stable_fingerprint(&self) -> [u8; 32]
 pub fn vyre_foundation::ir::ExprNode::validate_extension(&self) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::ir::ExprNode::wire_payload(&self) -> alloc::vec::Vec<u8>
+pub fn vyre_foundation::ir::GraphDelta::apply_transactional(&self, graph: &vyre_foundation::ir::ProgramGraph) -> core::result::Result<(vyre_foundation::ir::ProgramGraph, vyre_foundation::ir::AffectedGraphClosure), vyre_foundation::ir::GraphDeltaError>
+pub fn vyre_foundation::ir::GraphDelta::default() -> Self
+pub fn vyre_foundation::ir::GraphDelta::from_wire(bytes: &[u8]) -> core::result::Result<Self, vyre_foundation::ir::GraphDeltaError>
+pub fn vyre_foundation::ir::GraphDelta::is_empty(&self) -> bool
+pub fn vyre_foundation::ir::GraphDelta::len(&self) -> usize
+pub fn vyre_foundation::ir::GraphDelta::new() -> Self
+pub fn vyre_foundation::ir::GraphDelta::operations(&self) -> &[vyre_foundation::ir::GraphDeltaOp]
+pub fn vyre_foundation::ir::GraphDelta::push(&mut self, op: vyre_foundation::ir::GraphDeltaOp)
+pub fn vyre_foundation::ir::GraphDelta::to_wire(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::ir::GraphDeltaError>
+pub fn vyre_foundation::ir::GraphDelta::validate(&self, graph: &vyre_foundation::ir::ProgramGraph) -> core::result::Result<(), vyre_foundation::ir::GraphDeltaError>
+pub fn vyre_foundation::ir::GraphDelta::with_op(self, op: vyre_foundation::ir::GraphDeltaOp) -> Self
 pub fn vyre_foundation::ir::Ident::as_ref(&self) -> &str
 pub fn vyre_foundation::ir::Ident::as_str(&self) -> &str
 pub fn vyre_foundation::ir::Ident::borrow(&self) -> &str
@@ -1253,6 +1272,7 @@ pub fn vyre_foundation::ir::ProgramGraph::identity(&self, context: &vyre_foundat
 pub fn vyre_foundation::ir::ProgramGraph::liveness_intervals(&self) -> alloc::vec::Vec<vyre_foundation::ir::LivenessInterval>
 pub fn vyre_foundation::ir::ProgramGraph::new() -> Self
 pub fn vyre_foundation::ir::ProgramGraph::nodes(&self) -> &[vyre_foundation::ir::ProgramGraphNode]
+pub fn vyre_foundation::ir::ProgramGraph::replace_node(&mut self, node_id: vyre_foundation::ir::GraphNodeId, program: vyre_foundation::ir::Program, inputs: alloc::vec::Vec<vyre_foundation::ir::GraphInput>, outputs: alloc::vec::Vec<vyre_foundation::ir::GraphOutput>) -> core::result::Result<(), vyre_foundation::ir::ProgramGraphError>
 pub fn vyre_foundation::ir::ProgramGraph::schedule(&self) -> alloc::vec::Vec<vyre_foundation::ir::GraphNodeId>
 pub fn vyre_foundation::ir::ProgramGraph::to_wire(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::ir::ProgramGraphError>
 pub fn vyre_foundation::ir::ProgramGraph::values(&self) -> &[vyre_foundation::ir::ProgramGraphValue]
@@ -2726,7 +2746,6 @@ pub fn vyre_foundation::visit::ExprVisitor::visit_logical_tile_id(&mut self, _ex
 pub fn vyre_foundation::visit::ExprVisitor::visit_logical_within_tile_id(&mut self, _expr: &vyre_foundation::ir::Expr, _axis: u32) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_opaque_expr(&mut self, _expr: &vyre_foundation::ir::Expr, _extension: &dyn vyre_foundation::ir::ExprNode) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_select(&mut self, _expr: &vyre_foundation::ir::Expr, _cond: &vyre_foundation::ir::Expr, _true_val: &vyre_foundation::ir::Expr, _false_val: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
-pub fn vyre_foundation::visit::ExprVisitor::visit_sequence(&mut self, _parts: &[vyre_foundation::ir::Expr]) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_subgroup_add(&mut self, _expr: &vyre_foundation::ir::Expr, _value: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_subgroup_ballot(&mut self, _expr: &vyre_foundation::ir::Expr, _cond: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_subgroup_local_id(&mut self, _expr: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
@@ -2768,6 +2787,7 @@ pub fn vyre_foundation::visit::collect_call_op_ids(program: &vyre_foundation::ir
 pub fn vyre_foundation::visit::expr_buffer_ref(expr: &vyre_foundation::ir::Expr) -> vyre_foundation::visit::ExprBufferRef<'_>
 pub fn vyre_foundation::visit::expr_children(expr: &vyre_foundation::ir::Expr) -> vyre_foundation::visit::ExprChildren<'_>
 pub fn vyre_foundation::visit::expr_combine(expr: &vyre_foundation::ir::Expr) -> core::option::Option<vyre_foundation::visit::ExprCombine<'_>>
+pub fn vyre_foundation::visit::expr_is_leaf(expr: &vyre_foundation::ir::Expr) -> bool
 pub fn vyre_foundation::visit::expr_magnitude(expr: &vyre_foundation::ir::Expr) -> vyre_foundation::visit::ExprMagnitude<'_>
 pub fn vyre_foundation::visit::for_each_expr<'a>(nodes: &'a [vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&'a vyre_foundation::ir::Expr))
 pub fn vyre_foundation::visit::for_each_node<'a>(nodes: &'a [vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&'a vyre_foundation::ir::Node))
@@ -2782,6 +2802,7 @@ pub fn vyre_foundation::visit::node_scalars(node: &vyre_foundation::ir::Node) ->
 pub fn vyre_foundation::visit::node_shape(node: &vyre_foundation::ir::Node) -> vyre_foundation::visit::NodeShape
 pub fn vyre_foundation::visit::node_tag(node: &vyre_foundation::ir::Node) -> core::option::Option<&vyre_foundation::ir::Ident>
 pub fn vyre_foundation::visit::node_variadic_operands(node: &vyre_foundation::ir::Node) -> &[vyre_foundation::ir::Expr]
+pub fn vyre_foundation::visit::push_expr_children<'a>(expr: &'a vyre_foundation::ir::Expr, stack: &mut smallvec::SmallVec<[&'a vyre_foundation::ir::Expr; 16]>)
 pub fn vyre_foundation::visit::referenced_buffers(program: &vyre_foundation::ir::Program) -> std::collections::hash::set::HashSet<vyre_foundation::ir::Ident>
 pub fn vyre_foundation::visit::try_for_each_expr<B>(nodes: &[vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<B>) -> core::ops::control_flow::ControlFlow<B>
 pub fn vyre_foundation::visit::try_for_each_node<'a, B>(nodes: &'a [vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&'a vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<B>) -> core::ops::control_flow::ControlFlow<B>
@@ -2991,8 +3012,10 @@ pub struct vyre_foundation::extension::ExtensionUnOpRegistration
 pub struct vyre_foundation::extension::OpaqueExprResolver
 pub struct vyre_foundation::extension::OpaqueNodeResolver
 pub struct vyre_foundation::fp_expansion::StrictExpansionError
+pub struct vyre_foundation::ir::AffectedGraphClosure
 pub struct vyre_foundation::ir::BufferDecl
 pub struct vyre_foundation::ir::EvalError
+pub struct vyre_foundation::ir::GraphDelta
 pub struct vyre_foundation::ir::GraphInput
 pub struct vyre_foundation::ir::GraphNodeId(pub u32)
 pub struct vyre_foundation::ir::GraphOutput
@@ -3645,6 +3668,13 @@ pub vyre_foundation::graph_view::NodeGraph::buffers: alloc::vec::Vec<vyre_founda
 pub vyre_foundation::graph_view::NodeGraph::edges: alloc::vec::Vec<vyre_foundation::graph_view::DataEdge>
 pub vyre_foundation::graph_view::NodeGraph::nodes: alloc::vec::Vec<vyre_foundation::graph_view::GraphNode>
 pub vyre_foundation::graph_view::NodeGraph::workgroup_size: [u32; 3]
+pub vyre_foundation::ir::AffectedGraphClosure::affected_resource_names: alloc::collections::btree::set::BTreeSet<alloc::string::String>
+pub vyre_foundation::ir::AffectedGraphClosure::dirty_nodes: alloc::collections::btree::set::BTreeSet<vyre_foundation::ir::GraphNodeId>
+pub vyre_foundation::ir::AffectedGraphClosure::dirty_values: alloc::collections::btree::set::BTreeSet<vyre_foundation::ir::GraphValueId>
+pub vyre_foundation::ir::AffectedGraphClosure::is_pure_generation_bump: bool
+pub vyre_foundation::ir::AffectedGraphClosure::is_pure_shape_update: bool
+pub vyre_foundation::ir::AffectedGraphClosure::unchanged_nodes: alloc::collections::btree::set::BTreeSet<vyre_foundation::ir::GraphNodeId>
+pub vyre_foundation::ir::AffectedGraphClosure::unchanged_values: alloc::collections::btree::set::BTreeSet<vyre_foundation::ir::GraphValueId>
 pub vyre_foundation::ir::BufferDecl::access: vyre_spec::buffer_access::BufferAccess
 pub vyre_foundation::ir::BufferDecl::binding: u32
 pub vyre_foundation::ir::BufferDecl::bytes_extraction: bool
@@ -3724,6 +3754,57 @@ pub vyre_foundation::ir::Expr::UnOp::operand: alloc::boxed::Box<vyre_foundation:
 pub vyre_foundation::ir::Expr::Var(vyre_foundation::ir::Ident)
 pub vyre_foundation::ir::Expr::WorkgroupId
 pub vyre_foundation::ir::Expr::WorkgroupId::axis: u8
+pub vyre_foundation::ir::GraphDeltaError::DependencyViolation
+pub vyre_foundation::ir::GraphDeltaError::DependencyViolation::dependent: vyre_foundation::ir::GraphNodeId
+pub vyre_foundation::ir::GraphDeltaError::DependencyViolation::node: vyre_foundation::ir::GraphNodeId
+pub vyre_foundation::ir::GraphDeltaError::EmptyDelta
+pub vyre_foundation::ir::GraphDeltaError::Graph(vyre_foundation::ir::ProgramGraphError)
+pub vyre_foundation::ir::GraphDeltaError::IllegalShapeBound
+pub vyre_foundation::ir::GraphDeltaError::IllegalShapeBound::new_bound: u64
+pub vyre_foundation::ir::GraphDeltaError::IllegalShapeBound::old_bound: u64
+pub vyre_foundation::ir::GraphDeltaError::IllegalShapeBound::symbol: alloc::string::String
+pub vyre_foundation::ir::GraphDeltaError::InvalidStateTransition
+pub vyre_foundation::ir::GraphDeltaError::InvalidStateTransition::output_name: alloc::string::String
+pub vyre_foundation::ir::GraphDeltaError::InvalidStateTransition::reason: alloc::string::String
+pub vyre_foundation::ir::GraphDeltaError::MissingNode(vyre_foundation::ir::GraphNodeId)
+pub vyre_foundation::ir::GraphDeltaError::MissingValue(vyre_foundation::ir::GraphValueId)
+pub vyre_foundation::ir::GraphDeltaError::ResourceGenerationMismatch
+pub vyre_foundation::ir::GraphDeltaError::ResourceGenerationMismatch::expected: u64
+pub vyre_foundation::ir::GraphDeltaError::ResourceGenerationMismatch::found: u64
+pub vyre_foundation::ir::GraphDeltaError::ResourceGenerationMismatch::resource_name: alloc::string::String
+pub vyre_foundation::ir::GraphDeltaError::UnknownShapeSymbol
+pub vyre_foundation::ir::GraphDeltaError::UnknownShapeSymbol::symbol: alloc::string::String
+pub vyre_foundation::ir::GraphDeltaError::VersionMismatch
+pub vyre_foundation::ir::GraphDeltaError::VersionMismatch::expected: u16
+pub vyre_foundation::ir::GraphDeltaError::VersionMismatch::found: u16
+pub vyre_foundation::ir::GraphDeltaError::Wire(alloc::string::String)
+pub vyre_foundation::ir::GraphDeltaOp::DeleteNode
+pub vyre_foundation::ir::GraphDeltaOp::DeleteNode::node_id: vyre_foundation::ir::GraphNodeId
+pub vyre_foundation::ir::GraphDeltaOp::InsertExternalValue
+pub vyre_foundation::ir::GraphDeltaOp::InsertExternalValue::contract: vyre_foundation::ir::ValueContract
+pub vyre_foundation::ir::GraphDeltaOp::InsertExternalValue::name: alloc::string::String
+pub vyre_foundation::ir::GraphDeltaOp::InsertNode
+pub vyre_foundation::ir::GraphDeltaOp::InsertNode::inputs: alloc::vec::Vec<vyre_foundation::ir::GraphInput>
+pub vyre_foundation::ir::GraphDeltaOp::InsertNode::name: alloc::string::String
+pub vyre_foundation::ir::GraphDeltaOp::InsertNode::outputs: alloc::vec::Vec<vyre_foundation::ir::GraphOutput>
+pub vyre_foundation::ir::GraphDeltaOp::InsertNode::program: vyre_foundation::ir::Program
+pub vyre_foundation::ir::GraphDeltaOp::ReplaceNode
+pub vyre_foundation::ir::GraphDeltaOp::ReplaceNode::inputs: alloc::vec::Vec<vyre_foundation::ir::GraphInput>
+pub vyre_foundation::ir::GraphDeltaOp::ReplaceNode::node_id: vyre_foundation::ir::GraphNodeId
+pub vyre_foundation::ir::GraphDeltaOp::ReplaceNode::outputs: alloc::vec::Vec<vyre_foundation::ir::GraphOutput>
+pub vyre_foundation::ir::GraphDeltaOp::ReplaceNode::program: vyre_foundation::ir::Program
+pub vyre_foundation::ir::GraphDeltaOp::UpdateResourceGeneration
+pub vyre_foundation::ir::GraphDeltaOp::UpdateResourceGeneration::new_generation: u64
+pub vyre_foundation::ir::GraphDeltaOp::UpdateResourceGeneration::prior_generation: u64
+pub vyre_foundation::ir::GraphDeltaOp::UpdateResourceGeneration::resource_name: alloc::string::String
+pub vyre_foundation::ir::GraphDeltaOp::UpdateShapeBound
+pub vyre_foundation::ir::GraphDeltaOp::UpdateShapeBound::new_bound: u64
+pub vyre_foundation::ir::GraphDeltaOp::UpdateShapeBound::old_bound: u64
+pub vyre_foundation::ir::GraphDeltaOp::UpdateShapeBound::symbol: alloc::string::String
+pub vyre_foundation::ir::GraphDeltaOp::UpdateStateTransition
+pub vyre_foundation::ir::GraphDeltaOp::UpdateStateTransition::new_prior_value: vyre_foundation::ir::GraphValueId
+pub vyre_foundation::ir::GraphDeltaOp::UpdateStateTransition::output_name: alloc::string::String
+pub vyre_foundation::ir::GraphDeltaOp::UpdateStateTransition::prior_value: vyre_foundation::ir::GraphValueId
 pub vyre_foundation::ir::GraphInput::buffer: alloc::string::String
 pub vyre_foundation::ir::GraphInput::contract: vyre_foundation::ir::ValueContract
 pub vyre_foundation::ir::GraphInput::value: vyre_foundation::ir::GraphValueId
@@ -3893,12 +3974,15 @@ pub vyre_foundation::ir::ProgramGraphError::InputContract::buffer: alloc::string
 pub vyre_foundation::ir::ProgramGraphError::InputContract::expected: vyre_foundation::ir::ValueContract
 pub vyre_foundation::ir::ProgramGraphError::InputContract::node: alloc::string::String
 pub vyre_foundation::ir::ProgramGraphError::InputContract::value: vyre_foundation::ir::GraphValueId
+pub vyre_foundation::ir::ProgramGraphError::InvalidReplacementOutputs
+pub vyre_foundation::ir::ProgramGraphError::InvalidReplacementOutputs::node: vyre_foundation::ir::GraphNodeId
 pub vyre_foundation::ir::ProgramGraphError::InvalidRetainedTransition
 pub vyre_foundation::ir::ProgramGraphError::InvalidRetainedTransition::output: alloc::string::String
 pub vyre_foundation::ir::ProgramGraphError::InvalidRetainedTransition::prior: vyre_foundation::ir::GraphValueId
 pub vyre_foundation::ir::ProgramGraphError::MissingBuffer
 pub vyre_foundation::ir::ProgramGraphError::MissingBuffer::buffer: alloc::string::String
 pub vyre_foundation::ir::ProgramGraphError::MissingBuffer::node: alloc::string::String
+pub vyre_foundation::ir::ProgramGraphError::MissingNode(vyre_foundation::ir::GraphNodeId)
 pub vyre_foundation::ir::ProgramGraphError::MissingRetainedInput
 pub vyre_foundation::ir::ProgramGraphError::MissingRetainedInput::output: alloc::string::String
 pub vyre_foundation::ir::ProgramGraphError::MissingRetainedInput::prior: vyre_foundation::ir::GraphValueId

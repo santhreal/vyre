@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:3cfaa0ef1ac2f973c5c9b7be833ce2c0d92fbb6a:dirty=true:worktree=2a1cb0a8a68b1071af1018b7631e9eb50b8549b16ba11caabae9cc0ed5f106bc",
+  "source_fingerprint": "git:a08d4b239de91dd83947eee6147624ce72a1aa3c:dirty=true:worktree=ed0c560d94f35bcf6677613b447b664c341a8379071622217aeba1468d231d97",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -11,7 +11,7 @@
     },
     {
       "path": "vyre-driver/src/backend/vyre_backend.rs",
-      "line": 69,
+      "line": 72,
       "pattern": "placeholder_text",
       "text": "/// one is a count the backend rejects rather than a placeholder it skips. A"
     },
@@ -58,8 +58,14 @@
       "text": "// `max(edge_count, 1)`. A zero-edge graph still carries a single placeholder"
     },
     {
+      "path": "vyre-libs/src/reduce/grid_stride_tree.rs",
+      "line": 115,
+      "pattern": "placeholder_text",
+      "text": "// single-block form cannot drift into demanding a placeholder for its own"
+    },
+    {
       "path": "vyre-megakernel/src/baseline.rs",
-      "line": 19,
+      "line": 22,
       "pattern": "placeholder_text",
       "text": "/// candidate rather than a placeholder: it is the schedule every ranking is"
     },
@@ -95,7 +101,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 155,
+      "line": 156,
       "pattern": "placeholder_text",
       "text": "help: \"Cross-validate every speedup cell across the three measured backend comparison  matrices. Proves every measured cell records positive speedup, is strictly reproducible  from its source probe, cites no placeholder, and is traceable back to its host, commit,  GPU model, driver version, and measurement timestamp. Proves nothing about benchmark  methodology: this gate reads the produced matrices and their source artifacts, never  starts a benchmark run. Run with --write to re-derive the markdown summary table.\","
     },

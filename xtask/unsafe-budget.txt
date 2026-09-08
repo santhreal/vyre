@@ -13,8 +13,9 @@
 # attribute out of code: a mention in a comment or a string is not a surface.
 #   ./cargo_full run -q -p xtask --bin xtask -- lint-unsafe-budget
 
+vyre-alloc-probe/src/lib.rs
+vyre-alloc-probe/tests/all_tests.rs
 vyre-bench/src/lib.rs
-vyre-bench/src/probes/allocations.rs
 vyre-bench/src/probes/cpu.rs
 vyre-bench/tests/min_samples_gate.rs
 vyre-driver-cuda/src/backend/cuda_graph.rs

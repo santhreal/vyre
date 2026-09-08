@@ -60,11 +60,11 @@ pub mod ir {
         ProgramGraphError, ProgramGraphNode, ProgramGraphValue, ShapeDim, ValueContract,
         ValueLifetime,
     };
-    pub use crate::ir_inner::model::program_graph_identity::{
-        ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,
-    };
     pub use crate::ir_inner::model::program_graph_delta::{
         AffectedGraphClosure, GraphDelta, GraphDeltaError, GraphDeltaOp, GRAPH_DELTA_VERSION,
+    };
+    pub use crate::ir_inner::model::program_graph_identity::{
+        ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,
     };
     pub use crate::ir_inner::model::tile::{Layout, Residency, Tile};
     /// Per-Node-variant bit-position constants for `ProgramStats::node_kinds_present`.

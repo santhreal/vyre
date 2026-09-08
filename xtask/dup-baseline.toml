@@ -43,8 +43,8 @@ total_lines = 438
 
 [[crate]]
 name = "fuzz"
-duplicate_lines = 14
-total_lines = 100
+duplicate_lines = 0
+total_lines = 82
 
 [[crate]]
 name = "structure-gate"
@@ -63,8 +63,8 @@ total_lines = 1599
 
 [[crate]]
 name = "vyre-bench"
-duplicate_lines = 928
-total_lines = 38091
+duplicate_lines = 912
+total_lines = 38605
 
 [[crate]]
 name = "vyre-debug"
@@ -73,13 +73,13 @@ total_lines = 2227
 
 [[crate]]
 name = "vyre-driver"
-duplicate_lines = 429
-total_lines = 40879
+duplicate_lines = 413
+total_lines = 40073
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 1268
-total_lines = 62596
+duplicate_lines = 1238
+total_lines = 63038
 
 [[crate]]
 name = "vyre-driver-metal"
@@ -88,18 +88,18 @@ total_lines = 4528
 
 [[crate]]
 name = "vyre-driver-reference"
-duplicate_lines = 10
-total_lines = 669
+duplicate_lines = 0
+total_lines = 874
 
 [[crate]]
 name = "vyre-driver-spirv"
-duplicate_lines = 34
-total_lines = 1795
+duplicate_lines = 8
+total_lines = 2249
 
 [[crate]]
 name = "vyre-driver-wgpu"
-duplicate_lines = 246
-total_lines = 32807
+duplicate_lines = 224
+total_lines = 34503
 
 [[crate]]
 name = "vyre-emit-metal"
@@ -113,8 +113,8 @@ total_lines = 9540
 
 [[crate]]
 name = "vyre-emit-ptx"
-duplicate_lines = 48
-total_lines = 12617
+duplicate_lines = 32
+total_lines = 13107
 
 [[crate]]
 name = "vyre-emit-spirv"
@@ -123,13 +123,13 @@ total_lines = 1127
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 2177
-total_lines = 112689
+duplicate_lines = 2061
+total_lines = 122483
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 5273
-total_lines = 207740
+duplicate_lines = 5218
+total_lines = 210008
 
 [[crate]]
 name = "vyre-lints"

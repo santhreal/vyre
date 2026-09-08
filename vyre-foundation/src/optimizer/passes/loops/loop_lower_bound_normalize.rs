@@ -95,28 +95,20 @@ fn normalize_loop(node: &Node) -> Option<Vec<Node>> {
     if !is_normalizable_loop(node) {
         return None;
     }
-    let Node::Loop {
-        var,
-        from,
-        to,
-        body,
-    } = node
-    else {
-        return None;
-    };
-    let (Expr::LitU32(lo), Expr::LitU32(hi)) = (from, to) else {
+    let loop_ref = super::loop_bounds::match_loop(node)?;
+    let (Expr::LitU32(lo), Expr::LitU32(hi)) = (loop_ref.from, loop_ref.to) else {
         return None;
     };
     Some(vec![Node::Loop {
-        var: var.clone(),
+        var: loop_ref.var.clone(),
         from: Expr::u32(0),
         to: Expr::u32(hi - lo),
         body: substitute_nodes(
-            body,
-            var,
+            loop_ref.body,
+            loop_ref.var,
             &Expr::BinOp {
                 op: BinOp::Add,
-                left: Box::new(Expr::Var(var.clone())),
+                left: Box::new(Expr::Var(loop_ref.var.clone())),
                 right: Box::new(Expr::u32(*lo)),
             },
         ),
@@ -124,21 +116,14 @@ fn normalize_loop(node: &Node) -> Option<Vec<Node>> {
 }
 
 fn is_normalizable_loop(node: &Node) -> bool {
-    if let Node::Loop {
-        var,
-        from,
-        to,
-        body,
-    } = node
-    {
-        match (from, to) {
-            (Expr::LitU32(lo), Expr::LitU32(hi)) if *lo > 0 && *hi >= *lo => {}
-            _ => return false,
-        }
-        !body_rebinds_var(body, var)
-    } else {
-        false
+    let Some(loop_ref) = super::loop_bounds::match_loop(node) else {
+        return false;
+    };
+    match (loop_ref.from, loop_ref.to) {
+        (Expr::LitU32(lo), Expr::LitU32(hi)) if *lo > 0 && *hi >= *lo => {}
+        _ => return false,
     }
+    !body_rebinds_var(loop_ref.body, loop_ref.var)
 }
 
 #[cfg(test)]
@@ -155,35 +140,9 @@ mod tests {
     }
 
     fn find_loop(nodes: &[Node]) -> Option<&Node> {
-        for n in nodes {
-            if matches!(n, Node::Loop { .. }) {
-                return Some(n);
-            }
-            match n {
-                Node::Block(body) => {
-                    if let Some(found) = find_loop(body) {
-                        return Some(found);
-                    }
-                }
-                Node::Region { body, .. } => {
-                    if let Some(found) = find_loop(body.as_ref()) {
-                        return Some(found);
-                    }
-                }
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    if let Some(found) = find_loop(then) {
-                        return Some(found);
-                    }
-                    if let Some(found) = find_loop(otherwise) {
-                        return Some(found);
-                    }
-                }
-                _ => {}
-            }
-        }
-        None
+        super::super::test_fixtures::loops_of(nodes)
+            .first()
+            .copied()
     }
 
     /// Positive: `Loop(i, 4, 12, store(buf, i, ...))` rewrites to

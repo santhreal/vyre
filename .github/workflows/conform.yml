@@ -38,7 +38,7 @@ jobs:
       # not, and a default `cargo test -p vyre-conform` there must not compile
       # them.
       - name: Verify consolidated conformance engine
-        run: ./cargo_full test -p vyre-conform --features device-tests
+        run: ./cargo_full test -p vyre-conform --features device-tests -- --test-threads=1
 
       - name: Verify registered primitive safety contracts
         run: >-

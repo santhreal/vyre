@@ -53,6 +53,7 @@ const PUBLIC_API_ARTIFACTS: &[&str] = &[
 
 const TESTING_GUIDE_ARTIFACTS: &[&str] = &[
     "docs/testing/structure-gate.md",
+    "docs/testing/vyre-alloc-probe.md",
     "docs/testing/vyre-aot.md",
     "docs/testing/vyre-bench.md",
     "docs/testing/vyre-conform-spec.md",
@@ -347,6 +348,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
             "conform/vyre-conform-spec/README.md",
             "conform/vyre-conform/README.md",
             "structure-gate/README.md",
+            "vyre-alloc-probe/README.md",
             "vyre-aot/README.md",
             "vyre-bench/README.md",
             "vyre-debug/README.md",

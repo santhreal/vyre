@@ -64,20 +64,12 @@ fn strip_mine_if_eligible(node: &Node, scope_names: &[Ident]) -> Option<Vec<Node
     if !is_strip_mine_eligible(node) {
         return None;
     }
-    let Node::Loop {
-        var,
-        from,
-        to,
-        body,
-    } = node
-    else {
-        return None;
-    };
-    let (from_lit, to_lit) = literal_bounds(from, to)?;
+    let loop_ref = super::loop_bounds::match_loop(node)?;
+    let (from_lit, to_lit) = super::loop_bounds::literal_bounds(loop_ref.from, loop_ref.to)?;
     let trip_count = to_lit.checked_sub(from_lit)?;
 
-    let outer_var = fresh_ident(var, "tile", scope_names);
-    let lane_var = fresh_ident(var, "lane", scope_names);
+    let outer_var = fresh_ident(loop_ref.var, "tile", scope_names);
+    let lane_var = fresh_ident(loop_ref.var, "lane", scope_names);
     let tile_count = trip_count.div_ceil(DEFAULT_STRIP_MINE_TILE);
     let tile_offset = Expr::add(
         Expr::mul(
@@ -87,7 +79,7 @@ fn strip_mine_if_eligible(node: &Node, scope_names: &[Ident]) -> Option<Vec<Node
         Expr::var(lane_var.as_str()),
     );
     let original_index = Expr::add(Expr::u32(from_lit), tile_offset.clone());
-    let tiled_body = substitute_nodes(body, var, &original_index);
+    let tiled_body = substitute_nodes(loop_ref.body, loop_ref.var, &original_index);
     let guarded_body = vec![Node::if_then(
         Expr::lt(tile_offset, Expr::u32(trip_count)),
         tiled_body,
@@ -106,35 +98,15 @@ fn strip_mine_if_eligible(node: &Node, scope_names: &[Ident]) -> Option<Vec<Node
     )])
 }
 
-fn literal_bounds(from: &Expr, to: &Expr) -> Option<(u32, u32)> {
-    let from = literal_u32(from)?;
-    let to = literal_u32(to)?;
-    Some((from, to))
-}
-
-fn literal_u32(expr: &Expr) -> Option<u32> {
-    match expr {
-        Expr::LitU32(value) => Some(*value),
-        Expr::LitI32(value) => u32::try_from(*value).ok(),
-        _ => None,
-    }
-}
-
 fn is_strip_mine_eligible(node: &Node) -> bool {
-    let Node::Loop {
-        var,
-        from,
-        to,
-        body,
-    } = node
-    else {
+    let Some(loop_ref) = super::loop_bounds::match_loop(node) else {
         return false;
     };
-    let Some((from, to)) = literal_bounds(from, to) else {
+    let Some((from, to)) = super::loop_bounds::literal_bounds(loop_ref.from, loop_ref.to) else {
         return false;
     };
     matches!(to.checked_sub(from), Some(n) if n >= DEFAULT_STRIP_MINE_TILE * 2)
-        && !body_writes_loop_var(body, var)
+        && !body_writes_loop_var(loop_ref.body, loop_ref.var)
 }
 
 fn fresh_ident(base: &Ident, suffix: &str, used: &[Ident]) -> Ident {

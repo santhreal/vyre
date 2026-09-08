@@ -265,7 +265,9 @@ mod reconcile_tests {
         let error = reconcile_completion(same(4), map(&[(77, 0x77)]), BTreeMap::new())
             .expect_err("a completion missing a declared value must be refused");
         assert!(
-            error.to_string().contains("omitted canonical graph output 4"),
+            error
+                .to_string()
+                .contains("omitted canonical graph output 4"),
             "the omission is the reported fault: {error}"
         );
     }

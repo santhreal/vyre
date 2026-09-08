@@ -1,13 +1,13 @@
 {
-  "source_fingerprint": "git:3cfaa0ef1ac2f973c5c9b7be833ce2c0d92fbb6a:dirty=true:worktree=2a1cb0a8a68b1071af1018b7631e9eb50b8549b16ba11caabae9cc0ed5f106bc",
+  "source_fingerprint": "git:a08d4b239de91dd83947eee6147624ce72a1aa3c:dirty=true:worktree=ed0c560d94f35bcf6677613b447b664c341a8379071622217aeba1468d231d97",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
     {
       "path": "structure-gate/src/source_scan.rs",
-      "line": 98,
+      "line": 101,
       "pattern": "documented_panic_contract",
-      "text": ".flat_map(|handle| handle.join().expect(\"a source read lane must not panic\"))"
+      "text": "handle.join().expect(\"a source read lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
@@ -29,37 +29,37 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 266,
+      "line": 267,
       "pattern": "documented_panic_contract",
-      "text": ".flat_map(|lane| lane.join().expect(\"a member source lane must not panic\"))"
+      "text": "lane.join().expect(\"a member source lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 350,
+      "line": 353,
       "pattern": "documented_panic_contract",
-      "text": ".filter_map(|lane| lane.join().expect(\"a crate root lane must not panic\"))"
+      "text": "lane.join().expect(\"a crate root lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 516,
+      "line": 520,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 517,
+      "line": 521,
       "pattern": "documented_panic_contract",
       "text": "if let Some(root) = ROOTS.lock().expect(POISONED).get(&start) {"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 523,
+      "line": 527,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 529,
+      "line": 533,
       "pattern": "documented_panic_contract",
       "text": "ROOTS.lock().expect(POISONED).insert(start, root.clone());"
     },
@@ -125,7 +125,7 @@
     },
     {
       "path": "vyre-driver-wgpu/src/runtime/device/acquire.rs",
-      "line": 89,
+      "line": 91,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: a LoaderInstance is only empty while it is being dropped\")"
     },
@@ -281,7 +281,7 @@
     },
     {
       "path": "vyre-foundation/src/optimizer/scheduler/queries.rs",
-      "line": 30,
+      "line": 29,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
@@ -317,7 +317,7 @@
     },
     {
       "path": "vyre-libs/src/fixture_bytes.rs",
-      "line": 165,
+      "line": 179,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"Fix: {label} program must execute in the reference interpreter: {error:?}\")"
     },
@@ -971,97 +971,97 @@
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 48,
+      "line": 49,
       "pattern": "expect_call",
-      "text": "u32::try_from(*count).expect(\"fixture element count must fit u32\")"
+      "text": ".expect(\"fixture element count must fit u32. Fix: declare a count within u32 in the caller's ValueContract\")"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 50,
+      "line": 51,
       "pattern": "panic_macro",
       "text": "shape => panic!(\"fixture value `{name}` must declare one known dimension, got {shape:?}\"),"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 67,
+      "line": 68,
       "pattern": "panic_macro",
       "text": "panic!(\"fixture value `{name}` declares {access:?}, which is not a graph external\")"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 88,
+      "line": 89,
       "pattern": "expect_call",
-      "text": ".expect(\"fixture external value must be valid\");"
+      "text": ".expect(\"fixture external value must be valid. Fix: correct the contract this fixture declares for `input`\");"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 100,
+      "line": 101,
       "pattern": "expect_call",
-      "text": ".expect(\"fixture node must be valid\");"
+      "text": ".expect(\"fixture node must be valid. Fix: correct the buffer declaration or the graph input this fixture wires to `entry`\");"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 138,
+      "line": 139,
       "pattern": "expect_call",
-      "text": ".expect(\"fixture collective node must be valid\");"
+      "text": ".expect(\"fixture collective node must be valid. Fix: correct the reduced contract or the collective output this fixture declares\");"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 170,
+      "line": 172,
       "pattern": "expect_call",
-      "text": "let slot = u32::try_from(slot).expect(\"fixture slot must fit u32\");"
+      "text": ".expect(\"fixture slot must fit u32. Fix: pass fewer values to graph_over\");"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 173,
+      "line": 175,
       "pattern": "expect_call",
-      "text": ".expect(\"fixture resource must be valid\");"
+      "text": ".expect(\"fixture resource must be valid. Fix: correct the contract the caller paired with this value name\");"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 183,
+      "line": 185,
       "pattern": "expect_call",
-      "text": ".expect(\"fixture node must be valid\");"
+      "text": ".expect(\"fixture node must be valid. Fix: correct the declarations graph_over builds from the caller's values\");"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 223,
+      "line": 226,
       "pattern": "expect_call",
-      "text": "compile(&request).expect(\"fixture request must compile\")"
+      "text": ".expect(\"fixture request must compile. Fix: correct the graph or raise the artifact-bytes bound this fixture sets\")"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 236,
+      "line": 240,
       "pattern": "expect_call",
-      "text": "compile(&request).expect(\"fixture request must compile\")"
+      "text": ".expect(\"fixture request must compile. Fix: correct the graph or the placement this fixture compiles it under\")"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 282,
+      "line": 288,
       "pattern": "expect_call",
-      "text": "request.validate().expect(\"fixture request must validate\")"
+      "text": ".expect(\"fixture request must validate. Fix: correct the graph, the device facts, or the mesh this fixture places it on\")"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 344,
+      "line": 350,
       "pattern": "expect_call",
-      "text": ".expect(\"fixture mesh must authenticate\")"
+      "text": ".expect(\"fixture mesh must authenticate. Fix: correct the device and link records this two-device mesh declares\")"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 397,
+      "line": 403,
       "pattern": "expect_call",
-      "text": ".expect(\"fixture resource must be valid\");"
+      "text": ".expect(\"fixture resource must be valid. Fix: correct the buffer declaration the program carries for this value\");"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 401,
+      "line": 407,
       "pattern": "expect_call",
-      "text": ".expect(\"fixture node must be valid\");"
+      "text": ".expect("
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 453,
+      "line": 461,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|| panic!(\"fixture artifact records no geometry for node {}\", node.0));"
     },
@@ -1138,18 +1138,6 @@
       "text": "panic!("
     },
     {
-      "path": "vyre-test-support/src/csr_sweep.rs",
-      "line": 206,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-test-support/src/csr_sweep.rs",
-      "line": 342,
-      "pattern": "documented_panic_contract",
-      "text": ".map(|path| std::fs::read_to_string(path).expect(\"Fix: read a test source\"))"
-    },
-    {
       "path": "vyre-test-support/src/data_type_variants.rs",
       "line": 51,
       "pattern": "documented_panic_contract",
@@ -1160,12 +1148,6 @@
       "line": 54,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"Fix: no `pub enum DataType` declaration in {path:?}; update this enumeration\")"
-    },
-    {
-      "path": "vyre-test-support/src/dense_matvec_cases.rs",
-      "line": 331,
-      "pattern": "panic_macro",
-      "text": "panic!("
     },
     {
       "path": "vyre-test-support/src/differential_matrix.rs",
@@ -1247,39 +1229,15 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 381,
+      "line": 413,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|err| panic!(\"Fix: cannot read {path:?} to derive the level set: {err}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 383,
+      "line": 415,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|| panic!(\"Fix: {path:?} no longer declares `pub enum IrLevel`\"));"
-    },
-    {
-      "path": "vyre-test-support/src/lib.rs",
-      "line": 434,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
-    },
-    {
-      "path": "vyre-test-support/src/lib.rs",
-      "line": 477,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
-    },
-    {
-      "path": "vyre-test-support/src/lib.rs",
-      "line": 572,
-      "pattern": "documented_panic_contract",
-      "text": "Err(error) => panic!("
-    },
-    {
-      "path": "vyre-test-support/src/lib.rs",
-      "line": 580,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
@@ -1301,19 +1259,19 @@
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 210,
+      "line": 211,
       "pattern": "expect_call",
-      "text": ".flat_map(|handle| handle.join().expect(\"a corpus read lane must not panic\"))"
+      "text": "handle.join().expect("
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 276,
+      "line": 281,
       "pattern": "documented_panic_contract",
       "text": "let executable = std::env::current_exe().expect(\"Fix: the test binary path must be readable\");"
     },
     {
       "path": "vyre-test-support/src/monorepo.rs",
-      "line": 278,
+      "line": 283,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -1345,23 +1303,47 @@
       "path": "vyre-test-support/src/preferred_dispatch_backend_contract.rs",
       "line": 24,
       "pattern": "documented_panic_contract",
-      "text": "backend_dispatches(backend_id).expect(\"valid backend registry\"),"
+      "text": "backend_dispatches(backend_id).expect("
     },
     {
       "path": "vyre-test-support/src/preferred_dispatch_backend_contract.rs",
-      "line": 28,
+      "line": 31,
       "pattern": "documented_panic_contract",
-      "text": "backend_precedence(backend_id).expect(\"valid backend registry\"),"
+      "text": "backend_precedence(backend_id).expect("
     },
     {
       "path": "vyre-test-support/src/preferred_dispatch_backend_contract.rs",
-      "line": 50,
+      "line": 56,
       "pattern": "documented_panic_contract",
       "text": "let backend = acquire_preferred_dispatch_backend().expect(acquisition_message);"
     },
     {
       "path": "vyre-test-support/src/public_api.rs",
       "line": 63,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "vyre-test-support/src/registry_closure.rs",
+      "line": 61,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
+    },
+    {
+      "path": "vyre-test-support/src/registry_closure.rs",
+      "line": 104,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
+    },
+    {
+      "path": "vyre-test-support/src/registry_closure.rs",
+      "line": 199,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!("
+    },
+    {
+      "path": "vyre-test-support/src/registry_closure.rs",
+      "line": 207,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -1507,31 +1489,31 @@
       "path": "vyre-test-support/src/target_compiler_contract.rs",
       "line": 85,
       "pattern": "expect_call",
-      "text": ".expect(\"single-lane fixture graph must accept its one node\");"
+      "text": ".expect(\"single-lane fixture graph must accept its one node. Fix: correct the program or the output this fixture declares for `main`\");"
     },
     {
       "path": "vyre-test-support/src/target_compiler_contract.rs",
       "line": 132,
       "pattern": "expect_call",
-      "text": ".expect(\"two-stage fixture graph must accept its producer\");"
+      "text": ".expect(\"two-stage fixture graph must accept its producer. Fix: correct the producer's program or the contract of the value it publishes\");"
     },
     {
       "path": "vyre-test-support/src/target_compiler_contract.rs",
       "line": 135,
       "pattern": "expect_call",
-      "text": ".expect(\"the producer declares one output value\");"
+      "text": ".expect(\"the producer declares one output value. Fix: keep the producer's single GraphOutput above, which this stage reads as `middle`\");"
     },
     {
       "path": "vyre-test-support/src/target_compiler_contract.rs",
       "line": 152,
       "pattern": "expect_call",
-      "text": ".expect(\"two-stage fixture graph must accept its consumer\");"
+      "text": ".expect(\"two-stage fixture graph must accept its consumer. Fix: correct the consumer's program or the contract it reads `middle` under\");"
     },
     {
       "path": "vyre-test-support/src/target_compiler_contract.rs",
       "line": 163,
       "pattern": "expect_call",
-      "text": ".expect(\"backend registry must build\")"
+      "text": ".expect(\"backend registry must build. Fix: correct the duplicate or malformed registration the driver crates publish\")"
     },
     {
       "path": "vyre-test-support/src/target_compiler_contract.rs",
@@ -1691,9 +1673,9 @@
     },
     {
       "path": "xtask/src/artifact_gate.rs",
-      "line": 494,
+      "line": 493,
       "pattern": "documented_panic_contract",
-      "text": "handle.join().expect(\"a snapshot read lane must not panic\");"
+      "text": "let (lane_entries, lane_errors) = handle.join().expect("
     },
     {
       "path": "xtask/src/fixture_checkout.rs",
@@ -1721,7 +1703,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1613,
+      "line": 1615,
       "pattern": "documented_panic_contract",
       "text": "descriptor(gate_name).unwrap_or_else(|| panic!(\"gate `{gate_name}` is not in GATE_METADATA\"))"
     },

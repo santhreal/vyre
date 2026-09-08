@@ -220,13 +220,12 @@ pub mod fusion_workgroup_geometry;
 #[path = "geometry_foundation_contracts.rs"]
 pub mod geometry_foundation_contracts;
 
-/// Integration tests from `tests/graph_invariants.rs`.
-#[path = "graph_invariants.rs"]
-pub mod graph_invariants;
 /// Integration tests from `tests/graph_delta_contract.rs`.
 #[path = "graph_delta_contract.rs"]
 pub mod graph_delta_contract;
-
+/// Integration tests from `tests/graph_invariants.rs`.
+#[path = "graph_invariants.rs"]
+pub mod graph_invariants;
 
 /// Integration tests from `tests/inline_buffer_reference_arguments.rs`.
 #[path = "inline_buffer_reference_arguments.rs"]

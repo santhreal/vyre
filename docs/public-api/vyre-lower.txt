@@ -421,12 +421,14 @@ pub fn vyre_lower::descriptor_builder::binop(kind: vyre_spec::bin_op::BinOp, lhs
 pub fn vyre_lower::descriptor_builder::binop_over_loads(id: &str, elem: vyre_spec::data_type::DataType, binop: vyre_spec::bin_op::BinOp) -> vyre_lower::KernelDescriptor
 pub fn vyre_lower::descriptor_builder::body() -> vyre_lower::descriptor_builder::KernelBodyBuilder
 pub fn vyre_lower::descriptor_builder::cast_over_load(id: &str, src: vyre_spec::data_type::DataType, target: vyre_spec::data_type::DataType, out: vyre_spec::data_type::DataType) -> vyre_lower::KernelDescriptor
+pub fn vyre_lower::descriptor_builder::column_walk_tile(element_count: u32) -> vyre_lower::KernelDescriptor
 pub fn vyre_lower::descriptor_builder::counted_loop_head(loop_var: &str) -> [vyre_lower::KernelOp; 3]
 pub fn vyre_lower::descriptor_builder::descriptor(id: &str) -> vyre_lower::descriptor_builder::KernelDescriptorBuilder
 pub fn vyre_lower::descriptor_builder::effect(kind: vyre_lower::KernelOpKind, operands: impl core::convert::Into<alloc::vec::Vec<u32>>) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::emission_target(workgroup: vyre_lower::WorkgroupLimits, subgroup: vyre_lower::SubgroupCapabilities) -> vyre_lower::EmissionTargetCapabilities
 pub fn vyre_lower::descriptor_builder::extract_lane(vector_id: u32, lane: u8, result: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::fixed_global_ro(index: u32, element_type: vyre_spec::data_type::DataType, count: u32, name: &str) -> vyre_lower::BindingSlot
+pub fn vyre_lower::descriptor_builder::folded_literal_vector_store(id: &str) -> vyre_lower::KernelDescriptor
 pub fn vyre_lower::descriptor_builder::for_loop(loop_var: &str, lo: u32, hi: u32, loop_body: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::global_ro(index: u32, element_type: vyre_spec::data_type::DataType, name: &str) -> vyre_lower::BindingSlot
 pub fn vyre_lower::descriptor_builder::global_rw(index: u32, element_type: vyre_spec::data_type::DataType, name: &str) -> vyre_lower::BindingSlot
@@ -435,12 +437,14 @@ pub fn vyre_lower::descriptor_builder::if_then(cond: u32, then_body: u32) -> vyr
 pub fn vyre_lower::descriptor_builder::if_then_else(cond: u32, then_body: u32, otherwise_body: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::lit(pool_index: u32, result: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::load_global(slot: u32, index: u32, result: u32) -> vyre_lower::KernelOp
+pub fn vyre_lower::descriptor_builder::local_invocation_id(axis: u32, result: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::mma_f16_m16n8k16() -> vyre_lower::KernelOpKind
 pub fn vyre_lower::descriptor_builder::op(kind: vyre_lower::KernelOpKind, operands: impl core::convert::Into<alloc::vec::Vec<u32>>, result: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::permissive_workgroup_limits() -> vyre_lower::WorkgroupLimits
 pub fn vyre_lower::descriptor_builder::shared_rw(index: u32, element_type: vyre_spec::data_type::DataType, count: u32, name: &str) -> vyre_lower::BindingSlot
 pub fn vyre_lower::descriptor_builder::slot(index: u32, element_type: vyre_spec::data_type::DataType, memory_class: vyre_lower::MemoryClass, visibility: vyre_lower::BindingVisibility, name: &str) -> vyre_lower::BindingSlot
 pub fn vyre_lower::descriptor_builder::store_global(slot: u32, index: u32, value: u32) -> vyre_lower::KernelOp
+pub fn vyre_lower::descriptor_builder::strided_tile_program() -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_lower::descriptor_builder::target_without_subgroups() -> vyre_lower::EmissionTargetCapabilities
 pub fn vyre_lower::descriptor_builder::vector_load_global(slot: u32, index: u32, width: u8, result: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::vector_store_global(slot: u32, index: u32, width: u8, values: &[u32]) -> vyre_lower::KernelOp
@@ -1048,6 +1052,7 @@ pub vyre_lower::analyses::BankAccessSite::binding_slot: u32
 pub vyre_lower::analyses::BankAccessSite::conflict: vyre_lower::analyses::BankConflictKind
 pub vyre_lower::analyses::BankAccessSite::kind: vyre_lower::analyses::AccessKind
 pub vyre_lower::analyses::BankAccessSite::op_index: usize
+pub vyre_lower::analyses::BankAccessSite::stride_elements: core::option::Option<u32>
 pub vyre_lower::analyses::BankConflictKind::BroadcastSafe
 pub vyre_lower::analyses::BankConflictKind::Conflict
 pub vyre_lower::analyses::BankConflictKind::Conflict::way_count: u32

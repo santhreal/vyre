@@ -100,6 +100,45 @@ impl crate::gate::GateBehavior for BackendExtension {
             ));
         }
 
+        match register_macro_body(&inventory) {
+            None => report.find(Finding::in_file(
+                INVENTORY,
+                "the register_backend! registration macro is gone",
+                "restore the macro; every backend crate registers itself through it",
+            )),
+            Some(body) => {
+                for (needle, message) in [
+                    (
+                        "$crate::BackendRegistration {",
+                        "register_backend! no longer submits BackendRegistration",
+                    ),
+                    (
+                        "$crate::BackendPrecedence {",
+                        "register_backend! no longer submits BackendPrecedence",
+                    ),
+                    (
+                        "$crate::BackendCapability {",
+                        "register_backend! no longer submits BackendCapability",
+                    ),
+                    (
+                        "supported_ops:",
+                        "register_backend! no longer advertises supported_ops",
+                    ),
+                ] {
+                    if !body.contains(needle) {
+                        report.find(Finding::in_file(
+                            INVENTORY,
+                            message,
+                            format!(
+                                "restore `{needle}` in the macro body; every backend crate \
+                                 registers whatever the macro submits"
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+
         for backend in BACKENDS {
             let manifest = format!("{backend}/Cargo.toml");
             if !tree.exists(&manifest) {
@@ -127,15 +166,36 @@ impl crate::gate::GateBehavior for BackendExtension {
             }
 
             let sources = tree.rust(&[&format!("{backend}/src")])?;
-            for (message, matcher) in backend_source_requirements() {
-                let found = !tree.hits(&sources, |line| matcher(line))?.is_empty();
-                if !found {
-                    report.find(Finding::in_file(
-                        format!("{backend}/src"),
-                        format!("{backend} {message}"),
-                        "keep a backend one crate that implements the backend trait and \
-                         submits its own registration, precedence and capability records",
-                    ));
+            if tree
+                .hits(&sources, |line| {
+                    line.contains("impl ") && line.contains("VyreBackend for")
+                })?
+                .is_empty()
+            {
+                report.find(Finding::in_file(
+                    format!("{backend}/src"),
+                    format!("{backend} does not implement the backend trait in its own crate"),
+                    "keep a backend one crate that implements the backend trait",
+                ));
+            }
+            // A crate that expands the shared macro submits exactly what the
+            // macro submits, and the macro body is checked above. A crate that
+            // writes its own submissions is checked record by record here.
+            if tree
+                .hits(&sources, |line| line.contains(REGISTER_MACRO))?
+                .is_empty()
+            {
+                for (message, matcher) in raw_registration_requirements() {
+                    if tree.hits(&sources, |line| matcher(line))?.is_empty() {
+                        report.find(Finding::in_file(
+                            format!("{backend}/src"),
+                            format!("{backend} {message}"),
+                            format!(
+                                "submit the record from the backend crate, or register \
+                                 through `{REGISTER_MACRO}`"
+                            ),
+                        ));
+                    }
                 }
             }
         }
@@ -194,13 +254,22 @@ fn emit_members(tree: &Tree) -> Result<Vec<String>, GateError> {
     Ok(emitters)
 }
 
-/// What every backend crate's own sources must contain.
-fn backend_source_requirements() -> Vec<SourceRequirement> {
+/// The invocation a backend crate writes to register itself through the shared
+/// macro instead of spelling each submission by hand.
+const REGISTER_MACRO: &str = "vyre_driver::register_backend!";
+
+/// The body of the `register_backend!` macro, from its `macro_rules!` header to
+/// the closing brace in the first column. `None` means the macro is gone.
+fn register_macro_body(inventory: &str) -> Option<&str> {
+    let start = inventory.find("macro_rules! register_backend {")?;
+    let rest = &inventory[start..];
+    let end = rest.find("\n}\n")?;
+    Some(&rest[..end])
+}
+
+/// What a backend crate that does not expand the shared macro must contain.
+fn raw_registration_requirements() -> Vec<SourceRequirement> {
     vec![
-        (
-            "does not implement the backend trait in its own crate",
-            |line: &str| line.contains("impl ") && line.contains("VyreBackend for"),
-        ),
         (
             "does not submit backend metadata through inventory",
             |line: &str| followed_by(line, "inventory::submit!", '{'),

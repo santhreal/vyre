@@ -132,7 +132,7 @@ jobs:
       - name: Metal driver device tests
         if: runner.os == 'macOS'
         shell: bash
-        run: ./cargo_full test -p vyre-driver-metal --features device-tests
+        run: ./cargo_full test -p vyre-driver-metal --features device-tests -- --test-threads=1
 
 
       - name: composition-library reference-parity tests

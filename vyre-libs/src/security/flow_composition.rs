@@ -22,9 +22,9 @@ use crate::bitset::bitset_words;
 use crate::graph::csr_backward_traverse::csr_backward_traverse;
 use crate::graph::csr_forward_traverse::csr_forward_traverse;
 use crate::graph::program_graph::ProgramGraphShape;
+use crate::plumbing::program::outputs::demote_intermediate_outputs;
 #[cfg(test)]
 use crate::predicate::edge_kind;
-use crate::plumbing::program::outputs::demote_intermediate_outputs;
 use vyre_foundation::composition::{
     reparent_program_children, tag_program, trap_program, wrap_anonymous_region,
 };
@@ -279,6 +279,11 @@ pub(crate) fn security_flow_program(options: SecurityFlowOptions<'_>) -> Program
 // ---------------------------------------------------------------------------
 pub(crate) const FORWARD_REACH_EXPECTED_BYTES: [u8; 4] = [0x03, 0x00, 0x00, 0x00];
 pub(crate) const DOMINANCE_EXPECTED_BYTES: [u8; 4] = [0x0E, 0x00, 0x00, 0x00];
+/// The reach accumulator after one hop from {0} along the chain: {0, 1}.
+pub(crate) const DATAFLOW_REACH_EXPECTED_BYTES: [u8; 4] = [0x03, 0x00, 0x00, 0x00];
+/// Reach intersected with the sink tag on {1}: {1}.
+pub(crate) const DATAFLOW_HITS_EXPECTED_BYTES: [u8; 4] = [0x02, 0x00, 0x00, 0x00];
+/// Nonzero because the intersection is non-empty.
 pub(crate) const DATAFLOW_HIT_SCALAR_BYTES: [u8; 4] = [0x01, 0x00, 0x00, 0x00];
 
 /// Linear chain `0 → 1 → 2 → 3` over ASSIGNMENT edges, frontier seeded at {0}.
@@ -340,7 +345,11 @@ pub(crate) fn dataflow_hit_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
 /// Reach grows to {0, 1}, the sink at {1} is hit, the witness reads 1.
 #[cfg(test)]
 pub(crate) fn dataflow_hit_fixture_expected() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![DATAFLOW_HIT_SCALAR_BYTES.to_vec()]]
+    vec![vec![
+        DATAFLOW_REACH_EXPECTED_BYTES.to_vec(),
+        DATAFLOW_HITS_EXPECTED_BYTES.to_vec(),
+        DATAFLOW_HIT_SCALAR_BYTES.to_vec(),
+    ]]
 }
 
 // ---------------------------------------------------------------------------
@@ -573,9 +582,16 @@ mod tests {
             dominance_fixture_expected(),
             vec![vec![vec![0x0E, 0x00, 0x00, 0x00]]]
         );
+        // Every buffer the fused composition returns, as literals rather than
+        // the constants the fixture is built from: reach {0,1}, the sink
+        // intersection {1}, and the nonzero witness.
         assert_eq!(
             dataflow_hit_fixture_expected(),
-            vec![vec![vec![0x01, 0x00, 0x00, 0x00]]]
+            vec![vec![
+                vec![0x03, 0x00, 0x00, 0x00],
+                vec![0x02, 0x00, 0x00, 0x00],
+                vec![0x01, 0x00, 0x00, 0x00],
+            ]]
         );
     }
 }

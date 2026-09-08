@@ -24,7 +24,7 @@
 
 use std::collections::{BTreeMap, VecDeque};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 
 use thiserror::Error;
 
@@ -77,7 +77,9 @@ impl DeadlineClass {
     pub const fn budget_ns(&self) -> u64 {
         match self {
             Self::HardRealTime { deadline_ns, .. } => *deadline_ns,
-            Self::InteractiveFrame { frame_target_ns, .. } => *frame_target_ns,
+            Self::InteractiveFrame {
+                frame_target_ns, ..
+            } => *frame_target_ns,
             Self::Background { max_latency_ns } => *max_latency_ns,
         }
     }
@@ -222,6 +224,10 @@ pub enum InteractiveAdmissionError {
     /// Device has faulted or experienced unrecoverable loss.
     #[error("session is faulted due to device loss")]
     DeviceLoss,
+    /// Session state is unusable because a thread panicked holding one of its
+    /// locks.
+    #[error("interactive session state is poisoned: {0}. Fix: rebuild the session; its queue and records may disagree.")]
+    Poisoned(String),
 }
 
 /// Errors occurring during interactive request cancellation.
@@ -235,6 +241,10 @@ pub enum InteractiveCancellationError {
     /// Request ID is unknown to the state machine.
     #[error("unknown interactive request ID {0:?}")]
     UnknownRequest(InteractiveRequestId),
+    /// Session state is unusable because a thread panicked holding one of its
+    /// locks.
+    #[error("interactive session state is poisoned: {0}. Fix: rebuild the session; its queue and records may disagree.")]
+    Poisoned(String),
 }
 
 #[derive(Debug)]
@@ -253,7 +263,10 @@ pub struct InteractiveSessionStateMachine {
     records: Mutex<BTreeMap<InteractiveRequestId, RequestRecord>>,
     channel_generations: Mutex<BTreeMap<InteractiveChannelId, u64>>,
     admitted_queue: Mutex<VecDeque<InteractiveRequestId>>,
-    faulted: Mutex<bool>,
+    /// Reason the session faulted, `None` while it is healthy. Carrying the
+    /// reason is what lets a faulted completion report why rather than a
+    /// fixed string.
+    faulted: Mutex<Option<String>>,
 }
 
 impl InteractiveSessionStateMachine {
@@ -271,9 +284,19 @@ impl InteractiveSessionStateMachine {
             next_request_id: AtomicU64::new(1),
             records: Mutex::new(BTreeMap::new()),
             channel_generations: Mutex::new(BTreeMap::new()),
-            admitted_queue: Mutex::new(VecDeque::new()),
-            faulted: Mutex::new(false),
+            // Admission refuses past `max_queue_depth`, so the queue is sized
+            // for its ceiling once and never grows on the dispatch path.
+            admitted_queue: Mutex::new(VecDeque::with_capacity(max_queue_depth)),
+            faulted: Mutex::new(None),
         }
+    }
+
+    /// Acquire one of the session locks, reporting poison rather than panicking.
+    ///
+    /// A panic under any of these locks can leave the queue and the record map
+    /// disagreeing, so every entry point refuses instead of reading torn state.
+    fn guard<T>(lock: &Mutex<T>) -> Result<MutexGuard<'_, T>, BackendError> {
+        lock.lock().map_err(BackendError::poisoned_lock)
     }
 
     /// Maximum admitted queue capacity.
@@ -291,8 +314,9 @@ impl InteractiveSessionStateMachine {
         request: InteractiveSubmissionRequest,
         current_time_ns: u64,
     ) -> Result<InteractiveRequestId, InteractiveAdmissionError> {
-        let faulted = self.faulted.lock().unwrap_or_else(|e| e.into_inner());
-        if *faulted {
+        let faulted = Self::guard(&self.faulted)
+            .map_err(|error| InteractiveAdmissionError::Poisoned(error.to_string()))?;
+        if faulted.is_some() {
             return Err(InteractiveAdmissionError::DeviceLoss);
         }
 
@@ -305,7 +329,8 @@ impl InteractiveSessionStateMachine {
             });
         }
 
-        let mut channel_gens = self.channel_generations.lock().unwrap_or_else(|e| e.into_inner());
+        let mut channel_gens = Self::guard(&self.channel_generations)
+            .map_err(|error| InteractiveAdmissionError::Poisoned(error.to_string()))?;
         let current_gen = channel_gens.entry(request.channel_id).or_insert(0);
         if request.frame_generation < *current_gen {
             return Err(InteractiveAdmissionError::StaleGeneration {
@@ -315,8 +340,10 @@ impl InteractiveSessionStateMachine {
             });
         }
 
-        let mut queue = self.admitted_queue.lock().unwrap_or_else(|e| e.into_inner());
-        let mut records = self.records.lock().unwrap_or_else(|e| e.into_inner());
+        let mut queue = Self::guard(&self.admitted_queue)
+            .map_err(|error| InteractiveAdmissionError::Poisoned(error.to_string()))?;
+        let mut records = Self::guard(&self.records)
+            .map_err(|error| InteractiveAdmissionError::Poisoned(error.to_string()))?;
 
         // Perform supersession for any older generation on the same channel
         for req_id in queue.iter() {
@@ -364,12 +391,14 @@ impl InteractiveSessionStateMachine {
 
     /// Advance an admitted request to `Prepared` status off the event thread.
     pub fn prepare(&self, request_id: InteractiveRequestId) -> Result<(), BackendError> {
-        let mut records = self.records.lock().unwrap_or_else(|e| e.into_inner());
-        let record = records.get_mut(&request_id).ok_or_else(|| {
-            BackendError::InvalidProgram {
-                fix: format!("Fix: request {request_id:?} is not registered in the session state machine."),
-            }
-        })?;
+        let mut records = Self::guard(&self.records)?;
+        let record = records
+            .get_mut(&request_id)
+            .ok_or_else(|| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: request {request_id:?} is not registered in the session state machine."
+                ),
+            })?;
 
         match record.state {
             InteractiveSessionState::Admitted => {
@@ -392,13 +421,15 @@ impl InteractiveSessionStateMachine {
 
     /// Advance a prepared request across the irreversible submission boundary into `Submitted`.
     pub fn submit(&self, request_id: InteractiveRequestId) -> Result<(), BackendError> {
-        let mut queue = self.admitted_queue.lock().unwrap_or_else(|e| e.into_inner());
-        let mut records = self.records.lock().unwrap_or_else(|e| e.into_inner());
-        let record = records.get_mut(&request_id).ok_or_else(|| {
-            BackendError::InvalidProgram {
-                fix: format!("Fix: request {request_id:?} is not registered in the session state machine."),
-            }
-        })?;
+        let mut queue = Self::guard(&self.admitted_queue)?;
+        let mut records = Self::guard(&self.records)?;
+        let record = records
+            .get_mut(&request_id)
+            .ok_or_else(|| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: request {request_id:?} is not registered in the session state machine."
+                ),
+            })?;
 
         match record.state {
             InteractiveSessionState::Prepared => {
@@ -426,12 +457,18 @@ impl InteractiveSessionStateMachine {
         request_id: InteractiveRequestId,
         completion_time_ns: u64,
     ) -> Result<InteractiveCompletion, BackendError> {
-        let mut records = self.records.lock().unwrap_or_else(|e| e.into_inner());
-        let record = records.get_mut(&request_id).ok_or_else(|| {
-            BackendError::InvalidProgram {
-                fix: format!("Fix: request {request_id:?} is not registered in the session state machine."),
-            }
-        })?;
+        // Same lock order as `admit`: faulted, then channel generations, then
+        // records.
+        let fault_reason = Self::guard(&self.faulted)?.clone();
+        let channel_gens = Self::guard(&self.channel_generations)?;
+        let mut records = Self::guard(&self.records)?;
+        let record = records
+            .get_mut(&request_id)
+            .ok_or_else(|| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: request {request_id:?} is not registered in the session state machine."
+                ),
+            })?;
 
         match record.state {
             InteractiveSessionState::Submitted => {
@@ -446,14 +483,22 @@ impl InteractiveSessionStateMachine {
             InteractiveSessionState::Superseded => Ok(InteractiveCompletion::Superseded {
                 request_id,
                 stale_generation: record.request.frame_generation,
-                superseded_by_generation: record.request.frame_generation + 1,
+                // The channel's current generation is the one that superseded
+                // this frame. Adding one to the stale generation named a frame
+                // that need not exist whenever a channel skipped ahead.
+                superseded_by_generation: channel_gens
+                    .get(&record.request.channel_id)
+                    .copied()
+                    .unwrap_or(record.request.frame_generation),
             }),
             InteractiveSessionState::Cancelled => {
                 Ok(InteractiveCompletion::Cancelled { request_id })
             }
             InteractiveSessionState::Faulted => Ok(InteractiveCompletion::Faulted {
                 request_id,
-                reason: "session was faulted".into(),
+                reason: fault_reason.unwrap_or_else(|| {
+                    "request faulted without a recorded session fault".to_string()
+                }),
             }),
             other => Err(BackendError::InvalidProgram {
                 fix: format!("Fix: cannot complete request in state {other:?}."),
@@ -466,8 +511,10 @@ impl InteractiveSessionStateMachine {
         &self,
         request_id: InteractiveRequestId,
     ) -> Result<CancellationOutcome, InteractiveCancellationError> {
-        let mut queue = self.admitted_queue.lock().unwrap_or_else(|e| e.into_inner());
-        let mut records = self.records.lock().unwrap_or_else(|e| e.into_inner());
+        let mut queue = Self::guard(&self.admitted_queue)
+            .map_err(|error| InteractiveCancellationError::Poisoned(error.to_string()))?;
+        let mut records = Self::guard(&self.records)
+            .map_err(|error| InteractiveCancellationError::Poisoned(error.to_string()))?;
         let record = records
             .get_mut(&request_id)
             .ok_or(InteractiveCancellationError::UnknownRequest(request_id))?;
@@ -478,9 +525,9 @@ impl InteractiveSessionStateMachine {
                 queue.retain(|id| id != &request_id);
                 Ok(CancellationOutcome::Cancelled)
             }
-            InteractiveSessionState::Submitted => {
-                Err(InteractiveCancellationError::IrreversibleSubmission(request_id))
-            }
+            InteractiveSessionState::Submitted => Err(
+                InteractiveCancellationError::IrreversibleSubmission(request_id),
+            ),
             InteractiveSessionState::Superseded => Ok(CancellationOutcome::AlreadySuperseded),
             InteractiveSessionState::Completed => Ok(CancellationOutcome::AlreadyCompleted),
             InteractiveSessionState::Cancelled => Ok(CancellationOutcome::Cancelled),
@@ -496,12 +543,12 @@ impl InteractiveSessionStateMachine {
         blocking_id: InteractiveRequestId,
         waiting_priority: PriorityClass,
     ) -> Result<PriorityClass, BackendError> {
-        let mut records = self.records.lock().unwrap_or_else(|e| e.into_inner());
-        let record = records.get_mut(&blocking_id).ok_or_else(|| {
-            BackendError::InvalidProgram {
+        let mut records = Self::guard(&self.records)?;
+        let record = records
+            .get_mut(&blocking_id)
+            .ok_or_else(|| BackendError::InvalidProgram {
                 fix: format!("Fix: blocking request {blocking_id:?} is not registered."),
-            }
-        })?;
+            })?;
 
         if waiting_priority > record.effective_priority {
             record.effective_priority = waiting_priority;
@@ -509,13 +556,16 @@ impl InteractiveSessionStateMachine {
         Ok(record.effective_priority)
     }
 
-    /// Mark the entire session as faulted (e.g. on unrecoverable device loss).
-    pub fn fault_all(&self, _reason: &str) {
-        let mut faulted = self.faulted.lock().unwrap_or_else(|e| e.into_inner());
-        *faulted = true;
-        let mut queue = self.admitted_queue.lock().unwrap_or_else(|e| e.into_inner());
+    /// Mark the entire session as faulted on unrecoverable device loss.
+    ///
+    /// `reason` is retained and reported by every faulted completion, so a
+    /// caller learns which loss ended its frame.
+    pub fn fault_all(&self, reason: &str) -> Result<(), BackendError> {
+        let mut faulted = Self::guard(&self.faulted)?;
+        *faulted = Some(reason.to_string());
+        let mut queue = Self::guard(&self.admitted_queue)?;
         queue.clear();
-        let mut records = self.records.lock().unwrap_or_else(|e| e.into_inner());
+        let mut records = Self::guard(&self.records)?;
         for rec in records.values_mut() {
             if rec.state != InteractiveSessionState::Completed
                 && rec.state != InteractiveSessionState::Cancelled
@@ -524,22 +574,38 @@ impl InteractiveSessionStateMachine {
                 rec.state = InteractiveSessionState::Faulted;
             }
         }
+        Ok(())
+    }
+
+    /// Reason this session faulted, `None` while it is healthy.
+    pub fn fault_reason(&self) -> Result<Option<String>, BackendError> {
+        Ok(Self::guard(&self.faulted)?.clone())
     }
 
     /// Inspect current state of a request.
-    #[must_use]
-    pub fn state_of(&self, request_id: InteractiveRequestId) -> Option<InteractiveSessionState> {
-        self.records.lock().unwrap_or_else(|e| e.into_inner()).get(&request_id).map(|r| r.state)
+    ///
+    /// `Ok(None)` means the request is not registered. Poison is reported
+    /// rather than folded into the same `None`, because those need different
+    /// corrective action.
+    pub fn state_of(
+        &self,
+        request_id: InteractiveRequestId,
+    ) -> Result<Option<InteractiveSessionState>, BackendError> {
+        Ok(Self::guard(&self.records)?
+            .get(&request_id)
+            .map(|r| r.state))
     }
 
     /// Inspect effective priority of a request.
-    #[must_use]
-    pub fn effective_priority_of(&self, request_id: InteractiveRequestId) -> Option<PriorityClass> {
-        self.records
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
+    ///
+    /// `Ok(None)` means the request is not registered.
+    pub fn effective_priority_of(
+        &self,
+        request_id: InteractiveRequestId,
+    ) -> Result<Option<PriorityClass>, BackendError> {
+        Ok(Self::guard(&self.records)?
             .get(&request_id)
-            .map(|r| r.effective_priority)
+            .map(|r| r.effective_priority))
     }
 }
 

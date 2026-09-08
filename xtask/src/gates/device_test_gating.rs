@@ -102,6 +102,32 @@ impl crate::gate::GateBehavior for DeviceTestGating {
                 parsed.insert(path.clone(), file);
             }
         }
+        let registry = registry_reach(&parsed);
+        report.note(format!(
+            "{} registry acquisition name(s): {}; {} registration reader(s): {}",
+            registry.acquisitions.len(),
+            registry
+                .acquisitions
+                .iter()
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(", "),
+            registry.readers.len(),
+            registry
+                .readers
+                .iter()
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+        if registry.acquisitions.is_empty() || registry.readers.is_empty() {
+            report.find(Finding::new(
+                format!("no name in `{REGISTRY_CRATE}` reads a registration or hands out a `{LIVE_BACKEND}`"),
+                "this gate reads the registry's own signatures; if the live-backend handle was \
+                 renamed, teach the roster the new shape rather than leaving the rule vacuous",
+            ));
+        }
+        let device_linked = device_linking_members(&tree)?;
         let admitted_files = admitted_closure(&parsed);
         for path in &sources {
             let Some(file) = parsed.get(path) else {
@@ -120,6 +146,36 @@ impl crate::gate::GateBehavior for DeviceTestGating {
                          behind `#![cfg(feature = \"{FEATURE}\")]`, so it compiles on the runner \
                          that has the device instead of aborting on the one that does not; a \
                          measurement instrument run by hand takes `#[ignore]` instead"
+                    ),
+                ));
+            }
+            // A registry acquisition names no concrete type, so the roster
+            // above cannot see it. Two conditions decide whether one reaches
+            // hardware: the package links a driver that owns some, and the file
+            // reads the registration it acquires from. Without the second,
+            // `ModuleGlobalsGate::acquire` on a mutex reads as opening a device.
+            if !device_linked.iter().any(|member| scan::under(path, member)) {
+                continue;
+            }
+            let whole = code_tokens(file.to_token_stream()).replace(' ', "");
+            if !registry
+                .readers
+                .iter()
+                .any(|reader| calls_registry(&whole, reader))
+            {
+                continue;
+            }
+            for name in ungated_acquisitions_through(&file.items, in_test, &registry.acquisitions) {
+                report.find(Finding::new(
+                    format!(
+                        "{display}: test code acquires a backend through `{name}` with no \
+                         hardware admission"
+                    ),
+                    format!(
+                        "put the test behind `#[cfg(feature = \"{FEATURE}\")]`, or the whole file \
+                         behind `#![cfg(feature = \"{FEATURE}\")]`; the registry hands out a live \
+                         backend without naming its type, so a package that links a driver \
+                         reaches the device through it"
                     ),
                 ));
             }
@@ -201,7 +257,15 @@ impl crate::gate::GateBehavior for DeviceTestGating {
                         ));
                     }
                 }
-                if !admits_every_lane(&named, &on_by_default) {
+                // The defect is an admission that reads as a hardware gate and
+                // performs none, so it needs a file that reaches hardware. A
+                // feature named because the target cannot compile without the
+                // registry it reads is a build prerequisite, not an admission,
+                // and reporting one would say the manifest is wrong about what
+                // its own target needs.
+                if !admits_every_lane(&named, &on_by_default)
+                    || !reaches_hardware(file, &backends, &registry)
+                {
                     continue;
                 }
                 report.find(Finding::new(
@@ -606,6 +670,214 @@ fn backend_roster(tree: &Tree) -> Result<BTreeSet<String>, GateError> {
     Ok(roster)
 }
 
+/// The backend-agnostic crate whose registry hands out a live backend.
+const REGISTRY_CRATE: &str = "vyre-driver";
+
+/// How a live backend is handed out, with the spacing token rendering removes.
+const LIVE_BACKEND: &str = "Box<dynVyreBackend>";
+
+/// The registration type a caller reads before it can acquire through it.
+const REGISTRATION: &str = "BackendRegistration";
+
+/// How a caller reaches a device without naming a concrete backend.
+///
+/// The concrete roster above reads `Type::acquire(`, which is every acquisition
+/// that spells its backend. The registry spells none: a caller holding a
+/// `BackendRegistration` calls `.acquire()` on it, or calls its `factory`
+/// field, and receives a live device with no concrete type anywhere in the
+/// source. `vyre-registry-link` acquired every linked driver that way in a
+/// suite no lane admitted to hardware, and the run spent six hours of user CPU
+/// inside a vendor thread-local destructor instead of failing.
+struct RegistryReach {
+    /// Names that hand out a live backend when they are called.
+    acquisitions: BTreeSet<String>,
+    /// Names that hand out the registration an acquisition is reached through.
+    readers: BTreeSet<String>,
+}
+
+/// Both halves, derived from the signatures the workspace declares.
+///
+/// An acquisition name alone is ambiguous: `acquire` is also what a mutex gate
+/// and a materializer device call theirs. Requiring the file to read a
+/// registration first is what separates opening a device from taking a lock.
+/// Renaming either half moves the rule with it.
+///
+/// Read from every member rather than from `vyre-driver` alone, because a
+/// wrapper is where the reach hides: `vyre-registry-link` re-exposes the
+/// registry as `live_backend_registry`, and a rule that knew only the names in
+/// the owning crate saw a test enumerate every driver and acquire each one
+/// without matching anything. Declarations in test trees are skipped, so a
+/// fixture that names a reader does not widen the rule.
+fn registry_reach(parsed: &BTreeMap<PathBuf, syn::File>) -> RegistryReach {
+    let mut reach = RegistryReach {
+        acquisitions: BTreeSet::new(),
+        readers: BTreeSet::new(),
+    };
+    for (path, file) in parsed {
+        if scan::is_test_tree(path) {
+            continue;
+        }
+        collect_registry_acquisitions(&file.items, &mut reach.acquisitions);
+        collect_registration_readers(&file.items, &mut reach.readers);
+    }
+    reach
+}
+
+/// Every name that yields a registration, walking inline modules.
+fn collect_registration_readers(items: &[syn::Item], names: &mut BTreeSet<String>) {
+    for item in items {
+        match item {
+            syn::Item::Fn(function) if signature_yields_registration(&function.sig) => {
+                names.insert(function.sig.ident.to_string());
+            }
+            syn::Item::Impl(block) => {
+                for inner in &block.items {
+                    if let syn::ImplItem::Fn(function) = inner {
+                        if signature_yields_registration(&function.sig) {
+                            names.insert(function.sig.ident.to_string());
+                        }
+                    }
+                }
+            }
+            syn::Item::Mod(module) => {
+                if let Some((_, inner)) = &module.content {
+                    collect_registration_readers(inner, names);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Whether a signature returns a registration and takes none.
+fn signature_yields_registration(sig: &syn::Signature) -> bool {
+    let mentions = |ty: &syn::Type| {
+        ty.to_token_stream()
+            .to_string()
+            .replace(' ', "")
+            .contains(REGISTRATION)
+    };
+    let returns = match &sig.output {
+        syn::ReturnType::Default => false,
+        syn::ReturnType::Type(_, ty) => mentions(ty),
+    };
+    let consumes = sig.inputs.iter().any(|input| match input {
+        syn::FnArg::Receiver(receiver) => mentions(&receiver.ty),
+        syn::FnArg::Typed(typed) => mentions(&typed.ty),
+    });
+    returns && !consumes
+}
+
+/// Whether a rendered type is the live-backend handle.
+fn yields_live_backend(ty: &syn::Type) -> bool {
+    ty.to_token_stream()
+        .to_string()
+        .replace(' ', "")
+        .contains(LIVE_BACKEND)
+}
+
+/// Whether a signature acquires a live backend rather than passing one along.
+///
+/// Returning the handle is not enough: `wrap_grid_sync_split` takes a live
+/// backend and returns it wrapped, and an accessor hands back one it already
+/// holds. An acquisition is the call that produces a handle from something that
+/// is not one, so a live backend among the inputs disqualifies it.
+fn signature_acquires_backend(sig: &syn::Signature) -> bool {
+    let returns = match &sig.output {
+        syn::ReturnType::Default => false,
+        syn::ReturnType::Type(_, ty) => yields_live_backend(ty),
+    };
+    let consumes = sig.inputs.iter().any(|input| match input {
+        syn::FnArg::Receiver(receiver) => yields_live_backend(&receiver.ty),
+        syn::FnArg::Typed(typed) => yields_live_backend(&typed.ty),
+    });
+    returns && !consumes
+}
+
+/// Every acquisition name declared by these items, walking inline modules.
+///
+/// A field counts only when it is function-typed: `factory` is a fn pointer the
+/// registry calls to open a device, while a field that merely holds a live
+/// backend is an accessor and reaches no hardware.
+fn collect_registry_acquisitions(items: &[syn::Item], names: &mut BTreeSet<String>) {
+    for item in items {
+        match item {
+            syn::Item::Fn(function) if signature_acquires_backend(&function.sig) => {
+                names.insert(function.sig.ident.to_string());
+            }
+            syn::Item::Struct(declared) => {
+                for field in &declared.fields {
+                    let Some(name) = &field.ident else {
+                        continue;
+                    };
+                    if field_acquires_backend(&field.ty) {
+                        names.insert(name.to_string());
+                    }
+                }
+            }
+            syn::Item::Impl(block) => {
+                for inner in &block.items {
+                    if let syn::ImplItem::Fn(function) = inner {
+                        if signature_acquires_backend(&function.sig) {
+                            names.insert(function.sig.ident.to_string());
+                        }
+                    }
+                }
+            }
+            syn::Item::Mod(module) => {
+                if let Some((_, inner)) = &module.content {
+                    collect_registry_acquisitions(inner, names);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Whether a field is a function that opens a device when it is called.
+fn field_acquires_backend(ty: &syn::Type) -> bool {
+    let syn::Type::BareFn(function) = ty else {
+        return false;
+    };
+    let returns = match &function.output {
+        syn::ReturnType::Default => false,
+        syn::ReturnType::Type(_, inner) => yields_live_backend(inner),
+    };
+    returns
+        && !function
+            .inputs
+            .iter()
+            .any(|argument| yields_live_backend(&argument.ty))
+}
+
+/// Workspace members whose build links a driver crate that owns hardware.
+///
+/// A registry acquisition in `vyre-driver`'s own tests reaches no device: the
+/// registry is empty there and `acquire` returns the error that says so. The
+/// same call in a member that links a driver opens one.
+fn device_linking_members(tree: &Tree) -> Result<BTreeSet<String>, GateError> {
+    const TABLES: [&str; 3] = ["dependencies", "dev-dependencies", "build-dependencies"];
+    let mut linked = BTreeSet::new();
+    for member in tree.member_manifests()? {
+        let owns_hardware =
+            member.name.starts_with("vyre-driver-") && member.name != CPU_ORACLE_CRATE;
+        let depends = TABLES.iter().any(|table| {
+            member
+                .manifest
+                .get(*table)
+                .and_then(toml::Value::as_table)
+                .is_some_and(|deps| {
+                    deps.keys()
+                        .any(|name| name.starts_with("vyre-driver-") && name != CPU_ORACLE_CRATE)
+                })
+        });
+        if owns_hardware || depends {
+            linked.insert(member.path.clone());
+        }
+    }
+    Ok(linked)
+}
+
 /// The type-name suffixes a hardware-owning handle is declared with.
 ///
 /// `*Backend` was the whole roster once, and it let two real acquisitions
@@ -705,6 +977,28 @@ fn code_tokens(stream: proc_macro2::TokenStream) -> String {
     rendered
 }
 
+/// Whether a file opens a device at all, whatever admits it.
+///
+/// Read over the whole file rather than per item, because the admission
+/// question is about the target that compiles the file and the acquisition can
+/// sit in any helper inside it.
+fn reaches_hardware(
+    file: &syn::File,
+    backends: &BTreeSet<String>,
+    registry: &RegistryReach,
+) -> bool {
+    let rendered = code_tokens(file.to_token_stream()).replace(' ', "");
+    backends.iter().any(|name| acquires(&rendered, name))
+        || (registry
+            .readers
+            .iter()
+            .any(|reader| calls_registry(&rendered, reader))
+            && registry
+                .acquisitions
+                .iter()
+                .any(|name| calls_registry(&rendered, name)))
+}
+
 /// Backend acquisitions in test code that nothing admits to hardware.
 fn ungated_acquisitions(
     items: &[syn::Item],
@@ -742,6 +1036,69 @@ fn ungated_acquisitions(
         );
     }
     found
+}
+
+/// Registry acquisitions in test code that nothing admits to hardware.
+///
+/// Same walk as the concrete roster, matching a call rather than a path: an
+/// acquisition through the registry is `receiver.acquire(`, `path::acquire(`,
+/// or a call of a function-typed field written `(record.factory)(`.
+fn ungated_acquisitions_through(
+    items: &[syn::Item],
+    in_test: bool,
+    names: &BTreeSet<String>,
+) -> Vec<String> {
+    let mut found = Vec::new();
+    for item in items {
+        let attrs = item_attrs(item);
+        if attrs.is_some_and(admitted) {
+            continue;
+        }
+        let test_here =
+            in_test || attrs.is_some_and(|list| list.iter().any(scan::attribute_is_test_only));
+        if let syn::Item::Mod(module) = item {
+            if let Some((_, inner)) = &module.content {
+                found.extend(ungated_acquisitions_through(inner, test_here, names));
+            }
+            continue;
+        }
+        if !test_here {
+            continue;
+        }
+        let rendered = code_tokens(item.to_token_stream()).replace(' ', "");
+        found.extend(
+            names
+                .iter()
+                .filter(|name| calls_registry(&rendered, name))
+                .cloned(),
+        );
+    }
+    found
+}
+
+/// Whether `rendered` calls `name`.
+///
+/// Four shapes reach one: a method on a value, a path, a bare imported
+/// function, and a function-typed field written `(record.factory)()`. The bare
+/// shape is why the left side needs a word boundary rather than a punctuation
+/// prefix: `live_backend_registry()` is imported and called with nothing in
+/// front of it, and requiring a `.` or `::` missed every enumeration of the
+/// registry.
+fn calls_registry(rendered: &str, name: &str) -> bool {
+    let bytes = rendered.as_bytes();
+    let mut from = 0;
+    while let Some(at) = rendered[from..].find(name) {
+        let start = from + at;
+        let end = start + name.len();
+        let bounded = start == 0
+            || !matches!(bytes[start - 1], b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_');
+        let after = &rendered[end..];
+        if bounded && (after.starts_with('(') || after.starts_with(")(")) {
+            return true;
+        }
+        from = start + 1;
+    }
+    false
 }
 
 /// The attributes of an item, for the item kinds that carry them.

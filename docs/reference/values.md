@@ -74,3 +74,13 @@ outside a single `ProgramGraph` should hold one.
 `ProgramGraph` is `Clone`. A clone is a distinct graph with the same dense
 indices, so an identity taken from one graph stays valid against its clone and
 against nothing else.
+
+Within one graph, a value id survives a node replacement.
+`ProgramGraph::replace_node` swaps the program a node runs and the values it
+reads, and keeps the output values it produces. Stating output ports that
+differ from the node's current ones is rejected as
+`ProgramGraphError::InvalidReplacementOutputs`, because consumers hold those
+values by id and a changed set leaves them bound to values the new program
+never writes. Changing the outputs is a delete and an insert. A replacement
+naming a node the graph does not hold is rejected as
+`ProgramGraphError::MissingNode`.

@@ -53,13 +53,7 @@ fn parity_reference_runner_uses_planned_zeroed_read_write_inputs() {
     let mut borrowed_inputs = Vec::new();
 
     let outputs = runner
-        .execute_with_plan(
-            &program,
-            &inputs,
-            &mut values,
-            &plan,
-            &mut borrowed_inputs,
-        )
+        .execute_with_plan(&program, &inputs, &mut values, &plan, &mut borrowed_inputs)
         .expect("Fix: reference parity runner must receive planned zeroed read-write inputs.");
 
     assert_eq!(

@@ -75,6 +75,9 @@ metal = ["dep:vyre-driver-metal"]
 reference = ["dep:vyre-driver-reference"]
 spirv = ["dep:vyre-driver-spirv"]
 wgpu = ["dep:vyre-driver-wgpu"]
+# Admits the suite that constructs a real backend. Off by default, so a hosted
+# lane with no device compiles the ledger closure and not the device contract.
+device-tests = []
 
 # The rules read the operation registry as well as the backend one, so they
 # cannot build when the operation sources are not linked. Declared rather than
@@ -90,3 +93,8 @@ path = "tests/all_tests.rs"
 name = "all_tests_operations"
 path = "tests/all_tests_operations.rs"
 required-features = ["operations"]
+
+[[test]]
+name = "all_tests_device"
+path = "tests/all_tests_device.rs"
+required-features = ["device-tests"]

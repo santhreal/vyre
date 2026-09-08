@@ -444,7 +444,10 @@ pub(crate) unsafe fn dispatch_program(
 ) -> Result<Vec<Vec<u8>>, BackendError> {
     if config.float_lowering.blocks_contraction() {
         return Err(BackendError::UnsupportedFeature {
-            name: format!("float lowering mode `{}`", config.float_lowering.cache_label()),
+            name: format!(
+                "float lowering mode `{}`",
+                config.float_lowering.cache_label()
+            ),
             backend: crate::SPIRV_BACKEND_ID.to_string(),
         });
     }
@@ -858,7 +861,7 @@ fn infer_grid(program: &Program, workgroup_size: [u32; 3]) -> Result<[u32; 3], B
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+    use vyre_foundation::ir::{BufferDecl, DataType, Program};
 
     /// Before the fix, a program with count=0 output and count=512 input launched exactly
     /// 1 workgroup (max_output_count==0 → div_ceil(lanes).max(1)==1). After the fix it
@@ -871,11 +874,7 @@ mod tests {
                 BufferDecl::output("out", 1, DataType::U32), // count=0: runtime-sized
             ],
             [64, 1, 1],
-            vec![Node::store(
-                "out",
-                Expr::gid_x(),
-                Expr::load("input", Expr::gid_x()),
-            )],
+            Vec::new(),
         );
         let grid = infer_grid(&program, [64, 1, 1])
             .expect("Fix: infer_grid must succeed when input count is non-zero");
@@ -896,11 +895,7 @@ mod tests {
                 BufferDecl::output("out", 1, DataType::U32), // count=0
             ],
             [64, 1, 1],
-            vec![Node::store(
-                "out",
-                Expr::gid_x(),
-                Expr::load("input", Expr::gid_x()),
-            )],
+            Vec::new(),
         );
         let result = infer_grid(&program, [64, 1, 1]);
         assert!(
@@ -920,7 +915,7 @@ mod tests {
         let program = Program::wrapped(
             vec![BufferDecl::output("out", 0, DataType::U32).with_count(256)],
             [64, 1, 1],
-            vec![Node::store("out", Expr::gid_x(), Expr::u32(0))],
+            Vec::new(),
         );
         let grid = infer_grid(&program, [64, 1, 1]).expect("Fix: static output count must succeed");
         assert_eq!(

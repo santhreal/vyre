@@ -44,7 +44,6 @@ _expr: &Expr,
 _op_id: &str,
 _args: &[Expr],
 ) -> ControlFlow<Self::Break>;
-fn visit_sequence(&mut self, _parts: &[Expr]) -> ControlFlow<Self::Break>;
 fn visit_fma(
 &mut self,
 _expr: &Expr,

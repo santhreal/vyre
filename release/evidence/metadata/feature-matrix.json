@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:3cfaa0ef1ac2f973c5c9b7be833ce2c0d92fbb6a:dirty=true:worktree=3cbe563d46758ba403708b657afeb7c9809ec1784cce46e7bf700652e0bdaee0",
+  "source_fingerprint": "git:a08d4b239de91dd83947eee6147624ce72a1aa3c:dirty=true:worktree=b89b7369b7e9ec5c8b730be71602927cd309e201e79a831d45afaa9a8bc1f1fa",
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
@@ -34,6 +34,17 @@
       "malformed_features": [],
       "unresolved_feature_members": [],
       "release_policy": "top-level crate exposes explicit cuda and wgpu feature switches with empty default"
+    },
+    {
+      "name": "vyre-alloc-probe",
+      "manifest": "vyre-alloc-probe/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
       "name": "vyre-aot",
@@ -533,16 +544,14 @@
     {
       "name": "vyre-test-support",
       "manifest": "vyre-test-support/Cargo.toml",
-      "feature_count": 8,
+      "feature_count": 6,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
         "default",
         "driver-artifact-contracts",
         "driver-contracts",
-        "graph-sweeps",
         "ir-fixtures",
-        "matvec-cases",
         "semantic-requests",
         "spec-strategies"
       ],

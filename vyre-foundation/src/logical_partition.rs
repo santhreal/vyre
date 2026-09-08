@@ -69,6 +69,17 @@ pub enum LogicalExchangeKind {
 }
 
 impl LogicalExchangeKind {
+    /// Every exchange kind variant.
+    pub const ALL: [Self; 5] = [
+        Self::AllReduce,
+        Self::AllGather,
+        Self::ReduceScatter,
+        Self::Broadcast,
+        Self::PointToPoint,
+    ];
+}
+
+impl LogicalExchangeKind {
     /// Whether this exchange combines contributions rather than moving them.
     #[must_use]
     pub const fn combines(self) -> bool {

@@ -505,11 +505,46 @@ mod layout_config_contracts {
 mod host_input_classification_contracts {
     use rustc_hash::FxHashSet;
     use vyre_foundation::ir::BufferAccess;
+    use vyre_lower::{
+        BindingLayout, BindingSlot, BindingVisibility, Dispatch, GridIndexSpace, KernelBody,
+        KernelDescriptor, MemoryClass,
+    };
 
     use super::*;
     use crate::pipeline::descriptor_metadata::descriptor_buffer_bindings;
     use crate::pipeline::host_input_slots;
 
+    fn slot(
+        index: u32,
+        name: &str,
+        memory_class: MemoryClass,
+        visibility: BindingVisibility,
+    ) -> BindingSlot {
+        BindingSlot {
+            slot: index,
+            element_type: DataType::U32,
+            element_count: Some(4),
+            memory_class,
+            visibility,
+            name: name.to_owned(),
+        }
+    }
+
+    fn descriptor_of(slots: Vec<BindingSlot>) -> KernelDescriptor {
+        KernelDescriptor {
+            id: String::from("host-input-test"),
+            bindings: BindingLayout { slots },
+            dispatch: Dispatch {
+                workgroup_size: [1, 1, 1],
+                grid_index: GridIndexSpace::default(),
+            },
+            body: KernelBody {
+                ops: Vec::new(),
+                child_bodies: Vec::new(),
+                literals: Vec::new(),
+            },
+        }
+    }
     /// WHY: `BufferDecl::consumes_host_input` is the single definition of the
     /// host input ABI, and `inputs` carries one value per buffer it returns
     /// true for. This backend spelled the rule out again and disagreed with
@@ -532,20 +567,33 @@ mod host_input_classification_contracts {
                 .with_count(4),
             BufferDecl::output("out", 3, DataType::U32).with_count(4),
         ];
-        let canonical: FxHashSet<u32> = buffers
-            .iter()
-            .filter(|buffer| buffer.consumes_host_input())
-            .map(BufferDecl::binding)
-            .collect();
+        let slots = vec![
+            slot(0, "fed", MemoryClass::Global, BindingVisibility::ReadOnly),
+            slot(
+                1,
+                "persist",
+                MemoryClass::Global,
+                BindingVisibility::ReadOnly,
+            ),
+            slot(
+                2,
+                "carried",
+                MemoryClass::Global,
+                BindingVisibility::ReadOnly,
+            ),
+            slot(3, "out", MemoryClass::Global, BindingVisibility::WriteOnly),
+        ];
+        let descriptor = descriptor_of(slots);
+        let canonical: FxHashSet<(u32, u32)> = FxHashSet::from_iter([(0, 0)]);
         assert_eq!(
             canonical,
-            FxHashSet::from_iter([0]),
+            FxHashSet::from_iter([(0, 0)]),
             "of these four only the plain read buffer takes host bytes: a \
              persistent buffer is loaded on the device, a live-out is carried \
              across segments, and an output is written by the dispatch"
         );
         assert_eq!(
-            host_input_slots(&buffers, None)
+            host_input_slots(&descriptor, &buffers, None)
                 .expect("Fix: four buffers must not exhaust the host input set."),
             canonical,
             "the derivation must read the canonical answer rather than \
@@ -585,7 +633,7 @@ mod host_input_classification_contracts {
             .filter(|buffer| buffer.is_output())
             .map(BufferDecl::binding)
             .collect();
-        let host_inputs = host_input_slots(program.buffers(), None)
+        let host_inputs = host_input_slots(&descriptor, program.buffers(), None)
             .expect("Fix: three buffers must not exhaust the host input set.");
         let bindings = descriptor_buffer_bindings(&descriptor, &outputs, &host_inputs)
             .expect("Fix: binding metadata must derive for an analyzed descriptor.");
@@ -620,6 +668,77 @@ mod host_input_classification_contracts {
             checked, 3,
             "every declared buffer must reach a bind group, so a program of \
              three must record three bindings"
+        );
+    }
+
+    /// WHY: recording the canonical answer is half the contract. The record
+    /// path and the persistent slot walk both read it through
+    /// [`crate::pipeline::binding::consumes_host_input`], and that reader must
+    /// layer only the backend-owned trap concern on top. A reader that spells
+    /// the ABI out again from the flattened fields cannot see
+    /// `pipeline_live_out`, so it answers true for `carried` below where the
+    /// declaration answers false, and the two walks disagree again.
+    #[test]
+    fn the_binding_reader_returns_the_recorded_answer_minus_the_trap() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::read("fed", 0, DataType::U32).with_count(4),
+                BufferDecl::storage("carried", 1, BufferAccess::ReadOnly, DataType::U32)
+                    .with_pipeline_live_out(true)
+                    .with_count(4),
+                BufferDecl::output("out", 2, DataType::U32).with_count(4),
+                BufferDecl::storage("scratch", 3, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(4),
+            ],
+            [1, 1, 1],
+            vec![
+                Node::store("scratch", Expr::u32(0), Expr::load("carried", Expr::u32(0))),
+                Node::store(
+                    "out",
+                    Expr::u32(0),
+                    Expr::add(
+                        Expr::load("fed", Expr::u32(0)),
+                        Expr::load("scratch", Expr::u32(0)),
+                    ),
+                ),
+            ],
+        );
+        let descriptor = crate::emit::descriptor_gate::validate_and_analyze(&program)
+            .expect("Fix: a program of plain storage buffers must analyze.");
+        let outputs: FxHashSet<u32> = program
+            .buffers()
+            .iter()
+            .filter(|buffer| buffer.is_output())
+            .map(BufferDecl::binding)
+            .collect();
+        let host_inputs = host_input_slots(&descriptor, program.buffers(), None)
+            .expect("Fix: four buffers must not exhaust the host input set.");
+        let bindings = descriptor_buffer_bindings(&descriptor, &outputs, &host_inputs)
+            .expect("Fix: binding metadata must derive for an analyzed descriptor.");
+
+        let mut disagreeing_declaration_seen = false;
+        for info in &bindings {
+            let expected = info.consumes_host_input && !info.internal_trap;
+            assert_eq!(
+                crate::pipeline::binding::consumes_host_input(info),
+                expected,
+                "binding {} reads {} where the recorded answer minus the trap \
+                 concern is {}",
+                info.binding,
+                crate::pipeline::binding::consumes_host_input(info),
+                expected
+            );
+            let rederived = info.kind != MemoryKind::Shared
+                && !info.internal_trap
+                && (!info.is_output || info.preserve_input_contents);
+            if rederived != expected {
+                disagreeing_declaration_seen = true;
+            }
+        }
+        assert!(
+            disagreeing_declaration_seen,
+            "this program must contain a binding the flattened re-derivation \
+             gets wrong, or the assertion above proves nothing"
         );
     }
 }

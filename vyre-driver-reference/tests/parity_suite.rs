@@ -320,8 +320,10 @@ fn capability_queries_state_what_the_interpreter_executes() {
     assert!(backend.supports_subgroup_ops());
     assert_eq!(
         backend.subgroup_size(),
-        Some(u32::try_from(vyre_reference::subgroup::SubgroupSimulator::default().width())
-            .expect("the simulator width must fit a u32")),
+        Some(
+            u32::try_from(vyre_reference::subgroup::SubgroupSimulator::default().width())
+                .expect("the simulator width must fit a u32")
+        ),
         "a ballot the oracle returns is comparable to a device answer only when \
          the reported width is the width the simulator models"
     );

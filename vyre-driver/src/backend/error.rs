@@ -33,6 +33,12 @@ pub enum ErrorCode {
     /// not a hard failure: the orchestrator should fall back (loudly) to a
     /// recall-identical non-cooperative path (resident fixpoint or host split).
     CooperativeResidencyExceeded,
+    /// A submitted request was abandoned before it produced a result because a
+    /// newer generation superseded it or a caller cancelled it.
+    ///
+    /// The program and the device are both intact. An interactive frontend
+    /// drops the frame and submits the next one.
+    ExecutionAborted,
     /// Unclassified error (produced by [`BackendError::new`]).
     Unknown,
 }
@@ -54,6 +60,7 @@ impl ErrorCode {
             Self::InvalidProgram => 1006,
             Self::CooperativeResidencyExceeded => 1007,
             Self::DeviceLost => 1008,
+            Self::ExecutionAborted => 1009,
             Self::Unknown => 1999,
         }
     }
@@ -74,6 +81,7 @@ impl ErrorCode {
         Self::InvalidProgram,
         Self::CooperativeResidencyExceeded,
         Self::DeviceLost,
+        Self::ExecutionAborted,
         Self::Unknown,
     ];
 
@@ -99,6 +107,11 @@ impl ErrorCode {
                  non-cooperative path."
             }
             Self::DeviceLost => "Acquired device generation was lost or invalidated.",
+            Self::ExecutionAborted => {
+                "A request was abandoned before producing a result because a newer \
+                 generation superseded it or a caller cancelled it. The program and \
+                 the device are intact."
+            }
             Self::Unknown => {
                 "The backend reported a failure it could not classify, produced by \
                  BackendError::new. A code that stays Unknown across releases is a \
@@ -245,6 +258,21 @@ pub enum BackendError {
         detail: String,
     },
 
+    /// A request was abandoned before producing a result.
+    ///
+    /// Supersession and cancellation are routine in an interactive session, so
+    /// this stays distinct from `InvalidProgram`: nothing about the program or
+    /// the device is wrong and the caller submits the next generation.
+    #[error(
+        "execution aborted at stage `{stage}`: {reason}. Fix: submit the next generation; the abandoned request produces no result."
+    )]
+    ExecutionAborted {
+        /// Lifecycle stage the request was abandoned at.
+        stage: &'static str,
+        /// Why the request was abandoned.
+        reason: String,
+    },
+
     /// Actionable backend failure without a more specific structured class.
     #[error("{0}")]
     Other(String),
@@ -343,6 +371,7 @@ impl BackendError {
             Self::Validation { .. } => ErrorCode::InvalidProgram,
             Self::InvalidProgram { .. } => ErrorCode::InvalidProgram,
             Self::CooperativeResidencyExceeded { .. } => ErrorCode::CooperativeResidencyExceeded,
+            Self::ExecutionAborted { .. } => ErrorCode::ExecutionAborted,
             Self::Other(_) => ErrorCode::Unknown,
         }
     }

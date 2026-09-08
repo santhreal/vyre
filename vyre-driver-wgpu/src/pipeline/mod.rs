@@ -9,7 +9,7 @@ pub(crate) mod bindings_reflection;
 pub(crate) mod cache_impact;
 pub(crate) mod compiled_dispatch;
 pub(crate) mod compound;
-pub(crate) mod descriptor_metadata;
+pub mod descriptor_metadata;
 pub(crate) mod disk_cache;
 pub(crate) mod disk_cache_entries;
 pub(crate) mod output_readback;
@@ -42,13 +42,14 @@ use vyre_lower::{TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
 
 pub(crate) use self::artifact::AuthenticatedTarget;
 use self::artifact::CachedPipelineArtifact;
-pub(crate) use self::descriptor_metadata::BufferBindingInfo;
+pub use self::descriptor_metadata::BufferBindingInfo;
 use self::descriptor_metadata::{
     bind_group_layout_fingerprint, create_bind_group_layouts, descriptor_buffer_bindings,
     descriptor_trap_tags,
 };
 use self::tuning::wgpu_effective_dispatch_config;
 use crate::buffer::{BindGroupCache, StagingBufferPool};
+use crate::descriptor_mapping::descriptor_binding_key;
 use crate::pipeline::disk_cache::{
     compiled_pipeline_cache_key, create_compiled_pipeline_cache, early_pipeline_cache_key,
     load_or_compile_disk_wgsl, persist_compiled_pipeline_cache,
@@ -323,8 +324,11 @@ impl WgpuPipeline {
             "split the pipeline or reduce output binding fanout before compilation",
         )?;
         public_output_bindings.extend(output_bindings.iter().map(|output| output.binding));
-        let host_input_bindings =
-            host_input_slots(program.buffers(), authenticated_resource_bindings)?;
+        let host_input_bindings = host_input_slots(
+            &descriptor,
+            program.buffers(),
+            authenticated_resource_bindings,
+        )?;
 
         let buffer_bindings: Arc<[BufferBindingInfo]> =
             descriptor_buffer_bindings(&descriptor, &public_output_bindings, &host_input_bindings)?
@@ -657,14 +661,15 @@ impl WgpuPipeline {
 /// definition of the host input ABI. This backend re-derived it for years and
 /// disagreed with the reference oracle on a `Persistent`-kind buffer and on a
 /// pipeline live-out whose access is not `ReadWrite`.
-pub(crate) fn host_input_slots(
+pub fn host_input_slots(
+    descriptor: &vyre_lower::KernelDescriptor,
     buffers: &[vyre_foundation::ir::BufferDecl],
     authenticated_resource_bindings: Option<&[vyre_megakernel::TargetResourceBinding]>,
-) -> Result<FxHashSet<u32>, BackendError> {
+) -> Result<FxHashSet<(u32, u32)>, BackendError> {
     let mut slots = FxHashSet::default();
     reserve_hash_set_to_capacity(
         &mut slots,
-        buffers.len(),
+        descriptor.bindings.slots.len().max(buffers.len()),
         "WGPU pipeline binding classification",
         "host input binding",
         "split the pipeline or reduce input binding fanout before compilation",
@@ -676,14 +681,20 @@ pub(crate) fn host_input_slots(
                 .filter(|binding| {
                     binding.access != vyre_megakernel::TargetResourceAccess::WriteOnly
                 })
-                .map(|binding| binding.slot),
+                .map(|binding| (binding.group, binding.slot)),
         ),
-        None => slots.extend(
-            buffers
-                .iter()
-                .filter(|buffer| buffer.consumes_host_input())
-                .map(vyre_foundation::ir::BufferDecl::binding),
-        ),
+        None => {
+            for slot in &descriptor.bindings.slots {
+                let Some(buffer) = buffers.iter().find(|b| b.binding() == slot.slot) else {
+                    continue;
+                };
+                if buffer.consumes_host_input() {
+                    if let Some(key) = descriptor_binding_key(slot.memory_class, slot.slot) {
+                        slots.insert(key);
+                    }
+                }
+            }
+        }
     }
     Ok(slots)
 }

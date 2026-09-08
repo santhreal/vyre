@@ -183,57 +183,13 @@ impl CseCtx {
                 self.clear_observed_state();
                 Node::logical_barrier(*ordering)
             }
-            Node::IndirectDispatch {
-                count_buffer,
-                count_offset,
-            } => {
-                self.clear_observed_state();
-                Node::IndirectDispatch {
-                    count_buffer: count_buffer.clone(),
-                    count_offset: *count_offset,
-                }
-            }
-            Node::AsyncLoad {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => {
-                self.clear_observed_state();
-                Node::async_load_gpu_driven(
-                    source.clone(),
-                    destination.clone(),
-                    (**offset).clone(),
-                    (**size).clone(),
-                    tag.clone(),
-                )
-            }
-            Node::AsyncStore {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => {
-                self.clear_observed_state();
-                Node::async_store(
-                    source.clone(),
-                    destination.clone(),
-                    (**offset).clone(),
-                    (**size).clone(),
-                    tag.clone(),
-                )
-            }
-            Node::AsyncWait { tag } => {
-                self.clear_observed_state();
-                Node::AsyncWait { tag: tag.clone() }
-            }
-            Node::Trap { .. } | Node::Resume { .. } => {
-                self.clear_observed_state();
-                node.clone()
-            }
-            Node::AllReduce { .. }
+            Node::IndirectDispatch { .. }
+            | Node::AsyncLoad { .. }
+            | Node::AsyncStore { .. }
+            | Node::AsyncWait { .. }
+            | Node::Trap { .. }
+            | Node::Resume { .. }
+            | Node::AllReduce { .. }
             | Node::AllGather { .. }
             | Node::ReduceScatter { .. }
             | Node::Broadcast { .. } => {
@@ -392,25 +348,7 @@ impl CseCtx {
                     ordering: *ordering,
                 })
             }
-            Expr::LitU32(_)
-            | Expr::LitI32(_)
-            | Expr::LitF32(_)
-            | Expr::LitBool(_)
-            | Expr::Var(_)
-            | Expr::BufferRef { .. }
-            | Expr::BufLen { .. }
-            | Expr::InvocationId { .. }
-            | Expr::LogicalIndex { .. }
-            | Expr::LogicalTileId { .. }
-            | Expr::LogicalWithinTileId { .. }
-            | Expr::WorkgroupId { .. }
-            | Expr::LocalId { .. }
-            | Expr::SubgroupBallot { .. }
-            | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupReduce { .. }
-            | Expr::SubgroupLocalId
-            | Expr::SubgroupSize
-            | Expr::Opaque(_) => Cow::Borrowed(expr),
+            _ => Cow::Borrowed(expr),
         };
 
         if matches!(rewritten.as_ref(), Expr::Var(_)) || expr_has_effect(rewritten.as_ref()) {

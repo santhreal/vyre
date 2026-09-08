@@ -525,8 +525,10 @@ mod tests {
     fn tenant_registry_exhaustion_reports_registry_full() {
         use std::sync::atomic::Ordering;
         let reg = TenantRegistry::new();
-        reg.next_id
-            .store(crate::tenant::registry::MAX_TENANT_OPCODE_WINDOWS, Ordering::SeqCst);
+        reg.next_id.store(
+            crate::tenant::registry::MAX_TENANT_OPCODE_WINDOWS,
+            Ordering::SeqCst,
+        );
 
         let err = reg
             .register("overflow")

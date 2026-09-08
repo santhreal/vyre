@@ -3336,6 +3336,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "vyre-alloc-probe"
+version = "0.8.0"
+
+[[package]]
 name = "vyre-aot"
 version = "0.8.0"
 dependencies = [
@@ -3383,6 +3387,7 @@ dependencies = [
  "thiserror 2.0.19",
  "toml",
  "vyre",
+ "vyre-alloc-probe",
  "vyre-driver",
  "vyre-driver-cuda",
  "vyre-driver-reference",
@@ -3598,6 +3603,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "vyre",
+ "vyre-alloc-probe",
  "vyre-conform",
  "vyre-driver",
  "vyre-emit-naga",

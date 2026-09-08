@@ -13,13 +13,13 @@ use vyre_emit_naga::program::TrapTag;
 use vyre_lower::TRAP_SIDECAR_NAME;
 
 use crate::descriptor_mapping::{
-    descriptor_bind_group, descriptor_buffer_access, descriptor_memory_kind,
+    descriptor_binding_key, descriptor_buffer_access, descriptor_memory_kind,
 };
 use crate::pipeline::element_size_bytes;
 
 /// Metadata for one buffer binding derived from a `Program` at compile time.
 #[derive(Clone, Debug)]
-pub(crate) struct BufferBindingInfo {
+pub struct BufferBindingInfo {
     /// `group N` slot.
     pub group: u32,
     /// `binding slot N` slot.
@@ -51,10 +51,11 @@ pub(crate) struct BufferBindingInfo {
     pub consumes_host_input: bool,
 }
 
-pub(crate) fn descriptor_buffer_bindings(
+/// Build buffer binding metadata for a lowered kernel descriptor.
+pub fn descriptor_buffer_bindings(
     descriptor: &vyre_lower::KernelDescriptor,
     public_output_bindings: &FxHashSet<u32>,
-    host_input_bindings: &FxHashSet<u32>,
+    host_input_bindings: &FxHashSet<(u32, u32)>,
 ) -> Result<Vec<BufferBindingInfo>, BackendError> {
     let mut bindings = Vec::new();
     vyre_driver::allocation::try_reserve_vec_to_capacity(
@@ -68,13 +69,14 @@ pub(crate) fn descriptor_buffer_bindings(
             ))
         })?;
     for slot in &descriptor.bindings.slots {
-        let Some(group) = descriptor_bind_group(slot.memory_class) else {
+        let Some((group, key_slot)) = descriptor_binding_key(slot.memory_class, slot.slot) else {
             continue;
         };
         let access = descriptor_buffer_access(slot.visibility);
         let internal_trap = slot.name == TRAP_SIDECAR_NAME;
         let is_output = public_output_bindings.contains(&slot.slot) && !internal_trap;
-        let consumes_host_input = host_input_bindings.contains(&slot.slot) && !internal_trap;
+        let consumes_host_input =
+            host_input_bindings.contains(&(group, key_slot)) && !internal_trap;
         let preserve_input_contents =
             access == vyre_foundation::ir::BufferAccess::ReadWrite && consumes_host_input;
         bindings.push(BufferBindingInfo {
@@ -326,10 +328,10 @@ mod tests {
         let slots = full_grid();
         // Alternating membership, so neither an all-true nor an all-false
         // projection can agree with it.
-        let host_inputs: FxHashSet<u32> = slots
+        let host_inputs: FxHashSet<(u32, u32)> = slots
             .iter()
             .filter(|slot| slot.slot % 2 == 0)
-            .map(|slot| slot.slot)
+            .filter_map(|slot| descriptor_binding_key(slot.memory_class, slot.slot))
             .collect();
         let bindings =
             descriptor_buffer_bindings(&descriptor_of(slots), &FxHashSet::default(), &host_inputs)
@@ -341,11 +343,11 @@ mod tests {
         for binding in &bindings {
             assert_eq!(
                 binding.consumes_host_input,
-                host_inputs.contains(&binding.binding),
+                host_inputs.contains(&(binding.group, binding.binding)),
                 "binding {} recorded {} for a host-input set that says {}",
                 binding.binding,
                 binding.consumes_host_input,
-                host_inputs.contains(&binding.binding)
+                host_inputs.contains(&(binding.group, binding.binding))
             );
         }
     }
@@ -358,9 +360,11 @@ mod tests {
             MemoryClass::Global,
             BindingVisibility::ReadWrite,
         )];
-        let every_slot: FxHashSet<u32> = FxHashSet::from_iter([0]);
-        let bindings = descriptor_buffer_bindings(&descriptor_of(slots), &every_slot, &every_slot)
-            .expect("binding metadata for a trap sidecar descriptor");
+        let public_outputs: FxHashSet<u32> = FxHashSet::from_iter([0]);
+        let host_inputs: FxHashSet<(u32, u32)> = FxHashSet::from_iter([(0, 0)]);
+        let bindings =
+            descriptor_buffer_bindings(&descriptor_of(slots), &public_outputs, &host_inputs)
+                .expect("binding metadata for a trap sidecar descriptor");
         let sidecar = bindings
             .iter()
             .find(|binding| binding.internal_trap)
@@ -393,7 +397,10 @@ mod tests {
     #[test]
     fn preserved_contents_require_read_write_and_a_host_input() {
         let slots = full_grid();
-        let host_inputs: FxHashSet<u32> = slots.iter().map(|slot| slot.slot).collect();
+        let host_inputs: FxHashSet<(u32, u32)> = slots
+            .iter()
+            .filter_map(|slot| descriptor_binding_key(slot.memory_class, slot.slot))
+            .collect();
         let bindings =
             descriptor_buffer_bindings(&descriptor_of(slots), &FxHashSet::default(), &host_inputs)
                 .expect("binding metadata for a well-formed descriptor");
@@ -420,7 +427,7 @@ mod tests {
              host input set that disagrees with the group its lookup reads. Bindings: {:?}",
             bindings
                 .iter()
-                .map(|binding| (binding.group, binding.binding, binding.access))
+                .map(|binding| (binding.group, binding.binding, &binding.access))
                 .collect::<Vec<_>>()
         );
     }

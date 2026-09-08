@@ -210,6 +210,70 @@ pub struct BackendCapability {
 
 inventory::collect!(BackendCapability);
 
+/// Register a backend descriptor, precedence rank, and dispatch capability.
+///
+/// Expands to three `inventory::submit!` invocations:
+/// - [`BackendRegistration`]: registers the backend identifier, target identity,
+///   optional payload format, reference oracle flag, factory function, supported
+///   operation set, semantic operation set, and optional compiler/materializer facets.
+/// - [`BackendPrecedence`]: registers the backend router priority rank.
+/// - [`BackendCapability`]: registers dispatch execution availability (`dispatches: true`).
+#[macro_export]
+macro_rules! register_backend {
+    (
+        id: $id:expr,
+        target_id: $target_id:expr,
+        payload_format: $payload_format:expr,
+        reference_oracle: $reference_oracle:expr,
+        factory: $factory:expr,
+        $(supported_ops: $supported_ops:expr,)?
+        $(semantic_operations: $semantic_operations:expr,)?
+        target_compiler: $target_compiler:expr,
+        materializer: $materializer:expr,
+        rank: $rank:expr $(,)?
+    ) => {
+        ::inventory::submit! {
+            $crate::BackendRegistration {
+                id: $id,
+                target_id: $target_id,
+                payload_format: $payload_format,
+                reference_oracle: $reference_oracle,
+                factory: $factory,
+                supported_ops: $crate::register_backend!(@supported_ops $($supported_ops)?),
+                semantic_operations: $crate::register_backend!(@semantic_ops $($semantic_operations)?),
+                target_compiler: $target_compiler,
+                materializer: $materializer,
+            }
+        }
+
+        ::inventory::submit! {
+            $crate::BackendPrecedence {
+                id: $id,
+                rank: $rank,
+            }
+        }
+
+        ::inventory::submit! {
+            $crate::BackendCapability {
+                id: $id,
+                dispatches: true,
+            }
+        }
+    };
+    (@supported_ops $ops:expr) => {
+        $ops
+    };
+    (@supported_ops) => {
+        $crate::core_supported_ops
+    };
+    (@semantic_ops $ops:expr) => {
+        $ops
+    };
+    (@semantic_ops) => {
+        $crate::dialect_only_supported_ops
+    };
+}
+
 /// Immutable validated view over linked backend registrations and metadata.
 struct BackendRegistry {
     registrations: Arc<[BackendRegistration]>,

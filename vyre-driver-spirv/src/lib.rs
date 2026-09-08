@@ -34,7 +34,7 @@ pub use backend::SpirvBackend;
 
 use std::sync::Arc;
 
-use vyre_driver::{BackendError, BackendRegistration, DispatchConfig, VyreBackend};
+use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
 use vyre_foundation::ir::Program;
 
 /// Stable backend identifier for conform certificates.
@@ -86,13 +86,6 @@ impl VyreBackend for SpirvBackendRegistration {
     fn version(&self) -> &'static str {
         env!("CARGO_PKG_VERSION")
     }
-    fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
-        match mode {
-            vyre_foundation::fp_parity::FloatLoweringMode::Contracted => true,
-            vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee => false,
-        }
-    }
-
 
     fn dispatch_borrowed(
         &self,
@@ -102,7 +95,10 @@ impl VyreBackend for SpirvBackendRegistration {
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         if config.float_lowering.blocks_contraction() {
             return Err(BackendError::UnsupportedFeature {
-                name: format!("float lowering mode `{}`", config.float_lowering.cache_label()),
+                name: format!(
+                    "float lowering mode `{}`",
+                    config.float_lowering.cache_label()
+                ),
                 backend: SPIRV_BACKEND_ID.to_string(),
             });
         }
@@ -224,31 +220,22 @@ pub fn spirv_supported_ops() -> &'static std::collections::HashSet<vyre_foundati
     vyre_driver::core_supported_ops()
 }
 
-/// Backend id this crate submits into the backend registry on this target.
-///
-/// WHY: the registration below lives in this crate's object file, and a linker
-/// keeps that object only when a symbol inside it is referenced. Naming the
-/// crate with `use vyre_driver_spirv as _;` references nothing, and reading
-/// [`SPIRV_BACKEND_ID`] is a `const` that inlines at the use site, so neither
-/// keeps the registration. Calling this function does, which is why the backend
-/// registry owner calls it instead of importing the crate for effect.
+/// Backend id submitted into the registry by the SPIR-V driver.
 #[must_use]
 pub fn registered_backend_id() -> Option<&'static str> {
     Some(SPIRV_BACKEND_ID)
 }
 
-inventory::submit! {
-    BackendRegistration {
-        id: SPIRV_BACKEND_ID,
-        target_id: SPIRV_TARGET_ID,
-        payload_format: Some(target_compiler::SPIRV_TARGET_FORMAT),
-        reference_oracle: false,
-        factory: spirv_factory,
-        supported_ops: spirv_supported_ops,
-        semantic_operations: vyre_driver::dialect_only_supported_ops,
-        target_compiler: Some(target_compiler::target_compiler_factory),
-        materializer: Some(materializer::materializer_factory),
-    }
+vyre_driver::register_backend! {
+    id: SPIRV_BACKEND_ID,
+    target_id: SPIRV_TARGET_ID,
+    payload_format: Some(target_compiler::SPIRV_TARGET_FORMAT),
+    reference_oracle: false,
+    factory: spirv_factory,
+    supported_ops: spirv_supported_ops,
+    target_compiler: Some(target_compiler::target_compiler_factory),
+    materializer: Some(materializer::materializer_factory),
+    rank: 30,
 }
 
 #[cfg(test)]
@@ -267,20 +254,5 @@ mod tests {
              the router to skip all SPIRV dispatch. Got {} ops.",
             ops.len()
         );
-    }
-}
-
-// V7-EXT-021: declare router precedence inline. SPIR-V is rank 30.
-inventory::submit! {
-    vyre_driver::BackendPrecedence {
-        id: SPIRV_BACKEND_ID,
-        rank: 30,
-    }
-}
-
-inventory::submit! {
-    vyre_driver::BackendCapability {
-        id: SPIRV_BACKEND_ID,
-        dispatches: true,
     }
 }

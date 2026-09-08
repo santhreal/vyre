@@ -123,10 +123,16 @@ fn every_table_entry_carries_a_reserved_builtin_wire_tag() {
     for (op, expected_tag) in builtin_collective_ops() {
         let tag = op.builtin_wire_tag();
         assert_eq!(tag, expected_tag);
-        assert!((1..=0x7f).contains(&tag), "CollectiveOp {op:?} tag {tag:#04x}");
+        assert!(
+            (1..=0x7f).contains(&tag),
+            "CollectiveOp {op:?} tag {tag:#04x}"
+        );
     }
     for op in SubgroupReduceOp::ALL {
         let tag = op.builtin_wire_tag();
-        assert!((1..=0x7f).contains(&tag), "SubgroupReduceOp {op:?} tag {tag:#04x}");
+        assert!(
+            (1..=0x7f).contains(&tag),
+            "SubgroupReduceOp {op:?} tag {tag:#04x}"
+        );
     }
 }

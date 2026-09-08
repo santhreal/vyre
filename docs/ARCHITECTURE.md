@@ -61,6 +61,9 @@ ranks and every declared edge.
   measures that pipeline against the host optimizer on a device, so it declares
   an edge to the pass engine as well as to the compiler.
 - `vyre-reference` is the oracle, not a backend and not a fallback.
+- `vyre-alloc-probe` counts per-thread heap traffic behind a `GlobalAlloc`
+  wrapper. It has no workspace dependency, so a harness binary links the
+  counter without linking a test tree.
 
 ## Production route
 

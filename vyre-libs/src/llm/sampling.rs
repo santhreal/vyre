@@ -390,12 +390,6 @@ fn nucleus_select_body(
 const FIXTURE_VOCABULARY: u32 = 4;
 /// The candidate count every registered fixture in this module keeps.
 const FIXTURE_CANDIDATES: u32 = 2;
-/// Raw logits behind every registered fixture in this module.
-const FIXTURE_LOGITS: [f32; FIXTURE_VOCABULARY as usize] = [1.0, 2.0, 3.0, 4.0];
-/// Occurrence counts behind every registered fixture in this module. Entry one
-/// is already in the context, so the penalty applies to exactly one logit and a
-/// build that dropped the count lookup cannot reproduce the row.
-const FIXTURE_COUNTS: [u32; FIXTURE_VOCABULARY as usize] = [0, 1, 0, 0];
 /// Fixture temperature. Not one, so a build that dropped the division cannot
 /// reproduce the row.
 const FIXTURE_TEMPERATURE: f32 = 2.0;
@@ -404,86 +398,49 @@ const FIXTURE_PENALTY: f32 = 2.0;
 /// Fixture nucleus mass. Below the leading candidate plus the second, and above
 /// the leading candidate alone, so the cutoff keeps both.
 const FIXTURE_TOP_P: f32 = 0.7;
-/// Fixture uniform sample. High enough in the nucleus that the draw lands on
-/// the second candidate, so a build that always answered with the argmax fails.
-const FIXTURE_UNIFORM: f32 = 0.9;
 
-fn fixture_f32(values: &[f32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_f32_slice(values)
-}
+/// Raw logits fixture inputs encoded as little-endian IEEE 754 float bytes.
+const FIXTURE_LOGITS_BYTES: [u8; 16] = [
+    0, 0, 128, 63, // 1.0
+    0, 0, 0, 64, // 2.0
+    0, 0, 64, 64, // 3.0
+    0, 0, 128, 64, // 4.0
+];
 
-fn fixture_u32(values: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(values)
-}
+/// Occurrence count fixture inputs encoded as little-endian u32 bytes.
+const FIXTURE_COUNTS_BYTES: [u8; 16] = [
+    0, 0, 0, 0, // 0
+    1, 0, 0, 0, // 1
+    0, 0, 0, 0, // 0
+    0, 0, 0, 0, // 0
+];
 
-/// The adjusted logit row, recomputed in the same order the body evaluates it.
-fn fixture_adjusted() -> Vec<f32> {
-    FIXTURE_LOGITS
-        .iter()
-        .zip(FIXTURE_COUNTS.iter())
-        .map(|(logit, count)| {
-            let penalized = if *count > 0 {
-                if *logit > 0.0 {
-                    logit / FIXTURE_PENALTY
-                } else {
-                    logit * FIXTURE_PENALTY
-                }
-            } else {
-                *logit
-            };
-            penalized / FIXTURE_TEMPERATURE
-        })
-        .collect()
-}
+/// Uniform random draw fixture input (0.9) encoded as little-endian IEEE 754 float bytes.
+const FIXTURE_UNIFORM_BYTES: [u8; 4] = [102, 102, 102, 63];
 
-/// The candidate set the selection produces: the two largest exponentials of the
-/// adjusted row in descending order, and their share of the full softmax
-/// denominator.
-struct FixtureSelection {
-    indices: Vec<u32>,
-    weights: Vec<f32>,
-}
+/// Zero-initialized f32 candidate scratch buffer bytes.
+const FIXTURE_ZERO_F32_CANDIDATES_BYTES: [u8; 8] = [0; 8];
 
-fn fixture_selection() -> FixtureSelection {
-    let adjusted = fixture_adjusted();
-    let max =
-        adjusted.iter().copied().fold(
-            f32::NEG_INFINITY,
-            |best, value| {
-                if value > best {
-                    value
-                } else {
-                    best
-                }
-            },
-        );
-    let exponentials: Vec<f32> = adjusted.iter().map(|value| (value - max).exp()).collect();
-    let sum = exponentials
-        .iter()
-        .fold(0.0f32, |total, value| total + value);
+/// Zero-initialized u32 candidate scratch buffer bytes.
+const FIXTURE_ZERO_U32_CANDIDATES_BYTES: [u8; 8] = [0; 8];
 
-    // The body's insertion sort keeps the first index on a tie, so ordering by
-    // a strict comparison over ascending indices reproduces it.
-    let mut order: Vec<u32> = (0..FIXTURE_VOCABULARY).collect();
-    order.sort_by(|left, right| {
-        let left_value = exponentials[*left as usize];
-        let right_value = exponentials[*right as usize];
-        right_value
-            .partial_cmp(&left_value)
-            .unwrap_or(core::cmp::Ordering::Equal)
-            .then(left.cmp(right))
-    });
-    let indices: Vec<u32> = order
-        .into_iter()
-        .take(FIXTURE_CANDIDATES as usize)
-        .collect();
-    let kept: Vec<f32> = indices
-        .iter()
-        .map(|index| exponentials[*index as usize])
-        .collect();
-    let weights: Vec<f32> = kept.iter().map(|value| value / sum).collect();
-    FixtureSelection { indices, weights }
-}
+/// Adjusted logits produced by `logit_adjust` from FIXTURE_LOGITS and FIXTURE_COUNTS.
+/// Logits [1.0, 2.0, 3.0, 4.0] with count [0, 1, 0, 0], penalty 2.0, temperature 2.0
+/// produce [0.5, 0.5, 1.5, 2.0].
+const EXPECTED_LOGIT_ADJUST_OUTPUT_BYTES: [u8; 16] =
+    [0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 192, 63, 0, 0, 0, 64];
+
+/// Top-k candidate vocabulary indices [3, 2] in descending order of adjusted logits.
+const EXPECTED_TOP_K_INDICES_BYTES: [u8; 8] = [3, 0, 0, 0, 2, 0, 0, 0];
+
+/// Normalized nucleus softmax weights [0.4871416, 0.29546633] for the top-2 candidates.
+const EXPECTED_NUCLEUS_WEIGHTS_BYTES: [u8; 8] = [161, 106, 249, 62, 93, 71, 151, 62];
+
+/// Unnormalized exponentials [1.0, 0.60653066] of kept candidates after subtracting max logit 2.0.
+const EXPECTED_KEPT_EXPONENTIALS_BYTES: [u8; 8] = [0, 0, 128, 63, 152, 69, 27, 63];
+
+/// Selected token index 2 chosen by `nucleus_select` given uniform draw 0.9 and cutoff 0.7.
+const EXPECTED_NUCLEUS_SELECT_OUTPUT_BYTES: [u8; 4] = [2, 0, 0, 0];
 
 fn fixture_sampler() -> TokenSampler<'static> {
     TokenSampler {
@@ -532,17 +489,13 @@ fn sample_token_fixture_program() -> Program {
     }
 }
 
-const EXPECTED_LOGIT_ADJUST_OUTPUT_BYTES: [u8; 16] =
-    [0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 192, 63, 0, 0, 0, 64];
-const EXPECTED_NUCLEUS_SELECT_OUTPUT_BYTES: [u8; 4] = [2, 0, 0, 0];
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library_unconstrained(
         LOGIT_ADJUST_OP_ID,
         logit_adjust_fixture_program,
         Some(|| vec![vec![
-            fixture_f32(&FIXTURE_LOGITS),
-            fixture_u32(&FIXTURE_COUNTS),
+            FIXTURE_LOGITS_BYTES.to_vec(),
+            FIXTURE_COUNTS_BYTES.to_vec(),
         ]]),
         Some(|| vec![vec![EXPECTED_LOGIT_ADJUST_OUTPUT_BYTES.to_vec()]]),
     )
@@ -554,27 +507,24 @@ inventory::submit! {
         NUCLEUS_SELECT_OP_ID,
         nucleus_select_fixture_program,
         Some(|| {
-            let selection = fixture_selection();
             vec![vec![
-                fixture_u32(&selection.indices),
-                fixture_f32(&selection.weights),
-                fixture_f32(&[FIXTURE_UNIFORM]),
+                EXPECTED_TOP_K_INDICES_BYTES.to_vec(),
+                EXPECTED_NUCLEUS_WEIGHTS_BYTES.to_vec(),
+                FIXTURE_UNIFORM_BYTES.to_vec(),
             ]]
         }),
-Some(|| vec![vec![EXPECTED_NUCLEUS_SELECT_OUTPUT_BYTES.to_vec()]]),
+        Some(|| vec![vec![EXPECTED_NUCLEUS_SELECT_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("llm")
 }
 
 fn sample_token_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
-    const ZERO_F32: [f32; FIXTURE_CANDIDATES as usize] = [0.0; FIXTURE_CANDIDATES as usize];
-    const ZERO_U32: [u32; FIXTURE_CANDIDATES as usize] = [0; FIXTURE_CANDIDATES as usize];
     vec![vec![
-        fixture_f32(&FIXTURE_LOGITS),
-        fixture_u32(&FIXTURE_COUNTS),
-        fixture_f32(&ZERO_F32),
-        fixture_u32(&ZERO_U32),
-        fixture_f32(&[FIXTURE_UNIFORM]),
+        FIXTURE_LOGITS_BYTES.to_vec(),
+        FIXTURE_COUNTS_BYTES.to_vec(),
+        FIXTURE_ZERO_F32_CANDIDATES_BYTES.to_vec(),
+        FIXTURE_ZERO_U32_CANDIDATES_BYTES.to_vec(),
+        FIXTURE_UNIFORM_BYTES.to_vec(),
     ]]
 }
 
@@ -585,6 +535,11 @@ inventory::submit! {
         Some(sample_token_fixture_inputs),
         Some(|| {
             vec![vec![
+                EXPECTED_LOGIT_ADJUST_OUTPUT_BYTES.to_vec(),
+                EXPECTED_TOP_K_INDICES_BYTES.to_vec(),
+                EXPECTED_NUCLEUS_WEIGHTS_BYTES.to_vec(),
+                EXPECTED_KEPT_EXPONENTIALS_BYTES.to_vec(),
+                EXPECTED_TOP_K_INDICES_BYTES.to_vec(),
                 EXPECTED_NUCLEUS_SELECT_OUTPUT_BYTES.to_vec(),
             ]]
         }),
@@ -620,6 +575,59 @@ mod buffer_contract_tests {
                 Some(bytes.len()),
                 buffer.static_byte_len().unwrap(),
                 "fixture bytes must match `{}`",
+                buffer.name()
+            );
+        }
+    }
+
+    /// WHY: the oracle returns one buffer per `is_reference_output` decl, in
+    /// declaration order, and every fused stage's result is one of them. The
+    /// expected-output fixture declared only the token, so the four
+    /// intermediates went unchecked and the comparison failed on count alone.
+    ///
+    /// This is the mirror of the input-side contract above. It pins the order by
+    /// name so a reordered stage fails here, in the crate that owns the
+    /// composition, rather than only in the conformance harness.
+    #[test]
+    fn sample_token_expected_outputs_track_every_returned_buffer() {
+        let program = sample_token_fixture_program();
+        let returned = program
+            .buffers()
+            .iter()
+            .filter(|buffer| {
+                buffer.is_backend_allocated_output()
+                    || buffer.access() == vyre_foundation::ir::BufferAccess::ReadWrite
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            returned
+                .iter()
+                .map(|buffer| buffer.name())
+                .collect::<Vec<_>>(),
+            [
+                "__vyre_llm_sampling_adjusted",
+                "__vyre_llm_sampling_candidates",
+                "__vyre_llm_sampling_weights",
+                "best_vals",
+                "best_idxs",
+                "token"
+            ]
+        );
+
+        let expected: [&[u8]; 6] = [
+            &EXPECTED_LOGIT_ADJUST_OUTPUT_BYTES,
+            &EXPECTED_TOP_K_INDICES_BYTES,
+            &EXPECTED_NUCLEUS_WEIGHTS_BYTES,
+            &EXPECTED_KEPT_EXPONENTIALS_BYTES,
+            &EXPECTED_TOP_K_INDICES_BYTES,
+            &EXPECTED_NUCLEUS_SELECT_OUTPUT_BYTES,
+        ];
+        assert_eq!(expected.len(), returned.len());
+        for (bytes, buffer) in expected.iter().zip(returned) {
+            assert_eq!(
+                Some(bytes.len()),
+                buffer.static_byte_len().unwrap(),
+                "expected bytes must match `{}`",
                 buffer.name()
             );
         }

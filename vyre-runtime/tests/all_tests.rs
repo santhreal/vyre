@@ -14,6 +14,10 @@ pub mod prefix_cache_fixtures;
 #[path = "ring_expectations/mod.rs"]
 pub mod ring_expectations;
 
+/// Shared fixture module from `tests/artifact_session_fixtures/mod.rs`.
+#[path = "artifact_session_fixtures/mod.rs"]
+pub mod artifact_session_fixtures;
+
 /// Integration tests from `tests/adversarial_disk.rs`.
 #[path = "adversarial_disk.rs"]
 pub mod adversarial_disk;
@@ -45,7 +49,6 @@ pub mod driver_runtime_lifecycle_boundary;
 #[path = "interactive_session_contract.rs"]
 pub mod interactive_session_contract;
 
-
 /// Integration tests from `tests/multi_tenant_scheduler.rs`.
 #[allow(clippy::assertions_on_constants)]
 #[path = "multi_tenant_scheduler.rs"]
@@ -58,7 +61,6 @@ pub mod paged_prefix_mtp_contracts;
 /// Integration tests from `tests/pipeline_fingerprint_surface.rs`.
 #[path = "pipeline_fingerprint_surface.rs"]
 pub mod pipeline_fingerprint_surface;
-
 
 /// Integration tests from `tests/pipeline_error_fault_classification.rs`.
 #[path = "pipeline_error_fault_classification.rs"]

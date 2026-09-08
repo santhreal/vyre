@@ -5,14 +5,7 @@ use crate::visit::{any_subexpr, expr_children};
 use smallvec::SmallVec;
 use std::borrow::Cow;
 
-/// Push every operand of `expr` onto an order-insensitive worklist.
-///
-/// Positions come from [`expr_children`], the one exhaustive owner, so a new
-/// operand-carrying variant reaches every scan built on this without an edit
-/// here.
-pub(crate) fn push_expr_children<'a>(expr: &'a Expr, stack: &mut SmallVec<[&'a Expr; 16]>) {
-    stack.extend(expr_children(expr).iter());
-}
+pub(crate) use crate::visit::push_expr_children;
 
 pub(crate) fn expr_contains_atomic(expr: &Expr) -> bool {
     any_subexpr(expr, &mut |candidate| {
@@ -131,22 +124,6 @@ pub(crate) fn rewrite_expr<'a>(
             }
             Frame::Assemble(e) => {
                 let rewritten = match e {
-                    Expr::LitU32(_)
-                    | Expr::LitI32(_)
-                    | Expr::LitF32(_)
-                    | Expr::LitBool(_)
-                    | Expr::Var(_)
-                    | Expr::BufferRef { .. }
-                    | Expr::BufLen { .. }
-                    | Expr::InvocationId { .. }
-                    | Expr::LogicalIndex { .. }
-                    | Expr::LogicalTileId { .. }
-                    | Expr::LogicalWithinTileId { .. }
-                    | Expr::WorkgroupId { .. }
-                    | Expr::LocalId { .. }
-                    | Expr::SubgroupLocalId
-                    | Expr::SubgroupSize
-                    | Expr::Opaque(_) => Cow::Borrowed(e),
                     Expr::Load { buffer, .. } => {
                         let index = pop_rewrite_result(&mut results, "load index");
                         match index {
@@ -275,6 +252,7 @@ pub(crate) fn rewrite_expr<'a>(
                             }),
                         }
                     }
+                    _ => Cow::Borrowed(e),
                 };
 
                 let transformed = if let Some(t) = transform(rewritten.as_ref()) {
