@@ -1568,7 +1568,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         subject: "owned documentation pages",
         artifacts: &[],
         prerequisites: &[],
-        proof: "crate::gates::workspace_build::tests::workspace_docs_constructs_no_deps_doc_arguments",
+        proof: "crate::gates::workspace_build::tests::only_the_gate_that_cannot_deny_a_warning_judges_one",
     },
     GateDescriptor {
         name: "workspace-membership",

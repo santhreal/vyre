@@ -39,7 +39,7 @@ const LANE_ZERO: u32 = 1;
 /// Canonical output value name, and the buffer the fixture Program declares.
 const OUTPUT: &str = "out";
 
-/// The fixture Program: one output buffer, one store of [`LANE_ZERO`] to lane zero.
+/// The fixture Program: one output buffer, one store of `LANE_ZERO` to lane zero.
 pub fn store_one_program() -> Program {
     Program::wrapped(
         vec![BufferDecl::output(OUTPUT, 0, DataType::U32).with_count(1)],

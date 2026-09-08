@@ -219,7 +219,7 @@ fn program_has_transcendental(program: &Program) -> bool {
 /// elementary window.
 ///
 /// `UnOp` is `#[non_exhaustive]`, so the closure cannot be a compile-time one
-/// here. [`recorded_approximability`] answers `None` for an operator no arm
+/// here. `recorded_approximability` answers `None` for an operator no arm
 /// names, and the closure test in this module reads that: it walks the frozen
 /// builtin tag table and fails on a tag with no recorded decision.
 #[must_use]

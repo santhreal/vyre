@@ -23,9 +23,8 @@
 //! [`MAX_REFERENCE_STEPS`](crate::execution::step_budget::MAX_REFERENCE_STEPS)
 //! is the floor, which is what a program with a data-derived trip count is
 //! refused against because nothing declares its work. Once the dispatch
-//! geometry is resolved,
-//! [`admit_declared_work`](crate::execution::step_budget::admit_declared_work)
-//! raises the ceiling to the work the program's own constant extents declare.
+//! geometry is resolved, `admit_declared_work` raises the ceiling to the work
+//! the program's own constant extents declare.
 //! That is the distinction the refusal already asks for: bound the trip counts
 //! by a declared extent, and the declaration is what the oracle admits.
 

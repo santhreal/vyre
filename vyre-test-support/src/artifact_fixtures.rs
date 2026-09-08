@@ -10,7 +10,7 @@
 //! The copies also had to keep restating which buffer declaration a value
 //! contract implies, so a fixture whose declared element count disagreed with its
 //! contract shape was accepted by whichever crate wrote it and rejected by the
-//! next one to copy it. [`decl_for`] states that mapping once.
+//! next one to copy it. `decl_for` states that mapping once.
 //!
 //! Shared the same way as `crate::preferred_dispatch_backend_contract`: each
 //! consumer calls into this one owner from its own suite.

@@ -47,7 +47,13 @@ struct Run {
 /// that it had not run, so the workspace was neither clippy-clean nor dirty for
 /// as long as it stood. Nothing here sets a build-affecting flag or variable,
 /// because build configuration is declared once in `.cargo/config.toml`.
-fn diagnostics(root: &Path, arguments: &[&str]) -> Result<Run, GateError> {
+///
+/// `judge_warnings` is for a gate whose command cannot deny them. `cargo doc`
+/// takes no trailing rustdoc argument, so a broken intra-doc link arrives as a
+/// warning, and recording only errors let this gate report a clean workspace
+/// while rustdoc under a deny flag refused the same tree. A gate that cannot
+/// fail on the thing its name claims certifies what it never checked.
+fn diagnostics(root: &Path, arguments: &[&str], judge_warnings: bool) -> Result<Run, GateError> {
     let cargo = crate::cargo_runner::binary(root);
     let (cargo_arguments, driver_arguments) = split_at_driver(arguments);
     let output = Command::new(&cargo)
@@ -77,13 +83,14 @@ fn diagnostics(root: &Path, arguments: &[&str]) -> Result<Run, GateError> {
         let Some(message) = value.get("message") else {
             continue;
         };
-        if message.get("level").and_then(serde_json::Value::as_str) != Some("error") {
+        let level = message.get("level").and_then(serde_json::Value::as_str);
+        if !judged(level, judge_warnings) {
             continue;
         }
         let text = message
             .get("message")
             .and_then(serde_json::Value::as_str)
-            .unwrap_or("the compiler reported an error with no message")
+            .unwrap_or("the compiler reported a diagnostic with no message")
             .to_string();
         let primary = message
             .get("spans")
@@ -135,12 +142,27 @@ fn diagnostics(root: &Path, arguments: &[&str]) -> Result<Run, GateError> {
     Ok(Run { found, unmeasured })
 }
 
+/// Whether a diagnostic at `level` is one the calling gate judges.
+///
+/// Split out because the gate that could not fail on a broken intra-doc link
+/// was proven by a test that read its command line. A command line is not a
+/// verdict, and the verdict was the defect: a predicate is decidable without a
+/// cargo run, so what the gate counts is what gets proven.
+fn judged(level: Option<&str>, judge_warnings: bool) -> bool {
+    level == Some("error") || (judge_warnings && level == Some("warning"))
+}
+
 /// Turn the diagnostics of one cargo invocation into a report.
-fn report_diagnostics(root: &Path, arguments: &[&str], fix: &str) -> Result<Report, GateError> {
+fn report_diagnostics(
+    root: &Path,
+    arguments: &[&str],
+    fix: &str,
+    judge_warnings: bool,
+) -> Result<Report, GateError> {
     let mut report = Report::clean();
     let tree = Tree::open(root)?;
     report.cover_complete("workspace members", tree.member_manifests()?.len());
-    let run = diagnostics(root, arguments)?;
+    let run = diagnostics(root, arguments, judge_warnings)?;
     if let Some(missing) = run.unmeasured {
         report.find(Finding::new(
             format!(
@@ -172,6 +194,7 @@ impl crate::gate::GateBehavior for WorkspaceCheck {
             &ctx.root,
             &["check", "--workspace", "--all-features", "--all-targets"],
             "fix the compile error the diagnostic names",
+            false,
         )
     }
 }
@@ -193,6 +216,7 @@ impl crate::gate::GateBehavior for WorkspaceClippy {
                 "warnings",
             ],
             "fix the lint the diagnostic names, or justify an allow at the item with a reason",
+            false,
         )
     }
 }
@@ -210,6 +234,7 @@ impl crate::gate::GateBehavior for WorkspaceDocs {
             &ctx.root,
             &["doc", "--workspace", "--all-features", "--no-deps"],
             "repair the item the diagnostic names, including its intra-doc links",
+            true,
         )
     }
 }
@@ -383,6 +408,35 @@ mod tests {
         let (cargo, driver) = split_at_driver(&doc_args);
         assert_eq!(cargo, ["doc", "--workspace", "--no-deps"]);
         assert!(driver.is_empty());
+    }
+
+    /// WHY: `cargo doc` takes no trailing rustdoc argument, so a broken
+    /// intra-doc link arrives as a warning. Recording only errors let this gate
+    /// report a clean workspace while rustdoc under a deny flag refused the same
+    /// tree, and the gate's own proof read its command line instead of its
+    /// verdict. This decides every level the compiler emits.
+    #[test]
+    fn only_the_gate_that_cannot_deny_a_warning_judges_one() {
+        assert!(judged(Some("error"), false), "an error is always judged");
+        assert!(judged(Some("error"), true), "an error is always judged");
+        assert!(
+            judged(Some("warning"), true),
+            "a broken intra-doc link is a warning, and this gate has no flag to deny it"
+        );
+        assert!(
+            !judged(Some("warning"), false),
+            "clippy denies warnings on its own command line, so they arrive as errors"
+        );
+        for ignored in ["note", "help", "failure-note"] {
+            assert!(
+                !judged(Some(ignored), true),
+                "`{ignored}` explains a diagnostic and is not one"
+            );
+        }
+        assert!(
+            !judged(None, true),
+            "a compiler message with no level states no verdict"
+        );
     }
 
     /// WHY: workspace-tests runs tests across contract-owning layer packages.

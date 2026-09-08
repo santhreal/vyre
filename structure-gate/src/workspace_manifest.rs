@@ -286,7 +286,7 @@ const MAX_READ_LANES: usize = 32;
 
 /// How many lanes a latency-bound read of `files` files should use.
 ///
-/// Eight times the host's parallelism, capped at [`MAX_READ_LANES`] and never
+/// Eight times the host's parallelism, capped at `MAX_READ_LANES` and never
 /// more than one lane per file. A blocked read occupies no core, so the width
 /// that matters is requests in flight; on a local disk the extra lanes cost a
 /// thread each and finish in the same wall time, and on a network mount they

@@ -173,7 +173,7 @@ pub const SIN_COS_SMALL_ARGUMENT_BITS: u32 = 0x3980_0000;
 /// `401.0`, the stated domain of the strict circular expansions.
 ///
 /// `401.0 * 2/pi` rounds to 255, and 255 is the largest integer whose product
-/// with [`PIO2_1_BITS`] is exact. An f32-only argument reduction cannot reach
+/// with `PIO2_1_BITS` is exact. An f32-only argument reduction cannot reach
 /// further: extending it needs the multi-word integer arithmetic of a
 /// Payne-Hanek reduction. Beyond this magnitude the expansions produce
 /// [`NAN_RESULT_BITS`] rather than the silently clamped value of a saturated

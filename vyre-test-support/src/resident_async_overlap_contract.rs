@@ -26,7 +26,7 @@ fn lane(name: &str, slot: u32, access: BufferAccess) -> BufferDecl {
     BufferDecl::storage(name, slot, access, DataType::U32).with_count(1)
 }
 
-/// The fixture: one read-write output lane, one read-only input lane, out = in + [`ADDEND`].
+/// The fixture: one read-write output lane, one read-only input lane, out = in + `ADDEND`.
 pub fn add_program() -> Program {
     Program::wrapped(
         vec![

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The workspace-docs gate reports a warning-level rustdoc diagnostic as a finding, so a public item linking to a private one fails the gate that owns the check instead of only the strict documentation leg."
