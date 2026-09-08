@@ -174,3 +174,63 @@ fn diagnostic_from_ir_error_covers_wire_and_inlining_errors() {
         .unwrap()
         .contains("remove the recursive Expr::Call chain"));
 }
+
+#[test]
+fn diagnostic_extended_schema_round_trip_and_human_render() {
+    use vyre_foundation::diagnostics::{CompilerLevel, DiagnosticCause};
+
+    let diagnostic = Diagnostic::error("MKC099_SCHEMA_EXTENDED", "extended diagnostic payload")
+        .with_stage(DiagnosticStage::Emit)
+        .with_compiler_level(CompilerLevel::Emission)
+        .with_target("ptx")
+        .with_device("sm_90a")
+        .with_artifact_id("artifact.hash.12345")
+        .with_location(
+            OpLocation::op("fusion.kernel")
+                .with_operand(2)
+                .with_attr("layout")
+                .with_field_path("bindings.slots.0")
+                .with_path("src/kernel.ptx")
+                .with_source_span(10, 50),
+        )
+        .with_fix("align binding slots to 16 bytes")
+        .with_cause_chain(vec![
+            DiagnosticCause {
+                kind: "alignment".to_string(),
+                detail: "binding slot 0 unaligned".to_string(),
+            },
+            DiagnosticCause {
+                kind: "target_restriction".to_string(),
+                detail: "PTX ldmatrix requires 16-byte alignment".to_string(),
+            },
+        ])
+        .with_retry(RetryClass::RecompileSource)
+        .with_context_value("requested_align", "4")
+        .with_context_value("required_align", "16");
+
+    let encoded = serde_json::to_vec(&diagnostic).expect("diagnostic must serialize");
+    let decoded: Diagnostic =
+        serde_json::from_slice(&encoded).expect("diagnostic must deserialize");
+
+    assert_eq!(decoded, diagnostic);
+    assert_eq!(decoded.compiler_level, Some(CompilerLevel::Emission));
+    assert_eq!(decoded.target.as_deref(), Some("ptx"));
+    assert_eq!(decoded.device.as_deref(), Some("sm_90a"));
+    assert_eq!(decoded.artifact_id.as_deref(), Some("artifact.hash.12345"));
+    assert_eq!(decoded.cause_chain.len(), 2);
+    assert_eq!(decoded.context_values.len(), 2);
+    assert_eq!(
+        decoded.location.as_ref().unwrap().field_path.as_deref(),
+        Some("bindings.slots.0")
+    );
+
+    let human = diagnostic.render_human();
+    assert!(human.contains("level: emission"));
+    assert!(human.contains("target: ptx"));
+    assert!(human.contains("device: sm_90a"));
+    assert!(human.contains("artifact: artifact.hash.12345"));
+    assert!(human.contains("field `bindings.slots.0`"));
+    assert!(human.contains("cause[alignment]: binding slot 0 unaligned"));
+    assert!(human.contains("cause[target_restriction]: PTX ldmatrix requires 16-byte alignment"));
+    assert!(human.contains("context `requested_align`: 4"));
+}

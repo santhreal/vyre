@@ -1,5 +1,8 @@
 use std::fmt;
-
+use vyre_foundation::diagnostics::{
+    CompilerLevel, Diagnostic, DiagnosticCause, DiagnosticCode, DiagnosticStage, RetryClass,
+    Severity, ToDiagnostic,
+};
 /// The work one reference evaluation was allowed and what it exceeded.
 ///
 /// A caller waiting on the parity oracle reads the ceiling and the program that
@@ -86,5 +89,66 @@ impl std::error::Error for ReferenceError {
         self.validation
             .as_ref()
             .map(|source| source as &(dyn std::error::Error + 'static))
+    }
+}
+
+impl ToDiagnostic for ReferenceError {
+    fn to_diagnostic(&self) -> Diagnostic {
+        if let Some(validation) = &self.validation {
+            let mut diag = validation.to_diagnostic();
+            diag.cause_chain.push(DiagnosticCause {
+                kind: "reference_validation_failure".to_string(),
+                detail: self.message.clone(),
+            });
+            return diag;
+        }
+        let retry = if self.step_ceiling.is_some() {
+            RetryClass::RecompileSource
+        } else {
+            RetryClass::Never
+        };
+        Diagnostic {
+            severity: Severity::Error,
+            code: DiagnosticCode::new("REF001_REFERENCE_ERROR"),
+            stage: DiagnosticStage::Submit,
+            compiler_level: Some(CompilerLevel::DriverRuntime),
+            message: self.message.clone().into(),
+            location: None,
+            artifact_id: None,
+            target: None,
+            device: None,
+            suggested_fix: self.step_ceiling.as_ref().map(|_| {
+                "bound program trip counts by a declared extent or evaluate a smaller input".into()
+            }),
+            cause: Some(DiagnosticCause {
+                kind: "reference_execution_error".to_string(),
+                detail: self.message.clone(),
+            }),
+            cause_chain: vec![DiagnosticCause {
+                kind: "reference_execution_error".to_string(),
+                detail: self.message.clone(),
+            }],
+            retry,
+            context_values: self.step_ceiling.as_ref().map_or_else(Vec::new, |sc| {
+                vec![
+                    ("program".to_string(), sc.program.clone()),
+                    ("ceiling".to_string(), sc.ceiling.to_string()),
+                ]
+            }),
+            doc_url: None,
+            notes: Vec::new(),
+        }
+    }
+}
+
+impl From<&ReferenceError> for Diagnostic {
+    fn from(error: &ReferenceError) -> Self {
+        error.to_diagnostic()
+    }
+}
+
+impl From<ReferenceError> for Diagnostic {
+    fn from(error: ReferenceError) -> Self {
+        error.to_diagnostic()
     }
 }

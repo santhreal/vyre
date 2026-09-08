@@ -45,6 +45,8 @@ pub use vyre_megakernel::{
     SearchBudget, TargetPayload, TargetPayloadFormat, TargetProfile, ValidatedCompileRequest,
 };
 
+/// Shared structured diagnostic protocol.
+pub use vyre_foundation::diagnostics;
 /// Retry classification shared by every diagnostic that can be retried.
 pub use vyre_foundation::diagnostics::RetryClass;
 /// Domain-neutral tagged byte-range contract.

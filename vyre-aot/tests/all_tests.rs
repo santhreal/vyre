@@ -50,3 +50,7 @@ pub mod launcher_registry_closure_contracts;
 /// Integration tests from `tests/manifest_round_trip.rs`.
 #[path = "manifest_round_trip.rs"]
 pub mod manifest_round_trip;
+
+/// Integration tests from `tests/workspace_error_diagnostic_schema.rs`.
+#[path = "workspace_error_diagnostic_schema.rs"]
+pub mod workspace_error_diagnostic_schema;
