@@ -8,13 +8,13 @@ use crate::pipeline::{element_size_bytes, BufferBindingInfo, OutputBindingLayout
 
 /// Return true when a binding consumes one caller-provided borrowed input slot.
 ///
-/// Pure outputs are allocated by the backend and must not shift subsequent
-/// inputs. Read/write live-outs with `preserve_input_contents` are both inputs
-/// and outputs, so they intentionally consume one caller input slot.
+/// Reads the answer recorded from `BufferDecl::consumes_host_input` at pipeline
+/// build time, so this walk and the persistent one cannot disagree about which
+/// binding a caller input fills. Deriving it here from flattened fields could
+/// not reproduce the canonical answer, because `BufferBindingInfo` carries no
+/// `pipeline_live_out`.
 pub(crate) fn consumes_host_input(info: &BufferBindingInfo) -> bool {
-    info.kind != vyre_foundation::ir::MemoryKind::Shared
-        && !info.internal_trap
-        && (!info.is_output || info.preserve_input_contents)
+    info.consumes_host_input
 }
 
 /// Return true when a binding is the slot a single dispatch-parameter handle
@@ -162,44 +162,3 @@ where
     Ok(())
 }
 
-// Inline: covers `consumes_host_input`, which no integration test can name.
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::Arc;
-
-    fn info(
-        is_output: bool,
-        preserve_input_contents: bool,
-        internal_trap: bool,
-    ) -> BufferBindingInfo {
-        BufferBindingInfo {
-            group: 0,
-            binding: 1,
-            name: Arc::from("buf"),
-            access: vyre_foundation::ir::BufferAccess::ReadWrite,
-            kind: vyre_foundation::ir::MemoryKind::Global,
-            hints: vyre_foundation::ir::MemoryHints::default(),
-            element: vyre_foundation::ir::DataType::U32,
-            count: 4,
-            is_output,
-            preserve_input_contents,
-            internal_trap,
-        }
-    }
-
-    #[test]
-    fn pure_outputs_do_not_consume_host_input_slots() {
-        assert!(!consumes_host_input(&info(true, false, false)));
-    }
-
-    #[test]
-    fn preserved_live_outs_consume_host_input_slots() {
-        assert!(consumes_host_input(&info(true, true, false)));
-    }
-
-    #[test]
-    fn internal_traps_do_not_consume_host_input_slots() {
-        assert!(!consumes_host_input(&info(false, false, true)));
-    }
-}

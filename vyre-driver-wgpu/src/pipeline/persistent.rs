@@ -694,6 +694,9 @@ mod tests {
             is_output: false,
             preserve_input_contents: false,
             internal_trap: false,
+            // A read-only binding that is not an output is fed from one host
+            // slot, which is what BufferDecl::consumes_host_input states.
+            consumes_host_input: true,
         }
     }
 

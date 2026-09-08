@@ -43,12 +43,18 @@ pub(crate) struct BufferBindingInfo {
     /// Backend-owned trap sidecar; not supplied by callers and not returned as
     /// a public output.
     pub internal_trap: bool,
+    /// Whether one caller-provided input slot supplies this binding's contents.
+    ///
+    /// Recorded from `BufferDecl::consumes_host_input`, the single definition of
+    /// the host input ABI, so each binding walk reads one answer rather than
+    /// re-deriving the rule from flattened fields that omit `pipeline_live_out`.
+    pub consumes_host_input: bool,
 }
 
 pub(crate) fn descriptor_buffer_bindings(
     descriptor: &vyre_lower::KernelDescriptor,
     public_output_bindings: &FxHashSet<u32>,
-    host_input_bindings: &FxHashSet<(u32, u32)>,
+    host_input_bindings: &FxHashSet<u32>,
 ) -> Result<Vec<BufferBindingInfo>, BackendError> {
     let mut bindings = Vec::new();
     vyre_driver::allocation::try_reserve_vec_to_capacity(
@@ -68,9 +74,9 @@ pub(crate) fn descriptor_buffer_bindings(
         let access = descriptor_buffer_access(slot.visibility);
         let internal_trap = slot.name == TRAP_SIDECAR_NAME;
         let is_output = public_output_bindings.contains(&slot.slot) && !internal_trap;
-        let preserve_input_contents = access == vyre_foundation::ir::BufferAccess::ReadWrite
-            && host_input_bindings.contains(&(group, slot.slot))
-            && !internal_trap;
+        let consumes_host_input = host_input_bindings.contains(&slot.slot) && !internal_trap;
+        let preserve_input_contents =
+            access == vyre_foundation::ir::BufferAccess::ReadWrite && consumes_host_input;
         bindings.push(BufferBindingInfo {
             group,
             binding: slot.slot,
@@ -83,6 +89,7 @@ pub(crate) fn descriptor_buffer_bindings(
             is_output,
             preserve_input_contents,
             internal_trap,
+            consumes_host_input,
         });
     }
     Ok(bindings)
@@ -214,4 +221,183 @@ pub(crate) fn descriptor_trap_tags(
             "descriptor trap tag table unavailable: {source}. Fix: split nested kernel bodies before descriptor metadata extraction."
         ))
     })
+}
+
+// Inline: `descriptor_buffer_bindings` is crate-private, and it is the single
+// place a canonical host-input answer is recorded onto binding metadata. A
+// device is never reached, so this runs on any host.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vyre_lower::{
+        BindingLayout, BindingSlot, BindingVisibility, Dispatch, GridIndexSpace, KernelBody,
+        KernelDescriptor, MemoryClass,
+    };
+
+    /// Every `MemoryClass`. The match carries no catch-all arm, so a class
+    /// added to the lowering descriptor fails to compile here until someone
+    /// records whether a binding in it is fed from the host.
+    fn all_memory_classes() -> Vec<MemoryClass> {
+        let classes = vec![
+            MemoryClass::Global,
+            MemoryClass::Shared,
+            MemoryClass::Constant,
+            MemoryClass::Uniform,
+            MemoryClass::Scratch,
+        ];
+        for class in &classes {
+            match class {
+                MemoryClass::Global
+                | MemoryClass::Shared
+                | MemoryClass::Constant
+                | MemoryClass::Uniform
+                | MemoryClass::Scratch => {}
+            }
+        }
+        classes
+    }
+
+    /// Every `BindingVisibility`, closed against additions the same way.
+    fn all_visibilities() -> Vec<BindingVisibility> {
+        let visibilities = vec![
+            BindingVisibility::ReadOnly,
+            BindingVisibility::WriteOnly,
+            BindingVisibility::ReadWrite,
+        ];
+        for visibility in &visibilities {
+            match visibility {
+                BindingVisibility::ReadOnly
+                | BindingVisibility::WriteOnly
+                | BindingVisibility::ReadWrite => {}
+            }
+        }
+        visibilities
+    }
+
+    fn slot(
+        index: u32,
+        name: &str,
+        memory_class: MemoryClass,
+        visibility: BindingVisibility,
+    ) -> BindingSlot {
+        BindingSlot {
+            slot: index,
+            element_type: vyre_foundation::ir::DataType::U32,
+            element_count: Some(4),
+            memory_class,
+            visibility,
+            name: name.to_owned(),
+        }
+    }
+
+    fn descriptor_of(slots: Vec<BindingSlot>) -> KernelDescriptor {
+        KernelDescriptor {
+            id: String::from("host-input-projection"),
+            bindings: BindingLayout { slots },
+            dispatch: Dispatch {
+                workgroup_size: [1, 1, 1],
+                grid_index: GridIndexSpace::default(),
+            },
+            body: KernelBody {
+                ops: Vec::new(),
+                child_bodies: Vec::new(),
+                literals: Vec::new(),
+            },
+        }
+    }
+
+    /// One slot per `MemoryClass` and `BindingVisibility` pair, so a rule that
+    /// holds for the read-only global case and fails for a uniform or a
+    /// write-only one cannot pass.
+    fn full_grid() -> Vec<BindingSlot> {
+        let mut slots = Vec::new();
+        let mut index = 0u32;
+        for class in all_memory_classes() {
+            for visibility in all_visibilities() {
+                slots.push(slot(index, &format!("buf{index}"), class, visibility));
+                index += 1;
+            }
+        }
+        slots
+    }
+
+    #[test]
+    fn recorded_host_input_answer_is_the_supplied_set() {
+        let slots = full_grid();
+        // Alternating membership, so neither an all-true nor an all-false
+        // projection can agree with it.
+        let host_inputs: FxHashSet<u32> = slots
+            .iter()
+            .filter(|slot| slot.slot % 2 == 0)
+            .map(|slot| slot.slot)
+            .collect();
+        let bindings =
+            descriptor_buffer_bindings(&descriptor_of(slots), &FxHashSet::default(), &host_inputs)
+                .expect("binding metadata for a well-formed descriptor");
+        assert!(
+            !bindings.is_empty(),
+            "the grid must reach at least one bind-group-mapped class"
+        );
+        for binding in &bindings {
+            assert_eq!(
+                binding.consumes_host_input,
+                host_inputs.contains(&binding.binding),
+                "binding {} recorded {} for a host-input set that says {}",
+                binding.binding,
+                binding.consumes_host_input,
+                host_inputs.contains(&binding.binding)
+            );
+        }
+    }
+
+    #[test]
+    fn trap_sidecar_never_consumes_a_host_input_slot() {
+        let slots = vec![slot(
+            0,
+            TRAP_SIDECAR_NAME,
+            MemoryClass::Global,
+            BindingVisibility::ReadWrite,
+        )];
+        let every_slot: FxHashSet<u32> = FxHashSet::from_iter([0]);
+        let bindings = descriptor_buffer_bindings(&descriptor_of(slots), &every_slot, &every_slot)
+            .expect("binding metadata for a trap sidecar descriptor");
+        let sidecar = bindings
+            .iter()
+            .find(|binding| binding.internal_trap)
+            .expect("the trap sidecar slot maps to a bind group");
+        assert!(
+            !sidecar.consumes_host_input,
+            "the trap sidecar is backend-allocated and takes no caller input"
+        );
+        assert!(
+            !sidecar.is_output,
+            "the trap sidecar is not a public output"
+        );
+        assert!(
+            !sidecar.preserve_input_contents,
+            "a binding with no host input has no contents to preserve"
+        );
+    }
+
+    #[test]
+    fn preserved_contents_require_read_write_and_a_host_input() {
+        let slots = full_grid();
+        let host_inputs: FxHashSet<u32> = slots.iter().map(|slot| slot.slot).collect();
+        let bindings =
+            descriptor_buffer_bindings(&descriptor_of(slots), &FxHashSet::default(), &host_inputs)
+                .expect("binding metadata for a well-formed descriptor");
+        for binding in &bindings {
+            let expected = binding.access == vyre_foundation::ir::BufferAccess::ReadWrite
+                && binding.consumes_host_input;
+            assert_eq!(
+                binding.preserve_input_contents,
+                expected,
+                "binding {} preserves {} under access {:?} and host input {}",
+                binding.binding,
+                binding.preserve_input_contents,
+                binding.access,
+                binding.consumes_host_input
+            );
+        }
+    }
 }

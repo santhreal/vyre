@@ -121,6 +121,7 @@ impl WgpuBackend {
                 count: input_word_count_u32,
                 is_output: false,
                 preserve_input_contents: false,
+                consumes_host_input: true,
             },
             BufferBindingInfo {
                 internal_trap: false,
@@ -134,6 +135,8 @@ impl WgpuBackend {
                 count: output_len_u32,
                 is_output: true,
                 preserve_input_contents: false,
+                // A backend-allocated output takes no host slot.
+                consumes_host_input: false,
             },
             BufferBindingInfo {
                 internal_trap: false,
@@ -147,6 +150,7 @@ impl WgpuBackend {
                 count: 4,
                 is_output: false,
                 preserve_input_contents: false,
+                consumes_host_input: true,
             },
         ];
         let max_group: u32 = buffer_bindings.iter().map(|b| b.group).max().unwrap_or(0);
