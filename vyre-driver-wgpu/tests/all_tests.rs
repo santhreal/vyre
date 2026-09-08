@@ -224,6 +224,11 @@ pub mod gap_transcendentals_parity;
 #[path = "host_input_contracts.rs"]
 pub mod host_input_contracts;
 
+/// Integration tests from `tests/input_abi_contracts.rs`.
+#[cfg(feature = "device-tests")]
+#[path = "input_abi_contracts.rs"]
+pub mod input_abi_contracts;
+
 /// Integration tests from `tests/hit_buffer.rs`.
 #[cfg(feature = "device-tests")]
 #[allow(deprecated)]
