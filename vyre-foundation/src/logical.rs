@@ -671,6 +671,29 @@ impl<'a> LogicalProgramGraph<'a> {
             self.collect_ancestors(dependence.predecessor, chain);
         }
     }
+
+    /// Compute structural sharing metrics over the underlying ProgramGraph.
+    #[must_use]
+    pub fn structural_sharing_metrics(&self) -> crate::ir::ProgramGraphSharingMetrics {
+        self.graph.structural_sharing_metrics()
+    }
+
+    /// Number of distinct logical region bodies in the graph.
+    #[must_use]
+    pub fn canonical_region_count(&self) -> usize {
+        let mut unique_regions = rustc_hash::FxHashSet::default();
+        for region in &self.regions {
+            unique_regions.insert((
+                region.kind,
+                region.extents.clone(),
+                region.reduction_axes.clone(),
+                region.effects.retained_state,
+                region.effects.atomics,
+                region.effects.synchronizes,
+            ));
+        }
+        unique_regions.len()
+    }
 }
 
 /// The format a region computes in, given the formats it reads or writes.

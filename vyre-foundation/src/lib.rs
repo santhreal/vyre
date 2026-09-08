@@ -57,8 +57,8 @@ pub mod ir {
     };
     pub use crate::ir_inner::model::program_graph::{
         GraphInput, GraphNodeId, GraphOutput, GraphValueId, LivenessInterval, ProgramGraph,
-        ProgramGraphError, ProgramGraphNode, ProgramGraphValue, ShapeDim, ValueContract,
-        ValueLifetime,
+        ProgramGraphError, ProgramGraphNode, ProgramGraphSharingMetrics, ProgramGraphTemplate,
+        ProgramGraphValue, ShapeDim, ValueContract, ValueLifetime,
     };
     pub use crate::ir_inner::model::program_graph_delta::{
         AffectedGraphClosure, GraphDelta, GraphDeltaError, GraphDeltaOp, GRAPH_DELTA_VERSION,

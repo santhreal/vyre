@@ -753,3 +753,6 @@ pub mod wire_version_mismatch;
 /// Integration tests from `tests/workspace_naming_footguns.rs`.
 #[path = "workspace_naming_footguns.rs"]
 pub mod workspace_naming_footguns;
+/// Integration tests from `tests/structural_sharing_and_bounded_compilation_contracts.rs`.
+#[path = "structural_sharing_and_bounded_compilation_contracts.rs"]
+pub mod structural_sharing_and_bounded_compilation_contracts;
