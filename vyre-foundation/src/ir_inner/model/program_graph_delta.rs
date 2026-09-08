@@ -772,20 +772,11 @@ fn put_bytes(bytes: &mut Vec<u8>, data: &[u8]) -> Result<(), GraphDeltaError> {
 }
 
 fn put_contract(bytes: &mut Vec<u8>, contract: &ValueContract) -> Result<(), GraphDeltaError> {
-    let dtype_code: u8 = match contract.dtype {
-        DataType::F32 => 1,
-        DataType::F16 => 2,
-        DataType::BF16 => 3,
-        DataType::U32 => 4,
-        DataType::I32 => 5,
-        DataType::U8 => 6,
-        DataType::I8 => 7,
-        DataType::U64 => 8,
-        DataType::I64 => 9,
-        DataType::F64 => 10,
-        DataType::Bool => 11,
-        DataType::Custom(_) => 12,
-    };
+    // The wire tag for a `DataType` is owned by `serial::wire::tags`. A second
+    // mapping here would go stale the next time a data type is added, and the
+    // one it replaced listed twelve of the thirty-four variants.
+    let dtype_code = crate::serial::wire::tags::data_type_tag(&contract.dtype)
+        .map_err(|error| GraphDeltaError::Wire(error.to_string()))?;
     bytes.push(dtype_code);
     let access_code: u8 = match contract.access {
         BufferAccess::ReadOnly => 1,
@@ -868,34 +859,28 @@ fn read_contract(bytes: &[u8], cursor: &mut usize) -> Result<ValueContract, Grap
     if *cursor + 3 > bytes.len() {
         return Err(GraphDeltaError::Wire("EOF reading contract header".into()));
     }
-    let dtype = match bytes[*cursor] {
-        1 => DataType::F32,
-        2 => DataType::F16,
-        3 => DataType::BF16,
-        4 => DataType::U32,
-        5 => DataType::I32,
-        6 => DataType::U8,
-        7 => DataType::I8,
-        8 => DataType::U64,
-        9 => DataType::I64,
-        10 => DataType::F64,
-        11 => DataType::Bool,
-        _ => DataType::F32,
-    };
+    // Each tag is decoded by the authority that wrote it, and an unknown tag is
+    // an error. The three matches these replaced ended in a catch-all that
+    // returned `F32`, `ReadOnly` and `Invocation`, so a delta written by a newer
+    // encoder, or a corrupted one, decoded into a contract that named a
+    // different type than the bytes did and was served as if it were the
+    // caller's.
+    let dtype = crate::serial::wire::tags::data_type_from_tag::data_type_from_tag(bytes[*cursor])
+        .map_err(GraphDeltaError::Wire)?;
     *cursor += 1;
-    let access = match bytes[*cursor] {
-        1 => BufferAccess::ReadOnly,
-        2 => BufferAccess::ReadWrite,
-        3 => BufferAccess::Workgroup,
-        _ => BufferAccess::ReadOnly,
-    };
+    let access = crate::serial::wire::tags::access_from_tag::access_from_tag(bytes[*cursor])
+        .map_err(GraphDeltaError::Wire)?;
     *cursor += 1;
     let lifetime = match bytes[*cursor] {
         1 => ValueLifetime::Constant,
         2 => ValueLifetime::Invocation,
         3 => ValueLifetime::Retained,
         4 => ValueLifetime::Output,
-        _ => ValueLifetime::Invocation,
+        unknown => {
+            return Err(GraphDeltaError::Wire(format!(
+                "value lifetime tag {unknown} is not one of the four `ValueLifetime` tags"
+            )));
+        }
     };
     *cursor += 1;
     let rank = read_u32(bytes, cursor)? as usize;
