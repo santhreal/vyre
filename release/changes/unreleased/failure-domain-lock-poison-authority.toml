@@ -1,0 +1,2 @@
+category = "fixed"
+description = "Added canonical failure domain lock policy authority, typed recovery semantics, and source-derived closure verification."

@@ -1,0 +1,2 @@
+category = "added"
+description = "Added canonical typed schema authority, bounded decoders, platform-independent digests, and JSON schema export."

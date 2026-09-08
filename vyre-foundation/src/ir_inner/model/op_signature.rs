@@ -6,7 +6,7 @@
 //! # Examples
 //!
 //! ```
-//! use vyre::ir::{DataType, BufferAccess, BinOp};
+//! use vyre_foundation::ir::{DataType, BufferAccess, BinOp};
 //!
 //! // Element type for a U32 buffer
 //! let elem = DataType::U32;

@@ -7,20 +7,21 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use rustc_hash::FxHashMap;
 use thiserror::Error;
+use serde::{Deserialize, Serialize};
 
 use super::op_signature::{BufferAccess, DataType};
 use super::program::Program;
 
 /// Canonical graph-local identity for one connected semantic value.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct GraphValueId(pub u32);
 
 /// Canonical graph-local identity for one executable program node.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct GraphNodeId(pub u32);
 
 /// One value dimension, either statically known or bound by graph configuration.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum ShapeDim {
     /// Exact element extent.
     Known(u64),
@@ -29,7 +30,7 @@ pub enum ShapeDim {
 }
 
 /// Semantic lifetime class used by compilation and runtime binding.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum ValueLifetime {
     /// Immutable constant data shared by every invocation.
     Constant,
@@ -68,7 +69,7 @@ pub struct ControlBounds {
 }
 
 /// Complete semantic contract for a connected graph value.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ValueContract {
     /// Element representation.
     pub dtype: DataType,

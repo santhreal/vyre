@@ -354,3 +354,7 @@ pub mod vyre_backend_forwarding_closure;
 /// Integration tests for domain-neutral resource ABI from `tests/resource_abi_contracts.rs`.
 #[path = "resource_abi_contracts.rs"]
 pub mod resource_abi_contracts;
+
+/// Integration tests from `tests/lock_policy_closure.rs`.
+#[path = "lock_policy_closure.rs"]
+pub mod lock_policy_closure;

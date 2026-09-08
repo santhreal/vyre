@@ -335,7 +335,7 @@ fn count_alignment_from_predicate(
 mod tests {
     use super::*;
     use crate::ir_inner::model::program::{BufferDecl, ShapePredicate};
-    use vyre::ir::{DataType as VyreDataType, Node, Program as VyreProgram};
+    use crate::ir::{DataType as VyreDataType, Node, Program as VyreProgram};
 
     fn one_buffer_program() -> VyreProgram {
         VyreProgram::wrapped(

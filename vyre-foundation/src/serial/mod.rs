@@ -39,6 +39,13 @@ pub use envelope::{EnvelopeError, WireReader, WireWriter};
 /// restating the same five encode/decode tests.
 pub mod wire_round_trip;
 
+/// Authoritative typed schema registry, bounded decoders, and canonical digests.
+pub mod schema_authority;
+pub use schema_authority::{
+    export_schema_json, BoundedDecoder, CanonicalDigest, CanonicalSchemaVersion, DigestAlgorithm,
+    SchemaAuthority, SchemaAuthorityError, SchemaDescriptor, SchemaId,
+};
+
 pub(crate) fn put_leb_u32(out: &mut Vec<u8>, value: u32) {
     put_leb_u64(out, u64::from(value));
 }

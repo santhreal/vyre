@@ -221,7 +221,7 @@ pub(crate) fn any_body(nodes: &[Node], pred: &mut impl FnMut(&[Node]) -> bool) -
 /// # Examples
 ///
 /// ```
-/// use vyre::ir::Program;
+/// use vyre_foundation::ir::Program;
 /// use vyre_foundation::visit::walk_nodes;
 ///
 /// let program = Program::empty();
@@ -347,7 +347,7 @@ fn drain_expr_stack<'a>(
 /// # Examples
 ///
 /// ```
-/// use vyre::ir::Program;
+/// use vyre_foundation::ir::Program;
 /// use vyre_foundation::visit::walk_exprs;
 ///
 /// let program = Program::empty();
@@ -386,7 +386,7 @@ pub fn walk_exprs(program: &Program, mut f: impl FnMut(&Expr)) {
 /// # Examples
 ///
 /// ```
-/// use vyre::ir::Program;
+/// use vyre_foundation::ir::Program;
 /// use vyre_foundation::visit::walk_nodes_mut;
 ///
 /// let mut program = Program::empty();
@@ -424,17 +424,17 @@ pub fn walk_nodes_mut(program: &mut Program, mut f: impl FnMut(&mut Node)) {
 /// # Examples
 ///
 /// ```
-/// use vyre::ir::Program;
+/// use vyre_foundation::ir::Program;
 /// use vyre_foundation::visit::{walk_nodes_and_exprs, ExprSink, NodeSink};
 ///
 /// struct CountAll;
 ///
 /// impl NodeSink for CountAll {
-///     fn accept_node(&mut self, _node: &vyre::ir::Node) {}
+///     fn accept_node(&mut self, _node: &vyre_foundation::ir::Node) {}
 /// }
 ///
 /// impl ExprSink for CountAll {
-///     fn accept_expr(&mut self, _expr: &vyre::ir::Expr) {}
+///     fn accept_expr(&mut self, _expr: &vyre_foundation::ir::Expr) {}
 /// }
 ///
 /// let program = Program::empty();

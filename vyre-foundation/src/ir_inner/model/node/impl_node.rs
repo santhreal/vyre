@@ -9,7 +9,7 @@ impl Node {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{Expr, Node};
+    /// use vyre_foundation::ir::{Expr, Node};
     /// let _ = Node::let_bind("x", Expr::u32(1));
     /// ```
     #[must_use]
@@ -26,7 +26,7 @@ impl Node {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{Expr, Node};
+    /// use vyre_foundation::ir::{Expr, Node};
     /// let _ = Node::assign("x", Expr::u32(2));
     /// ```
     #[must_use]
@@ -43,7 +43,7 @@ impl Node {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{Expr, Node};
+    /// use vyre_foundation::ir::{Expr, Node};
     /// let _ = Node::store("out", Expr::u32(0), Expr::u32(1));
     /// ```
     #[must_use]
@@ -61,7 +61,7 @@ impl Node {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{Expr, Node};
+    /// use vyre_foundation::ir::{Expr, Node};
     /// let _ = Node::if_then_else(Expr::bool(true), vec![Node::Return], vec![]);
     /// ```
     #[must_use]
@@ -79,7 +79,7 @@ impl Node {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{Expr, Node};
+    /// use vyre_foundation::ir::{Expr, Node};
     /// let _ = Node::if_then(Expr::bool(true), vec![Node::Return]);
     /// ```
     #[must_use]
@@ -97,7 +97,7 @@ impl Node {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{Expr, Node};
+    /// use vyre_foundation::ir::{Expr, Node};
     /// let _ = Node::loop_for("i", Expr::u32(0), Expr::u32(4), vec![]);
     /// ```
     #[must_use]
@@ -116,7 +116,7 @@ impl Node {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{Expr, Node};
+    /// use vyre_foundation::ir::{Expr, Node};
     ///
     /// let node = Node::loop_("i", Expr::u32(0), Expr::u32(4), vec![Node::Return]);
     /// assert!(matches!(node, Node::Loop { .. }));
@@ -143,7 +143,7 @@ impl Node {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::Node;
+    /// use vyre_foundation::ir::Node;
     ///
     /// let persistent = Node::forever(vec![Node::Return]);
     /// assert!(matches!(persistent, Node::Loop { .. }));
@@ -159,7 +159,7 @@ impl Node {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::Node;
+    /// use vyre_foundation::ir::Node;
     ///
     /// assert!(matches!(Node::block(vec![Node::Return]), Node::Block(_)));
     /// ```
@@ -174,7 +174,7 @@ impl Node {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::Node;
+    /// use vyre_foundation::ir::Node;
     ///
     /// assert!(matches!(Node::return_(), Node::Return));
     /// ```
@@ -197,7 +197,7 @@ impl Node {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::Node;
+    /// use vyre_foundation::ir::Node;
     ///
     /// assert!(matches!(Node::barrier(), Node::Barrier { .. }));
     /// ```
@@ -244,7 +244,7 @@ impl Node {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::Node;
+    /// use vyre_foundation::ir::Node;
     ///
     /// let node = Node::indirect_dispatch("counts", 0);
     /// assert!(matches!(node, Node::IndirectDispatch { .. }));
@@ -264,7 +264,7 @@ impl Node {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{Node, Expr};
+    /// use vyre_foundation::ir::{Expr, Node};
     ///
     /// let node = Node::async_load_gpu_driven("ssd", "vram", Expr::u32(0), Expr::u32(1024), "tag-0");
     /// assert!(matches!(node, Node::AsyncLoad { .. }));
@@ -329,7 +329,7 @@ impl Node {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::Node;
+    /// use vyre_foundation::ir::Node;
     ///
     /// let node = Node::async_wait("stage-a");
     /// assert!(matches!(node, Node::AsyncWait { .. }));
