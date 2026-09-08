@@ -81,6 +81,7 @@ inventory::submit! {
         ]]),
         Some(|| vec![vec![EXPECTED_INDEXED_MAP_OUTPUT_BYTES.to_vec()]]),
     )
+    .with_opaque("dynamic buffer indexing and strided accumulation builder")
 }
 
 inventory::submit! {
@@ -92,4 +93,5 @@ inventory::submit! {
         ]]),
         Some(|| vec![vec![EXPECTED_STRIDED_ACCUMULATE_OUTPUT_BYTES.to_vec()]]),
     )
+    .with_opaque("dynamic buffer indexing and strided accumulation builder")
 }

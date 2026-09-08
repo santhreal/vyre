@@ -500,6 +500,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_LOGIT_ADJUST_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("llm")
+    .with_opaque("autoregressive token sampling and KV cache management")
 }
 
 inventory::submit! {
@@ -516,6 +517,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_NUCLEUS_SELECT_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("llm")
+    .with_opaque("autoregressive token sampling and KV cache management")
 }
 
 fn sample_token_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
@@ -545,6 +547,7 @@ inventory::submit! {
         }),
     )
     .with_category("llm")
+    .with_opaque("autoregressive token sampling and KV cache management")
 }
 #[cfg(test)]
 mod buffer_contract_tests {

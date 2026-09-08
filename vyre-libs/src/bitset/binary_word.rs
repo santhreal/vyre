@@ -368,6 +368,10 @@ macro_rules! define_bitwise_in_place_op {
                 BitwiseBinaryOp::Xor => &["self-inverse"],
                 BitwiseBinaryOp::AndNot => &[],
             })
+            .with_opaque(match BitwiseBinaryOp::$op_kind {
+                BitwiseBinaryOp::AndNot => "in-place non-symmetric bitset difference target and not operand",
+                _ => "bitwise in-place word combination",
+            })
         }
 
         #[cfg(test)]

@@ -325,6 +325,7 @@ inventory::submit! {
             vec![vec![EXPECTED_LINE_SPLICE_CLASSIFY_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("lexical and grammar parser state automaton transition")
 }
 
 #[cfg(test)]

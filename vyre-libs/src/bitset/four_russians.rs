@@ -383,6 +383,7 @@ inventory::submit! {
             vec![vec![EXPECTED_FOUR_RUSSIANS_APPLY_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("bitset manipulation query or non-symmetric set transformation")
 }
 
 const EXPECTED_FOUR_RUSSIANS_DENSE_MATVEC_OUTPUT_BYTES: [u8; 4] = [5, 0, 0, 0];
@@ -405,6 +406,7 @@ inventory::submit! {
             vec![vec![EXPECTED_FOUR_RUSSIANS_DENSE_MATVEC_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("bitset manipulation query or non-symmetric set transformation")
 }
 
 #[cfg(test)]

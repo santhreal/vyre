@@ -93,6 +93,7 @@ inventory::submit! {
             ]]]
         }),
     )
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
 }
 
 #[cfg(test)]

@@ -148,6 +148,7 @@ inventory::submit! {
             ]]]
         }),
     )
+    .with_opaque("multi-block parallel reduction and prefix scan kernel")
 }
 
 #[cfg(test)]

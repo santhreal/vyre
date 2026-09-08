@@ -156,8 +156,8 @@ mod verification;
 /// Specification element.
 pub use adversarial_input::AdversarialInput;
 /// See [`algebraic_law::AlgebraicLaw`].
-/// Specification element.
-pub use algebraic_law::{AlgebraicLaw, LawCheckFn};
+/// Specification element for algebraic laws.
+pub use algebraic_law::{AlgebraicLaw, LawCheckFn, LawGuard};
 /// See [`all_algebraic_laws::all_algebraic_laws`].
 /// Specification element.
 pub use all_algebraic_laws::all_algebraic_laws;

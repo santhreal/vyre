@@ -39,6 +39,7 @@ inventory::submit! {
             vec![vec![EXPECTED_BITSET_NOT_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["involution"])
 }
 
 #[cfg(test)]

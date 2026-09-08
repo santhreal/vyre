@@ -108,6 +108,7 @@ inventory::submit! {
             vec![vec![EXPECTED_FUNCTOR_APPLY_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("graph traversal and topological structural analysis")
 }
 
 #[cfg(test)]

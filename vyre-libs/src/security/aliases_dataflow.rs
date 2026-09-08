@@ -260,6 +260,7 @@ inventory::submit! {
         }),
     )
     .with_category("security")
+    .with_opaque("static taint analysis and control-flow dominance check")
 }
 
 #[cfg(test)]

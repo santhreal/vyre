@@ -10,7 +10,7 @@
 //! semver boundary. External crates pin against the `{ op_id, law }`
 //! form; new fields will be `#[non_exhaustive]`-guarded.
 
-pub use vyre_spec::AlgebraicLaw;
+pub use vyre_spec::{AlgebraicLaw, LawGuard};
 
 use rustc_hash::FxHashMap;
 use std::sync::LazyLock;
@@ -25,6 +25,8 @@ pub struct AlgebraicLawRegistration {
     pub op_id: &'static str,
     /// The law itself. Optimizer passes match on the variant.
     pub law: AlgebraicLaw,
+    /// Precondition under which the law holds.
+    pub guard: LawGuard,
 }
 
 impl AlgebraicLawRegistration {
@@ -40,11 +42,39 @@ impl AlgebraicLawRegistration {
     /// ```
     #[must_use]
     pub const fn new(op_id: &'static str, law: AlgebraicLaw) -> Self {
-        Self { op_id, law }
+        Self {
+            op_id,
+            law,
+            guard: LawGuard::Unconditional,
+        }
+    }
+
+    /// Construct a registration with an explicit precondition guard.
+    #[must_use]
+    pub const fn guarded(op_id: &'static str, law: AlgebraicLaw, guard: LawGuard) -> Self {
+        Self { op_id, law, guard }
+    }
+
+    /// Attach an explicit precondition guard to this registration.
+    #[must_use]
+    pub const fn with_guard(mut self, guard: LawGuard) -> Self {
+        self.guard = guard;
+        self
     }
 }
 
 inventory::collect!(AlgebraicLawRegistration);
+
+static REGISTRATIONS_BY_OP: LazyLock<
+    FxHashMap<&'static str, Vec<&'static AlgebraicLawRegistration>>,
+> = LazyLock::new(|| {
+    let mut map: FxHashMap<&'static str, Vec<&'static AlgebraicLawRegistration>> =
+        FxHashMap::default();
+    for r in inventory::iter::<AlgebraicLawRegistration>() {
+        map.entry(r.op_id).or_default().push(r);
+    }
+    map
+});
 
 static LAWS_BY_OP: LazyLock<FxHashMap<&'static str, Vec<&'static AlgebraicLaw>>> =
     LazyLock::new(|| {
@@ -54,6 +84,12 @@ static LAWS_BY_OP: LazyLock<FxHashMap<&'static str, Vec<&'static AlgebraicLaw>>>
         }
         map
     });
+
+/// Collect every registered law registration for `op_id`.
+#[must_use]
+pub fn registrations_for_op(op_id: &str) -> &'static [&'static AlgebraicLawRegistration] {
+    REGISTRATIONS_BY_OP.get(op_id).map_or(&[], Vec::as_slice)
+}
 
 /// Collect every registered law for `op_id`. Optimizer passes use
 /// this at pass-scheduling time; per-dispatch callers should cache.

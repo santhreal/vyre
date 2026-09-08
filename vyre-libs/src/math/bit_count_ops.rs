@@ -44,7 +44,8 @@ macro_rules! define_bit_count_u32_op {
                     }),
                 )
                 .with_category("math")
-            }
+    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
+}
 
             #[cfg(test)]
             mod tests {

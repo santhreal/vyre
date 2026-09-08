@@ -135,7 +135,7 @@ fn apply_rewrite(
         if mirror.egraph().class_count() >= class_budget {
             break;
         }
-        let Some(equivalent) = equivalent_class(mirror, rewrite.kind, &node)? else {
+        let Some(equivalent) = equivalent_class(mirror, rewrite, &node)? else {
             continue;
         };
         let before = mirror.egraph_mut().try_find(class)?;
@@ -165,13 +165,35 @@ fn matched_nodes(mirror: &ExprMirror, rewrite: &DerivedRewrite) -> Vec<(EClassId
 /// precondition.
 fn equivalent_class(
     mirror: &mut ExprMirror,
-    kind: DerivedRewriteKind,
+    rewrite: &DerivedRewrite,
     node: &ExprLang,
 ) -> Result<Option<EClassId>, EGraphError> {
     let ExprLang::Bin { op, left, right } = *node else {
         return Ok(None);
     };
-    match kind {
+    match rewrite.guard {
+        vyre_spec::LawGuard::Unconditional | vyre_spec::LawGuard::ExactOnly => {}
+        vyre_spec::LawGuard::NonZero => {
+            if mirror.literal_u32(right) == Some(0) || mirror.literal_u32(left) == Some(0) {
+                return Ok(None);
+            }
+        }
+        vyre_spec::LawGuard::FiniteOnly | vyre_spec::LawGuard::PureOnly => {}
+        vyre_spec::LawGuard::Range { lo, hi } => {
+            if let Some(val) = mirror.literal_u32(right) {
+                if (val as i64) < lo || (val as i64) > hi {
+                    return Ok(None);
+                }
+            }
+            if let Some(val) = mirror.literal_u32(left) {
+                if (val as i64) < lo || (val as i64) > hi {
+                    return Ok(None);
+                }
+            }
+        }
+        _ => {}
+    }
+    match rewrite.kind {
         DerivedRewriteKind::Commute => {
             if mirror.egraph_mut().try_find(left)? == mirror.egraph_mut().try_find(right)? {
                 return Ok(None);

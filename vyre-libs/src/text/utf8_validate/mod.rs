@@ -60,4 +60,5 @@ inventory::submit! {
             vec![vec![EXPECTED_UTF8_VALIDATE_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("text encoding classification and character frequency scanning")
 }

@@ -268,6 +268,7 @@ inventory::submit! {
             ]
         }),
     )
+    .with_opaque("variable-length decoding and decompression stream state")
 }
 #[cfg(test)]
 mod primitive_tests {

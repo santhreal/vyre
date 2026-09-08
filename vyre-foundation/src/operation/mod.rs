@@ -56,6 +56,8 @@ pub struct SemanticOperation {
     pub explicit_effects: Option<OperationEffects>,
     /// Optional explicit closed capabilities.
     pub explicit_capabilities: Option<RequiredCapabilities>,
+    /// Optional explicit opaque / no-transform reason.
+    pub opaque_reason: Option<&'static str>,
 }
 
 impl SemanticOperation {
@@ -125,6 +127,17 @@ impl SemanticOperation {
     #[must_use]
     pub const fn category(self) -> Option<&'static str> {
         self.category
+    }
+    /// Return the explicit opaque / no-transform reason, if one was recorded.
+    #[must_use]
+    pub const fn opaque_reason(self) -> Option<&'static str> {
+        self.opaque_reason
+    }
+
+    /// Whether this operation has a recorded transform decision (either laws or an explicit opaque decision).
+    #[must_use]
+    pub fn has_transform_decision(self) -> bool {
+        !self.laws.is_empty() || self.opaque_reason.is_some()
     }
 
     /// Return the permitted f32 drift in ULPs.
@@ -213,6 +226,8 @@ pub struct OperationRegistration {
     pub explicit_effects: Option<OperationEffects>,
     /// Optional explicit closed capabilities.
     pub explicit_capabilities: Option<RequiredCapabilities>,
+    /// Optional explicit opaque / no-transform reason.
+    pub opaque_reason: Option<&'static str>,
 }
 
 impl OperationRegistration {
@@ -241,6 +256,7 @@ impl OperationRegistration {
             source_file: Location::caller().file(),
             explicit_effects: None,
             explicit_capabilities: None,
+            opaque_reason: None,
         }
     }
 
@@ -319,6 +335,24 @@ impl OperationRegistration {
     pub const fn with_laws(mut self, laws: &'static [&'static str]) -> Self {
         self.laws = laws;
         self
+    }
+    /// Attach an explicit opaque / no-transform decision with a one-line reason.
+    #[must_use]
+    pub const fn with_opaque(mut self, reason: &'static str) -> Self {
+        self.opaque_reason = Some(reason);
+        self
+    }
+
+    /// Return the recorded opaque / no-transform decision reason, if any.
+    #[must_use]
+    pub const fn opaque_reason(&self) -> Option<&'static str> {
+        self.opaque_reason
+    }
+
+    /// Whether this operation has a recorded transform decision (either laws or an explicit opaque decision).
+    #[must_use]
+    pub const fn has_transform_decision(&self) -> bool {
+        !self.laws.is_empty() || self.opaque_reason.is_some()
     }
 
     /// Attach the source file that owns this registration.
@@ -452,6 +486,7 @@ impl From<&'static OperationRegistration> for SemanticOperation {
             source_file: registration.source_file,
             explicit_effects: registration.explicit_effects,
             explicit_capabilities: registration.explicit_capabilities,
+            opaque_reason: registration.opaque_reason,
         }
     }
 }

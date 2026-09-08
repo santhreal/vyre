@@ -1055,6 +1055,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         proof: "crate::gates::op_names::tests::rejects_every_banned_shape_and_accepts_a_canonical_name",
     },
     GateDescriptor {
+        name: "operation-law-decisions",
+        help: "Enforce every registered semantic operation carries algebraic laws or an explicit opaque decision",
+        package: "xtask-registry",
+        areas: &["prepublish"],
+        subject: "registered operations",
+        artifacts: &[],
+        prerequisites: &[],
+        proof: "xtask_registry::gates::operation_law_decisions::tests::an_operation_without_a_decision_is_reported",
+    },
+    GateDescriptor {
         name: "operation-schema",
         help: "Hold docs/generated/OP_SCHEMA.json to the live operation registry; --write regenerates it",
         package: "xtask-registry",

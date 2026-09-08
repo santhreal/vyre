@@ -417,6 +417,7 @@ inventory::submit! {
         ]]),
     )
     .with_category("parsing")
+    .with_opaque("lexical and grammar parser state automaton transition")
 }
 
 const EXPECTED_IMPORTS_RECORDS: [u8; 384] = pack_words_padded_bytes([1, 7, 2, 0, 7, u32::MAX]);
@@ -433,6 +434,7 @@ inventory::submit! {
         ]]),
     )
     .with_category("parsing")
+    .with_opaque("lexical and grammar parser state automaton transition")
 }
 
 const EXPECTED_WITH_BLOCKS_RECORDS: [u8; 384] = pack_words_padded_bytes([11, 3, 6, 14, 1]);
@@ -449,6 +451,7 @@ inventory::submit! {
         ]]),
     )
     .with_category("parsing")
+    .with_opaque("lexical and grammar parser state automaton transition")
 }
 
 fn structure_fixture_inputs() -> Vec<Vec<Vec<u8>>> {

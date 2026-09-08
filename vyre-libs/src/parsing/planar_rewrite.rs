@@ -219,6 +219,7 @@ inventory::submit! {
         }),
         Some(|| vec![vec![EXPECTED_PLANAR_REWRITE_EXCLUSION_CHECK_BYTES.to_vec()]]),
     )
+    .with_opaque("lexical and grammar parser state automaton transition")
 }
 
 const EXPECTED_PLANAR_REWRITE_BYTES: [u8; 64] = [
@@ -242,6 +243,7 @@ inventory::submit! {
             vec![vec![EXPECTED_PLANAR_REWRITE_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("lexical and grammar parser state automaton transition")
 }
 
 #[cfg(test)]

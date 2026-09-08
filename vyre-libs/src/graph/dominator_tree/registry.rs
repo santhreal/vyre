@@ -37,6 +37,7 @@ inventory::submit! {
             ]]
         }),
     )
+    .with_opaque("graph traversal and topological structural analysis")
 }
 
 // The forest is a chain `0 <- 1 <- 2` with node 3 not yet reached, so the
@@ -53,6 +54,7 @@ inventory::submit! {
         }),
         Some(|| vec![vec![EXPECTED_DOM_TREE_DEPTH_BYTES.to_vec()]]),
     )
+    .with_opaque("graph traversal and topological structural analysis")
 }
 
 // A diamond `0 -> {1, 2} -> 3` whose node 3 is not yet reached, so one sweep
@@ -78,4 +80,5 @@ inventory::submit! {
             ]]
         }),
     )
+    .with_opaque("graph traversal and topological structural analysis")
 }

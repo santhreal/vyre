@@ -364,6 +364,10 @@ name = "op-names"
 findings = 0
 
 [[gate]]
+name = "operation-law-decisions"
+findings = 0
+
+[[gate]]
 name = "operation-schema"
 findings = 0
 

@@ -349,6 +349,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_PAGED_KV_GATHER_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("llm")
+    .with_opaque("autoregressive token sampling and KV cache management")
 }
 
 inventory::submit! {
@@ -365,6 +366,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_PAGED_KV_APPEND_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("llm")
+    .with_opaque("autoregressive token sampling and KV cache management")
 }
 #[cfg(test)]
 mod tests {

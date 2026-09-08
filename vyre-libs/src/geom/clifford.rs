@@ -194,6 +194,7 @@ inventory::submit! {
             vec![vec![EXPECTED_CLIFFORD_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("geometric algebra product and spatial vector mixing")
 }
 
 #[cfg(test)]

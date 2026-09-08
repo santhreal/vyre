@@ -446,6 +446,7 @@ inventory::submit! {
             EXPECTED_REGEX_DFA_MATCHES_BYTES.to_vec(),
         ]]),
     )
+    .with_opaque("string pattern matching DFA and aho-corasick automaton")
 }
 
 fn build_regex_dfa_shards_with(

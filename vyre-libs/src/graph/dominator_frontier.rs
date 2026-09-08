@@ -327,6 +327,7 @@ inventory::submit! {
         ]]),
         Some(|| vec![vec![EXPECTED_DOMINATOR_FRONTIER_PRED_CHECK_BYTES.to_vec()]]),
     )
+    .with_opaque("graph traversal and topological structural analysis")
 }
 
 /// Number of nodes flagged in a dominance-frontier bitset.
@@ -357,6 +358,7 @@ inventory::submit! {
             vec![vec![EXPECTED_DOMINATOR_FRONTIER_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_opaque("graph traversal and topological structural analysis")
 }
 
 #[cfg(test)]

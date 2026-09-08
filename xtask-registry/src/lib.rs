@@ -79,6 +79,10 @@ pub static GATES: &[(&str, &'static dyn GateBehavior)] = &[
     ("lego-tier-claims", &gates::lego_audit::LegoTierClaims),
     ("lego-trend", &gates::lego_audit::LegoTrend),
     (
+        "operation-law-decisions",
+        &gates::operation_law_decisions::OperationLawDecisions,
+    ),
+    (
         "verify-rewrite-proofs",
         &gates::verify_rewrite_proofs::VerifyRewriteProofs,
     ),

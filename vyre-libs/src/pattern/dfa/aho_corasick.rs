@@ -137,6 +137,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_AHO_CORASICK_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("scan")
+    .with_opaque("parallel substring scanning and string search DFA")
 }
 
 #[cfg(test)]

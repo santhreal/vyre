@@ -468,6 +468,7 @@ inventory::submit! {
         ]]),
         Some(|| vec![vec![EXPECTED_VAST_DESCEND_LEFTMOST_LEAF_BYTES.to_vec()]]),
     )
+    .with_opaque("graph traversal and topological structural analysis")
 }
 
 fn checked_node_words(node_count: u32, stride: u32, op_id: &'static str) -> Result<u32, String> {
@@ -868,4 +869,5 @@ inventory::submit! {
         ]]),
         Some(|| vec![vec![EXPECTED_VAST_POSTORDER_OUTPUT_BYTES.to_vec()]]),
     )
+    .with_opaque("graph traversal and topological structural analysis")
 }

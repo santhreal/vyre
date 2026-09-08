@@ -219,6 +219,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_INT4_DOT_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
+    .with_opaque("neural network layer activation or tensor contraction step")
 }
 
 inventory::submit! {
@@ -236,6 +237,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_INT4_DOT_SCALED_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
+    .with_opaque("neural network layer activation or tensor contraction step")
 }
 
 inventory::submit! {
@@ -252,6 +254,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_INT4_MATVEC_SCALED_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
+    .with_opaque("neural network layer activation or tensor contraction step")
 }
 
 inventory::submit! {
@@ -268,6 +271,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_INT4_4F32_ZEROS_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
+    .with_opaque("neural network layer activation or tensor contraction step")
 }
 
 inventory::submit! {
@@ -296,6 +300,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_INT4_4F32_ZEROS_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
+    .with_opaque("neural network layer activation or tensor contraction step")
 }
 
 inventory::submit! {
@@ -324,6 +329,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_INT4_4F32_ZEROS_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
+    .with_opaque("neural network layer activation or tensor contraction step")
 }
 
 #[cfg(test)]
