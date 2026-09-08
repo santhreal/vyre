@@ -10,10 +10,16 @@
 //! `acquire_preferred_dispatch_backend` and in `routing/mod.rs`; this is the
 //! executable form.
 //!
-//! The crate set is derived from the workspace manifest and the
-//! `reference_oracle` flag in each crate's own source, so a backend crate added
-//! tomorrow is covered without editing this file. A new crate that registers a
-//! backend and links the reference interpreter fails here on its first build.
+//! The interpreter is no longer a registered backend, so the set of crates
+//! registering one is exactly the concrete driver members other than
+//! `vyre-driver-reference`, and no workspace crate sets `reference_oracle`. The
+//! flag survives for an out-of-tree registration, which
+//! `acquire_preferred_dispatch_backend` skips.
+//!
+//! Both sets are derived from the workspace manifest and each crate's own
+//! source, so a backend crate added tomorrow is covered without editing this
+//! file, and a driver crate that registers nothing fails here rather than
+//! shrinking the scan in silence.
 //!
 //! `[dev-dependencies]` are deliberately not scanned: parity tests compare a
 //! backend against the reference oracle on purpose, and that dependency does not
@@ -24,16 +30,22 @@ use std::path::Path;
 
 use vyre_test_support::monorepo::vyre_workspace_root;
 
-/// Crates whose whole purpose is host arithmetic. Only the reference driver may
-/// link one.
+/// Crates whose whole purpose is host arithmetic. A crate that registers a
+/// backend may not link one outside `[dev-dependencies]`.
 const HOST_ARITHMETIC_CRATES: &[&str] = &["vyre-reference"];
 
-/// The one crate allowed to declare itself a reference oracle.
+/// Owns the reference interpreter's driver-facing surface: the target profile
+/// and the semantic executor the conformance oracle calls directly. It
+/// registers no backend, so host arithmetic has no dispatch identity at all,
+/// and it is the one concrete-driver member excluded from the scan below.
 const REFERENCE_DRIVER: &str = "vyre-driver-reference";
 
 /// The shared, backend-neutral driver crate. Every concrete driver depends on
 /// it; it registers no backend of its own.
 const SHARED_DRIVER: &str = "vyre-driver";
+
+/// Prefix every concrete driver member carries.
+const CONCRETE_DRIVER_PREFIX: &str = "vyre-driver-";
 
 struct BackendCrate {
     name: String,
@@ -107,6 +119,17 @@ fn reference_oracle_flag(src: &Path) -> Option<bool> {
     declared
 }
 
+/// Concrete driver members, by directory name, from the workspace manifest.
+fn concrete_driver_members(root: &Path) -> BTreeSet<String> {
+    workspace_members(root)
+        .into_iter()
+        .filter_map(|member| {
+            let name = Path::new(&member).file_name()?.to_str()?.to_string();
+            name.starts_with(CONCRETE_DRIVER_PREFIX).then_some(name)
+        })
+        .collect()
+}
+
 fn backend_crates() -> Vec<BackendCrate> {
     let root = vyre_workspace_root();
     let mut crates = Vec::new();
@@ -126,29 +149,39 @@ fn backend_crates() -> Vec<BackendCrate> {
             dependencies: declared_dependencies(&dir.join("Cargo.toml")),
         });
     }
-    assert!(
-        crates.len() >= 5,
-        "Fix: the backend-crate scan found {} crates registering a backend. The workspace has at \
-         least five concrete drivers, so a scan this small means the enumeration broke rather than \
-         that the tree shrank.",
-        crates.len()
+    // The scan is a source-text search, so an enumeration that breaks reports
+    // an empty tree rather than a violation. The expected set is derived from
+    // the same manifest: every concrete driver member registers a backend, and
+    // the reference driver registers none. Adding a driver crate that forgets
+    // to register, or restoring a registration to the reference driver, turns
+    // this red before any linkage rule below is consulted.
+    let found: BTreeSet<String> = crates.iter().map(|entry| entry.name.clone()).collect();
+    let mut expected = concrete_driver_members(&root);
+    expected.remove(REFERENCE_DRIVER);
+    assert_eq!(
+        found, expected,
+        "Fix: the crates registering a backend must be exactly the concrete driver members other \
+         than {REFERENCE_DRIVER}. A missing one means the scan broke or a driver registers \
+         nothing; an extra one means a backend is registered outside a driver crate; \
+         {REFERENCE_DRIVER} appearing means host arithmetic regained a dispatch identity."
     );
     crates
 }
 
 #[test]
-fn only_the_reference_driver_declares_itself_a_reference_oracle() {
+fn no_crate_declares_itself_a_reference_oracle() {
     let oracles: BTreeSet<String> = backend_crates()
         .into_iter()
         .filter(|entry| entry.declares_reference_oracle)
         .map(|entry| entry.name)
         .collect();
-    assert_eq!(
-        oracles,
-        BTreeSet::from([REFERENCE_DRIVER.to_string()]),
-        "Fix: exactly one crate may set `reference_oracle: true`, and it is {REFERENCE_DRIVER}. A \
-         second one makes host arithmetic look like two independent oracles; zero makes the CPU \
-         reference an implicit dispatch target."
+    assert!(
+        oracles.is_empty(),
+        "Fix: {oracles:?} set `reference_oracle: true`. No crate in this workspace registers the \
+         interpreter as a backend, so the flag exists for an out-of-tree registration and \
+         `acquire_preferred_dispatch_backend` skips it. A workspace crate setting it makes host \
+         arithmetic reachable by explicit id, which is the dispatch route the reference backend \
+         was deleted to close."
     );
 }
 
@@ -156,9 +189,6 @@ fn only_the_reference_driver_declares_itself_a_reference_oracle() {
 fn no_device_backend_crate_links_host_arithmetic() {
     let mut offenders: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for entry in backend_crates() {
-        if entry.name == REFERENCE_DRIVER {
-            continue;
-        }
         let linked: Vec<String> = HOST_ARITHMETIC_CRATES
             .iter()
             .filter(|host| entry.dependencies.contains(**host))
