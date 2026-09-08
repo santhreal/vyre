@@ -193,11 +193,16 @@ fn project_resources_multi_node_fused_matches_returned_graph_values() {
             "node_a",
             Program::wrapped(
                 vec![
-                    BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(16),
+                    BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
+                        .with_count(16),
                     BufferDecl::output("intermediate", 1, DataType::U32).with_count(16),
                 ],
                 [16, 1, 1],
-                vec![Node::store("intermediate", Expr::u32(0), Expr::load("input", Expr::u32(0)))],
+                vec![Node::store(
+                    "intermediate",
+                    Expr::u32(0),
+                    Expr::load("input", Expr::u32(0)),
+                )],
             ),
             vec![GraphInput {
                 buffer: "input".into(),
@@ -228,11 +233,16 @@ fn project_resources_multi_node_fused_matches_returned_graph_values() {
             "node_b",
             Program::wrapped(
                 vec![
-                    BufferDecl::storage("intermediate", 0, BufferAccess::ReadOnly, DataType::U32).with_count(16),
+                    BufferDecl::storage("intermediate", 0, BufferAccess::ReadOnly, DataType::U32)
+                        .with_count(16),
                     BufferDecl::output("out", 1, DataType::U32).with_count(16),
                 ],
                 [16, 1, 1],
-                vec![Node::store("out", Expr::u32(0), Expr::load("intermediate", Expr::u32(0)))],
+                vec![Node::store(
+                    "out",
+                    Expr::u32(0),
+                    Expr::load("intermediate", Expr::u32(0)),
+                )],
             ),
             vec![GraphInput {
                 buffer: "intermediate".into(),

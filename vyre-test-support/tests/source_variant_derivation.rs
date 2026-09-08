@@ -125,7 +125,8 @@ pub enum Sample {
     Second,
 }
 "#;
-    let body = braced_body(source, "pub enum Sample {").expect("Fix: the declaration must be found");
+    let body =
+        braced_body(source, "pub enum Sample {").expect("Fix: the declaration must be found");
     assert_eq!(
         top_level_variant_names(body),
         ["First", "Second"].into_iter().map(String::from).collect(),

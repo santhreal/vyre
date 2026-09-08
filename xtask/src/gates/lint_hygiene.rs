@@ -338,12 +338,15 @@ impl crate::gate::GateBehavior for LivenessEvasion {
         for path in all_rust {
             let text = tree.read(&path)?;
             let production = !is_outside_production(&path) && !test_modules.contains(&path);
-            let test_only = scan::cfg_test_lines(&text.lines().collect::<Vec<&str>>());
+            let lines = text.lines().collect::<Vec<&str>>();
+            let test_only = scan::cfg_test_lines(&lines);
+            let trait_impl = scan::trait_impl_lines(&lines);
             sources.push(Source {
                 path,
                 text,
                 production,
                 test_only,
+                trait_impl,
             });
         }
 
@@ -354,12 +357,16 @@ impl crate::gate::GateBehavior for LivenessEvasion {
                     continue;
                 }
                 let test_side = source.test_side(index);
+                // A trait-impl method is dispatched through the trait, so a
+                // name scan finds no call site for one however live it is.
                 if let Some(name) = declared_item_name(line) {
-                    declarations.entry(name).or_default().push(Declaration {
-                        file: source.path.clone(),
-                        line: index,
-                        test_side,
-                    });
+                    if !source.trait_impl.get(index).copied().unwrap_or(false) {
+                        declarations.entry(name).or_default().push(Declaration {
+                            file: source.path.clone(),
+                            line: index,
+                            test_side,
+                        });
+                    }
                 }
                 if test_side {
                     continue;
@@ -456,6 +463,8 @@ struct Source {
     production: bool,
     /// Which of its lines belong to a test-only item, by 0-based index.
     test_only: Vec<bool>,
+    /// Which of its lines sit inside a trait impl, by 0-based index.
+    trait_impl: Vec<bool>,
 }
 
 impl Source {
@@ -1209,6 +1218,66 @@ mod tests {
             [4],
             "only the production discard is reported: {:?}",
             messages(&report)
+        );
+    }
+
+    /// WHY: a trait method is reached through the trait, never by its own name,
+    /// so counting identifier occurrences finds zero production callers for a
+    /// live one. `BindingSlotSet::from_iter` in `vyre-driver` was reported that
+    /// way: its production caller is a `.collect()` two lines above it, and the
+    /// only literal `from_iter` in the tree was in a test.
+    ///
+    /// The fixture covers the whole dispatch family, not the reported member:
+    /// `from_iter` behind `collect`, `from` behind `into`, `fmt` behind
+    /// `to_string`, and `next` behind a `for` loop. An inherent method with the
+    /// same shape stays reportable, because a name scan does see its callers.
+    #[test]
+    fn a_trait_method_is_not_judged_by_name_and_an_inherent_one_still_is() {
+        let (_directory, root) = checkout(&[(
+            "lib.rs",
+            "use std::fmt;\n\n\
+             struct Bag {\n    items: Vec<u32>,\n}\n\n\
+             impl FromIterator<u32> for Bag {\n    \
+             fn from_iter<T: IntoIterator<Item = u32>>(iter: T) -> Self {\n        \
+             Self {\n            items: iter.into_iter().collect(),\n        }\n    }\n}\n\n\
+             impl From<u32> for Bag {\n    fn from(value: u32) -> Self {\n        \
+             Self {\n            items: vec![value],\n        }\n    }\n}\n\n\
+             impl fmt::Display for Bag {\n    \
+             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {\n        \
+             write!(f, \"{}\", self.items.len())\n    }\n}\n\n\
+             impl Iterator for Bag {\n    type Item = u32;\n    \
+             fn next(&mut self) -> Option<u32> {\n        self.items.pop()\n    }\n}\n\n\
+             impl Bag {\n    fn inherent_helper(&self) -> usize {\n        \
+             self.items.len()\n    }\n}\n\n\
+             pub fn entry(value: u32) -> String {\n    \
+             let bag: Bag = Bag::from(value);\n    \
+             let collected: Bag = (0..3).collect();\n    \
+             let mut total = 0usize;\n    for _ in collected {\n        total += 1;\n    }\n    \
+             format!(\"{bag}{total}\")\n}\n\n\
+             #[cfg(test)]\nmod tests {\n    use super::Bag;\n    #[test]\n    \
+             fn it_runs() {\n        \
+             let bag = Bag::from_iter([1u32]);\n        \
+             assert_eq!(bag.inherent_helper(), 1);\n    }\n}\n",
+        )]);
+
+        let report = LivenessEvasion
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("Fix: the gate must read the fixture tree; check the fixture git step");
+        let reported = messages(&report);
+        for method in ["from_iter", "from", "fmt", "next"] {
+            assert!(
+                !reported.iter().any(|line| line.contains(&format!("`{method}`"))),
+                "`{method}` is dispatched through its trait, so a name count cannot judge it: {reported:?}"
+            );
+        }
+        assert_eq!(
+            reported.len(),
+            1,
+            "only the inherent method is judged by name: {reported:?}"
+        );
+        assert!(
+            reported[0].contains("inherent_helper"),
+            "the inherent method's only caller is the test: {reported:?}"
         );
     }
 }

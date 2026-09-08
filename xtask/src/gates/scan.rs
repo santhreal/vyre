@@ -834,6 +834,66 @@ pub fn numbered(text: &str) -> Vec<(u32, &str)> {
         .collect()
 }
 
+/// Which lines sit inside a trait implementation block, by 0-based index.
+///
+/// A method in `impl Trait for Type` is never called by its own name. Callers
+/// reach it through the trait: `.collect()` for `FromIterator::from_iter`,
+/// `.into()` for `From::from`, `format!` for `Display::fmt`, a `for` loop for
+/// `Iterator::next`. A scan that counts identifier occurrences therefore sees
+/// zero production references for every one of them, and reports each as an
+/// item whose only callers are tests as soon as a test happens to name it.
+///
+/// An inherent `impl Type` block is not marked: its methods are called by name
+/// and a reference count means what it says.
+///
+/// Nesting comes from `line_nesting`, so a brace inside a literal or a comment
+/// does not close a block.
+#[must_use]
+pub fn trait_impl_lines(lines: &[&str]) -> Vec<bool> {
+    let nesting = line_nesting(lines);
+    let mut inside = vec![false; lines.len()];
+    let mut depth = 0i32;
+    // Depth at which the innermost open trait-impl block started, if any. One
+    // value is enough: a trait impl cannot contain another item that reopens
+    // the question, and a nested inherent impl inside one is still reached
+    // through the outer trait.
+    let mut opened_at: Option<i32> = None;
+    for (index, line) in lines.iter().enumerate() {
+        let code = nesting[index].code(line).trim();
+        if opened_at.is_none() && is_trait_impl_header(code) {
+            opened_at = Some(depth);
+        }
+        if opened_at.is_some() {
+            inside[index] = true;
+        }
+        depth += nesting[index].brace_delta;
+        if let Some(outer) = opened_at {
+            // A header whose brace is on the next line leaves depth unchanged,
+            // so the block is only closed once it has actually opened.
+            if depth <= outer && nesting[index].brace_delta < 0 {
+                opened_at = None;
+            }
+        }
+    }
+    inside
+}
+
+/// Whether a line opens `impl <Trait> for <Type>` rather than an inherent impl.
+///
+/// The `for` must be a separate word: `impl Formatter` and `impl<T> Foo<T>` are
+/// inherent, and a generic parameter named `for` is not legal Rust.
+fn is_trait_impl_header(code: &str) -> bool {
+    let rest = match code.strip_prefix("impl") {
+        Some(rest) if rest.starts_with([' ', '<']) => rest,
+        _ => return false,
+    };
+    // Stop at the body so `impl Trait for Type { fn f(x: for<'a> ...) }` on one
+    // line cannot be read past its header, and so a `for` inside the body of a
+    // one-line inherent impl does not promote it.
+    let header = rest.split('{').next().unwrap_or(rest);
+    contains_word(header, "for")
+}
+
 /// Which lines belong to a test-only item, by 0-based index.
 ///
 /// The scan always meant to exclude test code: it skipped a line that WAS the
