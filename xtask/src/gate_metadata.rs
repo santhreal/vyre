@@ -1276,8 +1276,10 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         package: "xtask-registry",
         areas: &["prepublish"],
         subject: "registered operations",
+        inputs: &[],
         artifacts: &[],
         prerequisites: &[],
+        resource_class: ResourceClass::Cpu,
         proof: "xtask_registry::gates::operation_law_decisions::tests::an_operation_without_a_decision_is_reported",
     },
     GateDescriptor {
