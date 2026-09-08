@@ -4,6 +4,7 @@
 //! They use the scanner output contract's `counts`, `offsets`, and `lengths`
 //! buffer names.
 
+use crate::builder::trip_count::clamped_by_extents;
 use vyre_foundation::ir::{Expr, Node};
 
 /// Maximum number of cached positions per tagged range. Matches the
@@ -47,17 +48,17 @@ pub fn match_order(left_id: Expr, right_id: Expr, res_name: &str) -> (Vec<Node>,
     let mut block = Vec::new();
 
     let limit_a = Expr::load("counts", left_id.clone());
-    let clamped_limit_a = Expr::select(
-        Expr::gt(limit_a.clone(), Expr::u32(MAX_CACHED_POSITIONS)),
-        Expr::u32(MAX_CACHED_POSITIONS),
-        limit_a,
+    let clamped_limit_a = clamped_by_extents(
+        Expr::min(limit_a, Expr::u32(MAX_CACHED_POSITIONS)),
+        "offsets",
+        ["lengths"],
     );
 
     let limit_b = Expr::load("counts", right_id.clone());
-    let clamped_limit_b = Expr::select(
-        Expr::gt(limit_b.clone(), Expr::u32(MAX_CACHED_POSITIONS)),
-        Expr::u32(MAX_CACHED_POSITIONS),
-        limit_b,
+    let clamped_limit_b = clamped_by_extents(
+        Expr::min(limit_b, Expr::u32(MAX_CACHED_POSITIONS)),
+        "offsets",
+        ["lengths"],
     );
 
     block.push(Node::let_bind(format!("{res_name}_len_a"), clamped_limit_a));
