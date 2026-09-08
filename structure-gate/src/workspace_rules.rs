@@ -29,6 +29,7 @@ pub(crate) const ALLOWED_MEMBERS: &[&str] = &[
     "conform/vyre-conform",
     "conform/vyre-conform-spec",
     "vyre",
+    "vyre-alloc-probe",
     "vyre-aot",
     // Sole owner of the registry link anchors: it names every crate that submits
     // into an inventory registry so no consumer has to.
