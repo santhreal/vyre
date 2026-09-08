@@ -15,24 +15,144 @@
 use crate::harness;
 use harness::{acquire_live_backend as live_backend, add_one_program};
 
-use std::alloc::System;
-use std::sync::{Mutex, MutexGuard};
+use std::alloc::{GlobalAlloc, Layout, System};
+use std::cell::Cell;
 use std::time::{Duration, Instant};
 
-use stats_alloc::{Region, StatsAlloc, INSTRUMENTED_SYSTEM};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::{CompiledPipeline, DispatchConfig, VyreBackend};
 
-#[global_allocator]
-static GLOBAL: &StatsAlloc<System> = &INSTRUMENTED_SYSTEM;
-static ALLOCATION_CONTRACT_LOCK: Mutex<()> = Mutex::new(());
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub struct AllocStats {
+    pub allocations: usize,
+    pub deallocations: usize,
+    pub reallocations: usize,
+    pub bytes_allocated: usize,
+    pub bytes_deallocated: usize,
+}
 
-fn allocation_contract_guard() -> MutexGuard<'static, ()> {
-    ALLOCATION_CONTRACT_LOCK.lock().unwrap_or_else(|error| {
-        panic!(
-            "allocation contract mutex was poisoned: {error}. Fix: resolve the earlier allocation-contract panic before trusting global allocator measurements."
-        )
-    })
+thread_local! {
+    static THREAD_STATS: Cell<AllocStats> = const { Cell::new(AllocStats {
+        allocations: 0,
+        deallocations: 0,
+        reallocations: 0,
+        bytes_allocated: 0,
+        bytes_deallocated: 0,
+    }) };
+}
+
+/// Global allocator tracking per-thread allocation and deallocation statistics.
+pub struct ThreadAlloc;
+
+impl ThreadAlloc {
+    pub const fn new() -> Self {
+        Self
+    }
+}
+
+unsafe impl GlobalAlloc for ThreadAlloc {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        let ptr = System.alloc(layout);
+        if !ptr.is_null() {
+            let _ = THREAD_STATS.try_with(|cell| {
+                let mut stats = cell.get();
+                stats.allocations += 1;
+                stats.bytes_allocated += layout.size();
+                cell.set(stats);
+            });
+        }
+        ptr
+    }
+
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+        let ptr = System.alloc_zeroed(layout);
+        if !ptr.is_null() {
+            let _ = THREAD_STATS.try_with(|cell| {
+                let mut stats = cell.get();
+                stats.allocations += 1;
+                stats.bytes_allocated += layout.size();
+                cell.set(stats);
+            });
+        }
+        ptr
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        System.dealloc(ptr, layout);
+        let _ = THREAD_STATS.try_with(|cell| {
+            let mut stats = cell.get();
+            stats.deallocations += 1;
+            stats.bytes_deallocated += layout.size();
+            cell.set(stats);
+        });
+    }
+
+    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+        let new_ptr = System.realloc(ptr, layout, new_size);
+        if !new_ptr.is_null() {
+            let _ = THREAD_STATS.try_with(|cell| {
+                let mut stats = cell.get();
+                stats.reallocations += 1;
+                stats.allocations += 1;
+                stats.deallocations += 1;
+                stats.bytes_allocated += new_size;
+                stats.bytes_deallocated += layout.size();
+                cell.set(stats);
+            });
+        }
+        new_ptr
+    }
+}
+
+#[global_allocator]
+static GLOBAL: ThreadAlloc = ThreadAlloc::new();
+
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub struct RegionChange {
+    pub allocations: usize,
+    pub deallocations: usize,
+    pub reallocations: usize,
+    pub bytes_allocated: usize,
+    pub bytes_deallocated: usize,
+}
+
+impl RegionChange {
+    pub fn net_bytes(&self) -> isize {
+        self.bytes_allocated as isize - self.bytes_deallocated as isize
+    }
+
+    pub fn net_allocations(&self) -> isize {
+        self.allocations as isize - self.deallocations as isize
+    }
+}
+
+/// Measurement region snapshotting and diffing thread-local allocator statistics.
+pub struct Region {
+    start: AllocStats,
+}
+
+impl Region {
+    pub fn new() -> Self {
+        let start = THREAD_STATS.try_with(|cell| cell.get()).unwrap_or_default();
+        Self { start }
+    }
+
+    pub fn change(&self) -> RegionChange {
+        let current = THREAD_STATS.try_with(|cell| cell.get()).unwrap_or_default();
+        RegionChange {
+            allocations: current.allocations.saturating_sub(self.start.allocations),
+            deallocations: current.deallocations.saturating_sub(self.start.deallocations),
+            reallocations: current.reallocations.saturating_sub(self.start.reallocations),
+            bytes_allocated: current.bytes_allocated.saturating_sub(self.start.bytes_allocated),
+            bytes_deallocated: current.bytes_deallocated.saturating_sub(self.start.bytes_deallocated),
+        }
+    }
+}
+
+impl Default for Region {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// Build a Program with `inputs` separate read buffers and one output. The
@@ -66,19 +186,17 @@ fn many_input_sum_program(inputs: u32, words: u32) -> Program {
 /// (max heap allocations, max heap bytes) for one hot `dispatch_borrowed` after warm-up.
 ///
 /// Ratchet: actual measured 2026-05 steady-state on the live wgpu/Vulkan
-/// path is dramatically higher than the original Inventory P0 #10
-/// aspiration (~200). The current budget reflects what the path
-/// actually does; lowering it requires the readback-mutex, zero-copy
-/// outputs, and dispatch-arena work that's still upstream of this
-/// layer. Tighten as each dispatch-path improvement merges.
+/// path is higher than the original Inventory P0 #10 aspiration (~200).
+/// The current budget reflects what the path actually does; lowering it
+/// requires the readback-mutex, zero-copy outputs, and dispatch-arena work.
 fn budget_borrowed_hot() -> (usize, usize) {
     (3072, 4 * 1024 * 1024)
 }
 
 /// Wide-program ratchet: a Program whose buffer count exceeds the dispatch
 /// `SmallVec` inline cap (8 for `clear_requests`) must stay within this budget
-/// after warm-up. Per-thread scratch arenas eliminate the
-/// per-dispatch heap allocations that the spill path used to pay.
+/// after warm-up. Per-thread scratch arenas eliminate the per-dispatch heap
+/// allocations that the spill path used to pay.
 fn budget_borrowed_wide_hot() -> (usize, usize) {
     (4096, 6 * 1024 * 1024)
 }
@@ -88,14 +206,13 @@ fn budget_async_hot() -> (usize, usize) {
     (4096, 6 * 1024 * 1024)
 }
 
-/// Compiled-pipeline hot path  -  same ratchet policy as `budget_borrowed_hot`.
+/// Compiled-pipeline hot path ratchet: same budget as `budget_borrowed_hot`.
 fn budget_compiled_hot() -> (usize, usize) {
     (3072, 4 * 1024 * 1024)
 }
 
 #[test]
 fn direct_dispatch_borrowed_steady_state_alloc_bounded() {
-    let _guard = allocation_contract_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
     let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
@@ -105,7 +222,7 @@ fn direct_dispatch_borrowed_steady_state_alloc_bounded() {
         .dispatch_borrowed(&program, &borrowed, &DispatchConfig::default())
         .expect("Fix: warm-up dispatch_borrowed must succeed");
 
-    let region = Region::new(GLOBAL);
+    let region = Region::new();
     let _ = backend
         .dispatch_borrowed(&program, &borrowed, &DispatchConfig::default())
         .expect("Fix: hot dispatch_borrowed must succeed");
@@ -115,20 +232,19 @@ fn direct_dispatch_borrowed_steady_state_alloc_bounded() {
     assert!(
         change.allocations <= max_allocs,
         "Fix: hot dispatch_borrowed must not exceed {max_allocs} heap allocations (got {}). \
-         Inventory P0 #10  -  reduce per-dispatch host allocations.",
+         Inventory P0 #10: reduce per-dispatch host allocations.",
         change.allocations
     );
     assert!(
         change.bytes_allocated <= max_bytes,
         "Fix: hot dispatch_borrowed must not exceed {max_bytes} heap bytes (got {}). \
-         Inventory P0 #10  -  reduce per-dispatch host bytes.",
+         Inventory P0 #10: reduce per-dispatch host bytes.",
         change.bytes_allocated
     );
 }
 
 #[test]
 fn wide_program_dispatch_borrowed_steady_state_alloc_bounded() {
-    let _guard = allocation_contract_guard();
     let backend = live_backend();
     // 12 inputs > clear_requests inline cap (8): the dispatch hot path's
     // SmallVec spill must come from per-thread scratch capacity, not a fresh
@@ -149,7 +265,7 @@ fn wide_program_dispatch_borrowed_steady_state_alloc_bounded() {
         .dispatch_borrowed(&program, &borrowed, &DispatchConfig::default())
         .expect("Fix: second warm-up wide dispatch_borrowed must succeed");
 
-    let region = Region::new(GLOBAL);
+    let region = Region::new();
     let _ = backend
         .dispatch_borrowed(&program, &borrowed, &DispatchConfig::default())
         .expect("Fix: hot wide dispatch_borrowed must succeed");
@@ -159,7 +275,7 @@ fn wide_program_dispatch_borrowed_steady_state_alloc_bounded() {
     assert!(
         change.allocations <= max_allocs,
         "Fix: hot wide dispatch_borrowed must not exceed {max_allocs} heap allocations (got {}). \
-         Inventory P0 #9  -  per-thread scratch arenas should absorb SmallVec spills.",
+         Inventory P0 #9: per-thread scratch arenas should absorb SmallVec spills.",
         change.allocations
     );
     assert!(
@@ -172,7 +288,6 @@ fn wide_program_dispatch_borrowed_steady_state_alloc_bounded() {
 
 #[test]
 fn compiled_pipeline_dispatch_steady_state_alloc_bounded() {
-    let _guard = allocation_contract_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
     let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
@@ -185,7 +300,7 @@ fn compiled_pipeline_dispatch_steady_state_alloc_bounded() {
         .dispatch(&[input.clone()], &DispatchConfig::default())
         .expect("Fix: warm-up compiled dispatch must succeed");
 
-    let region = Region::new(GLOBAL);
+    let region = Region::new();
     let _ = pipeline
         .dispatch(&[input], &DispatchConfig::default())
         .expect("Fix: hot compiled dispatch must succeed");
@@ -210,7 +325,6 @@ fn compiled_pipeline_dispatch_steady_state_alloc_bounded() {
 /// borrowed, not copied (see module docs).
 #[test]
 fn async_dispatch_steady_state_alloc_bounded() {
-    let _guard = allocation_contract_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
     let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
@@ -222,7 +336,7 @@ fn async_dispatch_steady_state_alloc_bounded() {
         .await_result()
         .expect("Fix: warm-up async dispatch must complete");
 
-    let region = Region::new(GLOBAL);
+    let region = Region::new();
     let async_start = Instant::now();
     let pending = backend
         .dispatch_async(&program, &[input], &DispatchConfig::default())
@@ -243,7 +357,7 @@ fn async_dispatch_steady_state_alloc_bounded() {
     assert!(
         change.allocations <= max_allocs,
         "Fix: hot dispatch_async+await must not exceed {max_allocs} heap allocations in measured region (got {}). \
-         Inventory P0 #10  -  async path should not allocate unboundedly per job.",
+         Inventory P0 #10: async path should not allocate unboundedly per job.",
         change.allocations
     );
     assert!(
@@ -258,7 +372,6 @@ fn async_dispatch_steady_state_alloc_bounded() {
 /// multiple buffers without cloning payload bytes; allocation budget matches the ratcheted async path.
 #[test]
 fn async_dispatch_multi_input_borrowed_smallvec_inline_alloc_bounded() {
-    let _guard = allocation_contract_guard();
     let backend = live_backend();
     let inputs_count: u32 = 3;
     let words: u32 = 256;
@@ -273,7 +386,7 @@ fn async_dispatch_multi_input_borrowed_smallvec_inline_alloc_bounded() {
         .await_result()
         .expect("Fix: warm-up multi-input async dispatch must complete");
 
-    let region = Region::new(GLOBAL);
+    let region = Region::new();
     let async_start = Instant::now();
     let pending = backend
         .dispatch_async(&program, &owned, &DispatchConfig::default())
@@ -299,5 +412,64 @@ fn async_dispatch_multi_input_borrowed_smallvec_inline_alloc_bounded() {
         change.bytes_allocated <= max_bytes,
         "Fix: hot multi-input dispatch_async+await must not exceed {max_bytes} heap bytes in measured region (got {}).",
         change.bytes_allocated
+    );
+}
+
+#[test]
+fn allocation_measurement_isolates_concurrent_threads() {
+    let region = Region::new();
+
+    let background = std::thread::spawn(|| {
+        let mut noise: Vec<Vec<u8>> = Vec::new();
+        for _ in 0..100 {
+            noise.push(vec![0xAA; 64 * 1024]);
+        }
+        noise
+    });
+
+    let noise = background
+        .join()
+        .expect("Fix: background thread must finish cleanly");
+    assert_eq!(noise.len(), 100);
+
+    let change = region.change();
+    assert_eq!(
+        change.allocations, 0,
+        "Fix: background thread allocations leaked into measuring thread. Expected 0 allocations, got {}.",
+        change.allocations
+    );
+    assert_eq!(
+        change.bytes_allocated, 0,
+        "Fix: background thread allocated bytes leaked into measuring thread. Expected 0 bytes, got {}.",
+        change.bytes_allocated
+    );
+}
+
+#[test]
+fn allocation_measurement_tracks_local_thread_traffic() {
+    let region = Region::new();
+    let buffer: Vec<u8> = vec![42; 2048];
+    let change = region.change();
+    assert!(
+        change.allocations >= 1,
+        "Fix: local thread allocations must be counted. Got {}.",
+        change.allocations
+    );
+    assert!(
+        change.bytes_allocated >= 2048,
+        "Fix: local thread bytes allocated must be counted. Got {}.",
+        change.bytes_allocated
+    );
+    drop(buffer);
+    let change_after_drop = region.change();
+    assert!(
+        change_after_drop.deallocations >= 1,
+        "Fix: local thread deallocations must be counted. Got {}.",
+        change_after_drop.deallocations
+    );
+    assert!(
+        change_after_drop.bytes_deallocated >= 2048,
+        "Fix: local thread bytes deallocated must be counted. Got {}.",
+        change_after_drop.bytes_deallocated
     );
 }
