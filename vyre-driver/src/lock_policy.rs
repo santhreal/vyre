@@ -1,43 +1,49 @@
-//! The failure domain of a poisoned lock.
+//! Canonical failure domain and lock poisoning authority for driver and runtime state.
 //!
 //! A `Mutex` or `RwLock` is poisoned when a thread panicked while holding it,
-//! and the state behind it is then whatever that panic left. Three answers to
-//! that were in this tree at once: report [`BackendError::poisoned_lock`],
-//! recover the guard through `PoisonError::into_inner`, and read the state
-//! anyway. A caller cannot compose them, because one word meant "the value is
-//! stale", "the value is fine" and "the process is unsound" in three
-//! subsystems.
+//! leaving the guarded memory in an arbitrary intermediate state.
 //!
-//! Two domains cover every lock here, and an owner states which one it is in.
+//! Subsystems must not make ad-hoc local decisions (such as unconditionally recovering
+//! with `into_inner`, panicking in place, or ignoring poison). Instead, every lock
+//! belongs to an explicitly declared [`FailureDomain`]:
 //!
-//! A lock over state this process owns is **recoverable**. The owner reports
-//! [`BackendError::poisoned_lock`], discards the guarded value, and a caller
-//! rebuilds it: a cache, a registry snapshot, a memoized plan. Nothing outside
-//! the process saw the half-written state.
-//!
-//! A lock over state outside the process image is **process fatal**. A graphics
-//! loader dispatch table, a device context, a driver-global registry: the panic
-//! already left that state half written, no owner in this process can rebuild
-//! it, and the next call into it faults inside code that carries no vyre frame.
-//! [`process_fatal_poison`](crate::lock_policy::process_fatal_poison) ends the
-//! process there, while the reason is still known, instead of surfacing as a
-//! SIGSEGV in an ICD an hour later.
-//!
-//! A `Drop` implementation is why the second domain cannot be an error. The
-//! same lock that guards loader startup guards loader teardown, and teardown
-//! runs in `Drop`, which has no caller to report to.
+//! 1. [`FailureDomain::Transactional`]: In-flight mutation was aborted. The guarded
+//!    state is discarded and a typed [`BackendError`] is reported to the caller.
+//! 2. [`FailureDomain::RestartableFromCanonical`]: Caches, staging pools, or memoized
+//!    entries that can be cleanly discarded/reset to an empty valid state and restarted.
+//! 3. [`FailureDomain::DeviceContextFatal`]: Device-bound queues, command encoders,
+//!    or device handles where poison indicates corrupted GPU submission state. The
+//!    device is marked lost and [`BackendError::DeviceLost`] is reported.
+//! 4. [`FailureDomain::ProcessFatal`]: Foreign ICD dynamic loader dispatch tables,
+//!    global driver runtime init, or external C-ABI boundaries where corrupt state
+//!    causes silent memory corruption or SIGSEGV in foreign frames. Process is aborted.
+//! 5. [`FailureDomain::InvariantViolation`]: Critical internal data structure
+//!    corruption violating compiler invariants. Process is aborted with diagnostic details.
+
+use std::sync::{Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use crate::BackendError;
+
+/// Declared failure domain and recovery contract of a lock owner.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum FailureDomain {
+    /// In-flight transaction was aborted; state discarded and error reported.
+    Transactional,
+    /// Cache/pool restartable from canonical input or empty state.
+    RestartableFromCanonical,
+    /// GPU device context corrupted; device marked lost.
+    DeviceContextFatal,
+    /// Unrecoverable native ICD / C-ABI memory state; process terminated immediately.
+    ProcessFatal,
+    /// Subsystem internal invariant violated; unrecoverable bug.
+    InvariantViolation,
+}
 
 /// End the process, naming the owner and the state its poisoned lock guards.
 ///
 /// `owner` names the subsystem holding the lock and `state` names what the
-/// lock excludes concurrent access to, both in the reader's terms rather than
-/// as a type name: `"the device factory"` and `"the graphics loader dispatch
+/// lock excludes concurrent access to: `"the device factory"` and `"the graphics loader dispatch
 /// table"`, not `"LOADER_STARTUP"`.
-///
-/// Recovering the guard instead hands the next caller exactly the half-written
-/// state the lock exists to keep it out of.
 pub fn process_fatal_poison(owner: &str, state: &str) -> ! {
     eprintln!(
         "vyre: {owner} holds a poisoned lock over {state}. A thread panicked while that lock \
@@ -53,7 +59,127 @@ pub fn process_fatal_poison(owner: &str, state: &str) -> ! {
 /// The guarded value is discarded with the guard: a caller that receives the
 /// error rebuilds it rather than reading what the panic left.
 pub fn recoverable_poison<T>(
-    result: Result<T, std::sync::PoisonError<T>>,
+    result: Result<T, PoisonError<T>>,
 ) -> Result<T, BackendError> {
     result.map_err(BackendError::poisoned_lock)
+}
+
+/// Take a mutex guard governed by an explicit failure domain contract.
+pub fn govern_mutex<'a, T>(
+    mutex: &'a Mutex<T>,
+    owner: &'static str,
+    state: &'static str,
+    domain: FailureDomain,
+) -> Result<MutexGuard<'a, T>, BackendError> {
+    govern_mutex_with_reset(mutex, owner, state, domain, |_| {})
+}
+
+/// Take a mutex guard with an explicit reset action executed if restartable state is recovered.
+pub fn govern_mutex_with_reset<'a, T, F>(
+    mutex: &'a Mutex<T>,
+    owner: &'static str,
+    state: &'static str,
+    domain: FailureDomain,
+    reset_on_restart: F,
+) -> Result<MutexGuard<'a, T>, BackendError>
+where
+    F: FnOnce(&mut T),
+{
+    match mutex.lock() {
+        Ok(guard) => Ok(guard),
+        Err(poison) => match domain {
+            FailureDomain::ProcessFatal | FailureDomain::InvariantViolation => {
+                process_fatal_poison(owner, state);
+            }
+            FailureDomain::Transactional => Err(BackendError::poisoned_lock(poison)),
+            FailureDomain::DeviceContextFatal => {
+                Err(BackendError::DeviceLost {
+                    backend: owner.to_string(),
+                    device: state.to_string(),
+                    generation: 0,
+                    message: format!("lock over `{state}` in `{owner}` was poisoned by a previous panic"),
+                })
+            }
+            FailureDomain::RestartableFromCanonical => {
+                let mut guard = poison.into_inner();
+                reset_on_restart(&mut guard);
+                Ok(guard)
+            }
+        },
+    }
+}
+
+/// Take a read lock governed by an explicit failure domain contract.
+pub fn govern_rwlock_read<'a, T>(
+    rwlock: &'a RwLock<T>,
+    owner: &'static str,
+    state: &'static str,
+    domain: FailureDomain,
+) -> Result<RwLockReadGuard<'a, T>, BackendError> {
+    match rwlock.read() {
+        Ok(guard) => Ok(guard),
+        Err(poison) => match domain {
+            FailureDomain::ProcessFatal | FailureDomain::InvariantViolation => {
+                process_fatal_poison(owner, state);
+            }
+            FailureDomain::Transactional => Err(BackendError::poisoned_lock(poison)),
+            FailureDomain::DeviceContextFatal => {
+                Err(BackendError::DeviceLost {
+                    backend: owner.to_string(),
+                    device: state.to_string(),
+                    generation: 0,
+                    message: format!("lock over `{state}` in `{owner}` was poisoned by a previous panic"),
+                })
+            }
+            FailureDomain::RestartableFromCanonical => {
+                // Read lock cannot mutate to reset; return poisoned error to force write-side recovery
+                Err(BackendError::poisoned_lock(poison))
+            }
+        },
+    }
+}
+
+/// Take a write lock governed by an explicit failure domain contract.
+pub fn govern_rwlock_write<'a, T>(
+    rwlock: &'a RwLock<T>,
+    owner: &'static str,
+    state: &'static str,
+    domain: FailureDomain,
+) -> Result<RwLockWriteGuard<'a, T>, BackendError> {
+    govern_rwlock_write_with_reset(rwlock, owner, state, domain, |_| {})
+}
+
+/// Take a write lock with an explicit reset action executed if restartable state is recovered.
+pub fn govern_rwlock_write_with_reset<'a, T, F>(
+    rwlock: &'a RwLock<T>,
+    owner: &'static str,
+    state: &'static str,
+    domain: FailureDomain,
+    reset_on_restart: F,
+) -> Result<RwLockWriteGuard<'a, T>, BackendError>
+where
+    F: FnOnce(&mut T),
+{
+    match rwlock.write() {
+        Ok(guard) => Ok(guard),
+        Err(poison) => match domain {
+            FailureDomain::ProcessFatal | FailureDomain::InvariantViolation => {
+                process_fatal_poison(owner, state);
+            }
+            FailureDomain::Transactional => Err(BackendError::poisoned_lock(poison)),
+            FailureDomain::DeviceContextFatal => {
+                Err(BackendError::DeviceLost {
+                    backend: owner.to_string(),
+                    device: state.to_string(),
+                    generation: 0,
+                    message: format!("lock over `{state}` in `{owner}` was poisoned by a previous panic"),
+                })
+            }
+            FailureDomain::RestartableFromCanonical => {
+                let mut guard = poison.into_inner();
+                reset_on_restart(&mut guard);
+                Ok(guard)
+            }
+        },
+    }
 }
