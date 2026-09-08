@@ -21,6 +21,10 @@ pub mod declared_law_proof;
 #[path = "fp_parity_ul_policy_contracts.rs"]
 pub mod fp_parity_ul_policy_contracts;
 
+/// Integration tests from `tests/grid_sync_production_route.rs`.
+#[path = "grid_sync_production_route.rs"]
+pub mod grid_sync_production_route;
+
 /// Integration tests from `tests/invariants.rs`.
 #[path = "invariants.rs"]
 pub mod invariants;

@@ -805,6 +805,21 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
         0
     }
 
+    /// Bytes of workgroup-scoped scratch one workgroup may declare. `0` means
+    /// the backend offers none, so a program declaring workgroup scratch is
+    /// refused before compilation.
+    ///
+    /// The neutral profile reads `has_shared_memory` from this figure, so a
+    /// backend states its scratch budget once instead of restating the flag
+    /// beside it. Reporting a budget is a promise the backend executes a
+    /// program that declares scratch within it.
+    ///
+    /// Default: `0`.
+    #[must_use]
+    fn max_shared_memory_bytes(&self) -> u32 {
+        0
+    }
+
     /// Unified backend-neutral device profile.
     ///
     /// Shared planner code should prefer this single profile over reading

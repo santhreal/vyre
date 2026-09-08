@@ -55,14 +55,17 @@ impl SemanticExecutor for RegisteredSemanticExecutor {
         let mut bindings = BindingSet::new(artifact);
         for (value, bytes) in request.inputs() {
             bindings.insert(
-                ArtifactValueId(value.0),
+                artifact_value(&session, request, *value)?,
                 BoundResource::Host(bytes.to_vec()),
             );
         }
+        let expected_outputs = vyre_megakernel::returned_graph_values(request.logical().graph())
+            .into_iter()
+            .map(|value| Ok((value, artifact_value(&session, request, value)?)))
+            .collect::<Result<Vec<_>, SemanticExecutionError>>()?;
         let completion = session
             .submit_and_wait(bindings)
             .map_err(|error| SemanticExecutionError::Backend(error.to_string()))?;
-        let expected_outputs = vyre_megakernel::returned_graph_values(request.logical().graph());
         let outputs =
             reconcile_completion(expected_outputs, completion.outputs, completion.retained)?;
         Ok(SemanticExecutionOutput {
@@ -71,6 +74,42 @@ impl SemanticExecutor for RegisteredSemanticExecutor {
             outputs,
         })
     }
+}
+
+/// Resolve one canonical graph value to the artifact ABI value that carries it.
+///
+/// The two identifier spaces are not the same numbering. Compilation may rewrite
+/// the graph before it builds the ABI: the whole-grid fence cut rebuilds the
+/// graph, mints one retained carrier per segment, and renumbers everything after
+/// the first insertion. Reading a `GraphValueId` as an `ArtifactValueId` then
+/// binds the wrong buffer, and it does so silently, because the shifted index
+/// still names a real resource. One fenced program returned its scratch carrier
+/// as its output under exactly that skew.
+///
+/// The resource name is the join. `ProgramGraph` keeps node and value names
+/// unique, the fence cut preserves every original name and suffixes only the
+/// carriers it adds, and the ABI records each name verbatim.
+fn artifact_value(
+    session: &ArtifactSession,
+    request: &SemanticExecutionRequest<'_>,
+    value: vyre_foundation::ir::GraphValueId,
+) -> Result<ArtifactValueId, SemanticExecutionError> {
+    let name = request
+        .logical()
+        .graph()
+        .values()
+        .iter()
+        .find(|candidate| candidate.id == value)
+        .map(|candidate| candidate.name.as_str())
+        .ok_or_else(|| {
+            SemanticExecutionError::InvalidRequest(format!(
+                "graph value {} is not declared by the request graph. Fix: bind only values the graph declares",
+                value.0
+            ))
+        })?;
+    session
+        .resource(name)
+        .map_err(|error| SemanticExecutionError::Backend(error.to_string()))
 }
 
 /// Match an artifact completion against the graph values a request declares.
@@ -88,13 +127,12 @@ impl SemanticExecutor for RegisteredSemanticExecutor {
 /// retained half at the projection instead dropped the middle of every
 /// retained chain.
 fn reconcile_completion(
-    expected_outputs: impl IntoIterator<Item = vyre_foundation::ir::GraphValueId>,
+    expected_outputs: impl IntoIterator<Item = (vyre_foundation::ir::GraphValueId, ArtifactValueId)>,
     mut completion_outputs: BTreeMap<ArtifactValueId, Vec<u8>>,
     mut completion_retained: BTreeMap<ArtifactValueId, Vec<u8>>,
 ) -> Result<BTreeMap<vyre_foundation::ir::GraphValueId, Vec<u8>>, SemanticExecutionError> {
     let mut outputs = BTreeMap::new();
-    for value in expected_outputs {
-        let artifact_value = ArtifactValueId(value.0);
+    for (value, artifact_value) in expected_outputs {
         let output = completion_outputs.remove(&artifact_value);
         let retained = completion_retained.remove(&artifact_value);
         let bytes = match (output, retained) {
@@ -144,16 +182,21 @@ mod reconcile_tests {
             .collect()
     }
 
+    /// One declared value whose two identifiers happen to coincide.
+    fn same(value: u32) -> [(GraphValueId, ArtifactValueId); 1] {
+        [(GraphValueId(value), ArtifactValueId(value))]
+    }
+
     #[test]
     fn a_declared_value_delivered_as_an_output_is_returned() {
-        let outputs = reconcile_completion([GraphValueId(7)], map(&[(7, 0xAA)]), BTreeMap::new())
+        let outputs = reconcile_completion(same(7), map(&[(7, 0xAA)]), BTreeMap::new())
             .expect("a declared output must reconcile");
         assert_eq!(outputs.get(&GraphValueId(7)), Some(&bytes(0xAA)));
     }
 
     #[test]
     fn a_declared_value_delivered_as_retained_state_is_returned() {
-        let outputs = reconcile_completion([GraphValueId(7)], BTreeMap::new(), map(&[(7, 0xBB)]))
+        let outputs = reconcile_completion(same(7), BTreeMap::new(), map(&[(7, 0xBB)]))
             .expect("a declared value carried as retained state must reconcile");
         assert_eq!(outputs.get(&GraphValueId(7)), Some(&bytes(0xBB)));
     }
@@ -161,7 +204,7 @@ mod reconcile_tests {
     #[test]
     fn undeclared_retained_state_is_not_a_fault() {
         let outputs = reconcile_completion(
-            [GraphValueId(1)],
+            same(1),
             map(&[(1, 0x11)]),
             map(&[(50, 0x50), (51, 0x51), (52, 0x52)]),
         )
@@ -173,7 +216,7 @@ mod reconcile_tests {
     #[test]
     fn an_undeclared_output_names_the_values_it_refuses() {
         let error = reconcile_completion(
-            [GraphValueId(1)],
+            same(1),
             map(&[(1, 0x11), (98, 0x98), (99, 0x99)]),
             BTreeMap::new(),
         )
@@ -195,7 +238,7 @@ mod reconcile_tests {
 
     #[test]
     fn a_value_delivered_through_both_channels_is_refused() {
-        let error = reconcile_completion([GraphValueId(3)], map(&[(3, 0x33)]), map(&[(3, 0x33)]))
+        let error = reconcile_completion(same(3), map(&[(3, 0x33)]), map(&[(3, 0x33)]))
             .expect_err("one value delivered twice must be refused");
         assert!(
             error.to_string().contains("both output and retained state"),
@@ -205,7 +248,7 @@ mod reconcile_tests {
 
     #[test]
     fn an_omitted_declared_value_is_refused_by_name() {
-        let error = reconcile_completion([GraphValueId(4)], BTreeMap::new(), BTreeMap::new())
+        let error = reconcile_completion(same(4), BTreeMap::new(), BTreeMap::new())
             .expect_err("a declared value that arrived through neither channel must be refused");
         let message = error.to_string();
         assert!(
@@ -219,11 +262,32 @@ mod reconcile_tests {
         // A completion that both omits a declared value and carries an
         // undeclared one is two faults. The omission is the one the caller can
         // act on, because it names the value that never arrived.
-        let error = reconcile_completion([GraphValueId(4)], map(&[(77, 0x77)]), BTreeMap::new())
+        let error = reconcile_completion(same(4), map(&[(77, 0x77)]), BTreeMap::new())
             .expect_err("a completion missing a declared value must be refused");
         assert!(
             error.to_string().contains("omitted canonical graph output 4"),
             "the omission is the reported fault: {error}"
         );
+    }
+
+    #[test]
+    fn a_renumbered_artifact_value_is_read_through_its_own_identifier() {
+        // Compilation renumbers when it rewrites the graph. The whole-grid fence
+        // cut inserts a retained carrier ahead of a node's own outputs, so graph
+        // value 4 is carried by artifact value 5 and artifact values 3 and 4 are
+        // carriers the graph never named. Reading the graph number as the
+        // artifact number returns the carrier's bytes under the output's name.
+        let outputs = reconcile_completion(
+            [(GraphValueId(4), ArtifactValueId(5))],
+            map(&[(5, 0xEE)]),
+            map(&[(3, 0x33), (4, 0x44)]),
+        )
+        .expect("a renumbered output must reconcile through its artifact identifier");
+        assert_eq!(
+            outputs.get(&GraphValueId(4)),
+            Some(&bytes(0xEE)),
+            "the output must carry the artifact value's bytes, not the carrier's"
+        );
+        assert_eq!(outputs.len(), 1, "only declared values are returned");
     }
 }

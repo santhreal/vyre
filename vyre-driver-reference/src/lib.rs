@@ -1,5 +1,6 @@
 //! Registry adapter for the reference parity backend and semantic executor.
 
+mod materializer;
 mod program_dispatch;
 
 pub use program_dispatch::ReferenceSemanticExecutor;
@@ -7,9 +8,7 @@ pub use program_dispatch::ReferenceSemanticExecutor;
 use std::sync::Arc;
 
 use vyre_driver::sealed;
-use vyre_driver::{
-    core_supported_ops, BackendCapability, BackendError, BackendPrecedence, BackendRegistration,
-};
+use vyre_driver::{core_supported_ops, BackendError};
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_foundation::ir::{BufferAccess, Program};
 use vyre_reference::value::Value;
@@ -19,6 +18,22 @@ pub const CPU_REF_BACKEND_ID: &str = "cpu-ref";
 /// Validated identity for the non-production reference target.
 pub const CPU_REF_TARGET_ID: vyre_foundation::operation::TargetId =
     vyre_foundation::operation::TargetId::expect_valid(CPU_REF_BACKEND_ID);
+
+/// Lane count the interpreter's subgroup simulator models.
+///
+/// [`vyre_reference::subgroup::SubgroupSimulator`] is built at this width, and
+/// a ballot the oracle returns is only comparable to a device answer when both
+/// report the same width.
+pub const REFERENCE_SUBGROUP_WIDTH: u32 = 32;
+
+/// Workgroup-scoped scratch the interpreter admits, in bytes.
+///
+/// The interpreter allocates scratch in host memory, so this figure exists to
+/// keep the oracle from refusing a program a device accepts rather than to
+/// describe a hardware bank. It sits above the largest per-workgroup scratch
+/// any shipped target offers, which is 227 KiB of opt-in shared memory on the
+/// widest CUDA part.
+pub const REFERENCE_SHARED_SCRATCH_BYTES: u32 = 256 * 1024;
 
 /// Dispatch backend backed by `vyre_reference::reference_eval`.
 #[derive(Debug, Default, Clone, Copy)]
@@ -43,54 +58,23 @@ impl VyreBackend for CpuRefBackend {
     /// program a strict device kernel executes: the oracle has to run the same
     /// IR for a bit-identity comparison to mean anything.
     fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
-        match mode {
+        matches!(
+            mode,
             vyre_foundation::fp_parity::FloatLoweringMode::Contracted
-            | vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee => true,
-        }
+                | vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee
+        )
     }
 
+    /// A cooperative request selects a launch, not a semantics. The interpreter
+    /// satisfies a whole-grid fence either way, so both requests reach the same
+    /// evaluation.
     fn dispatch_borrowed(
         &self,
         program: &Program,
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
-        if config.cooperative && !self.supports_grid_sync() {
-            return Err(BackendError::UnsupportedFeature {
-                name: "cpu-ref cooperative grid dispatch".to_string(),
-                backend: CPU_REF_BACKEND_ID.to_string(),
-            });
-        }
-        let expanded = strict_expanded(program, config)?;
-        let program = expanded.as_ref().unwrap_or(program);
-        let values = reference_values(program, inputs)?;
-        // The interpreter infers its grid from buffer SHAPES, which cannot express
-        // the per-invocation count of a byte-scan program (the haystack is packed
-        // 4 bytes/u32 and the scan length is a runtime value). When the caller
-        // declares the true element-grid coverage via `dispatch_elements`, pass it
-        // as the interpreter's dispatch floor so high positions are covered exactly
-        // as the real GPU dispatch would, otherwise the tail is silently skipped
-        // (the Law-10 under-coverage this backend used to exhibit). `None` (every
-        // megakernel, whose `grid_override` is a work-queue length, not an element
-        // count) keeps buffer-shape inference so its grid is never over-run.
-        // An explicit dispatch grid fully specifies the workgroup coverage (its
-        // N-D shape, e.g. one query per `grid.y` block for batched persistent-BFS),
-        // so it wins over the 1-D `dispatch_elements` floor; the shape-inference
-        // path only applies when neither is set. See `DispatchConfig::dispatch_grid`.
-        let result = match (config.coverage_grid(), config.dispatch_elements) {
-            (Some(grid), _) => vyre_reference::reference_eval_with_grid(program, &values, grid),
-            (None, Some(elements)) => {
-                vyre_reference::reference_eval_with_dispatch(program, &values, elements)
-            }
-            (None, None) => vyre_reference::reference_eval(program, &values),
-        };
-        result
-            .map(|outputs| outputs.iter().map(Value::to_bytes).collect())
-            .map_err(|error| {
-                BackendError::new(format!(
-                    "cpu-ref reference dispatch failed: {error}. Fix: validate the Program and input buffer ABI before dispatch."
-                ))
-            })
+        interpret(program, inputs, config)
     }
 
     fn supported_ops(&self) -> &std::collections::HashSet<vyre_foundation::ir::OpId> {
@@ -104,6 +88,81 @@ impl VyreBackend for CpuRefBackend {
     fn max_compute_workgroups_per_dimension(&self) -> u32 {
         u32::MAX
     }
+
+    /// The interpreter evaluates subgroup expressions through
+    /// [`vyre_reference::subgroup::SubgroupSimulator`], so a program that uses
+    /// them reaches the oracle instead of being refused before compilation.
+    fn supports_subgroup_ops(&self) -> bool {
+        true
+    }
+
+    fn subgroup_size(&self) -> Option<u32> {
+        Some(REFERENCE_SUBGROUP_WIDTH)
+    }
+
+    fn max_shared_memory_bytes(&self) -> u32 {
+        REFERENCE_SHARED_SCRATCH_BYTES
+    }
+
+    /// The interpreter satisfies a whole-grid fence inside one dispatch.
+    ///
+    /// `vyre_reference` flattens every fence-carrying scope, partitions the body
+    /// at each top-level fence, and runs the whole grid through one segment
+    /// before the next over one shared memory. That is what a cooperative launch
+    /// buys on a device, so the oracle has the capability and reports it.
+    ///
+    /// Reporting `false` is not conservative here. It sends a fenced program
+    /// through the launch-boundary cut, which mints a retained carrier the
+    /// segments hand to each other through device-resident storage. A one-shot
+    /// host submission has no resident storage, so the later segment read a
+    /// zeroed carrier and the oracle answered with the wrong bytes.
+    fn supports_grid_sync(&self) -> bool {
+        true
+    }
+}
+
+/// Run one Program through the interpreter under a dispatch configuration.
+///
+/// The dispatch backend and the artifact materializer both reach the oracle
+/// here, so a program submitted as an artifact and the same program dispatched
+/// directly evaluate under one grid rule and one strict-mode expansion. Two
+/// copies of this would let the artifact route and the direct route disagree
+/// about the answer the oracle gives.
+fn interpret(
+    program: &Program,
+    inputs: &[&[u8]],
+    config: &DispatchConfig,
+) -> Result<Vec<Vec<u8>>, BackendError> {
+    let expanded = strict_expanded(program, config)?;
+    let program = expanded.as_ref().unwrap_or(program);
+    let values = reference_values(program, inputs)?;
+    // The interpreter infers its grid from buffer SHAPES, which cannot express
+    // the per-invocation count of a byte-scan program (the haystack is packed
+    // 4 bytes/u32 and the scan length is a runtime value). When the caller
+    // declares the true element-grid coverage via `dispatch_elements`, pass it
+    // as the interpreter's dispatch floor so high positions are covered exactly
+    // as the real GPU dispatch would, otherwise the tail is silently skipped
+    // (the Law-10 under-coverage this backend used to exhibit). `None` (every
+    // megakernel, whose `grid_override` is a work-queue length, not an element
+    // count) keeps buffer-shape inference so its grid is never over-run.
+    // An explicit dispatch grid fully specifies the workgroup coverage (its
+    // N-D shape, e.g. one query per `grid.y` block for batched persistent-BFS),
+    // so it wins over the 1-D `dispatch_elements` floor; the shape-inference
+    // path only applies when neither is set. See `DispatchConfig::dispatch_grid`.
+    let result = match (config.coverage_grid(), config.dispatch_elements) {
+        (Some(grid), _) => vyre_reference::reference_eval_with_grid(program, &values, grid),
+        (None, Some(elements)) => {
+            vyre_reference::reference_eval_with_dispatch(program, &values, elements)
+        }
+        (None, None) => vyre_reference::reference_eval(program, &values),
+    };
+    result
+        .map(|outputs| outputs.iter().map(Value::to_bytes).collect())
+        .map_err(|error| {
+            BackendError::new(format!(
+                "cpu-ref reference dispatch failed: {error}. Fix: validate the Program and input buffer ABI before dispatch."
+            ))
+        })
 }
 
 /// The program with every approximable f32 operation expanded, or `None` when
@@ -176,30 +235,13 @@ pub fn registered_backend_id() -> Option<&'static str> {
     Some(CPU_REF_BACKEND_ID)
 }
 
-inventory::submit! {
-    BackendRegistration {
-        id: CPU_REF_BACKEND_ID,
-        target_id: CPU_REF_TARGET_ID,
-        payload_format: Some(program_dispatch::REFERENCE_TARGET_FORMAT),
-        reference_oracle: true,
-        factory: acquire_cpu_ref,
-        supported_ops: core_supported_ops,
-        semantic_operations: vyre_driver::dialect_only_supported_ops,
-        target_compiler: Some(program_dispatch::target_compiler_factory),
-        materializer: None,
-    }
-}
-
-inventory::submit! {
-    BackendCapability {
-        id: CPU_REF_BACKEND_ID,
-        dispatches: true,
-    }
-}
-
-inventory::submit! {
-    BackendPrecedence {
-        id: CPU_REF_BACKEND_ID,
-        rank: 900,
-    }
+vyre_driver::register_backend! {
+    id: CPU_REF_BACKEND_ID,
+    target_id: CPU_REF_TARGET_ID,
+    payload_format: Some(program_dispatch::REFERENCE_TARGET_FORMAT),
+    reference_oracle: true,
+    factory: acquire_cpu_ref,
+    target_compiler: Some(program_dispatch::target_compiler_factory),
+    materializer: Some(materializer::materializer_factory),
+    rank: 900,
 }

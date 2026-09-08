@@ -305,14 +305,40 @@ fn extra_input_buffers_rejected() {
 // Capability queries
 // ---------------------------------------------------------------
 
+/// WHY: this asserted the oracle reported no subgroup support, which was the
+/// opposite of what it executes: `vyre_reference` carries a subgroup simulator
+/// and evaluates workgroup-scoped scratch, and the false report refused 47
+/// conformance witnesses before compilation. A capability query is a promise
+/// the oracle executes the construct, so each one below is pinned to the
+/// figure the interpreter is built with.
 #[test]
-fn capability_queries_conservative() {
+fn capability_queries_state_what_the_interpreter_executes() {
     let backend = CpuRefBackend;
     assert_eq!(backend.id(), "cpu-ref");
     assert_eq!(backend.max_workgroup_size(), [1024, 1, 1]);
     assert_eq!(backend.max_compute_workgroups_per_dimension(), u32::MAX);
-    // CPU backend should report conservative capabilities
-    assert!(!backend.supports_subgroup_ops());
+    assert!(backend.supports_subgroup_ops());
+    assert_eq!(
+        backend.subgroup_size(),
+        Some(u32::try_from(vyre_reference::subgroup::SubgroupSimulator::default().width())
+            .expect("the simulator width must fit a u32")),
+        "a ballot the oracle returns is comparable to a device answer only when \
+         the reported width is the width the simulator models"
+    );
+    assert_eq!(
+        backend.max_shared_memory_bytes(),
+        vyre_driver_reference::REFERENCE_SHARED_SCRATCH_BYTES
+    );
+    let profile = backend.device_profile();
+    assert!(
+        profile.has_shared_memory,
+        "the neutral profile reads the scratch flag from the budget, so a \
+         reported budget must set it"
+    );
+    assert_eq!(
+        profile.max_shared_memory_bytes,
+        vyre_driver_reference::REFERENCE_SHARED_SCRATCH_BYTES
+    );
     assert!(!backend.supports_f16());
     assert!(!backend.supports_tensor_cores());
     assert!(!backend.supports_async_compute());

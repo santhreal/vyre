@@ -186,6 +186,7 @@ impl DeviceProfile {
     #[must_use]
     pub fn from_backend<B: crate::backend::VyreBackend + ?Sized>(backend: &B) -> Self {
         let max_workgroup_size = backend.max_workgroup_size();
+        let max_shared_memory_bytes = backend.max_shared_memory_bytes();
         Self {
             backend: backend.id(),
             supports_subgroup_ops: backend.supports_subgroup_ops(),
@@ -202,11 +203,11 @@ impl DeviceProfile {
             has_mul_high: false,
             has_dual_issue_fp32_int32: false,
             has_subgroup_shuffle: backend.supports_subgroup_ops(),
-            has_shared_memory: false,
+            has_shared_memory: max_shared_memory_bytes > 0,
             max_native_int_width: 32,
             max_workgroup_size,
             max_invocations_per_workgroup: backend.max_compute_invocations_per_workgroup(),
-            max_shared_memory_bytes: 0,
+            max_shared_memory_bytes,
             max_storage_buffer_binding_size: backend.max_storage_buffer_bytes(),
             subgroup_size: backend.subgroup_size().unwrap_or(0),
             compute_units: 0,

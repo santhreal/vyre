@@ -13,17 +13,19 @@ use vyre_reference::value::Value;
 use crate::CPU_REF_BACKEND_ID;
 
 pub(crate) const REFERENCE_TARGET_FORMAT: &str = "reference-graph";
+/// Payload format version the reference dialect emits and admits.
+pub(crate) const REFERENCE_TARGET_FORMAT_VERSION: u16 = 1;
 
 const REFERENCE_DIALECT: TargetDialect = TargetDialect {
     backend_id: CPU_REF_BACKEND_ID,
     dialect: "reference graph",
     format: REFERENCE_TARGET_FORMAT,
-    format_version: 1,
+    format_version: REFERENCE_TARGET_FORMAT_VERSION,
     generation: 1,
     max_workgroup_size: [1_024, 1, 1],
     max_invocations_per_workgroup: 1_024,
-    max_dynamic_shared_bytes: 0,
-    subgroup_size: 1,
+    max_dynamic_shared_bytes: crate::REFERENCE_SHARED_SCRATCH_BYTES,
+    subgroup_size: crate::REFERENCE_SUBGROUP_WIDTH,
     emit: emit_reference_module,
 };
 
@@ -48,6 +50,11 @@ fn emit_reference_module(
 pub(crate) fn target_compiler_factory() -> Result<Box<dyn TargetCompiler>, vyre_driver::BackendError>
 {
     REFERENCE_DIALECT.compiler()
+}
+
+/// Compilation profile of the reference target.
+pub(crate) fn target_profile() -> Result<TargetProfile, vyre_driver::BackendError> {
+    REFERENCE_DIALECT.profile()
 }
 
 /// Reference-only parity executor for validated logical graphs.

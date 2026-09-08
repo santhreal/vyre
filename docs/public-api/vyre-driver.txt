@@ -618,6 +618,7 @@ pub fn vyre_driver::VyreBackend::id(&self) -> &'static str
 pub fn vyre_driver::VyreBackend::is_distributed(&self) -> bool
 pub fn vyre_driver::VyreBackend::max_compute_invocations_per_workgroup(&self) -> u32
 pub fn vyre_driver::VyreBackend::max_compute_workgroups_per_dimension(&self) -> u32
+pub fn vyre_driver::VyreBackend::max_shared_memory_bytes(&self) -> u32
 pub fn vyre_driver::VyreBackend::max_storage_buffer_bytes(&self) -> u64
 pub fn vyre_driver::VyreBackend::max_workgroup_size(&self) -> [u32; 3]
 pub fn vyre_driver::VyreBackend::pipeline_cache_snapshot(&self) -> core::option::Option<vyre_driver::PipelineCacheSnapshot>
@@ -1174,6 +1175,7 @@ pub macro vyre_driver::artifact_instance_identity!
 pub macro vyre_driver::artifact_instance_unreported_resources!
 pub macro vyre_driver::executable_module!
 pub macro vyre_driver::materializer_passthrough!
+pub macro vyre_driver::register_backend!
 pub macro vyre_driver::resident_pipeline_launch!
 pub mod vyre_driver
 pub mod vyre_driver::accounting
@@ -1480,6 +1482,9 @@ pub vyre_driver::BackendError::DeviceOutOfMemory::requested: u64
 pub vyre_driver::BackendError::DispatchFailed
 pub vyre_driver::BackendError::DispatchFailed::code: core::option::Option<i32>
 pub vyre_driver::BackendError::DispatchFailed::message: alloc::string::String
+pub vyre_driver::BackendError::ExecutionAborted
+pub vyre_driver::BackendError::ExecutionAborted::reason: alloc::string::String
+pub vyre_driver::BackendError::ExecutionAborted::stage: &'static str
 pub vyre_driver::BackendError::InvalidProgram
 pub vyre_driver::BackendError::InvalidProgram::fix: alloc::string::String
 pub vyre_driver::BackendError::KernelCompileFailed
@@ -1632,6 +1637,7 @@ pub vyre_driver::ErrorCode::CooperativeResidencyExceeded
 pub vyre_driver::ErrorCode::DeviceLost
 pub vyre_driver::ErrorCode::DeviceOutOfMemory
 pub vyre_driver::ErrorCode::DispatchFailed
+pub vyre_driver::ErrorCode::ExecutionAborted
 pub vyre_driver::ErrorCode::InvalidProgram
 pub vyre_driver::ErrorCode::KernelCompileFailed
 pub vyre_driver::ErrorCode::PoisonedLock
