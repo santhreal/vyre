@@ -45,7 +45,7 @@ use vyre_libs::pattern::CompiledDfa;
 
 const AHO_CORASICK_OP_ID: &str = "vyre-libs::pattern::aho_corasick";
 
-/// The source file that owns the width table, relative to the crate root. Read at
+/// The source file that owns the width table, relative to the `vyre-libs-pattern` crate root. Read at
 /// run time so the member set is the shipped enum rather than a copy of it.
 const WIDTH_TABLE_SOURCE: &str = "src/pattern/classic_ac/bounded_ranges/prefilter/mod.rs";
 
@@ -131,7 +131,7 @@ fn rows() -> Vec<WidthRow> {
 }
 
 fn crate_root() -> std::path::PathBuf {
-    vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs")
+    vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs-pattern")
 }
 
 /// The `PrefilterWidth` variant names, read out of the width table's own source.

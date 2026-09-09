@@ -178,7 +178,9 @@ macro_rules! u32_signature {
 #[cfg(feature = "ir-fixtures")]
 pub mod adversarial_generators;
 mod registry_closure;
-pub use registry_closure::{assert_registry_closure, collect_rust_files};
+pub use registry_closure::{
+    assert_registry_closure, assert_registry_closure_crates, collect_rust_files,
+};
 #[cfg(feature = "semantic-requests")]
 pub mod artifact_fixtures;
 #[cfg(feature = "ir-fixtures")]

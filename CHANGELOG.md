@@ -8949,6 +8949,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   closed naming the borrowed path, because the split carries each segment's
   state through host byte buffers and the device-buffer path exposes no
   readback between segments.
+- Retargeted fifteen architecture and duplication gates in vyre-libs across
+  domain-split crates and resolved test-support parity oracle reachability.
 - Enabling one `vyre-libs` composition feature no longer resolves the whole
   primitive substrate. `vyre-libs` used to enable 19 `vyre-primitives` domains
   unconditionally, so a consumer that wanted substring scanning also compiled

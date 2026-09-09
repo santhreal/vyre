@@ -308,21 +308,54 @@ mod closure {
     use vyre_test_support::collect_rust_files;
     use vyre_test_support::monorepo::vyre_crate_directory;
 
-    /// Names of every `pub fn` in one file that ends in a delegating suffix.
+    /// Names of every `pub fn ... -> Program` builder in one file that ends in a delegating suffix.
     fn delegating_forms(text: &str) -> Vec<String> {
-        text.lines()
-            .filter_map(|line| line.trim().strip_prefix("pub fn "))
-            .filter_map(|rest| rest.split('(').next())
-            .filter(|name| name.ends_with("_with") || name.ends_with("_with_op_id"))
-            .map(str::to_string)
-            .collect()
+        let lines: Vec<&str> = text.lines().collect();
+        let mut forms = Vec::new();
+        for (i, line) in lines.iter().enumerate() {
+            let trimmed = line.trim();
+            if let Some(rest) = trimmed.strip_prefix("pub fn ") {
+                let Some(name) = rest.split(['(', '<']).next() else {
+                    continue;
+                };
+                let name = name.trim();
+                if name.ends_with("_with") || name.ends_with("_with_op_id") {
+                    let mut decl = String::new();
+                    for l in &lines[i..] {
+                        decl.push(' ');
+                        decl.push_str(l.trim());
+                        if l.contains('{') || l.contains(';') {
+                            break;
+                        }
+                    }
+                    if decl.contains("-> Program") {
+                        forms.push(name.to_string());
+                    }
+                }
+            }
+        }
+        forms
     }
 
     #[test]
     fn every_published_delegating_form_is_compared_here() {
-        let crate_dir: PathBuf = vyre_crate_directory(env!("CARGO_PKG_NAME"));
+        let workspace_root = vyre_test_support::monorepo::vyre_workspace_root();
+        let domain_crates: Vec<PathBuf> = structure_gate::workspace_members(&workspace_root)
+            .into_iter()
+            .filter(|member| {
+                let name = member.rsplit('/').next().unwrap_or(member.as_str());
+                name == "vyre-libs" || name.starts_with("vyre-libs-")
+            })
+            .map(|member| workspace_root.join(member))
+            .collect();
+
         let mut sources = Vec::new();
-        collect_rust_files(&crate_dir.join("src"), &mut sources);
+        for crate_dir in &domain_crates {
+            let src = crate_dir.join("src");
+            if src.is_dir() {
+                collect_rust_files(&src, &mut sources);
+            }
+        }
         let declared: BTreeSet<String> = sources
             .iter()
             .flat_map(|path: &PathBuf| {
@@ -333,11 +366,12 @@ mod closure {
             .collect();
         assert!(
             !declared.is_empty(),
-            "the declaration scan found no delegating form under src, so it proves nothing"
+            "the declaration scan found no delegating form across the domain crates, so it proves nothing"
         );
 
+        let test_dir = vyre_crate_directory(env!("CARGO_PKG_NAME")).join("tests");
         let own_source = Path::new(file!()).file_name().expect("test file name");
-        let this_file = std::fs::read_to_string(crate_dir.join("tests").join(own_source))
+        let this_file = std::fs::read_to_string(test_dir.join(own_source))
             .expect("this test's own source must be readable");
         let missing: Vec<&String> = declared
             .iter()
