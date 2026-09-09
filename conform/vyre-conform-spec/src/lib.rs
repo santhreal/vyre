@@ -5,11 +5,17 @@
 
 pub mod cert;
 pub mod schema;
+pub mod protocol;
 pub mod witness;
 
 pub use schema::{
     BundleCertificate, Certificate, ConformanceCase, ConformanceResult, ReplayCapsule,
     ReplayMinimization, ReplayMismatch, SchemaVersionError, CERTIFICATE_SCHEMA_VERSION,
     REPLAY_CAPSULE_SCHEMA_VERSION,
+};
+pub use protocol::{
+    derive_auth_key, hash_outputs, ulp_distance_f32, verify_receipts_for_certificate,
+    CasePayload, CertificateRejection, DeviceLease, NumericalMismatch, NumericalPolicy,
+    WorkerBudget, WorkerMode, WorkerReceipt, WorkerRequest, WorkerStatus,
 };
 pub use witness::{U32Witness, WitnessSet};

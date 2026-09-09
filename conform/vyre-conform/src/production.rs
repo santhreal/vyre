@@ -1,12 +1,8 @@
 //! Production semantic compilation, artifact admission, and submission route.
 
 use std::collections::BTreeMap;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{self, RecvTimeoutError};
 use std::sync::Arc;
-use std::thread;
 use std::time::Duration;
-
 use thiserror::Error;
 use vyre_driver::{BackendRegistration, BindingPlan};
 use vyre_foundation::ir::{BufferDecl, GraphValueId, Program, ProgramGraph};
@@ -42,88 +38,6 @@ pub enum ProductionError {
     /// Backend acquisition failed before compiler target facts could be recorded.
     #[error("backend dispatch route failed: {0}")]
     Dispatch(String),
-    /// A bounded step did not finish inside [`PRODUCTION_STEP_DEADLINE`].
-    #[error(
-        "{step} of `{op_id}` on backend `{backend}` did not finish within {deadline:?}. \
-         Fix: the step is bounded on purpose; diagnose the backend call that does not return \
-         for this operation instead of waiting on it."
-    )]
-    Deadline {
-        /// Which bounded step exceeded its ceiling.
-        step: &'static str,
-        /// Operation the step was running.
-        op_id: String,
-        /// Backend the step was running on.
-        backend: &'static str,
-        /// Ceiling the step exceeded.
-        deadline: Duration,
-    },
-    /// A bounded step panicked instead of returning a result.
-    #[error(
-        "{step} of `{op_id}` on backend `{backend}` panicked. \
-         Fix: repair the panicking backend path; a conformance step must return a typed error."
-    )]
-    Panicked {
-        /// Which bounded step panicked.
-        step: &'static str,
-        /// Operation the step was running.
-        op_id: String,
-        /// Backend the bounded step was running on.
-        backend: &'static str,
-    },
-    /// A bounded step was abandoned on expiry and the executor refuses more work.
-    #[error(
-        "`{op_id}` on backend `{backend}` abandoned a step that exceeded its deadline. \
-         Fix: the abandoned step may still be inside a driver call against this \
-         artifact; construct a fresh executor instead of reusing this one."
-    )]
-    Abandoned {
-        /// Operation whose step was abandoned.
-        op_id: String,
-        /// Backend the abandoned step was running on.
-        backend: &'static str,
-    },
-}
-
-/// Run one backend step under `deadline`, naming `op_id` and `backend` on expiry.
-///
-/// The step runs on its own thread. A call already blocked inside a device driver
-/// cannot be cancelled from outside it, so an expired step is abandoned rather
-/// than joined.
-pub fn run_bounded_step<T: Send + 'static>(
-    step: &'static str,
-    op_id: &str,
-    backend: &'static str,
-    deadline: Duration,
-    work: impl FnOnce() -> Result<T, ProductionError> + Send + 'static,
-) -> Result<T, ProductionError> {
-    let (sender, receiver) = mpsc::sync_channel(1);
-    let thread_name = format!("vyre-conform-{step}-{backend}");
-    thread::Builder::new()
-        .name(thread_name)
-        .spawn(move || {
-            let _ = sender.send(work());
-        })
-        .map_err(|error| {
-            ProductionError::Dispatch(format!(
-                "could not start a bounded {step} thread for `{op_id}` on `{backend}`: {error}. \
-                 Fix: raise the process thread limit before running conformance."
-            ))
-        })?;
-    match receiver.recv_timeout(deadline) {
-        Ok(result) => result,
-        Err(RecvTimeoutError::Timeout) => Err(ProductionError::Deadline {
-            step,
-            op_id: op_id.to_string(),
-            backend,
-            deadline,
-        }),
-        Err(RecvTimeoutError::Disconnected) => Err(ProductionError::Panicked {
-            step,
-            op_id: op_id.to_string(),
-            backend,
-        }),
-    }
 }
 
 /// Compiler-selected artifact and payload identities with canonical program outputs.
@@ -148,7 +62,6 @@ pub struct ProductionSession {
     program: Arc<Program>,
     op_id: String,
     backend: &'static str,
-    abandoned: AtomicBool,
 }
 
 impl ProductionSession {
@@ -180,7 +93,6 @@ impl ProductionSession {
             program: Arc::new(program.clone()),
             op_id: program.entry_op_id().unwrap_or(UNNAMED_OP_ID).to_string(),
             backend,
-            abandoned: AtomicBool::new(false),
         }
     }
 
@@ -204,7 +116,6 @@ impl ProductionSession {
             program: Arc::clone(&self.program),
             op_id: self.op_id.clone(),
             backend: self.backend,
-            abandoned: AtomicBool::new(false),
         }
     }
 
@@ -227,36 +138,21 @@ impl ProductionSession {
             program: Arc::clone(&self.program),
             op_id: self.op_id.clone(),
             backend: self.backend,
-            abandoned: AtomicBool::new(false),
         }
     }
 
     /// Execute caller inputs through semantic compilation and admitted artifact submission.
     pub fn submit(&self, inputs: &[&[u8]]) -> Result<ProductionExecution, ProductionError> {
-        if self.abandoned.load(Ordering::Acquire) {
-            return Err(ProductionError::Abandoned {
-                op_id: self.op_id.clone(),
-                backend: self.backend,
-            });
-        }
         let owned_inputs = inputs
             .iter()
             .map(|bytes| bytes.to_vec())
             .collect::<Vec<_>>();
-        let executor = Arc::clone(&self.executor);
-        let policy = self.policy.clone();
-        let program = Arc::clone(&self.program);
-        let outcome = run_bounded_step(
-            "semantic execution",
-            &self.op_id,
-            self.backend,
-            PRODUCTION_STEP_DEADLINE,
-            move || execute_program(executor.as_ref(), &policy, &program, &owned_inputs),
-        );
-        if matches!(outcome, Err(ProductionError::Deadline { .. })) {
-            self.abandoned.store(true, Ordering::Release);
-        }
-        outcome
+        execute_program(
+            self.executor.as_ref(),
+            &self.policy,
+            &self.program,
+            &owned_inputs,
+        )
     }
 
     /// What a passing case on this route proves, in the words a report records.

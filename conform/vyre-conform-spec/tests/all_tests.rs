@@ -16,3 +16,7 @@ pub mod schema_contract;
 /// Integration tests from `tests/witness_contract.rs`.
 #[path = "witness_contract.rs"]
 pub mod witness_contract;
+
+/// Integration tests from `tests/protocol_contract.rs`.
+#[path = "protocol_contract.rs"]
+pub mod protocol_contract;

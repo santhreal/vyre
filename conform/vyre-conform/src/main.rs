@@ -1,7 +1,6 @@
 //! `vyre-conform` CLI  -  runs conformance certs for registered ops.
 
 mod artifact_json;
-mod backend_selection;
 mod certificate_merge;
 mod dispatch_command;
 mod operation_selection;
@@ -18,8 +17,11 @@ use crate::certificate_merge::merge_certificates;
 use crate::dispatch_command::dispatch_pairs;
 use crate::proof_plan::emit_plan;
 use crate::prove_command::{prove, DEFAULT_CERTIFICATE_DIR, DEFAULT_CERTIFICATE_FILE};
+use vyre_conform::run_worker_from_env_or_exit;
+use vyre_conform::run_worker_stdio;
 
 fn main() {
+    run_worker_from_env_or_exit();
     let mut args = std::env::args();
     let _binary = args.next();
     let subcommand = match args.next() {
@@ -54,10 +56,13 @@ fn main() {
         }
         return;
     }
+    if subcommand == "worker" || subcommand == "--worker" {
+        run_worker_stdio();
+        return;
+    }
     if subcommand != "dispatch" {
         eprintln!(
-            "unknown subcommand `{}`  -  supported subcommands: dispatch, merge, plan, prove.",
-            subcommand
+            "unknown subcommand `{subcommand}`  -  supported subcommands: dispatch, merge, plan, prove, worker."
         );
         std::process::exit(2);
     }

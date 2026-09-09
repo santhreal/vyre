@@ -84,3 +84,8 @@ pub mod schema_compatibility;
 /// Integration tests from `tests/semantic_execution_contracts.rs`.
 #[path = "semantic_execution_contracts.rs"]
 pub mod semantic_execution_contracts;
+
+#[test]
+fn vyre_conform_worker_entry() {
+    vyre_conform::run_worker_from_env_or_exit();
+}

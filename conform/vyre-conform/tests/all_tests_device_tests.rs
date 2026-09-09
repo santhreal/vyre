@@ -28,3 +28,8 @@ pub mod reference_parity_classes;
 /// Integration tests from `tests/ulp_audit.rs`.
 #[path = "ulp_audit.rs"]
 pub mod ulp_audit;
+
+#[test]
+fn vyre_conform_worker_entry() {
+    vyre_conform::run_worker_from_env_or_exit();
+}

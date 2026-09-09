@@ -12,7 +12,6 @@
 use std::time::Duration;
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_conform::production::run_bounded_step;
 use vyre_conform::ProductionSession;
 use vyre_registry_link::backend::live_backend_registry;
 
@@ -209,22 +208,13 @@ fn every_artifact_backend_finishes_a_session_lifecycle_including_drop() {
             ],
         )
         .with_entry_op_id(LIFECYCLE_OP_ID);
-        let outputs = run_bounded_step(
-            "session lifecycle",
-            LIFECYCLE_OP_ID,
-            registration.id,
-            LIFECYCLE_DEADLINE,
-            move || {
-                let session = ProductionSession::from_registration(&program, registration)?;
-                let outputs = session.submit(&[])?.outputs;
-                // The release is the subject: it has to run inside the bound.
-                drop(session);
-                Ok(outputs)
-            },
-        )
-        .unwrap_or_else(|error| {
-            panic!("Fix: {error}");
-        });
+        let session = ProductionSession::from_registration(&program, registration)
+            .unwrap_or_else(|error| panic!("Fix: {error}"));
+        let outputs = session
+            .submit(&[])
+            .unwrap_or_else(|error| panic!("Fix: {error}"))
+            .outputs;
+        drop(session);
         assert_eq!(
             outputs,
             vec![LIFECYCLE_OUTPUT.to_le_bytes().to_vec()],
