@@ -446,6 +446,12 @@ impl ProgramGraph {
         &self.nodes
     }
 
+    /// Lookup a node by its [`GraphNodeId`].
+    #[must_use]
+    pub fn node(&self, id: GraphNodeId) -> Option<&ProgramGraphNode> {
+        self.nodes.iter().find(|node| node.id == id)
+    }
+
     /// Canonical connected values.
     #[must_use]
     pub fn values(&self) -> &[ProgramGraphValue] {

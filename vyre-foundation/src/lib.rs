@@ -76,7 +76,8 @@ pub mod ir {
         ValueContract, ValueLifetime,
     };
     pub use crate::ir_inner::model::program_graph_delta::{
-        AffectedGraphClosure, GraphDelta, GraphDeltaError, GraphDeltaOp, GRAPH_DELTA_VERSION,
+        AffectedGraphClosure, GenerationTracker, GraphDelta, GraphDeltaError, GraphDeltaOp,
+        GRAPH_DELTA_VERSION,
     };
     pub use crate::ir_inner::model::program_graph_identity::{
         ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,

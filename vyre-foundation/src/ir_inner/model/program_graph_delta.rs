@@ -115,6 +115,30 @@ pub struct AffectedGraphClosure {
     pub is_pure_generation_bump: bool,
 }
 
+impl AffectedGraphClosure {
+    /// Derive exact invalidated query keys for the deterministic query engine.
+    #[must_use]
+    pub fn invalidated_query_keys(&self) -> Vec<crate::substrate::QueryKey> {
+        let mut keys = Vec::new();
+        for node_id in &self.dirty_nodes {
+            keys.push(crate::substrate::QueryKey::SemanticFacts {
+                node_id: node_id.0,
+                program_digest: [0u8; 32],
+            });
+            keys.push(crate::substrate::QueryKey::Lowering {
+                node_id: node_id.0,
+                target_fingerprint: 0,
+            });
+            keys.push(crate::substrate::QueryKey::Emission {
+                node_id: node_id.0,
+                target_format: "ptx".into(),
+                target_fingerprint: 0,
+            });
+        }
+        keys
+    }
+}
+
 /// Transactional error encountered while validating or applying a [`GraphDelta`].
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum GraphDeltaError {
@@ -182,6 +206,38 @@ pub enum GraphDeltaError {
         /// Decoded format version.
         found: u16,
     },
+    /// Maximum operation count exceeded in delta container.
+    #[error("graph delta exceeds operation ceiling limit of {limit}")]
+    OperationLimitExceeded {
+        /// Configured operation ceiling limit.
+        limit: usize,
+    },
+    /// Name string byte length exceeded.
+    #[error("graph delta name `{name}` exceeds length ceiling of {limit} bytes")]
+    NameLengthExceeded {
+        /// Oversized name string.
+        name: String,
+        /// Maximum allowed bytes.
+        limit: usize,
+    },
+    /// Tensor rank dimensionality exceeded.
+    #[error("graph delta rank {rank} exceeds ceiling of {limit}")]
+    RankExceeded {
+        /// Declared rank.
+        rank: usize,
+        /// Maximum rank limit.
+        limit: usize,
+    },
+    /// Attempted to publish an artifact from a superseded generation.
+    #[error("superseded generation for resource `{resource_name}`: current is {current_generation}, attempted {attempted_generation}")]
+    SupersededGeneration {
+        /// Resource name.
+        resource_name: String,
+        /// Current active generation.
+        current_generation: u64,
+        /// Stale attempted generation.
+        attempted_generation: u64,
+    },
     /// Wire encoding or decoding failure.
     #[error("invalid graph delta wire data: {0}")]
     Wire(String),
@@ -213,18 +269,95 @@ impl GraphDelta {
         Self::default()
     }
 
-    /// Add an operation to the delta.
+    /// Add an operation to the delta with bounds checking.
     #[must_use]
     pub fn with_op(mut self, op: GraphDeltaOp) -> Self {
-        self.operations.push(op);
+        self.try_push(op).expect("Delta bounds exceeded");
         self
     }
 
-    /// Push an operation onto the delta.
+    /// Push an operation onto the delta with bounds checking.
     pub fn push(&mut self, op: GraphDeltaOp) {
-        self.operations.push(op);
+        self.try_push(op).expect("Delta bounds exceeded");
     }
 
+    /// Check bounds on an individual operation.
+    pub fn validate_op_bounds(op: &GraphDeltaOp) -> Result<(), GraphDeltaError> {
+        match op {
+            GraphDeltaOp::InsertExternalValue { name, contract } => {
+                if name.len() > MAX_NAME_BYTES {
+                    return Err(GraphDeltaError::NameLengthExceeded {
+                        name: name.clone(),
+                        limit: MAX_NAME_BYTES,
+                    });
+                }
+                if contract.shape.len() > MAX_RANK {
+                    return Err(GraphDeltaError::RankExceeded {
+                        rank: contract.shape.len(),
+                        limit: MAX_RANK,
+                    });
+                }
+            }
+            GraphDeltaOp::InsertNode { name, inputs, outputs, .. } => {
+                if name.len() > MAX_NAME_BYTES {
+                    return Err(GraphDeltaError::NameLengthExceeded {
+                        name: name.clone(),
+                        limit: MAX_NAME_BYTES,
+                    });
+                }
+                if inputs.len() > MAX_PORTS_PER_NODE || outputs.len() > MAX_PORTS_PER_NODE {
+                    return Err(GraphDeltaError::OperationLimitExceeded {
+                        limit: MAX_PORTS_PER_NODE,
+                    });
+                }
+            }
+            GraphDeltaOp::ReplaceNode { inputs, outputs, .. } => {
+                if inputs.len() > MAX_PORTS_PER_NODE || outputs.len() > MAX_PORTS_PER_NODE {
+                    return Err(GraphDeltaError::OperationLimitExceeded {
+                        limit: MAX_PORTS_PER_NODE,
+                    });
+                }
+            }
+            GraphDeltaOp::UpdateShapeBound { symbol, .. } => {
+                if symbol.len() > MAX_NAME_BYTES {
+                    return Err(GraphDeltaError::NameLengthExceeded {
+                        name: symbol.clone(),
+                        limit: MAX_NAME_BYTES,
+                    });
+                }
+            }
+            GraphDeltaOp::UpdateResourceGeneration { resource_name, .. } => {
+                if resource_name.len() > MAX_NAME_BYTES {
+                    return Err(GraphDeltaError::NameLengthExceeded {
+                        name: resource_name.clone(),
+                        limit: MAX_NAME_BYTES,
+                    });
+                }
+            }
+            GraphDeltaOp::UpdateStateTransition { output_name, .. } => {
+                if output_name.len() > MAX_NAME_BYTES {
+                    return Err(GraphDeltaError::NameLengthExceeded {
+                        name: output_name.clone(),
+                        limit: MAX_NAME_BYTES,
+                    });
+                }
+            }
+            GraphDeltaOp::DeleteNode { .. } => {}
+        }
+        Ok(())
+    }
+
+    /// Try pushing an operation onto the delta, returning an error if bounds are exceeded.
+    pub fn try_push(&mut self, op: GraphDeltaOp) -> Result<(), GraphDeltaError> {
+        if self.operations.len() >= MAX_DELTA_OPERATIONS {
+            return Err(GraphDeltaError::OperationLimitExceeded {
+                limit: MAX_DELTA_OPERATIONS,
+            });
+        }
+        Self::validate_op_bounds(&op)?;
+        self.operations.push(op);
+        Ok(())
+    }
     /// Number of operations in this delta.
     #[must_use]
     pub fn len(&self) -> usize {
@@ -1002,4 +1135,50 @@ fn read_contract(bytes: &[u8], cursor: &mut usize) -> Result<ValueContract, Grap
         access,
         lifetime,
     })
+}
+
+/// Thread-safe generation tracker preventing publication of superseded artifacts.
+#[derive(Debug, Default, Clone)]
+pub struct GenerationTracker {
+    generations: std::sync::Arc<std::sync::RwLock<rustc_hash::FxHashMap<String, u64>>>,
+}
+
+impl GenerationTracker {
+    /// Create an empty generation tracker.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Current published generation for a resource name.
+    #[must_use]
+    pub fn current_generation(&self, resource_name: &str) -> u64 {
+        self.generations
+            .read()
+            .expect("Lock poisoned")
+            .get(resource_name)
+            .copied()
+            .unwrap_or(0)
+    }
+
+    /// Publish a new generation for a resource.
+    ///
+    /// Rejects superseded generations: `generation` must be strictly greater than `current_generation`.
+    pub fn publish_generation(
+        &self,
+        resource_name: &str,
+        generation: u64,
+    ) -> Result<(), GraphDeltaError> {
+        let mut guard = self.generations.write().expect("Lock poisoned");
+        let current = guard.get(resource_name).copied().unwrap_or(0);
+        if generation <= current {
+            return Err(GraphDeltaError::SupersededGeneration {
+                resource_name: resource_name.to_string(),
+                current_generation: current,
+                attempted_generation: generation,
+            });
+        }
+        guard.insert(resource_name.to_string(), generation);
+        Ok(())
+    }
 }
