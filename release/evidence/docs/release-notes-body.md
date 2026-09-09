@@ -3976,6 +3976,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   previous example called a vyre-primitives builder and executed it on the
   reference interpreter, so it demonstrated neither a libs composition nor the
   compiler.
+- The crate ownership registry declares every internal production edge with its
+  feature list, target conditions, dependency kinds, optionality, boundary and
+  owning seam, so the generated crate graph and ownership documents describe
+  the workspace the manifests resolve.
 - Where a packed field sits is answered by the contract that states the layout,
   so the four-bit library paths build their reads from `load_field`,
   `load_row_field` and `decode_field` instead of their own lane arithmetic and
@@ -4035,14 +4039,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   and several functions and features were removed as duplicated surfaces were
   consolidated onto one owner.
 - Three oversized vyre-libs sources become directory modules named for their
-  concerns. matching/nfa_to_dfa.rs splits into error, state_set, subset and
-  dedup; graph/motif.rs into pattern, layout, plan, program, cpu_ref and
-  registry; graph/toposort.rs into error, csr, edge_list, plan and program,
-  each with its contracts under tests. Every body moved verbatim, so the
-  emitted programs and the operation catalogs are unchanged. The motif host
-  reference carried the cpu-parity gate once per item; the gate now sits on the
-  module declaration, where an omission cannot ship a host classifier into a
-  device build.
+  concerns. pattern/nfa_to_dfa.rs splits into error, state_set, subset and
+  dedup; graph/motif.rs into pattern, layout, plan, program and registry;
+  graph/toposort.rs into error, csr, plan and program, each with its contracts
+  under tests. Every body moved verbatim, so the emitted programs and the
+  operation catalogs are unchanged.
 - An unregistered IO destination handle, a panicked runtime worker thread, and
   a tenant opcode landing in the reserved system range report
   `PipelineError::UnregisteredResource`, `WorkerThreadPanicked`, and
@@ -4386,6 +4387,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   infallible pair returned an empty snapshot when the rows exceeded the 32-bit
   GPU column ABI, which a pass reads as an e-graph with nothing to rewrite and
   a fixture asserts against as if it had built the columns.
+- Types that were published at both a crate root and a submodule are now
+  reachable at one path, so an import names the single location that defines
+  the type.
 - `vyre-runtime/src/resident_work_queue/scaling.rs` is gone. It declared no
   item of its own: every line was a `pub use` of a `planner` or `policy` item,
   so each of those 77 items had two public paths and a reader had to pick. Its
@@ -4882,6 +4886,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The 1D convolution builds its boundary offset from one non-negative distance
   instead of computing both directions of the same subtraction as the two arms
   of a select, where one arm wrapped in every lane.
+- A cooperative shared-memory two-dimensional contraction emits a tiled kernel
+  instead of failing with a shape mismatch, and masks ragged edge tiles so a
+  contraction whose dimensions are not multiples of the tile computes the same
+  values as the untiled reference.
 - The CPU reference backend synthesized a zeroed value for every
   backend-allocated output and passed it to the interpreter, so its dispatch
   argument list was one entry longer than the artifact ABI a device enforces.
@@ -8661,6 +8669,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   scanned and a renamed module kept its row while resolving to nothing, which
   reads as coverage. The set is the tree now, and one owner answers whether a
   path holds test source for both the workspace walk and the tooling walk.
+- The interactive graphics pipeline composition declares the visual package it
+  imports, so enabling the visual feature compiles instead of failing on an
+  unresolved crate.
 - Buffers handed to the fixture_bytes eval helpers are byte vectors throughout.
   Several modules still wrapped them in Value::Bytes or built a parallel
   Vec<Value> beside the byte vector they already had, and a few decoded a

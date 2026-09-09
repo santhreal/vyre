@@ -343,7 +343,7 @@ seam = "backend-contract"
 package = "vyre-emit-metal"
 purpose = "native Apple source emission"
 features = []
-conditions = ["cfg(any(target_os = \"macos\", target_os = \"ios\"))"]
+conditions = ["always"]
 kinds = ["normal"]
 optional = false
 default_features = true
@@ -445,17 +445,6 @@ optional = false
 default_features = true
 boundary = "private"
 seam = "megakernel-compiler"
-
-[[crate.dependency]]
-package = "vyre-pass-engine"
-purpose = "optimizer pass execution as dispatched Vyre Programs"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "public"
-seam = "pass-engine"
 
 [[crate.dependency]]
 package = "vyre-spec"
@@ -594,17 +583,6 @@ default_features = true
 boundary = "private"
 seam = "megakernel-compiler"
 
-[[crate.dependency]]
-package = "vyre-pass-engine"
-purpose = "optimizer pass execution as dispatched Vyre Programs"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "public"
-seam = "pass-engine"
-
 [[crate]]
 package = "vyre-driver-reference"
 publication_class = "concrete-backend"
@@ -686,6 +664,17 @@ optional = false
 default_features = true
 boundary = "private"
 seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "registration link anchors for composed operations"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "product-libraries"
 
 [[crate.dependency]]
 package = "vyre-lower"
@@ -911,6 +900,17 @@ optional = true
 default_features = true
 boundary = "private"
 seam = "megakernel-compiler"
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "wire encoding for fixture payload construction"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = false
+boundary = "private"
+seam = "primitive-library"
+
 [[crate.dependency]]
 package = "vyre-reference"
 purpose = "reference interpreter oracle evaluation and canonical ULP distance calculation for the differential execution matrix, behind the ir-fixtures feature"
@@ -1454,6 +1454,248 @@ optional = false
 default_features = true
 boundary = "public"
 seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-analysis"
+purpose = "compiler-internal static analysis, cost model, and dataflow fixpoint compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-bitset"
+purpose = "packed bitset word operations and logical bitwise compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure and registration link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-decode"
+purpose = "Base64, hex, DEFLATE, and encodex decoding compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-device"
+purpose = "compiler-internal device boundary and resident layout compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-encoding"
+purpose = "compiler-internal provenance, matroid, and fingerprint encoding compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-fixpoint"
+purpose = "deterministic fixpoint iteration and grid synchronization compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-graph"
+purpose = "graph traversal, dominator, and topological sorting compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-hash"
+purpose = "hash and checksum compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-math"
+purpose = "linear algebra, scan, and geometric algebra compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-nn"
+purpose = "neural activation, attention, and mixture-of-experts compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-parsing"
+purpose = "lexer driver and LR(1) table walker compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-pattern"
+purpose = "substring, DFA, NFA, and regular expression scanning compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-reasoning"
+purpose = "compiler-internal logic, causal reasoning, and knowledge compilation compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-reduce"
+purpose = "workgroup reduction tree and prefix scan compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-rule"
+purpose = "detection rule condition operator and formula compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-scheduling"
+purpose = "compiler-internal scheduling, fusion, and batching compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-security"
+purpose = "security taint analysis and label resolver compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-solvers"
+purpose = "compiler-internal numerical solver and autotuning compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-text"
+purpose = "text classification, UTF-8 validation, and line indexing compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-vfs"
+purpose = "virtual filesystem asynchronous block load compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-visual"
+purpose = "visual rendering and compositing effect compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "public"
+seam = "product-libraries"
 
 [[crate.dependency]]
 package = "vyre-megakernel"
@@ -2007,6 +2249,17 @@ boundary = "public"
 seam = "product-libraries"
 
 [[crate.dependency]]
+package = "vyre-libs-visual"
+purpose = "interactive graphics compositions the visual dispatch path builds on"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "product-libraries"
+
+[[crate.dependency]]
 package = "vyre-megakernel"
 purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
 features = []
@@ -2078,6 +2331,17 @@ kinds = ["normal"]
 optional = false
 default_features = true
 boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-hash"
+purpose = "checksum compositions the scanning pipeline reuses"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
 seam = "product-libraries"
 
 [[crate.dependency]]
@@ -3158,7 +3422,7 @@ seam = "product-libraries"
 [[crate.dependency]]
 package = "vyre-libs-graph"
 purpose = "graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort"
-features = []
+features = ["analysis"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
@@ -3254,7 +3518,7 @@ seam = "product-libraries"
 [[crate.dependency]]
 package = "vyre-libs-graph"
 purpose = "graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort"
-features = []
+features = ["reasoning"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false

@@ -4,8 +4,8 @@
 schema_version = 1
 
 [summary]
-total_crates = 35
-total_gates = 147
+total_crates = 57
+total_gates = 150
 evaluated_axes = 22
 overall_verdict = "qualified"
 
@@ -24,7 +24,7 @@ status = "qualified"
 name = "vyre"
 path = "vyre"
 tier = "core"
-public_api_symbols = 42
+public_api_symbols = 185
 testing_guide_present = true
 gate_count = 12
 axes_passed = 22
@@ -46,7 +46,7 @@ status = "qualified"
 name = "vyre-aot"
 path = "vyre-aot"
 tier = "middleware"
-public_api_symbols = 83
+public_api_symbols = 85
 testing_guide_present = true
 gate_count = 3
 axes_passed = 22
@@ -90,7 +90,7 @@ status = "qualified"
 name = "vyre-debug"
 path = "vyre-debug"
 tier = "middleware"
-public_api_symbols = 163
+public_api_symbols = 273
 testing_guide_present = true
 gate_count = 3
 axes_passed = 22
@@ -101,7 +101,7 @@ status = "qualified"
 name = "vyre-driver"
 path = "vyre-driver"
 tier = "driver"
-public_api_symbols = 2674
+public_api_symbols = 2702
 testing_guide_present = true
 gate_count = 4
 axes_passed = 22
@@ -112,7 +112,7 @@ status = "qualified"
 name = "vyre-driver-cuda"
 path = "vyre-driver-cuda"
 tier = "driver"
-public_api_symbols = 1065
+public_api_symbols = 1053
 testing_guide_present = true
 gate_count = 4
 axes_passed = 22
@@ -123,7 +123,7 @@ status = "qualified"
 name = "vyre-driver-metal"
 path = "vyre-driver-metal"
 tier = "driver"
-public_api_symbols = 5
+public_api_symbols = 56
 testing_guide_present = true
 gate_count = 3
 axes_passed = 22
@@ -134,7 +134,7 @@ status = "qualified"
 name = "vyre-driver-reference"
 path = "vyre-driver-reference"
 tier = "driver"
-public_api_symbols = 12
+public_api_symbols = 10
 testing_guide_present = true
 gate_count = 3
 axes_passed = 22
@@ -145,7 +145,7 @@ status = "qualified"
 name = "vyre-driver-spirv"
 path = "vyre-driver-spirv"
 tier = "driver"
-public_api_symbols = 34
+public_api_symbols = 35
 testing_guide_present = true
 gate_count = 3
 axes_passed = 22
@@ -156,7 +156,7 @@ status = "qualified"
 name = "vyre-driver-wgpu"
 path = "vyre-driver-wgpu"
 tier = "driver"
-public_api_symbols = 497
+public_api_symbols = 550
 testing_guide_present = true
 gate_count = 4
 axes_passed = 22
@@ -189,7 +189,7 @@ status = "qualified"
 name = "vyre-emit-ptx"
 path = "vyre-emit-ptx"
 tier = "emitter"
-public_api_symbols = 209
+public_api_symbols = 211
 testing_guide_present = true
 gate_count = 3
 axes_passed = 22
@@ -211,7 +211,7 @@ status = "qualified"
 name = "vyre-foundation"
 path = "vyre-foundation"
 tier = "core"
-public_api_symbols = 7724
+public_api_symbols = 9379
 testing_guide_present = true
 gate_count = 5
 axes_passed = 22
@@ -222,8 +222,250 @@ status = "qualified"
 name = "vyre-libs"
 path = "vyre-libs"
 tier = "middleware"
-public_api_symbols = 4709
+public_api_symbols = 45
 testing_guide_present = true
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-analysis"
+path = "vyre-libs-analysis"
+tier = "middleware"
+public_api_symbols = 111
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-bitset"
+path = "vyre-libs-bitset"
+tier = "middleware"
+public_api_symbols = 171
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-builder"
+path = "vyre-libs-builder"
+tier = "middleware"
+public_api_symbols = 935
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-decode"
+path = "vyre-libs-decode"
+tier = "middleware"
+public_api_symbols = 97
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-device"
+path = "vyre-libs-device"
+tier = "middleware"
+public_api_symbols = 139
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-encoding"
+path = "vyre-libs-encoding"
+tier = "middleware"
+public_api_symbols = 129
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-fixpoint"
+path = "vyre-libs-fixpoint"
+tier = "middleware"
+public_api_symbols = 41
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-graph"
+path = "vyre-libs-graph"
+tier = "middleware"
+public_api_symbols = 0
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-hash"
+path = "vyre-libs-hash"
+tier = "middleware"
+public_api_symbols = 0
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-math"
+path = "vyre-libs-math"
+tier = "middleware"
+public_api_symbols = 0
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-nn"
+path = "vyre-libs-nn"
+tier = "middleware"
+public_api_symbols = 0
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-parsing"
+path = "vyre-libs-parsing"
+tier = "middleware"
+public_api_symbols = 0
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-pattern"
+path = "vyre-libs-pattern"
+tier = "middleware"
+public_api_symbols = 0
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-reasoning"
+path = "vyre-libs-reasoning"
+tier = "middleware"
+public_api_symbols = 0
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-reduce"
+path = "vyre-libs-reduce"
+tier = "middleware"
+public_api_symbols = 0
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-rule"
+path = "vyre-libs-rule"
+tier = "middleware"
+public_api_symbols = 0
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-scheduling"
+path = "vyre-libs-scheduling"
+tier = "middleware"
+public_api_symbols = 0
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-security"
+path = "vyre-libs-security"
+tier = "middleware"
+public_api_symbols = 0
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-solvers"
+path = "vyre-libs-solvers"
+tier = "middleware"
+public_api_symbols = 0
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-text"
+path = "vyre-libs-text"
+tier = "middleware"
+public_api_symbols = 0
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-vfs"
+path = "vyre-libs-vfs"
+tier = "middleware"
+public_api_symbols = 0
+testing_guide_present = false
+gate_count = 3
+axes_passed = 22
+axes_total = 22
+status = "qualified"
+
+[[crate]]
+name = "vyre-libs-visual"
+path = "vyre-libs-visual"
+tier = "middleware"
+public_api_symbols = 0
+testing_guide_present = false
 gate_count = 3
 axes_passed = 22
 axes_total = 22
@@ -244,7 +486,7 @@ status = "qualified"
 name = "vyre-lower"
 path = "vyre-lower"
 tier = "middleware"
-public_api_symbols = 1307
+public_api_symbols = 1349
 testing_guide_present = true
 gate_count = 3
 axes_passed = 22
@@ -255,7 +497,7 @@ status = "qualified"
 name = "vyre-macros"
 path = "vyre-macros"
 tier = "middleware"
-public_api_symbols = 3
+public_api_symbols = 4
 testing_guide_present = true
 gate_count = 3
 axes_passed = 22
@@ -266,7 +508,7 @@ status = "qualified"
 name = "vyre-megakernel"
 path = "vyre-megakernel"
 tier = "middleware"
-public_api_symbols = 1330
+public_api_symbols = 1335
 testing_guide_present = true
 gate_count = 3
 axes_passed = 22
@@ -299,7 +541,7 @@ status = "qualified"
 name = "vyre-reference"
 path = "vyre-reference"
 tier = "middleware"
-public_api_symbols = 1183
+public_api_symbols = 1395
 testing_guide_present = true
 gate_count = 3
 axes_passed = 22
@@ -321,7 +563,7 @@ status = "qualified"
 name = "vyre-runtime"
 path = "vyre-runtime"
 tier = "middleware"
-public_api_symbols = 2631
+public_api_symbols = 2965
 testing_guide_present = true
 gate_count = 3
 axes_passed = 22
@@ -332,7 +574,7 @@ status = "qualified"
 name = "vyre-safetensors"
 path = "vyre-safetensors"
 tier = "middleware"
-public_api_symbols = 128
+public_api_symbols = 174
 testing_guide_present = true
 gate_count = 3
 axes_passed = 22
@@ -343,7 +585,7 @@ status = "qualified"
 name = "vyre-spec"
 path = "vyre-spec"
 tier = "core"
-public_api_symbols = 1260
+public_api_symbols = 2198
 testing_guide_present = true
 gate_count = 4
 axes_passed = 22
@@ -367,7 +609,7 @@ path = "xtask"
 tier = "tooling"
 public_api_symbols = 0
 testing_guide_present = true
-gate_count = 147
+gate_count = 150
 axes_passed = 22
 axes_total = 22
 status = "qualified"
@@ -389,7 +631,7 @@ path = "xtask-registry"
 tier = "tooling"
 public_api_symbols = 0
 testing_guide_present = true
-gate_count = 36
+gate_count = 38
 axes_passed = 22
 axes_total = 22
 status = "qualified"

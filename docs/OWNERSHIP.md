@@ -181,17 +181,15 @@ Own pure PTX target compilation, native device acquisition, materialization, dis
 - Owner: `cuda-driver`
 - Layer: `concrete-backend`
 - Publication class: `concrete-backend`
-- Internal production dependencies: `vyre-driver`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`
+- Internal production dependencies: `vyre-driver`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `public` | `backend-contract` |
 | `vyre-emit-ptx` | primary binary backend text emission | `private` | `primary-binary-emitter` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
-| `vyre-libs` | composition trees the CUDA adapters plan against | `private` | `product-libraries` |
 | `vyre-lower` | verified backend-neutral representation lowering | `private` | `lowering` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `private` | `megakernel-compiler` |
-| `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | `public` | `pass-engine` |
 
 ### `vyre-driver-metal`
 
@@ -254,17 +252,15 @@ Own pure WGSL target compilation, portable GPU acquisition, materialization, dis
 - Owner: `portable-driver`
 - Layer: `concrete-backend`
 - Publication class: `concrete-backend`
-- Internal production dependencies: `vyre-driver`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-spec`
+- Internal production dependencies: `vyre-driver`, `vyre-emit-naga`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `public` | `backend-contract` |
 | `vyre-emit-naga` | primary text and related binary emission | `private` | `primary-text-emitter` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
-| `vyre-libs` | composition trees the portable adapters plan against | `private` | `product-libraries` |
 | `vyre-lower` | verified backend-neutral representation lowering | `private` | `lowering` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `private` | `megakernel-compiler` |
-| `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | `public` | `pass-engine` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
 
 ### `vyre-emit-metal`
@@ -352,11 +348,479 @@ Own every composition in the workspace: consumer dialects and compiler-internal 
 - Owner: `product-libraries`
 - Layer: `libraries`
 - Publication class: `stable-consumer-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-analysis`, `vyre-libs-bitset`, `vyre-libs-builder`, `vyre-libs-decode`, `vyre-libs-device`, `vyre-libs-encoding`, `vyre-libs-fixpoint`, `vyre-libs-graph`, `vyre-libs-hash`, `vyre-libs-math`, `vyre-libs-nn`, `vyre-libs-parsing`, `vyre-libs-pattern`, `vyre-libs-reasoning`, `vyre-libs-reduce`, `vyre-libs-rule`, `vyre-libs-scheduling`, `vyre-libs-security`, `vyre-libs-solvers`, `vyre-libs-text`, `vyre-libs-vfs`, `vyre-libs-visual`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-analysis` | compiler-internal static analysis, cost model, and dataflow fixpoint compositions | `public` | `product-libraries` |
+| `vyre-libs-bitset` | packed bitset word operations and logical bitwise compositions | `public` | `product-libraries` |
+| `vyre-libs-builder` | shared IR composition infrastructure and registration link anchors | `public` | `product-libraries` |
+| `vyre-libs-decode` | Base64, hex, DEFLATE, and encodex decoding compositions | `public` | `product-libraries` |
+| `vyre-libs-device` | compiler-internal device boundary and resident layout compositions | `public` | `product-libraries` |
+| `vyre-libs-encoding` | compiler-internal provenance, matroid, and fingerprint encoding compositions | `public` | `product-libraries` |
+| `vyre-libs-fixpoint` | deterministic fixpoint iteration and grid synchronization compositions | `public` | `product-libraries` |
+| `vyre-libs-graph` | graph traversal, dominator, and topological sorting compositions | `public` | `product-libraries` |
+| `vyre-libs-hash` | hash and checksum compositions | `public` | `product-libraries` |
+| `vyre-libs-math` | linear algebra, scan, and geometric algebra compositions | `public` | `product-libraries` |
+| `vyre-libs-nn` | neural activation, attention, and mixture-of-experts compositions | `public` | `product-libraries` |
+| `vyre-libs-parsing` | lexer driver and LR(1) table walker compositions | `public` | `product-libraries` |
+| `vyre-libs-pattern` | substring, DFA, NFA, and regular expression scanning compositions | `public` | `product-libraries` |
+| `vyre-libs-reasoning` | compiler-internal logic, causal reasoning, and knowledge compilation compositions | `public` | `product-libraries` |
+| `vyre-libs-reduce` | workgroup reduction tree and prefix scan compositions | `public` | `product-libraries` |
+| `vyre-libs-rule` | detection rule condition operator and formula compositions | `public` | `product-libraries` |
+| `vyre-libs-scheduling` | compiler-internal scheduling, fusion, and batching compositions | `public` | `product-libraries` |
+| `vyre-libs-security` | security taint analysis and label resolver compositions | `public` | `product-libraries` |
+| `vyre-libs-solvers` | compiler-internal numerical solver and autotuning compositions | `public` | `product-libraries` |
+| `vyre-libs-text` | text classification, UTF-8 validation, and line indexing compositions | `public` | `product-libraries` |
+| `vyre-libs-vfs` | virtual filesystem asynchronous block load compositions | `public` | `product-libraries` |
+| `vyre-libs-visual` | visual rendering and compositing effect compositions | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-analysis`
+
+Own compiler-internal static analysis, cost models, dataflow fixpoint routines, and diagnostic aggregation. Does not own pass engine scheduling, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-analysis`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `internal-engine`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-builder`, `vyre-libs-device`, `vyre-libs-fixpoint`, `vyre-libs-graph`, `vyre-libs-math`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-libs-device` | compiler-internal device boundary contracts, memory ownership, and resident graph layout | `public` | `product-libraries` |
+| `vyre-libs-fixpoint` | deterministic fixpoint iteration kernels and grid synchronization barriers | `public` | `product-libraries` |
+| `vyre-libs-graph` | graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort | `public` | `product-libraries` |
+| `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-bitset`
+
+Own packed u32 bitset operations, word utilities, and logical bitwise IR compositions. Does not own reduction tree implementations, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-bitset`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-builder`, `vyre-libs-reduce`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-builder`
+
+Own shared IR composition infrastructure, child region skeletons, operand wrappers, and registration link anchors for library builders. Does not own concrete domain operations, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-builder`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
 - Internal production dependencies: `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-decode`
+
+Own Base64, hex, DEFLATE, and encodex data decoding and decompression IR compositions. Does not own parsing drivers, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-decode`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-builder`, `vyre-libs-pattern`, `vyre-libs-text`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-libs-pattern` | substring matching, DFA, NFA, regex scanning pipelines, and bracket matching | `public` | `product-libraries` |
+| `vyre-libs-text` | text processing, byte classification, UTF-8 validation, and line indexing | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-device`
+
+Own compiler-internal device boundary contracts, memory ownership models, and resident graph layout compositions. Does not own concrete backend implementations or driver dispatch.
+
+- Path: `vyre-libs-device`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `internal-engine`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-builder`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-encoding`
+
+Own compiler-internal bitset, provenance, matroid, and fingerprint encoding compositions. Does not own consumer decoding algorithms, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-encoding`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `internal-engine`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-bitset`, `vyre-libs-builder`, `vyre-libs-device`, `vyre-libs-fixpoint`, `vyre-libs-graph`, `vyre-libs-hash`, `vyre-libs-math`, `vyre-libs-nn`, `vyre-libs-parsing`, `vyre-libs-pattern`, `vyre-libs-reduce`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-bitset` | packed u32 bitset operations, word utilities, and logical bitwise compositions | `public` | `product-libraries` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-libs-device` | compiler-internal device boundary contracts, memory ownership, and resident graph layout | `public` | `product-libraries` |
+| `vyre-libs-fixpoint` | deterministic fixpoint iteration kernels and grid synchronization barriers | `public` | `product-libraries` |
+| `vyre-libs-graph` | graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort | `public` | `product-libraries` |
+| `vyre-libs-hash` | hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3 | `public` | `product-libraries` |
+| `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | `public` | `product-libraries` |
+| `vyre-libs-nn` | neural network activations, linear, normalization, attention, MoE, and LLM inference | `public` | `product-libraries` |
+| `vyre-libs-parsing` | lexer drivers, LR(1) table walkers, and language-specific AST construction kernels | `public` | `product-libraries` |
+| `vyre-libs-pattern` | substring matching, DFA, NFA, regex scanning pipelines, and bracket matching | `public` | `product-libraries` |
+| `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-fixpoint`
+
+Own deterministic fixpoint iteration kernels, routing contracts, and grid synchronization barriers. Does not own domain dataflow analysis, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-fixpoint`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-bitset`, `vyre-libs-builder`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-bitset` | packed u32 bitset operations, word utilities, and logical bitwise compositions | `public` | `product-libraries` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-graph`
+
+Own graph algorithms, CSR traversal, AST walks, dominator trees, and topological sorting IR compositions. Does not own pattern matching engines, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-graph`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-bitset`, `vyre-libs-builder`, `vyre-libs-fixpoint`, `vyre-libs-hash`, `vyre-libs-math`, `vyre-libs-reduce`, `vyre-libs-visual`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-bitset` | packed u32 bitset operations, word utilities, and logical bitwise compositions | `public` | `product-libraries` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-libs-fixpoint` | deterministic fixpoint iteration kernels and grid synchronization barriers | `public` | `product-libraries` |
+| `vyre-libs-hash` | hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3 | `public` | `product-libraries` |
+| `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | `public` | `product-libraries` |
+| `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | `public` | `product-libraries` |
+| `vyre-libs-visual` | interactive graphics compositions the visual dispatch path builds on | `private` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-hash`
+
+Own hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3 IR builders. Does not own security taint logic, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-hash`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-builder`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-math`
+
+Own linear algebra, matrix operations, broadcasting, scans, optimization builders, and geometric algebra IR compositions. Does not own neural network layers, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-math`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-builder`, `vyre-libs-fixpoint`, `vyre-libs-reduce`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-libs-fixpoint` | deterministic fixpoint iteration kernels and grid synchronization barriers | `public` | `product-libraries` |
+| `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-nn`
+
+Own neural network activations, linear transformations, normalization, attention, mixture-of-experts, and language model inference IR compositions. Does not own general matrix kernels, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-nn`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-builder`, `vyre-libs-math`, `vyre-libs-reduce`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | `public` | `product-libraries` |
+| `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-parsing`
+
+Own lexer drivers, LR(1) table walkers, and language-specific AST construction IR compositions. Does not own semantic analysis passes, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-parsing`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-builder`, `vyre-libs-hash`, `vyre-libs-pattern`, `vyre-libs-reduce`, `vyre-libs-text`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-libs-hash` | hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3 | `public` | `product-libraries` |
+| `vyre-libs-pattern` | substring matching, DFA, NFA, regex scanning pipelines, and bracket matching | `public` | `product-libraries` |
+| `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | `public` | `product-libraries` |
+| `vyre-libs-text` | text processing, byte classification, UTF-8 validation, and line indexing | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-pattern`
+
+Own substring matching, DFA, NFA, bracket matching, and regular expression scanning pipeline IR compositions. Does not own token lexing or parser tables, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-pattern`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-bitset`, `vyre-libs-builder`, `vyre-libs-hash`, `vyre-libs-math`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-bitset` | packed u32 bitset operations, word utilities, and logical bitwise compositions | `public` | `product-libraries` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-libs-hash` | checksum compositions the scanning pipeline reuses | `private` | `product-libraries` |
+| `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-reasoning`
+
+Own compiler-internal logic, causal reasoning, categorical rewrites, and knowledge compilation compositions. Does not own cost model evaluation, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-reasoning`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `internal-engine`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-analysis`, `vyre-libs-builder`, `vyre-libs-graph`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-analysis` | compiler-internal static analysis, cost models, dataflow fixpoint, and diagnostics | `public` | `product-libraries` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-libs-graph` | graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-reduce`
+
+Own workgroup reduction trees, atomic scalar reductions, and prefix scan IR compositions. Does not own domain-specific algorithms, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-reduce`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-builder`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-rule`
+
+Own detection rule engine condition operators, formulas, and program evaluation builders. Does not own security predicate solvers, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-rule`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-builder`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-scheduling`
+
+Own compiler-internal scheduling, fusion, batching, and dispatch strategy compositions. Does not own physical lowering, device execution, or runtime lifecycle policy.
+
+- Path: `vyre-libs-scheduling`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `internal-engine`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-builder`, `vyre-libs-device`, `vyre-libs-graph`, `vyre-libs-math`, `vyre-libs-parsing`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-libs-device` | compiler-internal device boundary contracts, memory ownership, and resident graph layout | `public` | `product-libraries` |
+| `vyre-libs-graph` | graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort | `public` | `product-libraries` |
+| `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | `public` | `product-libraries` |
+| `vyre-libs-parsing` | lexer drivers, LR(1) table walkers, and language-specific AST construction kernels | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-security`
+
+Own security taint analysis compositions, predicate evaluators, and label resolver IR builders. Does not own rule engine AST evaluation, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-security`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-bitset`, `vyre-libs-builder`, `vyre-libs-graph`, `vyre-libs-reduce`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-bitset` | packed u32 bitset operations, word utilities, and logical bitwise compositions | `public` | `product-libraries` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-libs-graph` | graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort | `public` | `product-libraries` |
+| `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-solvers`
+
+Own compiler-internal numerical solvers, autotuning routines, and spectral schedule analysis compositions. Does not own schedule search ranking, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-solvers`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `internal-engine`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-bitset`, `vyre-libs-builder`, `vyre-libs-device`, `vyre-libs-fixpoint`, `vyre-libs-graph`, `vyre-libs-math`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-bitset` | packed u32 bitset operations, word utilities, and logical bitwise compositions | `public` | `product-libraries` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-libs-device` | compiler-internal device boundary contracts, memory ownership, and resident graph layout | `public` | `product-libraries` |
+| `vyre-libs-fixpoint` | deterministic fixpoint iteration kernels and grid synchronization barriers | `public` | `product-libraries` |
+| `vyre-libs-graph` | graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort | `public` | `product-libraries` |
+| `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-text`
+
+Own text processing, byte classification, UTF-8 validation, and line indexing IR compositions. Does not own decoding decompression algorithms, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-text`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-builder`, `vyre-libs-reduce`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-vfs`
+
+Own virtual filesystem DMA asynchronous block load and asset resolution compositions. Does not own host file IO or runtime storage drivers.
+
+- Path: `vyre-libs-vfs`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-builder`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
+
+### `vyre-libs-visual`
+
+Own visual rendering and compositing effects including blur, shadow, blend modes, gradients, and color conversions. Does not own display presentation, backend lowering, or runtime execution.
+
+- Path: `vyre-libs-visual`
+- Owner: `product-libraries`
+- Layer: `libraries`
+- Publication class: `extension-sdk`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs-builder`, `vyre-libs-math`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | `public` | `product-libraries` |
+| `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | `public` | `product-libraries` |
 | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | `public` | `megakernel-compiler` |
 | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
@@ -467,7 +931,7 @@ Own every inventory registry link anchor, report which sources a build links, an
 - Owner: `registry-link`
 - Layer: `registry-link`
 - Publication class: `internal-engine`
-- Internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+- Internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-libs-builder`, `vyre-lower`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -478,6 +942,7 @@ Own every inventory registry link anchor, report which sources a build links, an
 | `vyre-driver-wgpu` | portable backend registration | `private` | `portable-driver` |
 | `vyre-foundation` | operation registry contracts | `private` | `foundation-ir` |
 | `vyre-libs` | product operation registrations | `private` | `product-libraries` |
+| `vyre-libs-builder` | registration link anchors for composed operations | `private` | `product-libraries` |
 | `vyre-lower` | the physical-kernel level-stage registry source | `public` | `lowering` |
 | `vyre-megakernel` | the target-payload level-stage registry source | `public` | `megakernel-compiler` |
 | `vyre-primitives` | primitive operation registrations | `private` | `primitive-library` |
@@ -528,7 +993,7 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 - Owner: `test-support`
 - Layer: `test-tooling`
 - Publication class: `private-test-support`
-- Internal production dependencies: `structure-gate`, `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-reference`, `vyre-spec`
+- Internal production dependencies: `structure-gate`, `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -536,6 +1001,7 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 | `vyre-driver` | the backend-neutral driver registry contract every backend fixture is stated against, behind the driver-contracts feature | `private` | `backend-contract` |
 | `vyre-foundation` | IR statement fixtures for the run-time variant enumeration, behind the ir-fixtures feature | `private` | `foundation-ir` |
 | `vyre-megakernel` | the semantic execution request every backend contract shares, behind the semantic-requests feature | `private` | `megakernel-compiler` |
+| `vyre-primitives` | wire encoding for fixture payload construction | `private` | `primitive-library` |
 | `vyre-reference` | reference interpreter oracle evaluation and canonical ULP distance calculation for the differential execution matrix, behind the ir-fixtures feature | `private` | `reference-semantics` |
 | `vyre-spec` | DataType and declared operation signatures for fixture tables, without gating a leaf crate behind ir-fixtures | `private` | `specification` |
 
