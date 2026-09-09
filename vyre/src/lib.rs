@@ -112,6 +112,13 @@ pub use vyre_foundation::validate::validate;
 
 /// Domain-neutral tagged byte range shared by source-processing products.
 pub use vyre_foundation::match_result::ByteRange;
+
+/// Typed configuration schema, precedence resolution, and credential secrecy.
+pub use vyre_foundation::{
+    render_cli_help, render_configuration_reference_markdown, ConfigFieldDef, ConfigLayer,
+    ConfigMutability, ConfigPartition, ConfigSecrecy, ConfigType, ConfigValue, IdentityImpact,
+    ResolvedConfiguration, CANONICAL_CONFIG_FIELDS,
+};
 #[cfg(test)]
 mod tests {
     // Both cases that call this are feature-selected, so a default build links
