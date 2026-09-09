@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with H through P.
-pub const GATES_H_P: [GateDescriptor; 60] = [
+pub const GATES_H_P: [GateDescriptor; 61] = [
     GateDescriptor {
         name: "heuristic-audit",
         help: "Enforce heuristic-audit contracts",
