@@ -1,0 +1,203 @@
+#[non_exhaustive] pub enum vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::PackError
+impl vyre_libs_parsing::parsing::lr_tables::Action
+impl vyre_libs_parsing::parsing::lr_tables::LrTables
+impl vyre_libs_parsing::parsing::source_cache::SourceHash
+impl<T> vyre_libs_parsing::parsing::source_cache::ParsedSourceLru<T>
+pub const fn vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::packed_dispatch_table_len(entries_len: usize) -> usize
+pub const fn vyre_libs_parsing::parsing::lr_tables::Action::pack(self) -> u32
+pub const fn vyre_libs_parsing::parsing::lr_tables::Action::unpack(word: u32) -> Self
+pub const vyre_libs_parsing::parsing::ast_cse_constant_fold::OP_ID: &str
+pub const vyre_libs_parsing::parsing::ast_cse_structural_hash::AST_CSE_HASH_PROBE_OP_ID: &str
+pub const vyre_libs_parsing::parsing::ast_cse_structural_hash::OP_ID: &str
+pub const vyre_libs_parsing::parsing::ast_ops::AST_ADD: u32
+pub const vyre_libs_parsing::parsing::ast_ops::AST_ASSIGN: u32
+pub const vyre_libs_parsing::parsing::ast_ops::AST_CONST_INT: u32
+pub const vyre_libs_parsing::parsing::ast_ops::AST_MUL: u32
+pub const vyre_libs_parsing::parsing::ast_ops::AST_PTR_DEREF: u32
+pub const vyre_libs_parsing::parsing::ast_ops::AST_VAR: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_ADD: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_ASSIGN: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_CALL: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_CAST: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_CONST_INT: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_DIV: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_EQ: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_GE: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_GT: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_IF: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_LE: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_LOGICAL_AND: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_LOGICAL_OR: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_LT: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_MOD: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_MUL: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_NE: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_PTR_DEREF: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_RET: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_SUB: u32
+pub const vyre_libs_parsing::parsing::core::ast::node::AST_VAR: u32
+pub const vyre_libs_parsing::parsing::core::ast::shunting::AST_SHUNTING_YARD_REDUCE_OP_ID: &str
+pub const vyre_libs_parsing::parsing::core::ast::shunting::OP_ID: &str
+pub const vyre_libs_parsing::parsing::core_delimiter_match::OP_ID: &str
+pub const vyre_libs_parsing::parsing::go::parse::structure::GO_DECL_FUNC: u32
+pub const vyre_libs_parsing::parsing::go::parse::structure::GO_DECL_INTERFACE: u32
+pub const vyre_libs_parsing::parsing::go::parse::structure::GO_DECL_METHOD: u32
+pub const vyre_libs_parsing::parsing::go::parse::structure::GO_DECL_RECORD_WORDS: u32
+pub const vyre_libs_parsing::parsing::go::parse::structure::GO_SPAN_RECORD_WORDS: u32
+pub const vyre_libs_parsing::parsing::line_splice_classify::BINDING_BYTES_IN: u32
+pub const vyre_libs_parsing::parsing::line_splice_classify::BINDING_KEPT_MASK_OUT: u32
+pub const vyre_libs_parsing::parsing::line_splice_classify::LINE_SPLICE_CLASSIFY_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_parsing::parsing::line_splice_classify::OP_ID: &str
+pub const vyre_libs_parsing::parsing::lr_tables::NT_E: u32
+pub const vyre_libs_parsing::parsing::lr_tables::NT_F: u32
+pub const vyre_libs_parsing::parsing::lr_tables::NT_T: u32
+pub const vyre_libs_parsing::parsing::planar_rewrite::OP_ID: &str
+pub const vyre_libs_parsing::parsing::planar_rewrite::PLANAR_REWRITE_EXCLUSION_CHECK_OP_ID: &str
+pub const vyre_libs_parsing::parsing::ssa_dominance_scan::OP_ID: &str
+pub const vyre_libs_parsing::parsing::whitespace_classify_word::BINDING_BYTES_IN: u32
+pub const vyre_libs_parsing::parsing::whitespace_classify_word::BINDING_WHITESPACE_MASK_OUT: u32
+pub const vyre_libs_parsing::parsing::whitespace_classify_word::OP_ID: &str
+pub const vyre_libs_parsing::parsing::whitespace_classify_word::WHITESPACE_CLASSIFY_WORD_WORKGROUP_SIZE: [u32; 3]
+pub enum vyre_libs_parsing::parsing::ast_cse_structural_hash::SlotAccess
+pub enum vyre_libs_parsing::parsing::lr_tables::Action
+pub fn vyre_libs_parsing::link_anchor()
+pub fn vyre_libs_parsing::parsing::ast_cse_constant_fold::ast_cse_constant_fold(ast_opcodes: &str, ast_lefts: &str, ast_rights: &str, ast_vals: &str, out_modified_flag: &str, t: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_parsing::parsing::ast_cse_structural_hash::ast_cse_hash_probe_body(ast_opcodes: &str, ast_vals: &str, hash_set: &str, hash_set_capacity: u32, out_modified_flag: &str, node_idx: vyre_foundation::ir_inner::model::generated::Expr, h: vyre_foundation::ir_inner::model::generated::Expr, slot_init: vyre_foundation::ir_inner::model::generated::Expr, access: vyre_libs_parsing::parsing::ast_cse_structural_hash::SlotAccess) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_parsing::parsing::ast_cse_structural_hash::ast_cse_hash_probe_program(hash_set_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::ast_cse_structural_hash::ast_cse_structural_hash(ast_opcodes: &str, ast_lefts: &str, ast_rights: &str, ast_vals: &str, hash_set: &str, hash_set_capacity: u32, out_modified_flag: &str, t: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_parsing::parsing::ast_cse_structural_hash::ast_cse_structural_hash_program(num_nodes: u32, hash_set_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::pack_dispatch_table(entries: &[vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::OpcodeHandlerEntry]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::PackError>
+pub fn vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::pack_dispatch_table_into(entries: &[vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::OpcodeHandlerEntry], out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::PackError>
+pub fn vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::pack_entry(entry: vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::OpcodeHandlerEntry) -> u32
+pub fn vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::unpack_entry(packed: u32) -> vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::OpcodeHandlerEntry
+pub fn vyre_libs_parsing::parsing::core::ast::binding::ast_binding_strength(tok_types: &str, out_depths: &str, out_strengths: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::core::ast::blocks::ast_cfg_blocks(tok_types: &str, _out_scope_parents: &str, statements: &str, num_statements: vyre_foundation::ir_inner::model::generated::Expr, out_block_headers: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::core::ast::shunting::ast_shunting_yard(tok_types: &str, statements: &str, num_statements: vyre_foundation::ir_inner::model::generated::Expr, out_ast_nodes: &str, out_ast_count: &str, out_statement_roots: &str, scratch_val_stack: &str, scratch_op_stack: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::core::ast::shunting::ast_shunting_yard_reduce_program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::core::ast::shunting::ast_shunting_yard_with_capacity(tok_types: &str, statements: &str, num_statements: vyre_foundation::ir_inner::model::generated::Expr, out_ast_nodes: &str, out_ast_count: &str, out_statement_roots: &str, scratch_val_stack: &str, scratch_op_stack: &str, token_capacity: u32, statement_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::core_delimiter_match::core_delimiter_match(tok_types: &str, tok_depths: &str, tok_count: u32, open_tok_id: u32, close_tok_id: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::go::lex::go_compact_tokens(sparse_types: &str, sparse_starts: &str, sparse_lens: &str, emit_flags: &str, emit_offsets: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::go::lex::go_lexer(haystack: &str, quote_ranks: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_emit_flags: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::go::lex::go_quote_flags(haystack: &str, out_quote_flags: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::go::lex::go_scan_emit_flags(emit_flags: &str, emit_offsets: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::go::lex::go_scan_quote_flags(quote_flags: &str, quote_ranks: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::go::parse::ast_ops::go_extract_channel_creations(tok_types: &str, tok_starts: &str, tok_lens: &str, haystack: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_ops: &str, out_counts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::go::parse::ast_ops::go_extract_channel_receives(tok_types: &str, tok_starts: &str, tok_lens: &str, haystack: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_ops: &str, out_counts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::go::parse::ast_ops::go_extract_channel_sends(tok_types: &str, tok_starts: &str, tok_lens: &str, haystack: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_ops: &str, out_counts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::go::parse::ast_ops::go_extract_defer_calls(tok_types: &str, tok_starts: &str, tok_lens: &str, haystack: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_calls: &str, out_counts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::go::parse::ast_ops::go_extract_goroutine_calls(tok_types: &str, tok_starts: &str, tok_lens: &str, haystack: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_calls: &str, out_counts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::go::parse::structure::go_extract_declarations(tok_types: &str, tok_starts: &str, tok_lens: &str, haystack: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_decls: &str, out_decl_counts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::go::parse::structure::go_extract_packages_and_imports(tok_types: &str, tok_starts: &str, tok_lens: &str, haystack: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr, out_packages: &str, out_package_counts: &str, out_imports: &str, out_import_counts: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::line_splice_classify::line_splice_classify(byte_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::line_splice_classify::line_splice_classify_u8(byte_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::lr_tables::LrTables::action_at(&self, state: u32, token: u32) -> vyre_libs_parsing::parsing::lr_tables::Action
+pub fn vyre_libs_parsing::parsing::lr_tables::LrTables::goto_at(&self, state: u32, nt: u32) -> u32
+pub fn vyre_libs_parsing::parsing::parallel_parse::parse_corpus_parallel<T, F>(sources: &[(alloc::vec::Vec<u8>, alloc::vec::Vec<u8>)], cache: &vyre_libs_parsing::parsing::source_cache::ParsedSourceLru<T>, parse: F) -> alloc::vec::Vec<alloc::sync::Arc<T>> where T: core::marker::Send + core::marker::Sync, F: core::ops::function::Fn(&[u8]) -> T + core::marker::Sync
+pub fn vyre_libs_parsing::parsing::planar_rewrite::planar_rewrite_exclusion_check_body(chosen: &str, w: u32, k: u32, r: vyre_foundation::ir_inner::model::generated::Expr, c: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_parsing::parsing::planar_rewrite::planar_rewrite_exclusion_check_program(w: u32, k: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::planar_rewrite::planar_rewrite_schedule(candidates: &str, chosen: &str, h: u32, w: u32, k: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::python::lex::python312_lexer(haystack: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::python::parse::calls::python312_extract_calls(tok_types: &str, tok_starts: &str, tok_lens: &str, out_calls: &str, out_call_counts: &str, out_kwargs: &str, out_kw_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::python::parse::decorators::python312_extract_decorators(tok_types: &str, tok_starts: &str, tok_lens: &str, out_records: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::python::parse::structure::python312_extract_imports(tok_types: &str, tok_starts: &str, tok_lens: &str, out_records: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::python::parse::structure::python312_extract_structure(tok_types: &str, tok_starts: &str, tok_lens: &str, out_records: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::python::parse::structure::python312_extract_with_blocks(tok_types: &str, tok_starts: &str, tok_lens: &str, out_records: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::python::source_cache::get_or_build_python312_pipeline(cache: &vyre_libs_parsing::parsing::python::source_cache::Python312PipelineCache, source: &[u8], extra: &[u8]) -> alloc::sync::Arc<vyre_libs_parsing::parsing::python::source_cache::Python312PipelinePrograms>
+pub fn vyre_libs_parsing::parsing::source_cache::ParsedSourceLru<T>::get(&self, key: vyre_libs_parsing::parsing::source_cache::SourceHash) -> core::option::Option<alloc::sync::Arc<T>>
+pub fn vyre_libs_parsing::parsing::source_cache::ParsedSourceLru<T>::get_or_parse<F>(&self, source: &[u8], extra: &[u8], parse: F) -> alloc::sync::Arc<T> where F: core::ops::function::FnOnce(&[u8]) -> T
+pub fn vyre_libs_parsing::parsing::source_cache::ParsedSourceLru<T>::insert(&self, key: vyre_libs_parsing::parsing::source_cache::SourceHash, value: T) -> alloc::sync::Arc<T>
+pub fn vyre_libs_parsing::parsing::source_cache::ParsedSourceLru<T>::is_empty(&self) -> bool
+pub fn vyre_libs_parsing::parsing::source_cache::ParsedSourceLru<T>::len(&self) -> usize
+pub fn vyre_libs_parsing::parsing::source_cache::ParsedSourceLru<T>::with_capacity(capacity: usize) -> Self
+pub fn vyre_libs_parsing::parsing::source_cache::SourceHash::of(source: &[u8], extra: &[u8]) -> Self
+pub fn vyre_libs_parsing::parsing::source_cache::source_len_u32_nonzero(source: &[u8]) -> u32
+pub fn vyre_libs_parsing::parsing::ssa_dominance_scan::ssa_dominance_scan(ast_opcodes: &str, ast_rights: &str, ast_vals: &str, block_headers: &str, num_nodes: vyre_foundation::ir_inner::model::generated::Expr, out_phi_nodes: &str, out_phi_count: &str, t: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_parsing::parsing::ssa_dominance_scan::ssa_dominance_scan_program(num_nodes: u32, phi_words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_parsing::parsing::whitespace_classify_word::whitespace_classify_word(word_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub mod vyre_libs_parsing
+pub mod vyre_libs_parsing::parsing
+pub mod vyre_libs_parsing::parsing::ast_cse_constant_fold
+pub mod vyre_libs_parsing::parsing::ast_cse_structural_hash
+pub mod vyre_libs_parsing::parsing::ast_ops
+pub mod vyre_libs_parsing::parsing::bytecode_dispatch_table_pack
+pub mod vyre_libs_parsing::parsing::core
+pub mod vyre_libs_parsing::parsing::core::ast
+pub mod vyre_libs_parsing::parsing::core::ast::binding
+pub mod vyre_libs_parsing::parsing::core::ast::blocks
+pub mod vyre_libs_parsing::parsing::core::ast::node
+pub mod vyre_libs_parsing::parsing::core::ast::shunting
+pub mod vyre_libs_parsing::parsing::core_delimiter_match
+pub mod vyre_libs_parsing::parsing::go
+pub mod vyre_libs_parsing::parsing::go::lex
+pub mod vyre_libs_parsing::parsing::go::parse
+pub mod vyre_libs_parsing::parsing::go::parse::ast_ops
+pub mod vyre_libs_parsing::parsing::go::parse::structure
+pub mod vyre_libs_parsing::parsing::line_splice_classify
+pub mod vyre_libs_parsing::parsing::lr_tables
+pub mod vyre_libs_parsing::parsing::parallel_parse
+pub mod vyre_libs_parsing::parsing::planar_rewrite
+pub mod vyre_libs_parsing::parsing::python
+pub mod vyre_libs_parsing::parsing::python::lex
+pub mod vyre_libs_parsing::parsing::python::parse
+pub mod vyre_libs_parsing::parsing::python::parse::calls
+pub mod vyre_libs_parsing::parsing::python::parse::decorators
+pub mod vyre_libs_parsing::parsing::python::parse::structure
+pub mod vyre_libs_parsing::parsing::python::source_cache
+pub mod vyre_libs_parsing::parsing::source_cache
+pub mod vyre_libs_parsing::parsing::ssa_dominance_scan
+pub mod vyre_libs_parsing::parsing::vast
+pub mod vyre_libs_parsing::parsing::whitespace_classify_word
+pub static vyre_libs_parsing::parsing::lr_tables::ACTION_TABLE: &[u32]
+pub static vyre_libs_parsing::parsing::lr_tables::C11_EXPR: vyre_libs_parsing::parsing::lr_tables::LrTables
+pub static vyre_libs_parsing::parsing::lr_tables::GOTO_TABLE: &[u32]
+pub static vyre_libs_parsing::parsing::lr_tables::PRODUCTIONS: &[vyre_libs_parsing::parsing::lr_tables::Production]
+pub struct vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::OpcodeHandlerEntry
+pub struct vyre_libs_parsing::parsing::lr_tables::LrTables
+pub struct vyre_libs_parsing::parsing::lr_tables::Production
+pub struct vyre_libs_parsing::parsing::python::source_cache::Python312PipelinePrograms
+pub struct vyre_libs_parsing::parsing::source_cache::ParsedSourceLru<T>
+pub struct vyre_libs_parsing::parsing::source_cache::SourceHash(pub [u8; 32])
+pub type vyre_libs_parsing::parsing::python::source_cache::Python312PipelineCache = vyre_libs_parsing::parsing::source_cache::ParsedSourceLru<vyre_libs_parsing::parsing::python::source_cache::Python312PipelinePrograms>
+pub use vyre_libs_parsing::parsing::vast::HEADER_LEN
+pub use vyre_libs_parsing::parsing::vast::NODE_STRIDE_U32
+pub use vyre_libs_parsing::parsing::vast::SENTINEL
+pub use vyre_libs_parsing::parsing::vast::VAST_MAGIC
+pub use vyre_libs_parsing::parsing::vast::VAST_VERSION
+pub use vyre_libs_parsing::parsing::vast::VastError
+pub use vyre_libs_parsing::parsing::vast::VastHeader
+pub use vyre_libs_parsing::parsing::vast::VastNode
+pub use vyre_libs_parsing::parsing::vast::pack_spine_vast
+pub use vyre_libs_parsing::parsing::vast::validate_vast
+pub use vyre_libs_parsing::parsing::vast::walk_postorder_indices
+pub use vyre_libs_parsing::parsing::vast::walk_preorder_indices
+pub vyre_libs_parsing::parsing::ast_cse_structural_hash::SlotAccess::Contended
+pub vyre_libs_parsing::parsing::ast_cse_structural_hash::SlotAccess::SingleLane
+pub vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::OpcodeHandlerEntry::control_flow: bool
+pub vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::OpcodeHandlerEntry::handler_arity: u8
+pub vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::OpcodeHandlerEntry::handler_offset: u32
+pub vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::OpcodeHandlerEntry::side_effecting: bool
+pub vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::PackError::Allocation
+pub vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::PackError::Allocation::requested: usize
+pub vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::PackError::Allocation::source: alloc::string::String
+pub vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::PackError::ArityTooLarge
+pub vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::PackError::ArityTooLarge::arity: u8
+pub vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::PackError::ArityTooLarge::opcode: usize
+pub vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::PackError::OffsetTooLarge
+pub vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::PackError::OffsetTooLarge::offset: u32
+pub vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::PackError::OffsetTooLarge::opcode: usize
+pub vyre_libs_parsing::parsing::lr_tables::Action::Accept
+pub vyre_libs_parsing::parsing::lr_tables::Action::Error
+pub vyre_libs_parsing::parsing::lr_tables::Action::Reduce(u32)
+pub vyre_libs_parsing::parsing::lr_tables::Action::Shift(u32)
+pub vyre_libs_parsing::parsing::lr_tables::LrTables::action: &'static [u32]
+pub vyre_libs_parsing::parsing::lr_tables::LrTables::goto: &'static [u32]
+pub vyre_libs_parsing::parsing::lr_tables::LrTables::num_nonterminals: u32
+pub vyre_libs_parsing::parsing::lr_tables::LrTables::num_states: u32
+pub vyre_libs_parsing::parsing::lr_tables::LrTables::num_tokens: u32
+pub vyre_libs_parsing::parsing::lr_tables::LrTables::productions: &'static [vyre_libs_parsing::parsing::lr_tables::Production]
+pub vyre_libs_parsing::parsing::lr_tables::Production::lhs: u32
+pub vyre_libs_parsing::parsing::lr_tables::Production::rhs_len: u32
+pub vyre_libs_parsing::parsing::python::source_cache::Python312PipelinePrograms::calls: vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_libs_parsing::parsing::python::source_cache::Python312PipelinePrograms::imports: vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_libs_parsing::parsing::python::source_cache::Python312PipelinePrograms::lex: vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_libs_parsing::parsing::python::source_cache::Python312PipelinePrograms::structure: vyre_foundation::ir_inner::model::program::definition::Program
