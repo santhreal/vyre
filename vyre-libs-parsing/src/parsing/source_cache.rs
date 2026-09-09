@@ -327,19 +327,34 @@ fn wait_for_in_flight<T>(in_flight: &InFlight<T>) -> Option<Arc<T>> {
         if state.panicked {
             return None;
         }
-        state = in_flight
-            .ready
-            .wait(state)
-            .unwrap_or_else(|error| error.into_inner());
+        state = vyre_foundation::failure_domain::reclaim_poisoned_condvar_wait(
+            &in_flight.ready,
+            &in_flight.state,
+            state,
+            IN_FLIGHT_OWNER,
+            IN_FLIGHT_STATE,
+        );
     }
 }
 
+/// Take one in-flight parse's state, keeping it after a panic.
+///
+/// The state carries the parse result and the terminal `panicked` flag every
+/// waiter is blocked on. Discarding it would leave those waiters with nothing
+/// to observe, so recovery keeps it and clears the poison flag once.
 fn lock_in_flight_state<T>(in_flight: &InFlight<T>) -> MutexGuard<'_, InFlightState<T>> {
-    in_flight
-        .state
-        .lock()
-        .unwrap_or_else(|error| error.into_inner())
+    vyre_foundation::failure_domain::reclaim_poisoned_mutex(
+        &in_flight.state,
+        IN_FLIGHT_OWNER,
+        IN_FLIGHT_STATE,
+    )
 }
+
+/// The subsystem every in-flight poison report in this module names as the owner.
+const IN_FLIGHT_OWNER: &str = "the parsed-source cache";
+
+/// The state every in-flight poison report in this module names.
+const IN_FLIGHT_STATE: &str = "one in-flight parse's result slot";
 
 fn bump_recency<T>(inner: &mut LruInner<T>, key: SourceHash) {
     inner.clock = inner.clock.saturating_add(1);

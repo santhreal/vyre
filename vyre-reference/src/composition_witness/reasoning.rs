@@ -947,15 +947,14 @@ fn match_regex(value: &str, pattern: &str) -> bool {
     use std::sync::{LazyLock, Mutex};
     static CACHE: LazyLock<Mutex<HashMap<String, Option<regex::Regex>>>> =
         LazyLock::new(|| Mutex::new(HashMap::new()));
-    let mut lock = match CACHE.lock() {
-        Ok(guard) => guard,
-        Err(poisoned) => {
-            CACHE.clear_poison();
-            let mut guard = poisoned.into_inner();
-            guard.clear();
-            guard
-        }
-    };
+    // Every entry is recompiled from the pattern it is filed under, so a panic
+    // under the lock costs one recompilation rather than a wrong match.
+    let mut lock = vyre_foundation::failure_domain::govern_mutex_restartable(
+        &CACHE,
+        "the reference composition witness",
+        "the compiled regex memo",
+        HashMap::clear,
+    );
     lock.entry(pattern.to_string())
         .or_insert_with(|| regex::Regex::new(pattern).ok())
         .as_ref()

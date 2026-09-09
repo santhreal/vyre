@@ -9,6 +9,11 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::RwLock;
 
+use vyre_foundation::failure_domain::reclaim_poisoned_write;
+
+/// The subsystem every poison report in this module names as the owner.
+const OWNER: &str = "metal backend external resource registry";
+
 use vyre_driver::{
     AdmittedResourceRecord, DeviceLossInvalidationReport, ExternalMemoryKind, ImageDimensions,
     ImageFormat, ResourceAbiError, ResourcePermittedUsages, ResourceTransitionSchedule,
@@ -284,27 +289,18 @@ impl MetalExternalResourceImporter {
             invalidated_artifacts: Vec::new(),
         };
 
-        let mut map = match self.imported_resources.write() {
-            Ok(g) => g,
-            Err(p) => {
-                self.imported_resources.clear_poison();
-                p.into_inner()
-            }
-        };
-        let mut views = match self.dependent_views.write() {
-            Ok(g) => g,
-            Err(p) => {
-                self.dependent_views.clear_poison();
-                p.into_inner()
-            }
-        };
-        let mut pipelines = match self.dependent_pipelines.write() {
-            Ok(g) => g,
-            Err(p) => {
-                self.dependent_pipelines.clear_poison();
-                p.into_inner()
-            }
-        };
+        let mut map = reclaim_poisoned_write(
+            &self.imported_resources,
+            OWNER,
+            "the imported external resource table",
+        );
+        let mut views =
+            reclaim_poisoned_write(&self.dependent_views, OWNER, "the dependent view index");
+        let mut pipelines = reclaim_poisoned_write(
+            &self.dependent_pipelines,
+            OWNER,
+            "the dependent pipeline index",
+        );
 
         for (res_id, res) in map.iter_mut() {
             res.is_valid = false;

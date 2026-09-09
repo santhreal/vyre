@@ -12,11 +12,25 @@ use vyre_conform_spec::{
     WorkerMode, WorkerReceipt, WorkerRequest, WorkerStatus,
 };
 
+use vyre_foundation::failure_domain::reclaim_poisoned_mutex;
+
 use crate::backend_selection::backend_registration;
 use crate::worker::{current_binary_digest, current_environment_digest, DEFAULT_WORKER_SECRET};
 
 static LEASE_COUNTER: AtomicU64 = AtomicU64::new(1);
 static REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+/// The subsystem every lease poison report names as the owner.
+const OWNER: &str = "the conformance device lease manager";
+
+/// A lease set records devices this process took. Discarding it leaves a lease
+/// held with nothing left to release it, and refusing it forever stops the run
+/// on the first panic in any worker.
+const ACTIVE: &str = "the set of leases currently held";
+
+/// Refusing this set fails open: a device the run quarantined is handed out
+/// again on the next acquisition.
+const QUARANTINED: &str = "the set of quarantined leases";
 
 /// Thread-safe manager for device leases across disposable worker processes.
 #[derive(Debug, Default)]
@@ -37,10 +51,7 @@ impl DeviceLeaseManager {
 
     /// Acquire a unique device lease for the specified backend.
     pub fn acquire_lease(&self, backend_id: &str) -> Result<DeviceLease, String> {
-        let quarantined = self
-            .quarantined_leases
-            .lock()
-            .map_err(|_| "lease manager lock poisoned".to_string())?;
+        let quarantined = reclaim_poisoned_mutex(&self.quarantined_leases, OWNER, QUARANTINED);
 
         let id_num = LEASE_COUNTER.fetch_add(1, Ordering::Relaxed);
         let lease_id = format!("lease-{backend_id}-{id_num:06}");
@@ -53,11 +64,7 @@ impl DeviceLeaseManager {
             return Err(format!("device lease `{lease_id}` is quarantined"));
         }
 
-        let mut active = self
-            .active_leases
-            .lock()
-            .map_err(|_| "lease manager lock poisoned".to_string())?;
-        active.insert(lease_id.clone());
+        reclaim_poisoned_mutex(&self.active_leases, OWNER, ACTIVE).insert(lease_id.clone());
 
         Ok(DeviceLease::new(
             lease_id,
@@ -70,28 +77,20 @@ impl DeviceLeaseManager {
 
     /// Release a device lease after clean execution.
     pub fn release_lease(&self, lease: &DeviceLease) {
-        if let Ok(mut active) = self.active_leases.lock() {
-            active.remove(&lease.lease_id);
-        }
+        reclaim_poisoned_mutex(&self.active_leases, OWNER, ACTIVE).remove(&lease.lease_id);
     }
 
     /// Quarantine a device lease after failure, leak, or driver loss.
     pub fn quarantine_lease(&self, lease: &DeviceLease, _reason: &str) {
-        if let Ok(mut active) = self.active_leases.lock() {
-            active.remove(&lease.lease_id);
-        }
-        if let Ok(mut quarantined) = self.quarantined_leases.lock() {
-            quarantined.insert(lease.lease_id.clone());
-        }
+        reclaim_poisoned_mutex(&self.active_leases, OWNER, ACTIVE).remove(&lease.lease_id);
+        reclaim_poisoned_mutex(&self.quarantined_leases, OWNER, QUARANTINED)
+            .insert(lease.lease_id.clone());
     }
 
     /// Check if a lease ID is quarantined.
     #[must_use]
     pub fn is_quarantined(&self, lease_id: &str) -> bool {
-        self.quarantined_leases
-            .lock()
-            .map(|set| set.contains(lease_id))
-            .unwrap_or(false)
+        reclaim_poisoned_mutex(&self.quarantined_leases, OWNER, QUARANTINED).contains(lease_id)
     }
 }
 

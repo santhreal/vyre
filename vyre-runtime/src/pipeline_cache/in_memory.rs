@@ -38,14 +38,16 @@ impl InMemoryPipelineCache {
     ///
     /// [`RecoveryClass::RestartableFromCanonicalInput`]: vyre_foundation::RecoveryClass::RestartableFromCanonicalInput
     fn lock_shard(shard: &Mutex<InMemoryCacheShard>) -> MutexGuard<'_, InMemoryCacheShard> {
-        vyre_foundation::failure_domain::govern_mutex_restartable(shard,
-        "runtime in-memory pipeline cache",
-        "one cache shard",
-        |shard| {
-            shard.entries.clear();
-            shard.bytes = 0;
-            shard.last_eviction = None;
-        },)
+        vyre_foundation::failure_domain::govern_mutex_restartable(
+            shard,
+            "runtime in-memory pipeline cache",
+            "one cache shard",
+            |shard| {
+                shard.entries.clear();
+                shard.bytes = 0;
+                shard.last_eviction = None;
+            },
+        )
     }
 
     /// Construct an empty cache.

@@ -108,16 +108,15 @@ pub(crate) struct ModuleGlobalsGuard {
 
 impl Drop for ModuleGlobalsGuard {
     fn drop(&mut self) {
-        // Recover the poisoned guard rather than propagating: failing to clear
-        // the flag here would block every future launch on this module, which is
-        // strictly worse than continuing after someone else's panic.
-        let mut busy = match self.gate.busy.lock() {
-            Ok(g) => g,
-            Err(poison) => {
-                self.gate.busy.clear_poison();
-                poison.into_inner()
-            }
-        };
+        // The flag is the lease, and release is what a drop is for: a panic that
+        // left it set would block every future launch on this module, so the
+        // recovery writes the canonical released value rather than refusing.
+        let mut busy = vyre_foundation::failure_domain::govern_mutex_restartable(
+            &self.gate.busy,
+            "cuda module globals gate",
+            "one module's busy flag",
+            |busy| *busy = false,
+        );
         *busy = false;
         drop(busy);
         self.gate.free.notify_one();

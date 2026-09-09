@@ -466,11 +466,17 @@ impl QueryEngine {
         struct StackGuard<'a> {
             stack: &'a Mutex<Vec<QueryKey>>,
         }
-        impl<'a> Drop for StackGuard<'a> {
+        impl Drop for StackGuard<'_> {
             fn drop(&mut self) {
-                if let Ok(mut stack) = self.stack.lock() {
-                    stack.pop();
-                }
+                // Skipping the pop would strand this key on the stack and make
+                // every later query for it report a false cycle, so the pop
+                // happens whether or not a panic poisoned the lock.
+                let mut stack = crate::failure_domain::reclaim_poisoned_mutex(
+                    &self.stack,
+                    "foundation substrate query engine",
+                    "the query cycle stack",
+                );
+                stack.pop();
             }
         }
         let _guard = StackGuard {

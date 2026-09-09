@@ -11,8 +11,8 @@ use std::string::String;
 use std::sync::Mutex;
 
 use vyre_foundation::failure_domain::{
-    reclaim_poisoned_irreplaceable_state, FailureDomain, RecoveryClass, RecoveryDisposition,
-    TypedRecoveryError,
+    reclaim_poisoned_mutex, reclaim_poisoned_mutex_observed, FailureDomain, Reclaimed,
+    RecoveryClass, RecoveryDisposition, TypedRecoveryError,
 };
 
 /// The subsystem every poison report in this module names as the owner.
@@ -91,17 +91,12 @@ impl<T> AtomicGuardedState<T> {
     /// which entry point observes it first, and no later acquisition repeats
     /// the transition over a state a caller has since recovered.
     fn lock_state(&self) -> std::sync::MutexGuard<'_, GuardedState<T>> {
-        let mut recovered = false;
-        let mut guard = reclaim_poisoned_irreplaceable_state(
-            self.inner.lock(),
-            || {
-                recovered = true;
-                self.inner.clear_poison();
-            },
+        let (mut guard, reclaimed) = reclaim_poisoned_mutex_observed(
+            &self.inner,
             OWNER,
             "one atomically guarded state machine",
         );
-        if recovered {
+        if reclaimed == Reclaimed::Once {
             *guard = GuardedState::PoisonedTerminal {
                 domain: self.domain,
                 recovery_class: self.recovery_class,
@@ -232,18 +227,16 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
     ///
     /// Returns error if key is already prepared by a concurrent operation.
     fn lock_committed(&self) -> std::sync::MutexGuard<'_, BTreeMap<K, V>> {
-        reclaim_poisoned_irreplaceable_state(
-            self.committed.lock(),
-            || self.committed.clear_poison(),
+        reclaim_poisoned_mutex(
+            &self.committed,
             OWNER,
             "the prepare-commit journal's committed keys",
         )
     }
 
     fn lock_prepared(&self) -> std::sync::MutexGuard<'_, BTreeMap<K, (PrepareTicket, V)>> {
-        reclaim_poisoned_irreplaceable_state(
-            self.prepared.lock(),
-            || self.prepared.clear_poison(),
+        reclaim_poisoned_mutex(
+            &self.prepared,
             OWNER,
             "the prepare-commit journal's prepared keys",
         )
@@ -438,9 +431,8 @@ impl SupervisedRestartBudget {
     /// Current recorded restart count.
     #[must_use]
     fn lock_restart_count(&self) -> std::sync::MutexGuard<'_, u32> {
-        reclaim_poisoned_irreplaceable_state(
-            self.restart_count.lock(),
-            || self.restart_count.clear_poison(),
+        reclaim_poisoned_mutex(
+            &self.restart_count,
             OWNER,
             "a supervised restart budget's consumed count",
         )

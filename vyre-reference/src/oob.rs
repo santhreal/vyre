@@ -14,6 +14,19 @@ use vyre_foundation::ir::DataType;
 use std::cell::Cell;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
+/// Report a poisoned reference buffer byte lock as an invariant violation.
+///
+/// A poisoned lock means a writer panicked mid-store, leaving the bytes
+/// inconsistent. Recovering them would let the oracle emit corrupt golden
+/// values that the conform gate then trusts as truth, so the unit of work that
+/// reads them ends instead.
+pub(crate) fn poisoned_buffer_byte_lock() -> ! {
+    vyre_foundation::failure_domain::invariant_violation_poison(
+        "the reference oracle",
+        "reference Buffer byte lock",
+    )
+}
+
 /// Count of out-of-bounds accesses the interpreter silently absorbed during one
 /// tracked run (see [`crate::reference_eval_oob_report`]).
 ///
@@ -137,7 +150,7 @@ impl Buffer {
     fn read_bytes(&self) -> RwLockReadGuard<'_, Vec<u8>> {
         self.bytes
             .read()
-            .unwrap_or_else(|_| panic!("reference Buffer byte lock was poisoned"))
+            .unwrap_or_else(|_| poisoned_buffer_byte_lock())
     }
 
     /// Acquire the byte buffer for writing, failing closed on poison (see
@@ -148,7 +161,7 @@ impl Buffer {
     fn write_bytes(&self) -> RwLockWriteGuard<'_, Vec<u8>> {
         self.bytes
             .write()
-            .unwrap_or_else(|_| panic!("reference Buffer byte lock was poisoned"))
+            .unwrap_or_else(|_| poisoned_buffer_byte_lock())
     }
 
     pub(crate) fn len(&self) -> u32 {
@@ -238,12 +251,12 @@ impl Buffer {
         std::sync::Arc::try_unwrap(self.bytes)
             .map(|rw| {
                 rw.into_inner()
-                    .unwrap_or_else(|_| panic!("reference Buffer byte lock was poisoned"))
+                    .unwrap_or_else(|_| poisoned_buffer_byte_lock())
             })
             .unwrap_or_else(|shared| {
                 shared
                     .read()
-                    .unwrap_or_else(|_| panic!("reference Buffer byte lock was poisoned"))
+                    .unwrap_or_else(|_| poisoned_buffer_byte_lock())
                     .clone()
             })
     }

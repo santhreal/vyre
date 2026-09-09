@@ -19,7 +19,16 @@ use std::collections::{BTreeMap, HashSet};
 use std::sync::{LazyLock, RwLock};
 
 use serde::{Deserialize, Serialize};
+use vyre_foundation::failure_domain::{
+    govern_rwlock_read, govern_rwlock_write_restartable, RecoveryClass,
+};
 use vyre_foundation::ir::OpId;
+
+/// The subsystem every poison report in this module names as the owner.
+const OWNER: &str = "driver support certificate registry";
+
+/// The state every poison report in this module names.
+const CERTIFICATE_TABLE: &str = "the backend support certificate table";
 
 /// Schema version for production path support certificates.
 pub const SUPPORT_CERTIFICATE_SCHEMA: u32 = 1;
@@ -278,19 +287,45 @@ impl SupportCertificateRegistry {
     }
 
     /// Register or update a support certificate.
+    ///
+    /// This is the documented recovery for a poisoned table: a certificate is
+    /// proof that a backend lowers an op, a half-written table is not proof, so
+    /// registration discards what a panic left and starts from the certificate
+    /// it was handed. Every discarded entry is re-registered by the backend
+    /// that declared it.
     pub fn register_certificate(&self, cert: SupportCertificate) {
-        if let Ok(mut certs) = self.certificates.write() {
-            certs.insert((cert.backend_id.clone(), cert.op_id.clone()), cert);
-        }
+        let mut certs = govern_rwlock_write_restartable(
+            &self.certificates,
+            OWNER,
+            CERTIFICATE_TABLE,
+            BTreeMap::clear,
+        );
+        certs.insert((cert.backend_id.clone(), cert.op_id.clone()), cert);
     }
 
     /// Evaluate support status for an operation on a backend.
+    ///
+    /// A poisoned table reports unsupported and names the poison, because a
+    /// table a panic left half written proves nothing and reporting it as an
+    /// absent certificate would name a condition this call never observed.
     #[must_use]
     pub fn evaluate_support(&self, backend_id: &str, op_id: &OpId) -> SupportStatus {
-        if let Ok(certs) = self.certificates.read() {
-            if let Some(cert) = certs.get(&(backend_id.to_string(), op_id.clone())) {
-                return cert.evaluate();
+        let certs = match govern_rwlock_read(
+            &self.certificates,
+            OWNER,
+            CERTIFICATE_TABLE,
+            RecoveryClass::RestartableFromCanonicalInput,
+        ) {
+            Ok(certs) => certs,
+            Err(error) => {
+                return SupportStatus::Unsupported {
+                    missing_stage: ProductionPathStage::Validation,
+                    reason: error.to_string(),
+                }
             }
+        };
+        if let Some(cert) = certs.get(&(backend_id.to_string(), op_id.clone())) {
+            return cert.evaluate();
         }
         SupportStatus::Unsupported {
             missing_stage: ProductionPathStage::Validation,
@@ -301,14 +336,23 @@ impl SupportCertificateRegistry {
     }
 
     /// Get all supported operation IDs for a backend (joined from certificates).
+    ///
+    /// A poisoned table yields the empty set: no op is proven supported by a
+    /// table a panic left half written.
     #[must_use]
     pub fn supported_ops_for_backend(&self, backend_id: &str) -> HashSet<OpId> {
         let mut supported = HashSet::new();
-        if let Ok(certs) = self.certificates.read() {
-            for ((b_id, op_id), cert) in certs.iter() {
-                if b_id == backend_id && cert.evaluate().is_supported() {
-                    supported.insert(op_id.clone());
-                }
+        let Ok(certs) = govern_rwlock_read(
+            &self.certificates,
+            OWNER,
+            CERTIFICATE_TABLE,
+            RecoveryClass::RestartableFromCanonicalInput,
+        ) else {
+            return supported;
+        };
+        for ((b_id, op_id), cert) in certs.iter() {
+            if b_id == backend_id && cert.evaluate().is_supported() {
+                supported.insert(op_id.clone());
             }
         }
         supported

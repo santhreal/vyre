@@ -43,16 +43,19 @@ struct StagingBufferPoolInner {
 }
 
 impl StagingBufferPool {
+    /// Take the pool's inner state, discarding retained buffers after a panic.
+    ///
+    /// A retained free buffer is a reuse optimization, not a record: the pool
+    /// allocates a fresh one from the device whenever the free list is empty,
+    /// so discarding a half-written free list costs an allocation and never a
+    /// correct result.
     fn lock_inner(&self) -> MutexGuard<'_, StagingBufferPoolInner> {
-        match self.inner.lock() {
-            Ok(g) => g,
-            Err(p) => {
-                self.inner.clear_poison();
-                let mut inner = p.into_inner();
-                inner.free.clear();
-                inner
-            }
-        }
+        vyre_foundation::failure_domain::govern_mutex_restartable(
+            &self.inner,
+            "wgpu staging buffer pool",
+            "the retained free buffer classes",
+            |inner| inner.free.clear(),
+        )
     }
 
     /// Create an empty staging buffer pool.

@@ -101,7 +101,6 @@ where
     .map_err(|error| as_backend_error(&error, owner, state))
 }
 
-
 /// Take a read lock governed by an explicit failure domain contract.
 pub fn govern_rwlock_read<'a, T>(
     rwlock: &'a RwLock<T>,

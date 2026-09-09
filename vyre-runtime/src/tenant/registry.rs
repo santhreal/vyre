@@ -39,22 +39,26 @@ impl Default for TenantRegistry {
 }
 
 impl TenantRegistry {
+    /// Take the free list, rebuilding it from the live tenant map after a panic.
+    ///
+    /// The list is a derived index: the canonical input is `next_id` and the
+    /// tenant map, so a half-written list is discarded and re-derived rather
+    /// than read.
     fn lock_free_list(&self) -> std::sync::MutexGuard<'_, Vec<u32>> {
-        match self.free_list.lock() {
-            Ok(guard) => guard,
-            Err(poison) => {
-                self.free_list.clear_poison();
-                let mut guard = poison.into_inner();
-                guard.clear();
+        vyre_foundation::failure_domain::govern_mutex_restartable(
+            &self.free_list,
+            "runtime tenant registry",
+            "the retired tenant id free list",
+            |free_list| {
+                free_list.clear();
                 let current_next = self.next_id.load(Ordering::Relaxed);
                 for id in (1..current_next).rev() {
                     if !self.tenants.contains_key(&id) {
-                        guard.push(id);
+                        free_list.push(id);
                     }
                 }
-                guard
-            }
-        }
+            },
+        )
     }
 
     /// Fresh registry with no tenants.

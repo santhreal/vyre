@@ -6,7 +6,9 @@
 
 use core::fmt;
 use std::string::String;
-use std::sync::{Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{
+    Condvar, Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard,
+};
 /// Explicit failure domain identifying which subsystem boundary failed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FailureDomain {
@@ -328,7 +330,7 @@ pub fn reclaim_poisoned_for_teardown<T>(
     }
 }
 
-/// Take poisoned state no owner can rebuild, clearing the poison flag once.
+/// Report that irreplaceable state was read past a panic.
 ///
 /// WHY: discarding this state loses the only record of something the process
 /// already did: an external handle the device still holds, a committed
@@ -336,27 +338,116 @@ pub fn reclaim_poisoned_for_teardown<T>(
 /// a retry repeat a side effect, and both are worse than reading past a panic.
 /// One insertion writes one entry, so a panic leaves entries whole and leaves
 /// only the sequence across them incomplete, which the caller's own state
-/// machine records. Clearing the flag makes one panic cost one recovery instead
-/// of one per acquisition for the life of the process.
+/// machine records.
+fn report_reclaimed(owner: &str, state: &str) {
+    eprintln!(
+        "vyre: {owner} recovered a poisoned lock over {state} and kept it. A thread panicked \
+         while that lock was held. That state names resources this process still owns, so \
+         discarding it would leak them. Fix: report the earlier panic."
+    );
+}
+
+/// Whether an acquisition was the one that read past a panic.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Reclaimed {
+    /// The lock was not poisoned.
+    No,
+    /// This acquisition found the poison flag set and cleared it. Because the
+    /// flag is cleared under the same acquisition, exactly one acquisition ever
+    /// observes this for a given panic, which is what lets an owner run a
+    /// one-time transition here without repeating it.
+    Once,
+}
+
+/// Take a mutex guard over state no owner can rebuild, reporting whether this
+/// acquisition is the one that recovered it.
 ///
-/// `clear_poison` clears the flag on the same lock `acquired` came from, which
-/// is what keeps this one function correct for a `Mutex`, a read guard, and a
-/// write guard alike.
-pub fn reclaim_poisoned_irreplaceable_state<G>(
-    acquired: Result<G, PoisonError<G>>,
-    clear_poison: impl FnOnce(),
+/// The poison flag is cleared here rather than by the caller, so one panic
+/// costs one recovery instead of one per acquisition for the life of the
+/// process, and clearing the flag stays with the record of who accepted the
+/// state and why. See [`report_reclaimed`] for why the state is kept.
+pub fn reclaim_poisoned_mutex_observed<'a, T>(
+    mutex: &'a Mutex<T>,
     owner: &str,
     state: &str,
-) -> G {
-    match acquired {
+) -> (MutexGuard<'a, T>, Reclaimed) {
+    match mutex.lock() {
+        Ok(guard) => (guard, Reclaimed::No),
+        Err(poison) => {
+            report_reclaimed(owner, state);
+            mutex.clear_poison();
+            (poison.into_inner(), Reclaimed::Once)
+        }
+    }
+}
+
+/// Take a mutex guard over state no owner can rebuild.
+///
+/// [`reclaim_poisoned_mutex_observed`] for an owner that runs a one-time
+/// transition when the recovery happens.
+pub fn reclaim_poisoned_mutex<'a, T>(
+    mutex: &'a Mutex<T>,
+    owner: &str,
+    state: &str,
+) -> MutexGuard<'a, T> {
+    reclaim_poisoned_mutex_observed(mutex, owner, state).0
+}
+
+/// Take a read guard over state no owner can rebuild.
+///
+/// The `RwLock` read counterpart of [`reclaim_poisoned_mutex`], so an owner
+/// picks its lock kind without picking a different recovery.
+pub fn reclaim_poisoned_read<'a, T>(
+    rwlock: &'a RwLock<T>,
+    owner: &str,
+    state: &str,
+) -> RwLockReadGuard<'a, T> {
+    match rwlock.read() {
         Ok(guard) => guard,
         Err(poison) => {
-            eprintln!(
-                "vyre: {owner} recovered a poisoned lock over {state} and kept it. A thread \
-                 panicked while that lock was held. That state names resources this process \
-                 still owns, so discarding it would leak them. Fix: report the earlier panic."
-            );
-            clear_poison();
+            report_reclaimed(owner, state);
+            rwlock.clear_poison();
+            poison.into_inner()
+        }
+    }
+}
+
+/// Take a write guard over state no owner can rebuild.
+///
+/// The `RwLock` write counterpart of [`reclaim_poisoned_mutex`], so an owner
+/// picks its lock kind without picking a different recovery.
+pub fn reclaim_poisoned_write<'a, T>(
+    rwlock: &'a RwLock<T>,
+    owner: &str,
+    state: &str,
+) -> RwLockWriteGuard<'a, T> {
+    match rwlock.write() {
+        Ok(guard) => guard,
+        Err(poison) => {
+            report_reclaimed(owner, state);
+            rwlock.clear_poison();
+            poison.into_inner()
+        }
+    }
+}
+
+/// Wait on a condition variable over state no owner can rebuild.
+///
+/// A wait releases the mutex and takes it again, so it observes a panic in
+/// another waiter exactly as an acquisition does. `mutex` is the lock `guard`
+/// came from, which is what the flag is cleared on.
+pub fn reclaim_poisoned_condvar_wait<'a, T>(
+    condvar: &Condvar,
+    mutex: &'a Mutex<T>,
+    guard: MutexGuard<'a, T>,
+    owner: &str,
+    state: &str,
+) -> MutexGuard<'a, T> {
+    match condvar.wait(guard) {
+        Ok(reacquired) => reacquired,
+        Err(poison) => {
+            report_reclaimed(owner, state);
+            mutex.clear_poison();
             poison.into_inner()
         }
     }

@@ -231,17 +231,22 @@ fn expected_fingerprint(root: &Path, base: &str, carrier: &str) -> Result<String
     // Two fixture checkouts can reach the same commit id from the same seeded
     // content, so the tree is part of the identity of an answer about it.
     let key = (root.to_path_buf(), base.to_string(), carrier.to_string());
-    if let Ok(cache) = EXPECTED.lock() {
-        if let Some(expected) = cache.get(&key) {
-            return Ok(expected.clone());
-        }
+    let memo = crate::lock_policy::govern_memo(&EXPECTED, MEMO_OWNER, MEMO_STATE);
+    if let Some(expected) = memo.get(&key) {
+        return Ok(expected.clone());
     }
+    drop(memo);
     let expected = fingerprint_of(base, &changed_between(root, base, carrier)?);
-    if let Ok(mut cache) = EXPECTED.lock() {
-        cache.insert(key, expected.clone());
-    }
+    crate::lock_policy::govern_memo(&EXPECTED, MEMO_OWNER, MEMO_STATE)
+        .insert(key, expected.clone());
     Ok(expected)
 }
+
+/// The subsystem the provenance memo reports as the owner on poison.
+const MEMO_OWNER: &str = "the source provenance checker";
+
+/// The state the provenance memo reports on poison.
+const MEMO_STATE: &str = "the per-pair expected fingerprint memo";
 
 /// The fingerprint text for a base commit and what the source differs from it by.
 fn fingerprint_of(commit: &str, changed: &[ChangedPath]) -> String {
