@@ -17,16 +17,15 @@
 //! the interpreter, and a rule that convicted it would be switched off rather
 //! than obeyed.
 //!
-//! [`EXEMPT_LAYERS`] names the layers that may link one; every other layer in
-//! [`LAYER_ORDER`] ships and is held to the rule. Deriving it that way rather
-//! than listing the shipped layers is what makes a new layer fail closed: it is
-//! subject to the rule the moment `check-tier-deps` learns about it, and nobody
-//! has to remember this file exists.
+//! [`EXEMPT_LAYERS`] names the layers that may link one; every other layer the
+//! architecture manifest declares ships and is held to the rule. Deriving it
+//! that way rather than listing the shipped layers is what makes a new layer
+//! fail closed: it is subject to the rule the moment a `[[layer]]` row exists,
+//! and nobody has to remember this file exists.
 
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use crate::gate::{Finding, GateError, Report};
-use crate::gates::check_tier_deps::LAYER_ORDER;
 use crate::gates::crate_registry::{self, CrateRecord, WorkspaceState};
 use crate::gates::scan::Tree;
 
@@ -46,9 +45,9 @@ const SHIPPED_KIND: &str = "normal";
 /// Layers whose crates exist to test, measure, or register, and are expected to
 /// link a host evaluator.
 ///
-/// Every other layer ships. A layer added to [`LAYER_ORDER`] is therefore held
-/// to the rule until someone decides it belongs here, which is the direction a
-/// default should fail in.
+/// Every other declared layer ships. A layer added to the architecture manifest
+/// is therefore held to the rule until someone decides it belongs here, which
+/// is the direction a default should fail in.
 const EXEMPT_LAYERS: &[&str] = &[
     "standalone-tooling",
     "test-tooling",
@@ -58,37 +57,43 @@ const EXEMPT_LAYERS: &[&str] = &[
 ];
 
 /// Whether a crate in `layer` ends up in a shipped artifact.
-fn ships(layer: &str) -> bool {
-    LAYER_ORDER.contains(&layer) && !EXEMPT_LAYERS.contains(&layer)
+fn ships(layer: &str, declared: &BTreeSet<&str>) -> bool {
+    declared.contains(layer) && !EXEMPT_LAYERS.contains(&layer)
 }
 
 /// Findings for every shipped crate that can reach a host evaluator.
 pub(crate) fn findings(tree: &Tree, report: &mut Report) -> Result<Vec<Finding>, GateError> {
     let records = crate_registry::load_registry(tree, report)?;
     let state = crate_registry::workspace_state(tree)?;
-    Ok(evaluate(&records, &state))
+    let ranks = crate_registry::declared_layer_ranks(tree)?;
+    Ok(evaluate(&records, &state, &ranks))
 }
 
 /// Judge a workspace that has already been read.
 ///
 /// Split from [`findings`] so the rule is testable against a constructed
 /// workspace rather than only against this one.
-fn evaluate(records: &[CrateRecord], state: &WorkspaceState) -> Vec<Finding> {
+fn evaluate(
+    records: &[CrateRecord],
+    state: &WorkspaceState,
+    ranks: &BTreeMap<String, i64>,
+) -> Vec<Finding> {
     let mut findings = Vec::new();
+    let declared: BTreeSet<&str> = ranks.keys().map(String::as_str).collect();
 
     for record in records {
         let layer = record.layer.as_str();
-        if !LAYER_ORDER.contains(&layer) {
+        if !declared.contains(layer) {
             findings.push(Finding::new(
                 format!(
                     "`{}` declares layer `{layer}`, which is not a layer this workspace has",
                     record.package
                 ),
-                "declare a layer LAYER_ORDER names, or add the new layer there and decide in xtask/src/gates/host_oracle_closure.rs whether its crates ship",
+                "declare a layer with a `[[layer]]` row in docs/CRATE_OWNERSHIP.toml, and decide in xtask/src/gates/host_oracle_closure.rs whether its crates ship",
             ));
             continue;
         }
-        if !ships(layer) {
+        if !ships(layer, &declared) {
             continue;
         }
         // A host evaluator is allowed to be one. `vyre-driver-reference` exists
@@ -156,15 +161,38 @@ mod tests {
     use super::*;
     use crate::gates::crate_registry::DependencyUse;
 
+    /// Layer ranks the fixtures are judged against. Names only; the rule reads
+    /// which layers exist, never their order.
+    fn ranks(layers: &[&str]) -> BTreeMap<String, i64> {
+        layers
+            .iter()
+            .enumerate()
+            .map(|(index, name)| ((*name).to_string(), index as i64))
+            .collect()
+    }
+
+    /// The layers the fixtures name, plus every exempt layer.
+    fn fixture_ranks() -> BTreeMap<String, i64> {
+        let mut layers: Vec<&str> = vec![
+            "backend-neutral",
+            "concrete-backend",
+            "libraries",
+            "runtime",
+        ];
+        layers.extend(EXEMPT_LAYERS);
+        ranks(&layers)
+    }
+
     fn record(package: &str, layer: &str) -> CrateRecord {
         CrateRecord {
             package: package.to_string(),
             path: format!("crates/{package}"),
-            owner: "test".to_string(),
             layer: layer.to_string(),
             publication_class: "internal-engine".to_string(),
+            seam: package.to_string(),
+            interface: "a fixture seam".to_string(),
             responsibility: "a fixture".to_string(),
-            dependencies: Vec::new(),
+            facade_exported: false,
         }
     }
 
@@ -188,7 +216,13 @@ mod tests {
             members: Vec::new(),
             paths: BTreeMap::new(),
             dependencies,
+            development: BTreeMap::new(),
         }
+    }
+
+    /// Judge a fixture against the layers the fixtures declare.
+    fn judge(records: &[CrateRecord], state: &WorkspaceState) -> Vec<Finding> {
+        evaluate(records, state, &fixture_ranks())
     }
 
     /// WHY: the direct form of what this rule forbids. A shipped crate naming
@@ -196,7 +230,7 @@ mod tests {
     /// calls.
     #[test]
     fn a_shipped_crate_that_links_the_interpreter_is_reported() {
-        let found = evaluate(
+        let found = judge(
             &[record("vyre-driver", "backend-neutral")],
             &shipped(&[("vyre-driver", "vyre-reference")]),
         );
@@ -211,7 +245,7 @@ mod tests {
     /// rule that only looked at a crate's own manifest would have passed it.
     #[test]
     fn an_indirect_route_to_the_interpreter_is_reported_with_its_path() {
-        let found = evaluate(
+        let found = judge(
             &[
                 record("vyre-runtime", "runtime"),
                 record("vyre-helper", "libraries"),
@@ -235,7 +269,7 @@ mod tests {
     #[test]
     fn an_exempt_layer_and_a_non_shipping_kind_are_both_allowed() {
         assert!(
-            evaluate(
+            judge(
                 &[record("vyre-conform", "conformance")],
                 &shipped(&[("vyre-conform", "vyre-reference")]),
             )
@@ -243,7 +277,7 @@ mod tests {
             "a conformance crate runs the interpreter on purpose"
         );
         assert!(
-            evaluate(
+            judge(
                 &[record("vyre-driver", "backend-neutral")],
                 &graph(&[("vyre-driver", "vyre-reference")], "build"),
             )
@@ -259,7 +293,7 @@ mod tests {
     #[test]
     fn a_host_evaluator_may_link_itself_but_its_dependents_may_not() {
         assert!(
-            evaluate(
+            judge(
                 &[record("vyre-driver-reference", "concrete-backend")],
                 &shipped(&[("vyre-driver-reference", "vyre-reference")]),
             )
@@ -267,7 +301,7 @@ mod tests {
             "a host evaluator is allowed to be one"
         );
 
-        let found = evaluate(
+        let found = judge(
             &[
                 record("vyre-runtime", "runtime"),
                 record("vyre-driver-reference", "concrete-backend"),
@@ -285,12 +319,12 @@ mod tests {
         );
     }
 
-    /// WHY: a layer the workspace does not have is a registry defect, not a
+    /// WHY: a layer no `[[layer]]` row declares is a manifest defect, not a
     /// quiet pass. Waving it through would let a crate opt out of the rule by
     /// declaring a layer nobody recognises.
     #[test]
     fn a_layer_the_workspace_does_not_have_is_reported() {
-        let found = evaluate(
+        let found = judge(
             &[record("vyre-new", "quantum-boundary")],
             &shipped(&[("vyre-new", "vyre-reference")]),
         );
@@ -301,27 +335,38 @@ mod tests {
         );
     }
 
-    /// WHY: the fail-closed direction. A layer added to the roster must be
-    /// held to the rule until someone exempts it, so this asserts the default
-    /// rather than a list that would have to be maintained beside the roster.
+    /// WHY: the fail-closed direction, against the layers this checkout
+    /// actually declares rather than a list beside them. Adding a `[[layer]]`
+    /// row makes its crates shipped, so the new layer is held to the rule until
+    /// someone adds it to [`EXEMPT_LAYERS`]; retiring one that is exempt turns
+    /// this red instead of leaving a dead exemption behind.
     #[test]
     fn a_new_layer_ships_until_it_is_exempted() {
-        for layer in LAYER_ORDER {
+        let tree = Tree::open(&crate::checkout::checkout_root())
+            .expect("Fix: the checkout must be readable");
+        let ranks = crate_registry::declared_layer_ranks(&tree)
+            .expect("Fix: docs/CRATE_OWNERSHIP.toml must declare [[layer]] rows");
+        let declared: BTreeSet<&str> = ranks.keys().map(String::as_str).collect();
+        assert!(
+            !declared.is_empty(),
+            "the architecture manifest declares no layers"
+        );
+        for layer in &declared {
             assert_eq!(
-                ships(layer),
+                ships(layer, &declared),
                 !EXEMPT_LAYERS.contains(layer),
                 "`{layer}` must ship unless it is exempt"
             );
         }
         for layer in EXEMPT_LAYERS {
             assert!(
-                LAYER_ORDER.contains(layer),
-                "`{layer}` is exempted but is not a layer this workspace has"
+                declared.contains(layer),
+                "`{layer}` is exempted and no [[layer]] row declares it"
             );
         }
         assert!(
-            !ships("quantum-boundary"),
-            "an unknown layer is not shipped"
+            !ships("quantum-boundary", &declared),
+            "an undeclared layer is not shipped"
         );
     }
 }
