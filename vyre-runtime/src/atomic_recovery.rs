@@ -10,7 +10,9 @@ use std::format;
 use std::string::String;
 use std::sync::Mutex;
 
-use vyre_foundation::{FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError};
+use vyre_foundation::failure_domain::{
+    FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError,
+};
 
 /// Lifecycle state for an atomic guarded resource.
 #[derive(Clone, Debug, PartialEq)]
