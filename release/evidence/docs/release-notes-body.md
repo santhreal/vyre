@@ -2777,6 +2777,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Operations in vyre-libs no longer publish dispatch-grid functions, fields, or
   constants; a caller below admission lets vyre_driver::infer_dispatch_grid
   derive the launch.
+- Every entry of the production backend registry carries a recorded execution
+  domain, and a registration whose id has no decision fails the closure suite.
+  The rules that claimed to close this route rejected an id whose text
+  contained `ref` or `cpu`, so a host evaluator registered under any other name
+  passed, and the copy in `vyre-driver-reference` ran against an empty registry
+  in a binary that links no driver crate. `vyre-driver-reference` now links the
+  declared drivers in its test graph and decides each registry entry through an
+  exhaustive match with no catch-all arm, so a new backend registration is red
+  until a decision is recorded for it.
 - The borrow-preserving structural `Node` rewrite has one owner,
   `vyre_foundation::transform::rewrite_walk`. Eight sites carried their own
   `match node { .. }` that rebuilt every variant: induction-variable
@@ -4397,6 +4406,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Removed
 
+- The Mac benchmark bundle no longer carries a `cpu-ref` backend report or a
+  `cpu-ref-vs-metal` comparison. A bundle records one timed report per backend
+  and one comparison per pair, so listing the host evaluator measured
+  interpretation against a device and reported the ratio as a benchmark result.
+  The bundle now requires four artifacts: a `wgpu` report, a `metal` report,
+  and the JSON and text sides of the `wgpu-vs-metal` comparison.
 - The scheduler-owned fact cache is gone, along with the `fact_cache_reused`,
   `fact_cache_recomputed` and `fact_cache_invalidated` fields on
   `PassRunMetric` and `PassExplanation`. The scheduler derived a `FactCache`
@@ -4990,6 +5005,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - `graph::dominator_frontier_pred_check` clamps both CSR loop ends to the
   extent of the buffer the loop indexes, so a caller or a fused producer cannot
   ask it for four billion iterations that had nothing to read.
+- The CUB scan measurement parser rejects a line that omits `device`,
+  `compute_capability` or `cub_version`. Typed record decoding marked those
+  three fields `serde(default)`, so a truncated line parsed into an empty
+  device identity, and `architecture()` keyed the compiled-baseline cache
+  directory on that empty string, which let two different devices share one
+  cached binary.
 - Three vyre-bench tests named vyre_driver_cuda, which the crate depends on
   only under cfg(not(target_os = "macos")). The macOS lane failed to resolve
   the crate and the whole benchmark harness stopped compiling there. Each test
@@ -6207,6 +6228,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Variant selection refuses a workload outside the domain the specialization
   contract declares instead of serving it from the generic remainder compiled
   for that domain.
+- The micro benchmark workload pins are taken over the canonicalized buffer
+  roster and node tree instead of `Program::fingerprint`. That fingerprint is
+  blake3 over the canonical wire bytes, whose first framed field is the wire
+  format version, so raising the version from 8 to 9 moved all seven pins at
+  once while no program's meaning moved, and the only answer a wire-digest
+  table admits is copying the new numbers in. The new column is a function of
+  the IR model alone, so a changed operand, a dropped node or a changed ABI
+  moves it and a serialization revision does not.
 - The worktree-lifetime gate's own test resolves the checkout with
   `structure_gate::workspace_root` instead of the manifest directory baked in
   at compile time, so a unit reused across checkouts that share a target

@@ -151,13 +151,6 @@ fn write_report(path: &std::path::Path, report: &ReportSchema) {
 
 fn write_complete_benchmark_bundle(dir: &std::path::Path) {
     std::fs::create_dir_all(dir).expect("test bundle dir should be creatable");
-    let case_id = "foundation.elementwise.add.1m";
-    let mut cpu_ref = report(vec![case_report_with_wall(case_id, 120, 120.0)], 1, 0);
-    cpu_ref.suite = "smoke".to_string();
-    cpu_ref.selected_backend = Some("cpu-ref".to_string());
-    cpu_ref.backend_profile = Some(backend_profile("cpu-ref", "host_only"));
-    write_report(&dir.join("cpu-ref.json"), &cpu_ref);
-
     let (wgpu, metal) = comparison_reports();
     write_report(&dir.join("wgpu.json"), &wgpu);
     write_report(&dir.join("metal.json"), &metal);
@@ -174,18 +167,6 @@ fn write_complete_benchmark_bundle(dir: &std::path::Path) {
         "baseline_backend=wgpu\ncandidate_backend=metal\nbaseline_selected_backend=wgpu baseline_profile_backend=wgpu baseline_timing_quality=host_enqueue_wait\ncandidate_selected_backend=metal candidate_profile_backend=metal candidate_timing_quality=host_enqueue_wait\nfoundation.elementwise.add.1m\ncompare_exit_code=0\n",
     )
     .expect("test comparison text should be writable");
-    let ref_comparison = build_comparison_artifact(&cpu_ref, &metal)
-        .expect("test reference comparison artifact should build");
-    write_comparison_artifact(
-        &ref_comparison,
-        &dir.join("cpu-ref-vs-metal.json").to_string_lossy(),
-    )
-    .expect("test reference comparison artifact should be writable");
-    std::fs::write(
-        dir.join("cpu-ref-vs-metal.txt"),
-        "baseline_backend=cpu-ref\ncandidate_backend=metal\nbaseline_selected_backend=cpu-ref baseline_profile_backend=cpu-ref baseline_timing_quality=host_only\ncandidate_selected_backend=metal candidate_profile_backend=metal candidate_timing_quality=host_enqueue_wait\nfoundation.elementwise.add.1m\ncompare_exit_code=0\n",
-    )
-    .expect("test reference comparison text should be writable");
 }
 
 fn write_manifest_variant<F>(dir: &std::path::Path, label: &str, mutate: F) -> std::path::PathBuf
@@ -287,8 +268,8 @@ fn validate_benchmark_bundle_accepts_complete_mac_gate_artifacts() {
     let _ = std::fs::remove_dir_all(&dir);
 
     assert_eq!(
-        manifest.artifact_count, 7,
-        "Fix: bundle validation should cover three backend reports and two comparison JSON/text pairs."
+        manifest.artifact_count, 4,
+        "Fix: bundle validation should cover two backend reports and one comparison JSON/text pair."
     );
     assert_eq!(manifest.schema, BENCHMARK_BUNDLE_SCHEMA);
     assert_eq!(
@@ -303,11 +284,7 @@ fn validate_benchmark_bundle_accepts_complete_mac_gate_artifacts() {
     assert_eq!(manifest.provenance.case_id, MAC_BENCHMARK_BUNDLE_CASE_ID);
     assert_eq!(
         manifest.provenance.report_backends,
-        vec![
-            "cpu-ref".to_string(),
-            "metal".to_string(),
-            "wgpu".to_string()
-        ]
+        vec!["metal".to_string(), "wgpu".to_string()]
     );
     // The expected pair is stated here rather than in the module under test: a
     // constant the production path never reads is an expectation derived from
@@ -316,7 +293,7 @@ fn validate_benchmark_bundle_accepts_complete_mac_gate_artifacts() {
     assert_eq!(manifest.provenance.candidate_backend, "metal");
     assert_eq!(
         manifest.provenance.comparison_pairs,
-        vec!["cpu-ref->metal".to_string(), "wgpu->metal".to_string()]
+        vec!["wgpu->metal".to_string()]
     );
     assert_eq!(manifest.provenance.source_fingerprint, "source:unit");
     assert_eq!(manifest.provenance.source_tree_fingerprint, "tree:unit");
@@ -481,10 +458,10 @@ fn validate_benchmark_bundle_rejects_manifest_artifact_set_drift() {
 #[test]
 fn benchmark_bundle_provenance_is_derived_from_report_evidence() {
     let case_id = "custom.case";
-    let mut cpu_ref = report(vec![case_report(case_id, "pass", true)], 1, 0);
-    cpu_ref.suite = "custom-suite".to_string();
-    cpu_ref.selected_backend = Some("cpu-ref".to_string());
-    cpu_ref.backend_profile = Some(backend_profile("cpu-ref", "host_only"));
+    let mut extra = report(vec![case_report(case_id, "pass", true)], 1, 0);
+    extra.suite = "custom-suite".to_string();
+    extra.selected_backend = Some("gamma".to_string());
+    extra.backend_profile = Some(backend_profile("gamma", "host_enqueue_wait"));
     let mut baseline = report(vec![case_report_with_wall(case_id, 100, 100.0)], 1, 0);
     baseline.suite = "custom-suite".to_string();
     baseline.selected_backend = Some("alpha".to_string());
@@ -497,18 +474,14 @@ fn benchmark_bundle_provenance_is_derived_from_report_evidence() {
         .expect("Fix: comparison artifact should build from matching custom cases.");
 
     let provenance =
-        derive_benchmark_bundle_provenance(&[cpu_ref, baseline, candidate], &[comparison])
+        derive_benchmark_bundle_provenance(&[extra, baseline, candidate], &[comparison])
             .expect("Fix: provenance should derive from valid report and comparison evidence.");
 
     assert_eq!(provenance.suite, "custom-suite");
     assert_eq!(provenance.case_id, case_id);
     assert_eq!(
         provenance.report_backends,
-        vec![
-            "alpha".to_string(),
-            "beta".to_string(),
-            "cpu-ref".to_string()
-        ]
+        vec!["alpha".to_string(), "beta".to_string(), "gamma".to_string()]
     );
     assert_eq!(provenance.baseline_backend, "alpha");
     assert_eq!(provenance.candidate_backend, "beta");
@@ -520,10 +493,10 @@ fn benchmark_bundle_provenance_is_derived_from_report_evidence() {
 #[test]
 fn benchmark_bundle_provenance_rejects_mixed_source_reports() {
     let case_id = "custom.case";
-    let mut cpu_ref = report(vec![case_report(case_id, "pass", true)], 1, 0);
-    cpu_ref.suite = "custom-suite".to_string();
-    cpu_ref.selected_backend = Some("cpu-ref".to_string());
-    cpu_ref.backend_profile = Some(backend_profile("cpu-ref", "host_only"));
+    let mut extra = report(vec![case_report(case_id, "pass", true)], 1, 0);
+    extra.suite = "custom-suite".to_string();
+    extra.selected_backend = Some("gamma".to_string());
+    extra.backend_profile = Some(backend_profile("gamma", "host_enqueue_wait"));
     let mut baseline = report(vec![case_report_with_wall(case_id, 100, 100.0)], 1, 0);
     baseline.suite = "custom-suite".to_string();
     baseline.selected_backend = Some("alpha".to_string());
@@ -536,7 +509,7 @@ fn benchmark_bundle_provenance_rejects_mixed_source_reports() {
     let comparison = build_comparison_artifact(&baseline, &candidate)
         .expect("Fix: comparison artifact should build from matching custom cases.");
 
-    let error = derive_benchmark_bundle_provenance(&[cpu_ref, baseline, candidate], &[comparison])
+    let error = derive_benchmark_bundle_provenance(&[extra, baseline, candidate], &[comparison])
         .expect_err("Fix: bundle provenance must reject mixed source-tree evidence.");
     let error = error.to_string();
     assert!(
@@ -964,4 +937,51 @@ fn a_comparison_judged_under_another_band_is_rejected() {
             "Fix: {what} must be refused naming the band or verdict: {error}"
         );
     }
+}
+
+/// Every backend a benchmark bundle carries a report for leaves the host.
+///
+/// WHY: a bundle records one timed report per backend and one comparison per
+/// pair, so a host evaluator listed as a bundle backend is measured as if it
+/// were a device. The decision comes from the production-backend ledger rather
+/// than from a literal in this file, so an id with no recorded decision, or one
+/// recorded as host, turns this red. The comparison table and the required
+/// artifact set are derived from the same two tables, so a host pair cannot be
+/// re-added through the comparison table alone.
+#[test]
+fn every_benchmark_bundle_backend_leaves_the_host() {
+    for &id in BENCHMARK_BUNDLE_BACKENDS {
+        vyre_test_support::backend_execution_domain::assert_dispatch_leaves_the_host(id);
+    }
+    for (_, _, baseline, candidate) in MAC_BENCHMARK_BUNDLE_COMPARISONS {
+        for id in [baseline, candidate] {
+            assert!(
+                BENCHMARK_BUNDLE_BACKENDS.contains(id),
+                "Fix: bundle comparison names backend `{id}`, which carries no bundle report. Add it to BENCHMARK_BUNDLE_BACKENDS or drop the pair."
+            );
+        }
+    }
+    let expected: std::collections::BTreeSet<(String, String)> = BENCHMARK_BUNDLE_BACKENDS
+        .iter()
+        .map(|backend| (format!("{backend}.json"), "backend_report".to_string()))
+        .chain(
+            MAC_BENCHMARK_BUNDLE_COMPARISONS
+                .iter()
+                .flat_map(|(json, text, _, _)| {
+                    [
+                        ((*json).to_string(), "comparison_json".to_string()),
+                        ((*text).to_string(), "comparison_text".to_string()),
+                    ]
+                }),
+        )
+        .collect();
+    let declared: std::collections::BTreeSet<(String, String)> =
+        BENCHMARK_BUNDLE_REQUIRED_ARTIFACTS
+            .iter()
+            .map(|(path, kind)| ((*path).to_string(), (*kind).to_string()))
+            .collect();
+    assert_eq!(
+        declared, expected,
+        "Fix: the required artifact set must be exactly one report per bundle backend plus one JSON/text pair per comparison."
+    );
 }

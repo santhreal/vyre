@@ -25,6 +25,10 @@ pub mod hostile_input_closure_contract;
 #[path = "parity_suite.rs"]
 pub mod parity_suite;
 
+/// Integration tests from `tests/production_registry_execution_domain.rs`.
+#[path = "production_registry_execution_domain.rs"]
+pub mod production_registry_execution_domain;
+
 /// Integration tests from `tests/semantic_execution.rs`.
 #[path = "semantic_execution.rs"]
 pub mod semantic_execution;

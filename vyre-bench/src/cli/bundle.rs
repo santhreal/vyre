@@ -9,23 +9,20 @@ use std::collections::BTreeMap;
 
 pub(super) const BENCHMARK_BUNDLE_SCHEMA: &str = "vyre-bench.bundle.v1";
 pub(super) const MAC_BENCHMARK_BUNDLE_CASE_ID: &str = "foundation.elementwise.add.1m";
-const MAC_BENCHMARK_BUNDLE_COMPARISONS: &[(&str, &str, &str, &str)] = &[
-    ("wgpu-vs-metal.json", "wgpu-vs-metal.txt", "wgpu", "metal"),
-    (
-        "cpu-ref-vs-metal.json",
-        "cpu-ref-vs-metal.txt",
-        "cpu-ref",
-        "metal",
-    ),
-];
-const BENCHMARK_BUNDLE_REQUIRED_ARTIFACTS: &[(&str, &str)] = &[
-    ("cpu-ref.json", "backend_report"),
+/// The backends a bundle carries a report for.
+///
+/// Every entry is a device backend. Nothing in a bundle measures host
+/// interpretation: the reference oracle decides whether a result is correct and
+/// is never a timed side of a comparison, so a host evaluator has no report and
+/// no comparison pair here.
+pub(super) const BENCHMARK_BUNDLE_BACKENDS: &[&str] = &["wgpu", "metal"];
+pub(super) const MAC_BENCHMARK_BUNDLE_COMPARISONS: &[(&str, &str, &str, &str)] =
+    &[("wgpu-vs-metal.json", "wgpu-vs-metal.txt", "wgpu", "metal")];
+pub(super) const BENCHMARK_BUNDLE_REQUIRED_ARTIFACTS: &[(&str, &str)] = &[
     ("wgpu.json", "backend_report"),
     ("metal.json", "backend_report"),
     ("wgpu-vs-metal.json", "comparison_json"),
     ("wgpu-vs-metal.txt", "comparison_text"),
-    ("cpu-ref-vs-metal.json", "comparison_json"),
-    ("cpu-ref-vs-metal.txt", "comparison_text"),
 ];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,13 +71,13 @@ pub(super) fn validate_benchmark_bundle(
     let dir = std::path::Path::new(dir);
     if !dir.is_dir() {
         anyhow::bail!(
-            "benchmark bundle dir `{}` is not a directory. Fix: pass the VYRE_MACBOOK_BENCH_OUTPUT_DIR directory produced by scripts/check_metal_macbook.sh benchmark.",
+            "benchmark bundle dir `{}` is not a directory. Fix: pass the directory the benchmark run wrote its per-backend reports and comparisons into.",
             dir.display()
         );
     }
     let mut artifacts = Vec::new();
     let mut reports = Vec::new();
-    for backend in ["cpu-ref", "wgpu", "metal"] {
+    for &backend in BENCHMARK_BUNDLE_BACKENDS {
         let path = dir.join(format!("{backend}.json"));
         let bytes = read_report_bounded(&path).map_err(|error| {
             anyhow::anyhow!(
@@ -212,7 +209,7 @@ pub(super) fn derive_benchmark_bundle_provenance(
 ) -> anyhow::Result<BenchmarkBundleProvenance> {
     if reports.is_empty() {
         anyhow::bail!(
-            "benchmark bundle has no backend reports. Fix: rerun the benchmark gate so cpu-ref, wgpu, and metal reports are present."
+            "benchmark bundle has no backend reports. Fix: rerun the benchmark gate so a report is present for every backend in BENCHMARK_BUNDLE_BACKENDS."
         );
     }
     if comparisons.is_empty() {
@@ -241,7 +238,7 @@ pub(super) fn derive_benchmark_bundle_provenance(
     case_ids.dedup();
     if case_ids.len() != 1 {
         anyhow::bail!(
-            "benchmark bundle comparison must contain exactly one case for the Mac smoke bundle, got {:?}. Fix: rerun scripts/check_metal_macbook.sh benchmark.",
+            "benchmark bundle comparison must contain exactly one case for the Mac smoke bundle, got {:?}. Fix: rerun the benchmark gate against a single case.",
             case_ids
         );
     }
