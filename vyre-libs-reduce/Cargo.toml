@@ -1,0 +1,43 @@
+[package]
+name = "vyre-libs-reduce"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Workgroup reduction trees, atomic scalar reductions, and prefix scans"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-reduce"
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+
+[lints]
+workspace = true
+
+[features]
+default = ["reduce"]
+reduce = []
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-megakernel.workspace = true
+vyre-spec.workspace = true
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+smallvec.workspace = true
+inventory.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+libm.workspace = true
+rustc-hash.workspace = true
+blake3.workspace = true
+rayon.workspace = true
+vyre-libs-builder = { workspace = true }
+
+[dev-dependencies]
+vyre-primitives = { workspace = true, features = ["hardware"] }

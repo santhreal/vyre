@@ -1,0 +1,45 @@
+[package]
+name = "vyre-libs-decode"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Base64, hex, DEFLATE, and encodex data decoding and decompression compositions"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-decode"
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+
+[lints]
+workspace = true
+
+[features]
+default = ["decode"]
+decode = []
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-megakernel.workspace = true
+vyre-spec.workspace = true
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+smallvec.workspace = true
+inventory.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+libm.workspace = true
+rustc-hash.workspace = true
+blake3.workspace = true
+rayon.workspace = true
+vyre-libs-builder = { workspace = true }
+vyre-libs-pattern = { workspace = true }
+vyre-libs-text = { workspace = true }
+
+[dev-dependencies]
+vyre-primitives = { workspace = true, features = ["hardware"] }

@@ -1,0 +1,55 @@
+[package]
+name = "vyre-libs-math"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-math"
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+
+[lints]
+workspace = true
+
+[features]
+default = ["math"]
+math = ["math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct"]
+"math-dialect" = []
+"math-kernels" = []
+"math-linalg" = ["math-dialect", "math-kernels"]
+"math-scan" = ["math-dialect", "math-kernels"]
+"math-broadcast" = ["math-dialect", "math-kernels"]
+"math-algebra" = ["math-dialect", "math-kernels"]
+"math-succinct" = ["math-dialect", "math-kernels"]
+geom = ["math-kernels"]
+opt = ["math-kernels"]
+representation = []
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-megakernel.workspace = true
+vyre-spec.workspace = true
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+smallvec.workspace = true
+inventory.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+libm.workspace = true
+rustc-hash.workspace = true
+blake3.workspace = true
+rayon.workspace = true
+vyre-libs-builder = { workspace = true }
+vyre-libs-reduce = { workspace = true }
+vyre-libs-fixpoint = { workspace = true }
+
+[dev-dependencies]
+vyre-primitives = { workspace = true, features = ["hardware"] }
