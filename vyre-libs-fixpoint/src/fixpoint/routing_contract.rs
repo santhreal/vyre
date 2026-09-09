@@ -1,7 +1,7 @@
 //! The one assertion of the persistent-fixpoint routing contract.
 //!
 //! Every op that drives a convergence loop through
-//! [`routed_persistent_fixpoint`](super::persistent_fixpoint::routed_persistent_fixpoint)
+//! [`routed_persistent_fixpoint`](crate::fixpoint::persistent_fixpoint::routed_persistent_fixpoint)
 //! inherits the same four obligations, and they are obligations of the ROUTING,
 //! not of the op:
 //!

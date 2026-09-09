@@ -31,6 +31,7 @@ use super::telemetry::{CudaTelemetry, CudaTelemetrySnapshot};
 use crate::device::{CudaDeviceCaps, CudaDeviceHandle};
 
 const TRANSIENT_ALLOCATION_POOL_BYTES: usize = 256 * 1024 * 1024;
+
 const PINNED_HOST_POOL_BYTES: usize = 128 * 1024 * 1024;
 const CUDA_LAUNCH_RESOURCE_CACHE: usize = 128;
 /// A live CUDA backend handle bound to a specific device.

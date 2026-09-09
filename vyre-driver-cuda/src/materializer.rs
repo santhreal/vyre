@@ -160,10 +160,7 @@ impl ResidentInstance for CudaArtifactInstance {
 }
 
 pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
-    let backend = CudaBackend::acquire().map_err(|message| BackendError::DispatchFailed {
-        code: None,
-        message: format!("CUDA artifact device acquisition failed: {message}"),
-    })?;
+    let backend = crate::registration::registered_device()?;
     let device = backend.caps.name.clone();
     Ok(Box::new(CudaMaterializer {
         resident: CudaBackendRegistration {
