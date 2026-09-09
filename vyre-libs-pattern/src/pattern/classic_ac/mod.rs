@@ -63,7 +63,7 @@ pub(crate) use count_program::{
 };
 
 /// THE Aho-Corasick walk lives in [`bounded_ranges`]. Only the state-advance
-/// step is re-exported, for `dfa::aho_corasick`; every other scan-level
+/// step is re-exported, for `dfa::aho_corasick_programs`; every other scan-level
 /// builder reaches `bounded_ranges` directly rather than through a second
 /// path.
 pub(in crate::pattern) use bounded_ranges::ac_advance_state_node;

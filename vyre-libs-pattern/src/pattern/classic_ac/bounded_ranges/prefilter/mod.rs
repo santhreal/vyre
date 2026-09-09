@@ -256,7 +256,7 @@ pub(in crate::pattern) fn gated_ranges_program(
         buffers,
         [128, 1, 1],
         vec![wrap_child_region(
-            crate::pattern::dfa::aho_corasick::OP_ID,
+            crate::pattern::dfa::aho_corasick_programs::OP_ID,
             Ident::from(generator),
             body,
         )],
