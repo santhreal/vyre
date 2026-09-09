@@ -25,16 +25,14 @@ impl core::convert::From<vyre_driver::backend::error::BackendError> for vyre_run
 impl core::convert::From<vyre_megakernel::error::CompileError> for vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl core::convert::From<vyre_runtime::PipelineError> for vyre_foundation::diagnostics::Diagnostic
 impl core::convert::From<vyre_runtime::replay::ReplayLogError> for vyre_runtime::PipelineError
-impl core::convert::From<vyre_spec::resource_capability::ResourceAbiError> for vyre_runtime::external_resource_admission::ExternalAdmissionError
+impl core::convert::From<vyre_spec::resource_capability::ResourceAbiError> for vyre_runtime::ExternalAdmissionError
 impl core::default::Default for vyre_runtime::CacheQuota
-impl core::default::Default for vyre_runtime::CancellationToken
 impl core::default::Default for vyre_runtime::IoQuota
 impl core::default::Default for vyre_runtime::QueueQuota
 impl core::default::Default for vyre_runtime::RetainedGenerationQuota
 impl core::default::Default for vyre_runtime::RetryQuota
 impl core::default::Default for vyre_runtime::SessionQuota
 impl core::default::Default for vyre_runtime::TelemetryQuota
-impl core::default::Default for vyre_runtime::TenantQuota
 impl core::default::Default for vyre_runtime::artifact_admission::InteractiveSessionStateMachine
 impl core::default::Default for vyre_runtime::pipeline_cache::InMemoryPipelineCache
 impl core::default::Default for vyre_runtime::resident_work_queue::advanced::hierarchical_atomics::HitRingBindings
@@ -49,6 +47,8 @@ impl core::default::Default for vyre_runtime::resource_transfer::DeviceTransferC
 impl core::default::Default for vyre_runtime::retained_page_cache::RetainedPageLimits
 impl core::default::Default for vyre_runtime::routed_work_queue::RoutedQueueLimits
 impl core::default::Default for vyre_runtime::speculative_transaction::SpeculativeTransactionConfig
+impl core::default::Default for vyre_runtime::structured_concurrency::CancellationToken
+impl core::default::Default for vyre_runtime::tenant::TenantQuota
 impl core::default::Default for vyre_runtime::tenant::TenantRegistry
 impl core::default::Default for vyre_runtime::uring_completion_pump::UringCompletionPump<'_>
 impl core::error::Error for vyre_runtime::pipeline_cache::PipelineCacheMetricError
@@ -62,15 +62,15 @@ impl core::fmt::Display for vyre_runtime::CounterScope
 impl core::fmt::Display for vyre_runtime::RequestFault
 impl core::fmt::Display for vyre_runtime::RingEncodingFault
 impl core::fmt::Display for vyre_runtime::pipeline_cache::PipelineCacheMetricError
-impl core::ops::drop::Drop for vyre_runtime::StructuredWorkerScope
 impl core::ops::drop::Drop for vyre_runtime::resource_residency::ResourceResidency
+impl core::ops::drop::Drop for vyre_runtime::structured_concurrency::StructuredWorkerScope
 impl core::ops::drop::Drop for vyre_runtime::uring::IoUringState
 impl core::ops::drop::Drop for vyre_runtime::uring::ResidentIoLoop
 impl vyre_foundation::diagnostics::ToDiagnostic for vyre_runtime::PipelineError
 impl vyre_megakernel::execution::SemanticExecutor for vyre_runtime::RegisteredSemanticExecutor
 impl vyre_runtime::CacheQuota
-impl vyre_runtime::CancellationToken
 impl vyre_runtime::CounterArithmetic
+impl vyre_runtime::ExternalResourceAdmissionManager
 impl vyre_runtime::GenerationScopedNamespace
 impl vyre_runtime::IoQuota
 impl vyre_runtime::PipelineError
@@ -83,10 +83,7 @@ impl vyre_runtime::RingEncodingFault
 impl vyre_runtime::RollingUpgradeCoordinator
 impl vyre_runtime::SessionIdentity
 impl vyre_runtime::SessionQuota
-impl vyre_runtime::StructuredWorkerScope
 impl vyre_runtime::TelemetryQuota
-impl vyre_runtime::TenantQuota
-impl vyre_runtime::WorkerQuarantine
 impl vyre_runtime::artifact_admission::AdmittedArtifact
 impl vyre_runtime::artifact_admission::AdmittedPortfolio
 impl vyre_runtime::artifact_admission::ArtifactAdmissionError
@@ -109,7 +106,6 @@ impl vyre_runtime::atomic_recovery::StateOwnerRecovery for vyre_runtime::pipelin
 impl vyre_runtime::atomic_recovery::StateOwnerRecovery for vyre_runtime::resource_residency::ResourceResidency
 impl vyre_runtime::atomic_recovery::StateOwnerRecovery for vyre_runtime::tenant::TenantRegistry
 impl vyre_runtime::atomic_recovery::SupervisedRestartBudget
-impl vyre_runtime::external_resource_admission::ExternalResourceAdmissionManager
 impl vyre_runtime::paged_resource::BlockTableSpec
 impl vyre_runtime::paged_resource::PagedResidencyPlanner
 impl vyre_runtime::paged_resource::PagedResourceBinding
@@ -202,7 +198,11 @@ impl vyre_runtime::routing::RoutingEngine
 impl vyre_runtime::routing::RoutingPolicy for vyre_runtime::routing::standard_policy::StandardPolicy
 impl vyre_runtime::scheduler::WorkStealingScheduler
 impl vyre_runtime::speculative_transaction::SpeculativeTransactionCoordinator
+impl vyre_runtime::structured_concurrency::CancellationToken
+impl vyre_runtime::structured_concurrency::StructuredWorkerScope
+impl vyre_runtime::structured_concurrency::WorkerQuarantine
 impl vyre_runtime::tenant::TenantHandle
+impl vyre_runtime::tenant::TenantQuota
 impl vyre_runtime::tenant::TenantRegistry
 impl vyre_runtime::tenant::TenantSelectionScratch
 impl vyre_runtime::uring::GpuDirectCapability
@@ -242,15 +242,12 @@ pub const fn vyre_runtime::RetryQuota::is_finite(&self) -> bool
 pub const fn vyre_runtime::RetryQuota::standard() -> Self
 pub const fn vyre_runtime::RollingUpgradeCoordinator::phase(&self) -> vyre_runtime::UpgradePhase
 pub const fn vyre_runtime::SessionIdentity::is_finite(&self) -> bool
-pub const fn vyre_runtime::SessionQuota::bounded(queue: vyre_runtime::QueueQuota, tenant: vyre_runtime::TenantQuota, cache: vyre_runtime::CacheQuota, retained_generation: vyre_runtime::RetainedGenerationQuota, io: vyre_runtime::IoQuota, retry: vyre_runtime::RetryQuota, telemetry: vyre_runtime::TelemetryQuota) -> Self
+pub const fn vyre_runtime::SessionQuota::bounded(queue: vyre_runtime::QueueQuota, tenant: vyre_runtime::tenant::TenantQuota, cache: vyre_runtime::CacheQuota, retained_generation: vyre_runtime::RetainedGenerationQuota, io: vyre_runtime::IoQuota, retry: vyre_runtime::RetryQuota, telemetry: vyre_runtime::TelemetryQuota) -> Self
 pub const fn vyre_runtime::SessionQuota::is_finite(&self) -> bool
 pub const fn vyre_runtime::SessionQuota::standard() -> Self
 pub const fn vyre_runtime::TelemetryQuota::bounded(max_events_per_window: u64, ring_buffer_capacity: usize) -> Self
 pub const fn vyre_runtime::TelemetryQuota::is_finite(&self) -> bool
 pub const fn vyre_runtime::TelemetryQuota::standard() -> Self
-pub const fn vyre_runtime::TenantQuota::bounded(max_outstanding_slots: u64, max_staging_bytes: u64, max_resident_handles: u64) -> Self
-pub const fn vyre_runtime::TenantQuota::is_finite(&self) -> bool
-pub const fn vyre_runtime::TenantQuota::standard() -> Self
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::envelope(&self) -> &vyre_megakernel::envelope::ArtifactEnvelope
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::neutral(&self) -> &vyre_megakernel::schema::Artifact
 pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::contract(&self) -> &vyre_megakernel::specialization::SpecializationContract
@@ -324,6 +321,9 @@ pub const fn vyre_runtime::resident_work_queue::workspace_layout::workspace_reco
 pub const fn vyre_runtime::resource_residency::ArtifactInstanceBinding::byte_len(&self) -> u64
 pub const fn vyre_runtime::routed_work_queue::InterDeviceRoutedExchange::accounting(&self) -> &vyre_driver::peer_transfer::PeerTransferAccounting
 pub const fn vyre_runtime::speculative_transaction::SpeculativeTransactionCoordinator::config(&self) -> &vyre_runtime::speculative_transaction::SpeculativeTransactionConfig
+pub const fn vyre_runtime::tenant::TenantQuota::bounded(max_outstanding_slots: u64, max_staging_bytes: u64, max_resident_handles: u64) -> Self
+pub const fn vyre_runtime::tenant::TenantQuota::is_finite(&self) -> bool
+pub const fn vyre_runtime::tenant::TenantQuota::standard() -> Self
 pub const fn vyre_runtime::tenant::TenantSelectionScratch::new() -> Self
 pub const vyre_runtime::CacheQuota::DEFAULT_MAX_BYTES: u64
 pub const vyre_runtime::CacheQuota::DEFAULT_MAX_ENTRIES: usize
@@ -340,9 +340,6 @@ pub const vyre_runtime::RetryQuota::DEFAULT_MAX_TIMEOUT_MICROS: u64
 pub const vyre_runtime::RingEncodingFault::ALL: [Self; 5]
 pub const vyre_runtime::TelemetryQuota::DEFAULT_MAX_EVENTS_PER_WINDOW: u64
 pub const vyre_runtime::TelemetryQuota::DEFAULT_RING_BUFFER_CAPACITY: usize
-pub const vyre_runtime::TenantQuota::DEFAULT_MAX_OUTSTANDING_SLOTS: u64
-pub const vyre_runtime::TenantQuota::DEFAULT_MAX_RESIDENT_HANDLES: u64
-pub const vyre_runtime::TenantQuota::DEFAULT_MAX_STAGING_BYTES: u64
 pub const vyre_runtime::artifact_admission::INTERACTIVE_DISPATCH_HEADROOM: u64
 pub const vyre_runtime::artifact_admission::MAX_INTERACTIVE_STEP_BUDGET_MICROS: u64
 pub const vyre_runtime::artifact_admission::MEASURED_INTERACTIVE_DISPATCH_CEILING_MICROS: u64
@@ -464,18 +461,17 @@ pub const vyre_runtime::resident_work_queue::telemetry::TELEMETRY_DECODE_CAPACIT
 pub const vyre_runtime::tenant::OPCODE_RANGE_PER_TENANT: u32
 pub const vyre_runtime::tenant::TENANT_ID_MAX: u32
 pub const vyre_runtime::tenant::TENANT_OPCODE_BASE: u32
+pub const vyre_runtime::tenant::TenantQuota::DEFAULT_MAX_OUTSTANDING_SLOTS: u64
+pub const vyre_runtime::tenant::TenantQuota::DEFAULT_MAX_RESIDENT_HANDLES: u64
+pub const vyre_runtime::tenant::TenantQuota::DEFAULT_MAX_STAGING_BYTES: u64
 pub const vyre_runtime::uring::NVME_CMD_READ: u8
-pub enum vyre_runtime::ConcurrencyError
 pub enum vyre_runtime::CounterArithmetic
 pub enum vyre_runtime::CounterScope
 pub enum vyre_runtime::ExternalAdmissionError
-pub enum vyre_runtime::GuardedState<T>
 pub enum vyre_runtime::RequestFault
 pub enum vyre_runtime::RingEncodingFault
 pub enum vyre_runtime::SessionQuotaError
 pub enum vyre_runtime::UpgradePhase
-pub enum vyre_runtime::UringPollState
-pub enum vyre_runtime::WorkerStatus
 pub enum vyre_runtime::artifact_admission::ArtifactSessionError
 pub enum vyre_runtime::artifact_admission::CancellationOutcome
 pub enum vyre_runtime::artifact_admission::GeneratedDataSource
@@ -491,7 +487,6 @@ pub enum vyre_runtime::artifact_admission::ResourceManifestSource
 pub enum vyre_runtime::artifact_admission::RetainedSessionPhase
 pub enum vyre_runtime::artifact_admission::RetainedSessionTransition
 pub enum vyre_runtime::atomic_recovery::GuardedState<T>
-pub enum vyre_runtime::external_resource_admission::ExternalAdmissionError
 pub enum vyre_runtime::paged_resource::PagedResidencyError
 pub enum vyre_runtime::paged_resource::PagingCandidateStrategy
 pub enum vyre_runtime::pipeline_cache::InMemoryEvictionReason
@@ -521,7 +516,6 @@ pub enum vyre_runtime::resource_transfer::ResourceTransferPath
 pub enum vyre_runtime::resource_transfer::ResourceTransferState
 pub enum vyre_runtime::retained_page_cache::RetainedPageCacheError
 pub enum vyre_runtime::routed_work_queue::RoutedQueueError
-pub enum vyre_runtime::session_quota::SessionQuotaError
 pub enum vyre_runtime::speculative_transaction::SpeculativeTransactionError
 pub enum vyre_runtime::structured_concurrency::ConcurrencyError
 pub enum vyre_runtime::structured_concurrency::WorkerStatus
@@ -531,12 +525,18 @@ pub enum vyre_runtime::uring_completion_pump::UringPollState
 pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_runtime::PipelineError) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_runtime::PipelineError) -> Self
 pub fn vyre_runtime::CacheQuota::default() -> Self
-pub fn vyre_runtime::CancellationToken::cancel(&self)
-pub fn vyre_runtime::CancellationToken::default() -> Self
-pub fn vyre_runtime::CancellationToken::is_cancelled(&self) -> bool
-pub fn vyre_runtime::CancellationToken::new() -> Self
 pub fn vyre_runtime::CounterArithmetic::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_runtime::CounterScope::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_runtime::ExternalAdmissionError::from(err: vyre_spec::resource_capability::ResourceAbiError) -> Self
+pub fn vyre_runtime::ExternalResourceAdmissionManager::admit_external_resource(&self, record: vyre_spec::resource_capability::AdmittedResourceRecord) -> core::result::Result<vyre_runtime::AdmittedExternalResourceLease, vyre_runtime::ExternalAdmissionError>
+pub fn vyre_runtime::ExternalResourceAdmissionManager::device_id(&self) -> u64
+pub fn vyre_runtime::ExternalResourceAdmissionManager::execute_transition_schedule(&self, schedule: &vyre_driver::semantic_resource_abi::ResourceTransitionSchedule) -> core::result::Result<vyre_driver::semantic_resource_abi::TransitionExecutionReport, vyre_runtime::ExternalAdmissionError>
+pub fn vyre_runtime::ExternalResourceAdmissionManager::invalidate_device_loss(&self) -> vyre_driver::semantic_resource_abi::DeviceLossInvalidationReport
+pub fn vyre_runtime::ExternalResourceAdmissionManager::mutate_resource(&self, resource_id: u64, expected_gen: u64) -> core::result::Result<u64, vyre_runtime::ExternalAdmissionError>
+pub fn vyre_runtime::ExternalResourceAdmissionManager::new(device_id: u64) -> Self
+pub fn vyre_runtime::ExternalResourceAdmissionManager::query_resource(&self, resource_id: u64) -> core::option::Option<vyre_spec::resource_capability::AdmittedResourceRecord>
+pub fn vyre_runtime::ExternalResourceAdmissionManager::register_dependent_pipeline(&self, resource_id: u64, pipeline_id: u64) -> core::result::Result<(), vyre_runtime::ExternalAdmissionError>
+pub fn vyre_runtime::ExternalResourceAdmissionManager::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_runtime::ExternalAdmissionError>
 pub fn vyre_runtime::GenerationScopedNamespace::scoped_key(&self, raw_key: &str) -> alloc::string::String
 pub fn vyre_runtime::IoQuota::default() -> Self
 pub fn vyre_runtime::PipelineError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
@@ -560,26 +560,7 @@ pub fn vyre_runtime::RollingUpgradeCoordinator::rollback(&mut self, previous_ver
 pub fn vyre_runtime::SessionIdentity::new(session_id: u64, artifact: vyre_megakernel::identity::Digest, device: vyre_driver::backend::artifact_lifecycle::DeviceIdentity, quota: vyre_runtime::SessionQuota) -> core::result::Result<Self, vyre_runtime::SessionQuotaError>
 pub fn vyre_runtime::SessionQuota::default() -> Self
 pub fn vyre_runtime::SessionQuota::validate(&self) -> core::result::Result<(), vyre_runtime::SessionQuotaError>
-pub fn vyre_runtime::StateOwnerRecovery::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain
-pub fn vyre_runtime::StateOwnerRecovery::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
-pub fn vyre_runtime::StructuredWorkerScope::cancel(&self)
-pub fn vyre_runtime::StructuredWorkerScope::cancellation_token(&self) -> vyre_runtime::CancellationToken
-pub fn vyre_runtime::StructuredWorkerScope::close(&self)
-pub fn vyre_runtime::StructuredWorkerScope::drop(&mut self)
-pub fn vyre_runtime::StructuredWorkerScope::execute_bounded<T: core::marker::Send + 'static>(&self, deadline_micros: u64, operation: impl core::ops::function::FnOnce(&vyre_runtime::CancellationToken) -> core::result::Result<T, vyre_driver::backend::error::BackendError> + core::marker::Send + 'static) -> core::result::Result<T, vyre_runtime::ConcurrencyError>
-pub fn vyre_runtime::StructuredWorkerScope::new(scope_id: u64) -> Self
-pub fn vyre_runtime::StructuredWorkerScope::quarantine(&self) -> alloc::sync::Arc<vyre_runtime::WorkerQuarantine>
-pub fn vyre_runtime::StructuredWorkerScope::scope_id(&self) -> u64
-pub fn vyre_runtime::StructuredWorkerScope::with_quarantine(scope_id: u64, quarantine: alloc::sync::Arc<vyre_runtime::WorkerQuarantine>) -> Self
 pub fn vyre_runtime::TelemetryQuota::default() -> Self
-pub fn vyre_runtime::TenantQuota::default() -> Self
-pub fn vyre_runtime::WorkerQuarantine::active_count(&self) -> usize
-pub fn vyre_runtime::WorkerQuarantine::is_quarantined(&self, worker_id: u64) -> bool
-pub fn vyre_runtime::WorkerQuarantine::mark_completed(&self, worker_id: u64)
-pub fn vyre_runtime::WorkerQuarantine::new() -> Self
-pub fn vyre_runtime::WorkerQuarantine::quarantine_worker(&self, worker_id: u64, reason: alloc::string::String, timestamp_ns: u64)
-pub fn vyre_runtime::WorkerQuarantine::quarantined_count(&self) -> usize
-pub fn vyre_runtime::WorkerQuarantine::register_worker(&self, worker_id: u64)
 pub fn vyre_runtime::artifact_admission::AdmittedArtifact::into_envelope(self) -> vyre_megakernel::envelope::ArtifactEnvelope
 pub fn vyre_runtime::artifact_admission::AdmittedArtifact::submission_devices(&self) -> alloc::vec::Vec<vyre_megakernel::allocation::DeviceSlot>
 pub fn vyre_runtime::artifact_admission::AdmittedArtifact::target_payload(&self) -> &vyre_megakernel::envelope::TargetPayload
@@ -731,17 +712,6 @@ pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::recovery_class(&s
 pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::remaining_restarts(&self) -> u32
 pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::reset(&self)
 pub fn vyre_runtime::atomic_recovery::authoritative_runtime_state_owner_registry() -> alloc::collections::btree::map::BTreeMap<&'static str, (vyre_foundation::failure_domain::FailureDomain, vyre_foundation::failure_domain::RecoveryClass)>
-pub fn vyre_runtime::authoritative_runtime_state_owner_registry() -> alloc::collections::btree::map::BTreeMap<&'static str, (vyre_foundation::failure_domain::FailureDomain, vyre_foundation::failure_domain::RecoveryClass)>
-pub fn vyre_runtime::external_resource_admission::ExternalAdmissionError::from(err: vyre_spec::resource_capability::ResourceAbiError) -> Self
-pub fn vyre_runtime::external_resource_admission::ExternalResourceAdmissionManager::admit_external_resource(&self, record: vyre_spec::resource_capability::AdmittedResourceRecord) -> core::result::Result<vyre_runtime::external_resource_admission::AdmittedExternalResourceLease, vyre_runtime::external_resource_admission::ExternalAdmissionError>
-pub fn vyre_runtime::external_resource_admission::ExternalResourceAdmissionManager::device_id(&self) -> u64
-pub fn vyre_runtime::external_resource_admission::ExternalResourceAdmissionManager::execute_transition_schedule(&self, schedule: &vyre_driver::semantic_resource_abi::ResourceTransitionSchedule) -> core::result::Result<vyre_driver::semantic_resource_abi::TransitionExecutionReport, vyre_runtime::external_resource_admission::ExternalAdmissionError>
-pub fn vyre_runtime::external_resource_admission::ExternalResourceAdmissionManager::invalidate_device_loss(&self) -> vyre_driver::semantic_resource_abi::DeviceLossInvalidationReport
-pub fn vyre_runtime::external_resource_admission::ExternalResourceAdmissionManager::mutate_resource(&self, resource_id: u64, expected_gen: u64) -> core::result::Result<u64, vyre_runtime::external_resource_admission::ExternalAdmissionError>
-pub fn vyre_runtime::external_resource_admission::ExternalResourceAdmissionManager::new(device_id: u64) -> Self
-pub fn vyre_runtime::external_resource_admission::ExternalResourceAdmissionManager::query_resource(&self, resource_id: u64) -> core::option::Option<vyre_spec::resource_capability::AdmittedResourceRecord>
-pub fn vyre_runtime::external_resource_admission::ExternalResourceAdmissionManager::register_dependent_pipeline(&self, resource_id: u64, pipeline_id: u64) -> core::result::Result<(), vyre_runtime::external_resource_admission::ExternalAdmissionError>
-pub fn vyre_runtime::external_resource_admission::ExternalResourceAdmissionManager::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_runtime::external_resource_admission::ExternalAdmissionError>
 pub fn vyre_runtime::paged_resource::BlockTableSpec::required_table_bytes(&self) -> usize
 pub fn vyre_runtime::paged_resource::PagedResidencyPlanner::select_strategy(device_supports_paging: bool, max_capacity_units: u32) -> vyre_runtime::paged_resource::PagingCandidateStrategy
 pub fn vyre_runtime::paged_resource::PagedResourceBinding::complete_execution(&mut self, completed_ticket: u64)
@@ -934,12 +904,12 @@ pub fn vyre_runtime::resident_work_queue::planner::ResidentQueueTelemetry::defau
 pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::calculate_optimal_grid(&self, request: vyre_runtime::resident_work_queue::planner::ResidentGridRequest, limits: vyre_runtime::resident_work_queue::planner::ResidentGridLimits) -> core::result::Result<vyre_runtime::resident_work_queue::planner::ResidentGridPlan, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::default() -> Self
 pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::geometry_from_slots(&self, slot_count: u32, worker_count: u32, max_workgroup_size_x: u32) -> vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry
-pub fn vyre_runtime::resident_work_queue::planner::build_bellman_tn_order_program(buffers: vyre_libs::math::bellman_shortest_path::BellmanBuffers<'_>, extents: vyre_libs::math::bellman_shortest_path::BellmanExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_runtime::resident_work_queue::planner::build_bellman_tn_order_program(buffers: vyre_libs_math::math::bellman_shortest_path::BellmanBuffers<'_>, extents: vyre_libs_math::math::bellman_shortest_path::BellmanExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::build_kfac_autotune_step_program(blocks_out: &str, blocks_in: &str, scratch: &str, num_blocks: u32, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::build_persistent_fixpoint_program(transfer_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, current: &str, next: &str, changed: &str, words: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::build_scallop_provenance_wide_program(state: &str, next: &str, join_rules: &str, changed: &str, n: u32, w: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::build_sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_runtime::resident_work_queue::planner::build_sinkhorn_full_clustering_program(buffers: vyre_libs::math::sinkhorn_iterate::SinkhornBuffers<'_>, extents: vyre_libs::math::sinkhorn_iterate::SinkhornExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_runtime::resident_work_queue::planner::build_sinkhorn_full_clustering_program(buffers: vyre_libs_math::math::sinkhorn_iterate::SinkhornBuffers<'_>, extents: vyre_libs_math::math::sinkhorn_iterate::SinkhornExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::default_worker_groups_from_limits(max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> u32
 pub fn vyre_runtime::resident_work_queue::planner::dispatch_grid_for(worker_count: u32, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3]
 pub fn vyre_runtime::resident_work_queue::planner::elide_value_flow_barriers(program: vyre_foundation::ir_inner::model::program::definition::Program) -> (vyre_foundation::ir_inner::model::program::definition::Program, vyre_runtime::resident_work_queue::planner::BarrierElisionReport)
@@ -1212,6 +1182,26 @@ pub fn vyre_runtime::speculative_transaction::SpeculativeTransactionCoordinator:
 pub fn vyre_runtime::speculative_transaction::SpeculativeTransactionCoordinator::rollback_all(&self, provisional: vyre_runtime::speculative_transaction::SpeculativeProvisionalState) -> core::result::Result<(), vyre_runtime::speculative_transaction::SpeculativeTransactionError>
 pub fn vyre_runtime::speculative_transaction::SpeculativeTransactionCoordinator::stage_speculative_step(&self, request_id: u64, cache_key: &vyre_runtime::retained_page_cache::RetainedPageCacheKey, base_prefix: &[u32], proposals: &[(u32, f32)]) -> core::result::Result<vyre_runtime::speculative_transaction::SpeculativeProvisionalState, vyre_runtime::speculative_transaction::SpeculativeTransactionError>
 pub fn vyre_runtime::speculative_transaction::SpeculativeTransactionCoordinator::verify_and_commit(&self, provisional: vyre_runtime::speculative_transaction::SpeculativeProvisionalState, verified_ground_truth: &[u32]) -> core::result::Result<vyre_runtime::speculative_transaction::TransactionCommitResult, vyre_runtime::speculative_transaction::SpeculativeTransactionError>
+pub fn vyre_runtime::structured_concurrency::CancellationToken::cancel(&self)
+pub fn vyre_runtime::structured_concurrency::CancellationToken::default() -> Self
+pub fn vyre_runtime::structured_concurrency::CancellationToken::is_cancelled(&self) -> bool
+pub fn vyre_runtime::structured_concurrency::CancellationToken::new() -> Self
+pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::cancel(&self)
+pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::cancellation_token(&self) -> vyre_runtime::structured_concurrency::CancellationToken
+pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::close(&self)
+pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::drop(&mut self)
+pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::execute_bounded<T: core::marker::Send + 'static>(&self, deadline_micros: u64, operation: impl core::ops::function::FnOnce(&vyre_runtime::structured_concurrency::CancellationToken) -> core::result::Result<T, vyre_driver::backend::error::BackendError> + core::marker::Send + 'static) -> core::result::Result<T, vyre_runtime::structured_concurrency::ConcurrencyError>
+pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::new(scope_id: u64) -> Self
+pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::quarantine(&self) -> alloc::sync::Arc<vyre_runtime::structured_concurrency::WorkerQuarantine>
+pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::scope_id(&self) -> u64
+pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::with_quarantine(scope_id: u64, quarantine: alloc::sync::Arc<vyre_runtime::structured_concurrency::WorkerQuarantine>) -> Self
+pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::active_count(&self) -> usize
+pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::is_quarantined(&self, worker_id: u64) -> bool
+pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::mark_completed(&self, worker_id: u64)
+pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::new() -> Self
+pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::quarantine_worker(&self, worker_id: u64, reason: alloc::string::String, timestamp_ns: u64)
+pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::quarantined_count(&self) -> usize
+pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::register_worker(&self, worker_id: u64)
 pub fn vyre_runtime::tenant::TenantHandle::base_opcode(&self) -> u32
 pub fn vyre_runtime::tenant::TenantHandle::drained_count(&self) -> u64
 pub fn vyre_runtime::tenant::TenantHandle::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1233,6 +1223,7 @@ pub fn vyre_runtime::tenant::TenantHandle::reserve_staging_bytes(&self, byte_cou
 pub fn vyre_runtime::tenant::TenantHandle::runtime_counters(&self) -> vyre_runtime::tenant::TenantRuntimeCounters
 pub fn vyre_runtime::tenant::TenantHandle::tenant_id_128(&self) -> vyre_foundation::security::label::TenantId
 pub fn vyre_runtime::tenant::TenantHandle::validate_capability(&self, authenticator: &vyre_foundation::security::capability::CapabilityAuthenticator, handle: &vyre_foundation::security::capability::UnforgeableCapability, device_id: u64, required_permission: &vyre_foundation::security::label::Permission) -> core::result::Result<(), vyre_foundation::security::error::SecurityError>
+pub fn vyre_runtime::tenant::TenantQuota::default() -> Self
 pub fn vyre_runtime::tenant::TenantRegistry::active_tenants(&self) -> alloc::vec::Vec<vyre_runtime::tenant::TenantHandle>
 pub fn vyre_runtime::tenant::TenantRegistry::active_tenants_into(&self, out: &mut alloc::vec::Vec<vyre_runtime::tenant::TenantHandle>)
 pub fn vyre_runtime::tenant::TenantRegistry::default() -> Self
@@ -1242,7 +1233,7 @@ pub fn vyre_runtime::tenant::TenantRegistry::new() -> Self
 pub fn vyre_runtime::tenant::TenantRegistry::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
 pub fn vyre_runtime::tenant::TenantRegistry::register(&self, label: impl core::convert::Into<alloc::string::String>) -> core::result::Result<vyre_runtime::tenant::TenantHandle, vyre_runtime::tenant::TenantError>
 pub fn vyre_runtime::tenant::TenantRegistry::register_with_backpressure(&self, label: impl core::convert::Into<alloc::string::String>, max_outstanding_slots: u64) -> core::result::Result<vyre_runtime::tenant::TenantHandle, vyre_runtime::tenant::TenantError>
-pub fn vyre_runtime::tenant::TenantRegistry::register_with_quotas(&self, label: impl core::convert::Into<alloc::string::String>, quota: vyre_runtime::TenantQuota) -> core::result::Result<vyre_runtime::tenant::TenantHandle, vyre_runtime::tenant::TenantError>
+pub fn vyre_runtime::tenant::TenantRegistry::register_with_quotas(&self, label: impl core::convert::Into<alloc::string::String>, quota: vyre_runtime::tenant::TenantQuota) -> core::result::Result<vyre_runtime::tenant::TenantHandle, vyre_runtime::tenant::TenantError>
 pub fn vyre_runtime::tenant::TenantRegistry::runtime_counters(&self) -> alloc::vec::Vec<vyre_runtime::tenant::TenantRuntimeCounters>
 pub fn vyre_runtime::tenant::TenantRegistry::runtime_counters_into(&self, out: &mut alloc::vec::Vec<vyre_runtime::tenant::TenantRuntimeCounters>)
 pub fn vyre_runtime::tenant::TenantRegistry::select_concurrent_tenants(&self, conflict_adj: &[u32]) -> alloc::vec::Vec<u32>
@@ -1319,7 +1310,6 @@ pub fn vyre_runtime::uring_completion_pump::UringCompletionPump<'a>::with_uring(
 pub mod vyre_runtime
 pub mod vyre_runtime::artifact_admission
 pub mod vyre_runtime::atomic_recovery
-pub mod vyre_runtime::external_resource_admission
 pub mod vyre_runtime::paged_resource
 pub mod vyre_runtime::persistent_executor
 pub mod vyre_runtime::pipeline_cache
@@ -1364,21 +1354,16 @@ pub mod vyre_runtime::routed_work_queue
 pub mod vyre_runtime::routing
 pub mod vyre_runtime::routing::standard_policy
 pub mod vyre_runtime::scheduler
-pub mod vyre_runtime::session_quota
 pub mod vyre_runtime::speculative_transaction
 pub mod vyre_runtime::structured_concurrency
 pub mod vyre_runtime::tenant
 pub mod vyre_runtime::uring
 pub mod vyre_runtime::uring_completion_pump
 pub struct vyre_runtime::AdmittedExternalResourceLease
-pub struct vyre_runtime::AtomicGuardedState<T>
 pub struct vyre_runtime::CacheQuota
-pub struct vyre_runtime::CancellationToken
 pub struct vyre_runtime::ExternalResourceAdmissionManager
 pub struct vyre_runtime::GenerationScopedNamespace
 pub struct vyre_runtime::IoQuota
-pub struct vyre_runtime::PrepareCommitJournal<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone>
-pub struct vyre_runtime::PrepareTicket
 pub struct vyre_runtime::QueueQuota
 pub struct vyre_runtime::RegisteredSemanticExecutor
 pub struct vyre_runtime::RetainedGenerationQuota
@@ -1386,12 +1371,7 @@ pub struct vyre_runtime::RetryQuota
 pub struct vyre_runtime::RollingUpgradeCoordinator
 pub struct vyre_runtime::SessionIdentity
 pub struct vyre_runtime::SessionQuota
-pub struct vyre_runtime::StructuredWorkerScope
-pub struct vyre_runtime::SupervisedRestartBudget
 pub struct vyre_runtime::TelemetryQuota
-pub struct vyre_runtime::TenantQuota
-pub struct vyre_runtime::UringCompletionPump<'a>
-pub struct vyre_runtime::WorkerQuarantine
 pub struct vyre_runtime::artifact_admission::AdmittedArtifact
 pub struct vyre_runtime::artifact_admission::AdmittedPortfolio
 pub struct vyre_runtime::artifact_admission::ArtifactAdmissionError
@@ -1412,8 +1392,6 @@ pub struct vyre_runtime::atomic_recovery::AtomicGuardedState<T>
 pub struct vyre_runtime::atomic_recovery::PrepareCommitJournal<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone>
 pub struct vyre_runtime::atomic_recovery::PrepareTicket
 pub struct vyre_runtime::atomic_recovery::SupervisedRestartBudget
-pub struct vyre_runtime::external_resource_admission::AdmittedExternalResourceLease
-pub struct vyre_runtime::external_resource_admission::ExternalResourceAdmissionManager
 pub struct vyre_runtime::paged_resource::BlockTableSpec
 pub struct vyre_runtime::paged_resource::PagedResidencyPlanner
 pub struct vyre_runtime::paged_resource::PagedResourceBinding
@@ -1535,15 +1513,6 @@ pub struct vyre_runtime::routing::RoutingExplanation
 pub struct vyre_runtime::routing::standard_policy::StandardPolicy
 pub struct vyre_runtime::scheduler::Shard
 pub struct vyre_runtime::scheduler::WorkStealingScheduler
-pub struct vyre_runtime::session_quota::CacheQuota
-pub struct vyre_runtime::session_quota::IoQuota
-pub struct vyre_runtime::session_quota::QueueQuota
-pub struct vyre_runtime::session_quota::RetainedGenerationQuota
-pub struct vyre_runtime::session_quota::RetryQuota
-pub struct vyre_runtime::session_quota::SessionIdentity
-pub struct vyre_runtime::session_quota::SessionQuota
-pub struct vyre_runtime::session_quota::TelemetryQuota
-pub struct vyre_runtime::session_quota::TenantQuota
 pub struct vyre_runtime::speculative_transaction::SpeculativeProposal
 pub struct vyre_runtime::speculative_transaction::SpeculativeProvisionalState
 pub struct vyre_runtime::speculative_transaction::SpeculativeTransactionConfig
@@ -1568,7 +1537,6 @@ pub struct vyre_runtime::uring::RegisteredIoDestination
 pub struct vyre_runtime::uring::ResidentIoLoop
 pub struct vyre_runtime::uring::UringResidentQueuePump<'a>
 pub struct vyre_runtime::uring_completion_pump::UringCompletionPump<'a>
-pub trait vyre_runtime::StateOwnerRecovery
 pub trait vyre_runtime::atomic_recovery::StateOwnerRecovery
 pub trait vyre_runtime::pipeline_cache::PipelineCacheStore: core::marker::Send + core::marker::Sync
 pub trait vyre_runtime::resident_work_queue::ring::RingConsumer
@@ -1588,14 +1556,6 @@ pub vyre_runtime::AdmittedExternalResourceLease::resource_id: u64
 pub vyre_runtime::AdmittedExternalResourceLease::row_pitch_bytes: u32
 pub vyre_runtime::CacheQuota::max_bytes: u64
 pub vyre_runtime::CacheQuota::max_entries: usize
-pub vyre_runtime::ConcurrencyError::Cancelled
-pub vyre_runtime::ConcurrencyError::DeadlineExceeded
-pub vyre_runtime::ConcurrencyError::DeadlineExceeded::deadline_micros: u64
-pub vyre_runtime::ConcurrencyError::DeadlineExceeded::elapsed_micros: u64
-pub vyre_runtime::ConcurrencyError::WorkerPanicked(alloc::string::String)
-pub vyre_runtime::ConcurrencyError::WorkerQuarantined
-pub vyre_runtime::ConcurrencyError::WorkerQuarantined::reason: alloc::string::String
-pub vyre_runtime::ConcurrencyError::WorkerQuarantined::worker_id: u64
 pub vyre_runtime::CounterArithmetic::Product
 pub vyre_runtime::CounterArithmetic::Sum
 pub vyre_runtime::CounterScope::IoUring
@@ -1626,12 +1586,6 @@ pub vyre_runtime::ExternalAdmissionError::UsageNotPermitted::resource_id: u64
 pub vyre_runtime::GenerationScopedNamespace::domain: vyre_spec::compatibility::ProtocolDomain
 pub vyre_runtime::GenerationScopedNamespace::generation_id: u64
 pub vyre_runtime::GenerationScopedNamespace::version: vyre_spec::compatibility::ProtocolVersion
-pub vyre_runtime::GuardedState::PoisonedTerminal
-pub vyre_runtime::GuardedState::PoisonedTerminal::domain: vyre_foundation::failure_domain::FailureDomain
-pub vyre_runtime::GuardedState::PoisonedTerminal::reason: alloc::string::String
-pub vyre_runtime::GuardedState::PoisonedTerminal::recovery_class: vyre_foundation::failure_domain::RecoveryClass
-pub vyre_runtime::GuardedState::Ready(T)
-pub vyre_runtime::GuardedState::Rebuilding
 pub vyre_runtime::IoQuota::max_inflight_requests: usize
 pub vyre_runtime::IoQuota::max_transfer_bytes: u64
 pub vyre_runtime::PipelineError::Backend(alloc::string::String)
@@ -1711,7 +1665,6 @@ pub vyre_runtime::PipelineError::UnregisteredResource::slot: u32
 pub vyre_runtime::PipelineError::WorkerThreadPanicked
 pub vyre_runtime::PipelineError::WorkerThreadPanicked::fix: &'static str
 pub vyre_runtime::PipelineError::WorkerThreadPanicked::worker: &'static str
-pub vyre_runtime::PrepareTicket::ticket_id: u64
 pub vyre_runtime::QueueQuota::max_outstanding_slots: u64
 pub vyre_runtime::QueueQuota::max_queue_depth: usize
 pub vyre_runtime::RequestFault::BelowMinimum
@@ -1736,15 +1689,12 @@ pub vyre_runtime::SessionQuota::queue: vyre_runtime::QueueQuota
 pub vyre_runtime::SessionQuota::retained_generation: vyre_runtime::RetainedGenerationQuota
 pub vyre_runtime::SessionQuota::retry: vyre_runtime::RetryQuota
 pub vyre_runtime::SessionQuota::telemetry: vyre_runtime::TelemetryQuota
-pub vyre_runtime::SessionQuota::tenant: vyre_runtime::TenantQuota
+pub vyre_runtime::SessionQuota::tenant: vyre_runtime::tenant::TenantQuota
 pub vyre_runtime::SessionQuotaError::NonFiniteLimit
 pub vyre_runtime::SessionQuotaError::NonFiniteLimit::limit: &'static str
 pub vyre_runtime::SessionQuotaError::NonFiniteLimit::subsystem: &'static str
 pub vyre_runtime::TelemetryQuota::max_events_per_window: u64
 pub vyre_runtime::TelemetryQuota::ring_buffer_capacity: usize
-pub vyre_runtime::TenantQuota::max_outstanding_slots: u64
-pub vyre_runtime::TenantQuota::max_resident_handles: u64
-pub vyre_runtime::TenantQuota::max_staging_bytes: u64
 pub vyre_runtime::UpgradePhase::Active
 pub vyre_runtime::UpgradePhase::Completed
 pub vyre_runtime::UpgradePhase::RolledBack
@@ -1753,14 +1703,6 @@ pub vyre_runtime::UpgradePhase::RolledBack::restored_generation: u64
 pub vyre_runtime::UpgradePhase::RollingUpgrade
 pub vyre_runtime::UpgradePhase::RollingUpgrade::draining_generation: u64
 pub vyre_runtime::UpgradePhase::RollingUpgrade::target_generation: u64
-pub vyre_runtime::UringPollState::Completed(u32)
-pub vyre_runtime::UringPollState::Detached
-pub vyre_runtime::WorkerStatus::Active
-pub vyre_runtime::WorkerStatus::Cancelled
-pub vyre_runtime::WorkerStatus::Completed
-pub vyre_runtime::WorkerStatus::Quarantined
-pub vyre_runtime::WorkerStatus::Quarantined::reason: alloc::string::String
-pub vyre_runtime::WorkerStatus::Quarantined::timestamp_ns: u64
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Admission(vyre_runtime::artifact_admission::ArtifactAdmissionError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Backend(vyre_driver::backend::error::BackendError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Compile(vyre_megakernel::error::CompileError)
@@ -1953,34 +1895,6 @@ pub vyre_runtime::atomic_recovery::GuardedState::PoisonedTerminal::recovery_clas
 pub vyre_runtime::atomic_recovery::GuardedState::Ready(T)
 pub vyre_runtime::atomic_recovery::GuardedState::Rebuilding
 pub vyre_runtime::atomic_recovery::PrepareTicket::ticket_id: u64
-pub vyre_runtime::external_resource_admission::AdmittedExternalResourceLease::dimensions: vyre_spec::resource_capability::ImageDimensions
-pub vyre_runtime::external_resource_admission::AdmittedExternalResourceLease::format: vyre_spec::resource_capability::ImageFormat
-pub vyre_runtime::external_resource_admission::AdmittedExternalResourceLease::is_zero_copy: bool
-pub vyre_runtime::external_resource_admission::AdmittedExternalResourceLease::lease_id: u64
-pub vyre_runtime::external_resource_admission::AdmittedExternalResourceLease::resource_id: u64
-pub vyre_runtime::external_resource_admission::AdmittedExternalResourceLease::row_pitch_bytes: u32
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::GenerationMismatch
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::GenerationMismatch::actual: u64
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::GenerationMismatch::expected: u64
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::GenerationMismatch::resource_id: u64
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::InvalidCombination
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::InvalidCombination::format: vyre_spec::resource_capability::ImageFormat
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::InvalidCombination::memory_kind: vyre_spec::resource_capability::ExternalMemoryKind
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::InvalidCombination::resource_id: u64
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::InvalidDimensions
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::InvalidDimensions::dimensions: vyre_spec::resource_capability::ImageDimensions
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::InvalidDimensions::resource_id: u64
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::InvalidPitch
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::InvalidPitch::provided: u32
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::InvalidPitch::required: u32
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::InvalidPitch::resource_id: u64
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::ResourceInvalidated
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::ResourceInvalidated::resource_id: u64
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::ResourceNotFound
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::ResourceNotFound::resource_id: u64
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::UsageNotPermitted
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::UsageNotPermitted::requested: vyre_spec::resource_capability::ResourcePermittedUsages
-pub vyre_runtime::external_resource_admission::ExternalAdmissionError::UsageNotPermitted::resource_id: u64
 pub vyre_runtime::paged_resource::BlockTableSpec::blocks_per_sequence: u32
 pub vyre_runtime::paged_resource::BlockTableSpec::sequences: u32
 pub vyre_runtime::paged_resource::PagedResidencyError::BackendError(alloc::string::String)
@@ -2819,35 +2733,6 @@ pub vyre_runtime::routing::RoutingExplanation::policy: &'static str
 pub vyre_runtime::routing::RoutingExplanation::reason: &'static str
 pub vyre_runtime::scheduler::Shard::backend_id: &'static str
 pub vyre_runtime::scheduler::Shard::work_range: core::ops::range::Range<usize>
-pub vyre_runtime::session_quota::CacheQuota::max_bytes: u64
-pub vyre_runtime::session_quota::CacheQuota::max_entries: usize
-pub vyre_runtime::session_quota::IoQuota::max_inflight_requests: usize
-pub vyre_runtime::session_quota::IoQuota::max_transfer_bytes: u64
-pub vyre_runtime::session_quota::QueueQuota::max_outstanding_slots: u64
-pub vyre_runtime::session_quota::QueueQuota::max_queue_depth: usize
-pub vyre_runtime::session_quota::RetainedGenerationQuota::max_generations: u64
-pub vyre_runtime::session_quota::RetainedGenerationQuota::max_retained_values: usize
-pub vyre_runtime::session_quota::RetryQuota::max_restarts: u32
-pub vyre_runtime::session_quota::RetryQuota::max_timeout_micros: u64
-pub vyre_runtime::session_quota::SessionIdentity::artifact: vyre_megakernel::identity::Digest
-pub vyre_runtime::session_quota::SessionIdentity::device: vyre_driver::backend::artifact_lifecycle::DeviceIdentity
-pub vyre_runtime::session_quota::SessionIdentity::quota: vyre_runtime::SessionQuota
-pub vyre_runtime::session_quota::SessionIdentity::session_id: u64
-pub vyre_runtime::session_quota::SessionQuota::cache: vyre_runtime::CacheQuota
-pub vyre_runtime::session_quota::SessionQuota::io: vyre_runtime::IoQuota
-pub vyre_runtime::session_quota::SessionQuota::queue: vyre_runtime::QueueQuota
-pub vyre_runtime::session_quota::SessionQuota::retained_generation: vyre_runtime::RetainedGenerationQuota
-pub vyre_runtime::session_quota::SessionQuota::retry: vyre_runtime::RetryQuota
-pub vyre_runtime::session_quota::SessionQuota::telemetry: vyre_runtime::TelemetryQuota
-pub vyre_runtime::session_quota::SessionQuota::tenant: vyre_runtime::TenantQuota
-pub vyre_runtime::session_quota::SessionQuotaError::NonFiniteLimit
-pub vyre_runtime::session_quota::SessionQuotaError::NonFiniteLimit::limit: &'static str
-pub vyre_runtime::session_quota::SessionQuotaError::NonFiniteLimit::subsystem: &'static str
-pub vyre_runtime::session_quota::TelemetryQuota::max_events_per_window: u64
-pub vyre_runtime::session_quota::TelemetryQuota::ring_buffer_capacity: usize
-pub vyre_runtime::session_quota::TenantQuota::max_outstanding_slots: u64
-pub vyre_runtime::session_quota::TenantQuota::max_resident_handles: u64
-pub vyre_runtime::session_quota::TenantQuota::max_staging_bytes: u64
 pub vyre_runtime::speculative_transaction::SpeculativeProposal::confidence: f32
 pub vyre_runtime::speculative_transaction::SpeculativeProposal::depth: usize
 pub vyre_runtime::speculative_transaction::SpeculativeProposal::provisional_page_ids: alloc::vec::Vec<u32>

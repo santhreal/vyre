@@ -8,7 +8,7 @@ use thiserror::Error;
 use vyre_driver::DeviceIdentity;
 use vyre_megakernel::Digest;
 
-pub use crate::tenant::TenantQuota;
+use crate::tenant::TenantQuota;
 
 /// Error returned when an unbounded or invalid quota is rejected.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]

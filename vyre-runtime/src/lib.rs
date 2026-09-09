@@ -84,7 +84,6 @@ pub mod uring;
 
 /// Completion pump for an optional Linux io_uring stream.
 pub mod uring_completion_pump;
-pub use uring_completion_pump::{UringCompletionPump, UringPollState};
 
 /// Mandatory finite session quotas and typed session identity.
 pub use vyre_foundation::{FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError};
@@ -94,12 +93,7 @@ pub use session_quota::*;
 
 /// Structured concurrency, cancellation propagation, and worker/device quarantine.
 pub mod structured_concurrency;
-pub use structured_concurrency::*;
 
-pub use atomic_recovery::{
-    authoritative_runtime_state_owner_registry, AtomicGuardedState, GuardedState,
-    PrepareCommitJournal, PrepareTicket, StateOwnerRecovery, SupervisedRestartBudget,
-};
 pub use generation_namespace::{
     GenerationScopedNamespace, RollingUpgradeCoordinator, UpgradePhase,
 };
