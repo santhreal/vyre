@@ -39,6 +39,24 @@ impl Default for TenantRegistry {
 }
 
 impl TenantRegistry {
+    fn lock_free_list(&self) -> std::sync::MutexGuard<'_, Vec<u32>> {
+        match self.free_list.lock() {
+            Ok(guard) => guard,
+            Err(poison) => {
+                self.free_list.clear_poison();
+                let mut guard = poison.into_inner();
+                guard.clear();
+                let current_next = self.next_id.load(Ordering::Relaxed);
+                for id in (1..current_next).rev() {
+                    if !self.tenants.contains_key(&id) {
+                        guard.push(id);
+                    }
+                }
+                guard
+            }
+        }
+    }
+
     /// Fresh registry with no tenants.
     #[must_use]
     pub fn new() -> Self {
@@ -120,7 +138,7 @@ impl TenantRegistry {
             });
         }
         let (id, generation) = {
-            let mut free = self.free_list.lock().unwrap_or_else(|e| e.into_inner());
+            let mut free = self.lock_free_list();
             if let Some(recycled_id) = free.pop() {
                 let mut entry = self.generations.entry(recycled_id).or_insert(1);
                 *entry = entry.wrapping_add(1).max(1);
@@ -218,7 +236,7 @@ impl TenantRegistry {
         let (_, handle) = self.tenants.remove(&tenant_id)?;
         handle.state.revoked.store(1, Ordering::Release);
         handle.release_all_resource_reservations();
-        let mut free = self.free_list.lock().unwrap_or_else(|e| e.into_inner());
+        let mut free = self.lock_free_list();
         free.push(tenant_id);
         Some(handle)
     }
@@ -272,5 +290,15 @@ impl TenantRegistry {
             .map(|entry| entry.value().runtime_counters())
             .for_each(|counters| out.push(counters));
         out.sort_by_key(|counters| counters.tenant_id);
+    }
+}
+
+impl crate::StateOwnerRecovery for TenantRegistry {
+    fn failure_domain(&self) -> crate::FailureDomain {
+        crate::FailureDomain::MemoryState
+    }
+
+    fn recovery_class(&self) -> crate::RecoveryClass {
+        crate::RecoveryClass::RestartableFromCanonicalInput
     }
 }

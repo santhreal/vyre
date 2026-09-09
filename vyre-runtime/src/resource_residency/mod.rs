@@ -527,3 +527,13 @@ impl Drop for ResourceResidency {
         }
     }
 }
+
+impl crate::StateOwnerRecovery for ResourceResidency {
+    fn failure_domain(&self) -> crate::FailureDomain {
+        crate::FailureDomain::DeviceContext
+    }
+
+    fn recovery_class(&self) -> crate::RecoveryClass {
+        crate::RecoveryClass::DeviceContextFatal
+    }
+}

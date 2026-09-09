@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every mutable runtime and driver state owner declares its failure domain and recovery class with atomic transitions on lock poison and idempotent prepare-commit journals for side-effecting operations."

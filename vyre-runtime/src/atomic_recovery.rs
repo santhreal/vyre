@@ -8,9 +8,9 @@ use std::collections::BTreeMap;
 use std::format;
 use std::string::String;
 use core::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Mutex, RwLock};
+use std::sync::Mutex;
 
-use vyre_foundation::{
+pub use vyre_foundation::{
     FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError,
 };
 
@@ -32,9 +32,17 @@ pub enum GuardedState<T> {
     },
 }
 
+/// Trait implemented by mutable state owners declaring their failure domain and recovery class.
+pub trait StateOwnerRecovery {
+    /// Failure domain this state owner belongs to.
+    fn failure_domain(&self) -> FailureDomain;
+    /// Recovery class defining how failures are remediated.
+    fn recovery_class(&self) -> RecoveryClass;
+}
+
 /// Thread-safe atomic guarded container that eliminates uncoordinated lock poison.
 pub struct AtomicGuardedState<T> {
-    inner: RwLock<Mutex<GuardedState<T>>>,
+    inner: Mutex<GuardedState<T>>,
     domain: FailureDomain,
     recovery_class: RecoveryClass,
 }
@@ -44,10 +52,22 @@ impl<T> AtomicGuardedState<T> {
     #[must_use]
     pub fn new(initial: T, domain: FailureDomain, recovery_class: RecoveryClass) -> Self {
         Self {
-            inner: RwLock::new(Mutex::new(GuardedState::Ready(initial))),
+            inner: Mutex::new(GuardedState::Ready(initial)),
             domain,
             recovery_class,
         }
+    }
+
+    /// Failure domain.
+    #[must_use]
+    pub fn domain(&self) -> FailureDomain {
+        self.domain
+    }
+
+    /// Recovery class.
+    #[must_use]
+    pub fn recovery_class(&self) -> RecoveryClass {
+        self.recovery_class
     }
 
     /// Inspect the current lifecycle state.
@@ -56,11 +76,7 @@ impl<T> AtomicGuardedState<T> {
     where
         T: Clone,
     {
-        let read_slot = match self.inner.read() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
-        let guard = match read_slot.lock() {
+        let guard = match self.inner.lock() {
             Ok(g) => g,
             Err(poison) => poison.into_inner(),
         };
@@ -76,12 +92,7 @@ impl<T> AtomicGuardedState<T> {
         &self,
         op: impl FnOnce(&mut T) -> Result<R, String>,
     ) -> Result<R, TypedRecoveryError> {
-        let read_slot = match self.inner.read() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
-
-        let mut guard = match read_slot.lock() {
+        let mut guard = match self.inner.lock() {
             Ok(g) => g,
             Err(poison) => {
                 let mut inner_guard = poison.into_inner();
@@ -131,13 +142,61 @@ impl<T> AtomicGuardedState<T> {
         }
     }
 
+    /// Access the guarded state with a read-only closure.
+    pub fn with_state_ref<R>(
+        &self,
+        op: impl FnOnce(&T) -> Result<R, String>,
+    ) -> Result<R, TypedRecoveryError> {
+        self.with_state(|val| op(val))
+    }
+
     /// Explicitly recover and restore state to Ready.
     pub fn recover(&self, fresh_state: T) {
-        let mut write_slot = match self.inner.write() {
+        self.inner.clear_poison();
+        let mut guard = match self.inner.lock() {
             Ok(g) => g,
-            Err(p) => p.into_inner(),
+            Err(poison) => poison.into_inner(),
         };
-        *write_slot = Mutex::new(GuardedState::Ready(fresh_state));
+        *guard = GuardedState::Ready(fresh_state);
+    }
+
+    /// Mark the state as currently rebuilding.
+    pub fn begin_rebuild(&self) -> Result<(), TypedRecoveryError> {
+        self.inner.clear_poison();
+        let mut guard = match self.inner.lock() {
+            Ok(g) => g,
+            Err(poison) => poison.into_inner(),
+        };
+        *guard = GuardedState::Rebuilding;
+        Ok(())
+    }
+
+    /// Complete rebuilding and restore state to Ready.
+    pub fn finish_rebuild(&self, fresh_state: T) {
+        self.recover(fresh_state);
+    }
+
+    /// Transition to PoisonedTerminal state explicitly with a diagnostic reason.
+    pub fn fault(&self, reason: impl Into<String>) {
+        let mut guard = match self.inner.lock() {
+            Ok(g) => g,
+            Err(poison) => poison.into_inner(),
+        };
+        *guard = GuardedState::PoisonedTerminal {
+            domain: self.domain,
+            recovery_class: self.recovery_class,
+            reason: reason.into(),
+        };
+    }
+}
+
+impl<T> StateOwnerRecovery for AtomicGuardedState<T> {
+    fn failure_domain(&self) -> FailureDomain {
+        self.domain
+    }
+
+    fn recovery_class(&self) -> RecoveryClass {
+        self.recovery_class
     }
 }
 
@@ -208,21 +267,90 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
             Ok(g) => g,
             Err(p) => p.into_inner(),
         };
-        let (saved_ticket, val) = prepared.remove(&key).ok_or_else(|| {
-            String::from("Fix: no prepared transaction found for key during commit phase.")
-        })?;
+        if let Some((saved_ticket, val)) = prepared.remove(&key) {
+            if saved_ticket != ticket {
+                return Err(String::from(
+                    "Fix: ticket mismatch during prepare-commit transaction commit.",
+                ));
+            }
+            let mut committed = match self.committed.lock() {
+                Ok(g) => g,
+                Err(p) => p.into_inner(),
+            };
+            committed.insert(key, val.clone());
+            Ok(val)
+        } else {
+            let committed = match self.committed.lock() {
+                Ok(g) => g,
+                Err(p) => p.into_inner(),
+            };
+            if let Some(existing) = committed.get(&key) {
+                Ok(existing.clone())
+            } else {
+                Err(String::from(
+                    "Fix: no prepared transaction found for key during commit phase.",
+                ))
+            }
+        }
+    }
 
-        if saved_ticket != ticket {
-            return Err(String::from(
-                "Fix: ticket mismatch during prepare-commit transaction commit.",
-            ));
+    /// Commit an idempotency key, executing a side-effecting closure if not already committed.
+    ///
+    /// If the key is already committed, the closure is NEVER invoked, and the existing
+    /// committed value is returned, guaranteeing exactly-once side-effect execution.
+    pub fn commit_idempotent<E>(
+        &self,
+        key: K,
+        ticket: PrepareTicket,
+        side_effect: impl FnOnce() -> Result<V, E>,
+    ) -> Result<V, E>
+    where
+        E: From<String>,
+    {
+        // First check if already committed
+        {
+            let committed = match self.committed.lock() {
+                Ok(g) => g,
+                Err(p) => p.into_inner(),
+            };
+            if let Some(val) = committed.get(&key) {
+                return Ok(val.clone());
+            }
         }
 
-        let mut committed = match self.committed.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
-        committed.insert(key, val.clone());
+        // Verify prepared ticket
+        {
+            let prepared = match self.prepared.lock() {
+                Ok(g) => g,
+                Err(p) => p.into_inner(),
+            };
+            let (saved_ticket, _) = prepared.get(&key).ok_or_else(|| {
+                E::from(String::from("Fix: no prepared transaction found for key during commit phase."))
+            })?;
+            if *saved_ticket != ticket {
+                return Err(E::from(String::from("Fix: ticket mismatch during prepare-commit transaction commit.")));
+            }
+        }
+
+        // Execute side effect exactly once
+        let val = side_effect()?;
+
+        // Move from prepared to committed
+        {
+            let mut prepared = match self.prepared.lock() {
+                Ok(g) => g,
+                Err(p) => p.into_inner(),
+            };
+            prepared.remove(&key);
+        }
+        {
+            let mut committed = match self.committed.lock() {
+                Ok(g) => g,
+                Err(p) => p.into_inner(),
+            };
+            committed.insert(key, val.clone());
+        }
+
         Ok(val)
     }
 
@@ -248,11 +376,54 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
         };
         committed.contains_key(key)
     }
+
+    /// Retrieve the committed value for a key if already committed.
+    #[must_use]
+    pub fn get_committed(&self, key: &K) -> Option<V> {
+        let committed = match self.committed.lock() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
+        committed.get(key).cloned()
+    }
+
+    /// Bounded cleanup of stale prepared transactions exceeding a ticket threshold.
+    pub fn cleanup_stale_prepared(&self, max_stale_tickets: u64, limit: usize) -> usize {
+        let mut prepared = match self.prepared.lock() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
+        let current_ticket = self.next_ticket.load(Ordering::SeqCst);
+        let mut to_remove = Vec::new();
+        for (key, (ticket, _)) in prepared.iter() {
+            if current_ticket.saturating_sub(ticket.ticket_id) >= max_stale_tickets {
+                to_remove.push(key.clone());
+                if to_remove.len() >= limit {
+                    break;
+                }
+            }
+        }
+        let count = to_remove.len();
+        for key in to_remove {
+            prepared.remove(&key);
+        }
+        count
+    }
 }
 
 impl<K: Ord + Clone, V: Clone> Default for PrepareCommitJournal<K, V> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl<K: Ord + Clone, V: Clone> StateOwnerRecovery for PrepareCommitJournal<K, V> {
+    fn failure_domain(&self) -> FailureDomain {
+        FailureDomain::MemoryState
+    }
+
+    fn recovery_class(&self) -> RecoveryClass {
+        RecoveryClass::TransactionallyRecoverable
     }
 }
 
@@ -272,10 +443,33 @@ impl SupervisedRestartBudget {
         }
     }
 
+    /// Maximum permitted restarts.
+    #[must_use]
+    pub const fn max_restarts(&self) -> u32 {
+        self.max_restarts
+    }
+
+    /// Current recorded restart count.
+    #[must_use]
+    pub fn current_restarts(&self) -> u32 {
+        let count = match self.restart_count.lock() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
+        *count
+    }
+
+    /// Remaining permitted restarts before budget is exhausted.
+    #[must_use]
+    pub fn remaining_restarts(&self) -> u32 {
+        self.max_restarts.saturating_sub(self.current_restarts())
+    }
+
     /// Record a restart event and check if the budget is exhausted.
     ///
     /// # Errors
     ///
+    /// Returns [`TypedRecoveryError`] with [`RecoveryDisposition::Fatal`] if the budget is exceeded.
     pub fn record_restart(&self, domain: FailureDomain) -> Result<u32, TypedRecoveryError> {
         let mut count = match self.restart_count.lock() {
             Ok(g) => g,
@@ -305,4 +499,141 @@ impl SupervisedRestartBudget {
         };
         *count = 0;
     }
+}
+
+impl StateOwnerRecovery for SupervisedRestartBudget {
+    fn failure_domain(&self) -> FailureDomain {
+        FailureDomain::WorkerProcess
+    }
+
+    fn recovery_class(&self) -> RecoveryClass {
+        RecoveryClass::ProcessFatal
+    }
+}
+
+/// Authoritative declaration registry mapping each known runtime state owner to its failure domain and recovery class.
+#[must_use]
+pub fn authoritative_runtime_state_owner_registry(
+) -> BTreeMap<&'static str, (FailureDomain, RecoveryClass)> {
+    let mut map = BTreeMap::new();
+    map.insert(
+        "vyre-runtime/src/atomic_recovery.rs:inner",
+        (
+            FailureDomain::MemoryState,
+            RecoveryClass::RestartableFromCanonicalInput,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/atomic_recovery.rs:prepared",
+        (
+            FailureDomain::MemoryState,
+            RecoveryClass::TransactionallyRecoverable,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/atomic_recovery.rs:committed",
+        (
+            FailureDomain::MemoryState,
+            RecoveryClass::TransactionallyRecoverable,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/atomic_recovery.rs:restart_count",
+        (
+            FailureDomain::WorkerProcess,
+            RecoveryClass::ProcessFatal,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/artifact_admission/interactive_session.rs:records",
+        (
+            FailureDomain::SessionLifecycle,
+            RecoveryClass::TransactionallyRecoverable,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/artifact_admission/interactive_session.rs:channel_generations",
+        (
+            FailureDomain::SessionLifecycle,
+            RecoveryClass::TransactionallyRecoverable,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/artifact_admission/interactive_session.rs:admitted_queue",
+        (
+            FailureDomain::SessionLifecycle,
+            RecoveryClass::TransactionallyRecoverable,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/artifact_admission/interactive_session.rs:faulted",
+        (
+            FailureDomain::SessionLifecycle,
+            RecoveryClass::TransactionallyRecoverable,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/artifact_admission/retained.rs:state_machine",
+        (
+            FailureDomain::DeviceContext,
+            RecoveryClass::DeviceContextFatal,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/artifact_admission/session.rs:state",
+        (
+            FailureDomain::DeviceContext,
+            RecoveryClass::DeviceContextFatal,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/pipeline_cache/in_memory.rs:shards",
+        (
+            FailureDomain::MemoryState,
+            RecoveryClass::RestartableFromCanonicalInput,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/pipeline_cache/disk.rs:pending_flushes",
+        (
+            FailureDomain::DiskJournal,
+            RecoveryClass::RestartableFromCanonicalInput,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/prefix_cache/mod.rs:inner",
+        (
+            FailureDomain::MemoryState,
+            RecoveryClass::RestartableFromCanonicalInput,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/resource_residency/mod.rs:state",
+        (
+            FailureDomain::DeviceContext,
+            RecoveryClass::DeviceContextFatal,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/tenant/registry.rs:free_list",
+        (
+            FailureDomain::MemoryState,
+            RecoveryClass::RestartableFromCanonicalInput,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/tenant/registry.rs:tenants",
+        (
+            FailureDomain::MemoryState,
+            RecoveryClass::RestartableFromCanonicalInput,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/tenant/registry.rs:generations",
+        (
+            FailureDomain::MemoryState,
+            RecoveryClass::RestartableFromCanonicalInput,
+        ),
+    );
+    map
 }

@@ -260,3 +260,13 @@ impl RetainedArtifactSession {
         Ok(completion)
     }
 }
+
+impl crate::StateOwnerRecovery for RetainedArtifactSession {
+    fn failure_domain(&self) -> crate::FailureDomain {
+        crate::FailureDomain::DeviceContext
+    }
+
+    fn recovery_class(&self) -> crate::RecoveryClass {
+        crate::RecoveryClass::DeviceContextFatal
+    }
+}

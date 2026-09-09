@@ -575,3 +575,13 @@ impl Default for InteractiveSessionStateMachine {
         Self::new()
     }
 }
+
+impl crate::StateOwnerRecovery for InteractiveSessionStateMachine {
+    fn failure_domain(&self) -> crate::FailureDomain {
+        crate::FailureDomain::SessionLifecycle
+    }
+
+    fn recovery_class(&self) -> crate::RecoveryClass {
+        crate::RecoveryClass::TransactionallyRecoverable
+    }
+}

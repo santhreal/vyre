@@ -109,33 +109,13 @@ fn rwlock_transactional_read_reports_typed_error_on_poison() {
     assert!(matches!(res.unwrap_err(), BackendError::PoisonedLock { .. }));
 }
 
-/// Authoritative declaration registry for all Mutex and RwLock instances across driver crates.
-fn authoritative_lock_registry() -> BTreeMap<&'static str, FailureDomain> {
-    let mut map = BTreeMap::new();
-    // vyre-driver
-    map.insert("vyre-driver/src/launch_facts.rs:LAUNCH_MEASUREMENTS", FailureDomain::Transactional);
-    map.insert("vyre-driver/src/observability.rs:EVENTS", FailureDomain::Transactional);
-    map.insert("vyre-driver/src/backend/resident_sequence.rs:submitted", FailureDomain::Transactional);
-    map.insert("vyre-driver/src/grid_sync/resident_dispatch.rs:buffers", FailureDomain::Transactional);
-    map.insert("vyre-driver/src/grid_sync/resident_dispatch.rs:freed", FailureDomain::Transactional);
-    map.insert("vyre-driver/src/pipeline/cache.rs:pending_flushes", FailureDomain::Transactional);
-    // vyre-driver-wgpu
-    map.insert("vyre-driver-wgpu/src/lib.rs:shape_history", FailureDomain::Transactional);
-    map.insert("vyre-driver-wgpu/src/strict_float.rs:VERDICTS", FailureDomain::RestartableFromCanonical);
-    map.insert("vyre-driver-wgpu/src/buffer/bind_group_cache/mod.rs:cache", FailureDomain::RestartableFromCanonical);
-    map.insert("vyre-driver-wgpu/src/buffer/staging/mod.rs:inner", FailureDomain::RestartableFromCanonical);
-    map.insert("vyre-driver-wgpu/src/pipeline/disk_cache_entries.rs:TEST_DISK_PIPELINE_CACHE_ROOT", FailureDomain::Transactional);
-    map.insert("vyre-driver-wgpu/src/pipeline/disk_cache/io.rs:PENDING_DURABLE_CACHE_FILES", FailureDomain::Transactional);
-    map.insert("vyre-driver-wgpu/src/runtime/prerecorded.rs:cb", FailureDomain::DeviceContextFatal);
-    map.insert("vyre-driver-wgpu/src/runtime/device/acquire.rs:LOADER_STARTUP", FailureDomain::ProcessFatal);
-    map
-}
+use vyre_driver::lock_policy::{authoritative_driver_lock_registry, RecoveryClass};
 
 #[test]
 fn lock_failure_domain_closure_from_source() {
-    let registry = authoritative_lock_registry();
+    let registry = authoritative_driver_lock_registry();
 
-    fn scan_dir(dir: &Path, lock_locations: &mut Vec<String>) {
+    fn scan_dir(dir: &Path, lock_files: &mut BTreeMap<String, usize>) {
         if !dir.exists() {
             return;
         }
@@ -145,35 +125,64 @@ fn lock_failure_domain_closure_from_source() {
             if path.is_dir() {
                 let name = path.file_name().unwrap().to_str().unwrap();
                 if name != "target" && name != "tests" {
-                    scan_dir(&path, lock_locations);
+                    scan_dir(&path, lock_files);
                 }
-            } else if path.extension().map_or(false, |ext| ext == "rs") {
+            } else if path.extension().is_some_and(|ext| ext == "rs") {
+                let file_name = path.file_name().unwrap().to_str().unwrap();
+                if file_name == "tests.rs" || file_name.ends_with("_tests.rs") || file_name == "lock_policy.rs" {
+                    continue;
+                }
                 let content = fs::read_to_string(&path).unwrap();
-                for (line_no, line) in content.lines().enumerate() {
-                    if (line.contains("Mutex<") || line.contains("RwLock<"))
-                        && !line.trim_start().starts_with("//")
-                        && !line.trim_start().starts_with("/*")
-                        && !line.contains("use ")
-                    {
-                        let path_str = path.to_str().unwrap().replace('\\', "/");
-                        lock_locations.push(format!("{path_str}:line_{}", line_no + 1));
+                let mut lock_count = 0;
+                let mut in_test_cfg = false;
+                for line in content.lines() {
+                    let trimmed = line.trim();
+                    if trimmed.starts_with("#[cfg(test)]") {
+                        in_test_cfg = true;
                     }
+                    if in_test_cfg {
+                        continue;
+                    }
+                    if (line.contains("Mutex<") || line.contains("RwLock<"))
+                        && !trimmed.starts_with("//")
+                        && !trimmed.starts_with("/*")
+                        && !line.contains("use ")
+                        && !line.contains("fn ")
+                    {
+                        lock_count += 1;
+                    }
+                }
+                if lock_count > 0 {
+                    let path_str = path.to_str().unwrap().replace('\\', "/");
+                    lock_files.insert(path_str, lock_count);
                 }
             }
         }
     }
 
-    let mut lock_locations = Vec::new();
+    let mut lock_files = BTreeMap::new();
     let root = vyre_workspace_root();
-    scan_dir(&root.join("vyre-driver/src"), &mut lock_locations);
-    scan_dir(&root.join("vyre-driver-wgpu/src"), &mut lock_locations);
+    scan_dir(&root.join("vyre-driver/src"), &mut lock_files);
+    scan_dir(&root.join("vyre-driver-wgpu/src"), &mut lock_files);
 
     assert!(
-        !lock_locations.is_empty(),
-        "scan must locate existing driver locks"
+        !lock_files.is_empty(),
+        "scan must locate existing driver locks from source"
     );
 
-    // Verify each registered lock belongs to a valid failure domain
+    // 1. Verify every source file with locks is covered in registry
+    for (file_path, count) in &lock_files {
+        let has_entry = registry.keys().any(|key| {
+            let prefix = key.split(':').next().unwrap_or("");
+            file_path.ends_with(prefix)
+        });
+        assert!(
+            has_entry,
+            "Source file {file_path} contains {count} lock(s) but has no declared FailureDomain in authoritative registry! Fix: register failure domain in authoritative_driver_lock_registry()."
+        );
+    }
+
+    // 2. Verify each registered lock belongs to a valid failure domain and recovery class
     for (key, domain) in &registry {
         assert!(
             matches!(
@@ -186,5 +195,39 @@ fn lock_failure_domain_closure_from_source() {
             ),
             "registered lock {key} must have a valid failure domain"
         );
+
+        let class = RecoveryClass::from(*domain);
+        let roundtrip = FailureDomain::from(class);
+        assert_eq!(
+            *domain, roundtrip,
+            "RecoveryClass roundtrip must be identity for {key}"
+        );
+    }
+}
+
+#[test]
+fn failure_domain_recovery_class_bijection_preserves_semantics() {
+    for domain in [
+        FailureDomain::Transactional,
+        FailureDomain::RestartableFromCanonical,
+        FailureDomain::DeviceContextFatal,
+        FailureDomain::ProcessFatal,
+        FailureDomain::InvariantViolation,
+    ] {
+        let class: RecoveryClass = domain.into();
+        let back: FailureDomain = class.into();
+        assert_eq!(domain, back);
+    }
+
+    for class in [
+        RecoveryClass::TransactionallyRecoverable,
+        RecoveryClass::RestartableFromCanonicalInput,
+        RecoveryClass::DeviceContextFatal,
+        RecoveryClass::ProcessFatal,
+        RecoveryClass::InvariantViolation,
+    ] {
+        let domain: FailureDomain = class.into();
+        let back: RecoveryClass = domain.into();
+        assert_eq!(class, back);
     }
 }

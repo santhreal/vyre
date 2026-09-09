@@ -30,21 +30,23 @@ impl InMemoryPipelineCache {
         usize::from(fp.0[0]) % Self::SHARD_COUNT
     }
 
-    /// Lock one cache shard, failing closed on a poisoned lock.
+    /// Lock one cache shard according to [`crate::RecoveryClass::RestartableFromCanonicalInput`].
     ///
-    /// # Panics
-    /// Panics when the shard lock is poisoned. A poisoned lock means a panic left the
-    /// shard inconsistent, and serving from it could return a pipeline built for another
-    /// program.
+    /// If a previous thread panicked while holding the shard lock, the shard state is
+    /// atomically reset to an empty valid state so no corrupted entries can be served,
+    /// and the caller restarts cleanly from canonical input.
     fn lock_shard(shard: &Mutex<InMemoryCacheShard>) -> MutexGuard<'_, InMemoryCacheShard> {
-        // Fail closed on poison. `PoisonError::into_inner` would silently hand
-        // back a guard over shard state left half-mutated by a panicking writer
-        //: every subsequent cache read/write would then trust corrupt data with
-        // no signal. A poisoned pipeline-cache shard is unrecoverable; surface it
-        // loudly instead of laundering it.
-        shard
-            .lock()
-            .unwrap_or_else(|_| panic!("pipeline cache shard lock was poisoned"))
+        match shard.lock() {
+            Ok(guard) => guard,
+            Err(poison) => {
+                shard.clear_poison();
+                let mut guard = poison.into_inner();
+                guard.entries.clear();
+                guard.bytes = 0;
+                guard.last_eviction = None;
+                guard
+            }
+        }
     }
 
     /// Construct an empty cache.
@@ -538,8 +540,12 @@ mod tests {
     }
 
     #[test]
-    fn poisoned_cache_shard_is_not_silently_recovered() {
+    fn poisoned_cache_shard_resets_cleanly_under_restartable_recovery() {
         let cache = Arc::new(InMemoryPipelineCache::new());
+        let fp = PipelineFingerprint([0; 32]);
+        cache.put(fp, vec![1, 2, 3, 4]);
+        assert_eq!(cache.len(), 1);
+
         let poisoned = Arc::clone(&cache);
         let _ = std::thread::spawn(move || {
             let _guard = InMemoryPipelineCache::lock_shard(&poisoned.shards[0]);
@@ -547,18 +553,23 @@ mod tests {
         })
         .join();
 
-        let panic = std::panic::catch_unwind(|| {
-            let _ = cache.len();
-        })
-        .expect_err("poisoned pipeline cache shard must panic instead of recovering");
-        let message = panic
-            .downcast_ref::<String>()
-            .map(String::as_str)
-            .or_else(|| panic.downcast_ref::<&'static str>().copied())
-            .unwrap_or("<non-string panic>");
-        assert!(
-            message.contains("pipeline cache shard lock was poisoned"),
-            "{message}"
-        );
+        // Under RestartableFromCanonicalInput, accessing the poisoned shard resets it cleanly to empty
+        assert_eq!(cache.len(), 0, "poisoned shard must reset to empty valid state");
+        assert_eq!(cache.get(&fp), None);
+
+        // Subsequent put succeeds normally
+        cache.put(fp, vec![5, 6, 7, 8]);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(cache.get(&fp), Some(vec![5, 6, 7, 8]));
+    }
+}
+
+impl crate::StateOwnerRecovery for InMemoryPipelineCache {
+    fn failure_domain(&self) -> crate::FailureDomain {
+        crate::FailureDomain::MemoryState
+    }
+
+    fn recovery_class(&self) -> crate::RecoveryClass {
+        crate::RecoveryClass::RestartableFromCanonicalInput
     }
 }

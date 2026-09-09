@@ -517,3 +517,13 @@ mod tests {
         );
     }
 }
+
+impl crate::StateOwnerRecovery for DiskCache {
+    fn failure_domain(&self) -> crate::FailureDomain {
+        crate::FailureDomain::DiskJournal
+    }
+
+    fn recovery_class(&self) -> crate::RecoveryClass {
+        crate::RecoveryClass::RestartableFromCanonicalInput
+    }
+}

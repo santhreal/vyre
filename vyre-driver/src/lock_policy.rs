@@ -20,7 +20,12 @@
 //! 5. [`FailureDomain::InvariantViolation`](crate::lock_policy::FailureDomain::InvariantViolation): Critical internal data structure
 //!    corruption violating compiler invariants. Process is aborted with diagnostic details.
 
+use std::collections::BTreeMap;
 use std::sync::{Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
+
+pub use vyre_foundation::{
+    FailureDomain as SystemFailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError,
+};
 
 use crate::BackendError;
 
@@ -37,6 +42,54 @@ pub enum FailureDomain {
     ProcessFatal,
     /// Subsystem internal invariant violated; unrecoverable bug.
     InvariantViolation,
+}
+
+impl From<RecoveryClass> for FailureDomain {
+    fn from(class: RecoveryClass) -> Self {
+        match class {
+            RecoveryClass::TransactionallyRecoverable => Self::Transactional,
+            RecoveryClass::RestartableFromCanonicalInput => Self::RestartableFromCanonical,
+            RecoveryClass::DeviceContextFatal => Self::DeviceContextFatal,
+            RecoveryClass::ProcessFatal => Self::ProcessFatal,
+            RecoveryClass::InvariantViolation | _ => Self::InvariantViolation,
+        }
+    }
+}
+
+impl From<FailureDomain> for RecoveryClass {
+    fn from(domain: FailureDomain) -> Self {
+        match domain {
+            FailureDomain::Transactional => Self::TransactionallyRecoverable,
+            FailureDomain::RestartableFromCanonical => Self::RestartableFromCanonicalInput,
+            FailureDomain::DeviceContextFatal => Self::DeviceContextFatal,
+            FailureDomain::ProcessFatal => Self::ProcessFatal,
+            FailureDomain::InvariantViolation => Self::InvariantViolation,
+        }
+    }
+}
+
+/// Authoritative declaration registry mapping each known driver lock to its recovery class and domain.
+#[must_use]
+pub fn authoritative_driver_lock_registry() -> BTreeMap<&'static str, FailureDomain> {
+    let mut map = BTreeMap::new();
+    // vyre-driver
+    map.insert("vyre-driver/src/launch_facts.rs:LAUNCH_MEASUREMENTS", FailureDomain::Transactional);
+    map.insert("vyre-driver/src/observability.rs:EVENTS", FailureDomain::Transactional);
+    map.insert("vyre-driver/src/observability.rs:LOCK", FailureDomain::Transactional);
+    map.insert("vyre-driver/src/backend/resident_sequence.rs:submitted", FailureDomain::Transactional);
+    map.insert("vyre-driver/src/grid_sync/resident_dispatch.rs:buffers", FailureDomain::Transactional);
+    map.insert("vyre-driver/src/grid_sync/resident_dispatch.rs:freed", FailureDomain::Transactional);
+    map.insert("vyre-driver/src/pipeline/cache.rs:pending_flushes", FailureDomain::Transactional);
+    // vyre-driver-wgpu
+    map.insert("vyre-driver-wgpu/src/lib.rs:shape_history", FailureDomain::Transactional);
+    map.insert("vyre-driver-wgpu/src/strict_float.rs:VERDICTS", FailureDomain::RestartableFromCanonical);
+    map.insert("vyre-driver-wgpu/src/buffer/bind_group_cache/mod.rs:cache", FailureDomain::RestartableFromCanonical);
+    map.insert("vyre-driver-wgpu/src/buffer/staging/mod.rs:inner", FailureDomain::RestartableFromCanonical);
+    map.insert("vyre-driver-wgpu/src/pipeline/disk_cache_entries.rs:TEST_DISK_PIPELINE_CACHE_ROOT", FailureDomain::Transactional);
+    map.insert("vyre-driver-wgpu/src/pipeline/disk_cache/io.rs:PENDING_DURABLE_CACHE_FILES", FailureDomain::Transactional);
+    map.insert("vyre-driver-wgpu/src/runtime/prerecorded.rs:cb", FailureDomain::DeviceContextFatal);
+    map.insert("vyre-driver-wgpu/src/runtime/device/acquire.rs:LOADER_STARTUP", FailureDomain::ProcessFatal);
+    map
 }
 
 /// End the process, naming the owner and the state its poisoned lock guards.

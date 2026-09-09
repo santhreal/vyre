@@ -787,3 +787,13 @@ fn require_every_entry_binding(
     }
     Ok(())
 }
+
+impl crate::StateOwnerRecovery for ArtifactSession {
+    fn failure_domain(&self) -> crate::FailureDomain {
+        crate::FailureDomain::DeviceContext
+    }
+
+    fn recovery_class(&self) -> crate::RecoveryClass {
+        crate::RecoveryClass::DeviceContextFatal
+    }
+}

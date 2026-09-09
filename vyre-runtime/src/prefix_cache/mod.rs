@@ -114,3 +114,13 @@ impl PrefixCache {
         Ok(())
     }
 }
+
+impl crate::StateOwnerRecovery for PrefixCache {
+    fn failure_domain(&self) -> crate::FailureDomain {
+        crate::FailureDomain::MemoryState
+    }
+
+    fn recovery_class(&self) -> crate::RecoveryClass {
+        crate::RecoveryClass::RestartableFromCanonicalInput
+    }
+}
