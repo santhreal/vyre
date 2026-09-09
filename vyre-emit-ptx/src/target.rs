@@ -1,3 +1,5 @@
+use vyre_lower::analyses::TargetBankGeometry;
+
 /// Target compute capability for PTX emit. Defaults to `sm_70` (Volta),
 /// the broad-compatibility floor for the shipped PTX op set.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -58,6 +60,19 @@ impl ComputeCapability {
     pub const fn supports_wmma_bf16(&self) -> bool {
         self.major >= 8
     }
+
+    /// Shared-memory bank geometry for this compute capability target:
+    /// thirty-two four-byte banks, thirty-two lanes to a warp, four-byte native
+    /// access width.
+    #[must_use]
+    pub const fn bank_geometry(&self) -> TargetBankGeometry {
+        TargetBankGeometry {
+            bank_count: 32,
+            bank_width_bytes: 4,
+            subgroup_lanes: 32,
+            instruction_word_bytes: 4,
+        }
+    }
 }
 
 impl Default for ComputeCapability {
@@ -104,5 +119,17 @@ impl PtxEmitOptions {
 impl Default for PtxEmitOptions {
     fn default() -> Self {
         Self::for_target(ComputeCapability::default())
+    }
+}
+impl PtxEmitOptions {
+    /// Shared-memory bank geometry stated by these emission options.
+    #[must_use]
+    pub fn bank_geometry(&self) -> TargetBankGeometry {
+        TargetBankGeometry {
+            bank_count: 32,
+            bank_width_bytes: 4,
+            subgroup_lanes: self.subgroup_size,
+            instruction_word_bytes: 4,
+        }
     }
 }

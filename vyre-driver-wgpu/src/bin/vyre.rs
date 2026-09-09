@@ -101,7 +101,7 @@ fn run_demo() -> Result<u32, String> {
         vec![
             BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(1)
-                .with_output_byte_range(0..4),
+                .with_full_output_byte_range(),
         ],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(42))],

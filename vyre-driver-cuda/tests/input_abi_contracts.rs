@@ -14,13 +14,13 @@ fn sample_mixed_program() -> Program {
         vec![
             BufferDecl::storage("in_read", 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(4)
-                .with_memory_kind(MemoryKind::Dynamic),
+                .with_kind(MemoryKind::Global),
             BufferDecl::storage("out_write", 1, BufferAccess::WriteOnly, DataType::U32)
                 .with_count(4)
-                .with_memory_kind(MemoryKind::Dynamic),
+                .with_kind(MemoryKind::Global),
             BufferDecl::storage("state_rw", 2, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(4)
-                .with_memory_kind(MemoryKind::Dynamic),
+                .with_kind(MemoryKind::Global),
         ],
         [1, 1, 1],
         vec![Node::store(
@@ -41,7 +41,7 @@ fn sample_test_programs() -> Vec<Program> {
             vec![
                 BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
                     .with_count(4)
-                    .with_memory_kind(MemoryKind::Dynamic),
+                    .with_kind(MemoryKind::Global),
             ],
             [1, 1, 1],
             vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
@@ -51,10 +51,10 @@ fn sample_test_programs() -> Vec<Program> {
             vec![
                 BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::U32)
                     .with_count(4)
-                    .with_memory_kind(MemoryKind::Dynamic),
+                    .with_kind(MemoryKind::Global),
                 BufferDecl::storage("out", 1, BufferAccess::WriteOnly, DataType::U32)
                     .with_count(4)
-                    .with_memory_kind(MemoryKind::Dynamic),
+                    .with_kind(MemoryKind::Global),
             ],
             [1, 1, 1],
             vec![Node::store(
@@ -68,13 +68,13 @@ fn sample_test_programs() -> Vec<Program> {
             vec![
                 BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::U32)
                     .with_count(4)
-                    .with_memory_kind(MemoryKind::Dynamic),
+                    .with_kind(MemoryKind::Global),
                 BufferDecl::storage("b", 1, BufferAccess::ReadOnly, DataType::U32)
                     .with_count(4)
-                    .with_memory_kind(MemoryKind::Dynamic),
+                    .with_kind(MemoryKind::Global),
                 BufferDecl::storage("out", 2, BufferAccess::WriteOnly, DataType::U32)
                     .with_count(4)
-                    .with_memory_kind(MemoryKind::Dynamic),
+                    .with_kind(MemoryKind::Global),
             ],
             [1, 1, 1],
             vec![Node::store(
@@ -85,6 +85,26 @@ fn sample_test_programs() -> Vec<Program> {
         ),
         // 1 read-only, 1 read-write, 1 write-only (2 host inputs)
         sample_mixed_program(),
+        // Shared-tier storage buffer -> 1 host input
+        Program::wrapped(
+            vec![
+                BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(4)
+                    .with_kind(MemoryKind::Global),
+                BufferDecl::storage("shared_tier", 1, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(4)
+                    .with_kind(MemoryKind::Shared),
+                BufferDecl::storage("out", 2, BufferAccess::WriteOnly, DataType::U32)
+                    .with_count(4)
+                    .with_kind(MemoryKind::Global),
+            ],
+            [1, 1, 1],
+            vec![Node::store(
+                "out",
+                Expr::u32(0),
+                Expr::load("in", Expr::u32(0)),
+            )],
+        ),
     ]
 }
 
@@ -94,8 +114,8 @@ fn canonical_inputs_for_program(program: &Program) -> Vec<Vec<u8>> {
         .iter()
         .filter(|decl| decl.consumes_host_input())
         .map(|decl| {
-            let count = decl.element_count().unwrap_or(4);
-            vec![0u8; count as usize * decl.data_type().element_size_bytes()]
+            let bytes = decl.static_byte_len().ok().flatten().unwrap_or(16);
+            vec![0u8; bytes]
         })
         .collect()
 }
@@ -163,7 +183,7 @@ fn host_input_abi_refusal_contracts_non_device() {
 #[test]
 fn long_form_with_output_placeholder_is_refused_with_both_counts_named() {
     use vyre_driver::{DispatchConfig, VyreBackend};
-    use crate::CudaBackend;
+    use vyre_driver_cuda::CudaBackend;
 
     let backend = CudaBackend::acquire()
         .expect("Fix: live CUDA backend is required for input ABI contract coverage");
@@ -218,7 +238,7 @@ fn long_form_with_output_placeholder_is_refused_with_both_counts_named() {
 #[test]
 fn reference_interpreter_and_cuda_backend_agree_on_accepted_input_counts() {
     use vyre_driver::{DispatchConfig, VyreBackend};
-    use crate::CudaBackend;
+    use vyre_driver_cuda::CudaBackend;
 
     let backend = CudaBackend::acquire()
         .expect("Fix: live CUDA backend is required for input ABI contract coverage");

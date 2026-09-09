@@ -19,7 +19,7 @@ fn dummy_program(workgroup_size: [u32; 3]) -> Program {
     Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)
             .with_count(1)
-            .with_output_byte_range(0..4)],
+            .with_output_byte_range(0_usize..4)],
         workgroup_size,
         vec![
             Node::store("out", Expr::u32(0), Expr::u32(42)),

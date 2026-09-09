@@ -584,6 +584,11 @@ pub mod self_optimizer_licm_e2e;
 #[path = "self_optimizer_pattern_match_e2e.rs"]
 pub mod self_optimizer_pattern_match_e2e;
 
+/// Integration tests from `tests/self_optimizer_pipeline_resident_e2e.rs`.
+#[cfg(all(test, feature = "device-tests"))]
+#[path = "self_optimizer_pipeline_resident_e2e.rs"]
+pub mod self_optimizer_pipeline_resident_e2e;
+
 /// Integration tests from `tests/self_optimizer_pattern_match_extended/mod.rs`.
 #[cfg(all(test, feature = "device-tests"))]
 #[path = "self_optimizer_pattern_match_extended/mod.rs"]

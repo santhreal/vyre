@@ -54,6 +54,8 @@ bincode = { workspace = true }
 # lives behind this feature, like `descriptor_builder`.
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
 vyre-runtime.workspace = true
+# The self-hosted optimizer device suites drive pass-engine scheduling directly.
+vyre-pass-engine.workspace = true
 # `ir-fixtures` carries the shared u32 binop parity tables the live-GPU
 # parity suites read their operands and pinned oracle answers from.
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests", "driver-artifact-contracts"] }

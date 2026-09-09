@@ -306,7 +306,7 @@ pub(crate) fn long_running_program() -> Program {
     Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)
             .with_count(OUTPUT_WORDS)
-            .with_output_byte_range(0..4)],
+            .with_output_byte_range(0_usize..4)],
         [WORKGROUP_INVOCATIONS, 1, 1],
         body,
     )

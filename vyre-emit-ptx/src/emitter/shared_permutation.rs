@@ -10,25 +10,13 @@ use std::num::NonZeroU32;
 
 use vyre_lower::analyses::{
     derive_shared_access_profiles, select_bank_conflict_strategy, BankConflictMitigation,
-    SharedBindingAccessProfile, TargetBankGeometry,
+    SharedBindingAccessProfile,
 };
 use vyre_lower::KernelDescriptor;
 use vyre_lower::MemoryClass;
 
 use super::BodyCtx;
 use crate::reg::{PtxType, Reg};
-
-/// Shared-memory bank geometry, as every CUDA target since Kepler reports it:
-/// thirty-two four-byte banks, thirty-two lanes to a warp, four-byte native
-/// access width.
-const fn bank_geometry() -> TargetBankGeometry {
-    TargetBankGeometry {
-        bank_count: 32,
-        bank_width_bytes: 4,
-        subgroup_lanes: 32,
-        instruction_word_bytes: 4,
-    }
-}
 
 /// A bijective rewrite of a shared binding's element index.
 ///
@@ -170,9 +158,8 @@ impl BodyCtx<'_> {
     /// or store with a known stride, and that no asynchronous transaction or
     /// fused bulk copy reaches it: both route around the single address site
     /// the rewrite happens at, and the derivation states that verdict so this
-    /// crate keeps no second copy of the rule.
     pub(super) fn plan_shared_permutations(&mut self, desc: &KernelDescriptor) {
-        let geometry = bank_geometry();
+        let geometry = self.options.bank_geometry();
         let Some(banks) = NonZeroU32::new(geometry.bank_count) else {
             return;
         };
@@ -394,7 +381,10 @@ mod tests {
     #[test]
     fn a_column_walk_selects_one_element_of_padding_per_row() {
         let profile = profile(1024, &[32, 32]);
-        let selection = select_bank_conflict_strategy(&profile.phases, &bank_geometry());
+        let selection = select_bank_conflict_strategy(
+            &profile.phases,
+            &crate::PtxEmitOptions::default().bank_geometry(),
+        );
         assert!(selection.accepted);
         assert_eq!(
             selection.strategy,

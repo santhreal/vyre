@@ -221,14 +221,6 @@ fn record_dispatch_unsubmitted_impl(
             )
         })?;
     }
-    // Runtime-sized writable bindings are sized from the bytes the caller
-    // supplied on THIS dispatch. The pipeline's cached layouts cannot carry that
-    // number: they are derived once per program, at compile time, where the input
-    // lengths do not exist yet, so a countless declaration was laid out as zero
-    // elements. Resolving it here is what makes such a buffer read back the same
-    // bytes the CPU reference and CUDA return, instead of an empty buffer under
-    // an `Ok`, and it is what stops the upload from overrunning a 4-byte
-    // allocation and aborting the host process inside `Queue::write_buffer`.
     if request
         .buffer_bindings
         .iter()

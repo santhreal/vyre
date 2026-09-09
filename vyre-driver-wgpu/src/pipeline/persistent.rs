@@ -397,6 +397,12 @@ impl WgpuPipeline {
             crate::buffer::write_padded(queue, handle.buffer(), data, padded_size)?;
             input_handles.push(handle);
         }
+        if input_slot != inputs.len() {
+            return Err(BackendError::new(format!(
+                "Fix: dispatch expected {input_slot} input buffer(s) from Program declarations but received {}. Pass one input per binding that consumes host bytes, in binding order, and none for a backend-allocated output.",
+                inputs.len()
+            )));
+        }
         Ok((input_handles, output_handles))
     }
 

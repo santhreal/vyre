@@ -296,11 +296,11 @@ fn reference_interpreter_and_wgpu_backend_agree_on_accepted_input_counts() {
             vyre_reference::reference_eval(program, &ref_inputs).is_ok(),
             "reference_eval must accept exactly {expected_count} inputs"
         );
+        let res = backend.dispatch(program, &wgpu_inputs, &DispatchConfig::default());
         assert!(
-            backend
-                .dispatch(program, &wgpu_inputs, &DispatchConfig::default())
-                .is_ok(),
-            "wgpu backend must accept exactly {expected_count} inputs"
+            res.is_ok(),
+            "wgpu backend must accept exactly {expected_count} inputs: {:?}",
+            res.err()
         );
 
         // One extra input

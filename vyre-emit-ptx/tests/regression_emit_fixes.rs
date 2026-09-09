@@ -3,10 +3,10 @@
 //! Each test asserts the exact PTX instruction suffix/mnemonic that the
 //! fix introduced, confirming the pre-fix behaviour is gone.
 
-use vyre_foundation::ir::{BinOp, DataType};
+use vyre_foundation::ir::{AtomicOp, BinOp, DataType, MemoryOrdering};
 use vyre_lower::descriptor_builder::{
-    binop, body, column_walk_tile, descriptor, global_rw, lit, load_global, op, store_global,
-    strided_tile_program,
+    binop, body, column_walk_tile, descriptor, effect, global_rw, lit, load_global, op,
+    store_global, strided_tile_program,
 };
 use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue, WORKGROUP_SLOT_BASE};
 
@@ -284,5 +284,80 @@ fn a_real_lowered_conflicting_program_emits_permuted_ptx() {
     assert!(
         ptx.contains("shr.u32"),
         "the padded address takes the row count from the index with a shift. Emitted PTX:\n{ptx}"
+    );
+}
+/// An asynchronous transaction reaching a shared binding prevents index
+/// permutation because the transfer addresses the allocation, so the unpermuted
+/// 4096-byte extent and unpermuted address computation are emitted.
+#[test]
+fn an_asynchronous_transfer_prevents_shared_permutation() {
+    let mut desc = column_walk_tile(1024);
+    desc.body.ops.push(effect(
+        KernelOpKind::async_load("dma".into()),
+        [0, WORKGROUP_SLOT_BASE, 0, 0],
+    ));
+    let ptx = emit(&desc, "column walk with async load");
+
+    let declared = shared_declaration(4096);
+    assert!(
+        ptx.contains(&declared),
+        "an async transfer blocks permutation, keeping the declared 4096 bytes. PTX emitted:\n{ptx}"
+    );
+    assert_eq!(
+        padded_address_sites(&ptx, 1),
+        0,
+        "no row-padding rewrite is emitted when an async transfer reaches the binding. PTX emitted:\n{ptx}"
+    );
+}
+
+/// A fused bulk copy (global load feeding shared store at same index) reaching
+/// a shared binding prevents index permutation, keeping the unpermuted 4096-byte
+/// extent and unpermuted address computation.
+#[test]
+fn a_fused_bulk_copy_prevents_shared_permutation() {
+    let mut desc = column_walk_tile(1024);
+    desc.body.ops.push(op(KernelOpKind::LoadGlobal, [0, 0], 5));
+    desc.body.ops.push(op(
+        KernelOpKind::StoreShared,
+        [WORKGROUP_SLOT_BASE, 0, 5],
+        6,
+    ));
+    let ptx = emit(&desc, "column walk with fused bulk copy");
+
+    let declared = shared_declaration(4096);
+    assert!(
+        ptx.contains(&declared),
+        "a fused bulk copy blocks permutation, keeping the declared 4096 bytes. PTX emitted:\n{ptx}"
+    );
+    assert_eq!(
+        padded_address_sites(&ptx, 1),
+        0,
+        "no row-padding rewrite is emitted when a fused bulk copy reaches the binding. PTX emitted:\n{ptx}"
+    );
+}
+
+/// An atomic op reaching a shared binding prevents index permutation.
+#[test]
+fn an_atomic_op_prevents_shared_permutation() {
+    let mut desc = column_walk_tile(1024);
+    desc.body.ops.push(op(
+        KernelOpKind::Atomic {
+            op: AtomicOp::Add,
+            ordering: MemoryOrdering::Relaxed,
+        },
+        [WORKGROUP_SLOT_BASE, 2, 0],
+        4,
+    ));
+    let ptx = emit(&desc, "column walk with atomic");
+
+    let declared = shared_declaration(4096);
+    assert!(
+        ptx.contains(&declared),
+        "an atomic blocks permutation, keeping the declared 4096 bytes. PTX emitted:\n{ptx}"
+    );
+    assert_eq!(
+        padded_address_sites(&ptx, 1),
+        0,
+        "no row-padding rewrite is emitted when an atomic reaches the binding. PTX emitted:\n{ptx}"
     );
 }

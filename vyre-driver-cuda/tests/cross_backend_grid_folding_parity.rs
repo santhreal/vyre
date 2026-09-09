@@ -11,9 +11,8 @@
 
 #![cfg(feature = "device-tests")]
 
-use crate::harness;
-use crate::CudaBackend;
 use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::value::Value;
 
@@ -23,7 +22,7 @@ fn identity_program(words: u32) -> Program {
         vec![
             BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
                 .with_count(words)
-                .with_output_byte_range(0..(words as usize * 4)),
+                .with_output_byte_range(0_usize..(words as usize * 4)),
         ],
         [256, 1, 1],
         vec![Node::if_then(

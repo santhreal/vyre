@@ -314,7 +314,7 @@ mod layout_config_contracts {
         let program = Program::wrapped(
             vec![BufferDecl::output("out", 0, DataType::U32)
                 .with_count(1024)
-                .with_output_byte_range(4..12)],
+                .with_output_byte_range(4_usize..12)],
             [1, 1, 1],
             vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
         );

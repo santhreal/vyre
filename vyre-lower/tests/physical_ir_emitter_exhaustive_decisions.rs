@@ -8,9 +8,7 @@
 //! 3. All target dialects (naga/wgsl, ptx, spirv, metal) must have explicit coverage.
 
 use std::path::Path;
-use vyre_foundation::ir::{
-    AtomicOp, BinOp, DataType, MemoryOrdering, SubgroupReduceOp, UnOp,
-};
+use vyre_foundation::ir::{AtomicOp, BinOp, DataType, MemoryOrdering, SubgroupReduceOp, UnOp};
 use vyre_lower::{
     AsyncTransaction, AsyncWaitSpec, FragmentValue, KernelOpKind, MatrixMmaElement,
     MatrixMmaLayout, MatrixMmaSpec, MatrixTileShape, MemoryProxyFence, Name, OpaqueExprData,
@@ -326,9 +324,7 @@ fn all_physical_ir_variants() -> Vec<KernelOpKind> {
             op: AtomicOp::Add,
             ordering: MemoryOrdering::SeqCst,
         },
-        KernelOpKind::IndirectDispatch {
-            count_offset: 0,
-        },
+        KernelOpKind::IndirectDispatch { count_offset: 0 },
         KernelOpKind::MatrixMma(Box::new(MatrixMmaSpec {
             tile: MatrixTileShape {
                 m: 16,

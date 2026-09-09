@@ -12,7 +12,7 @@ fn two_dimensional_program() -> Program {
     Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)
             .with_count(64)
-            .with_output_byte_range(0..256)],
+            .with_output_byte_range(0_usize..256)],
         [8, 8, 1],
         vec![Node::store("out", Expr::gid_x(), Expr::u32(7))],
     )
@@ -50,7 +50,7 @@ fn one_dimensional_program(words: u32) -> Program {
     Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)
             .with_count(words)
-            .with_output_byte_range(0..16)],
+            .with_output_byte_range(0_usize..16)],
         [256, 1, 1],
         vec![Node::if_then(
             Expr::lt(Expr::gid_x(), Expr::u32(4)),
@@ -131,7 +131,7 @@ fn identity_program(words: u32) -> Program {
     Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)
             .with_count(words)
-            .with_output_byte_range(0..(words as usize * 4))],
+            .with_output_byte_range(0_usize..(words as usize * 4))],
         [256, 1, 1],
         vec![Node::if_then(
             Expr::lt(Expr::gid_x(), Expr::u32(words)),
@@ -297,7 +297,7 @@ fn an_inferred_launch_past_the_device_single_axis_ceiling_folds_and_matches_refe
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)
             .with_count(words)
-            .with_output_byte_range(0..8)],
+            .with_output_byte_range(0_usize..8)],
         [workgroup_size, 1, 1],
         vec![
             Node::if_then(
@@ -353,4 +353,234 @@ fn an_inferred_launch_past_the_product_of_every_axis_limit_is_refused_naming_the
         message.contains("1025") && message.contains("1024") && message.contains("Fix:"),
         "Fix: the refusal must name the element count asked for and the capacity limit: {message}"
     );
+}
+/// WHY: closes the class "an out-of-range invocation in the folded tail writes past the buffer
+/// or wraps and overwrites a valid element". When a 1D launch of 1025 elements with a 256-lane
+/// workgroup is folded across a 4-workgroup per-axis ceiling, the inferred grid is [4, 2, 1],
+/// which launches 2048 total invocations. Invocations 0..1025 must write their exact values,
+/// while the 1023 tail invocations (1025..2048) in the second row must not write into the
+/// buffer or overwrite elements 0..1022.
+#[test]
+fn a_launch_one_element_above_the_pinned_per_axis_ceiling_proves_tail_guard() {
+    let backend = live_backend();
+    let words = 1025_u32;
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32)
+            .with_count(words)
+            .with_output_byte_range(0_usize..(words as usize * 4))],
+        [256, 1, 1],
+        vec![Node::if_then(
+            Expr::lt(Expr::gid_x(), Expr::u32(words)),
+            vec![Node::store(
+                "out",
+                Expr::gid_x(),
+                Expr::add(Expr::gid_x(), Expr::u32(50)),
+            )],
+        )],
+    );
+
+    let mut config = DispatchConfig::default();
+    config.max_workgroups_per_axis = Some([4, 65_535, 65_535]);
+
+    let outputs = backend
+        .dispatch(&program, &[], &config)
+        .expect("Fix: 1025 elements on a 1024 ceiling must fold to [4, 2, 1] and dispatch.");
+
+    let expected = (0..words)
+        .map(|i| i + 50)
+        .flat_map(u32::to_le_bytes)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        outputs[0], expected,
+        "Fix: every lane 0..1025 must store its value and no tail invocation may overwrite elements."
+    );
+
+    let reference = vyre_reference::reference_eval(&program, &[])
+        .expect("Fix: reference interpreter must evaluate 1025-element folded launch.")
+        .into_iter()
+        .map(|value| value.to_bytes())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        outputs[0], reference[0],
+        "Fix: folded launch one element above ceiling must match reference interpreter."
+    );
+}
+
+/// WHY: closes the class "a launch one element below a fold boundary miscalculates grid shape
+/// or fails to guard the single trailing idle invocation".
+/// Boundary 1: 1023 elements (one element below the 1024 single-axis ceiling, grid [4, 1, 1]).
+/// Boundary 2: 2047 elements (one element below the 2048 2-row fold boundary, grid [4, 2, 1]).
+#[test]
+fn a_launch_one_element_below_fold_boundary_proves_boundary_and_tail_guard() {
+    let backend = live_backend();
+    for words in [1023_u32, 2047_u32] {
+        let program = Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32)
+                .with_count(words)
+                .with_output_byte_range(0_usize..(words as usize * 4))],
+            [256, 1, 1],
+            vec![Node::if_then(
+                Expr::lt(Expr::gid_x(), Expr::u32(words)),
+                vec![Node::store(
+                    "out",
+                    Expr::gid_x(),
+                    Expr::add(Expr::gid_x(), Expr::u32(77)),
+                )],
+            )],
+        );
+
+        let mut config = DispatchConfig::default();
+        config.max_workgroups_per_axis = Some([4, 65_535, 65_535]);
+
+        let outputs = backend
+            .dispatch(&program, &[], &config)
+            .unwrap_or_else(|error| {
+                panic!("Fix: {words} elements must dispatch under pinned ceiling: {error}")
+            });
+
+        let expected = (0..words)
+            .map(|i| i + 77)
+            .flat_map(u32::to_le_bytes)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            outputs[0], expected,
+            "Fix: every lane 0..{words} must store correctly without tail corruption."
+        );
+
+        let reference = vyre_reference::reference_eval(&program, &[])
+            .unwrap_or_else(|error| {
+                panic!("Fix: reference interpreter must evaluate {words} elements: {error}")
+            })
+            .into_iter()
+            .map(|value| value.to_bytes())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            outputs[0], reference[0],
+            "Fix: {words} elements must match reference interpreter."
+        );
+    }
+}
+
+/// WHY: verifies boundary cases around the live device's single-axis ceiling:
+/// 1. Exactly at the ceiling (`single_axis_ceiling`).
+/// 2. One element below the ceiling (`single_axis_ceiling - 1`).
+/// 3. One element above the ceiling (`single_axis_ceiling + 1`).
+/// Asserts exact marker buffer contents and parity against the reference interpreter.
+#[test]
+fn an_inferred_launch_at_exact_device_ceiling_and_boundaries_matches_reference() {
+    let backend = live_backend();
+    let ceiling = backend.max_compute_workgroups_per_dimension();
+    let workgroup_size = 256_u32;
+    let single_axis_ceiling = ceiling
+        .checked_mul(workgroup_size)
+        .expect("Fix: single-axis ceiling multiplication must not overflow u32.");
+
+    // Case 1: Exactly at ceiling
+    {
+        let words = single_axis_ceiling;
+        let program = Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32)
+                .with_count(words)
+                .with_output_byte_range(0_usize..8)],
+            [workgroup_size, 1, 1],
+            vec![
+                Node::if_then(
+                    Expr::eq(Expr::gid_x(), Expr::u32(0)),
+                    vec![Node::store("out", Expr::u32(0), Expr::u32(11))],
+                ),
+                Node::if_then(
+                    Expr::eq(Expr::gid_x(), Expr::u32(single_axis_ceiling - 1)),
+                    vec![Node::store("out", Expr::u32(1), Expr::u32(22))],
+                ),
+            ],
+        );
+        let outputs = backend
+            .dispatch(&program, &[], &DispatchConfig::default())
+            .expect("Fix: exact device ceiling launch must dispatch.");
+        let expected = [11_u32, 22_u32]
+            .into_iter()
+            .flat_map(u32::to_le_bytes)
+            .collect::<Vec<_>>();
+        assert_eq!(outputs[0], expected);
+        let reference = vyre_reference::reference_eval(&program, &[])
+            .expect("Fix: reference must evaluate exact ceiling program.")
+            .into_iter()
+            .map(|value| value.to_bytes())
+            .collect::<Vec<_>>();
+        assert_eq!(outputs[0], reference[0]);
+    }
+
+    // Case 2: One below ceiling
+    {
+        let words = single_axis_ceiling - 1;
+        let program = Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32)
+                .with_count(words)
+                .with_output_byte_range(0_usize..8)],
+            [workgroup_size, 1, 1],
+            vec![
+                Node::if_then(
+                    Expr::eq(Expr::gid_x(), Expr::u32(0)),
+                    vec![Node::store("out", Expr::u32(0), Expr::u32(33))],
+                ),
+                Node::if_then(
+                    Expr::eq(Expr::gid_x(), Expr::u32(single_axis_ceiling - 2)),
+                    vec![Node::store("out", Expr::u32(1), Expr::u32(44))],
+                ),
+            ],
+        );
+        let outputs = backend
+            .dispatch(&program, &[], &DispatchConfig::default())
+            .expect("Fix: one-below device ceiling launch must dispatch.");
+        let expected = [33_u32, 44_u32]
+            .into_iter()
+            .flat_map(u32::to_le_bytes)
+            .collect::<Vec<_>>();
+        assert_eq!(outputs[0], expected);
+        let reference = vyre_reference::reference_eval(&program, &[])
+            .expect("Fix: reference must evaluate one-below ceiling program.")
+            .into_iter()
+            .map(|value| value.to_bytes())
+            .collect::<Vec<_>>();
+        assert_eq!(outputs[0], reference[0]);
+    }
+
+    // Case 3: One above ceiling (folds to 2 rows on y)
+    {
+        let words = single_axis_ceiling + 1;
+        let program = Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32)
+                .with_count(words)
+                .with_output_byte_range(0_usize..12)],
+            [workgroup_size, 1, 1],
+            vec![
+                Node::if_then(
+                    Expr::eq(Expr::gid_x(), Expr::u32(0)),
+                    vec![Node::store("out", Expr::u32(0), Expr::u32(55))],
+                ),
+                Node::if_then(
+                    Expr::eq(Expr::gid_x(), Expr::u32(single_axis_ceiling - 1)),
+                    vec![Node::store("out", Expr::u32(1), Expr::u32(66))],
+                ),
+                Node::if_then(
+                    Expr::eq(Expr::gid_x(), Expr::u32(single_axis_ceiling)),
+                    vec![Node::store("out", Expr::u32(2), Expr::u32(77))],
+                ),
+            ],
+        );
+        let outputs = backend
+            .dispatch(&program, &[], &DispatchConfig::default())
+            .expect("Fix: one-above device ceiling launch must fold and dispatch.");
+        let expected = [55_u32, 66_u32, 77_u32]
+            .into_iter()
+            .flat_map(u32::to_le_bytes)
+            .collect::<Vec<_>>();
+        assert_eq!(outputs[0], expected);
+        let reference = vyre_reference::reference_eval(&program, &[])
+            .expect("Fix: reference must evaluate one-above ceiling program.")
+            .into_iter()
+            .map(|value| value.to_bytes())
+            .collect::<Vec<_>>();
+        assert_eq!(outputs[0], reference[0]);
+    }
 }

@@ -236,6 +236,16 @@ fn every_block_class_removes_the_binding_it_reaches_from_the_permutable_set() {
          no rule classifies states nothing"
     );
 
+    let fused_bulk = tile_plus(vec![
+        op(KernelOpKind::LoadGlobal, [0, 0], 5),
+        op(KernelOpKind::StoreShared, [WORKGROUP_SLOT_BASE, 0, 5], 6),
+    ]);
+    assert_eq!(
+        tile_profile(&fused_bulk).blocked_by,
+        Some(SharedPermutationBlock::FusedBulkCopy),
+        "Fix: a fused bulk copy stages the binding via allocation-level transfer"
+    );
+
     let mut undeclared = column_walk_tile(1024);
     undeclared.bindings.slots[1].element_count = None;
     assert_eq!(
@@ -316,5 +326,93 @@ fn conflicting_access_pattern_yields_strategy_other_than_no_rewrite() {
         BankConflictMitigation::PadLines {
             pad_elements_per_row: 1
         }
+    );
+}
+/// Every variant of [`SharedPermutationBlock`] is derived from source at run time
+/// and tested against a descriptor that produces it, so adding a block reason
+/// fails this test until someone records how it is caused.
+#[test]
+fn every_declared_permutation_block_has_a_test_case() {
+    let path = vyre_test_support::monorepo::vyre_workspace_root()
+        .join("vyre-lower/src/analyses/bank_conflict/strategy.rs");
+    let source = vyre_test_support::read_source_file_bounded(&path).unwrap_or_else(|err| {
+        panic!("Fix: cannot read the SharedPermutationBlock declaration at {path:?}: {err}")
+    });
+    let body = vyre_test_support::braced_body(&source, "pub enum SharedPermutationBlock {")
+        .unwrap_or_else(|| {
+            panic!("Fix: no `pub enum SharedPermutationBlock` declaration in {path:?}; update this test")
+        });
+    let declared = vyre_test_support::top_level_variant_names(body);
+    assert_eq!(
+        declared.len(),
+        5,
+        "Fix: expected 5 declared SharedPermutationBlock variants, found {}",
+        declared.len()
+    );
+
+    let covered: std::collections::BTreeSet<String> = [
+        SharedPermutationBlock::AsyncTransaction,
+        SharedPermutationBlock::Atomic,
+        SharedPermutationBlock::FusedBulkCopy,
+        SharedPermutationBlock::UnprovenAccess,
+        SharedPermutationBlock::NoDeclaredExtent,
+    ]
+    .iter()
+    .map(|b| match b {
+        SharedPermutationBlock::AsyncTransaction => "AsyncTransaction".to_string(),
+        SharedPermutationBlock::Atomic => "Atomic".to_string(),
+        SharedPermutationBlock::FusedBulkCopy => "FusedBulkCopy".to_string(),
+        SharedPermutationBlock::UnprovenAccess => "UnprovenAccess".to_string(),
+        SharedPermutationBlock::NoDeclaredExtent => "NoDeclaredExtent".to_string(),
+    })
+    .collect();
+
+    let missing: Vec<&String> = declared.difference(&covered).collect();
+    assert!(
+        missing.is_empty(),
+        "Fix: add coverage for newly declared SharedPermutationBlock variant(s): {missing:?}"
+    );
+}
+
+/// Every variant of [`AccessPhase`] is derived from source at run time, ensuring
+/// exhaustive handling and that any new phase variant turns the suite red.
+#[test]
+fn every_declared_access_phase_has_a_test_case() {
+    let path = vyre_test_support::monorepo::vyre_workspace_root()
+        .join("vyre-lower/src/analyses/bank_conflict/strategy.rs");
+    let source = vyre_test_support::read_source_file_bounded(&path).unwrap_or_else(|err| {
+        panic!("Fix: cannot read the AccessPhase declaration at {path:?}: {err}")
+    });
+    let body =
+        vyre_test_support::braced_body(&source, "pub enum AccessPhase {").unwrap_or_else(|| {
+            panic!("Fix: no `pub enum AccessPhase` declaration in {path:?}; update this test")
+        });
+    let declared = vyre_test_support::top_level_variant_names(body);
+    assert_eq!(
+        declared.len(),
+        4,
+        "Fix: expected 4 declared AccessPhase variants, found {}",
+        declared.len()
+    );
+
+    let covered: std::collections::BTreeSet<String> = [
+        AccessPhase::LoadStage,
+        AccessPhase::ComputeRead,
+        AccessPhase::Reduction,
+        AccessPhase::EpilogueStore,
+    ]
+    .iter()
+    .map(|p| match p {
+        AccessPhase::LoadStage => "LoadStage".to_string(),
+        AccessPhase::ComputeRead => "ComputeRead".to_string(),
+        AccessPhase::Reduction => "Reduction".to_string(),
+        AccessPhase::EpilogueStore => "EpilogueStore".to_string(),
+    })
+    .collect();
+
+    let missing: Vec<&String> = declared.difference(&covered).collect();
+    assert!(
+        missing.is_empty(),
+        "Fix: add coverage for newly declared AccessPhase variant(s): {missing:?}"
     );
 }

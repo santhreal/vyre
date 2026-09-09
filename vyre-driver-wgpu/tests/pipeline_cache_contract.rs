@@ -22,7 +22,7 @@ fn tiny_unique_program(salt: u32) -> Program {
     Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)
             .with_count(8)
-            .with_output_byte_range(0..32)],
+            .with_output_byte_range(0_usize..32)],
         [1, 1, 1],
         vec![
             Node::store("out", Expr::u32(0), Expr::u32(salt)),

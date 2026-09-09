@@ -360,7 +360,7 @@ mod cache_key_contracts {
                     vyre_foundation::ir::DataType::U32,
                 )
                 .with_count(8)
-                .with_output_byte_range(0..32),
+                .with_output_byte_range(0_usize..32),
             ],
             [64, 1, 1],
             entry.clone(),
@@ -379,7 +379,7 @@ mod cache_key_contracts {
                     vyre_foundation::ir::DataType::U32,
                 )
                 .with_count(1024)
-                .with_output_byte_range(0..4096),
+                .with_output_byte_range(0_usize..4096),
             ],
             [64, 1, 1],
             entry,
@@ -418,7 +418,7 @@ mod cache_key_contracts {
                     vyre_foundation::ir::DataType::U32,
                 )
                 .with_count(8)
-                .with_output_byte_range(0..32),
+                .with_output_byte_range(0_usize..32),
             ],
             [64, 1, 1],
             entry.clone(),
@@ -437,7 +437,7 @@ mod cache_key_contracts {
                     vyre_foundation::ir::DataType::U32,
                 )
                 .with_count(4096)
-                .with_output_byte_range(0..16_384),
+                .with_output_byte_range(0_usize..16_384),
             ],
             [64, 1, 1],
             entry,

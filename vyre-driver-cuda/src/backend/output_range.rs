@@ -24,11 +24,19 @@ pub(crate) fn cuda_output_readback(
         });
     }
     let device_offset = usize::try_from(range.start).map_err(|_| BackendError::InvalidProgram {
-        fix: format!("Fix: CUDA output `{}` start offset {} exceeds usize.", buffer.name(), range.start),
+        fix: format!(
+            "Fix: CUDA output `{}` start offset {} exceeds usize.",
+            buffer.name(),
+            range.start
+        ),
     })?;
-    let byte_len = usize::try_from(range.end - range.start).map_err(|_| BackendError::InvalidProgram {
-        fix: format!("Fix: CUDA output `{}` byte length exceeds usize.", buffer.name()),
-    })?;
+    let byte_len =
+        usize::try_from(range.end - range.start).map_err(|_| BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA output `{}` byte length exceeds usize.",
+                buffer.name()
+            ),
+        })?;
     Ok(CudaOutputReadback {
         device_offset,
         byte_len,

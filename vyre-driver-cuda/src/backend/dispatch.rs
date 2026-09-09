@@ -70,7 +70,10 @@ impl CudaBackend {
     }
 
     /// Whether this backend lowers `mode` end to end.
-    pub fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
+    pub fn honors_float_lowering(
+        &self,
+        mode: vyre_foundation::fp_parity::FloatLoweringMode,
+    ) -> bool {
         match mode {
             vyre_foundation::fp_parity::FloatLoweringMode::Contracted => true,
             vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee => false,
