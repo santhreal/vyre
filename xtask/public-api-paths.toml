@@ -10,14 +10,6 @@ name = "vyre"
 duplicate_paths = 0
 
 [[crate]]
-name = "vyre-aot"
-duplicate_paths = 0
-
-[[crate]]
-name = "vyre-debug"
-duplicate_paths = 0
-
-[[crate]]
 name = "vyre-driver"
 duplicate_paths = 0
 
@@ -154,10 +146,6 @@ name = "vyre-libs-visual"
 duplicate_paths = 0
 
 [[crate]]
-name = "vyre-lints"
-duplicate_paths = 0
-
-[[crate]]
 name = "vyre-lower"
 duplicate_paths = 0
 
@@ -167,10 +155,6 @@ duplicate_paths = 0
 
 [[crate]]
 name = "vyre-megakernel"
-duplicate_paths = 0
-
-[[crate]]
-name = "vyre-pass-engine"
 duplicate_paths = 0
 
 [[crate]]

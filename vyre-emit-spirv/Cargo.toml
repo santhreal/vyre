@@ -14,6 +14,7 @@ keywords = ["vyre", "spirv", "shader", "gpu"]
 
 [package.metadata.vyre]
 publication_class = "internal-engine"
+publication_contract = "closure:vyre-driver-spirv"
 
 [lints]
 workspace = true

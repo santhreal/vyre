@@ -1,6 +1,7 @@
 [package]
 name = "vyre-debug"
 version = "0.8.0"
+publish = false
 autotests = false
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -16,7 +17,7 @@ keywords = ["vyre", "debug", "gpu", "shader"]
 ignored = ["vyre-megakernel"]
 
 [package.metadata.vyre]
-publication_class = "internal-engine"
+publication_class = "conformance-tooling"
 
 [lints]
 workspace = true

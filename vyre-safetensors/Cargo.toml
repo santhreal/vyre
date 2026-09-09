@@ -25,6 +25,7 @@ tempfile.workspace = true
 
 [package.metadata.vyre]
 publication_class = "stable-consumer-sdk"
+publication_contract = "consumer-seam:vyre-model-compiler"
 
 [lints]
 workspace = true

@@ -1,6 +1,7 @@
 [package]
 name = "vyre-aot"
 version = "0.8.0"
+publish = false
 autotests = false
 edition.workspace = true
 rust-version.workspace = true

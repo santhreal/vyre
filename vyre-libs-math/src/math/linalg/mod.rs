@@ -3,13 +3,15 @@
 mod dot;
 mod matmul;
 mod matmul_strassen;
-pub mod matmul_tiled;
+mod matmul_tiled;
 
 pub use dot::{dot, Dot};
 pub use matmul::{matmul, matmul_bias, Matmul, MatmulBias};
 pub use matmul_strassen::{matmul_strassen_2x2, matmul_strassen_one_level};
 
-// Keep the tiled builders on the linear-algebra sub-dialect surface.
+// The tiled builders are on the linear-algebra sub-dialect surface, and the
+// module holding them is private so each name has one public path, as with the
+// three sibling modules above.
 pub use matmul_tiled::{
     matmul_bias_tiled, matmul_tiled, plan_matmul_kernel, F32MatmulMode, MatmulBiasTiled,
     MatmulFallbackReason, MatmulKernelCapabilities, MatmulKernelPath, MatmulKernelPlan,

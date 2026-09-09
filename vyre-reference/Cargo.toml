@@ -46,7 +46,8 @@ default = ["subgroup-ops"]
 subgroup-ops = []
 
 [package.metadata.vyre]
-publication_class = "internal-engine"
+publication_class = "extension-sdk"
+publication_contract = "extension-point:external_backend_extension"
 
 [lints]
 workspace = true
