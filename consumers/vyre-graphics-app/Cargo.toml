@@ -1,3 +1,9 @@
+# A consumer package is deliberately outside the compiler workspace, so cargo
+# must stop looking for one here. Without this table it walks up past the
+# checkout and adopts whatever workspace contains the directory the tree was
+# placed in, which fails the build in any nested checkout.
+[workspace]
+
 [package]
 name = "vyre-graphics-app"
 version = "0.1.0"
