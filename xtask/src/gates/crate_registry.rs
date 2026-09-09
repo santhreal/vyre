@@ -162,6 +162,7 @@ impl crate::gate::GateBehavior for CrateOwnership {
         report
             .findings
             .extend(direction_findings(&state, &records, &layers));
+        report.findings.extend(cycle_findings(&state));
         report.note(format!(
             "{} registry row(s) across {} workspace member(s) in {} layer(s)",
             records.len(),
@@ -540,6 +541,95 @@ fn direction_findings(
             }
         }
     }
+    findings
+}
+
+/// What a caller does about a circular dependency.
+const CYCLE_FIX: &str = "remove one of the circular dependencies so the internal production dependency graph is acyclic";
+
+/// Every cycle in the resolved internal production dependency graph.
+///
+/// Internal normal and build dependencies must form a DAG. Cross-layer edges
+/// are held to rank ordering, which rejects cross-layer cycles directly. This
+/// check additionally rejects intra-layer cycles and reports the exact path of
+/// every cycle deterministically.
+fn cycle_findings(state: &WorkspaceState) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    let mut adjacency: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    for package in state.paths.keys() {
+        adjacency.insert(package.as_str(), Vec::new());
+    }
+    for (package, destinations) in &state.dependencies {
+        let entry = adjacency.entry(package.as_str()).or_default();
+        for (destination, use_) in destinations {
+            if use_.kinds.iter().any(|kind| kind == "normal" || kind == "build") {
+                entry.push(destination.as_str());
+            }
+        }
+        entry.sort();
+        entry.dedup();
+    }
+
+    let mut visit_state: BTreeMap<&str, u8> = BTreeMap::new();
+    let mut path: Vec<&str> = Vec::new();
+    let mut reported: BTreeSet<Vec<String>> = BTreeSet::new();
+
+    fn dfs<'a>(
+        u: &'a str,
+        adjacency: &BTreeMap<&'a str, Vec<&'a str>>,
+        visit_state: &mut BTreeMap<&'a str, u8>,
+        path: &mut Vec<&'a str>,
+        reported: &mut BTreeSet<Vec<String>>,
+        findings: &mut Vec<Finding>,
+    ) {
+        visit_state.insert(u, 1);
+        path.push(u);
+        if let Some(neighbors) = adjacency.get(u) {
+            for &v in neighbors {
+                match visit_state.get(v).copied().unwrap_or(0) {
+                    1 => {
+                        if let Some(start_idx) = path.iter().position(|&x| x == v) {
+                            let cycle_slice = &path[start_idx..];
+                            let min_pos = cycle_slice
+                                .iter()
+                                .enumerate()
+                                .min_by_key(|(_, &x)| x)
+                                .map(|(idx, _)| idx)
+                                .unwrap_or(0);
+                            let mut canonical: Vec<String> = Vec::with_capacity(cycle_slice.len());
+                            for &item in &cycle_slice[min_pos..] {
+                                canonical.push(item.to_string());
+                            }
+                            for &item in &cycle_slice[..min_pos] {
+                                canonical.push(item.to_string());
+                            }
+                            if reported.insert(canonical.clone()) {
+                                let cycle_str = format!("{} -> {}", canonical.join(" -> "), canonical[0]);
+                                findings.push(Finding::in_file(
+                                    REGISTRY,
+                                    format!("dependency cycle detected: {cycle_str}"),
+                                    CYCLE_FIX,
+                                ));
+                            }
+                        }
+                    }
+                    0 => {
+                        dfs(v, adjacency, visit_state, path, reported, findings);
+                    }
+                    _ => {}
+                }
+            }
+        }
+        path.pop();
+        visit_state.insert(u, 2);
+    }
+
+    for package in state.paths.keys() {
+        if visit_state.get(package.as_str()).copied().unwrap_or(0) == 0 {
+            dfs(package.as_str(), &adjacency, &mut visit_state, &mut path, &mut reported, &mut findings);
+        }
+    }
+
     findings
 }
 
@@ -1446,5 +1536,70 @@ mod tests {
         let findings = contract_findings(&state, &records);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert!(findings[0].message.contains("declares seam `wrong-seam` and the destination owner is `cuda-driver`"));
+    }
+    /// WHY: internal production dependency cycles (including intra-layer cycles)
+    /// must fail closed with a finding naming the exact cycle path.
+    #[test]
+    fn dependency_cycle_is_a_finding() {
+        let state = WorkspaceState {
+            members: vec!["a".to_string(), "b".to_string()],
+            paths: BTreeMap::from([("a".to_string(), "a".to_string()), ("b".to_string(), "b".to_string())]),
+            dependencies: BTreeMap::from([
+                (
+                    "a".to_string(),
+                    BTreeMap::from([(
+                        "b".to_string(),
+                        DependencyUse {
+                            kinds: vec!["normal".to_string()],
+                            ..DependencyUse::default()
+                        },
+                    )]),
+                ),
+                (
+                    "b".to_string(),
+                    BTreeMap::from([(
+                        "a".to_string(),
+                        DependencyUse {
+                            kinds: vec!["normal".to_string()],
+                            ..DependencyUse::default()
+                        },
+                    )]),
+                ),
+            ]),
+        };
+        let findings = cycle_findings(&state);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert!(findings[0].message.contains("dependency cycle detected: a -> b -> a"));
+    }
+
+    /// WHY: a feature inherited from workspace dependencies or feature unification
+    /// that the registry declaration omits is drift and must be rejected.
+    #[test]
+    fn hidden_feature_unified_edge_is_a_finding() {
+        let (mut records, state) = base_records_and_state();
+        records[0].dependencies[0].features = vec!["unregistered-feature".to_string()];
+        let findings = contract_findings(&state, &records);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert!(findings[0].message.contains("declares features `unregistered-feature` and cargo resolves ``"));
+    }
+
+    /// WHY: declaring normal dependency kind when cargo resolves build (or vice-versa)
+    /// must be rejected.
+    #[test]
+    fn wrong_dependency_kind_is_a_finding() {
+        let (mut records, state) = base_records_and_state();
+        records[0].dependencies[0].kinds = vec!["build".to_string()];
+        let findings = contract_findings(&state, &records);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert!(findings[0].message.contains("declares kinds `build` and cargo resolves `normal`"));
+    }
+
+    /// WHY: a lower layer (e.g. foundation, rank 0) depending on facade (rank 6)
+    /// is a layer reversal and must be rejected.
+    #[test]
+    fn facade_imported_from_lower_layer_is_a_layer_reversal_finding() {
+        let reversed = direction_case("foundation", 0, "facade", 6, &["normal"]);
+        assert_eq!(reversed.len(), 1, "{reversed:?}");
+        assert!(reversed[0].message.contains("`consumer` in layer `foundation` (rank 0) depends on `dependency` in layer `facade` (rank 6)"));
     }
 }

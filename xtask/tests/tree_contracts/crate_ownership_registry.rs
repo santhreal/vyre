@@ -265,3 +265,119 @@ fn dependency_feature_drift_fails_closed() {
         "Fix: feature drift must name both sides; got\n{messages}"
     );
 }
+/// A dependency cycle must fail closed naming the exact cycle path.
+#[test]
+fn dependency_cycle_fails_closed() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_workspace(temp.path(), &["a", "b"]);
+    write_member(
+        temp.path(),
+        "a",
+        "a",
+        "[dependencies]\nb = { version = \"0.1.0\", path = \"../b\" }\n",
+    );
+    write_member(
+        temp.path(),
+        "b",
+        "b",
+        "[dependencies]\na = { version = \"0.1.0\", path = \"../a\" }\n",
+    );
+    seal(
+        temp.path(),
+        format!(
+            "schema_version = 3\n\n[[layer]]\nname = \"fixture-layer\"\nrank = 0\npurpose = \"test\"\n\n{}{}",
+            registry_row("a", "a", &["b"]),
+            registry_row("b", "b", &["a"])
+        ),
+    );
+
+    let report = run(temp.path());
+    let messages = messages(&report);
+    assert!(
+        messages.contains("dependency cycle detected: a -> b -> a"),
+        "Fix: dependency cycle must name the cycle path; got\n{messages}"
+    );
+}
+
+/// A dependency from a lower-ranked layer to a higher-ranked layer must fail closed.
+#[test]
+fn layer_reversal_dependency_fails_closed() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_workspace(temp.path(), &["low", "high"]);
+    write_member(
+        temp.path(),
+        "low",
+        "low",
+        "[dependencies]\nhigh = { version = \"0.1.0\", path = \"../high\" }\n",
+    );
+    write_member(temp.path(), "high", "high", "");
+    let registry = format!(
+        "schema_version = 3\n\n[[layer]]\nname = \"layer-low\"\nrank = 0\npurpose = \"low\"\n\n[[layer]]\nname = \"layer-high\"\nrank = 5\npurpose = \"high\"\n\n[[crate]]\npackage = \"low\"\npath = \"low\"\nowner = \"fixture-owner\"\nlayer = \"layer-low\"\nresponsibility = \"low\"\n\n[[crate.dependency]]\npackage = \"high\"\npurpose = \"Use high\"\nfeatures = []\nconditions = [\"always\"]\nkinds = [\"normal\"]\noptional = false\ndefault_features = true\nboundary = \"private\"\nseam = \"fixture-owner\"\n\n[[crate]]\npackage = \"high\"\npath = \"high\"\nowner = \"fixture-owner\"\nlayer = \"layer-high\"\nresponsibility = \"high\"\n"
+    );
+    seal(temp.path(), registry);
+
+    let report = run(temp.path());
+    let messages = messages(&report);
+    assert!(
+        messages.contains("`low` in layer `layer-low` (rank 0) depends on `high` in layer `layer-high` (rank 5)"),
+        "Fix: layer reversal must name source, destination, and ranks; got\n{messages}"
+    );
+}
+
+/// A workspace-inherited feature not declared in the registry must fail closed.
+#[test]
+fn hidden_feature_unified_edge_fails_closed() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    fs::create_dir_all(temp.path().join("docs")).expect("Fix: fixture docs directory must be creatable");
+    fs::write(
+        temp.path().join("Cargo.toml"),
+        "[workspace]\nresolver = \"2\"\nmembers = [\"a\", \"b\"]\n[workspace.dependencies]\nb = { version = \"0.1.0\", path = \"b\", features = [\"unified-flag\"] }\n",
+    )
+    .expect("Fix: fixture workspace manifest must be writable");
+    write_member(temp.path(), "a", "a", "[dependencies]\nb = { workspace = true }\n");
+    write_member(temp.path(), "b", "b", "\n[features]\nunified-flag = []\n");
+    seal(
+        temp.path(),
+        format!(
+            "schema_version = 3\n\n[[layer]]\nname = \"fixture-layer\"\nrank = 0\npurpose = \"test\"\n\n{}{}",
+            registry_row("a", "a", &["b"]),
+            registry_row("b", "b", &[])
+        ),
+    );
+
+    let report = run(temp.path());
+    let messages = messages(&report);
+    assert!(
+        messages.contains("`a` -> `b` declares features `` and cargo resolves `unified-flag`"),
+        "Fix: unified feature drift must name declared and resolved features; got\n{messages}"
+    );
+}
+
+/// Declaring normal dependency when the manifest declares build-dependencies must fail closed.
+#[test]
+fn wrong_dependency_kind_fails_closed() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_workspace(temp.path(), &["a", "b"]);
+    write_member(
+        temp.path(),
+        "a",
+        "a",
+        "[build-dependencies]\nb = { version = \"0.1.0\", path = \"../b\" }\n",
+    );
+    write_member(temp.path(), "b", "b", "");
+    seal(
+        temp.path(),
+        format!(
+            "schema_version = 3\n\n[[layer]]\nname = \"fixture-layer\"\nrank = 0\npurpose = \"test\"\n\n{}{}",
+            registry_row("a", "a", &["b"]),
+            registry_row("b", "b", &[])
+        ),
+    );
+
+    let report = run(temp.path());
+    let messages = messages(&report);
+    assert!(
+        messages.contains("`a` -> `b` declares kinds `normal` and cargo resolves `build`"),
+        "Fix: wrong dependency kind must name declared and actual kinds; got\n{messages}"
+    );
+}
