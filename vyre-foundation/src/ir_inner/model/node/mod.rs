@@ -32,25 +32,36 @@ pub trait NodeExtension: fmt::Debug + Send + Sync + 'static {
     /// local invariants.
     fn validate_extension(&self) -> Result<(), String>;
 
-    /// Downcast to Any to allow backend-specific dispatch from opaque payloads.
-    fn as_any(&self) -> &dyn std::any::Any;
-
     /// Serialize the extension payload into stable bytes used by the wire
-    /// encoder's `Node::Opaque` path (tag `0x80`). Default: empty payload.
+    /// encoder's `Node::Opaque` path (tag `0x80`).
     ///
     /// The payload contract is endian-fixed: any numeric field wider than
-    /// one byte MUST be written with `to_le_bytes` (or the
-    /// [`crate::opaque_payload`] helpers) and the matching decoder MUST
-    /// reconstruct it with `from_le_bytes`. Host-endian encodings such as
-    /// `to_ne_bytes` are forbidden because the wire format must stay
-    /// byte-identical across architectures: a Program encoded on a
-    /// little-endian host and decoded on a big-endian host must produce
-    /// the same `crate::ir::Program::hash` and the same IR.
-    ///
-    /// Extension authors should use [`crate::opaque_payload::endian::LeBytesWriter`] when
-    /// building payloads because it makes the required endianness explicit in the type.
+    /// one byte MUST be written with `to_le_bytes`, and the matching decoder
     fn wire_payload(&self) -> Vec<u8> {
         Vec::new()
+    }
+
+    /// Downcast helper for backend dispatch.
+    fn as_any(&self) -> &dyn std::any::Any;
+
+    /// Whether this statement is purely functional without side effects.
+    fn is_pure(&self) -> bool {
+        false
+    }
+
+    /// Whether this statement may cause control flow divergence.
+    fn is_divergent(&self) -> bool {
+        true
+    }
+
+    /// Whether memory accesses in this statement may alias other buffers.
+    fn may_alias(&self) -> bool {
+        true
+    }
+
+    /// Whether this statement is guaranteed to terminate in bounded steps.
+    fn terminates(&self) -> bool {
+        true
     }
 }
 

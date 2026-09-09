@@ -114,6 +114,9 @@ impl ExprNode for GateExtension {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+    fn wire_payload(&self) -> Vec<u8> {
+        Vec::new()
+    }
 }
 
 fn f32_operand() -> Expr {

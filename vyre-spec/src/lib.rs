@@ -210,8 +210,9 @@ pub use extension::{
     ExtensionAtomicOp, ExtensionAtomicOpId, ExtensionBinOp, ExtensionBinOpId, ExtensionDataType,
     ExtensionDataTypeId, ExtensionField, ExtensionFieldType, ExtensionIdentity,
     ExtensionNamespace, ExtensionNumericalContract, ExtensionOperand,
-    ExtensionOperandKind, ExtensionResourceBounds, ExtensionRuleConditionId,
-    ExtensionSchema, ExtensionSchemaDigest, ExtensionSemVer, ExtensionShapeRule,
+    ExtensionOperandKind, ExtensionProofFieldKind, ExtensionProofFields,
+    ExtensionResourceBounds, ExtensionRuleConditionId, ExtensionSchema,
+    ExtensionSchemaDigest, ExtensionSemVer, ExtensionShapeRule,
     ExtensionTernaryOp, ExtensionTernaryOpId, ExtensionUnOp, ExtensionUnOpId,
 };
 /// See [`expr_variant::expr_variants`].

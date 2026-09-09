@@ -139,9 +139,15 @@ fn node_effects(node: &Node) -> ProgramEffects {
         | Node::AsyncWait { .. }
         | Node::Resume { .. }
         | Node::Return
-        | Node::Opaque(_)
         | Node::Block(_)
         | Node::Region { .. } => ProgramEffects::empty(),
+        Node::Opaque(ext) => {
+            if ext.is_pure() {
+                ProgramEffects::empty()
+            } else {
+                ProgramEffects::HOST_IO | ProgramEffects::BUFFER_WRITE
+            }
+        }
     }
 }
 

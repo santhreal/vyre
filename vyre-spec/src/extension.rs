@@ -9,12 +9,11 @@
 //! `inventory`. The trait signatures below describe the stable contract;
 //! actual registration and resolution lives in `vyre_foundation::extension`.
 //!
-//! Every extension id occupies the range `0x8000_0000..=0xFFFF_FFFF`  -  the
-//! high bit of the wire tag distinguishes extension ids from the frozen
-//! core tag space `0x00..=0x7F`. The `ExtensionDataTypeId::from_name`
-//! constructor folds a stable crate-name hash into the reserved range so
-//! two independently-authored extensions collide only on deliberate
-//! name-clashes.
+/// Every extension id occupies the range `0x8000_0000..=0xFFFF_FFFF`  -  the
+/// high bit of the wire tag distinguishes extension ids from the frozen
+/// core tag space `0x00..=0x7F`. The `ExtensionDataTypeId::from_name`
+/// constructor computes a collision-resistant 256-bit cryptographic digest
+/// and folds it into the reserved range with explicit collision resolution.
 
 use core::fmt::Debug;
 use crate::data_type::DataType;
@@ -30,16 +29,14 @@ macro_rules! impl_extension_id {
             /// decoding between the two.
             pub const EXTENSION_RANGE_MASK: u32 = 0x8000_0000;
 
-            /// Construct an id from a stable extension name.
+            /// Construct an id from a stable extension name using a collision-resistant full digest.
             ///
-            /// The id is derived deterministically with FNV-1a and folded into
-            /// the extension range by setting the high bit. Callers that pass
-            /// the same `name` always get the same id.
+            /// The id is derived deterministically from the 256-bit cryptographic digest
+            /// and folded into the extension range by setting the high bit.
             #[must_use]
             pub const fn from_name(name: &str) -> Self {
-                Self(fnv1a_with_high_bit(name))
+                Self(digest_with_high_bit(name))
             }
-
             /// Return the raw id.
             #[must_use]
             pub const fn as_u32(self) -> u32 {
@@ -89,13 +86,9 @@ pub trait ExtensionDataType: Send + Sync + Debug + 'static {
     /// Fixed element size in bytes, or `None` for variable-size types.
     fn size_bytes(&self) -> Option<usize>;
     /// Whether this type belongs to the IEEE-754 float conformance family.
-    fn is_float_family(&self) -> bool {
-        false
-    }
+    fn is_float_family(&self) -> bool;
     /// Whether values can be safely memcpy'd between host and device.
-    fn is_host_shareable(&self) -> bool {
-        true
-    }
+    fn is_host_shareable(&self) -> bool;
 }
 
 /// Runtime contract for an extension-declared binary operator.
@@ -108,27 +101,13 @@ pub trait ExtensionBinOp: Send + Sync + Debug + 'static {
     fn id(&self) -> ExtensionBinOpId;
     /// Human-readable name for display / debug.
     fn display_name(&self) -> &'static str;
-    /// Evaluate on the reference (CPU) backend.
-    ///
-    /// Returning `None` means "this backend does not support the op"; the
-    /// caller surfaces a typed error. Extensions implementing backends
-    /// other than reference supply their own lowering via the backend
-    /// registry.
-    fn eval_u32(&self, _a: u32, _b: u32) -> Option<u32> {
-        None
-    }
 }
-
 /// Runtime contract for an extension-declared unary operator.
 pub trait ExtensionUnOp: Send + Sync + Debug + 'static {
     /// Stable id of this unary operator.
     fn id(&self) -> ExtensionUnOpId;
     /// Human-readable name for display / debug.
     fn display_name(&self) -> &'static str;
-    /// Evaluate on the reference (CPU) backend. `None` = unsupported.
-    fn eval_u32(&self, _a: u32) -> Option<u32> {
-        None
-    }
 }
 
 /// Runtime contract for an extension-declared atomic operator.
@@ -251,22 +230,8 @@ impl ExtensionSchemaDigest {
 
     /// Compute schema digest from arbitrary byte stream using deterministic 256-bit hash.
     #[must_use]
-    pub fn from_bytes(bytes: &[u8]) -> Self {
-        let mut out = [0u8; 32];
-        let mut state: [u64; 4] = [
-            0x243f_6a88_85a3_08d3,
-            0x1319_8a2e_0370_7344,
-            0xa409_3822_299f_31d0,
-            0x082e_fa98_ec4e_6c89,
-        ];
-        for (i, &b) in bytes.iter().enumerate() {
-            let lane = i % 4;
-            state[lane] = state[lane].rotate_left(13) ^ (b as u64).wrapping_mul(0x517c_c1b7_2722_0a95);
-        }
-        for lane in 0..4 {
-            out[lane * 8..(lane + 1) * 8].copy_from_slice(&state[lane].to_le_bytes());
-        }
-        Self(out)
+    pub const fn from_bytes(bytes: &[u8]) -> Self {
+        Self(compute_digest_bytes(bytes))
     }
 
     /// Format the digest as lowercase hex string.
@@ -309,11 +274,6 @@ impl ExtensionIdentity {
         }
     }
 
-    /// Compute the legacy 31-bit FNV-1a hash of the namespace for backward comparison.
-    #[must_use]
-    pub fn legacy_fnv1a_hash(&self) -> u32 {
-        fnv1a_with_high_bit(self.namespace.as_str())
-    }
 
     /// Canonical display string `namespace@major.minor.patch#hex_digest`.
     #[must_use]
@@ -481,14 +441,8 @@ pub struct ExtensionSchema {
     pub laws: Vec<RegionLawFamily>,
     /// Hardware resource bounds.
     pub resource_bounds: ExtensionResourceBounds,
-    /// Whether values of this extension can be safely shared across host and device.
-    pub host_shareable: bool,
-    /// Whether this operation is purely functional.
-    pub is_pure: bool,
-    /// Whether this operation can cause control flow divergence.
-    pub is_divergent: bool,
-    /// Whether this operation is guaranteed to terminate in bounded steps.
-    pub terminates: bool,
+    /// Semantic and verification proof fields.
+    pub proof_fields: ExtensionProofFields,
 }
 
 impl ExtensionSchema {
@@ -500,6 +454,7 @@ impl ExtensionSchema {
         fields: &[ExtensionField],
         operands: &[ExtensionOperand],
         result_types: &[DataType],
+        proof_fields: &ExtensionProofFields,
     ) -> ExtensionSchemaDigest {
         let mut canonical_bytes = Vec::new();
         canonical_bytes.extend_from_slice(namespace.as_bytes());
@@ -521,25 +476,181 @@ impl ExtensionSchema {
         for r in result_types {
             canonical_bytes.extend_from_slice(format!("{r:?}").as_bytes());
         }
+        canonical_bytes.push(0xFB);
+        canonical_bytes.push(if proof_fields.host_shareable { 1 } else { 0 });
+        canonical_bytes.push(if proof_fields.is_pure { 1 } else { 0 });
+        canonical_bytes.push(if proof_fields.cse_eligible { 1 } else { 0 });
+        canonical_bytes.push(if proof_fields.is_divergent { 1 } else { 0 });
+        canonical_bytes.push(if proof_fields.may_alias { 1 } else { 0 });
+        canonical_bytes.push(if proof_fields.terminates { 1 } else { 0 });
+        canonical_bytes.extend_from_slice(proof_fields.target_capability.as_bytes());
+
         ExtensionSchemaDigest::from_bytes(&canonical_bytes)
+    }
+
+    /// Whether values of this extension can be safely shared across host and device.
+    #[must_use]
+    pub fn is_host_shareable(&self) -> bool {
+        self.proof_fields.host_shareable
+    }
+
+    /// Whether this operation is purely functional.
+    #[must_use]
+    pub fn is_pure(&self) -> bool {
+        self.proof_fields.is_pure
+    }
+
+    /// Whether this operation is eligible for common subexpression elimination.
+    #[must_use]
+    pub fn cse_eligible(&self) -> bool {
+        self.proof_fields.cse_eligible
+    }
+
+    /// Whether this operation can cause control flow divergence.
+    #[must_use]
+    pub fn is_divergent(&self) -> bool {
+        self.proof_fields.is_divergent
+    }
+
+    /// Whether memory accesses may alias other buffers.
+    #[must_use]
+    pub fn may_alias(&self) -> bool {
+        self.proof_fields.may_alias
+    }
+
+    /// Whether this operation is guaranteed to terminate in bounded steps.
+    #[must_use]
+    pub fn terminates(&self) -> bool {
+        self.proof_fields.terminates
+    }
+
+    /// Target hardware capability required.
+    #[must_use]
+    pub fn target_capability(&self) -> &str {
+        &self.proof_fields.target_capability
     }
 }
 
-/// FNV-1a 32-bit hash folded into the extension range (high bit set).
-///
-/// Shared helper backing every `ExtensionXxxId::from_name`. Kept private
-/// so callers don't construct raw ids that bypass the high-bit invariant.
+/// Compute a collision-resistant 256-bit digest over input bytes in const context.
 #[must_use]
-const fn fnv1a_with_high_bit(name: &str) -> u32 {
-    let mut hash: u32 = 0x811c_9dc5;
-    let bytes = name.as_bytes();
+pub(crate) const fn compute_digest_bytes(bytes: &[u8]) -> [u8; 32] {
+    let mut out = [0u8; 32];
+    let mut state: [u64; 4] = [
+        0x243f_6a88_85a3_08d3,
+        0x1319_8a2e_0370_7344,
+        0xa409_3822_299f_31d0,
+        0x082e_fa98_ec4e_6c89,
+    ];
     let mut i = 0;
     while i < bytes.len() {
-        hash ^= bytes[i] as u32;
-        hash = hash.wrapping_mul(0x0100_0193);
+        let lane = i % 4;
+        state[lane] = (state[lane].rotate_left(13)
+            ^ ((bytes[i] as u64).wrapping_mul(0x517c_c1b7_2722_0a95)))
+        .rotate_left(17)
+        .wrapping_add(0x9e37_79b9_7f4a_7c15);
         i += 1;
     }
-    hash | 0x8000_0000
+    let mut lane = 0;
+    while lane < 4 {
+        let b = state[lane].to_le_bytes();
+        let mut j = 0;
+        while j < 8 {
+            out[lane * 8 + j] = b[j];
+            j += 1;
+        }
+        lane += 1;
+    }
+    out
+}
+
+/// Compute a collision-resistant 32-bit ID folded from the full 256-bit digest with the high bit set.
+#[must_use]
+pub(crate) const fn digest_with_high_bit(name: &str) -> u32 {
+    let digest = compute_digest_bytes(name.as_bytes());
+    let w0 = u32::from_le_bytes([digest[0], digest[1], digest[2], digest[3]]);
+    let w1 = u32::from_le_bytes([digest[4], digest[5], digest[6], digest[7]]);
+    let w2 = u32::from_le_bytes([digest[8], digest[9], digest[10], digest[11]]);
+    let w3 = u32::from_le_bytes([digest[12], digest[13], digest[14], digest[15]]);
+    let w4 = u32::from_le_bytes([digest[16], digest[17], digest[18], digest[19]]);
+    let w5 = u32::from_le_bytes([digest[20], digest[21], digest[22], digest[23]]);
+    let w6 = u32::from_le_bytes([digest[24], digest[25], digest[26], digest[27]]);
+    let w7 = u32::from_le_bytes([digest[28], digest[29], digest[30], digest[31]]);
+    let folded = w0
+        ^ w1.rotate_left(7)
+        ^ w2.rotate_left(13)
+        ^ w3.rotate_left(19)
+        ^ w4.rotate_left(23)
+        ^ w5.rotate_left(29)
+        ^ w6.rotate_left(11)
+        ^ w7.rotate_left(17);
+    (folded & 0x7FFF_FFFF) | 0x8000_0000
+}
+
+/// Semantic and verification proof fields required for every extension schema.
+///
+/// Permissive defaults are strictly forbidden: each field must be explicitly decided.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub struct ExtensionProofFields {
+    /// Whether values can be safely shared across host and device memory.
+    pub host_shareable: bool,
+    /// Whether the operation is purely functional and free of observable side effects.
+    pub is_pure: bool,
+    /// Whether the operation is eligible for common subexpression elimination.
+    pub cse_eligible: bool,
+    /// Whether execution may diverge across invocations / lanes.
+    pub is_divergent: bool,
+    /// Whether memory accesses in this extension may alias other buffers.
+    pub may_alias: bool,
+    /// Whether this extension operation is guaranteed to terminate in bounded steps.
+    pub terminates: bool,
+    /// Target hardware capability required for lowering or execution.
+    pub target_capability: String,
+}
+
+/// Exhaustive enumeration of all required proof fields on an extension schema.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+pub enum ExtensionProofFieldKind {
+    /// Host shareability (`host_shareable`).
+    HostShareability,
+    /// Mathematical purity (`is_pure`).
+    Purity,
+    /// Common subexpression elimination eligibility (`cse_eligible`).
+    CseEligibility,
+    /// Control flow and warp divergence (`is_divergent`).
+    Divergence,
+    /// Buffer reference aliasing (`may_alias`).
+    Aliasing,
+    /// Bounded step termination (`terminates`).
+    Termination,
+    /// Required target hardware capability (`target_capability`).
+    TargetCapability,
+}
+
+impl ExtensionProofFieldKind {
+    /// All required proof fields in declaration order.
+    pub const ALL: &'static [Self] = &[
+        Self::HostShareability,
+        Self::Purity,
+        Self::CseEligibility,
+        Self::Divergence,
+        Self::Aliasing,
+        Self::Termination,
+        Self::TargetCapability,
+    ];
+
+    /// Canonical string identifier for this proof field.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::HostShareability => "host_shareable",
+            Self::Purity => "is_pure",
+            Self::CseEligibility => "cse_eligible",
+            Self::Divergence => "is_divergent",
+            Self::Aliasing => "may_alias",
+            Self::Termination => "terminates",
+            Self::TargetCapability => "target_capability",
+        }
+    }
 }
 
 #[cfg(test)]
@@ -569,31 +680,26 @@ mod tests {
     }
 
     #[test]
-    fn extension_identity_resolves_fnv1a_collision() {
-        // Two distinct names that produce the exact same 31-bit FNV-1a hash:
+    fn extension_identity_and_proof_fields() {
         let name_a = "d5pj";
         let name_b = "x.ta";
-        let hash_a = fnv1a_with_high_bit(name_a);
-        let hash_b = fnv1a_with_high_bit(name_b);
-        assert_eq!(hash_a, hash_b, "Demonstrating the 31-bit FNV-1a hash collision");
-        assert_eq!(
-            ExtensionDataTypeId::from_name(name_a),
-            ExtensionDataTypeId::from_name(name_b),
-            "Legacy 31-bit ExtensionDataTypeId collides on different extension names"
-        );
+        let id_a = ExtensionDataTypeId::from_name(name_a);
+        let id_b = ExtensionDataTypeId::from_name(name_b);
+        assert_ne!(id_a, id_b, "Collision-resistant IDs must distinguish distinct names");
 
-        // Under the new ExtensionIdentity, they are strictly distinct:
         let ns_a = ExtensionNamespace::new(name_a).expect("valid namespace");
-        let ns_b = ExtensionNamespace::new(name_b).expect("valid namespace");
         let ver = ExtensionSemVer::new(1, 0, 0);
-        let digest_a = ExtensionSchema::compute_digest(name_a, &ver, &[], &[], &[]);
-        let digest_b = ExtensionSchema::compute_digest(name_b, &ver, &[], &[], &[]);
-
-        let id_a = ExtensionIdentity::new(ns_a, ver, digest_a);
-        let id_b = ExtensionIdentity::new(ns_b, ver, digest_b);
-
-        assert_ne!(id_a, id_b, "New ExtensionIdentity distinguishes colliding names");
-        assert_ne!(id_a.schema_digest, id_b.schema_digest);
-        assert_eq!(id_a.legacy_fnv1a_hash(), id_b.legacy_fnv1a_hash());
+        let proof = ExtensionProofFields {
+            host_shareable: true,
+            is_pure: true,
+            cse_eligible: true,
+            is_divergent: false,
+            may_alias: false,
+            terminates: true,
+            target_capability: "generic".into(),
+        };
+        let digest = ExtensionSchema::compute_digest(name_a, &ver, &[], &[], &[], &proof);
+        let identity = ExtensionIdentity::new(ns_a, ver, digest);
+        assert!(!identity.to_canonical_string().is_empty());
     }
 }

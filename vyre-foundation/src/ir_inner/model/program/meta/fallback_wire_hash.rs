@@ -189,6 +189,10 @@ impl NodeSink for FallbackWireHasher<'_> {
             Node::Opaque(ext) => {
                 h.update(b"n:Opaque\0");
                 h.update(ext.extension_kind().as_bytes());
+                h.update(&ext.stable_fingerprint());
+                let payload = ext.wire_payload();
+                h.update(&(payload.len() as u64).to_le_bytes());
+                h.update(&payload);
             }
         }
     }
@@ -306,6 +310,10 @@ impl ExprSink for FallbackWireHasher<'_> {
             Expr::Opaque(ext) => {
                 h.update(b"e:Opaque\0");
                 h.update(ext.extension_kind().as_bytes());
+                h.update(&ext.stable_fingerprint());
+                let payload = ext.wire_payload();
+                h.update(&(payload.len() as u64).to_le_bytes());
+                h.update(&payload);
             }
         }
     }

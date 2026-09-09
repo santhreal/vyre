@@ -4,7 +4,6 @@ use crate::ir_inner::model::expr::{ExprNode, Ident};
 use crate::operation::{OperationRegistration, OperationTier};
 use crate::validate::BackendValidationCapabilities;
 use rustc_hash::FxHashMap;
-use std::any::Any;
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -84,9 +83,12 @@ impl ExprNode for TestExprExtension {
     fn validate_extension(&self) -> Result<(), String> {
         Ok(())
     }
-
-    fn as_any(&self) -> &dyn Any {
+    fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+
+    fn wire_payload(&self) -> Vec<u8> {
+        Vec::new()
     }
 }
 

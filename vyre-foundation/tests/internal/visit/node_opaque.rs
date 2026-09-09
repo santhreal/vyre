@@ -29,9 +29,12 @@ impl ExprNode for TestOpaqueExpr {
     fn validate_extension(&self) -> std::result::Result<(), String> {
         Ok(())
     }
-
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+
+    fn wire_payload(&self) -> Vec<u8> {
+        Vec::new()
     }
 }
 

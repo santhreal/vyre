@@ -51,8 +51,8 @@ pub(super) fn has_divergent_invocation_gated_store(
         | Node::TileStore { .. }
         | Node::TileMatmul { .. }
         | Node::TileReduce { .. }
-        | Node::TileDecl { .. }
-        | Node::Opaque(_) => false,
+        | Node::TileDecl { .. } => false,
+        Node::Opaque(ext) => ext.is_divergent(),
         Node::TileElementwise { body, .. } => body
             .iter()
             .any(|n| has_divergent_invocation_gated_store(n, inside_invocation_gate)),
@@ -158,8 +158,8 @@ fn node_has_launch_geometry_dependent_write(
         | Node::TileStore { .. }
         | Node::TileMatmul { .. }
         | Node::TileReduce { .. }
-        | Node::TileDecl { .. }
-        | Node::Opaque(_) => false,
+        | Node::TileDecl { .. } => false,
+        Node::Opaque(ext) => ext.is_divergent() || !ext.is_pure(),
         Node::TileElementwise { body, .. } => {
             nodes_have_launch_geometry_dependent_write(body, launch_vars, inside_launch_gate)
         }
@@ -199,8 +199,8 @@ fn expr_names_launch_geometry(expr: &Expr) -> bool {
         | Expr::Call { .. }
         | Expr::SubgroupBallot { .. }
         | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupReduce { .. }
-        | Expr::Opaque(_) => false,
+        | Expr::SubgroupReduce { .. } => false,
+        Expr::Opaque(ext) => !ext.cse_safe(),
     }
 }
 

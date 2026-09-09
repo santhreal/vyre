@@ -164,6 +164,9 @@ fn unregistered_opaque_kind_fails_loudly() {
         fn as_any(&self) -> &dyn std::any::Any {
             self
         }
+        fn wire_payload(&self) -> Vec<u8> {
+            Vec::new()
+        }
     }
 
     let program = Program::wrapped(

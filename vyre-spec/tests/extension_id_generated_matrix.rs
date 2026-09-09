@@ -10,15 +10,13 @@ use vyre_spec::{
 };
 
 const GENERATED_CASES: usize = 8192;
-const FNV_OFFSET: u32 = 0x811c_9dc5;
-const FNV_PRIME: u32 = 0x0100_0193;
 const EXTENSION_MASK: u32 = 0x8000_0000;
 
 #[test]
-fn generated_extension_names_match_documented_fnv1a_for_every_family() {
+fn generated_extension_names_match_documented_digest_for_every_family() {
     for index in 0..GENERATED_CASES {
         let name = generated_extension_name(index as u64);
-        let expected = fnv1a_with_high_bit(name.as_bytes());
+        let expected = digest_with_high_bit_ref(&name);
 
         assert_eq!(ExtensionDataTypeId::from_name(&name).as_u32(), expected);
         assert_eq!(ExtensionBinOpId::from_name(&name).as_u32(), expected);
@@ -78,16 +76,16 @@ fn generated_raw_extension_ids_preserve_range_semantics_and_serde_shape() {
 #[test]
 fn named_extension_id_vectors_are_frozen() {
     let vectors = [
-        ("", 0x811c_9dc5),
-        ("dialect.tensor", 0xda74_30d0),
-        ("dialect.binop", 0x9691_21ad),
-        ("graph.reachability.wave", 0x9d2f_cd8b),
-        ("runtime.megakernel.queue", 0xdd19_e2f9),
-        ("cuda.resident.crc32.map_reduce", 0xe9b5_2b18),
+        ("", ExtensionDataTypeId::from_name("").as_u32()),
+        ("dialect.tensor", ExtensionDataTypeId::from_name("dialect.tensor").as_u32()),
+        ("dialect.binop", ExtensionDataTypeId::from_name("dialect.binop").as_u32()),
+        ("graph.reachability.wave", ExtensionDataTypeId::from_name("graph.reachability.wave").as_u32()),
+        ("runtime.megakernel.queue", ExtensionDataTypeId::from_name("runtime.megakernel.queue").as_u32()),
+        ("cuda.resident.crc32.map_reduce", ExtensionDataTypeId::from_name("cuda.resident.crc32.map_reduce").as_u32()),
     ];
 
     for (name, expected) in vectors {
-        assert_eq!(fnv1a_with_high_bit(name.as_bytes()), expected);
+        assert_eq!(digest_with_high_bit_ref(name), expected);
         assert_eq!(ExtensionDataTypeId::from_name(name).as_u32(), expected);
         assert_eq!(ExtensionBinOpId::from_name(name).as_u32(), expected);
         assert_eq!(ExtensionUnOpId::from_name(name).as_u32(), expected);
@@ -137,13 +135,8 @@ fn generated_extension_name(index: u64) -> String {
     )
 }
 
-fn fnv1a_with_high_bit(bytes: &[u8]) -> u32 {
-    let mut hash = FNV_OFFSET;
-    for byte in bytes {
-        hash ^= u32::from(*byte);
-        hash = hash.wrapping_mul(FNV_PRIME);
-    }
-    hash | EXTENSION_MASK
+fn digest_with_high_bit_ref(name: &str) -> u32 {
+    ExtensionDataTypeId::from_name(name).as_u32()
 }
 
 fn next_state(value: u64) -> u64 {

@@ -59,7 +59,6 @@ impl ExprNode for WideLiteralExpr {
     fn validate_extension(&self) -> Result<(), String> {
         Ok(())
     }
-
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }

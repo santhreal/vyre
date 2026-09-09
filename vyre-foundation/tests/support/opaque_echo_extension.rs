@@ -80,11 +80,9 @@ impl ExprNode for EchoExpr {
     fn validate_extension(&self) -> Result<(), String> {
         Ok(())
     }
-
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
-
     fn wire_payload(&self) -> Vec<u8> {
         self.payload.clone()
     }
@@ -126,11 +124,9 @@ impl NodeExtension for EchoNode {
     fn validate_extension(&self) -> Result<(), String> {
         Ok(())
     }
-
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
-
     fn wire_payload(&self) -> Vec<u8> {
         self.payload.clone()
     }

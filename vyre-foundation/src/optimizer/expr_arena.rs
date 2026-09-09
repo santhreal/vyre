@@ -177,20 +177,21 @@ pub enum FlatExpr {
     },
     SubgroupLocalId,
     SubgroupSize,
-    /// Opaque extension expressions are interned by `Arc` identity, not
-    /// structural equality (no `ExprNode::content_hash` API). Equal
-    /// contents wrapped in distinct `Arc`s get distinct `ExprId`s.
-    Opaque(OpaqueId),
+    /// Opaque extension expressions are interned by stable content identity
+    /// (extension kind + 32-byte content fingerprint). Equal contents
+    /// wrapped in distinct `Arc` allocations produce identical `ExprId`s.
+    Opaque(OpaqueContentKey),
 }
 
-/// Pointer-identity tag for opaque extension expressions. Wraps the
-/// `Arc<dyn ExprNode>` raw pointer cast to `usize`  -  two `Arc`s
-/// pointing to the same allocation produce the same `OpaqueId`; two
-/// `Arc`s wrapping equal contents but with distinct allocations
-/// produce different `OpaqueId`s.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct OpaqueId(usize);
-
+/// Content-addressed identity for opaque extension expressions. Keys on
+/// stable extension kind and 32-byte content fingerprint.
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct OpaqueContentKey {
+    /// Extension kind namespace.
+    pub kind: String,
+    /// Content fingerprint.
+    pub fingerprint: [u8; 32],
+}
 /// Hash-consed arena of [`FlatExpr`] nodes.
 ///
 /// Build one per program (or share across passes within the same
@@ -209,8 +210,8 @@ pub struct ExprArena {
     /// `OpaqueId` is just a usize fingerprint; `rebuild` reconstructs
     /// the `Arc` by looking up here.
     opaques: Vec<Arc<dyn ExprNode>>,
-    /// `OpaqueId` already seen → its index into `opaques`.
-    opaque_lookup: FxHashMap<OpaqueId, usize>,
+    /// `OpaqueContentKey` already seen → its index into `opaques`.
+    opaque_lookup: FxHashMap<OpaqueContentKey, usize>,
     hashcons: FxHashMap<Arc<FlatExpr>, ExprId>,
 }
 
@@ -334,14 +335,14 @@ impl ExprArena {
             },
             FlatExpr::SubgroupLocalId => Expr::SubgroupLocalId,
             FlatExpr::SubgroupSize => Expr::SubgroupSize,
-            FlatExpr::Opaque(opaque_id) => {
+            FlatExpr::Opaque(key) => {
                 let idx = self
                     .opaque_lookup
-                    .get(&opaque_id)
+                    .get(&key)
                     .copied()
                     .unwrap_or_else(|| {
                         unreachable!(
-                            "rebuild only sees OpaqueIds produced by intern_flat (this arena)"
+                            "rebuild only sees OpaqueContentKeys produced by intern_flat (this arena)"
                         )
                     });
                 Expr::Opaque(Arc::clone(&self.opaques[idx]))
@@ -445,13 +446,16 @@ impl ExprArena {
             Expr::SubgroupLocalId => FlatExpr::SubgroupLocalId,
             Expr::SubgroupSize => FlatExpr::SubgroupSize,
             Expr::Opaque(arc) => {
-                let opaque_id = OpaqueId(Arc::as_ptr(arc).cast::<()>() as usize);
-                self.opaque_lookup.entry(opaque_id).or_insert_with(|| {
+                let key = OpaqueContentKey {
+                    kind: arc.extension_kind().to_string(),
+                    fingerprint: arc.stable_fingerprint(),
+                };
+                self.opaque_lookup.entry(key.clone()).or_insert_with(|| {
                     let idx = self.opaques.len();
                     self.opaques.push(Arc::clone(arc));
                     idx
                 });
-                FlatExpr::Opaque(opaque_id)
+                FlatExpr::Opaque(key)
             }
         }
     }
@@ -605,12 +609,10 @@ mod tests {
     }
 
     #[test]
-    fn opaque_expr_interning_via_arc_identity() {
-        // Build two `Arc`s pointing at the same allocation; their
-        // OpaqueIds must collapse.
+    fn opaque_expr_interning_via_stable_content() {
+        // Opaque nodes with equal content must collapse across distinct Arcs.
         use crate::ir::DataType;
         use crate::ir::ExprNode;
-        use std::any::Any;
 
         #[derive(Debug)]
         struct DummyOpaque;
@@ -633,15 +635,20 @@ mod tests {
             fn validate_extension(&self) -> Result<(), String> {
                 Ok(())
             }
-            fn as_any(&self) -> &dyn Any {
+            fn as_any(&self) -> &dyn std::any::Any {
                 self
             }
+            fn wire_payload(&self) -> Vec<u8> {
+                Vec::new()
+            }
         }
-        let arc: Arc<dyn ExprNode> = Arc::new(DummyOpaque);
+        let arc_a: Arc<dyn ExprNode> = Arc::new(DummyOpaque);
+        let arc_b: Arc<dyn ExprNode> = Arc::new(DummyOpaque);
+        assert!(!Arc::ptr_eq(&arc_a, &arc_b), "two distinct Arc allocations");
         let mut arena = ExprArena::default();
-        let id_a = arena.intern(&Expr::Opaque(Arc::clone(&arc)));
-        let id_b = arena.intern(&Expr::Opaque(arc));
-        assert_eq!(id_a, id_b, "two Arcs of the same allocation must collapse");
+        let id_a = arena.intern(&Expr::Opaque(arc_a));
+        let id_b = arena.intern(&Expr::Opaque(arc_b));
+        assert_eq!(id_a, id_b, "two distinct Arcs with equal content must collapse to same ExprId");
         assert_eq!(arena.len(), 1);
     }
 

@@ -34,6 +34,8 @@ pub use vyre_spec::{
     ExtensionIdentity as DeclExtensionIdentity, ExtensionNamespace as DeclExtensionNamespace,
     ExtensionNumericalContract as DeclExtensionNumericalContract,
     ExtensionOperand as DeclExtensionOperand, ExtensionOperandKind as DeclExtensionOperandKind,
+    ExtensionProofFieldKind as DeclExtensionProofFieldKind,
+    ExtensionProofFields as DeclExtensionProofFields,
     ExtensionResourceBounds as DeclExtensionResourceBounds, ExtensionSchema as DeclExtensionSchema,
     ExtensionSchemaDigest as DeclExtensionSchemaDigest, ExtensionSemVer as DeclExtensionSemVer,
     ExtensionShapeRule as DeclExtensionShapeRule,
@@ -45,6 +47,18 @@ pub enum ExtensionCatalogError {
     /// An extension with identical identity is already registered in the bundle.
     #[error("Duplicate extension identity in bundle: {0}")]
     DuplicateIdentity(ExtensionIdentity),
+    /// An extension with same namespace and semantic version already exists with a different digest.
+    #[error("Conflicting schema definition for {namespace}@{version}: existing {first_id}, incoming {second_id}")]
+    DuplicateNamespaceVersion {
+        /// Extension namespace.
+        namespace: vyre_spec::ExtensionNamespace,
+        /// Extension semantic version.
+        version: vyre_spec::ExtensionSemVer,
+        /// Existing identity in bundle.
+        first_id: ExtensionIdentity,
+        /// Incoming colliding identity.
+        second_id: ExtensionIdentity,
+    },
     /// Computed schema digest does not match the claimed identity digest.
     #[error("Schema digest mismatch for {identity}: expected {expected:?}, computed {actual:?}")]
     DigestMismatch {
@@ -55,6 +69,9 @@ pub enum ExtensionCatalogError {
         /// Actual digest recomputed from fields.
         actual: ExtensionSchemaDigest,
     },
+    /// Required proof field missing or empty.
+    #[error("Required extension proof field missing: {0}")]
+    MissingProofField(String),
     /// Extension schema failed validation.
     #[error("Invalid extension schema for {0}: {1}")]
     InvalidSchema(String, String),
@@ -87,12 +104,18 @@ impl CatalogBundle {
     /// Fails closed if the identity is already registered or if the schema
     /// digest is inconsistent.
     pub fn register(&mut self, schema: ExtensionSchema) -> Result<(), ExtensionCatalogError> {
+        if schema.proof_fields.target_capability.trim().is_empty() {
+            return Err(ExtensionCatalogError::MissingProofField(
+                "target_capability must not be empty".to_string(),
+            ));
+        }
         let expected_digest = ExtensionSchema::compute_digest(
             schema.identity.namespace.as_str(),
             &schema.identity.version,
             &schema.fields,
             &schema.operands,
             &schema.result_types,
+            &schema.proof_fields,
         );
         if schema.identity.schema_digest != expected_digest {
             return Err(ExtensionCatalogError::DigestMismatch {
@@ -103,6 +126,18 @@ impl CatalogBundle {
         }
         if self.schemas.contains_key(&schema.identity) {
             return Err(ExtensionCatalogError::DuplicateIdentity(schema.identity));
+        }
+        for existing in self.schemas.values() {
+            if existing.identity.namespace == schema.identity.namespace
+                && existing.identity.version == schema.identity.version
+            {
+                return Err(ExtensionCatalogError::DuplicateNamespaceVersion {
+                    namespace: schema.identity.namespace.clone(),
+                    version: schema.identity.version,
+                    first_id: existing.identity.clone(),
+                    second_id: schema.identity.clone(),
+                });
+            }
         }
         self.schemas.insert(schema.identity.clone(), schema);
         Ok(())
@@ -147,6 +182,7 @@ impl CatalogBundle {
                 &schema.fields,
                 &schema.operands,
                 &schema.result_types,
+                &schema.proof_fields,
             );
             if identity.schema_digest != expected {
                 return Err(ExtensionCatalogError::DigestMismatch {
@@ -198,17 +234,20 @@ impl CatalogBundle {
 pub trait RuleConditionExt: Debug + Send + Sync + 'static {
     /// Stable extension id.
     fn extension_id(&self) -> ExtensionRuleConditionId;
-    /// Evaluate against an opaque rule context (crate-specific payload).
-    fn evaluate_opaque(&self, ctx: &dyn std::any::Any) -> bool;
     /// Canonical fingerprint for cache invalidation.
     fn stable_fingerprint(&self) -> [u8; 32];
     /// Buffer declarations the rule builder must add when this condition
-    /// appears in a program. Extensions that need private scratch
-    /// buffers for their evaluator return them here; frozen conditions
-    /// return an empty `Vec`. The rule builder merges these into the
-    /// canonical six-buffer set before construction.
+    /// appears in a program.
     fn required_buffers(&self) -> Vec<crate::ir::BufferDecl> {
         Vec::new()
+    }
+    /// Serialize the extension payload into stable bytes for wire round-trip.
+    fn wire_payload(&self) -> Vec<u8> {
+        Vec::new()
+    }
+    /// Evaluate against an opaque rule context (crate-specific payload).
+    fn evaluate_opaque(&self, _ctx: &dyn std::any::Any) -> bool {
+        false
     }
 }
 
@@ -341,6 +380,14 @@ pub fn decode_opaque_expr(kind: &str, payload: &[u8]) -> Result<crate::ir::Expr,
     let registry = frozen_opaque_expr_registry()?;
     if let Some(deserialize) = registry.get(kind) {
         let node = deserialize(payload)?;
+        let re_encoded = node.wire_payload();
+        if re_encoded.as_slice() != payload {
+            return Err(format!(
+                "Canonical decode/re-encode mismatch for opaque expr `{kind}`: payload length {}, re-encoded length {}. Fix: ensure deserialized extension round-trips byte-for-byte to its canonical wire payload.",
+                payload.len(),
+                re_encoded.len()
+            ));
+        }
         Ok(crate::ir::Expr::Opaque(node))
     } else {
         Err(format!(
@@ -354,6 +401,14 @@ pub fn decode_opaque_node(kind: &str, payload: &[u8]) -> Result<crate::ir::Node,
     let registry = frozen_opaque_node_registry()?;
     if let Some(deserialize) = registry.get(kind) {
         let extension = deserialize(payload)?;
+        let re_encoded = extension.wire_payload();
+        if re_encoded.as_slice() != payload {
+            return Err(format!(
+                "Canonical decode/re-encode mismatch for opaque node `{kind}`: payload length {}, re-encoded length {}. Fix: ensure deserialized extension round-trips byte-for-byte to its canonical wire payload.",
+                payload.len(),
+                re_encoded.len()
+            ));
+        }
         Ok(crate::ir::Node::Opaque(extension))
     } else {
         Err(format!(
@@ -530,26 +585,44 @@ mod tests {
     }
 
     #[test]
-    fn catalog_bundle_distinguishes_fnv1a_colliding_extensions() {
+    fn catalog_bundle_distinguishes_distinct_extension_identities() {
         let mut bundle = CatalogBundle::new("test_bundle");
         let name_a = "d5pj";
         let name_b = "x.ta";
 
-        // Prove legacy 31-bit FNV-1a collided
-        assert_eq!(
-            ExtensionDataTypeId::from_name(name_a),
-            ExtensionDataTypeId::from_name(name_b)
-        );
+        let id_val_a = ExtensionDataTypeId::from_name(name_a);
+        let id_val_b = ExtensionDataTypeId::from_name(name_b);
+        assert_ne!(id_val_a, id_val_b, "Extension IDs must not collide");
 
         let ns_a = ExtensionNamespace::new(name_a).unwrap();
         let ns_b = ExtensionNamespace::new(name_b).unwrap();
-        let ver = ExtensionSemVer::new(1, 0, 0);
+        let ver_a = ExtensionSemVer::new(1, 0, 0);
+        let ver_b = ExtensionSemVer::new(1, 0, 0);
 
-        let digest_a = ExtensionSchema::compute_digest(name_a, &ver, &[], &[], &[]);
-        let digest_b = ExtensionSchema::compute_digest(name_b, &ver, &[], &[], &[]);
+        let proof_a = ExtensionProofFields {
+            host_shareable: true,
+            is_pure: true,
+            cse_eligible: true,
+            is_divergent: false,
+            may_alias: false,
+            terminates: true,
+            target_capability: "generic".into(),
+        };
+        let proof_b = ExtensionProofFields {
+            host_shareable: true,
+            is_pure: true,
+            cse_eligible: true,
+            is_divergent: false,
+            may_alias: false,
+            terminates: true,
+            target_capability: "generic".into(),
+        };
 
-        let id_a = ExtensionIdentity::new(ns_a, ver, digest_a);
-        let id_b = ExtensionIdentity::new(ns_b, ver, digest_b);
+        let digest_a = ExtensionSchema::compute_digest(name_a, &ver_a, &[], &[], &[], &proof_a);
+        let digest_b = ExtensionSchema::compute_digest(name_b, &ver_b, &[], &[], &[], &proof_b);
+
+        let id_a = ExtensionIdentity::new(ns_a, ver_a, digest_a);
+        let id_b = ExtensionIdentity::new(ns_b, ver_b, digest_b);
 
         let schema_a = ExtensionSchema {
             identity: id_a.clone(),
@@ -560,13 +633,10 @@ mod tests {
             result_types: Vec::new(),
             side_effects: vyre_spec::SideEffectClass::Pure,
             shape_rules: Vec::new(),
-            numerical_contract: ExtensionNumericalContract::default(),
+            numerical_contract: vyre_spec::ExtensionNumericalContract::default(),
             laws: Vec::new(),
-            resource_bounds: ExtensionResourceBounds::default(),
-            host_shareable: true,
-            is_pure: true,
-            is_divergent: false,
-            terminates: true,
+            resource_bounds: vyre_spec::ExtensionResourceBounds::default(),
+            proof_fields: proof_a,
         };
 
         let schema_b = ExtensionSchema {
@@ -578,16 +648,12 @@ mod tests {
             result_types: Vec::new(),
             side_effects: vyre_spec::SideEffectClass::Pure,
             shape_rules: Vec::new(),
-            numerical_contract: ExtensionNumericalContract::default(),
+            numerical_contract: vyre_spec::ExtensionNumericalContract::default(),
             laws: Vec::new(),
-            resource_bounds: ExtensionResourceBounds::default(),
-            host_shareable: true,
-            is_pure: true,
-            is_divergent: false,
-            terminates: true,
+            resource_bounds: vyre_spec::ExtensionResourceBounds::default(),
+            proof_fields: proof_b,
         };
 
-        // Both register and coexist simultaneously without collision!
         bundle.register(schema_a).expect("schema A registers cleanly");
         bundle.register(schema_b).expect("schema B registers cleanly");
 

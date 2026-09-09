@@ -55,30 +55,24 @@ pub trait ExprNode: fmt::Debug + Send + Sync + 'static {
     /// The returned error must explain the bad invariant and include `Fix:`.
     fn validate_extension(&self) -> Result<(), String>;
 
-    /// Downcast to Any to allow backend-specific dispatch from opaque payloads.
-    fn as_any(&self) -> &dyn std::any::Any;
-
     /// Serialize the extension payload into stable bytes used by the wire
-    /// encoder's `Expr::Opaque` path (tag `0x80`). Default: empty payload  -
-    /// suitable for extensions that carry no state beyond their type
-    /// identity. Extensions with state must override this to emit the exact
-    /// bytes `wire_payload`'s matching `OpaqueExprResolver` will consume.
+    /// encoder's `Expr::Opaque` path (tag `0x80`).
     ///
     /// The payload contract is endian-fixed: any numeric field wider than
     /// one byte MUST be written with `to_le_bytes`, and the matching decoder
     /// MUST reconstruct it with `from_le_bytes`. Host-endian encodings such as
     /// `to_ne_bytes` are forbidden because the wire format must stay
     /// byte-identical across architectures.
-    ///
-    /// Extension authors should use [`crate::opaque_payload::endian::LeBytesWriter`] when
-    /// building payloads because it makes the required endianness explicit in the type.
-    ///
-    /// Literal extensions that encode regex payloads must also canonicalize
-    /// inline flag prefixes before emitting bytes. For example, `(?mi)` and
-    /// `(?im)` are the same semantic payload and MUST serialize to the same
-    /// flag ordering.
     fn wire_payload(&self) -> Vec<u8> {
         Vec::new()
+    }
+
+    /// Downcast helper for backend dispatch.
+    fn as_any(&self) -> &dyn std::any::Any;
+
+    /// Whether this expression is purely functional without side effects.
+    fn is_pure(&self) -> bool {
+        self.cse_safe()
     }
 }
 

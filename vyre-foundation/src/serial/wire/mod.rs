@@ -263,7 +263,6 @@ mod tests {
 #[test]
 pub(crate) fn opaque_payload_limit_is_symmetric() {
     use crate::ir::{Expr, ExprNode};
-    use std::any::Any;
 
     #[derive(Debug)]
     struct BigOpaque(Vec<u8>);
@@ -286,7 +285,7 @@ pub(crate) fn opaque_payload_limit_is_symmetric() {
         fn validate_extension(&self) -> Result<(), String> {
             Ok(())
         }
-        fn as_any(&self) -> &dyn Any {
+        fn as_any(&self) -> &dyn std::any::Any {
             self
         }
         fn wire_payload(&self) -> Vec<u8> {

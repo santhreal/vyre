@@ -275,6 +275,7 @@ static EXTENSION_SCHEMA_FIELDS: &[CanonicalField] = &[
     CanonicalField { number: 2, name: "extension_id", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
     CanonicalField { number: 3, name: "extension_name", field_type: FieldType::Utf8String, is_identity: true, required: true },
     CanonicalField { number: 4, name: "op_count", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 5, name: "proof_digest", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
 ];
 
 /// The complete declarative schema registry.

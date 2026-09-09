@@ -342,16 +342,15 @@ pub fn node_effect_level(node: &Node) -> EffectLevel {
         // A pure control-flow terminator: no memory or synchronization effect.
         Node::Return => EffectLevel::Pure,
         // Trap runs a host-side effect handler that may read or write any device
-        // memory; Resume continues from it; an Opaque extension node carries a
-        // backend-defined effect no analysis can name. Their effect is
-        // UNKNOWABLE, so they take the lattice top (`Diverging`): composing
-        // memory ops across them must REFUSE rather than silently treat them as
-        // `Pure` (the join identity), which would let a fusion pass reorder or
-        // fuse an effectful escape hatch as if it were a no-op, the exact
-        // silent miscompile this lattice exists to refuse. `Pure` here would also
-        // make a `Block`/`Region`/`Loop` whose only child is one of these
-        // summarise to `Pure`, hiding the effect from `program_effect_level`.
-        Node::Trap { .. } | Node::Resume { .. } | Node::Opaque(_) => EffectLevel::Diverging,
+        // memory; Resume continues from it.
+        Node::Trap { .. } | Node::Resume { .. } => EffectLevel::Diverging,
+        Node::Opaque(ext) => {
+            if ext.is_pure() {
+                EffectLevel::Pure
+            } else {
+                EffectLevel::Diverging
+            }
+        }
     }
 }
 
