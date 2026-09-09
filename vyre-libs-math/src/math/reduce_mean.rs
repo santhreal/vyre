@@ -87,10 +87,10 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::decode_f32_one as decode_one;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
-    use vyre_libs_builder::fixture_bytes::f32_bytes;
-    use vyre_libs_builder::fixture_bytes::try_eval_bytes;
+    use vyre_test_support::test_parity_oracles::decode_f32_one as decode_one;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
+    use vyre_test_support::test_parity_oracles::f32_bytes;
+    use vyre_test_support::test_parity_oracles::try_eval_bytes;
 
     #[test]
     fn tiled_reduce_mean_matches_scalar_reference_across_multiple_tiles() {

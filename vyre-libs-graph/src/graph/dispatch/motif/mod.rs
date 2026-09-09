@@ -40,6 +40,3 @@ impl MotifGpuScratch {
     }
 }
 
-#[cfg(test)]
-#[path = "../../../../tests/internal/graph/dispatch/motif/mod.rs"]
-mod tests;

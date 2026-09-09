@@ -308,7 +308,7 @@ mod tests {
     }
 
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     #[test]
     fn cross_entropy_matches_logsumexp_reference() {

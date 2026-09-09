@@ -98,10 +98,10 @@ pub fn linear_4bit(
 
 #[cfg(test)]
 mod tests {
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     use super::linear_4bit;
-    use vyre_libs_builder::fixture_bytes::{f32_bytes, u32_bytes};
+    use vyre_test_support::test_parity_oracles::{f32_bytes, u32_bytes};
 
     #[test]
     fn linear_4bit_matches_unpack_then_linear() {

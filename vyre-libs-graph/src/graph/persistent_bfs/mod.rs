@@ -12,16 +12,11 @@ mod layout;
 mod plan;
 mod program;
 #[cfg(test)]
-#[path = "../../../tests/internal/graph/persistent_bfs/reference_adapter.rs"]
 mod reference_adapter;
 mod resident_plan;
 mod validate;
 
 mod registry;
-
-#[cfg(test)]
-#[path = "../../../tests/internal/graph/persistent_bfs/mod.rs"]
-mod tests;
 
 pub use hash::{persistent_bfs_layout_hash, persistent_bfs_program_layout_hash};
 pub use layout::{

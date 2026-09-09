@@ -204,11 +204,8 @@ inventory::submit! {
             fixture_u32(&[1, 2, 3, 4]),
             fixture_u32(&[5, 6, 7, 8]),
         ]]),
-        Some(|| vec![vec![vyre_libs_builder::fixture_bytes::MATMUL_2X2_EXPECTED_BYTES.to_vec()]]),
+        Some(|| vec![vec![vyre_test_support::test_parity_oracles::MATMUL_2X2_EXPECTED_BYTES.to_vec()]]),
     )
     .with_laws(&["distributive"])
 }
 
-#[cfg(test)]
-#[path = "../../../tests/internal/math/semiring_gemm/mod.rs"]
-mod tests;

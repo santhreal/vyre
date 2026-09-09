@@ -342,14 +342,14 @@ fn linear_4bit_affine_grouped_batch_impl(
 
 #[cfg(test)]
 mod tests {
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_foundation::ir::{Expr, Node};
 
     use super::super::grouped_layout::AFFINE_GROUPED_WORKGROUP_SIZE;
     use super::super::planner_evidence::linear_4bit_affine_grouped_planner_evidence;
     use super::super::QuantizedLinear4BitSpec;
     use super::{linear_4bit_affine_grouped, linear_4bit_affine_grouped_batched};
-    use vyre_libs_builder::fixture_bytes::{f32_bytes, u32_bytes};
+    use vyre_test_support::test_parity_oracles::{f32_bytes, u32_bytes};
 
     fn expr_contains_subgroup_shuffle(expr: &Expr) -> bool {
         match expr {

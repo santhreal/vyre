@@ -235,8 +235,8 @@ pub fn classic_ac_program(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::bytes_to_u32 as decode_u32_words;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::bytes_to_u32 as decode_u32_words;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     #[test]
     fn single_pattern_matches() {
@@ -340,13 +340,13 @@ mod tests {
         );
 
         let inputs = vec![
-            vyre_libs_builder::fixture_bytes::u32_bytes(
+            vyre_test_support::test_parity_oracles::u32_bytes(
                 &haystack.iter().map(|&b| u32::from(b)).collect::<Vec<_>>(),
             ),
-            vyre_libs_builder::fixture_bytes::u32_bytes(&ac.dfa.transitions),
-            vyre_libs_builder::fixture_bytes::u32_bytes(&ac.dfa.output_offsets),
-            vyre_libs_builder::fixture_bytes::u32_bytes(&ac.dfa.output_records),
-            vyre_libs_builder::fixture_bytes::u32_bytes(&[0u32]),
+            vyre_test_support::test_parity_oracles::u32_bytes(&ac.dfa.transitions),
+            vyre_test_support::test_parity_oracles::u32_bytes(&ac.dfa.output_offsets),
+            vyre_test_support::test_parity_oracles::u32_bytes(&ac.dfa.output_records),
+            vyre_test_support::test_parity_oracles::u32_bytes(&[0u32]),
             vec![0u8; 1024 * 4],
         ];
 
@@ -389,13 +389,13 @@ mod tests {
         );
 
         let inputs = vec![
-            vyre_libs_builder::fixture_bytes::u32_bytes(
+            vyre_test_support::test_parity_oracles::u32_bytes(
                 &haystack.iter().map(|&b| u32::from(b)).collect::<Vec<_>>(),
             ),
-            vyre_libs_builder::fixture_bytes::u32_bytes(&ac.dfa.transitions),
-            vyre_libs_builder::fixture_bytes::u32_bytes(&ac.dfa.output_offsets),
-            vyre_libs_builder::fixture_bytes::u32_bytes(&ac.dfa.output_records),
-            vyre_libs_builder::fixture_bytes::u32_bytes(&[0u32]),
+            vyre_test_support::test_parity_oracles::u32_bytes(&ac.dfa.transitions),
+            vyre_test_support::test_parity_oracles::u32_bytes(&ac.dfa.output_offsets),
+            vyre_test_support::test_parity_oracles::u32_bytes(&ac.dfa.output_records),
+            vyre_test_support::test_parity_oracles::u32_bytes(&[0u32]),
             vec![0u8; 2 * 4],
         ];
 

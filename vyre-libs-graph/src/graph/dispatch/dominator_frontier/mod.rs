@@ -63,6 +63,3 @@ pub fn frontier_size(frontier: &[u32]) -> u32 {
     primitive_frontier_size(frontier)
 }
 
-#[cfg(test)]
-#[path = "../../../../tests/internal/graph/dispatch/dominator_frontier/mod.rs"]
-mod tests;

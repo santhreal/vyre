@@ -31,6 +31,3 @@ impl ToposortGpuScratch {
     }
 }
 
-#[cfg(test)]
-#[path = "../../../../tests/internal/graph/dispatch/toposort/mod.rs"]
-mod tests;

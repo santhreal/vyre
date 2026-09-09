@@ -47,3 +47,7 @@ vyre-libs-fixpoint = { workspace = true }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
 vyre-reference = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

@@ -376,9 +376,9 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::assert_tiled_matches_reference;
-    use vyre_libs_builder::fixture_bytes::eval_f32;
-    use vyre_libs_builder::fixture_bytes::try_eval_bytes;
+    use vyre_test_support::test_parity_oracles::assert_tiled_matches_reference;
+    use vyre_test_support::test_parity_oracles::eval_f32;
+    use vyre_test_support::test_parity_oracles::try_eval_bytes;
 
     #[test]
     fn builder_rejects_dtype_mismatch() {

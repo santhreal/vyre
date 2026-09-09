@@ -31,7 +31,7 @@ pub fn sinkhorn_full_clustering_program(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     /// The binding names one region's Sinkhorn program is built against.
     const FIXTURE: SinkhornBuffers<'static> = SinkhornBuffers::CANONICAL;

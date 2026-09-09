@@ -171,6 +171,3 @@ pub fn csr_queue_split_low_forward_traverse_with(
     })
 }
 
-#[cfg(test)]
-#[path = "../../../tests/internal/graph/csr_queue_split/mod.rs"]
-mod tests;

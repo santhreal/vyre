@@ -68,7 +68,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::ln_scale_backward;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     fn f32_bytes(values: &[f32]) -> Vec<u8> {
         vyre_primitives::wire::pack_f32_slice(values)

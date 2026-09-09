@@ -14,6 +14,3 @@
 //! behaviour, and a second signature to keep in step. Callers name
 //! `crate::graph` directly.
 
-#[cfg(test)]
-#[path = "../../../../tests/internal/graph/dispatch/structural_kernel_pipeline/mod.rs"]
-mod tests;

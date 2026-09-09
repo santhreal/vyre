@@ -239,7 +239,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_reference::composition_witness::{
         blake3_g_witness as cpu_blake3_g, blake3_round_witness as cpu_blake3_round,
     };

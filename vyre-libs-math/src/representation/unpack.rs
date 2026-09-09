@@ -35,7 +35,7 @@ inventory::submit! {
             // Pack 16 4-bit values: 0..15 into 2 u32s (8 nibbles each)
             // u32[0] = 0x76543210, u32[1] = 0xFEDCBA98
             vec![vec![
-                vyre_libs_builder::fixture_bytes::u32_bytes(&[0x7654_3210, 0xFEDC_BA98]), // input: 2 packed u32s
+                vyre_test_support::test_parity_oracles::u32_bytes(&[0x7654_3210, 0xFEDC_BA98]), // input: 2 packed u32s
             ]]
         }),
         Some(|| {

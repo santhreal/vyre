@@ -105,10 +105,10 @@ fn welford_invalid_program(input: &str, sum_out: &str, sum_sq_out: &str) -> Prog
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::decode_f32_one as decode_one;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
-    use vyre_libs_builder::fixture_bytes::f32_bytes;
-    use vyre_libs_builder::fixture_bytes::try_eval_bytes;
+    use vyre_test_support::test_parity_oracles::decode_f32_one as decode_one;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
+    use vyre_test_support::test_parity_oracles::f32_bytes;
+    use vyre_test_support::test_parity_oracles::try_eval_bytes;
 
     #[test]
     fn welford_small_dataset() {

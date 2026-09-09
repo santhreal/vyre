@@ -125,7 +125,7 @@ define_dialect! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     fn eval_u32_binary(program: &vyre_foundation::ir::Program, a: &[u32], b: &[u32]) -> Vec<u32> {
         let outputs = eval_bytes(

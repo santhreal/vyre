@@ -353,7 +353,7 @@ pub(crate) fn build_atomic_compare_exchange(
 // Test helpers shared across atomic op unit tests.
 #[cfg(test)]
 pub(crate) mod testutil {
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     pub(crate) use vyre_primitives::wire::pack_u32_slice as pack_u32;
 

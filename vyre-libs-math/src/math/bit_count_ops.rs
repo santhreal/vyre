@@ -50,7 +50,7 @@ macro_rules! define_bit_count_u32_op {
             #[cfg(test)]
             mod tests {
                 use super::*;
-                use vyre_libs_builder::fixture_bytes::eval_u32;
+                use vyre_test_support::test_parity_oracles::eval_u32;
 
                 fn counted(input: &[u32]) -> Vec<u32> {
                     let n = (input.len() as u32).max(1);

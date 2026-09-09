@@ -336,7 +336,7 @@ mod primitive_tests {
 mod tests {
     use super::*;
     use crate::decode::scan::dummy_compiled_dfa;
-    use vyre_libs_builder::fixture_bytes::{bytes_to_u32, eval_bytes};
+    use vyre_test_support::test_parity_oracles::{bytes_to_u32, eval_bytes};
 
     fn decoded(input: &[u8]) -> Vec<u32> {
         let program = hex_decode("input", "output", input.len() as u32);

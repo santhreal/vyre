@@ -5,8 +5,8 @@ use crate::pattern::CompiledDfa;
 use vyre_foundation::ir::Program;
 use vyre_primitives::wire::pack_u32_slice;
 
-use vyre_libs_builder::fixture_bytes::bytes_to_u32;
-use vyre_libs_builder::fixture_bytes::eval_bytes;
+use vyre_test_support::test_parity_oracles::bytes_to_u32;
+use vyre_test_support::test_parity_oracles::eval_bytes;
 use crate::pattern::haystack::pack_haystack_u32;
 
 /// A u32 slice as one reference-backend input value.

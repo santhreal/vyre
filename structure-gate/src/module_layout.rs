@@ -168,7 +168,14 @@ pub fn generic_module_name_failures(
             continue;
         }
         let path = module_path_of(file, crate_roots);
-        if path.as_deref().is_some_and(|path| published.contains(path)) {
+        if path.as_deref().is_some_and(|path| {
+            published.contains(path) || {
+                let facade_path = path
+                    .strip_prefix("vyre_libs_")
+                    .and_then(|tail| tail.split_once("::").map(|(_, rest)| format!("vyre_libs::{rest}")));
+                facade_path.as_deref().is_some_and(|p| published.contains(p))
+            }
+        }) {
             continue;
         }
         let published_note = path.map_or_else(String::new, |path| {

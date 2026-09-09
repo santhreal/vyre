@@ -267,7 +267,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_foundation::visit::any_descendant;
 
     fn entry_region_body(program: &Program) -> &[Node] {

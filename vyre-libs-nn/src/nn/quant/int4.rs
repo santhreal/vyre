@@ -332,7 +332,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_reference::composition_witness::{
         i4x8_batched_matmul_f32_scaled_witness, i4x8_batched_matmul_top1_f32_scaled_witness,
         i4x8_batched_matvec_f32_scaled_witness, i4x8_dot_f32_scaled_witness, i4x8_dot_i32_witness,
@@ -343,7 +343,7 @@ mod tests {
         let lhs_packed = pack_i4x8_witness(lhs);
         let rhs_packed = pack_i4x8_witness(rhs);
         let program = int4_dot_i32("lhs", "rhs", "out", lhs.len() as u32);
-        let raw = vyre_libs_builder::fixture_bytes::eval_bytes(
+        let raw = vyre_test_support::test_parity_oracles::eval_bytes(
             "int4_dot_i32",
             &program,
             vec![

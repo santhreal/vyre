@@ -271,8 +271,8 @@ inventory::submit! {
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod primitive_tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::bytes_to_u32;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::bytes_to_u32;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_reference::composition_witness::ziftsieve_extract_literals_witness as ziftsieve_reference_extract_literals;
 
     fn literals(
@@ -484,7 +484,7 @@ mod primitive_tests {
                 max_output: 3,
             },
         );
-        let (_outputs, report) = vyre_libs_builder::fixture_bytes::eval_bytes_oob_report(
+        let (_outputs, report) = vyre_test_support::test_parity_oracles::eval_bytes_oob_report(
             "ziftsieve",
             &program,
             vec![

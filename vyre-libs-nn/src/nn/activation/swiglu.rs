@@ -75,7 +75,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_f32;
+    use vyre_test_support::test_parity_oracles::eval_f32;
 
     fn swiglu_ref(g: f32, u: f32) -> f32 {
         let sigmoid_g = 1.0 / (1.0 + (-g).exp());

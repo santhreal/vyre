@@ -166,13 +166,19 @@ pub(crate) fn build_matmul_tiled_program(
     let a_count = checked_element_count(a, m, k)?;
     let b_count = checked_element_count(b, k, n)?;
     let logical_out_count = checked_element_count(out, m, n)?;
-    let element_size = dtype
-        .size_bytes()
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: out.to_string(),
-            shape: vec![m, n],
-        })?;
-    let logical_output_bytes = (logical_out_count as usize)
+    let element_size = u64::try_from(
+        dtype
+            .size_bytes()
+            .ok_or_else(|| TensorRefError::ElementCountOverflow {
+                name: out.to_string(),
+                shape: vec![m, n],
+            })?,
+    )
+    .map_err(|_| TensorRefError::ElementCountOverflow {
+        name: out.to_string(),
+        shape: vec![m, n],
+    })?;
+    let logical_output_bytes = u64::from(logical_out_count)
         .checked_mul(element_size)
         .ok_or_else(|| TensorRefError::ElementCountOverflow {
             name: out.to_string(),

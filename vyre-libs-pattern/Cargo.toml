@@ -49,5 +49,10 @@ vyre-libs-math = { workspace = true }
 regex-syntax = { workspace = true, optional = true }
 
 [dev-dependencies]
+vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

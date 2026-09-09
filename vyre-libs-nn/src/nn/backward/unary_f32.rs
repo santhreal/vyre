@@ -62,7 +62,7 @@ pub(super) fn eval_unary_f32_backward(
 ) -> Vec<f32> {
     let n = input.len();
     assert_eq!(n, grad_out.len());
-    let outputs = vyre_libs_builder::fixture_bytes::eval_bytes(
+    let outputs = vyre_test_support::test_parity_oracles::eval_bytes(
         label,
         program,
         vec![

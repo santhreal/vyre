@@ -299,7 +299,7 @@ mod reference_eval_tests {
         build_char_class_table, char_class, C_ALPHA, C_CLOSE_BRACE, C_CLOSE_PAREN, C_DIGIT,
         C_MINUS, C_NEWLINE, C_OPEN_BRACE, C_OPEN_PAREN, C_PLUS, C_SLASH, C_STAR, C_WS,
     };
-    use vyre_libs_builder::fixture_bytes::{bytes_to_u32, eval_bytes};
+    use vyre_test_support::test_parity_oracles::{bytes_to_u32, eval_bytes};
 
     fn classified(bytes: &[u8]) -> Vec<u32> {
         let table = build_char_class_table();

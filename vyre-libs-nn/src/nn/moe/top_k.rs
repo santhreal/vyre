@@ -72,8 +72,8 @@ pub fn top_k(input: &str, output_indices: &str, n: u32, k: u32) -> Program {
 mod tests {
     use super::super::topk_selection::u32_from_bytes;
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
-    use vyre_libs_builder::fixture_bytes::f32_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
+    use vyre_test_support::test_parity_oracles::f32_bytes;
 
     #[test]
     fn top_k_descending_input() {

@@ -42,5 +42,11 @@ rayon.workspace = true
 vyre-libs-builder = { workspace = true }
 
 [dev-dependencies]
+proptest.workspace = true
+vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

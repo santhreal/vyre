@@ -147,7 +147,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_reference::composition_witness::encoding_classify_histogram_witness as classify_from_histogram;
 
     #[test]

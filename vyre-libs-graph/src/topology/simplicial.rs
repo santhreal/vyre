@@ -139,7 +139,7 @@ pub fn simplicial_triangle_message(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_reference::composition_witness::simplicial_triangle_message_witness as simplicial_triangle_message_cpu;
 
     fn approx_eq(a: f64, b: f64) -> bool {

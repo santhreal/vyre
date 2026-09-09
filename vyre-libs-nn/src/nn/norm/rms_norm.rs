@@ -158,9 +158,9 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::assert_tiled_matches_reference;
-    use vyre_libs_builder::fixture_bytes::eval_f32;
-    use vyre_libs_builder::fixture_bytes::try_eval_bytes;
+    use vyre_test_support::test_parity_oracles::assert_tiled_matches_reference;
+    use vyre_test_support::test_parity_oracles::eval_f32;
+    use vyre_test_support::test_parity_oracles::try_eval_bytes;
 
     #[test]
     fn tiled_rms_norm_matches_scalar_reference_across_multiple_tiles() {

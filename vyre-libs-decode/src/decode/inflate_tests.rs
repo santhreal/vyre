@@ -7,7 +7,7 @@ use super::inflate::{
     STORED_HEADER_FIX,
 };
 use vyre_libs_builder::plumbing::operand::buffer_names::fixed_name;
-use vyre_libs_builder::fixture_bytes::eval_bytes;
+use vyre_test_support::test_parity_oracles::eval_bytes;
 use vyre_libs_pattern::pattern::dfa_compile;
 use vyre_primitives::wire::pack_u32_slice as pack_words;
 use vyre_reference::composition_witness::{inflate_stored_witness, InflateStoredWitness};

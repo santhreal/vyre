@@ -124,9 +124,9 @@ inventory::submit! {
         //   out[3] = 0*3 + 1*7 + 2*11 + 3*15 =  7 + 22 + 45 = 74
         Some(|| {
 
-            let x = vyre_libs_builder::fixture_bytes::u32_bytes(&(0..4).collect::<Vec<_>>());
-            let w = vyre_libs_builder::fixture_bytes::u32_bytes(&(0..16).collect::<Vec<_>>());
-            let bias = vyre_libs_builder::fixture_bytes::u32_bytes(&[0, 0, 0, 0]);
+            let x = vyre_test_support::test_parity_oracles::u32_bytes(&(0..4).collect::<Vec<_>>());
+            let w = vyre_test_support::test_parity_oracles::u32_bytes(&(0..16).collect::<Vec<_>>());
+            let bias = vyre_test_support::test_parity_oracles::u32_bytes(&[0, 0, 0, 0]);
             // The output buffer is declared with `with_count(out_dim) = 4`
             // u32s = 16 bytes. The CPU reference and the GPU dispatch both
             // honor that buffer length; an over-allocated input slot would
@@ -151,9 +151,9 @@ inventory::submit! {
         },
         Some(|| {
 
-            let x = vyre_libs_builder::fixture_bytes::u32_bytes(&(0..4).collect::<Vec<_>>());
-            let w = vyre_libs_builder::fixture_bytes::u32_bytes(&(0..16).collect::<Vec<_>>());
-            let bias = vyre_libs_builder::fixture_bytes::u32_bytes(&[0, 0, 0, 0]);
+            let x = vyre_test_support::test_parity_oracles::u32_bytes(&(0..4).collect::<Vec<_>>());
+            let w = vyre_test_support::test_parity_oracles::u32_bytes(&(0..16).collect::<Vec<_>>());
+            let bias = vyre_test_support::test_parity_oracles::u32_bytes(&[0, 0, 0, 0]);
             vec![vec![x, w, bias]]
         }),
         Some(|| {

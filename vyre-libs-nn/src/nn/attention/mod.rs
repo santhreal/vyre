@@ -65,7 +65,7 @@ pub(crate) fn eval_qkv_program(
     v: &[f32],
     on_failure: &str,
 ) -> Vec<f32> {
-    use vyre_libs_builder::fixture_bytes::{decode_f32, eval_bytes, f32_bytes};
+    use vyre_test_support::test_parity_oracles::{decode_f32, eval_bytes, f32_bytes};
 
     let out_bytes = program
         .buffers()

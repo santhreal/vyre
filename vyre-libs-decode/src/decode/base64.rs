@@ -453,7 +453,7 @@ inventory::submit! {
 #[cfg(test)]
 mod primitive_tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     fn build_standard_decode_table() -> [u32; 256] {
         let mut table = [INVALID; 256];
         for byte in b'A'..=b'Z' {
@@ -647,7 +647,7 @@ mod primitive_tests {
 mod tests {
     use super::*;
     use crate::decode::scan::dummy_compiled_dfa;
-    use vyre_libs_builder::fixture_bytes::{bytes_to_u32, decode_u32_one, eval_bytes};
+    use vyre_test_support::test_parity_oracles::{bytes_to_u32, decode_u32_one, eval_bytes};
 
     fn decoded(input: &[u8]) -> (Vec<u32>, u32) {
         let program = base64_decode("input", "output", input.len() as u32);

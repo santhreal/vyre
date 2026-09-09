@@ -291,6 +291,3 @@ inventory::submit! {
     .with_opaque("pixel layout rasterization and spatial color transformation")
 }
 
-#[cfg(test)]
-#[path = "../../../tests/internal/visual/glass/mod.rs"]
-mod tests;

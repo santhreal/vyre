@@ -44,15 +44,52 @@ fn test_tooling_is_not_in_a_published_library_surface() {
         let production = structure_gate::cfg_test::strip_cfg_test_items(&text);
         for line in production.lines() {
             let trimmed = line.trim();
-            if trimmed.starts_with("pub mod test_parity_oracles;") {
+            if trimmed.starts_with("pub mod test_parity_oracles;")
+                || trimmed.starts_with("pub mod fixture_bytes;")
+            {
                 panic!(
-                    "Fix: {path} declares ungated `pub mod test_parity_oracles;`. \
+                    "Fix: {path} declares ungated `{trimmed}`. \
                      Test tooling must be owned by `vyre-test-support` and not exposed in \
                      a library crate's published surface."
                 );
             }
         }
     }
+}
+
+/// No domain crate declares a relative source include into a `tests/` directory.
+///
+/// A crate's test module belongs in that crate, and reaching across crate boundaries
+/// with relative `#[path = "...tests/..."]` attributes couples packages to monorepo layout.
+#[test]
+fn no_domain_crate_declares_relative_tests_include() {
+    let root = workspace_root();
+    let members = structure_gate::workspace_members(&root);
+    let mut failures = Vec::new();
+
+    for member in members {
+        if !member.starts_with("vyre-libs") {
+            continue;
+        }
+        let crate_dir = root.join(&member);
+        for source in structure_gate::source_scan::rust_sources_with_text(&crate_dir) {
+            let structure_gate::source_scan::SourceText::Read { path, text } = source else {
+                continue;
+            };
+            for (line_no, line) in text.lines().enumerate() {
+                let trimmed = line.trim();
+                if trimmed.contains("#[path") && trimmed.contains("tests/") && trimmed.contains("../") {
+                    failures.push(format!("{path}:{}: {trimmed}", line_no + 1));
+                }
+            }
+        }
+    }
+
+    assert!(
+        failures.is_empty(),
+        "Fix: domain crates must not contain relative source includes into a `tests/` directory:\n{}",
+        failures.join("\n")
+    );
 }
 
 /// A production module is not reported, so the set is not everything.

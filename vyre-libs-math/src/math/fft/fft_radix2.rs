@@ -217,7 +217,7 @@ inventory::submit! {
             .unwrap_or_else(|_| unreachable!("Fix: catalog fixture uses a valid radix-2 FFT size.")),
         Some(|| {
             vec![vec![
-                vyre_libs_builder::fixture_bytes::f32_bytes(&[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+                vyre_test_support::test_parity_oracles::f32_bytes(&[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
             ]]
         }),
         Some(|| {
@@ -237,7 +237,7 @@ inventory::submit! {
 mod tests {
     use super::super::complex_length::naive_dft;
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_f32;
+    use vyre_test_support::test_parity_oracles::eval_f32;
 
     fn bins(n: u32, input: &[f32]) -> Vec<f32> {
         let program = fft_radix2_complex("input", "output", n).expect("Fix: build");

@@ -185,3 +185,7 @@ publication_class = "stable-consumer-sdk"
 
 [lints]
 workspace = true
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

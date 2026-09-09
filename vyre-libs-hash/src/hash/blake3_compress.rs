@@ -179,9 +179,9 @@ inventory::submit! {
             let params: [u32; 4] = [0, 0, 64, 0b0000_1011]; // CHUNK_START | CHUNK_END | ROOT
 
             vec![vec![
-                vyre_libs_builder::fixture_bytes::u32_bytes(&iv),
-                vyre_libs_builder::fixture_bytes::u32_bytes(&msg),
-                vyre_libs_builder::fixture_bytes::u32_bytes(&params),
+                vyre_primitives::wire::pack_u32_slice(&iv),
+                vyre_primitives::wire::pack_u32_slice(&msg),
+                vyre_primitives::wire::pack_u32_slice(&params),
             ]]
         }),
         Some(|| vec![vec![EXPECTED_BLAKE3_COMPRESS_OUTPUT_BYTES.to_vec()]]),

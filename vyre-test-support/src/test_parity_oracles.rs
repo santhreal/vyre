@@ -406,3 +406,197 @@ pub fn try_eval_bytes(
         .map(|value| value.to_bytes())
         .collect())
 }
+
+/// Every registration checked against u32 bytes is a hash, linalg, pattern-dfa
+/// or representation op.
+pub fn u32_bytes(words: &[u32]) -> Vec<u8> {
+    vyre_primitives::wire::pack_u32_slice(words)
+}
+
+/// `math/linalg/matmul_tiled` and `math/semiring_gemm` are the only matmul
+/// witnesses.
+pub const MATMUL_2X2_EXPECTED_BYTES: [u8; 16] = [
+    0x13, 0x00, 0x00, 0x00, // 19
+    0x16, 0x00, 0x00, 0x00, // 22
+    0x2b, 0x00, 0x00, 0x00, // 43
+    0x32, 0x00, 0x00, 0x00, // 50
+];
+
+/// Every registration checked against f32 bytes is a conv, fft, weighted-sum,
+/// strassen or fused-activation op.
+pub fn f32_bytes(values: &[f32]) -> Vec<u8> {
+    vyre_primitives::wire::pack_f32_slice(values)
+}
+
+/// Decode an entire slice of little-endian bytes into f32 words.
+pub fn decode_f32(bytes: &[u8]) -> Vec<f32> {
+    vyre_primitives::wire::decode_f32_le_bytes_all(bytes)
+}
+
+/// Decode the first f32 value from little-endian bytes.
+pub fn decode_f32_one(bytes: &[u8]) -> f32 {
+    match try_decode_f32_one(bytes) {
+        Ok(value) => value,
+        Err(_) => f32::NAN,
+    }
+}
+
+/// Try to decode the first f32 value from little-endian bytes.
+pub fn try_decode_f32_one(bytes: &[u8]) -> Result<f32, String> {
+    vyre_primitives::wire::read_f32_le_word(bytes, 0, "f32 scalar fixture output")
+}
+
+/// Decode the first u32 value from little-endian bytes.
+pub fn decode_u32_one(bytes: &[u8]) -> u32 {
+    match try_decode_u32_one(bytes) {
+        Ok(value) => value,
+        Err(_) => u32::MAX,
+    }
+}
+
+/// Try to decode the first u32 value from little-endian bytes.
+pub fn try_decode_u32_one(bytes: &[u8]) -> Result<u32, String> {
+    vyre_primitives::wire::read_u32_le_word(bytes, 0, "u32 scalar fixture output")
+}
+
+/// Decode an entire slice of little-endian bytes into u32 words.
+pub fn bytes_to_u32(slice: &[u8]) -> Vec<u32> {
+    vyre_primitives::wire::decode_u32_le_bytes_all(slice)
+}
+
+/// Run a program and hand back both its buffers and the interpreter's
+/// out-of-bounds report.
+pub fn eval_bytes_oob_report(
+    label: &str,
+    program: &Program,
+    buffers: Vec<Vec<u8>>,
+) -> (Vec<Vec<u8>>, vyre_reference::OobReport) {
+    let values = vyre_reference::reference_inputs(program, buffers);
+    let (outputs, report) = vyre_reference::reference_eval_oob_report(program, &values)
+        .unwrap_or_else(|error| {
+            panic!("Fix: {label} program must execute in the reference interpreter: {error:?}")
+        });
+    (
+        outputs.iter().map(|value| value.to_bytes()).collect(),
+        report,
+    )
+}
+
+/// Run a program with the interpreter's lanes in declaration order, or
+/// reversed.
+pub fn eval_bytes_lane_order(
+    label: &str,
+    program: &Program,
+    buffers: Vec<Vec<u8>>,
+    reversed: bool,
+) -> Vec<Vec<u8>> {
+    let values = vyre_reference::reference_inputs(program, buffers);
+    let results = if reversed {
+        vyre_reference::reference_eval_lane_reversed(program, &values)
+    } else {
+        vyre_reference::reference_eval(program, &values)
+    };
+    results
+        .unwrap_or_else(|error| {
+            panic!("Fix: {label} program must execute in the reference interpreter: {error:?}")
+        })
+        .iter()
+        .map(|value| value.to_bytes())
+        .collect()
+}
+
+/// Run a program whose arguments and one output are all f32.
+pub fn eval_f32(
+    label: &str,
+    program: &Program,
+    inputs: &[&[f32]],
+    output_len: usize,
+) -> Vec<f32> {
+    let mut buffers: Vec<Vec<u8>> = inputs.iter().map(|input| f32_bytes(input)).collect();
+    buffers.push(vec![0u8; output_len * 4]);
+    decode_f32(&eval_bytes(label, program, buffers)[0])
+}
+
+/// Run a program whose arguments and one output are all u32.
+pub fn eval_u32(
+    label: &str,
+    program: &Program,
+    inputs: &[&[u32]],
+    output_len: usize,
+) -> Vec<u32> {
+    let mut buffers: Vec<Vec<u8>> = inputs.iter().map(|input| u32_bytes(input)).collect();
+    buffers.push(vec![0u8; output_len * 4]);
+    bytes_to_u32(&eval_bytes(label, program, buffers)[0])
+}
+
+/// Run a one-in one-out f32 program through the reference interpreter.
+pub fn eval_f32_unary(
+    label: &str,
+    input: &[f32],
+    program: &Program,
+) -> Vec<f32> {
+    eval_f32(label, program, &[input], input.len())
+}
+
+/// Compare a tiled f32 program against its scalar reference, lane by lane.
+pub fn assert_tiled_matches_reference(
+    label: &str,
+    input: &[f32],
+    tolerance: f32,
+    tiled: &Program,
+    reference: &Program,
+) {
+    let actual = eval_f32_unary(label, input, tiled);
+    let expected = eval_f32_unary(label, input, reference);
+    assert_eq!(
+        actual.len(),
+        expected.len(),
+        "Fix: {label} must write the same lane count as its reference."
+    );
+    for (idx, (lhs, rhs)) in actual.iter().zip(expected.iter()).enumerate() {
+        assert!(
+            (lhs - rhs).abs() <= tolerance,
+            "{label} mismatch at lane {idx}: tiled={lhs:?} reference={rhs:?}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_matmul_2x2_expected_bytes_identity() {
+        let constructed = u32_bytes(&[19, 22, 43, 50]);
+        assert_eq!(constructed, MATMUL_2X2_EXPECTED_BYTES);
+    }
+
+    #[test]
+    fn test_round_trip() {
+        let original = vec![1, 2, 3, 0xFFFFFFFF, 0x12345678];
+        let bytes = u32_bytes(&original);
+        let back = bytes_to_u32(&bytes);
+        assert_eq!(original, back);
+    }
+
+    #[test]
+    fn test_empty_input() {
+        let original: Vec<u32> = vec![];
+        let bytes = u32_bytes(&original);
+        assert!(bytes.is_empty());
+        let back = bytes_to_u32(&bytes);
+        assert!(back.is_empty());
+    }
+
+    #[test]
+    fn test_f32_bit_exact_pack() {
+        let bytes = f32_bytes(&[1.0, -0.0, f32::INFINITY, f32::NAN]);
+        let unpacked =
+            vyre_primitives::wire::unpack_f32_slice(&bytes, 4, "test_f32_bit_exact_pack")
+                .expect("Fix: f32 test fixture pack must round-trip.");
+        assert_eq!(unpacked[0].to_bits(), 1.0f32.to_bits());
+        assert_eq!(unpacked[1].to_bits(), (-0.0f32).to_bits());
+        assert_eq!(unpacked[2].to_bits(), f32::INFINITY.to_bits());
+        assert!(unpacked[3].is_nan());
+    }
+}

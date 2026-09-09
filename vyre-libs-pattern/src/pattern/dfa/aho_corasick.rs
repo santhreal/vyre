@@ -129,9 +129,9 @@ inventory::submit! {
             let haystack = b"abracadabra";
 
             vec![vec![
-                vyre_libs_builder::fixture_bytes::u32_bytes(&haystack.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()),
-                vyre_libs_builder::fixture_bytes::u32_bytes(&compiled.transitions),
-                vyre_libs_builder::fixture_bytes::u32_bytes(&compiled.accept),
+                vyre_test_support::test_parity_oracles::u32_bytes(&haystack.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()),
+                vyre_test_support::test_parity_oracles::u32_bytes(&compiled.transitions),
+                vyre_test_support::test_parity_oracles::u32_bytes(&compiled.accept),
             ]]
         }),
         Some(|| vec![vec![EXPECTED_AHO_CORASICK_OUTPUT_BYTES.to_vec()]]),
