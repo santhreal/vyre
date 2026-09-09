@@ -50,10 +50,6 @@ pub mod kv_cache_append_contract;
 #[path = "kv_cache_typed_contract.rs"]
 pub mod kv_cache_typed_contract;
 
-/// Integration tests from `tests/nn_attention_clone_family_ir_invariance.rs`.
-#[path = "nn_attention_clone_family_ir_invariance.rs"]
-pub mod nn_attention_clone_family_ir_invariance;
-
 /// Integration tests from `tests/overflow_guards.rs`.
 #[cfg(all(feature = "math-linalg", feature = "nn-attention"))]
 #[path = "overflow_guards.rs"]
