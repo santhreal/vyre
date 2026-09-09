@@ -42,7 +42,7 @@ tempfile.workspace = true
 inventory.workspace = true
 # Used through the shared `vyre_test_support::artifact_fixtures` module, which
 # the unused-dependency audit cannot follow into a dev-dependency's modules.
-vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
+vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests", "driver-artifact-contracts"] }
 
 [package.metadata.cargo-machete]
 ignored = ["vyre-test-support"]

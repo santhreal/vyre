@@ -40,8 +40,8 @@ fn facade_compiles_validated_graph_to_canonical_artifact() {
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([9; 32]), BTreeMap::new()),
-        DeviceFacts::unknown(),
-        SearchBudget::new(1, 1, 1, 0, 1_000_000),
+        DeviceFacts::new(vyre_foundation::validate::BackendCapabilities::default(), 1024),
+        SearchBudget::new(8, 1_000, 2, 0, 10_000_000),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
