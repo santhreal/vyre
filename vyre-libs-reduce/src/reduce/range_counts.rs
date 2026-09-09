@@ -56,7 +56,7 @@ pub fn range_counts_u32(histogram: &str, out: &str, start: u32, end: u32) -> Pro
                 .with_count(256),
             BufferDecl::output(out, 1, DataType::U32)
                 .with_count(1)
-                .with_output_byte_range(0..4),
+                .with_full_output_byte_range(),
         ],
         [1, 1, 1],
         vec![wrap_anonymous_region(RANGE_COUNTS_U32_OP_ID, body)],

@@ -76,7 +76,7 @@ pub fn workgroup_any_u32(values: &str, out: &str, count: u32) -> Program {
                 .with_count(count.max(1)),
             BufferDecl::output(out, 1, DataType::U32)
                 .with_count(1)
-                .with_output_byte_range(0..4),
+                .with_full_output_byte_range(),
         ],
         [1, 1, 1],
         vec![wrap_anonymous_region(WORKGROUP_ANY_U32_OP_ID, body)],
