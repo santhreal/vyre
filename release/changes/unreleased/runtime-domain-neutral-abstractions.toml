@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Vyre runtime exports only generic bounded routed queues, speculative state transactions, retained-page caches, paged resources, and typed transfers without model-specific concepts."
