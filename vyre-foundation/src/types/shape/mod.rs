@@ -8,8 +8,33 @@
 pub(crate) mod solver;
 
 use rustc_hash::FxHashMap;
-use std::sync::RwLock;
+use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
+#[inline]
+fn shape_read<'a, T>(rwlock: &'a RwLock<T>, state: &'static str) -> RwLockReadGuard<'a, T> {
+    match crate::failure_domain::govern_rwlock_read(
+        rwlock,
+        "ShapeInterner",
+        state,
+        crate::failure_domain::RecoveryClass::InvariantViolation,
+    ) {
+        Ok(guard) => guard,
+        Err(_) => crate::failure_domain::process_fatal_poison("ShapeInterner", state),
+    }
+}
+
+#[inline]
+fn shape_write<'a, T>(rwlock: &'a RwLock<T>, state: &'static str) -> RwLockWriteGuard<'a, T> {
+    match crate::failure_domain::govern_rwlock_write(
+        rwlock,
+        "ShapeInterner",
+        state,
+        crate::failure_domain::RecoveryClass::InvariantViolation,
+    ) {
+        Ok(guard) => guard,
+        Err(_) => crate::failure_domain::process_fatal_poison("ShapeInterner", state),
+    }
+}
 /// Interned identifier for a canonical symbolic dimension expression.
 #[derive(
     Clone, Copy, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, serde::Deserialize, serde::Serialize,
@@ -304,16 +329,16 @@ impl ShapeInterner {
     pub fn intern_shape(&self, dims: &[ShapeExprId]) -> ShapeId {
         let shape_vec = dims.to_vec();
         {
-            let map = self.shape_to_id.read().unwrap();
+            let map = shape_read(&self.shape_to_id, "shape_to_id");
             if let Some(&id) = map.get(&shape_vec) {
                 return id;
             }
         }
-        let mut map = self.shape_to_id.write().unwrap();
+        let mut map = shape_write(&self.shape_to_id, "shape_to_id");
         if let Some(&id) = map.get(&shape_vec) {
             return id;
         }
-        let mut id_list = self.id_to_shape.write().unwrap();
+        let mut id_list = shape_write(&self.id_to_shape, "id_to_shape");
         let id = ShapeId(id_list.len() as u32);
         id_list.push(shape_vec.clone());
         map.insert(shape_vec, id);
@@ -322,28 +347,28 @@ impl ShapeInterner {
 
     /// Look up an interned dimension expression by ID.
     pub fn get_expr(&self, id: ShapeExprId) -> Option<SymbolicDim> {
-        let list = self.id_to_expr.read().unwrap();
+        let list = shape_read(&self.id_to_expr, "id_to_expr");
         list.get(id.0 as usize).cloned()
     }
 
     /// Look up an interned multi-dimensional shape by ID.
     pub fn get_shape(&self, id: ShapeId) -> Option<Vec<ShapeExprId>> {
-        let list = self.id_to_shape.read().unwrap();
+        let list = shape_read(&self.id_to_shape, "id_to_shape");
         list.get(id.0 as usize).cloned()
     }
 
     fn intern_expr_raw(&self, dim: SymbolicDim) -> ShapeExprId {
         {
-            let map = self.expr_to_id.read().unwrap();
+            let map = shape_read(&self.expr_to_id, "expr_to_id");
             if let Some(&id) = map.get(&dim) {
                 return id;
             }
         }
-        let mut map = self.expr_to_id.write().unwrap();
+        let mut map = shape_write(&self.expr_to_id, "expr_to_id");
         if let Some(&id) = map.get(&dim) {
             return id;
         }
-        let mut id_list = self.id_to_expr.write().unwrap();
+        let mut id_list = shape_write(&self.id_to_expr, "id_to_expr");
         let id = ShapeExprId(id_list.len() as u32);
         id_list.push(dim.clone());
         map.insert(dim, id);

@@ -172,6 +172,12 @@ pub enum QueryError {
     /// Stale or corrupted cache entry.
     #[error("Stale cache error: {0}")]
     StaleCache(#[from] StaleCacheError),
+    /// Query engine lock was poisoned by a previous thread panic.
+    #[error("query engine lock for `{lock_name}` was poisoned. Fix: rebuild the query engine")]
+    LockPoisoned {
+        /// Name of the poisoned lock.
+        lock_name: String,
+    },
     /// General query evaluation failure.
     #[error("Query execution failed: {0}")]
     ExecutionFailed(String),
@@ -419,7 +425,15 @@ impl QueryEngine {
 
         // Check query cache.
         {
-            let cache_guard = self.cache.read().expect("Lock poisoned");
+            let cache_guard = crate::failure_domain::govern_rwlock_read(
+                &self.cache,
+                "query_engine",
+                "cache",
+                crate::failure_domain::RecoveryClass::TransactionallyRecoverable,
+            )
+            .map_err(|_| QueryError::LockPoisoned {
+                lock_name: "cache".to_string(),
+            })?;
             if let Some(entry) = cache_guard.get(&key) {
                 // Validate cache schema version.
                 if entry.output.cache_key.schema_version == SUBSTRATE_CACHE_SCHEMA_VERSION {
@@ -430,7 +444,15 @@ impl QueryEngine {
 
         // Cycle detection: check active query stack.
         {
-            let mut stack = self.active_stack.lock().expect("Lock poisoned");
+            let mut stack = crate::failure_domain::govern_mutex(
+                &self.active_stack,
+                "query_engine",
+                "active_stack",
+                crate::failure_domain::RecoveryClass::TransactionallyRecoverable,
+            )
+            .map_err(|_| QueryError::LockPoisoned {
+                lock_name: "active_stack".to_string(),
+            })?;
             if stack.contains(&key) {
                 return Err(QueryError::Cycle {
                     query: key.clone(),
@@ -477,7 +499,15 @@ impl QueryEngine {
 
         // Commit to cache.
         {
-            let mut cache_guard = self.cache.write().expect("Lock poisoned");
+            let mut cache_guard = crate::failure_domain::govern_rwlock_write(
+                &self.cache,
+                "query_engine",
+                "cache",
+                crate::failure_domain::RecoveryClass::TransactionallyRecoverable,
+            )
+            .map_err(|_| QueryError::LockPoisoned {
+                lock_name: "cache".to_string(),
+            })?;
             cache_guard.insert(
                 key.clone(),
                 CachedQueryResult {
@@ -490,12 +520,19 @@ impl QueryEngine {
 
         // Update reverse dependencies for precise invalidation.
         {
-            let mut rev_guard = self.reverse_deps.write().expect("Lock poisoned");
+            let mut rev_guard = crate::failure_domain::govern_rwlock_write(
+                &self.reverse_deps,
+                "query_engine",
+                "reverse_deps",
+                crate::failure_domain::RecoveryClass::TransactionallyRecoverable,
+            )
+            .map_err(|_| QueryError::LockPoisoned {
+                lock_name: "reverse_deps".to_string(),
+            })?;
             for dep in deps {
                 rev_guard.entry(dep).or_default().insert(key.clone());
             }
         }
-
         Ok(output)
     }
 
@@ -553,7 +590,15 @@ impl QueryEngine {
         let mut to_invalidate = BTreeSet::new();
         let mut worklist: Vec<QueryKey> = dirty_keys.to_vec();
 
-        let rev_guard = self.reverse_deps.read().expect("Lock poisoned");
+        let rev_guard = match crate::failure_domain::govern_rwlock_read(
+            &self.reverse_deps,
+            "query_engine",
+            "reverse_deps",
+            crate::failure_domain::RecoveryClass::RestartableFromCanonicalInput,
+        ) {
+            Ok(guard) => guard,
+            Err(_) => return 0,
+        };
         while let Some(key) = worklist.pop() {
             if to_invalidate.insert(key.clone()) {
                 if let Some(dependents) = rev_guard.get(&key) {
@@ -565,7 +610,16 @@ impl QueryEngine {
         }
         drop(rev_guard);
 
-        let mut cache_guard = self.cache.write().expect("Lock poisoned");
+        let mut cache_guard = match crate::failure_domain::govern_rwlock_write_with_reset(
+            &self.cache,
+            "query_engine",
+            "cache",
+            crate::failure_domain::RecoveryClass::RestartableFromCanonicalInput,
+            |c| c.clear(),
+        ) {
+            Ok(guard) => guard,
+            Err(_) => return 0,
+        };
         let count = to_invalidate.len();
         for key in &to_invalidate {
             if let Some(removed) = cache_guard.remove(key) {
@@ -581,40 +635,70 @@ impl QueryEngine {
     /// Total number of active cached query results.
     #[must_use]
     pub fn cached_count(&self) -> usize {
-        self.cache.read().expect("Lock poisoned").len()
+        crate::failure_domain::govern_rwlock_read(
+            &self.cache,
+            "query_engine",
+            "cache",
+            crate::failure_domain::RecoveryClass::RestartableFromCanonicalInput,
+        )
+        .map(|g| g.len())
+        .unwrap_or(0)
     }
 
     /// Check whether a query key is cached.
     #[must_use]
     pub fn is_cached(&self, key: &QueryKey) -> bool {
-        self.cache.read().expect("Lock poisoned").contains_key(key)
+        crate::failure_domain::govern_rwlock_read(
+            &self.cache,
+            "query_engine",
+            "cache",
+            crate::failure_domain::RecoveryClass::RestartableFromCanonicalInput,
+        )
+        .map(|g| g.contains_key(key))
+        .unwrap_or(false)
     }
     /// Revision when a cached entry was computed.
     #[must_use]
     pub fn entry_revision(&self, key: &QueryKey) -> Option<Revision> {
-        self.cache
-            .read()
-            .expect("Lock poisoned")
-            .get(key)
-            .map(|e| e.revision)
+        crate::failure_domain::govern_rwlock_read(
+            &self.cache,
+            "query_engine",
+            "cache",
+            crate::failure_domain::RecoveryClass::RestartableFromCanonicalInput,
+        )
+        .ok()
+        .and_then(|g| g.get(key).map(|e| e.revision))
     }
 
     /// Declared dependencies of a cached entry.
     #[must_use]
     pub fn entry_dependencies(&self, key: &QueryKey) -> Option<Vec<QueryKey>> {
-        self.cache
-            .read()
-            .expect("Lock poisoned")
-            .get(key)
-            .map(|e| e.dependencies.clone())
+        crate::failure_domain::govern_rwlock_read(
+            &self.cache,
+            "query_engine",
+            "cache",
+            crate::failure_domain::RecoveryClass::RestartableFromCanonicalInput,
+        )
+        .ok()
+        .and_then(|g| g.get(key).map(|e| e.dependencies.clone()))
     }
 
     /// Clear all cached query results.
     pub fn clear_cache(&self) {
-        let mut cache_guard = self.cache.write().expect("Lock poisoned");
-        cache_guard.clear();
-        let mut rev_guard = self.reverse_deps.write().expect("Lock poisoned");
-        rev_guard.clear();
+        let _unused_cache = crate::failure_domain::govern_rwlock_write_with_reset(
+            &self.cache,
+            "query_engine",
+            "cache",
+            crate::failure_domain::RecoveryClass::RestartableFromCanonicalInput,
+            |c| c.clear(),
+        );
+        let _unused_deps = crate::failure_domain::govern_rwlock_write_with_reset(
+            &self.reverse_deps,
+            "query_engine",
+            "reverse_deps",
+            crate::failure_domain::RecoveryClass::RestartableFromCanonicalInput,
+            |r| r.clear(),
+        );
         self.memory.query_cache_bytes.store(0, Ordering::Relaxed);
     }
 }

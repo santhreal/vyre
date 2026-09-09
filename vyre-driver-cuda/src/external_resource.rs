@@ -215,7 +215,14 @@ impl CudaExternalResourceImporter {
             is_valid: true,
         };
 
-        let mut map = self.imported_resources.write().unwrap();
+        let mut map = match self.imported_resources.write() {
+            Ok(g) => g,
+            Err(_) => {
+                return Err(ResourceAbiError::ResourceInvalidated {
+                    resource_id: descriptor.resource_id,
+                })
+            }
+        };
         map.insert(descriptor.resource_id, imported);
 
         Ok(record)
@@ -231,7 +238,10 @@ impl CudaExternalResourceImporter {
         resource_id: u64,
         view_id: u64,
     ) -> Result<(), ResourceAbiError> {
-        let map = self.imported_resources.read().unwrap();
+        let map = match self.imported_resources.read() {
+            Ok(g) => g,
+            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
+        };
         let resource = map
             .get(&resource_id)
             .ok_or(ResourceAbiError::ResourceInvalidated { resource_id })?;
@@ -240,7 +250,10 @@ impl CudaExternalResourceImporter {
         }
         drop(map);
 
-        let mut views = self.dependent_views.write().unwrap();
+        let mut views = match self.dependent_views.write() {
+            Ok(g) => g,
+            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
+        };
         views.entry(resource_id).or_default().insert(view_id);
         Ok(())
     }
@@ -255,7 +268,10 @@ impl CudaExternalResourceImporter {
         resource_id: u64,
         graph_id: u64,
     ) -> Result<(), ResourceAbiError> {
-        let map = self.imported_resources.read().unwrap();
+        let map = match self.imported_resources.read() {
+            Ok(g) => g,
+            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
+        };
         let resource = map
             .get(&resource_id)
             .ok_or(ResourceAbiError::ResourceInvalidated { resource_id })?;
@@ -264,7 +280,10 @@ impl CudaExternalResourceImporter {
         }
         drop(map);
 
-        let mut graphs = self.dependent_graphs.write().unwrap();
+        let mut graphs = match self.dependent_graphs.write() {
+            Ok(g) => g,
+            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
+        };
         graphs.entry(resource_id).or_default().insert(graph_id);
         Ok(())
     }
@@ -278,7 +297,10 @@ impl CudaExternalResourceImporter {
         &self,
         schedule: &ResourceTransitionSchedule,
     ) -> Result<TransitionExecutionReport, ResourceAbiError> {
-        let map = self.imported_resources.read().unwrap();
+        let map = match self.imported_resources.read() {
+            Ok(g) => g,
+            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id: 0 }),
+        };
         for (resource_id, _) in &schedule.transitions {
             let res = map
                 .get(resource_id)
@@ -305,9 +327,27 @@ impl CudaExternalResourceImporter {
             invalidated_artifacts: Vec::new(),
         };
 
-        let mut map = self.imported_resources.write().unwrap();
-        let mut views = self.dependent_views.write().unwrap();
-        let mut graphs = self.dependent_graphs.write().unwrap();
+        let mut map = match self.imported_resources.write() {
+            Ok(g) => g,
+            Err(p) => {
+                self.imported_resources.clear_poison();
+                p.into_inner()
+            }
+        };
+        let mut views = match self.dependent_views.write() {
+            Ok(g) => g,
+            Err(p) => {
+                self.dependent_views.clear_poison();
+                p.into_inner()
+            }
+        };
+        let mut graphs = match self.dependent_graphs.write() {
+            Ok(g) => g,
+            Err(p) => {
+                self.dependent_graphs.clear_poison();
+                p.into_inner()
+            }
+        };
 
         for (res_id, res) in map.iter_mut() {
             res.is_valid = false;

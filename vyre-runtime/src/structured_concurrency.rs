@@ -108,22 +108,24 @@ impl WorkerQuarantine {
         }
     }
 
+    fn lock_workers(&self) -> std::sync::MutexGuard<'_, BTreeMap<u64, WorkerStatus>> {
+        match self.workers.lock() {
+            Ok(g) => g,
+            Err(p) => {
+                self.workers.clear_poison();
+                p.into_inner()
+            }
+        }
+    }
+
     /// Register a worker as active.
     pub fn register_worker(&self, worker_id: u64) {
-        let mut guard = match self.workers.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
-        guard.insert(worker_id, WorkerStatus::Active);
+        self.lock_workers().insert(worker_id, WorkerStatus::Active);
     }
 
     /// Quarantine a worker following an unreturnable driver call or hang.
     pub fn quarantine_worker(&self, worker_id: u64, reason: String, timestamp_ns: u64) {
-        let mut guard = match self.workers.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
-        guard.insert(
+        self.lock_workers().insert(
             worker_id,
             WorkerStatus::Quarantined {
                 reason,
@@ -134,22 +136,15 @@ impl WorkerQuarantine {
 
     /// Mark a worker completed.
     pub fn mark_completed(&self, worker_id: u64) {
-        let mut guard = match self.workers.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
-        guard.insert(worker_id, WorkerStatus::Completed);
+        self.lock_workers()
+            .insert(worker_id, WorkerStatus::Completed);
     }
 
     /// Check if a worker is quarantined.
     #[must_use]
     pub fn is_quarantined(&self, worker_id: u64) -> bool {
-        let guard = match self.workers.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
         matches!(
-            guard.get(&worker_id),
+            self.lock_workers().get(&worker_id),
             Some(WorkerStatus::Quarantined { .. })
         )
     }
@@ -157,11 +152,7 @@ impl WorkerQuarantine {
     /// Count currently quarantined workers.
     #[must_use]
     pub fn quarantined_count(&self) -> usize {
-        let guard = match self.workers.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
-        guard
+        self.lock_workers()
             .values()
             .filter(|status| matches!(status, WorkerStatus::Quarantined { .. }))
             .count()
@@ -170,11 +161,7 @@ impl WorkerQuarantine {
     /// Count currently active workers.
     #[must_use]
     pub fn active_count(&self) -> usize {
-        let guard = match self.workers.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
-        guard
+        self.lock_workers()
             .values()
             .filter(|status| matches!(status, WorkerStatus::Active))
             .count()
@@ -263,7 +250,10 @@ impl StructuredWorkerScope {
             let res = operation(&token);
             let mut slot = match result_slot_clone.lock() {
                 Ok(g) => g,
-                Err(p) => p.into_inner(),
+                Err(p) => {
+                    result_slot_clone.clear_poison();
+                    p.into_inner()
+                }
             };
             *slot = Some(res);
             quarantine.mark_completed(worker_id);
@@ -281,7 +271,10 @@ impl StructuredWorkerScope {
             {
                 let mut slot = match result_slot.lock() {
                     Ok(g) => g,
-                    Err(p) => p.into_inner(),
+                    Err(p) => {
+                        result_slot.clear_poison();
+                        p.into_inner()
+                    }
                 };
                 if let Some(res) = slot.take() {
                     let _ = handle.join();
@@ -302,7 +295,10 @@ impl StructuredWorkerScope {
 
         let mut workers = match self.workers.lock() {
             Ok(g) => g,
-            Err(p) => p.into_inner(),
+            Err(p) => {
+                self.workers.clear_poison();
+                p.into_inner()
+            }
         };
         workers.push((worker_id, handle));
 
@@ -322,7 +318,10 @@ impl StructuredWorkerScope {
         self.cancel();
         let mut workers = match self.workers.lock() {
             Ok(g) => g,
-            Err(p) => p.into_inner(),
+            Err(p) => {
+                self.workers.clear_poison();
+                p.into_inner()
+            }
         };
         for (id, handle) in workers.drain(..) {
             if !self.quarantine.is_quarantined(id) {

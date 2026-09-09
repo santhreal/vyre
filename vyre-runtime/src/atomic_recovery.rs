@@ -229,20 +229,37 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
     /// # Errors
     ///
     /// Returns error if key is already prepared by a concurrent operation.
-    pub fn prepare(&self, key: K, value: V) -> Result<Option<PrepareTicket>, String> {
-        let committed = match self.committed.lock() {
+    fn lock_committed(&self) -> std::sync::MutexGuard<'_, BTreeMap<K, V>> {
+        match self.committed.lock() {
             Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
+            Err(p) => {
+                self.committed.clear_poison();
+                p.into_inner()
+            }
+        }
+    }
+
+    fn lock_prepared(&self) -> std::sync::MutexGuard<'_, BTreeMap<K, (PrepareTicket, V)>> {
+        match self.prepared.lock() {
+            Ok(g) => g,
+            Err(p) => {
+                self.prepared.clear_poison();
+                p.into_inner()
+            }
+        }
+    }
+
+    /// # Errors
+    ///
+    /// Returns error if key is already prepared by a concurrent operation.
+    pub fn prepare(&self, key: K, value: V) -> Result<Option<PrepareTicket>, String> {
+        let committed = self.lock_committed();
         if committed.contains_key(&key) {
             return Ok(None); // Already committed; idempotent no-op
         }
         drop(committed);
 
-        let mut prepared = match self.prepared.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
+        let mut prepared = self.lock_prepared();
         if prepared.contains_key(&key) {
             return Err(String::from(
                 "Fix: operation with this idempotency key is already prepared in flight.",
@@ -261,27 +278,18 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
     ///
     /// Returns error if the ticket does not match the prepared entry.
     pub fn commit(&self, key: K, ticket: PrepareTicket) -> Result<V, String> {
-        let mut prepared = match self.prepared.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
+        let mut prepared = self.lock_prepared();
         if let Some((saved_ticket, val)) = prepared.remove(&key) {
             if saved_ticket != ticket {
                 return Err(String::from(
                     "Fix: ticket mismatch during prepare-commit transaction commit.",
                 ));
             }
-            let mut committed = match self.committed.lock() {
-                Ok(g) => g,
-                Err(p) => p.into_inner(),
-            };
+            let mut committed = self.lock_committed();
             committed.insert(key, val.clone());
             Ok(val)
         } else {
-            let committed = match self.committed.lock() {
-                Ok(g) => g,
-                Err(p) => p.into_inner(),
-            };
+            let committed = self.lock_committed();
             if let Some(existing) = committed.get(&key) {
                 Ok(existing.clone())
             } else {
@@ -307,10 +315,7 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
     {
         // First check if already committed
         {
-            let committed = match self.committed.lock() {
-                Ok(g) => g,
-                Err(p) => p.into_inner(),
-            };
+            let committed = self.lock_committed();
             if let Some(val) = committed.get(&key) {
                 return Ok(val.clone());
             }
@@ -318,10 +323,7 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
 
         // Verify prepared ticket
         {
-            let prepared = match self.prepared.lock() {
-                Ok(g) => g,
-                Err(p) => p.into_inner(),
-            };
+            let prepared = self.lock_prepared();
             let (saved_ticket, _) = prepared.get(&key).ok_or_else(|| {
                 E::from(String::from(
                     "Fix: no prepared transaction found for key during commit phase.",
@@ -339,17 +341,11 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
 
         // Move from prepared to committed
         {
-            let mut prepared = match self.prepared.lock() {
-                Ok(g) => g,
-                Err(p) => p.into_inner(),
-            };
+            let mut prepared = self.lock_prepared();
             prepared.remove(&key);
         }
         {
-            let mut committed = match self.committed.lock() {
-                Ok(g) => g,
-                Err(p) => p.into_inner(),
-            };
+            let mut committed = self.lock_committed();
             committed.insert(key, val.clone());
         }
 
@@ -358,10 +354,7 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
 
     /// Abort and discard a prepared mutation.
     pub fn abort(&self, key: &K, ticket: PrepareTicket) {
-        let mut prepared = match self.prepared.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
+        let mut prepared = self.lock_prepared();
         if let Some((saved_ticket, _)) = prepared.get(key) {
             if saved_ticket.ticket_id == ticket.ticket_id {
                 prepared.remove(key);
@@ -372,29 +365,20 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
     /// Check if an idempotency key has been committed.
     #[must_use]
     pub fn is_committed(&self, key: &K) -> bool {
-        let committed = match self.committed.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
+        let committed = self.lock_committed();
         committed.contains_key(key)
     }
 
     /// Retrieve the committed value for a key if already committed.
     #[must_use]
     pub fn get_committed(&self, key: &K) -> Option<V> {
-        let committed = match self.committed.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
+        let committed = self.lock_committed();
         committed.get(key).cloned()
     }
 
     /// Bounded cleanup of stale prepared transactions exceeding a ticket threshold.
     pub fn cleanup_stale_prepared(&self, max_stale_tickets: u64, limit: usize) -> usize {
-        let mut prepared = match self.prepared.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
+        let mut prepared = self.lock_prepared();
         let current_ticket = self.next_ticket.load(Ordering::SeqCst);
         let mut to_remove = Vec::new();
         for (key, (ticket, _)) in prepared.iter() {
@@ -453,11 +437,20 @@ impl SupervisedRestartBudget {
 
     /// Current recorded restart count.
     #[must_use]
-    pub fn current_restarts(&self) -> u32 {
-        let count = match self.restart_count.lock() {
+    fn lock_restart_count(&self) -> std::sync::MutexGuard<'_, u32> {
+        match self.restart_count.lock() {
             Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
+            Err(p) => {
+                self.restart_count.clear_poison();
+                p.into_inner()
+            }
+        }
+    }
+
+    /// Current recorded restart count.
+    #[must_use]
+    pub fn current_restarts(&self) -> u32 {
+        let count = self.lock_restart_count();
         *count
     }
 
@@ -473,10 +466,7 @@ impl SupervisedRestartBudget {
     ///
     /// Returns [`TypedRecoveryError`] with [`RecoveryDisposition::Fatal`] if the budget is exceeded.
     pub fn record_restart(&self, domain: FailureDomain) -> Result<u32, TypedRecoveryError> {
-        let mut count = match self.restart_count.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
+        let mut count = self.lock_restart_count();
         *count += 1;
         if *count > self.max_restarts {
             return Err(TypedRecoveryError::new(
@@ -495,10 +485,7 @@ impl SupervisedRestartBudget {
 
     /// Reset restart count after a sustained period of healthy operation.
     pub fn reset(&self) {
-        let mut count = match self.restart_count.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        };
+        let mut count = self.lock_restart_count();
         *count = 0;
     }
 }

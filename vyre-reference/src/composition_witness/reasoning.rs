@@ -947,8 +947,14 @@ fn match_regex(value: &str, pattern: &str) -> bool {
     use std::sync::{LazyLock, Mutex};
     static CACHE: LazyLock<Mutex<HashMap<String, Option<regex::Regex>>>> =
         LazyLock::new(|| Mutex::new(HashMap::new()));
-    let Ok(mut lock) = CACHE.lock() else {
-        return false;
+    let mut lock = match CACHE.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => {
+            CACHE.clear_poison();
+            let mut guard = poisoned.into_inner();
+            guard.clear();
+            guard
+        }
     };
     lock.entry(pattern.to_string())
         .or_insert_with(|| regex::Regex::new(pattern).ok())

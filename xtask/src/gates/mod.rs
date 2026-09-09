@@ -67,6 +67,7 @@ pub mod inventory_walk;
 pub mod layering;
 pub mod lego_quick;
 pub mod lint_hygiene;
+pub mod lock_poison_policy;
 pub mod lockfile;
 pub mod manifest_contract;
 pub mod metal_parity;
@@ -186,6 +187,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
         "lint-unsafe-justification",
         &lint_hygiene::UnsafeJustification,
     ),
+    ("lock-poison-policy", &lock_poison_policy::LockPoisonPolicy),
     ("lockfile-clean", &lockfile::LockfileClean),
     (
         "internal-dep-versions",
