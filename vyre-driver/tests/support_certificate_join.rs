@@ -184,3 +184,75 @@ fn support_certificate_registry_filters_unsupported_operations() {
     assert!(supported_set.contains(&op_supported));
     assert!(!supported_set.contains(&op_unsupported));
 }
+
+#[test]
+fn runtime_derived_operation_and_target_sets_require_certificate_join() {
+    use vyre_foundation::operation::OperationRegistry;
+
+    let op_registry = OperationRegistry::global();
+    let backends = vyre_driver::registered_backends().expect("Fix: backend registry must load");
+
+    assert!(
+        op_registry.iter().len() > 0,
+        "Fix: OperationRegistry must contain registered operations"
+    );
+    assert!(
+        !backends.is_empty(),
+        "Fix: registered_backends must contain registered backends"
+    );
+
+    let cert_registry = SupportCertificateRegistry::global();
+
+    // For every backend and every operation, evaluate support without a certificate
+    // and verify it fails closed (Unsupported).
+    for backend in backends {
+        for op in op_registry.iter() {
+            let op_id = OpId::from(op.id);
+            // Query an unregistered combination
+            let status = cert_registry.evaluate_support(
+                &format!("unregistered_{}", backend.id),
+                &op_id,
+            );
+            assert!(
+                !status.is_supported(),
+                "Fix: unregistered backend `{}` and op `{}` must evaluate to unsupported",
+                backend.id,
+                op_id
+            );
+        }
+    }
+}
+
+#[test]
+fn device_execution_stage_cannot_be_fabricated_and_requires_hardware_proof() {
+    let mut cert = SupportCertificate::new("cuda", "cuda", OpId::from("vyre-libs::math::fma"));
+
+    // Record host-side stages 1-5 as proven
+    cert = cert.with_proven_stage(ProductionPathStage::Validation, "val-digest", None);
+    cert = cert.with_proven_stage(ProductionPathStage::Emission, "emit-digest", None);
+    cert = cert.with_proven_stage(ProductionPathStage::NativeCompilation, "nvrtc-digest", None);
+    cert = cert.with_proven_stage(ProductionPathStage::Materialization, "module-digest", None);
+    cert = cert.with_proven_stage(ProductionPathStage::HostileBindings, "hostile-digest", None);
+
+    // Leave DeviceExecution and OracleAgreement as Unproven (as when no physical GPU is present)
+    let status = cert.evaluate();
+    assert!(
+        !status.is_supported(),
+        "Fix: certificate without device execution proof must not be supported"
+    );
+
+    match status {
+        SupportStatus::Unsupported { missing_stage, reason } => {
+            assert_eq!(
+                missing_stage,
+                ProductionPathStage::DeviceExecution,
+                "Fix: evaluation must report DeviceExecution as the first missing stage"
+            );
+            assert!(
+                reason.contains("device_execution"),
+                "Fix: reason must explicitly state device_execution is unproven: {reason}"
+            );
+        }
+        SupportStatus::Supported { .. } => panic!("unproven device execution must not be supported"),
+    }
+}

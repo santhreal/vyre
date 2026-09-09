@@ -24,11 +24,9 @@ pub use external_resource::{
     MetalExternalMemoryDescriptor, MetalExternalMemoryHandle, MetalExternalResourceImporter,
     MetalImportedResource,
 };
-#[cfg(any(target_os = "macos", target_os = "ios"))]
 mod materializer;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod runtime;
-#[cfg(any(target_os = "macos", target_os = "ios"))]
 mod target_compiler;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
@@ -65,21 +63,12 @@ pub fn acquire() -> Result<Box<dyn VyreBackend>, BackendError> {
     })
 }
 
-/// Return the backend identifier submitted into the registry on this target,
-/// or `None` on targets where native Metal registration is omitted.
+/// Return the backend identifier submitted into the registry on this target.
 #[must_use]
 pub fn registered_backend_id() -> Option<&'static str> {
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
-    {
-        Some(METAL_BACKEND_ID)
-    }
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
-    {
-        None
-    }
+    Some(METAL_BACKEND_ID)
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
 vyre_driver::register_backend! {
     id: METAL_BACKEND_ID,
     target_id: METAL_TARGET_ID,

@@ -395,6 +395,7 @@ fn proof_runtime_public_surface_contains_no_model_concepts() {
     let src_dir = manifest_dir.join("src");
 
     let banned_terms = [
+        // Generic model concepts
         "model",
         "expert",
         "attention",
@@ -402,6 +403,22 @@ fn proof_runtime_public_surface_contains_no_model_concepts() {
         "mtp",
         "kv_cache",
         "tokenizer",
+        "paged_attention",
+        "speculative_decoding",
+        // Model families and architectures
+        "llama",
+        "mistral",
+        "transformer",
+        "gpt",
+        "bert",
+        "moe",
+        "deepseek",
+        "qwen",
+        "falcon",
+        "phi",
+        "whisper",
+        "vit",
+        "clip",
     ];
 
     // Scan all public module files in vyre-runtime/src/

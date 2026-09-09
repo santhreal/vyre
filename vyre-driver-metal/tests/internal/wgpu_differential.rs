@@ -53,7 +53,7 @@ fn apple_native_metal_matches_wgpu_on_same_program_bytes() {
     let metal = acquire().expect(
         "Fix: Apple Metal builds must acquire the system default MTLDevice before differential dispatch.",
     );
-    let wgpu = vyre_driver_wgpu::WgpuBackend::acquire()
+    let wgpu = vyre_driver::acquire("wgpu")
         .expect("Fix: WGPU-on-Metal must acquire on the Apple GPU differential lane.");
     let config = DispatchConfig::default();
     let metal_outputs = metal
@@ -117,7 +117,7 @@ fn a_folded_wgpu_launch_matches_native_metal_on_one_axis() {
 
     let metal =
         acquire().expect("Fix: Apple Metal builds must acquire the system default MTLDevice.");
-    let wgpu = vyre_driver_wgpu::WgpuBackend::acquire()
+    let wgpu = vyre_driver::acquire("wgpu")
         .expect("Fix: WGPU-on-Metal must acquire on the Apple GPU differential lane.");
 
     let mut folded = DispatchConfig::default();

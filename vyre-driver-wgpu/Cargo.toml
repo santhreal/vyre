@@ -29,7 +29,6 @@ vyre-spec = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
-vyre-pass-engine = { workspace = true }
 vyre-lower.workspace = true
 vyre-emit-naga.workspace = true
 naga = { workspace = true, features = ["wgsl-out", "spv-out"] }

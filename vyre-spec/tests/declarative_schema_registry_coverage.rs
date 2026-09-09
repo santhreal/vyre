@@ -3,7 +3,7 @@
 //!
 //! WHY: closes the class "schema registry entries omit bounds, identity fields, or domain separators".
 
-use vyre_spec::schema_registry::{DefaultsPolicy, FieldType, SchemaId, SchemaRegistry};
+use vyre_spec::{DefaultsPolicy, FieldType, SchemaId, SchemaRegistry};
 
 #[test]
 fn runtime_derived_schema_registry_covers_all_schema_ids() {

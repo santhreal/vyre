@@ -830,3 +830,141 @@ fn transactional_tensor_reader_operations() {
         matches!(missing_err, SafetensorError::MissingRequiredTensor { name } if name == "missing.tensor")
     );
 }
+
+/// Proves that substituting a shard file on disk after verification is rejected atomically.
+#[test]
+fn shard_substitution_between_verification_and_binding_fails_atomically() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let shard1_path = temp.path().join("shard1.safetensors");
+    let shard2_path = temp.path().join("shard2.safetensors");
+    let rogue_path = temp.path().join("rogue.safetensors");
+
+    let header1 = br#"{"weight1":{"dtype":"F32","shape":[2],"data_offsets":[0,8]}}"#;
+    let payload1 = [11_u8; 8];
+    write_shard(&shard1_path, header1, &payload1);
+
+    let header2 = br#"{"weight2":{"dtype":"F32","shape":[2],"data_offsets":[0,8]}}"#;
+    let payload2 = [22_u8; 8];
+    write_shard(&shard2_path, header2, &payload2);
+
+    let header_rogue = br#"{"weight2":{"dtype":"F32","shape":[2],"data_offsets":[0,8]}}"#;
+    let payload_rogue = [99_u8; 8];
+    write_shard(&rogue_path, header_rogue, &payload_rogue);
+
+    let index_path = temp.path().join("model.safetensors.index.json");
+    fs::write(
+        &index_path,
+        br#"{"weight_map":{"weight1":"shard1.safetensors","weight2":"shard2.safetensors"}}"#,
+    )
+    .expect("write index");
+
+    let index = ShardedSafetensorIndex::open(temp.path(), &index_path).expect("open index");
+    let s1_rel = Path::new("shard1.safetensors");
+    let s2_rel = Path::new("shard2.safetensors");
+    let d1 = *blake3::hash(&fs::read(&shard1_path).expect("read 1")).as_bytes();
+    let d2 = *blake3::hash(&fs::read(&shard2_path).expect("read 2")).as_bytes();
+
+    let checkpoint = index
+        .verify_transactional([
+            ExpectedShardDigest {
+                shard: s1_rel,
+                blake3: d1,
+            },
+            ExpectedShardDigest {
+                shard: s2_rel,
+                blake3: d2,
+            },
+        ])
+        .expect("verify transactional");
+
+    // Shard 2 is substituted on disk with rogue payload (file replacement on disk)!
+    fs::remove_file(&shard2_path).expect("remove shard2");
+    fs::copy(&rogue_path, &shard2_path).expect("substitute shard2");
+
+    // 1. Transactional checkpoint still safely reads the verified content from the pinned handle
+    let read2 = checkpoint.read_tensor("weight2").expect("read weight2");
+    assert_eq!(
+        read2, payload2,
+        "Transactional handle must read original verified content, not substituted file"
+    );
+
+    // 2. Re-verifying or opening index against the substituted shard fails with digest mismatch
+    let new_index =
+        ShardedSafetensorIndex::open(temp.path(), &index_path).expect("reopen index");
+    let err = new_index
+        .verify_shards([
+            ExpectedShardDigest {
+                shard: s1_rel,
+                blake3: d1,
+            },
+            ExpectedShardDigest {
+                shard: s2_rel,
+                blake3: d2,
+            },
+        ])
+        .expect_err("verification on substituted shard must fail");
+    assert!(
+        matches!(err, SafetensorError::ShardDigestMismatch { ref shard, .. } if shard == s2_rel)
+    );
+}
+
+/// Proves that sparse-file modification or truncation after verification is detected and refused.
+#[test]
+fn sparse_file_change_and_stale_manifest_fail_atomically() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let shard_path = temp.path().join("sparse_shard.safetensors");
+    let header = br#"{"sparse_tensor":{"dtype":"U8","shape":[16],"data_offsets":[0,16]}}"#;
+    write_sparse_shard(&shard_path, header, 16);
+
+    let index_path = temp.path().join("model.safetensors.index.json");
+    fs::write(
+        &index_path,
+        br#"{"weight_map":{"sparse_tensor":"sparse_shard.safetensors"}}"#,
+    )
+    .expect("write index");
+
+    let index = ShardedSafetensorIndex::open(temp.path(), &index_path).expect("open index");
+    let shard_rel = Path::new("sparse_shard.safetensors");
+    let digest = *blake3::hash(&fs::read(&shard_path).expect("read sparse")).as_bytes();
+
+    let checkpoint = index
+        .verify_transactional([ExpectedShardDigest {
+            shard: shard_rel,
+            blake3: digest,
+        }])
+        .expect("verify transactional");
+
+    // 1. Initial read succeeds
+    let bytes = checkpoint
+        .read_tensor("sparse_tensor")
+        .expect("read sparse_tensor");
+    assert_eq!(bytes.len(), 16);
+
+    // 2. Modifying the sparse file length on disk is detected on subsequent read
+    let cur_len = fs::metadata(&shard_path).expect("metadata").len();
+    fs::OpenOptions::new()
+        .write(true)
+        .open(&shard_path)
+        .expect("open")
+        .set_len(cur_len + 32)
+        .expect("set_len");
+
+    let err = checkpoint
+        .read_tensor("sparse_tensor")
+        .expect_err("read after sparse modification must fail");
+    assert!(
+        matches!(&err, SafetensorError::ShardLengthChanged { shard, .. } if shard == shard_rel)
+    );
+
+    // 3. Stale manifest pointing to a non-existent or modified shard fails atomically
+    let stale_index_path = temp.path().join("stale.safetensors.index.json");
+    fs::write(
+        &stale_index_path,
+        br#"{"weight_map":{"tensor_x":"nonexistent_shard.safetensors"}}"#,
+    )
+    .expect("write stale index");
+    assert!(
+        ShardedSafetensorIndex::open(temp.path(), &stale_index_path).is_err(),
+        "Stale manifest pointing to nonexistent shard must fail atomically"
+    );
+}

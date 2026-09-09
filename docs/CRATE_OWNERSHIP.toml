@@ -392,20 +392,9 @@ layer = "concrete-backend"
 responsibility = "Own pure WGSL target compilation, portable GPU acquisition, materialization, dispatch, graph execution, and backend evidence."
 
 [[crate.dependency]]
-package = "vyre-libs"
-purpose = "composition trees the portable adapters plan against"
-features = ["reasoning"]
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "product-libraries"
-
-[[crate.dependency]]
 package = "vyre-driver"
 purpose = "backend-neutral target, materialization, submission, and completion contracts"
-features = ["libs-compositions"]
+features = []
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
@@ -549,17 +538,6 @@ path = "vyre-driver-cuda"
 owner = "cuda-driver"
 layer = "concrete-backend"
 responsibility = "Own pure PTX target compilation, native device acquisition, materialization, dispatch, graphs, and release-path evidence."
-
-[[crate.dependency]]
-package = "vyre-libs"
-purpose = "composition trees the CUDA adapters plan against"
-features = ["device", "graph-dispatch", "scheduling"]
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "product-libraries"
 
 [[crate.dependency]]
 package = "vyre-driver"
