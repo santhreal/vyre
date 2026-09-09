@@ -28,3 +28,7 @@ pub mod wire_malformed_adversarial;
 /// Integration tests from `tests/wire_v1_round_trip.rs`.
 #[path = "wire_v1_round_trip.rs"]
 pub mod wire_v1_round_trip;
+
+/// Integration tests from `tests/downstream_workflow_fixture.rs`.
+#[path = "downstream_workflow_fixture.rs"]
+pub mod downstream_workflow_fixture;

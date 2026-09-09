@@ -676,3 +676,143 @@ fn changed_shard_length_fails_before_digest_verification() {
         }
     );
 }
+
+/// Proves transactional checkpoint handles protect against symlink swaps after verification.
+#[test]
+fn symlink_swap_between_verification_and_binding_reads_original_verified_content() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let target_a = temp.path().join("real_shard_a.safetensors");
+    let target_b = temp.path().join("real_shard_b.safetensors");
+    let symlink_path = temp.path().join("shard.safetensors");
+
+    let header_a = br#"{"weights":{"dtype":"F32","shape":[2],"data_offsets":[0,8]}}"#;
+    let payload_a = [10_u8; 8];
+    write_shard(&target_a, header_a, &payload_a);
+
+    let header_b = br#"{"weights":{"dtype":"F32","shape":[2],"data_offsets":[0,8]}}"#;
+    let payload_b = [99_u8; 8];
+    write_shard(&target_b, header_b, &payload_b);
+
+    // Create symlink pointing to shard A
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&target_a, &symlink_path).expect("symlink");
+
+    #[cfg(unix)]
+    {
+        let index_path = temp.path().join("model.safetensors.index.json");
+        fs::write(
+            &index_path,
+            br#"{"weight_map":{"weights":"shard.safetensors"}}"#,
+        )
+        .expect("write index");
+
+        let index = ShardedSafetensorIndex::open(temp.path(), &index_path).expect("open index");
+        let shard_rel = Path::new("shard.safetensors");
+        let expected_digest = *blake3::hash(&fs::read(&target_a).expect("read a")).as_bytes();
+
+        let checkpoint = index
+            .verify_transactional([ExpectedShardDigest {
+                shard: shard_rel,
+                blake3: expected_digest,
+            }])
+            .expect("verify transactional");
+
+        // Adversary swaps the symlink to target_b on disk after verification!
+        fs::remove_file(&symlink_path).expect("remove symlink");
+        std::os::unix::fs::symlink(&target_b, &symlink_path).expect("swap symlink to b");
+
+        // The transactional checkpoint holds the open verified handle from target_a.
+        let bytes = checkpoint.read_tensor("weights").expect("read from transactional checkpoint");
+        assert_eq!(bytes, payload_a, "Transactional handle must read original verified content, not swapped symlink target");
+
+        // Attempting to re-open index or verify against swapped symlink with expected_digest fails with mismatch by name!
+        let new_index = ShardedSafetensorIndex::open(temp.path(), &index_path).expect("reopen index");
+        let err = new_index
+            .verify_shards([ExpectedShardDigest {
+                shard: shard_rel,
+                blake3: expected_digest,
+            }])
+            .expect_err("verification on swapped symlink must fail");
+        assert!(matches!(err, SafetensorError::ShardDigestMismatch { ref shard, .. } if shard == shard_rel));
+    }
+}
+
+/// Proves that a resource whose content changes between verification and binding is refused by name.
+#[test]
+fn resource_content_change_between_verification_and_binding_is_refused_by_name() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let shard_path = temp.path().join("weights.safetensors");
+    let header = br#"{"layer.weight":{"dtype":"F32","shape":[2],"data_offsets":[0,8]}}"#;
+    let original_payload = [7_u8; 8];
+    write_shard(&shard_path, header, &original_payload);
+
+    let index_path = temp.path().join("model.safetensors.index.json");
+    fs::write(
+        &index_path,
+        br#"{"weight_map":{"layer.weight":"weights.safetensors"}}"#,
+    )
+    .expect("write index");
+
+    let index = ShardedSafetensorIndex::open(temp.path(), &index_path).expect("open index");
+    let shard_rel = Path::new("weights.safetensors");
+    let expected_digest = *blake3::hash(&fs::read(&shard_path).expect("read")).as_bytes();
+
+    let checkpoint = index
+        .verify_transactional([ExpectedShardDigest {
+            shard: shard_rel,
+            blake3: expected_digest,
+        }])
+        .expect("verify transactional");
+
+    // Verify initial read succeeds
+    let read1 = checkpoint.read_tensor("layer.weight").expect("read tensor");
+    assert_eq!(read1, original_payload);
+
+    // Adversary modifies the file on disk (truncates / changes length)
+    let current_len = fs::metadata(&shard_path).expect("metadata").len();
+    fs::OpenOptions::new()
+        .write(true)
+        .open(&shard_path)
+        .expect("open")
+        .set_len(current_len + 16)
+        .expect("set_len");
+
+    // Subsequent read on the tensor handle detects the length change and refuses by name!
+    let err = checkpoint.read_tensor("layer.weight").expect_err("read after file length modification must fail");
+    assert!(
+        matches!(&err, SafetensorError::ShardLengthChanged { shard, .. } if shard == shard_rel),
+        "Fix: resource content modification must be refused by name, got {err:?}"
+    );
+}
+
+/// Proves transactional reader operations read_bytes, read_into, and tensor lookup.
+#[test]
+fn transactional_tensor_reader_operations() {
+    let (temp, index) = requirement_fixture();
+    let shard = Path::new("one.safetensors");
+    let path = temp.path().join(shard);
+    let expected = *blake3::hash(&fs::read(&path).expect("read")).as_bytes();
+
+    let checkpoint = index
+        .verify_transactional([ExpectedShardDigest {
+            shard,
+            blake3: expected,
+        }])
+        .expect("verify transactional");
+
+    let embedding_handle = checkpoint.tensor("embedding").expect("embedding handle");
+    assert_eq!(embedding_handle.tensor().name, "embedding");
+    assert_eq!(embedding_handle.shard(), shard);
+
+    let reader = checkpoint.tensor_reader("embedding").expect("reader");
+    let bytes = reader.read_bytes().expect("read bytes");
+    assert_eq!(bytes.len(), 8);
+
+    let mut buf = vec![0_u8; 8];
+    reader.read_into(&mut buf).expect("read into");
+    assert_eq!(buf, bytes);
+
+    // Nonexistent tensor is refused by name
+    let missing_err = checkpoint.read_tensor("missing.tensor").expect_err("missing tensor must fail");
+    assert!(matches!(missing_err, SafetensorError::MissingRequiredTensor { name } if name == "missing.tensor"));
+}

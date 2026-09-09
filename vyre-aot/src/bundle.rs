@@ -245,6 +245,111 @@ pub fn read_bundle_artifact(
     Ok((manifest, envelope))
 }
 
+/// Read and authenticate packaged weights bytes against the bundle manifest.
+pub fn read_bundle_weights(bundle_dir: &Path) -> Result<Vec<u8>, BundleError> {
+    let manifest_bytes = read_bytes_bounded(
+        &bundle_dir.join("manifest.json"),
+        MAX_BUNDLE_MANIFEST_BYTES,
+        "manifest",
+    )?;
+    let manifest: Manifest = serde_json::from_slice(&manifest_bytes)?;
+    if manifest.weights_compression != "brotli-11" {
+        return Err(BundleError::InvalidArtifact(format!(
+            "weights compression `{}` is unsupported; expected `brotli-11`",
+            manifest.weights_compression
+        )));
+    }
+    let compressed = fs::read(bundle_dir.join(&manifest.weights_file))?;
+    let weights = brotli_decompress(&compressed)?;
+    if sha256_hex(&weights) != manifest.weights_sha256_hex {
+        return Err(BundleError::InvalidArtifact(
+            "weights SHA-256 does not match manifest identity".to_string(),
+        ));
+    }
+    Ok(weights)
+}
+
+/// Install a published bundle directory into an installation directory.
+///
+/// Verifies the bundle before copying, and preserves a backup in `.previous`
+/// for rollback support.
+pub fn install_package(archive_dir: &Path, install_dir: &Path) -> Result<Manifest, BundleError> {
+    let (manifest, _) = read_bundle_artifact(archive_dir)?;
+    let _ = read_bundle_weights(archive_dir)?;
+
+    fs::create_dir_all(install_dir)?;
+    let active_dir = install_dir.join("active");
+    let prev_dir = install_dir.join(".previous");
+
+    if active_dir.exists() {
+        if prev_dir.exists() {
+            fs::remove_dir_all(&prev_dir)?;
+        }
+        copy_dir_recursive(&active_dir, &prev_dir)?;
+        fs::remove_dir_all(&active_dir)?;
+    }
+
+    fs::create_dir_all(&active_dir)?;
+    copy_dir_recursive(archive_dir, &active_dir)?;
+    Ok(manifest)
+}
+
+/// Load an active installed bundle, authenticating its envelope and weights.
+pub fn load_installed_package(
+    install_dir: &Path,
+) -> Result<(Manifest, ArtifactEnvelope, Vec<u8>), BundleError> {
+    let active_dir = install_dir.join("active");
+    let (manifest, envelope) = read_bundle_artifact(&active_dir)?;
+    let weights = read_bundle_weights(&active_dir)?;
+    Ok((manifest, envelope, weights))
+}
+
+/// Update an installed package with a new archive directory.
+///
+/// Validates the new archive first. If valid, the current active bundle is
+/// saved to `.previous` and the new archive is installed to `active`.
+pub fn update_package(install_dir: &Path, new_archive_dir: &Path) -> Result<Manifest, BundleError> {
+    install_package(new_archive_dir, install_dir)
+}
+
+/// Roll back an installed package to its `.previous` backup.
+pub fn rollback_package(install_dir: &Path) -> Result<Manifest, BundleError> {
+    let active_dir = install_dir.join("active");
+    let prev_dir = install_dir.join(".previous");
+
+    if !prev_dir.exists() {
+        return Err(BundleError::InvalidArtifact(
+            "no previous package version available for rollback".to_string(),
+        ));
+    }
+
+    let (manifest, _) = read_bundle_artifact(&prev_dir)?;
+    let _ = read_bundle_weights(&prev_dir)?;
+
+    if active_dir.exists() {
+        fs::remove_dir_all(&active_dir)?;
+    }
+    fs::create_dir_all(&active_dir)?;
+    copy_dir_recursive(&prev_dir, &active_dir)?;
+    Ok(manifest)
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> io::Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+        if file_type.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else {
+            fs::copy(&src_path, &dst_path)?;
+        }
+    }
+    Ok(())
+}
+
 fn validate_artifact_for_bundle(
     envelope: &ArtifactEnvelope,
     target: &TargetId,
@@ -485,5 +590,14 @@ fn brotli_compress(input: &[u8]) -> Result<Vec<u8>, BundleError> {
             .flush()
             .map_err(|e| BundleError::Brotli(format!("{e}")))?;
     }
+    Ok(out)
+}
+
+fn brotli_decompress(input: &[u8]) -> Result<Vec<u8>, BundleError> {
+    let mut out = Vec::new();
+    let mut reader = brotli::Decompressor::new(input, 4096);
+    reader
+        .read_to_end(&mut out)
+        .map_err(|e| BundleError::Brotli(format!("{e:?}")))?;
     Ok(out)
 }

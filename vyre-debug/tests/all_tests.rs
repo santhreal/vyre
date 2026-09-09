@@ -63,3 +63,7 @@ pub mod wgsl_dump_contracts;
 /// Integration tests from `tests/causal_report_contracts.rs` (Row 117).
 #[path = "causal_report_contracts.rs"]
 pub mod causal_report_contracts;
+
+/// Integration tests from `tests/compiler_level_contracts.rs`.
+#[path = "compiler_level_contracts.rs"]
+pub mod compiler_level_contracts;

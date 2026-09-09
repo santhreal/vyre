@@ -75,6 +75,36 @@ pub const DEBUG_CAPABILITIES: &[DebugCapabilityInfo] = &[
         is_binary_safe: true,
     },
     DebugCapabilityInfo {
+        name: "compiler_level_view",
+        kind: DebugCapabilityKind::NeutralArtifact,
+        requires_target_emitter: false,
+        is_binary_safe: true,
+    },
+    DebugCapabilityInfo {
+        name: "candidate_report",
+        kind: DebugCapabilityKind::NeutralArtifact,
+        requires_target_emitter: false,
+        is_binary_safe: true,
+    },
+    DebugCapabilityInfo {
+        name: "allocation_report",
+        kind: DebugCapabilityKind::NeutralArtifact,
+        requires_target_emitter: false,
+        is_binary_safe: true,
+    },
+    DebugCapabilityInfo {
+        name: "program_diff",
+        kind: DebugCapabilityKind::NeutralDescriptor,
+        requires_target_emitter: false,
+        is_binary_safe: true,
+    },
+    DebugCapabilityInfo {
+        name: "artifact_diff",
+        kind: DebugCapabilityKind::NeutralArtifact,
+        requires_target_emitter: false,
+        is_binary_safe: true,
+    },
+    DebugCapabilityInfo {
         name: "dump_wgsl",
         kind: DebugCapabilityKind::TargetNagaWgsl,
         requires_target_emitter: true,

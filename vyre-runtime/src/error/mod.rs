@@ -52,6 +52,7 @@ macro_rules! closed_enum {
         }
     };
 }
+pub(crate) use closed_enum;
 
 closed_enum! {
     /// Why a resident-ring encode or publish was rejected.

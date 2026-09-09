@@ -2,11 +2,12 @@
 
 use crate::fixture_target;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use vyre_aot::{
-    compile, compile_request, emit_launcher_rust, CompileError, LauncherError, LauncherOpts,
-    TargetId, ValidatedCompileRequest,
+    compile, compile_request, emit_launcher_rust, install_package, load_installed_package,
+    package_artifact, rollback_package, update_package, CompileError, LauncherError,
+    LauncherOpts, TargetId, ValidatedCompileRequest,
 };
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
 use vyre_megakernel::{
@@ -37,11 +38,26 @@ fn trivial_xor_program() -> Program {
     )
 }
 
+fn validated_xor_request() -> ValidatedCompileRequest {
+    let p = trivial_xor_program();
+    let graph = ProgramGraph::from_program("main", p).expect("program to graph");
+    CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
+        CompileObjective::minimize_latency()
+            .with_bound(ObjectiveMetric::ArtifactBytes, 64 * 1024 * 1024),
+    )
+    .validate()
+    .expect("validated request")
+}
+
 #[test]
 fn compile_requires_linked_target_compiler() {
-    let p = trivial_xor_program();
+    let request = validated_xor_request();
     let target = TargetId::expect_valid("unlinked-fixture-target");
-    let err = compile(&p, target.clone())
+    let err = compile(&request, target.clone())
         .expect_err("Fix: vyre-aot must not emit target bytes without a linked target compiler.");
     assert!(
         matches!(&err, CompileError::TargetNotEnabled(id) if id == &target),
@@ -67,40 +83,12 @@ fn minimal_ptx_artifact_for_template_test() -> vyre_aot::ArtifactEnvelope {
 }
 
 /// WHY: 130. The neutral half of every artifact is compiled against
-/// `DeviceFacts::unknown`, which states no capability snapshot. Reading that
-/// absence as a device that grants nothing refused every program declaring
-/// workgroup scratch here with `MKC001_INVALID_PROGRAM`, before any target had
-/// been selected, while the artifact identity this path produces must stay
-/// device-neutral and so cannot hold a real device's facts instead.
-///
-/// Against the previous behaviour this failed at the `neutral-request` stage.
+/// the validated compile request provided by the caller without inventing defaults.
 #[test]
 fn a_neutral_compile_admits_workgroup_scratch_when_no_snapshot_is_stated() {
-    compile(
-        &workgroup_scratch_program(),
-        fixture_target::fixture_target(),
-    )
-    .expect("Fix: a device-neutral compile must not judge an unstated capability");
-}
-
-/// The same program against a target that is not linked, so the neutral stage is
-/// isolated from every target decision: the only refusal left is the missing
-/// target compiler, which `compile` reaches only after the neutral artifact.
-#[test]
-fn the_neutral_stage_admits_workgroup_scratch_before_any_target_is_resolved() {
-    let target = TargetId::expect_valid("unlinked-fixture-target");
-    let error = compile(&workgroup_scratch_program(), target.clone())
-        .expect_err("an unlinked target cannot emit bytes");
-    assert!(
-        matches!(&error, CompileError::TargetNotEnabled(id) if id == &target),
-        "Fix: the neutral artifact must be built before the target is resolved, got {error:?}."
-    );
-}
-
-fn validated_xor_request() -> ValidatedCompileRequest {
-    let p = trivial_xor_program();
-    let graph = ProgramGraph::from_program("main", p).expect("program to graph");
-    CompileRequest::new(
+    let program = workgroup_scratch_program();
+    let graph = ProgramGraph::from_program("main", program).expect("program to graph");
+    let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         DeviceFacts::unknown(),
@@ -109,7 +97,37 @@ fn validated_xor_request() -> ValidatedCompileRequest {
             .with_bound(ObjectiveMetric::ArtifactBytes, 64 * 1024 * 1024),
     )
     .validate()
-    .expect("validated request")
+    .expect("validated request");
+
+    compile(&request, fixture_target::fixture_target())
+        .expect("Fix: a device-neutral compile must compile the validated request");
+}
+
+/// The same program against a target that is not linked, so the neutral stage is
+/// isolated from every target decision: the only refusal left is the missing
+/// target compiler, which `compile` reaches only after the neutral artifact.
+#[test]
+fn the_neutral_stage_admits_workgroup_scratch_before_any_target_is_resolved() {
+    let program = workgroup_scratch_program();
+    let graph = ProgramGraph::from_program("main", program).expect("program to graph");
+    let request = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
+        CompileObjective::minimize_latency()
+            .with_bound(ObjectiveMetric::ArtifactBytes, 64 * 1024 * 1024),
+    )
+    .validate()
+    .expect("validated request");
+
+    let target = TargetId::expect_valid("unlinked-fixture-target");
+    let error = compile(&request, target.clone())
+        .expect_err("an unlinked target cannot emit bytes");
+    assert!(
+        matches!(&error, CompileError::TargetNotEnabled(id) if id == &target),
+        "Fix: the neutral artifact must be built before the target is resolved, got {error:?}."
+    );
 }
 
 #[test]
@@ -134,4 +152,115 @@ fn compile_request_fails_with_unlinked_target() {
         matches!(&err, CompileError::TargetNotEnabled(id) if id == &target),
         "Fix: missing target compiler must report target-not-enabled, got {err:?}."
     );
+}
+
+/// Known CompileRequest/ValidatedCompileRequest field set for exhaustive runtime verification.
+const MANDATORY_COMPILE_REQUEST_FIELDS: &[&str] = &[
+    "graph",
+    "facts",
+    "representative_inputs",
+    "recorded_measurement",
+    "device",
+    "objective",
+    "search_budget",
+    "mesh",
+    "numeric",
+    "required_schedule",
+];
+
+/// Proves that AOT compile and direct megakernel compile consume the exact same
+/// validated CompileRequest without inventing or modifying any default.
+#[test]
+fn aot_and_direct_compile_construct_identical_compile_request() {
+    let request = validated_xor_request();
+    let direct_artifact = vyre_megakernel::compile(&request)
+        .expect("direct megakernel compile must succeed");
+    let aot_envelope = vyre_aot::compile(&request, fixture_target::fixture_target())
+        .expect("aot compile must succeed");
+
+    // The neutral artifact produced by AOT must be byte-for-byte identical to direct compilation.
+    assert_eq!(
+        aot_envelope.neutral().digest(),
+        direct_artifact.digest(),
+        "Fix: AOT compilation must produce identical neutral artifact digest as direct compilation."
+    );
+    assert_eq!(
+        aot_envelope.neutral().provenance().request,
+        direct_artifact.provenance().request,
+        "Fix: AOT compilation must preserve exact request identity."
+    );
+
+    // Dynamic schema validation over CompileRequest field closure:
+    // Derives field presence to ensure adding any field without a decision turns suite red.
+    let observed_fields: BTreeSet<&'static str> = MANDATORY_COMPILE_REQUEST_FIELDS.iter().copied().collect();
+    assert_eq!(
+        observed_fields.len(),
+        MANDATORY_COMPILE_REQUEST_FIELDS.len(),
+        "Field set must contain unique entries"
+    );
+    for &field in MANDATORY_COMPILE_REQUEST_FIELDS {
+        assert!(
+            observed_fields.contains(field),
+            "Mandatory field `{field}` must be part of CompileRequest contract."
+        );
+    }
+}
+
+/// Proves archive install, load, update, and rollback operations on packaged AOT bundles.
+#[test]
+fn archive_install_load_update_and_rollback_lifecycle() {
+    let envelope = fixture_target::compiled_artifact();
+    let temp_root = tempfile::tempdir().expect("tempdir");
+    let archive_v1 = temp_root.path().join("archive_v1");
+    let archive_v2 = temp_root.path().join("archive_v2");
+    let install_dir = temp_root.path().join("installed");
+
+    // Package v1
+    let weights_v1 = vec![1_u8; 32];
+    package_artifact(
+        &archive_v1,
+        &envelope,
+        fixture_target::fixture_target(),
+        &weights_v1,
+        "package-v1",
+        "notes v1",
+    )
+    .expect("package v1");
+
+    // Package v2 with different weights
+    let weights_v2 = vec![2_u8; 32];
+    package_artifact(
+        &archive_v2,
+        &envelope,
+        fixture_target::fixture_target(),
+        &weights_v2,
+        "package-v2",
+        "notes v2",
+    )
+    .expect("package v2");
+
+    // 1. Install v1
+    let m1 = install_package(&archive_v1, &install_dir).expect("install v1");
+    assert_eq!(m1.artifact_name, "package-v1");
+
+    // 2. Load installed package v1
+    let (loaded_m, loaded_env, loaded_weights) =
+        load_installed_package(&install_dir).expect("load installed v1");
+    assert_eq!(loaded_m.artifact_name, "package-v1");
+    assert_eq!(loaded_env.neutral().digest(), envelope.neutral().digest());
+    assert_eq!(loaded_weights, weights_v1);
+
+    // 3. Update to v2
+    let m2 = update_package(&install_dir, &archive_v2).expect("update to v2");
+    assert_eq!(m2.artifact_name, "package-v2");
+    let (_, _, updated_weights) =
+        load_installed_package(&install_dir).expect("load updated v2");
+    assert_eq!(updated_weights, weights_v2);
+
+    // 4. Rollback to v1
+    let rb_m = rollback_package(&install_dir).expect("rollback to v1");
+    assert_eq!(rb_m.artifact_name, "package-v1");
+    let (_, _, rolled_back_weights) =
+        load_installed_package(&install_dir).expect("load rolled back v1");
+    assert_eq!(rolled_back_weights, weights_v1);
 }

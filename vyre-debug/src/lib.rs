@@ -22,6 +22,16 @@ pub(crate) mod naga_trace;
 /// Sanitizer correctness failures and PMU performance expectations.
 pub(crate) mod sanitizer;
 /// Source-level assignment traversal.
+/// Five-level compiler view and structural diffs.
+pub(crate) mod compiler_level;
+/// Candidate funnel and prune reason reports.
+pub(crate) mod candidate_report;
+/// Allocation and memory map inspection.
+pub(crate) mod allocation_report;
+/// Frontend Program and ProgramGraph structural diffs.
+pub(crate) mod program_diff;
+/// Compiled Artifact and SelectedPlan structural diffs.
+pub(crate) mod artifact_diff;
 pub mod source_assignments;
 /// WGSL emission and source-line mapping.
 pub(crate) mod wgsl;
@@ -45,3 +55,12 @@ pub use sanitizer::{
 };
 pub use wgsl::{dump_wgsl, dump_wgsl_with_lines, WgslDump};
 pub use causal_report::CausalReceiptReport;
+pub use compiler_level::{diff_compiler_levels, CompilerLevelDiff, CompilerLevelView};
+pub use candidate_report::{
+    diff_search_certificates, CandidateReport, EliminatedFamilyReport, SearchCertificateDiff,
+};
+pub use allocation_report::{
+    diff_allocations, AllocationDiff, AllocationReport, ResourceAllocationInfo,
+};
+pub use program_diff::{diff_program_graphs, diff_programs, GraphDiff, ProgramDiff};
+pub use artifact_diff::{diff_artifacts, diff_selected_plans, ArtifactDiff, PlanDiff};

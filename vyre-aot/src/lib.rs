@@ -14,8 +14,11 @@ pub(crate) mod manifest;
 
 pub use artifact::registration;
 pub use artifact::TargetId;
-pub use bundle::{bundle, package_artifact, read_bundle_artifact, BundleError, DeploymentBundle};
-pub use compile::{compile, compile_request, compile_with_resolver, CompileError};
+pub use bundle::{
+    bundle, install_package, load_installed_package, package_artifact, read_bundle_artifact,
+    read_bundle_weights, rollback_package, update_package, BundleError, DeploymentBundle,
+};
+pub use compile::{compile, compile_request, CompileError};
 pub use launcher::{emit_launcher_rust, LauncherError, LauncherOpts};
 pub use manifest::Manifest;
 pub use vyre_megakernel::{
