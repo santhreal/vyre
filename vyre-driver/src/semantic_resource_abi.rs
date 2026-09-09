@@ -243,13 +243,14 @@ impl ExternalResourceRegistry {
     ///
     /// Returns [`ResourceAbiError::ResourceInvalidated`] if the resource is already marked invalid.
     pub fn admit_resource(&self, record: AdmittedResourceRecord) -> Result<u64, ResourceAbiError> {
-        if !record.is_valid {
-            return Err(ResourceAbiError::ResourceInvalidated {
-                resource_id: record.resource_id,
-            });
-        }
         let id = record.resource_id;
-        let mut map = self.resources.lock().unwrap();
+        if !record.is_valid {
+            return Err(ResourceAbiError::ResourceInvalidated { resource_id: id });
+        }
+        let mut map = match self.resources.lock() {
+            Ok(g) => g,
+            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id: id }),
+        };
         map.insert(id, record);
         Ok(id)
     }
@@ -264,7 +265,10 @@ impl ExternalResourceRegistry {
         resource_id: u64,
         view_id: u64,
     ) -> Result<(), ResourceAbiError> {
-        let map = self.resources.lock().unwrap();
+        let map = match self.resources.lock() {
+            Ok(g) => g,
+            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
+        };
         let record = map
             .get(&resource_id)
             .ok_or(ResourceAbiError::ResourceInvalidated { resource_id })?;
@@ -273,7 +277,10 @@ impl ExternalResourceRegistry {
         }
         drop(map);
 
-        let mut views = self.dependent_views.lock().unwrap();
+        let mut views = match self.dependent_views.lock() {
+            Ok(g) => g,
+            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
+        };
         views.entry(resource_id).or_default().insert(view_id);
         Ok(())
     }
@@ -288,7 +295,10 @@ impl ExternalResourceRegistry {
         resource_id: u64,
         artifact_id: u64,
     ) -> Result<(), ResourceAbiError> {
-        let map = self.resources.lock().unwrap();
+        let map = match self.resources.lock() {
+            Ok(g) => g,
+            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
+        };
         let record = map
             .get(&resource_id)
             .ok_or(ResourceAbiError::ResourceInvalidated { resource_id })?;
@@ -297,7 +307,10 @@ impl ExternalResourceRegistry {
         }
         drop(map);
 
-        let mut artifacts = self.dependent_artifacts.lock().unwrap();
+        let mut artifacts = match self.dependent_artifacts.lock() {
+            Ok(g) => g,
+            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
+        };
         artifacts
             .entry(resource_id)
             .or_default()
@@ -314,9 +327,27 @@ impl ExternalResourceRegistry {
             invalidated_artifacts: Vec::new(),
         };
 
-        let mut resources = self.resources.lock().unwrap();
-        let mut views = self.dependent_views.lock().unwrap();
-        let mut artifacts = self.dependent_artifacts.lock().unwrap();
+        let mut resources = match self.resources.lock() {
+            Ok(g) => g,
+            Err(p) => {
+                self.resources.clear_poison();
+                p.into_inner()
+            }
+        };
+        let mut views = match self.dependent_views.lock() {
+            Ok(g) => g,
+            Err(p) => {
+                self.dependent_views.clear_poison();
+                p.into_inner()
+            }
+        };
+        let mut artifacts = match self.dependent_artifacts.lock() {
+            Ok(g) => g,
+            Err(p) => {
+                self.dependent_artifacts.clear_poison();
+                p.into_inner()
+            }
+        };
 
         for (res_id, record) in resources.iter_mut() {
             if record.device_id == device_id {
@@ -341,7 +372,7 @@ impl ExternalResourceRegistry {
     /// Look up an admitted resource by ID.
     #[must_use]
     pub fn get_resource(&self, resource_id: u64) -> Option<AdmittedResourceRecord> {
-        let map = self.resources.lock().unwrap();
+        let map = self.resources.lock().ok()?;
         map.get(&resource_id).cloned()
     }
 }

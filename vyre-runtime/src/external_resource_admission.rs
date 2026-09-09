@@ -273,7 +273,10 @@ impl ExternalResourceAdmissionManager {
         let row_pitch_bytes = record.row_pitch_bytes;
         let is_zero_copy = record.is_zero_copy;
 
-        let mut map = self.resources.write().unwrap();
+        let mut map = match self.resources.write() {
+            Ok(g) => g,
+            Err(_) => return Err(ExternalAdmissionError::ResourceInvalidated { resource_id }),
+        };
         map.insert(resource_id, record);
 
         Ok(AdmittedExternalResourceLease {
@@ -296,7 +299,10 @@ impl ExternalResourceAdmissionManager {
         resource_id: u64,
         view_id: u64,
     ) -> Result<(), ExternalAdmissionError> {
-        let map = self.resources.read().unwrap();
+        let map = match self.resources.read() {
+            Ok(g) => g,
+            Err(_) => return Err(ExternalAdmissionError::ResourceInvalidated { resource_id }),
+        };
         let record = map
             .get(&resource_id)
             .ok_or(ExternalAdmissionError::ResourceNotFound { resource_id })?;
@@ -305,7 +311,10 @@ impl ExternalResourceAdmissionManager {
         }
         drop(map);
 
-        let mut views = self.dependent_views.write().unwrap();
+        let mut views = match self.dependent_views.write() {
+            Ok(g) => g,
+            Err(_) => return Err(ExternalAdmissionError::ResourceInvalidated { resource_id }),
+        };
         views.entry(resource_id).or_default().insert(view_id);
         Ok(())
     }
@@ -320,7 +329,10 @@ impl ExternalResourceAdmissionManager {
         resource_id: u64,
         pipeline_id: u64,
     ) -> Result<(), ExternalAdmissionError> {
-        let map = self.resources.read().unwrap();
+        let map = match self.resources.read() {
+            Ok(g) => g,
+            Err(_) => return Err(ExternalAdmissionError::ResourceInvalidated { resource_id }),
+        };
         let record = map
             .get(&resource_id)
             .ok_or(ExternalAdmissionError::ResourceNotFound { resource_id })?;
@@ -329,7 +341,10 @@ impl ExternalResourceAdmissionManager {
         }
         drop(map);
 
-        let mut pipelines = self.dependent_pipelines.write().unwrap();
+        let mut pipelines = match self.dependent_pipelines.write() {
+            Ok(g) => g,
+            Err(_) => return Err(ExternalAdmissionError::ResourceInvalidated { resource_id }),
+        };
         pipelines
             .entry(resource_id)
             .or_default()
@@ -346,7 +361,10 @@ impl ExternalResourceAdmissionManager {
         &self,
         schedule: &ResourceTransitionSchedule,
     ) -> Result<TransitionExecutionReport, ExternalAdmissionError> {
-        let map = self.resources.write().unwrap();
+        let map = match self.resources.write() {
+            Ok(g) => g,
+            Err(_) => return Err(ExternalAdmissionError::ResourceInvalidated { resource_id: 0 }),
+        };
 
         // 1. Verify every referenced resource is valid
         for (resource_id, _) in &schedule.transitions {
@@ -377,7 +395,10 @@ impl ExternalResourceAdmissionManager {
         resource_id: u64,
         expected_gen: u64,
     ) -> Result<u64, ExternalAdmissionError> {
-        let mut map = self.resources.write().unwrap();
+        let mut map = match self.resources.write() {
+            Ok(g) => g,
+            Err(_) => return Err(ExternalAdmissionError::ResourceInvalidated { resource_id }),
+        };
         let record = map
             .get_mut(&resource_id)
             .ok_or(ExternalAdmissionError::ResourceNotFound { resource_id })?;
@@ -394,9 +415,27 @@ impl ExternalResourceAdmissionManager {
             invalidated_artifacts: Vec::new(),
         };
 
-        let mut map = self.resources.write().unwrap();
-        let mut views = self.dependent_views.write().unwrap();
-        let mut pipelines = self.dependent_pipelines.write().unwrap();
+        let mut map = match self.resources.write() {
+            Ok(g) => g,
+            Err(p) => {
+                self.resources.clear_poison();
+                p.into_inner()
+            }
+        };
+        let mut views = match self.dependent_views.write() {
+            Ok(g) => g,
+            Err(p) => {
+                self.dependent_views.clear_poison();
+                p.into_inner()
+            }
+        };
+        let mut pipelines = match self.dependent_pipelines.write() {
+            Ok(g) => g,
+            Err(p) => {
+                self.dependent_pipelines.clear_poison();
+                p.into_inner()
+            }
+        };
 
         for (res_id, record) in map.iter_mut() {
             record.invalidate_on_device_loss();
@@ -419,7 +458,7 @@ impl ExternalResourceAdmissionManager {
     /// Look up an admitted resource record.
     #[must_use]
     pub fn query_resource(&self, resource_id: u64) -> Option<AdmittedResourceRecord> {
-        let map = self.resources.read().unwrap();
+        let map = self.resources.read().ok()?;
         map.get(&resource_id).cloned()
     }
 }

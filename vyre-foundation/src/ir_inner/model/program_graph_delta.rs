@@ -180,6 +180,14 @@ pub enum GraphDeltaError {
         /// Bound the delta states the symbol takes.
         new_bound: u64,
     },
+    /// Generation tracker lock was poisoned by a previous thread panic.
+    #[error(
+        "generation tracker lock was poisoned for `{state}`. Fix: rebuild the generation tracker"
+    )]
+    LockPoisoned {
+        /// Guarded state name.
+        state: String,
+    },
     /// Resource generation specified an incorrect prior generation.
     #[error("resource `{resource_name}` expected prior generation {expected}, found {found}")]
     ResourceGenerationMismatch {
@@ -1160,12 +1168,14 @@ impl GenerationTracker {
     /// Current published generation for a resource name.
     #[must_use]
     pub fn current_generation(&self, resource_name: &str) -> u64 {
-        self.generations
-            .read()
-            .expect("Lock poisoned")
-            .get(resource_name)
-            .copied()
-            .unwrap_or(0)
+        crate::failure_domain::govern_rwlock_read(
+            &self.generations,
+            "GenerationTracker",
+            "generations",
+            crate::failure_domain::RecoveryClass::RestartableFromCanonicalInput,
+        )
+        .map(|guard| guard.get(resource_name).copied().unwrap_or(0))
+        .unwrap_or(0)
     }
 
     /// Publish a new generation for a resource.
@@ -1176,7 +1186,15 @@ impl GenerationTracker {
         resource_name: &str,
         generation: u64,
     ) -> Result<(), GraphDeltaError> {
-        let mut guard = self.generations.write().expect("Lock poisoned");
+        let mut guard = crate::failure_domain::govern_rwlock_write(
+            &self.generations,
+            "GenerationTracker",
+            "generations",
+            crate::failure_domain::RecoveryClass::TransactionallyRecoverable,
+        )
+        .map_err(|_| GraphDeltaError::LockPoisoned {
+            state: "generations".to_string(),
+        })?;
         let current = guard.get(resource_name).copied().unwrap_or(0);
         if generation <= current {
             return Err(GraphDeltaError::SupersededGeneration {

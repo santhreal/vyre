@@ -44,16 +44,15 @@ struct StagingBufferPoolInner {
 
 impl StagingBufferPool {
     fn lock_inner(&self) -> MutexGuard<'_, StagingBufferPoolInner> {
-        vyre_driver::lock_policy::govern_mutex_with_reset(
-            &self.inner,
-            "wgpu_staging_buffer_pool",
-            "inner",
-            vyre_driver::lock_policy::RecoveryClass::RestartableFromCanonicalInput,
-            |inner| {
+        match self.inner.lock() {
+            Ok(g) => g,
+            Err(p) => {
+                self.inner.clear_poison();
+                let mut inner = p.into_inner();
                 inner.free.clear();
-            },
-        )
-        .expect("RestartableFromCanonicalInput must recover guard")
+                inner
+            }
+        }
     }
 
     /// Create an empty staging buffer pool.

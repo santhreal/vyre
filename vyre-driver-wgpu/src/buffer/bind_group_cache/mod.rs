@@ -49,18 +49,17 @@ impl Default for BindGroupCache {
 
 impl BindGroupCache {
     fn lock_cache(&self) -> MutexGuard<'_, BindGroupCacheInner> {
-        vyre_driver::lock_policy::govern_mutex_with_reset(
-            &self.cache,
-            "wgpu_bind_group_cache",
-            "cache",
-            vyre_driver::lock_policy::RecoveryClass::RestartableFromCanonicalInput,
-            |inner| {
+        match self.cache.lock() {
+            Ok(g) => g,
+            Err(p) => {
+                self.cache.clear_poison();
+                let mut inner = p.into_inner();
                 inner.entries.clear();
                 inner.lru.clear();
                 inner.next_generation = 0;
-            },
-        )
-        .expect("RestartableFromCanonicalInput must recover guard")
+                inner
+            }
+        }
     }
 
     /// Create a bind-group cache with the default 256-entry cap.

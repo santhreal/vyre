@@ -364,6 +364,10 @@ name = "list-ops"
 findings = 0
 
 [[gate]]
+name = "lock-poison-policy"
+findings = 0
+
+[[gate]]
 name = "lockfile-clean"
 findings = 0
 

@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with H through P.
-pub const GATES_H_P: [GateDescriptor; 59] = [
+pub const GATES_H_P: [GateDescriptor; 60] = [
     GateDescriptor {
         name: "heuristic-audit",
         help: "Enforce heuristic-audit contracts",
@@ -441,6 +441,18 @@ pub const GATES_H_P: [GateDescriptor; 59] = [
         prerequisites: &[],
         resource_class: ResourceClass::Process,
         proof: "xtask_registry::docs::list_ops::tests::list_ops_renders_canonical_toml_schema",
+    },
+    GateDescriptor {
+        name: "lock-poison-policy",
+        help: "Enforce zero unhandled or ad-hoc lock poisoning in production source code",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "tracked source files",
+        inputs: &[],
+        artifacts: &[],
+        prerequisites: &[],
+        resource_class: ResourceClass::Cpu,
+        proof: "crate::gates::lock_poison_policy::tests::lock_poison_policy_gate_reports_clean_on_workspace",
     },
     GateDescriptor {
         name: "lockfile-clean",

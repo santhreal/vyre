@@ -111,11 +111,13 @@ impl Drop for ModuleGlobalsGuard {
         // Recover the poisoned guard rather than propagating: failing to clear
         // the flag here would block every future launch on this module, which is
         // strictly worse than continuing after someone else's panic.
-        let mut busy = self
-            .gate
-            .busy
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut busy = match self.gate.busy.lock() {
+            Ok(g) => g,
+            Err(poison) => {
+                self.gate.busy.clear_poison();
+                poison.into_inner()
+            }
+        };
         *busy = false;
         drop(busy);
         self.gate.free.notify_one();

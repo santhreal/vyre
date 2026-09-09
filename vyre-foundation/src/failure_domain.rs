@@ -6,7 +6,7 @@
 
 use core::fmt;
 use std::string::String;
-
+use std::sync::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 /// Explicit failure domain identifying which subsystem boundary failed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FailureDomain {
@@ -196,6 +196,154 @@ impl TypedRecoveryError {
             reason: reason.into(),
             fix: fix.into(),
         }
+    }
+}
+
+/// End the process, reporting the owner and the state its poisoned lock guards.
+///
+/// `owner` names the subsystem holding the lock and `state` names what the
+/// lock excludes concurrent access to.
+pub fn process_fatal_poison(owner: &str, state: &str) -> ! {
+    eprintln!(
+        "FATAL: invariant violation: lock over `{state}` in `{owner}` was poisoned by a prior thread panic. \
+         Fix: treat the earlier panic as the root defect; compiler substrate invariants were violated."
+    );
+    std::process::abort();
+}
+
+/// Take a mutex guard governed by an explicit failure domain contract.
+pub fn govern_mutex<'a, T>(
+    mutex: &'a Mutex<T>,
+    owner: &'static str,
+    state: &'static str,
+    class: RecoveryClass,
+) -> Result<MutexGuard<'a, T>, TypedRecoveryError> {
+    govern_mutex_with_reset(mutex, owner, state, class, |_| {})
+}
+
+/// Take a mutex guard with an explicit reset action executed if restartable state is recovered.
+pub fn govern_mutex_with_reset<'a, T, F>(
+    mutex: &'a Mutex<T>,
+    owner: &'static str,
+    state: &'static str,
+    class: RecoveryClass,
+    reset_on_restart: F,
+) -> Result<MutexGuard<'a, T>, TypedRecoveryError>
+where
+    F: FnOnce(&mut T),
+{
+    match mutex.lock() {
+        Ok(guard) => Ok(guard),
+        Err(poison) => match class {
+            RecoveryClass::ProcessFatal | RecoveryClass::InvariantViolation => {
+                process_fatal_poison(owner, state);
+            }
+            RecoveryClass::TransactionallyRecoverable => Err(TypedRecoveryError::new(
+                FailureDomain::MemoryState,
+                class,
+                RecoveryDisposition::RequiresRebuild,
+                format!("lock over `{state}` in `{owner}` was poisoned"),
+                format!("Fix: rebuild `{owner}` state machine from canonical input."),
+            )),
+            RecoveryClass::DeviceContextFatal => Err(TypedRecoveryError::new(
+                FailureDomain::DeviceContext,
+                class,
+                RecoveryDisposition::RequiresDeviceReacquisition,
+                format!("device-bound lock over `{state}` in `{owner}` was poisoned"),
+                format!("Fix: drop `{owner}` and reacquire a fresh device context."),
+            )),
+            RecoveryClass::RestartableFromCanonicalInput => {
+                let mut guard = poison.into_inner();
+                reset_on_restart(&mut guard);
+                Ok(guard)
+            }
+        },
+    }
+}
+
+/// Take a read lock governed by an explicit failure domain contract.
+pub fn govern_rwlock_read<'a, T>(
+    rwlock: &'a RwLock<T>,
+    owner: &'static str,
+    state: &'static str,
+    class: RecoveryClass,
+) -> Result<RwLockReadGuard<'a, T>, TypedRecoveryError> {
+    match rwlock.read() {
+        Ok(guard) => Ok(guard),
+        Err(poison) => match class {
+            RecoveryClass::ProcessFatal | RecoveryClass::InvariantViolation => {
+                process_fatal_poison(owner, state);
+            }
+            RecoveryClass::TransactionallyRecoverable
+            | RecoveryClass::RestartableFromCanonicalInput => Err(TypedRecoveryError::new(
+                FailureDomain::MemoryState,
+                class,
+                RecoveryDisposition::RequiresRebuild,
+                format!("read lock over `{state}` in `{owner}` was poisoned: {poison}"),
+                format!("Fix: rebuild `{owner}` state machine from canonical input."),
+            )),
+            RecoveryClass::DeviceContextFatal => Err(TypedRecoveryError::new(
+                FailureDomain::DeviceContext,
+                class,
+                RecoveryDisposition::RequiresDeviceReacquisition,
+                format!(
+                    "device-bound read lock over `{state}` in `{owner}` was poisoned: {poison}"
+                ),
+                format!("Fix: drop `{owner}` and reacquire a fresh device context."),
+            )),
+        },
+    }
+}
+
+/// Take a write lock governed by an explicit failure domain contract.
+pub fn govern_rwlock_write<'a, T>(
+    rwlock: &'a RwLock<T>,
+    owner: &'static str,
+    state: &'static str,
+    class: RecoveryClass,
+) -> Result<RwLockWriteGuard<'a, T>, TypedRecoveryError> {
+    govern_rwlock_write_with_reset(rwlock, owner, state, class, |_| {})
+}
+
+/// Take a write lock with an explicit reset action executed if restartable state is recovered.
+pub fn govern_rwlock_write_with_reset<'a, T, F>(
+    rwlock: &'a RwLock<T>,
+    owner: &'static str,
+    state: &'static str,
+    class: RecoveryClass,
+    reset_on_restart: F,
+) -> Result<RwLockWriteGuard<'a, T>, TypedRecoveryError>
+where
+    F: FnOnce(&mut T),
+{
+    match rwlock.write() {
+        Ok(guard) => Ok(guard),
+        Err(poison) => match class {
+            RecoveryClass::ProcessFatal | RecoveryClass::InvariantViolation => {
+                process_fatal_poison(owner, state);
+            }
+            RecoveryClass::TransactionallyRecoverable => Err(TypedRecoveryError::new(
+                FailureDomain::MemoryState,
+                class,
+                RecoveryDisposition::RequiresRebuild,
+                format!("write lock over `{state}` in `{owner}` was poisoned: {poison}"),
+                format!("Fix: rebuild `{owner}` state machine from canonical input."),
+            )),
+            RecoveryClass::DeviceContextFatal => Err(TypedRecoveryError::new(
+                FailureDomain::DeviceContext,
+                class,
+                RecoveryDisposition::RequiresDeviceReacquisition,
+                format!(
+                    "device-bound write lock over `{state}` in `{owner}` was poisoned: {poison}"
+                ),
+                format!("Fix: drop `{owner}` and reacquire a fresh device context."),
+            )),
+            RecoveryClass::RestartableFromCanonicalInput => {
+                let mut guard = poison.into_inner();
+                reset_on_restart(&mut guard);
+                Ok(guard)
+            }
+        },
     }
 }
 #[cfg(test)]

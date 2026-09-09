@@ -39,7 +39,7 @@ mod canonical_codec;
 /// Typed configuration schema and resolution (Row 123).
 pub mod config_schema;
 /// Explicit failure domains and recovery classes (Row 122).
-mod failure_domain;
+pub mod failure_domain;
 /// Typed region-based SSA intermediate representation (Row 103).
 pub mod region_ssa;
 /// Compiler data substrate, arenas, interners, and query engine (Row 89).

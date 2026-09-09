@@ -94,6 +94,27 @@ where
     }
 }
 
+/// Take a mutex guard for restartable state, resetting on poison.
+pub fn govern_mutex_restartable<'a, T, F>(
+    mutex: &'a Mutex<T>,
+    _owner: &'static str,
+    _state: &'static str,
+    reset_on_restart: F,
+) -> MutexGuard<'a, T>
+where
+    F: FnOnce(&mut T),
+{
+    match mutex.lock() {
+        Ok(guard) => guard,
+        Err(poison) => {
+            mutex.clear_poison();
+            let mut guard = poison.into_inner();
+            reset_on_restart(&mut guard);
+            guard
+        }
+    }
+}
+
 /// Take a read lock governed by an explicit failure domain contract.
 pub fn govern_rwlock_read<'a, T>(
     rwlock: &'a RwLock<T>,

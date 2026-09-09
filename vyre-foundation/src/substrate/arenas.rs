@@ -5,8 +5,41 @@
 //! sharing and O(1) identity comparisons.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
+#[inline]
+fn arena_read<'a, T>(
+    rwlock: &'a RwLock<T>,
+    owner: &'static str,
+    state: &'static str,
+) -> RwLockReadGuard<'a, T> {
+    match crate::failure_domain::govern_rwlock_read(
+        rwlock,
+        owner,
+        state,
+        crate::failure_domain::RecoveryClass::InvariantViolation,
+    ) {
+        Ok(guard) => guard,
+        Err(_) => crate::failure_domain::process_fatal_poison(owner, state),
+    }
+}
+
+#[inline]
+fn arena_write<'a, T>(
+    rwlock: &'a RwLock<T>,
+    owner: &'static str,
+    state: &'static str,
+) -> RwLockWriteGuard<'a, T> {
+    match crate::failure_domain::govern_rwlock_write(
+        rwlock,
+        owner,
+        state,
+        crate::failure_domain::RecoveryClass::InvariantViolation,
+    ) {
+        Ok(guard) => guard,
+        Err(_) => crate::failure_domain::process_fatal_poison(owner, state),
+    }
+}
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 
@@ -34,18 +67,18 @@ impl StringInterner {
     /// Intern a string slice and return its stable typed identifier.
     pub fn intern(&self, text: &str) -> InternedStringId {
         {
-            let read_guard = self.map.read().expect("Lock poisoned");
+            let read_guard = arena_read(&self.map, "StringInterner", "map");
             if let Some(&id) = read_guard.get(text) {
                 return id;
             }
         }
 
-        let mut write_guard = self.map.write().expect("Lock poisoned");
+        let mut write_guard = arena_write(&self.map, "StringInterner", "map");
         if let Some(&id) = write_guard.get(text) {
             return id;
         }
 
-        let mut strings_guard = self.strings.write().expect("Lock poisoned");
+        let mut strings_guard = arena_write(&self.strings, "StringInterner", "strings");
         let id = InternedStringId(strings_guard.len() as u32);
         let arc_str: Arc<str> = text.into();
         self.allocated_bytes.fetch_add(
@@ -59,14 +92,14 @@ impl StringInterner {
 
     /// Resolve an interned string identifier to its shared string reference.
     pub fn lookup(&self, id: InternedStringId) -> Option<Arc<str>> {
-        let strings_guard = self.strings.read().expect("Lock poisoned");
+        let strings_guard = arena_read(&self.strings, "StringInterner", "strings");
         strings_guard.get(id.0 as usize).cloned()
     }
 
     /// Total number of unique interned strings.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.strings.read().expect("Lock poisoned").len()
+        arena_read(&self.strings, "StringInterner", "strings").len()
     }
 
     /// Whether the interner contains no entries.
@@ -128,18 +161,18 @@ impl TypeInterner {
     /// Intern a canonical type description.
     pub fn intern(&self, ty: CanonicalType) -> InternedTypeId {
         {
-            let read_guard = self.map.read().expect("Lock poisoned");
+            let read_guard = arena_read(&self.map, "TypeInterner", "map");
             if let Some(&id) = read_guard.get(&ty) {
                 return id;
             }
         }
 
-        let mut write_guard = self.map.write().expect("Lock poisoned");
+        let mut write_guard = arena_write(&self.map, "TypeInterner", "map");
         if let Some(&id) = write_guard.get(&ty) {
             return id;
         }
 
-        let mut types_guard = self.types.write().expect("Lock poisoned");
+        let mut types_guard = arena_write(&self.types, "TypeInterner", "types");
         let id = InternedTypeId(types_guard.len() as u32);
         self.allocated_bytes
             .fetch_add(std::mem::size_of::<CanonicalType>(), Ordering::Relaxed);
@@ -155,14 +188,14 @@ impl TypeInterner {
 
     /// Resolve an interned type identifier.
     pub fn lookup(&self, id: InternedTypeId) -> Option<CanonicalType> {
-        let types_guard = self.types.read().expect("Lock poisoned");
+        let types_guard = arena_read(&self.types, "TypeInterner", "types");
         types_guard.get(id.0 as usize).cloned()
     }
 
     /// Total number of interned types.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.types.read().expect("Lock poisoned").len()
+        arena_read(&self.types, "TypeInterner", "types").len()
     }
 
     /// Whether the interner contains no entries.
@@ -217,18 +250,18 @@ impl ConstInterner {
     /// Intern a constant value.
     pub fn intern(&self, val: CanonicalConst) -> InternedConstId {
         {
-            let read_guard = self.map.read().expect("Lock poisoned");
+            let read_guard = arena_read(&self.map, "ConstInterner", "map");
             if let Some(&id) = read_guard.get(&val) {
                 return id;
             }
         }
 
-        let mut write_guard = self.map.write().expect("Lock poisoned");
+        let mut write_guard = arena_write(&self.map, "ConstInterner", "map");
         if let Some(&id) = write_guard.get(&val) {
             return id;
         }
 
-        let mut consts_guard = self.constants.write().expect("Lock poisoned");
+        let mut consts_guard = arena_write(&self.constants, "ConstInterner", "constants");
         let id = InternedConstId(consts_guard.len() as u32);
         self.allocated_bytes
             .fetch_add(std::mem::size_of::<CanonicalConst>(), Ordering::Relaxed);
@@ -239,14 +272,14 @@ impl ConstInterner {
 
     /// Resolve an interned constant identifier.
     pub fn lookup(&self, id: InternedConstId) -> Option<CanonicalConst> {
-        let consts_guard = self.constants.read().expect("Lock poisoned");
+        let consts_guard = arena_read(&self.constants, "ConstInterner", "constants");
         consts_guard.get(id.0 as usize).cloned()
     }
 
     /// Total number of interned constants.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.constants.read().expect("Lock poisoned").len()
+        arena_read(&self.constants, "ConstInterner", "constants").len()
     }
 
     /// Whether the interner contains no entries.
@@ -291,18 +324,18 @@ impl LayoutInterner {
     /// Intern a canonical layout.
     pub fn intern(&self, layout: CanonicalLayout) -> InternedLayoutId {
         {
-            let read_guard = self.map.read().expect("Lock poisoned");
+            let read_guard = arena_read(&self.map, "LayoutInterner", "map");
             if let Some(&id) = read_guard.get(&layout) {
                 return id;
             }
         }
 
-        let mut write_guard = self.map.write().expect("Lock poisoned");
+        let mut write_guard = arena_write(&self.map, "LayoutInterner", "map");
         if let Some(&id) = write_guard.get(&layout) {
             return id;
         }
 
-        let mut layouts_guard = self.layouts.write().expect("Lock poisoned");
+        let mut layouts_guard = arena_write(&self.layouts, "LayoutInterner", "layouts");
         let id = InternedLayoutId(layouts_guard.len() as u32);
         self.allocated_bytes.fetch_add(
             std::mem::size_of::<CanonicalLayout>() + layout.strides.len() * 8,
@@ -315,14 +348,14 @@ impl LayoutInterner {
 
     /// Resolve an interned layout identifier.
     pub fn lookup(&self, id: InternedLayoutId) -> Option<CanonicalLayout> {
-        let layouts_guard = self.layouts.read().expect("Lock poisoned");
+        let layouts_guard = arena_read(&self.layouts, "LayoutInterner", "layouts");
         layouts_guard.get(id.0 as usize).cloned()
     }
 
     /// Total number of interned layouts.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.layouts.read().expect("Lock poisoned").len()
+        arena_read(&self.layouts, "LayoutInterner", "layouts").len()
     }
 
     /// Whether the interner contains no entries.
@@ -364,18 +397,18 @@ impl ExprArena {
     pub fn intern(&self, expr: Expr) -> ExprId {
         let digest = compute_expr_digest(&expr);
         {
-            let read_guard = self.map.read().expect("Lock poisoned");
+            let read_guard = arena_read(&self.map, "ExprArena", "map");
             if let Some(&id) = read_guard.get(&digest) {
                 return id;
             }
         }
 
-        let mut write_guard = self.map.write().expect("Lock poisoned");
+        let mut write_guard = arena_write(&self.map, "ExprArena", "map");
         if let Some(&id) = write_guard.get(&digest) {
             return id;
         }
 
-        let mut exprs_guard = self.exprs.write().expect("Lock poisoned");
+        let mut exprs_guard = arena_write(&self.exprs, "ExprArena", "exprs");
         let id = ExprId(exprs_guard.len() as u32);
         let arc_expr = Arc::new(expr);
         self.allocated_bytes
@@ -387,14 +420,14 @@ impl ExprArena {
 
     /// Resolve an expression identifier to its shared immutable expression.
     pub fn lookup(&self, id: ExprId) -> Option<Arc<Expr>> {
-        let exprs_guard = self.exprs.read().expect("Lock poisoned");
+        let exprs_guard = arena_read(&self.exprs, "ExprArena", "exprs");
         exprs_guard.get(id.0 as usize).cloned()
     }
 
     /// Total number of unique expressions in the arena.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.exprs.read().expect("Lock poisoned").len()
+        arena_read(&self.exprs, "ExprArena", "exprs").len()
     }
 
     /// Whether the arena contains no expressions.
@@ -436,18 +469,18 @@ impl NodeArena {
     pub fn intern(&self, node: Node) -> NodeId {
         let digest = compute_node_digest(&node);
         {
-            let read_guard = self.map.read().expect("Lock poisoned");
+            let read_guard = arena_read(&self.map, "NodeArena", "map");
             if let Some(&id) = read_guard.get(&digest) {
                 return id;
             }
         }
 
-        let mut write_guard = self.map.write().expect("Lock poisoned");
+        let mut write_guard = arena_write(&self.map, "NodeArena", "map");
         if let Some(&id) = write_guard.get(&digest) {
             return id;
         }
 
-        let mut nodes_guard = self.nodes.write().expect("Lock poisoned");
+        let mut nodes_guard = arena_write(&self.nodes, "NodeArena", "nodes");
         let id = NodeId(nodes_guard.len() as u32);
         let arc_node = Arc::new(node);
         self.allocated_bytes
@@ -459,14 +492,14 @@ impl NodeArena {
 
     /// Resolve a node identifier to its shared immutable node.
     pub fn lookup(&self, id: NodeId) -> Option<Arc<Node>> {
-        let nodes_guard = self.nodes.read().expect("Lock poisoned");
+        let nodes_guard = arena_read(&self.nodes, "NodeArena", "nodes");
         nodes_guard.get(id.0 as usize).cloned()
     }
 
     /// Total number of unique nodes in the arena.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.nodes.read().expect("Lock poisoned").len()
+        arena_read(&self.nodes, "NodeArena", "nodes").len()
     }
 
     /// Whether the arena contains no nodes.
@@ -500,18 +533,18 @@ impl RegionArena {
     /// Intern a logical region into the hash-consed arena.
     pub fn intern(&self, region: LogicalRegion) -> RegionId {
         {
-            let read_guard = self.map.read().expect("Lock poisoned");
+            let read_guard = arena_read(&self.map, "RegionArena", "map");
             if let Some(&id) = read_guard.get(&region) {
                 return id;
             }
         }
 
-        let mut write_guard = self.map.write().expect("Lock poisoned");
+        let mut write_guard = arena_write(&self.map, "RegionArena", "map");
         if let Some(&id) = write_guard.get(&region) {
             return id;
         }
 
-        let mut regions_guard = self.regions.write().expect("Lock poisoned");
+        let mut regions_guard = arena_write(&self.regions, "RegionArena", "regions");
         let id = RegionId(regions_guard.len() as u32);
         let arc_region = Arc::new(region.clone());
         self.allocated_bytes
@@ -523,14 +556,14 @@ impl RegionArena {
 
     /// Resolve a region identifier to its shared immutable logical region.
     pub fn lookup(&self, id: RegionId) -> Option<Arc<LogicalRegion>> {
-        let regions_guard = self.regions.read().expect("Lock poisoned");
+        let regions_guard = arena_read(&self.regions, "RegionArena", "regions");
         regions_guard.get(id.0 as usize).cloned()
     }
 
     /// Total number of unique regions in the arena.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.regions.read().expect("Lock poisoned").len()
+        arena_read(&self.regions, "RegionArena", "regions").len()
     }
 
     /// Whether the arena contains no regions.
