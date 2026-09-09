@@ -8,6 +8,7 @@
 //! uncertainty model, parity, and failures.
 
 pub mod campaign;
+pub mod fleet;
 pub mod floor;
 pub mod receipt;
 pub mod store;
@@ -16,6 +17,7 @@ use std::path::Path;
 
 pub use campaign::*;
 pub use floor::*;
+pub use fleet::*;
 pub use receipt::*;
 pub use store::*;
 
