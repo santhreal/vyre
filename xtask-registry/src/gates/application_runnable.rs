@@ -786,9 +786,57 @@ pub fn derive_artifact_modules() -> Vec<ArtifactModuleRecord> {
 
 /// Derive device execution certificates from evidence files on disk.
 #[must_use]
+#[derive(serde::Deserialize)]
+struct DeviceCertJson {
+    #[serde(default = "default_schema_version")]
+    schema_version: u32,
+    backend_id: Option<String>,
+    #[serde(default)]
+    total_pairs: usize,
+    #[serde(default)]
+    distinct_op_count: usize,
+    #[serde(default)]
+    missing_catalog_ops: Vec<String>,
+}
+
+const fn default_schema_version() -> u32 {
+    1
+}
+
+#[derive(serde::Deserialize)]
+struct MergedCertJson {
+    #[serde(default = "default_schema_version")]
+    wire_format_version: u32,
+    #[serde(default = "default_merged_backend")]
+    backend_id: String,
+    plan: Option<MergedPlanJson>,
+}
+
+fn default_merged_backend() -> String {
+    "merged".to_string()
+}
+
+#[derive(serde::Deserialize)]
+struct MergedPlanJson {
+    #[serde(default)]
+    pair_count: usize,
+    #[serde(default)]
+    op_count: usize,
+    execution_hash: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct ReleaseWorkloadMatrixJson {
+    required_closed_families: Option<usize>,
+    release_suite_case_count: Option<usize>,
+    cpu_sota_100x_contract_count: Option<usize>,
+}
+
+/// Derive device execution certificates from evidence files on disk.
+#[must_use]
 pub fn derive_device_execution_certificates(root: &Path) -> Vec<DeviceCertificateRecord> {
-    let cert_dir = root.join("release/evidence/conformance");
     let mut certs = Vec::new();
+    let cert_dir = root.join("release/evidence/conformance");
 
     let cert_files = [
         ("reference-conformance.json", "cpu-ref"),
@@ -800,37 +848,16 @@ pub fn derive_device_execution_certificates(root: &Path) -> Vec<DeviceCertificat
         let file_path = cert_dir.join(file_name);
         if file_path.exists() {
             if let Ok(content) = std::fs::read_to_string(&file_path) {
-                if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
-                    let schema_ver = val
-                        .get("schema_version")
-                        .and_then(serde_json::Value::as_u64)
-                        .unwrap_or(1) as u32;
-                    let backend_id = val
-                        .get("backend_id")
-                        .and_then(serde_json::Value::as_str)
-                        .unwrap_or(default_backend)
-                        .to_string();
-                    let total_pairs = val
-                        .get("total_pairs")
-                        .and_then(serde_json::Value::as_u64)
-                        .unwrap_or(0) as usize;
-                    let distinct_ops = val
-                        .get("distinct_op_count")
-                        .and_then(serde_json::Value::as_u64)
-                        .unwrap_or(0) as usize;
-                    let missing_ops = val
-                        .get("missing_catalog_ops")
-                        .and_then(serde_json::Value::as_array)
-                        .map(Vec::len)
-                        .unwrap_or(0);
-
+                if let Ok(val) = serde_json::from_str::<DeviceCertJson>(&content) {
                     certs.push(DeviceCertificateRecord {
                         certificate_file: file_name.to_string(),
-                        backend_id,
-                        schema_version: schema_ver,
-                        status_passed: missing_ops == 0,
-                        total_pairs,
-                        distinct_op_count: distinct_ops,
+                        backend_id: val
+                            .backend_id
+                            .unwrap_or_else(|| default_backend.to_string()),
+                        schema_version: val.schema_version,
+                        status_passed: val.missing_catalog_ops.is_empty(),
+                        total_pairs: val.total_pairs,
+                        distinct_op_count: val.distinct_op_count,
                         execution_hash: None,
                     });
                 }
@@ -842,40 +869,20 @@ pub fn derive_device_execution_certificates(root: &Path) -> Vec<DeviceCertificat
     let merged_path = cert_dir.join("release-all-backends-certificate.json");
     if merged_path.exists() {
         if let Ok(content) = std::fs::read_to_string(&merged_path) {
-            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
-                let schema_ver = val
-                    .get("wire_format_version")
-                    .and_then(serde_json::Value::as_u64)
-                    .unwrap_or(1) as u32;
-                let backend_id = val
-                    .get("backend_id")
-                    .and_then(serde_json::Value::as_str)
-                    .unwrap_or("merged")
-                    .to_string();
-                let pair_count = val
-                    .get("plan")
-                    .and_then(|p| p.get("pair_count"))
-                    .and_then(serde_json::Value::as_u64)
-                    .unwrap_or(0) as usize;
-                let op_count = val
-                    .get("plan")
-                    .and_then(|p| p.get("op_count"))
-                    .and_then(serde_json::Value::as_u64)
-                    .unwrap_or(0) as usize;
-                let exec_hash = val
-                    .get("plan")
-                    .and_then(|p| p.get("execution_hash"))
-                    .and_then(serde_json::Value::as_str)
-                    .map(ToString::to_string);
-
+            if let Ok(val) = serde_json::from_str::<MergedCertJson>(&content) {
+                let plan = val.plan.unwrap_or(MergedPlanJson {
+                    pair_count: 0,
+                    op_count: 0,
+                    execution_hash: None,
+                });
                 certs.push(DeviceCertificateRecord {
                     certificate_file: "release-all-backends-certificate.json".to_string(),
-                    backend_id,
-                    schema_version: schema_ver,
+                    backend_id: val.backend_id,
+                    schema_version: val.wire_format_version,
                     status_passed: true,
-                    total_pairs: pair_count,
-                    distinct_op_count: op_count,
-                    execution_hash: exec_hash,
+                    total_pairs: plan.pair_count,
+                    distinct_op_count: plan.op_count,
+                    execution_hash: plan.execution_hash,
                 });
             }
         }
@@ -900,24 +907,15 @@ pub fn derive_benchmark_evidence(root: &Path) -> BenchmarkEvidenceSummary {
 
     if bench_file.exists() {
         if let Ok(content) = std::fs::read_to_string(&bench_file) {
-            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
-                if let Some(closed) = val
-                    .get("required_closed_families")
-                    .and_then(serde_json::Value::as_u64)
-                {
-                    total_cases = closed as usize;
+            if let Ok(val) = serde_json::from_str::<ReleaseWorkloadMatrixJson>(&content) {
+                if let Some(closed) = val.required_closed_families {
+                    total_cases = closed;
                 }
-                if let Some(count) = val
-                    .get("release_suite_case_count")
-                    .and_then(serde_json::Value::as_u64)
-                {
-                    suite_cases = count as usize;
+                if let Some(count) = val.release_suite_case_count {
+                    suite_cases = count;
                 }
-                if let Some(sota) = val
-                    .get("cpu_sota_100x_contract_count")
-                    .and_then(serde_json::Value::as_u64)
-                {
-                    timings_count = sota as usize;
+                if let Some(sota) = val.cpu_sota_100x_contract_count {
+                    timings_count = sota;
                 }
             }
         }

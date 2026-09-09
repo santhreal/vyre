@@ -141,7 +141,7 @@ mod region_law;
 mod resource_capability;
 /// Catalog of invariants every registered op is checked against.
 /// Declarative schema registry for all persisted and wire formats.
-mod schema_registry;
+pub mod schema_registry;
 /// Canonical semiring selector for dataflow and algebraic kernels.
 mod semiring;
 /// Soundness markers and precision contracts for cross-engine analysis data.

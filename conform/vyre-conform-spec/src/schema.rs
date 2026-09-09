@@ -6,13 +6,13 @@
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
+use vyre_spec::schema_registry::SchemaId;
 
 /// Supported per-operation and bundle certificate schema version.
-pub const CERTIFICATE_SCHEMA_VERSION: &str = "vyre-conformance-certificate-v2";
+pub const CERTIFICATE_SCHEMA_VERSION: &str = SchemaId::ConformanceCertificate.domain_separator();
 
 /// Supported replay-capsule schema version.
-pub const REPLAY_CAPSULE_SCHEMA_VERSION: u32 = 2;
-
+pub const REPLAY_CAPSULE_SCHEMA_VERSION: u32 = SchemaId::ReplayCapsule.version_u32();
 /// A named conformance input case.
 ///
 /// `inputs` contains one raw byte buffer per logical input. The field order is
@@ -173,7 +173,7 @@ impl Certificate {
         Self {
             version: CERTIFICATE_SCHEMA_VERSION.to_string(),
             op_id: op_id.into(),
-            wire_format_version: 1,
+            wire_format_version: SchemaId::ProofPlanArtifact.version_u32(),
             program_blake3: "TBD".to_string(),
             witness_set_blake3: "TBD".to_string(),
             backend_id: backend_id.into(),
@@ -192,6 +192,40 @@ impl Certificate {
     /// Returns the underlying serde error if serialization fails.
     pub fn to_json(&self) -> serde_json::Result<String> {
         serde_json::to_string_pretty(self)
+    }
+
+    /// Serialize the canonical signable body excluding the signature.
+    ///
+    /// # Errors
+    ///
+    /// Returns serde error if serialization fails.
+    pub fn to_signable_bytes(&self) -> serde_json::Result<Vec<u8>> {
+        #[derive(Serialize)]
+        struct CertificateSignableBody<'a> {
+            version: &'a str,
+            op_id: &'a str,
+            wire_format_version: u32,
+            program_blake3: &'a str,
+            witness_set_blake3: &'a str,
+            backend_id: &'a str,
+            backend_version: &'a str,
+            laws_verified: &'a [String],
+            timestamp: &'a str,
+            pubkey: &'a str,
+        }
+        let body = CertificateSignableBody {
+            version: &self.version,
+            op_id: &self.op_id,
+            wire_format_version: self.wire_format_version,
+            program_blake3: &self.program_blake3,
+            witness_set_blake3: &self.witness_set_blake3,
+            backend_id: &self.backend_id,
+            backend_version: &self.backend_version,
+            laws_verified: &self.laws_verified,
+            timestamp: &self.timestamp,
+            pubkey: &self.pubkey,
+        };
+        serde_json::to_vec(&body)
     }
 
     /// Reject a certificate from an unsupported schema version.
@@ -240,6 +274,34 @@ impl BundleCertificate {
             &self.version,
             CERTIFICATE_SCHEMA_VERSION,
         )
+    }
+
+    /// Serialize the canonical signable body excluding the signature.
+    ///
+    /// # Errors
+    ///
+    /// Returns serde error if serialization fails.
+    pub fn to_signable_bytes(&self) -> serde_json::Result<Vec<u8>> {
+        #[derive(Serialize)]
+        struct BundleCertSignableBody<'a> {
+            version: &'a str,
+            bundle_blake3: &'a str,
+            corpus_blake3: &'a str,
+            reference_output_blake3: &'a str,
+            witness_count: u64,
+            timestamp: &'a str,
+            pubkey: &'a str,
+        }
+        let body = BundleCertSignableBody {
+            version: &self.version,
+            bundle_blake3: &self.bundle_blake3,
+            corpus_blake3: &self.corpus_blake3,
+            reference_output_blake3: &self.reference_output_blake3,
+            witness_count: self.witness_count,
+            timestamp: &self.timestamp,
+            pubkey: &self.pubkey,
+        };
+        serde_json::to_vec(&body)
     }
 }
 

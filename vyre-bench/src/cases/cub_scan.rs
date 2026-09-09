@@ -283,43 +283,34 @@ fn measure_cub() -> Result<CubMeasurement, BenchError> {
 
 /// Read the one JSON line the baseline prints.
 fn parse_measurement(stdout: &str) -> Result<CubMeasurement, BenchError> {
-    let document: serde_json::Value = serde_json::from_str(stdout.trim()).map_err(|error| {
+    #[derive(serde::Deserialize)]
+    struct RawCubOutput {
+        checksum: u32,
+        samples_ms: Vec<f64>,
+        #[serde(default)]
+        device: String,
+        #[serde(default)]
+        compute_capability: String,
+        #[serde(default)]
+        cub_version: u32,
+    }
+
+    let raw: RawCubOutput = serde_json::from_str(stdout.trim()).map_err(|error| {
         BenchError::BackendFailed(format!(
             "Fix: the CUB baseline printed something other than its measurement line: {error}"
         ))
     })?;
-    let field = |name: &str| -> Result<&serde_json::Value, BenchError> {
-        document.get(name).ok_or_else(|| {
-            BenchError::BackendFailed(format!(
-                "Fix: the CUB baseline measurement is missing `{name}`"
-            ))
-        })
-    };
-    let samples_ms = field("samples_ms")?
-        .as_array()
-        .ok_or_else(|| BenchError::BackendFailed("Fix: `samples_ms` is not an array".to_string()))?
-        .iter()
-        .map(|sample| {
-            sample.as_f64().ok_or_else(|| {
-                BenchError::BackendFailed("Fix: a `samples_ms` entry is not a number".to_string())
-            })
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    if samples_ms.is_empty() {
+    if raw.samples_ms.is_empty() {
         return Err(BenchError::BackendFailed(
             "Fix: the CUB baseline recorded no samples".to_string(),
         ));
     }
     Ok(CubMeasurement {
-        checksum: u32::try_from(field("checksum")?.as_u64().unwrap_or(u64::MAX))
-            .map_err(|_| BenchError::BackendFailed("Fix: `checksum` is not a u32".to_string()))?,
-        samples_ms,
-        device: field("device")?.as_str().unwrap_or_default().to_string(),
-        compute_capability: field("compute_capability")?
-            .as_str()
-            .unwrap_or_default()
-            .to_string(),
-        version: u32::try_from(field("cub_version")?.as_u64().unwrap_or(0)).unwrap_or(0),
+        checksum: raw.checksum,
+        samples_ms: raw.samples_ms,
+        device: raw.device,
+        compute_capability: raw.compute_capability,
+        version: raw.cub_version,
     })
 }
 

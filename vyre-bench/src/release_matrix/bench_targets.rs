@@ -35,28 +35,67 @@ impl ReleaseBenchTarget {
 pub(super) fn release_bench_targets_from_manifest(
     text: &str,
 ) -> Result<Vec<ReleaseBenchTarget>, String> {
-    let value = toml::from_str::<toml::Value>(text)
+    #[derive(serde::Deserialize)]
+    struct BenchTargetsFile {
+        #[serde(default)]
+        target: Vec<RawBenchTarget>,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct RawBenchTarget {
+        #[serde(default)]
+        id: Option<String>,
+        #[serde(default)]
+        suite: Option<String>,
+        #[serde(default)]
+        bench_case_id: Option<String>,
+        #[serde(default)]
+        baseline_class: Option<String>,
+        #[serde(default)]
+        min_speedup_over_baseline: Option<f64>,
+    }
+
+    let file: BenchTargetsFile = toml::from_str(text)
         .map_err(|error| format!("Fix: BENCH_TARGETS.toml must parse as TOML: {error}"))?;
-    let targets = value
-        .get("target")
-        .and_then(toml::Value::as_array)
-        .ok_or_else(|| "Fix: BENCH_TARGETS.toml must contain [[target]] rows.".to_string())?;
+    if file.target.is_empty() {
+        return Err("Fix: BENCH_TARGETS.toml must contain [[target]] rows.".to_string());
+    }
     let mut seen = BTreeSet::new();
     let mut rows = Vec::new();
-    for target in targets.iter().filter(|target| {
-        target.get("suite").and_then(toml::Value::as_str) == Some("release-workload")
-    }) {
-        let id = release_target_string(target, "id")?;
-        if !seen.insert(id.clone()) {
+    for target in file
+        .target
+        .into_iter()
+        .filter(|t| t.suite.as_deref() == Some("release-workload"))
+    {
+        let id = target.id.as_deref().unwrap_or("<missing id>");
+        if target.id.is_none() || id.trim().is_empty() {
             return Err(format!(
-                "Fix: BENCH_TARGETS.toml contains duplicate release-workload target id `{id}`."
+                "Fix: release-workload BENCH_TARGETS target `{id}` must declare non-empty `id`."
             ));
         }
+        let id_str = id.trim().to_string();
+        if !seen.insert(id_str.clone()) {
+            return Err(format!(
+                "Fix: BENCH_TARGETS.toml contains duplicate release-workload target id `{id_str}`."
+            ));
+        }
+        let bench_case_id = target.bench_case_id.filter(|s| !s.trim().is_empty()).ok_or_else(|| {
+            format!("Fix: release-workload BENCH_TARGETS target `{id_str}` must declare non-empty `bench_case_id`.")
+        })?;
+        let baseline_class = target.baseline_class.filter(|s| !s.trim().is_empty()).ok_or_else(|| {
+            format!("Fix: release-workload BENCH_TARGETS target `{id_str}` must declare non-empty `baseline_class`.")
+        })?;
+        let min_speedup = target.min_speedup_over_baseline.ok_or_else(|| {
+            format!("Fix: release-workload BENCH_TARGETS target `{id_str}` must declare numeric `min_speedup_over_baseline`.")
+        })?;
+        if min_speedup <= 0.0 {
+            return Err(format!("Fix: release-workload BENCH_TARGETS target `{id_str}` numeric `min_speedup_over_baseline` must be positive."));
+        }
         rows.push(ReleaseBenchTarget {
-            id,
-            bench_case_id: release_target_string(target, "bench_case_id")?,
-            baseline_class: release_target_string(target, "baseline_class")?,
-            min_speedup_over_baseline: release_target_number(target, "min_speedup_over_baseline")?,
+            id: id_str,
+            bench_case_id: bench_case_id.trim().to_string(),
+            baseline_class: baseline_class.trim().to_string(),
+            min_speedup_over_baseline: min_speedup,
         });
     }
     if rows.is_empty() {
@@ -66,51 +105,6 @@ pub(super) fn release_bench_targets_from_manifest(
         );
     }
     Ok(rows)
-}
-
-fn release_target_string(target: &toml::Value, key: &'static str) -> Result<String, String> {
-    let id = target
-        .get("id")
-        .and_then(toml::Value::as_str)
-        .unwrap_or("<missing id>");
-    let value = target
-        .get(key)
-        .and_then(toml::Value::as_str)
-        .unwrap_or("")
-        .trim();
-    if value.is_empty() {
-        return Err(format!(
-            "Fix: release-workload BENCH_TARGETS target `{id}` must declare non-empty `{key}`."
-        ));
-    }
-    Ok(value.to_string())
-}
-
-fn release_target_number(target: &toml::Value, key: &'static str) -> Result<f64, String> {
-    let id = target
-        .get("id")
-        .and_then(toml::Value::as_str)
-        .unwrap_or("<missing id>");
-    let value = target
-        .get(key)
-        .and_then(toml::Value::as_float)
-        .or_else(|| {
-            target
-                .get(key)
-                .and_then(toml::Value::as_integer)
-                .map(|value| value as f64)
-        })
-        .ok_or_else(|| {
-            format!(
-                "Fix: release-workload BENCH_TARGETS target `{id}` must declare numeric `{key}`."
-            )
-        })?;
-    if value <= 0.0 {
-        return Err(format!(
-            "Fix: release-workload BENCH_TARGETS target `{id}` numeric `{key}` must be positive."
-        ));
-    }
-    Ok(value)
 }
 
 pub(super) fn release_bench_target_by_id(

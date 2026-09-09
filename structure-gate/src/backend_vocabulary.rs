@@ -28,7 +28,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Range;
 use std::path::Path;
 
-use toml::Value;
+use serde::Deserialize;
 
 use crate::cfg_test::cfg_test_line_mask;
 use crate::crate_ownership::{Registry, REGISTRY as OWNERSHIP_REGISTRY};
@@ -235,80 +235,110 @@ impl Neutrality {
     }
 }
 
+#[derive(Deserialize)]
+struct VocabularySection {
+    neutral_terms: Vec<String>,
+}
+
+#[derive(Deserialize)]
+struct LayerRow {
+    name: String,
+    neutral: bool,
+}
+
+#[derive(Deserialize)]
+struct ExemptLayerRow {
+    layer: String,
+    reason: String,
+}
+
+#[derive(Deserialize)]
+struct TermRow {
+    word: String,
+    owner_layer: String,
+    neutral: String,
+}
+
+#[derive(Deserialize)]
+struct InterfaceRow {
+    prefix: String,
+    name: String,
+    reason: String,
+}
+
+#[derive(Deserialize)]
+struct VocabularyManifest {
+    vocabulary: VocabularySection,
+    #[serde(default)]
+    layer: Vec<LayerRow>,
+    #[serde(default)]
+    exempt_layer: Vec<ExemptLayerRow>,
+    #[serde(default)]
+    term: Vec<TermRow>,
+    #[serde(default)]
+    interface: Vec<InterfaceRow>,
+}
+
 /// Read and parse the contract data file.
 fn read_contract(root: &Path) -> Result<Contract, String> {
     let path = crate::member_directory(root, crate::SELF_CRATE).join(DATA_FILE);
     let text = read_source_bounded(&path)
         .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-    let table: toml::Table = toml::from_str(&text)
+    let manifest: VocabularyManifest = toml::from_str(&text)
         .map_err(|error| format!("{} is not readable as TOML: {error}", path.display()))?;
-    let document = Value::Table(table);
     let label = DATA_FILE;
 
-    let neutral_terms = document
-        .get("vocabulary")
-        .and_then(|vocabulary| vocabulary.get("neutral_terms"))
-        .and_then(Value::as_array)
-        .ok_or_else(|| format!("{label} declares no [vocabulary] neutral_terms array"))?
-        .iter()
-        .map(|value| {
-            value
-                .as_str()
-                .map(str::to_string)
-                .ok_or_else(|| format!("{label} has a non-string entry in neutral_terms"))
-        })
-        .collect::<Result<Vec<String>, String>>()?;
+    let neutral_terms = manifest.vocabulary.neutral_terms;
     if neutral_terms.is_empty() {
         return Err(format!(
             "{label} lists no neutral term, so no banned word could state its replacement"
         ));
     }
 
-    let mut layers = Vec::new();
-    for row in rows(&document, "layer", label)? {
-        let name = string_field(row, "name", "layer", label)?;
-        let neutral = row
-            .get("neutral")
-            .and_then(Value::as_bool)
-            .ok_or_else(|| format!("{label} [[layer]] `{name}` declares no boolean `neutral`"))?;
-        layers.push((name, neutral));
-    }
+    let layers: Vec<(String, bool)> = manifest
+        .layer
+        .into_iter()
+        .map(|row| (row.name, row.neutral))
+        .collect();
     if layers.is_empty() {
         return Err(format!(
             "{label} decides no layer, so the roster would be empty and the rule would pass forever"
         ));
     }
 
-    let mut exempt_layers = Vec::new();
-    for row in rows(&document, "exempt_layer", label)? {
-        exempt_layers.push(ExemptLayer {
-            layer: string_field(row, "layer", "exempt_layer", label)?,
-            reason: string_field(row, "reason", "exempt_layer", label)?,
-        });
-    }
+    let exempt_layers = manifest
+        .exempt_layer
+        .into_iter()
+        .map(|row| ExemptLayer {
+            layer: row.layer,
+            reason: row.reason,
+        })
+        .collect();
 
-    let mut terms = Vec::new();
-    for row in rows(&document, "term", label)? {
-        terms.push(Term {
-            word: string_field(row, "word", "term", label)?,
-            owner_layer: string_field(row, "owner_layer", "term", label)?,
-            neutral: string_field(row, "neutral", "term", label)?,
-        });
-    }
+    let terms: Vec<Term> = manifest
+        .term
+        .into_iter()
+        .map(|row| Term {
+            word: row.word,
+            owner_layer: row.owner_layer,
+            neutral: row.neutral,
+        })
+        .collect();
     if terms.is_empty() {
         return Err(format!(
             "{label} bans no word, so the vocabulary rule could not fail on any source"
         ));
     }
 
-    let mut interfaces = Vec::new();
-    for row in rows(&document, "interface", label)? {
-        interfaces.push(Interface {
-            prefix: string_field(row, "prefix", "interface", label)?,
-            name: string_field(row, "name", "interface", label)?,
-            reason: string_field(row, "reason", "interface", label)?,
-        });
-    }
+    let interfaces = manifest
+        .interface
+        .into_iter()
+        .map(|row| Interface {
+            prefix: row.prefix,
+            name: row.name,
+            reason: row.reason,
+        })
+        .collect();
 
     Ok(Contract {
         neutral_terms,
@@ -318,25 +348,6 @@ fn read_contract(root: &Path) -> Result<Contract, String> {
         interfaces,
     })
 }
-
-/// The rows of one array-of-tables, or an empty slice when the key is absent.
-fn rows<'a>(document: &'a Value, key: &str, label: &str) -> Result<&'a [Value], String> {
-    match document.get(key) {
-        None => Ok(&[]),
-        Some(value) => value.as_array().map(Vec::as_slice).ok_or_else(|| {
-            format!("{label} declares `{key}` as something other than a table array")
-        }),
-    }
-}
-
-/// One required string field of one row.
-fn string_field(row: &Value, key: &str, kind: &str, label: &str) -> Result<String, String> {
-    row.get(key)
-        .and_then(Value::as_str)
-        .map(str::to_string)
-        .ok_or_else(|| format!("{label} has a [[{kind}]] row with no string `{key}`"))
-}
-
 /// Declared layer and checkout-relative directory per member, from the registry.
 fn read_registry(
     root: &Path,

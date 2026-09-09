@@ -85,6 +85,7 @@ pub mod release_provenance;
 pub mod repo_hygiene;
 pub mod scan;
 pub mod schedule_ownership;
+pub mod schema_authority;
 pub mod scorecard;
 pub mod script_ledger;
 pub mod shader_source;
@@ -222,6 +223,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ),
     ("repo-hygiene", &repo_hygiene::RepoHygiene),
     ("single-backlog", &repo_hygiene::SingleBacklog),
+    ("schema-authority", &schema_authority::SchemaAuthorityGate),
     ("schedule-ownership", &schedule_ownership::ScheduleOwnership),
     ("script-ledger", &script_ledger::ScriptLedger),
     ("shader-source", &shader_source::ShaderSource),

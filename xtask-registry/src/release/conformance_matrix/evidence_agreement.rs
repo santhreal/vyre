@@ -94,40 +94,45 @@ pub(super) fn disagreements(root: &Path, specs: &[OpMatrixReleaseBackendSpec]) -
 /// A pair naming a different backend is a mixed-up artifact rather than a
 /// coverage gap, so it is reported instead of ignored.
 fn read_pairs(path: &Path, recorded_id: &str) -> Result<BTreeMap<String, bool>, String> {
+    #[derive(serde::Deserialize)]
+    struct ConformanceEvidenceDoc {
+        pairs: Option<Vec<EvidencePairRow>>,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct EvidencePairRow {
+        op_id: Option<String>,
+        #[serde(default)]
+        backend_id: String,
+        passed: Option<bool>,
+    }
+
     let text = super::read_text_bounded(path)
         .map_err(|error| format!("{} is unreadable: {error}", path.display()))?;
-    let document: serde_json::Value = serde_json::from_str(&text)
+    let document: ConformanceEvidenceDoc = serde_json::from_str(&text)
         .map_err(|error| format!("{} is not JSON: {error}", path.display()))?;
     let pairs = document
-        .get("pairs")
-        .and_then(serde_json::Value::as_array)
+        .pairs
         .ok_or_else(|| format!("{} records no `pairs` array", path.display()))?;
     let mut observed = BTreeMap::new();
     for pair in pairs {
         let op_id = pair
-            .get("op_id")
-            .and_then(serde_json::Value::as_str)
+            .op_id
             .ok_or_else(|| format!("{} has a pair with no `op_id`", path.display()))?;
-        let backend_id = pair
-            .get("backend_id")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or_default();
-        if backend_id != recorded_id {
+        if pair.backend_id != recorded_id {
             return Err(format!(
-                "{} records `{op_id}` under backend `{backend_id}`, not `{recorded_id}`",
-                path.display()
+                "{} records `{op_id}` under backend `{}`, not `{recorded_id}`",
+                path.display(),
+                pair.backend_id
             ));
         }
-        let passed = pair
-            .get("passed")
-            .and_then(serde_json::Value::as_bool)
-            .ok_or_else(|| {
-                format!(
-                    "{} has a pair for `{op_id}` with no `passed`",
-                    path.display()
-                )
-            })?;
-        observed.insert(op_id.to_string(), passed);
+        let passed = pair.passed.ok_or_else(|| {
+            format!(
+                "{} has a pair for `{op_id}` with no `passed`",
+                path.display()
+            )
+        })?;
+        observed.insert(op_id, passed);
     }
     if observed.is_empty() {
         return Err(format!("{} records zero pairs", path.display()));

@@ -179,3 +179,63 @@ fn adversarial_certificate_version_string_is_not_accepted_as_compatible() {
         .to_string()
         .contains("unsupported certificate schema version"));
 }
+#[test]
+fn runtime_registry_entry_derivation_covers_all_conformance_schemas() {
+    use vyre_spec::schema_registry::{SchemaId, SchemaRegistry};
+
+    // Derived dynamically from SchemaRegistry at runtime
+    let registry_ids: Vec<SchemaId> = SchemaRegistry::all().iter().map(|d| d.id).collect();
+
+    // Required persisted record kinds in conformance testing
+    let required_conformance_schemas = [
+        SchemaId::ConformanceCertificate,
+        SchemaId::BundleCertificate,
+        SchemaId::ReplayCapsule,
+        SchemaId::ProveArtifact,
+        SchemaId::ProofPlanArtifact,
+        SchemaId::ProofReceipt,
+    ];
+
+    for schema_id in required_conformance_schemas {
+        assert!(
+            registry_ids.contains(&schema_id),
+            "Registry is missing required conformance schema definition for {:?}",
+            schema_id
+        );
+        let def = SchemaRegistry::lookup(schema_id).expect("schema must be present in registry");
+        assert!(
+            def.validate_invariants(),
+            "schema invariants violated for {:?}",
+            schema_id
+        );
+    }
+}
+
+#[test]
+fn schema_id_with_differing_version_is_rejected() {
+    use vyre_spec::schema_registry::SchemaId;
+
+    let cert_id = SchemaId::ConformanceCertificate;
+    let expected_version = cert_id.domain_separator();
+
+    let skewed_json = serde_json::json!({
+        "version": "vyre-conformance-certificate-v1",
+        "op_id": "primitive.add.u32",
+        "wire_format_version": 1,
+        "program_blake3": "TBD",
+        "witness_set_blake3": "TBD",
+        "backend_id": "cpu-ref",
+        "backend_version": "0.7.2",
+        "laws_verified": [],
+        "timestamp": "1970-01-01T00:00:00Z",
+        "signature_ed25519": "TBD",
+        "pubkey": "TBD"
+    });
+
+    let res = serde_json::from_value::<Certificate>(skewed_json);
+    assert!(res.is_err(), "Must reject record with mismatched version");
+    let err_str = res.unwrap_err().to_string();
+    assert!(err_str
+        .contains("unsupported certificate schema version `vyre-conformance-certificate-v1`"));
+    assert!(err_str.contains(expected_version));
+}

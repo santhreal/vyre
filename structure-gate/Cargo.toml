@@ -16,9 +16,9 @@ publish = false
 # keeps working while the workspace it judges does not compile - which is
 # exactly when a structural migration needs it.
 [dependencies]
+serde = { workspace = true }
 toml.workspace = true
 walkdir.workspace = true
-
 # Fixture trees for the source-placement contracts. A test that judges how a
 # directory tree is read has to build one.
 [dev-dependencies]

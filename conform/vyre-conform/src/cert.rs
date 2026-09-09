@@ -54,7 +54,7 @@ pub fn issue_certificate(input: IssueInput<'_>) -> Result<Certificate, Certifica
     Ok(Certificate {
         version: CERTIFICATE_SCHEMA_VERSION.to_string(),
         op_id: input.op_id.to_string(),
-        wire_format_version: 1,
+        wire_format_version: vyre_spec::schema_registry::SchemaId::ProofPlanArtifact.version_u32(),
         program_blake3,
         witness_set_blake3,
         backend_id: input.backend_id.to_string(),

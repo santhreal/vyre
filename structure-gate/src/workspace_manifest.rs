@@ -10,7 +10,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex, PoisonError};
 
-use toml::Value;
+use serde::Deserialize;
 use walkdir::WalkDir;
 
 use crate::module_layout::CrateRoot;
@@ -61,13 +61,17 @@ pub fn member_directory(root: &Path, package: &str) -> PathBuf {
         let Ok(text) = read_source_bounded(&manifest_path) else {
             continue;
         };
-        let declared = toml::from_str::<toml::Table>(&text).ok().and_then(|table| {
-            Value::Table(table)
-                .get("package")
-                .and_then(|pkg| pkg.get("name"))
-                .and_then(Value::as_str)
-                .map(str::to_string)
-        });
+        #[derive(Deserialize)]
+        struct PackageManifest {
+            package: Option<PackageName>,
+        }
+        #[derive(Deserialize)]
+        struct PackageName {
+            name: String,
+        }
+        let declared = toml::from_str::<PackageManifest>(&text)
+            .ok()
+            .and_then(|manifest| manifest.package.map(|pkg| pkg.name));
         if declared.as_deref() == Some(package) {
             return member_dir;
         }
@@ -115,38 +119,32 @@ pub fn workspace_excludes(root: &Path) -> Vec<String> {
 /// Panics when the root manifest cannot be read or parsed. Every gate in this
 /// crate answers for the roster that manifest declares, so a gate that carried
 /// on with an empty roster would report a clean tree it never read.
+#[derive(Deserialize)]
+struct RootWorkspaceManifest {
+    workspace: Option<WorkspaceSection>,
+}
+
+#[derive(Deserialize)]
+struct WorkspaceSection {
+    members: Option<Vec<String>>,
+    exclude: Option<Vec<String>>,
+}
+
 pub(crate) fn workspace_paths(root: &Path, key: &str) -> Vec<String> {
     let manifest_path = root.join("Cargo.toml");
     let text = read_source_bounded(&manifest_path)
         .unwrap_or_else(|error| panic!("Fix: cannot read {}: {error}", manifest_path.display()));
-    let table: toml::Table = toml::from_str(&text)
+    let manifest: RootWorkspaceManifest = toml::from_str(&text)
         .unwrap_or_else(|error| panic!("Fix: parse {}: {error}", manifest_path.display()));
-    string_list(
-        Value::Table(table)
-            .get("workspace")
-            .and_then(|workspace| workspace.get(key)),
-    )
-}
-
-/// Every string a TOML array holds, and nothing when it is not one.
-///
-/// A manifest states a roster, a feature list and a dependency's features all
-/// the same way, as an array of strings, and every reader of one wrote the same
-/// four-combinator chain to unwrap it. An absent key and a value of another type
-/// both answer with an empty list: a caller that needs to tell those apart reads
-/// the value itself.
-#[must_use]
-pub fn string_list(value: Option<&Value>) -> Vec<String> {
-    value
-        .and_then(Value::as_array)
-        .map(|entries| {
-            entries
-                .iter()
-                .filter_map(Value::as_str)
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default()
+    let ws = manifest.workspace.unwrap_or(WorkspaceSection {
+        members: None,
+        exclude: None,
+    });
+    match key {
+        "members" => ws.members.unwrap_or_default(),
+        "exclude" => ws.exclude.unwrap_or_default(),
+        _ => Vec::new(),
+    }
 }
 
 /// Crate identifier for a crate name, e.g. `vyre_libs` for `vyre-libs`.
@@ -465,17 +463,28 @@ fn walk_tree_files(root: &Path) -> TreeFiles {
 /// `[lib] name` wins where it is written, because that is the name a consumer
 /// and `cargo public-api` both use; the package name is the default Cargo
 /// applies when it is not.
+#[derive(Deserialize)]
+struct PackageAndLibManifest {
+    package: Option<PackageNameSection>,
+    lib: Option<LibSection>,
+}
+
+#[derive(Deserialize)]
+struct PackageNameSection {
+    name: String,
+}
+
+#[derive(Deserialize)]
+struct LibSection {
+    name: Option<String>,
+}
+
 pub(crate) fn manifest_crate_ident(manifest: &Path) -> Option<String> {
     let text = read_source_bounded(manifest).ok()?;
-    let table: toml::Table = toml::from_str(&text).ok()?;
-    let value = Value::Table(table);
-    let package = value.get("package")?.get("name")?.as_str()?;
-    let name = value
-        .get("lib")
-        .and_then(|lib| lib.get("name"))
-        .and_then(Value::as_str)
-        .unwrap_or(package);
-    Some(crate_ident(name))
+    let parsed: PackageAndLibManifest = toml::from_str(&text).ok()?;
+    let package = parsed.package?.name;
+    let name = parsed.lib.and_then(|lib| lib.name).unwrap_or(package);
+    Some(crate_ident(&name))
 }
 
 pub(crate) fn relative(root: &Path, path: &Path) -> String {

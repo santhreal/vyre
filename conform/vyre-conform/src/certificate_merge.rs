@@ -176,7 +176,7 @@ pub(crate) fn merge_certificates(args: impl IntoIterator<Item = String>) -> Resu
     rand_core::OsRng.fill_bytes(&mut seed);
     let key = SigningKey::from_bytes(&seed);
     let signable = ProveSignableBody {
-        wire_format_version: 2,
+        wire_format_version: vyre_spec::schema_registry::SchemaId::ProveArtifact.version_u32(),
         program_hash: &program_hash,
         backend_id: "merged",
         plan: &plan,
@@ -188,7 +188,7 @@ pub(crate) fn merge_certificates(args: impl IntoIterator<Item = String>) -> Resu
     })?;
     let signature = key.sign(&signable_bytes);
     let artifact = MergedProveArtifact {
-        wire_format_version: 2,
+        wire_format_version: vyre_spec::schema_registry::SchemaId::ProveArtifact.version_u32(),
         program_hash,
         backend_id: "merged".to_string(),
         plan,
@@ -210,7 +210,9 @@ fn read_and_verify_shard(path: &str) -> Result<VerifiedShard, String> {
             "failed to parse certificate `{path}`: {error}. Fix: pass a valid JSON prove artifact."
         )
     })?;
-    if artifact.wire_format_version != 2 {
+    if artifact.wire_format_version
+        != vyre_spec::schema_registry::SchemaId::ProveArtifact.version_u32()
+    {
         return Err(format!(
             "certificate `{path}` has wire_format_version {}. Fix: merge only v2 prove artifacts, which carry the proven-law roster.",
             artifact.wire_format_version

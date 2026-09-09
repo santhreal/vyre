@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with Q through Z.
-pub const GATES_Q_Z: [GateDescriptor; 37] = [
+pub const GATES_Q_Z: [GateDescriptor; 38] = [
     GateDescriptor {
         name: "readback-ring",
         help: "Enforce readback-ring contracts",
@@ -133,6 +133,18 @@ pub const GATES_Q_Z: [GateDescriptor; 37] = [
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
         proof: "crate::gates::repo_hygiene::tests::a_double_extension_archive_is_still_an_artifact",
+    },
+    GateDescriptor {
+        name: "schema-authority",
+        help: "Enforce schema authority and typed decode contracts",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "production sources across the workspace",
+        inputs: &[],
+        artifacts: &[],
+        prerequisites: &[],
+        resource_class: ResourceClass::Cpu,
+        proof: "crate::gates::schema_authority::tests::a_duplicated_version_literal_is_a_finding",
     },
     GateDescriptor {
         name: "schedule-ownership",
