@@ -62,9 +62,10 @@ vyre-lower = { workspace = true, features = ["test-fixtures"] }
 # their case tables and references and nothing else.
 vyre-driver = { workspace = true, features = ["test-fixtures"] }
 # Integration tests and benchmarks assert against the lower-layer libraries they
-# exercise. `full` owns the published composition surface; live parity tests also
-# exercise the compiler-owned analysis, encoding, and solver domains directly.
-vyre-libs = { path = "../vyre-libs", features = ["full", "analysis", "encoding", "solvers"] }
+# exercise. `full` owns every domain this facade publishes, including the
+# compiler-owned analysis, encoding, solver, and graph-dispatch domains the live
+# parity tests drive directly.
+vyre-libs = { path = "../vyre-libs", features = ["full"] }
 tempfile.workspace = true
 # Required by tests/common/mod.rs (`vyre::ir`, `vyre_driver::DispatchConfig`) and by
 # many live CUDA integration tests. `vyre` optionally depends on

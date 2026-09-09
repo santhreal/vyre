@@ -7025,6 +7025,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   resolves its links in the scope of the parent that declares the module, so
   the telemetry and security family-mask headers name their items by full path
   instead of by bare name.
+- vyre-libs and vyre-spec declare a test target for every integration test
+  file, so their feature-gated suites compile and run.
 - Every `vyre-primitives` feature compiles alone. The operand-shape guards
   `matrix_cells` and `square_matrix_cells` lived behind the `math` feature
   while `graph` used them, and `math` already enables `graph`, so the missing
@@ -7348,6 +7350,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   allocation. A kernel body restated per primitive drifts where no per-op
   oracle looks, because an oracle compares evaluated output and never sees the
   grid or the allocation size.
+- The graph single-source contracts resolve the graph domain in
+  vyre-libs-graph, the crate that owns it.
 - Graph and delta wire decoding checks bounds on operation, port, rank, and
   string lengths before allocation and caps capacity pre-reservations by
   remaining payload bytes.
@@ -8614,6 +8618,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   three-argument check_backend_capabilities. It still held the seven-boolean
   signature that the struct replaced, so the snapshot described a function the
   crate no longer exports.
+- The `full` feature of vyre-libs selects every domain the facade publishes,
+  including analysis, device, encoding, graph-dispatch, reasoning, rule,
+  scheduling, and solvers.
 - The gate-canon gate holds the registry, the pinned baselines and the subsets
   to each other and fails on the seven shapes that soften them: a baseline
   count that rises, a floor constant that moves up, a weakened target, a gate

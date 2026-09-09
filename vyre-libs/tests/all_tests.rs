@@ -1197,3 +1197,7 @@ pub mod multi_domain_production_graph_compilation;
 #[cfg(feature = "reduce")]
 #[path = "workgroup_any_ir_parity_proptest.rs"]
 pub mod workgroup_any_ir_parity_proptest;
+
+/// Integration tests from `tests/facade_feature_closure.rs`.
+#[path = "facade_feature_closure.rs"]
+pub mod facade_feature_closure;

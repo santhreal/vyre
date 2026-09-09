@@ -1,9 +1,10 @@
-//! Contracts for graph-domain single-sourcing between `vyre-libs::graph` and the
-//! dispatch wrappers in this crate.
+//! Contracts for graph-domain single-sourcing between `vyre-libs-graph::graph`
+//! and the dispatch wrappers beside it.
 //!
-//! `vyre-libs::graph` owns graph algorithms and primitive Program builders. A wrapper
-//! under `src/graph/dispatch/` may add scratch buffers, batching, a plan cache
-//! and backend wiring, and must not fork the algorithm it dispatches.
+//! `vyre-libs-graph::graph` owns graph algorithms and primitive Program
+//! builders. A wrapper under its `src/graph/dispatch/` may add scratch buffers,
+//! batching, a plan cache and backend wiring, and must not fork the algorithm
+//! it dispatches.
 //!
 //! WHY these rules are derived rather than listed: the wrapper set, the primitive
 //! each wrapper wraps, and the reference functions each primitive publishes are
@@ -20,7 +21,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// A dispatch wrapper: a directory under `src/graph/dispatch/` that pairs with
-/// a canonical primitive module in `vyre-libs/src/graph/`.
+/// a canonical primitive module in `vyre-libs-graph/src/graph/`.
 #[derive(Debug)]
 struct Wrapper {
     name: String,
@@ -38,6 +39,7 @@ const WRAPPER_FLOOR: usize = 9;
 
 /// Known non-wrapper dispatch infrastructure / pipeline modules under `src/graph/dispatch/`.
 const KNOWN_DISPATCH_INFRASTRUCTURE: &[&str] = &[
+    "csr_fixtures",
     "dispatch_bridge",
     "frontier",
     "mod",
@@ -62,16 +64,16 @@ fn find_second_graph_owners(workspace_root: &Path, canonical_crate_root: &Path) 
     other_owners
 }
 
-/// Assert that `vyre-libs` is the single canonical graph owner in the workspace.
+/// Assert that `vyre-libs-graph` is the single canonical graph owner.
 fn assert_single_graph_owner() {
     let workspace_root = crate_root()
         .parent()
-        .expect("Fix: vyre-libs must live under the workspace root")
+        .expect("Fix: vyre-libs-graph must live under the workspace root")
         .to_path_buf();
     let other_owners = find_second_graph_owners(&workspace_root, &crate_root());
     assert!(
         other_owners.is_empty(),
-        "Fix: detected a second graph owner in the workspace:\n{}\n`vyre-libs/src/graph` is the single canonical owner of the graph domain.",
+        "Fix: detected a second graph owner in the workspace:\n{}\n`vyre-libs-graph/src/graph` is the single canonical owner of the graph domain.",
         other_owners.join("\n")
     );
 }
@@ -120,7 +122,7 @@ fn the_wrapper_set_is_derived_and_not_empty() {
     let wrappers = wrappers();
     assert!(
         wrappers.len() >= WRAPPER_FLOOR,
-        "Fix: only {} graph dispatch wrappers were derived, below the floor of {WRAPPER_FLOOR}; the pairing between `vyre-libs/src/graph/dispatch/<name>` and `vyre-libs/src/graph/<name>` broke, and every rule in this file would otherwise pass by judging nothing",
+        "Fix: only {} graph dispatch wrappers were derived, below the floor of {WRAPPER_FLOOR}; the pairing between `vyre-libs-graph/src/graph/dispatch/<name>` and `vyre-libs-graph/src/graph/<name>` broke, and every rule in this file would otherwise pass by judging nothing",
         wrappers.len()
     );
 }
@@ -152,8 +154,8 @@ fn every_dispatch_wrapper_names_the_graph_primitive_it_wraps() {
     for wrapper in wrappers() {
         let crate_path = format!("crate::graph::{}", wrapper.primitive_name);
         let crate_path_direct = format!("crate::graph::{}", wrapper.name);
-        let libs_path = format!("vyre_libs::graph::{}", wrapper.primitive_name);
-        let libs_path_direct = format!("vyre_libs::graph::{}", wrapper.name);
+        let libs_path = format!("vyre_libs_graph::graph::{}", wrapper.primitive_name);
+        let libs_path_direct = format!("vyre_libs_graph::graph::{}", wrapper.name);
         let bare_path = format!("graph::{}", wrapper.primitive_name);
         let bare_path_direct = format!("graph::{}", wrapper.name);
         if !wrapper.source.contains(&crate_path)
@@ -297,7 +299,7 @@ fn resolve_primitive_for_wrapper(
     // 2. Derive primitive name by inspecting wrapper source imports: crate::graph::<primitive>
     let wrapper_source = concatenate(wrapper_dir);
     let mut candidates = Vec::new();
-    for token in ["crate::graph::", "graph::", "vyre_libs::graph::"] {
+    for token in ["crate::graph::", "graph::", "vyre_libs_graph::graph::"] {
         let mut rest = wrapper_source.as_str();
         while let Some(pos) = rest.find(token) {
             let after = &rest[pos + token.len()..];
@@ -419,9 +421,10 @@ fn cpu_reference_functions(primitive_source: &str) -> Vec<String> {
     names
 }
 
-/// This crate's directory, resolved from the checkout this run is inside.
+/// The graph-owning crate's directory, resolved from the checkout this run is
+/// inside.
 fn crate_root() -> PathBuf {
-    vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs")
+    vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs-graph")
 }
 
 fn read(path: &Path) -> String {

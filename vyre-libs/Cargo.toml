@@ -45,6 +45,9 @@ full = [
     "parsing-kernels",
     "text",
     "bitset", "reduce", "label", "predicate", "fixpoint", "graph",
+    "math", "nn", "pattern", "crypto",
+    "analysis", "device", "encoding", "graph-dispatch",
+    "reasoning", "rule", "scheduling", "solvers",
     "representation",
     "builder-ops",
     "geom", "opt", "topology",
@@ -189,6 +192,236 @@ workspace = true
 [[test]]
 name = "all_tests"
 path = "tests/all_tests.rs"
+
+[[test]]
+name = "all_tests_analysis"
+path = "tests/all_tests_analysis.rs"
+required-features = ["analysis"]
+
+[[test]]
+name = "all_tests_analysis_encoding"
+path = "tests/all_tests_analysis_encoding.rs"
+required-features = ["analysis", "encoding"]
+
+[[test]]
+name = "all_tests_bitset"
+path = "tests/all_tests_bitset.rs"
+required-features = ["bitset"]
+
+[[test]]
+name = "all_tests_decode"
+path = "tests/all_tests_decode.rs"
+required-features = ["decode"]
+
+[[test]]
+name = "all_tests_decode_parsing"
+path = "tests/all_tests_decode_parsing.rs"
+required-features = ["decode", "parsing"]
+
+[[test]]
+name = "all_tests_encoding"
+path = "tests/all_tests_encoding.rs"
+required-features = ["encoding"]
+
+[[test]]
+name = "all_tests_fixpoint_graph_math_kernels"
+path = "tests/all_tests_fixpoint_graph_math_kernels.rs"
+required-features = ["fixpoint", "graph", "math-kernels"]
+
+[[test]]
+name = "all_tests_fixpoint_graph_math_kernels_parsing_kernels"
+path = "tests/all_tests_fixpoint_graph_math_kernels_parsing_kernels.rs"
+required-features = ["fixpoint", "graph", "math-kernels", "parsing-kernels"]
+
+[[test]]
+name = "all_tests_fixpoint_math_kernels"
+path = "tests/all_tests_fixpoint_math_kernels.rs"
+required-features = ["fixpoint", "math-kernels"]
+
+[[test]]
+name = "all_tests_graph"
+path = "tests/all_tests_graph.rs"
+required-features = ["graph"]
+
+[[test]]
+name = "all_tests_graph_dispatch"
+path = "tests/all_tests_graph_dispatch.rs"
+required-features = ["graph-dispatch"]
+
+[[test]]
+name = "all_tests_hash"
+path = "tests/all_tests_hash.rs"
+required-features = ["hash"]
+
+[[test]]
+name = "all_tests_hash_math_nn_activation_nn_linear_pattern"
+path = "tests/all_tests_hash_math_nn_activation_nn_linear_pattern.rs"
+required-features = ["hash", "math", "nn-activation", "nn-linear", "pattern"]
+
+[[test]]
+name = "all_tests_hash_nn_activation_nn_attention_nn_linear_nn_norm"
+path = "tests/all_tests_hash_nn_activation_nn_attention_nn_linear_nn_norm.rs"
+required-features = ["hash", "nn-activation", "nn-attention", "nn-linear", "nn-norm"]
+
+[[test]]
+name = "all_tests_hash_nn_attention_nn_norm"
+path = "tests/all_tests_hash_nn_attention_nn_norm.rs"
+required-features = ["hash", "nn-attention", "nn-norm"]
+
+[[test]]
+name = "all_tests_label"
+path = "tests/all_tests_label.rs"
+required-features = ["label"]
+
+[[test]]
+name = "all_tests_llm"
+path = "tests/all_tests_llm.rs"
+required-features = ["llm"]
+
+[[test]]
+name = "all_tests_logical"
+path = "tests/all_tests_logical.rs"
+required-features = ["logical"]
+
+[[test]]
+name = "all_tests_math"
+path = "tests/all_tests_math.rs"
+required-features = ["math"]
+
+[[test]]
+name = "all_tests_math_kernels"
+path = "tests/all_tests_math_kernels.rs"
+required-features = ["math-kernels"]
+
+[[test]]
+name = "all_tests_math_math_linalg_nn_activation_nn_attention_nn_linear_nn_norm"
+path = "tests/all_tests_math_math_linalg_nn_activation_nn_attention_nn_linear_nn_norm.rs"
+required-features = ["math", "math-linalg", "nn-activation", "nn-attention", "nn-linear", "nn-norm"]
+
+[[test]]
+name = "all_tests_math_nn_attention"
+path = "tests/all_tests_math_nn_attention.rs"
+required-features = ["math", "nn-attention"]
+
+[[test]]
+name = "all_tests_math_scan"
+path = "tests/all_tests_math_scan.rs"
+required-features = ["math-scan"]
+
+[[test]]
+name = "all_tests_nfa"
+path = "tests/all_tests_nfa.rs"
+required-features = ["nfa"]
+
+[[test]]
+name = "all_tests_nn_activation"
+path = "tests/all_tests_nn_activation.rs"
+required-features = ["nn-activation"]
+
+[[test]]
+name = "all_tests_nn_activation_nn_linear"
+path = "tests/all_tests_nn_activation_nn_linear.rs"
+required-features = ["nn-activation", "nn-linear"]
+
+[[test]]
+name = "all_tests_nn_attention"
+path = "tests/all_tests_nn_attention.rs"
+required-features = ["nn-attention"]
+
+[[test]]
+name = "all_tests_nn_attention_nn_linear_nn_norm"
+path = "tests/all_tests_nn_attention_nn_linear_nn_norm.rs"
+required-features = ["nn-attention", "nn-linear", "nn-norm"]
+
+[[test]]
+name = "all_tests_nn_attention_nn_norm"
+path = "tests/all_tests_nn_attention_nn_norm.rs"
+required-features = ["nn-attention", "nn-norm"]
+
+[[test]]
+name = "all_tests_nn_inference"
+path = "tests/all_tests_nn_inference.rs"
+required-features = ["nn-inference"]
+
+[[test]]
+name = "all_tests_nn_linear"
+path = "tests/all_tests_nn_linear.rs"
+required-features = ["nn-linear"]
+
+[[test]]
+name = "all_tests_nn_norm"
+path = "tests/all_tests_nn_norm.rs"
+required-features = ["nn-norm"]
+
+[[test]]
+name = "all_tests_parsing"
+path = "tests/all_tests_parsing.rs"
+required-features = ["parsing"]
+
+[[test]]
+name = "all_tests_parsing_kernels"
+path = "tests/all_tests_parsing_kernels.rs"
+required-features = ["parsing-kernels"]
+
+[[test]]
+name = "all_tests_pattern"
+path = "tests/all_tests_pattern.rs"
+required-features = ["pattern"]
+
+[[test]]
+name = "all_tests_pattern_kernels"
+path = "tests/all_tests_pattern_kernels.rs"
+required-features = ["pattern-kernels"]
+
+[[test]]
+name = "all_tests_pattern_regex"
+path = "tests/all_tests_pattern_regex.rs"
+required-features = ["pattern-regex"]
+
+[[test]]
+name = "all_tests_pattern_substring"
+path = "tests/all_tests_pattern_substring.rs"
+required-features = ["pattern-substring"]
+
+[[test]]
+name = "all_tests_predicate"
+path = "tests/all_tests_predicate.rs"
+required-features = ["predicate"]
+
+[[test]]
+name = "all_tests_reasoning"
+path = "tests/all_tests_reasoning.rs"
+required-features = ["reasoning"]
+
+[[test]]
+name = "all_tests_reduce"
+path = "tests/all_tests_reduce.rs"
+required-features = ["reduce"]
+
+[[test]]
+name = "all_tests_reduce_telemetry"
+path = "tests/all_tests_reduce_telemetry.rs"
+required-features = ["reduce", "telemetry"]
+
+[[test]]
+name = "all_tests_rule"
+path = "tests/all_tests_rule.rs"
+required-features = ["rule"]
+
+[[test]]
+name = "all_tests_scheduling"
+path = "tests/all_tests_scheduling.rs"
+required-features = ["scheduling"]
+
+[[test]]
+name = "all_tests_solvers"
+path = "tests/all_tests_solvers.rs"
+required-features = ["solvers"]
+
+[[test]]
+name = "all_tests_text"
+path = "tests/all_tests_text.rs"
+required-features = ["text"]
 
 [[example]]
 name = "select1_optimizer_parity"

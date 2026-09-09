@@ -193,6 +193,9 @@ pub mod test_descriptor_surface;
 #[path = "token_ids_have_one_owner.rs"]
 pub mod token_ids_have_one_owner;
 
+/// Integration tests from `tests/declarative_schema_registry_coverage.rs`.
+#[path = "declarative_schema_registry_coverage.rs"]
+pub mod declarative_schema_registry_coverage;
 /// Integration tests from `tests/operation_law_contract_records.rs`.
 #[path = "operation_law_contract_records.rs"]
 pub mod operation_law_contract_records;
