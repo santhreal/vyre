@@ -203,8 +203,8 @@ fn cuda_graph_replay_updates_graph_telemetry_after_reset() {
         "Fix: one cudaGraph replay must record exactly one graph launch."
     );
     assert_eq!(
-        snapshot.kernel_launches, 0,
-        "Fix: graph replay telemetry must not double-count as a direct kernel launch."
+        snapshot.kernel_launches, 1,
+        "Fix: a graph replay executes the kernels captured into the graph, so one replay of a single-kernel program must record one kernel launch. Capture issues `cuLaunchKernel` into the capture stream and records nothing, so this cannot double-count."
     );
     assert_eq!(
         snapshot.host_to_device_bytes,

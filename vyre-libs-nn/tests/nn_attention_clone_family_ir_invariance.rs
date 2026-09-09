@@ -5,18 +5,53 @@
 //! normalize skeleton, the three-pass score/sum/write owner, and the layout
 //! index-map owner. Collapsing a clone family is only safe if the surviving
 //! owner emits exactly what every former copy emitted, so this file pins the
-//! canonical wire fingerprint of every entry point involved. Any change to a
-//! shared helper that is not a deliberate IR change turns these red.
+//! structural IR of every entry point involved.
 //!
-//! What this does not catch: a change that alters the fingerprint on purpose.
-//! That is the point at which a human has to decide whether the new IR is
-//! correct and re-pin the constant.
+//! # Three rules, and what each one alone cannot see
+//!
+//! `clone_family_entry_points_emit_the_pinned_ir` compares each entry point's
+//! canonicalized buffer roster and node tree against a checked-in golden. It
+//! sees a changed operand, a dropped node and a reordered data dependence, and
+//! it reports them as a text diff naming the node that moved. It does not see a
+//! shared owner that stopped being reached while emitting equivalent work.
+//!
+//! `clone_family_entry_points_carry_the_pinned_region_identities` answers that
+//! by name: it pins which shared child regions each entry point embeds.
+//!
+//! `mla_and_flash_attention_2_share_the_online_softmax_skeleton` compares the
+//! two tiled decoders node for node, so neither can reacquire a private copy of
+//! the recurrence while both goldens move together.
+//!
+//! # Why the pin is structural IR and not `Program::fingerprint`
+//!
+//! This file pinned BLAKE3 over `canonical_wire_bytes` for 26 entry points. Wire
+//! bytes open with `WIRE_FORMAT_VERSION`, so every serialization revision moved
+//! all 26 digests at once while no program's meaning moved, and each time the
+//! table was re-pinned by hand from the failure report. A guard that goes red on
+//! a relabelling, reports the difference as 32 opaque bytes, and is answered by
+//! copying the measured numbers back in certifies nothing about the IR. The
+//! rendering is a function of the IR model now, and `harness::structural_ir`
+//! states what that covers and what it deliberately drops.
+//!
+//! # Closure
+//!
+//! The roster is an enum whose `build` and `id` matches have no catch-all arm,
+//! so a 27th member is a compile error until someone builds it and names it.
+//! `the_roster_names_every_declared_entry_point` holds the enum's own
+//! declaration equal to `ALL`, and
+//! `every_public_attention_builder_has_a_recorded_decision` reads the module's
+//! re-export list from source and refuses to pass until a new public builder is
+//! either rostered or recorded as not a clone-family member.
 
 #![forbid(unsafe_code)]
 
-use crate::harness;
+use std::path::PathBuf;
 
-use harness::ir_fingerprint::assert_pinned_ir_fingerprints;
+use crate::harness;
+use harness::structural_ir::{
+    assert_matches_golden, golden_contains, render_golden, render_section, render_structural_ir,
+    write_golden,
+};
 use vyre_foundation::ir::{DataType, Node, Program};
 use vyre_libs_nn::nn::attention::{
     attention, attention_head_to_token, attention_reference, attention_token_to_head,
@@ -76,7 +111,7 @@ fn flash_fixture() -> Program {
 }
 
 /// The layout-move fixture shape, ragged in every axis so a transposed index
-/// derivation cannot produce the same fingerprint.
+/// derivation cannot produce the same IR.
 fn permute_spec(dtype: DataType) -> AttentionPermuteSpec<'static> {
     AttentionPermuteSpec {
         input: "input",
@@ -104,240 +139,452 @@ fn cache_spec(dtype: DataType) -> KvCacheAppendSpec<'static> {
     }
 }
 
-fn entry_points() -> Vec<(&'static str, Program)> {
-    vec![
-        (
-            "recurrent_gated_delta/f32",
-            gated_delta_fixture(recurrent_gated_delta, DataType::F32),
-        ),
-        (
-            "recurrent_gated_delta/f16",
-            gated_delta_fixture(recurrent_gated_delta, DataType::F16),
-        ),
-        (
-            "chunked_gated_delta/f32",
-            gated_delta_fixture(chunked_gated_delta, DataType::F32),
-        ),
-        (
-            "chunked_gated_delta/f16",
-            gated_delta_fixture(chunked_gated_delta, DataType::F16),
-        ),
-        ("mla_decode", mla_fixture()),
-        ("flash_attention_2", flash_fixture()),
-        ("softmax", softmax("input", "output", 1000)),
-        ("layer_norm", layer_norm("input", "output", 1000, 1e-5)),
-        (
-            "flash_attention",
-            flash_attention("q", "k", "v", "out", SEQ_LEN, HEAD_DIM).expect("flash builds"),
-        ),
-        (
-            "flash_attention/direct",
-            flash_attention("q", "k", "v", "out", 4, 4).expect("direct flash builds"),
-        ),
-        (
-            "attention",
-            attention("q", "k", "v", "out", SEQ_LEN, HEAD_DIM),
-        ),
-        ("attention/direct", attention("q", "k", "v", "out", 4, 4)),
-        (
-            "attention_reference",
-            attention_reference("q", "k", "v", "out", 8, 4),
-        ),
-        (
-            "gqa_attention",
-            gqa_attention("q", "k", "v", "out", 4, 2, 8, 4).expect("gqa builds"),
-        ),
-        (
-            "gqa_attention_causal",
-            gqa_attention_causal("q", "k", "v", "out", 2, 4, 2, 3, 8, 4, 2)
-                .expect("causal gqa builds"),
-        ),
-        (
-            "gqa_attention_causal/f16",
-            gqa_attention_causal_typed("q", "k", "v", "out", 2, 4, 2, 3, 8, 4, 2, DataType::F16)
-                .expect("typed causal gqa builds"),
-        ),
-        (
-            "kv_cache_append",
-            kv_cache_append(cache_spec(DataType::F32)).expect("cache builds"),
-        ),
-        (
-            "kv_cache_append/f16",
-            kv_cache_append(cache_spec(DataType::F16)).expect("typed cache builds"),
-        ),
-        (
-            "attention_head_to_token",
-            attention_head_to_token(permute_spec(DataType::F32)).expect("head to token builds"),
-        ),
-        (
-            "attention_head_to_token/f16",
-            attention_head_to_token(permute_spec(DataType::F16))
-                .expect("typed head to token builds"),
-        ),
-        (
-            "attention_token_to_head",
-            attention_token_to_head(permute_spec(DataType::F32)).expect("token to head builds"),
-        ),
-        (
-            "quest_paging",
-            quest_paging("q", "meta", "scores", "io", 8, 3, 4),
-        ),
-        (
-            "partial_rope",
-            partial_rope("input", "cos", "sin", "output", 2, 5, 8, 4),
-        ),
-        ("qk_gain", qk_gain("q_in", "q_out", "gain", 3, 5, 4)),
-        (
-            "turboquant_attention",
-            turboquant_attention("q", "k_packed", "v_packed", "out", 6, 4),
-        ),
-        (
-            "mla_compress_kv",
-            mla_compress_kv("h", "w_dk", "c_out", 6, 4).expect("mla compress builds"),
-        ),
-    ]
+/// One clone-family entry point.
+///
+/// The `build` and `id` matches below have no catch-all arm, so adding a
+/// variant is a compile error in this file until the new member has a fixture
+/// and a name. That is the point at which someone also has to bless a golden
+/// section for it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CloneFamilyEntry {
+    RecurrentGatedDeltaF32,
+    RecurrentGatedDeltaF16,
+    ChunkedGatedDeltaF32,
+    ChunkedGatedDeltaF16,
+    MlaDecode,
+    FlashAttention2,
+    Softmax,
+    LayerNorm,
+    FlashAttention,
+    FlashAttentionDirect,
+    Attention,
+    AttentionDirect,
+    AttentionReference,
+    GqaAttention,
+    GqaAttentionCausal,
+    GqaAttentionCausalF16,
+    KvCacheAppend,
+    KvCacheAppendF16,
+    AttentionHeadToToken,
+    AttentionHeadToTokenF16,
+    AttentionTokenToHead,
+    QuestPaging,
+    PartialRope,
+    QkGain,
+    TurboquantAttention,
+    MlaCompressKv,
 }
 
-/// Canonical wire fingerprints recorded for all clone-family entry points.
+impl CloneFamilyEntry {
+    /// The roster, in golden order.
+    ///
+    /// A const array cannot be exhaustive on its own;
+    /// `the_roster_names_every_declared_entry_point` holds it equal to the enum
+    /// declaration this file carries.
+    const ALL: [Self; 26] = [
+        Self::RecurrentGatedDeltaF32,
+        Self::RecurrentGatedDeltaF16,
+        Self::ChunkedGatedDeltaF32,
+        Self::ChunkedGatedDeltaF16,
+        Self::MlaDecode,
+        Self::FlashAttention2,
+        Self::Softmax,
+        Self::LayerNorm,
+        Self::FlashAttention,
+        Self::FlashAttentionDirect,
+        Self::Attention,
+        Self::AttentionDirect,
+        Self::AttentionReference,
+        Self::GqaAttention,
+        Self::GqaAttentionCausal,
+        Self::GqaAttentionCausalF16,
+        Self::KvCacheAppend,
+        Self::KvCacheAppendF16,
+        Self::AttentionHeadToToken,
+        Self::AttentionHeadToTokenF16,
+        Self::AttentionTokenToHead,
+        Self::QuestPaging,
+        Self::PartialRope,
+        Self::QkGain,
+        Self::TurboquantAttention,
+        Self::MlaCompressKv,
+    ];
+
+    /// Golden section name.
+    fn id(self) -> &'static str {
+        match self {
+            Self::RecurrentGatedDeltaF32 => "recurrent_gated_delta/f32",
+            Self::RecurrentGatedDeltaF16 => "recurrent_gated_delta/f16",
+            Self::ChunkedGatedDeltaF32 => "chunked_gated_delta/f32",
+            Self::ChunkedGatedDeltaF16 => "chunked_gated_delta/f16",
+            Self::MlaDecode => "mla_decode",
+            Self::FlashAttention2 => "flash_attention_2",
+            Self::Softmax => "softmax",
+            Self::LayerNorm => "layer_norm",
+            Self::FlashAttention => "flash_attention",
+            Self::FlashAttentionDirect => "flash_attention/direct",
+            Self::Attention => "attention",
+            Self::AttentionDirect => "attention/direct",
+            Self::AttentionReference => "attention_reference",
+            Self::GqaAttention => "gqa_attention",
+            Self::GqaAttentionCausal => "gqa_attention_causal",
+            Self::GqaAttentionCausalF16 => "gqa_attention_causal/f16",
+            Self::KvCacheAppend => "kv_cache_append",
+            Self::KvCacheAppendF16 => "kv_cache_append/f16",
+            Self::AttentionHeadToToken => "attention_head_to_token",
+            Self::AttentionHeadToTokenF16 => "attention_head_to_token/f16",
+            Self::AttentionTokenToHead => "attention_token_to_head",
+            Self::QuestPaging => "quest_paging",
+            Self::PartialRope => "partial_rope",
+            Self::QkGain => "qk_gain",
+            Self::TurboquantAttention => "turboquant_attention",
+            Self::MlaCompressKv => "mla_compress_kv",
+        }
+    }
+
+    /// The public builder this entry point exercises.
+    ///
+    /// `every_public_attention_builder_has_a_recorded_decision` reads the
+    /// module's re-export list and requires each exported builder to appear
+    /// here or in [`NOT_A_CLONE_FAMILY_MEMBER`].
+    fn builder(self) -> &'static str {
+        match self {
+            Self::RecurrentGatedDeltaF32 | Self::RecurrentGatedDeltaF16 => "recurrent_gated_delta",
+            Self::ChunkedGatedDeltaF32 | Self::ChunkedGatedDeltaF16 => "chunked_gated_delta",
+            Self::MlaDecode => "mla_decode",
+            Self::FlashAttention2 => "flash_attention_2",
+            Self::Softmax => "softmax",
+            Self::LayerNorm => "layer_norm",
+            Self::FlashAttention | Self::FlashAttentionDirect => "flash_attention",
+            Self::Attention | Self::AttentionDirect => "attention",
+            Self::AttentionReference => "attention_reference",
+            Self::GqaAttention => "gqa_attention",
+            Self::GqaAttentionCausal => "gqa_attention_causal",
+            Self::GqaAttentionCausalF16 => "gqa_attention_causal_typed",
+            Self::KvCacheAppend | Self::KvCacheAppendF16 => "kv_cache_append",
+            Self::AttentionHeadToToken | Self::AttentionHeadToTokenF16 => "attention_head_to_token",
+            Self::AttentionTokenToHead => "attention_token_to_head",
+            Self::QuestPaging => "quest_paging",
+            Self::PartialRope => "partial_rope",
+            Self::QkGain => "qk_gain",
+            Self::TurboquantAttention => "turboquant_attention",
+            Self::MlaCompressKv => "mla_compress_kv",
+        }
+    }
+
+    fn build(self) -> Program {
+        match self {
+            Self::RecurrentGatedDeltaF32 => {
+                gated_delta_fixture(recurrent_gated_delta, DataType::F32)
+            }
+            Self::RecurrentGatedDeltaF16 => {
+                gated_delta_fixture(recurrent_gated_delta, DataType::F16)
+            }
+            Self::ChunkedGatedDeltaF32 => gated_delta_fixture(chunked_gated_delta, DataType::F32),
+            Self::ChunkedGatedDeltaF16 => gated_delta_fixture(chunked_gated_delta, DataType::F16),
+            Self::MlaDecode => mla_fixture(),
+            Self::FlashAttention2 => flash_fixture(),
+            Self::Softmax => softmax("input", "output", 1000),
+            Self::LayerNorm => layer_norm("input", "output", 1000, 1e-5),
+            Self::FlashAttention => {
+                flash_attention("q", "k", "v", "out", SEQ_LEN, HEAD_DIM).expect("flash builds")
+            }
+            Self::FlashAttentionDirect => {
+                flash_attention("q", "k", "v", "out", 4, 4).expect("direct flash builds")
+            }
+            Self::Attention => attention("q", "k", "v", "out", SEQ_LEN, HEAD_DIM),
+            Self::AttentionDirect => attention("q", "k", "v", "out", 4, 4),
+            Self::AttentionReference => attention_reference("q", "k", "v", "out", 8, 4),
+            Self::GqaAttention => {
+                gqa_attention("q", "k", "v", "out", 4, 2, 8, 4).expect("gqa builds")
+            }
+            Self::GqaAttentionCausal => {
+                gqa_attention_causal("q", "k", "v", "out", 2, 4, 2, 3, 8, 4, 2)
+                    .expect("causal gqa builds")
+            }
+            Self::GqaAttentionCausalF16 => {
+                gqa_attention_causal_typed("q", "k", "v", "out", 2, 4, 2, 3, 8, 4, 2, DataType::F16)
+                    .expect("typed causal gqa builds")
+            }
+            Self::KvCacheAppend => {
+                kv_cache_append(cache_spec(DataType::F32)).expect("cache builds")
+            }
+            Self::KvCacheAppendF16 => {
+                kv_cache_append(cache_spec(DataType::F16)).expect("typed cache builds")
+            }
+            Self::AttentionHeadToToken => {
+                attention_head_to_token(permute_spec(DataType::F32)).expect("head to token builds")
+            }
+            Self::AttentionHeadToTokenF16 => attention_head_to_token(permute_spec(DataType::F16))
+                .expect("typed head to token builds"),
+            Self::AttentionTokenToHead => {
+                attention_token_to_head(permute_spec(DataType::F32)).expect("token to head builds")
+            }
+            Self::QuestPaging => quest_paging("q", "meta", "scores", "io", 8, 3, 4),
+            Self::PartialRope => partial_rope("input", "cos", "sin", "output", 2, 5, 8, 4),
+            Self::QkGain => qk_gain("q_in", "q_out", "gain", 3, 5, 4),
+            Self::TurboquantAttention => {
+                turboquant_attention("q", "k_packed", "v_packed", "out", 6, 4)
+            }
+            Self::MlaCompressKv => {
+                mla_compress_kv("h", "w_dk", "c_out", 6, 4).expect("mla compress builds")
+            }
+        }
+    }
+}
+
+fn entry_points() -> Vec<(&'static str, Program)> {
+    CloneFamilyEntry::ALL
+        .iter()
+        .map(|entry| (entry.id(), entry.build()))
+        .collect()
+}
+
+/// Path of the structural IR golden.
+fn golden_path() -> PathBuf {
+    harness::crate_dir().join("tests/golden/nn_attention_clone_family_ir.txt")
+}
+
+/// The roster's structural IR, rendered in golden order.
+fn render_corpus() -> String {
+    render_golden(
+        CloneFamilyEntry::ALL
+            .iter()
+            .map(|entry| (entry.id(), render_section(&entry.build()))),
+    )
+}
+
+/// Public `nn::attention` builders that are deliberately not clone-family entry
+/// points, each with the reason.
 ///
-/// The fingerprints across all 26 entry points moved together during integration
-/// due to canonical wire format and IR model unification:
-/// 1. Region attribution `source_region` transitioned from `Option<GeneratorRef>`
-///    to `Option<Ident>` in the AST and wire stream (`c7bdcef`).
-/// 2. Canonical wire serialization unified output-buffer projections via
-///    `OutputSet::encode_from_buffers_into` across the wire framing envelope.
-/// 3. Operation registry and namespace consolidation moved shared builder
-///    and reduction identifiers to canonical paths.
-///
-/// `softmax` and `layer_norm` embed the shared `strided_writeback_child` helper,
-/// carrying `anonymous::vyre-libs::builder::strided_writeback`. By the composition
-/// contract in `vyre_foundation::composition` (`ANONYMOUS_GENERATOR_PREFIXES`),
-/// internal phase boundaries that are not standalone catalog operations use the
-/// `anonymous::` prefix so validation and LEGO composability gates distinguish
-/// phase attribution from catalog operation references without duplicating writeback.
-///
-/// `mla_decode` and `flash_attention_2` continue to share the exact online-softmax
-/// core verified by `mla_and_flash_attention_2_share_the_online_softmax_skeleton`.
-///
-/// `partial_rope` alone moved when its pair base and rotation-table index were
-/// folded through the `dim < rope_dims` predicate that already selected the
-/// result: an `Expr::select` evaluates both arms, so the discarded arm was
-/// issuing a load past the table. The values it computes are unchanged.
-///
-/// Wire revision 8 and the schedule-free identity migration change canonical
-/// bytes for all 26 members. Their value semantics, logical coverage, memory
-/// layout, ABI contracts, and selected-schedule lowering remain separately
-/// covered by the clone-family structure and conformance tests below.
-const EXPECTED: [(&str, &str); 26] = [
+/// A public builder in this module is either a member of a collapsed family, in
+/// which case its IR belongs in the golden, or it is not, in which case someone
+/// has to say why. An export with neither turns
+/// `every_public_attention_builder_has_a_recorded_decision` red.
+const NOT_A_CLONE_FAMILY_MEMBER: [(&str, &str); 9] = [
     (
-        "recurrent_gated_delta/f32",
-        "ad8b55452abc8c9df84f0761d0587ea4984ba5a41df32c3c916f4ce07cf89951",
+        "fused_tile_attention",
+        "tile-dialect builder: emits tile nodes and shares no collapsed helper \
+         with the scalar families",
     ),
     (
-        "recurrent_gated_delta/f16",
-        "c38e3b21d68ef9bb3efdf15efca165c124b485cb66ddd6894e497abcf7d9015f",
+        "paged_attention",
+        "the paged family owns its own three-pass builder rather than the \
+         collapsed score/sum/write owner",
     ),
     (
-        "chunked_gated_delta/f32",
-        "fe22980f42fe08d5c3610cddfec551a1c76067eba0a57fc0574329bfe2cab5da",
+        "paged_cache_append",
+        "paged cache layout, not the kv_cache_append index-map owner",
     ),
     (
-        "chunked_gated_delta/f16",
-        "80cff7b1dc0ba82f93328564a81736edd8060e8f7aea79c08ed93215b3707ae4",
+        "partial_rope_at_offset",
+        "offset wrapper over the partial_rope owner the roster builds",
     ),
     (
-        "mla_decode",
-        "5412b78d2afafe632acb95b1b416a63bf02bab635b384d84d0db8f07b3488d4c",
+        "partial_rope_at_offset_typed",
+        "dtype wrapper over the partial_rope owner the roster builds",
     ),
     (
-        "flash_attention_2",
-        "7402fdb74be1269dfec4e03de7366056b91cbb8dd435b53cdd07bb8b3eeeb5fe",
+        "plan_flash_attention_scalar",
+        "returns a work plan, not a Program",
     ),
     (
-        "softmax",
-        "6d2fa3148318eb1226505ccd2ca1783b980362ad11e866234cc2cc92cf269e11",
+        "plan_flash_attention_tiled",
+        "returns a work plan, not a Program",
     ),
     (
-        "layer_norm",
-        "f234e6b1a719f9063d66447858b5513c4c8a05f4b596edab6ae0d1542a84f520",
+        "try_attention_reference",
+        "fallible form of the rostered attention_reference, same owner",
     ),
     (
-        "flash_attention",
-        "8b73bdbc78a63a193fdc0729cade1d66dad5000aa3fa354f03f0a032a589b7f3",
-    ),
-    (
-        "flash_attention/direct",
-        "c17caada022b988ee65cea65295a63a69a6068760a1de7ac491af4260b6caa48",
-    ),
-    (
-        "attention",
-        "60042fcbb8e8dd457fdee8892444385e6ff6829e00d6eb911eaf37460da488f6",
-    ),
-    (
-        "attention/direct",
-        "938f7860fba056a234be7fb71a5addce1afa86bc477dc1450ac72c1d20cecd3f",
-    ),
-    (
-        "attention_reference",
-        "545af0d3fdec13aad5f12dbe9138e38469a84ac8685dc5d08dd313acfe48c61d",
-    ),
-    (
-        "gqa_attention",
-        "7862f7ad5a76c2dbd7bf14537afe6631b1cda172b281e43f4d0a3ce3d83ad73d",
-    ),
-    (
-        "gqa_attention_causal",
-        "c50f04a2406c4306abd7f2ca4acce4bb2c87c9fda97dff5afbdb411d8bf9b354",
-    ),
-    (
-        "gqa_attention_causal/f16",
-        "c78843c159351f55aacefd2e32d608b98adc30ad8829f0d68404a03b00e709b9",
-    ),
-    (
-        "kv_cache_append",
-        "386b4d87caea752653c3e7181c89d9193d3a56812e3c49ec101c9c9ab5c5f401",
-    ),
-    (
-        "kv_cache_append/f16",
-        "5b27b531ea22186fb596b31db7cb7d844a2ca59a6a3a2e40cbf7f73dd505fdb0",
-    ),
-    (
-        "attention_head_to_token",
-        "3b858c86cbf42d4cbed3c030e180b9fa66adf340a16ae8276d2aabceb4bd33ce",
-    ),
-    (
-        "attention_head_to_token/f16",
-        "bf36c0779d9a8a0c13d8d69ed0de61119cedb255a552a09e03c79c4ddfa3dc7f",
-    ),
-    (
-        "attention_token_to_head",
-        "8d2d6708cdd1f013106a3c96be900b7b11a5fc7b8e2b7bad51a04d2092e0065e",
-    ),
-    (
-        "quest_paging",
-        "789ba90607c500f07a2afeb2c801583c963095ec25e48d5daf8fb87bfda9a913",
-    ),
-    (
-        "partial_rope",
-        "8615b7abe62de44bb463702a7ccb59b3d6481bae0c6fcbaafafef06a01a404f5",
-    ),
-    (
-        "qk_gain",
-        "6babe9ba069f25db576dd122bafd5b069351cf11059b95a61a98d7cdbd6f0849",
-    ),
-    (
-        "turboquant_attention",
-        "9b570a1cbab55be4a9c87f218a8bdf7b45f07830672c32c630700f1ff9d94e20",
-    ),
-    (
-        "mla_compress_kv",
-        "77142f2dbccf10bd4c82c6bda5b6961ffb4af97d050aeb5c21f49e704f06c0aa",
+        "softmax_reference",
+        "scalar reference path; the rostered softmax builds the tiled path that \
+         carries the collapsed reduce owners",
     ),
 ];
 
+/// The structural IR of every clone-family entry point, against the golden.
+///
+/// This is the rule a shared-helper edit turns red. It carries node kinds, field
+/// names, operand expressions, literal values, identifier text, region
+/// generators and nesting, after canonicalization, so a changed operand, a
+/// dropped node or a reordered data dependence moves it and a buffer-table
+/// reorder or a commutative operand swap does not.
 #[test]
 fn clone_family_entry_points_emit_the_pinned_ir() {
-    assert_pinned_ir_fingerprints(&entry_points(), &EXPECTED);
+    assert_matches_golden(&golden_path(), &render_corpus());
+}
+
+/// A golden that no longer names an entry point silently stopped covering it.
+#[test]
+fn the_golden_names_every_roster_entry_point() {
+    let golden = std::fs::read_to_string(golden_path()).expect("structural IR golden must exist");
+    for entry in CloneFamilyEntry::ALL {
+        assert!(
+            golden_contains(&golden, entry.id()),
+            "Fix: the structural IR golden is missing `{}`; re-bless it.",
+            entry.id()
+        );
+    }
+}
+
+/// Every declared roster variant must be in `ALL`.
+///
+/// `ALL` is a const array, so it cannot be exhaustive by itself: a variant added
+/// to the enum and given `build` and `id` arms would still be absent from the
+/// golden with nothing red. The enum declaration is read from this file's own
+/// source, which is the same closure the workspace uses for `Node` and `Expr`
+/// variant coverage.
+#[test]
+fn the_roster_names_every_declared_entry_point() {
+    let source = harness::crate_file("tests/nn_attention_clone_family_ir_invariance.rs");
+    let declared = harness::declared_enum_variants(&source, "enum CloneFamilyEntry {");
+    assert_eq!(
+        declared.len(),
+        CloneFamilyEntry::ALL.len(),
+        "the roster declares {} entry points and ALL names {}; add the new \
+         variant to ALL and bless its golden section",
+        declared.len(),
+        CloneFamilyEntry::ALL.len()
+    );
+    let named: std::collections::BTreeSet<String> = CloneFamilyEntry::ALL
+        .iter()
+        .map(|entry| format!("{entry:?}"))
+        .collect();
+    assert_eq!(
+        declared, named,
+        "the roster declaration and ALL name different entry points"
+    );
+}
+
+/// Every public builder `nn::attention` re-exports is either rostered or
+/// recorded as not a clone-family member.
+///
+/// The export list is read from `nn/attention/mod.rs` at run time, so a 27th
+/// public builder turns this red until a decision exists for it. A hand-typed
+/// list of covered builders would go stale in silence instead, which is the
+/// same failure as having no coverage rule.
+///
+/// `layer_norm` is rostered and lives in `nn::norm`, so it has no export in this
+/// module; the check runs one way, from exports to decisions.
+#[test]
+fn every_public_attention_builder_has_a_recorded_decision() {
+    let source = harness::crate_file("src/nn/attention/mod.rs");
+    let exported = reexported_builder_names(&source);
+    assert!(
+        exported.len() >= 20,
+        "read only {} public builders out of nn/attention/mod.rs; the \
+         re-export parser no longer matches the module",
+        exported.len()
+    );
+
+    let rostered: std::collections::BTreeSet<&str> = CloneFamilyEntry::ALL
+        .iter()
+        .map(|entry| entry.builder())
+        .collect();
+    let excluded: std::collections::BTreeSet<&str> = NOT_A_CLONE_FAMILY_MEMBER
+        .iter()
+        .map(|(name, _)| *name)
+        .collect();
+
+    let undecided: Vec<&String> = exported
+        .iter()
+        .filter(|name| !rostered.contains(name.as_str()) && !excluded.contains(name.as_str()))
+        .collect();
+    assert!(
+        undecided.is_empty(),
+        "nn::attention exports {undecided:?} with no recorded decision. Fix: \
+         add each to the CloneFamilyEntry roster and bless its golden section, \
+         or record it in NOT_A_CLONE_FAMILY_MEMBER with the reason it is not a \
+         clone-family entry point."
+    );
+
+    let stale: Vec<&&str> = excluded
+        .iter()
+        .filter(|name| !exported.contains(&(**name).to_string()))
+        .collect();
+    assert!(
+        stale.is_empty(),
+        "NOT_A_CLONE_FAMILY_MEMBER records {stale:?}, which nn::attention no \
+         longer exports. Fix: drop the stale rows."
+    );
+
+    let both: Vec<&&str> = excluded
+        .iter()
+        .filter(|name| rostered.contains(**name))
+        .collect();
+    assert!(
+        both.is_empty(),
+        "{both:?} is both rostered and recorded as not a clone-family member"
+    );
+}
+
+/// Snake-case item names a module re-exports, which are its public builders.
+///
+/// Types, errors and constants are named in the other two cases, so the initial
+/// character decides: lowercase is a function, uppercase is a type or a
+/// constant.
+fn reexported_builder_names(source: &str) -> std::collections::BTreeSet<String> {
+    let mut names = std::collections::BTreeSet::new();
+    let mut rest = source;
+    while let Some((_, after)) = rest.split_once("pub use ") {
+        let (statement, tail) = after.split_once(';').unwrap_or((after, ""));
+        rest = tail;
+        let items = statement.split_once('{').map_or_else(
+            || statement.rsplit("::").next().unwrap_or(""),
+            |(_, braced)| braced.split_once('}').map_or(braced, |(inner, _)| inner),
+        );
+        for item in items.split(',') {
+            let item = item.trim();
+            let item = item.rsplit("::").next().unwrap_or(item).trim();
+            if item.starts_with(|character: char| character.is_ascii_lowercase())
+                && item
+                    .chars()
+                    .all(|character| character.is_ascii_alphanumeric() || character == '_')
+            {
+                names.insert(item.to_string());
+            }
+        }
+    }
+    names
+}
+
+/// The rendering must be a pure function of the program.
+///
+/// A renderer that read an address, a cache or an iteration order would match
+/// the golden once and diverge on the next run, which reads as an IR change.
+#[test]
+fn structural_ir_is_deterministic_across_builds() {
+    assert_eq!(render_corpus(), render_corpus());
+}
+
+#[test]
+#[ignore = "bless: rewrites the pinned structural IR golden; run deliberately and review the diff"]
+fn bless_pinned_structural_ir_golden() {
+    write_golden(&golden_path(), &render_corpus());
+}
+
+/// Write the full structural IR of every entry point under the test target
+/// directory, for reading a digest move the histograms do not explain.
+///
+/// The golden pins a digest over this rendering rather than the rendering
+/// itself, because two direct-path fixtures unroll to about 53000 lines each
+/// and the corpus would be ten megabytes. This is how a maintainer gets the
+/// text: run it on both sides of the change and diff the two trees.
+#[test]
+#[ignore = "diagnostic: writes the full structural IR rendering, for diffing a digest move"]
+fn dump_full_structural_ir() {
+    let out = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("nn_attention_structural_ir");
+    for entry in CloneFamilyEntry::ALL {
+        write_golden(
+            &out.join(format!("{}.ir.txt", entry.id().replace('/', "_"))),
+            &render_structural_ir(&entry.build()),
+        );
+    }
+    println!(
+        "wrote the full structural IR of 26 entry points to {}",
+        out.display()
+    );
 }
 
 /// Body of the innermost region an entry point wraps its kernel in.
@@ -588,17 +835,16 @@ const EXPECTED_IDENTITIES: [(&str, &[&str]); 26] = [
     ("mla_compress_kv", &["vyre-libs::nn::mla_compress_kv"]),
 ];
 
-/// A generator identity is part of the wire encoding, so renaming one moves
-/// every fingerprint that embeds it. `clone_family_entry_points_emit_the_pinned_ir`
-/// sees that as an opaque 32-byte difference and cannot say whether the IR or
-/// only a name moved. This rule answers that question by name.
+/// Which shared child regions each entry point embeds, by name.
 ///
-/// It also pins which entry points share a child region: an owner that stops
-/// being reused, or a builder that reacquires a private copy of a collapsed
-/// loop, changes this set even when the emitted work is equivalent.
+/// The golden sees an identity rename as a text difference but cannot say
+/// whether the work behind it moved. This rule answers that half: it pins the
+/// reuse graph, so an owner that stops being reached, or a builder that
+/// reacquires a private copy of a collapsed loop, is named even when the
+/// emitted work is equivalent.
 ///
 /// What this does not catch: an IR change that keeps every identity, which is
-/// what the fingerprint pin is for. The two rules are complements.
+/// what the golden is for. The two rules are complements.
 #[test]
 fn clone_family_entry_points_carry_the_pinned_region_identities() {
     let observed: Vec<(&'static str, Vec<String>)> = entry_points()

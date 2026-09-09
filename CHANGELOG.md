@@ -4427,6 +4427,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   AccuracyPlan::exhaustive_conformance_required. Comparing a device result
   against a reference belongs to the conformance harness, which reports a
   mismatch rather than substituting the host answer.
+- The four driver crates publish each item at one path. `support_certificate`
+  in `vyre-driver` and `external_resource` in `vyre-driver-cuda`,
+  `vyre-driver-metal` and `vyre-driver-wgpu` are file splits of the crate root,
+  so `FactStatus`, `ProductionPathFact`, `ProductionPathStage`,
+  `SupportCertificate`, `SupportCertificateRegistry`, `SupportStatus`,
+  `SUPPORT_CERTIFICATE_SCHEMA` and each backend's external memory descriptor,
+  memory handle, resource importer and imported record are reachable at the
+  crate root and nowhere else. Those four module paths and the 96 items they
+  restated left the published surface.
 - The infallible wrappers `vyre_driver::grid_sync::split_on_grid_sync`,
   `vyre_driver::cache_eviction_heat::entries_to_evict`,
   `vyre_runtime::scheduler::WorkStealingScheduler::partition`,
@@ -4771,6 +4780,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   C-frontend test files or parser release artifacts. Diagnostic and
   preprocessing conformance now belongs to the live frontend and conformance
   paths.
+- The `vyre-libs-builder` crate root no longer re-exports its plumbing.
+  `telemetry`, `contracts` and `operation_catalog`, and the contents of
+  `dispatch_buffers`, `program_cache`, `scratch`, `buffer_names`,
+  `element_zero`, `shape`, `tensor_ref`, `attribution`, `descriptor`, `outputs`
+  and `signatures`, are reachable only through `plumbing::host`,
+  `plumbing::operand`, `plumbing::program` and `plumbing::registration`.
 - The `vyre` crate root no longer re-exports the compile surface. `Artifact`,
   `ArtifactEnvelope`, `ArtifactPortfolio`, `CompileObjective`,
   `CompileRequest`, `DeviceFacts`, `Digest`, `ExternalFacts`,
@@ -5328,6 +5343,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   and rewires the values the node reads. It previously bounds-checked the node
   id, marked the closure dirty, and returned a graph identical to the one it
   was applied to.
+- A CUDA graph replay records the kernel launches it executes, so
+  `cuda_kernel_launches` counts the kernels a graph-dispatched program runs on
+  the device instead of only those issued through `cuLaunchKernel`. The
+  resident optimizer pipeline dispatches entirely through captured graphs, so
+  it reported seven graph launches and zero kernel launches per run, and every
+  consumer of that counter read zero device work for a pipeline that was
+  executing.
 - Semantic execution resolves each graph value to its artifact ABI value by
   resource name. Reading the graph number as the artifact number returned a
   whole-grid fence carrier under the output's name whenever compilation
@@ -5727,6 +5749,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   gone, each reference has one name, and the exploded arm now asserts what the
   substrate actually owes: the CSR the reference builds is the declared one,
   with one row offset per node plus the terminator.
+- The registered CUDA backend resolves one shared device handle for both its
+  dispatch facet and its materializer facet. Each facet used to call
+  `CudaBackend::acquire()` on every request, so a seven-stage resident
+  optimizer run built seven device generations, each with an empty module
+  cache, empty allocation pools, a private resident store whose handles the
+  other generations reject, and private telemetry counters that no caller could
+  read. One run of the resident optimizer pipeline on an RTX 3080 Ti cost 48.2
+  ms and reported zero host-to-device bytes, zero readback bytes and zero
+  synchronization points; it now costs 35.3 ms and reports 6028 host-to-device
+  bytes, 1224 readback bytes and 21 synchronization points.
 - Nine registered floating-point operations left a multiply feeding an add for
   a backend to contract on its own, so a device took one rounding where the
   reference took two. `vyre-libs::math::dot_partial`, the attention max, sum
@@ -6325,6 +6357,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   program holding a NaN literal is equal to itself and reaches an optimizer
   fixpoint rather than failing every dispatch at the iteration cap, and `0.0`
   and `-0.0` are two literals.
+- The nn-attention clone-family IR invariance gate pins the canonicalized IR
+  model instead of a BLAKE3 digest of the wire encoding. Wire bytes open with
+  the wire format version, so every serialization revision moved all 26 pinned
+  entry points at once while no program changed, and the table was re-pinned by
+  hand from the failure report each time; the gate now reports a changed
+  operand, a dropped node or a reordered data dependence as a diff naming the
+  entry point, and a serialization revision leaves it green.
 - The generated operation schema reads the tier and the enabling features each
   operation registers instead of deriving them from the identifier. Reading the
   vyre-primitives and vyre-libs prefixes reported 163 intrinsics against 164
