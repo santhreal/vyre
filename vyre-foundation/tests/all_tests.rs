@@ -822,3 +822,6 @@ pub mod region_fusion_contracts;
 /// Integration tests from `tests/schema_authority_contract.rs`.
 #[path = "schema_authority_contract.rs"]
 pub mod schema_authority_contract;
+/// Integration tests from `tests/compiler_substrate_contract.rs` (Row 89).
+#[path = "compiler_substrate_contract.rs"]
+pub mod compiler_substrate_contract;
