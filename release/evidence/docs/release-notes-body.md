@@ -1139,6 +1139,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A dispatch carries one complete launch, so a resident step submits the
   workgroup it states instead of running its grid under the program's declared
   shape.
+- A `vyre-libs-*` domain crate's `link_anchor` returns nothing. Every anchor
+  reported the whole process-wide library operation catalog, so
+  `vyre_libs::link_anchor` summing them returned the catalog size multiplied by
+  the number of enabled domains. `vyre_libs::link_anchor` still returns `usize`
+  and now reads the registry once.
 - A file name states what the file holds, and the gate now judges every tree a
   crate compiles rather than src/ alone. The prohibition on names like common,
   support, helpers, types and utils was written for library modules and never
@@ -2147,6 +2152,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Selection cost prices instruction, matrix-engine, rendezvous and idle-lane
   work from reported device facts, records every term's unit and provenance,
   and rejects a register allocation only above the architectural ceiling.
+- `vyre-foundation` publishes each item at one path: configuration and recovery
+  items are addressed through `config_schema` and `failure_domain` instead of
+  the crate root, `ShapeExprId` through `types` instead of `ir`, and the
+  file-split submodules of `execution_plan::fusion` and `schedule` are private
+  behind the module that re-exports them.
 - Every library composition in vyre-libs sits behind a feature. The text,
   representation, parsing and graph module trees were declared with no cfg, so
   forty-two files submitted an operation registration in every build that
@@ -3645,6 +3655,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   a program whose second buffer had a different access produced a fingerprint
   the fixture could not distinguish. It now walks every buffer with that
   buffer's own access.
+- Runtime structured concurrency, atomic recovery and the io_uring completion
+  pump are reached at `vyre_runtime::structured_concurrency`,
+  `vyre_runtime::atomic_recovery` and `vyre_runtime::uring_completion_pump`,
+  and the tenant quota at `vyre_runtime::tenant::TenantQuota`. The crate root
+  re-exported the contents of all three modules, twice through a glob, and
+  `session_quota` re-exported `tenant::TenantQuota` into a root glob of its
+  own, so 43 published items carried two paths and nothing in the source stated
+  which one a consumer writes. The root re-exports are gone and every caller
+  names the owning module.
 - Vyre runtime exports only generic bounded routed queues, speculative state
   transactions, retained-page caches, paged resources, and typed transfers
   without model-specific concepts.
@@ -4032,6 +4051,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `vyre-runtime/ARCHITECTURE.md` described three types that do not exist and a
   directory that no longer did; it now describes the real submodules and the
   real public surface.
+- The `vyre-spec` schema registry surface publishes only at
+  `vyre_spec::schema_registry`; the crate-root re-exports of `SchemaId`,
+  `SchemaRegistry`, `SchemaDefinition`, `SchemaBounds`, `CanonicalField`,
+  `DefaultsPolicy`, `FieldType`, and `CANONICAL_SCHEMA_REGISTRY` are gone.
+  `vyre_foundation` re-exports all eight at its own root as before.
 - The marker trait that seals the driver, optimizer and registry traits lives
   in a module named sealed rather than private, and vyre-driver publishes it at
   vyre_driver::sealed. A module name states what a module contains, not who may

@@ -45,7 +45,7 @@ pub fn vyre_libs_analysis::analysis::knowledge_compile_pass_precondition::pass_a
 pub fn vyre_libs_analysis::analysis::knowledge_compile_pass_precondition::pass_conflicts_via(dispatcher: &impl vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, nodes: &[(u32, u32, u32)], node_var: &[u32], children: &[u32], var_assignments: &[u32], waves: &[alloc::vec::Vec<u32>]) -> core::result::Result<bool, vyre_megakernel::execution::SemanticExecutionError>
 pub fn vyre_libs_analysis::analysis::persistent_fixpoint_program::persistent_fixpoint_program(transfer_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, current: &str, next: &str, changed: &str, words: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_analysis::analysis::persistent_fixpoint_program::persistent_fixpoint_program_route(words: u32, max_iterations: u32) -> vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointRoute
-pub fn vyre_libs_analysis::link_anchor() -> usize
+pub fn vyre_libs_analysis::link_anchor()
 pub mod vyre_libs_analysis
 pub mod vyre_libs_analysis::analysis
 pub mod vyre_libs_analysis::analysis::cost_model

@@ -31,7 +31,7 @@ pub fn vyre_libs_device::device::gpu_probe_contract::GpuProbeContractError::fmt(
 pub fn vyre_libs_device::device::gpu_probe_contract::validate_gpu_probe_contract(records: &[vyre_libs_device::device::gpu_probe_contract::GpuProbeRecord<'_>]) -> core::result::Result<vyre_libs_device::device::gpu_probe_contract::GpuProbeContractProof, vyre_libs_device::device::gpu_probe_contract::GpuProbeContractError>
 pub fn vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_libs_device::device::memory_ownership_contract::validate_memory_ownership_contract(records: &[vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipRecord<'_>]) -> core::result::Result<vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipProof, vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError>
-pub fn vyre_libs_device::link_anchor() -> usize
+pub fn vyre_libs_device::link_anchor()
 pub mod vyre_libs_device
 pub mod vyre_libs_device::device
 pub mod vyre_libs_device::device::device_resident_token_fact_graph

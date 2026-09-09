@@ -1,0 +1,202 @@
+impl vyre_libs_security::security::SanitizedFlowExecutionMode
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs_security::security::AuthCheckDominates
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs_security::security::BufferSizeCheck
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs_security::security::FormatStringCheck
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs_security::security::IntegerOverflowArith
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs_security::security::LockDominates
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs_security::security::PathCanonical
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs_security::security::SanitizerDominates
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs_security::security::SinkIntersection
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs_security::security::SqlParamBound
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs_security::security::TaintKill
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs_security::security::TaintPollution
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs_security::security::UncheckedReturn
+impl vyre_spec::soundness::SoundnessTagged for vyre_libs_security::security::XssEscape
+pub const fn vyre_libs_security::predicate::edge_kind::call_arg_slot(n: u32) -> u32
+pub const fn vyre_libs_security::security::SanitizedFlowExecutionMode::is_converged_fixpoint(self) -> bool
+pub const fn vyre_libs_security::security::SanitizedFlowExecutionMode::label(self) -> &'static str
+pub const fn vyre_libs_security::security::sanitized_flow_soundness_contract(mode: vyre_libs_security::security::SanitizedFlowExecutionMode) -> vyre_libs_security::security::SanitizedFlowSoundnessContract
+pub const vyre_libs_security::label::nodeset_filter::OP_ID: &str
+pub const vyre_libs_security::label::resolve_family::OP_ID: &str
+pub const vyre_libs_security::predicate::arg_of::OP_ID: &str
+pub const vyre_libs_security::predicate::call_to::OP_ID: &str
+pub const vyre_libs_security::predicate::edge::OP_ID: &str
+pub const vyre_libs_security::predicate::edge_kind::ALIAS: u32
+pub const vyre_libs_security::predicate::edge_kind::ASSIGNMENT: u32
+pub const vyre_libs_security::predicate::edge_kind::BASE: u32
+pub const vyre_libs_security::predicate::edge_kind::BLOCK_MEMBER: u32
+pub const vyre_libs_security::predicate::edge_kind::CALL_ARG: u32
+pub const vyre_libs_security::predicate::edge_kind::CALL_ARG_0: u32
+pub const vyre_libs_security::predicate::edge_kind::CALL_ARG_1: u32
+pub const vyre_libs_security::predicate::edge_kind::CALL_ARG_2: u32
+pub const vyre_libs_security::predicate::edge_kind::CALL_ARG_3: u32
+pub const vyre_libs_security::predicate::edge_kind::CALL_ARG_4: u32
+pub const vyre_libs_security::predicate::edge_kind::CALL_ARG_5: u32
+pub const vyre_libs_security::predicate::edge_kind::CALL_ARG_6: u32
+pub const vyre_libs_security::predicate::edge_kind::CALL_ARG_7: u32
+pub const vyre_libs_security::predicate::edge_kind::CALL_ARG_MAX_SLOT: u32
+pub const vyre_libs_security::predicate::edge_kind::CALL_ARG_SLOT_BASE: u32
+pub const vyre_libs_security::predicate::edge_kind::CONTROL: u32
+pub const vyre_libs_security::predicate::edge_kind::DOMINANCE: u32
+pub const vyre_libs_security::predicate::edge_kind::FORMAT_STRING_ARG: u32
+pub const vyre_libs_security::predicate::edge_kind::INDEX: u32
+pub const vyre_libs_security::predicate::edge_kind::INDUCTION_VARIABLE: u32
+pub const vyre_libs_security::predicate::edge_kind::MEM_LOAD: u32
+pub const vyre_libs_security::predicate::edge_kind::MEM_STORE: u32
+pub const vyre_libs_security::predicate::edge_kind::MUT_REF: u32
+pub const vyre_libs_security::predicate::edge_kind::PHI: u32
+pub const vyre_libs_security::predicate::edge_kind::RETURN: u32
+pub const vyre_libs_security::predicate::edge_kind::SIZE_ARG: u32
+pub const vyre_libs_security::predicate::edge_kind::UPPER_BOUND: u32
+pub const vyre_libs_security::predicate::in_file::OP_ID: &str
+pub const vyre_libs_security::predicate::in_function::OP_ID: &str
+pub const vyre_libs_security::predicate::in_package::OP_ID: &str
+pub const vyre_libs_security::predicate::literal_of::OP_ID: &str
+pub const vyre_libs_security::predicate::node_kind::BASIC_BLOCK: u32
+pub const vyre_libs_security::predicate::node_kind::BINARY: u32
+pub const vyre_libs_security::predicate::node_kind::CALL: u32
+pub const vyre_libs_security::predicate::node_kind::FUNCTION_DECL: u32
+pub const vyre_libs_security::predicate::node_kind::IMPORT: u32
+pub const vyre_libs_security::predicate::node_kind::LITERAL: u32
+pub const vyre_libs_security::predicate::node_kind::SSA: u32
+pub const vyre_libs_security::predicate::node_kind::VARIABLE: u32
+pub const vyre_libs_security::predicate::node_kind_eq::OP_ID: &str
+pub const vyre_libs_security::predicate::return_value_of::OP_ID: &str
+pub const vyre_libs_security::predicate::size_argument_of::OP_ID: &str
+pub const vyre_libs_security::predicate::tag_family::FILE: u32
+pub const vyre_libs_security::predicate::tag_family::FUNCTION: u32
+pub const vyre_libs_security::predicate::tag_family::PACKAGE: u32
+pub const vyre_libs_security::security::ALIAS_PROPAGATION_MASK: u32
+pub const vyre_libs_security::security::FIXPOINT_OP_ID: &str
+pub const vyre_libs_security::security::FLOWS_TO_MASK: u32
+pub const vyre_libs_security::security::OP_ID: &str
+pub const vyre_libs_security::security::family_mask::ALLOCATOR: u32
+pub const vyre_libs_security::security::family_mask::BOUNDED_COPY_OR_LENGTH_CHECK_LAUNCH: u32
+pub const vyre_libs_security::security::family_mask::CANONICAL_BITS: &[(&str, u32)]
+pub const vyre_libs_security::security::family_mask::COMPARISON_OP: u32
+pub const vyre_libs_security::security::family_mask::COPY_FROM_USER: u32
+pub const vyre_libs_security::security::family_mask::COPY_TO_USER: u32
+pub const vyre_libs_security::security::family_mask::DECODE: u32
+pub const vyre_libs_security::security::family_mask::FREE: u32
+pub const vyre_libs_security::security::family_mask::GETS_LAUNCH: u32
+pub const vyre_libs_security::security::family_mask::INFLATE: u32
+pub const vyre_libs_security::security::family_mask::OVERFLOW_CHECK: u32
+pub const vyre_libs_security::security::family_mask::POINTER_USE_LAUNCH: u32
+pub const vyre_libs_security::security::family_mask::PRINTF_LAUNCH: u32
+pub const vyre_libs_security::security::family_mask::PRIVILEGE_CHECK: u32
+pub const vyre_libs_security::security::family_mask::PRIVILEGE_USE: u32
+pub const vyre_libs_security::security::family_mask::REASSIGN_NULL_AFTER_FREE_LAUNCH: u32
+pub const vyre_libs_security::security::family_mask::RECEIVE: u32
+pub const vyre_libs_security::security::family_mask::SANITIZER: u32
+pub const vyre_libs_security::security::family_mask::SINK_FILESYSTEM: u32
+pub const vyre_libs_security::security::family_mask::SINK_PROCESS: u32
+pub const vyre_libs_security::security::family_mask::SOURCE_NETWORK: u32
+pub const vyre_libs_security::security::family_mask::TYPE_CAST_UNCHECKED: u32
+pub const vyre_libs_security::security::family_mask::TYPE_TAG_CHECK_LAUNCH: u32
+pub const vyre_libs_security::security::family_mask::UNBOUNDED_COPY_LAUNCH: u32
+pub const vyre_libs_security::security::family_mask::UNBOUNDED_SPRINTF_LAUNCH: u32
+pub enum vyre_libs_security::label::nodeset_filter::NodeSetFilter
+pub enum vyre_libs_security::security::SanitizedFlowExecutionMode
+pub fn vyre_libs_security::label::nodeset_filter::nodeset_filter(values: &str, nodeset_out: &str, node_count: u32, filter: vyre_libs_security::label::nodeset_filter::NodeSetFilter) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::label::resolve_family::resolve_family(node_tags: &str, nodeset_out: &str, node_count: u32, family_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::link_anchor()
+pub fn vyre_libs_security::predicate::arg_of::arg_of(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::predicate::arg_of::arg_of_slot(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str, slot: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::predicate::call_to::call_to(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::predicate::edge::edge(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str, edge_kind_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::predicate::in_file::in_file(node_tags: &str, nodeset_out: &str, node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::predicate::in_function::in_function(node_tags: &str, nodeset_out: &str, node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::predicate::in_package::in_package(node_tags: &str, nodeset_out: &str, node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::predicate::literal_of::literal_of(nodes: &str, nodeset_out: &str, node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::predicate::node_kind_eq::node_kind_eq(nodes: &str, nodeset_out: &str, node_count: u32, kind: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::predicate::return_value_of::return_value_of(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::predicate::size_argument_of::size_argument_of(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::AuthCheckDominates::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs_security::security::BufferSizeCheck::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs_security::security::FormatStringCheck::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs_security::security::IntegerOverflowArith::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs_security::security::LockDominates::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs_security::security::PathCanonical::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs_security::security::SanitizerDominates::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs_security::security::SinkIntersection::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs_security::security::SqlParamBound::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs_security::security::TaintKill::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs_security::security::TaintPollution::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs_security::security::UncheckedReturn::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs_security::security::XssEscape::soundness(&self) -> vyre_spec::soundness::Soundness
+pub fn vyre_libs_security::security::aliases_dataflow(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, x_buf: &str, y_buf: &str, reach_x_buf: &str, reach_y_buf: &str, hop_x_buf: &str, hop_y_buf: &str, x_in_y_buf: &str, y_in_x_buf: &str, out_buf: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::auth_check_dominates(node_count: u32, auth_doms: &str, sensitive_op_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::bounded_by_comparison(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::buffer_size_check(node_count: u32, size_compared: &str, user_input_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::dominance_predecessors(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::family_mask::canonical_family_mask(family: &str) -> core::option::Option<u32>
+pub fn vyre_libs_security::security::family_mask::resolve_label_family_mask(family: &str) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_libs_security::security::flows_to(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::flows_to_alias_only(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::flows_to_to_sink(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, source_buf: &str, sink_buf: &str, reach_buf: &str, hits_buf: &str, out_scalar_buf: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::flows_to_with_sanitizer(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, source_buf: &str, sink_buf: &str, sanitizer_buf: &str, clean_buf: &str, reach_buf: &str, alive_buf: &str, hits_buf: &str, out_scalar_buf: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::format_string_check(node_count: u32, format_arg_pts: &str, non_literal_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::integer_overflow_arith(node_count: u32, arith_set: &str, attacker_reach: &str, overflow_check_dominates: &str, intermediate: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::label_by_family(node_tags: &str, nodeset_out: &str, node_count: u32, family_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::lock_dominates(node_count: u32, lock_doms: &str, shared_access_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::path_canonical(node_count: u32, canonicalizer_dominates: &str, fs_op_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::sanitized_by(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, sanitizers_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::sanitized_flow_final_soundness_contract(mode: vyre_libs_security::security::SanitizedFlowExecutionMode) -> core::result::Result<vyre_libs_security::security::SanitizedFlowSoundnessContract, vyre_libs_security::security::SanitizedFlowContractViolation>
+pub fn vyre_libs_security::security::sanitizer_dominates(node_count: u32, sanitizer_doms: &str, sink_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::sink_intersection(node_count: u32, query_set: &str, sink_set: &str, intersect_buf: &str, out_scalar: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::sql_param_bound(node_count: u32, param_binding_set: &str, sql_query_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::taint_flow(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::taint_kill(node_count: u32, frontier_in: &str, kill_set: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::taint_pollution(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, source_buf: &str, label_set: &str, reach_buf: &str, hits_buf: &str, out_scalar: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::try_aliases_dataflow(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, x_buf: &str, y_buf: &str, reach_x_buf: &str, reach_y_buf: &str, hop_x_buf: &str, hop_y_buf: &str, x_in_y_buf: &str, y_in_x_buf: &str, out_buf: &str) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_foundation::execution_plan::fusion::FusionError>
+pub fn vyre_libs_security::security::unchecked_return(node_count: u32, use_set: &str, check_dominates: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_security::security::xss_escape(node_count: u32, escape_dominates: &str, render_set: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub mod vyre_libs_security
+pub mod vyre_libs_security::label
+pub mod vyre_libs_security::label::nodeset_filter
+pub mod vyre_libs_security::label::resolve_family
+pub mod vyre_libs_security::predicate
+pub mod vyre_libs_security::predicate::arg_of
+pub mod vyre_libs_security::predicate::call_to
+pub mod vyre_libs_security::predicate::edge
+pub mod vyre_libs_security::predicate::edge_kind
+pub mod vyre_libs_security::predicate::in_file
+pub mod vyre_libs_security::predicate::in_function
+pub mod vyre_libs_security::predicate::in_package
+pub mod vyre_libs_security::predicate::literal_of
+pub mod vyre_libs_security::predicate::node_kind
+pub mod vyre_libs_security::predicate::node_kind_eq
+pub mod vyre_libs_security::predicate::return_value_of
+pub mod vyre_libs_security::predicate::size_argument_of
+pub mod vyre_libs_security::predicate::tag_family
+pub mod vyre_libs_security::security
+pub mod vyre_libs_security::security::family_mask
+pub struct vyre_libs_security::security::AuthCheckDominates
+pub struct vyre_libs_security::security::BufferSizeCheck
+pub struct vyre_libs_security::security::FormatStringCheck
+pub struct vyre_libs_security::security::IntegerOverflowArith
+pub struct vyre_libs_security::security::LockDominates
+pub struct vyre_libs_security::security::PathCanonical
+pub struct vyre_libs_security::security::SanitizedFlowContractViolation
+pub struct vyre_libs_security::security::SanitizedFlowSoundnessContract
+pub struct vyre_libs_security::security::SanitizerDominates
+pub struct vyre_libs_security::security::SinkIntersection
+pub struct vyre_libs_security::security::SqlParamBound
+pub struct vyre_libs_security::security::TaintKill
+pub struct vyre_libs_security::security::TaintPollution
+pub struct vyre_libs_security::security::UncheckedReturn
+pub struct vyre_libs_security::security::XssEscape
+pub vyre_libs_security::label::nodeset_filter::NodeSetFilter::Eq(u32)
+pub vyre_libs_security::label::nodeset_filter::NodeSetFilter::Intersects(u32)
+pub vyre_libs_security::security::SanitizedFlowContractViolation::fix: &'static str
+pub vyre_libs_security::security::SanitizedFlowContractViolation::mode: vyre_libs_security::security::SanitizedFlowExecutionMode
+pub vyre_libs_security::security::SanitizedFlowContractViolation::soundness: vyre_spec::soundness::Soundness
+pub vyre_libs_security::security::SanitizedFlowExecutionMode::FixpointConverged
+pub vyre_libs_security::security::SanitizedFlowExecutionMode::FixpointConverged::iterations: u32
+pub vyre_libs_security::security::SanitizedFlowExecutionMode::OneStep
+pub vyre_libs_security::security::SanitizedFlowSoundnessContract::external_fact_kind: vyre_spec::analysis::AnalysisFactKind
+pub vyre_libs_security::security::SanitizedFlowSoundnessContract::external_role: &'static str
+pub vyre_libs_security::security::SanitizedFlowSoundnessContract::mode: vyre_libs_security::security::SanitizedFlowExecutionMode
+pub vyre_libs_security::security::SanitizedFlowSoundnessContract::op_id: &'static str
+pub vyre_libs_security::security::SanitizedFlowSoundnessContract::sanitizer_filter: bool
+pub vyre_libs_security::security::SanitizedFlowSoundnessContract::soundness: vyre_spec::soundness::Soundness

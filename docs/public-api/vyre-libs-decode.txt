@@ -62,7 +62,7 @@ pub fn vyre_libs_decode::decode::streaming::fuse_decode_scan(decoder: vyre_found
 pub fn vyre_libs_decode::decode::ziftsieve::ziftsieve_gpu(buffers: vyre_libs_decode::decode::ziftsieve::ZiftsieveBuffers<'_>, extents: vyre_libs_decode::decode::ziftsieve::ZiftsieveExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_decode::decode::ziftsieve::ziftsieve_literal_copy(buffers: vyre_libs_decode::decode::ziftsieve::ZiftsieveBuffers<'_>, extents: vyre_libs_decode::decode::ziftsieve::ZiftsieveExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_decode::decode::ziftsieve::ziftsieve_literal_copy_body(buffers: vyre_libs_decode::decode::ziftsieve::ZiftsieveBuffers<'_>, seq_count: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_libs_decode::link_anchor() -> usize
+pub fn vyre_libs_decode::link_anchor()
 pub mod vyre_libs_decode
 pub mod vyre_libs_decode::decode
 pub mod vyre_libs_decode::decode::base64
