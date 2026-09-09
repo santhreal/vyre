@@ -663,10 +663,17 @@ impl ProofMethod {
     /// Whether this method provides executable proof evidence.
     #[must_use]
     pub const fn has_executable_proof(&self) -> bool {
-        !matches!(self, Self::None)
+        match self {
+            Self::None => false,
+            Self::WitnessedU32 { count, .. } => *count > 0,
+            Self::ExhaustiveU8
+            | Self::ExhaustiveU16
+            | Self::ExhaustiveFloat { .. }
+            | Self::SmtQfBv { .. }
+            | Self::DecisionProcedure { .. } => true,
+        }
     }
 }
-
 impl Default for ProofMethod {
     fn default() -> Self {
         Self::WitnessedU32 {
@@ -936,14 +943,28 @@ impl GuardedLaw {
         self
     }
 
-    /// Validate the law: rejects laws with no executable proof evidence.
+    /// Validate the law: rejects laws with no executable proof evidence or invalid guards.
     ///
     /// # Errors
-    /// Returns [`LawValidationError::NoExecutableProofEvidence`] if `proof_method` is `None`.
+    /// Returns [`LawValidationError`] if `proof_method` is `None`, count is 0, guard is invalid, or affected compiler levels is empty.
     pub fn validate(&self) -> Result<(), LawValidationError> {
         if !self.proof_method.has_executable_proof() {
             return Err(LawValidationError::NoExecutableProofEvidence {
                 law: self.law.name().into(),
+            });
+        }
+        if let LawGuard::Range { lo, hi } = self.guard {
+            if lo > hi {
+                return Err(LawValidationError::InvalidGuard {
+                    law: self.law.name().into(),
+                    reason: alloc::format!("lower bound {lo} exceeds upper bound {hi}"),
+                });
+            }
+        }
+        if self.affected_compiler_levels.is_empty() {
+            return Err(LawValidationError::InvalidGuard {
+                law: self.law.name().into(),
+                reason: "affected compiler levels cannot be empty".into(),
             });
         }
         Ok(())

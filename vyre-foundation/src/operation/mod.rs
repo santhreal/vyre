@@ -92,7 +92,51 @@ macro_rules! declare_operation {
             $crate::inventory::submit! {
                 $crate::operation::ContractProvider {
                     id: $id,
-                    contract: None,
+                    contract: Some(|| {
+                        let desc = $crate::operation::SemanticDescriptor {
+                            id: $id,
+                            semantic_version: 1 $( - 1 + $sem_ver )?,
+                            signature: None $(.or(Some($sig)))?,
+                            tier: $tier,
+                            category: None $(.or(Some($cat)))?,
+                            laws: {
+                                let mut val: &'static [&'static str] = &[];
+                                $(val = $laws;)?
+                                val
+                            },
+                            numeric: {
+                                let mut val = $crate::numeric::NumericContract::EXACT;
+                                $(val = $num;)?
+                                val
+                            },
+                            geometry_requirements: {
+                                let mut val = $crate::geometry::GeometryRequirements::agnostic();
+                                $(val = $geom;)?
+                                val
+                            },
+                            explicit_effects: None $(.or(Some($eff)))?,
+                            explicit_capabilities: None $(.or(Some($caps)))?,
+                            opaque_reason: None $(.or(Some($opaque)))?,
+                        };
+                        let op = $crate::operation::SemanticOperation {
+                            id: desc.id,
+                            semantic_version: desc.semantic_version,
+                            signature: desc.signature,
+                            tier: desc.tier,
+                            category: desc.category,
+                            build: None $(.or(Some($build)))?,
+                            test_inputs: None $(.or(Some($inputs)))?,
+                            expected_output: None $(.or(Some($expected)))?,
+                            laws: desc.laws,
+                            numeric: desc.numeric,
+                            geometry_requirements: desc.geometry_requirements,
+                            source_file: file!(),
+                            explicit_effects: desc.explicit_effects,
+                            explicit_capabilities: desc.explicit_capabilities,
+                            opaque_reason: desc.opaque_reason,
+                        };
+                        op.contract_record()
+                    }),
                 }
             }
         };

@@ -467,7 +467,8 @@ fn catalog_bundle_digest_is_part_of_artifact_identity() {
 }
 
 /// A test enumerates the operation roster at run time and fails when an operation has no contract
-/// record, or a record with neither a law nor an explicit no-transform decision.
+/// record, or a record with neither a law nor an explicit no-transform decision, asserting zero
+/// operations in an unrecorded state.
 #[test]
 fn every_registered_operation_has_contract_record_with_valid_decision() {
     let registry = OperationRegistry::global();
@@ -478,18 +479,27 @@ fn every_registered_operation_has_contract_record_with_valid_decision() {
     );
 
     let mut violations = Vec::new();
-    let mut covered_count = 0usize;
+    let mut guarded_laws_count = 0usize;
+    let mut no_transform_count = 0usize;
+    let mut opaque_count = 0usize;
+    let mut not_recorded_count = 0usize;
 
     for op in &all_ops {
-        covered_count += 1;
+        let record = op.contract_record();
+        match record.decision {
+            vyre_spec::TransformDecision::GuardedLaws(_) => guarded_laws_count += 1,
+            vyre_spec::TransformDecision::NoTransform { .. } => no_transform_count += 1,
+            vyre_spec::TransformDecision::Opaque { .. } => opaque_count += 1,
+            vyre_spec::TransformDecision::NotRecorded => not_recorded_count += 1,
+        }
+
         if !op.has_transform_decision() {
             violations.push(format!(
-                "operation `{}` has neither algebraic laws nor an explicit opaque decision",
+                "operation `{}` has neither algebraic laws nor an explicit opaque/no-transform decision",
                 op.id
             ));
             continue;
         }
-        let record = op.contract_record();
         if let Err(err) = record.validate() {
             violations.push(format!(
                 "operation `{}` contract record failed validation: {err}",
@@ -498,14 +508,26 @@ fn every_registered_operation_has_contract_record_with_valid_decision() {
         }
     }
 
+    assert_eq!(
+        not_recorded_count, 0,
+        "Fix: zero operations may be in unrecorded state, found {not_recorded_count}"
+    );
     assert!(
         violations.is_empty(),
         "Fix: {} operations failed contract decision check: {violations:#?}",
         violations.len()
     );
+    println!(
+        "OP_COUNTS: total={}, guarded_laws={}, no_transform={}, opaque={}, not_recorded={}",
+        all_ops.len(),
+        guarded_laws_count,
+        no_transform_count,
+        opaque_count,
+        not_recorded_count
+    );
     assert!(
-        covered_count > 0,
-        "Fix: expected covered operations in registry, found {covered_count}"
+        guarded_laws_count + no_transform_count + opaque_count == all_ops.len(),
+        "Fix: all operations must be classified in the three resolved states"
     );
 }
 
@@ -522,8 +544,40 @@ fn adding_operation_without_decision_turns_registry_red() {
     assert!(!undecidable_reg.has_transform_decision());
     let record = undecidable_reg.contract_record();
     assert!(
-        record.validate().is_err(),
-        "Contract record without a decision must fail validation"
+        record.decision.is_not_recorded(),
+        "Unannotated registration must produce NotRecorded transform decision"
+    );
+    let result = record.validate();
+    assert_eq!(
+        result,
+        Err(vyre_spec::ContractValidationError::NotRecorded),
+        "Contract record without a decision must fail validation with NotRecorded"
+    );
+}
+
+/// A test proves a law label without executable proof evidence is rejected.
+#[test]
+fn law_label_without_executable_proof_evidence_is_rejected() {
+    let unproven_law = vyre_spec::GuardedLaw::unconditional(vyre_spec::AlgebraicLaw::Associative)
+        .with_proof_method(vyre_spec::ProofMethod::None);
+    assert_eq!(
+        unproven_law.validate(),
+        Err(vyre_spec::LawValidationError::NoExecutableProofEvidence {
+            law: "associative".to_string()
+        })
+    );
+
+    let zero_witness_law =
+        vyre_spec::GuardedLaw::unconditional(vyre_spec::AlgebraicLaw::Commutative)
+            .with_proof_method(vyre_spec::ProofMethod::WitnessedU32 {
+                seed: 42,
+                count: 0,
+            });
+    assert_eq!(
+        zero_witness_law.validate(),
+        Err(vyre_spec::LawValidationError::NoExecutableProofEvidence {
+            law: "commutative".to_string()
+        })
     );
 }
 
@@ -595,3 +649,4 @@ fn declarative_dialect_operation_generation() {
     assert_eq!(record.decision.laws().len(), 1);
     assert_eq!(record.decision.laws()[0].law.name(), "idempotent");
 }
+

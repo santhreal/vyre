@@ -422,6 +422,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   been answered by deleting them. Keying on the pair means a reviewed
   declaration exempts the gate it names and not the next one added to the same
   file.
+- Every semantic operation carries a generated contract record with an explicit
+  four-state transform decision, rejecting uncharacterized operations, law
+  labels without executable proof evidence, and placeholder opaque reasons.
 - `UnOp::BitcastF32ToU32` and `UnOp::BitcastU32ToF32` reinterpret the 32 bits
   of a value without converting it, with wire tags `0x25` and `0x26`, a
   reference-interpreter arm that preserves every NaN payload and subnormal, and
@@ -811,6 +814,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   the frozen surface no longer carries, fails. Adding a scalar literal, adding
   an evaluator, or widening the interpreter's operation table turns the suite
   red until a row records the decision.
+- The compositional schedule calculus provides typed schedule scopes, algebraic
+  tree normalization, and closed operator verification while isolating physical
+  kernel descriptors from semantic policy types.
 - A `schedule-ownership` gate derives the schedule decision roster from the
   selected plan's own fields and the registered crate layers, and reports any
   crate outside the compiler boundary that builds a decision, writes geometry
@@ -941,6 +947,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A canonical schema authority states every persisted schema version, its
   decoders are bounded, its digests are platform-independent, and it exports a
   JSON schema.
+- The configuration schema is unified into a typed descriptor substrate
+  partitioned into semantic compile inputs, operational policy, diagnostic
+  controls, and credentials with explicit precedence resolution and strict
+  secrecy redaction.
 - `vyre-foundation` closes `Expr` variant traversal, child operand
   reachability, magnitude classification, buffer reference classification, and
   cross-invocation combine classification against `EXPR_VARIANT_NAMES` in
@@ -1651,6 +1661,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The crate ownership gate enforces a closed layer DAG and circular dependency
   detection across workspace member internal production dependencies joined
   against Cargo metadata.
+- The type and shape systems are closed and orthogonal with checked arithmetic
+  and fixed-width fields.
 - The four RFC-0004 collective nodes come from
   `vyre_test_support::collective_programs`, and `ValueContract::dense_1d`
   builds the one-dimensional graph-port contract every connected-graph suite
@@ -3243,9 +3255,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - `conform/vyre-conform` introduces `OracleSession` evaluating programs
   directly through `vyre-reference` interpreter, deleting `cpu-ref` from the
   `VyreBackend` registry, precedence order, and `vyre-registry-link`.
+- Elementwise builder output byte ranges are declared in 64-bit.
+  `add_output_with_byte_range` takes a `Range<u64>`, matching
+  `BufferDecl::with_output_byte_range`, and `add_output` computes its range in
+  `u64` so a buffer larger than a 32-bit host address space states its extent
+  without truncation.
 - Foundation now exposes IR-specific `IrError` and `IrResult` contracts instead
   of a cross-domain error sink. Reference interpretation, backend execution,
   WGPU device selection, and runtime framing return owner-local typed failures.
+- The monolithic vyre-libs library is partitioned into acyclic domain
+  compilation packages with a shared builder substrate, a machine-readable
+  domain roster, and a backwards-compatible facade.
 - The encoded-order IR rewrite walk in `vyre-pass-engine` has one owner,
   `optimizer::rewrite_walk`. Three copies of the same recursive rebuild
   existed, in the walk module, in const folding, and in resident arena-delta
@@ -3563,6 +3583,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   speculative state transactions, content-addressed retained-page caches,
   paged-resource bindings, and typed resource transfers, eliminating
   model-specific expert, token, MTP, KV-cache, and safetensors abstractions.
+- The runtime derives its complete finite quota space from source at test time
+  and verifies bounded cancellation termination and worker quarantine for
+  unreturnable driver calls.
 - Runtime enforces mandatory finite session quotas across all subsystems
   without unbounded constructors, moves low-level unsafe io_uring and mmap
   operations into private raw_platform abstractions with exclusive aliasing,

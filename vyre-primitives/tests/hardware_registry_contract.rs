@@ -83,3 +83,33 @@ fn canonical_catalog_is_deterministic_and_fixture_complete() {
         );
     }
 }
+
+#[test]
+fn all_hardware_intrinsics_carry_valid_contract_records_with_explicit_decisions() {
+    let entries = all_entries().collect::<Vec<_>>();
+    assert!(!entries.is_empty(), "hardware intrinsic entries must not be empty");
+
+    for intrinsic in entries {
+        assert!(
+            intrinsic.has_transform_decision(),
+            "{} must have a recorded transform decision",
+            intrinsic.id
+        );
+        let record = intrinsic.contract_record();
+        assert_eq!(
+            record.id, intrinsic.id,
+            "contract record id must match intrinsic id"
+        );
+        assert!(
+            !record.decision.is_not_recorded(),
+            "{} transform decision must not be in NotRecorded state",
+            intrinsic.id
+        );
+        assert!(
+            record.validate().is_ok(),
+            "{} contract record must validate successfully: {:?}",
+            intrinsic.id,
+            record.validate()
+        );
+    }
+}
