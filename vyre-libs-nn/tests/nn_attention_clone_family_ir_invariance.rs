@@ -249,9 +249,7 @@ impl CloneFamilyEntry {
     /// here or in [`NOT_A_CLONE_FAMILY_MEMBER`].
     fn builder(self) -> &'static str {
         match self {
-            Self::RecurrentGatedDeltaF32 | Self::RecurrentGatedDeltaF16 => {
-                "recurrent_gated_delta"
-            }
+            Self::RecurrentGatedDeltaF32 | Self::RecurrentGatedDeltaF16 => "recurrent_gated_delta",
             Self::ChunkedGatedDeltaF32 | Self::ChunkedGatedDeltaF16 => "chunked_gated_delta",
             Self::MlaDecode => "mla_decode",
             Self::FlashAttention2 => "flash_attention_2",
@@ -264,9 +262,7 @@ impl CloneFamilyEntry {
             Self::GqaAttentionCausal => "gqa_attention_causal",
             Self::GqaAttentionCausalF16 => "gqa_attention_causal_typed",
             Self::KvCacheAppend | Self::KvCacheAppendF16 => "kv_cache_append",
-            Self::AttentionHeadToToken | Self::AttentionHeadToTokenF16 => {
-                "attention_head_to_token"
-            }
+            Self::AttentionHeadToToken | Self::AttentionHeadToTokenF16 => "attention_head_to_token",
             Self::AttentionTokenToHead => "attention_token_to_head",
             Self::QuestPaging => "quest_paging",
             Self::PartialRope => "partial_rope",
@@ -306,21 +302,10 @@ impl CloneFamilyEntry {
                 gqa_attention_causal("q", "k", "v", "out", 2, 4, 2, 3, 8, 4, 2)
                     .expect("causal gqa builds")
             }
-            Self::GqaAttentionCausalF16 => gqa_attention_causal_typed(
-                "q",
-                "k",
-                "v",
-                "out",
-                2,
-                4,
-                2,
-                3,
-                8,
-                4,
-                2,
-                DataType::F16,
-            )
-            .expect("typed causal gqa builds"),
+            Self::GqaAttentionCausalF16 => {
+                gqa_attention_causal_typed("q", "k", "v", "out", 2, 4, 2, 3, 8, 4, 2, DataType::F16)
+                    .expect("typed causal gqa builds")
+            }
             Self::KvCacheAppend => {
                 kv_cache_append(cache_spec(DataType::F32)).expect("cache builds")
             }
@@ -338,7 +323,9 @@ impl CloneFamilyEntry {
             Self::QuestPaging => quest_paging("q", "meta", "scores", "io", 8, 3, 4),
             Self::PartialRope => partial_rope("input", "cos", "sin", "output", 2, 5, 8, 4),
             Self::QkGain => qk_gain("q_in", "q_out", "gain", 3, 5, 4),
-            Self::TurboquantAttention => turboquant_attention("q", "k_packed", "v_packed", "out", 6, 4),
+            Self::TurboquantAttention => {
+                turboquant_attention("q", "k_packed", "v_packed", "out", 6, 4)
+            }
             Self::MlaCompressKv => {
                 mla_compress_kv("h", "w_dk", "c_out", 6, 4).expect("mla compress builds")
             }
@@ -543,11 +530,10 @@ fn reexported_builder_names(source: &str) -> std::collections::BTreeSet<String> 
     while let Some((_, after)) = rest.split_once("pub use ") {
         let (statement, tail) = after.split_once(';').unwrap_or((after, ""));
         rest = tail;
-        let items = statement
-            .split_once('{')
-            .map_or_else(|| statement.rsplit("::").next().unwrap_or(""), |(_, braced)| {
-                braced.split_once('}').map_or(braced, |(inner, _)| inner)
-            });
+        let items = statement.split_once('{').map_or_else(
+            || statement.rsplit("::").next().unwrap_or(""),
+            |(_, braced)| braced.split_once('}').map_or(braced, |(inner, _)| inner),
+        );
         for item in items.split(',') {
             let item = item.trim();
             let item = item.rsplit("::").next().unwrap_or(item).trim();

@@ -164,7 +164,10 @@ fn walk<'a>(
 ) {
     whole.record_node(node, depth);
     if let Some(identity) = enclosing {
-        regions.entry(identity).or_default().record_node(node, depth);
+        regions
+            .entry(identity)
+            .or_default()
+            .record_node(node, depth);
     }
     for operand in node_operands(node).into_iter().flatten() {
         walk_expr(operand, whole, enclosing, regions);
