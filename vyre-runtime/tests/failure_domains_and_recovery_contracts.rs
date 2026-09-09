@@ -197,20 +197,39 @@ fn source_derived_mutable_state_owner_closure_test() {
                 }
                 let content = fs::read_to_string(&path).unwrap();
                 let mut lock_count = 0;
-                let mut in_test_cfg = false;
+                let mut in_test_mod = false;
+                let mut test_mod_depth = 0;
+                let mut pending_test_cfg = false;
                 for line in content.lines() {
                     let trimmed = line.trim();
-                    if trimmed.starts_with("#[cfg(test)]") {
-                        in_test_cfg = true;
+                    if trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*') {
+                        continue;
                     }
-                    if in_test_cfg {
+                    if trimmed.starts_with("#[cfg(test)]") {
+                        pending_test_cfg = true;
+                        continue;
+                    }
+                    if pending_test_cfg {
+                        if trimmed.starts_with("mod ") {
+                            in_test_mod = true;
+                            test_mod_depth = 0;
+                        }
+                        pending_test_cfg = false;
+                    }
+                    if in_test_mod {
+                        test_mod_depth += trimmed.matches('{').count();
+                        let close_count = trimmed.matches('}').count();
+                        if close_count >= test_mod_depth {
+                            in_test_mod = false;
+                            test_mod_depth = 0;
+                        } else {
+                            test_mod_depth -= close_count;
+                        }
                         continue;
                     }
                     if (line.contains("Mutex<")
                         || line.contains("RwLock<")
                         || line.contains("DashMap<"))
-                        && !trimmed.starts_with("//")
-                        && !trimmed.starts_with("/*")
                         && !line.contains("use ")
                         && !line.contains("fn ")
                     {
