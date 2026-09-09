@@ -632,16 +632,30 @@ impl BodyCtx<'_> {
             Resume { tag } => {
                 let _ = writeln!(self.text, "    // resume tag: {tag}");
             }
-            IndirectDispatch { .. } => {
+            IndirectDispatch { count_offset: _ } => {
                 return Err(EmitError::UnsupportedOp(KernelOp {
                     kind: op.kind.clone(),
                     operands: op.operands.clone(),
                     result: op.result,
                 }));
             }
-            other => {
+            Call { op_id: _ } => {
                 return Err(EmitError::UnsupportedOp(KernelOp {
-                    kind: other.clone(),
+                    kind: op.kind.clone(),
+                    operands: op.operands.clone(),
+                    result: op.result,
+                }));
+            }
+            OpaqueExpr(data) => {
+                return Err(EmitError::UnsupportedOp(KernelOp {
+                    kind: KernelOpKind::OpaqueExpr(data.clone()),
+                    operands: op.operands.clone(),
+                    result: op.result,
+                }));
+            }
+            OpaqueNode(data) => {
+                return Err(EmitError::UnsupportedOp(KernelOp {
+                    kind: KernelOpKind::OpaqueNode(data.clone()),
                     operands: op.operands.clone(),
                     result: op.result,
                 }));

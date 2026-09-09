@@ -8,7 +8,7 @@ use vyre_lower::descriptor_builder::{
     body, descriptor, effect, global_ro, global_rw, lit, op, shared_rw, store_literal_kernel,
     SlotCount,
 };
-use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
+use vyre_lower::{BindingVisibility, KernelDescriptor, KernelOpKind, LiteralValue, MemoryClass};
 
 fn empty_kernel() -> KernelDescriptor {
     descriptor("empty").dispatch(64, 1, 1).build()
@@ -48,6 +48,9 @@ fn one_store_kernel_emits_buffer_binding_metadata() {
     assert_eq!(artifact.bindings[0].name, "out");
     assert_eq!(artifact.bindings[0].metal_buffer_index, 0);
     assert_eq!(artifact.sizes_buffer_index, Some(1));
+    assert_eq!(artifact.bindings[0].element_type, DataType::U32);
+    assert_eq!(artifact.bindings[0].memory_class, MemoryClass::Global);
+    assert_eq!(artifact.bindings[0].visibility, BindingVisibility::ReadWrite);
     assert!(artifact.threadgroup_memories.is_empty());
     assert!(!artifact.msl.is_empty());
 }

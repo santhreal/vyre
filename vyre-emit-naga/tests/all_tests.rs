@@ -36,3 +36,7 @@ pub mod target_capabilities;
 /// Integration tests from `tests/vec_pack_hazards.rs`.
 #[path = "vec_pack_hazards.rs"]
 pub mod vec_pack_hazards;
+
+/// Integration tests from `tests/physical_ir_variant_exhaustiveness.rs`.
+#[path = "physical_ir_variant_exhaustiveness.rs"]
+pub mod physical_ir_variant_exhaustiveness;

@@ -68,3 +68,7 @@ pub mod shared_branch_walk_equality;
 /// Integration tests from `tests/ulp_budget_is_not_an_admission_gate.rs`.
 #[path = "ulp_budget_is_not_an_admission_gate.rs"]
 pub mod ulp_budget_is_not_an_admission_gate;
+
+/// Integration tests from `tests/physical_ir_variant_exhaustiveness.rs`.
+#[path = "physical_ir_variant_exhaustiveness.rs"]
+pub mod physical_ir_variant_exhaustiveness;

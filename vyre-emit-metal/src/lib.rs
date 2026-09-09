@@ -19,7 +19,8 @@ use naga::valid::{Capabilities, ValidationFlags, Validator};
 use naga::{AddressSpace, StorageAccess};
 use thiserror::Error;
 use vyre_foundation::diagnostics::{CompilerLevel, Diagnostic, DiagnosticStage};
-use vyre_lower::{BindingSlot, KernelDescriptor, MemoryClass};
+use vyre_foundation::ir::DataType;
+use vyre_lower::{BindingSlot, BindingVisibility, KernelDescriptor, MemoryClass};
 
 /// Target identity every diagnostic this emitter raises carries.
 const TARGET: &str = "metal";
@@ -197,15 +198,14 @@ pub struct MetalBindingMetadata {
     pub slot: u32,
     /// MSL buffer index.
     pub metal_buffer_index: u8,
-    /// Element type as stable debug text until the shared artifact schema owns
-    /// a typed cross-emitter field.
-    pub element_type: String,
+    /// Typed element type from the lowered descriptor.
+    pub element_type: DataType,
     /// Static element count when known.
     pub element_count: Option<u32>,
     /// Lowered memory class.
-    pub memory_class: String,
+    pub memory_class: MemoryClass,
     /// Read/write visibility.
-    pub visibility: String,
+    pub visibility: BindingVisibility,
 }
 
 /// Threadgroup-memory metadata stored in a Metal artifact.
@@ -603,10 +603,10 @@ fn metal_bindings(
             name: slot.name.clone(),
             slot: slot.slot,
             metal_buffer_index,
-            element_type: format!("{:?}", slot.element_type),
+            element_type: slot.element_type.clone(),
             element_count: slot.element_count,
-            memory_class: format!("{:?}", slot.memory_class),
-            visibility: format!("{:?}", slot.visibility),
+            memory_class: slot.memory_class,
+            visibility: slot.visibility,
         });
     }
     Ok(out)
