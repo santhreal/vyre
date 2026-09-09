@@ -1,0 +1,381 @@
+#[non_exhaustive] pub enum vyre_libs_pattern::pattern::DfaCompileError
+#[non_exhaustive] pub enum vyre_libs_pattern::pattern::DfaWireError
+#[non_exhaustive] pub enum vyre_libs_pattern::pattern::NfaToDfaError
+#[non_exhaustive] pub enum vyre_libs_pattern::pattern::RegexCompileError
+#[non_exhaustive] pub enum vyre_libs_pattern::pattern::RegexConstruct
+#[non_exhaustive] pub enum vyre_libs_pattern::pattern::RegexDfaError
+impl core::cmp::Ord for vyre_libs_pattern::pattern::RegionTriple
+impl core::cmp::PartialOrd for vyre_libs_pattern::pattern::RegionTriple
+impl core::convert::From<vyre_libs_pattern::pattern::NfaToDfaError> for vyre_libs_pattern::pattern::RegexDfaError
+impl core::convert::From<vyre_libs_pattern::pattern::RegexCompileError> for vyre_libs_pattern::pattern::RegexDfaError
+impl core::default::Default for vyre_libs_pattern::pattern::RegexReplayPolicy
+impl core::error::Error for vyre_libs_pattern::pattern::AnchorDfaPlanError
+impl core::error::Error for vyre_libs_pattern::pattern::DfaCompileError
+impl core::error::Error for vyre_libs_pattern::pattern::DfaWireError
+impl core::error::Error for vyre_libs_pattern::pattern::NfaToDfaError
+impl core::error::Error for vyre_libs_pattern::pattern::PostProcessError
+impl core::error::Error for vyre_libs_pattern::pattern::RegexCompileError
+impl core::error::Error for vyre_libs_pattern::pattern::RegexDfaError
+impl core::error::Error for vyre_libs_pattern::pattern::nfa::NfaCompileError
+impl core::fmt::Display for vyre_libs_pattern::pattern::AnchorDfaPlanError
+impl core::fmt::Display for vyre_libs_pattern::pattern::DfaCompileError
+impl core::fmt::Display for vyre_libs_pattern::pattern::DfaWireError
+impl core::fmt::Display for vyre_libs_pattern::pattern::NfaToDfaError
+impl core::fmt::Display for vyre_libs_pattern::pattern::PostProcessError
+impl core::fmt::Display for vyre_libs_pattern::pattern::RegexCompileError
+impl core::fmt::Display for vyre_libs_pattern::pattern::RegexDfaError
+impl core::fmt::Display for vyre_libs_pattern::pattern::nfa::NfaCompileError
+impl vyre_libs_pattern::pattern::AnchorDfaPlan
+impl vyre_libs_pattern::pattern::CaptureMode
+impl vyre_libs_pattern::pattern::CompiledDfa
+impl vyre_libs_pattern::pattern::CompiledRegexSet
+impl vyre_libs_pattern::pattern::RegexCompileError
+impl vyre_libs_pattern::pattern::RegexConstruct
+impl vyre_libs_pattern::pattern::RegexDfaError
+impl vyre_libs_pattern::pattern::RegionTriple
+impl vyre_libs_pattern::pattern::nfa::NfaPlan
+impl<'anchor> vyre_libs_pattern::pattern::AnchorDfaCandidate<'anchor>
+pub const fn vyre_libs_pattern::pattern::AnchorDfaCandidate<'anchor>::new(pattern_id: u32, bytes: &'anchor [u8]) -> Self
+pub const fn vyre_libs_pattern::pattern::CaptureMode::accelerator_eligible(self) -> bool
+pub const fn vyre_libs_pattern::pattern::CaptureMode::contract_row(self) -> vyre_libs_pattern::pattern::CaptureModeContract
+pub const fn vyre_libs_pattern::pattern::CaptureMode::verifier_required(self) -> bool
+pub const fn vyre_libs_pattern::pattern::RegionTriple::new(pid: u32, start: u32, end: u32) -> Self
+pub const vyre_libs_pattern::nfa::subgroup_nfa::LANES_PER_SUBGROUP: usize
+pub const vyre_libs_pattern::nfa::subgroup_nfa::MAX_EPSILON_ITERS: u32
+pub const vyre_libs_pattern::nfa::subgroup_nfa::MAX_STATES_PER_SUBGROUP: usize
+pub const vyre_libs_pattern::nfa::subgroup_nfa::NAME_EPSILON: &str
+pub const vyre_libs_pattern::nfa::subgroup_nfa::NAME_INPUT: &str
+pub const vyre_libs_pattern::nfa::subgroup_nfa::NAME_OUT: &str
+pub const vyre_libs_pattern::nfa::subgroup_nfa::NAME_STATE: &str
+pub const vyre_libs_pattern::nfa::subgroup_nfa::NAME_TRANSITION: &str
+pub const vyre_libs_pattern::nfa::subgroup_nfa::OP_ID: &str
+pub const vyre_libs_pattern::pattern::ANCHORED_WINDOW_MATCHES_BINDING: u32
+pub const vyre_libs_pattern::pattern::ANCHORED_WINDOW_MATCH_COUNT_BINDING: u32
+pub const vyre_libs_pattern::pattern::ANCHOR_DFA_PLAN_SCHEMA_VERSION: u32
+pub const vyre_libs_pattern::pattern::BRACKET_KIND_CLOSE: u32
+pub const vyre_libs_pattern::pattern::BRACKET_KIND_OPEN: u32
+pub const vyre_libs_pattern::pattern::BRACKET_KIND_OTHER: u32
+pub const vyre_libs_pattern::pattern::BRACKET_MATCH_NONE: u32
+pub const vyre_libs_pattern::pattern::BRACKET_MATCH_OP_ID: &str
+pub const vyre_libs_pattern::pattern::BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_pattern::pattern::CAP_REGIONS_PER_PATTERN_OP_ID: &str
+pub const vyre_libs_pattern::pattern::COMPACT_FIRST_PER_REGION_PATTERN_OP_ID: &str
+pub const vyre_libs_pattern::pattern::CaptureMode::ALL: [vyre_libs_pattern::pattern::CaptureMode; 6]
+pub const vyre_libs_pattern::pattern::DEDUP_REGIONS_CLUSTER_OP_ID: &str
+pub const vyre_libs_pattern::pattern::DEDUP_REGIONS_FLAG_OP_ID: &str
+pub const vyre_libs_pattern::pattern::DEFAULT_DFA_BUDGET_BYTES: usize
+pub const vyre_libs_pattern::pattern::DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES: u32
+pub const vyre_libs_pattern::pattern::FUSED_EVIDENCE_ADMISSION_BINDING: u32
+pub const vyre_libs_pattern::pattern::FUSED_EVIDENCE_MATCHES_BINDING: u32
+pub const vyre_libs_pattern::pattern::FUSED_EVIDENCE_MATCH_COUNT_BINDING: u32
+pub const vyre_libs_pattern::pattern::FUSED_EVIDENCE_PRESENCE_BINDING: u32
+pub const vyre_libs_pattern::pattern::HIT_BUFFER_LIVE_LENGTH: &str
+pub const vyre_libs_pattern::pattern::HIT_BUFFER_OVERFLOW_COUNT: &str
+pub const vyre_libs_pattern::pattern::REGEX_DFA_OP_ID: &str
+pub const vyre_libs_pattern::pattern::REGION_DEDUP_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_pattern::pattern::RegexConstruct::ALL: &'static [Self]
+pub const vyre_libs_pattern::pattern::SCAN_SUBSTRING_OP_ID: &str
+pub const vyre_libs_pattern::pattern::classic_ac::CLASSIC_AC_SUFFIX2_MASK_WORDS: usize
+pub const vyre_libs_pattern::pattern::classic_ac::CLASSIC_AC_SUFFIX3_BLOOM_WORDS: usize
+pub const vyre_libs_pattern::pattern::nfa::HAYSTACK_LEN_BUF: &str
+pub const vyre_libs_pattern::pattern::nfa::MAX_SCAN_BYTES_BUF: &str
+pub const vyre_libs_pattern::pattern::nfa::REGEX_SCAN_OP_ID: &str
+pub enum vyre_libs_pattern::pattern::AnchorDfaPlanError
+pub enum vyre_libs_pattern::pattern::CaptureMode
+pub enum vyre_libs_pattern::pattern::PostProcessError
+pub enum vyre_libs_pattern::pattern::nfa::NfaCompileError
+pub fn vyre_libs_pattern::link_anchor()
+pub fn vyre_libs_pattern::nfa::subgroup_nfa::nfa_step(state_buf: &str, input_buf: &str, transition_buf: &str, epsilon_buf: &str, out_buf: &str, num_states: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::AnchorDfaPlan::is_complete(&self) -> bool
+pub fn vyre_libs_pattern::pattern::AnchorDfaPlanError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_pattern::pattern::CaptureMode::from_mode_id(mode_id: &str) -> core::option::Option<vyre_libs_pattern::pattern::CaptureMode>
+pub fn vyre_libs_pattern::pattern::CompiledDfa::empty() -> Self
+pub fn vyre_libs_pattern::pattern::CompiledDfa::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_libs_pattern::pattern::DfaWireError>
+pub fn vyre_libs_pattern::pattern::CompiledDfa::to_bytes(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_libs_pattern::pattern::DfaWireError>
+pub fn vyre_libs_pattern::pattern::CompiledRegexSet::capture_extraction_diagnostic_code(&self) -> core::option::Option<&'static str>
+pub fn vyre_libs_pattern::pattern::DfaCompileError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_pattern::pattern::DfaWireError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_pattern::pattern::NfaToDfaError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_pattern::pattern::PostProcessError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_pattern::pattern::RegexCompileError::diagnostic_code(&self) -> core::option::Option<&'static str>
+pub fn vyre_libs_pattern::pattern::RegexCompileError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_pattern::pattern::RegexDfaError::diagnostic_code(&self) -> core::option::Option<&'static str>
+pub fn vyre_libs_pattern::pattern::RegexDfaError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_pattern::pattern::RegexDfaError::from(error: vyre_libs_pattern::pattern::NfaToDfaError) -> Self
+pub fn vyre_libs_pattern::pattern::RegexDfaError::from(error: vyre_libs_pattern::pattern::RegexCompileError) -> Self
+pub fn vyre_libs_pattern::pattern::RegexReplayPolicy::default() -> Self
+pub fn vyre_libs_pattern::pattern::RegionTriple::cmp(&self, other: &Self) -> core::cmp::Ordering
+pub fn vyre_libs_pattern::pattern::RegionTriple::partial_cmp(&self, other: &Self) -> core::option::Option<core::cmp::Ordering>
+pub fn vyre_libs_pattern::pattern::aho_corasick(haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::aho_corasick::aho_corasick(haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::aho_corasick::aho_corasick_bounded(haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32, state_count: u32, max_pattern_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::aho_corasick::aho_corasick_program_from_dfa_wire(wire_bytes: &[u8], haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_pattern::pattern::DfaWireError>
+pub fn vyre_libs_pattern::pattern::anchored_window_extract_program(haystack: &str, transitions: &str, output_offsets: &str, output_records: &str, candidates: &str, candidate_count: &str, haystack_len: &str, match_count: &str, matches: &str, state_count: u32, output_records_len: u32, max_candidates: u32, max_matches: u32, max_pattern_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::bracket_match(kinds: &str, stack: &str, match_pairs: &str, n: u32, max_depth: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::build_anchor_dfa_plan(anchors: &[vyre_libs_pattern::pattern::AnchorDfaCandidate<'_>], dfa_state_budget: u32, verifier_fragment_id: &str) -> core::result::Result<vyre_libs_pattern::pattern::AnchorDfaPlan, vyre_libs_pattern::pattern::AnchorDfaPlanError>
+pub fn vyre_libs_pattern::pattern::build_regex_dfa_pipeline(patterns: &[&str], max_matches: u32, max_dfa_states: usize) -> core::result::Result<vyre_libs_pattern::pattern::RegexDfaPipeline, vyre_libs_pattern::pattern::RegexDfaError>
+pub fn vyre_libs_pattern::pattern::build_regex_dfa_pipeline_with_policy(patterns: &[&str], max_matches: u32, max_dfa_states: usize, replay_policy: vyre_libs_pattern::pattern::RegexReplayPolicy) -> core::result::Result<vyre_libs_pattern::pattern::RegexDfaPipeline, vyre_libs_pattern::pattern::RegexDfaError>
+pub fn vyre_libs_pattern::pattern::build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce(patterns: &[&str], max_matches: u32, max_dfa_states: usize, replay_policy: vyre_libs_pattern::pattern::RegexReplayPolicy, use_subgroup_coalesce: bool) -> core::result::Result<vyre_libs_pattern::pattern::RegexDfaPipeline, vyre_libs_pattern::pattern::RegexDfaError>
+pub fn vyre_libs_pattern::pattern::build_regex_dfa_shards(patterns: &[&str], max_matches: u32, max_dfa_states: usize) -> core::result::Result<alloc::vec::Vec<vyre_libs_pattern::pattern::RegexDfaShard>, vyre_libs_pattern::pattern::RegexDfaError>
+pub fn vyre_libs_pattern::pattern::build_regex_dfa_shards_unanchored(patterns: &[&str], max_matches: u32, max_dfa_states: usize) -> core::result::Result<alloc::vec::Vec<vyre_libs_pattern::pattern::RegexDfaShard>, vyre_libs_pattern::pattern::RegexDfaError>
+pub fn vyre_libs_pattern::pattern::build_regex_dfa_unanchored(patterns: &[&str], max_matches: u32, max_dfa_states: usize) -> core::result::Result<vyre_libs_pattern::pattern::RegexDfaPipeline, vyre_libs_pattern::pattern::RegexDfaError>
+pub fn vyre_libs_pattern::pattern::build_scan_program(patterns: &[&str], input_buf: &str, hit_buf: &str, input_len: u32) -> vyre_libs_pattern::pattern::ScanProgram
+pub fn vyre_libs_pattern::pattern::build_scan_program_from_regex(patterns: &[&str], input_buf: &str, hit_buf: &str, input_len: u32) -> core::result::Result<vyre_libs_pattern::pattern::ScanProgram, vyre_libs_pattern::pattern::RegexCompileError>
+pub fn vyre_libs_pattern::pattern::builders::append_match(hits_buffer: &str, count_buffer: &str, tag: impl core::convert::Into<vyre_foundation::ir_inner::model::generated::Expr>, start: impl core::convert::Into<vyre_foundation::ir_inner::model::generated::Expr>, end: impl core::convert::Into<vyre_foundation::ir_inner::model::generated::Expr>) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_pattern::pattern::builders::append_match_subgroup(hits_buffer: &str, count_buffer: &str, tag: impl core::convert::Into<vyre_foundation::ir_inner::model::generated::Expr>, start: impl core::convert::Into<vyre_foundation::ir_inner::model::generated::Expr>, end: impl core::convert::Into<vyre_foundation::ir_inner::model::generated::Expr>, cond: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_pattern::pattern::builders::load_packed_byte(haystack: &str, idx: vyre_foundation::ir_inner::model::generated::Expr) -> (vyre_foundation::ir_inner::model::generated::Node, vyre_foundation::ir_inner::model::generated::Expr)
+pub fn vyre_libs_pattern::pattern::builders::load_packed_byte_expr(haystack: &str, idx: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_pattern::pattern::cap_regions_per_pattern_flag_program(pids: &str, survivors: &str, k: u32, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::classic_ac::build_ac_bounded_count_prefilter_program(dfa: &vyre_libs_pattern::pattern::CompiledDfa) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::classic_ac::build_ac_bounded_count_program(dfa: &vyre_libs_pattern::pattern::CompiledDfa) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::classic_ac::build_ac_bounded_count_suffix2_prefilter_program(dfa: &vyre_libs_pattern::pattern::CompiledDfa) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::classic_ac::build_ac_bounded_count_suffix3_prefilter_program(dfa: &vyre_libs_pattern::pattern::CompiledDfa) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::classic_ac::build_ac_bounded_ranges_prefilter_program(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32, max_matches: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::classic_ac::build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32, max_matches: u32, use_subgroup_coalesce: bool) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::classic_ac::build_ac_bounded_ranges_program(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32, max_matches: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::classic_ac::build_ac_bounded_ranges_program_with_subgroup_coalesce(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32, max_matches: u32, use_subgroup_coalesce: bool) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::classic_ac::build_ac_bounded_ranges_suffix3_prefilter_program(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32, max_matches: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::classic_ac::build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32, max_matches: u32, use_subgroup_coalesce: bool) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::classic_ac::classic_ac_compile(patterns: &[&[u8]]) -> vyre_libs_pattern::pattern::classic_ac::ClassicAcAutomaton
+pub fn vyre_libs_pattern::pattern::classic_ac::classic_ac_program(haystack: &str, transitions: &str, output_offsets: &str, output_records: &str, match_count: &str, matches: &str, haystack_len: u32, state_count: u32, output_records_len: u32, max_matches: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::classic_ac::presence_bitmap_words(pattern_count: u32) -> u32
+pub fn vyre_libs_pattern::pattern::classic_ac::presence_by_region_words(pattern_count: u32, max_regions: u32) -> u32
+pub fn vyre_libs_pattern::pattern::classic_ac::try_build_ac_bounded_ranges_prefilter_program(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32, max_matches: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_pattern::pattern::classic_ac::try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32, max_matches: u32, use_subgroup_coalesce: bool) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_pattern::pattern::classic_ac::try_build_ac_bounded_ranges_program(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32, max_matches: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_pattern::pattern::classic_ac::try_build_ac_bounded_ranges_program_with_subgroup_coalesce(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32, max_matches: u32, use_subgroup_coalesce: bool) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_pattern::pattern::classic_ac::try_build_ac_bounded_ranges_suffix3_prefilter_program(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32, max_matches: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_pattern::pattern::classic_ac::try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32, max_matches: u32, use_subgroup_coalesce: bool) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_pattern::pattern::classic_ac::try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32, max_regions: u32, max_matches: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_pattern::pattern::classic_ac::try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32, max_regions: u32, max_matches: u32, first_positioned_pattern_id: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_pattern::pattern::classic_ac::try_build_ac_bounded_ranges_suffix3_presence_by_region_program(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32, max_regions: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_pattern::pattern::classic_ac::try_build_ac_bounded_ranges_suffix3_presence_program(dfa: &vyre_libs_pattern::pattern::CompiledDfa, pattern_count: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_pattern::pattern::compact_first_per_region_pattern_flag_program(regions: &str, pids: &str, survivors: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::compact_hits(out_hits: &str, out_cursor: &str, max_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::compact_hits_with_layout(out_hits: &str, out_cursor: &str, hit_capacity: u32, max_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::compile_regex_set(patterns: &[&str]) -> core::result::Result<vyre_libs_pattern::pattern::CompiledRegexSet, vyre_libs_pattern::pattern::RegexCompileError>
+pub fn vyre_libs_pattern::pattern::compile_regex_set_with_policy(patterns: &[&str], replay_policy: vyre_libs_pattern::pattern::RegexReplayPolicy) -> core::result::Result<vyre_libs_pattern::pattern::CompiledRegexSet, vyre_libs_pattern::pattern::RegexCompileError>
+pub fn vyre_libs_pattern::pattern::cooperative_dfa_scan(input: &str, transitions: &str, accept_mask: &str, matches: &str, input_len: u32, state_count: u32, subgroup_size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::cooperative_dfa_scan_body_with_store(input: &str, transitions: &str, accept_mask: &str, matches: &str, subgroup_size: u32, store_value: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_pattern::pattern::dedup_regions_cluster_program(pids: &str, starts: &str, ends: &str, survivors: &str, merged_ends: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::dedup_regions_flag_program(pids: &str, starts: &str, ends: &str, survivors: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::dfa_compile(patterns: &[&[u8]]) -> vyre_libs_pattern::pattern::CompiledDfa
+pub fn vyre_libs_pattern::pattern::dfa_compile_case_insensitive(patterns: &[&[u8]]) -> vyre_libs_pattern::pattern::CompiledDfa
+pub fn vyre_libs_pattern::pattern::dfa_compile_case_insensitive_with_budget(patterns: &[&[u8]], budget_bytes: usize) -> core::result::Result<vyre_libs_pattern::pattern::CompiledDfa, vyre_libs_pattern::pattern::DfaCompileError>
+pub fn vyre_libs_pattern::pattern::dfa_compile_with_budget(patterns: &[&[u8]], budget_bytes: usize) -> core::result::Result<vyre_libs_pattern::pattern::CompiledDfa, vyre_libs_pattern::pattern::DfaCompileError>
+pub fn vyre_libs_pattern::pattern::emit_hit(rule_id: &str, file_id: &str, span_start: &str, span_len: &str, out_hits: &str, out_cursor: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::emit_hit_then_compact(rule_id: &str, file_id: &str, span_start: &str, span_len: &str, out_hits: &str, out_cursor: &str) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_foundation::execution_plan::fusion::FusionError>
+pub fn vyre_libs_pattern::pattern::emit_hit_then_compact_with_layout(rule_id: &str, file_id: &str, span_start: &str, span_len: &str, out_hits: &str, out_cursor: &str, lane_count: u32, max_hits: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_foundation::execution_plan::fusion::FusionError>
+pub fn vyre_libs_pattern::pattern::emit_hit_with_layout(rule_id: &str, file_id: &str, span_start: &str, span_len: &str, out_hits: &str, out_cursor: &str, lane_count: u32, max_hits: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::fused_region_evidence_program(haystack: &str, transitions: &str, output_offsets: &str, output_records: &str, region_starts: &str, region_base: &str, position_mask: &str, admission_mask: &str, haystack_len: &str, presence: &str, match_count: &str, matches: &str, admission: &str, state_count: u32, output_records_len: u32, region_count: u32, pattern_count: u32, presence_words: u32, max_matches: u32, max_pattern_len: u32, log2_max_regions: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::nfa::NfaCompileError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_pattern::pattern::nfa::NfaPlan::for_input_len(self, input_len: u32) -> Self
+pub fn vyre_libs_pattern::pattern::nfa::build_epsilon_table(patterns: &[&str]) -> alloc::vec::Vec<u32>
+pub fn vyre_libs_pattern::pattern::nfa::build_transition_table(patterns: &[&str]) -> alloc::vec::Vec<u32>
+pub fn vyre_libs_pattern::pattern::nfa::compile(patterns: &[&str]) -> vyre_libs_pattern::pattern::nfa::NfaPlan
+pub fn vyre_libs_pattern::pattern::nfa::nfa_scan(patterns: &[&str], input_buf: &str, hit_buf: &str, input_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::nfa::nfa_scan_with_plan(plan: &vyre_libs_pattern::pattern::nfa::NfaPlan, has_epsilon: bool, input_buf: &str, hit_buf: &str, input_len: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_pattern::pattern::nfa::nfa_sharded_programs(patterns: &[&str], input_buf: &str, hit_buf: &str, input_len: u32) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::program::definition::Program>, alloc::string::String>
+pub fn vyre_libs_pattern::pattern::nfa::plan_shards<'a>(patterns: &'a [&'a str]) -> alloc::vec::Vec<alloc::vec::Vec<&'a str>>
+pub fn vyre_libs_pattern::pattern::nfa::try_build_epsilon_table(patterns: &[&str]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_libs_pattern::pattern::nfa::NfaCompileError>
+pub fn vyre_libs_pattern::pattern::nfa::try_build_transition_table(patterns: &[&str]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_libs_pattern::pattern::nfa::NfaCompileError>
+pub fn vyre_libs_pattern::pattern::nfa::try_compile(patterns: &[&str]) -> core::result::Result<vyre_libs_pattern::pattern::nfa::NfaPlan, vyre_libs_pattern::pattern::nfa::NfaCompileError>
+pub fn vyre_libs_pattern::pattern::nfa::try_nfa_scan(patterns: &[&str], input_buf: &str, hit_buf: &str, input_len: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_pattern::pattern::nfa_to_dfa(tables: &vyre_libs_pattern::pattern::NfaTables<'_>, max_dfa_states: usize) -> core::result::Result<vyre_libs_pattern::pattern::CompiledDfa, vyre_libs_pattern::pattern::NfaToDfaError>
+pub fn vyre_libs_pattern::pattern::pack_haystack_u32(bytes: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_libs_pattern::pattern::regex_admission_by_region_program(haystack: &str, transitions: &str, output_offsets: &str, output_records: &str, region_starts: &str, region_base: &str, haystack_len: &str, presence: &str, state_count: u32, output_records_len: u32, region_count: u32, presence_words: u32, max_pattern_len: u32, log2_max_regions: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::regex_construct_diagnostic_code(construct: vyre_libs_pattern::pattern::RegexConstruct) -> &'static str
+pub fn vyre_libs_pattern::pattern::regex_dfa_program(patterns: &[&str], max_matches: u32, max_dfa_states: usize) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_pattern::pattern::RegexDfaError>
+pub fn vyre_libs_pattern::pattern::regex_dfa_sharded_programs(patterns: &[&str], max_matches: u32, max_dfa_states: usize) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::program::definition::Program>, vyre_libs_pattern::pattern::RegexDfaError>
+pub fn vyre_libs_pattern::pattern::regex_dfa_unanchored_program(patterns: &[&str], max_matches: u32, max_dfa_states: usize) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_pattern::pattern::RegexDfaError>
+pub fn vyre_libs_pattern::pattern::regex_dfa_unanchored_sharded_programs(patterns: &[&str], max_matches: u32, max_dfa_states: usize) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::program::definition::Program>, vyre_libs_pattern::pattern::RegexDfaError>
+pub fn vyre_libs_pattern::pattern::regex_scan_program(patterns: &[&str], input_buf: &str, hit_buf: &str, input_len: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_pattern::pattern::RegexCompileError>
+pub fn vyre_libs_pattern::pattern::region_sort_program(pids_in: &str, starts_in: &str, ends_in: &str, pids_out: &str, starts_out: &str, ends_out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::substring_search(haystack: &str, needle: &str, matches: &str, haystack_len: u32, needle_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub mod vyre_libs_pattern
+pub mod vyre_libs_pattern::nfa
+pub mod vyre_libs_pattern::nfa::subgroup_nfa
+pub mod vyre_libs_pattern::pattern
+pub mod vyre_libs_pattern::pattern::aho_corasick
+pub mod vyre_libs_pattern::pattern::builders
+pub mod vyre_libs_pattern::pattern::classic_ac
+pub mod vyre_libs_pattern::pattern::nfa
+pub struct vyre_libs_pattern::pattern::AnchorDfaCandidate<'anchor>
+pub struct vyre_libs_pattern::pattern::AnchorDfaLiteral
+pub struct vyre_libs_pattern::pattern::AnchorDfaPlan
+pub struct vyre_libs_pattern::pattern::CaptureModeContract
+pub struct vyre_libs_pattern::pattern::CompiledDfa
+pub struct vyre_libs_pattern::pattern::CompiledRegexSet
+pub struct vyre_libs_pattern::pattern::FusedRegionEvidence
+pub struct vyre_libs_pattern::pattern::NfaTables<'tables>
+pub struct vyre_libs_pattern::pattern::PostProcessedMatch
+pub struct vyre_libs_pattern::pattern::RegexDfaPipeline
+pub struct vyre_libs_pattern::pattern::RegexDfaShard
+pub struct vyre_libs_pattern::pattern::RegexPatternExtent
+pub struct vyre_libs_pattern::pattern::RegexReplayPolicy
+pub struct vyre_libs_pattern::pattern::RegionTriple
+pub struct vyre_libs_pattern::pattern::ScanProgram
+pub struct vyre_libs_pattern::pattern::classic_ac::ClassicAcAutomaton
+pub struct vyre_libs_pattern::pattern::nfa::NfaPlan
+pub use vyre_libs_pattern::pattern::FusionError
+pub use vyre_libs_pattern::pattern::fuse_programs
+pub use vyre_libs_pattern::pattern::fuse_programs_vec
+pub vyre_libs_pattern::pattern::AnchorDfaCandidate::bytes: &'anchor [u8]
+pub vyre_libs_pattern::pattern::AnchorDfaCandidate::pattern_id: u32
+pub vyre_libs_pattern::pattern::AnchorDfaLiteral::bytes: alloc::vec::Vec<u8>
+pub vyre_libs_pattern::pattern::AnchorDfaLiteral::pattern_id: u32
+pub vyre_libs_pattern::pattern::AnchorDfaPlan::anchors: alloc::vec::Vec<vyre_libs_pattern::pattern::AnchorDfaLiteral>
+pub vyre_libs_pattern::pattern::AnchorDfaPlan::dfa_state_budget: u32
+pub vyre_libs_pattern::pattern::AnchorDfaPlan::dfa_state_count: u32
+pub vyre_libs_pattern::pattern::AnchorDfaPlan::fallback_rejection_reason: alloc::string::String
+pub vyre_libs_pattern::pattern::AnchorDfaPlan::match_parity_required: bool
+pub vyre_libs_pattern::pattern::AnchorDfaPlan::schema_version: u32
+pub vyre_libs_pattern::pattern::AnchorDfaPlan::verifier_fragment_id: alloc::string::String
+pub vyre_libs_pattern::pattern::AnchorDfaPlanError::DfaBudgetOverflow
+pub vyre_libs_pattern::pattern::AnchorDfaPlanError::DfaCompile(vyre_libs_pattern::pattern::DfaCompileError)
+pub vyre_libs_pattern::pattern::AnchorDfaPlanError::EmptyAnchor
+pub vyre_libs_pattern::pattern::AnchorDfaPlanError::EmptyAnchor::pattern_id: u32
+pub vyre_libs_pattern::pattern::AnchorDfaPlanError::EmptyAnchorSet
+pub vyre_libs_pattern::pattern::AnchorDfaPlanError::MissingVerifierFragmentId
+pub vyre_libs_pattern::pattern::AnchorDfaPlanError::ReserveFailed
+pub vyre_libs_pattern::pattern::AnchorDfaPlanError::ReserveFailed::message: alloc::string::String
+pub vyre_libs_pattern::pattern::AnchorDfaPlanError::ZeroDfaStateBudget
+pub vyre_libs_pattern::pattern::CaptureMode::Count
+pub vyre_libs_pattern::pattern::CaptureMode::GroupExtraction
+pub vyre_libs_pattern::pattern::CaptureMode::NamedCapture
+pub vyre_libs_pattern::pattern::CaptureMode::NonCapture
+pub vyre_libs_pattern::pattern::CaptureMode::RepeatedCapture
+pub vyre_libs_pattern::pattern::CaptureMode::Span
+pub vyre_libs_pattern::pattern::CaptureModeContract::accelerator_eligible: bool
+pub vyre_libs_pattern::pattern::CaptureModeContract::mode_id: &'static str
+pub vyre_libs_pattern::pattern::CaptureModeContract::null_policy: &'static str
+pub vyre_libs_pattern::pattern::CaptureModeContract::output_shape: &'static str
+pub vyre_libs_pattern::pattern::CaptureModeContract::verifier_required: bool
+pub vyre_libs_pattern::pattern::CompiledDfa::accept: alloc::vec::Vec<u32>
+pub vyre_libs_pattern::pattern::CompiledDfa::max_pattern_len: u32
+pub vyre_libs_pattern::pattern::CompiledDfa::output_offsets: alloc::vec::Vec<u32>
+pub vyre_libs_pattern::pattern::CompiledDfa::output_records: alloc::vec::Vec<u32>
+pub vyre_libs_pattern::pattern::CompiledDfa::state_count: u32
+pub vyre_libs_pattern::pattern::CompiledDfa::transitions: alloc::vec::Vec<u32>
+pub vyre_libs_pattern::pattern::CompiledRegexSet::captures_present: bool
+pub vyre_libs_pattern::pattern::CompiledRegexSet::epsilon_table: alloc::vec::Vec<u32>
+pub vyre_libs_pattern::pattern::CompiledRegexSet::pattern_extents: alloc::vec::Vec<vyre_libs_pattern::pattern::RegexPatternExtent>
+pub vyre_libs_pattern::pattern::CompiledRegexSet::plan: vyre_libs_pattern::pattern::nfa::NfaPlan
+pub vyre_libs_pattern::pattern::CompiledRegexSet::transition_table: alloc::vec::Vec<u32>
+pub vyre_libs_pattern::pattern::DfaCompileError::TooLarge
+pub vyre_libs_pattern::pattern::DfaCompileError::TooLarge::budget_bytes: usize
+pub vyre_libs_pattern::pattern::DfaCompileError::TooLarge::requested_bytes: usize
+pub vyre_libs_pattern::pattern::DfaCompileError::TooLarge::state_count: u32
+pub vyre_libs_pattern::pattern::DfaCompileError::TooManyPatterns
+pub vyre_libs_pattern::pattern::DfaCompileError::TooManyPatterns::limit: usize
+pub vyre_libs_pattern::pattern::DfaCompileError::TooManyPatterns::pattern_count: usize
+pub vyre_libs_pattern::pattern::DfaCompileError::TrieStateCapExceeded
+pub vyre_libs_pattern::pattern::DfaCompileError::TrieStateCapExceeded::state_cap: usize
+pub vyre_libs_pattern::pattern::DfaWireError::BadMagic
+pub vyre_libs_pattern::pattern::DfaWireError::Envelope(alloc::string::String)
+pub vyre_libs_pattern::pattern::DfaWireError::SectionTooLarge
+pub vyre_libs_pattern::pattern::DfaWireError::SectionTooLarge::len: usize
+pub vyre_libs_pattern::pattern::DfaWireError::SectionTooLarge::max: usize
+pub vyre_libs_pattern::pattern::DfaWireError::ShapeMismatch
+pub vyre_libs_pattern::pattern::DfaWireError::ShapeMismatch::reason: &'static str
+pub vyre_libs_pattern::pattern::DfaWireError::Truncated
+pub vyre_libs_pattern::pattern::DfaWireError::Truncated::got: usize
+pub vyre_libs_pattern::pattern::DfaWireError::Truncated::needed: usize
+pub vyre_libs_pattern::pattern::DfaWireError::VersionMismatch
+pub vyre_libs_pattern::pattern::DfaWireError::VersionMismatch::expected: u32
+pub vyre_libs_pattern::pattern::DfaWireError::VersionMismatch::found: u32
+pub vyre_libs_pattern::pattern::FusedRegionEvidence::admission: alloc::vec::Vec<u32>
+pub vyre_libs_pattern::pattern::FusedRegionEvidence::positions: alloc::vec::Vec<vyre_foundation::match_result::ByteRange>
+pub vyre_libs_pattern::pattern::FusedRegionEvidence::presence: alloc::vec::Vec<u32>
+pub vyre_libs_pattern::pattern::NfaTables::accept_pattern_ids: &'tables [u32]
+pub vyre_libs_pattern::pattern::NfaTables::accept_state_ids: &'tables [u32]
+pub vyre_libs_pattern::pattern::NfaTables::epsilon_table: &'tables [u32]
+pub vyre_libs_pattern::pattern::NfaTables::max_pattern_len: u32
+pub vyre_libs_pattern::pattern::NfaTables::num_states: u32
+pub vyre_libs_pattern::pattern::NfaTables::transition_table: &'tables [u32]
+pub vyre_libs_pattern::pattern::NfaToDfaError::ShapeMismatch
+pub vyre_libs_pattern::pattern::NfaToDfaError::ShapeMismatch::reason: &'static str
+pub vyre_libs_pattern::pattern::NfaToDfaError::StateExplosion
+pub vyre_libs_pattern::pattern::NfaToDfaError::StateExplosion::cap: usize
+pub vyre_libs_pattern::pattern::NfaToDfaError::StateExplosion::produced: usize
+pub vyre_libs_pattern::pattern::PostProcessError::InvalidRange
+pub vyre_libs_pattern::pattern::PostProcessError::InvalidRange::end: u32
+pub vyre_libs_pattern::pattern::PostProcessError::InvalidRange::haystack_len: usize
+pub vyre_libs_pattern::pattern::PostProcessError::InvalidRange::pattern_id: u32
+pub vyre_libs_pattern::pattern::PostProcessError::InvalidRange::start: u32
+pub vyre_libs_pattern::pattern::PostProcessedMatch::confidence: f32
+pub vyre_libs_pattern::pattern::PostProcessedMatch::end: u32
+pub vyre_libs_pattern::pattern::PostProcessedMatch::entropy_bits_per_byte: f32
+pub vyre_libs_pattern::pattern::PostProcessedMatch::pattern_id: u32
+pub vyre_libs_pattern::pattern::PostProcessedMatch::start: u32
+pub vyre_libs_pattern::pattern::RegexCompileError::MatchLengthArithmeticOverflow
+pub vyre_libs_pattern::pattern::RegexCompileError::MatchLengthArithmeticOverflow::pattern_index: usize
+pub vyre_libs_pattern::pattern::RegexCompileError::MatchLengthOverflow
+pub vyre_libs_pattern::pattern::RegexCompileError::MatchLengthOverflow::len: usize
+pub vyre_libs_pattern::pattern::RegexCompileError::MatchLengthOverflow::pattern_index: usize
+pub vyre_libs_pattern::pattern::RegexCompileError::OpenEndedReplayLimitTooSmall
+pub vyre_libs_pattern::pattern::RegexCompileError::OpenEndedReplayLimitTooSmall::limit: u32
+pub vyre_libs_pattern::pattern::RegexCompileError::OpenEndedReplayLimitTooSmall::minimum: u32
+pub vyre_libs_pattern::pattern::RegexCompileError::OpenEndedReplayLimitTooSmall::pattern_index: usize
+pub vyre_libs_pattern::pattern::RegexCompileError::Parse
+pub vyre_libs_pattern::pattern::RegexCompileError::Parse::message: alloc::string::String
+pub vyre_libs_pattern::pattern::RegexCompileError::Parse::pattern_index: usize
+pub vyre_libs_pattern::pattern::RegexCompileError::PatternCountOverflow
+pub vyre_libs_pattern::pattern::RegexCompileError::PatternCountOverflow::count: usize
+pub vyre_libs_pattern::pattern::RegexCompileError::StorageReserveFailed
+pub vyre_libs_pattern::pattern::RegexCompileError::StorageReserveFailed::field: &'static str
+pub vyre_libs_pattern::pattern::RegexCompileError::StorageReserveFailed::message: alloc::string::String
+pub vyre_libs_pattern::pattern::RegexCompileError::StorageReserveFailed::requested: usize
+pub vyre_libs_pattern::pattern::RegexCompileError::TableWordCountOverflow
+pub vyre_libs_pattern::pattern::RegexCompileError::TableWordCountOverflow::table: &'static str
+pub vyre_libs_pattern::pattern::RegexCompileError::TooManyStates
+pub vyre_libs_pattern::pattern::RegexCompileError::TooManyStates::cap: usize
+pub vyre_libs_pattern::pattern::RegexCompileError::TooManyStates::states: usize
+pub vyre_libs_pattern::pattern::RegexCompileError::Unsupported
+pub vyre_libs_pattern::pattern::RegexCompileError::Unsupported::feature: &'static str
+pub vyre_libs_pattern::pattern::RegexCompileError::Unsupported::pattern_index: usize
+pub vyre_libs_pattern::pattern::RegexConstruct::Backreference
+pub vyre_libs_pattern::pattern::RegexConstruct::CaptureExtraction
+pub vyre_libs_pattern::pattern::RegexConstruct::HugeAlternation
+pub vyre_libs_pattern::pattern::RegexConstruct::Lookaround
+pub vyre_libs_pattern::pattern::RegexConstruct::NestedRepeats
+pub vyre_libs_pattern::pattern::RegexConstruct::UnicodeClassesGpu
+pub vyre_libs_pattern::pattern::RegexDfaError::Compile(vyre_libs_pattern::pattern::RegexCompileError)
+pub vyre_libs_pattern::pattern::RegexDfaError::Lower(vyre_libs_pattern::pattern::NfaToDfaError)
+pub vyre_libs_pattern::pattern::RegexDfaError::Size
+pub vyre_libs_pattern::pattern::RegexDfaError::Size::message: alloc::string::String
+pub vyre_libs_pattern::pattern::RegexDfaPipeline::dfa: vyre_libs_pattern::pattern::CompiledDfa
+pub vyre_libs_pattern::pattern::RegexDfaPipeline::pattern_lengths: alloc::vec::Vec<u32>
+pub vyre_libs_pattern::pattern::RegexDfaPipeline::program: vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_libs_pattern::pattern::RegexDfaShard::global_pattern_ids: alloc::vec::Vec<u32>
+pub vyre_libs_pattern::pattern::RegexDfaShard::pipeline: vyre_libs_pattern::pattern::RegexDfaPipeline
+pub vyre_libs_pattern::pattern::RegexPatternExtent::max_bytes: core::option::Option<u32>
+pub vyre_libs_pattern::pattern::RegexPatternExtent::min_bytes: u32
+pub vyre_libs_pattern::pattern::RegexPatternExtent::replay_limit_bytes: u32
+pub vyre_libs_pattern::pattern::RegexReplayPolicy::open_ended_limit_bytes: u32
+pub vyre_libs_pattern::pattern::RegionTriple::end: u32
+pub vyre_libs_pattern::pattern::RegionTriple::pid: u32
+pub vyre_libs_pattern::pattern::RegionTriple::start: u32
+pub vyre_libs_pattern::pattern::ScanProgram::epsilon_table: alloc::vec::Vec<u32>
+pub vyre_libs_pattern::pattern::ScanProgram::plan: vyre_libs_pattern::pattern::nfa::NfaPlan
+pub vyre_libs_pattern::pattern::ScanProgram::program: vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_libs_pattern::pattern::ScanProgram::transition_table: alloc::vec::Vec<u32>
+pub vyre_libs_pattern::pattern::classic_ac::ClassicAcAutomaton::dfa: vyre_libs_pattern::pattern::CompiledDfa
+pub vyre_libs_pattern::pattern::nfa::NfaCompileError::PatternCountOverflow
+pub vyre_libs_pattern::pattern::nfa::NfaCompileError::PatternCountOverflow::count: usize
+pub vyre_libs_pattern::pattern::nfa::NfaCompileError::PatternLengthOverflow
+pub vyre_libs_pattern::pattern::nfa::NfaCompileError::PatternLengthOverflow::len: usize
+pub vyre_libs_pattern::pattern::nfa::NfaCompileError::PatternLengthOverflow::pattern_index: usize
+pub vyre_libs_pattern::pattern::nfa::NfaCompileError::StateCountOverflow
+pub vyre_libs_pattern::pattern::nfa::NfaCompileError::StorageReserveFailed
+pub vyre_libs_pattern::pattern::nfa::NfaCompileError::StorageReserveFailed::field: &'static str
+pub vyre_libs_pattern::pattern::nfa::NfaCompileError::StorageReserveFailed::message: alloc::string::String
+pub vyre_libs_pattern::pattern::nfa::NfaCompileError::StorageReserveFailed::requested: usize
+pub vyre_libs_pattern::pattern::nfa::NfaCompileError::TableWordCountOverflow
+pub vyre_libs_pattern::pattern::nfa::NfaCompileError::TableWordCountOverflow::table: &'static str
+pub vyre_libs_pattern::pattern::nfa::NfaPlan::accept_end_anchored: alloc::vec::Vec<bool>
+pub vyre_libs_pattern::pattern::nfa::NfaPlan::accept_start_anchored: alloc::vec::Vec<bool>
+pub vyre_libs_pattern::pattern::nfa::NfaPlan::accept_state_ids: alloc::vec::Vec<u32>
+pub vyre_libs_pattern::pattern::nfa::NfaPlan::accept_states: alloc::vec::Vec<(u32, u32)>
+pub vyre_libs_pattern::pattern::nfa::NfaPlan::input_len: u32
+pub vyre_libs_pattern::pattern::nfa::NfaPlan::num_states: u32

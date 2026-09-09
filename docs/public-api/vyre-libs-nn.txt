@@ -1,0 +1,493 @@
+impl vyre_libs_nn::llm::sampling::TokenSampler<'_>
+impl vyre_libs_nn::nn::attention::Attention
+impl vyre_libs_nn::nn::attention::PagedAttentionSpec<'_>
+impl vyre_libs_nn::nn::attention::PagedCacheAppendSpec<'_>
+impl vyre_libs_nn::nn::attention::Softmax
+impl vyre_libs_nn::nn::linear::Linear
+impl vyre_libs_nn::nn::linear::QuantizedLinear4BitSpec
+impl vyre_libs_nn::nn::norm::LayerNorm
+pub const vyre_libs_nn::llm::paged_kv::PAGED_KV_APPEND_OP_ID: &str
+pub const vyre_libs_nn::llm::paged_kv::PAGED_KV_GATHER_OP_ID: &str
+pub const vyre_libs_nn::llm::sampling::LOGIT_ADJUST_OP_ID: &str
+pub const vyre_libs_nn::llm::sampling::NUCLEUS_SELECT_OP_ID: &str
+pub const vyre_libs_nn::llm::sampling::SAMPLE_TOKEN_OP_ID: &str
+pub const vyre_libs_nn::nn::attention::ATTENTION_LAYOUT_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_nn::nn::attention::FLASH_ATTENTION_OUTPUT_TOLERANCE_ABS: f32
+pub const vyre_libs_nn::nn::attention::FLASH_ATTENTION_SEQUENCE_PARALLEL_TARGET_TILES_PER_SPLIT: u32
+pub const vyre_libs_nn::nn::attention::PAGED_ATTENTION_MAX_PASS_OP_ID: &str
+pub const vyre_libs_nn::nn::attention::PAGED_ATTENTION_OP_ID: &str
+pub const vyre_libs_nn::nn::attention::PAGED_ATTENTION_SUM_PASS_OP_ID: &str
+pub const vyre_libs_nn::nn::attention::PAGED_ATTENTION_WRITE_PASS_OP_ID: &str
+pub const vyre_libs_nn::nn::attention::PAGED_CACHE_APPEND_OP_ID: &str
+pub const vyre_libs_nn::nn::attention::tiled_online_softmax::ATTENTION_ABSORB_VALUES_OP_ID: &str
+pub const vyre_libs_nn::nn::attention::tiled_online_softmax::ATTENTION_TILE_SCORES_OP_ID: &str
+pub const vyre_libs_nn::nn::attention::tiled_online_softmax::OP_ID: &str
+pub const vyre_libs_nn::nn::attention_passes::ATTENTION_MAX_PASS_OP_ID: &str
+pub const vyre_libs_nn::nn::attention_passes::ATTENTION_SUM_PASS_OP_ID: &str
+pub const vyre_libs_nn::nn::attention_passes::ATTENTION_WRITE_PASS_OP_ID: &str
+pub const vyre_libs_nn::nn::linear::LINEAR_4BIT_AFFINE_GROUPED_OUTPUT_DRIFT_ABS_TOLERANCE: f32
+pub const vyre_libs_nn::nn::quant::INT4_BATCHED_MATMUL_SCALED_EXTENSION_NAME: &str
+pub const vyre_libs_nn::nn::quant::INT4_BATCHED_MATMUL_TOP1_SCALED_EXTENSION_NAME: &str
+pub const vyre_libs_nn::nn::quant::INT4_BATCHED_MATVEC_SCALED_EXTENSION_NAME: &str
+pub const vyre_libs_nn::nn::quant::INT4_DOT_EXTENSION_NAME: &str
+pub const vyre_libs_nn::nn::quant::INT4_DOT_SCALED_EXTENSION_NAME: &str
+pub const vyre_libs_nn::nn::quant::INT4_MATVEC_SCALED_EXTENSION_NAME: &str
+pub const vyre_libs_nn::nn::quant::Q2_K_BLOCKS_PER_SUPER: u32
+pub const vyre_libs_nn::nn::quant::Q2_K_BLOCK_SIZE: u32
+pub const vyre_libs_nn::nn::quant::Q2_K_SUPER_BLOCK_SIZE: u32
+pub const vyre_libs_nn::nn::quant::Q4_K_BLOCKS_PER_SUPER: u32
+pub const vyre_libs_nn::nn::quant::Q4_K_BLOCK_SIZE: u32
+pub const vyre_libs_nn::nn::quant::Q4_K_SUPER_BLOCK_SIZE: u32
+pub const vyre_libs_nn::nn::quest_paging_passes::QUEST_SCORE_PAGES_OP_ID: &str
+pub const vyre_libs_nn::nn::quest_paging_passes::QUEST_SELECT_TOP_K_OP_ID: &str
+pub const vyre_libs_nn::nn::quest_paging_passes::QUEST_ZERO_FILL_OP_ID: &str
+pub enum vyre_libs_nn::llm::paged_kv::PagedKvError
+pub enum vyre_libs_nn::llm::sampling::SamplingError
+pub enum vyre_libs_nn::nn::attention::FlashAttentionKernelKind
+pub enum vyre_libs_nn::nn::attention::KvCacheAppendError
+pub enum vyre_libs_nn::nn::attention::PagedAttentionError
+pub enum vyre_libs_nn::nn::attention::PagedCacheAppendError
+pub enum vyre_libs_nn::nn::attention::RecurrentGatedDeltaError
+pub enum vyre_libs_nn::nn::conv::CausalConvActivation
+pub enum vyre_libs_nn::nn::conv::DepthwiseCausalConv1dError
+pub enum vyre_libs_nn::nn::model::DenseGatedMlpError
+pub enum vyre_libs_nn::nn::norm::GatedRmsNormError
+pub enum vyre_libs_nn::nn::norm::LastDimL2NormError
+pub fn vyre_libs_nn::link_anchor()
+pub fn vyre_libs_nn::llm::paged_kv::paged_kv_append(spec: &vyre_libs_nn::llm::paged_kv::PagedKvCache<'_>, chunk: &str, chunk_tokens: u32, position: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_nn::llm::paged_kv::PagedKvError>
+pub fn vyre_libs_nn::llm::paged_kv::paged_kv_gather(spec: &vyre_libs_nn::llm::paged_kv::PagedKvCache<'_>, window: &str, window_tokens: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_nn::llm::paged_kv::PagedKvError>
+pub fn vyre_libs_nn::llm::sampling::TokenSampler<'_>::program(&self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_nn::llm::sampling::SamplingError>
+pub fn vyre_libs_nn::llm::sampling::logit_adjust(logits: &str, counts: &str, adjusted: &str, vocabulary: u32, temperature: f32, penalty: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::llm::sampling::nucleus_select(selected: &str, weights: &str, uniform: &str, token: &str, candidates: u32, top_p: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::activation::cross_entropy(logits: &str, targets: &str, loss_out: &str, n: u32, vocab_size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::activation::embedding(embed_table: &str, tokens: &str, output: &str, n: u32, embed_dim: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::activation::embedding_typed(table: &str, tokens: &str, output: &str, n: u32, vocab_size: u32, embed_dim: u32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::activation::gelu(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::activation::leaky_relu_sq(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::activation::logit_softcap(input: &str, output: &str, n: u32, cap: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::activation::mlp_4x_leaky_sq(x: &str, w1: &str, b1: &str, w2: &str, b2: &str, output: &str, model_dim: u32, hidden_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::activation::parallel_residual_block(x: &str, attn_out: &str, mlp_out: &str, output: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::activation::relu(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::activation::residual_add(residual: &str, branch: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::activation::residual_add_typed(residual: &str, branch: &str, output: &str, n: u32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::activation::sigmoid_gate(gate_logits: &str, branch: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::activation::sigmoid_gate_typed(gate_logits: &str, branch: &str, output: &str, n: u32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::activation::silu(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::activation::skip_gate(gate: &str, branch: &str, skip: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::activation::swiglu(gate: &str, up: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::activation::swiglu_typed(gate: &str, up: &str, output: &str, n: u32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::activation::try_cross_entropy(logits: &str, targets: &str, loss_out: &str, n: u32, vocab_size: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_nn::nn::attention::Attention::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_nn::nn::attention::Attention::new(q: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, k: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, v: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef) -> Self
+pub fn vyre_libs_nn::nn::attention::Attention::with_region_generator(self, name: &'static str) -> Self
+pub fn vyre_libs_nn::nn::attention::Attention::with_tenant_id(self, tenant_id: u32) -> Self
+pub fn vyre_libs_nn::nn::attention::Attention::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs_nn::nn::attention::PagedAttentionSpec<'_>::validate(&self) -> core::result::Result<(u32, u32, u32, u32), vyre_libs_nn::nn::attention::PagedAttentionError>
+pub fn vyre_libs_nn::nn::attention::PagedCacheAppendSpec<'_>::validate(&self) -> core::result::Result<(u32, u32, u32), vyre_libs_nn::nn::attention::PagedCacheAppendError>
+pub fn vyre_libs_nn::nn::attention::Softmax::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_nn::nn::attention::Softmax::new(input: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, output: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef) -> Self
+pub fn vyre_libs_nn::nn::attention::Softmax::with_region_generator(self, name: &'static str) -> Self
+pub fn vyre_libs_nn::nn::attention::Softmax::with_tenant_id(self, tenant_id: u32) -> Self
+pub fn vyre_libs_nn::nn::attention::Softmax::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs_nn::nn::attention::attention(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention::attention_head_to_token(spec: vyre_libs_nn::nn::attention::AttentionPermuteSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::attention::attention_reference(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention::attention_token_to_head(spec: vyre_libs_nn::nn::attention::AttentionPermuteSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::attention::chunked_gated_delta(spec: &vyre_libs_nn::nn::attention::GatedDeltaSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_nn::nn::attention::RecurrentGatedDeltaError>
+pub fn vyre_libs_nn::nn::attention::flash_attention(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::attention::flash_attention_2(q: &str, k: &str, v: &str, out: &str, seq_len: u32, head_dim: u32, tile_size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention::fused_tile_attention(q: &str, k: &str, v: &str, out: &str, seq_len: u32, head_dim: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention::fused_tile_attention::fused_tile_attention(q: &str, k: &str, v: &str, out: &str, seq_len: u32, head_dim: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention::gqa_attention(q: &str, k: &str, v_buf: &str, output: &str, n_q_heads: u32, n_kv_heads: u32, seq_len: u32, head_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::attention::gqa_attention_causal(q: &str, k: &str, v_buf: &str, output: &str, batch: u32, n_q_heads: u32, n_kv_heads: u32, query_len: u32, kv_len: u32, head_dim: u32, cache_offset: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::attention::gqa_attention_causal_typed(q: &str, k: &str, v_buf: &str, output: &str, batch: u32, n_q_heads: u32, n_kv_heads: u32, query_len: u32, kv_len: u32, head_dim: u32, cache_offset: u32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::attention::kv_cache_append(spec: vyre_libs_nn::nn::attention::KvCacheAppendSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_nn::nn::attention::KvCacheAppendError>
+pub fn vyre_libs_nn::nn::attention::mla_compress_kv(h: &str, w_dk: &str, c_out: &str, hidden_dim: u32, kv_lora_rank: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::attention::mla_decode(q: &str, kv_cache: &str, kr_cache: &str, w_uk: &str, w_uv: &str, out: &str, seq_len: u32, num_heads: u32, head_dim: u32, kv_lora_rank: u32, qk_rope_head_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::attention::paged_attention(spec: &vyre_libs_nn::nn::attention::PagedAttentionSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_nn::nn::attention::PagedAttentionError>
+pub fn vyre_libs_nn::nn::attention::paged_cache_append(spec: &vyre_libs_nn::nn::attention::PagedCacheAppendSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_nn::nn::attention::PagedCacheAppendError>
+pub fn vyre_libs_nn::nn::attention::partial_rope(input: &str, cos_table: &str, sin_table: &str, output: &str, num_heads: u32, seq_len: u32, head_dim: u32, rope_dims: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention::partial_rope_at_offset(input: &str, cos_table: &str, sin_table: &str, output: &str, num_heads: u32, seq_len: u32, head_dim: u32, rope_dims: u32, position_offset: u32, table_seq_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention::partial_rope_at_offset_typed(input: &str, cos_table: &str, sin_table: &str, output: &str, num_heads: u32, seq_len: u32, head_dim: u32, rope_dims: u32, position_offset: u32, table_seq_len: u32, activation_dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::attention::plan_flash_attention_scalar(seq_len: u32, head_dim: u32) -> core::result::Result<vyre_libs_nn::nn::attention::FlashAttentionWorkPlan, alloc::string::String>
+pub fn vyre_libs_nn::nn::attention::plan_flash_attention_tiled(seq_len: u32, head_dim: u32, tile_size: u32) -> core::result::Result<vyre_libs_nn::nn::attention::FlashAttentionWorkPlan, alloc::string::String>
+pub fn vyre_libs_nn::nn::attention::qk_gain(q_in: &str, q_out: &str, gain: &str, num_heads: u32, seq_len: u32, head_dim: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention::quest_paging(query: &str, page_metadata: &str, scores: &str, io_queue: &str, num_pages: u32, k: u32, d_head: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention::recurrent_gated_delta(spec: &vyre_libs_nn::nn::attention::GatedDeltaSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_nn::nn::attention::RecurrentGatedDeltaError>
+pub fn vyre_libs_nn::nn::attention::softmax(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention::softmax_reference(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention::tiled_online_softmax::attention_absorb_values_program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention::tiled_online_softmax::attention_tile_scores_program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention::tiled_online_softmax::online_softmax_attention(q: &str, k: &str, v: &str, out: &str, plan: &vyre_libs_nn::nn::attention::FlashAttentionWorkPlan) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention::try_attention_reference(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_nn::nn::attention::turboquant_attention(q: &str, k_packed: &str, v_packed: &str, out: &str, seq_len: u32, d_head: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention_passes::attention_max_pass(q: &str, k: &str, d: u32, s: u32, scale_expr: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_nn::nn::attention_passes::attention_max_pass_bounded(q: &str, k: &str, d: u32, key_limit: vyre_foundation::ir_inner::model::generated::Expr, scale_expr: vyre_foundation::ir_inner::model::generated::Expr, query_base: vyre_foundation::ir_inner::model::generated::Expr, key_base: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_nn::nn::attention_passes::attention_max_pass_program(q: &str, k: &str, out: &str, s: u32, d: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention_passes::attention_sum_pass(q: &str, k: &str, d: u32, s: u32, scale_expr: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_nn::nn::attention_passes::attention_sum_pass_bounded(q: &str, k: &str, d: u32, key_limit: vyre_foundation::ir_inner::model::generated::Expr, scale_expr: vyre_foundation::ir_inner::model::generated::Expr, query_base: vyre_foundation::ir_inner::model::generated::Expr, key_base: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_nn::nn::attention_passes::attention_sum_pass_program(q: &str, k: &str, max_in: &str, out: &str, s: u32, d: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention_passes::attention_write_pass(q: &str, k: &str, v: &str, d: u32, s: u32, scale_expr: vyre_foundation::ir_inner::model::generated::Expr, out: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_nn::nn::attention_passes::attention_write_pass_bounded(q: &str, k: &str, v: &str, d: u32, key_limit: vyre_foundation::ir_inner::model::generated::Expr, scale_expr: vyre_foundation::ir_inner::model::generated::Expr, out: &str, query_base: vyre_foundation::ir_inner::model::generated::Expr, key_base: vyre_foundation::ir_inner::model::generated::Expr, value_base: vyre_foundation::ir_inner::model::generated::Expr, output_base: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_nn::nn::attention_passes::attention_write_pass_bounded_typed(q: &str, k: &str, v: &str, d: u32, key_limit: vyre_foundation::ir_inner::model::generated::Expr, scale_expr: vyre_foundation::ir_inner::model::generated::Expr, out: &str, query_base: vyre_foundation::ir_inner::model::generated::Expr, key_base: vyre_foundation::ir_inner::model::generated::Expr, value_base: vyre_foundation::ir_inner::model::generated::Expr, output_base: vyre_foundation::ir_inner::model::generated::Expr, output_dtype: vyre_spec::data_type::DataType) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_nn::nn::attention_passes::attention_write_pass_program(spec: vyre_libs_nn::nn::attention_passes::AttentionWritePassProgramSpec<'_>) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::attention_stability::bounded_exp_arg(value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_nn::nn::attention_stability::bounded_score(value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_nn::nn::attention_stability::direct_score_expr(q: &str, k: &str, row: u32, col: u32, dimension: u32, scale: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_nn::nn::attention_stability::positive_denominator(value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_nn::nn::backward::leaky_relu_sq_backward(input: &str, grad_out: &str, grad_in: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::backward::ln_scale_backward(input: &str, scale: &str, grad_out: &str, grad_x: &str, grad_scale: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::backward::logit_softcap_backward(input: &str, grad_out: &str, grad_in: &str, n: u32, cap: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::backward::mlp_backward(x: &str, w1: &str, b1: &str, w2: &str, grad_out: &str, grad_x: &str, model_dim: u32, hidden_dim: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::backward::partial_rope_backward(grad_out: &str, cos_table: &str, sin_table: &str, grad_in: &str, num_heads: u32, seq_len: u32, head_dim: u32, rope_dims: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::backward::qk_gain_backward(gain: &str, grad_out: &str, grad_q: &str, num_heads: u32, seq_len: u32, head_dim: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::backward::residual_block_backward(grad_out: &str, grad_x: &str, grad_attn: &str, grad_mlp: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::backward::skip_gate_backward(gate: &str, branch: &str, skip: &str, grad_out: &str, grad_gate: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::conv::depthwise_causal_conv1d(input: &str, weight: &str, bias: core::option::Option<&str>, mask: core::option::Option<&str>, output: &str, batch: u32, channels: u32, sequence: u32, kernel: u32, activation: vyre_libs_nn::nn::conv::CausalConvActivation, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_nn::nn::conv::DepthwiseCausalConv1dError>
+pub fn vyre_libs_nn::nn::conv::depthwise_causal_conv1d_update(input: &str, weight: &str, bias: core::option::Option<&str>, state_input: &str, output: &str, state_output: &str, batch: u32, channels: u32, chunk: u32, kernel: u32, activation: vyre_libs_nn::nn::conv::CausalConvActivation, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_nn::nn::conv::DepthwiseCausalConv1dError>
+pub fn vyre_libs_nn::nn::f32_stability::finite_or(value: vyre_foundation::ir_inner::model::generated::Expr, replacement: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_nn::nn::f32_stability::flush_tiny(value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_nn::nn::f32_stability::positive_finite_or_min(value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_nn::nn::linear::Linear::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_nn::nn::linear::Linear::new(x: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, w: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, b: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef) -> Self
+pub fn vyre_libs_nn::nn::linear::Linear::with_region_generator(self, name: &'static str) -> Self
+pub fn vyre_libs_nn::nn::linear::Linear::with_tenant_id(self, tenant_id: u32) -> Self
+pub fn vyre_libs_nn::nn::linear::Linear::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs_nn::nn::linear::QuantizedLinear4BitSpec::affine_grouped(in_dim: u32, out_dim: u32, group_size: u32) -> Self
+pub fn vyre_libs_nn::nn::linear::batch_matmul(a: &str, b: &str, out: &str, batch: u32, m: u32, k: u32, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::linear(x: &str, w: &str, b: &str, out: &str, in_dim: u32, out_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::linear_4bit(x: &str, w_packed: &str, b: &str, out: &str, in_dim: u32, out_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::linear_4bit_affine_grouped(x: &str, w_packed: &str, scale: &str, zero_point: &str, b: &str, out: &str, in_dim: u32, out_dim: u32, group_size: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::linear_4bit_affine_grouped_batched(x: &str, w_packed: &str, scale: &str, zero_point: &str, b: &str, out: &str, in_dim: u32, out_dim: u32, group_size: u32, batch_size: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::linear_4bit_affine_grouped_batched_typed(spec: &vyre_libs_nn::nn::linear::QuantizedLinear4BitSpec, batch_size: u32, x: &str, w_packed: &str, scale: &str, zero_point: &str, b: &str, out: &str) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::linear_4bit_affine_grouped_planner_evidence(spec: &vyre_libs_nn::nn::linear::QuantizedLinear4BitSpec) -> core::result::Result<vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::linear_4bit_affine_grouped_typed(spec: &vyre_libs_nn::nn::linear::QuantizedLinear4BitSpec, x: &str, w_packed: &str, scale: &str, zero_point: &str, b: &str, out: &str) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::linear_relu(x: &str, w: &str, b: &str, out: &str, in_dim: u32, out_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::linear_rows(x: &str, w: &str, b: &str, out: &str, rows: u32, in_dim: u32, out_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::linear_rows_no_bias(x: &str, w: &str, out: &str, rows: u32, in_dim: u32, out_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::linear_rows_no_bias_out_in_typed(x: &str, w: &str, out: &str, rows: u32, in_dim: u32, out_dim: u32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::linear_rows_no_bias_typed(x: &str, w: &str, out: &str, rows: u32, in_dim: u32, out_dim: u32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::linear_silu(x: &str, w: &str, b: &str, out: &str, in_dim: u32, out_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::linear_tiled(x: &str, w: &str, b: &str, out: &str, in_dim: u32, out_dim: u32, tile: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::linear_tiled_reference(x: &str, w: &str, b: &str, out: &str, in_dim: u32, out_dim: u32, tile: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::linear::rms_norm_linear(input: &str, w: &str, b: &str, out: &str, n: u32, in_dim: u32, out_dim: u32, eps: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::linear::try_rms_norm_linear(input: &str, w: &str, b: &str, out: &str, n: u32, in_dim: u32, out_dim: u32, eps: f32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_nn::nn::model::dense_gated_mlp_graph(spec: &vyre_libs_nn::nn::model::DenseGatedMlpSpec) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::graph::ProgramGraph, vyre_libs_nn::nn::model::DenseGatedMlpError>
+pub fn vyre_libs_nn::nn::moe::expert_mlp(x: &str, w_gate: &str, b_gate: &str, w_up: &str, b_up: &str, w_down: &str, b_down: &str, out: &str, in_dim: u32, hidden_dim: u32, out_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::moe::moe_gate(input_scores: &str, output_indices: &str, output_weights: &str, num_experts: u32, k: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::moe::moe_layer_route_and_accumulate(x: &str, w_router: &str, b_router: &str, expert_indices: &str, expert_weights: &str, expert_outputs: &str, out: &str, in_dim: u32, num_experts: u32, out_dim: u32, k: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::moe::softmax_top_k(scores: &str, out_indices: &str, out_weights: &str, n: u32, k: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::moe::top_k(input: &str, output_indices: &str, n: u32, k: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::norm::LayerNorm::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_nn::nn::norm::LayerNorm::new(input: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, output: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, eps: f32) -> Self
+pub fn vyre_libs_nn::nn::norm::LayerNorm::with_region_generator(self, name: &'static str) -> Self
+pub fn vyre_libs_nn::nn::norm::LayerNorm::with_tenant_id(self, tenant_id: u32) -> Self
+pub fn vyre_libs_nn::nn::norm::LayerNorm::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs_nn::nn::norm::gated_rms_norm(input: &str, weight: &str, gate: &str, output: &str, rows: u32, hidden: u32, eps: f32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_nn::nn::norm::GatedRmsNormError>
+pub fn vyre_libs_nn::nn::norm::gated_rms_norm_with_weight_dtype(input: &str, weight: &str, gate: &str, output: &str, rows: u32, hidden: u32, eps: f32, dtype: vyre_spec::data_type::DataType, weight_dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_nn::nn::norm::GatedRmsNormError>
+pub fn vyre_libs_nn::nn::norm::last_dim_l2_norm(input: &str, output: &str, rows: u32, width: u32, eps: f32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_nn::nn::norm::LastDimL2NormError>
+pub fn vyre_libs_nn::nn::norm::layer_norm(input: &str, output: &str, n: u32, eps: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::norm::layerwise_ln_scale(input: &str, scale: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::norm::learned_rms_norm(input: &str, weight: &str, output: &str, rows: u32, hidden: u32, eps: f32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_nn::nn::norm::GatedRmsNormError>
+pub fn vyre_libs_nn::nn::norm::rms_norm(input: &str, output: &str, n: u32, eps: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::norm::rms_norm_reference(input: &str, output: &str, n: u32, eps: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::optim::adamw_step(params: &str, grads: &str, m_buf: &str, v_buf: &str, n: u32, lr: f32, beta1: f32, beta2: f32, eps: f32, wd: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::optim::ema_apply(ema: &str, theta: &str, n: u32, decay: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::optim::muon_update(params: &str, grads: &str, momentum_buf: &str, output: &str, n: u32, lr: f32, momentum: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::optim::muoneq_r(params: &str, grads: &str, momentum_buf: &str, output: &str, n: u32, rows: u32, cols: u32, lr: f32, momentum: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::optim::newton_schulz_5step(mat: &str, output: &str, rows: u32, cols: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quant::byte_shuffle(input: &str, output: &str, n: u32, elem_bytes: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::quant::gptq_round(input: &str, scale: &str, output: &str, n: u32, max_val: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quant::gptq_sdclip(input: &str, output: &str, n: u32, k: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quant::int4_batched_matmul_f32_scaled(weights_packed: &str, activation_batches_packed: &str, row_scales: &str, batch_scales: &str, out: &str, batch: u32, rows: u32, cols: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quant::int4_batched_matmul_scaled_extension_id() -> vyre_spec::extension::ExtensionTernaryOpId
+pub fn vyre_libs_nn::nn::quant::int4_batched_matmul_top1_f32_scaled(weights_packed: &str, activation_batches_packed: &str, row_scales: &str, batch_scales: &str, out: &str, batch: u32, rows: u32, cols: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quant::int4_batched_matmul_top1_scaled_extension_id() -> vyre_spec::extension::ExtensionTernaryOpId
+pub fn vyre_libs_nn::nn::quant::int4_batched_matvec_f32_scaled(weights_packed: &str, x_batches: &str, row_scales: &str, out: &str, batch: u32, rows: u32, cols: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quant::int4_batched_matvec_scaled_extension_id() -> vyre_spec::extension::ExtensionTernaryOpId
+pub fn vyre_libs_nn::nn::quant::int4_dot_extension_id() -> vyre_spec::extension::ExtensionBinOpId
+pub fn vyre_libs_nn::nn::quant::int4_dot_f32_scaled(lhs_packed: &str, rhs_packed: &str, lhs_scale: &str, rhs_scale: &str, out: &str, lane_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quant::int4_dot_i32(lhs_packed: &str, rhs_packed: &str, out: &str, lane_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quant::int4_dot_scaled_extension_id() -> vyre_spec::extension::ExtensionBinOpId
+pub fn vyre_libs_nn::nn::quant::int4_matvec_f32_scaled(weights_packed: &str, x: &str, row_scales: &str, out: &str, rows: u32, cols: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quant::int4_matvec_scaled_extension_id() -> vyre_spec::extension::ExtensionTernaryOpId
+pub fn vyre_libs_nn::nn::quant::int6_pack(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quant::int6_unpack(packed: &str, scale: &str, zero: &str, output: &str, n: u32, block_size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quant::int8_pack(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quant::int8_unpack(packed: &str, scales: &str, output: &str, n: u32, cols: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quant::q2_k_linear(x: &str, w_packed: &str, w_scales: &str, w_mins: &str, b: &str, out: &str, in_dim: u32, out_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::quant::q2_k_unpack(packed: &str, scales: &str, mins: &str, output: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::quant::q4_k_linear(x: &str, w_packed: &str, w_scales: &str, w_mins: &str, b: &str, out: &str, in_dim: u32, out_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::quant::q4_k_unpack(packed: &str, scales: &str, mins: &str, output: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_nn::nn::quest_paging_passes::quest_score_pages(query: &str, page_metadata: &str, scores: &str, num_pages: u32, d_head: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quest_paging_passes::quest_score_pages_body(query: &str, page_metadata: &str, scores: &str, num_pages: u32, d_head: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_nn::nn::quest_paging_passes::quest_select_top_k(scores: &str, io_queue: &str, num_pages: u32, k: u32, score_sentinel: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quest_paging_passes::quest_select_top_k_body(scores: &str, io_queue: &str, num_pages: u32, k: u32, score_sentinel: f32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_nn::nn::quest_paging_passes::quest_zero_fill(io_queue: &str, num_pages: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_nn::nn::quest_paging_passes::quest_zero_fill_body(io_queue: &str, num_pages: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub mod vyre_libs_nn
+pub mod vyre_libs_nn::llm
+pub mod vyre_libs_nn::llm::paged_kv
+pub mod vyre_libs_nn::llm::sampling
+pub mod vyre_libs_nn::nn
+pub mod vyre_libs_nn::nn::activation
+pub mod vyre_libs_nn::nn::attention
+pub mod vyre_libs_nn::nn::attention::fused_tile_attention
+pub mod vyre_libs_nn::nn::attention::tiled_online_softmax
+pub mod vyre_libs_nn::nn::attention_passes
+pub mod vyre_libs_nn::nn::attention_stability
+pub mod vyre_libs_nn::nn::backward
+pub mod vyre_libs_nn::nn::conv
+pub mod vyre_libs_nn::nn::f32_stability
+pub mod vyre_libs_nn::nn::linear
+pub mod vyre_libs_nn::nn::model
+pub mod vyre_libs_nn::nn::moe
+pub mod vyre_libs_nn::nn::norm
+pub mod vyre_libs_nn::nn::optim
+pub mod vyre_libs_nn::nn::quant
+pub mod vyre_libs_nn::nn::quest_paging_passes
+pub struct vyre_libs_nn::llm::paged_kv::PagedKvCache<'a>
+pub struct vyre_libs_nn::llm::sampling::TokenSampler<'a>
+pub struct vyre_libs_nn::nn::attention::Attention
+pub struct vyre_libs_nn::nn::attention::AttentionPermuteSpec<'a>
+pub struct vyre_libs_nn::nn::attention::FlashAttentionBenchMetrics
+pub struct vyre_libs_nn::nn::attention::FlashAttentionMemoryTraffic
+pub struct vyre_libs_nn::nn::attention::FlashAttentionWorkPlan
+pub struct vyre_libs_nn::nn::attention::GatedDeltaSpec<'a>
+pub struct vyre_libs_nn::nn::attention::KvCacheAppendSpec<'a>
+pub struct vyre_libs_nn::nn::attention::PagedAttentionSpec<'a>
+pub struct vyre_libs_nn::nn::attention::PagedCacheAppendSpec<'a>
+pub struct vyre_libs_nn::nn::attention::Softmax
+pub struct vyre_libs_nn::nn::attention_passes::AttentionWritePassProgramSpec<'a>
+pub struct vyre_libs_nn::nn::linear::Linear
+pub struct vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence
+pub struct vyre_libs_nn::nn::linear::QuantizedLinear4BitSpec
+pub struct vyre_libs_nn::nn::model::DenseGatedMlpSpec
+pub struct vyre_libs_nn::nn::norm::LayerNorm
+pub vyre_libs_nn::llm::paged_kv::PagedKvCache::block_table: &'a str
+pub vyre_libs_nn::llm::paged_kv::PagedKvCache::block_tokens: u32
+pub vyre_libs_nn::llm::paged_kv::PagedKvCache::blocks: u32
+pub vyre_libs_nn::llm::paged_kv::PagedKvCache::blocks_per_sequence: u32
+pub vyre_libs_nn::llm::paged_kv::PagedKvCache::cache: &'a str
+pub vyre_libs_nn::llm::paged_kv::PagedKvCache::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_nn::llm::paged_kv::PagedKvCache::head_dim: u32
+pub vyre_libs_nn::llm::paged_kv::PagedKvCache::heads: u32
+pub vyre_libs_nn::llm::paged_kv::PagedKvCache::sequences: u32
+pub vyre_libs_nn::llm::paged_kv::PagedKvError::ElementCountOverflow
+pub vyre_libs_nn::llm::paged_kv::PagedKvError::EmptyShape
+pub vyre_libs_nn::llm::paged_kv::PagedKvError::Range
+pub vyre_libs_nn::llm::paged_kv::PagedKvError::Range::block_tokens: u32
+pub vyre_libs_nn::llm::paged_kv::PagedKvError::Range::blocks_per_sequence: u32
+pub vyre_libs_nn::llm::paged_kv::PagedKvError::Range::end: u32
+pub vyre_libs_nn::llm::paged_kv::PagedKvError::UnsupportedDtype
+pub vyre_libs_nn::llm::paged_kv::PagedKvError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_nn::llm::sampling::SamplingError::CandidatesExceedVocabulary
+pub vyre_libs_nn::llm::sampling::SamplingError::CandidatesExceedVocabulary::candidates: u32
+pub vyre_libs_nn::llm::sampling::SamplingError::CandidatesExceedVocabulary::vocabulary: u32
+pub vyre_libs_nn::llm::sampling::SamplingError::EmptyVocabulary
+pub vyre_libs_nn::llm::sampling::SamplingError::Fusion
+pub vyre_libs_nn::llm::sampling::SamplingError::Fusion::reason: alloc::string::String
+pub vyre_libs_nn::llm::sampling::SamplingError::NoCandidates
+pub vyre_libs_nn::llm::sampling::SamplingError::Penalty
+pub vyre_libs_nn::llm::sampling::SamplingError::Penalty::penalty: f32
+pub vyre_libs_nn::llm::sampling::SamplingError::Temperature
+pub vyre_libs_nn::llm::sampling::SamplingError::Temperature::temperature: f32
+pub vyre_libs_nn::llm::sampling::SamplingError::TopP
+pub vyre_libs_nn::llm::sampling::SamplingError::TopP::top_p: f32
+pub vyre_libs_nn::llm::sampling::TokenSampler::candidates: u32
+pub vyre_libs_nn::llm::sampling::TokenSampler::counts: &'a str
+pub vyre_libs_nn::llm::sampling::TokenSampler::logits: &'a str
+pub vyre_libs_nn::llm::sampling::TokenSampler::repetition_penalty: f32
+pub vyre_libs_nn::llm::sampling::TokenSampler::temperature: f32
+pub vyre_libs_nn::llm::sampling::TokenSampler::token: &'a str
+pub vyre_libs_nn::llm::sampling::TokenSampler::top_p: f32
+pub vyre_libs_nn::llm::sampling::TokenSampler::uniform: &'a str
+pub vyre_libs_nn::llm::sampling::TokenSampler::vocabulary: u32
+pub vyre_libs_nn::nn::attention::AttentionPermuteSpec::batch: u32
+pub vyre_libs_nn::nn::attention::AttentionPermuteSpec::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_nn::nn::attention::AttentionPermuteSpec::head_dim: u32
+pub vyre_libs_nn::nn::attention::AttentionPermuteSpec::heads: u32
+pub vyre_libs_nn::nn::attention::AttentionPermuteSpec::input: &'a str
+pub vyre_libs_nn::nn::attention::AttentionPermuteSpec::output: &'a str
+pub vyre_libs_nn::nn::attention::AttentionPermuteSpec::sequence: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionBenchMetrics::memory_traffic: vyre_libs_nn::nn::attention::FlashAttentionMemoryTraffic
+pub vyre_libs_nn::nn::attention::FlashAttentionBenchMetrics::non_matmul_flops: u64
+pub vyre_libs_nn::nn::attention::FlashAttentionBenchMetrics::occupancy_proxy_bps: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionBenchMetrics::output_tolerance_abs: f32
+pub vyre_libs_nn::nn::attention::FlashAttentionKernelKind::CooperativeTiled
+pub vyre_libs_nn::nn::attention::FlashAttentionKernelKind::ScalarOnline
+pub vyre_libs_nn::nn::attention::FlashAttentionMemoryTraffic::global_read_bytes: u64
+pub vyre_libs_nn::nn::attention::FlashAttentionMemoryTraffic::global_write_bytes: u64
+pub vyre_libs_nn::nn::attention::FlashAttentionMemoryTraffic::shared_memory_bytes: u64
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::bench_metrics: vyre_libs_nn::nn::attention::FlashAttentionBenchMetrics
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::head_dim: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::kernel: vyre_libs_nn::nn::attention::FlashAttentionKernelKind
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::keys_per_sequence_split: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::logical_elements: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::o_acc_scratch_elements: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::parallel_workgroups_per_row: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::q_scratch_elements: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::rows_per_block: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::score_scratch_elements: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::seq_len: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::sequence_splits: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::split_reduce_scratch_elements: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::subgroup_lanes: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::subgroups_per_block: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::tile_count: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::tile_size: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::tiles_per_sequence_split: u32
+pub vyre_libs_nn::nn::attention::FlashAttentionWorkPlan::workgroup_lanes: u32
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::batch: u32
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::beta_logits: &'a str
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::decay_log: &'a str
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::eps: f32
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::key: &'a str
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::key_dim: u32
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::key_heads: u32
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::output: &'a str
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::query: &'a str
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::sequence: u32
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::state_input: &'a str
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::state_output: &'a str
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::value: &'a str
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::value_dim: u32
+pub vyre_libs_nn::nn::attention::GatedDeltaSpec::value_heads: u32
+pub vyre_libs_nn::nn::attention::KvCacheAppendError::ElementCountOverflow
+pub vyre_libs_nn::nn::attention::KvCacheAppendError::EmptyShape
+pub vyre_libs_nn::nn::attention::KvCacheAppendError::Range
+pub vyre_libs_nn::nn::attention::KvCacheAppendError::Range::capacity: u32
+pub vyre_libs_nn::nn::attention::KvCacheAppendError::Range::chunk_len: u32
+pub vyre_libs_nn::nn::attention::KvCacheAppendError::Range::offset: u32
+pub vyre_libs_nn::nn::attention::KvCacheAppendError::UnsupportedDtype
+pub vyre_libs_nn::nn::attention::KvCacheAppendError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_nn::nn::attention::KvCacheAppendSpec::batch: u32
+pub vyre_libs_nn::nn::attention::KvCacheAppendSpec::capacity: u32
+pub vyre_libs_nn::nn::attention::KvCacheAppendSpec::chunk: &'a str
+pub vyre_libs_nn::nn::attention::KvCacheAppendSpec::chunk_len: u32
+pub vyre_libs_nn::nn::attention::KvCacheAppendSpec::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_nn::nn::attention::KvCacheAppendSpec::head_dim: u32
+pub vyre_libs_nn::nn::attention::KvCacheAppendSpec::heads: u32
+pub vyre_libs_nn::nn::attention::KvCacheAppendSpec::next: &'a str
+pub vyre_libs_nn::nn::attention::KvCacheAppendSpec::offset: u32
+pub vyre_libs_nn::nn::attention::KvCacheAppendSpec::prior: &'a str
+pub vyre_libs_nn::nn::attention::PagedAttentionError::BlockTableCapacity
+pub vyre_libs_nn::nn::attention::PagedAttentionError::BlockTableCapacity::block_tokens: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionError::BlockTableCapacity::blocks_per_sequence: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionError::BlockTableCapacity::capacity: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionError::BlockTableCapacity::context_tokens: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionError::CausalRange
+pub vyre_libs_nn::nn::attention::PagedAttentionError::CausalRange::cache_offset: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionError::CausalRange::context_tokens: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionError::CausalRange::query_tokens: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionError::ElementCountOverflow
+pub vyre_libs_nn::nn::attention::PagedAttentionError::EmptyShape
+pub vyre_libs_nn::nn::attention::PagedAttentionError::HeadMismatch
+pub vyre_libs_nn::nn::attention::PagedAttentionError::HeadMismatch::kv_heads: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionError::HeadMismatch::q_heads: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionError::UnsupportedDtype
+pub vyre_libs_nn::nn::attention::PagedAttentionError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::block_table: &'a str
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::block_tokens: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::blocks: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::blocks_per_sequence: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::cache_offset: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::causal: bool
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::context_tokens: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::head_dim: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::k_cache: &'a str
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::kv_heads: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::output: &'a str
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::q: &'a str
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::q_heads: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::query_tokens: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::scale: core::option::Option<f32>
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::sequences: u32
+pub vyre_libs_nn::nn::attention::PagedAttentionSpec::v_cache: &'a str
+pub vyre_libs_nn::nn::attention::PagedCacheAppendError::BlockTableCapacity
+pub vyre_libs_nn::nn::attention::PagedCacheAppendError::BlockTableCapacity::block_tokens: u32
+pub vyre_libs_nn::nn::attention::PagedCacheAppendError::BlockTableCapacity::blocks_per_sequence: u32
+pub vyre_libs_nn::nn::attention::PagedCacheAppendError::BlockTableCapacity::capacity: u32
+pub vyre_libs_nn::nn::attention::PagedCacheAppendError::BlockTableCapacity::end_position: u32
+pub vyre_libs_nn::nn::attention::PagedCacheAppendError::ElementCountOverflow
+pub vyre_libs_nn::nn::attention::PagedCacheAppendError::EmptyShape
+pub vyre_libs_nn::nn::attention::PagedCacheAppendError::UnsupportedDtype
+pub vyre_libs_nn::nn::attention::PagedCacheAppendError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_nn::nn::attention::PagedCacheAppendSpec::block_table: &'a str
+pub vyre_libs_nn::nn::attention::PagedCacheAppendSpec::block_tokens: u32
+pub vyre_libs_nn::nn::attention::PagedCacheAppendSpec::blocks: u32
+pub vyre_libs_nn::nn::attention::PagedCacheAppendSpec::blocks_per_sequence: u32
+pub vyre_libs_nn::nn::attention::PagedCacheAppendSpec::cache: &'a str
+pub vyre_libs_nn::nn::attention::PagedCacheAppendSpec::chunk: &'a str
+pub vyre_libs_nn::nn::attention::PagedCacheAppendSpec::chunk_tokens: u32
+pub vyre_libs_nn::nn::attention::PagedCacheAppendSpec::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_nn::nn::attention::PagedCacheAppendSpec::head_dim: u32
+pub vyre_libs_nn::nn::attention::PagedCacheAppendSpec::kv_heads: u32
+pub vyre_libs_nn::nn::attention::PagedCacheAppendSpec::sequences: u32
+pub vyre_libs_nn::nn::attention::PagedCacheAppendSpec::start_position: u32
+pub vyre_libs_nn::nn::attention::RecurrentGatedDeltaError::ElementCountOverflow
+pub vyre_libs_nn::nn::attention::RecurrentGatedDeltaError::EmptyShape
+pub vyre_libs_nn::nn::attention::RecurrentGatedDeltaError::InvalidHeadGrouping
+pub vyre_libs_nn::nn::attention::RecurrentGatedDeltaError::InvalidHeadGrouping::key_heads: u32
+pub vyre_libs_nn::nn::attention::RecurrentGatedDeltaError::InvalidHeadGrouping::value_heads: u32
+pub vyre_libs_nn::nn::attention::RecurrentGatedDeltaError::UnsupportedDtype
+pub vyre_libs_nn::nn::attention::RecurrentGatedDeltaError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_nn::nn::attention_passes::AttentionWritePassProgramSpec::d: u32
+pub vyre_libs_nn::nn::attention_passes::AttentionWritePassProgramSpec::k: &'a str
+pub vyre_libs_nn::nn::attention_passes::AttentionWritePassProgramSpec::max_in: &'a str
+pub vyre_libs_nn::nn::attention_passes::AttentionWritePassProgramSpec::out: &'a str
+pub vyre_libs_nn::nn::attention_passes::AttentionWritePassProgramSpec::q: &'a str
+pub vyre_libs_nn::nn::attention_passes::AttentionWritePassProgramSpec::s: u32
+pub vyre_libs_nn::nn::attention_passes::AttentionWritePassProgramSpec::sum_in: &'a str
+pub vyre_libs_nn::nn::attention_passes::AttentionWritePassProgramSpec::v: &'a str
+pub vyre_libs_nn::nn::conv::CausalConvActivation::None
+pub vyre_libs_nn::nn::conv::CausalConvActivation::Silu
+pub vyre_libs_nn::nn::conv::DepthwiseCausalConv1dError::ElementCountOverflow
+pub vyre_libs_nn::nn::conv::DepthwiseCausalConv1dError::EmptyShape
+pub vyre_libs_nn::nn::conv::DepthwiseCausalConv1dError::StateKernelTooShort
+pub vyre_libs_nn::nn::conv::DepthwiseCausalConv1dError::UnsupportedDtype
+pub vyre_libs_nn::nn::conv::DepthwiseCausalConv1dError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::bias_bytes: u64
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::dequant_bytes_elided: u64
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::dequantized_weight_bytes: u64
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::group_count: u32
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::group_size: u32
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::in_dim: u32
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::matmul_candidate_path: core::option::Option<&'static str>
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::matmul_fallback_reason: core::option::Option<&'static str>
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::matmul_k: u32
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::matmul_m: u32
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::matmul_n: u32
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::matmul_selected_path: &'static str
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::matmul_tile: u32
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::out_dim: u32
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::output_bytes: u64
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::output_drift_abs_tolerance: f32
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::packed_weight_bytes: u64
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::sidecar_bytes: u64
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::tensor_core_eligible: bool
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitSpec::in_dim: u32
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitSpec::out_dim: u32
+pub vyre_libs_nn::nn::linear::QuantizedLinear4BitSpec::weight_type: vyre_spec::data_type::DataType
+pub vyre_libs_nn::nn::model::DenseGatedMlpError::Graph(vyre_foundation::ir_inner::model::program_graph::types::ProgramGraphError)
+pub vyre_libs_nn::nn::model::DenseGatedMlpError::Primitive(alloc::string::String)
+pub vyre_libs_nn::nn::model::DenseGatedMlpSpec::batch: u32
+pub vyre_libs_nn::nn::model::DenseGatedMlpSpec::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_nn::nn::model::DenseGatedMlpSpec::hidden_dim: u32
+pub vyre_libs_nn::nn::model::DenseGatedMlpSpec::intermediate_dim: u32
+pub vyre_libs_nn::nn::model::DenseGatedMlpSpec::norm_eps: f32
+pub vyre_libs_nn::nn::model::DenseGatedMlpSpec::sequence: u32
+pub vyre_libs_nn::nn::norm::GatedRmsNormError::ElementCountOverflow
+pub vyre_libs_nn::nn::norm::GatedRmsNormError::EmptyShape
+pub vyre_libs_nn::nn::norm::GatedRmsNormError::EmptyShape::hidden: u32
+pub vyre_libs_nn::nn::norm::GatedRmsNormError::EmptyShape::rows: u32
+pub vyre_libs_nn::nn::norm::GatedRmsNormError::UnsupportedDtype
+pub vyre_libs_nn::nn::norm::GatedRmsNormError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_nn::nn::norm::LastDimL2NormError::ElementCountOverflow
+pub vyre_libs_nn::nn::norm::LastDimL2NormError::EmptyShape
+pub vyre_libs_nn::nn::norm::LastDimL2NormError::EmptyShape::rows: u32
+pub vyre_libs_nn::nn::norm::LastDimL2NormError::EmptyShape::width: u32
+pub vyre_libs_nn::nn::norm::LastDimL2NormError::UnsupportedDtype
+pub vyre_libs_nn::nn::norm::LastDimL2NormError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
