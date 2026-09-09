@@ -195,11 +195,6 @@ fn record_dispatch_unsubmitted_impl(
     // The count sentence matches `vyre_driver::BindingPlan::validate_inputs`,
     // which is what cuda refuses a wrong count through, so a caller reads one
     // sentence whichever backend rejected the list.
-    let non_shared_binding_count = request
-        .buffer_bindings
-        .iter()
-        .filter(|info| info.kind != vyre_foundation::ir::MemoryKind::Shared)
-        .count();
     let input_slot_count = request.inputs.len();
     let consumed_input_count = request
         .buffer_bindings
@@ -303,6 +298,11 @@ fn record_dispatch_unsubmitted_impl(
     // not the size_class allocation length the pool returns. See
     // using `as_entire_binding()` made `arrayLength`
     // report the rounded-up element count instead of the logical one.
+    let non_shared_binding_count = request
+        .buffer_bindings
+        .iter()
+        .filter(|info| info.kind != vyre_foundation::ir::MemoryKind::Shared)
+        .count();
     let mut gpu_buffers = GpuBuffers::with_capacity(non_shared_binding_count);
     let gpu_idx_by_binding = &mut scratch.gpu_idx_by_binding;
     let output_idx_by_binding = &mut scratch.output_idx_by_binding;

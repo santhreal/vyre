@@ -196,9 +196,8 @@ pub(crate) fn run_hashmap_reference(
         return Err(ReferenceError::new(format!(
             "reference_eval received {} input Value(s) for a program with {logical_input_count} \
              reference input buffer(s), so {} of them is an unused input Value. Fix: pass one \
-             Value per buffer accepted by `vyre_reference::is_reference_input`, and none for a \
-             backend-allocated output; a placeholder for one is what the artifact ABI rejects on \
-             a device.",
+             Value per buffer accepted by `vyre_reference::is_reference_input`, in \
+             `Program::buffers` order, and none for a backend-allocated output.",
             inputs.len(),
             inputs.len() - logical_input_count
         )));

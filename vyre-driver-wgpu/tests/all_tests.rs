@@ -221,7 +221,6 @@ pub mod fnv1a64_gpu_parity;
 pub mod gap_transcendentals_parity;
 
 /// Integration tests from `tests/input_abi_contracts.rs`.
-#[cfg(feature = "device-tests")]
 #[path = "input_abi_contracts.rs"]
 pub mod input_abi_contracts;
 

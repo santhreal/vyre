@@ -114,6 +114,30 @@ fn an_anonymous_program_is_named_by_its_fingerprint() {
 }
 
 #[test]
+fn a_named_program_is_refused_under_its_entry_op_id() {
+    let mut program = data_derived_trip_count();
+    program.entry_op_id = Some("hostile::trip_count_op".to_string());
+    let start = std::time::Instant::now();
+    let error = reference_eval_with_step_ceiling(&program, &trip_inputs(u32::MAX), 4_096)
+        .expect_err("Fix: a hostile trip count no declared extent bounds must reach the work ceiling");
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(2),
+        "Fix: the interpreter must refuse an unbounded trip count promptly; elapsed {:?}",
+        start.elapsed()
+    );
+    let source = error.step_ceiling_source().expect(
+        "Fix: a work-ceiling refusal must carry the ceiling it exceeded, not only a message",
+    );
+    assert_eq!(source.ceiling, 4_096);
+    assert_eq!(source.program, "hostile::trip_count_op");
+    let rendered = error.to_string();
+    assert!(
+        rendered.contains("hostile::trip_count_op") && rendered.contains("4096"),
+        "Fix: the rendered message must name the program and the ceiling, got {rendered}"
+    );
+}
+
+#[test]
 fn an_empty_loop_body_is_bounded_too() {
     let error = reference_eval_with_step_ceiling(
         &data_derived_trip_count_empty_body(),
@@ -316,3 +340,4 @@ fn the_heaviest_legitimate_corpus_work_completes_under_the_ceiling_with_margin()
         "Fix: legitimate workload must complete under ceiling with margin, charged {steps} against ceiling {MAX_REFERENCE_STEPS}"
     );
 }
+

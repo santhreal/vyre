@@ -11,8 +11,11 @@ homepage.workspace = true
 description = "Canonical Vyre conformance engine and thin proof CLI."
 publish = false
 
+# `vyre-driver-spirv` is linked for its registration, not called by name, so a
+# source scan reports it as unused. Dropping it resolves `--backend spirv` to no
+# registration and writes one `unknown backend` row per op.
 [package.metadata.cargo-machete]
-ignored = ["vyre-test-support"]
+ignored = ["vyre-test-support", "vyre-driver-spirv"]
 
 [lints]
 workspace = true

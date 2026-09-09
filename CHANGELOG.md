@@ -757,6 +757,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   read from the sources when the test runs, so a third registering crate is
   covered the day it registers. This replaces a smoke test that grepped
   `list-ops` output for one crate's prefix from another crate's test target.
+- The resident CUDA optimizer pipeline is registered as a release benchmark
+  case against the foundation CPU pipeline baseline, and the release gate
+  verifies the measured execution times, provenance, and performance contract.
 - The runtime now owns immutable resources, reusable artifact instances, and
   mutable leased state through one budgeted residency boundary. Cold and warm
   admission, rollback, cancellation, generation-checked reset, completion,
@@ -6967,6 +6970,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   reciprocal is exact, so a divisor that is not a power of two keeps the
   quotient it computed before and a divisor below 2^-127 no longer turns every
   quotient into an infinity or a NaN.
+- VyreBackend declares lowered FloatLoweringMode capabilities per driver,
+  refusing unsupported modes by name at compilation with a runtime registry
+  closure test.
 - The registered FMA fixture now records the exact fused result for the
   maximum-finite times one-half boundary case.
 - The frontier leaderboard reads a metric percentile through the same reader as
@@ -8726,6 +8732,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   device, and the backend's own re-derivations disagreed with the reference
   oracle on a `Persistent`-kind buffer and on a pipeline live-out whose access
   is not `ReadWrite`.
+- The wgpu record-and-readback path binds exactly one input slot per
+  host-consuming binding and refuses an input list of any other length with a
+  named error stating the expected and received counts.
 - `vyre-driver-wgpu`'s loop-carrier scope-latch dispatch test reads
   `TOK_LBRACE` and `TOK_RBRACE` from `vyre_spec::c11_token` instead of
   declaring its own pair with the values 1 and 2. Those two declarations were
