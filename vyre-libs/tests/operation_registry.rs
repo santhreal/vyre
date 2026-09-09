@@ -33,6 +33,7 @@ inventory::submit! {
         None,
         None,
     )
+    .with_opaque("the expansion introduces a logical barrier, which no algebraic law may reorder")
 }
 
 #[test]

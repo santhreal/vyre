@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Five semantic operation registrations that declared no transform decision now state one, and the operation-law-decisions gate reads every registration in the tree so one compiled only in a device lane can no longer panic registry validation and poison the registry for later readers."

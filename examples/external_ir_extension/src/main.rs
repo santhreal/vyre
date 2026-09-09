@@ -31,6 +31,7 @@ inventory::submit! {
         None,
     )
     .with_category("fixture")
+    .with_opaque("the fixture stores one constant, so it carries no law to state")
 }
 
 struct ExternalTargetCompiler {

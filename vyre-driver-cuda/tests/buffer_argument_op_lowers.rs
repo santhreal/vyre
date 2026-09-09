@@ -92,6 +92,7 @@ inventory::submit! {
     )
     .with_signature(LOOKUP_SIG)
     .with_category("test")
+    .with_opaque("an indexed read of a caller-supplied table states no reorderable law")
 }
 
 /// The call resolves, and the callee's read moves onto the caller's buffer.
