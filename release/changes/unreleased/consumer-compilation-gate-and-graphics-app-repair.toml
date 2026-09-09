@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The downstream graphics app consumer package compiles and passes its test suite against the current runtime API, and the consumer-compilation gate verifies that out-of-workspace consumer packages build without errors."

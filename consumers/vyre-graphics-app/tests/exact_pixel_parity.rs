@@ -46,8 +46,8 @@ fn test_exact_text_run_bytes() {
     // 2x2 canvas, 1 glyph at (0,0) with size 1x1, sampled from atlas (0,0) with alpha 255
     let p_text = text_run_blend("glyphs", 1, "atlas", 2, 2, "bg", "out", 2, 2);
     let glyphs = vec![0u32, 0, 1, 1, 0, 0, 0xFF00_00FF]; // Blue glyph
-    let atlas = vec![0xFF00_0000u32, 0, 0, 0];            // 255 alpha at (0,0)
-    let bg = vec![0xFF00_0000u32; 4];                     // Black background
+    let atlas = vec![0xFF00_0000u32, 0, 0, 0]; // 255 alpha at (0,0)
+    let bg = vec![0xFF00_0000u32; 4]; // Black background
 
     let inputs = vec![
         Value::from(vyre_primitives::wire::pack_u32_slice(&glyphs)),
@@ -118,9 +118,9 @@ fn test_renderer_full_scene_exact_bytes() {
     scene.width = 2;
     scene.height = 2;
     scene.background = vec![0xFF00_0000u32; 4]; // Black
-    scene.segments = vec![0, 0, 1, 0];          // Segment at y=0
+    scene.segments = vec![0, 0, 1, 0]; // Segment at y=0
     scene.stroke_radius = 1;
-    scene.stroke_color = 0xFF00_00FF;           // Red stroke
+    scene.stroke_color = 0xFF00_00FF; // Red stroke
     scene.clip_rect = (0, 0, 2, 2);
 
     let mut renderer = GraphicsRenderer::new(scene);

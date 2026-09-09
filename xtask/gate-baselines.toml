@@ -100,6 +100,10 @@ name = "conformance-matrix"
 findings = 0
 
 [[gate]]
+name = "consumer-compilation"
+findings = 0
+
+[[gate]]
 name = "contract-in-source"
 findings = 0
 

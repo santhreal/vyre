@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with A through G.
-pub const GATES_A_G: [GateDescriptor; 54] = [
+pub const GATES_A_G: [GateDescriptor; 55] = [
     GateDescriptor {
         name: "abstraction-gate",
         help: "Enforce registered building-block boundaries",
@@ -35,7 +35,7 @@ pub const GATES_A_G: [GateDescriptor; 54] = [
             "vyre-foundation/tests/dialect_schema_translation_closure_contracts.rs",
         ],
         artifacts: &["release/evidence/conformance/application-readiness.json"],
-        prerequisites: &[],
+        prerequisites: &["release-conformance", "release-workload-matrix"],
         resource_class: ResourceClass::Process,
         proof: "xtask_registry::gates::application_runnable::tests::application_runnable_proves_closure_and_receipts",
     },
@@ -309,6 +309,18 @@ pub const GATES_A_G: [GateDescriptor; 54] = [
         prerequisites: &["op-matrix", "release-conformance"],
         resource_class: ResourceClass::Process,
         proof: "xtask_registry::release::conformance_matrix::case_classes::tests::release_backend_case_rows_block_non_supported_rows_without_unsupported_evidence",
+    },
+    GateDescriptor {
+        name: "consumer-compilation",
+        help: "Compile every out-of-workspace consumer package",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "out-of-workspace consumer packages",
+        inputs: &[],
+        artifacts: &[],
+        prerequisites: &[],
+        resource_class: ResourceClass::Process,
+        proof: "crate::gates::consumer_compilation::tests::finds_compile_failure_in_consumer",
     },
     GateDescriptor {
         name: "contract-in-source",

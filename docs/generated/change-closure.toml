@@ -516,7 +516,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "AliasDiscipline"
 variant_name = "DistinctDisjoint"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:69"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:68"
 constructors = ["AliasDiscipline::DistinctDisjoint"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -526,7 +526,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "AliasDiscipline"
 variant_name = "MayAlias"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:71"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:70"
 constructors = ["AliasDiscipline::MayAlias"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -536,7 +536,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "AliasDiscipline"
 variant_name = "NoAlias"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:67"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:66"
 constructors = ["AliasDiscipline::NoAlias"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -546,7 +546,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "AliasDiscipline"
 variant_name = "OverlappingView"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:73"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:72"
 constructors = ["AliasDiscipline::OverlappingView"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -2538,7 +2538,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "BorrowKind"
 variant_name = "AtomicExclusive"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:47"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:46"
 constructors = ["BorrowKind::AtomicExclusive"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -2548,7 +2548,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "BorrowKind"
 variant_name = "Immutable"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:43"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:42"
 constructors = ["BorrowKind::Immutable"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -2558,7 +2558,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "BorrowKind"
 variant_name = "Mutable"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:45"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:44"
 constructors = ["BorrowKind::Mutable"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -7509,7 +7509,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "EffectKind"
 variant_name = "AsyncTransfer"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:161"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:160"
 constructors = ["EffectKind::AsyncTransfer"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -7519,7 +7519,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "EffectKind"
 variant_name = "AtomicRmw"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:157"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:156"
 constructors = ["EffectKind::AtomicRmw"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -7529,7 +7529,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "EffectKind"
 variant_name = "BarrierSync"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:159"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:158"
 constructors = ["EffectKind::BarrierSync"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -7539,7 +7539,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "EffectKind"
 variant_name = "CollectiveComm"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:163"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:162"
 constructors = ["EffectKind::CollectiveComm"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -7549,7 +7549,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "EffectKind"
 variant_name = "ControlDivergence"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:165"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:164"
 constructors = ["EffectKind::ControlDivergence"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -7559,7 +7559,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "EffectKind"
 variant_name = "Pure"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:151"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:150"
 constructors = ["EffectKind::Pure"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -7569,7 +7569,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "EffectKind"
 variant_name = "ReadMemory"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:153"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:152"
 constructors = ["EffectKind::ReadMemory"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -7579,7 +7579,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "EffectKind"
 variant_name = "TrapFault"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:167"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:166"
 constructors = ["EffectKind::TrapFault"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -7589,7 +7589,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "EffectKind"
 variant_name = "WriteMemory"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:155"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:154"
 constructors = ["EffectKind::WriteMemory"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -16327,7 +16327,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryCapability"
 variant_name = "AsyncDma"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:97"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:96"
 constructors = ["MemoryCapability::AsyncDma"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -16337,7 +16337,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryCapability"
 variant_name = "Atomic"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:93"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:92"
 constructors = ["MemoryCapability::Atomic"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -16347,7 +16347,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryCapability"
 variant_name = "Barrier"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:95"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:94"
 constructors = ["MemoryCapability::Barrier"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -16357,7 +16357,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryCapability"
 variant_name = "Collective"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:99"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:98"
 constructors = ["MemoryCapability::Collective"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -16367,7 +16367,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryCapability"
 variant_name = "DynamicDispatch"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:101"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:100"
 constructors = ["MemoryCapability::DynamicDispatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -16377,7 +16377,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryCapability"
 variant_name = "Read"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:89"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:88"
 constructors = ["MemoryCapability::Read"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -16387,7 +16387,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryCapability"
 variant_name = "Write"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:91"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:90"
 constructors = ["MemoryCapability::Write"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -18157,7 +18157,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ObligationError"
 variant_name = "BorrowExclusivityViolation"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:289"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:288"
 constructors = ["ObligationError::BorrowExclusivityViolation"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -18167,7 +18167,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ObligationError"
 variant_name = "ConflictingObligation"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:277"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:276"
 constructors = ["ObligationError::ConflictingObligation"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -18177,7 +18177,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ObligationError"
 variant_name = "InvalidObligationConsumption"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:267"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:266"
 constructors = ["ObligationError::InvalidObligationConsumption"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -18187,7 +18187,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ObligationError"
 variant_name = "UnconsumedObligation"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:255"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:254"
 constructors = ["ObligationError::UnconsumedObligation"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -18197,7 +18197,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ObligationKind"
 variant_name = "PendingAsyncWait"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:194"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:193"
 constructors = ["ObligationKind::PendingAsyncWait"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -18207,7 +18207,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ObligationKind"
 variant_name = "PendingBarrierRendezvous"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:203"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:202"
 constructors = ["ObligationKind::PendingBarrierRendezvous"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -18217,7 +18217,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ObligationKind"
 variant_name = "PendingBorrowRelease"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:217"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:216"
 constructors = ["ObligationKind::PendingBorrowRelease"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -18227,7 +18227,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ObligationKind"
 variant_name = "PendingCollectiveJoin"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:210"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:209"
 constructors = ["ObligationKind::PendingCollectiveJoin"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -18237,7 +18237,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ObligationKind"
 variant_name = "PendingStateTransition"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:224"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:223"
 constructors = ["ObligationKind::PendingStateTransition"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -18247,7 +18247,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ObligationKind"
 variant_name = "PendingWriteVisibility"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:185"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:184"
 constructors = ["ObligationKind::PendingWriteVisibility"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -18737,7 +18737,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "OwnershipKind"
 variant_name = "Borrowed"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:21"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:20"
 constructors = ["OwnershipKind::Borrowed"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -18747,7 +18747,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "OwnershipKind"
 variant_name = "Exclusive"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:17"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:16"
 constructors = ["OwnershipKind::Exclusive"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -18757,7 +18757,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "OwnershipKind"
 variant_name = "Released"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:25"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:24"
 constructors = ["OwnershipKind::Released"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -18767,7 +18767,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "OwnershipKind"
 variant_name = "Shared"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:19"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:18"
 constructors = ["OwnershipKind::Shared"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -18777,7 +18777,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "OwnershipKind"
 variant_name = "Transferred"
-declaration_site = "vyre-foundation/src/memory_model/obligations.rs:23"
+declaration_site = "vyre-foundation/src/memory_model/obligations.rs:22"
 constructors = ["OwnershipKind::Transferred"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
