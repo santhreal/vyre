@@ -1,8 +1,6 @@
 #[non_exhaustive] #[repr(C)] pub struct vyre_foundation::match_result::ByteRange
 #[non_exhaustive] pub enum vyre_foundation::ConfigPartition
-#[non_exhaustive] pub enum vyre_foundation::FailureDomain
 #[non_exhaustive] pub enum vyre_foundation::IrError
-#[non_exhaustive] pub enum vyre_foundation::RecoveryClass
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::CompilerLevel
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::DiagnosticStage
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::RetryClass
@@ -11,6 +9,8 @@
 #[non_exhaustive] pub enum vyre_foundation::dialect_lookup::AttrType
 #[non_exhaustive] pub enum vyre_foundation::execution_plan::InnovationTrack
 #[non_exhaustive] pub enum vyre_foundation::execution_plan::fusion::FusionError
+#[non_exhaustive] pub enum vyre_foundation::execution_plan::fusion::FusionRejectionReason
+#[non_exhaustive] pub enum vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason
 #[non_exhaustive] pub enum vyre_foundation::graph_view::DataflowKind
 #[non_exhaustive] pub enum vyre_foundation::graph_view::EdgeKind
 #[non_exhaustive] pub enum vyre_foundation::graph_view::GraphValidateError
@@ -22,6 +22,8 @@
 #[non_exhaustive] pub enum vyre_foundation::ir::Node
 #[non_exhaustive] pub enum vyre_foundation::ir::ShapePredicate
 #[non_exhaustive] pub enum vyre_foundation::ir::Value
+#[non_exhaustive] pub enum vyre_foundation::memory_model::MemoryOrdering
+#[non_exhaustive] pub enum vyre_foundation::memory_model::legacy::MemoryOrdering
 #[non_exhaustive] pub enum vyre_foundation::operation::OperationTier
 #[non_exhaustive] pub enum vyre_foundation::optimizer::CostModelFamily
 #[non_exhaustive] pub enum vyre_foundation::optimizer::OptimizerError
@@ -85,6 +87,7 @@ impl core::convert::From<alloc::string::String> for vyre_foundation::ir::Ident
 impl core::convert::From<alloc::string::String> for vyre_foundation::serial::wire::encode::WireEncodeErr
 impl core::convert::From<alloc::sync::Arc<str>> for vyre_foundation::ir::Ident
 impl core::convert::From<vyre_foundation::IrError> for vyre_foundation::diagnostics::Diagnostic
+impl core::convert::From<vyre_foundation::ir::Residency> for vyre_foundation::execution_plan::fusion::tile::TileResidency
 impl core::convert::From<vyre_foundation::opaque_payload::endian::LeBytesWriter> for alloc::vec::Vec<u8>
 impl core::convert::From<vyre_foundation::optimizer::eqsat::EGraphError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
 impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
@@ -93,12 +96,14 @@ impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapsho
 impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotIntegrityError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError
 impl core::convert::From<vyre_foundation::serial::wire::encode::WireEncodeErr> for alloc::string::String
 impl core::convert::From<vyre_foundation::validate::ValidationError> for vyre_foundation::diagnostics::Diagnostic
+impl core::convert::From<vyre_foundation::verifier::Verified<vyre_foundation::verifier::SemanticModule>> for vyre_foundation::verifier::VerifiedStageWrapper<vyre_foundation::verifier::VerifiedIrStage, vyre_foundation::verifier::SemanticModule>
 impl core::default::Default for vyre_foundation::CooperativeWidth
 impl core::default::Default for vyre_foundation::ElementPolicy
 impl core::default::Default for vyre_foundation::LaunchGeometry
 impl core::default::Default for vyre_foundation::Uniformity
 impl core::default::Default for vyre_foundation::causal::CausalTraceMode
 impl core::default::Default for vyre_foundation::execution_plan::SchedulingPolicy
+impl core::default::Default for vyre_foundation::execution_plan::fusion::tile::TilePipeliningPlan
 impl core::default::Default for vyre_foundation::ir::GraphDelta
 impl core::default::Default for vyre_foundation::ir::MemoryHints
 impl core::default::Default for vyre_foundation::ir::Program
@@ -110,6 +115,7 @@ impl core::default::Default for vyre_foundation::optimizer::eqsat::CostModelFact
 impl core::default::Default for vyre_foundation::optimizer::hot_path_hints::HotPathHints
 impl core::default::Default for vyre_foundation::optimizer::law_saturation::LawSaturationBudget
 impl core::default::Default for vyre_foundation::optimizer::multi_level_eqsat::PassEngine
+impl core::default::Default for vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation
 impl core::default::Default for vyre_foundation::optimizer::region_law::RegionDerivationBudget
 impl core::default::Default for vyre_foundation::security::CompilationQuota
 impl core::default::Default for vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudget
@@ -129,6 +135,7 @@ impl core::error::Error for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBrid
 impl core::error::Error for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError
 impl core::error::Error for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError
 impl core::error::Error for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotIntegrityError
+impl core::error::Error for vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError
 impl core::error::Error for vyre_foundation::program_caps::MissingCapability
 impl core::error::Error for vyre_foundation::serial::EnvelopeError
 impl core::error::Error for vyre_foundation::serial::text::TextParseError
@@ -158,6 +165,7 @@ impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionError
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionOverDispatchError
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionSelfAliasingError
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+impl core::fmt::Display for vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason
 impl core::fmt::Display for vyre_foundation::fp_expansion::StrictExpansionError
 impl core::fmt::Display for vyre_foundation::graph_view::GraphValidateError
 impl core::fmt::Display for vyre_foundation::ir::EvalError
@@ -176,6 +184,7 @@ impl core::fmt::Display for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBrid
 impl core::fmt::Display for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError
 impl core::fmt::Display for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError
 impl core::fmt::Display for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotIntegrityError
+impl core::fmt::Display for vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError
 impl core::fmt::Display for vyre_foundation::optimizer::rewrite_contract::BoundedExpansion
 impl core::fmt::Display for vyre_foundation::platform::CanonicalU32
 impl core::fmt::Display for vyre_foundation::platform::CanonicalU64
@@ -215,6 +224,7 @@ impl inventory::Collect for vyre_foundation::extension::ExtensionUnOpRegistratio
 impl inventory::Collect for vyre_foundation::extension::OpaqueExprResolver
 impl inventory::Collect for vyre_foundation::extension::OpaqueNodeResolver
 impl inventory::Collect for vyre_foundation::operation::ConformanceProvider
+impl inventory::Collect for vyre_foundation::operation::ContractProvider
 impl inventory::Collect for vyre_foundation::operation::LoweringProvider
 impl inventory::Collect for vyre_foundation::operation::OperationRegistration
 impl inventory::Collect for vyre_foundation::operation::SemanticDescriptor
@@ -262,6 +272,17 @@ impl vyre_foundation::execution_plan::DeviceMemoryBudget
 impl vyre_foundation::execution_plan::ExecutionPlan
 impl vyre_foundation::execution_plan::ReadbackStrategy
 impl vyre_foundation::execution_plan::SchedulingPolicy
+impl vyre_foundation::execution_plan::fusion::candidate::FusionCandidate
+impl vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind
+impl vyre_foundation::execution_plan::fusion::candidate::FusionCandidateSet
+impl vyre_foundation::execution_plan::fusion::dependence::HandoffLocation
+impl vyre_foundation::execution_plan::fusion::dependence::RegionDependenceGraph
+impl vyre_foundation::execution_plan::fusion::legality::FusionLegalityVerdict
+impl vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason
+impl vyre_foundation::execution_plan::fusion::region::IterationSpace
+impl vyre_foundation::execution_plan::fusion::region::RegionFusionPlanner
+impl vyre_foundation::execution_plan::fusion::tile::ScheduleTile
+impl vyre_foundation::execution_plan::fusion::tile::TilePipeliningPlan
 impl vyre_foundation::extension::CatalogBundle
 impl vyre_foundation::fp_expansion::StrictExpansionError
 impl vyre_foundation::fp_parity::FloatLoweringMode
@@ -269,17 +290,10 @@ impl vyre_foundation::graph_view::DataEdge
 impl vyre_foundation::graph_view::GraphNode
 impl vyre_foundation::graph_view::NodeGraph
 impl vyre_foundation::ir::AdmittedResourceRecord
-impl vyre_foundation::ir::AsyncTransactionLifecycle
-impl vyre_foundation::ir::AtomicOrdering
-impl vyre_foundation::ir::BarrierParticipation
 impl vyre_foundation::ir::BufferDecl
-impl vyre_foundation::ir::CollectiveGroup
 impl vyre_foundation::ir::EvalError
-impl vyre_foundation::ir::ExecutionScope
 impl vyre_foundation::ir::Expr
 impl vyre_foundation::ir::ExternalResourceCapability
-impl vyre_foundation::ir::FailureCancellationBehavior
-impl vyre_foundation::ir::FenceSemantics
 impl vyre_foundation::ir::GraphDelta
 impl vyre_foundation::ir::Ident
 impl vyre_foundation::ir::ImageExtent
@@ -288,8 +302,6 @@ impl vyre_foundation::ir::InterpCtx
 impl vyre_foundation::ir::Layout
 impl vyre_foundation::ir::LinearType
 impl vyre_foundation::ir::MemoryKind
-impl vyre_foundation::ir::MemoryOrdering
-impl vyre_foundation::ir::MemoryScope
 impl vyre_foundation::ir::Node
 impl vyre_foundation::ir::NodeStorage
 impl vyre_foundation::ir::PlaneDescriptor
@@ -300,7 +312,6 @@ impl vyre_foundation::ir::ProgramGraphTemplate
 impl vyre_foundation::ir::ProgramStats
 impl vyre_foundation::ir::ResourceUsageFlags
 impl vyre_foundation::ir::ShapePredicate
-impl vyre_foundation::ir::StorageDomain
 impl vyre_foundation::ir::SubresourceRange
 impl vyre_foundation::ir::Tile
 impl vyre_foundation::ir::ValueContract
@@ -309,6 +320,18 @@ impl vyre_foundation::logical::LogicalRegionKind
 impl vyre_foundation::lower::LoweringError
 impl vyre_foundation::lower::ProgramEffects
 impl vyre_foundation::match_result::ByteRange
+impl vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle
+impl vyre_foundation::memory_model::atomic::AtomicOrdering
+impl vyre_foundation::memory_model::collective::CollectiveGroup
+impl vyre_foundation::memory_model::failure::FailureCancellationBehavior
+impl vyre_foundation::memory_model::fence::BarrierParticipation
+impl vyre_foundation::memory_model::fence::FenceSemantics
+impl vyre_foundation::memory_model::legacy::MemoryOrdering
+impl vyre_foundation::memory_model::obligations::ObligationTracker
+impl vyre_foundation::memory_model::obligations::StateEpoch
+impl vyre_foundation::memory_model::scope::ExecutionScope
+impl vyre_foundation::memory_model::scope::MemoryScope
+impl vyre_foundation::memory_model::storage::StorageDomain
 impl vyre_foundation::numeric::CalibrationIdentity
 impl vyre_foundation::numeric::ErrorMeasure
 impl vyre_foundation::numeric::FieldTarget
@@ -321,6 +344,7 @@ impl vyre_foundation::numeric::ScalarFormat
 impl vyre_foundation::opaque_payload::endian::LeBytesWriter
 impl vyre_foundation::operation::CallGraphClosure
 impl vyre_foundation::operation::CatalogBundle
+impl vyre_foundation::operation::ConformanceRegistry
 impl vyre_foundation::operation::OperationEffects
 impl vyre_foundation::operation::OperationRegistration
 impl vyre_foundation::operation::OperationRegistry
@@ -391,6 +415,8 @@ impl vyre_foundation::optimizer::effect_lattice::AtomicOrdering
 impl vyre_foundation::optimizer::effect_lattice::EffectLevel
 impl vyre_foundation::optimizer::effect_lattice::SyncScope
 impl vyre_foundation::optimizer::eqsat::ENodeLang for vyre_foundation::optimizer::law_saturation::ExprLang
+impl vyre_foundation::optimizer::eqsat::ProofTerm
+impl vyre_foundation::optimizer::eqsat::RuleCacheKey
 impl vyre_foundation::optimizer::eqsat::SaturationReport
 impl vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImage
 impl vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceLayout
@@ -415,6 +441,7 @@ impl vyre_foundation::optimizer::multi_level_eqsat::MultiObjectiveCost
 impl vyre_foundation::optimizer::multi_level_eqsat::OptimizationProofChecker
 impl vyre_foundation::optimizer::multi_level_eqsat::ParetoFront
 impl vyre_foundation::optimizer::multi_level_eqsat::PassEngine
+impl vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation
 impl vyre_foundation::optimizer::multi_level_eqsat::StepProof
 impl vyre_foundation::optimizer::pass_catalog::OptimizationCatalogEntry
 impl vyre_foundation::optimizer::passes::algebraic::atomic_minimize::AtomicMinimizePass
@@ -550,9 +577,14 @@ impl vyre_foundation::vast::VastFile
 impl vyre_foundation::vast::VastHeader
 impl vyre_foundation::vast::VastNode
 impl vyre_foundation::verifier::DeclarativeVerifier
+impl vyre_foundation::verifier::InvariantCategory
 impl vyre_foundation::verifier::SemanticCompiler
 impl vyre_foundation::verifier::SemanticModule
+impl vyre_foundation::verifier::StageKind for vyre_foundation::verifier::LoweredStage
+impl vyre_foundation::verifier::StageKind for vyre_foundation::verifier::OptimizedStage
+impl vyre_foundation::verifier::StageKind for vyre_foundation::verifier::VerifiedIrStage
 impl vyre_foundation::verifier::VerificationCertificate
+impl vyre_foundation::verifier::Verified<vyre_foundation::verifier::SemanticModule>
 impl<'a> vyre_foundation::logical::LogicalProgramGraph<'a>
 impl<'a> vyre_foundation::serial::WireReader<'a>
 impl<'a> vyre_foundation::validate::ValidationOptions<'a>
@@ -562,13 +594,12 @@ impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::validate::Valida
 impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::validate::ValidationError
 impl<K, V> core::default::Default for vyre_foundation::ir::Scope<K, V>
 impl<K, V> vyre_foundation::ir::Scope<K, V> where K: core::clone::Clone + core::cmp::Eq + core::hash::Hash, V: core::clone::Clone
-impl<L: vyre_foundation::optimizer::eqsat::ENodeLang, F: core::ops::function::Fn() -> bool> vyre_foundation::optimizer::eqsat::DeviceAwareRule<L, F>
-impl<L: vyre_foundation::optimizer::eqsat::ENodeLang, F: core::ops::function::Fn() -> bool> vyre_foundation::optimizer::eqsat::Rule<L> for vyre_foundation::optimizer::eqsat::DeviceAwareRule<L, F>
 impl<L: vyre_foundation::optimizer::eqsat::ENodeLang> core::default::Default for vyre_foundation::optimizer::eqsat::EGraph<L>
 impl<L: vyre_foundation::optimizer::eqsat::ENodeLang> vyre_foundation::optimizer::eqsat::EGraph<L>
 impl<L: vyre_foundation::optimizer::eqsat::ENodeLang> vyre_foundation::optimizer::eqsat::HardwarePropertyRule<L>
 impl<L: vyre_foundation::optimizer::eqsat::ENodeLang> vyre_foundation::optimizer::eqsat::Rule<L> for vyre_foundation::optimizer::eqsat::HardwarePropertyRule<L>
 impl<L> vyre_foundation::optimizer::eqsat::Rule<L> for vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules where L: vyre_foundation::optimizer::eqsat::ENodeLang + vyre_foundation::optimizer::eqsat_toml::OpIdNode
+impl<S: vyre_foundation::verifier::StageKind, T> vyre_foundation::verifier::VerifiedStageWrapper<S, T>
 impl<T> core::ops::deref::Deref for vyre_foundation::verifier::Verified<T>
 impl<T> vyre_foundation::verifier::Verified<T>
 pub const fn vyre_foundation::ConfigPartition::as_str(self) -> &'static str
@@ -577,7 +608,7 @@ pub const fn vyre_foundation::GeometryRequirements::agnostic() -> Self
 pub const fn vyre_foundation::GeometryRequirements::cooperative(width: vyre_foundation::CooperativeWidth) -> Self
 pub const fn vyre_foundation::GeometryRequirements::with_cooperative_launch(self) -> Self
 pub const fn vyre_foundation::GeometryRequirements::with_element_policy(self, policy: vyre_foundation::ElementPolicy) -> Self
-pub const fn vyre_foundation::GeometryRequirements::with_memory_ordering(self, ordering: vyre_foundation::ir::MemoryOrdering) -> Self
+pub const fn vyre_foundation::GeometryRequirements::with_memory_ordering(self, ordering: vyre_foundation::memory_model::legacy::MemoryOrdering) -> Self
 pub const fn vyre_foundation::GeometryRequirements::with_min_shared_bytes(self, bytes: u32) -> Self
 pub const fn vyre_foundation::GeometryRequirements::with_subgroup_uniformity(self, uniformity: vyre_foundation::Uniformity) -> Self
 pub const fn vyre_foundation::GeometryRequirements::with_subgroup_width(self, width: vyre_foundation::CooperativeWidth) -> Self
@@ -623,36 +654,21 @@ pub const fn vyre_foundation::execution_plan::SchedulingPolicy::select_unroll_de
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::select_vector_pack_bits(&self, element_bits: u32, caps: &vyre_foundation::optimizer::AdapterCaps) -> u32
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::standard() -> Self
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::worker_workgroup_size(&self, worker_count: u32, max_workgroup_size_x: u32) -> u32
+pub const fn vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind::code(self) -> &'static str
+pub const fn vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind::is_baseline(self) -> bool
+pub const fn vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind::name(self) -> &'static str
+pub const fn vyre_foundation::execution_plan::fusion::dependence::HandoffLocation::is_register_or_independent(self) -> bool
+pub const fn vyre_foundation::execution_plan::fusion::dependence::HandoffLocation::requires_dispatch_cut(self) -> bool
+pub const fn vyre_foundation::execution_plan::fusion::dependence::HandoffLocation::requires_workgroup_barrier(self) -> bool
+pub const fn vyre_foundation::execution_plan::fusion::legality::FusionLegalityVerdict::is_legal(&self) -> bool
+pub const fn vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason::code(self) -> &'static str
 pub const fn vyre_foundation::fp_parity::FloatLoweringMode::blocks_contraction(self) -> bool
 pub const fn vyre_foundation::fp_parity::FloatLoweringMode::cache_label(self) -> &'static str
 pub const fn vyre_foundation::fp_parity::FloatLoweringMode::roster_index(self) -> usize
-pub const fn vyre_foundation::ir::AsyncTransactionLifecycle::is_successful_commit(self) -> bool
-pub const fn vyre_foundation::ir::AsyncTransactionLifecycle::is_terminal(self) -> bool
-pub const fn vyre_foundation::ir::AsyncTransactionLifecycle::name(self) -> &'static str
-pub const fn vyre_foundation::ir::AsyncTransactionLifecycle::wire_tag(self) -> u8
-pub const fn vyre_foundation::ir::AtomicOrdering::is_acquire(self) -> bool
-pub const fn vyre_foundation::ir::AtomicOrdering::is_release(self) -> bool
-pub const fn vyre_foundation::ir::AtomicOrdering::join(self, other: Self) -> Self
-pub const fn vyre_foundation::ir::AtomicOrdering::name(self) -> &'static str
-pub const fn vyre_foundation::ir::AtomicOrdering::wire_tag(self) -> u8
-pub const fn vyre_foundation::ir::BarrierParticipation::name(self) -> &'static str
-pub const fn vyre_foundation::ir::BarrierParticipation::requires_uniform_control_flow(self) -> bool
-pub const fn vyre_foundation::ir::BarrierParticipation::wire_tag(self) -> u8
-pub const fn vyre_foundation::ir::CollectiveGroup::is_inter_device(self) -> bool
-pub const fn vyre_foundation::ir::CollectiveGroup::name(self) -> &'static str
-pub const fn vyre_foundation::ir::CollectiveGroup::wire_tag(self) -> u8
-pub const fn vyre_foundation::ir::ExecutionScope::is_cross_block(self) -> bool
-pub const fn vyre_foundation::ir::ExecutionScope::name(self) -> &'static str
-pub const fn vyre_foundation::ir::ExecutionScope::wire_tag(self) -> u8
 pub const fn vyre_foundation::ir::Expr::logical_index(axis: u8) -> Self
 pub const fn vyre_foundation::ir::Expr::logical_tile_index(axis: u8) -> Self
 pub const fn vyre_foundation::ir::Expr::logical_within_tile_index(axis: u8) -> Self
 pub const fn vyre_foundation::ir::ExternalResourceCapability::desktop_gpu_standard() -> Self
-pub const fn vyre_foundation::ir::FailureCancellationBehavior::halts_execution(self) -> bool
-pub const fn vyre_foundation::ir::FailureCancellationBehavior::name(self) -> &'static str
-pub const fn vyre_foundation::ir::FailureCancellationBehavior::wire_tag(self) -> u8
-pub const fn vyre_foundation::ir::FenceSemantics::name(self) -> &'static str
-pub const fn vyre_foundation::ir::FenceSemantics::wire_tag(self) -> u8
 pub const fn vyre_foundation::ir::GraphDelta::version(&self) -> u16
 pub const fn vyre_foundation::ir::ImageExtent::d2(width: u32, height: u32) -> Self
 pub const fn vyre_foundation::ir::ImageExtent::d3(width: u32, height: u32, depth: u32) -> Self
@@ -661,40 +677,23 @@ pub const fn vyre_foundation::ir::ImageFormat::bytes_per_pixel(self) -> u32
 pub const fn vyre_foundation::ir::ImageFormat::is_depth_or_stencil(self) -> bool
 pub const fn vyre_foundation::ir::LinearType::forbids_drop(self) -> bool
 pub const fn vyre_foundation::ir::LinearType::forbids_reuse(self) -> bool
-pub const fn vyre_foundation::ir::MemoryOrdering::execution_scope(self) -> vyre_foundation::ir::ExecutionScope
-pub const fn vyre_foundation::ir::MemoryOrdering::is_valid_for_atomic_rmw(self) -> bool
-pub const fn vyre_foundation::ir::MemoryOrdering::is_valid_for_barrier(self) -> bool
-pub const fn vyre_foundation::ir::MemoryOrdering::join(self, other: Self) -> Self
-pub const fn vyre_foundation::ir::MemoryOrdering::memory_scope(self) -> vyre_foundation::ir::MemoryScope
-pub const fn vyre_foundation::ir::MemoryOrdering::requires_grid_sync(self) -> bool
-pub const fn vyre_foundation::ir::MemoryOrdering::to_atomic_ordering(self) -> core::option::Option<vyre_foundation::ir::AtomicOrdering>
-pub const fn vyre_foundation::ir::MemoryOrdering::wire_tag(self) -> u8
-pub const fn vyre_foundation::ir::MemoryScope::is_cross_workgroup(self) -> bool
-pub const fn vyre_foundation::ir::MemoryScope::is_device_wide(self) -> bool
-pub const fn vyre_foundation::ir::MemoryScope::name(self) -> &'static str
-pub const fn vyre_foundation::ir::MemoryScope::widen(self, other: Self) -> Self
-pub const fn vyre_foundation::ir::MemoryScope::wire_tag(self) -> u8
 pub const fn vyre_foundation::ir::Node::barrier() -> Self
-pub const fn vyre_foundation::ir::Node::barrier_with_ordering(ordering: vyre_foundation::ir::MemoryOrdering) -> Self
-pub const fn vyre_foundation::ir::Node::logical_barrier(ordering: vyre_foundation::ir::MemoryOrdering) -> Self
+pub const fn vyre_foundation::ir::Node::barrier_with_ordering(ordering: vyre_foundation::memory_model::legacy::MemoryOrdering) -> Self
+pub const fn vyre_foundation::ir::Node::logical_barrier(ordering: vyre_foundation::memory_model::legacy::MemoryOrdering) -> Self
 pub const fn vyre_foundation::ir::Node::return_() -> Self
 pub const fn vyre_foundation::ir::ResourceUsageFlags::compute_sampled() -> Self
 pub const fn vyre_foundation::ir::ResourceUsageFlags::compute_storage() -> Self
 pub const fn vyre_foundation::ir::ResourceUsageFlags::presentable_storage() -> Self
-pub const fn vyre_foundation::ir::StorageDomain::is_host_accessible(self) -> bool
-pub const fn vyre_foundation::ir::StorageDomain::is_shared_across_threads(self) -> bool
-pub const fn vyre_foundation::ir::StorageDomain::name(self) -> &'static str
-pub const fn vyre_foundation::ir::StorageDomain::wire_tag(self) -> u8
 pub const fn vyre_foundation::ir::SubresourceRange::color_all() -> Self
-pub const fn vyre_foundation::ir::exhaustiveness_check_async_transaction_lifecycle(val: vyre_foundation::ir::AsyncTransactionLifecycle) -> &'static str
-pub const fn vyre_foundation::ir::exhaustiveness_check_atomic_ordering(val: vyre_foundation::ir::AtomicOrdering) -> &'static str
-pub const fn vyre_foundation::ir::exhaustiveness_check_barrier_participation(val: vyre_foundation::ir::BarrierParticipation) -> &'static str
-pub const fn vyre_foundation::ir::exhaustiveness_check_collective_group(val: vyre_foundation::ir::CollectiveGroup) -> &'static str
-pub const fn vyre_foundation::ir::exhaustiveness_check_execution_scope(val: vyre_foundation::ir::ExecutionScope) -> &'static str
-pub const fn vyre_foundation::ir::exhaustiveness_check_failure_cancellation_behavior(val: vyre_foundation::ir::FailureCancellationBehavior) -> &'static str
-pub const fn vyre_foundation::ir::exhaustiveness_check_fence_semantics(val: vyre_foundation::ir::FenceSemantics) -> &'static str
-pub const fn vyre_foundation::ir::exhaustiveness_check_memory_scope(val: vyre_foundation::ir::MemoryScope) -> &'static str
-pub const fn vyre_foundation::ir::exhaustiveness_check_storage_domain(val: vyre_foundation::ir::StorageDomain) -> &'static str
+pub const fn vyre_foundation::ir::exhaustiveness_check_async_transaction_lifecycle(val: vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle) -> &'static str
+pub const fn vyre_foundation::ir::exhaustiveness_check_atomic_ordering(val: vyre_foundation::memory_model::atomic::AtomicOrdering) -> &'static str
+pub const fn vyre_foundation::ir::exhaustiveness_check_barrier_participation(val: vyre_foundation::memory_model::fence::BarrierParticipation) -> &'static str
+pub const fn vyre_foundation::ir::exhaustiveness_check_collective_group(val: vyre_foundation::memory_model::collective::CollectiveGroup) -> &'static str
+pub const fn vyre_foundation::ir::exhaustiveness_check_execution_scope(val: vyre_foundation::memory_model::scope::ExecutionScope) -> &'static str
+pub const fn vyre_foundation::ir::exhaustiveness_check_failure_cancellation_behavior(val: vyre_foundation::memory_model::failure::FailureCancellationBehavior) -> &'static str
+pub const fn vyre_foundation::ir::exhaustiveness_check_fence_semantics(val: vyre_foundation::memory_model::fence::FenceSemantics) -> &'static str
+pub const fn vyre_foundation::ir::exhaustiveness_check_memory_scope(val: vyre_foundation::memory_model::scope::MemoryScope) -> &'static str
+pub const fn vyre_foundation::ir::exhaustiveness_check_storage_domain(val: vyre_foundation::memory_model::storage::StorageDomain) -> &'static str
 pub const fn vyre_foundation::logical::LogicalExchangeKind::combines(self) -> bool
 pub const fn vyre_foundation::logical::LogicalProgramGraph<'a>::graph(&self) -> &'a vyre_foundation::ir::ProgramGraph
 pub const fn vyre_foundation::lower::ProgramEffects::bits(self) -> u32
@@ -708,6 +707,83 @@ pub const fn vyre_foundation::match_result::ByteRange::ends_before(&self, other:
 pub const fn vyre_foundation::match_result::ByteRange::is_empty(&self) -> bool
 pub const fn vyre_foundation::match_result::ByteRange::len(&self) -> u32
 pub const fn vyre_foundation::match_result::ByteRange::new(tag: u32, start: u32, end: u32) -> Self
+pub const fn vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle::can_transition_to(self, next: Self) -> bool
+pub const fn vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle::is_in_flight(self) -> bool
+pub const fn vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle::is_successful_commit(self) -> bool
+pub const fn vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle::is_terminal(self) -> bool
+pub const fn vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle::name(self) -> &'static str
+pub const fn vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle::wire_tag(self) -> u8
+pub const fn vyre_foundation::memory_model::async_tx::exhaustiveness_check_async_transaction_lifecycle(val: vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle) -> &'static str
+pub const fn vyre_foundation::memory_model::atomic::AtomicOrdering::is_acquire(self) -> bool
+pub const fn vyre_foundation::memory_model::atomic::AtomicOrdering::is_release(self) -> bool
+pub const fn vyre_foundation::memory_model::atomic::AtomicOrdering::is_seq_cst(self) -> bool
+pub const fn vyre_foundation::memory_model::atomic::AtomicOrdering::join(self, other: Self) -> Self
+pub const fn vyre_foundation::memory_model::atomic::AtomicOrdering::name(self) -> &'static str
+pub const fn vyre_foundation::memory_model::atomic::AtomicOrdering::wire_tag(self) -> u8
+pub const fn vyre_foundation::memory_model::atomic::exhaustiveness_check_atomic_ordering(val: vyre_foundation::memory_model::atomic::AtomicOrdering) -> &'static str
+pub const fn vyre_foundation::memory_model::collective::CollectiveGroup::execution_scope(self) -> vyre_foundation::memory_model::scope::ExecutionScope
+pub const fn vyre_foundation::memory_model::collective::CollectiveGroup::is_inter_device(self) -> bool
+pub const fn vyre_foundation::memory_model::collective::CollectiveGroup::is_subgroup_only(self) -> bool
+pub const fn vyre_foundation::memory_model::collective::CollectiveGroup::name(self) -> &'static str
+pub const fn vyre_foundation::memory_model::collective::CollectiveGroup::wire_tag(self) -> u8
+pub const fn vyre_foundation::memory_model::collective::exhaustiveness_check_collective_group(val: vyre_foundation::memory_model::collective::CollectiveGroup) -> &'static str
+pub const fn vyre_foundation::memory_model::exhaustiveness_check_async_transaction_lifecycle(val: vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle) -> &'static str
+pub const fn vyre_foundation::memory_model::exhaustiveness_check_atomic_ordering(val: vyre_foundation::memory_model::atomic::AtomicOrdering) -> &'static str
+pub const fn vyre_foundation::memory_model::exhaustiveness_check_barrier_participation(val: vyre_foundation::memory_model::fence::BarrierParticipation) -> &'static str
+pub const fn vyre_foundation::memory_model::exhaustiveness_check_collective_group(val: vyre_foundation::memory_model::collective::CollectiveGroup) -> &'static str
+pub const fn vyre_foundation::memory_model::exhaustiveness_check_execution_scope(val: vyre_foundation::memory_model::scope::ExecutionScope) -> &'static str
+pub const fn vyre_foundation::memory_model::exhaustiveness_check_failure_cancellation_behavior(val: vyre_foundation::memory_model::failure::FailureCancellationBehavior) -> &'static str
+pub const fn vyre_foundation::memory_model::exhaustiveness_check_fence_semantics(val: vyre_foundation::memory_model::fence::FenceSemantics) -> &'static str
+pub const fn vyre_foundation::memory_model::exhaustiveness_check_memory_scope(val: vyre_foundation::memory_model::scope::MemoryScope) -> &'static str
+pub const fn vyre_foundation::memory_model::exhaustiveness_check_storage_domain(val: vyre_foundation::memory_model::storage::StorageDomain) -> &'static str
+pub const fn vyre_foundation::memory_model::failure::FailureCancellationBehavior::halts_execution(self) -> bool
+pub const fn vyre_foundation::memory_model::failure::FailureCancellationBehavior::name(self) -> &'static str
+pub const fn vyre_foundation::memory_model::failure::FailureCancellationBehavior::poisons_memory(self) -> bool
+pub const fn vyre_foundation::memory_model::failure::FailureCancellationBehavior::propagates_to_caller(self) -> bool
+pub const fn vyre_foundation::memory_model::failure::FailureCancellationBehavior::wire_tag(self) -> u8
+pub const fn vyre_foundation::memory_model::failure::exhaustiveness_check_failure_cancellation_behavior(val: vyre_foundation::memory_model::failure::FailureCancellationBehavior) -> &'static str
+pub const fn vyre_foundation::memory_model::fence::BarrierParticipation::allows_divergence(self) -> bool
+pub const fn vyre_foundation::memory_model::fence::BarrierParticipation::name(self) -> &'static str
+pub const fn vyre_foundation::memory_model::fence::BarrierParticipation::requires_uniform_control_flow(self) -> bool
+pub const fn vyre_foundation::memory_model::fence::BarrierParticipation::wire_tag(self) -> u8
+pub const fn vyre_foundation::memory_model::fence::FenceSemantics::is_bidirectional(self) -> bool
+pub const fn vyre_foundation::memory_model::fence::FenceSemantics::name(self) -> &'static str
+pub const fn vyre_foundation::memory_model::fence::FenceSemantics::orders_reads(self) -> bool
+pub const fn vyre_foundation::memory_model::fence::FenceSemantics::orders_writes(self) -> bool
+pub const fn vyre_foundation::memory_model::fence::FenceSemantics::wire_tag(self) -> u8
+pub const fn vyre_foundation::memory_model::fence::exhaustiveness_check_barrier_participation(val: vyre_foundation::memory_model::fence::BarrierParticipation) -> &'static str
+pub const fn vyre_foundation::memory_model::fence::exhaustiveness_check_fence_semantics(val: vyre_foundation::memory_model::fence::FenceSemantics) -> &'static str
+pub const fn vyre_foundation::memory_model::legacy::MemoryOrdering::execution_scope(self) -> vyre_foundation::memory_model::scope::ExecutionScope
+pub const fn vyre_foundation::memory_model::legacy::MemoryOrdering::is_valid_for_atomic_rmw(self) -> bool
+pub const fn vyre_foundation::memory_model::legacy::MemoryOrdering::is_valid_for_barrier(self) -> bool
+pub const fn vyre_foundation::memory_model::legacy::MemoryOrdering::join(self, other: Self) -> Self
+pub const fn vyre_foundation::memory_model::legacy::MemoryOrdering::memory_scope(self) -> vyre_foundation::memory_model::scope::MemoryScope
+pub const fn vyre_foundation::memory_model::legacy::MemoryOrdering::requires_grid_sync(self) -> bool
+pub const fn vyre_foundation::memory_model::legacy::MemoryOrdering::to_atomic_ordering(self) -> core::option::Option<vyre_foundation::memory_model::atomic::AtomicOrdering>
+pub const fn vyre_foundation::memory_model::legacy::MemoryOrdering::wire_tag(self) -> u8
+pub const fn vyre_foundation::memory_model::obligations::ObligationTracker::current_epoch(&self) -> vyre_foundation::memory_model::obligations::StateEpoch
+pub const fn vyre_foundation::memory_model::obligations::StateEpoch::next(self) -> Self
+pub const fn vyre_foundation::memory_model::scope::ExecutionScope::includes(self, other: Self) -> bool
+pub const fn vyre_foundation::memory_model::scope::ExecutionScope::is_cross_block(self) -> bool
+pub const fn vyre_foundation::memory_model::scope::ExecutionScope::is_grid_or_mesh(self) -> bool
+pub const fn vyre_foundation::memory_model::scope::ExecutionScope::name(self) -> &'static str
+pub const fn vyre_foundation::memory_model::scope::ExecutionScope::widen(self, other: Self) -> Self
+pub const fn vyre_foundation::memory_model::scope::ExecutionScope::wire_tag(self) -> u8
+pub const fn vyre_foundation::memory_model::scope::MemoryScope::includes(self, other: Self) -> bool
+pub const fn vyre_foundation::memory_model::scope::MemoryScope::is_cross_workgroup(self) -> bool
+pub const fn vyre_foundation::memory_model::scope::MemoryScope::is_device_wide(self) -> bool
+pub const fn vyre_foundation::memory_model::scope::MemoryScope::name(self) -> &'static str
+pub const fn vyre_foundation::memory_model::scope::MemoryScope::widen(self, other: Self) -> Self
+pub const fn vyre_foundation::memory_model::scope::MemoryScope::wire_tag(self) -> u8
+pub const fn vyre_foundation::memory_model::scope::exhaustiveness_check_execution_scope(val: vyre_foundation::memory_model::scope::ExecutionScope) -> &'static str
+pub const fn vyre_foundation::memory_model::scope::exhaustiveness_check_memory_scope(val: vyre_foundation::memory_model::scope::MemoryScope) -> &'static str
+pub const fn vyre_foundation::memory_model::storage::StorageDomain::default_memory_scope(self) -> vyre_foundation::memory_model::scope::MemoryScope
+pub const fn vyre_foundation::memory_model::storage::StorageDomain::is_host_accessible(self) -> bool
+pub const fn vyre_foundation::memory_model::storage::StorageDomain::is_on_chip(self) -> bool
+pub const fn vyre_foundation::memory_model::storage::StorageDomain::is_shared_across_threads(self) -> bool
+pub const fn vyre_foundation::memory_model::storage::StorageDomain::name(self) -> &'static str
+pub const fn vyre_foundation::memory_model::storage::StorageDomain::wire_tag(self) -> u8
+pub const fn vyre_foundation::memory_model::storage::exhaustiveness_check_storage_domain(val: vyre_foundation::memory_model::storage::StorageDomain) -> &'static str
 pub const fn vyre_foundation::numeric::ErrorMeasure::absolute(distance: f64) -> Self
 pub const fn vyre_foundation::numeric::ErrorMeasure::is_exact(self) -> bool
 pub const fn vyre_foundation::numeric::ErrorMeasure::relative(fraction: f64) -> Self
@@ -764,6 +840,7 @@ pub const fn vyre_foundation::optimizer::PassMetadata::new(name: &'static str, r
 pub const fn vyre_foundation::optimizer::RewriteBatchPlan::empty(candidate_count: usize, threshold: usize) -> Self
 pub const fn vyre_foundation::optimizer::RewriteCandidate::new(row: u32, col: u32) -> Self
 pub const fn vyre_foundation::optimizer::algebraic_rules::arithmetic_rewrite_proof_contracts() -> &'static [vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract]
+pub const fn vyre_foundation::optimizer::eqsat::ProofTerm::new(rule_name: &'static str, justification: &'static str, obligation_digest: [u8; 32]) -> Self
 pub const fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImage::layout(&self) -> vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceLayout
 pub const fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceLayout::child_count(&self) -> usize
 pub const fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceLayout::children(&self) -> vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceSpan
@@ -833,7 +910,7 @@ pub const fn vyre_foundation::serial::SchemaId::as_str(self) -> &'static str
 pub const fn vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::within_budget(&self) -> bool
 pub const fn vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::within_budget(&self) -> bool
 pub const fn vyre_foundation::serial::wire::encode::WireEncodeErr::static_msg(msg: &'static str) -> Self
-pub const fn vyre_foundation::types::LifetimeEpoch::new(epoch_id: u64, scope: vyre_foundation::ir::ExecutionScope) -> Self
+pub const fn vyre_foundation::types::LifetimeEpoch::new(epoch_id: u64, scope: vyre_foundation::memory_model::scope::ExecutionScope) -> Self
 pub const fn vyre_foundation::types::NumericalContract::fast_math() -> Self
 pub const fn vyre_foundation::types::NumericalContract::strict_ieee() -> Self
 pub const fn vyre_foundation::types::OwnershipMutability::can_alias(&self) -> bool
@@ -880,6 +957,8 @@ pub const fn vyre_foundation::validate::ValidationError::location(&self) -> &vyr
 pub const fn vyre_foundation::validate::ValidationError::phase(&self) -> vyre_foundation::validate::ValidationPhase
 pub const fn vyre_foundation::validate::ValidationError::retry(&self) -> vyre_foundation::diagnostics::RetryClass
 pub const fn vyre_foundation::validate::ValidationPhase::as_str(self) -> &'static str
+pub const fn vyre_foundation::verifier::InvariantCategory::all() -> &'static [vyre_foundation::verifier::InvariantCategory]
+pub const fn vyre_foundation::verifier::InvariantCategory::code_prefix(&self) -> &'static str
 pub const fn vyre_foundation::visit::ExprChildren<'a>::is_empty(self) -> bool
 pub const vyre_foundation::CANONICAL_CONFIG_FIELDS: &[vyre_foundation::ConfigFieldDef]
 pub const vyre_foundation::ConfigPartition::ALL: &'static [Self]
@@ -891,6 +970,7 @@ pub const vyre_foundation::causal::CausalPhase::ALL: [Self; 6]
 pub const vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES: [&str; 2]
 pub const vyre_foundation::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str
 pub const vyre_foundation::dialect::ResourceAbi::EMPTY: Self
+pub const vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind::ALL: &'static [Self]
 pub const vyre_foundation::fp_expansion::EXP_OVERFLOW_ABOVE_BITS: u32
 pub const vyre_foundation::fp_expansion::EXP_UNDERFLOW_BELOW_BITS: u32
 pub const vyre_foundation::fp_expansion::MIN_NORMAL_BITS: u32
@@ -947,6 +1027,17 @@ pub const vyre_foundation::lower::ProgramEffects::BUFFER_WRITE: Self
 pub const vyre_foundation::lower::ProgramEffects::GPU_DISPATCH: Self
 pub const vyre_foundation::lower::ProgramEffects::HOST_IO: Self
 pub const vyre_foundation::lower::ProgramEffects::TRAP: Self
+pub const vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle::ALL: [Self; 6]
+pub const vyre_foundation::memory_model::atomic::AtomicOrdering::ALL: [Self; 5]
+pub const vyre_foundation::memory_model::collective::CollectiveGroup::ALL: [Self; 6]
+pub const vyre_foundation::memory_model::failure::FailureCancellationBehavior::ALL: [Self; 5]
+pub const vyre_foundation::memory_model::fence::BarrierParticipation::ALL: [Self; 6]
+pub const vyre_foundation::memory_model::fence::FenceSemantics::ALL: [Self; 4]
+pub const vyre_foundation::memory_model::legacy::MemoryOrdering::ALL: [Self; 6]
+pub const vyre_foundation::memory_model::obligations::StateEpoch::ZERO: Self
+pub const vyre_foundation::memory_model::scope::ExecutionScope::ALL: [Self; 6]
+pub const vyre_foundation::memory_model::scope::MemoryScope::ALL: [Self; 6]
+pub const vyre_foundation::memory_model::storage::StorageDomain::ALL: [Self; 8]
 pub const vyre_foundation::numeric::CALIBRATION_IDENTITY_VERSION: u32
 pub const vyre_foundation::numeric::NUMERIC_CONTRACT_VERSION: u32
 pub const vyre_foundation::numeric::NumericContract::EXACT: Self
@@ -1031,6 +1122,7 @@ pub const vyre_foundation::vast::VAST_MAGIC: [u8; 4]
 pub const vyre_foundation::vast::VAST_VERSION: u16
 pub const vyre_foundation::verifier::DeclarativeVerifier::SCHEMA_VERSION: u32
 pub const vyre_foundation::verifier::DeclarativeVerifier::VERSION: &'static str
+pub const vyre_foundation::verifier::InvariantCategory::CANONICAL: &'static [vyre_foundation::verifier::InvariantCategory]
 pub enum vyre_foundation::CanonicalValue
 pub enum vyre_foundation::CodecError
 pub enum vyre_foundation::ConfigLayer
@@ -1040,8 +1132,10 @@ pub enum vyre_foundation::ConfigType
 pub enum vyre_foundation::ConfigValue
 pub enum vyre_foundation::CooperativeWidth
 pub enum vyre_foundation::ElementPolicy
+pub enum vyre_foundation::FailureDomain
 pub enum vyre_foundation::GeometryConstraintConflict
 pub enum vyre_foundation::IdentityImpact
+pub enum vyre_foundation::RecoveryClass
 pub enum vyre_foundation::RecoveryDisposition
 pub enum vyre_foundation::Uniformity
 pub enum vyre_foundation::algebraic_reordering::ReorderingClass
@@ -1060,14 +1154,27 @@ pub enum vyre_foundation::execution_plan::LayoutStrategy
 pub enum vyre_foundation::execution_plan::PlanError
 pub enum vyre_foundation::execution_plan::ProvenanceStrategy
 pub enum vyre_foundation::execution_plan::ReadbackStrategy
+pub enum vyre_foundation::execution_plan::fusion::FusionCandidateKind
+pub enum vyre_foundation::execution_plan::fusion::FusionLegalityVerdict
+pub enum vyre_foundation::execution_plan::fusion::HandoffLocation
+pub enum vyre_foundation::execution_plan::fusion::RegionRelation
+pub enum vyre_foundation::execution_plan::fusion::TileResidency
+pub enum vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind
+pub enum vyre_foundation::execution_plan::fusion::dependence::HandoffLocation
+pub enum vyre_foundation::execution_plan::fusion::legality::FusionLegalityVerdict
+pub enum vyre_foundation::execution_plan::fusion::region::RegionRelation
+pub enum vyre_foundation::execution_plan::fusion::tile::TileResidency
 pub enum vyre_foundation::extension::ExtensionCatalogError
 pub enum vyre_foundation::fp_parity::BufferParity
 pub enum vyre_foundation::fp_parity::FloatLoweringMode
+pub enum vyre_foundation::ir::AliasDiscipline
 pub enum vyre_foundation::ir::AsyncTransactionLifecycle
 pub enum vyre_foundation::ir::AtomicOrdering
 pub enum vyre_foundation::ir::BarrierParticipation
+pub enum vyre_foundation::ir::BorrowKind
 pub enum vyre_foundation::ir::CollectiveGroup
 pub enum vyre_foundation::ir::ColorSpace
+pub enum vyre_foundation::ir::EffectKind
 pub enum vyre_foundation::ir::ExecutionScope
 pub enum vyre_foundation::ir::ExternalEffect
 pub enum vyre_foundation::ir::ExternalMemoryKind
@@ -1080,8 +1187,12 @@ pub enum vyre_foundation::ir::ImageAspect
 pub enum vyre_foundation::ir::ImageDimension
 pub enum vyre_foundation::ir::ImageFormat
 pub enum vyre_foundation::ir::Layout
+pub enum vyre_foundation::ir::MemoryCapability
 pub enum vyre_foundation::ir::MemoryScope
 pub enum vyre_foundation::ir::NodeStorage
+pub enum vyre_foundation::ir::ObligationError
+pub enum vyre_foundation::ir::ObligationKind
+pub enum vyre_foundation::ir::OwnershipKind
 pub enum vyre_foundation::ir::ProgramGraphError
 pub enum vyre_foundation::ir::ProgramGraphIdentityError
 pub enum vyre_foundation::ir::Residency
@@ -1090,6 +1201,7 @@ pub enum vyre_foundation::ir::SamplerAddressMode
 pub enum vyre_foundation::ir::SamplerFilter
 pub enum vyre_foundation::ir::ShapeDim
 pub enum vyre_foundation::ir::StorageDomain
+pub enum vyre_foundation::ir::TileLayout
 pub enum vyre_foundation::ir::ValueLifetime
 pub enum vyre_foundation::logical::LogicalCombineOp
 pub enum vyre_foundation::logical::LogicalDependenceKind
@@ -1100,6 +1212,38 @@ pub enum vyre_foundation::logical::LogicalProgramError
 pub enum vyre_foundation::logical::LogicalRegionKind
 pub enum vyre_foundation::logical::OrderingSyncScope
 pub enum vyre_foundation::logical::ScanDirection
+pub enum vyre_foundation::memory_model::AliasDiscipline
+pub enum vyre_foundation::memory_model::AsyncTransactionLifecycle
+pub enum vyre_foundation::memory_model::AtomicOrdering
+pub enum vyre_foundation::memory_model::BarrierParticipation
+pub enum vyre_foundation::memory_model::BorrowKind
+pub enum vyre_foundation::memory_model::CollectiveGroup
+pub enum vyre_foundation::memory_model::EffectKind
+pub enum vyre_foundation::memory_model::ExecutionScope
+pub enum vyre_foundation::memory_model::FailureCancellationBehavior
+pub enum vyre_foundation::memory_model::FenceSemantics
+pub enum vyre_foundation::memory_model::MemoryCapability
+pub enum vyre_foundation::memory_model::MemoryScope
+pub enum vyre_foundation::memory_model::ObligationError
+pub enum vyre_foundation::memory_model::ObligationKind
+pub enum vyre_foundation::memory_model::OwnershipKind
+pub enum vyre_foundation::memory_model::StorageDomain
+pub enum vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle
+pub enum vyre_foundation::memory_model::atomic::AtomicOrdering
+pub enum vyre_foundation::memory_model::collective::CollectiveGroup
+pub enum vyre_foundation::memory_model::failure::FailureCancellationBehavior
+pub enum vyre_foundation::memory_model::fence::BarrierParticipation
+pub enum vyre_foundation::memory_model::fence::FenceSemantics
+pub enum vyre_foundation::memory_model::obligations::AliasDiscipline
+pub enum vyre_foundation::memory_model::obligations::BorrowKind
+pub enum vyre_foundation::memory_model::obligations::EffectKind
+pub enum vyre_foundation::memory_model::obligations::MemoryCapability
+pub enum vyre_foundation::memory_model::obligations::ObligationError
+pub enum vyre_foundation::memory_model::obligations::ObligationKind
+pub enum vyre_foundation::memory_model::obligations::OwnershipKind
+pub enum vyre_foundation::memory_model::scope::ExecutionScope
+pub enum vyre_foundation::memory_model::scope::MemoryScope
+pub enum vyre_foundation::memory_model::storage::StorageDomain
 pub enum vyre_foundation::numeric::Approximation
 pub enum vyre_foundation::numeric::AtomicOrderSensitivity
 pub enum vyre_foundation::numeric::ContractRefusal
@@ -1123,6 +1267,7 @@ pub enum vyre_foundation::optimizer::algebraic_rules::ScalarLiteral
 pub enum vyre_foundation::optimizer::effect_lattice::SyncScope
 pub enum vyre_foundation::optimizer::eqsat::EGraphError
 pub enum vyre_foundation::optimizer::eqsat::ExtractionStopReason
+pub enum vyre_foundation::optimizer::eqsat::RuleFactIdentity
 pub enum vyre_foundation::optimizer::eqsat::SaturationStopReason
 pub enum vyre_foundation::optimizer::eqsat::TargetFact
 pub enum vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
@@ -1133,6 +1278,7 @@ pub enum vyre_foundation::optimizer::law_saturation::ExprLang
 pub enum vyre_foundation::optimizer::law_saturation::LawDerivation
 pub enum vyre_foundation::optimizer::law_saturation::LawSaturationStop
 pub enum vyre_foundation::optimizer::level_contract::LevelVerdict
+pub enum vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError
 pub enum vyre_foundation::optimizer::pass_catalog::OptimizationCatalogEntryKind
 pub enum vyre_foundation::optimizer::passes::algebraic::precision_hint::PrecisionHint
 pub enum vyre_foundation::optimizer::passes::algebraic::precision_hint::TranscendentalOp
@@ -1203,6 +1349,7 @@ pub enum vyre_foundation::vast::VastEditCorpusError
 pub enum vyre_foundation::vast::VastError
 pub enum vyre_foundation::verifier::CompileError
 pub enum vyre_foundation::verifier::InvariantCategory
+pub enum vyre_foundation::verifier::ReplayError
 pub enum vyre_foundation::verifier::VerificationError
 pub enum vyre_foundation::visit::ExprBufferAccess
 pub enum vyre_foundation::visit::ExprBufferRef<'a>
@@ -1377,10 +1524,43 @@ pub fn vyre_foundation::execution_plan::fusion::FusionError::fmt(&self, f: &mut 
 pub fn vyre_foundation::execution_plan::fusion::FusionOverDispatchError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::execution_plan::fusion::FusionSelfAliasingError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::execution_plan::fusion::analyze_program_fusion_legality(producer: &vyre_foundation::ir::Program, consumer: &vyre_foundation::ir::Program) -> vyre_foundation::execution_plan::fusion::legality::FusionLegalityVerdict
+pub fn vyre_foundation::execution_plan::fusion::analyze_region_fusion_legality(producer: &vyre_foundation::logical::LogicalRegion, consumer: &vyre_foundation::logical::LogicalRegion) -> vyre_foundation::execution_plan::fusion::legality::FusionLegalityVerdict
+pub fn vyre_foundation::execution_plan::fusion::candidate::FusionCandidate::baseline(regions: alloc::vec::Vec<usize>) -> Self
+pub fn vyre_foundation::execution_plan::fusion::candidate::FusionCandidate::register_forwarding(producer: usize, consumer: usize) -> Self
+pub fn vyre_foundation::execution_plan::fusion::candidate::FusionCandidate::shared_forwarding(producer: usize, consumer: usize, tile: vyre_foundation::execution_plan::fusion::tile::ScheduleTile) -> Self
+pub fn vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind::evaluate_legality(self, producer: &vyre_foundation::logical::LogicalRegion, consumer: &vyre_foundation::logical::LogicalRegion) -> core::result::Result<(), vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason>
+pub fn vyre_foundation::execution_plan::fusion::candidate::FusionCandidateSet::add(&mut self, candidate: vyre_foundation::execution_plan::fusion::candidate::FusionCandidate)
+pub fn vyre_foundation::execution_plan::fusion::candidate::FusionCandidateSet::has_baseline(&self) -> bool
+pub fn vyre_foundation::execution_plan::fusion::candidate::FusionCandidateSet::new(region_count: usize) -> Self
+pub fn vyre_foundation::execution_plan::fusion::classify_program_handoff(producer: &vyre_foundation::ir::Program, consumer: &vyre_foundation::ir::Program) -> vyre_foundation::execution_plan::fusion::dependence::HandoffLocation
+pub fn vyre_foundation::execution_plan::fusion::dependence::RegionDependenceGraph::earliest_handoff_between(&self, producer: usize, consumer: usize) -> core::option::Option<vyre_foundation::execution_plan::fusion::dependence::HandoffLocation>
+pub fn vyre_foundation::execution_plan::fusion::dependence::RegionDependenceGraph::from_programs(programs: &[vyre_foundation::ir::Program]) -> Self
+pub fn vyre_foundation::execution_plan::fusion::dependence::classify_program_handoff(producer: &vyre_foundation::ir::Program, consumer: &vyre_foundation::ir::Program) -> vyre_foundation::execution_plan::fusion::dependence::HandoffLocation
+pub fn vyre_foundation::execution_plan::fusion::dependence::earliest_region_handoff(producer: &vyre_foundation::logical::LogicalRegion, consumer: &vyre_foundation::logical::LogicalRegion) -> vyre_foundation::execution_plan::fusion::dependence::HandoffLocation
+pub fn vyre_foundation::execution_plan::fusion::earliest_region_handoff(producer: &vyre_foundation::logical::LogicalRegion, consumer: &vyre_foundation::logical::LogicalRegion) -> vyre_foundation::execution_plan::fusion::dependence::HandoffLocation
 pub fn vyre_foundation::execution_plan::fusion::fuse_programs(programs: &[vyre_foundation::ir::Program]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_foundation::execution_plan::fusion::fuse_programs_vec(programs: alloc::vec::Vec<vyre_foundation::ir::Program>) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
+pub fn vyre_foundation::execution_plan::fusion::legality::FusionLegalityVerdict::into_result(self) -> core::result::Result<vyre_foundation::execution_plan::fusion::dependence::HandoffLocation, vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason>
+pub fn vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::execution_plan::fusion::legality::analyze_program_fusion_legality(producer: &vyre_foundation::ir::Program, consumer: &vyre_foundation::ir::Program) -> vyre_foundation::execution_plan::fusion::legality::FusionLegalityVerdict
+pub fn vyre_foundation::execution_plan::fusion::legality::analyze_region_fusion_legality(producer: &vyre_foundation::logical::LogicalRegion, consumer: &vyre_foundation::logical::LogicalRegion) -> vyre_foundation::execution_plan::fusion::legality::FusionLegalityVerdict
+pub fn vyre_foundation::execution_plan::fusion::lower_fusion_candidate(candidate: &vyre_foundation::execution_plan::fusion::candidate::FusionCandidate, programs: &[vyre_foundation::ir::Program]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
+pub fn vyre_foundation::execution_plan::fusion::lowering::lower_fusion_candidate(candidate: &vyre_foundation::execution_plan::fusion::candidate::FusionCandidate, programs: &[vyre_foundation::ir::Program]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_foundation::execution_plan::fusion::merge_programs_shared(programs: &[vyre_foundation::ir::Program]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
+pub fn vyre_foundation::execution_plan::fusion::region::IterationSpace::from_region(region: &vyre_foundation::logical::LogicalRegion) -> Self
+pub fn vyre_foundation::execution_plan::fusion::region::IterationSpace::is_congruent_with(&self, other: &Self) -> bool
+pub fn vyre_foundation::execution_plan::fusion::region::IterationSpace::is_tile_compatible(&self, tile_shape: &[u32]) -> bool
+pub fn vyre_foundation::execution_plan::fusion::region::IterationSpace::new(extents: alloc::vec::Vec<u64>, kind: vyre_foundation::logical::LogicalRegionKind) -> Self
+pub fn vyre_foundation::execution_plan::fusion::region::IterationSpace::total_points(&self) -> u64
+pub fn vyre_foundation::execution_plan::fusion::region::RegionFusionPlanner::classify_relation(producer: &vyre_foundation::logical::LogicalRegion, consumer: &vyre_foundation::logical::LogicalRegion) -> vyre_foundation::execution_plan::fusion::region::RegionRelation
 pub fn vyre_foundation::execution_plan::fusion::relies_on_single_invocation_workgroup(prog: &vyre_foundation::ir::Program) -> bool
+pub fn vyre_foundation::execution_plan::fusion::tile::ScheduleTile::new(dimensions: alloc::vec::Vec<u32>, vector_width: u32, residency: vyre_foundation::execution_plan::fusion::tile::TileResidency) -> Self
+pub fn vyre_foundation::execution_plan::fusion::tile::ScheduleTile::register_1d(size: u32) -> Self
+pub fn vyre_foundation::execution_plan::fusion::tile::ScheduleTile::shared_tile(dimensions: alloc::vec::Vec<u32>) -> Self
+pub fn vyre_foundation::execution_plan::fusion::tile::TilePipeliningPlan::default() -> Self
+pub fn vyre_foundation::execution_plan::fusion::tile::TilePipeliningPlan::double_buffered() -> Self
+pub fn vyre_foundation::execution_plan::fusion::tile::TileResidency::from(residency: vyre_foundation::ir::Residency) -> Self
 pub fn vyre_foundation::execution_plan::plan(program: &vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::execution_plan::ExecutionPlan, vyre_foundation::execution_plan::PlanError>
 pub fn vyre_foundation::execution_plan::plan_for_adapter(program: &vyre_foundation::ir::Program, adapter_caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::execution_plan::ExecutionPlan, vyre_foundation::execution_plan::PlanError>
 pub fn vyre_foundation::execution_plan::plan_with_options(program: &vyre_foundation::ir::Program, options: vyre_foundation::validate::ValidationOptions<'_>) -> core::result::Result<vyre_foundation::execution_plan::ExecutionPlan, vyre_foundation::execution_plan::PlanError>
@@ -1395,10 +1575,11 @@ pub fn vyre_foundation::extension::CatalogBundle::merge(&mut self, other: vyre_f
 pub fn vyre_foundation::extension::CatalogBundle::new(bundle_id: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::extension::CatalogBundle::register(&mut self, schema: vyre_spec::extension::ExtensionSchema) -> core::result::Result<(), vyre_foundation::extension::ExtensionCatalogError>
 pub fn vyre_foundation::extension::CatalogBundle::validate(&self) -> core::result::Result<(), vyre_foundation::extension::ExtensionCatalogError>
-pub fn vyre_foundation::extension::RuleConditionExt::evaluate_opaque(&self, ctx: &dyn core::any::Any) -> bool
+pub fn vyre_foundation::extension::RuleConditionExt::evaluate_opaque(&self, _ctx: &dyn core::any::Any) -> bool
 pub fn vyre_foundation::extension::RuleConditionExt::extension_id(&self) -> vyre_spec::extension::ExtensionRuleConditionId
 pub fn vyre_foundation::extension::RuleConditionExt::required_buffers(&self) -> alloc::vec::Vec<vyre_foundation::ir::BufferDecl>
 pub fn vyre_foundation::extension::RuleConditionExt::stable_fingerprint(&self) -> [u8; 32]
+pub fn vyre_foundation::extension::RuleConditionExt::wire_payload(&self) -> alloc::vec::Vec<u8>
 pub fn vyre_foundation::extension::decode_opaque_expr(kind: &str, payload: &[u8]) -> core::result::Result<vyre_foundation::ir::Expr, alloc::string::String>
 pub fn vyre_foundation::extension::decode_opaque_node(kind: &str, payload: &[u8]) -> core::result::Result<vyre_foundation::ir::Node, alloc::string::String>
 pub fn vyre_foundation::extension::resolve_atomic_op(id: vyre_spec::extension::ExtensionAtomicOpId) -> core::option::Option<&'static dyn vyre_spec::extension::ExtensionAtomicOp>
@@ -1439,9 +1620,6 @@ pub fn vyre_foundation::graph_view::to_graph(program: &vyre_foundation::ir::Prog
 pub fn vyre_foundation::guarded_logical_span(program: &vyre_foundation::ir::Program) -> core::option::Option<u32>
 pub fn vyre_foundation::hashing::update_length_delimited_field(hasher: &mut blake3::Hasher, label: &[u8], value: &[u8])
 pub fn vyre_foundation::ir::AdmittedResourceRecord::validate(&self, caps: &vyre_foundation::ir::ExternalResourceCapability) -> core::result::Result<(), vyre_foundation::ir::ResourceAbiError>
-pub fn vyre_foundation::ir::AsyncTransactionLifecycle::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
-pub fn vyre_foundation::ir::AtomicOrdering::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
-pub fn vyre_foundation::ir::BarrierParticipation::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_foundation::ir::BufferDecl::access(&self) -> vyre_spec::buffer_access::BufferAccess
 pub fn vyre_foundation::ir::BufferDecl::binding(&self) -> u32
 pub fn vyre_foundation::ir::BufferDecl::consumes_host_input(&self) -> bool
@@ -1475,11 +1653,9 @@ pub fn vyre_foundation::ir::BufferDecl::with_pipeline_live_out(self, flag: bool)
 pub fn vyre_foundation::ir::BufferDecl::with_shape_predicate(self, predicate: vyre_foundation::ir::ShapePredicate) -> Self
 pub fn vyre_foundation::ir::BufferDecl::workgroup(name: &str, count: u32, element: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_foundation::ir::BufferDecl::written(name: &str, binding: u32, access: vyre_spec::buffer_access::BufferAccess, element: vyre_spec::data_type::DataType) -> Self
-pub fn vyre_foundation::ir::CollectiveGroup::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_foundation::ir::EvalError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::ir::EvalError::message(&self) -> &str
 pub fn vyre_foundation::ir::EvalError::new(message: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_foundation::ir::ExecutionScope::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_foundation::ir::Expr::abs(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::abs_diff(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::acos(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
@@ -1488,10 +1664,10 @@ pub fn vyre_foundation::ir::Expr::and(left: vyre_foundation::ir::Expr, right: vy
 pub fn vyre_foundation::ir::Expr::asin(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::atan(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::atomic_add(buffer: &str, index: vyre_foundation::ir::Expr, value: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
-pub fn vyre_foundation::ir::Expr::atomic_add_ordered(buffer: &str, index: vyre_foundation::ir::Expr, value: vyre_foundation::ir::Expr, ordering: vyre_foundation::ir::MemoryOrdering) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::atomic_add_ordered(buffer: &str, index: vyre_foundation::ir::Expr, value: vyre_foundation::ir::Expr, ordering: vyre_foundation::memory_model::legacy::MemoryOrdering) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::atomic_and(buffer: &str, index: vyre_foundation::ir::Expr, value: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::atomic_compare_exchange(buffer: &str, index: vyre_foundation::ir::Expr, expected: vyre_foundation::ir::Expr, new_value: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
-pub fn vyre_foundation::ir::Expr::atomic_compare_exchange_ordered(buffer: &str, index: vyre_foundation::ir::Expr, expected: vyre_foundation::ir::Expr, new_value: vyre_foundation::ir::Expr, ordering: vyre_foundation::ir::MemoryOrdering) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::atomic_compare_exchange_ordered(buffer: &str, index: vyre_foundation::ir::Expr, expected: vyre_foundation::ir::Expr, new_value: vyre_foundation::ir::Expr, ordering: vyre_foundation::memory_model::legacy::MemoryOrdering) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::atomic_exchange(buffer: &str, index: vyre_foundation::ir::Expr, value: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::atomic_max(buffer: &str, index: vyre_foundation::ir::Expr, value: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::atomic_min(buffer: &str, index: vyre_foundation::ir::Expr, value: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
@@ -1606,12 +1782,11 @@ pub fn vyre_foundation::ir::ExprNode::as_any(&self) -> &dyn core::any::Any
 pub fn vyre_foundation::ir::ExprNode::cse_safe(&self) -> bool
 pub fn vyre_foundation::ir::ExprNode::debug_identity(&self) -> &str
 pub fn vyre_foundation::ir::ExprNode::extension_kind(&self) -> &'static str
+pub fn vyre_foundation::ir::ExprNode::is_pure(&self) -> bool
 pub fn vyre_foundation::ir::ExprNode::result_type(&self) -> core::option::Option<vyre_spec::data_type::DataType>
 pub fn vyre_foundation::ir::ExprNode::stable_fingerprint(&self) -> [u8; 32]
 pub fn vyre_foundation::ir::ExprNode::validate_extension(&self) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::ir::ExprNode::wire_payload(&self) -> alloc::vec::Vec<u8>
-pub fn vyre_foundation::ir::FailureCancellationBehavior::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
-pub fn vyre_foundation::ir::FenceSemantics::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_foundation::ir::GraphDelta::apply_transactional(&self, graph: &vyre_foundation::ir::ProgramGraph) -> core::result::Result<(vyre_foundation::ir::ProgramGraph, vyre_foundation::ir::AffectedGraphClosure), vyre_foundation::ir::GraphDeltaError>
 pub fn vyre_foundation::ir::GraphDelta::default() -> Self
 pub fn vyre_foundation::ir::GraphDelta::from_wire(bytes: &[u8]) -> core::result::Result<Self, vyre_foundation::ir::GraphDeltaError>
@@ -1652,8 +1827,6 @@ pub fn vyre_foundation::ir::InterpCtx::set_operands<I>(&mut self, operands: I) w
 pub fn vyre_foundation::ir::InterpCtx::set_region(&mut self, id: vyre_foundation::ir::RegionId, bytes: alloc::vec::Vec<u8>)
 pub fn vyre_foundation::ir::Layout::linear_index(&self, coords: &[u32], extents: &[u32]) -> usize
 pub fn vyre_foundation::ir::MemoryHints::default() -> Self
-pub fn vyre_foundation::ir::MemoryOrdering::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
-pub fn vyre_foundation::ir::MemoryScope::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_foundation::ir::Node::assign(name: impl core::convert::Into<vyre_foundation::ir::Ident>, value: vyre_foundation::ir::Expr) -> Self
 pub fn vyre_foundation::ir::Node::async_load(tag: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
 pub fn vyre_foundation::ir::Node::async_load_gpu_driven(source: impl core::convert::Into<vyre_foundation::ir::Ident>, destination: impl core::convert::Into<vyre_foundation::ir::Ident>, offset: vyre_foundation::ir::Expr, size: vyre_foundation::ir::Expr, tag: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
@@ -1683,7 +1856,11 @@ pub fn vyre_foundation::ir::Node::trap(address: vyre_foundation::ir::Expr, tag: 
 pub fn vyre_foundation::ir::NodeExtension::as_any(&self) -> &dyn core::any::Any
 pub fn vyre_foundation::ir::NodeExtension::debug_identity(&self) -> &str
 pub fn vyre_foundation::ir::NodeExtension::extension_kind(&self) -> &'static str
+pub fn vyre_foundation::ir::NodeExtension::is_divergent(&self) -> bool
+pub fn vyre_foundation::ir::NodeExtension::is_pure(&self) -> bool
+pub fn vyre_foundation::ir::NodeExtension::may_alias(&self) -> bool
 pub fn vyre_foundation::ir::NodeExtension::stable_fingerprint(&self) -> [u8; 32]
+pub fn vyre_foundation::ir::NodeExtension::terminates(&self) -> bool
 pub fn vyre_foundation::ir::NodeExtension::validate_extension(&self) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::ir::NodeExtension::wire_payload(&self) -> alloc::vec::Vec<u8>
 pub fn vyre_foundation::ir::NodeStorage::input_ids(&self) -> alloc::vec::Vec<vyre_foundation::ir::NodeId>
@@ -1823,7 +2000,6 @@ pub fn vyre_foundation::ir::ShapePredicate::evaluate_with_interner(&self, intern
 pub fn vyre_foundation::ir::ShapePredicate::holds(&self, count: u32) -> bool
 pub fn vyre_foundation::ir::ShapePredicate::proves_non_empty(&self) -> bool
 pub fn vyre_foundation::ir::ShapePredicate::to_interned_constraints(&self, interner: &vyre_foundation::types::ShapeInterner, count_expr: vyre_foundation::types::ShapeExprId) -> alloc::vec::Vec<vyre_foundation::types::ShapeConstraint>
-pub fn vyre_foundation::ir::StorageDomain::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_foundation::ir::Tile::byte_size(&self) -> u64
 pub fn vyre_foundation::ir::Tile::element_count(&self) -> usize
 pub fn vyre_foundation::ir::Tile::new(element: vyre_spec::data_type::DataType, extents: impl core::convert::Into<alloc::vec::Vec<u32>>, layout: vyre_foundation::ir::Layout, residency: vyre_foundation::ir::Residency) -> Self
@@ -1836,6 +2012,7 @@ pub fn vyre_foundation::ir::eval::fold_unary_literal(op: &vyre_spec::un_op::UnOp
 pub fn vyre_foundation::ir::expr_variant_name(item: &vyre_foundation::ir::Expr) -> &'static str
 pub fn vyre_foundation::ir::node_op_id(node: &vyre_foundation::ir::Node) -> &'static str
 pub fn vyre_foundation::ir::node_variant_name(item: &vyre_foundation::ir::Node) -> &'static str
+pub fn vyre_foundation::ir::verify_program_obligations(program: &vyre_foundation::ir::Program) -> core::result::Result<(), vyre_foundation::memory_model::obligations::ObligationError>
 pub fn vyre_foundation::launch_covers_full_input_span(program: &vyre_foundation::ir::Program) -> bool
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::canonical_region_count(&self) -> usize
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::exchanges(&self) -> &[vyre_foundation::logical::LogicalExchange]
@@ -1862,6 +2039,26 @@ pub fn vyre_foundation::lower::ProgramEffects::bitor(self, rhs: Self) -> Self
 pub fn vyre_foundation::lower::ProgramEffects::bitor_assign(&mut self, rhs: Self)
 pub fn vyre_foundation::lower::compute_program_effects(program: &vyre_foundation::ir::Program) -> vyre_foundation::lower::ProgramEffects
 pub fn vyre_foundation::lower::lower_subgroup_reductions(program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::ir::Program
+pub fn vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_foundation::memory_model::atomic::AtomicOrdering::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_foundation::memory_model::collective::CollectiveGroup::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_foundation::memory_model::failure::FailureCancellationBehavior::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_foundation::memory_model::fence::BarrierParticipation::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_foundation::memory_model::fence::FenceSemantics::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_foundation::memory_model::legacy::MemoryOrdering::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_foundation::memory_model::obligations::ObligationTracker::advance_epoch(&mut self) -> vyre_foundation::memory_model::obligations::StateEpoch
+pub fn vyre_foundation::memory_model::obligations::ObligationTracker::check_all_consumed(&self) -> core::result::Result<(), vyre_foundation::memory_model::obligations::ObligationError>
+pub fn vyre_foundation::memory_model::obligations::ObligationTracker::consume(&mut self, obligation_id: u64, node_idx: usize) -> core::result::Result<(), vyre_foundation::memory_model::obligations::ObligationError>
+pub fn vyre_foundation::memory_model::obligations::ObligationTracker::consume_matching<F>(&mut self, node_idx: usize, predicate: F) -> usize where F: core::ops::function::FnMut(&vyre_foundation::memory_model::obligations::Obligation) -> bool
+pub fn vyre_foundation::memory_model::obligations::ObligationTracker::new() -> Self
+pub fn vyre_foundation::memory_model::obligations::ObligationTracker::produce(&mut self, name: impl core::convert::Into<alloc::string::String>, kind: vyre_foundation::memory_model::obligations::ObligationKind, node_idx: usize) -> u64
+pub fn vyre_foundation::memory_model::obligations::ObligationTracker::unconsumed_obligations(&self) -> alloc::vec::Vec<&vyre_foundation::memory_model::obligations::Obligation>
+pub fn vyre_foundation::memory_model::obligations::StateEpoch::advance(&mut self) -> Self
+pub fn vyre_foundation::memory_model::obligations::verify_program_obligations(program: &vyre_foundation::ir::Program) -> core::result::Result<(), vyre_foundation::memory_model::obligations::ObligationError>
+pub fn vyre_foundation::memory_model::scope::ExecutionScope::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_foundation::memory_model::scope::MemoryScope::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_foundation::memory_model::storage::StorageDomain::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_foundation::memory_model::verify_program_obligations(program: &vyre_foundation::ir::Program) -> core::result::Result<(), vyre_foundation::memory_model::obligations::ObligationError>
 pub fn vyre_foundation::numeric::CalibrationIdentity::authenticates(&self, payload: &[u8]) -> bool
 pub fn vyre_foundation::numeric::CalibrationIdentity::hex(&self) -> alloc::string::String
 pub fn vyre_foundation::numeric::CalibrationIdentity::of(payload: &[u8]) -> Self
@@ -1974,14 +2171,39 @@ pub fn vyre_foundation::operation::CallGraphClosure::is_unclosed_or_cyclic(&self
 pub fn vyre_foundation::operation::CallGraphClosure::solve_from_registrations<'a, I>(registrations: I) -> Self where I: core::iter::traits::collect::IntoIterator<Item = &'a vyre_foundation::operation::OperationRegistration>
 pub fn vyre_foundation::operation::CallGraphClosure::transitive_capabilities(&self, id: &str) -> core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub fn vyre_foundation::operation::CallGraphClosure::transitive_effects(&self, id: &str) -> core::option::Option<vyre_foundation::operation::OperationEffects>
+pub fn vyre_foundation::operation::CatalogBundle::artifact_identity(&self, request_or_program_digest: &[u8; 32]) -> [u8; 32]
+pub fn vyre_foundation::operation::CatalogBundle::compute_digest(version: u32, descriptors: &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::SemanticDescriptor>, lowering_providers: &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::LoweringProvider>, extensions: &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>) -> [u8; 32]
 pub fn vyre_foundation::operation::CatalogBundle::contains(&self, id: &str) -> bool
 pub fn vyre_foundation::operation::CatalogBundle::descriptor(&self, id: &str) -> core::option::Option<&vyre_foundation::operation::SemanticDescriptor>
+pub fn vyre_foundation::operation::CatalogBundle::empty() -> Self
+pub fn vyre_foundation::operation::CatalogBundle::extension(&self, name: &str) -> core::option::Option<&vyre_foundation::operation::ExtensionProvenance>
+pub fn vyre_foundation::operation::CatalogBundle::extensions(&self) -> &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>
+pub fn vyre_foundation::operation::CatalogBundle::from_parts(descriptors: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::SemanticDescriptor>, lowering_providers: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::LoweringProvider>, extensions: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>) -> Self
 pub fn vyre_foundation::operation::CatalogBundle::from_registry() -> Self
 pub fn vyre_foundation::operation::CatalogBundle::is_empty(&self) -> bool
 pub fn vyre_foundation::operation::CatalogBundle::len(&self) -> usize
 pub fn vyre_foundation::operation::CatalogBundle::lowering(&self, id: &str) -> core::option::Option<&vyre_foundation::operation::LoweringProvider>
+pub fn vyre_foundation::operation::CatalogBundle::with_descriptor(self, descriptor: vyre_foundation::operation::SemanticDescriptor) -> Self
+pub fn vyre_foundation::operation::CatalogBundle::with_extension(self, name: &'static str, version: u32, descriptors: impl core::iter::traits::collect::IntoIterator<Item = vyre_foundation::operation::SemanticDescriptor>, lowerings: impl core::iter::traits::collect::IntoIterator<Item = vyre_foundation::operation::LoweringProvider>) -> Self
+pub fn vyre_foundation::operation::CatalogBundle::with_lowering(self, lowering: vyre_foundation::operation::LoweringProvider) -> Self
+pub fn vyre_foundation::operation::CatalogBundle::with_operation(self, descriptor: vyre_foundation::operation::SemanticDescriptor, lowering: core::option::Option<vyre_foundation::operation::LoweringProvider>) -> Self
+pub fn vyre_foundation::operation::ConformanceRegistry::contains(&self, id: &str) -> bool
+pub fn vyre_foundation::operation::ConformanceRegistry::from_registry() -> Self
+pub fn vyre_foundation::operation::ConformanceRegistry::is_empty(&self) -> bool
+pub fn vyre_foundation::operation::ConformanceRegistry::iter(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &vyre_foundation::operation::ConformanceProvider> + '_
+pub fn vyre_foundation::operation::ConformanceRegistry::len(&self) -> usize
+pub fn vyre_foundation::operation::ConformanceRegistry::provider(&self, id: &str) -> core::option::Option<&vyre_foundation::operation::ConformanceProvider>
+pub fn vyre_foundation::operation::DialectOperationSpec::build_program(&self) -> vyre_foundation::ir::Program
+pub fn vyre_foundation::operation::DialectOperationSpec::contract_record(&self) -> vyre_spec::op_contract::SemanticContractRecord
+pub fn vyre_foundation::operation::DialectOperationSpec::documentation(&self) -> &'static str
+pub fn vyre_foundation::operation::DialectOperationSpec::generate_property_input(&self, seed: u64) -> alloc::vec::Vec<u8>
+pub fn vyre_foundation::operation::DialectOperationSpec::id(&self) -> &'static str
+pub fn vyre_foundation::operation::DialectOperationSpec::metamorphic_test(&self, inputs: &[alloc::vec::Vec<u8>]) -> bool
+pub fn vyre_foundation::operation::DialectOperationSpec::reference_obligation(&self) -> &'static str
 pub fn vyre_foundation::operation::OperationEffects::from_program(program: &vyre_foundation::ir::Program) -> Self
 pub fn vyre_foundation::operation::OperationRegistration::conformance_provider(&self) -> vyre_foundation::operation::ConformanceProvider
+pub fn vyre_foundation::operation::OperationRegistration::contract_provider(&'static self) -> vyre_foundation::operation::ContractProvider
+pub fn vyre_foundation::operation::OperationRegistration::contract_record(&self) -> vyre_spec::op_contract::SemanticContractRecord
 pub fn vyre_foundation::operation::OperationRegistration::descriptor(&'static self) -> vyre_foundation::operation::SemanticDescriptor
 pub fn vyre_foundation::operation::OperationRegistration::direct_effects(&self) -> core::option::Option<vyre_foundation::operation::OperationEffects>
 pub fn vyre_foundation::operation::OperationRegistration::direct_required_capabilities(&self) -> core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
@@ -2001,9 +2223,13 @@ pub fn vyre_foundation::operation::OperationRegistry::global() -> &'static Self
 pub fn vyre_foundation::operation::OperationRegistry::iter(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = vyre_foundation::operation::SemanticOperation> + '_
 pub fn vyre_foundation::operation::OperationRegistry::transitive_capabilities(&self, id: &str) -> core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub fn vyre_foundation::operation::OperationRegistry::transitive_effects(&self, id: &str) -> core::option::Option<vyre_foundation::operation::OperationEffects>
+pub fn vyre_foundation::operation::OperationVisitor::visit_effect(&mut self, effect: &str)
+pub fn vyre_foundation::operation::OperationVisitor::visit_operand(&mut self, name: &str)
 pub fn vyre_foundation::operation::SemanticOperation::callees(self) -> core::option::Option<&'static [&'static str]>
 pub fn vyre_foundation::operation::SemanticOperation::composite_version(self) -> u64
 pub fn vyre_foundation::operation::SemanticOperation::conformance_provider(self) -> vyre_foundation::operation::ConformanceProvider
+pub fn vyre_foundation::operation::SemanticOperation::contract_provider(self) -> vyre_foundation::operation::ContractProvider
+pub fn vyre_foundation::operation::SemanticOperation::contract_record(self) -> vyre_spec::op_contract::SemanticContractRecord
 pub fn vyre_foundation::operation::SemanticOperation::descriptor(self) -> vyre_foundation::operation::SemanticDescriptor
 pub fn vyre_foundation::operation::SemanticOperation::direct_effects(self) -> core::option::Option<vyre_foundation::operation::OperationEffects>
 pub fn vyre_foundation::operation::SemanticOperation::direct_required_capabilities(self) -> core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
@@ -2164,10 +2390,6 @@ pub fn vyre_foundation::optimizer::effect_lattice::lattice_join(a: vyre_foundati
 pub fn vyre_foundation::optimizer::effect_lattice::node_effect_level(node: &vyre_foundation::ir::Node) -> vyre_foundation::optimizer::effect_lattice::EffectLevel
 pub fn vyre_foundation::optimizer::effect_lattice::program_effect_level(program: &vyre_foundation::ir::Program) -> vyre_foundation::optimizer::effect_lattice::EffectLevel
 pub fn vyre_foundation::optimizer::eqsat::CostModelFact::default() -> Self
-pub fn vyre_foundation::optimizer::eqsat::DeviceAwareRule<L, F>::matches(&self, egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>) -> alloc::vec::Vec<(vyre_foundation::optimizer::eqsat::EClassId, vyre_foundation::optimizer::eqsat::EClassId)>
-pub fn vyre_foundation::optimizer::eqsat::DeviceAwareRule<L, F>::name(&self) -> &'static str
-pub fn vyre_foundation::optimizer::eqsat::DeviceAwareRule<L, F>::new(inner: alloc::boxed::Box<dyn vyre_foundation::optimizer::eqsat::Rule<L>>, predicate: F) -> Self
-pub fn vyre_foundation::optimizer::eqsat::DeviceAwareRule<L, F>::witness(&self) -> vyre_foundation::optimizer::rewrite_contract::RewriteWitness
 pub fn vyre_foundation::optimizer::eqsat::EGraph<L>::add(&mut self, node: L) -> vyre_foundation::optimizer::eqsat::EClassId
 pub fn vyre_foundation::optimizer::eqsat::EGraph<L>::class(&self, id: vyre_foundation::optimizer::eqsat::EClassId) -> core::option::Option<&vyre_foundation::optimizer::eqsat::EClass<L>>
 pub fn vyre_foundation::optimizer::eqsat::EGraph<L>::class_count(&self) -> usize
@@ -2191,15 +2413,23 @@ pub fn vyre_foundation::optimizer::eqsat::ENodeLang::children(&self) -> vyre_fou
 pub fn vyre_foundation::optimizer::eqsat::ENodeLang::with_children(&self, children: &[vyre_foundation::optimizer::eqsat::EClassId]) -> Self
 pub fn vyre_foundation::optimizer::eqsat::Family::name(&self) -> &'static str
 pub fn vyre_foundation::optimizer::eqsat::Family::rules(&self) -> alloc::vec::Vec<alloc::boxed::Box<dyn vyre_foundation::optimizer::eqsat::Rule<L>>>
+pub fn vyre_foundation::optimizer::eqsat::HardwarePropertyRule<L>::cache_key(&self) -> vyre_foundation::optimizer::eqsat::RuleCacheKey
+pub fn vyre_foundation::optimizer::eqsat::HardwarePropertyRule<L>::fact_identity(&self) -> vyre_foundation::optimizer::eqsat::RuleFactIdentity
 pub fn vyre_foundation::optimizer::eqsat::HardwarePropertyRule<L>::is_satisfied(&self) -> bool
 pub fn vyre_foundation::optimizer::eqsat::HardwarePropertyRule<L>::matches(&self, egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>) -> alloc::vec::Vec<(vyre_foundation::optimizer::eqsat::EClassId, vyre_foundation::optimizer::eqsat::EClassId)>
 pub fn vyre_foundation::optimizer::eqsat::HardwarePropertyRule<L>::name(&self) -> &'static str
 pub fn vyre_foundation::optimizer::eqsat::HardwarePropertyRule<L>::new(inner: alloc::boxed::Box<dyn vyre_foundation::optimizer::eqsat::Rule<L>>, required_facts: alloc::vec::Vec<vyre_foundation::optimizer::eqsat::TargetFact>, active_facts: alloc::vec::Vec<vyre_foundation::optimizer::eqsat::TargetFact>) -> Self
+pub fn vyre_foundation::optimizer::eqsat::HardwarePropertyRule<L>::proof_term(&self) -> vyre_foundation::optimizer::eqsat::ProofTerm
 pub fn vyre_foundation::optimizer::eqsat::HardwarePropertyRule<L>::required_facts(&self) -> &[vyre_foundation::optimizer::eqsat::TargetFact]
 pub fn vyre_foundation::optimizer::eqsat::HardwarePropertyRule<L>::witness(&self) -> vyre_foundation::optimizer::rewrite_contract::RewriteWitness
+pub fn vyre_foundation::optimizer::eqsat::ProofTerm::from_name_and_justification(rule_name: &'static str, justification: &'static str) -> Self
+pub fn vyre_foundation::optimizer::eqsat::Rule::cache_key(&self) -> vyre_foundation::optimizer::eqsat::RuleCacheKey
+pub fn vyre_foundation::optimizer::eqsat::Rule::fact_identity(&self) -> vyre_foundation::optimizer::eqsat::RuleFactIdentity
 pub fn vyre_foundation::optimizer::eqsat::Rule::matches(&self, egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>) -> alloc::vec::Vec<(vyre_foundation::optimizer::eqsat::EClassId, vyre_foundation::optimizer::eqsat::EClassId)>
 pub fn vyre_foundation::optimizer::eqsat::Rule::name(&self) -> &'static str
+pub fn vyre_foundation::optimizer::eqsat::Rule::proof_term(&self) -> vyre_foundation::optimizer::eqsat::ProofTerm
 pub fn vyre_foundation::optimizer::eqsat::Rule::witness(&self) -> vyre_foundation::optimizer::rewrite_contract::RewriteWitness
+pub fn vyre_foundation::optimizer::eqsat::RuleCacheKey::from_components(name: &str, fact: &vyre_foundation::optimizer::eqsat::RuleFactIdentity, obligation_digest: &[u8; 32]) -> Self
 pub fn vyre_foundation::optimizer::eqsat::SaturationReport::class_count_delta(&self) -> isize
 pub fn vyre_foundation::optimizer::eqsat::extract_best<L: vyre_foundation::optimizer::eqsat::ENodeLang>(egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>, class_id: vyre_foundation::optimizer::eqsat::EClassId, cost_fn: impl core::ops::function::Fn(&L) -> u64) -> core::option::Option<(L, u64)>
 pub fn vyre_foundation::optimizer::eqsat::saturate<L: vyre_foundation::optimizer::eqsat::ENodeLang>(egraph: &mut vyre_foundation::optimizer::eqsat::EGraph<L>, rules: &[alloc::boxed::Box<dyn vyre_foundation::optimizer::eqsat::Rule<L>>], max_iters: usize) -> usize
@@ -2251,6 +2481,8 @@ pub fn vyre_foundation::optimizer::eqsat_gpu::apply_equivalences_to_egraph<L>(eg
 pub fn vyre_foundation::optimizer::eqsat_gpu::bridge_equivalence_batch_with_report<L, F, S, C>(egraph: &mut vyre_foundation::optimizer::eqsat::EGraph<L>, root: vyre_foundation::optimizer::eqsat::EClassId, op_name: F, equivalences: &[vyre_foundation::optimizer::eqsat_gpu::Equivalence], cost_fn: C) -> core::result::Result<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport, vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError> where L: vyre_foundation::optimizer::eqsat::ENodeLang, F: core::ops::function::Fn(&L) -> S, S: core::convert::AsRef<str>, C: core::ops::function::Fn(&L) -> u64 + core::marker::Copy
 pub fn vyre_foundation::optimizer::eqsat_gpu::gpu_egraph_row_signature(language_op_id: u32, children_len: u32, children: &[u32]) -> u32
 pub fn vyre_foundation::optimizer::eqsat_toml::OpIdNode::op_id(&self) -> core::option::Option<&str>
+pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::cache_key(&self) -> vyre_foundation::optimizer::eqsat::RuleCacheKey
+pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::fact_identity(&self) -> vyre_foundation::optimizer::eqsat::RuleFactIdentity
 pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::from_toml_str(name: &'static str, text: &str) -> core::io::error::Result<Self>
 pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::is_empty(&self) -> bool
 pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = &vyre_foundation::optimizer::eqsat_toml::EquivalenceRule>
@@ -2259,6 +2491,7 @@ pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::load(name: 
 pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::matches(&self, egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>) -> alloc::vec::Vec<(vyre_foundation::optimizer::eqsat::EClassId, vyre_foundation::optimizer::eqsat::EClassId)>
 pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::name(&self) -> &'static str
 pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::new(name: &'static str) -> Self
+pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::proof_term(&self) -> vyre_foundation::optimizer::eqsat::ProofTerm
 pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::witness(&self) -> vyre_foundation::optimizer::rewrite_contract::RewriteWitness
 pub fn vyre_foundation::optimizer::explain_optimizer_report(report: &vyre_foundation::optimizer::OptimizerRunReport) -> core::result::Result<alloc::vec::Vec<vyre_foundation::optimizer::PassExplanation>, vyre_foundation::optimizer::OptimizerError>
 pub fn vyre_foundation::optimizer::explain_optimizer_report_with_catalog(report: &vyre_foundation::optimizer::OptimizerRunReport, catalog: &[vyre_foundation::optimizer::pass_catalog::OptimizationCatalogEntry]) -> alloc::vec::Vec<vyre_foundation::optimizer::PassExplanation>
@@ -2346,13 +2579,18 @@ pub fn vyre_foundation::optimizer::megakernel::scratch_reuse::ScratchReusePlan::
 pub fn vyre_foundation::optimizer::multi_level_eqsat::MultiObjectiveCost::dominates(&self, other: &Self) -> bool
 pub fn vyre_foundation::optimizer::multi_level_eqsat::OptimizationProofChecker::export_replay_artifact(&self, telemetry: vyre_foundation::optimizer::multi_level_eqsat::PassTelemetry) -> core::option::Option<vyre_foundation::optimizer::multi_level_eqsat::ReplayArtifact>
 pub fn vyre_foundation::optimizer::multi_level_eqsat::OptimizationProofChecker::new() -> Self
-pub fn vyre_foundation::optimizer::multi_level_eqsat::OptimizationProofChecker::verify_and_record(&mut self, proof: vyre_foundation::optimizer::multi_level_eqsat::StepProof) -> core::result::Result<(), &'static str>
+pub fn vyre_foundation::optimizer::multi_level_eqsat::OptimizationProofChecker::verify_and_record(&mut self, proof: vyre_foundation::optimizer::multi_level_eqsat::StepProof) -> core::result::Result<(), vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError>
+pub fn vyre_foundation::optimizer::multi_level_eqsat::OptimizationProofChecker::verify_replay_artifact(artifact: &vyre_foundation::optimizer::multi_level_eqsat::ReplayArtifact) -> core::result::Result<[u8; 32], vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError>
 pub fn vyre_foundation::optimizer::multi_level_eqsat::ParetoFront::insert(&mut self, candidate: vyre_foundation::optimizer::multi_level_eqsat::ParetoCandidate) -> bool
 pub fn vyre_foundation::optimizer::multi_level_eqsat::ParetoFront::is_empty(&self) -> bool
 pub fn vyre_foundation::optimizer::multi_level_eqsat::ParetoFront::len(&self) -> usize
 pub fn vyre_foundation::optimizer::multi_level_eqsat::ParetoFront::select_weighted(&self, latency_weight: f64, memory_weight: f64) -> core::option::Option<&vyre_foundation::optimizer::multi_level_eqsat::ParetoCandidate>
 pub fn vyre_foundation::optimizer::multi_level_eqsat::PassEngine::default() -> Self
-pub fn vyre_foundation::optimizer::multi_level_eqsat::PassEngine::run_to_fixpoint<F>(&mut self, plan: vyre_foundation::schedule::SchedulePlan, pass: F) -> core::result::Result<(vyre_foundation::schedule::SchedulePlan, vyre_foundation::optimizer::multi_level_eqsat::PassTelemetry), &'static str> where F: core::ops::function::FnMut(&vyre_foundation::schedule::SchedulePlan) -> core::option::Option<(vyre_foundation::schedule::SchedulePlan, &'static str, &'static str)>
+pub fn vyre_foundation::optimizer::multi_level_eqsat::PassEngine::run_to_fixpoint<F>(&mut self, plan: vyre_foundation::schedule::SchedulePlan, pass: F) -> core::result::Result<(vyre_foundation::schedule::SchedulePlan, vyre_foundation::optimizer::multi_level_eqsat::PassTelemetry), vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError> where F: core::ops::function::FnMut(&vyre_foundation::schedule::SchedulePlan) -> core::option::Option<(vyre_foundation::schedule::SchedulePlan, &'static str, &'static str)>
+pub fn vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation::admits_contract(&self, contract: vyre_foundation::optimizer::rewrite_contract::NumericalContract) -> bool
+pub fn vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation::default() -> Self
+pub fn vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation::synthesize(&self, program: &vyre_foundation::ir::Program) -> core::result::Result<(vyre_foundation::ir::Program, alloc::vec::Vec<vyre_foundation::optimizer::multi_level_eqsat::StepProof>), vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError>
 pub fn vyre_foundation::optimizer::multi_level_eqsat::StepProof::new(step_index: usize, rule_name: impl core::convert::Into<alloc::string::String>, before_digest: [u8; 32], after_digest: [u8; 32], law_justification: impl core::convert::Into<alloc::string::String>, preserves_semantics: bool) -> Self
 pub fn vyre_foundation::optimizer::optimize(program: vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::optimizer::OptimizerError>
 pub fn vyre_foundation::optimizer::optimize_for_adapter(program: vyre_foundation::ir::Program, adapter: vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::optimizer::OptimizerError>
@@ -3454,24 +3692,41 @@ pub fn vyre_foundation::vast::vast_edit_digest(bytes: &[u8]) -> vyre_foundation:
 pub fn vyre_foundation::vast::walk_postorder_indices(node_bytes: &[u8], node_count: u32, max_stack: usize) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::vast::VastError>
 pub fn vyre_foundation::vast::walk_preorder_indices(node_bytes: &[u8], node_count: u32, max_stack: usize) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::vast::VastError>
 pub fn vyre_foundation::verifier::DeclarativeVerifier::verify(module: vyre_foundation::verifier::SemanticModule) -> core::result::Result<vyre_foundation::verifier::Verified<vyre_foundation::verifier::SemanticModule>, vyre_foundation::verifier::VerificationError>
+pub fn vyre_foundation::verifier::LoweredStage::name() -> &'static str
+pub fn vyre_foundation::verifier::OptimizedStage::name() -> &'static str
 pub fn vyre_foundation::verifier::ResourceBounds::default() -> Self
 pub fn vyre_foundation::verifier::SemanticCompiler::compile(verified: &vyre_foundation::verifier::Verified<vyre_foundation::verifier::SemanticModule>) -> core::result::Result<vyre_foundation::verifier::CompiledSemanticArtifact, vyre_foundation::verifier::CompileError>
 pub fn vyre_foundation::verifier::SemanticCompiler::compile_unverified(module: &vyre_foundation::verifier::SemanticModule) -> core::result::Result<vyre_foundation::verifier::CompiledSemanticArtifact, vyre_foundation::verifier::CompileError>
+pub fn vyre_foundation::verifier::SemanticCompiler::replay_and_compile(module: &vyre_foundation::verifier::SemanticModule, certificate: &vyre_foundation::verifier::VerificationCertificate) -> core::result::Result<vyre_foundation::verifier::CompiledSemanticArtifact, vyre_foundation::verifier::CompileError>
 pub fn vyre_foundation::verifier::SemanticModule::compute_identity(&self) -> alloc::string::String
 pub fn vyre_foundation::verifier::SemanticModule::from_program(name: impl core::convert::Into<alloc::string::String>, program: vyre_foundation::ir::Program) -> Self
 pub fn vyre_foundation::verifier::SemanticModule::new(name: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_foundation::verifier::SemanticModule::with_atomic_effect(self, effect: vyre_foundation::ir::AtomicOrdering) -> Self
-pub fn vyre_foundation::verifier::SemanticModule::with_collective_group(self, group: vyre_foundation::ir::CollectiveGroup) -> Self
+pub fn vyre_foundation::verifier::SemanticModule::with_atomic_effect(self, effect: vyre_foundation::memory_model::atomic::AtomicOrdering) -> Self
+pub fn vyre_foundation::verifier::SemanticModule::with_collective_group(self, group: vyre_foundation::memory_model::collective::CollectiveGroup) -> Self
+pub fn vyre_foundation::verifier::SemanticModule::with_deterministic_mode(self, deterministic: bool) -> Self
+pub fn vyre_foundation::verifier::SemanticModule::with_extension_obligation(self, obligation: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::verifier::SemanticModule::with_numeric_contract(self, contract: vyre_foundation::types::NumericalContract) -> Self
 pub fn vyre_foundation::verifier::SemanticModule::with_shape_constraint(self, constraint: vyre_foundation::types::ShapeConstraint) -> Self
+pub fn vyre_foundation::verifier::SemanticModule::with_state_transition(self, from: impl core::convert::Into<alloc::string::String>, to: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_foundation::verifier::SemanticModule::with_termination_bound(self, bound: u64) -> Self
 pub fn vyre_foundation::verifier::SemanticModule::with_type(self, ty: vyre_foundation::types::SemanticType) -> Self
+pub fn vyre_foundation::verifier::StageKind::name() -> &'static str
 pub fn vyre_foundation::verifier::VerificationCertificate::has_category(&self, category: vyre_foundation::verifier::InvariantCategory) -> bool
 pub fn vyre_foundation::verifier::VerificationCertificate::invariant_count(&self) -> usize
+pub fn vyre_foundation::verifier::VerificationCertificate::replay_proof(&self, module: &vyre_foundation::verifier::SemanticModule) -> core::result::Result<(), vyre_foundation::verifier::ReplayError>
 pub fn vyre_foundation::verifier::VerificationCertificate::replay_solver_proofs(&self, interner: &vyre_foundation::types::ShapeInterner) -> bool
 pub fn vyre_foundation::verifier::Verified<T>::as_inner(&self) -> &T
 pub fn vyre_foundation::verifier::Verified<T>::certificate(&self) -> &vyre_foundation::verifier::VerificationCertificate
 pub fn vyre_foundation::verifier::Verified<T>::deref(&self) -> &Self::Target
 pub fn vyre_foundation::verifier::Verified<T>::into_inner(self) -> T
+pub fn vyre_foundation::verifier::Verified<vyre_foundation::verifier::SemanticModule>::replay_proof(&self) -> core::result::Result<(), vyre_foundation::verifier::ReplayError>
+pub fn vyre_foundation::verifier::VerifiedIrStage::name() -> &'static str
+pub fn vyre_foundation::verifier::VerifiedStageWrapper<S, T>::as_inner(&self) -> &T
+pub fn vyre_foundation::verifier::VerifiedStageWrapper<S, T>::certificate(&self) -> &vyre_foundation::verifier::VerificationCertificate
+pub fn vyre_foundation::verifier::VerifiedStageWrapper<S, T>::into_inner(self) -> T
+pub fn vyre_foundation::verifier::VerifiedStageWrapper<S, T>::new(inner: T, certificate: vyre_foundation::verifier::VerificationCertificate) -> Self
+pub fn vyre_foundation::verifier::VerifiedStageWrapper<S, T>::transition_to<Next: vyre_foundation::verifier::StageKind, U>(self, transform: impl core::ops::function::FnOnce(T) -> U) -> vyre_foundation::verifier::VerifiedStageWrapper<Next, U>
+pub fn vyre_foundation::verifier::VerifiedStageWrapper<vyre_foundation::verifier::VerifiedIrStage, vyre_foundation::verifier::SemanticModule>::from(verified: vyre_foundation::verifier::Verified<vyre_foundation::verifier::SemanticModule>) -> Self
 pub fn vyre_foundation::visit::Evaluatable::evaluate(&self, env: &mut Env) -> vyre_foundation::IrResult<Self::Value>
 pub fn vyre_foundation::visit::ExprChildren<'a>::iter(self) -> impl core::iter::traits::double_ended::DoubleEndedIterator<Item = &'a vyre_foundation::ir::Expr> + core::clone::Clone
 pub fn vyre_foundation::visit::ExprSink::accept_expr(&mut self, expr: &vyre_foundation::ir::Expr)
@@ -3568,6 +3823,8 @@ pub fn vyre_foundation::visit::walk_node_children_default<V: vyre_foundation::vi
 pub fn vyre_foundation::visit::walk_nodes(program: &vyre_foundation::ir::Program, f: impl core::ops::function::FnMut(&vyre_foundation::ir::Node))
 pub fn vyre_foundation::visit::walk_nodes_and_exprs<V: vyre_foundation::visit::NodeSink + vyre_foundation::visit::ExprSink>(program: &vyre_foundation::ir::Program, sink: &mut V)
 pub fn vyre_foundation::visit::walk_nodes_mut(program: &mut vyre_foundation::ir::Program, f: impl core::ops::function::FnMut(&mut vyre_foundation::ir::Node))
+pub macro vyre_foundation::declare_dialect_op!
+pub macro vyre_foundation::declare_operation!
 pub macro vyre_foundation::define_dialect!
 pub macro vyre_foundation::diagnostic_conversions!
 pub macro vyre_foundation::rewrite_rules!
@@ -3583,6 +3840,12 @@ pub mod vyre_foundation::dialect
 pub mod vyre_foundation::dialect_lookup
 pub mod vyre_foundation::execution_plan
 pub mod vyre_foundation::execution_plan::fusion
+pub mod vyre_foundation::execution_plan::fusion::candidate
+pub mod vyre_foundation::execution_plan::fusion::dependence
+pub mod vyre_foundation::execution_plan::fusion::legality
+pub mod vyre_foundation::execution_plan::fusion::lowering
+pub mod vyre_foundation::execution_plan::fusion::region
+pub mod vyre_foundation::execution_plan::fusion::tile
 pub mod vyre_foundation::extension
 pub mod vyre_foundation::fp_expansion
 pub mod vyre_foundation::fp_parity
@@ -3595,6 +3858,16 @@ pub mod vyre_foundation::logical
 pub mod vyre_foundation::loop_bounds
 pub mod vyre_foundation::lower
 pub mod vyre_foundation::match_result
+pub mod vyre_foundation::memory_model
+pub mod vyre_foundation::memory_model::async_tx
+pub mod vyre_foundation::memory_model::atomic
+pub mod vyre_foundation::memory_model::collective
+pub mod vyre_foundation::memory_model::failure
+pub mod vyre_foundation::memory_model::fence
+pub mod vyre_foundation::memory_model::legacy
+pub mod vyre_foundation::memory_model::obligations
+pub mod vyre_foundation::memory_model::scope
+pub mod vyre_foundation::memory_model::storage
 pub mod vyre_foundation::numeric
 pub mod vyre_foundation::opaque_payload
 pub mod vyre_foundation::opaque_payload::canonicalize
@@ -3778,9 +4051,25 @@ pub struct vyre_foundation::execution_plan::SchedulingPolicy
 pub struct vyre_foundation::execution_plan::StrategyPlan
 pub struct vyre_foundation::execution_plan::TrackDecision
 pub struct vyre_foundation::execution_plan::fusion::FusionAliasingError
+pub struct vyre_foundation::execution_plan::fusion::FusionCandidate
+pub struct vyre_foundation::execution_plan::fusion::FusionCandidateSet
 pub struct vyre_foundation::execution_plan::fusion::FusionOverDispatchError
 pub struct vyre_foundation::execution_plan::fusion::FusionSelfAliasingError
 pub struct vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+pub struct vyre_foundation::execution_plan::fusion::IterationSpace
+pub struct vyre_foundation::execution_plan::fusion::RegionDependence
+pub struct vyre_foundation::execution_plan::fusion::RegionDependenceGraph
+pub struct vyre_foundation::execution_plan::fusion::RegionFusionPlanner
+pub struct vyre_foundation::execution_plan::fusion::ScheduleTile
+pub struct vyre_foundation::execution_plan::fusion::TilePipeliningPlan
+pub struct vyre_foundation::execution_plan::fusion::candidate::FusionCandidate
+pub struct vyre_foundation::execution_plan::fusion::candidate::FusionCandidateSet
+pub struct vyre_foundation::execution_plan::fusion::dependence::RegionDependence
+pub struct vyre_foundation::execution_plan::fusion::dependence::RegionDependenceGraph
+pub struct vyre_foundation::execution_plan::fusion::region::IterationSpace
+pub struct vyre_foundation::execution_plan::fusion::region::RegionFusionPlanner
+pub struct vyre_foundation::execution_plan::fusion::tile::ScheduleTile
+pub struct vyre_foundation::execution_plan::fusion::tile::TilePipeliningPlan
 pub struct vyre_foundation::extension::CatalogBundle
 pub struct vyre_foundation::extension::ExtensionAtomicOpRegistration
 pub struct vyre_foundation::extension::ExtensionBinOpRegistration
@@ -3791,8 +4080,12 @@ pub struct vyre_foundation::extension::OpaqueNodeResolver
 pub struct vyre_foundation::fp_expansion::StrictExpansionError
 pub struct vyre_foundation::ir::AdmittedResourceRecord
 pub struct vyre_foundation::ir::AffectedGraphClosure
+pub struct vyre_foundation::ir::AliasToken
+pub struct vyre_foundation::ir::BorrowToken
 pub struct vyre_foundation::ir::BufferDecl
+pub struct vyre_foundation::ir::CapabilityToken
 pub struct vyre_foundation::ir::ControlBounds
+pub struct vyre_foundation::ir::EffectToken
 pub struct vyre_foundation::ir::EvalError
 pub struct vyre_foundation::ir::ExternalMemoryDescriptor
 pub struct vyre_foundation::ir::ExternalResourceCapability
@@ -3807,6 +4100,9 @@ pub struct vyre_foundation::ir::InterpCtx
 pub struct vyre_foundation::ir::LivenessInterval
 pub struct vyre_foundation::ir::MemoryHints
 pub struct vyre_foundation::ir::NodeId(pub u32)
+pub struct vyre_foundation::ir::Obligation
+pub struct vyre_foundation::ir::ObligationTracker
+pub struct vyre_foundation::ir::OwnershipToken
 pub struct vyre_foundation::ir::PlaneDescriptor
 pub struct vyre_foundation::ir::Program
 pub struct vyre_foundation::ir::ProgramGraph
@@ -3821,8 +4117,10 @@ pub struct vyre_foundation::ir::RegionId(pub u32)
 pub struct vyre_foundation::ir::ResourceUsageFlags
 pub struct vyre_foundation::ir::SamplerDescriptor
 pub struct vyre_foundation::ir::Scope<K, V>
+pub struct vyre_foundation::ir::StateEpoch(pub u64)
 pub struct vyre_foundation::ir::SubresourceRange
 pub struct vyre_foundation::ir::Tile
+pub struct vyre_foundation::ir::TileType
 pub struct vyre_foundation::ir::ValueContract
 pub struct vyre_foundation::ir::VarId(pub u32)
 pub struct vyre_foundation::ir::ViewDescriptor
@@ -3846,6 +4144,22 @@ pub struct vyre_foundation::logical::WindowDescriptor
 pub struct vyre_foundation::loop_bounds::DataDerivedLoopBound
 pub struct vyre_foundation::lower::LoweringError
 pub struct vyre_foundation::lower::ProgramEffects(_)
+pub struct vyre_foundation::memory_model::AliasToken
+pub struct vyre_foundation::memory_model::BorrowToken
+pub struct vyre_foundation::memory_model::CapabilityToken
+pub struct vyre_foundation::memory_model::EffectToken
+pub struct vyre_foundation::memory_model::Obligation
+pub struct vyre_foundation::memory_model::ObligationTracker
+pub struct vyre_foundation::memory_model::OwnershipToken
+pub struct vyre_foundation::memory_model::StateEpoch(pub u64)
+pub struct vyre_foundation::memory_model::obligations::AliasToken
+pub struct vyre_foundation::memory_model::obligations::BorrowToken
+pub struct vyre_foundation::memory_model::obligations::CapabilityToken
+pub struct vyre_foundation::memory_model::obligations::EffectToken
+pub struct vyre_foundation::memory_model::obligations::Obligation
+pub struct vyre_foundation::memory_model::obligations::ObligationTracker
+pub struct vyre_foundation::memory_model::obligations::OwnershipToken
+pub struct vyre_foundation::memory_model::obligations::StateEpoch(pub u64)
 pub struct vyre_foundation::numeric::CalibrationIdentity
 pub struct vyre_foundation::numeric::GroupAxis
 pub struct vyre_foundation::numeric::MagnitudeRange
@@ -3860,6 +4174,9 @@ pub struct vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated
 pub struct vyre_foundation::operation::CallGraphClosure
 pub struct vyre_foundation::operation::CatalogBundle
 pub struct vyre_foundation::operation::ConformanceProvider
+pub struct vyre_foundation::operation::ConformanceRegistry
+pub struct vyre_foundation::operation::ContractProvider
+pub struct vyre_foundation::operation::ExtensionProvenance
 pub struct vyre_foundation::operation::LoweringProvider
 pub struct vyre_foundation::operation::OperationEffects
 pub struct vyre_foundation::operation::OperationRegistration
@@ -3899,7 +4216,6 @@ pub struct vyre_foundation::optimizer::corpus::OptimizationCorpusManifest
 pub struct vyre_foundation::optimizer::corpus::OptimizationFamilyCount
 pub struct vyre_foundation::optimizer::cost::DeviceCostEstimate
 pub struct vyre_foundation::optimizer::eqsat::CostModelFact
-pub struct vyre_foundation::optimizer::eqsat::DeviceAwareRule<L: vyre_foundation::optimizer::eqsat::ENodeLang, F: core::ops::function::Fn() -> bool>
 pub struct vyre_foundation::optimizer::eqsat::EClass<L: vyre_foundation::optimizer::eqsat::ENodeLang>
 pub struct vyre_foundation::optimizer::eqsat::EClassId(pub u32)
 pub struct vyre_foundation::optimizer::eqsat::EGraph<L: vyre_foundation::optimizer::eqsat::ENodeLang>
@@ -3907,6 +4223,8 @@ pub struct vyre_foundation::optimizer::eqsat::ExtractionReport<L: vyre_foundatio
 pub struct vyre_foundation::optimizer::eqsat::FamilySaturationReport
 pub struct vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
 pub struct vyre_foundation::optimizer::eqsat::HardwarePropertyRule<L: vyre_foundation::optimizer::eqsat::ENodeLang>
+pub struct vyre_foundation::optimizer::eqsat::ProofTerm
+pub struct vyre_foundation::optimizer::eqsat::RuleCacheKey(pub [u8; 32])
 pub struct vyre_foundation::optimizer::eqsat::SaturationReport
 pub struct vyre_foundation::optimizer::eqsat_gpu::ApplyEquivalencesReport
 pub struct vyre_foundation::optimizer::eqsat_gpu::Equivalence
@@ -3923,7 +4241,7 @@ pub struct vyre_foundation::optimizer::eqsat_toml::EquivalenceRule
 pub struct vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules
 pub struct vyre_foundation::optimizer::expr_arena::ExprArena
 pub struct vyre_foundation::optimizer::expr_arena::ExprId(pub u32)
-pub struct vyre_foundation::optimizer::expr_arena::OpaqueId(_)
+pub struct vyre_foundation::optimizer::expr_arena::OpaqueContentKey
 pub struct vyre_foundation::optimizer::expr_arena_analysis::ExprArenaStats
 pub struct vyre_foundation::optimizer::fact_cache::FactCache
 pub struct vyre_foundation::optimizer::fact_cache::TypeFacts
@@ -3949,6 +4267,7 @@ pub struct vyre_foundation::optimizer::multi_level_eqsat::ParetoFront
 pub struct vyre_foundation::optimizer::multi_level_eqsat::PassEngine
 pub struct vyre_foundation::optimizer::multi_level_eqsat::PassTelemetry
 pub struct vyre_foundation::optimizer::multi_level_eqsat::ReplayArtifact
+pub struct vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation
 pub struct vyre_foundation::optimizer::multi_level_eqsat::StepProof
 pub struct vyre_foundation::optimizer::pass_catalog::OptimizationCatalogEntry
 pub struct vyre_foundation::optimizer::passes::algebraic::atomic_minimize::AtomicMinimizePass
@@ -4123,11 +4442,15 @@ pub struct vyre_foundation::vast::VastNode
 pub struct vyre_foundation::verifier::CheckedInvariant
 pub struct vyre_foundation::verifier::CompiledSemanticArtifact
 pub struct vyre_foundation::verifier::DeclarativeVerifier
+pub struct vyre_foundation::verifier::LoweredStage
+pub struct vyre_foundation::verifier::OptimizedStage
 pub struct vyre_foundation::verifier::ResourceBounds
 pub struct vyre_foundation::verifier::SemanticCompiler
 pub struct vyre_foundation::verifier::SemanticModule
 pub struct vyre_foundation::verifier::VerificationCertificate
 pub struct vyre_foundation::verifier::Verified<T>
+pub struct vyre_foundation::verifier::VerifiedIrStage
+pub struct vyre_foundation::verifier::VerifiedStageWrapper<S: vyre_foundation::verifier::StageKind, T>
 pub struct vyre_foundation::visit::BufferRefs<'a>
 pub struct vyre_foundation::visit::ExprChildren<'a>
 pub struct vyre_foundation::visit::NodeScalars<'a>
@@ -4145,6 +4468,8 @@ pub trait vyre_foundation::dialect::ExternalSchemaVisitor
 pub trait vyre_foundation::extension::RuleConditionExt: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_foundation::ir::ExprNode: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_foundation::ir::NodeExtension: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
+pub trait vyre_foundation::operation::DialectOperationSpec: core::marker::Send + core::marker::Sync + 'static
+pub trait vyre_foundation::operation::OperationVisitor
 pub trait vyre_foundation::optimizer::ProgramPass: vyre_foundation::optimizer::sealed::Sealed + core::marker::Send + core::marker::Sync
 pub trait vyre_foundation::optimizer::eqsat::ENodeLang: core::clone::Clone + core::cmp::Eq + core::hash::Hash
 pub trait vyre_foundation::optimizer::eqsat::Family<L: vyre_foundation::optimizer::eqsat::ENodeLang>
@@ -4154,6 +4479,7 @@ pub trait vyre_foundation::optimizer::level_contract::LevelStage: core::marker::
 pub trait vyre_foundation::serial::wire_round_trip::WireRoundTrip: core::marker::Sized
 pub trait vyre_foundation::transform::rewrite_walk::NodeRewrite
 pub trait vyre_foundation::validate::BackendValidationCapabilities
+pub trait vyre_foundation::verifier::StageKind: 'static + core::marker::Send + core::marker::Sync
 pub trait vyre_foundation::visit::Evaluatable<Env: ?core::marker::Sized>
 pub trait vyre_foundation::visit::ExprSink
 pub trait vyre_foundation::visit::ExprVisitor
@@ -4169,6 +4495,7 @@ pub type vyre_foundation::extension::NodeExtensionDeserializer = fn(&[u8]) -> co
 pub type vyre_foundation::ir::Ident::Target = str
 pub type vyre_foundation::ir::OpId = alloc::sync::Arc<str>
 pub type vyre_foundation::lower::ProgramEffects::Output = vyre_foundation::lower::ProgramEffects
+pub type vyre_foundation::operation::OperationContractBuilder = fn() -> vyre_spec::op_contract::SemanticContractRecord
 pub type vyre_foundation::operation::OperationFixtures = fn() -> alloc::vec::Vec<alloc::vec::Vec<alloc::vec::Vec<u8>>>
 pub type vyre_foundation::optimizer::eqsat::EChildren = smallvec::SmallVec<[vyre_foundation::optimizer::eqsat::EClassId; 4]>
 pub type vyre_foundation::optimizer::law_saturation::DerivedKinds = smallvec::SmallVec<[vyre_foundation::optimizer::law_saturation::DerivedRewriteKind; 2]>
@@ -4209,6 +4536,8 @@ pub use vyre_foundation::extension::DeclExtensionNamespace
 pub use vyre_foundation::extension::DeclExtensionNumericalContract
 pub use vyre_foundation::extension::DeclExtensionOperand
 pub use vyre_foundation::extension::DeclExtensionOperandKind
+pub use vyre_foundation::extension::DeclExtensionProofFieldKind
+pub use vyre_foundation::extension::DeclExtensionProofFields
 pub use vyre_foundation::extension::DeclExtensionResourceBounds
 pub use vyre_foundation::extension::DeclExtensionSchema
 pub use vyre_foundation::extension::DeclExtensionSchemaDigest
@@ -4244,11 +4573,19 @@ pub vyre_foundation::CanonicalValue::VarBytes(alloc::vec::Vec<u8>)
 pub vyre_foundation::CodecError::DepthExceeded
 pub vyre_foundation::CodecError::DepthExceeded::depth: usize
 pub vyre_foundation::CodecError::DepthExceeded::limit: usize
+pub vyre_foundation::CodecError::DuplicateKey
+pub vyre_foundation::CodecError::DuplicateKey::field_number: u32
+pub vyre_foundation::CodecError::ElementCountExceeded
+pub vyre_foundation::CodecError::ElementCountExceeded::count: usize
+pub vyre_foundation::CodecError::ElementCountExceeded::limit: usize
 pub vyre_foundation::CodecError::InvalidUtf8
 pub vyre_foundation::CodecError::InvalidUtf8::field_number: u32
 pub vyre_foundation::CodecError::MissingRequiredField
 pub vyre_foundation::CodecError::MissingRequiredField::field_name: &'static str
 pub vyre_foundation::CodecError::MissingRequiredField::field_number: u32
+pub vyre_foundation::CodecError::NonCanonicalEncoding
+pub vyre_foundation::CodecError::NonCanonicalEncoding::details: &'static str
+pub vyre_foundation::CodecError::NonCanonicalEncoding::field_number: u32
 pub vyre_foundation::CodecError::NonCanonicalFieldOrder
 pub vyre_foundation::CodecError::NonCanonicalFieldOrder::expected_after: u32
 pub vyre_foundation::CodecError::NonCanonicalFieldOrder::got: u32
@@ -4256,6 +4593,9 @@ pub vyre_foundation::CodecError::PayloadOversized
 pub vyre_foundation::CodecError::PayloadOversized::limit: usize
 pub vyre_foundation::CodecError::PayloadOversized::size: usize
 pub vyre_foundation::CodecError::SignatureVerificationFailed
+pub vyre_foundation::CodecError::StaleSchemaVersion
+pub vyre_foundation::CodecError::StaleSchemaVersion::found: alloc::string::String
+pub vyre_foundation::CodecError::StaleSchemaVersion::schema_id: vyre_spec::schema_registry::SchemaId
 pub vyre_foundation::CodecError::TypeMismatch
 pub vyre_foundation::CodecError::TypeMismatch::field_name: &'static str
 pub vyre_foundation::CodecError::TypeMismatch::field_number: u32
@@ -4326,7 +4666,7 @@ pub vyre_foundation::GeometryConstraintConflict::ZeroElementMultiple
 pub vyre_foundation::GeometryConstraintConflict::ZeroWidth
 pub vyre_foundation::GeometryConstraintConflict::ZeroWidth::scope: &'static str
 pub vyre_foundation::GeometryRequirements::cooperative_width: vyre_foundation::CooperativeWidth
-pub vyre_foundation::GeometryRequirements::memory_ordering: core::option::Option<vyre_foundation::ir::MemoryOrdering>
+pub vyre_foundation::GeometryRequirements::memory_ordering: core::option::Option<vyre_foundation::memory_model::legacy::MemoryOrdering>
 pub vyre_foundation::GeometryRequirements::min_shared_bytes: u32
 pub vyre_foundation::GeometryRequirements::per_invocation_elements: vyre_foundation::ElementPolicy
 pub vyre_foundation::GeometryRequirements::requires_cooperative_launch: bool
@@ -4768,13 +5108,39 @@ pub vyre_foundation::execution_plan::fusion::FusionAliasingError::buffer_name: a
 pub vyre_foundation::execution_plan::fusion::FusionAliasingError::fix_hint: &'static str
 pub vyre_foundation::execution_plan::fusion::FusionAliasingError::read_arm: usize
 pub vyre_foundation::execution_plan::fusion::FusionAliasingError::write_arm: usize
+pub vyre_foundation::execution_plan::fusion::FusionCandidate::handoff: vyre_foundation::execution_plan::fusion::dependence::HandoffLocation
+pub vyre_foundation::execution_plan::fusion::FusionCandidate::kind: vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind
+pub vyre_foundation::execution_plan::fusion::FusionCandidate::regions: alloc::vec::Vec<usize>
+pub vyre_foundation::execution_plan::fusion::FusionCandidate::tile: core::option::Option<vyre_foundation::execution_plan::fusion::tile::ScheduleTile>
+pub vyre_foundation::execution_plan::fusion::FusionCandidateKind::EpilogueFusion
+pub vyre_foundation::execution_plan::fusion::FusionCandidateKind::ExplicitDispatchCut
+pub vyre_foundation::execution_plan::fusion::FusionCandidateKind::PartialFusion
+pub vyre_foundation::execution_plan::fusion::FusionCandidateKind::PipelinedTiles
+pub vyre_foundation::execution_plan::fusion::FusionCandidateKind::PrologueFusion
+pub vyre_foundation::execution_plan::fusion::FusionCandidateKind::RegisterForwarding
+pub vyre_foundation::execution_plan::fusion::FusionCandidateKind::SharedMemoryForwarding
+pub vyre_foundation::execution_plan::fusion::FusionCandidateKind::UnfusedBaseline
+pub vyre_foundation::execution_plan::fusion::FusionCandidateSet::candidates: alloc::vec::Vec<vyre_foundation::execution_plan::fusion::candidate::FusionCandidate>
 pub vyre_foundation::execution_plan::fusion::FusionError::Aliasing(vyre_foundation::execution_plan::fusion::FusionAliasingError)
 pub vyre_foundation::execution_plan::fusion::FusionError::OverDispatch(vyre_foundation::execution_plan::fusion::FusionOverDispatchError)
 pub vyre_foundation::execution_plan::fusion::FusionError::SelfAliasing(vyre_foundation::execution_plan::fusion::FusionSelfAliasingError)
 pub vyre_foundation::execution_plan::fusion::FusionError::WorkgroupGeometry(vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError)
+pub vyre_foundation::execution_plan::fusion::FusionLegalityVerdict::Legal(vyre_foundation::execution_plan::fusion::dependence::HandoffLocation)
+pub vyre_foundation::execution_plan::fusion::FusionLegalityVerdict::Rejected(vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason)
 pub vyre_foundation::execution_plan::fusion::FusionOverDispatchError::fix: &'static str
 pub vyre_foundation::execution_plan::fusion::FusionOverDispatchError::fused_threads: u64
 pub vyre_foundation::execution_plan::fusion::FusionOverDispatchError::max_arm_threads: u64
+pub vyre_foundation::execution_plan::fusion::FusionRejectionReason::DependencyCycle
+pub vyre_foundation::execution_plan::fusion::FusionRejectionReason::ExcessiveRegisters
+pub vyre_foundation::execution_plan::fusion::FusionRejectionReason::ExcessiveSharedMemory
+pub vyre_foundation::execution_plan::fusion::FusionRejectionReason::GenuinelyIllegalGeometry
+pub vyre_foundation::execution_plan::fusion::FusionRejectionReason::IncompatibleIterationSpace
+pub vyre_foundation::execution_plan::fusion::FusionRejectionReason::LifecycleBoundary
+pub vyre_foundation::execution_plan::fusion::FusionRejectionReason::MultipleConsumers
+pub vyre_foundation::execution_plan::fusion::FusionRejectionReason::NotProducerConsumer
+pub vyre_foundation::execution_plan::fusion::FusionRejectionReason::SynchronizationBoundary
+pub vyre_foundation::execution_plan::fusion::FusionRejectionReason::UnknownGraphMember
+pub vyre_foundation::execution_plan::fusion::FusionRejectionReason::WorkgroupMismatch
 pub vyre_foundation::execution_plan::fusion::FusionSelfAliasingError::fix: &'static str
 pub vyre_foundation::execution_plan::fusion::FusionSelfAliasingError::op_id: alloc::string::String
 pub vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::arm: usize
@@ -4782,6 +5148,96 @@ pub vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::arm_w
 pub vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::fix: &'static str
 pub vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::fused_workgroup: [u32; 3]
 pub vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::reason: &'static str
+pub vyre_foundation::execution_plan::fusion::HandoffLocation::DispatchCut
+pub vyre_foundation::execution_plan::fusion::HandoffLocation::Independent
+pub vyre_foundation::execution_plan::fusion::HandoffLocation::PipelinedStage(u32)
+pub vyre_foundation::execution_plan::fusion::HandoffLocation::Register
+pub vyre_foundation::execution_plan::fusion::HandoffLocation::WorkgroupShared
+pub vyre_foundation::execution_plan::fusion::IterationSpace::extents: alloc::vec::Vec<u64>
+pub vyre_foundation::execution_plan::fusion::IterationSpace::is_static: bool
+pub vyre_foundation::execution_plan::fusion::IterationSpace::kind: vyre_foundation::logical::LogicalRegionKind
+pub vyre_foundation::execution_plan::fusion::IterationSpace::rank: usize
+pub vyre_foundation::execution_plan::fusion::RegionDependence::carrier: alloc::string::String
+pub vyre_foundation::execution_plan::fusion::RegionDependence::consumer: usize
+pub vyre_foundation::execution_plan::fusion::RegionDependence::handoff: vyre_foundation::execution_plan::fusion::dependence::HandoffLocation
+pub vyre_foundation::execution_plan::fusion::RegionDependence::producer: usize
+pub vyre_foundation::execution_plan::fusion::RegionDependenceGraph::edges: alloc::vec::Vec<vyre_foundation::execution_plan::fusion::dependence::RegionDependence>
+pub vyre_foundation::execution_plan::fusion::RegionDependenceGraph::independent_frontiers: rustc_hash::FxHashSet<(usize, usize)>
+pub vyre_foundation::execution_plan::fusion::RegionRelation::Incompatible
+pub vyre_foundation::execution_plan::fusion::RegionRelation::IndependentFrontier
+pub vyre_foundation::execution_plan::fusion::RegionRelation::PointwiseMatch
+pub vyre_foundation::execution_plan::fusion::RegionRelation::ReductionConsumer
+pub vyre_foundation::execution_plan::fusion::RegionRelation::StencilWindow
+pub vyre_foundation::execution_plan::fusion::RegionRelation::TileCompatible
+pub vyre_foundation::execution_plan::fusion::ScheduleTile::capacity: u64
+pub vyre_foundation::execution_plan::fusion::ScheduleTile::dimensions: alloc::vec::Vec<u32>
+pub vyre_foundation::execution_plan::fusion::ScheduleTile::residency: vyre_foundation::execution_plan::fusion::tile::TileResidency
+pub vyre_foundation::execution_plan::fusion::ScheduleTile::vector_width: u32
+pub vyre_foundation::execution_plan::fusion::TilePipeliningPlan::double_buffered: bool
+pub vyre_foundation::execution_plan::fusion::TilePipeliningPlan::ring_slots: u32
+pub vyre_foundation::execution_plan::fusion::TilePipeliningPlan::stages: u32
+pub vyre_foundation::execution_plan::fusion::TileResidency::Global
+pub vyre_foundation::execution_plan::fusion::TileResidency::Register
+pub vyre_foundation::execution_plan::fusion::TileResidency::Subgroup
+pub vyre_foundation::execution_plan::fusion::TileResidency::WorkgroupShared
+pub vyre_foundation::execution_plan::fusion::candidate::FusionCandidate::handoff: vyre_foundation::execution_plan::fusion::dependence::HandoffLocation
+pub vyre_foundation::execution_plan::fusion::candidate::FusionCandidate::kind: vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind
+pub vyre_foundation::execution_plan::fusion::candidate::FusionCandidate::regions: alloc::vec::Vec<usize>
+pub vyre_foundation::execution_plan::fusion::candidate::FusionCandidate::tile: core::option::Option<vyre_foundation::execution_plan::fusion::tile::ScheduleTile>
+pub vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind::EpilogueFusion
+pub vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind::ExplicitDispatchCut
+pub vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind::PartialFusion
+pub vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind::PipelinedTiles
+pub vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind::PrologueFusion
+pub vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind::RegisterForwarding
+pub vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind::SharedMemoryForwarding
+pub vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind::UnfusedBaseline
+pub vyre_foundation::execution_plan::fusion::candidate::FusionCandidateSet::candidates: alloc::vec::Vec<vyre_foundation::execution_plan::fusion::candidate::FusionCandidate>
+pub vyre_foundation::execution_plan::fusion::dependence::HandoffLocation::DispatchCut
+pub vyre_foundation::execution_plan::fusion::dependence::HandoffLocation::Independent
+pub vyre_foundation::execution_plan::fusion::dependence::HandoffLocation::PipelinedStage(u32)
+pub vyre_foundation::execution_plan::fusion::dependence::HandoffLocation::Register
+pub vyre_foundation::execution_plan::fusion::dependence::HandoffLocation::WorkgroupShared
+pub vyre_foundation::execution_plan::fusion::dependence::RegionDependence::carrier: alloc::string::String
+pub vyre_foundation::execution_plan::fusion::dependence::RegionDependence::consumer: usize
+pub vyre_foundation::execution_plan::fusion::dependence::RegionDependence::handoff: vyre_foundation::execution_plan::fusion::dependence::HandoffLocation
+pub vyre_foundation::execution_plan::fusion::dependence::RegionDependence::producer: usize
+pub vyre_foundation::execution_plan::fusion::dependence::RegionDependenceGraph::edges: alloc::vec::Vec<vyre_foundation::execution_plan::fusion::dependence::RegionDependence>
+pub vyre_foundation::execution_plan::fusion::dependence::RegionDependenceGraph::independent_frontiers: rustc_hash::FxHashSet<(usize, usize)>
+pub vyre_foundation::execution_plan::fusion::legality::FusionLegalityVerdict::Legal(vyre_foundation::execution_plan::fusion::dependence::HandoffLocation)
+pub vyre_foundation::execution_plan::fusion::legality::FusionLegalityVerdict::Rejected(vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason)
+pub vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason::DependencyCycle
+pub vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason::ExcessiveRegisters
+pub vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason::ExcessiveSharedMemory
+pub vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason::GenuinelyIllegalGeometry
+pub vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason::IncompatibleIterationSpace
+pub vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason::LifecycleBoundary
+pub vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason::MultipleConsumers
+pub vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason::NotProducerConsumer
+pub vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason::SynchronizationBoundary
+pub vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason::UnknownGraphMember
+pub vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason::WorkgroupMismatch
+pub vyre_foundation::execution_plan::fusion::region::IterationSpace::extents: alloc::vec::Vec<u64>
+pub vyre_foundation::execution_plan::fusion::region::IterationSpace::is_static: bool
+pub vyre_foundation::execution_plan::fusion::region::IterationSpace::kind: vyre_foundation::logical::LogicalRegionKind
+pub vyre_foundation::execution_plan::fusion::region::IterationSpace::rank: usize
+pub vyre_foundation::execution_plan::fusion::region::RegionRelation::Incompatible
+pub vyre_foundation::execution_plan::fusion::region::RegionRelation::IndependentFrontier
+pub vyre_foundation::execution_plan::fusion::region::RegionRelation::PointwiseMatch
+pub vyre_foundation::execution_plan::fusion::region::RegionRelation::ReductionConsumer
+pub vyre_foundation::execution_plan::fusion::region::RegionRelation::StencilWindow
+pub vyre_foundation::execution_plan::fusion::region::RegionRelation::TileCompatible
+pub vyre_foundation::execution_plan::fusion::tile::ScheduleTile::capacity: u64
+pub vyre_foundation::execution_plan::fusion::tile::ScheduleTile::dimensions: alloc::vec::Vec<u32>
+pub vyre_foundation::execution_plan::fusion::tile::ScheduleTile::residency: vyre_foundation::execution_plan::fusion::tile::TileResidency
+pub vyre_foundation::execution_plan::fusion::tile::ScheduleTile::vector_width: u32
+pub vyre_foundation::execution_plan::fusion::tile::TilePipeliningPlan::double_buffered: bool
+pub vyre_foundation::execution_plan::fusion::tile::TilePipeliningPlan::ring_slots: u32
+pub vyre_foundation::execution_plan::fusion::tile::TilePipeliningPlan::stages: u32
+pub vyre_foundation::execution_plan::fusion::tile::TileResidency::Global
+pub vyre_foundation::execution_plan::fusion::tile::TileResidency::Register
+pub vyre_foundation::execution_plan::fusion::tile::TileResidency::Subgroup
+pub vyre_foundation::execution_plan::fusion::tile::TileResidency::WorkgroupShared
 pub vyre_foundation::extension::CatalogBundle::bundle_id: alloc::string::String
 pub vyre_foundation::extension::CatalogBundle::schemas: rustc_hash::FxHashMap<vyre_spec::extension::ExtensionIdentity, vyre_spec::extension::ExtensionSchema>
 pub vyre_foundation::extension::ExtensionAtomicOpRegistration::id: vyre_spec::extension::ExtensionAtomicOpId
@@ -4793,7 +5249,13 @@ pub vyre_foundation::extension::ExtensionCatalogError::DigestMismatch::actual: v
 pub vyre_foundation::extension::ExtensionCatalogError::DigestMismatch::expected: vyre_spec::extension::ExtensionSchemaDigest
 pub vyre_foundation::extension::ExtensionCatalogError::DigestMismatch::identity: vyre_spec::extension::ExtensionIdentity
 pub vyre_foundation::extension::ExtensionCatalogError::DuplicateIdentity(vyre_spec::extension::ExtensionIdentity)
+pub vyre_foundation::extension::ExtensionCatalogError::DuplicateNamespaceVersion
+pub vyre_foundation::extension::ExtensionCatalogError::DuplicateNamespaceVersion::first_id: vyre_spec::extension::ExtensionIdentity
+pub vyre_foundation::extension::ExtensionCatalogError::DuplicateNamespaceVersion::namespace: vyre_spec::extension::ExtensionNamespace
+pub vyre_foundation::extension::ExtensionCatalogError::DuplicateNamespaceVersion::second_id: vyre_spec::extension::ExtensionIdentity
+pub vyre_foundation::extension::ExtensionCatalogError::DuplicateNamespaceVersion::version: vyre_spec::extension::ExtensionSemVer
 pub vyre_foundation::extension::ExtensionCatalogError::InvalidSchema(alloc::string::String, alloc::string::String)
+pub vyre_foundation::extension::ExtensionCatalogError::MissingProofField(alloc::string::String)
 pub vyre_foundation::extension::ExtensionDataTypeRegistration::id: vyre_spec::extension::ExtensionDataTypeId
 pub vyre_foundation::extension::ExtensionDataTypeRegistration::vtable: &'static dyn vyre_spec::extension::ExtensionDataType
 pub vyre_foundation::extension::ExtensionUnOpRegistration::id: vyre_spec::extension::ExtensionUnOpId
@@ -4848,6 +5310,12 @@ pub vyre_foundation::ir::AffectedGraphClosure::is_pure_generation_bump: bool
 pub vyre_foundation::ir::AffectedGraphClosure::is_pure_shape_update: bool
 pub vyre_foundation::ir::AffectedGraphClosure::unchanged_nodes: alloc::collections::btree::set::BTreeSet<vyre_foundation::ir::GraphNodeId>
 pub vyre_foundation::ir::AffectedGraphClosure::unchanged_values: alloc::collections::btree::set::BTreeSet<vyre_foundation::ir::GraphValueId>
+pub vyre_foundation::ir::AliasDiscipline::DistinctDisjoint
+pub vyre_foundation::ir::AliasDiscipline::MayAlias
+pub vyre_foundation::ir::AliasDiscipline::NoAlias
+pub vyre_foundation::ir::AliasDiscipline::OverlappingView
+pub vyre_foundation::ir::AliasToken::discipline: vyre_foundation::memory_model::obligations::AliasDiscipline
+pub vyre_foundation::ir::AliasToken::resource: alloc::string::String
 pub vyre_foundation::ir::AsyncTransactionLifecycle::Aborted
 pub vyre_foundation::ir::AsyncTransactionLifecycle::Arrived
 pub vyre_foundation::ir::AsyncTransactionLifecycle::Committed
@@ -4865,6 +5333,13 @@ pub vyre_foundation::ir::BarrierParticipation::ElectOne
 pub vyre_foundation::ir::BarrierParticipation::SubgroupOnly
 pub vyre_foundation::ir::BarrierParticipation::Uniform
 pub vyre_foundation::ir::BarrierParticipation::WorkgroupOnly
+pub vyre_foundation::ir::BorrowKind::AtomicExclusive
+pub vyre_foundation::ir::BorrowKind::Immutable
+pub vyre_foundation::ir::BorrowKind::Mutable
+pub vyre_foundation::ir::BorrowToken::borrow_id: u64
+pub vyre_foundation::ir::BorrowToken::kind: vyre_foundation::memory_model::obligations::BorrowKind
+pub vyre_foundation::ir::BorrowToken::origin_epoch: vyre_foundation::memory_model::obligations::StateEpoch
+pub vyre_foundation::ir::BorrowToken::resource: alloc::string::String
 pub vyre_foundation::ir::BufferDecl::access: vyre_spec::buffer_access::BufferAccess
 pub vyre_foundation::ir::BufferDecl::binding: u32
 pub vyre_foundation::ir::BufferDecl::bytes_extraction: bool
@@ -4881,6 +5356,8 @@ pub vyre_foundation::ir::BufferDecl::shape_predicate: core::option::Option<vyre_
 pub vyre_foundation::ir::CacheLocality::Random
 pub vyre_foundation::ir::CacheLocality::Streaming
 pub vyre_foundation::ir::CacheLocality::Temporal
+pub vyre_foundation::ir::CapabilityToken::capability: vyre_foundation::memory_model::obligations::MemoryCapability
+pub vyre_foundation::ir::CapabilityToken::target: alloc::string::String
 pub vyre_foundation::ir::CollectiveGroup::Cluster
 pub vyre_foundation::ir::CollectiveGroup::CrossDeviceRing
 pub vyre_foundation::ir::CollectiveGroup::CustomTopology
@@ -4895,6 +5372,18 @@ pub vyre_foundation::ir::ColorSpace::Raw
 pub vyre_foundation::ir::ColorSpace::Srgb
 pub vyre_foundation::ir::ControlBounds::guaranteed_termination: bool
 pub vyre_foundation::ir::ControlBounds::max_steps: u64
+pub vyre_foundation::ir::EffectKind::AsyncTransfer
+pub vyre_foundation::ir::EffectKind::AtomicRmw
+pub vyre_foundation::ir::EffectKind::BarrierSync
+pub vyre_foundation::ir::EffectKind::CollectiveComm
+pub vyre_foundation::ir::EffectKind::ControlDivergence
+pub vyre_foundation::ir::EffectKind::Pure
+pub vyre_foundation::ir::EffectKind::ReadMemory
+pub vyre_foundation::ir::EffectKind::TrapFault
+pub vyre_foundation::ir::EffectKind::WriteMemory
+pub vyre_foundation::ir::EffectToken::epoch: vyre_foundation::memory_model::obligations::StateEpoch
+pub vyre_foundation::ir::EffectToken::kind: vyre_foundation::memory_model::obligations::EffectKind
+pub vyre_foundation::ir::EffectToken::token_id: u64
 pub vyre_foundation::ir::ExecutionScope::Cluster
 pub vyre_foundation::ir::ExecutionScope::DeviceMesh
 pub vyre_foundation::ir::ExecutionScope::Grid
@@ -4906,7 +5395,7 @@ pub vyre_foundation::ir::Expr::Atomic::buffer: vyre_foundation::ir::Ident
 pub vyre_foundation::ir::Expr::Atomic::expected: core::option::Option<alloc::boxed::Box<vyre_foundation::ir::Expr>>
 pub vyre_foundation::ir::Expr::Atomic::index: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::Expr::Atomic::op: vyre_spec::atomic_op::AtomicOp
-pub vyre_foundation::ir::Expr::Atomic::ordering: vyre_foundation::ir::MemoryOrdering
+pub vyre_foundation::ir::Expr::Atomic::ordering: vyre_foundation::memory_model::legacy::MemoryOrdering
 pub vyre_foundation::ir::Expr::Atomic::value: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::Expr::BinOp
 pub vyre_foundation::ir::Expr::BinOp::left: alloc::boxed::Box<vyre_foundation::ir::Expr>
@@ -5117,6 +5606,13 @@ pub vyre_foundation::ir::LinearType::Unrestricted
 pub vyre_foundation::ir::LivenessInterval::end: usize
 pub vyre_foundation::ir::LivenessInterval::start: usize
 pub vyre_foundation::ir::LivenessInterval::value: vyre_foundation::ir::GraphValueId
+pub vyre_foundation::ir::MemoryCapability::AsyncDma
+pub vyre_foundation::ir::MemoryCapability::Atomic
+pub vyre_foundation::ir::MemoryCapability::Barrier
+pub vyre_foundation::ir::MemoryCapability::Collective
+pub vyre_foundation::ir::MemoryCapability::DynamicDispatch
+pub vyre_foundation::ir::MemoryCapability::Read
+pub vyre_foundation::ir::MemoryCapability::Write
 pub vyre_foundation::ir::MemoryHints::cache_locality: vyre_foundation::ir::CacheLocality
 pub vyre_foundation::ir::MemoryHints::coalesce_axis: core::option::Option<u8>
 pub vyre_foundation::ir::MemoryHints::preferred_alignment: u32
@@ -5165,7 +5661,7 @@ pub vyre_foundation::ir::Node::AsyncStore::tag: vyre_foundation::ir::Ident
 pub vyre_foundation::ir::Node::AsyncWait
 pub vyre_foundation::ir::Node::AsyncWait::tag: vyre_foundation::ir::Ident
 pub vyre_foundation::ir::Node::Barrier
-pub vyre_foundation::ir::Node::Barrier::ordering: vyre_foundation::ir::MemoryOrdering
+pub vyre_foundation::ir::Node::Barrier::ordering: vyre_foundation::memory_model::legacy::MemoryOrdering
 pub vyre_foundation::ir::Node::Block(alloc::vec::Vec<vyre_foundation::ir::Node>)
 pub vyre_foundation::ir::Node::Broadcast
 pub vyre_foundation::ir::Node::Broadcast::buffer: vyre_foundation::ir::Ident
@@ -5182,7 +5678,7 @@ pub vyre_foundation::ir::Node::Let
 pub vyre_foundation::ir::Node::Let::name: vyre_foundation::ir::Ident
 pub vyre_foundation::ir::Node::Let::value: vyre_foundation::ir::Expr
 pub vyre_foundation::ir::Node::LogicalBarrier
-pub vyre_foundation::ir::Node::LogicalBarrier::ordering: vyre_foundation::ir::MemoryOrdering
+pub vyre_foundation::ir::Node::LogicalBarrier::ordering: vyre_foundation::memory_model::legacy::MemoryOrdering
 pub vyre_foundation::ir::Node::Loop
 pub vyre_foundation::ir::Node::Loop::body: alloc::vec::Vec<vyre_foundation::ir::Node>
 pub vyre_foundation::ir::Node::Loop::from: vyre_foundation::ir::Expr
@@ -5250,6 +5746,56 @@ pub vyre_foundation::ir::NodeStorage::LitU64(u64)
 pub vyre_foundation::ir::NodeStorage::UnOp
 pub vyre_foundation::ir::NodeStorage::UnOp::op: vyre_spec::un_op::UnOp
 pub vyre_foundation::ir::NodeStorage::UnOp::operand: vyre_foundation::ir::NodeId
+pub vyre_foundation::ir::Obligation::consumed: bool
+pub vyre_foundation::ir::Obligation::consumed_by_node: core::option::Option<usize>
+pub vyre_foundation::ir::Obligation::id: u64
+pub vyre_foundation::ir::Obligation::kind: vyre_foundation::memory_model::obligations::ObligationKind
+pub vyre_foundation::ir::Obligation::name: alloc::string::String
+pub vyre_foundation::ir::Obligation::produced_at_node: usize
+pub vyre_foundation::ir::ObligationError::BorrowExclusivityViolation
+pub vyre_foundation::ir::ObligationError::BorrowExclusivityViolation::buffer: alloc::string::String
+pub vyre_foundation::ir::ObligationError::BorrowExclusivityViolation::details: alloc::string::String
+pub vyre_foundation::ir::ObligationError::ConflictingObligation
+pub vyre_foundation::ir::ObligationError::ConflictingObligation::first_name: alloc::string::String
+pub vyre_foundation::ir::ObligationError::ConflictingObligation::reason: alloc::string::String
+pub vyre_foundation::ir::ObligationError::ConflictingObligation::second_name: alloc::string::String
+pub vyre_foundation::ir::ObligationError::InvalidObligationConsumption
+pub vyre_foundation::ir::ObligationError::InvalidObligationConsumption::details: alloc::string::String
+pub vyre_foundation::ir::ObligationError::InvalidObligationConsumption::name: alloc::string::String
+pub vyre_foundation::ir::ObligationError::UnconsumedObligation
+pub vyre_foundation::ir::ObligationError::UnconsumedObligation::details: alloc::string::String
+pub vyre_foundation::ir::ObligationError::UnconsumedObligation::kind: vyre_foundation::memory_model::obligations::ObligationKind
+pub vyre_foundation::ir::ObligationError::UnconsumedObligation::name: alloc::string::String
+pub vyre_foundation::ir::ObligationError::UnconsumedObligation::produced_at_node: usize
+pub vyre_foundation::ir::ObligationKind::PendingAsyncWait
+pub vyre_foundation::ir::ObligationKind::PendingAsyncWait::destination: alloc::string::String
+pub vyre_foundation::ir::ObligationKind::PendingAsyncWait::source: alloc::string::String
+pub vyre_foundation::ir::ObligationKind::PendingAsyncWait::tag: alloc::string::String
+pub vyre_foundation::ir::ObligationKind::PendingBarrierRendezvous
+pub vyre_foundation::ir::ObligationKind::PendingBarrierRendezvous::participation: vyre_foundation::memory_model::fence::BarrierParticipation
+pub vyre_foundation::ir::ObligationKind::PendingBarrierRendezvous::scope: vyre_foundation::memory_model::scope::ExecutionScope
+pub vyre_foundation::ir::ObligationKind::PendingBorrowRelease
+pub vyre_foundation::ir::ObligationKind::PendingBorrowRelease::borrow_id: u64
+pub vyre_foundation::ir::ObligationKind::PendingBorrowRelease::buffer: alloc::string::String
+pub vyre_foundation::ir::ObligationKind::PendingCollectiveJoin
+pub vyre_foundation::ir::ObligationKind::PendingCollectiveJoin::group: alloc::string::String
+pub vyre_foundation::ir::ObligationKind::PendingCollectiveJoin::op: alloc::string::String
+pub vyre_foundation::ir::ObligationKind::PendingStateTransition
+pub vyre_foundation::ir::ObligationKind::PendingStateTransition::from_epoch: vyre_foundation::memory_model::obligations::StateEpoch
+pub vyre_foundation::ir::ObligationKind::PendingStateTransition::resource: alloc::string::String
+pub vyre_foundation::ir::ObligationKind::PendingStateTransition::to_epoch: vyre_foundation::memory_model::obligations::StateEpoch
+pub vyre_foundation::ir::ObligationKind::PendingWriteVisibility
+pub vyre_foundation::ir::ObligationKind::PendingWriteVisibility::buffer: alloc::string::String
+pub vyre_foundation::ir::ObligationKind::PendingWriteVisibility::epoch: vyre_foundation::memory_model::obligations::StateEpoch
+pub vyre_foundation::ir::ObligationKind::PendingWriteVisibility::scope: vyre_foundation::memory_model::scope::MemoryScope
+pub vyre_foundation::ir::OwnershipKind::Borrowed
+pub vyre_foundation::ir::OwnershipKind::Exclusive
+pub vyre_foundation::ir::OwnershipKind::Released
+pub vyre_foundation::ir::OwnershipKind::Shared
+pub vyre_foundation::ir::OwnershipKind::Transferred
+pub vyre_foundation::ir::OwnershipToken::kind: vyre_foundation::memory_model::obligations::OwnershipKind
+pub vyre_foundation::ir::OwnershipToken::resource: alloc::string::String
+pub vyre_foundation::ir::OwnershipToken::storage_domain: vyre_foundation::memory_model::storage::StorageDomain
 pub vyre_foundation::ir::PlaneDescriptor::format: vyre_foundation::ir::ImageFormat
 pub vyre_foundation::ir::PlaneDescriptor::offset_bytes: u64
 pub vyre_foundation::ir::PlaneDescriptor::plane_height: u32
@@ -5432,6 +5978,15 @@ pub vyre_foundation::ir::Tile::element: vyre_spec::data_type::DataType
 pub vyre_foundation::ir::Tile::extents: alloc::vec::Vec<u32>
 pub vyre_foundation::ir::Tile::layout: vyre_foundation::ir::Layout
 pub vyre_foundation::ir::Tile::residency: vyre_foundation::ir::Residency
+pub vyre_foundation::ir::TileLayout::ColumnMajor
+pub vyre_foundation::ir::TileLayout::RowMajor
+pub vyre_foundation::ir::TileLayout::Swizzled
+pub vyre_foundation::ir::TileLayout::Swizzled::period: u32
+pub vyre_foundation::ir::TileLayout::Swizzled::permutation: alloc::vec::Vec<u32>
+pub vyre_foundation::ir::TileType::element: vyre_spec::data_type::DataType
+pub vyre_foundation::ir::TileType::extents: alloc::vec::Vec<u32>
+pub vyre_foundation::ir::TileType::layout: vyre_foundation::ir::Layout
+pub vyre_foundation::ir::TileType::residency: vyre_foundation::ir::Residency
 pub vyre_foundation::ir::Value::Bool(bool)
 pub vyre_foundation::ir::Value::F32(f32)
 pub vyre_foundation::ir::Value::I32(i32)
@@ -5591,6 +6146,290 @@ pub vyre_foundation::loop_bounds::DataDerivedLoopBound::var: vyre_foundation::ir
 pub vyre_foundation::match_result::ByteRange::end: u32
 pub vyre_foundation::match_result::ByteRange::start: u32
 pub vyre_foundation::match_result::ByteRange::tag: u32
+pub vyre_foundation::memory_model::AliasDiscipline::DistinctDisjoint
+pub vyre_foundation::memory_model::AliasDiscipline::MayAlias
+pub vyre_foundation::memory_model::AliasDiscipline::NoAlias
+pub vyre_foundation::memory_model::AliasDiscipline::OverlappingView
+pub vyre_foundation::memory_model::AliasToken::discipline: vyre_foundation::memory_model::obligations::AliasDiscipline
+pub vyre_foundation::memory_model::AliasToken::resource: alloc::string::String
+pub vyre_foundation::memory_model::AsyncTransactionLifecycle::Aborted
+pub vyre_foundation::memory_model::AsyncTransactionLifecycle::Arrived
+pub vyre_foundation::memory_model::AsyncTransactionLifecycle::Committed
+pub vyre_foundation::memory_model::AsyncTransactionLifecycle::Failed
+pub vyre_foundation::memory_model::AsyncTransactionLifecycle::InFlight
+pub vyre_foundation::memory_model::AsyncTransactionLifecycle::Submitted
+pub vyre_foundation::memory_model::AtomicOrdering::AcqRel
+pub vyre_foundation::memory_model::AtomicOrdering::Acquire
+pub vyre_foundation::memory_model::AtomicOrdering::Relaxed
+pub vyre_foundation::memory_model::AtomicOrdering::Release
+pub vyre_foundation::memory_model::AtomicOrdering::SeqCst
+pub vyre_foundation::memory_model::BarrierParticipation::Converged
+pub vyre_foundation::memory_model::BarrierParticipation::DynamicMask
+pub vyre_foundation::memory_model::BarrierParticipation::ElectOne
+pub vyre_foundation::memory_model::BarrierParticipation::SubgroupOnly
+pub vyre_foundation::memory_model::BarrierParticipation::Uniform
+pub vyre_foundation::memory_model::BarrierParticipation::WorkgroupOnly
+pub vyre_foundation::memory_model::BorrowKind::AtomicExclusive
+pub vyre_foundation::memory_model::BorrowKind::Immutable
+pub vyre_foundation::memory_model::BorrowKind::Mutable
+pub vyre_foundation::memory_model::BorrowToken::borrow_id: u64
+pub vyre_foundation::memory_model::BorrowToken::kind: vyre_foundation::memory_model::obligations::BorrowKind
+pub vyre_foundation::memory_model::BorrowToken::origin_epoch: vyre_foundation::memory_model::obligations::StateEpoch
+pub vyre_foundation::memory_model::BorrowToken::resource: alloc::string::String
+pub vyre_foundation::memory_model::CapabilityToken::capability: vyre_foundation::memory_model::obligations::MemoryCapability
+pub vyre_foundation::memory_model::CapabilityToken::target: alloc::string::String
+pub vyre_foundation::memory_model::CollectiveGroup::Cluster
+pub vyre_foundation::memory_model::CollectiveGroup::CrossDeviceRing
+pub vyre_foundation::memory_model::CollectiveGroup::CustomTopology
+pub vyre_foundation::memory_model::CollectiveGroup::DeviceMesh
+pub vyre_foundation::memory_model::CollectiveGroup::Subgroup
+pub vyre_foundation::memory_model::CollectiveGroup::Workgroup
+pub vyre_foundation::memory_model::EffectKind::AsyncTransfer
+pub vyre_foundation::memory_model::EffectKind::AtomicRmw
+pub vyre_foundation::memory_model::EffectKind::BarrierSync
+pub vyre_foundation::memory_model::EffectKind::CollectiveComm
+pub vyre_foundation::memory_model::EffectKind::ControlDivergence
+pub vyre_foundation::memory_model::EffectKind::Pure
+pub vyre_foundation::memory_model::EffectKind::ReadMemory
+pub vyre_foundation::memory_model::EffectKind::TrapFault
+pub vyre_foundation::memory_model::EffectKind::WriteMemory
+pub vyre_foundation::memory_model::EffectToken::epoch: vyre_foundation::memory_model::obligations::StateEpoch
+pub vyre_foundation::memory_model::EffectToken::kind: vyre_foundation::memory_model::obligations::EffectKind
+pub vyre_foundation::memory_model::EffectToken::token_id: u64
+pub vyre_foundation::memory_model::ExecutionScope::Cluster
+pub vyre_foundation::memory_model::ExecutionScope::DeviceMesh
+pub vyre_foundation::memory_model::ExecutionScope::Grid
+pub vyre_foundation::memory_model::ExecutionScope::Subgroup
+pub vyre_foundation::memory_model::ExecutionScope::Thread
+pub vyre_foundation::memory_model::ExecutionScope::Workgroup
+pub vyre_foundation::memory_model::FailureCancellationBehavior::AbortKernel
+pub vyre_foundation::memory_model::FailureCancellationBehavior::Ignore
+pub vyre_foundation::memory_model::FailureCancellationBehavior::Poison
+pub vyre_foundation::memory_model::FailureCancellationBehavior::Propagate
+pub vyre_foundation::memory_model::FailureCancellationBehavior::Trap
+pub vyre_foundation::memory_model::FenceSemantics::AcqRel
+pub vyre_foundation::memory_model::FenceSemantics::Acquire
+pub vyre_foundation::memory_model::FenceSemantics::Release
+pub vyre_foundation::memory_model::FenceSemantics::SequentiallyConsistent
+pub vyre_foundation::memory_model::MemoryCapability::AsyncDma
+pub vyre_foundation::memory_model::MemoryCapability::Atomic
+pub vyre_foundation::memory_model::MemoryCapability::Barrier
+pub vyre_foundation::memory_model::MemoryCapability::Collective
+pub vyre_foundation::memory_model::MemoryCapability::DynamicDispatch
+pub vyre_foundation::memory_model::MemoryCapability::Read
+pub vyre_foundation::memory_model::MemoryCapability::Write
+pub vyre_foundation::memory_model::MemoryOrdering::AcqRel
+pub vyre_foundation::memory_model::MemoryOrdering::Acquire
+pub vyre_foundation::memory_model::MemoryOrdering::GridSync
+pub vyre_foundation::memory_model::MemoryOrdering::Relaxed
+pub vyre_foundation::memory_model::MemoryOrdering::Release
+pub vyre_foundation::memory_model::MemoryOrdering::SeqCst
+pub vyre_foundation::memory_model::MemoryScope::Cluster
+pub vyre_foundation::memory_model::MemoryScope::Device
+pub vyre_foundation::memory_model::MemoryScope::Subgroup
+pub vyre_foundation::memory_model::MemoryScope::System
+pub vyre_foundation::memory_model::MemoryScope::Thread
+pub vyre_foundation::memory_model::MemoryScope::Workgroup
+pub vyre_foundation::memory_model::Obligation::consumed: bool
+pub vyre_foundation::memory_model::Obligation::consumed_by_node: core::option::Option<usize>
+pub vyre_foundation::memory_model::Obligation::id: u64
+pub vyre_foundation::memory_model::Obligation::kind: vyre_foundation::memory_model::obligations::ObligationKind
+pub vyre_foundation::memory_model::Obligation::name: alloc::string::String
+pub vyre_foundation::memory_model::Obligation::produced_at_node: usize
+pub vyre_foundation::memory_model::ObligationError::BorrowExclusivityViolation
+pub vyre_foundation::memory_model::ObligationError::BorrowExclusivityViolation::buffer: alloc::string::String
+pub vyre_foundation::memory_model::ObligationError::BorrowExclusivityViolation::details: alloc::string::String
+pub vyre_foundation::memory_model::ObligationError::ConflictingObligation
+pub vyre_foundation::memory_model::ObligationError::ConflictingObligation::first_name: alloc::string::String
+pub vyre_foundation::memory_model::ObligationError::ConflictingObligation::reason: alloc::string::String
+pub vyre_foundation::memory_model::ObligationError::ConflictingObligation::second_name: alloc::string::String
+pub vyre_foundation::memory_model::ObligationError::InvalidObligationConsumption
+pub vyre_foundation::memory_model::ObligationError::InvalidObligationConsumption::details: alloc::string::String
+pub vyre_foundation::memory_model::ObligationError::InvalidObligationConsumption::name: alloc::string::String
+pub vyre_foundation::memory_model::ObligationError::UnconsumedObligation
+pub vyre_foundation::memory_model::ObligationError::UnconsumedObligation::details: alloc::string::String
+pub vyre_foundation::memory_model::ObligationError::UnconsumedObligation::kind: vyre_foundation::memory_model::obligations::ObligationKind
+pub vyre_foundation::memory_model::ObligationError::UnconsumedObligation::name: alloc::string::String
+pub vyre_foundation::memory_model::ObligationError::UnconsumedObligation::produced_at_node: usize
+pub vyre_foundation::memory_model::ObligationKind::PendingAsyncWait
+pub vyre_foundation::memory_model::ObligationKind::PendingAsyncWait::destination: alloc::string::String
+pub vyre_foundation::memory_model::ObligationKind::PendingAsyncWait::source: alloc::string::String
+pub vyre_foundation::memory_model::ObligationKind::PendingAsyncWait::tag: alloc::string::String
+pub vyre_foundation::memory_model::ObligationKind::PendingBarrierRendezvous
+pub vyre_foundation::memory_model::ObligationKind::PendingBarrierRendezvous::participation: vyre_foundation::memory_model::fence::BarrierParticipation
+pub vyre_foundation::memory_model::ObligationKind::PendingBarrierRendezvous::scope: vyre_foundation::memory_model::scope::ExecutionScope
+pub vyre_foundation::memory_model::ObligationKind::PendingBorrowRelease
+pub vyre_foundation::memory_model::ObligationKind::PendingBorrowRelease::borrow_id: u64
+pub vyre_foundation::memory_model::ObligationKind::PendingBorrowRelease::buffer: alloc::string::String
+pub vyre_foundation::memory_model::ObligationKind::PendingCollectiveJoin
+pub vyre_foundation::memory_model::ObligationKind::PendingCollectiveJoin::group: alloc::string::String
+pub vyre_foundation::memory_model::ObligationKind::PendingCollectiveJoin::op: alloc::string::String
+pub vyre_foundation::memory_model::ObligationKind::PendingStateTransition
+pub vyre_foundation::memory_model::ObligationKind::PendingStateTransition::from_epoch: vyre_foundation::memory_model::obligations::StateEpoch
+pub vyre_foundation::memory_model::ObligationKind::PendingStateTransition::resource: alloc::string::String
+pub vyre_foundation::memory_model::ObligationKind::PendingStateTransition::to_epoch: vyre_foundation::memory_model::obligations::StateEpoch
+pub vyre_foundation::memory_model::ObligationKind::PendingWriteVisibility
+pub vyre_foundation::memory_model::ObligationKind::PendingWriteVisibility::buffer: alloc::string::String
+pub vyre_foundation::memory_model::ObligationKind::PendingWriteVisibility::epoch: vyre_foundation::memory_model::obligations::StateEpoch
+pub vyre_foundation::memory_model::ObligationKind::PendingWriteVisibility::scope: vyre_foundation::memory_model::scope::MemoryScope
+pub vyre_foundation::memory_model::OwnershipKind::Borrowed
+pub vyre_foundation::memory_model::OwnershipKind::Exclusive
+pub vyre_foundation::memory_model::OwnershipKind::Released
+pub vyre_foundation::memory_model::OwnershipKind::Shared
+pub vyre_foundation::memory_model::OwnershipKind::Transferred
+pub vyre_foundation::memory_model::OwnershipToken::kind: vyre_foundation::memory_model::obligations::OwnershipKind
+pub vyre_foundation::memory_model::OwnershipToken::resource: alloc::string::String
+pub vyre_foundation::memory_model::OwnershipToken::storage_domain: vyre_foundation::memory_model::storage::StorageDomain
+pub vyre_foundation::memory_model::StorageDomain::Constant
+pub vyre_foundation::memory_model::StorageDomain::DeviceGlobal
+pub vyre_foundation::memory_model::StorageDomain::HostPaged
+pub vyre_foundation::memory_model::StorageDomain::HostPinned
+pub vyre_foundation::memory_model::StorageDomain::Register
+pub vyre_foundation::memory_model::StorageDomain::Scratchpad
+pub vyre_foundation::memory_model::StorageDomain::Texture
+pub vyre_foundation::memory_model::StorageDomain::WorkgroupLocal
+pub vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle::Aborted
+pub vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle::Arrived
+pub vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle::Committed
+pub vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle::Failed
+pub vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle::InFlight
+pub vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle::Submitted
+pub vyre_foundation::memory_model::atomic::AtomicOrdering::AcqRel
+pub vyre_foundation::memory_model::atomic::AtomicOrdering::Acquire
+pub vyre_foundation::memory_model::atomic::AtomicOrdering::Relaxed
+pub vyre_foundation::memory_model::atomic::AtomicOrdering::Release
+pub vyre_foundation::memory_model::atomic::AtomicOrdering::SeqCst
+pub vyre_foundation::memory_model::collective::CollectiveGroup::Cluster
+pub vyre_foundation::memory_model::collective::CollectiveGroup::CrossDeviceRing
+pub vyre_foundation::memory_model::collective::CollectiveGroup::CustomTopology
+pub vyre_foundation::memory_model::collective::CollectiveGroup::DeviceMesh
+pub vyre_foundation::memory_model::collective::CollectiveGroup::Subgroup
+pub vyre_foundation::memory_model::collective::CollectiveGroup::Workgroup
+pub vyre_foundation::memory_model::failure::FailureCancellationBehavior::AbortKernel
+pub vyre_foundation::memory_model::failure::FailureCancellationBehavior::Ignore
+pub vyre_foundation::memory_model::failure::FailureCancellationBehavior::Poison
+pub vyre_foundation::memory_model::failure::FailureCancellationBehavior::Propagate
+pub vyre_foundation::memory_model::failure::FailureCancellationBehavior::Trap
+pub vyre_foundation::memory_model::fence::BarrierParticipation::Converged
+pub vyre_foundation::memory_model::fence::BarrierParticipation::DynamicMask
+pub vyre_foundation::memory_model::fence::BarrierParticipation::ElectOne
+pub vyre_foundation::memory_model::fence::BarrierParticipation::SubgroupOnly
+pub vyre_foundation::memory_model::fence::BarrierParticipation::Uniform
+pub vyre_foundation::memory_model::fence::BarrierParticipation::WorkgroupOnly
+pub vyre_foundation::memory_model::fence::FenceSemantics::AcqRel
+pub vyre_foundation::memory_model::fence::FenceSemantics::Acquire
+pub vyre_foundation::memory_model::fence::FenceSemantics::Release
+pub vyre_foundation::memory_model::fence::FenceSemantics::SequentiallyConsistent
+pub vyre_foundation::memory_model::legacy::MemoryOrdering::AcqRel
+pub vyre_foundation::memory_model::legacy::MemoryOrdering::Acquire
+pub vyre_foundation::memory_model::legacy::MemoryOrdering::GridSync
+pub vyre_foundation::memory_model::legacy::MemoryOrdering::Relaxed
+pub vyre_foundation::memory_model::legacy::MemoryOrdering::Release
+pub vyre_foundation::memory_model::legacy::MemoryOrdering::SeqCst
+pub vyre_foundation::memory_model::obligations::AliasDiscipline::DistinctDisjoint
+pub vyre_foundation::memory_model::obligations::AliasDiscipline::MayAlias
+pub vyre_foundation::memory_model::obligations::AliasDiscipline::NoAlias
+pub vyre_foundation::memory_model::obligations::AliasDiscipline::OverlappingView
+pub vyre_foundation::memory_model::obligations::AliasToken::discipline: vyre_foundation::memory_model::obligations::AliasDiscipline
+pub vyre_foundation::memory_model::obligations::AliasToken::resource: alloc::string::String
+pub vyre_foundation::memory_model::obligations::BorrowKind::AtomicExclusive
+pub vyre_foundation::memory_model::obligations::BorrowKind::Immutable
+pub vyre_foundation::memory_model::obligations::BorrowKind::Mutable
+pub vyre_foundation::memory_model::obligations::BorrowToken::borrow_id: u64
+pub vyre_foundation::memory_model::obligations::BorrowToken::kind: vyre_foundation::memory_model::obligations::BorrowKind
+pub vyre_foundation::memory_model::obligations::BorrowToken::origin_epoch: vyre_foundation::memory_model::obligations::StateEpoch
+pub vyre_foundation::memory_model::obligations::BorrowToken::resource: alloc::string::String
+pub vyre_foundation::memory_model::obligations::CapabilityToken::capability: vyre_foundation::memory_model::obligations::MemoryCapability
+pub vyre_foundation::memory_model::obligations::CapabilityToken::target: alloc::string::String
+pub vyre_foundation::memory_model::obligations::EffectKind::AsyncTransfer
+pub vyre_foundation::memory_model::obligations::EffectKind::AtomicRmw
+pub vyre_foundation::memory_model::obligations::EffectKind::BarrierSync
+pub vyre_foundation::memory_model::obligations::EffectKind::CollectiveComm
+pub vyre_foundation::memory_model::obligations::EffectKind::ControlDivergence
+pub vyre_foundation::memory_model::obligations::EffectKind::Pure
+pub vyre_foundation::memory_model::obligations::EffectKind::ReadMemory
+pub vyre_foundation::memory_model::obligations::EffectKind::TrapFault
+pub vyre_foundation::memory_model::obligations::EffectKind::WriteMemory
+pub vyre_foundation::memory_model::obligations::EffectToken::epoch: vyre_foundation::memory_model::obligations::StateEpoch
+pub vyre_foundation::memory_model::obligations::EffectToken::kind: vyre_foundation::memory_model::obligations::EffectKind
+pub vyre_foundation::memory_model::obligations::EffectToken::token_id: u64
+pub vyre_foundation::memory_model::obligations::MemoryCapability::AsyncDma
+pub vyre_foundation::memory_model::obligations::MemoryCapability::Atomic
+pub vyre_foundation::memory_model::obligations::MemoryCapability::Barrier
+pub vyre_foundation::memory_model::obligations::MemoryCapability::Collective
+pub vyre_foundation::memory_model::obligations::MemoryCapability::DynamicDispatch
+pub vyre_foundation::memory_model::obligations::MemoryCapability::Read
+pub vyre_foundation::memory_model::obligations::MemoryCapability::Write
+pub vyre_foundation::memory_model::obligations::Obligation::consumed: bool
+pub vyre_foundation::memory_model::obligations::Obligation::consumed_by_node: core::option::Option<usize>
+pub vyre_foundation::memory_model::obligations::Obligation::id: u64
+pub vyre_foundation::memory_model::obligations::Obligation::kind: vyre_foundation::memory_model::obligations::ObligationKind
+pub vyre_foundation::memory_model::obligations::Obligation::name: alloc::string::String
+pub vyre_foundation::memory_model::obligations::Obligation::produced_at_node: usize
+pub vyre_foundation::memory_model::obligations::ObligationError::BorrowExclusivityViolation
+pub vyre_foundation::memory_model::obligations::ObligationError::BorrowExclusivityViolation::buffer: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationError::BorrowExclusivityViolation::details: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationError::ConflictingObligation
+pub vyre_foundation::memory_model::obligations::ObligationError::ConflictingObligation::first_name: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationError::ConflictingObligation::reason: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationError::ConflictingObligation::second_name: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationError::InvalidObligationConsumption
+pub vyre_foundation::memory_model::obligations::ObligationError::InvalidObligationConsumption::details: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationError::InvalidObligationConsumption::name: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationError::UnconsumedObligation
+pub vyre_foundation::memory_model::obligations::ObligationError::UnconsumedObligation::details: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationError::UnconsumedObligation::kind: vyre_foundation::memory_model::obligations::ObligationKind
+pub vyre_foundation::memory_model::obligations::ObligationError::UnconsumedObligation::name: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationError::UnconsumedObligation::produced_at_node: usize
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingAsyncWait
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingAsyncWait::destination: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingAsyncWait::source: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingAsyncWait::tag: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingBarrierRendezvous
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingBarrierRendezvous::participation: vyre_foundation::memory_model::fence::BarrierParticipation
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingBarrierRendezvous::scope: vyre_foundation::memory_model::scope::ExecutionScope
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingBorrowRelease
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingBorrowRelease::borrow_id: u64
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingBorrowRelease::buffer: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingCollectiveJoin
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingCollectiveJoin::group: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingCollectiveJoin::op: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingStateTransition
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingStateTransition::from_epoch: vyre_foundation::memory_model::obligations::StateEpoch
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingStateTransition::resource: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingStateTransition::to_epoch: vyre_foundation::memory_model::obligations::StateEpoch
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingWriteVisibility
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingWriteVisibility::buffer: alloc::string::String
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingWriteVisibility::epoch: vyre_foundation::memory_model::obligations::StateEpoch
+pub vyre_foundation::memory_model::obligations::ObligationKind::PendingWriteVisibility::scope: vyre_foundation::memory_model::scope::MemoryScope
+pub vyre_foundation::memory_model::obligations::OwnershipKind::Borrowed
+pub vyre_foundation::memory_model::obligations::OwnershipKind::Exclusive
+pub vyre_foundation::memory_model::obligations::OwnershipKind::Released
+pub vyre_foundation::memory_model::obligations::OwnershipKind::Shared
+pub vyre_foundation::memory_model::obligations::OwnershipKind::Transferred
+pub vyre_foundation::memory_model::obligations::OwnershipToken::kind: vyre_foundation::memory_model::obligations::OwnershipKind
+pub vyre_foundation::memory_model::obligations::OwnershipToken::resource: alloc::string::String
+pub vyre_foundation::memory_model::obligations::OwnershipToken::storage_domain: vyre_foundation::memory_model::storage::StorageDomain
+pub vyre_foundation::memory_model::scope::ExecutionScope::Cluster
+pub vyre_foundation::memory_model::scope::ExecutionScope::DeviceMesh
+pub vyre_foundation::memory_model::scope::ExecutionScope::Grid
+pub vyre_foundation::memory_model::scope::ExecutionScope::Subgroup
+pub vyre_foundation::memory_model::scope::ExecutionScope::Thread
+pub vyre_foundation::memory_model::scope::ExecutionScope::Workgroup
+pub vyre_foundation::memory_model::scope::MemoryScope::Cluster
+pub vyre_foundation::memory_model::scope::MemoryScope::Device
+pub vyre_foundation::memory_model::scope::MemoryScope::Subgroup
+pub vyre_foundation::memory_model::scope::MemoryScope::System
+pub vyre_foundation::memory_model::scope::MemoryScope::Thread
+pub vyre_foundation::memory_model::scope::MemoryScope::Workgroup
+pub vyre_foundation::memory_model::storage::StorageDomain::Constant
+pub vyre_foundation::memory_model::storage::StorageDomain::DeviceGlobal
+pub vyre_foundation::memory_model::storage::StorageDomain::HostPaged
+pub vyre_foundation::memory_model::storage::StorageDomain::HostPinned
+pub vyre_foundation::memory_model::storage::StorageDomain::Register
+pub vyre_foundation::memory_model::storage::StorageDomain::Scratchpad
+pub vyre_foundation::memory_model::storage::StorageDomain::Texture
+pub vyre_foundation::memory_model::storage::StorageDomain::WorkgroupLocal
 pub vyre_foundation::numeric::Approximation::Native
 pub vyre_foundation::numeric::Approximation::Native::measure: vyre_foundation::numeric::ErrorMeasure
 pub vyre_foundation::numeric::Approximation::Refused
@@ -5758,11 +6597,16 @@ pub vyre_foundation::operation::CallGraphClosure::transitive_effects: alloc::col
 pub vyre_foundation::operation::CallGraphClosure::unclosed_or_cyclic: alloc::collections::btree::set::BTreeSet<&'static str>
 pub vyre_foundation::operation::CatalogBundle::descriptors: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::SemanticDescriptor>
 pub vyre_foundation::operation::CatalogBundle::digest: [u8; 32]
+pub vyre_foundation::operation::CatalogBundle::extensions: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>
 pub vyre_foundation::operation::CatalogBundle::lowering_providers: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::LoweringProvider>
 pub vyre_foundation::operation::CatalogBundle::version: u32
 pub vyre_foundation::operation::ConformanceProvider::expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>
 pub vyre_foundation::operation::ConformanceProvider::id: &'static str
 pub vyre_foundation::operation::ConformanceProvider::test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>
+pub vyre_foundation::operation::ContractProvider::contract: core::option::Option<vyre_foundation::operation::OperationContractBuilder>
+pub vyre_foundation::operation::ContractProvider::id: &'static str
+pub vyre_foundation::operation::ExtensionProvenance::name: &'static str
+pub vyre_foundation::operation::ExtensionProvenance::version: u32
 pub vyre_foundation::operation::IdNamespace::External(&'a str)
 pub vyre_foundation::operation::IdNamespace::Unknown
 pub vyre_foundation::operation::IdNamespace::Workspace(&'a str)
@@ -5787,8 +6631,14 @@ pub vyre_foundation::operation::OperationRegistration::signature: core::option::
 pub vyre_foundation::operation::OperationRegistration::source_file: &'static str
 pub vyre_foundation::operation::OperationRegistration::test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>
 pub vyre_foundation::operation::OperationRegistration::tier: vyre_foundation::operation::OperationTier
+pub vyre_foundation::operation::OperationRegistryError::ContractValidationFailed
+pub vyre_foundation::operation::OperationRegistryError::ContractValidationFailed::id: &'static str
+pub vyre_foundation::operation::OperationRegistryError::ContractValidationFailed::message: alloc::string::String
 pub vyre_foundation::operation::OperationRegistryError::DuplicateId
 pub vyre_foundation::operation::OperationRegistryError::DuplicateId::id: &'static str
+pub vyre_foundation::operation::OperationRegistryError::InvalidOpaqueReason
+pub vyre_foundation::operation::OperationRegistryError::InvalidOpaqueReason::id: &'static str
+pub vyre_foundation::operation::OperationRegistryError::InvalidOpaqueReason::reason: &'static str
 pub vyre_foundation::operation::OperationRegistryError::InvalidTier
 pub vyre_foundation::operation::OperationRegistryError::InvalidTier::declared: vyre_foundation::operation::OperationTier
 pub vyre_foundation::operation::OperationRegistryError::InvalidTier::id: &'static str
@@ -5797,6 +6647,14 @@ pub vyre_foundation::operation::OperationRegistryError::InvalidVersion
 pub vyre_foundation::operation::OperationRegistryError::InvalidVersion::id: &'static str
 pub vyre_foundation::operation::OperationRegistryError::MissingSemantics
 pub vyre_foundation::operation::OperationRegistryError::MissingSemantics::id: &'static str
+pub vyre_foundation::operation::OperationRegistryError::MissingTransformDecision
+pub vyre_foundation::operation::OperationRegistryError::MissingTransformDecision::id: &'static str
+pub vyre_foundation::operation::OperationRegistryError::NoExecutableProofEvidence
+pub vyre_foundation::operation::OperationRegistryError::NoExecutableProofEvidence::id: &'static str
+pub vyre_foundation::operation::OperationRegistryError::NoExecutableProofEvidence::law: &'static str
+pub vyre_foundation::operation::OperationRegistryError::UnknownAlgebraicLaw
+pub vyre_foundation::operation::OperationRegistryError::UnknownAlgebraicLaw::id: &'static str
+pub vyre_foundation::operation::OperationRegistryError::UnknownAlgebraicLaw::law: &'static str
 pub vyre_foundation::operation::OperationRegistryError::UnknownNamespace
 pub vyre_foundation::operation::OperationRegistryError::UnknownNamespace::id: &'static str
 pub vyre_foundation::operation::OperationTier::External
@@ -5811,6 +6669,7 @@ pub vyre_foundation::operation::SemanticDescriptor::geometry_requirements: vyre_
 pub vyre_foundation::operation::SemanticDescriptor::id: &'static str
 pub vyre_foundation::operation::SemanticDescriptor::laws: &'static [&'static str]
 pub vyre_foundation::operation::SemanticDescriptor::numeric: vyre_foundation::numeric::NumericContract
+pub vyre_foundation::operation::SemanticDescriptor::opaque_reason: core::option::Option<&'static str>
 pub vyre_foundation::operation::SemanticDescriptor::semantic_version: u32
 pub vyre_foundation::operation::SemanticDescriptor::signature: core::option::Option<&'static vyre_foundation::dialect_lookup::Signature>
 pub vyre_foundation::operation::SemanticDescriptor::tier: vyre_foundation::operation::OperationTier
@@ -6156,6 +7015,15 @@ pub vyre_foundation::optimizer::eqsat::FamilySaturationReport::family: &'static 
 pub vyre_foundation::optimizer::eqsat::FamilySaturationReport::iters_used: usize
 pub vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::family: &'static str
 pub vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::saturation: vyre_foundation::optimizer::eqsat::SaturationReport
+pub vyre_foundation::optimizer::eqsat::ProofTerm::justification: &'static str
+pub vyre_foundation::optimizer::eqsat::ProofTerm::obligation_digest: [u8; 32]
+pub vyre_foundation::optimizer::eqsat::ProofTerm::rule_name: &'static str
+pub vyre_foundation::optimizer::eqsat::RuleFactIdentity::AlgebraicLaw
+pub vyre_foundation::optimizer::eqsat::RuleFactIdentity::AlgebraicLaw::family: vyre_spec::region_law::RegionLawFamily
+pub vyre_foundation::optimizer::eqsat::RuleFactIdentity::AlgebraicLaw::law_name: &'static str
+pub vyre_foundation::optimizer::eqsat::RuleFactIdentity::HardwareProperty
+pub vyre_foundation::optimizer::eqsat::RuleFactIdentity::HardwareProperty::required: alloc::vec::Vec<vyre_foundation::optimizer::eqsat::TargetFact>
+pub vyre_foundation::optimizer::eqsat::RuleFactIdentity::TypedFact(&'static str)
 pub vyre_foundation::optimizer::eqsat::SaturationReport::applied_equivalences: usize
 pub vyre_foundation::optimizer::eqsat::SaturationReport::budget: usize
 pub vyre_foundation::optimizer::eqsat::SaturationReport::class_count_after: usize
@@ -6224,7 +7092,7 @@ pub vyre_foundation::optimizer::expr_arena::FlatExpr::Atomic::buffer: vyre_found
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Atomic::expected: core::option::Option<vyre_foundation::optimizer::expr_arena::ExprId>
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Atomic::index: vyre_foundation::optimizer::expr_arena::ExprId
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Atomic::op: vyre_spec::atomic_op::AtomicOp
-pub vyre_foundation::optimizer::expr_arena::FlatExpr::Atomic::ordering: vyre_foundation::ir::MemoryOrdering
+pub vyre_foundation::optimizer::expr_arena::FlatExpr::Atomic::ordering: vyre_foundation::memory_model::legacy::MemoryOrdering
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Atomic::value: vyre_foundation::optimizer::expr_arena::ExprId
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::BinOp
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::BinOp::left: vyre_foundation::optimizer::expr_arena::ExprId
@@ -6261,7 +7129,7 @@ pub vyre_foundation::optimizer::expr_arena::FlatExpr::LogicalTileId
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::LogicalTileId::axis: u8
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::LogicalWithinTileId
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::LogicalWithinTileId::axis: u8
-pub vyre_foundation::optimizer::expr_arena::FlatExpr::Opaque(vyre_foundation::optimizer::expr_arena::OpaqueId)
+pub vyre_foundation::optimizer::expr_arena::FlatExpr::Opaque(vyre_foundation::optimizer::expr_arena::OpaqueContentKey)
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Select
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Select::cond: vyre_foundation::optimizer::expr_arena::ExprId
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Select::false_val: vyre_foundation::optimizer::expr_arena::ExprId
@@ -6282,6 +7150,8 @@ pub vyre_foundation::optimizer::expr_arena::FlatExpr::UnOp::operand: vyre_founda
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Var(vyre_foundation::ir::Ident)
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::WorkgroupId
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::WorkgroupId::axis: u8
+pub vyre_foundation::optimizer::expr_arena::OpaqueContentKey::fingerprint: [u8; 32]
+pub vyre_foundation::optimizer::expr_arena::OpaqueContentKey::kind: alloc::string::String
 pub vyre_foundation::optimizer::expr_arena_analysis::ExprArenaStats::distinct_subexpr_count: usize
 pub vyre_foundation::optimizer::expr_arena_analysis::ExprArenaStats::fingerprint: [u8; 32]
 pub vyre_foundation::optimizer::expr_arena_analysis::ExprArenaStats::root_intern_count: usize
@@ -6381,10 +7251,34 @@ pub vyre_foundation::optimizer::multi_level_eqsat::PassTelemetry::cycle_detected
 pub vyre_foundation::optimizer::multi_level_eqsat::PassTelemetry::duration_us: u64
 pub vyre_foundation::optimizer::multi_level_eqsat::PassTelemetry::iterations: usize
 pub vyre_foundation::optimizer::multi_level_eqsat::PassTelemetry::rules_applied: usize
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::ContinuityBroken
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::ContinuityBroken::actual_digest: [u8; 32]
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::ContinuityBroken::expected_digest: [u8; 32]
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::ContinuityBroken::rule_name: alloc::string::String
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::ContinuityBroken::step_index: usize
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::CycleDetected
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::CycleDetected::step_index: usize
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::EmptyProofLog
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::FinalDigestMismatch
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::FinalDigestMismatch::actual: [u8; 32]
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::FinalDigestMismatch::expected: [u8; 32]
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::InitialDigestMismatch
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::InitialDigestMismatch::actual: [u8; 32]
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::InitialDigestMismatch::expected: [u8; 32]
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::SemanticsViolation
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::SemanticsViolation::rule_name: alloc::string::String
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::SemanticsViolation::step_index: usize
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::TamperedProof
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::TamperedProof::reason: alloc::string::String
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::TamperedProof::rule_name: alloc::string::String
+pub vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::TamperedProof::step_index: usize
 pub vyre_foundation::optimizer::multi_level_eqsat::ReplayArtifact::final_digest: [u8; 32]
 pub vyre_foundation::optimizer::multi_level_eqsat::ReplayArtifact::initial_digest: [u8; 32]
 pub vyre_foundation::optimizer::multi_level_eqsat::ReplayArtifact::proof_log: alloc::vec::Vec<vyre_foundation::optimizer::multi_level_eqsat::StepProof>
 pub vyre_foundation::optimizer::multi_level_eqsat::ReplayArtifact::telemetry: vyre_foundation::optimizer::multi_level_eqsat::PassTelemetry
+pub vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation::admitted_numerical_contracts: alloc::vec::Vec<vyre_foundation::optimizer::rewrite_contract::NumericalContract>
+pub vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation::class_growth_limit: usize
+pub vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation::max_iterations: usize
 pub vyre_foundation::optimizer::multi_level_eqsat::StepProof::after_digest: [u8; 32]
 pub vyre_foundation::optimizer::multi_level_eqsat::StepProof::before_digest: [u8; 32]
 pub vyre_foundation::optimizer::multi_level_eqsat::StepProof::law_justification: alloc::string::String
@@ -7349,7 +8243,7 @@ pub vyre_foundation::transform::schedule_lowering::ScheduleDistribution::target:
 pub vyre_foundation::transform::schedule_lowering::ScheduleDistribution::tile_size: u32
 pub vyre_foundation::types::LifetimeEpoch::epoch_id: u64
 pub vyre_foundation::types::LifetimeEpoch::region_token: core::option::Option<alloc::string::String>
-pub vyre_foundation::types::LifetimeEpoch::scope: vyre_foundation::ir::ExecutionScope
+pub vyre_foundation::types::LifetimeEpoch::scope: vyre_foundation::memory_model::scope::ExecutionScope
 pub vyre_foundation::types::NumericalContract::allow_reassoc: bool
 pub vyre_foundation::types::NumericalContract::fast_math: bool
 pub vyre_foundation::types::NumericalContract::finite_math_only: bool
@@ -7641,34 +8535,63 @@ pub vyre_foundation::verifier::CheckedInvariant::category: vyre_foundation::veri
 pub vyre_foundation::verifier::CheckedInvariant::code: &'static str
 pub vyre_foundation::verifier::CheckedInvariant::description: alloc::string::String
 pub vyre_foundation::verifier::CheckedInvariant::passed: bool
+pub vyre_foundation::verifier::CompileError::CertificateReplayFailed(alloc::string::String)
 pub vyre_foundation::verifier::CompileError::EmptyModule(alloc::string::String)
 pub vyre_foundation::verifier::CompileError::LoweringError(alloc::string::String)
+pub vyre_foundation::verifier::CompileError::MismatchedInputIdentity
+pub vyre_foundation::verifier::CompileError::MismatchedInputIdentity::actual: alloc::string::String
+pub vyre_foundation::verifier::CompileError::MismatchedInputIdentity::expected: alloc::string::String
 pub vyre_foundation::verifier::CompileError::UnverifiedSyntaxRejected(alloc::string::String)
 pub vyre_foundation::verifier::CompiledSemanticArtifact::certificate: vyre_foundation::verifier::VerificationCertificate
 pub vyre_foundation::verifier::CompiledSemanticArtifact::certified_invariant_count: usize
 pub vyre_foundation::verifier::CompiledSemanticArtifact::name: alloc::string::String
 pub vyre_foundation::verifier::InvariantCategory::AliasOwnership
+pub vyre_foundation::verifier::InvariantCategory::Bounds
 pub vyre_foundation::verifier::InvariantCategory::BoundsTermination
 pub vyre_foundation::verifier::InvariantCategory::CollectiveGroups
+pub vyre_foundation::verifier::InvariantCategory::Determinism
 pub vyre_foundation::verifier::InvariantCategory::DeterminismNumeric
 pub vyre_foundation::verifier::InvariantCategory::DominanceUseDef
+pub vyre_foundation::verifier::InvariantCategory::Effects
 pub vyre_foundation::verifier::InvariantCategory::EffectsConcurrency
+pub vyre_foundation::verifier::InvariantCategory::NumericContracts
+pub vyre_foundation::verifier::InvariantCategory::SemanticExtensionObligations
 pub vyre_foundation::verifier::InvariantCategory::StateTransitions
 pub vyre_foundation::verifier::InvariantCategory::StructuralClosure
+pub vyre_foundation::verifier::InvariantCategory::TerminationProgress
 pub vyre_foundation::verifier::InvariantCategory::TypeShapeRank
+pub vyre_foundation::verifier::ReplayError::MismatchedInputIdentity
+pub vyre_foundation::verifier::ReplayError::MismatchedInputIdentity::actual: alloc::string::String
+pub vyre_foundation::verifier::ReplayError::MismatchedInputIdentity::expected: alloc::string::String
+pub vyre_foundation::verifier::ReplayError::ResourceBoundsViolation(alloc::string::String)
+pub vyre_foundation::verifier::ReplayError::SchemaVersionMismatch
+pub vyre_foundation::verifier::ReplayError::SchemaVersionMismatch::expected: u32
+pub vyre_foundation::verifier::ReplayError::SchemaVersionMismatch::found: u32
+pub vyre_foundation::verifier::ReplayError::SolverProofReplayFailed
+pub vyre_foundation::verifier::ReplayError::UnsatisfiedInvariant
+pub vyre_foundation::verifier::ReplayError::UnsatisfiedInvariant::category: vyre_foundation::verifier::InvariantCategory
+pub vyre_foundation::verifier::ReplayError::UnsatisfiedInvariant::code: &'static str
+pub vyre_foundation::verifier::ReplayError::VerifierVersionMismatch
+pub vyre_foundation::verifier::ReplayError::VerifierVersionMismatch::expected: &'static str
+pub vyre_foundation::verifier::ReplayError::VerifierVersionMismatch::found: alloc::string::String
 pub vyre_foundation::verifier::ResourceBounds::buffer_count: usize
+pub vyre_foundation::verifier::ResourceBounds::estimated_work_units: u64
 pub vyre_foundation::verifier::ResourceBounds::grid_dimensions: [u32; 3]
 pub vyre_foundation::verifier::ResourceBounds::max_registers_per_thread: u32
 pub vyre_foundation::verifier::ResourceBounds::max_threads_per_workgroup: u32
 pub vyre_foundation::verifier::ResourceBounds::max_workgroup_memory_bytes: u64
-pub vyre_foundation::verifier::SemanticModule::atomic_effects: alloc::vec::Vec<vyre_foundation::ir::AtomicOrdering>
-pub vyre_foundation::verifier::SemanticModule::collective_groups: alloc::vec::Vec<vyre_foundation::ir::CollectiveGroup>
+pub vyre_foundation::verifier::SemanticModule::atomic_effects: alloc::vec::Vec<vyre_foundation::memory_model::atomic::AtomicOrdering>
+pub vyre_foundation::verifier::SemanticModule::collective_groups: alloc::vec::Vec<vyre_foundation::memory_model::collective::CollectiveGroup>
+pub vyre_foundation::verifier::SemanticModule::deterministic_mode: bool
 pub vyre_foundation::verifier::SemanticModule::entry_points: alloc::vec::Vec<alloc::string::String>
+pub vyre_foundation::verifier::SemanticModule::extension_obligations: alloc::vec::Vec<alloc::string::String>
 pub vyre_foundation::verifier::SemanticModule::name: alloc::string::String
 pub vyre_foundation::verifier::SemanticModule::numeric_contract: core::option::Option<vyre_foundation::types::NumericalContract>
 pub vyre_foundation::verifier::SemanticModule::program: core::option::Option<vyre_foundation::ir::Program>
 pub vyre_foundation::verifier::SemanticModule::shape_constraints: alloc::vec::Vec<vyre_foundation::types::ShapeConstraint>
 pub vyre_foundation::verifier::SemanticModule::shape_interner: alloc::sync::Arc<vyre_foundation::types::ShapeInterner>
+pub vyre_foundation::verifier::SemanticModule::state_transitions: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
+pub vyre_foundation::verifier::SemanticModule::termination_bound: core::option::Option<u64>
 pub vyre_foundation::verifier::SemanticModule::types: alloc::vec::Vec<vyre_foundation::types::SemanticType>
 pub vyre_foundation::verifier::VerificationCertificate::assumptions: alloc::vec::Vec<alloc::string::String>
 pub vyre_foundation::verifier::VerificationCertificate::checked_invariants: alloc::vec::Vec<vyre_foundation::verifier::CheckedInvariant>

@@ -74,7 +74,7 @@ impl inventory::Collect for vyre_driver::Deprecation
 impl inventory::Collect for vyre_driver::Migration
 impl serde_core::ser::Serialize for vyre_driver::Target
 impl vyre_driver::AdaptiveSpeculator
-impl vyre_driver::AdmittedResourceRecord
+impl vyre_driver::AdmittedResourceRecordExt for vyre_spec::resource_capability::AdmittedResourceRecord
 impl vyre_driver::AotLauncherFiles
 impl vyre_driver::AttrMap
 impl vyre_driver::BackendError
@@ -95,9 +95,8 @@ impl vyre_driver::DiskPipelineCache
 impl vyre_driver::DispatchConfig
 impl vyre_driver::Distribution
 impl vyre_driver::ErrorCode
+impl vyre_driver::ExternalResourceRegistry
 impl vyre_driver::HostShimBuffer
-impl vyre_driver::ImageDimensions
-impl vyre_driver::ImageFormat
 impl vyre_driver::LaunchDirective
 impl vyre_driver::LaunchGeometry
 impl vyre_driver::LaunchPlan
@@ -122,8 +121,7 @@ impl vyre_driver::RegexAcceleratorStreamMode
 impl vyre_driver::ResidentGraphReuseTelemetry
 impl vyre_driver::ResidentHandle
 impl vyre_driver::ResidentOwner
-impl vyre_driver::ResourcePermittedUsages
-impl vyre_driver::ResourceUsageTransition
+impl vyre_driver::ResourceTransitionSchedule
 impl vyre_driver::RoutingTable
 impl vyre_driver::Semver
 impl vyre_driver::SpecCacheKey
@@ -133,10 +131,10 @@ impl vyre_driver::SpeculationReport
 impl vyre_driver::SpeculativeVariantRace
 impl vyre_driver::SubgroupCaps
 impl vyre_driver::SubgroupOp
-impl vyre_driver::SubresourceRange
 impl vyre_driver::TailMaskPolicy
 impl vyre_driver::Target
 impl vyre_driver::TimedDispatchResult
+impl vyre_driver::TransitionExecutionReport
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionError
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationError
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::megakernel_barrier::MegakernelBarrierPlanError
@@ -177,6 +175,11 @@ impl vyre_driver::reservation_policy::ReservationPolicy
 impl vyre_driver::resident_transfer_fusion::ResidentUploadBytes<'_>
 impl vyre_driver::result_compaction::ResultCompactionScratch
 impl vyre_driver::shape_prediction::ShapeHistory
+impl vyre_driver::support_certificate::FactStatus
+impl vyre_driver::support_certificate::ProductionPathStage
+impl vyre_driver::support_certificate::SupportCertificate
+impl vyre_driver::support_certificate::SupportCertificateRegistry
+impl vyre_driver::support_certificate::SupportStatus
 impl vyre_driver::target_dialect::TargetDialect
 impl vyre_driver::transfer_accounting::TransferAccountingPolicy
 impl vyre_driver::trap_record::TrapRecord
@@ -211,11 +214,6 @@ pub const fn vyre_driver::ErrorCode::summary(self) -> &'static str
 pub const fn vyre_driver::ExtractionDevice<'a>::new(profile: &'a vyre_driver::DeviceProfile, hot_path: bool) -> Self
 pub const fn vyre_driver::ExtractionDevice<'a>::with_autotune_record(self, record: &'a vyre_driver::autotune_store::AutotuneRecord) -> Self
 pub const fn vyre_driver::ExtractionDevice<'a>::with_trace_jit(self, counters: vyre_driver::trace_jit_policy::TraceJitInputs) -> Self
-pub const fn vyre_driver::ImageDimensions::d2(width: u32, height: u32) -> Self
-pub const fn vyre_driver::ImageDimensions::unpadded_layer_bytes(&self, format: vyre_driver::ImageFormat) -> u64
-pub const fn vyre_driver::ImageFormat::bytes_per_pixel(&self) -> u32
-pub const fn vyre_driver::ImageFormat::is_depth_stencil(&self) -> bool
-pub const fn vyre_driver::ImageFormat::is_planar_video(&self) -> bool
 pub const fn vyre_driver::LaunchDirective::dynamic_shared_bytes(&self) -> u32
 pub const fn vyre_driver::LaunchDirective::grid(&self) -> [u32; 3]
 pub const fn vyre_driver::LaunchDirective::logical_coverage(&self) -> [u64; 3]
@@ -242,16 +240,11 @@ pub const fn vyre_driver::ResidentGraphReuseTelemetry::cold_upload(upload_bytes:
 pub const fn vyre_driver::ResidentGraphReuseTelemetry::from_counters(cold_uploads: u64, warm_reuses: u64, upload_bytes: u64, avoided_upload_bytes: u64) -> Self
 pub const fn vyre_driver::ResidentGraphReuseTelemetry::is_empty(self) -> bool
 pub const fn vyre_driver::ResidentGraphReuseTelemetry::warm_reuse(avoided_upload_bytes: u64) -> Self
-pub const fn vyre_driver::ResourcePermittedUsages::contains(&self, other: Self) -> bool
-pub const fn vyre_driver::ResourcePermittedUsages::union(self, other: Self) -> Self
-pub const fn vyre_driver::ResourceUsageTransition::to_present(from: vyre_driver::ResourceLayoutState) -> Self
-pub const fn vyre_driver::ResourceUsageTransition::to_sampled(from: vyre_driver::ResourceLayoutState) -> Self
 pub const fn vyre_driver::Semver::new(major: u32, minor: u32, patch: u32) -> Self
 pub const fn vyre_driver::SubgroupCaps::from_feature_range(supports_feature: bool, supports_vertex_stage: bool, min_size: u32, max_size: u32) -> Self
 pub const fn vyre_driver::SubgroupCaps::is_usable(self) -> bool
 pub const fn vyre_driver::SubgroupCaps::native(subgroup_size: u32) -> Self
 pub const fn vyre_driver::SubgroupOp::all() -> &'static [vyre_driver::SubgroupOp]
-pub const fn vyre_driver::SubresourceRange::full(dimensions: &vyre_driver::ImageDimensions) -> Self
 pub const fn vyre_driver::fusion::FusionCaps::high_end() -> Self
 pub const fn vyre_driver::graph_capture::GraphCaptureEditAction::as_str(self) -> &'static str
 pub const fn vyre_driver::graph_capture::GraphCaptureEditStability::as_str(self) -> &'static str
@@ -266,6 +259,7 @@ pub const fn vyre_driver::param_inlining::ParamInliningPolicy::disabled() -> Sel
 pub const fn vyre_driver::param_inlining::ParamInliningPolicy::large_inline_default() -> Self
 pub const fn vyre_driver::param_inlining::ParamInliningPolicy::small_inline_default() -> Self
 pub const fn vyre_driver::reservation_policy::ReservationPolicy::new(context: &'static str, fix: &'static str) -> Self
+pub const fn vyre_driver::support_certificate::ProductionPathStage::name(self) -> &'static str
 pub const fn vyre_driver::target_dialect::TargetDialect::admissible_invocations_per_workgroup(&self, adapter: u32) -> u32
 pub const fn vyre_driver::transfer_accounting::TransferAccountingPolicy::new(domain: &'static str, fix_action: &'static str) -> Self
 pub const vyre_driver::COUNTER_TAIL_BYTES: usize
@@ -288,15 +282,7 @@ pub const vyre_driver::PipelineFeatureFlags::SPECULATIVE: Self
 pub const vyre_driver::PipelineFeatureFlags::SUBGROUP_OPS: Self
 pub const vyre_driver::PipelineFeatureFlags::TENSOR_CORES: Self
 pub const vyre_driver::REGEX_ACCELERATOR_EVIDENCE_SCHEMA_VERSION: u32
-pub const vyre_driver::ResourcePermittedUsages::COLOR_ATTACHMENT: Self
-pub const vyre_driver::ResourcePermittedUsages::DEPTH_STENCIL_ATTACHMENT: Self
-pub const vyre_driver::ResourcePermittedUsages::EXTERNAL_EXPORT: Self
-pub const vyre_driver::ResourcePermittedUsages::EXTERNAL_IMPORT: Self
-pub const vyre_driver::ResourcePermittedUsages::PRESENTATION: Self
-pub const vyre_driver::ResourcePermittedUsages::SAMPLED: Self
-pub const vyre_driver::ResourcePermittedUsages::STORAGE: Self
-pub const vyre_driver::ResourcePermittedUsages::TRANSFER_DST: Self
-pub const vyre_driver::ResourcePermittedUsages::TRANSFER_SRC: Self
+pub const vyre_driver::SUPPORT_CERTIFICATE_SCHEMA: u32
 pub const vyre_driver::bindless_policy::BINDLESS_RESOURCE_COUNT_THRESHOLD: u32
 pub const vyre_driver::cache_eviction_heat::DECAY_HALF_LIFE_S: f64
 pub const vyre_driver::extraction_cost::COLD_PATH_COST_SCALE: f32
@@ -326,6 +312,8 @@ pub const vyre_driver::self_optimizer_bench::SCALING_FIXTURE_SIZES: &[usize]
 pub const vyre_driver::shape_prediction::MAX_HISTORY: usize
 pub const vyre_driver::speculation_verdict::MIN_ADOPT_SAVINGS_BPS: u64
 pub const vyre_driver::speculation_verdict::MIN_DISPATCHES_FOR_VERDICT: u32
+pub const vyre_driver::support_certificate::ProductionPathStage::ALL: [vyre_driver::support_certificate::ProductionPathStage; 7]
+pub const vyre_driver::support_certificate::SUPPORT_CERTIFICATE_SCHEMA: u32
 pub const vyre_driver::trace_jit_policy::TRACE_JIT_HOT_SHAPE_THRESHOLD: u32
 pub const vyre_driver::trace_jit_policy::TRACE_JIT_MIN_CONFIDENCE_BPS: u32
 pub const vyre_driver::trap_record::TRAP_RECORD_BYTES: usize
@@ -336,27 +324,23 @@ pub const vyre_driver::validation::DEFAULT_VALIDATION_VSA_SHARDS: usize
 pub enum vyre_driver::BackendLayoutClass
 pub enum vyre_driver::BindingRole
 pub enum vyre_driver::BoundResource
-pub enum vyre_driver::ColorInterpretation
 pub enum vyre_driver::DeviceTimingQuality
-pub enum vyre_driver::ExternalMemoryCapability
-pub enum vyre_driver::ImageFormat
+pub enum vyre_driver::FactStatus
 pub enum vyre_driver::IntrinsicRegistrationError
 pub enum vyre_driver::LaunchGeometry
 pub enum vyre_driver::PeerAccessCapability
 pub enum vyre_driver::PeerLinkKind
 pub enum vyre_driver::PeerTransferError
 pub enum vyre_driver::PipelineCacheMissReason
+pub enum vyre_driver::ProductionPathStage
 pub enum vyre_driver::RegexAcceleratorClass
 pub enum vyre_driver::RegexAcceleratorMatchSchema
 pub enum vyre_driver::RegexAcceleratorStreamMode
 pub enum vyre_driver::ResidentGraphReuseTelemetryError
 pub enum vyre_driver::Resource
-pub enum vyre_driver::ResourceAbiError
-pub enum vyre_driver::ResourceLayoutState
-pub enum vyre_driver::ResourceOwnershipState
 pub enum vyre_driver::SpeculationMode
 pub enum vyre_driver::SpeculativeVariantKind
-pub enum vyre_driver::TimelineSyncProtocol
+pub enum vyre_driver::SupportStatus
 pub enum vyre_driver::arm_independence::ArmConflict
 pub enum vyre_driver::arm_independence::ArmIndependenceVerdict
 pub enum vyre_driver::async_copy_overlap::CopyOverlapDecision
@@ -376,7 +360,6 @@ pub enum vyre_driver::graph_capture::GraphCaptureEditAction
 pub enum vyre_driver::graph_capture::GraphCaptureEditStability
 pub enum vyre_driver::graph_capture::ScanGraphCaptureEditKind
 pub enum vyre_driver::launch_fusion::LaunchFusionError
-pub enum vyre_driver::lock_policy::FailureDomain
 pub enum vyre_driver::megakernel_barrier::MegakernelBarrierPlanError
 pub enum vyre_driver::megakernel_execution::MegakernelMemoryError
 pub enum vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError
@@ -392,6 +375,9 @@ pub enum vyre_driver::result_compaction::ResultCompactionError
 pub enum vyre_driver::speculation_verdict::SpeculationVerdict
 pub enum vyre_driver::strategy::LoweredExpr
 pub enum vyre_driver::strategy::PrecisionLoweringPlan
+pub enum vyre_driver::support_certificate::FactStatus
+pub enum vyre_driver::support_certificate::ProductionPathStage
+pub enum vyre_driver::support_certificate::SupportStatus
 pub enum vyre_driver::trace_jit_policy::TraceJitDecision
 pub fn T::dispatch_bytes(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
 pub fn T::dispatch_f32(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[f32]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<f32>>, vyre_driver::BackendError>
@@ -408,14 +394,11 @@ pub fn vyre_driver::AdaptiveSpeculator::record(&self, report: vyre_driver::Specu
 pub fn vyre_driver::AdaptiveSpeculator::samples(&self) -> u32
 pub fn vyre_driver::AdaptiveSpeculator::should_speculate(&self) -> bool
 pub fn vyre_driver::AdaptiveSpeculator::threshold_ppm(&self) -> u64
-pub fn vyre_driver::AdmittedResourceRecord::advance_generation(&mut self, expected_gen: u64) -> core::result::Result<u64, vyre_driver::ResourceAbiError>
-pub fn vyre_driver::AdmittedResourceRecord::invalidate_on_device_loss(&mut self)
-pub fn vyre_driver::AdmittedResourceRecord::negotiate_zero_copy_import(&mut self, capability: vyre_driver::ExternalMemoryCapability) -> core::result::Result<(), vyre_driver::ResourceAbiError>
-pub fn vyre_driver::AdmittedResourceRecord::new_2d(resource_id: u64, device_id: u64, format: vyre_driver::ImageFormat, color: vyre_driver::ColorInterpretation, width: u32, height: u32, permitted_usages: vyre_driver::ResourcePermittedUsages, owner: vyre_driver::ResidentOwner) -> Self
+pub fn vyre_driver::AdmittedResourceRecordExt::new_2d_owned(resource_id: u64, device_id: u64, format: vyre_spec::resource_capability::ImageFormat, color: vyre_spec::resource_capability::ColorInterpretation, width: u32, height: u32, permitted_usages: vyre_spec::resource_capability::ResourcePermittedUsages, owner: vyre_driver::ResidentOwner) -> vyre_spec::resource_capability::AdmittedResourceRecord
 pub fn vyre_driver::AotLauncherFiles::from_entries(dependencies: alloc::vec::Vec<vyre_driver::LauncherDependency>, entries: impl core::iter::traits::collect::IntoIterator<Item = (std::path::PathBuf, alloc::string::String)>) -> Self
 pub fn vyre_driver::ArtifactInstance::artifact(&self) -> vyre_megakernel::identity::Digest
 pub fn vyre_driver::ArtifactInstance::device(&self) -> &vyre_driver::DeviceIdentity
-pub fn vyre_driver::ArtifactInstance::emitted_resources(&self) -> core::result::Result<alloc::vec::Vec<vyre_megakernel::compile::EmittedResources>, vyre_driver::BackendError>
+pub fn vyre_driver::ArtifactInstance::emitted_resources(&self) -> core::result::Result<alloc::vec::Vec<vyre_megakernel::compile::measured::EmittedResources>, vyre_driver::BackendError>
 pub fn vyre_driver::ArtifactInstance::payload(&self) -> vyre_megakernel::identity::Digest
 pub fn vyre_driver::ArtifactInstance::resident_device_bytes(&self) -> core::result::Result<core::option::Option<u64>, vyre_driver::BackendError>
 pub fn vyre_driver::ArtifactInstance::submit(&self, bindings: vyre_driver::BindingSet) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::Submission>, vyre_driver::BackendError>
@@ -449,7 +432,7 @@ pub fn vyre_driver::BackendError::unsupported_extension(backend: impl core::conv
 pub fn vyre_driver::BackendLayoutFingerprint::new(slots: alloc::vec::Vec<vyre_driver::BackendLayoutSlot>) -> Self
 pub fn vyre_driver::BackendRegistration::acquire(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError>
 pub fn vyre_driver::BackendRegistration::materializer(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::ArtifactMaterializer>, vyre_driver::BackendError>
-pub fn vyre_driver::BackendRegistration::target_compiler(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_megakernel::target::TargetCompiler>, vyre_driver::BackendError>
+pub fn vyre_driver::BackendRegistration::target_compiler(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_megakernel::target::compile::TargetCompiler>, vyre_driver::BackendError>
 pub fn vyre_driver::BatchOutputs::is_empty(&self) -> bool
 pub fn vyre_driver::BatchOutputs::len(&self) -> usize
 pub fn vyre_driver::BatchOutputs::push_row(&mut self, row: &[u8])
@@ -527,6 +510,12 @@ pub fn vyre_driver::DispatchConfig::validate_launch_authority(&self, backend: &s
 pub fn vyre_driver::Distribution::observe(values: &[u32]) -> Self
 pub fn vyre_driver::EnforceGate::evaluate(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_driver::EnforceVerdict
 pub fn vyre_driver::EnforceGate::name(&self) -> &'static str
+pub fn vyre_driver::ExternalResourceRegistry::admit_resource(&self, record: vyre_spec::resource_capability::AdmittedResourceRecord) -> core::result::Result<u64, vyre_spec::resource_capability::ResourceAbiError>
+pub fn vyre_driver::ExternalResourceRegistry::get_resource(&self, resource_id: u64) -> core::option::Option<vyre_spec::resource_capability::AdmittedResourceRecord>
+pub fn vyre_driver::ExternalResourceRegistry::invalidate_on_device_loss(&self, device_id: u64) -> vyre_driver::DeviceLossInvalidationReport
+pub fn vyre_driver::ExternalResourceRegistry::new() -> Self
+pub fn vyre_driver::ExternalResourceRegistry::register_dependent_artifact(&self, resource_id: u64, artifact_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
+pub fn vyre_driver::ExternalResourceRegistry::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
 pub fn vyre_driver::HostShimBuffer::allocate(backend_id: &'static str, byte_len: usize) -> alloc::boxed::Box<dyn vyre_driver::DeviceBuffer>
 pub fn vyre_driver::HostShimBuffer::as_any(&self) -> &dyn core::any::Any
 pub fn vyre_driver::HostShimBuffer::as_any_mut(&mut self) -> &mut dyn core::any::Any
@@ -592,6 +581,10 @@ pub fn vyre_driver::ResidentOwner::resolve(self, handle: vyre_driver::ResidentHa
 pub fn vyre_driver::Resource::default() -> Self
 pub fn vyre_driver::Resource::from(bytes: alloc::vec::Vec<u8>) -> Self
 pub fn vyre_driver::Resource::from(handle: vyre_driver::ResidentHandle) -> Self
+pub fn vyre_driver::ResourceTransitionSchedule::add_signal(&mut self, signal: vyre_spec::resource_capability::TimelineSyncProtocol)
+pub fn vyre_driver::ResourceTransitionSchedule::add_transition(&mut self, resource_id: u64, transition: vyre_spec::resource_capability::ResourceUsageTransition)
+pub fn vyre_driver::ResourceTransitionSchedule::add_wait(&mut self, wait: vyre_spec::resource_capability::TimelineSyncProtocol)
+pub fn vyre_driver::ResourceTransitionSchedule::new() -> Self
 pub fn vyre_driver::RoutingTable::distribution(&self, call_site: &str) -> core::option::Option<vyre_driver::Distribution>
 pub fn vyre_driver::RoutingTable::observe_sort_u32(&self, call_site: alloc::borrow::Cow<'_, str>, values: &[u32]) -> core::result::Result<vyre_driver::SortBackend, alloc::string::String>
 pub fn vyre_driver::Semver::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -624,6 +617,7 @@ pub fn vyre_driver::Target::serialize<S>(&self, serializer: S) -> core::result::
 pub fn vyre_driver::TimedDispatchResult::device_timed(outputs: vyre_driver::OutputBuffers, wall_ns: u64, device_ns: core::option::Option<u64>) -> Self
 pub fn vyre_driver::TimedDispatchResult::host_timed(outputs: vyre_driver::OutputBuffers, wall_ns: u64) -> Self
 pub fn vyre_driver::TimedDispatchResult::split_timed(outputs: vyre_driver::OutputBuffers, wall_ns: u64, device_ns: core::option::Option<u64>, enqueue_ns: u64, wait_ns: u64) -> Self
+pub fn vyre_driver::TransitionExecutionReport::execute_exact(schedule: &vyre_driver::ResourceTransitionSchedule) -> Self
 pub fn vyre_driver::TypedDispatchExt::dispatch_bytes(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
 pub fn vyre_driver::TypedDispatchExt::dispatch_f32(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[f32]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<f32>>, vyre_driver::BackendError>
 pub fn vyre_driver::TypedDispatchExt::dispatch_f32_into(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[f32]], config: &vyre_driver::DispatchConfig, raw_outputs: &mut vyre_driver::OutputBuffers, typed_outputs: &mut alloc::vec::Vec<alloc::vec::Vec<f32>>) -> core::result::Result<(), vyre_driver::BackendError>
@@ -748,6 +742,7 @@ pub fn vyre_driver::arm_independence::BindingSlotSet::insert(&mut self, slot: u3
 pub fn vyre_driver::arm_independence::BindingSlotSet::intersects(&self, other: &Self) -> bool
 pub fn vyre_driver::arm_independence::can_dispatch_concurrently(a: &vyre_driver::arm_independence::ArmBindingSummary, b: &vyre_driver::arm_independence::ArmBindingSummary) -> vyre_driver::arm_independence::ArmIndependenceVerdict
 pub fn vyre_driver::async_copy_overlap::can_overlap_copy_with_kernel(copy_dst_slot: u32, kernel_arm: &vyre_driver::arm_independence::ArmBindingSummary) -> vyre_driver::async_copy_overlap::CopyOverlapDecision
+pub fn vyre_driver::authenticate_external_import(resource_id: u64, _device_id: u64, format: vyre_spec::resource_capability::ImageFormat, memory_kind: vyre_spec::resource_capability::ExternalMemoryKind, width: u32, pitch_bytes: u32) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
 pub fn vyre_driver::auto_grid(program: &vyre_foundation::ir_inner::model::program::definition::Program, backend: &dyn vyre_driver::VyreBackend) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
 pub fn vyre_driver::autotune_store::AutotuneKey::new(spec: &vyre_driver::SpecCacheKey, adapter_id: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_driver::autotune_store::AutotuneStore::forget(&mut self, key: &vyre_driver::autotune_store::AutotuneKey) -> bool
@@ -871,11 +866,11 @@ pub fn vyre_driver::launch_fusion::LaunchFusionScratch::try_with_capacity(stage_
 pub fn vyre_driver::launch_fusion::plan_launch_fusion(stages: &[vyre_driver::launch_fusion::LaunchFusionStage], max_group_bytes: u64) -> core::result::Result<vyre_driver::launch_fusion::LaunchFusionPlan, vyre_driver::launch_fusion::LaunchFusionError>
 pub fn vyre_driver::launch_fusion::plan_launch_fusion_with_scratch(stages: &[vyre_driver::launch_fusion::LaunchFusionStage], max_group_bytes: u64, scratch: &mut vyre_driver::launch_fusion::LaunchFusionScratch) -> core::result::Result<vyre_driver::launch_fusion::LaunchFusionPlan, vyre_driver::launch_fusion::LaunchFusionError>
 pub fn vyre_driver::launch_width_measurements(program: &vyre_foundation::ir_inner::model::program::definition::Program, limits: vyre_driver::validation::LaunchGeometryLimits, element_count: u32) -> alloc::collections::btree::map::BTreeMap<[u32; 3], u64>
-pub fn vyre_driver::lock_policy::govern_mutex<'a, T>(mutex: &'a std::sync::poison::mutex::Mutex<T>, owner: &'static str, state: &'static str, domain: vyre_driver::lock_policy::FailureDomain) -> core::result::Result<std::sync::poison::mutex::MutexGuard<'a, T>, vyre_driver::BackendError>
-pub fn vyre_driver::lock_policy::govern_mutex_with_reset<'a, T, F>(mutex: &'a std::sync::poison::mutex::Mutex<T>, owner: &'static str, state: &'static str, domain: vyre_driver::lock_policy::FailureDomain, reset_on_restart: F) -> core::result::Result<std::sync::poison::mutex::MutexGuard<'a, T>, vyre_driver::BackendError> where F: core::ops::function::FnOnce(&mut T)
-pub fn vyre_driver::lock_policy::govern_rwlock_read<'a, T>(rwlock: &'a std::sync::poison::rwlock::RwLock<T>, owner: &'static str, state: &'static str, domain: vyre_driver::lock_policy::FailureDomain) -> core::result::Result<std::sync::poison::rwlock::RwLockReadGuard<'a, T>, vyre_driver::BackendError>
-pub fn vyre_driver::lock_policy::govern_rwlock_write<'a, T>(rwlock: &'a std::sync::poison::rwlock::RwLock<T>, owner: &'static str, state: &'static str, domain: vyre_driver::lock_policy::FailureDomain) -> core::result::Result<std::sync::poison::rwlock::RwLockWriteGuard<'a, T>, vyre_driver::BackendError>
-pub fn vyre_driver::lock_policy::govern_rwlock_write_with_reset<'a, T, F>(rwlock: &'a std::sync::poison::rwlock::RwLock<T>, owner: &'static str, state: &'static str, domain: vyre_driver::lock_policy::FailureDomain, reset_on_restart: F) -> core::result::Result<std::sync::poison::rwlock::RwLockWriteGuard<'a, T>, vyre_driver::BackendError> where F: core::ops::function::FnOnce(&mut T)
+pub fn vyre_driver::lock_policy::govern_mutex<'a, T>(mutex: &'a std::sync::poison::mutex::Mutex<T>, owner: &'static str, state: &'static str, class: vyre_foundation::failure_domain::RecoveryClass) -> core::result::Result<std::sync::poison::mutex::MutexGuard<'a, T>, vyre_driver::BackendError>
+pub fn vyre_driver::lock_policy::govern_mutex_with_reset<'a, T, F>(mutex: &'a std::sync::poison::mutex::Mutex<T>, owner: &'static str, state: &'static str, class: vyre_foundation::failure_domain::RecoveryClass, reset_on_restart: F) -> core::result::Result<std::sync::poison::mutex::MutexGuard<'a, T>, vyre_driver::BackendError> where F: core::ops::function::FnOnce(&mut T)
+pub fn vyre_driver::lock_policy::govern_rwlock_read<'a, T>(rwlock: &'a std::sync::poison::rwlock::RwLock<T>, owner: &'static str, state: &'static str, class: vyre_foundation::failure_domain::RecoveryClass) -> core::result::Result<std::sync::poison::rwlock::RwLockReadGuard<'a, T>, vyre_driver::BackendError>
+pub fn vyre_driver::lock_policy::govern_rwlock_write<'a, T>(rwlock: &'a std::sync::poison::rwlock::RwLock<T>, owner: &'static str, state: &'static str, class: vyre_foundation::failure_domain::RecoveryClass) -> core::result::Result<std::sync::poison::rwlock::RwLockWriteGuard<'a, T>, vyre_driver::BackendError>
+pub fn vyre_driver::lock_policy::govern_rwlock_write_with_reset<'a, T, F>(rwlock: &'a std::sync::poison::rwlock::RwLock<T>, owner: &'static str, state: &'static str, class: vyre_foundation::failure_domain::RecoveryClass, reset_on_restart: F) -> core::result::Result<std::sync::poison::rwlock::RwLockWriteGuard<'a, T>, vyre_driver::BackendError> where F: core::ops::function::FnOnce(&mut T)
 pub fn vyre_driver::lock_policy::process_fatal_poison(owner: &str, state: &str) -> never
 pub fn vyre_driver::lock_policy::recoverable_poison<T>(result: core::result::Result<T, std::sync::poison::PoisonError<T>>) -> core::result::Result<T, vyre_driver::BackendError>
 pub fn vyre_driver::lowering::LowerableOp::lower_binary(&self, ctx: &mut (), program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<(), alloc::string::String>
@@ -1172,8 +1167,19 @@ pub fn vyre_driver::strategy::LoweringStrategy::name(&self) -> &str
 pub fn vyre_driver::strategy::LoweringStrategy::priority(&self) -> u32
 pub fn vyre_driver::strategy::select_precision_lowering(caps: &vyre_foundation::validate::options::BackendCapabilities, hint: &vyre_foundation::optimizer::passes::algebraic::precision_hint::PrecisionHint) -> vyre_driver::strategy::PrecisionLoweringPlan
 pub fn vyre_driver::strategy::select_strategy<'a>(strategies: &'a [alloc::boxed::Box<dyn vyre_driver::strategy::LoweringStrategy>], caps: &vyre_foundation::validate::options::BackendCapabilities, op: &vyre_spec::bin_op::BinOp) -> core::option::Option<&'a dyn vyre_driver::strategy::LoweringStrategy>
+pub fn vyre_driver::support_certificate::FactStatus::is_proven(&self) -> bool
+pub fn vyre_driver::support_certificate::SupportCertificate::compute_digest(&self) -> alloc::string::String
+pub fn vyre_driver::support_certificate::SupportCertificate::evaluate(&self) -> vyre_driver::support_certificate::SupportStatus
+pub fn vyre_driver::support_certificate::SupportCertificate::new(backend_id: impl core::convert::Into<alloc::string::String>, target_id: impl core::convert::Into<alloc::string::String>, op_id: vyre_foundation::ir_inner::model::node_kind::OpId) -> Self
+pub fn vyre_driver::support_certificate::SupportCertificate::with_failed_stage(self, stage: vyre_driver::support_certificate::ProductionPathStage, reason: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_driver::support_certificate::SupportCertificate::with_proven_stage(self, stage: vyre_driver::support_certificate::ProductionPathStage, proof_digest: impl core::convert::Into<alloc::string::String>, details: core::option::Option<alloc::string::String>) -> Self
+pub fn vyre_driver::support_certificate::SupportCertificateRegistry::evaluate_support(&self, backend_id: &str, op_id: &vyre_foundation::ir_inner::model::node_kind::OpId) -> vyre_driver::support_certificate::SupportStatus
+pub fn vyre_driver::support_certificate::SupportCertificateRegistry::global() -> &'static Self
+pub fn vyre_driver::support_certificate::SupportCertificateRegistry::register_certificate(&self, cert: vyre_driver::support_certificate::SupportCertificate)
+pub fn vyre_driver::support_certificate::SupportCertificateRegistry::supported_ops_for_backend(&self, backend_id: &str) -> std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
+pub fn vyre_driver::support_certificate::SupportStatus::is_supported(&self) -> bool
 pub fn vyre_driver::target_dialect::TargetDialect::admissible_workgroup_size(&self, adapter: [u32; 3]) -> [u32; 3]
-pub fn vyre_driver::target_dialect::TargetDialect::compiler(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_megakernel::target::TargetCompiler>, vyre_driver::BackendError>
+pub fn vyre_driver::target_dialect::TargetDialect::compiler(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_megakernel::target::compile::TargetCompiler>, vyre_driver::BackendError>
 pub fn vyre_driver::target_dialect::TargetDialect::profile(&self) -> core::result::Result<vyre_megakernel::envelope::TargetProfile, vyre_driver::BackendError>
 pub fn vyre_driver::trace_jit_policy::decide_trace_jit_speculation(inputs: vyre_driver::trace_jit_policy::TraceJitInputs) -> vyre_driver::trace_jit_policy::TraceJitDecision
 pub fn vyre_driver::transfer_accounting::TransferAccountingPolicy::add_bytes(self, total: &mut u64, bytes: usize, label: &str) -> core::result::Result<(), vyre_driver::BackendError>
@@ -1195,7 +1201,7 @@ pub fn vyre_driver::try_reduction_offsets(subgroup_size: u32) -> core::result::R
 pub fn vyre_driver::try_reduction_offsets_into(subgroup_size: u32, offsets: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::update_dispatch_policy_cache_hash(hasher: &mut blake3::Hasher, config: &vyre_driver::DispatchConfig)
 pub fn vyre_driver::validate_buffer_ownership<'a>(self_backend_id: &str, buffers: impl core::iter::traits::collect::IntoIterator<Item = &'a dyn vyre_driver::DeviceBuffer>) -> core::result::Result<(), vyre_driver::BackendError>
-pub fn vyre_driver::validate_intrinsic_lowering(operation_id: &'static str) -> core::result::Result<vyre_foundation::operation::SemanticOperation, vyre_driver::IntrinsicRegistrationError>
+pub fn vyre_driver::validate_intrinsic_lowering(operation_id: &'static str) -> core::result::Result<vyre_foundation::operation::semantic_op::SemanticOperation, vyre_driver::IntrinsicRegistrationError>
 pub fn vyre_driver::validate_program(program: &vyre_foundation::ir_inner::model::program::definition::Program, backend: &dyn vyre_driver::Backend) -> core::result::Result<(), vyre_foundation::validate::validation_error::ValidationError>
 pub fn vyre_driver::validation::LaunchGeometryLimits::blocks_per_compute_unit(&self, workgroup_threads: u32) -> core::option::Option<u32>
 pub fn vyre_driver::validation::LaunchGeometryLimits::resident_threads_per_compute_unit(&self, workgroup_threads: u32) -> core::option::Option<u32>
@@ -1222,6 +1228,7 @@ pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_driver::Backe
 pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_driver::BackendError) -> Self
 pub fn vyre_foundation::optimizer::ctx::AdapterCaps::from(profile: vyre_driver::DeviceProfile) -> Self
 pub fn vyre_foundation::validate::options::BackendCapabilities::from(profile: vyre_driver::DeviceProfile) -> Self
+pub fn vyre_spec::resource_capability::AdmittedResourceRecord::new_2d_owned(resource_id: u64, device_id: u64, format: vyre_spec::resource_capability::ImageFormat, color: vyre_spec::resource_capability::ColorInterpretation, width: u32, height: u32, permitted_usages: vyre_spec::resource_capability::ResourcePermittedUsages, owner: vyre_driver::ResidentOwner) -> Self
 pub macro vyre_driver::artifact_instance_identity!
 pub macro vyre_driver::artifact_instance_unreported_resources!
 pub macro vyre_driver::executable_module!
@@ -1279,13 +1286,13 @@ pub mod vyre_driver::self_optimizer_bench
 pub mod vyre_driver::shape_prediction
 pub mod vyre_driver::speculation_verdict
 pub mod vyre_driver::strategy
+pub mod vyre_driver::support_certificate
 pub mod vyre_driver::target_dialect
 pub mod vyre_driver::trace_jit_policy
 pub mod vyre_driver::transfer_accounting
 pub mod vyre_driver::trap_record
 pub mod vyre_driver::validation
 pub struct vyre_driver::AdaptiveSpeculator
-pub struct vyre_driver::AdmittedResourceRecord
 pub struct vyre_driver::AotLauncherEmitter
 pub struct vyre_driver::AotLauncherFiles
 pub struct vyre_driver::AotLauncherRequest<'a>
@@ -1305,14 +1312,15 @@ pub struct vyre_driver::Completion
 pub struct vyre_driver::Deprecation
 pub struct vyre_driver::DeviceExtraction<L>
 pub struct vyre_driver::DeviceIdentity
+pub struct vyre_driver::DeviceLossInvalidationReport
 pub struct vyre_driver::DeviceProfile
 pub struct vyre_driver::DeviceSignature
 pub struct vyre_driver::DeviceSignatureTable
 pub struct vyre_driver::DiskPipelineCache
 pub struct vyre_driver::Distribution
+pub struct vyre_driver::ExternalResourceRegistry
 pub struct vyre_driver::ExtractionDevice<'a>
 pub struct vyre_driver::HostShimBuffer
-pub struct vyre_driver::ImageDimensions
 pub struct vyre_driver::IndirectDispatch
 pub struct vyre_driver::LaunchDirective
 pub struct vyre_driver::LaunchPlan
@@ -1336,6 +1344,7 @@ pub struct vyre_driver::PipelineCacheMissEvidence
 pub struct vyre_driver::PipelineCacheSnapshot
 pub struct vyre_driver::PipelineDeviceFingerprint
 pub struct vyre_driver::PipelineFeatureFlags(pub u32)
+pub struct vyre_driver::ProductionPathFact
 pub struct vyre_driver::RegexAcceleratorCapability
 pub struct vyre_driver::RegexAcceleratorEvidence
 pub struct vyre_driver::ResidentDispatchStep<'a>
@@ -1344,8 +1353,7 @@ pub struct vyre_driver::ResidentHandle
 pub struct vyre_driver::ResidentOwner(_)
 pub struct vyre_driver::ResidentReadRange<'a>
 pub struct vyre_driver::ResidentSequenceTiming
-pub struct vyre_driver::ResourcePermittedUsages(pub u32)
-pub struct vyre_driver::ResourceUsageTransition
+pub struct vyre_driver::ResourceTransitionSchedule
 pub struct vyre_driver::RoutingTable
 pub struct vyre_driver::Semver
 pub struct vyre_driver::SpecCacheKey
@@ -1357,9 +1365,11 @@ pub struct vyre_driver::SpeculativeVariantDecision
 pub struct vyre_driver::SpeculativeVariantKeys<'a>
 pub struct vyre_driver::SpeculativeVariantRace
 pub struct vyre_driver::SubgroupCaps
-pub struct vyre_driver::SubresourceRange
+pub struct vyre_driver::SupportCertificate
+pub struct vyre_driver::SupportCertificateRegistry
 pub struct vyre_driver::TailMaskPolicy
 pub struct vyre_driver::TimedDispatchResult
+pub struct vyre_driver::TransitionExecutionReport
 pub struct vyre_driver::arm_independence::ArmBindingSummary
 pub struct vyre_driver::arm_independence::BindingSlotSet
 pub struct vyre_driver::autotune_store::AutotuneKey
@@ -1452,6 +1462,9 @@ pub struct vyre_driver::result_compaction::ResultSlot
 pub struct vyre_driver::self_optimizer_bench::ScalingFixture
 pub struct vyre_driver::shape_prediction::ShapeHistory
 pub struct vyre_driver::speculation_verdict::SpeculationObservation
+pub struct vyre_driver::support_certificate::ProductionPathFact
+pub struct vyre_driver::support_certificate::SupportCertificate
+pub struct vyre_driver::support_certificate::SupportCertificateRegistry
 pub struct vyre_driver::target_dialect::EmittedDialectModule
 pub struct vyre_driver::target_dialect::TargetDialect
 pub struct vyre_driver::trace_jit_policy::TraceJitInputs
@@ -1460,6 +1473,7 @@ pub struct vyre_driver::trap_record::TrapRecord
 pub struct vyre_driver::validation::LaunchGeometryLimits
 pub struct vyre_driver::validation::ProgramValidationCaps
 pub struct vyre_driver::validation::ValidationCache
+pub trait vyre_driver::AdmittedResourceRecordExt
 pub trait vyre_driver::ArtifactInstance: core::marker::Send + core::marker::Sync
 pub trait vyre_driver::ArtifactMaterializer: core::marker::Send + core::marker::Sync
 pub trait vyre_driver::Backend: core::marker::Send + core::marker::Sync
@@ -1486,20 +1500,75 @@ pub type vyre_driver::materialize::MaterializedInstance::Module: vyre_driver::ma
 pub type vyre_driver::parity_harness::ParityDispatch<'a> = &'a dyn core::ops::function::Fn(&vyre_foundation::ir_inner::model::program::definition::Program, &[&[u8]]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
 pub type vyre_driver::reservation_policy::StagingReservationFailureAdapter<E> = fn(&'static str, usize, alloc::string::String) -> E
 pub type vyre_driver::shape_prediction::ShapeFingerprint = [u32; 8]
-pub type vyre_driver::target_dialect::EmitSelected = fn(&vyre_megakernel::target::SelectedLowering, &vyre_megakernel::envelope::TargetProfile) -> core::result::Result<vyre_driver::target_dialect::EmittedDialectModule, vyre_megakernel::target::TargetCompileError>
+pub type vyre_driver::target_dialect::EmitSelected = fn(&vyre_megakernel::target::bundle::SelectedLowering, &vyre_megakernel::envelope::TargetProfile) -> core::result::Result<vyre_driver::target_dialect::EmittedDialectModule, vyre_megakernel::target::error::TargetCompileError>
+pub use vyre_driver::AddressMode
+pub use vyre_driver::AdmittedResourceRecord
 pub use vyre_driver::AotTargetId
+pub use vyre_driver::BorderColor
+pub use vyre_driver::ColorInterpretation
+pub use vyre_driver::CompareFunction
+pub use vyre_driver::ComponentSwizzle
 pub use vyre_driver::Diagnostic
 pub use vyre_driver::DiagnosticCause
 pub use vyre_driver::DiagnosticCode
 pub use vyre_driver::DiagnosticStage
+pub use vyre_driver::ExternalEventCapability
+pub use vyre_driver::ExternalEventKind
+pub use vyre_driver::ExternalMemoryCapability
+pub use vyre_driver::ExternalMemoryKind
+pub use vyre_driver::FilterMode
+pub use vyre_driver::FormatClass
+pub use vyre_driver::ImageDimensions
+pub use vyre_driver::ImageFormat
+pub use vyre_driver::ImagePlane
+pub use vyre_driver::ImageViewDescriptor
+pub use vyre_driver::ImageViewKind
+pub use vyre_driver::MipmapFilterMode
 pub use vyre_driver::OpLocation
+pub use vyre_driver::PlaneKind
+pub use vyre_driver::ResourceAbiError
+pub use vyre_driver::ResourceAliasSet
+pub use vyre_driver::ResourceLayoutState
+pub use vyre_driver::ResourceLifetimeState
+pub use vyre_driver::ResourceOwnershipState
+pub use vyre_driver::ResourcePermittedUsages
+pub use vyre_driver::ResourceProvenance
+pub use vyre_driver::ResourceUsageTransition
 pub use vyre_driver::RetryClass
+pub use vyre_driver::SamplerCapability
+pub use vyre_driver::SamplerDescriptor
 pub use vyre_driver::Severity
+pub use vyre_driver::SubresourceRange
+pub use vyre_driver::SwizzleComponent
+pub use vyre_driver::TimelineSyncProtocol
+pub use vyre_driver::all_address_modes
+pub use vyre_driver::all_alias_set_kinds
+pub use vyre_driver::all_border_colors
+pub use vyre_driver::all_color_interpretations
+pub use vyre_driver::all_compare_functions
+pub use vyre_driver::all_external_event_kinds
+pub use vyre_driver::all_external_memory_kinds
+pub use vyre_driver::all_filter_modes
+pub use vyre_driver::all_format_classes
+pub use vyre_driver::all_image_formats
+pub use vyre_driver::all_image_view_kinds
+pub use vyre_driver::all_layout_states
+pub use vyre_driver::all_lifetime_state_kinds
+pub use vyre_driver::all_mipmap_filter_modes
+pub use vyre_driver::all_plane_kinds
+pub use vyre_driver::all_provenance_kinds
+pub use vyre_driver::all_swizzle_components
+pub use vyre_driver::all_sync_protocols
+pub use vyre_driver::all_usage_flags
 pub use vyre_driver::allocation::try_reserve_hash_map_to_capacity
 pub use vyre_driver::allocation::try_reserve_hash_set_to_capacity
 pub use vyre_driver::allocation::try_reserve_vec_to_capacity
 pub use vyre_driver::grid_sync::contains_grid_sync
 pub use vyre_driver::inventory
+pub use vyre_driver::lock_policy::FailureDomain
+pub use vyre_driver::lock_policy::RecoveryClass
+pub use vyre_driver::lock_policy::RecoveryDisposition
+pub use vyre_driver::lock_policy::TypedRecoveryError
 pub use vyre_driver::megakernel_execution::FrontierExecutionSample
 pub use vyre_driver::megakernel_execution::FrontierGraphShape
 pub use vyre_driver::megakernel_execution::FrontierMemoryBudget
@@ -1508,21 +1577,6 @@ pub use vyre_driver::megakernel_execution::FrontierTopologyDecision
 pub use vyre_driver::megakernel_execution::select_frontier_topology
 pub use vyre_driver::megakernel_execution::select_frontier_topology_stable
 pub use vyre_driver::node_op_id
-pub vyre_driver::AdmittedResourceRecord::alias_set_id: core::option::Option<u64>
-pub vyre_driver::AdmittedResourceRecord::color: vyre_driver::ColorInterpretation
-pub vyre_driver::AdmittedResourceRecord::device_id: u64
-pub vyre_driver::AdmittedResourceRecord::dimensions: vyre_driver::ImageDimensions
-pub vyre_driver::AdmittedResourceRecord::external_memory: core::option::Option<vyre_driver::ExternalMemoryCapability>
-pub vyre_driver::AdmittedResourceRecord::format: vyre_driver::ImageFormat
-pub vyre_driver::AdmittedResourceRecord::generation: u64
-pub vyre_driver::AdmittedResourceRecord::is_valid: bool
-pub vyre_driver::AdmittedResourceRecord::is_zero_copy: bool
-pub vyre_driver::AdmittedResourceRecord::ownership: vyre_driver::ResourceOwnershipState
-pub vyre_driver::AdmittedResourceRecord::permitted_usages: vyre_driver::ResourcePermittedUsages
-pub vyre_driver::AdmittedResourceRecord::resource_id: u64
-pub vyre_driver::AdmittedResourceRecord::row_pitch_bytes: u32
-pub vyre_driver::AdmittedResourceRecord::subresource: vyre_driver::SubresourceRange
-pub vyre_driver::AdmittedResourceRecord::sync_protocol: vyre_driver::TimelineSyncProtocol
 pub vyre_driver::AotLauncherEmitter::emit: fn(&vyre_driver::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::AotLauncherFiles, alloc::string::String>
 pub vyre_driver::AotLauncherEmitter::target: vyre_foundation::operation::target_facet::TargetId
 pub vyre_driver::AotLauncherFiles::dependencies: alloc::vec::Vec<vyre_driver::LauncherDependency>
@@ -1587,7 +1641,7 @@ pub vyre_driver::BackendRegistration::payload_format: core::option::Option<&'sta
 pub vyre_driver::BackendRegistration::reference_oracle: bool
 pub vyre_driver::BackendRegistration::semantic_operations: fn() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub vyre_driver::BackendRegistration::supported_ops: fn() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
-pub vyre_driver::BackendRegistration::target_compiler: core::option::Option<fn() -> core::result::Result<alloc::boxed::Box<dyn vyre_megakernel::target::TargetCompiler>, vyre_driver::BackendError>>
+pub vyre_driver::BackendRegistration::target_compiler: core::option::Option<fn() -> core::result::Result<alloc::boxed::Box<dyn vyre_megakernel::target::compile::TargetCompiler>, vyre_driver::BackendError>>
 pub vyre_driver::BackendRegistration::target_id: vyre_foundation::operation::target_facet::TargetId
 pub vyre_driver::Binding::binding: u32
 pub vyre_driver::Binding::buffer_index: usize
@@ -1612,13 +1666,6 @@ pub vyre_driver::BindingRole::Uniform
 pub vyre_driver::BindingSetFingerprint::slots: alloc::vec::Vec<(u32, vyre_driver::BindingRole, usize)>
 pub vyre_driver::BoundResource::Host(alloc::vec::Vec<u8>)
 pub vyre_driver::BoundResource::Resident(vyre_driver::Resource)
-pub vyre_driver::ColorInterpretation::Bt2020
-pub vyre_driver::ColorInterpretation::Bt709
-pub vyre_driver::ColorInterpretation::DisplayP3
-pub vyre_driver::ColorInterpretation::Hdr10
-pub vyre_driver::ColorInterpretation::LinearRgb
-pub vyre_driver::ColorInterpretation::Passthrough
-pub vyre_driver::ColorInterpretation::Srgb
 pub vyre_driver::Completion::artifact: vyre_megakernel::identity::Digest
 pub vyre_driver::Completion::device_ns: core::option::Option<u64>
 pub vyre_driver::Completion::outputs: alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>
@@ -1633,6 +1680,10 @@ pub vyre_driver::DeviceExtraction::node: L
 pub vyre_driver::DeviceIdentity::backend: &'static str
 pub vyre_driver::DeviceIdentity::device: alloc::string::String
 pub vyre_driver::DeviceIdentity::generation: u64
+pub vyre_driver::DeviceLossInvalidationReport::device_id: u64
+pub vyre_driver::DeviceLossInvalidationReport::invalidated_artifacts: alloc::vec::Vec<u64>
+pub vyre_driver::DeviceLossInvalidationReport::invalidated_resources: alloc::vec::Vec<u64>
+pub vyre_driver::DeviceLossInvalidationReport::invalidated_views: alloc::vec::Vec<u64>
 pub vyre_driver::DeviceProfile::backend: &'static str
 pub vyre_driver::DeviceProfile::compute_units: u32
 pub vyre_driver::DeviceProfile::has_dual_issue_fp32_int32: bool
@@ -1722,39 +1773,16 @@ pub vyre_driver::ErrorCode::KernelCompileFailed
 pub vyre_driver::ErrorCode::PoisonedLock
 pub vyre_driver::ErrorCode::Unknown
 pub vyre_driver::ErrorCode::UnsupportedFeature
-pub vyre_driver::ExternalMemoryCapability::DmaBuf
-pub vyre_driver::ExternalMemoryCapability::HostAllocation
-pub vyre_driver::ExternalMemoryCapability::MetalSharedResource
-pub vyre_driver::ExternalMemoryCapability::Win32Nt
 pub vyre_driver::ExtractionDevice::autotune_record: core::option::Option<&'a vyre_driver::autotune_store::AutotuneRecord>
 pub vyre_driver::ExtractionDevice::hot_path: bool
 pub vyre_driver::ExtractionDevice::profile: &'a vyre_driver::DeviceProfile
 pub vyre_driver::ExtractionDevice::trace_jit: core::option::Option<vyre_driver::trace_jit_policy::TraceJitInputs>
-pub vyre_driver::ImageDimensions::array_layers: u32
-pub vyre_driver::ImageDimensions::depth: u32
-pub vyre_driver::ImageDimensions::height: u32
-pub vyre_driver::ImageDimensions::mip_levels: u32
-pub vyre_driver::ImageDimensions::sample_count: u32
-pub vyre_driver::ImageDimensions::width: u32
-pub vyre_driver::ImageFormat::Bgra8Srgb
-pub vyre_driver::ImageFormat::Bgra8Unorm
-pub vyre_driver::ImageFormat::Depth24Plus
-pub vyre_driver::ImageFormat::Depth24PlusStencil8
-pub vyre_driver::ImageFormat::Depth32Float
-pub vyre_driver::ImageFormat::R16Float
-pub vyre_driver::ImageFormat::R32Float
-pub vyre_driver::ImageFormat::R32Sint
-pub vyre_driver::ImageFormat::R32Uint
-pub vyre_driver::ImageFormat::R8Unorm
-pub vyre_driver::ImageFormat::Rg16Float
-pub vyre_driver::ImageFormat::Rg32Float
-pub vyre_driver::ImageFormat::Rg8Unorm
-pub vyre_driver::ImageFormat::Rgba16Float
-pub vyre_driver::ImageFormat::Rgba32Float
-pub vyre_driver::ImageFormat::Rgba8Srgb
-pub vyre_driver::ImageFormat::Rgba8Unorm
-pub vyre_driver::ImageFormat::Yuv420Planar
-pub vyre_driver::ImageFormat::Yuv420SemiPlanar
+pub vyre_driver::FactStatus::Failed
+pub vyre_driver::FactStatus::Failed::reason: alloc::string::String
+pub vyre_driver::FactStatus::Proven
+pub vyre_driver::FactStatus::Proven::details: core::option::Option<alloc::string::String>
+pub vyre_driver::FactStatus::Proven::proof_digest: alloc::string::String
+pub vyre_driver::FactStatus::Unproven
 pub vyre_driver::IndirectDispatch::count_buffer: vyre_foundation::ir_inner::model::expr::ident::Ident
 pub vyre_driver::IndirectDispatch::count_offset: u64
 pub vyre_driver::IntrinsicRegistrationError::UnknownId
@@ -1882,6 +1910,15 @@ pub vyre_driver::PipelineCacheSnapshot::misses: u64
 pub vyre_driver::PipelineDeviceFingerprint::device: u32
 pub vyre_driver::PipelineDeviceFingerprint::driver_digest: [u8; 32]
 pub vyre_driver::PipelineDeviceFingerprint::vendor: u32
+pub vyre_driver::ProductionPathFact::stage: vyre_driver::support_certificate::ProductionPathStage
+pub vyre_driver::ProductionPathFact::status: vyre_driver::support_certificate::FactStatus
+pub vyre_driver::ProductionPathStage::DeviceExecution
+pub vyre_driver::ProductionPathStage::Emission
+pub vyre_driver::ProductionPathStage::HostileBindings
+pub vyre_driver::ProductionPathStage::Materialization
+pub vyre_driver::ProductionPathStage::NativeCompilation
+pub vyre_driver::ProductionPathStage::OracleAgreement
+pub vyre_driver::ProductionPathStage::Validation
 pub vyre_driver::RegexAcceleratorCapability::accelerator_class: vyre_driver::RegexAcceleratorClass
 pub vyre_driver::RegexAcceleratorCapability::backend: &'static str
 pub vyre_driver::RegexAcceleratorCapability::device_signature: &'static str
@@ -1937,36 +1974,9 @@ pub vyre_driver::ResidentSequenceTiming::wait_ns: core::option::Option<u64>
 pub vyre_driver::ResidentSequenceTiming::wall_ns: u64
 pub vyre_driver::Resource::Borrowed(alloc::vec::Vec<u8>)
 pub vyre_driver::Resource::Resident(vyre_driver::ResidentHandle)
-pub vyre_driver::ResourceAbiError::GenerationMismatch
-pub vyre_driver::ResourceAbiError::GenerationMismatch::actual: u64
-pub vyre_driver::ResourceAbiError::GenerationMismatch::expected: u64
-pub vyre_driver::ResourceAbiError::GenerationMismatch::resource_id: u64
-pub vyre_driver::ResourceAbiError::ResourceInvalidated
-pub vyre_driver::ResourceAbiError::ResourceInvalidated::resource_id: u64
-pub vyre_driver::ResourceAbiError::UnsupportedZeroCopyNegotiation
-pub vyre_driver::ResourceAbiError::UnsupportedZeroCopyNegotiation::resource_id: u64
-pub vyre_driver::ResourceAbiError::UsageNotPermitted
-pub vyre_driver::ResourceAbiError::UsageNotPermitted::requested_usage: vyre_driver::ResourcePermittedUsages
-pub vyre_driver::ResourceAbiError::UsageNotPermitted::resource_id: u64
-pub vyre_driver::ResourceLayoutState::ColorAttachmentOptimal
-pub vyre_driver::ResourceLayoutState::DepthStencilOptimal
-pub vyre_driver::ResourceLayoutState::General
-pub vyre_driver::ResourceLayoutState::PresentSrc
-pub vyre_driver::ResourceLayoutState::ShaderReadOnly
-pub vyre_driver::ResourceLayoutState::TransferDstOptimal
-pub vyre_driver::ResourceLayoutState::TransferSrcOptimal
-pub vyre_driver::ResourceLayoutState::Undefined
-pub vyre_driver::ResourceOwnershipState::Exclusive(vyre_driver::ResidentOwner)
-pub vyre_driver::ResourceOwnershipState::ExternalHost
-pub vyre_driver::ResourceOwnershipState::QueueFamilyTransfer
-pub vyre_driver::ResourceOwnershipState::QueueFamilyTransfer::source_queue: u32
-pub vyre_driver::ResourceOwnershipState::QueueFamilyTransfer::target_queue: u32
-pub vyre_driver::ResourceOwnershipState::SharedConcurrent(alloc::vec::Vec<vyre_driver::ResidentOwner>)
-pub vyre_driver::ResourceUsageTransition::from_layout: vyre_driver::ResourceLayoutState
-pub vyre_driver::ResourceUsageTransition::requires_barrier: bool
-pub vyre_driver::ResourceUsageTransition::source_usage: vyre_driver::ResourcePermittedUsages
-pub vyre_driver::ResourceUsageTransition::target_usage: vyre_driver::ResourcePermittedUsages
-pub vyre_driver::ResourceUsageTransition::to_layout: vyre_driver::ResourceLayoutState
+pub vyre_driver::ResourceTransitionSchedule::signals: alloc::vec::Vec<vyre_spec::resource_capability::TimelineSyncProtocol>
+pub vyre_driver::ResourceTransitionSchedule::transitions: alloc::vec::Vec<(u64, vyre_spec::resource_capability::ResourceUsageTransition)>
+pub vyre_driver::ResourceTransitionSchedule::waits: alloc::vec::Vec<vyre_spec::resource_capability::TimelineSyncProtocol>
 pub vyre_driver::Semver::major: u32
 pub vyre_driver::Semver::minor: u32
 pub vyre_driver::Semver::patch: u32
@@ -2018,11 +2028,16 @@ pub vyre_driver::SubgroupOp::InclusiveAdd
 pub vyre_driver::SubgroupOp::Max
 pub vyre_driver::SubgroupOp::Min
 pub vyre_driver::SubgroupOp::ShuffleXor
-pub vyre_driver::SubresourceRange::array_layer_count: u32
-pub vyre_driver::SubresourceRange::aspect_mask: u32
-pub vyre_driver::SubresourceRange::base_array_layer: u32
-pub vyre_driver::SubresourceRange::base_mip_level: u32
-pub vyre_driver::SubresourceRange::mip_level_count: u32
+pub vyre_driver::SupportCertificate::backend_id: alloc::string::String
+pub vyre_driver::SupportCertificate::facts: alloc::collections::btree::map::BTreeMap<vyre_driver::support_certificate::ProductionPathStage, vyre_driver::support_certificate::ProductionPathFact>
+pub vyre_driver::SupportCertificate::op_id: vyre_foundation::ir_inner::model::node_kind::OpId
+pub vyre_driver::SupportCertificate::schema: u32
+pub vyre_driver::SupportCertificate::target_id: alloc::string::String
+pub vyre_driver::SupportStatus::Supported
+pub vyre_driver::SupportStatus::Supported::certificate_digest: alloc::string::String
+pub vyre_driver::SupportStatus::Unsupported
+pub vyre_driver::SupportStatus::Unsupported::missing_stage: vyre_driver::support_certificate::ProductionPathStage
+pub vyre_driver::SupportStatus::Unsupported::reason: alloc::string::String
 pub vyre_driver::TailMaskPolicy::original_count: u32
 pub vyre_driver::TailMaskPolicy::rounded_count: u32
 pub vyre_driver::TailMaskPolicy::tail_lanes: u32
@@ -2038,19 +2053,12 @@ pub vyre_driver::TimedDispatchResult::enqueue_ns: core::option::Option<u64>
 pub vyre_driver::TimedDispatchResult::outputs: vyre_driver::OutputBuffers
 pub vyre_driver::TimedDispatchResult::wait_ns: core::option::Option<u64>
 pub vyre_driver::TimedDispatchResult::wall_ns: u64
-pub vyre_driver::TimelineSyncProtocol::Fence
-pub vyre_driver::TimelineSyncProtocol::Fence::fence_id: u64
-pub vyre_driver::TimelineSyncProtocol::Fence::is_signaled: bool
-pub vyre_driver::TimelineSyncProtocol::ImplicitQueue
-pub vyre_driver::TimelineSyncProtocol::MetalSharedEvent
-pub vyre_driver::TimelineSyncProtocol::MetalSharedEvent::event_id: u64
-pub vyre_driver::TimelineSyncProtocol::MetalSharedEvent::signal_value: u64
-pub vyre_driver::TimelineSyncProtocol::SyncFileFd
-pub vyre_driver::TimelineSyncProtocol::SyncFileFd::fd: i32
-pub vyre_driver::TimelineSyncProtocol::TimelineSemaphore
-pub vyre_driver::TimelineSyncProtocol::TimelineSemaphore::signal_value: u64
-pub vyre_driver::TimelineSyncProtocol::TimelineSemaphore::timeline_id: u64
-pub vyre_driver::TimelineSyncProtocol::TimelineSemaphore::wait_value: u64
+pub vyre_driver::TransitionExecutionReport::barriers_emitted: usize
+pub vyre_driver::TransitionExecutionReport::copy_count: usize
+pub vyre_driver::TransitionExecutionReport::device_wide_waits: usize
+pub vyre_driver::TransitionExecutionReport::timeline_signals_executed: usize
+pub vyre_driver::TransitionExecutionReport::timeline_waits_executed: usize
+pub vyre_driver::TransitionExecutionReport::transitions_executed: usize
 pub vyre_driver::arm_independence::ArmBindingSummary::reads: vyre_driver::arm_independence::BindingSlotSet
 pub vyre_driver::arm_independence::ArmBindingSummary::writes: vyre_driver::arm_independence::BindingSlotSet
 pub vyre_driver::arm_independence::ArmConflict::ReadAfterWrite
@@ -2316,13 +2324,8 @@ pub vyre_driver::launch_fusion::LaunchFusionStage::layout_hash: u64
 pub vyre_driver::launch_fusion::LaunchFusionStage::output_bytes: u64
 pub vyre_driver::launch_fusion::LaunchFusionStage::requires_host_materialization: bool
 pub vyre_driver::launch_fusion::LaunchFusionStage::scratch_bytes: u64
-pub vyre_driver::lock_policy::FailureDomain::DeviceContextFatal
-pub vyre_driver::lock_policy::FailureDomain::InvariantViolation
-pub vyre_driver::lock_policy::FailureDomain::ProcessFatal
-pub vyre_driver::lock_policy::FailureDomain::RestartableFromCanonical
-pub vyre_driver::lock_policy::FailureDomain::Transactional
 pub vyre_driver::materialize::AdmittedModule::config: vyre_driver::DispatchConfig
-pub vyre_driver::materialize::AdmittedModule::image: vyre_megakernel::target::TargetModuleImage
+pub vyre_driver::materialize::AdmittedModule::image: vyre_megakernel::target::bundle::TargetModuleImage
 pub vyre_driver::materialize::AdmittedModule::program: alloc::sync::Arc<vyre_foundation::ir_inner::model::program::definition::Program>
 pub vyre_driver::materialize::AdmittedModule::resource_bindings: alloc::vec::Vec<vyre_megakernel::envelope::TargetResourceBinding>
 pub vyre_driver::materialize::BoundState::host: alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>
@@ -2635,6 +2638,31 @@ pub vyre_driver::strategy::PrecisionLoweringPlan::PolynomialTranscendental
 pub vyre_driver::strategy::PrecisionLoweringPlan::PolynomialTranscendental::argument_bound: f32
 pub vyre_driver::strategy::PrecisionLoweringPlan::PolynomialTranscendental::degree: u8
 pub vyre_driver::strategy::PrecisionLoweringPlan::PolynomialTranscendental::op: vyre_foundation::optimizer::passes::algebraic::precision_hint::TranscendentalOp
+pub vyre_driver::support_certificate::FactStatus::Failed
+pub vyre_driver::support_certificate::FactStatus::Failed::reason: alloc::string::String
+pub vyre_driver::support_certificate::FactStatus::Proven
+pub vyre_driver::support_certificate::FactStatus::Proven::details: core::option::Option<alloc::string::String>
+pub vyre_driver::support_certificate::FactStatus::Proven::proof_digest: alloc::string::String
+pub vyre_driver::support_certificate::FactStatus::Unproven
+pub vyre_driver::support_certificate::ProductionPathFact::stage: vyre_driver::support_certificate::ProductionPathStage
+pub vyre_driver::support_certificate::ProductionPathFact::status: vyre_driver::support_certificate::FactStatus
+pub vyre_driver::support_certificate::ProductionPathStage::DeviceExecution
+pub vyre_driver::support_certificate::ProductionPathStage::Emission
+pub vyre_driver::support_certificate::ProductionPathStage::HostileBindings
+pub vyre_driver::support_certificate::ProductionPathStage::Materialization
+pub vyre_driver::support_certificate::ProductionPathStage::NativeCompilation
+pub vyre_driver::support_certificate::ProductionPathStage::OracleAgreement
+pub vyre_driver::support_certificate::ProductionPathStage::Validation
+pub vyre_driver::support_certificate::SupportCertificate::backend_id: alloc::string::String
+pub vyre_driver::support_certificate::SupportCertificate::facts: alloc::collections::btree::map::BTreeMap<vyre_driver::support_certificate::ProductionPathStage, vyre_driver::support_certificate::ProductionPathFact>
+pub vyre_driver::support_certificate::SupportCertificate::op_id: vyre_foundation::ir_inner::model::node_kind::OpId
+pub vyre_driver::support_certificate::SupportCertificate::schema: u32
+pub vyre_driver::support_certificate::SupportCertificate::target_id: alloc::string::String
+pub vyre_driver::support_certificate::SupportStatus::Supported
+pub vyre_driver::support_certificate::SupportStatus::Supported::certificate_digest: alloc::string::String
+pub vyre_driver::support_certificate::SupportStatus::Unsupported
+pub vyre_driver::support_certificate::SupportStatus::Unsupported::missing_stage: vyre_driver::support_certificate::ProductionPathStage
+pub vyre_driver::support_certificate::SupportStatus::Unsupported::reason: alloc::string::String
 pub vyre_driver::target_dialect::EmittedDialectModule::bytes: alloc::vec::Vec<u8>
 pub vyre_driver::target_dialect::EmittedDialectModule::entry_point: alloc::string::String
 pub vyre_driver::target_dialect::TargetDialect::backend_id: &'static str

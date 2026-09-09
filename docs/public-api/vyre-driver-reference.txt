@@ -1,7 +1,5 @@
 impl vyre_driver_reference::CpuRefEvaluator
 impl vyre_megakernel::execution::SemanticExecutor for vyre_driver_reference::ReferenceSemanticExecutor
-pub const vyre_driver_reference::CPU_REF_BACKEND_ID: &str
-pub const vyre_driver_reference::CPU_REF_TARGET_ID: vyre_foundation::operation::target_facet::TargetId
 pub const vyre_driver_reference::REFERENCE_SHARED_SCRATCH_BYTES: u32
 pub const vyre_driver_reference::REFERENCE_SUBGROUP_WIDTH: u32
 pub fn vyre_driver_reference::CpuRefEvaluator::evaluate(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>

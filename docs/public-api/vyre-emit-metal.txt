@@ -50,12 +50,12 @@ pub vyre_emit_metal::MetalArtifact::target: alloc::string::String
 pub vyre_emit_metal::MetalArtifact::threadgroup_memories: alloc::vec::Vec<vyre_emit_metal::MetalThreadgroupMemoryMetadata>
 pub vyre_emit_metal::MetalArtifact::workgroup_size: [u32; 3]
 pub vyre_emit_metal::MetalBindingMetadata::element_count: core::option::Option<u32>
-pub vyre_emit_metal::MetalBindingMetadata::element_type: alloc::string::String
-pub vyre_emit_metal::MetalBindingMetadata::memory_class: alloc::string::String
+pub vyre_emit_metal::MetalBindingMetadata::element_type: vyre_spec::data_type::DataType
+pub vyre_emit_metal::MetalBindingMetadata::memory_class: vyre_lower::descriptor::MemoryClass
 pub vyre_emit_metal::MetalBindingMetadata::metal_buffer_index: u8
 pub vyre_emit_metal::MetalBindingMetadata::name: alloc::string::String
 pub vyre_emit_metal::MetalBindingMetadata::slot: u32
-pub vyre_emit_metal::MetalBindingMetadata::visibility: alloc::string::String
+pub vyre_emit_metal::MetalBindingMetadata::visibility: vyre_lower::descriptor::BindingVisibility
 pub vyre_emit_metal::MetalEmitOptions::entry_point: alloc::string::String
 pub vyre_emit_metal::MetalEmitOptions::include_source: bool
 pub vyre_emit_metal::MetalEmitOptions::lang_version: (u8, u8)

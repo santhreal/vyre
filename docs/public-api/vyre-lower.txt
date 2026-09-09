@@ -176,6 +176,7 @@ pub const vyre_lower::program_stability_corpus::WORKGROUP_SIZE_X: u32
 pub const vyre_lower::rewrites::ALL_REWRITE_RULES: &[vyre_lower::rewrites::LoweringRewriteRule]
 pub enum vyre_lower::AsyncTransactionError
 pub enum vyre_lower::BindingVisibility
+pub enum vyre_lower::ContractionStrategy
 pub enum vyre_lower::DescriptorIntentError
 pub enum vyre_lower::DescriptorIntentKind
 pub enum vyre_lower::DescriptorIntentStrategy
@@ -211,6 +212,7 @@ pub enum vyre_lower::analyses::DimExtent
 pub enum vyre_lower::analyses::SharedPermutationBlock
 pub enum vyre_lower::analyses::SharedStoreLegality
 pub enum vyre_lower::analyses::StrideExpr
+pub enum vyre_lower::analyses::contraction_candidates::ContractionStrategy
 pub enum vyre_lower::analyses::structured_walk::ArmDescent
 pub enum vyre_lower::analyses::structured_walk::BranchForm
 pub enum vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily
@@ -386,6 +388,7 @@ pub fn vyre_lower::analyses::analyze_value_range(desc: &vyre_lower::KernelDescri
 pub fn vyre_lower::analyses::analyze_workgroup_uniform(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::analyses::WorkgroupUniformReport
 pub fn vyre_lower::analyses::candidate_plan::CandidatePlan<Candidate>::candidate_count(&self) -> usize
 pub fn vyre_lower::analyses::child_body_operands<'a>(kind: &vyre_lower::KernelOpKind, operands: &'a [u32]) -> impl core::iter::traits::iterator::Iterator<Item = u32> + 'a
+pub fn vyre_lower::analyses::contraction_candidates::analyze(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::ContractionPlan
 pub fn vyre_lower::analyses::dead_by_no_use(desc: &vyre_lower::KernelDescriptor) -> alloc::vec::Vec<(alloc::vec::Vec<usize>, u32)>
 pub fn vyre_lower::analyses::derive_shared_access_profiles(desc: &vyre_lower::KernelDescriptor, banks: core::num::nonzero::NonZeroU32) -> alloc::vec::Vec<vyre_lower::analyses::SharedBindingAccessProfile>
 pub fn vyre_lower::analyses::evaluate_mitigation_candidate(phases: &[vyre_lower::analyses::AccessPhaseProfile], geometry: &vyre_lower::analyses::TargetBankGeometry, candidate: vyre_lower::analyses::BankConflictMitigation, baseline_worst: vyre_lower::analyses::ConflictSeverity) -> vyre_lower::analyses::MitigationEvaluation
@@ -506,6 +509,7 @@ pub mod vyre_lower
 pub mod vyre_lower::analyses
 pub mod vyre_lower::analyses::alias_facts
 pub mod vyre_lower::analyses::candidate_plan
+pub mod vyre_lower::analyses::contraction_candidates
 pub mod vyre_lower::analyses::structured_walk
 pub mod vyre_lower::analyses::vec_pack
 pub mod vyre_lower::artifact_golden
@@ -521,6 +525,7 @@ pub struct vyre_lower::BarrierPhase
 pub struct vyre_lower::BindingEffects
 pub struct vyre_lower::BindingLayout
 pub struct vyre_lower::BindingSlot
+pub struct vyre_lower::ContractionCandidate
 pub struct vyre_lower::DescriptorIntent
 pub struct vyre_lower::DescriptorIntentEvidence
 pub struct vyre_lower::DescriptorIntentSet
@@ -599,6 +604,7 @@ pub struct vyre_lower::analyses::WorkgroupUniformReport
 pub struct vyre_lower::analyses::alias_facts::AliasFactSet
 pub struct vyre_lower::analyses::alias_facts::NoAliasFact
 pub struct vyre_lower::analyses::candidate_plan::CandidatePlan<Candidate>
+pub struct vyre_lower::analyses::contraction_candidates::ContractionCandidate
 pub struct vyre_lower::analyses::structured_walk::StructuredBranch<'a>
 pub struct vyre_lower::analyses::vec_pack::VecPackChain
 pub struct vyre_lower::analyses::vec_pack::VecPackReport
@@ -610,12 +616,14 @@ pub struct vyre_lower::rewrites::RewriteApplicabilityContract
 pub trait vyre_lower::analyses::structured_walk::StructuredVisitor<'a>
 pub trait vyre_lower::descriptor_builder::SlotCount
 pub trait vyre_lower::pattern_audit::PatternAudit
+pub type vyre_lower::ContractionPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::ContractionCandidate>
 pub type vyre_lower::KernelOpsIter<'a>::Item = &'a vyre_lower::KernelOp
 pub type vyre_lower::Name = alloc::sync::Arc<str>
 pub type vyre_lower::VerifyResult = core::result::Result<(), alloc::vec::Vec<vyre_lower::VerifyError>>
 pub type vyre_lower::analyses::LayoutTransformPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::LayoutCandidate>
 pub type vyre_lower::analyses::ProducerMap<'a> = rustc_hash::FxHashMap<u32, &'a vyre_lower::KernelOp>
 pub type vyre_lower::analyses::TexturePromotionPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::TextureCandidate>
+pub type vyre_lower::analyses::contraction_candidates::ContractionPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::ContractionCandidate>
 pub use vyre_lower::SubgroupReduceOp
 pub vyre_lower::AsyncTransaction::stage: core::option::Option<vyre_lower::StageSlot>
 pub vyre_lower::AsyncTransaction::tag: vyre_lower::Name
@@ -645,6 +653,23 @@ pub vyre_lower::BindingSlot::visibility: vyre_lower::BindingVisibility
 pub vyre_lower::BindingVisibility::ReadOnly
 pub vyre_lower::BindingVisibility::ReadWrite
 pub vyre_lower::BindingVisibility::WriteOnly
+pub vyre_lower::ContractionCandidate::contraction_id: alloc::string::String
+pub vyre_lower::ContractionCandidate::estimated_speedup_factor: f32
+pub vyre_lower::ContractionCandidate::strategy: vyre_lower::ContractionStrategy
+pub vyre_lower::ContractionCandidate::supported_dtypes: alloc::vec::Vec<vyre_spec::data_type::DataType>
+pub vyre_lower::ContractionStrategy::MatrixInstruction
+pub vyre_lower::ContractionStrategy::MatrixInstruction::acc_element: vyre_lower::MatrixMmaElement
+pub vyre_lower::ContractionStrategy::MatrixInstruction::left_element: vyre_lower::MatrixMmaElement
+pub vyre_lower::ContractionStrategy::MatrixInstruction::left_layout: vyre_lower::MatrixMmaLayout
+pub vyre_lower::ContractionStrategy::MatrixInstruction::right_element: vyre_lower::MatrixMmaElement
+pub vyre_lower::ContractionStrategy::MatrixInstruction::right_layout: vyre_lower::MatrixMmaLayout
+pub vyre_lower::ContractionStrategy::MatrixInstruction::tile: vyre_lower::MatrixTileShape
+pub vyre_lower::ContractionStrategy::Scalar
+pub vyre_lower::ContractionStrategy::SimtTiled
+pub vyre_lower::ContractionStrategy::SimtTiled::tile_k: u32
+pub vyre_lower::ContractionStrategy::SimtTiled::tile_m: u32
+pub vyre_lower::ContractionStrategy::SimtTiled::tile_n: u32
+pub vyre_lower::ContractionStrategy::SimtTiled::workgroup_size: [u32; 3]
 pub vyre_lower::DescriptorIntent::binding_slot: core::option::Option<u32>
 pub vyre_lower::DescriptorIntent::kind: vyre_lower::DescriptorIntentKind
 pub vyre_lower::DescriptorIntent::op_result: core::option::Option<u32>
@@ -736,9 +761,9 @@ pub vyre_lower::KernelOpKind::AsyncStore(alloc::boxed::Box<vyre_lower::AsyncTran
 pub vyre_lower::KernelOpKind::AsyncWait(alloc::boxed::Box<vyre_lower::AsyncWaitSpec>)
 pub vyre_lower::KernelOpKind::Atomic
 pub vyre_lower::KernelOpKind::Atomic::op: vyre_spec::atomic_op::AtomicOp
-pub vyre_lower::KernelOpKind::Atomic::ordering: vyre_foundation::memory_model::MemoryOrdering
+pub vyre_lower::KernelOpKind::Atomic::ordering: vyre_foundation::memory_model::legacy::MemoryOrdering
 pub vyre_lower::KernelOpKind::Barrier
-pub vyre_lower::KernelOpKind::Barrier::ordering: vyre_foundation::memory_model::MemoryOrdering
+pub vyre_lower::KernelOpKind::Barrier::ordering: vyre_foundation::memory_model::legacy::MemoryOrdering
 pub vyre_lower::KernelOpKind::BinOpKind(vyre_spec::bin_op::BinOp)
 pub vyre_lower::KernelOpKind::BufferLength
 pub vyre_lower::KernelOpKind::Call
@@ -1243,6 +1268,23 @@ pub vyre_lower::analyses::alias_facts::NoAliasFact::right_binding: u32
 pub vyre_lower::analyses::alias_facts::NoAliasFact::right_index: u32
 pub vyre_lower::analyses::candidate_plan::CandidatePlan::candidates: alloc::vec::Vec<Candidate>
 pub vyre_lower::analyses::candidate_plan::CandidatePlan::kernel_id: alloc::string::String
+pub vyre_lower::analyses::contraction_candidates::ContractionCandidate::contraction_id: alloc::string::String
+pub vyre_lower::analyses::contraction_candidates::ContractionCandidate::estimated_speedup_factor: f32
+pub vyre_lower::analyses::contraction_candidates::ContractionCandidate::strategy: vyre_lower::ContractionStrategy
+pub vyre_lower::analyses::contraction_candidates::ContractionCandidate::supported_dtypes: alloc::vec::Vec<vyre_spec::data_type::DataType>
+pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixInstruction
+pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixInstruction::acc_element: vyre_lower::MatrixMmaElement
+pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixInstruction::left_element: vyre_lower::MatrixMmaElement
+pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixInstruction::left_layout: vyre_lower::MatrixMmaLayout
+pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixInstruction::right_element: vyre_lower::MatrixMmaElement
+pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixInstruction::right_layout: vyre_lower::MatrixMmaLayout
+pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixInstruction::tile: vyre_lower::MatrixTileShape
+pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::Scalar
+pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::SimtTiled
+pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::SimtTiled::tile_k: u32
+pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::SimtTiled::tile_m: u32
+pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::SimtTiled::tile_n: u32
+pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::SimtTiled::workgroup_size: [u32; 3]
 pub vyre_lower::analyses::structured_walk::ArmDescent::Enter
 pub vyre_lower::analyses::structured_walk::ArmDescent::Skip
 pub vyre_lower::analyses::structured_walk::BranchForm::IfThen

@@ -31,7 +31,6 @@ impl core::convert::From<vyre_libs::graph::reachable::UnknownNode> for vyre_libs
 impl core::convert::From<vyre_libs::pattern::NfaToDfaError> for vyre_libs::pattern::RegexDfaError
 impl core::convert::From<vyre_libs::pattern::RegexCompileError> for vyre_libs::pattern::RegexDfaError
 impl core::convert::From<vyre_libs::visual::GridShape> for vyre_libs::stencil::CellGridShape
-impl core::default::Default for vyre_libs::nn::inference_graph::Ds4FlashConfig
 impl core::default::Default for vyre_libs::pattern::RegexReplayPolicy
 impl core::error::Error for vyre_libs::analysis::diagnostic_aggregation::DiagnosticAggregationError
 impl core::error::Error for vyre_libs::analysis::incremental_invalidation::IncrementalInvalidationError
@@ -1118,6 +1117,7 @@ pub enum vyre_libs::rule::RuleBuildError
 pub enum vyre_libs::scheduling::frontier_typed_ir::FrontierDomain
 pub enum vyre_libs::scheduling::frontier_typed_ir::FrontierTypedPlanError
 pub enum vyre_libs::security::SanitizedFlowExecutionMode
+pub enum vyre_libs::visual::BlendMode
 pub fn vyre_libs::BufferDescriptor::new(name: alloc::string::String, access: vyre_spec::buffer_access::BufferAccess, dtype: vyre_spec::data_type::DataType, count: u32) -> Self
 pub fn vyre_libs::BuildOptions::new() -> Self
 pub fn vyre_libs::BuildOptions::with_region_generator(self, name: &'static str) -> Self
@@ -1226,7 +1226,7 @@ pub fn vyre_libs::csr::CsrTraversalComposer<'a>::emit_backward_scan_full(&self, 
 pub fn vyre_libs::csr::CsrTraversalComposer<'a>::emit_edge_expand(&self, frontier_out: &str, src: vyre_foundation::ir_inner::model::generated::Expr, frontier_index: impl core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr, on_new_bit: impl core::ops::function::Fn() -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::csr::CsrTraversalComposer<'a>::emit_edge_scan(&self, frontier_out: &str, src: vyre_foundation::ir_inner::model::generated::Expr, frontier_index: impl core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr, on_new_bit: impl core::ops::function::Fn() -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::csr::CsrTraversalComposer<'a>::emit_neighbor_walk<F>(&self, src: vyre_foundation::ir_inner::model::generated::Expr, edge_var: core::option::Option<&str>, on_neighbor: F) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node> where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_libs::csr::CsrTraversalComposer<'a>::emit_parallel_forward_or_changed_body(&self, frontier_out: &str, changed: &str, snapshot_barrier: core::option::Option<vyre_foundation::memory_model::MemoryOrdering>, active_gate: core::option::Option<vyre_foundation::ir_inner::model::generated::Expr>, extra_changed: core::option::Option<(&str, vyre_foundation::ir_inner::model::generated::Expr)>) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs::csr::CsrTraversalComposer<'a>::emit_parallel_forward_or_changed_body(&self, frontier_out: &str, changed: &str, snapshot_barrier: core::option::Option<vyre_foundation::memory_model::legacy::MemoryOrdering>, active_gate: core::option::Option<vyre_foundation::ir_inner::model::generated::Expr>, extra_changed: core::option::Option<(&str, vyre_foundation::ir_inner::model::generated::Expr)>) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::csr::CsrTraversalComposer<'a>::emit_row_bounds_and_loop(&self, src: vyre_foundation::ir_inner::model::generated::Expr, edge_var: &str, loop_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::csr::CsrTraversalComposer<'a>::emit_row_degree(&self, src: vyre_foundation::ir_inner::model::generated::Expr, lo_var: &str, hi_var: &str, degree_var: &str) -> [vyre_foundation::ir_inner::model::generated::Node; 3]
 pub fn vyre_libs::csr::CsrTraversalComposer<'a>::emit_row_offsets(&self, src: vyre_foundation::ir_inner::model::generated::Expr, start_var: &str, end_var: &str) -> [vyre_foundation::ir_inner::model::generated::Node; 2]
@@ -1297,10 +1297,10 @@ pub fn vyre_libs::dispatch_buffers::decode_i32_output_exact(bytes: &[u8], expect
 pub fn vyre_libs::dispatch_buffers::decode_u32_input_aligned(bytes: &[u8], context: &str) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
 pub fn vyre_libs::dispatch_buffers::decode_u32_output_exact(bytes: &[u8], expected_words: usize, context: &str, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
 pub fn vyre_libs::dispatch_buffers::ensure_input_slots(inputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>, count: usize)
+pub fn vyre_libs::dispatch_buffers::execute_program(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, program: vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], policy: &vyre_megakernel::execution::SemanticExecutionPolicy) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs::dispatch_buffers::execute_program_first_output(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, program: vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], policy: &vyre_megakernel::execution::SemanticExecutionPolicy, context: &str) -> core::result::Result<alloc::vec::Vec<u8>, vyre_megakernel::execution::SemanticExecutionError>
 pub fn vyre_libs::dispatch_buffers::read_f32s(bytes: &[u8]) -> alloc::vec::Vec<f32>
 pub fn vyre_libs::dispatch_buffers::read_u32s(bytes: &[u8]) -> alloc::vec::Vec<u32>
-pub fn vyre_libs::dispatch_buffers::run_single(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, program: vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], policy: &vyre_megakernel::execution::SemanticExecutionPolicy) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_megakernel::execution::SemanticExecutionError>
-pub fn vyre_libs::dispatch_buffers::run_single_first_output(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, program: vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], policy: &vyre_megakernel::execution::SemanticExecutionPolicy, context: &str) -> core::result::Result<alloc::vec::Vec<u8>, vyre_megakernel::execution::SemanticExecutionError>
 pub fn vyre_libs::dispatch_buffers::u32_word_bytes(count: usize, context: &str) -> core::result::Result<usize, vyre_megakernel::execution::SemanticExecutionError>
 pub fn vyre_libs::dispatch_buffers::write_f32_slice_le_bytes(out: &mut alloc::vec::Vec<u8>, values: &[f32])
 pub fn vyre_libs::dispatch_buffers::write_u32_slice_le_bytes(out: &mut alloc::vec::Vec<u8>, values: &[u32])
@@ -1719,9 +1719,10 @@ pub fn vyre_libs::graph::vast_tree_walk::try_ast_walk_plan(nodes: &str, preorder
 pub fn vyre_libs::graph::vast_tree_walk::try_ast_walk_postorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::graph::vast_tree_walk::try_ast_walk_preorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::graph::vast_tree_walk::vast_descend_leftmost_leaf_program(node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::graph_compositions::build_csr_graph_traversal_pipeline(node_count: u64, edge_count: u64, steps: u64) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::ProgramGraphError>
-pub fn vyre_libs::graph_compositions::build_dense_neural_pipeline(batch_size: u64, in_dim: u64, hidden_dim: u64, out_dim: u64) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::ProgramGraphError>
-pub fn vyre_libs::graph_compositions::build_streaming_parser_pipeline(chunk_size: u64) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::ProgramGraphError>
+pub fn vyre_libs::graph_compositions::build_csr_graph_traversal_pipeline(node_count: u64, edge_count: u64, steps: u64) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::types::ProgramGraphError>
+pub fn vyre_libs::graph_compositions::build_dense_neural_pipeline(batch_size: u64, in_dim: u64, hidden_dim: u64, out_dim: u64) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::types::ProgramGraphError>
+pub fn vyre_libs::graph_compositions::build_interactive_graphics_pipeline(params: vyre_libs::graph_compositions::InteractiveGraphicsPipelineParams) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::types::ProgramGraphError>
+pub fn vyre_libs::graph_compositions::build_streaming_parser_pipeline(chunk_size: u64) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::types::ProgramGraphError>
 pub fn vyre_libs::hash::adler32::adler32_finalize_expr(a: vyre_foundation::ir_inner::model::generated::Expr, b: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::hash::adler32::adler32_initial_a_expr() -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::hash::adler32::adler32_initial_b_expr() -> vyre_foundation::ir_inner::model::generated::Expr
@@ -1762,6 +1763,7 @@ pub fn vyre_libs::hash::table::hash_insert(in_keys: &str, in_values: &str, table
 pub fn vyre_libs::hash::table::hash_lookup(queries: &str, table_keys: &str, table_values: &str, out_results: &str, table_capacity: u32, t: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::label::nodeset_filter::nodeset_filter(values: &str, nodeset_out: &str, node_count: u32, filter: vyre_libs::label::nodeset_filter::NodeSetFilter) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::label::resolve_family::resolve_family(node_tags: &str, nodeset_out: &str, node_count: u32, family_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::link_anchor() -> usize
 pub fn vyre_libs::llm::paged_kv::paged_kv_append(spec: &vyre_libs::llm::paged_kv::PagedKvCache<'_>, chunk: &str, chunk_tokens: u32, position: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::llm::paged_kv::PagedKvError>
 pub fn vyre_libs::llm::paged_kv::paged_kv_gather(spec: &vyre_libs::llm::paged_kv::PagedKvCache<'_>, window: &str, window_tokens: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::llm::paged_kv::PagedKvError>
 pub fn vyre_libs::llm::sampling::TokenSampler<'_>::program(&self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::llm::sampling::SamplingError>
@@ -2036,8 +2038,6 @@ pub fn vyre_libs::nn::conv::depthwise_causal_conv1d_update(input: &str, weight: 
 pub fn vyre_libs::nn::f32_stability::finite_or(value: vyre_foundation::ir_inner::model::generated::Expr, replacement: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::nn::f32_stability::flush_tiny(value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::nn::f32_stability::positive_finite_or_min(value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
-pub fn vyre_libs::nn::inference_graph::Ds4FlashConfig::default() -> Self
-pub fn vyre_libs::nn::inference_graph::build_forward_graph(config: &vyre_libs::nn::inference_graph::Ds4FlashConfig) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::program::definition::Program>
 pub fn vyre_libs::nn::linear::Linear::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
 pub fn vyre_libs::nn::linear::Linear::new(x: vyre_libs::TensorRef, w: vyre_libs::TensorRef, b: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
 pub fn vyre_libs::nn::linear::Linear::with_region_generator(self, name: &'static str) -> Self
@@ -2062,7 +2062,7 @@ pub fn vyre_libs::nn::linear::linear_tiled(x: &str, w: &str, b: &str, out: &str,
 pub fn vyre_libs::nn::linear::linear_tiled_reference(x: &str, w: &str, b: &str, out: &str, in_dim: u32, out_dim: u32, tile: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::linear::rms_norm_linear(input: &str, w: &str, b: &str, out: &str, n: u32, in_dim: u32, out_dim: u32, eps: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::linear::try_rms_norm_linear(input: &str, w: &str, b: &str, out: &str, n: u32, in_dim: u32, out_dim: u32, eps: f32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
-pub fn vyre_libs::nn::model::dense_gated_mlp_graph(spec: &vyre_libs::nn::model::DenseGatedMlpSpec) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::ProgramGraph, vyre_libs::nn::model::DenseGatedMlpError>
+pub fn vyre_libs::nn::model::dense_gated_mlp_graph(spec: &vyre_libs::nn::model::DenseGatedMlpSpec) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::graph::ProgramGraph, vyre_libs::nn::model::DenseGatedMlpError>
 pub fn vyre_libs::nn::moe::expert_mlp(x: &str, w_gate: &str, b_gate: &str, w_up: &str, b_up: &str, w_down: &str, b_down: &str, out: &str, in_dim: u32, hidden_dim: u32, out_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::moe::moe_gate(input_scores: &str, output_indices: &str, output_weights: &str, num_experts: u32, k: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::moe::moe_layer_route_and_accumulate(x: &str, w_router: &str, b_router: &str, expert_indices: &str, expert_weights: &str, expert_outputs: &str, out: &str, in_dim: u32, num_experts: u32, out_dim: u32, k: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
@@ -2115,9 +2115,10 @@ pub fn vyre_libs::nn::quest_paging_passes::quest_select_top_k(scores: &str, io_q
 pub fn vyre_libs::nn::quest_paging_passes::quest_select_top_k_body(scores: &str, io_queue: &str, num_pages: u32, k: u32, score_sentinel: f32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::nn::quest_paging_passes::quest_zero_fill(io_queue: &str, num_pages: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::quest_paging_passes::quest_zero_fill_body(io_queue: &str, num_pages: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_libs::operation_catalog::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
+pub fn vyre_libs::operation_catalog::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::semantic_op::SemanticOperation>
 pub fn vyre_libs::operation_catalog::convergence_contract(op_id: &str) -> core::option::Option<&'static vyre_libs::operation_catalog::ConvergenceContract>
-pub fn vyre_libs::operation_catalog::fixture_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
+pub fn vyre_libs::operation_catalog::fixture_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::semantic_op::SemanticOperation>
+pub fn vyre_libs::operation_catalog::link_anchor() -> usize
 pub fn vyre_libs::opt::homotopy::homotopy_euler_predictor(x_curr: &str, v: &str, dt_scaled: &str, x_pred: &str, n_paths: u32, n_dim: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::ast_cse_constant_fold::ast_cse_constant_fold(ast_opcodes: &str, ast_lefts: &str, ast_rights: &str, ast_vals: &str, out_modified_flag: &str, t: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::parsing::ast_cse_structural_hash::ast_cse_hash_probe_body(ast_opcodes: &str, ast_vals: &str, hash_set: &str, hash_set_capacity: u32, out_modified_flag: &str, node_idx: vyre_foundation::ir_inner::model::generated::Expr, h: vyre_foundation::ir_inner::model::generated::Expr, slot_init: vyre_foundation::ir_inner::model::generated::Expr, access: vyre_libs::parsing::ast_cse_structural_hash::SlotAccess) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
@@ -2678,8 +2679,15 @@ pub fn vyre_libs::visual::GaussianKernel::new(radius: u32, sigma: f32) -> Self
 pub fn vyre_libs::visual::GaussianKernel::weights(&self) -> &[u32]
 pub fn vyre_libs::visual::GaussianKernelError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_libs::visual::alpha_over(fg: &str, bg: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::visual::apply_clip_mask(input: &str, mask: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::visual::apply_scissor_rect(input: &str, output: &str, width: u32, height: u32, min_x: u32, min_y: u32, max_x: u32, max_y: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::visual::bilinear_resample_rgba(input: &str, in_w: u32, in_h: u32, output: &str, out_w: u32, out_h: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::box_shadow(output: &str, img_w: u32, img_h: u32, rect_x: u32, rect_y: u32, rect_w: u32, rect_h: u32, blur_radius: f32, color_rgba: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::cell_grid_fill(cells: &str, output: &str, shape: vyre_libs::visual::GridShape) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::visual::composite_blend(fg: &str, bg: &str, output: &str, count: u32, mode: vyre_libs::visual::BlendMode) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::visual::cull_boxes_2d(boxes: &str, count: u32, min_x: i32, min_y: i32, max_x: i32, max_y: i32, visible_mask: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::visual::dirty_region_patch_direct(patch: &str, patch_w: u32, patch_h: u32, dest_x: u32, dest_y: u32, target: &str, target_w: u32, target_h: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::visual::dirty_region_patch_rgba(atlas: &str, patch: &str, atlas_w: u32, atlas_h: u32, patch_w: u32, patch_h: u32, dest_x: u32, dest_y: u32, output: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::downsample_2x(input: &str, output: &str, width: u32, height: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::filter_chain(pixels: &str, count: u32, brightness: f32, contrast: f32, saturate: f32, invert: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::gaussian_blur_2pass(input: &str, output: &str, scratch: &str, width: u32, height: u32, radius: u32, sigma: f32) -> vyre_libs::visual::GaussianBlurStages
@@ -2688,10 +2696,18 @@ pub fn vyre_libs::visual::glass_blur_stage(input: &str, output: &str, scratch: &
 pub fn vyre_libs::visual::glass_filter_stage(pixels: &str, params: &vyre_libs::visual::GlassParams) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::glass_stages(input: &str, output: &str, scratch: &str, params: &vyre_libs::visual::GlassParams) -> (vyre_libs::visual::GaussianBlurStages, vyre_foundation::ir_inner::model::program::definition::Program)
 pub fn vyre_libs::visual::glyph_grid_blend(glyphs: &str, fg: &str, bg: &str, atlas: &str, output: &str, shape: vyre_libs::visual::GridShape, glyph_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::visual::grayscale_to_rgba(input: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::visual::layout_prefix_scan_u32(sizes: &str, offsets: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::linear_gradient(output: &str, width: u32, height: u32, angle_deg: f32, stops: &[vyre_libs::visual::ColorStop]) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::packed_rgba_map::packed_rgba_map(input: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::packed_rgba_map::packed_rgba_map_node(input: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs::visual::path_rasterize_segments(segments: &str, bg: &str, output: &str, width: u32, height: u32, segment_count: u32, stroke_radius: u32, stroke_color: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::visual::premultiply_alpha(input: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::visual::reduce_bounding_boxes_2d(boxes: &str, count: u32, output_bbox: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::visual::rgba_to_grayscale(input: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::visual::text_run_blend(glyphs: &str, glyph_count: u32, atlas: &str, atlas_w: u32, atlas_h: u32, bg: &str, output: &str, width: u32, height: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::try_linear_gradient(output: &str, width: u32, height: u32, angle_deg: f32, stops: &[vyre_libs::visual::ColorStop]) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs::visual::unpremultiply_alpha(input: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::upsample_2x(input: &str, output: &str, width: u32, height: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub mod vyre_libs
 pub mod vyre_libs::analysis
@@ -2900,7 +2916,6 @@ pub mod vyre_libs::nn::attention_stability
 pub mod vyre_libs::nn::backward
 pub mod vyre_libs::nn::conv
 pub mod vyre_libs::nn::f32_stability
-pub mod vyre_libs::nn::inference_graph
 pub mod vyre_libs::nn::linear
 pub mod vyre_libs::nn::model
 pub mod vyre_libs::nn::moe
@@ -3208,6 +3223,7 @@ pub struct vyre_libs::graph::toposort::ToposortCsrLayout
 pub struct vyre_libs::graph::toposort::ToposortCsrStaticInputKey
 pub struct vyre_libs::graph::union_find::UnionFindLayout
 pub struct vyre_libs::graph::vast_tree_walk::VastTreeWalkProgramPlan
+pub struct vyre_libs::graph_compositions::InteractiveGraphicsPipelineParams
 pub struct vyre_libs::llm::paged_kv::PagedKvCache<'a>
 pub struct vyre_libs::llm::sampling::TokenSampler<'a>
 pub struct vyre_libs::logical::dialect::DialectMarker
@@ -3233,7 +3249,6 @@ pub struct vyre_libs::nn::attention::PagedAttentionSpec<'a>
 pub struct vyre_libs::nn::attention::PagedCacheAppendSpec<'a>
 pub struct vyre_libs::nn::attention::Softmax
 pub struct vyre_libs::nn::attention_passes::AttentionWritePassProgramSpec<'a>
-pub struct vyre_libs::nn::inference_graph::Ds4FlashConfig
 pub struct vyre_libs::nn::linear::Linear
 pub struct vyre_libs::nn::linear::QuantizedLinear4BitPlannerEvidence
 pub struct vyre_libs::nn::linear::QuantizedLinear4BitSpec
@@ -4026,6 +4041,19 @@ pub vyre_libs::graph::vast_tree_walk::VastTreeWalkProgramPlan::postorder: vyre_f
 pub vyre_libs::graph::vast_tree_walk::VastTreeWalkProgramPlan::preorder: vyre_foundation::ir_inner::model::program::definition::Program
 pub vyre_libs::graph::vast_tree_walk::VastWalkOrder::Postorder
 pub vyre_libs::graph::vast_tree_walk::VastWalkOrder::Preorder
+pub vyre_libs::graph_compositions::InteractiveGraphicsPipelineParams::atlas_h: u32
+pub vyre_libs::graph_compositions::InteractiveGraphicsPipelineParams::atlas_w: u32
+pub vyre_libs::graph_compositions::InteractiveGraphicsPipelineParams::box_count: u32
+pub vyre_libs::graph_compositions::InteractiveGraphicsPipelineParams::clip_rect: (u32, u32, u32, u32)
+pub vyre_libs::graph_compositions::InteractiveGraphicsPipelineParams::glyph_count: u32
+pub vyre_libs::graph_compositions::InteractiveGraphicsPipelineParams::height: u32
+pub vyre_libs::graph_compositions::InteractiveGraphicsPipelineParams::patch_dest: (u32, u32)
+pub vyre_libs::graph_compositions::InteractiveGraphicsPipelineParams::patch_h: u32
+pub vyre_libs::graph_compositions::InteractiveGraphicsPipelineParams::patch_w: u32
+pub vyre_libs::graph_compositions::InteractiveGraphicsPipelineParams::segment_count: u32
+pub vyre_libs::graph_compositions::InteractiveGraphicsPipelineParams::stroke_color: u32
+pub vyre_libs::graph_compositions::InteractiveGraphicsPipelineParams::stroke_radius: u32
+pub vyre_libs::graph_compositions::InteractiveGraphicsPipelineParams::width: u32
 pub vyre_libs::hash::sketch::CountSketchError::Allocation
 pub vyre_libs::hash::sketch::CountSketchError::Allocation::requested: usize
 pub vyre_libs::hash::sketch::CountSketchError::Allocation::source: alloc::string::String
@@ -4310,18 +4338,6 @@ pub vyre_libs::nn::conv::DepthwiseCausalConv1dError::EmptyShape
 pub vyre_libs::nn::conv::DepthwiseCausalConv1dError::StateKernelTooShort
 pub vyre_libs::nn::conv::DepthwiseCausalConv1dError::UnsupportedDtype
 pub vyre_libs::nn::conv::DepthwiseCausalConv1dError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
-pub vyre_libs::nn::inference_graph::Ds4FlashConfig::head_dim: u32
-pub vyre_libs::nn::inference_graph::Ds4FlashConfig::hidden_dim: u32
-pub vyre_libs::nn::inference_graph::Ds4FlashConfig::kv_lora_rank: u32
-pub vyre_libs::nn::inference_graph::Ds4FlashConfig::max_seq_len: u32
-pub vyre_libs::nn::inference_graph::Ds4FlashConfig::moe_top_k: u32
-pub vyre_libs::nn::inference_graph::Ds4FlashConfig::num_experts: u32
-pub vyre_libs::nn::inference_graph::Ds4FlashConfig::num_heads: u32
-pub vyre_libs::nn::inference_graph::Ds4FlashConfig::num_layers: u32
-pub vyre_libs::nn::inference_graph::Ds4FlashConfig::qk_rope_head_dim: u32
-pub vyre_libs::nn::inference_graph::Ds4FlashConfig::rms_norm_eps: f32
-pub vyre_libs::nn::inference_graph::Ds4FlashConfig::shared_expert_hidden_dim: u32
-pub vyre_libs::nn::inference_graph::Ds4FlashConfig::vocab_size: u32
 pub vyre_libs::nn::linear::QuantizedLinear4BitPlannerEvidence::bias_bytes: u64
 pub vyre_libs::nn::linear::QuantizedLinear4BitPlannerEvidence::dequant_bytes_elided: u64
 pub vyre_libs::nn::linear::QuantizedLinear4BitPlannerEvidence::dequantized_weight_bytes: u64
@@ -4344,7 +4360,7 @@ pub vyre_libs::nn::linear::QuantizedLinear4BitPlannerEvidence::tensor_core_eligi
 pub vyre_libs::nn::linear::QuantizedLinear4BitSpec::in_dim: u32
 pub vyre_libs::nn::linear::QuantizedLinear4BitSpec::out_dim: u32
 pub vyre_libs::nn::linear::QuantizedLinear4BitSpec::weight_type: vyre_spec::data_type::DataType
-pub vyre_libs::nn::model::DenseGatedMlpError::Graph(vyre_foundation::ir_inner::model::program_graph::ProgramGraphError)
+pub vyre_libs::nn::model::DenseGatedMlpError::Graph(vyre_foundation::ir_inner::model::program_graph::types::ProgramGraphError)
 pub vyre_libs::nn::model::DenseGatedMlpError::Primitive(alloc::string::String)
 pub vyre_libs::nn::model::DenseGatedMlpSpec::batch: u32
 pub vyre_libs::nn::model::DenseGatedMlpSpec::dtype: vyre_spec::data_type::DataType
@@ -4689,6 +4705,18 @@ pub vyre_libs::stencil::Grid2DShape::width: u32
 pub vyre_libs::stencil::Stencil3x3Tap::column: u32
 pub vyre_libs::stencil::Stencil3x3Tap::in_bounds: vyre_foundation::ir_inner::model::generated::Expr
 pub vyre_libs::stencil::Stencil3x3Tap::input_index: vyre_foundation::ir_inner::model::generated::Expr
+pub vyre_libs::visual::BlendMode::Add = 11
+pub vyre_libs::visual::BlendMode::DstAtop = 7
+pub vyre_libs::visual::BlendMode::DstIn = 3
+pub vyre_libs::visual::BlendMode::DstOut = 5
+pub vyre_libs::visual::BlendMode::DstOver = 1
+pub vyre_libs::visual::BlendMode::Multiply = 9
+pub vyre_libs::visual::BlendMode::Screen = 10
+pub vyre_libs::visual::BlendMode::SrcAtop = 6
+pub vyre_libs::visual::BlendMode::SrcIn = 2
+pub vyre_libs::visual::BlendMode::SrcOut = 4
+pub vyre_libs::visual::BlendMode::SrcOver = 0
+pub vyre_libs::visual::BlendMode::Xor = 8
 pub vyre_libs::visual::ColorStop::color: u32
 pub vyre_libs::visual::ColorStop::position: f32
 pub vyre_libs::visual::GaussianBlurStages::horizontal: vyre_foundation::ir_inner::model::program::definition::Program

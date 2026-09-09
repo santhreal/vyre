@@ -19,7 +19,7 @@ pub const vyre_primitives::hardware::subgroup_ballot::OP_ID: &str
 pub const vyre_primitives::hardware::subgroup_shuffle::OP_ID: &str
 pub const vyre_primitives::hardware::workgroup_barrier::OP_ID: &str
 pub enum vyre_primitives::hardware::catalog::HardwareSemantic
-pub fn vyre_primitives::hardware::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
+pub fn vyre_primitives::hardware::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::semantic_op::SemanticOperation>
 pub fn vyre_primitives::hardware::bit_reverse_u32::bit_reverse_u32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_primitives::hardware::catalog::intrinsic_facet(operation_id: &str) -> core::option::Option<&'static vyre_primitives::hardware::catalog::IntrinsicFacet>
 pub fn vyre_primitives::hardware::fma_f32::fma_f32(a: &str, b: &str, c: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -34,7 +34,7 @@ pub fn vyre_primitives::ir_safe::byte_table_lookup(table: &str, byte: vyre_found
 pub fn vyre_primitives::ir_safe::clamped_load(buf: &str, idx: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_primitives::ir_safe::clamped_load_to(buf: &str, idx: vyre_foundation::ir_inner::model::generated::Expr, bound: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_primitives::ir_safe::source_byte_table_lookup(table: &str, source: &str, index: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
-pub fn vyre_primitives::operation_catalog::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
+pub fn vyre_primitives::operation_catalog::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::semantic_op::SemanticOperation>
 pub fn vyre_primitives::wire::append_f32_slice_le_bytes(values: &[f32], out: &mut alloc::vec::Vec<u8>)
 pub fn vyre_primitives::wire::append_packed_byte_lane(bytes: &[u8], out: &mut alloc::vec::Vec<u8>)
 pub fn vyre_primitives::wire::append_u32_slice_le_bytes(words: &[u32], out: &mut alloc::vec::Vec<u8>)
