@@ -398,6 +398,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   is addressed to the owner of that domain instead of arriving inside one
   whole-registry log. The whole-registry sweep stays as the backstop for a gate
   that belongs to no subset.
+- The downstream model compiler translates frontier neural architecture
+  definitions and checkpoint manifests into domain-neutral compositions,
+  deriving real BLAKE3 content and configuration identities, validating prefill
+  and decode artifacts, and proving dependency closure against the Vyre public
+  surface.
 - Moved named model configurations and forward graph construction out of the
   Vyre workspace into an independent downstream model-compiler consumer package
   consuming only domain-neutral graph and resource constructs.
@@ -3915,6 +3920,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   described `vyre-primitives` as marker types with no runtime behavior and no
   bench, while it owns the Tier 2.5 substrate and declares the
   `wire_throughput` bench.
+- Shared test fixtures, generators, and backend-neutral contract suites are
+  library modules in `vyre-test-support` rather than relative `#[path]` textual
+  includes, so zero `#[path]` attributes resolve outside their declaring Cargo
+  package and no contract body is textually compiled across package boundaries.
 - Artifact schema 10 records the selected launch of every entry point,
   including the entry dependency order, logical coverage, grid, workgroup,
   vector width, pipeline roles, ring slots, barrier phases, dynamic shared
