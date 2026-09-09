@@ -8,9 +8,9 @@ target_triples = [
     "aarch64-apple-darwin",
     "aarch64-unknown-linux-gnu",
 ]
-lockfile_digest = "56969b7cdeb1a68456692c0f00d46f644f3e3a5783044b7f33f6ddd6690a998e"
+lockfile_digest = "0a6860d41c185e320bca01a9e4a54ac6a244c372a9c63c792fff618b2bcfc03c"
 is_offline_capable = true
-reproducible_archive_hash = "ca15485ed37c844162292be4d4d994b461e1ee5ede4d892a4b4d8e3fbf0e01f5"
+reproducible_archive_hash = "d3a6345b36de343dd79db830f118492d4d71d1ae89b1dcfb0956eb4bc718c0f5"
 
 [[dependencies]]
 name = "adler2"
@@ -3013,6 +3013,182 @@ license = "Apache-2.0 OR MIT"
 is_policy_approved = true
 
 [[dependencies]]
+name = "vyre-libs-analysis"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-bitset"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-builder"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-decode"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-device"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-encoding"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-fixpoint"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-graph"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-hash"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-math"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-nn"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-parsing"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-pattern"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-reasoning"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-reduce"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-rule"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-scheduling"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-security"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-solvers"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-text"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-vfs"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
+name = "vyre-libs-visual"
+version = "0.8.0"
+checksum = "local_workspace"
+source = "workspace"
+license = "Apache-2.0 OR MIT"
+is_policy_approved = true
+
+[[dependencies]]
 name = "vyre-lints"
 version = "0.8.0"
 checksum = "local_workspace"
@@ -3712,7 +3888,7 @@ is_system_provided = true
 
 [[code_generators]]
 name = "vyre-macros"
-source_digest = "c0de0d933fb1bb57d91377f94fef001a642b755cbdeb97893a30803f72bc5123"
+source_digest = "56c09994fdaad85fddcc6ae932bc463926ccc2fe2c8a10ca9363e904f4f9ca98"
 target_outputs = [
     "registration",
     "lowering",
@@ -3721,7 +3897,7 @@ target_outputs = [
 
 [[code_generators]]
 name = "xtask-registry"
-source_digest = "599543d51419681321d9d9f1d6047345f3ca7d8aa078d804238917fae144eed6"
+source_digest = "file_missing"
 target_outputs = [
     "docs/generated/op-inventory.toml",
     "docs/generated/catalog.toml",
@@ -3866,6 +4042,22 @@ path = "release/evidence/benchmarks/wgpu-workload-17-egraph-saturation.json"
 digest = "1921dcf73446fe391f80344985f20b8f10104d62c32a90cfb77465c719d6acd5"
 
 [[benchmark_baselines]]
+path = "release/evidence/benchmarks/whole-app-dense-numerical-pipeline.json"
+digest = "b0e58907b241d7f922adcd4b98092b63dab2fdbca80a950de4a9519d4fb4700f"
+
+[[benchmark_baselines]]
+path = "release/evidence/benchmarks/whole-app-interactive-event-pipeline.json"
+digest = "cf0673bf4e973c1737194d71dc8ebbe210ebef6632d92f12ddd70b923e0255a2"
+
+[[benchmark_baselines]]
+path = "release/evidence/benchmarks/whole-app-irregular-stateful-traversal.json"
+digest = "6ecb61220613db0d8a4e7b011daef559ad13ad03b3b8f9d5655b4247a521db45"
+
+[[benchmark_baselines]]
+path = "release/evidence/benchmarks/whole-application-domain-matrix.json"
+digest = "2d87d09b8d4c0c8833b3e2405e893be1783856720132e7385b7b09b3e7840d6c"
+
+[[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-01-condition-eval.json"
 digest = "a22d5413676952577e89fdd86b25f7a7021bfcf9a1952fe60dd25bdea8800b42"
 
@@ -3943,7 +4135,11 @@ digest = "fe9abd3c8bb23269faa3518774d3278440ade80762452413075e4eb3f116c05d"
 
 [[schemas]]
 path = "docs/generated/change-closure.toml"
-digest = "624a2deb63d7038ad7202351a8f728d7722d7b2315e53cb55d31a3f5c4e221f6"
+digest = "ba995a047467006cebeb3d51fee563ad2c892e8063f21c893c10ab93d8529e4c"
+
+[[schemas]]
+path = "docs/generated/configuration-space.toml"
+digest = "5ec08a7206d1dd6060066fd2199a3ec73813c9c1507b5375972ad2da3c329882"
 
 [[schemas]]
 path = "docs/generated/driver-error-codes.toml"
@@ -3951,7 +4147,7 @@ digest = "2fbb1f049e9985434e389a67eedd95c9c20315bab34655ce8ebc1b0f4d2438d6"
 
 [[schemas]]
 path = "docs/generated/engineering-scorecard.toml"
-digest = "a85d25e76cefd83b0b7ea5a995d51c3340fb9036d1472feced24ac6b35eb43b6"
+digest = "d8c2ff990f4f6c04c19188e5072adb5586e0db67290c49b6e69135a29ae2bfc5"
 
 [[schemas]]
 path = "docs/generated/error-codes.toml"
@@ -3959,11 +4155,15 @@ digest = "5b2d9043d0316f90070475e2795f9e589e97920406d9938a205f63b3f4630874"
 
 [[schemas]]
 path = "docs/generated/op-inventory.toml"
-digest = "aa02e29a845b535f10ae0720fee7ec00b8c04505c6c14e4f2f890c457b0c669c"
+digest = "c7dd3afd28d3905018a61384a96dfbd4e6afd82098d0fca44a108f3d7a989165"
 
 [[schemas]]
 path = "docs/generated/optimizer-passes.toml"
 digest = "c4b44b5404a056ce1f3b516fb569c9937dc53353cf37bc9518faacd729ca83e7"
+
+[[schemas]]
+path = "docs/generated/platform-support-matrix.toml"
+digest = "28b1d68dbca1bbaa149ad619c77299874531f1cc6638397919f244affdf69575"
 
 [[build_scripts]]
 crate_name = "vyre-emit-ptx"
