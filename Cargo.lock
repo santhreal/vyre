@@ -3560,6 +3560,7 @@ dependencies = [
  "vyre-foundation",
  "vyre-megakernel",
  "vyre-reference",
+ "vyre-registry-link",
  "vyre-test-support",
 ]
 

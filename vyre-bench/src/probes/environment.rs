@@ -126,13 +126,18 @@ pub fn capture_environment() -> std::io::Result<EnvironmentData> {
         features.push(format!("backend.linked.{backend}"));
     }
     let mut usable_gpu_backend = false;
+    // Every registration in the backend registry dispatches to a device: the
+    // interpreter is an oracle reached by a named API and submits no
+    // registration, which
+    // `vyre-driver-reference/tests/production_registry_execution_domain.rs`
+    // closes. So an acquired backend is a usable device, and the arm that used
+    // to exclude `cpu-ref` from that conclusion had nothing left to exclude.
     for backend in linked_dispatch_backends {
         match vyre_driver::acquire(backend) {
-            Ok(_) if backend != "cpu-ref" => {
+            Ok(_) => {
                 usable_gpu_backend = true;
                 features.push(format!("backend.usable.{backend}"));
             }
-            Ok(_) => features.push(format!("backend.usable.{backend}")),
             Err(error) => features.push(format!("backend.unusable.{backend}:{error}")),
         }
     }
