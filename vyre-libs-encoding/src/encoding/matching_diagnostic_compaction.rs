@@ -69,7 +69,9 @@ pub fn bracket_pairs_via_with_scratch_into(
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, matching_diagnostic_compaction_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{
+        bump, matching_diagnostic_compaction_calls,
+    };
     bump(&matching_diagnostic_compaction_calls);
 
     let n = checked_len(kinds.len(), "bracket_pairs_via")?;
@@ -133,7 +135,9 @@ pub fn sort_regions_via_with_scratch_into(
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
     out: &mut Vec<RegionTriple>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, matching_diagnostic_compaction_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{
+        bump, matching_diagnostic_compaction_calls,
+    };
     bump(&matching_diagnostic_compaction_calls);
 
     let count = checked_nonzero_len(regions.len(), "sort_regions_via")?;
@@ -207,7 +211,9 @@ pub fn dedup_region_survivor_flags_via_with_scratch_into(
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, matching_diagnostic_compaction_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{
+        bump, matching_diagnostic_compaction_calls,
+    };
     bump(&matching_diagnostic_compaction_calls);
 
     if sorted_regions.is_empty() {

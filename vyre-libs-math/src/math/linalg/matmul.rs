@@ -51,7 +51,7 @@ impl Matmul {
     }
 }
 
-vyre_libs_builder::builder::impl_cat_a_builder_options!(Matmul);
+vyre_libs_builder::impl_cat_a_builder_options!(Matmul);
 
 /// Typed Cat-A builder for [`matmul_bias`].
 #[derive(Debug, Clone)]
@@ -94,7 +94,7 @@ impl MatmulBias {
     }
 }
 
-vyre_libs_builder::builder::impl_cat_a_builder_options!(MatmulBias);
+vyre_libs_builder::impl_cat_a_builder_options!(MatmulBias);
 
 /// Build a Program that computes `out = a @ b` where `a` is `m x k`,
 /// `b` is `k x n`, and `out` is `m x n`. The caller supplies buffer

@@ -95,7 +95,7 @@ impl Dot {
     }
 }
 
-vyre_libs_builder::builder::impl_cat_a_builder_options!(Dot);
+vyre_libs_builder::impl_cat_a_builder_options!(Dot);
 
 /// Build a Program that computes the dot product of `lhs` and `rhs`
 /// (both length `n`) into `out[0]`.

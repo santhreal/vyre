@@ -150,7 +150,7 @@ pub fn compose_ir_arrows_fixed_via_with_scratch_into(
     scratch: &mut StringDiagramRewriteScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, string_diagram_ir_rewrite_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, string_diagram_ir_rewrite_calls};
     bump(&string_diagram_ir_rewrite_calls);
 
     let f_cells = checked_product_count(a, b, "a", "b", "compose_ir_arrows_fixed_via f")?;

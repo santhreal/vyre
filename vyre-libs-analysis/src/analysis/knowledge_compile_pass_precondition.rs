@@ -150,7 +150,9 @@ pub fn pass_applies_via_with_scratch_into(
     scratch: &mut KnowledgeCompilePassScratch,
     evals_out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, knowledge_compile_pass_precondition_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{
+        bump, knowledge_compile_pass_precondition_calls,
+    };
     bump(&knowledge_compile_pass_precondition_calls);
 
     if nodes.is_empty() {
@@ -365,7 +367,9 @@ mod tests {
         var_assignments: &[u32],
         topo_order: &[u32],
     ) -> u32 {
-        use vyre_libs_builder::telemetry::{bump, knowledge_compile_pass_precondition_calls};
+        use vyre_libs_builder::plumbing::host::telemetry::{
+            bump, knowledge_compile_pass_precondition_calls,
+        };
         bump(&knowledge_compile_pass_precondition_calls);
         let evals =
             reference_ddnnf_evaluate(nodes, node_var, children, var_assignments, topo_order);

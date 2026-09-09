@@ -90,7 +90,7 @@ pub fn vyre_libs_encoding::encoding::vsa_fingerprint::fingerprint_via_into(dispa
 pub fn vyre_libs_encoding::encoding::vsa_fingerprint::fingerprint_via_with_scratch_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, kind_hv: &[u32], signature_hv: &[u32], region_hv: &[u32], scratch: &mut vyre_libs_encoding::encoding::vsa_fingerprint::VsaFingerprintGpuScratch, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
 pub fn vyre_libs_encoding::encoding::vsa_fingerprint::vsa_fingerprint(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> alloc::vec::Vec<u32>
 pub fn vyre_libs_encoding::encoding::vsa_fingerprint::vsa_fingerprint_words(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> [u32; 8]
-pub fn vyre_libs_encoding::link_anchor() -> usize
+pub fn vyre_libs_encoding::link_anchor()
 pub mod vyre_libs_encoding
 pub mod vyre_libs_encoding::encoding
 pub mod vyre_libs_encoding::encoding::bitset_mask_algebra

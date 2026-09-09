@@ -146,7 +146,7 @@ pub fn diffuse_dispatch_stalks_fixed_via_with_scratch_into(
     scratch: &mut SheafDispatchGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, sheaf_heterophilic_dispatch_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, sheaf_heterophilic_dispatch_calls};
     bump(&sheaf_heterophilic_dispatch_calls);
 
     let cells = checked_product_count(

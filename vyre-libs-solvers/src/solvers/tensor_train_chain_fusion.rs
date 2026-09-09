@@ -43,7 +43,7 @@ pub struct TensorTrainFusionGpuScratch {
 #[cfg(test)]
 #[must_use]
 pub(crate) fn reference_fusion_pressure(shared_buffer_ranks: &[u32]) -> f64 {
-    use vyre_libs_builder::telemetry::{bump, tensor_train_chain_fusion_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, tensor_train_chain_fusion_calls};
     bump(&tensor_train_chain_fusion_calls);
     reference_fusion_pressure_witness(shared_buffer_ranks)
 }
@@ -78,7 +78,7 @@ pub fn fusion_pressure_via_with_scratch(
     shared_buffer_ranks: &[u32],
     scratch: &mut TensorTrainFusionGpuScratch,
 ) -> Result<f64, SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, tensor_train_chain_fusion_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, tensor_train_chain_fusion_calls};
     bump(&tensor_train_chain_fusion_calls);
     if shared_buffer_ranks.is_empty() {
         return Ok(0.0);

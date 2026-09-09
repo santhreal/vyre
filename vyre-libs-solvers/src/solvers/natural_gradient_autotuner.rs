@@ -73,7 +73,7 @@ pub(crate) fn reference_precondition_autotune_gradient(
     grad: &[f64],
     n: u32,
 ) -> Vec<f64> {
-    use vyre_libs_builder::telemetry::{bump, natural_gradient_autotuner_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, natural_gradient_autotuner_calls};
     bump(&natural_gradient_autotuner_calls);
     reference_natural_gradient_block_apply(m_inv_sqrt, grad, n)
 }
@@ -149,7 +149,7 @@ pub fn precondition_autotune_gradient_fixed_via_with_scratch_into(
     scratch: &mut NaturalGradientGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, natural_gradient_autotuner_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, natural_gradient_autotuner_calls};
     bump(&natural_gradient_autotuner_calls);
 
     let matrix_cells = checked_square_cells(n, "precondition_autotune_gradient_fixed_via")?;
@@ -224,7 +224,7 @@ pub(crate) fn autotune_step_into(
     learning_rate: f64,
     out: &mut Vec<f64>,
 ) {
-    use vyre_libs_builder::telemetry::{bump, natural_gradient_autotuner_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, natural_gradient_autotuner_calls};
     bump(&natural_gradient_autotuner_calls);
     natural_gradient_autotune_step_witness_into(m_inv_sqrt, grad, n, learning_rate, out);
 }
