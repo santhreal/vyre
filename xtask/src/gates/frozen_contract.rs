@@ -19,7 +19,6 @@ const BACKENDS: &[&str] = &[
     "vyre-driver-wgpu",
     "vyre-driver-metal",
     "vyre-driver-spirv",
-    "vyre-driver-reference",
 ];
 
 /// Backend identifiers the core registry must not name.
@@ -150,14 +149,25 @@ impl crate::gate::GateBehavior for BackendExtension {
                 continue;
             }
             let text = tree.read(&manifest)?;
-            if !text.contains("vyre-driver") {
+            let toml_val: Option<toml::Value> = toml::from_str(&text).ok();
+            let has_dep = |dep: &str| -> bool {
+                if let Some(val) = &toml_val {
+                    if let Some(deps) = val.get("dependencies").and_then(|d| d.as_table()) {
+                        if deps.contains_key(dep) {
+                            return true;
+                        }
+                    }
+                }
+                text.contains(dep)
+            };
+            if !has_dep("vyre-driver") {
                 report.find(Finding::in_file(
                     manifest.clone(),
                     "backend crate does not depend on vyre-driver",
                     "depend on vyre-driver instead of editing core registry code",
                 ));
             }
-            if !(text.contains("inventory.workspace") || text.contains("inventory =")) {
+            if !has_dep("inventory") {
                 report.find(Finding::in_file(
                     manifest.clone(),
                     "backend crate does not depend on inventory",
@@ -166,18 +176,52 @@ impl crate::gate::GateBehavior for BackendExtension {
             }
 
             let sources = tree.rust(&[&format!("{backend}/src")])?;
-            if tree
-                .hits(&sources, |line| {
-                    line.contains("impl ") && line.contains("VyreBackend for")
-                })?
-                .is_empty()
-            {
+            let mut implements_backend = false;
+            for file in &sources {
+                if let Ok(content) = tree.read(file) {
+                    if let Ok(syntax) = syn::parse_file(&content) {
+                        for item in &syntax.items {
+                            if let syn::Item::Impl(item_impl) = item {
+                                if let Some((_, trait_path, _)) = &item_impl.trait_ {
+                                    let trait_str = quote::quote!(#trait_path).to_string();
+                                    if trait_str.contains("VyreBackend") {
+                                        implements_backend = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    } else if content.contains("impl ") && content.contains("VyreBackend for") {
+                        implements_backend = true;
+                        break;
+                    }
+                }
+                if implements_backend {
+                    break;
+                }
+            }
+            if !implements_backend {
                 report.find(Finding::in_file(
                     format!("{backend}/src"),
                     format!("{backend} does not implement the backend trait in its own crate"),
                     "keep a backend one crate that implements the backend trait",
                 ));
             }
+        if tree.exists("vyre-driver-reference/src") {
+            if let Ok(ref_sources) = tree.rust(&["vyre-driver-reference/src"]) {
+                for file in &ref_sources {
+                    if let Ok(content) = tree.read(file) {
+                        if content.contains("impl ") && content.contains("VyreBackend for") {
+                            report.find(Finding::in_file(
+                                "vyre-driver-reference/src",
+                                "vyre-driver-reference must not implement VyreBackend",
+                                "keep reference execution decoupled from production VyreBackend drivers",
+                            ));
+                        }
+                    }
+                }
+            }
+        }
             // A crate that expands the shared macro submits exactly what the
             // macro submits, and the macro body is checked above. A crate that
             // writes its own submissions is checked record by record here.

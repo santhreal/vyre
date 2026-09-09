@@ -88,8 +88,8 @@ impl xtask::gate::GateBehavior for CrossTarget {
         let recorded: BTreeMap<&str, &str> = TRIPLE_FOR_OS.iter().copied().collect();
         let mut report = Report::clean();
         report.cover_complete("target platforms", declared.len());
+        let installed = installed_targets(&root);
         let mut checked = 0usize;
-
         for (os, origin) in &declared {
             let Some(triple) = recorded.get(os.as_str()) else {
                 report.find(located(
@@ -106,7 +106,7 @@ impl xtask::gate::GateBehavior for CrossTarget {
                 continue;
             };
             checked += 1;
-            match check_triple(&root, triple) {
+            match check_triple(&root, triple, &installed) {
                 TripleResult::Clean => {}
                 TripleResult::NotInstalled => {
                     return Err(GateError::new(
@@ -177,7 +177,35 @@ enum TripleResult {
 /// No build-affecting flag or environment variable is set: the target is the one
 /// thing that must differ, and everything else has to be the build the tree
 /// declares in its own configuration or the answer is about a build nobody runs.
-fn check_triple(root: &Path, triple: &str) -> TripleResult {
+fn installed_targets(root: &Path) -> std::collections::BTreeSet<String> {
+    let mut command = std::process::Command::new("rustup");
+    command.current_dir(root).args(["target", "list", "--installed"]);
+    if let Ok(output) = command.output() {
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            return stdout
+                .lines()
+                .map(|line| line.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
+        }
+    }
+    std::collections::BTreeSet::new()
+}
+
+/// Compile [`PRODUCT_CRATES`] for one triple.
+///
+/// No build-affecting flag or environment variable is set: the target is the one
+/// thing that must differ, and everything else has to be the build the tree
+/// declares in its own configuration or the answer is about a build nobody runs.
+fn check_triple(
+    root: &Path,
+    triple: &str,
+    installed: &std::collections::BTreeSet<String>,
+) -> TripleResult {
+    if !installed.is_empty() && !installed.contains(triple) {
+        return TripleResult::NotInstalled;
+    }
     let mut command = xtask::cargo_runner::command(root);
     command.arg("check").arg("--target").arg(triple);
     for crate_name in PRODUCT_CRATES {
@@ -194,9 +222,6 @@ fn check_triple(root: &Path, triple: &str) -> TripleResult {
     if let Some(missing) = xtask::cargo_runner::unmeasured(&stderr) {
         return TripleResult::Unmeasured(missing);
     }
-    if stderr.contains("may not be installed") || stderr.contains("rustup target add") {
-        return TripleResult::NotInstalled;
-    }
     TripleResult::Failed(first_error_line(&stderr))
 }
 
@@ -205,8 +230,14 @@ fn check_triple(root: &Path, triple: &str) -> TripleResult {
 fn first_error_line(stderr: &str) -> String {
     stderr
         .lines()
-        .find(|line| line.starts_with("error"))
-        .unwrap_or("the target check reported no error line")
+        .find(|line| line.starts_with("error:") || line.starts_with("error["))
+        .or_else(|| stderr.lines().find(|line| line.contains("error:")))
+        .unwrap_or_else(|| {
+            stderr
+                .lines()
+                .find(|line| !line.trim().is_empty())
+                .unwrap_or("the target check reported no error line")
+        })
         .trim()
         .to_string()
 }

@@ -310,6 +310,11 @@ const WAIVERS: &[Waiver] = &[
         reason: "test oracle deliberately independent of the wire round trip it audits",
     },
     Waiver {
+        path: "vyre-foundation/tests/tile_nodes_contracts.rs",
+        owner: "foundation-ir",
+        reason: "tile node contract descent verification oracle",
+    },
+    Waiver {
         path: "vyre-libs/tests/internal/graph/dominator_tree/mod.rs",
         owner: "product-libraries",
         reason: "test oracle deliberately independent of the dominator construction it audits",

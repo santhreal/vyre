@@ -21,6 +21,9 @@ default-run = "xtask"
 name = "xtask"
 path = "src/lib.rs"
 
+[package.metadata.vyre]
+publication_class = "conformance-tooling"
+
 [lints]
 workspace = true
 

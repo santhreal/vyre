@@ -468,6 +468,10 @@ name = "release-evidence"
 findings = 0
 
 [[gate]]
+name = "release-provenance"
+findings = 0
+
+[[gate]]
 name = "release-workload-matrix"
 findings = 0
 

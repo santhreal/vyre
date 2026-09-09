@@ -40,15 +40,56 @@ const FIX: &str =
 /// Largest source file this gate will read.
 const MAX_SOURCE_BYTES: u64 = 2_097_152;
 
-/// The identifier a `pub fn` line declares, or `None` when the line declares no
-/// function.
+/// The identifier a `pub fn` declaration declares, or `None` when the line declares no
+/// public function.
 fn declared_function(line: &str) -> Option<&str> {
-    let rest = line.trim_start().strip_prefix("pub fn ")?;
+    let trimmed = line.trim();
+    if !trimmed.starts_with("pub ") {
+        return None;
+    }
+    let rest = trimmed.strip_prefix("pub fn ")?;
     let end = rest
         .find(|character: char| !character.is_alphanumeric() && character != '_')
         .unwrap_or(rest.len());
     let name = &rest[..end];
     (!name.is_empty()).then_some(name)
+}
+
+/// Public function declarations extracted from parsed Rust AST.
+struct AstPublicFn {
+    name: String,
+    line: u32,
+}
+
+/// Extract public function declarations by parsing the source file AST with syn.
+fn extract_public_functions(text: &str) -> Vec<AstPublicFn> {
+    if let Ok(syntax_file) = syn::parse_file(text) {
+        let mut fns = Vec::new();
+        for item in &syntax_file.items {
+            if let syn::Item::Fn(item_fn) = item {
+                if matches!(item_fn.vis, syn::Visibility::Public(_)) {
+                    let name = item_fn.sig.ident.to_string();
+                    let line = item_fn.sig.ident.span().start().line as u32;
+                    fns.push(AstPublicFn { name, line });
+                }
+            }
+        }
+        return fns;
+    }
+    // Fallback for unparseable syntax snippets
+    let mut fns = Vec::new();
+    for (index, line) in text.lines().enumerate() {
+        if line.starts_with("pub fn ") {
+            if let Some(name) = declared_function(line) {
+                let line_number = u32::try_from(index + 1).unwrap_or(u32::MAX);
+                fns.push(AstPublicFn {
+                    name: name.to_string(),
+                    line: line_number,
+                });
+            }
+        }
+    }
+    fns
 }
 
 /// Every naming rule `name` breaks.
@@ -124,21 +165,13 @@ impl crate::gate::GateBehavior for OpNames {
                     )
                 })?;
             scanned += 1;
-            for (index, line) in text.lines().enumerate() {
-                // The script matched `^pub fn`, so an inherent method stays out
-                // of scope: a method is named against its type, not the op.
-                if !line.starts_with("pub fn ") {
-                    continue;
-                }
-                let Some(name) = declared_function(line) else {
-                    continue;
-                };
+            let parsed_functions = extract_public_functions(&text);
+            for func in parsed_functions {
                 public_functions += 1;
-                let line_number = u32::try_from(index + 1).unwrap_or(u32::MAX);
-                for violation in violations(name) {
+                for violation in violations(&func.name) {
                     report.find(Finding::at(
                         path.strip_prefix(&ctx.root).unwrap_or(path),
-                        line_number,
+                        func.line,
                         violation,
                         FIX,
                     ));

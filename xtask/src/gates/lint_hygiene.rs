@@ -490,14 +490,45 @@ struct Declaration {
 /// are judged like a private item. Bare `pub` returns nothing: whether it has a
 /// caller is a question about other checkouts.
 fn declared_item_name(line: &str) -> Option<String> {
+    let trimmed = line.trim();
+    if trimmed.is_empty() || trimmed.starts_with("//") {
+        return None;
+    }
+    // Attempt syn Item parsing
+    let item_candidate = if trimmed.ends_with(';') || trimmed.ends_with('{') {
+        trimmed.to_string()
+    } else {
+        format!("{trimmed};")
+    };
+    if let Ok(item) = syn::parse_str::<syn::Item>(&item_candidate) {
+        let is_bare_pub = matches!(&item, syn::Item::Fn(f) if matches!(f.vis, syn::Visibility::Public(_)))
+            || matches!(&item, syn::Item::Struct(s) if matches!(s.vis, syn::Visibility::Public(_)))
+            || matches!(&item, syn::Item::Enum(e) if matches!(e.vis, syn::Visibility::Public(_)))
+            || matches!(&item, syn::Item::Trait(t) if matches!(t.vis, syn::Visibility::Public(_)))
+            || matches!(&item, syn::Item::Type(t) if matches!(t.vis, syn::Visibility::Public(_)))
+            || matches!(&item, syn::Item::Static(s) if matches!(s.vis, syn::Visibility::Public(_)))
+            || matches!(&item, syn::Item::Const(c) if matches!(c.vis, syn::Visibility::Public(_)));
+        if is_bare_pub {
+            return None;
+        }
+        return match item {
+            syn::Item::Fn(f) => Some(f.sig.ident.to_string()),
+            syn::Item::Struct(s) => Some(s.ident.to_string()),
+            syn::Item::Enum(e) => Some(e.ident.to_string()),
+            syn::Item::Trait(t) => Some(t.ident.to_string()),
+            syn::Item::Type(t) => Some(t.ident.to_string()),
+            syn::Item::Static(s) => Some(s.ident.to_string()),
+            syn::Item::Const(c) => Some(c.ident.to_string()),
+            syn::Item::Union(u) => Some(u.ident.to_string()),
+            _ => None,
+        };
+    }
     let mut rest = line.trim();
     match strip_restricted_visibility(rest) {
         Some(tail) => rest = tail,
         None if rest.starts_with("pub ") || rest.starts_with("pub(") => return None,
         None => {}
     }
-    // Modifiers that can precede an item keyword. `const` is both a modifier and
-    // an item keyword, so it is read below rather than stripped blindly.
     loop {
         let stripped = ["default ", "async ", "unsafe "]
             .iter()

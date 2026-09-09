@@ -316,6 +316,22 @@ fn excluded(tree: &Tree, member: &Member, directory: &str) -> Result<BTreeSet<St
 /// those would report every shared assertion macro as a duplicated test.
 fn declares_cases(tree: &Tree, path: &str) -> Result<bool, GateError> {
     let text = tree.read(path)?;
+    if let Ok(syntax) = syn::parse_file(&text) {
+        for item in &syntax.items {
+            if let syn::Item::Fn(item_fn) = item {
+                let is_test = item_fn.attrs.iter().any(|attr| {
+                    attr.path().is_ident("test")
+                        || (attr.path().segments.len() == 2
+                            && attr.path().segments[0].ident == "tokio"
+                            && attr.path().segments[1].ident == "test")
+                });
+                if is_test {
+                    return Ok(true);
+                }
+            }
+        }
+        return Ok(false);
+    }
     let mut depth = 0_i32;
     let mut in_macro = false;
     for line in text.lines() {
@@ -418,6 +434,31 @@ enum Declaration {
 
 /// Every module declaration in one file, in source order.
 fn declarations(text: &str) -> Vec<Declaration> {
+    if let Ok(syntax) = syn::parse_file(text) {
+        let mut decls = Vec::new();
+        for item in &syntax.items {
+            if let syn::Item::Mod(item_mod) = item {
+                if item_mod.content.is_none() {
+                    let mut explicit_path = None;
+                    for attr in &item_mod.attrs {
+                        if attr.path().is_ident("path") {
+                            if let syn::Meta::NameValue(nv) = &attr.meta {
+                                if let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(s), .. }) = &nv.value {
+                                    explicit_path = Some(s.value());
+                                }
+                            }
+                        }
+                    }
+                    if let Some(path) = explicit_path {
+                        decls.push(Declaration::Explicit(path));
+                    } else {
+                        decls.push(Declaration::Named(item_mod.ident.to_string()));
+                    }
+                }
+            }
+        }
+        return decls;
+    }
     let mut declarations = Vec::new();
     let mut pending: Option<String> = None;
     for line in text.lines() {

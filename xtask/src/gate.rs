@@ -545,6 +545,51 @@ impl fmt::Display for ResourceClass {
     }
 }
 
+/// Typed parser or query schema representing the input inspection mode of a gate.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub enum QueryKind {
+    /// Pure Rust syntax tree (AST / syn parser).
+    #[default]
+    RustAst,
+    /// Parsed TOML configuration or manifest.
+    TomlManifest,
+    /// Workspace dependency and metadata graph.
+    WorkspaceGraph,
+    /// Parsed JSON artifact or report.
+    JsonArtifact,
+    /// Parsed CI workflow YAML specification.
+    YamlWorkflow,
+    /// Live operation or inventory registry query.
+    RegistryLink,
+    /// Measured performance evidence or execution record.
+    EvidenceRecord,
+    /// Literal text where literal string matching is the product contract (e.g. license headers, docs).
+    TextLiteral,
+}
+
+impl QueryKind {
+    /// Stable string identifier for the query kind.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::RustAst => "rust-ast",
+            Self::TomlManifest => "toml-manifest",
+            Self::WorkspaceGraph => "workspace-graph",
+            Self::JsonArtifact => "json-artifact",
+            Self::YamlWorkflow => "yaml-workflow",
+            Self::RegistryLink => "registry-link",
+            Self::EvidenceRecord => "evidence-record",
+            Self::TextLiteral => "text-literal",
+        }
+    }
+}
+
+impl fmt::Display for QueryKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// Static contract that makes a gate discoverable and auditable.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GateDescriptor {
@@ -570,12 +615,80 @@ pub struct GateDescriptor {
     pub proof: &'static str,
 }
 impl GateDescriptor {
+    /// Authoritative owner package of this gate.
+    #[must_use]
+    pub fn owner(&self) -> &'static str {
+        self.package
+    }
+
+    /// Authoritative mutation suite symbol proving the claimed defect.
+    #[must_use]
+    pub fn mutation_suite(&self) -> &'static str {
+        self.proof
+    }
+
+    /// Exact generated outputs owned by this gate.
+    #[must_use]
+    pub fn generated_outputs(&self) -> &'static [&'static str] {
+        self.artifacts
+    }
+
+    /// Prerequisite gate names that must precede this gate.
+    #[must_use]
+    pub fn prerequisites_list(&self) -> &'static [&'static str] {
+        self.prerequisites
+    }
+
+    /// Pinned finding baseline for this gate (hard 0 across all gates).
+    #[must_use]
+    pub fn baseline(&self) -> usize {
+        0
+    }
+
+    /// Report schema version string.
+    #[must_use]
+    pub fn report_schema(&self) -> &'static str {
+        "standard-finding-v1"
+    }
+
+    /// Typed parser or query kind used to judge inputs.
+    #[must_use]
+    pub fn query_kind(&self) -> QueryKind {
+        if self.package == "xtask-registry" {
+            return QueryKind::RegistryLink;
+        }
+        if self.package == "xtask-evidence" {
+            return QueryKind::EvidenceRecord;
+        }
+        if self.subject == "ci workflows" || self.inputs.iter().any(|i| i.ends_with(".yml") || i.ends_with(".yaml")) {
+            return QueryKind::YamlWorkflow;
+        }
+        if self.inputs.iter().any(|i| i.ends_with(".json")) {
+            return QueryKind::JsonArtifact;
+        }
+        if self.inputs.iter().any(|i| i.ends_with(".toml")) || self.subject.contains("manifest") {
+            return QueryKind::TomlManifest;
+        }
+        if self.subject.contains("workspace") || self.subject.contains("crate") {
+            return QueryKind::WorkspaceGraph;
+        }
+        if self.inputs.iter().any(|i| i.ends_with(".md")) || self.subject.contains("documentation") {
+            return QueryKind::TextLiteral;
+        }
+        QueryKind::RustAst
+    }
+
+    /// Content-addressed cache key for this gate under `root`.
+    #[must_use]
+    pub fn cache_key(&self, root: &Path) -> String {
+        self.compute_cache_key(root)
+    }
+
     /// Whether this gate owns any generated artifact.
     #[must_use]
     pub fn generates(&self) -> bool {
         !self.artifacts.is_empty()
     }
-
     /// Compute a deterministic content-addressed cache key from descriptor metadata and declared input files.
     #[must_use]
     pub fn compute_cache_key(&self, root: &Path) -> String {
@@ -795,13 +908,29 @@ impl RegisteredGate {
 
     /// Judge the tree and report what is wrong with it.
     pub fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        match self.behavior {
+        let mut report = match self.behavior {
             Some(behavior) => {
                 let gate_ctx = ctx.for_gate(self.name(), self.generates());
-                behavior.run(&gate_ctx)
+                behavior.run(&gate_ctx)?
             }
-            None => crate::delegate::run_child_gate(self.package(), self.name(), ctx),
+            None => crate::delegate::run_child_gate(self.package(), self.name(), ctx)?,
+        };
+        let root_str = ctx.root.display().to_string();
+        let root_prefix = format!("{root_str}/");
+        for finding in &mut report.findings {
+            if let Some(path) = finding.file.take() {
+                finding.file = Some(
+                    path.strip_prefix(&ctx.root)
+                        .map_or_else(|_| path.clone(), Path::to_path_buf),
+                );
+            }
+            if finding.message.contains(&root_prefix) {
+                finding.message = finding.message.replace(&root_prefix, "");
+            } else if finding.message.contains(&root_str) {
+                finding.message = finding.message.replace(&root_str, "");
+            }
         }
+        Ok(report)
     }
 
     /// Authoritative metadata descriptor.

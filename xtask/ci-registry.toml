@@ -593,6 +593,11 @@ subsets = ["prepublish", "release-evidence"]
 workflows = ["ci.yml", "gates.yml", "release-evidence.yml"]
 
 [[gate]]
+name = "release-provenance"
+subsets = ["prepublish", "release-evidence"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
 name = "release-workload-matrix"
 subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "release-evidence.yml"]

@@ -24,6 +24,9 @@ walkdir.workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 
+[package.metadata.vyre]
+publication_class = "conformance-tooling"
+
 [lints]
 workspace = true
 

@@ -116,7 +116,30 @@ impl crate::gate::GateBehavior for Unification {
                         || text.contains("test_fixtures"))
                 })
                 .collect::<Vec<_>>();
-            let hits = tree.hits(&files, |line| (row.line)(line))?;
+            let mut hits = Vec::new();
+            for file in &files {
+                let text = tree.read(file)?;
+                if let Ok(syntax) = syn::parse_file(&text) {
+                    let ast_hits = find_unification_ast_hits(&syntax, row.name);
+                    for line in ast_hits {
+                        hits.push(crate::gates::scan::Hit {
+                            file: file.clone(),
+                            line,
+                            text: format!("{}: line {line}", row.name),
+                        });
+                    }
+                } else {
+                    for (idx, line) in text.lines().enumerate() {
+                        if (row.line)(line) {
+                            hits.push(crate::gates::scan::Hit {
+                                file: file.clone(),
+                                line: (idx + 1) as u32,
+                                text: line.to_string(),
+                            });
+                        }
+                    }
+                }
+            }
             report.note(format!(
                 "{}: {} site(s), ceiling {}",
                 row.name,
@@ -141,6 +164,47 @@ impl crate::gate::GateBehavior for Unification {
         }
         Ok(report)
     }
+}
+
+/// Collect line numbers matching unification rules using parsed Rust AST.
+fn find_unification_ast_hits(file: &syn::File, row_name: &str) -> Vec<u32> {
+    let mut lines = Vec::new();
+    for item in &file.items {
+        match (row_name, item) {
+            ("child-bodies-owner", syn::Item::Fn(f)) if f.sig.ident == "child_bodies" => {
+                lines.push(f.sig.ident.span().start().line as u32);
+            }
+            ("cpu-reference-implementations", syn::Item::Fn(f)) if f.sig.ident == "cpu_reference" => {
+                lines.push(f.sig.ident.span().start().line as u32);
+            }
+            ("fusion-planning-entry", syn::Item::Fn(f))
+                if f.sig.ident == "plan_fusion"
+                    || f.sig.ident == "fuse_programs"
+                    || f.sig.ident == "tensor_network_fusion_order" =>
+            {
+                lines.push(f.sig.ident.span().start().line as u32);
+            }
+            ("pipeline-cache-in-backend", syn::Item::Impl(i)) => {
+                if let Some((_, trait_path, _)) = &i.trait_ {
+                    let trait_str = quote::quote!(#trait_path).to_string();
+                    if trait_str.contains("PipelineCacheStore") {
+                        lines.push(i.impl_token.span.start().line as u32);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    if row_name == "buffer-access-auto-inference" {
+        let s = quote::quote!(#file).to_string();
+        if s.contains("BufferAccess :: infer")
+            || s.contains("BufferAccess :: auto")
+            || s.contains("BufferAccess :: derive_from")
+        {
+            lines.push(1);
+        }
+    }
+    lines
 }
 
 #[cfg(test)]

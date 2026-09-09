@@ -15,6 +15,9 @@ publish = false
 # its own.
 autotests = false
 
+[package.metadata.vyre]
+publication_class = "conformance-tooling"
+
 [lints]
 workspace = true
 

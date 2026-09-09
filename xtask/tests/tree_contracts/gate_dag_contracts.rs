@@ -169,3 +169,86 @@ fn gate_dag_gate_reports_complete_coverage() {
         report.contract_failures(descriptor_by_name("gate-dag"))
     );
 }
+
+/// WHY: Row 96 requires a test that derives the registered gate set at run time and fails
+/// when a gate has no baseline row, no mutation suite reference, or no owner, so adding a gate
+/// without those turns the suite red.
+#[test]
+fn runtime_registered_gate_set_has_owner_proof_and_baseline() {
+    let root = xtask::checkout::checkout_root();
+    let baseline_content = std::fs::read_to_string(root.join("xtask/gate-baselines.toml"))
+        .expect("gate-baselines.toml must be readable");
+    let baseline_data: toml::Value = toml::from_str(&baseline_content)
+        .expect("gate-baselines.toml must parse as valid TOML");
+    let baseline_gates = baseline_data
+        .get("gate")
+        .and_then(|g| g.as_array())
+        .expect("gate-baselines.toml must contain [[gate]] array");
+    let baseline_names: std::collections::BTreeSet<&str> = baseline_gates
+        .iter()
+        .filter_map(|g| g.get("name").and_then(|n| n.as_str()))
+        .collect();
+
+    // Derive registered gate descriptors at run time
+    let registered_descriptors = GATE_METADATA;
+    assert!(
+        !registered_descriptors.is_empty(),
+        "registered gate set must not be empty"
+    );
+
+    for desc in registered_descriptors {
+        // 1. Must have an authoritative owner in known packages
+        let owner = desc.owner();
+        assert!(
+            ["xtask", "xtask-registry", "xtask-evidence"].contains(&owner),
+            "gate `{}` has invalid or missing owner: `{owner}`",
+            desc.name
+        );
+
+        // 2. Must have a valid mutation suite reference
+        let proof = desc.mutation_suite().trim();
+        assert!(
+            !proof.is_empty() && proof != "definition-site mutation tests",
+            "gate `{}` must declare an authoritative mutation suite reference, found `{proof}`",
+            desc.name
+        );
+
+        // 3. Must have a baseline row in gate-baselines.toml
+        assert!(
+            baseline_names.contains(desc.name),
+            "gate `{}` has no baseline row in xtask/gate-baselines.toml",
+            desc.name
+        );
+
+        // 4. Must pass descriptor self-validation
+        let failures = desc.failures();
+        assert!(
+            failures.is_empty(),
+            "gate `{}` descriptor validation failed: {failures:?}",
+            desc.name
+        );
+    }
+}
+
+/// WHY: Row 96 requires proving that a gate missing owner, proof, or baseline fails the contract.
+#[test]
+fn runtime_gate_validation_fails_on_missing_owner_proof_or_baseline() {
+    let mut desc = *descriptor_by_name("architecture-contract");
+
+    // Missing owner
+    desc.package = "unknown-package";
+    let failures = desc.failures();
+    assert!(
+        failures.iter().any(|f| f.contains("unknown owner package")),
+        "validation must fail on unknown/missing owner: {failures:?}"
+    );
+
+    // Missing proof
+    let mut desc_no_proof = *descriptor_by_name("architecture-contract");
+    desc_no_proof.proof = "";
+    let failures = desc_no_proof.failures();
+    assert!(
+        failures.iter().any(|f| f.contains("declares no mutation-proof test")),
+        "validation must fail on missing mutation proof: {failures:?}"
+    );
+}

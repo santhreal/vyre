@@ -13,6 +13,8 @@ pub(super) enum FileRole {
     OperationImplementation,
     /// Shared semantic builder consumed by registered operations.
     SharedBuilder,
+    /// Whole-graph compositions spanning across domains.
+    WholeGraphComposition,
     /// Domain contract, type, or algorithm helper module.
     DomainContractOrType,
     /// Crate-level plumbing.
@@ -51,7 +53,14 @@ pub(super) fn classify_file_roles(
         roles.push(FileRole::CratePlumbing);
     }
 
-    // 3. Shared builder
+    // 3. Whole-graph compositions
+    if (first == "graph_compositions" || rel.starts_with("graph_compositions/"))
+        && !is_registered
+    {
+        roles.push(FileRole::WholeGraphComposition);
+    }
+
+    // 4. Shared builder
     if (first == "builder"
         || matches!(
             filename,
@@ -62,12 +71,13 @@ pub(super) fn classify_file_roles(
         roles.push(FileRole::SharedBuilder);
     }
 
-    // 4. Domain contract, type, or algorithm supporting module
+    // 5. Domain contract, type, or algorithm supporting module
     if is_authorized_domain_contract_or_type(rel)
         && !is_registered
         && first != "builder"
         && first != "plumbing"
         && first != "intern"
+        && first != "graph_compositions"
         && !matches!(
             rel,
             "lib.rs" | "prelude.rs" | "fixture_bytes.rs" | "test_parity_oracles.rs"
@@ -258,41 +268,39 @@ fn check_for_duplicate_block_skeletons(path: &Path, rel_path: &str, findings: &m
     }
 }
 
-pub(super) const RECOGNIZED_DOMAINS: &[&str] = &[
-    "analysis",
-    "bitset",
-    "decode",
-    "device",
-    "encoding",
-    "fixpoint",
-    "geom",
-    "graph",
-    "hash",
-    "label",
-    "llm",
-    "logical",
-    "math",
-    "nfa",
-    "nn",
-    "opt",
-    "parsing",
-    "pattern",
-    "predicate",
-    "reasoning",
-    "reduce",
-    "representation",
-    "rule",
-    "scheduling",
-    "security",
-    "solvers",
-    "text",
-    "topology",
-    "vfs",
-    "visual",
-];
+/// Recognized domains derived from source declarations in `vyre-libs/src/lib.rs` and manifest features.
+pub(super) fn recognized_domains() -> BTreeSet<String> {
+    let mut domains = BTreeSet::new();
+    // Static baseline domains
+    for d in [
+        "analysis", "bitset", "decode", "device", "encoding", "fixpoint", "geom", "graph",
+        "hash", "label", "llm", "logical", "math", "nfa", "nn", "opt", "parsing", "pattern",
+        "predicate", "reasoning", "reduce", "representation", "rule", "scheduling", "security",
+        "solvers", "text", "topology", "vfs", "visual",
+    ] {
+        domains.insert(d.to_string());
+    }
+
+    if let Some(root) = workspace_root() {
+        let lib_path = root.join("vyre-libs/src/lib.rs");
+        if let Ok(text) = std::fs::read_to_string(&lib_path) {
+            if let Ok(syntax) = syn::parse_file(&text) {
+                for item in syntax.items {
+                    if let syn::Item::Mod(item_mod) = item {
+                        let name = item_mod.ident.to_string();
+                        if !matches!(name.as_str(), "builder" | "plumbing" | "prelude" | "graph_compositions") {
+                            domains.insert(name);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    domains
+}
 
 pub(super) fn is_recognized_domain(name: &str) -> bool {
-    RECOGNIZED_DOMAINS.binary_search(&name).is_ok()
+    recognized_domains().contains(name)
 }
 
 fn check_source_placement(op: &OpInfo, findings: &mut Vec<Finding>) {
@@ -529,6 +537,13 @@ mod tests {
                 &registered
             ),
             vec![FileRole::DomainContractOrType]
+        );
+        assert_eq!(
+            classify_file_roles(
+                "vyre-libs/src/graph_compositions/dense_neural_pipeline.rs",
+                &registered
+            ),
+            vec![FileRole::WholeGraphComposition]
         );
         assert_eq!(
             classify_file_roles("vyre-libs/src/dumping_ground.rs", &registered),

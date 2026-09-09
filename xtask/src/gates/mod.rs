@@ -80,6 +80,7 @@ pub mod platform_docs;
 pub mod proptest_coverage;
 pub mod public_api;
 pub mod public_api_paths;
+pub mod release_provenance;
 pub mod repo_hygiene;
 pub mod scan;
 pub mod schedule_ownership;
@@ -209,6 +210,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("proptest-coverage", &proptest_coverage::ProptestCoverage),
     ("public-api-snapshot", &public_api::PublicApiSnapshot),
     ("public-api-paths", &public_api_paths::PublicApiPaths),
+    ("release-provenance", &release_provenance::ReleaseProvenanceGate),
     ("repo-hygiene", &repo_hygiene::RepoHygiene),
     ("single-backlog", &repo_hygiene::SingleBacklog),
     ("schedule-ownership", &schedule_ownership::ScheduleOwnership),

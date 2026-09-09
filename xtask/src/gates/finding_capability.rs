@@ -293,6 +293,38 @@ fn gate_run_bodies_registered(
     text: &str,
     registrations: &BTreeMap<String, String>,
 ) -> Vec<(String, String)> {
+    if let Ok(syntax) = syn::parse_file(text) {
+        let mut out = Vec::new();
+        for item in &syntax.items {
+            if let syn::Item::Impl(item_impl) = item {
+                let is_gate_behavior = item_impl.trait_.as_ref().is_some_and(|(_, trait_path, _)| {
+                    trait_path.segments.last().is_some_and(|seg| seg.ident == "GateBehavior")
+                });
+                if !is_gate_behavior {
+                    continue;
+                }
+                let type_name = quote::quote!(#item_impl.self_ty).to_string();
+                if type_name.contains('$') {
+                    continue;
+                }
+                let name = registrations
+                    .get(&type_name)
+                    .cloned()
+                    .unwrap_or_else(|| type_to_kebab(&type_name));
+                for impl_item in &item_impl.items {
+                    if let syn::ImplItem::Fn(fn_item) = impl_item {
+                        if fn_item.sig.ident == "run" {
+                            let body_code = quote::quote!(#fn_item.block).to_string();
+                            out.push((name.clone(), body_code));
+                        }
+                    }
+                }
+            }
+        }
+        if !out.is_empty() {
+            return out;
+        }
+    }
     let mut out = Vec::new();
     for marker in [
         "impl crate::gate::GateBehavior for ",
@@ -720,6 +752,19 @@ fn without_comments(text: &str) -> String {
 /// A test constructs findings to assert on them, so counting a test would make
 /// every gate look able to fail.
 fn without_test_modules(text: &str) -> String {
+    if let Ok(mut syntax) = syn::parse_file(text) {
+        syntax.items.retain(|item| {
+            if let syn::Item::Mod(item_mod) = item {
+                !item_mod.attrs.iter().any(|attr| {
+                    let s = quote::quote!(#attr).to_string();
+                    s.contains("cfg (test)") || s.contains("cfg(test)")
+                })
+            } else {
+                true
+            }
+        });
+        return quote::quote!(#syntax).to_string();
+    }
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     while let Some(at) = rest.find("#[cfg(test)]") {

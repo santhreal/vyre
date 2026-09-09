@@ -32,6 +32,41 @@ fn main() {
         sweep::run(&runner_args);
         return;
     }
+    if name == "regenerate" || name == "write-all" {
+        let root = xtask::checkout::checkout_root();
+        let registry = subcommands::registry();
+        match xtask::gate_dag::regenerate_all(&root, &registry) {
+            Ok(report) => {
+                println!("Executed {} writer gate(s) in topological DAG order.", report.executed_writers.len());
+                if !report.changed_artifacts.is_empty() {
+                    println!("Changed {} artifact(s):", report.changed_artifacts.len());
+                    for artifact in &report.changed_artifacts {
+                        println!("  - {artifact}");
+                    }
+                } else {
+                    println!("All artifacts are up to date.");
+                }
+                if !report.refused_gates.is_empty() {
+                    for (gate, prereq) in &report.refused_gates {
+                        eprintln!("Fix: writer gate `{gate}` refused to run because prerequisite `{prereq}` failed or reported findings");
+                    }
+                }
+                if !report.failures.is_empty() {
+                    for failure in &report.failures {
+                        eprintln!("Fix: {failure}");
+                    }
+                }
+                if !report.is_clean() {
+                    process::exit(1);
+                }
+                return;
+            }
+            Err(err) => {
+                eprintln!("Fix: regeneration failed: {err}");
+                process::exit(1);
+            }
+        }
+    }
     let Some(gate) = subcommands::find(name) else {
         eprintln!("Fix: unknown subcommand '{name}'. See --help.");
         process::exit(1);

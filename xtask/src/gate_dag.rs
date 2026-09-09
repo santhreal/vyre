@@ -463,9 +463,139 @@ pub fn execute_dag(
     report
 }
 
+/// Summary report from regenerating artifacts across all generating gates in topological order.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct RegenerateReport {
+    /// Generating gates executed in write mode.
+    pub executed_writers: Vec<&'static str>,
+    /// Exact workspace-relative artifact paths that changed during regeneration.
+    pub changed_artifacts: Vec<String>,
+    /// Gates refused because a prerequisite reported findings or errors: `(gate, failed_prereq)`.
+    pub refused_gates: Vec<(&'static str, &'static str)>,
+    /// Errors encountered during the regeneration run.
+    pub failures: Vec<String>,
+}
+
+impl RegenerateReport {
+    /// Whether all writer gates executed cleanly and no gate was refused or failed.
+    #[must_use]
+    pub fn is_clean(&self) -> bool {
+        self.failures.is_empty() && self.refused_gates.is_empty()
+    }
+}
+
+/// Regenerate every artifact in topological DAG order.
+///
+/// Refuses to run any writer gate whose prerequisite reported a finding or failed.
+/// Captures artifact state before and after execution to report exactly which paths changed.
+pub fn regenerate_all(root: &Path, gates: &[RegisteredGate]) -> Result<RegenerateReport, DagError> {
+    let dag = GateDag::from_registry(gates)?;
+    let order = dag.topological_order()?;
+
+    let mut report = RegenerateReport::default();
+    let mut failed_gates = BTreeSet::new();
+
+    // Collect all prerequisite gates needed by writer gates
+    let mut needed_gates = BTreeSet::new();
+    for gate_name in &order {
+        let Some(node) = dag.get(gate_name) else {
+            continue;
+        };
+        if node.descriptor.generates() {
+            needed_gates.insert(*gate_name);
+            for prereq in &node.prerequisites {
+                needed_gates.insert(*prereq);
+            }
+        }
+    }
+
+    for gate_name in order {
+        if !needed_gates.contains(gate_name) {
+            continue;
+        }
+        let Some(node) = dag.get(gate_name) else {
+            continue;
+        };
+        let Some(registered) = gates.iter().find(|g| g.name() == gate_name) else {
+            continue;
+        };
+
+        // Check if any prerequisite failed
+        let mut failed_prereq = None;
+        for prereq in &node.prerequisites {
+            if failed_gates.contains(prereq) {
+                failed_prereq = Some(*prereq);
+                break;
+            }
+        }
+
+        if let Some(prereq) = failed_prereq {
+            failed_gates.insert(gate_name);
+            if node.descriptor.generates() {
+                report.refused_gates.push((gate_name, prereq));
+            }
+            continue;
+        }
+
+        if node.descriptor.generates() {
+            // Snapshot artifact hashes before running
+            let mut before_hashes: BTreeMap<&'static str, Option<String>> = BTreeMap::new();
+            for artifact in node.descriptor.artifacts {
+                let p = root.join(artifact);
+                let hash = std::fs::read(&p).ok().map(|bytes| blake3::hash(&bytes).to_hex().to_string());
+                before_hashes.insert(*artifact, hash);
+            }
+
+            // Run gate in write mode
+            let ctx = crate::gate::GateCtx::new(root.to_path_buf(), vec!["--write".to_string()]);
+            match registered.run(&ctx) {
+                Ok(gate_report) => {
+                    let found = gate_report.count();
+                    if found > 0 {
+                        failed_gates.insert(gate_name);
+                        report.failures.push(format!(
+                            "writer gate `{gate_name}` reported {found} finding(s) in write mode",
+                        ));
+                    } else {
+                        report.executed_writers.push(gate_name);
+                        // Detect changed artifacts
+                        for (artifact, before_hash) in before_hashes {
+                            let p = root.join(artifact);
+                            let after_hash = std::fs::read(&p).ok().map(|bytes| blake3::hash(&bytes).to_hex().to_string());
+                            if before_hash != after_hash {
+                                report.changed_artifacts.push(artifact.to_string());
+                            }
+                        }
+                    }
+                }
+                Err(err) => {
+                    failed_gates.insert(gate_name);
+                    report.failures.push(format!("writer gate `{gate_name}` failed: {err}"));
+                }
+            }
+        } else {
+            // Run prerequisite check in comparison mode
+            let ctx = crate::gate::GateCtx::new(root.to_path_buf(), Vec::new());
+            match registered.run(&ctx) {
+                Ok(gate_report) => {
+                    if gate_report.count() > 0 {
+                        failed_gates.insert(gate_name);
+                    }
+                }
+                Err(_) => {
+                    failed_gates.insert(gate_name);
+                }
+            }
+        }
+    }
+
+    Ok(report)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gate::{Finding, GateBehavior, GateCtx, GateError, Report};
     use crate::gate::ResourceClass;
 
     const DUMMY_GATE_A: GateDescriptor = GateDescriptor {
@@ -583,5 +713,56 @@ mod tests {
         let root = crate::checkout::checkout_root();
         let failures = dag.validate(&root);
         assert!(failures.is_empty(), "DAG validation failed: {failures:?}");
+    }
+
+    #[test]
+    fn regenerate_all_respects_prerequisites_and_reports_cleanly() {
+        struct DummyWriterA;
+        impl GateBehavior for DummyWriterA {
+            fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+                let rep = Report::default();
+                if ctx.args.contains(&"--write".to_string()) {
+                    let path = ctx.root.join("docs/generated/dummy-a.toml");
+                    let _ = std::fs::create_dir_all(path.parent().unwrap());
+                    let _ = std::fs::write(&path, "content-a");
+                }
+                Ok(rep)
+            }
+        }
+        struct DummyWriterB;
+        impl GateBehavior for DummyWriterB {
+            fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+                let rep = Report::default();
+                if ctx.args.contains(&"--write".to_string()) {
+                    let path = ctx.root.join("docs/generated/dummy-b.toml");
+                    let _ = std::fs::create_dir_all(path.parent().unwrap());
+                    let _ = std::fs::write(&path, "content-b");
+                }
+                Ok(rep)
+            }
+        }
+        struct DummyPrereqFail;
+        impl GateBehavior for DummyPrereqFail {
+            fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+                let mut rep = Report::default();
+                rep.find(Finding::new("prerequisite failure", "fix"));
+                Ok(rep)
+            }
+        }
+
+        let reg_a = RegisteredGate::new(&DUMMY_GATE_A, &DummyWriterA);
+        let reg_b = RegisteredGate::new(&DUMMY_GATE_B, &DummyWriterB);
+        let reg_c = RegisteredGate::new(&DUMMY_GATE_C, &DummyPrereqFail);
+
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        let root = temp_dir.path();
+
+        let report = regenerate_all(root, &[reg_a, reg_b, reg_c])
+            .expect("regenerate_all should succeed");
+
+        assert_eq!(report.executed_writers, vec!["gate-a", "gate-b"]);
+        assert!(report.refused_gates.is_empty());
+        assert!(report.failures.is_empty());
+        assert_eq!(report.changed_artifacts.len(), 2);
     }
 }

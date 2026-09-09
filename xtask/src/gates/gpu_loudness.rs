@@ -32,9 +32,51 @@ impl crate::gate::GateBehavior for GpuLoudness {
         report.cover_complete("gpu source files", tree.all_rust().len());
         for path in tree.all_rust() {
             let text = tree.read(&path)?;
-            let masked = scan::mask_literals(&text);
             let lines: Vec<&str> = text.lines().collect();
+            let masked = scan::mask_literals(&text);
             let masked_lines: Vec<&str> = masked.lines().collect();
+
+            // Try AST parse first to discover structured skip nodes
+            if let Ok(syntax) = syn::parse_file(&text) {
+                let mut ast_skips = Vec::new();
+                find_ast_silent_skips(&syntax, &mut ast_skips);
+                for (line, reason) in ast_skips {
+                    let index = (line as usize).saturating_sub(1);
+                    if !loud_within_window(&lines, index) {
+                        report.find(Finding::at(
+                            path.clone(),
+                            line,
+                            format!("{reason} skips the test when no device is present"),
+                            "acquire the backend through the panicking constructor, or pair the \
+                             skip with a test that exercises the same path and aborts loudly; a \
+                             probe failure is a configuration failure and must be reported",
+                        ));
+                    }
+                }
+                // Also check comment-based skips and macro patterns that AST comments elide
+                for (index, line) in lines.iter().enumerate() {
+                    let blanked = masked_lines.get(index).copied().unwrap_or(line);
+                    if let Some((code, comment)) = blanked.split_once("//") {
+                        if comment.contains("no GPU") {
+                            if code.contains("return Ok(());") || code.contains("return;") {
+                                if !loud_within_window(&lines, index) {
+                                    report.find(Finding::at(
+                                        path.clone(),
+                                        (index + 1) as u32,
+                                        "a device-conditional early return skips the test when no device is present".to_string(),
+                                        "acquire the backend through the panicking constructor, or pair the \
+                                         skip with a test that exercises the same path and aborts loudly; a \
+                                         probe failure is a configuration failure and must be reported",
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                }
+                continue;
+            }
+
+            // Fallback for unparseable fragments
             for (index, line) in lines.iter().enumerate() {
                 let blanked = masked_lines.get(index).copied().unwrap_or(line);
                 for skip in silent_skips(line, blanked) {
@@ -53,6 +95,77 @@ impl crate::gate::GateBehavior for GpuLoudness {
             }
         }
         Ok(report)
+    }
+}
+
+/// Collect silent skips from a parsed syn::File AST.
+fn find_ast_silent_skips(file: &syn::File, sink: &mut Vec<(u32, &'static str)>) {
+    for attr in &file.attrs {
+        check_attr_for_silent_skip(attr, sink);
+    }
+    for item in &file.items {
+        check_item_for_silent_skips(item, sink);
+    }
+}
+
+fn check_attr_for_silent_skip(attr: &syn::Attribute, sink: &mut Vec<(u32, &'static str)>) {
+    let s = quote::quote!(#attr).to_string();
+    if s.contains("cfg (not (") && s.contains("gpu") {
+        sink.push((attr.pound_token.span.start().line as u32, "a cfg that compiles the test out without a device"));
+    } else if s.contains("cfg_attr") && s.contains("gpu") && s.contains("ignore") {
+        sink.push((attr.pound_token.span.start().line as u32, "a cfg_attr that ignores the test without the gpu feature"));
+    }
+}
+
+fn check_item_for_silent_skips(item: &syn::Item, sink: &mut Vec<(u32, &'static str)>) {
+    match item {
+        syn::Item::Fn(item_fn) => {
+            for attr in &item_fn.attrs {
+                check_attr_for_silent_skip(attr, sink);
+            }
+            for stmt in &item_fn.block.stmts {
+                check_stmt_for_silent_skips(stmt, sink);
+            }
+        }
+        syn::Item::Mod(item_mod) => {
+            for attr in &item_mod.attrs {
+                check_attr_for_silent_skip(attr, sink);
+            }
+            if let Some((_, items)) = &item_mod.content {
+                for inner in items {
+                    check_item_for_silent_skips(inner, sink);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+fn check_stmt_for_silent_skips(stmt: &syn::Stmt, sink: &mut Vec<(u32, &'static str)>) {
+    if let syn::Stmt::Expr(expr, _) = stmt {
+        check_expr_for_silent_skips(expr, sink);
+    }
+}
+
+fn check_expr_for_silent_skips(expr: &syn::Expr, sink: &mut Vec<(u32, &'static str)>) {
+    match expr {
+        syn::Expr::If(expr_if) => {
+            let cond_str = quote::quote!(#expr_if).to_string();
+            if cond_str.contains("is_err ()") && (cond_str.contains("return Ok (())") || cond_str.contains("return ;")) {
+                sink.push((expr_if.if_token.span.start().line as u32, "an is_err guard returning early"));
+            } else if cond_str.contains("if let Err") && cond_str.contains("return") {
+                sink.push((expr_if.if_token.span.start().line as u32, "an if-let-Err guard returning early"));
+            }
+        }
+        syn::Expr::Macro(expr_macro) => {
+            let mac_str = quote::quote!(#expr_macro).to_string();
+            if (mac_str.contains("println !") || mac_str.contains("eprintln !"))
+                && (mac_str.contains("skipped") || mac_str.contains("no GPU") || mac_str.contains("GPU unavailable"))
+            {
+                sink.push((expr_macro.mac.path.segments[0].ident.span().start().line as u32, "a printed excuse for not running"));
+            }
+        }
+        _ => {}
     }
 }
 
