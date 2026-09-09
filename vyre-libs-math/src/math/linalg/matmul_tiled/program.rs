@@ -172,8 +172,8 @@ pub(crate) fn build_matmul_tiled_program(
             name: out.to_string(),
             shape: vec![m, n],
         })?;
-    let logical_output_bytes = (logical_out_count as usize)
-        .checked_mul(element_size)
+    let logical_output_bytes = u64::from(logical_out_count)
+        .checked_mul(element_size as u64)
         .ok_or_else(|| TensorRefError::ElementCountOverflow {
             name: out.to_string(),
             shape: vec![m, n],
