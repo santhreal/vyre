@@ -234,9 +234,11 @@ pub use failure_domain::{
     govern_mutex_restartable, reclaim_poisoned_for_teardown, FailureDomain, RecoveryClass,
     RecoveryDisposition, TypedRecoveryError,
 };
+pub use vyre_spec::schema_registry::{
+    CanonicalField, DefaultsPolicy, FieldType, SchemaBounds, SchemaDefinition, SchemaId,
+    SchemaRegistry, CANONICAL_SCHEMA_REGISTRY,
+};
 pub use vyre_spec::{
-    CanonicalField, CompatibilityCell, CompatibilityDisposition, CompatibilityMatrix,
-    DefaultsPolicy, FieldType, NegotiatedContract, NegotiationError, ProtocolDomain,
-    ProtocolVersion, SchemaBounds, SchemaDefinition, SchemaId, SchemaRegistry,
-    CANONICAL_COMPATIBILITY_CELLS, CANONICAL_SCHEMA_REGISTRY,
+    CompatibilityCell, CompatibilityDisposition, CompatibilityMatrix, NegotiatedContract,
+    NegotiationError, ProtocolDomain, ProtocolVersion, CANONICAL_COMPATIBILITY_CELLS,
 };
