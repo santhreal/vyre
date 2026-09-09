@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 use vyre_foundation::extension::{
-    CatalogBundle, ExtensionCatalogError, OpaqueExprResolver, OpaqueNodeResolver,
+    ExtensionCatalogBundle, ExtensionCatalogError, OpaqueExprResolver, OpaqueNodeResolver,
 };
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node, NodeExtension, Program,
@@ -137,7 +137,7 @@ inventory::submit! {
 
 #[test]
 fn catalog_bundle_refuses_duplicate_identities_and_version_collisions_by_name() {
-    let mut bundle = CatalogBundle::new("proof_bundle");
+    let mut bundle = ExtensionCatalogBundle::new("proof_bundle");
     let ns = ExtensionNamespace::new("test.collision.refusal").unwrap();
     let ver = ExtensionSemVer::new(1, 0, 0);
 
@@ -225,7 +225,7 @@ fn catalog_bundle_refuses_duplicate_identities_and_version_collisions_by_name() 
 
 #[test]
 fn catalog_bundle_refuses_empty_required_proof_fields() {
-    let mut bundle = CatalogBundle::new("proof_check_bundle");
+    let mut bundle = ExtensionCatalogBundle::new("proof_check_bundle");
     let ns = ExtensionNamespace::new("test.proof.missing").unwrap();
     let ver = ExtensionSemVer::new(1, 0, 0);
 

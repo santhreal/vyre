@@ -1,9 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
-    operation_id_namespace, registry_error::validate_identity, CatalogBundle, ConformanceProvider,
-    ConformanceRegistry, ExtensionProvenance, IdNamespace, LoweringProvider, OperationRegistration,
-    OperationRegistry, OperationRegistryError, OperationTier, SemanticDescriptor,
+    operation_id_namespace, registry_error::validate_identity, ConformanceProvider,
+    ConformanceRegistry, ExtensionProvenance, IdNamespace, LoweringProvider,
+    OperationCatalogBundle, OperationRegistration, OperationRegistry, OperationRegistryError,
+    OperationTier, SemanticDescriptor,
 };
 use crate::numeric::NumericContract;
 
@@ -143,7 +144,7 @@ fn an_id_naming_no_crate_is_refused_whatever_it_declares() {
 /// Catalog bundle collects registered descriptors and lowering providers and computes a stable digest.
 #[test]
 fn catalog_bundle_assembly_and_descriptor_lookup() {
-    let bundle = CatalogBundle::from_registry();
+    let bundle = OperationCatalogBundle::from_registry();
     assert!(!bundle.is_empty());
     assert!(bundle.len() > 0);
     let digest = bundle.digest();
@@ -323,14 +324,14 @@ fn production_catalog_read_cannot_reach_fixtures_and_changing_fixtures_preserves
     descriptors.insert(id, desc);
     lowering_providers.insert(id, lowering);
 
-    let bundle1 = CatalogBundle::from_parts(
+    let bundle1 = OperationCatalogBundle::from_parts(
         descriptors.clone(),
         lowering_providers.clone(),
         extensions.clone(),
     );
     let digest1 = *bundle1.digest();
 
-    // Structurally verify: CatalogBundle and SemanticDescriptor expose NO fixture fields
+    // Structurally verify: OperationCatalogBundle and SemanticDescriptor expose NO fixture fields
     assert!(bundle1.descriptor(id).is_some());
     assert!(bundle1.lowering(id).is_some());
     // ConformanceProvider with fixture 1
@@ -353,7 +354,7 @@ fn production_catalog_read_cannot_reach_fixtures_and_changing_fixtures_preserves
     );
 
     // Recompute bundle digest: it must remain strictly byte-identical!
-    let bundle2 = CatalogBundle::from_parts(
+    let bundle2 = OperationCatalogBundle::from_parts(
         descriptors.clone(),
         lowering_providers.clone(),
         extensions.clone(),
@@ -361,7 +362,7 @@ fn production_catalog_read_cannot_reach_fixtures_and_changing_fixtures_preserves
     let digest2 = *bundle2.digest();
     assert_eq!(
         digest1, digest2,
-        "Fix: changing test fixtures or expected outputs must not alter the production CatalogBundle digest"
+        "Fix: changing test fixtures or expected outputs must not alter the production OperationCatalogBundle digest"
     );
 
     // Changing an execution-relevant semantic property MUST alter the digest
@@ -373,21 +374,22 @@ fn production_catalog_read_cannot_reach_fixtures_and_changing_fixtures_preserves
             ..desc
         },
     );
-    let bundle3 = CatalogBundle::from_parts(modified_descriptors, lowering_providers, extensions);
+    let bundle3 =
+        OperationCatalogBundle::from_parts(modified_descriptors, lowering_providers, extensions);
     let digest3 = *bundle3.digest();
     assert_ne!(
         digest1, digest3,
-        "Fix: changing a semantic version or descriptor property must alter the production CatalogBundle digest"
+        "Fix: changing a semantic version or descriptor property must alter the production OperationCatalogBundle digest"
     );
 }
 
-/// A test proves a CatalogBundle digest is part of artifact identity: two bundles differing
+/// A test proves a OperationCatalogBundle digest is part of artifact identity: two bundles differing
 /// in one extension version produce different artifact identities.
 #[test]
 fn catalog_bundle_digest_is_part_of_artifact_identity() {
     let base_request_digest: [u8; 32] = [42u8; 32];
 
-    let mut bundle_v1 = CatalogBundle::empty();
+    let mut bundle_v1 = OperationCatalogBundle::empty();
     bundle_v1 = bundle_v1.with_extension(
         "custom_dialect",
         1,
@@ -410,7 +412,7 @@ fn catalog_bundle_digest_is_part_of_artifact_identity() {
         }],
     );
 
-    let mut bundle_v2 = CatalogBundle::empty();
+    let mut bundle_v2 = OperationCatalogBundle::empty();
     bundle_v2 = bundle_v2.with_extension(
         "custom_dialect",
         2,

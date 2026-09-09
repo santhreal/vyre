@@ -5,7 +5,7 @@ use crate::optimizer::passes::fusion_cse::cse::CseCtx;
 
 /// O15 (revised): CSE deduplicates structural keys, not pointer addresses.
 ///
-/// The original O15 implementation cached by `*const Expr -> ExprId`,
+/// The original O15 implementation cached by `*const Expr -> CseExprId`,
 /// which was unsound: `Box<Expr>` sub-trees freed by `Cow::Owned`
 /// rewrites in `CseCtx::expr` get reallocated at the same address by
 /// later sub-trees, so the cache returned stale ExprIds and CSE
@@ -15,8 +15,8 @@ use crate::optimizer::passes::fusion_cse::cse::CseCtx;
 /// `BitOr(invocation, 1)`).
 ///
 /// The corrected contract: structurally identical sub-expressions
-/// return the SAME `ExprId` from `intern_expr`. The pointer is no
-/// longer cached, but the `deduplication` `FxHashMap<ExprKey, ExprId>`
+/// return the SAME `CseExprId` from `intern_expr`. The pointer is no
+/// longer cached, but the `deduplication` `FxHashMap<ExprKey, CseExprId>`
 /// still gives O(1) intern dedup by structural key.
 #[test]
 #[inline]
@@ -31,7 +31,7 @@ fn cse_intern_dedups_structurally_equivalent_subtrees() {
 
     assert_eq!(
         id_a, id_b,
-        "Fix: structurally identical Add(LitU32(1), LitU32(2)) trees must share an ExprId."
+        "Fix: structurally identical Add(LitU32(1), LitU32(2)) trees must share an CseExprId."
     );
 
     // Different operands → different IDs.

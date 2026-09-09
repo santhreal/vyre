@@ -11,8 +11,8 @@
 //! unit-tested in `structure_gate`; these tests are the standing gate.
 //!
 //! What these do NOT catch: two implementations of one algorithm that never
-//! register an operation, and duplication inside a single crate. `lego-audit`
-//! and `dedup-report` own the IR-fingerprint side of that.
+//! register an operation. `lego-audit` and `dedup-report` own the
+//! IR-fingerprint side of that.
 
 #![forbid(unsafe_code)]
 
@@ -22,9 +22,10 @@ use structure_gate::module_layout::{
     sibling_module_failures, source_test_directory_failures,
 };
 use structure_gate::{
-    category_home_failures, frontend_owner_failures, geometry_constant_failures,
-    operation_identity_failures, registration_owner_failures, registry_link_failures,
-    roster_failures, scan, substrate_home_failures, workspace_root, Workspace,
+    category_home_failures, duplicate_public_type_name_failures, frontend_owner_failures,
+    geometry_constant_failures, operation_identity_failures, registration_owner_failures,
+    registry_link_failures, roster_failures, scan, substrate_home_failures, workspace_root,
+    Workspace,
 };
 
 fn workspace() -> Workspace {
@@ -406,5 +407,23 @@ fn every_crate_in_the_checkout_is_judged() {
         "expected docs/public-api to publish vyre_libs::parsing; the snapshot scan read nothing, \
          so every published module would be reported as a banned name. Found {} module(s)",
         workspace.published_modules.len()
+    );
+}
+
+/// One crate resolves one type name to one definition.
+///
+/// The name space comes from the tree at run time, so a crate that grows a
+/// second `pub struct`, `pub enum`, `pub union` or `pub trait` of a name it
+/// already declares turns this red without an edit here. There is no exception
+/// list: a pair that is intended states the intent in the two names.
+#[test]
+fn no_crate_declares_one_public_type_name_twice() {
+    let workspace = workspace();
+    let failures = duplicate_public_type_name_failures(&workspace_root(), &workspace.crate_roots);
+
+    assert!(
+        failures.is_empty(),
+        "{}",
+        report("duplicate-type-name", &failures)
     );
 }

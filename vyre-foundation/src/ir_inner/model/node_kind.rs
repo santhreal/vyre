@@ -16,9 +16,12 @@ pub struct NodeId(pub u32);
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct VarId(pub u32);
 
-/// Stable memory-region id for graph-shaped IR.
+/// Stable id of a raw byte region held by an interpreter context.
+///
+/// Distinct from a structured control region in `region_ssa` and from an
+/// interned logical region in `substrate`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct RegionId(pub u32);
+pub struct ByteRegionId(pub u32);
 
 /// Scalar value carried by the generic interpreter.
 ///
@@ -75,7 +78,7 @@ impl std::error::Error for EvalError {}
 pub struct InterpCtx {
     values: FxHashMap<NodeId, Value>,
     operands: Vec<NodeId>,
-    regions: FxHashMap<RegionId, Vec<u8>>,
+    regions: FxHashMap<ByteRegionId, Vec<u8>>,
 }
 
 impl InterpCtx {
@@ -129,7 +132,7 @@ impl InterpCtx {
     }
 
     /// Store a byte region used by region-oriented primitives.
-    pub fn set_region(&mut self, id: RegionId, bytes: Vec<u8>) {
+    pub fn set_region(&mut self, id: ByteRegionId, bytes: Vec<u8>) {
         self.regions.insert(id, bytes);
     }
 
@@ -138,7 +141,7 @@ impl InterpCtx {
     /// # Errors
     ///
     /// Returns [`EvalError`] when `id` has no initialized byte region.
-    pub fn region(&self, id: RegionId) -> Result<&[u8], EvalError> {
+    pub fn region(&self, id: ByteRegionId) -> Result<&[u8], EvalError> {
         self.regions.get(&id).map(Vec::as_slice).ok_or_else(|| {
             EvalError::new(format!(
                 "missing interpreter region {}. Fix: initialize every primitive input region before reference execution.",
@@ -152,7 +155,7 @@ impl InterpCtx {
     /// # Errors
     ///
     /// Returns [`EvalError`] when `id` has no initialized mutable byte region.
-    pub fn region_mut(&mut self, id: RegionId) -> Result<&mut Vec<u8>, EvalError> {
+    pub fn region_mut(&mut self, id: ByteRegionId) -> Result<&mut Vec<u8>, EvalError> {
         self.regions.get_mut(&id).ok_or_else(|| {
             EvalError::new(format!(
                 "missing mutable interpreter region {}. Fix: allocate primitive output regions before reference execution.",

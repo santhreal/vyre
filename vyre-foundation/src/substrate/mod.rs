@@ -12,15 +12,15 @@ mod query;
 mod views;
 
 pub use arenas::{
-    CanonicalConst, CanonicalLayout, CanonicalType, ConstInterner, ExprArena, LayoutInterner,
-    NodeArena, RegionArena, StringInterner, SubstrateArena, TypeInterner,
+    CanonicalConst, CanonicalLayout, CanonicalType, ConstInterner, LayoutInterner, NodeArena,
+    RegionArena, StringInterner, SubstrateArena, TypeInterner,
 };
 pub use cache::{
     StaleCacheError, VersionedCacheEntry, VersionedCacheKey, SUBSTRATE_CACHE_SCHEMA_VERSION,
 };
 pub use ids::{
-    ArtifactId, ExprId, InternedConstId, InternedLayoutId, InternedStringId, InternedTypeId,
-    NodeId, PhysicalKernelId, RegionId, Revision, ScheduleNodeId,
+    ArtifactId, InternedConstId, InternedLayoutId, InternedNodeId, InternedRegionId,
+    InternedStringId, InternedTypeId, PhysicalKernelId, Revision, ScheduleNodeId,
 };
 pub use pass_contracts::{derive_registered_pass_descriptors, PassDescriptor, TransformOutcome};
 pub use query::{

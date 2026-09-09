@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre_foundation::optimizer::rewrite_contract::NumericalContract` is renamed `RewriteNumericalContract`. `types::contract::NumericalContract` keeps the name for the program-level record of caller-declared numeric allowances."

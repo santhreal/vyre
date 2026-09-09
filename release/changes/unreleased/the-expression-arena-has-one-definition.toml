@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`vyre_foundation::substrate::arenas::ExprArena`, `substrate::arenas::compute_expr_digest` and `substrate::ids::ExprId` are deleted. `SubstrateArena` interns through `optimizer::expr_arena::ExprArena` behind `intern_expr`, `expr` and `expr_count`, so an interned expression shares its subtrees instead of being keyed on a digest of its whole debug form."

@@ -230,6 +230,21 @@ impl ExprArena {
         self.nodes.is_empty()
     }
 
+    /// Bytes this arena holds for its interned nodes and lookup tables.
+    ///
+    /// Counts the arena's own storage: one `FlatExpr` plus its `Arc` header per
+    /// interned node, one hash-cons entry per node, and the opaque side tables.
+    /// It does not reach through an `Arc<dyn ExprNode>` into an extension's own
+    /// allocation, which the arena did not make.
+    #[must_use]
+    pub fn allocated_bytes(&self) -> usize {
+        use std::mem::size_of;
+        self.nodes.len() * (size_of::<FlatExpr>() + size_of::<Arc<FlatExpr>>())
+            + self.hashcons.len() * (size_of::<Arc<FlatExpr>>() + size_of::<ExprId>())
+            + self.opaques.len() * size_of::<Arc<dyn ExprNode>>()
+            + self.opaque_lookup.len() * (size_of::<OpaqueContentKey>() + size_of::<usize>())
+    }
+
     /// Borrow the [`FlatExpr`] previously interned at `id`.
     ///
     /// # Panics

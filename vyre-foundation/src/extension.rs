@@ -41,7 +41,7 @@ pub use vyre_spec::{
     ExtensionShapeRule as DeclExtensionShapeRule,
 };
 
-/// Error produced when validating or registering in a [`CatalogBundle`].
+/// Error produced when validating or registering in a [`ExtensionCatalogBundle`].
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ExtensionCatalogError {
     /// An extension with identical identity is already registered in the bundle.
@@ -82,14 +82,14 @@ pub enum ExtensionCatalogError {
 /// Replaces process-global opaque callbacks with an explicit, versioned,
 /// serializable bundle of declarative extension schemas.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct CatalogBundle {
+pub struct ExtensionCatalogBundle {
     /// Bundle identifier.
     pub bundle_id: String,
     /// Registered extension schemas keyed by collision-resistant identity.
     pub schemas: FxHashMap<ExtensionIdentity, ExtensionSchema>,
 }
 
-impl CatalogBundle {
+impl ExtensionCatalogBundle {
     /// Create a new empty catalog bundle.
     #[must_use]
     pub fn new(bundle_id: impl Into<String>) -> Self {
@@ -202,7 +202,7 @@ impl CatalogBundle {
     }
 
     /// Merge another catalog bundle into this one.
-    pub fn merge(&mut self, other: CatalogBundle) -> Result<(), ExtensionCatalogError> {
+    pub fn merge(&mut self, other: ExtensionCatalogBundle) -> Result<(), ExtensionCatalogError> {
         for (_, schema) in other.schemas {
             self.register(schema)?;
         }
@@ -596,7 +596,7 @@ mod tests {
 
     #[test]
     fn catalog_bundle_distinguishes_distinct_extension_identities() {
-        let mut bundle = CatalogBundle::new("test_bundle");
+        let mut bundle = ExtensionCatalogBundle::new("test_bundle");
         let name_a = "d5pj";
         let name_b = "x.ta";
 

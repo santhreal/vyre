@@ -20,6 +20,50 @@ pub enum RegionSsaError {
     /// Unbound variable reference.
     #[error("Unbound variable in statement IR: {0}")]
     UnboundVariable(String),
+    /// A literal whose value statement IR cannot carry.
+    #[error("Literal {literal:?} is not representable in statement IR, which carries only 32-bit and boolean literals. Fix: narrow the value to a 32-bit width in Region SSA before lowering, or keep the computation in Region SSA.")]
+    UnrepresentableLiteral {
+        /// The literal that was rejected instead of truncated.
+        literal: ScalarLiteral,
+    },
+}
+
+impl ScalarLiteral {
+    /// Convert to the statement-IR literal holding the same value.
+    ///
+    /// Statement IR carries only 32-bit and boolean literals. A `U64`, `I64`
+    /// or `F64` value converts only when the narrowed form is the same number,
+    /// so a value that would change is rejected rather than truncated.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RegionSsaError::UnrepresentableLiteral`] for a 64-bit literal
+    /// whose 32-bit narrowing is a different value.
+    pub fn to_expr(self) -> Result<Expr, RegionSsaError> {
+        let unrepresentable = || RegionSsaError::UnrepresentableLiteral { literal: self };
+        match self {
+            Self::U32(value) => Ok(Expr::LitU32(value)),
+            Self::I32(value) => Ok(Expr::LitI32(value)),
+            Self::F32(value) => Ok(Expr::LitF32(value)),
+            Self::Bool(value) => Ok(Expr::LitBool(value)),
+            Self::U64(value) => u32::try_from(value)
+                .map(Expr::LitU32)
+                .map_err(|_| unrepresentable()),
+            Self::I64(value) => i32::try_from(value)
+                .map(Expr::LitI32)
+                .map_err(|_| unrepresentable()),
+            Self::F64(value) => {
+                // Bit equality after the round trip also rejects a payload NaN,
+                // an out-of-range magnitude, and any loss of mantissa.
+                let narrowed = value as f32;
+                if f64::from(narrowed).to_bits() == value.to_bits() {
+                    Ok(Expr::LitF32(narrowed))
+                } else {
+                    Err(unrepresentable())
+                }
+            }
+        }
+    }
 }
 
 /// Lower a statement-based [`Program`] into a typed [`RegionModule`].
@@ -238,15 +282,7 @@ fn lower_ssa_op_to_nodes(
 ) -> Result<(), RegionSsaError> {
     match &op.kind {
         RegionOpKind::Constant(lit) => {
-            let expr = match lit {
-                ScalarLiteral::U32(v) => Expr::LitU32(*v),
-                ScalarLiteral::I32(v) => Expr::LitI32(*v),
-                ScalarLiteral::U64(v) => Expr::LitU32(*v as u32),
-                ScalarLiteral::I64(v) => Expr::LitI32(*v as i32),
-                ScalarLiteral::F32(v) => Expr::LitF32(*v),
-                ScalarLiteral::F64(v) => Expr::LitF32(*v as f32),
-                ScalarLiteral::Bool(v) => Expr::LitBool(*v),
-            };
+            let expr = lit.to_expr()?;
             if let Some(res) = op.results.first() {
                 val_to_expr.insert(res.id, expr.clone());
                 let var_name = format!("v_{}", res.id.0);

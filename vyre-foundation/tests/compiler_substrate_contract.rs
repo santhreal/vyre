@@ -172,16 +172,27 @@ fn hash_consed_arenas_and_interners_guarantee_structural_sharing() {
     let expr2 = Expr::add(Expr::var("x"), Expr::LitU32(42));
     let expr3 = Expr::add(Expr::var("y"), Expr::LitU32(42));
 
-    let eid1 = substrate.exprs.intern(expr1);
-    let eid2 = substrate.exprs.intern(expr2);
-    let eid3 = substrate.exprs.intern(expr3);
+    let eid1 = substrate.intern_expr(&expr1);
+    let eid2 = substrate.intern_expr(&expr2);
 
     assert_eq!(
         eid1, eid2,
         "Equivalent expressions must hash-cons to same ExprId"
     );
+    assert_eq!(
+        substrate.intern_expr(&substrate.expr(eid1)),
+        eid1,
+        "A rebuilt expression must intern back to its own id"
+    );
+
+    let before_expr3 = substrate.expr_count();
+    let eid3 = substrate.intern_expr(&expr3);
     assert_ne!(eid1, eid3, "Distinct expressions must have distinct ExprId");
-    assert_eq!(substrate.exprs.len(), 2);
+    assert_eq!(
+        substrate.expr_count() - before_expr3,
+        2,
+        "The `42` leaf is already interned, so only `y` and the new sum are added"
+    );
 
     // 6. Node Hash-Consing
     let node1 = Node::let_bind("res", Expr::LitU32(100));

@@ -26,7 +26,7 @@ use vyre_foundation::optimizer::region_law::{
     RegionDerivationBudget, RegionDerivationStop, REGION_LAWS,
 };
 use vyre_foundation::optimizer::rewrite_contract::{
-    contract_for_pass, registered_rewrite_contracts, NumericalContract,
+    contract_for_pass, registered_rewrite_contracts, RewriteNumericalContract,
 };
 use vyre_spec::RegionLawFamily;
 
@@ -164,7 +164,7 @@ fn value_changing_rewrites_are_exactly_the_numerical_citations() {
         }
         assert_eq!(
             contract,
-            NumericalContract::BitExact,
+            RewriteNumericalContract::BitExact,
             "Fix: law `{}` is cited from family `{}`, which admits no value difference, but \
              rewrite `{}` declares `{contract:?}`. Cite it from the numerical family or state a \
              bit-exact contract.",
@@ -180,7 +180,7 @@ fn value_changing_rewrites_are_exactly_the_numerical_citations() {
         .map(|law| law.realized_by)
         .collect();
     for contract in registered_rewrite_contracts() {
-        if contract.numerical == NumericalContract::BitExact {
+        if contract.numerical == RewriteNumericalContract::BitExact {
             continue;
         }
         assert!(
@@ -251,7 +251,7 @@ fn a_bit_exact_run_derives_no_value_changing_law() {
         let law = region_law(name).expect("Fix: a cited law must be declared");
         assert_eq!(
             law_numerical_contract(law),
-            Some(NumericalContract::BitExact),
+            Some(RewriteNumericalContract::BitExact),
             "Fix: law `{name}` was derived without its numerical contract being granted"
         );
     }
@@ -269,12 +269,12 @@ fn granting_a_contract_admits_the_law_that_declares_it() {
     let refused = derive_region_alternatives(&program, &[], budget)
         .expect("Fix: the pass registry must schedule");
     let granted =
-        derive_region_alternatives(&program, &[NumericalContract::IntegerWrapping], budget)
+        derive_region_alternatives(&program, &[RewriteNumericalContract::IntegerWrapping], budget)
             .expect("Fix: the pass registry must schedule");
 
     let wrapping_laws: BTreeSet<&str> = REGION_LAWS
         .iter()
-        .filter(|law| law_numerical_contract(law) == Some(NumericalContract::IntegerWrapping))
+        .filter(|law| law_numerical_contract(law) == Some(RewriteNumericalContract::IntegerWrapping))
         .map(|law| law.name)
         .collect();
     assert!(

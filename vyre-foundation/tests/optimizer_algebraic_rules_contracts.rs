@@ -5,13 +5,14 @@ use std::collections::BTreeSet;
 use vyre_foundation::ir::BinOp;
 use vyre_foundation::optimizer::algebraic_rules::{
     arithmetic_rewrite_proof_contracts, binop_identity_replacement,
-    strength_reduce_power_of_two_shift, IdentityReplacement, ScalarLiteral,
+    strength_reduce_power_of_two_shift, IdentityReplacement,
     REWRITE_ID_CANONICALIZE_ADD_COMMUTATIVE, REWRITE_ID_CANONICALIZE_MUL_COMMUTATIVE,
     REWRITE_ID_CONST_FOLD_ADD_LITERALS, REWRITE_ID_CONST_FOLD_MUL_LITERALS,
     REWRITE_ID_IDENTITY_ELIM_ADD_ZERO, REWRITE_ID_IDENTITY_ELIM_MUL_ONE,
     REWRITE_ID_IDENTITY_ELIM_MUL_ZERO, REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_EIGHT,
     REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_FOUR, REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_TWO,
 };
+use vyre_foundation::region_ssa::ScalarLiteral;
 
 #[test]
 fn identity_rules_cover_bool_and_integer_absorbers() {
