@@ -40,7 +40,7 @@ rayon.workspace = true
 vyre-libs-builder = { workspace = true }
 vyre-libs-device = { workspace = true }
 vyre-libs-math = { workspace = true }
-vyre-libs-graph = { workspace = true, features = ["analysis"] }
+vyre-libs-graph = { workspace = true, features = ["dense-reachability"] }
 vyre-libs-fixpoint = { workspace = true }
 
 [dev-dependencies]

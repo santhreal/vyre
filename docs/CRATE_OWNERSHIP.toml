@@ -4163,3 +4163,474 @@ optional = false
 default_features = true
 boundary = "public"
 seam = "lowering"
+
+# The consumer facade roster.
+#
+# `vyre-libs` is the one curated consumer facade over the domain packages of
+# the `libraries` layer. Its `[features]` table is generated from the rows
+# below by `cargo xtask configuration-model --write`, so a domain feature is
+# recorded once, beside the `[[crate]]` record of the package that owns its
+# semantics, instead of twice in two manifests that can disagree.
+#
+# A `[[facade.feature]]` row states which package owns the capability. The
+# generated manifest row forwards to that package and to nothing else, so the
+# facade is never a second declaring package for the name. `requires` names
+# the facade features the row also selects, which is the facade's own curation
+# of what a selection exposes and is not derivable from the domain manifest.
+# `activates` names third-party optional dependencies the capability needs.
+
+[facade]
+package = "vyre-libs"
+default = [
+    "math-linalg",
+    "math-scan",
+    "math-broadcast",
+    "nn-activation",
+    "nn-linear",
+    "nn-norm",
+    "pattern-substring",
+    "pattern-dfa",
+    "hash",
+    "decode",
+]
+local = ["test-fixtures"]
+
+# A named bundle of facade features. An aggregate forwards to no package of
+# its own, so it declares nothing and owns nothing.
+
+[[facade.aggregate]]
+name = "math"
+selects = ["math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct"]
+
+[[facade.aggregate]]
+name = "nn"
+selects = ["nn-activation", "nn-linear", "nn-norm", "nn-attention"]
+
+[[facade.aggregate]]
+name = "pattern"
+selects = ["pattern-substring", "pattern-dfa"]
+
+[[facade.aggregate]]
+name = "crypto"
+selects = ["crypto-blake3"]
+
+# One row per domain package the facade forwards to. `optional` states
+# whether the facade declares the dependency optional, which decides whether a
+# generated row activates it with `dep:` and forwards weakly.
+
+[[facade.domain]]
+package = "vyre-libs-builder"
+optional = false
+
+[[facade.domain]]
+package = "vyre-libs-bitset"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-reduce"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-fixpoint"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-math"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-nn"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-graph"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-pattern"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-hash"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-text"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-decode"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-parsing"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-security"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-visual"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-rule"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-vfs"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-device"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-solvers"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-encoding"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-analysis"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-reasoning"
+optional = true
+
+[[facade.domain]]
+package = "vyre-libs-scheduling"
+optional = true
+
+# One row per domain feature the facade exposes.
+
+[[facade.feature]]
+name = "builder"
+domain = "vyre-libs-builder"
+requires = []
+
+[[facade.feature]]
+name = "builder-ops"
+domain = "vyre-libs-builder"
+requires = ["builder"]
+
+[[facade.feature]]
+name = "cat-a-builder-options"
+domain = "vyre-libs-builder"
+requires = ["builder"]
+
+[[facade.feature]]
+name = "telemetry"
+domain = "vyre-libs-builder"
+requires = []
+
+[[facade.feature]]
+name = "bitset"
+domain = "vyre-libs-bitset"
+requires = ["reduce"]
+
+[[facade.feature]]
+name = "logical"
+domain = "vyre-libs-bitset"
+requires = ["bitset"]
+
+[[facade.feature]]
+name = "reduce"
+domain = "vyre-libs-reduce"
+requires = ["builder"]
+
+[[facade.feature]]
+name = "fixpoint"
+domain = "vyre-libs-fixpoint"
+requires = ["bitset"]
+
+[[facade.feature]]
+name = "math-dialect"
+domain = "vyre-libs-math"
+requires = ["builder-ops", "reduce"]
+
+[[facade.feature]]
+name = "math-kernels"
+domain = "vyre-libs-math"
+requires = ["reduce"]
+
+[[facade.feature]]
+name = "math-linalg"
+domain = "vyre-libs-math"
+requires = ["builder-ops", "cat-a-builder-options", "math-dialect", "math-kernels"]
+
+[[facade.feature]]
+name = "math-scan"
+domain = "vyre-libs-math"
+requires = ["math-dialect", "math-kernels"]
+
+[[facade.feature]]
+name = "math-broadcast"
+domain = "vyre-libs-math"
+requires = ["math-dialect", "math-kernels"]
+
+[[facade.feature]]
+name = "math-algebra"
+domain = "vyre-libs-math"
+requires = ["math-dialect", "math-kernels"]
+
+[[facade.feature]]
+name = "math-succinct"
+domain = "vyre-libs-math"
+requires = ["math-dialect", "math-kernels", "graph"]
+
+[[facade.feature]]
+name = "geom"
+domain = "vyre-libs-math"
+requires = ["math-kernels"]
+
+[[facade.feature]]
+name = "opt"
+domain = "vyre-libs-math"
+requires = ["math-kernels"]
+
+[[facade.feature]]
+name = "representation"
+domain = "vyre-libs-math"
+requires = ["builder"]
+
+[[facade.feature]]
+name = "nn-kernels"
+domain = "vyre-libs-nn"
+requires = ["math-kernels"]
+
+[[facade.feature]]
+name = "nn-activation"
+domain = "vyre-libs-nn"
+requires = ["builder-ops", "nn-kernels"]
+
+[[facade.feature]]
+name = "nn-linear"
+domain = "vyre-libs-nn"
+requires = ["cat-a-builder-options", "math-linalg", "nn-activation", "nn-kernels"]
+
+[[facade.feature]]
+name = "nn-linear-4bit"
+domain = "vyre-libs-nn"
+requires = ["nn-linear"]
+
+[[facade.feature]]
+name = "nn-norm"
+domain = "vyre-libs-nn"
+requires = ["builder-ops", "cat-a-builder-options", "math-broadcast", "nn-kernels"]
+
+[[facade.feature]]
+name = "nn-attention"
+domain = "vyre-libs-nn"
+requires = ["builder-ops", "cat-a-builder-options", "nn-norm", "math-linalg", "nn-kernels"]
+
+[[facade.feature]]
+name = "nn-moe"
+domain = "vyre-libs-nn"
+requires = ["nn-attention"]
+
+[[facade.feature]]
+name = "nn-inference"
+domain = "vyre-libs-nn"
+requires = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-moe"]
+
+[[facade.feature]]
+name = "llm"
+domain = "vyre-libs-nn"
+requires = ["builder-ops", "nn-moe"]
+
+[[facade.feature]]
+name = "graph"
+domain = "vyre-libs-graph"
+requires = ["bitset", "reduce", "hash", "fixpoint", "math-kernels", "telemetry"]
+
+[[facade.feature]]
+name = "topology"
+domain = "vyre-libs-graph"
+requires = ["math-kernels", "graph"]
+
+[[facade.feature]]
+name = "graph-dispatch"
+domain = "vyre-libs-graph"
+requires = ["device", "telemetry", "math-kernels", "graph"]
+
+[[facade.feature]]
+name = "interactive-graphics"
+domain = "vyre-libs-graph"
+requires = ["graph", "visual"]
+
+[[facade.feature]]
+name = "pattern-kernels"
+domain = "vyre-libs-pattern"
+requires = ["hash"]
+
+[[facade.feature]]
+name = "pattern-substring"
+domain = "vyre-libs-pattern"
+requires = ["pattern-dfa", "pattern-kernels"]
+
+[[facade.feature]]
+name = "pattern-dfa"
+domain = "vyre-libs-pattern"
+requires = ["pattern-kernels", "text"]
+
+[[facade.feature]]
+name = "pattern-nfa"
+domain = "vyre-libs-pattern"
+requires = ["pattern-dfa", "nfa"]
+
+[[facade.feature]]
+name = "pattern-regex"
+domain = "vyre-libs-pattern"
+requires = ["pattern-nfa"]
+activates = ["regex-syntax"]
+
+[[facade.feature]]
+name = "nfa"
+domain = "vyre-libs-pattern"
+requires = ["bitset", "pattern-kernels"]
+
+[[facade.feature]]
+name = "hash"
+domain = "vyre-libs-hash"
+requires = ["builder"]
+
+[[facade.feature]]
+name = "crypto-blake3"
+domain = "vyre-libs-hash"
+requires = ["hash"]
+
+[[facade.feature]]
+name = "text"
+domain = "vyre-libs-text"
+requires = ["reduce"]
+
+[[facade.feature]]
+name = "decode"
+domain = "vyre-libs-decode"
+requires = ["pattern-kernels", "text"]
+
+[[facade.feature]]
+name = "parsing"
+domain = "vyre-libs-parsing"
+requires = ["go-parser", "python-parser"]
+
+[[facade.feature]]
+name = "parsing-kernels"
+domain = "vyre-libs-parsing"
+requires = ["text", "pattern-kernels"]
+
+[[facade.feature]]
+name = "go-parser"
+domain = "vyre-libs-parsing"
+requires = ["reduce"]
+
+[[facade.feature]]
+name = "python-parser"
+domain = "vyre-libs-parsing"
+requires = ["parsing-kernels"]
+
+[[facade.feature]]
+name = "security"
+domain = "vyre-libs-security"
+requires = ["label", "predicate"]
+
+[[facade.feature]]
+name = "predicate"
+domain = "vyre-libs-security"
+requires = ["graph", "bitset", "label"]
+
+[[facade.feature]]
+name = "label"
+domain = "vyre-libs-security"
+requires = ["bitset"]
+
+[[facade.feature]]
+name = "visual"
+domain = "vyre-libs-visual"
+requires = ["math-kernels"]
+
+[[facade.feature]]
+name = "rule"
+domain = "vyre-libs-rule"
+requires = ["builder"]
+
+[[facade.feature]]
+name = "vfs"
+domain = "vyre-libs-vfs"
+requires = []
+
+[[facade.feature]]
+name = "device"
+domain = "vyre-libs-device"
+requires = []
+
+[[facade.feature]]
+name = "solvers"
+domain = "vyre-libs-solvers"
+requires = ["device", "telemetry", "math-kernels", "topology"]
+
+[[facade.feature]]
+name = "encoding"
+domain = "vyre-libs-encoding"
+requires = ["device", "telemetry", "pattern-kernels", "math-kernels", "nn-kernels", "parsing-kernels", "bitset", "graph", "fixpoint"]
+
+[[facade.feature]]
+name = "analysis"
+domain = "vyre-libs-analysis"
+requires = ["device", "telemetry", "math-kernels", "graph"]
+
+[[facade.feature]]
+name = "reasoning"
+domain = "vyre-libs-reasoning"
+requires = ["analysis", "graph"]
+
+[[facade.feature]]
+name = "scheduling"
+domain = "vyre-libs-scheduling"
+requires = ["device", "telemetry", "math-kernels", "parsing-kernels", "graph"]
+
+# Declared configuration constraints. `configuration-model` proves these over
+# every cell a build can ask for, and reports a constraint that names a feature
+# no package declares, because such a constraint can never bind while reading
+# as one.
+
+# A feature name every package spells the same way on purpose. The
+# one-owning-package rule does not apply, because the capability is a
+# per-package convention rather than one capability many packages expose.
+
+[[configuration.shared_capability]]
+name = "cpu-parity"
+reason = "each crate enables its own comparison against vyre-reference, so the switch is per-crate by construction"
+
+[[configuration.shared_capability]]
+name = "device-tests"
+reason = "each crate enables its own tests that require a real device, and the sets do not overlap"
+
+[[configuration.shared_capability]]
+name = "subgroup-ops"
+reason = "each crate declares the subgroup capability its own emitters or lowering paths need"
+
+[[configuration.shared_capability]]
+name = "test-fixtures"
+reason = "each crate publishes its own fixture module for downstream test code"
+
+[[configuration.shared_capability]]
+name = "cuda"
+reason = "vyre, vyre-registry-link and vyre-driver-cuda each gate their own linkage of the CUDA driver, so the switch is per-crate"
+
+[[configuration.shared_capability]]
+name = "wgpu"
+reason = "vyre, vyre-registry-link and vyre-driver-wgpu each gate their own linkage of the wgpu driver, so the switch is per-crate"
+
+[[configuration.shared_capability]]
+name = "gpu"
+reason = "vyre-conform and vyre-primitives each gate their own requirement for a real device, and the sets do not overlap"
+
+[[configuration.shared_capability]]
+name = "libs-compositions"
+reason = "vyre-driver and vyre-runtime each select the vyre-libs domains their own compositions need, and neither set is the other"

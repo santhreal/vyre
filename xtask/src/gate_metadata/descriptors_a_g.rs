@@ -288,12 +288,15 @@ pub const GATES_A_G: [GateDescriptor; 55] = [
     },
     GateDescriptor {
         name: "configuration-model",
-        help: "Generate typed configuration space model from Cargo metadata, target predicates, backend capabilities, publication classes, and declared incompatibilities; proves satisfiability and isolated covering set closure",
+        help: "Read every member manifest into one configuration model: which package declares each capability, which package a facade row forwards it to, the cells a build can ask for, and whether the declared constraints leave any cell without an assignment. Generates the configuration space artifact and the consumer facade's [features] table from the [facade] roster in docs/CRATE_OWNERSHIP.toml.",
         package: "xtask-registry",
         areas: &["prepublish"],
         subject: "workspace configuration space",
-        inputs: &["Cargo.toml"],
-        artifacts: &["docs/generated/configuration-space.toml"],
+        inputs: &["Cargo.toml", "docs/CRATE_OWNERSHIP.toml"],
+        artifacts: &[
+            "docs/generated/configuration-space.toml",
+            "vyre-libs/Cargo.toml",
+        ],
         prerequisites: &[],
         resource_class: ResourceClass::Process,
         proof: "xtask_registry::gates::configuration_model::tests::configuration_space_model_is_satisfiable_and_deterministic",

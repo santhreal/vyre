@@ -13,7 +13,7 @@ publish = false
 
 [dependencies]
 vyre = { path = "../../vyre", default-features = false, features = ["wgpu"] }
-vyre-libs = { path = "../../vyre-libs", default-features = false, features = ["visual", "math-scan", "reduce", "graph"] }
+vyre-libs = { path = "../../vyre-libs", default-features = false, features = ["visual", "interactive-graphics", "math-scan", "reduce", "graph"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 

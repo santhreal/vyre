@@ -42,7 +42,7 @@ mod do_calculus_oracle;
 
 /// Impact mask op id. The projection below is the compiler's own change-impact
 /// composition, so it rides the dialect that consumes it.
-#[cfg(feature = "reasoning")]
+#[cfg(feature = "impact-mask")]
 pub(crate) const IMPACT_MASK_OP_ID: &str = "vyre-libs::graph::do_impact_mask_from_closure";
 
 /// Emit a Program that zeros all incoming edges to nodes marked
@@ -219,7 +219,7 @@ mod tests {
 
 /// Emit a Program that projects a reachability closure matrix and intervention mask
 /// into an n-element impact mask on device.
-#[cfg(feature = "reasoning")]
+#[cfg(feature = "impact-mask")]
 #[must_use]
 pub fn impact_mask_from_closure(
     intervention_mask: &str,
@@ -234,7 +234,7 @@ pub fn impact_mask_from_closure(
 }
 
 /// Emit an impact-mask projection Program with checked input shapes.
-#[cfg(feature = "reasoning")]
+#[cfg(feature = "impact-mask")]
 pub(crate) fn try_impact_mask_from_closure(
     intervention_mask: &str,
     closure: &str,

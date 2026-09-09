@@ -38,7 +38,7 @@ rustc-hash.workspace = true
 blake3.workspace = true
 rayon.workspace = true
 vyre-libs-builder = { workspace = true }
-vyre-libs-graph = { workspace = true, features = ["reasoning"] }
+vyre-libs-graph = { workspace = true, features = ["impact-mask"] }
 vyre-libs-analysis = { workspace = true }
 
 [dev-dependencies]
