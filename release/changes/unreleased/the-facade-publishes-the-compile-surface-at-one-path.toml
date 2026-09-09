@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The `vyre` crate root no longer re-exports the compile surface. `Artifact`, `ArtifactEnvelope`, `ArtifactPortfolio`, `CompileObjective`, `CompileRequest`, `DeviceFacts`, `Digest`, `ExternalFacts`, `ObjectiveMetric`, `SearchBudget`, `TargetPayload`, `TargetPayloadFormat`, `TargetProfile`, `ValidatedCompileRequest` and `WorkloadProfile` publish at `vyre::compiler` only."
