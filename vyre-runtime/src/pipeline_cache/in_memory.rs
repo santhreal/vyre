@@ -30,23 +30,24 @@ impl InMemoryPipelineCache {
         usize::from(fp.0[0]) % Self::SHARD_COUNT
     }
 
-    /// Lock one cache shard according to [`crate::RecoveryClass::RestartableFromCanonicalInput`].
+    /// Lock one cache shard under [`RecoveryClass::RestartableFromCanonicalInput`].
     ///
-    /// If a previous thread panicked while holding the shard lock, the shard state is
-    /// atomically reset to an empty valid state so no corrupted entries can be served,
+    /// If a previous thread panicked while holding the shard lock, the shard is
+    /// reset to an empty valid state so no half-written entry can be served,
     /// and the caller restarts cleanly from canonical input.
+    ///
+    /// [`RecoveryClass::RestartableFromCanonicalInput`]: vyre_foundation::RecoveryClass::RestartableFromCanonicalInput
     fn lock_shard(shard: &Mutex<InMemoryCacheShard>) -> MutexGuard<'_, InMemoryCacheShard> {
-        match shard.lock() {
-            Ok(guard) => guard,
-            Err(poison) => {
-                shard.clear_poison();
-                let mut guard = poison.into_inner();
-                guard.entries.clear();
-                guard.bytes = 0;
-                guard.last_eviction = None;
-                guard
-            }
-        }
+        vyre_foundation::govern_mutex_restartable(
+            shard,
+            "runtime in-memory pipeline cache",
+            "one cache shard",
+            |shard| {
+                shard.entries.clear();
+                shard.bytes = 0;
+                shard.last_eviction = None;
+            },
+        )
     }
 
     /// Construct an empty cache.

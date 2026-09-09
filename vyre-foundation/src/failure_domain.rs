@@ -211,6 +211,30 @@ pub fn process_fatal_poison(owner: &str, state: &str) -> ! {
     std::process::abort();
 }
 
+/// Panic on a poisoned lock over state whose partial mutation invalidates every
+/// answer derived from it.
+///
+/// WHY: an invariant violation is scoped to the unit of work that reads the
+/// state, not to the whole process. Unwinding lets a supervised caller report
+/// which unit failed and reclaim what that unit held, while
+/// [`process_fatal_poison`] takes down every unrelated unit in the same
+/// process. The two are separate recovery classes because they have separate
+/// blast radii, and a policy that aborts for both certifies neither.
+///
+/// `owner` names the subsystem holding the lock and `state` names what the
+/// lock excludes concurrent access to.
+///
+/// # Panics
+///
+/// Always. The message names `state` and `owner`.
+pub fn invariant_violation_poison(owner: &str, state: &str) -> ! {
+    panic!(
+        "vyre: {state} was poisoned in {owner}. A thread panicked while that lock was held, so \
+         the state behind it is half written and reading it would publish a corrupt value as \
+         truth. Fix: report the earlier panic."
+    );
+}
+
 /// Take a mutex guard over state that is rebuildable from canonical input.
 ///
 /// A poisoned lock here means a panic left the guarded state partly written.
@@ -244,6 +268,41 @@ where
     }
 }
 
+/// Take a write guard over state that is rebuildable from canonical input.
+///
+/// WHY: the `RwLock` counterpart of [`govern_mutex_restartable`], so a
+/// restartable owner picks its lock kind without picking a different recovery.
+/// A poisoned lock here means a panic left the guarded state partly written.
+/// `reset_on_restart` returns it to an empty valid state, the poison flag is
+/// cleared so the next acquisition is an ordinary one, and the guard is handed
+/// back. Every entry discarded this way is derivable again from the input the
+/// owner already holds, which is what makes discarding it correct rather than
+/// lossy.
+pub fn govern_rwlock_write_restartable<'a, T, F>(
+    rwlock: &'a RwLock<T>,
+    owner: &'static str,
+    state: &'static str,
+    reset_on_restart: F,
+) -> RwLockWriteGuard<'a, T>
+where
+    F: FnOnce(&mut T),
+{
+    match rwlock.write() {
+        Ok(guard) => guard,
+        Err(poison) => {
+            eprintln!(
+                "vyre: {owner} recovered a poisoned lock over {state} by discarding it. A thread \
+                 panicked while that lock was held, so the state behind it is half written and is \
+                 rebuilt from canonical input on demand. Fix: report the earlier panic."
+            );
+            rwlock.clear_poison();
+            let mut guard = poison.into_inner();
+            reset_on_restart(&mut guard);
+            guard
+        }
+    }
+}
+
 /// Take poisoned state during teardown so the handles it holds are released.
 ///
 /// A destructor is the last owner of whatever a panic left behind. Refusing that
@@ -264,6 +323,40 @@ pub fn reclaim_poisoned_for_teardown<T>(
                  while that lock was held. Teardown releases the handles it still holds rather \
                  than leaking them. Fix: report the earlier panic."
             );
+            poison.into_inner()
+        }
+    }
+}
+
+/// Take poisoned state no owner can rebuild, clearing the poison flag once.
+///
+/// WHY: discarding this state loses the only record of something the process
+/// already did: an external handle the device still holds, a committed
+/// idempotency key, a supervised worker. Discarding it leaks the handle or lets
+/// a retry repeat a side effect, and both are worse than reading past a panic.
+/// One insertion writes one entry, so a panic leaves entries whole and leaves
+/// only the sequence across them incomplete, which the caller's own state
+/// machine records. Clearing the flag makes one panic cost one recovery instead
+/// of one per acquisition for the life of the process.
+///
+/// `clear_poison` clears the flag on the same lock `acquired` came from, which
+/// is what keeps this one function correct for a `Mutex`, a read guard, and a
+/// write guard alike.
+pub fn reclaim_poisoned_irreplaceable_state<G>(
+    acquired: Result<G, PoisonError<G>>,
+    clear_poison: impl FnOnce(),
+    owner: &str,
+    state: &str,
+) -> G {
+    match acquired {
+        Ok(guard) => guard,
+        Err(poison) => {
+            eprintln!(
+                "vyre: {owner} recovered a poisoned lock over {state} and kept it. A thread \
+                 panicked while that lock was held. That state names resources this process \
+                 still owns, so discarding it would leak them. Fix: report the earlier panic."
+            );
+            clear_poison();
             poison.into_inner()
         }
     }
@@ -293,9 +386,8 @@ where
     match mutex.lock() {
         Ok(guard) => Ok(guard),
         Err(poison) => match class {
-            RecoveryClass::ProcessFatal | RecoveryClass::InvariantViolation => {
-                process_fatal_poison(owner, state);
-            }
+            RecoveryClass::ProcessFatal => process_fatal_poison(owner, state),
+            RecoveryClass::InvariantViolation => invariant_violation_poison(owner, state),
             RecoveryClass::TransactionallyRecoverable => Err(TypedRecoveryError::new(
                 FailureDomain::MemoryState,
                 class,
@@ -330,9 +422,8 @@ pub fn govern_rwlock_read<'a, T>(
     match rwlock.read() {
         Ok(guard) => Ok(guard),
         Err(poison) => match class {
-            RecoveryClass::ProcessFatal | RecoveryClass::InvariantViolation => {
-                process_fatal_poison(owner, state);
-            }
+            RecoveryClass::ProcessFatal => process_fatal_poison(owner, state),
+            RecoveryClass::InvariantViolation => invariant_violation_poison(owner, state),
             RecoveryClass::TransactionallyRecoverable
             | RecoveryClass::RestartableFromCanonicalInput => Err(TypedRecoveryError::new(
                 FailureDomain::MemoryState,
@@ -378,9 +469,8 @@ where
     match rwlock.write() {
         Ok(guard) => Ok(guard),
         Err(poison) => match class {
-            RecoveryClass::ProcessFatal | RecoveryClass::InvariantViolation => {
-                process_fatal_poison(owner, state);
-            }
+            RecoveryClass::ProcessFatal => process_fatal_poison(owner, state),
+            RecoveryClass::InvariantViolation => invariant_violation_poison(owner, state),
             RecoveryClass::TransactionallyRecoverable => Err(TypedRecoveryError::new(
                 FailureDomain::MemoryState,
                 class,

@@ -231,8 +231,9 @@ pub use config_schema::{
     ResolvedConfiguration, CANONICAL_CONFIG_FIELDS,
 };
 pub use failure_domain::{
-    govern_mutex_restartable, reclaim_poisoned_for_teardown, FailureDomain, RecoveryClass,
-    RecoveryDisposition, TypedRecoveryError,
+    govern_mutex_restartable, govern_rwlock_write_restartable, invariant_violation_poison,
+    reclaim_poisoned_for_teardown, reclaim_poisoned_irreplaceable_state, FailureDomain,
+    RecoveryClass, RecoveryDisposition, TypedRecoveryError,
 };
 pub use vyre_spec::{
     CanonicalField, CompatibilityCell, CompatibilityDisposition, CompatibilityMatrix,
