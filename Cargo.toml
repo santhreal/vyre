@@ -43,6 +43,28 @@ members = [
     "vyre-runtime",
     "vyre-safetensors",
     "vyre-libs",
+    "vyre-libs-builder",
+    "vyre-libs-bitset",
+    "vyre-libs-reduce",
+    "vyre-libs-fixpoint",
+    "vyre-libs-math",
+    "vyre-libs-nn",
+    "vyre-libs-graph",
+    "vyre-libs-pattern",
+    "vyre-libs-hash",
+    "vyre-libs-text",
+    "vyre-libs-decode",
+    "vyre-libs-parsing",
+    "vyre-libs-security",
+    "vyre-libs-visual",
+    "vyre-libs-rule",
+    "vyre-libs-vfs",
+    "vyre-libs-device",
+    "vyre-libs-solvers",
+    "vyre-libs-encoding",
+    "vyre-libs-analysis",
+    "vyre-libs-reasoning",
+    "vyre-libs-scheduling",
     "vyre-aot",
     # Per-thread heap counters behind a GlobalAlloc wrapper. Depends on no vyre
     # crate so a harness binary links it at run time and a driver test links it
@@ -271,6 +293,28 @@ vyre-alloc-probe = { path = "vyre-alloc-probe" }
 vyre-runtime = { version = "0.8.0", path = "vyre-runtime" }
 vyre-safetensors = { version = "0.8.0", path = "vyre-safetensors" }
 vyre-libs = { version = "0.8.0", path = "vyre-libs" }
+vyre-libs-builder = { version = "0.8.0", path = "vyre-libs-builder" }
+vyre-libs-bitset = { version = "0.8.0", path = "vyre-libs-bitset" }
+vyre-libs-reduce = { version = "0.8.0", path = "vyre-libs-reduce" }
+vyre-libs-fixpoint = { version = "0.8.0", path = "vyre-libs-fixpoint" }
+vyre-libs-math = { version = "0.8.0", path = "vyre-libs-math" }
+vyre-libs-nn = { version = "0.8.0", path = "vyre-libs-nn" }
+vyre-libs-graph = { version = "0.8.0", path = "vyre-libs-graph" }
+vyre-libs-pattern = { version = "0.8.0", path = "vyre-libs-pattern" }
+vyre-libs-hash = { version = "0.8.0", path = "vyre-libs-hash" }
+vyre-libs-text = { version = "0.8.0", path = "vyre-libs-text" }
+vyre-libs-decode = { version = "0.8.0", path = "vyre-libs-decode" }
+vyre-libs-parsing = { version = "0.8.0", path = "vyre-libs-parsing" }
+vyre-libs-security = { version = "0.8.0", path = "vyre-libs-security" }
+vyre-libs-visual = { version = "0.8.0", path = "vyre-libs-visual" }
+vyre-libs-rule = { version = "0.8.0", path = "vyre-libs-rule" }
+vyre-libs-vfs = { version = "0.8.0", path = "vyre-libs-vfs" }
+vyre-libs-device = { version = "0.8.0", path = "vyre-libs-device" }
+vyre-libs-solvers = { version = "0.8.0", path = "vyre-libs-solvers" }
+vyre-libs-encoding = { version = "0.8.0", path = "vyre-libs-encoding" }
+vyre-libs-analysis = { version = "0.8.0", path = "vyre-libs-analysis" }
+vyre-libs-reasoning = { version = "0.8.0", path = "vyre-libs-reasoning" }
+vyre-libs-scheduling = { version = "0.8.0", path = "vyre-libs-scheduling" }
 vyre-pass-engine = { version = "0.8.0", path = "vyre-pass-engine" }
 vyre-aot = { version = "0.8.0", path = "vyre-aot" }
 # publish = false, so no version: a version requirement here is one a registry

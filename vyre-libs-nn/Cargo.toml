@@ -1,0 +1,54 @@
+[package]
+name = "vyre-libs-nn"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Neural network activations, linear, normalization, attention, MoE, and LLM inference"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-nn"
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+
+[lints]
+workspace = true
+
+[features]
+default = ["nn"]
+nn = ["nn-activation", "nn-linear", "nn-norm", "nn-attention"]
+"nn-kernels" = []
+"nn-activation" = ["nn-kernels"]
+"nn-linear" = ["nn-activation", "nn-kernels"]
+"nn-linear-4bit" = ["nn-linear"]
+"nn-norm" = ["nn-kernels"]
+"nn-attention" = ["nn-norm", "nn-kernels"]
+"nn-moe" = ["nn-attention"]
+"nn-inference" = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-moe"]
+llm = ["nn-moe"]
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-megakernel.workspace = true
+vyre-spec.workspace = true
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+smallvec.workspace = true
+inventory.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+libm.workspace = true
+rustc-hash.workspace = true
+blake3.workspace = true
+rayon.workspace = true
+vyre-libs-builder = { workspace = true }
+vyre-libs-reduce = { workspace = true }
+vyre-libs-math = { workspace = true }
+
+[dev-dependencies]
+vyre-primitives = { workspace = true, features = ["hardware"] }

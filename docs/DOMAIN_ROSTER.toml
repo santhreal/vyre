@@ -1,0 +1,226 @@
+schema_version = 1
+
+# Machine-readable domain roster for the vyre-libs ownership family (BACKLOG row 81).
+#
+# Generates facade features, registry linkage, documentation, feature-isolation cases,
+# and release membership. Adding a domain requires one ownership record here.
+
+[[domain]]
+name = "builder"
+package = "vyre-libs-builder"
+path = "vyre-libs-builder"
+category = "shared-infrastructure"
+default_in_facade = true
+facade_feature = "builder"
+description = "Shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+dependencies = []
+
+[[domain]]
+name = "bitset"
+package = "vyre-libs-bitset"
+path = "vyre-libs-bitset"
+category = "consumer"
+default_in_facade = true
+facade_feature = "bitset"
+description = "Packed u32 bitset operations, word utilities, and logical bitwise compositions"
+dependencies = ["vyre-libs-builder", "vyre-libs-reduce"]
+
+[[domain]]
+name = "reduce"
+package = "vyre-libs-reduce"
+path = "vyre-libs-reduce"
+category = "consumer"
+default_in_facade = true
+facade_feature = "reduce"
+description = "Workgroup reduction trees, atomic scalar reductions, and prefix scans"
+dependencies = ["vyre-libs-builder"]
+
+[[domain]]
+name = "fixpoint"
+package = "vyre-libs-fixpoint"
+path = "vyre-libs-fixpoint"
+category = "consumer"
+default_in_facade = true
+facade_feature = "fixpoint"
+description = "Deterministic fixpoint iteration kernels and grid synchronization barriers"
+dependencies = ["vyre-libs-builder", "vyre-libs-bitset"]
+
+[[domain]]
+name = "math"
+package = "vyre-libs-math"
+path = "vyre-libs-math"
+category = "consumer"
+default_in_facade = true
+facade_feature = "math"
+description = "Linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures"
+dependencies = ["vyre-libs-builder", "vyre-libs-reduce", "vyre-libs-fixpoint"]
+
+[[domain]]
+name = "nn"
+package = "vyre-libs-nn"
+path = "vyre-libs-nn"
+category = "consumer"
+default_in_facade = true
+facade_feature = "nn"
+description = "Neural network activations, linear, normalization, attention, MoE, and LLM inference"
+dependencies = ["vyre-libs-builder", "vyre-libs-reduce", "vyre-libs-math"]
+
+[[domain]]
+name = "graph"
+package = "vyre-libs-graph"
+path = "vyre-libs-graph"
+category = "consumer"
+default_in_facade = true
+facade_feature = "graph"
+description = "Graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort"
+dependencies = ["vyre-libs-builder", "vyre-libs-bitset", "vyre-libs-reduce", "vyre-libs-fixpoint", "vyre-libs-math", "vyre-libs-hash"]
+
+[[domain]]
+name = "pattern"
+package = "vyre-libs-pattern"
+path = "vyre-libs-pattern"
+category = "consumer"
+default_in_facade = true
+facade_feature = "pattern"
+description = "Substring matching, DFA, NFA, regex scanning pipelines, and bracket matching"
+dependencies = ["vyre-libs-builder", "vyre-libs-bitset", "vyre-libs-math"]
+
+[[domain]]
+name = "hash"
+package = "vyre-libs-hash"
+path = "vyre-libs-hash"
+category = "consumer"
+default_in_facade = true
+facade_feature = "hash"
+description = "Hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3"
+dependencies = ["vyre-libs-builder"]
+
+[[domain]]
+name = "text"
+package = "vyre-libs-text"
+path = "vyre-libs-text"
+category = "consumer"
+default_in_facade = true
+facade_feature = "text"
+description = "Text processing, byte classification, UTF-8 validation, and line indexing"
+dependencies = ["vyre-libs-builder", "vyre-libs-reduce"]
+
+[[domain]]
+name = "decode"
+package = "vyre-libs-decode"
+path = "vyre-libs-decode"
+category = "consumer"
+default_in_facade = true
+facade_feature = "decode"
+description = "Base64, hex, DEFLATE, and encodex data decoding and decompression compositions"
+dependencies = ["vyre-libs-builder", "vyre-libs-pattern", "vyre-libs-text"]
+
+[[domain]]
+name = "parsing"
+package = "vyre-libs-parsing"
+path = "vyre-libs-parsing"
+category = "consumer"
+default_in_facade = false
+facade_feature = "parsing"
+description = "Lexer drivers, LR(1) table walkers, and language-specific AST construction kernels"
+dependencies = ["vyre-libs-builder", "vyre-libs-reduce", "vyre-libs-text", "vyre-libs-pattern", "vyre-libs-hash"]
+
+[[domain]]
+name = "security"
+package = "vyre-libs-security"
+path = "vyre-libs-security"
+category = "consumer"
+default_in_facade = false
+facade_feature = "security"
+description = "Security taint analysis compositions, predicate evaluators, and label resolvers"
+dependencies = ["vyre-libs-builder", "vyre-libs-bitset", "vyre-libs-reduce", "vyre-libs-graph"]
+
+[[domain]]
+name = "visual"
+package = "vyre-libs-visual"
+path = "vyre-libs-visual"
+category = "consumer"
+default_in_facade = false
+facade_feature = "visual"
+description = "Visual rendering and compositing effects: blur, shadow, filters, gradients, glass"
+dependencies = ["vyre-libs-builder", "vyre-libs-math"]
+
+[[domain]]
+name = "rule"
+package = "vyre-libs-rule"
+path = "vyre-libs-rule"
+category = "consumer"
+default_in_facade = false
+facade_feature = "rule"
+description = "Detection rule engine conditions, formulas, and program evaluation builders"
+dependencies = ["vyre-libs-builder"]
+
+[[domain]]
+name = "vfs"
+package = "vyre-libs-vfs"
+path = "vyre-libs-vfs"
+category = "consumer"
+default_in_facade = false
+facade_feature = "vfs"
+description = "Virtual filesystem DMA asynchronous block load and asset resolution compositions"
+dependencies = ["vyre-libs-builder"]
+
+[[domain]]
+name = "device"
+package = "vyre-libs-device"
+path = "vyre-libs-device"
+category = "compiler-self-use"
+default_in_facade = false
+facade_feature = "device"
+description = "Compiler-internal device boundary contracts, memory ownership, and resident graph layout"
+dependencies = ["vyre-libs-builder"]
+
+[[domain]]
+name = "solvers"
+package = "vyre-libs-solvers"
+path = "vyre-libs-solvers"
+category = "compiler-self-use"
+default_in_facade = false
+facade_feature = "solvers"
+description = "Compiler-internal numerical solvers, autotuning, and spectral schedule analysis"
+dependencies = ["vyre-libs-builder", "vyre-libs-device", "vyre-libs-math", "vyre-libs-graph"]
+
+[[domain]]
+name = "encoding"
+package = "vyre-libs-encoding"
+path = "vyre-libs-encoding"
+category = "compiler-self-use"
+default_in_facade = false
+facade_feature = "encoding"
+description = "Compiler-internal bitset, provenance, matroid, and fingerprint encoding compositions"
+dependencies = ["vyre-libs-builder", "vyre-libs-device", "vyre-libs-bitset", "vyre-libs-reduce", "vyre-libs-fixpoint", "vyre-libs-math", "vyre-libs-nn", "vyre-libs-graph", "vyre-libs-pattern", "vyre-libs-parsing", "vyre-libs-hash"]
+
+[[domain]]
+name = "analysis"
+package = "vyre-libs-analysis"
+path = "vyre-libs-analysis"
+category = "compiler-self-use"
+default_in_facade = false
+facade_feature = "analysis"
+description = "Compiler-internal static analysis, cost models, dataflow fixpoint, and diagnostics"
+dependencies = ["vyre-libs-builder", "vyre-libs-device", "vyre-libs-math", "vyre-libs-graph", "vyre-libs-fixpoint"]
+
+[[domain]]
+name = "reasoning"
+package = "vyre-libs-reasoning"
+path = "vyre-libs-reasoning"
+category = "compiler-self-use"
+default_in_facade = false
+facade_feature = "reasoning"
+description = "Compiler-internal logic, causal reasoning, categorical rewrites, and knowledge compilation"
+dependencies = ["vyre-libs-builder", "vyre-libs-graph", "vyre-libs-analysis"]
+
+[[domain]]
+name = "scheduling"
+package = "vyre-libs-scheduling"
+path = "vyre-libs-scheduling"
+category = "compiler-self-use"
+default_in_facade = false
+facade_feature = "scheduling"
+description = "Compiler-internal scheduling, fusion, batching, and dispatch strategy compositions"
+dependencies = ["vyre-libs-builder", "vyre-libs-device", "vyre-libs-math", "vyre-libs-graph", "vyre-libs-parsing"]

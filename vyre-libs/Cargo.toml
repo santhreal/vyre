@@ -8,7 +8,7 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Category A program compositions over foundation IR and primitive-owned kernels"
+description = "Curated consumer facade for the vyre-libs composition family"
 readme = "README.md"
 keywords = ["gpu", "ml", "linear-algebra", "cryptography", "vyre"]
 categories = ["algorithms", "science"]
@@ -19,9 +19,6 @@ exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL
 path = "src/lib.rs"
 
 [features]
-# Default: ML / linear-algebra / pattern / decode core. Crypto and the heavy
-# nn-attention surface ride opt-in. Keeps `cargo add vyre-libs` from compiling
-# blake3/fnv for consumers that only need matmul plus substring scanning.
 default = [
     "math-linalg", "math-scan", "math-broadcast",
     "nn-activation", "nn-linear", "nn-norm",
@@ -29,13 +26,7 @@ default = [
     "hash",
     "decode",
 ]
-# `full` is every dialect this crate ships: every domain that submits an
-# `OperationRegistration`. It is the selection a consumer names to get the whole
-# composition surface, and the selection the registry walker names to see every
-# registration. It stops short of the compiler's own self-use composition
-# domains (`solvers`, `encoding`, `analysis`, `scheduling`, `graph-dispatch`,
-# `reasoning`), which submit nothing and exist for this workspace rather than
-# for a library consumer.
+
 full = [
     "math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct",
     "math-kernels",
@@ -59,171 +50,84 @@ full = [
     "geom", "opt", "topology",
     "vfs",
 ]
+
 test-fixtures = []
-# `builder` marks a selection in which at least one composition dialect is
-# compiled. It gates the two surfaces that exist only to serve a dialect: the
-# shared skeletons in `src/builder` that dialects compose, and the shared
-# conformance witnesses in `src/fixture_bytes` that their registrations are
-# checked against. It is internal and no consumer names it directly. A
-# selection that compiles no dialect, such as a consumer that wants only the
-# optimizer namespace, therefore compiles neither. A new dialect that reaches
-# either surface without naming this feature fails to resolve the module rather
-# than leaving it unreachable behind a `dead_code` allowance.
-builder = []
-# Kernel domains. Each one is a directory under `src/` holding reusable GPU
-# kernels with stable op ids, moved here from vyre-primitives. A domain names
-# only the domains its own source reaches, so enabling one never compiles a
-# sibling it does not call.
-# `bitset` names `reduce` because `bitset/relation.rs` builds `equal` and
-# `subset_of` on `reduce::atomic_scalar::atomic_grid_stride_u32`.
-bitset = ["reduce"]
-reduce = ["builder"]
-vfs = []
-fixpoint = ["bitset"]
-label = ["bitset"]
-# `graph` names `math-kernels` because seven graph kernels reach
-# `math::fixed`, `math::fixed_u32_matmul` and `math::chebyshev_recurrence`.
-# The reverse edge does not exist: `math-kernels` compiles no graph module.
-# `telemetry` because `graph::dispatch::toposort` and `union_find_emit` bump
-# their counters through `crate::telemetry`.
-graph = ["bitset", "reduce", "hash", "fixpoint", "math-kernels", "telemetry"]
-predicate = ["graph", "bitset", "label"]
-# `math-kernels` names `reduce` because `math/prefix_scan.rs` sweeps
-# `reduce::workgroup_scan::blelloch_inclusive_sum_nodes`.
-math-kernels = ["reduce"]
-nn-kernels = ["math-kernels"]
-# `pattern-kernels` names `hash` because `pattern/nfa_to_dfa.rs` imports
-# `hash::fnv1a` unconditionally.
-pattern-kernels = ["hash"]
-parsing-kernels = ["text", "pattern-kernels"]
-nfa = ["bitset", "pattern-kernels"]
-geom = ["math-kernels"]
-opt = ["math-kernels"]
-topology = ["math-kernels", "graph"]
+builder = ["vyre-libs-builder/builder"]
+"builder-ops" = ["builder", "vyre-libs-builder/builder-ops"]
+"cat-a-builder-options" = ["builder", "vyre-libs-builder/cat-a-builder-options"]
+telemetry = ["vyre-libs-builder/telemetry"]
 
-# Dialect surfaces over the kernels.
-hash = ["builder"]
-# `math-dialect` gates the dialect-level math surface (atomics, clamp, conv,
-# fft, the f32 reductions). Each `math-*` sub-feature names it so the surface
-# is not compiled by a consumer that only wants `math::fixed`.
-# `math-dialect` names `reduce` because `math/reduce_mean.rs` folds through
-# `reduce::workgroup_tree`.
-# It also names `builder-ops` because `math/reduce_mean.rs` composes
-# `strided_accumulate_child` and `math/square.rs` is a `build_indexed_map`
-# skeleton.
-math-dialect = ["builder-ops", "reduce"]
+bitset = ["dep:vyre-libs-bitset", "reduce"]
+logical = ["bitset", "vyre-libs-bitset?/logical"]
+reduce = ["dep:vyre-libs-reduce", "builder"]
+fixpoint = ["dep:vyre-libs-fixpoint", "bitset"]
+
 math = ["math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct"]
+math-dialect = ["builder-ops", "reduce", "dep:vyre-libs-math", "vyre-libs-math?/math-dialect"]
+math-kernels = ["reduce", "dep:vyre-libs-math", "vyre-libs-math?/math-kernels"]
+"math-linalg" = ["builder-ops", "cat-a-builder-options", "math-dialect", "math-kernels", "dep:vyre-libs-math", "vyre-libs-math?/math-linalg"]
+"math-scan" = ["math-dialect", "math-kernels", "dep:vyre-libs-math", "vyre-libs-math?/math-scan"]
+"math-broadcast" = ["math-dialect", "math-kernels", "dep:vyre-libs-math", "vyre-libs-math?/math-broadcast"]
+"math-algebra" = ["math-dialect", "math-kernels", "dep:vyre-libs-math", "vyre-libs-math?/math-algebra"]
+"math-succinct" = ["math-dialect", "math-kernels", "graph", "dep:vyre-libs-math", "vyre-libs-math?/math-succinct"]
+geom = ["math-kernels", "dep:vyre-libs-math", "vyre-libs-math?/geom"]
+opt = ["math-kernels", "dep:vyre-libs-math", "vyre-libs-math?/opt"]
+representation = ["builder", "dep:vyre-libs-math", "vyre-libs-math?/representation"]
+
 nn = ["nn-activation", "nn-linear", "nn-norm", "nn-attention"]
+"nn-kernels" = ["math-kernels", "dep:vyre-libs-nn", "vyre-libs-nn?/nn-kernels"]
+"nn-activation" = ["builder-ops", "nn-kernels", "dep:vyre-libs-nn", "vyre-libs-nn?/nn-activation"]
+"nn-linear" = ["cat-a-builder-options", "math-linalg", "nn-activation", "nn-kernels", "dep:vyre-libs-nn", "vyre-libs-nn?/nn-linear"]
+"nn-linear-4bit" = ["nn-linear", "dep:vyre-libs-nn", "vyre-libs-nn?/nn-linear-4bit"]
+"nn-norm" = ["builder-ops", "cat-a-builder-options", "math-broadcast", "nn-kernels", "dep:vyre-libs-nn", "vyre-libs-nn?/nn-norm"]
+"nn-attention" = ["builder-ops", "cat-a-builder-options", "nn-norm", "math-linalg", "nn-kernels", "dep:vyre-libs-nn", "vyre-libs-nn?/nn-attention"]
+"nn-moe" = ["nn-attention", "dep:vyre-libs-nn", "vyre-libs-nn?/nn-moe"]
+"nn-inference" = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-moe", "dep:vyre-libs-nn", "vyre-libs-nn?/nn-inference"]
+llm = ["builder-ops", "nn-moe", "dep:vyre-libs-nn", "vyre-libs-nn?/llm"]
+
+graph = ["bitset", "reduce", "hash", "fixpoint", "math-kernels", "telemetry", "dep:vyre-libs-graph", "vyre-libs-graph?/graph"]
+topology = ["math-kernels", "graph", "dep:vyre-libs-graph", "vyre-libs-graph?/topology"]
+
 pattern = ["pattern-substring", "pattern-dfa"]
+"pattern-kernels" = ["hash", "dep:vyre-libs-pattern", "vyre-libs-pattern?/pattern-kernels"]
+"pattern-substring" = ["pattern-dfa", "pattern-kernels", "dep:vyre-libs-pattern", "vyre-libs-pattern?/pattern-substring"]
+"pattern-dfa" = ["pattern-kernels", "text", "dep:vyre-libs-pattern", "vyre-libs-pattern?/pattern-dfa"]
+"pattern-nfa" = ["pattern-dfa", "nfa", "dep:vyre-libs-pattern", "vyre-libs-pattern?/pattern-nfa"]
+"pattern-regex" = ["pattern-nfa", "dep:regex-syntax", "dep:vyre-libs-pattern", "vyre-libs-pattern?/pattern-regex"]
+nfa = ["bitset", "pattern-kernels", "dep:vyre-libs-pattern", "vyre-libs-pattern?/nfa"]
+
+hash = ["builder", "dep:vyre-libs-hash", "vyre-libs-hash?/hash"]
 crypto = ["crypto-blake3"]
-# `decode` names `text` because `decode/encodex.rs` builds its classifier from
-# `text::byte_histogram_256_child` and `text::encoding_classify_child`.
-#
-# It does not name `cpu-parity`. That edge put host reference oracles into
-# every default build of this crate and hid the domain edges the sweep exists
-# to find, because the oracle modules re-enabled whatever a domain forgot.
-decode = ["pattern-kernels", "text"]
-text = ["reduce"]
-# `representation` gates `src/representation`, which reaches nothing else in
-# the crate: the unpack kernel is built from bare IR.
-representation = ["builder"]
-# `builder-ops` gates the two shared child regions the builder registers as
-# catalog entries of their own. Every dialect whose source composes
-# `build_indexed_map` or `strided_accumulate_child` names it, because the
-# skeletons emit child regions carrying those ids and a build that emits an id
-# its catalog does not contain hands consumers unresolvable programs.
-"builder-ops" = ["builder"]
-logical = ["bitset"]
-rule = ["builder"]
+"crypto-blake3" = ["hash", "dep:vyre-libs-hash", "vyre-libs-hash?/crypto-blake3"]
 
-# Compiler self-use composition domains, migrated out of the GPU pass engine
-# crate. Each gates one module tree; `all-solvers` turns on the set.
-telemetry = []
-device = []
-graph-dispatch = ["device", "telemetry", "math-kernels", "graph"]
-solvers = ["device", "telemetry", "math-kernels", "topology"]
-# `encoding` names `bitset` because `encoding/bitset_mask_algebra.rs` composes
-# eight `bitset::` builders, and `graph` plus `fixpoint` because
-# `matroid_exact_megakernel.rs` and `scallop_provenance.rs` reach
-# `math::matroid_intersection_full` and `math::scallop_join`, which are gated
-# on those two.
-encoding = ["device", "telemetry", "pattern-kernels", "math-kernels", "nn-kernels", "parsing-kernels", "bitset", "graph", "fixpoint"]
-reasoning = ["analysis", "graph"]
-# `analysis` names `graph` because `analysis/cost_model.rs` dispatches
-# `graph::level_wave` and `graph::sum_product_circuit`.
-analysis = ["device", "telemetry", "math-kernels", "graph"]
-# `scheduling` names `graph` because `scheduling/spectral_schedule.rs` builds on
-# `graph::chebyshev_filter`.
-scheduling = ["device", "telemetry", "math-kernels", "parsing-kernels", "graph"]
+text = ["reduce", "dep:vyre-libs-text", "vyre-libs-text?/text"]
+decode = ["pattern-kernels", "text", "dep:vyre-libs-decode", "vyre-libs-decode?/decode"]
 
-# Every dialect feature whose module invokes `impl_cat_a_builder_options!`
-# declares that it needs the macro. The macro's own gate then names one
-# feature instead of restating this set, which is what let the set rot into a
-# dead-code warning on a build that enabled none of them.
-"cat-a-builder-options" = ["builder"]
-# `math-linalg` names `builder-ops` because `math/linalg/dot.rs` composes
-# `strided_accumulate_child`.
-"math-linalg" = ["builder-ops", "cat-a-builder-options", "math-dialect", "math-kernels"]
-"math-scan" = ["math-dialect", "math-kernels"]
-"math-broadcast" = ["math-dialect", "math-kernels"]
-"math-algebra" = ["math-dialect", "math-kernels"]
-# `math-succinct` names `graph` because `math/succinct.rs` parents its rank
-# superblock region on `graph::path_reconstruct::OP_ID`.
-"math-succinct" = ["math-dialect", "math-kernels", "graph"]
-# `nn-activation` names `builder-ops` because embedding, skip_gate,
-# parallel_residual_block, the optimizer apply steps and the quant pack and
-# unpack kernels are all `build_indexed_map` skeletons.
-"nn-activation" = ["builder-ops", "nn-kernels"]
-"nn-linear" = ["cat-a-builder-options", "math-linalg", "nn-activation", "nn-kernels"]
-"nn-linear-4bit" = ["nn-linear"]
-# `nn-norm` names `builder-ops` because `nn/norm/rms_norm.rs` and the layer-norm
-# reduce phases compose `strided_accumulate_child`.
-"nn-norm" = ["builder-ops", "cat-a-builder-options", "math-broadcast", "nn-kernels"]
-# `nn-attention` names `builder-ops` because `nn/attention/softmax.rs` composes
-# `strided_accumulate_child` in both reduce passes.
-"nn-attention" = [
-    "builder-ops",
-    "cat-a-builder-options",
-    "nn-norm",
-    "math-linalg",
-    "nn-kernels",
-]
-"nn-moe" = ["nn-attention"]
-"nn-inference" = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-moe"]
-# `llm` names `nn-moe` because `llm/sampling.rs` composes
-# `nn::moe::softmax_top_k` and `llm/paged_kv.rs` builds on
-# `nn::attention::layout`, which `nn-moe` already names.
-# It also names `builder-ops` because `llm/sampling.rs` builds `logit_adjust`
-# as a `build_indexed_map` skeleton.
-"llm" = ["builder-ops", "nn-moe"]
-# Neither pattern domain names `cpu-parity`, for the same reason `decode` does
-# not: it compiled the host oracles into every default build and masked the
-# edges the sweep is for.
-"pattern-substring" = ["pattern-dfa", "pattern-kernels"]
-# `pattern-dfa` names `text` because `pattern/post_process.rs` folds
-# `text::reference_byte_histogram` into `shannon_entropy_bits_per_byte`.
-"pattern-dfa" = ["pattern-kernels", "text"]
-"pattern-nfa" = ["pattern-dfa", "nfa"]
-"pattern-regex" = ["pattern-nfa", "dep:regex-syntax"]
-"crypto-blake3" = ["hash"]
-"visual" = ["math-kernels"]
-"parsing" = ["go-parser", "python-parser"]
-# `go-parser` names `reduce` because `parsing/go/lex.rs` scans quote flags with
-# `reduce::multi_block_prefix_scan`.
-"go-parser" = ["reduce"]
-"python-parser" = ["parsing-kernels"]
-security = ["label", "predicate"]
+parsing = ["go-parser", "python-parser", "dep:vyre-libs-parsing", "vyre-libs-parsing?/parsing"]
+"parsing-kernels" = ["text", "pattern-kernels", "dep:vyre-libs-parsing", "vyre-libs-parsing?/parsing-kernels"]
+"go-parser" = ["reduce", "dep:vyre-libs-parsing", "vyre-libs-parsing?/go-parser"]
+"python-parser" = ["parsing-kernels", "dep:vyre-libs-parsing", "vyre-libs-parsing?/python-parser"]
+
+security = ["label", "predicate", "dep:vyre-libs-security", "vyre-libs-security?/security"]
+predicate = ["graph", "bitset", "label", "dep:vyre-libs-security", "vyre-libs-security?/predicate"]
+label = ["bitset", "dep:vyre-libs-security", "vyre-libs-security?/label"]
+
+visual = ["math-kernels", "dep:vyre-libs-visual", "vyre-libs-visual?/visual"]
+rule = ["builder", "dep:vyre-libs-rule", "vyre-libs-rule?/rule"]
+vfs = ["dep:vyre-libs-vfs", "vyre-libs-vfs?/vfs"]
+
+device = ["dep:vyre-libs-device", "vyre-libs-device?/device"]
+solvers = ["device", "telemetry", "math-kernels", "topology", "dep:vyre-libs-solvers", "vyre-libs-solvers?/solvers"]
+encoding = ["device", "telemetry", "pattern-kernels", "math-kernels", "nn-kernels", "parsing-kernels", "bitset", "graph", "fixpoint", "dep:vyre-libs-encoding", "vyre-libs-encoding?/encoding"]
+analysis = ["device", "telemetry", "math-kernels", "graph", "dep:vyre-libs-analysis", "vyre-libs-analysis?/analysis"]
+reasoning = ["analysis", "graph", "dep:vyre-libs-reasoning", "vyre-libs-reasoning?/reasoning"]
+scheduling = ["device", "telemetry", "math-kernels", "parsing-kernels", "graph", "dep:vyre-libs-scheduling", "vyre-libs-scheduling?/scheduling"]
+"graph-dispatch" = ["device", "telemetry", "math-kernels", "graph"]
 
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }
-# Every composition reaches a device only through the compiler-owned semantic
-# compile-and-execute seam this crate declares.
 vyre-megakernel.workspace = true
 vyre-spec.workspace = true
-# Every composition domain moved into this crate, so the only thing left to ask
-# vyre-primitives for is the substrate: the wire format, guarded IR
-# construction, the launch-geometry helper, the marker types, and
-# `inventory-registry` so intrinsic registrations populate the catalog.
 vyre-primitives = { workspace = true, features = ["inventory-registry"] }
 smallvec.workspace = true
 inventory.workspace = true
@@ -237,11 +141,31 @@ rustc-hash.workspace = true
 blake3.workspace = true
 rayon.workspace = true
 
+vyre-libs-builder = { workspace = true }
+vyre-libs-bitset = { workspace = true, optional = true }
+vyre-libs-reduce = { workspace = true, optional = true }
+vyre-libs-fixpoint = { workspace = true, optional = true }
+vyre-libs-math = { workspace = true, optional = true }
+vyre-libs-nn = { workspace = true, optional = true }
+vyre-libs-graph = { workspace = true, optional = true }
+vyre-libs-pattern = { workspace = true, optional = true }
+vyre-libs-hash = { workspace = true, optional = true }
+vyre-libs-text = { workspace = true, optional = true }
+vyre-libs-decode = { workspace = true, optional = true }
+vyre-libs-parsing = { workspace = true, optional = true }
+vyre-libs-security = { workspace = true, optional = true }
+vyre-libs-visual = { workspace = true, optional = true }
+vyre-libs-rule = { workspace = true, optional = true }
+vyre-libs-vfs = { workspace = true, optional = true }
+vyre-libs-device = { workspace = true, optional = true }
+vyre-libs-solvers = { workspace = true, optional = true }
+vyre-libs-encoding = { workspace = true, optional = true }
+vyre-libs-analysis = { workspace = true, optional = true }
+vyre-libs-reasoning = { workspace = true, optional = true }
+vyre-libs-scheduling = { workspace = true, optional = true }
+
 [dev-dependencies]
 vyre = { path = "../vyre" }
-# Parity tests import the vyre-primitives hardware intrinsics.
-# Enabling it here (dev-dep only) turns it on for vyre-libs'
-# own test/bench builds without leaking the intrinsics into production (resolver 2).
 vyre-primitives = { path = "../vyre-primitives", features = ["hardware"], default-features = false }
 vyre-emit-naga = { path = "../vyre-emit-naga" }
 vyre-driver-reference = { path = "../vyre-driver-reference" }
@@ -252,287 +176,12 @@ proptest.workspace = true
 naga.workspace = true
 tree-sitter = { workspace = true }
 tree-sitter-go = { workspace = true }
-# The shipped-build oracle gate resolves the dependency graph a consumer
-# compiles out of the manifests themselves, so it parses TOML rather than
-# restating any part of that graph in Rust.
 toml.workspace = true
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
-# The device-residency ownership gate derives its crate roster from the root
-# manifest. Path-only, and dev-only: cargo strips it from the published
-# manifest, so it adds no publish-ordering constraint.
 structure-gate = { path = "../structure-gate" }
-
-# The example the generated crate contract advertises. Named explicitly so the
-# contract picks this one rather than whichever filename sorts first.
-[[example]]
-name = "prefix_sum_megakernel"
-path = "examples/prefix_sum_megakernel.rs"
-required-features = ["math-scan"]
-
-[package.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
 
 [package.metadata.vyre]
 publication_class = "stable-consumer-sdk"
 
 [lints]
 workspace = true
-
-# Reads source text only, so it needs no domain feature: gating it on one would
-# narrow the walk to the modules that feature happens to enable, and a class is
-# not closed over a subset of the tree.
-
-[[example]]
-name = "select1_optimizer_parity"
-path = "examples/select1_optimizer_parity.rs"
-required-features = ["bitset"]
-
-[[example]]
-name = "dominator_tree_e2e"
-path = "examples/dominator_tree_e2e.rs"
-required-features = ["graph"]
-
-[[test]]
-name = "all_tests"
-path = "tests/all_tests.rs"
-
-[[test]]
-name = "all_tests_analysis"
-path = "tests/all_tests_analysis.rs"
-required-features = ["analysis"]
-
-[[test]]
-name = "all_tests_analysis_encoding"
-path = "tests/all_tests_analysis_encoding.rs"
-required-features = ["analysis", "encoding"]
-
-[[test]]
-name = "all_tests_bitset"
-path = "tests/all_tests_bitset.rs"
-required-features = ["bitset"]
-
-[[test]]
-name = "all_tests_decode"
-path = "tests/all_tests_decode.rs"
-required-features = ["decode"]
-
-[[test]]
-name = "all_tests_decode_parsing"
-path = "tests/all_tests_decode_parsing.rs"
-required-features = ["decode", "parsing"]
-
-[[test]]
-name = "all_tests_encoding"
-path = "tests/all_tests_encoding.rs"
-required-features = ["encoding"]
-
-[[test]]
-name = "all_tests_fixpoint"
-path = "tests/all_tests_fixpoint.rs"
-required-features = ["fixpoint"]
-
-[[test]]
-name = "all_tests_fixpoint_graph_math_kernels"
-path = "tests/all_tests_fixpoint_graph_math_kernels.rs"
-required-features = ["fixpoint", "graph", "math-kernels"]
-
-[[test]]
-name = "all_tests_fixpoint_graph_math_kernels_parsing_kernels"
-path = "tests/all_tests_fixpoint_graph_math_kernels_parsing_kernels.rs"
-required-features = ["fixpoint", "graph", "math-kernels", "parsing-kernels"]
-
-[[test]]
-name = "all_tests_fixpoint_math_kernels"
-path = "tests/all_tests_fixpoint_math_kernels.rs"
-required-features = ["fixpoint", "math-kernels"]
-
-[[test]]
-name = "all_tests_graph"
-path = "tests/all_tests_graph.rs"
-required-features = ["graph"]
-
-[[test]]
-name = "all_tests_graph_dispatch"
-path = "tests/all_tests_graph_dispatch.rs"
-required-features = ["graph-dispatch"]
-
-[[test]]
-name = "all_tests_hash"
-path = "tests/all_tests_hash.rs"
-required-features = ["hash"]
-
-[[test]]
-name = "all_tests_hash_math_nn_activation_nn_linear_pattern"
-path = "tests/all_tests_hash_math_nn_activation_nn_linear_pattern.rs"
-required-features = ["hash", "math", "nn-activation", "nn-linear", "pattern"]
-
-[[test]]
-name = "all_tests_hash_nn_activation_nn_attention_nn_linear_nn_norm"
-path = "tests/all_tests_hash_nn_activation_nn_attention_nn_linear_nn_norm.rs"
-required-features = ["hash", "nn-activation", "nn-attention", "nn-linear", "nn-norm"]
-
-[[test]]
-name = "all_tests_hash_nn_attention_nn_norm"
-path = "tests/all_tests_hash_nn_attention_nn_norm.rs"
-required-features = ["hash", "nn-attention", "nn-norm"]
-
-[[test]]
-name = "all_tests_label"
-path = "tests/all_tests_label.rs"
-required-features = ["label"]
-
-[[test]]
-name = "all_tests_llm"
-path = "tests/all_tests_llm.rs"
-required-features = ["llm"]
-
-[[test]]
-name = "all_tests_logical"
-path = "tests/all_tests_logical.rs"
-required-features = ["logical"]
-
-[[test]]
-name = "all_tests_math"
-path = "tests/all_tests_math.rs"
-required-features = ["math"]
-
-[[test]]
-name = "all_tests_math_math_linalg_nn_activation_nn_attention_nn_linear_nn_norm"
-path = "tests/all_tests_math_math_linalg_nn_activation_nn_attention_nn_linear_nn_norm.rs"
-required-features = ["math", "math-linalg", "nn-activation", "nn-attention", "nn-linear", "nn-norm"]
-
-[[test]]
-name = "all_tests_math_nn_attention"
-path = "tests/all_tests_math_nn_attention.rs"
-required-features = ["math", "nn-attention"]
-
-[[test]]
-name = "all_tests_math_kernels"
-path = "tests/all_tests_math_kernels.rs"
-required-features = ["math-kernels"]
-
-[[test]]
-name = "all_tests_math_scan"
-path = "tests/all_tests_math_scan.rs"
-required-features = ["math-scan"]
-
-[[test]]
-name = "all_tests_nfa"
-path = "tests/all_tests_nfa.rs"
-required-features = ["nfa"]
-
-[[test]]
-name = "all_tests_nn_activation"
-path = "tests/all_tests_nn_activation.rs"
-required-features = ["nn-activation"]
-
-[[test]]
-name = "all_tests_nn_activation_nn_linear"
-path = "tests/all_tests_nn_activation_nn_linear.rs"
-required-features = ["nn-activation", "nn-linear"]
-
-[[test]]
-name = "all_tests_nn_attention"
-path = "tests/all_tests_nn_attention.rs"
-required-features = ["nn-attention"]
-
-[[test]]
-name = "all_tests_nn_attention_nn_linear_nn_norm"
-path = "tests/all_tests_nn_attention_nn_linear_nn_norm.rs"
-required-features = ["nn-attention", "nn-linear", "nn-norm"]
-
-[[test]]
-name = "all_tests_nn_attention_nn_norm"
-path = "tests/all_tests_nn_attention_nn_norm.rs"
-required-features = ["nn-attention", "nn-norm"]
-
-[[test]]
-name = "all_tests_nn_inference"
-path = "tests/all_tests_nn_inference.rs"
-required-features = ["nn-inference"]
-
-[[test]]
-name = "all_tests_nn_linear"
-path = "tests/all_tests_nn_linear.rs"
-required-features = ["nn-linear"]
-
-[[test]]
-name = "all_tests_nn_norm"
-path = "tests/all_tests_nn_norm.rs"
-required-features = ["nn-norm"]
-
-[[test]]
-name = "all_tests_parsing"
-path = "tests/all_tests_parsing.rs"
-required-features = ["parsing"]
-
-[[test]]
-name = "all_tests_parsing_kernels"
-path = "tests/all_tests_parsing_kernels.rs"
-required-features = ["parsing-kernels"]
-
-[[test]]
-name = "all_tests_pattern"
-path = "tests/all_tests_pattern.rs"
-required-features = ["pattern"]
-
-[[test]]
-name = "all_tests_pattern_kernels"
-path = "tests/all_tests_pattern_kernels.rs"
-required-features = ["pattern-kernels"]
-
-[[test]]
-name = "all_tests_pattern_regex"
-path = "tests/all_tests_pattern_regex.rs"
-required-features = ["pattern-regex"]
-
-[[test]]
-name = "all_tests_pattern_substring"
-path = "tests/all_tests_pattern_substring.rs"
-required-features = ["pattern-substring"]
-
-[[test]]
-name = "all_tests_predicate"
-path = "tests/all_tests_predicate.rs"
-required-features = ["predicate"]
-
-[[test]]
-name = "all_tests_reasoning"
-path = "tests/all_tests_reasoning.rs"
-required-features = ["reasoning"]
-
-[[test]]
-name = "all_tests_reduce"
-path = "tests/all_tests_reduce.rs"
-required-features = ["reduce"]
-
-[[test]]
-name = "all_tests_reduce_telemetry"
-path = "tests/all_tests_reduce_telemetry.rs"
-required-features = ["reduce", "telemetry"]
-
-[[test]]
-name = "all_tests_rule"
-path = "tests/all_tests_rule.rs"
-required-features = ["rule"]
-
-[[test]]
-name = "all_tests_scheduling"
-path = "tests/all_tests_scheduling.rs"
-required-features = ["scheduling"]
-
-[[test]]
-name = "all_tests_security"
-path = "tests/all_tests_security.rs"
-required-features = ["security"]
-
-[[test]]
-name = "all_tests_solvers"
-path = "tests/all_tests_solvers.rs"
-required-features = ["solvers"]
-
-[[test]]
-name = "all_tests_text"
-path = "tests/all_tests_text.rs"
-required-features = ["text"]

@@ -1,0 +1,52 @@
+[package]
+name = "vyre-libs-pattern"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Substring matching, DFA, NFA, regex scanning pipelines, and bracket matching"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-pattern"
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+
+[lints]
+workspace = true
+
+[features]
+default = ["pattern"]
+pattern = ["pattern-substring", "pattern-dfa"]
+"pattern-kernels" = []
+"pattern-substring" = ["pattern-dfa", "pattern-kernels"]
+"pattern-dfa" = ["pattern-kernels"]
+"pattern-nfa" = ["pattern-dfa", "nfa"]
+"pattern-regex" = ["pattern-nfa", "dep:regex-syntax"]
+nfa = ["pattern-kernels"]
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-megakernel.workspace = true
+vyre-spec.workspace = true
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+smallvec.workspace = true
+inventory.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+libm.workspace = true
+rustc-hash.workspace = true
+blake3.workspace = true
+rayon.workspace = true
+vyre-libs-builder = { workspace = true }
+vyre-libs-bitset = { workspace = true }
+vyre-libs-math = { workspace = true }
+regex-syntax = { workspace = true, optional = true }
+
+[dev-dependencies]
+vyre-primitives = { workspace = true, features = ["hardware"] }

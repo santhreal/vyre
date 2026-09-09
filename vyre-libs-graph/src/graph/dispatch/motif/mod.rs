@@ -1,0 +1,45 @@
+//! Region-graph motif-matching substrate consumer.
+//!
+//! Wires `crate::graph::motif` so the optimizer can
+//! pattern-match small Region shapes (e.g. "load-store-store" or
+//! "atomic-then-barrier") for lint/audit/rewrite passes. Same
+//! primitive graph-analysis surface ships to user dialects, now consumed by
+//! vyre's own IR walker.
+
+mod dispatch;
+
+pub use dispatch::{
+    match_motif_via, match_motif_via_into, match_motif_via_with_scratch_into, motif_matches_via,
+    motif_participation_count_via,
+};
+
+use crate::graph::motif::{MotifLayout, MotifProgramCacheKey, MotifStaticInputKey};
+use vyre_foundation::ir::Program;
+
+use crate::graph::dispatch::dispatch_bridge::ProgramCache;
+
+/// Caller-owned GPU dispatch scratch for motif matching.
+#[derive(Debug, Default)]
+pub struct MotifGpuScratch {
+    inputs: Vec<Vec<u8>>,
+    motif_hits: Vec<u32>,
+    static_input_key: Option<MotifStaticInputKey>,
+    program_cache: ProgramCache<MotifProgramCacheKey, CachedMotifProgram>,
+}
+
+#[derive(Debug)]
+struct CachedMotifProgram {
+    layout: MotifLayout,
+    program: Program,
+}
+
+impl MotifGpuScratch {
+    #[cfg(test)]
+    fn program_builds(&self) -> usize {
+        self.program_cache.builds()
+    }
+}
+
+#[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/motif/mod.rs"]
+mod tests;
