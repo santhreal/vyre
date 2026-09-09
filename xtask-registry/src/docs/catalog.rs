@@ -15,7 +15,7 @@ impl xtask::gate::GateBehavior for Catalog {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let catalog = collect()?;
         let mut inspection = xtask::artifact_gate::Inspection::new();
-        inspection.generates_text(CATALOG_PATH, render(&catalog));
+        inspection.generates_document_text(CATALOG_PATH, render(&catalog));
         let mut report = xtask::artifact_gate::settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.note(format!(
             "{} subsystem(s) in the live inventory",

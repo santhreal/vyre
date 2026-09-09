@@ -29,7 +29,7 @@ impl GateBehavior for ConfigurationModelGate {
                 "ensure model is valid",
             )
         })?;
-        inspection.generates_text(CONFIG_SPACE_ARTIFACT_PATH, rendered_toml);
+        inspection.generates_document_text(CONFIG_SPACE_ARTIFACT_PATH, rendered_toml);
 
         let mut report = settle_inspection(ctx, ctx.gate_name()?, inspection);
 

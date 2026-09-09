@@ -106,7 +106,11 @@ fn settle_duplicate_report(
     path: &Path,
     duplicates: &DuplicateFamilyReport,
 ) {
-    match Generated::json(path, duplicates) {
+    let recorded = xtask::evidence_record::EvidenceArtifact::new(
+        xtask::evidence_record::MeasurementRecord::HostOnly,
+        duplicates,
+    );
+    match Generated::evidence(path, &recorded) {
         Ok(generated) => {
             report.produced(path);
             for finding in settle(root, "whats-similar", &[generated], write) {

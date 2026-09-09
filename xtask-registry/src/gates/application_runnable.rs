@@ -1068,7 +1068,11 @@ impl GateBehavior for ApplicationRunnable {
             blockers,
         };
 
-        inspection.generates(READINESS_EVIDENCE_PATH, &evidence);
+        inspection.generates_evidence(
+            READINESS_EVIDENCE_PATH,
+            xtask::evidence_record::MeasurementRecord::HostOnly,
+            &evidence,
+        );
 
         let mut report = xtask::artifact_gate::settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.cover_complete("application-runnable contract paths", 8);

@@ -39,7 +39,11 @@ impl xtask::gate::GateBehavior for LegoDuplicateReport {
             "{} duplicate family(ies) across the no-reinvention and operand-shape detectors",
             duplicates.families.len()
         ));
-        match Generated::json(path, &duplicates) {
+        let recorded = xtask::evidence_record::EvidenceArtifact::new(
+            xtask::evidence_record::MeasurementRecord::HostOnly,
+            &duplicates,
+        );
+        match Generated::evidence(path, &recorded) {
             Ok(generated) => {
                 report.produced(path);
                 for finding in settle(&ctx.root, "lego-duplicate-report", &[generated], ctx.write) {

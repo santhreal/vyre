@@ -56,7 +56,12 @@ fn attach_fused_execution_dag(
         .as_object_mut()
         .ok_or_else(|| format!("benchmark artifact `{output}` must be a JSON object"))?;
     report_object.insert("fused_execution_dag".to_string(), dag);
-    xtask::json_document::write(&path, &report)
+    xtask::artifact_gate::write_recorded(
+        workspace_root,
+        Path::new(output),
+        xtask::evidence_record::MeasurementRecord::device(),
+        &report,
+    )
 }
 
 fn fused_execution_dag_from_report(report: &Value, case_id: &str) -> Result<Value, String> {
@@ -219,7 +224,12 @@ pub(super) fn write_backend_suite_with_extra_blockers(
         artifact_statuses,
         blockers,
     };
-    xtask::json_document::write(&workspace_root.join(output), &evidence)
+    xtask::artifact_gate::write_recorded(
+        workspace_root,
+        Path::new(output.as_str()),
+        xtask::evidence_record::MeasurementRecord::device(),
+        &evidence,
+    )
 }
 
 fn backend_suite_schema_digest_chain(

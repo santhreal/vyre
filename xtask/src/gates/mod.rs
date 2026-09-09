@@ -29,6 +29,7 @@ pub mod dispatch_surface;
 pub mod doc_contract;
 pub mod docs_references;
 pub mod dup_scan;
+pub mod evidence_attribution;
 pub mod evidence_paths;
 pub mod evidence_provenance;
 pub mod example_capability;
@@ -150,6 +151,10 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("doc-claims", &doc_contract::DocClaims),
     ("docs-references", &docs_references::DocsReferences),
     ("dup-scan", &dup_scan::DupScan),
+    (
+        "evidence-attribution",
+        &evidence_attribution::EvidenceAttribution,
+    ),
     ("evidence-paths", &evidence_paths::EvidencePaths),
     ("invariant-paths", &evidence_paths::InvariantPaths),
     (

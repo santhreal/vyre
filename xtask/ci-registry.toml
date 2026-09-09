@@ -228,6 +228,11 @@ subsets = ["prepublish"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
+name = "evidence-attribution"
+subsets = ["contract-rules", "release-evidence"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
 name = "evidence-paths"
 subsets = ["contract-rules"]
 workflows = ["gates.yml"]

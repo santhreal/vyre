@@ -367,8 +367,10 @@ pub(super) fn write_frontier_leaderboard(workspace_root: &Path) -> Result<(), St
         rows,
         blockers,
     };
-    xtask::json_document::write(
-        &workspace_root.join(FRONTIER_LEADERBOARD_ARTIFACT),
+    xtask::artifact_gate::write_recorded(
+        workspace_root,
+        Path::new(FRONTIER_LEADERBOARD_ARTIFACT),
+        xtask::evidence_record::MeasurementRecord::device(),
         &evidence,
     )
 }

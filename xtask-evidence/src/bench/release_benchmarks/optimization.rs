@@ -347,8 +347,10 @@ pub(super) fn write_release_axes(workspace_root: &Path) -> Result<(), String> {
         source_artifacts,
         blockers,
     };
-    xtask::json_document::write(
-        &workspace_root.join("release/evidence/benchmarks/bench-release-axes.json"),
+    xtask::artifact_gate::write_recorded(
+        workspace_root,
+        Path::new("release/evidence/benchmarks/bench-release-axes.json"),
+        xtask::evidence_record::MeasurementRecord::device(),
         &evidence,
     )
 }
@@ -493,8 +495,10 @@ pub(super) fn write_optimization_benchmark_manifest(
     } else {
         Some(cache_hit_rates.iter().sum::<f64>() / cache_hit_rates.len() as f64)
     };
-    xtask::json_document::write(
-        &workspace_root.join("release/evidence/optimization/pass-family-benchmark-manifest.json"),
+    xtask::artifact_gate::write_recorded(
+        workspace_root,
+        Path::new("release/evidence/optimization/pass-family-benchmark-manifest.json"),
+        xtask::evidence_record::MeasurementRecord::device(),
         &OptimizationBenchmarkManifest {
             schema_version: 2,
             backend: backend.to_string(),

@@ -133,6 +133,20 @@ const BACKEND_ARTIFACTS: &[(&str, &str)] = &[
 
 const RELEASE_LOG: &str = "release/evidence/conformance/release-gate-log.json";
 
+/// What took part in producing one backend's conformance record.
+///
+/// The reference oracle is host code by construction, so a record it produced
+/// states that no device took part rather than naming the devices this host
+/// happens to have. Every other backend dispatches on a device, and the record
+/// names the one it dispatched on.
+fn measurement_of(backend_id: &str) -> crate::evidence_record::MeasurementRecord {
+    if backend_id == "cpu-ref" {
+        crate::evidence_record::MeasurementRecord::HostOnly
+    } else {
+        crate::evidence_record::MeasurementRecord::device()
+    }
+}
+
 /// `reference` is the caller's spelling of the backend the runner calls `cpu-ref`.
 fn backend_id_of(backend: &str) -> &str {
     if backend == "reference" {
@@ -169,7 +183,7 @@ fn audit(workspace_root: &Path, config: &Config) -> Inspection {
         let recorded = match read_text_bounded(&workspace_root.join(artifact)) {
             Ok(text) => {
                 let (_, body) = artifact_gate::split_provenance(&text);
-                inspection.generates_text(artifact, body);
+                inspection.generates_evidence_text(artifact, measurement_of(backend_id), body);
                 text
             }
             Err(error) => {
@@ -237,7 +251,11 @@ fn audit_release_log(workspace_root: &Path, inspection: &mut Inspection) {
     let text = match read_text_bounded(&workspace_root.join(RELEASE_LOG)) {
         Ok(text) => {
             let (_, body) = artifact_gate::split_provenance(&text);
-            inspection.generates_text(RELEASE_LOG, body);
+            inspection.generates_evidence_text(
+                RELEASE_LOG,
+                crate::evidence_record::MeasurementRecord::HostOnly,
+                body,
+            );
             text
         }
         Err(error) => {
@@ -327,9 +345,13 @@ fn measure(workspace_root: &Path, config: &Config) -> Inspection {
                  names, then rerun.",
             );
         }
-        inspection.generates(artifact, &body);
+        inspection.generates_evidence(artifact, measurement_of(backend_id), &body);
     }
-    inspection.generates(RELEASE_LOG, &release_log(workspace_root, config, &failures));
+    inspection.generates_evidence(
+        RELEASE_LOG,
+        crate::evidence_record::MeasurementRecord::HostOnly,
+        &release_log(workspace_root, config, &failures),
+    );
     inspection
 }
 

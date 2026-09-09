@@ -136,7 +136,11 @@ fn inspect(root: &Path) -> Inspection {
             state.blockers.join("; ")
         ));
     }
-    inspection.generates(ARTIFACT, &state);
+    inspection.generates_evidence(
+        ARTIFACT,
+        crate::evidence_record::MeasurementRecord::HostOnly,
+        &state,
+    );
     inspection
 }
 

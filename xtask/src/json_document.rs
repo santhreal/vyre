@@ -6,7 +6,25 @@ use std::path::Path;
 use serde::Serialize;
 
 /// Write `value` as pretty JSON with a trailing newline.
+///
+/// A path under `release/evidence` is refused. Evidence names the tree, host
+/// and device it was recorded from, and this writer states none of the three:
+/// six artifacts reached the corpus with no provenance through exactly this
+/// call. [`crate::artifact_gate::write_recorded`] is the writer that stamps
+/// them.
+///
+/// # Errors
+///
+/// Returns the sentence the caller reports when the path is an evidence path,
+/// or when the directory, serialization, or write fails.
 pub fn write(path: &Path, value: &impl Serialize) -> Result<(), String> {
+    if crate::artifact_gate::records_provenance(path) {
+        return Err(format!(
+            "`{}` is release evidence and this writer records no tree, host or device; write it \
+             with `artifact_gate::write_recorded`",
+            path.display()
+        ));
+    }
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
             .map_err(|error| format!("failed to create `{}`: {error}", parent.display()))?;

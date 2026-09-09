@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with A through G.
-pub const GATES_A_G: [GateDescriptor; 55] = [
+pub const GATES_A_G: [GateDescriptor; 56] = [
     GateDescriptor {
         name: "abstraction-gate",
         help: "Enforce registered building-block boundaries",
@@ -598,6 +598,18 @@ pub const GATES_A_G: [GateDescriptor; 55] = [
         prerequisites: &[],
         resource_class: ResourceClass::Process,
         proof: "xtask_registry::docs::error_codes::tests::each_catalog_uses_the_renderer_of_the_crate_that_owns_it",
+    },
+    GateDescriptor {
+        name: "evidence-attribution",
+        help: "Hold every release/evidence artifact to a complete provenance record; --write regenerates the ledger of the ones whose origin is unknown",
+        package: "xtask",
+        areas: &["contract-rules", "release-evidence"],
+        subject: "release evidence artifacts",
+        inputs: &["release/evidence"],
+        artifacts: &["release/evidence/metadata/unattributed-evidence.json"],
+        prerequisites: &[],
+        resource_class: ResourceClass::Io,
+        proof: "crate::gates::evidence_attribution::tests::a_host_reproducible_artifact_with_no_record_is_a_finding",
     },
     GateDescriptor {
         name: "evidence-paths",
