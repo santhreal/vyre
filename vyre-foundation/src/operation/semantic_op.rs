@@ -4,7 +4,9 @@ use crate::dialect_lookup::Signature;
 use crate::geometry::{GeometryConstraintConflict, GeometryRequirements};
 use crate::ir::Program;
 use crate::numeric::NumericContract;
-use crate::operation::records::{ConformanceProvider, LoweringProvider, OperationFixtures, SemanticDescriptor};
+use crate::operation::records::{
+    ConformanceProvider, ContractProvider, LoweringProvider, OperationFixtures, SemanticDescriptor,
+};
 use crate::operation::registry::OperationRegistry;
 use crate::operation::semantics::{OperationEffects, OperationTier};
 use crate::program_caps::{scan as scan_capabilities, RequiredCapabilities};
@@ -183,6 +185,7 @@ impl SemanticOperation {
             geometry_requirements: self.geometry_requirements,
             explicit_effects: self.explicit_effects,
             explicit_capabilities: self.explicit_capabilities,
+            opaque_reason: self.opaque_reason,
         }
     }
 
@@ -203,5 +206,199 @@ impl SemanticOperation {
             test_inputs: self.test_inputs,
             expected_output: self.expected_output,
         }
+    }
+
+    /// Extract the contract provider from this operation.
+    #[must_use]
+    pub fn contract_provider(self) -> ContractProvider {
+        ContractProvider {
+            id: self.id,
+            contract: None,
+        }
+    }
+
+    /// Construct the canonical semantic contract record.
+    #[must_use]
+    pub fn contract_record(self) -> vyre_spec::SemanticContractRecord {
+        build_contract_record(
+            self.id,
+            self.signature,
+            self.explicit_effects,
+            self.numeric,
+            self.laws,
+            self.opaque_reason,
+        )
+    }
+}
+
+fn parse_datatype(ty: &str) -> vyre_spec::DataType {
+    match ty {
+        "u8" => vyre_spec::DataType::U8,
+        "u16" => vyre_spec::DataType::U16,
+        "u32" => vyre_spec::DataType::U32,
+        "u64" => vyre_spec::DataType::U64,
+        "i8" => vyre_spec::DataType::I8,
+        "i16" => vyre_spec::DataType::I16,
+        "i32" => vyre_spec::DataType::I32,
+        "i64" => vyre_spec::DataType::I64,
+        "f16" => vyre_spec::DataType::F16,
+        "bf16" => vyre_spec::DataType::BF16,
+        "f32" => vyre_spec::DataType::F32,
+        "f64" => vyre_spec::DataType::F64,
+        "bool" => vyre_spec::DataType::Bool,
+        "bytes" => vyre_spec::DataType::Bytes,
+        _ => vyre_spec::DataType::U32,
+    }
+}
+
+fn signature_to_contract_sig(sig: Option<&Signature>) -> Option<vyre_spec::OpSignature> {
+    sig.map(|s| {
+        let inputs: Vec<vyre_spec::DataType> =
+            s.inputs.iter().map(|p| parse_datatype(p.ty)).collect();
+        let output = s
+            .outputs
+            .first()
+            .map(|p| parse_datatype(p.ty))
+            .unwrap_or(vyre_spec::DataType::U32);
+        let input_params = Some(
+            s.inputs
+                .iter()
+                .map(|p| vyre_spec::SignatureParam {
+                    name: p.name.to_string(),
+                    ty: parse_datatype(p.ty),
+                    metadata: None,
+                })
+                .collect(),
+        );
+        let output_params = Some(
+            s.outputs
+                .iter()
+                .map(|p| vyre_spec::SignatureParam {
+                    name: p.name.to_string(),
+                    ty: parse_datatype(p.ty),
+                    metadata: None,
+                })
+                .collect(),
+        );
+        vyre_spec::OpSignature {
+            inputs,
+            output,
+            input_params,
+            output_params,
+            contract: None,
+        }
+    })
+}
+
+pub(crate) fn build_contract_record(
+    id: &'static str,
+    signature: Option<&Signature>,
+    explicit_effects: Option<OperationEffects>,
+    numeric: NumericContract,
+    laws: &'static [&'static str],
+    opaque_reason: Option<&'static str>,
+) -> vyre_spec::SemanticContractRecord {
+    let sig = signature_to_contract_sig(signature);
+
+    let eff = if let Some(e) = explicit_effects {
+        if !e.reads && !e.writes && !e.atomics && !e.synchronizes {
+            vyre_spec::MemoryEffect::Pure
+        } else if e.atomics {
+            vyre_spec::MemoryEffect::Atomic
+        } else if e.synchronizes {
+            vyre_spec::MemoryEffect::Synchronizing
+        } else if e.writes {
+            vyre_spec::MemoryEffect::Write
+        } else {
+            vyre_spec::MemoryEffect::Read
+        }
+    } else {
+        vyre_spec::MemoryEffect::Pure
+    };
+
+    let num = match numeric.ulp_budget() {
+        Some(0) | None => vyre_spec::NumericBehavior::Exact,
+        Some(ulps) => vyre_spec::NumericBehavior::IeeeFloatingPoint {
+            ulp_budget: ulps,
+            nan_behavior: vyre_spec::NanBehavior::CanonicalQuietNan,
+            infinity_behavior: vyre_spec::InfinityBehavior::SignedInfinity,
+        },
+    };
+
+    let decision = if !laws.is_empty() {
+        let mut guarded = Vec::new();
+        for &law_name in laws {
+            let law = match law_name {
+                "commutative" => vyre_spec::AlgebraicLaw::Commutative,
+                "associative" => vyre_spec::AlgebraicLaw::Associative,
+                "identity" => vyre_spec::AlgebraicLaw::Identity { element: 0 },
+                "left-identity" => vyre_spec::AlgebraicLaw::LeftIdentity { element: 0 },
+                "right-identity" => vyre_spec::AlgebraicLaw::RightIdentity { element: 0 },
+                "self-inverse" => vyre_spec::AlgebraicLaw::SelfInverse { result: 0 },
+                "idempotent" => vyre_spec::AlgebraicLaw::Idempotent,
+                "absorbing" => vyre_spec::AlgebraicLaw::Absorbing { element: 0 },
+                "left-absorbing" => vyre_spec::AlgebraicLaw::LeftAbsorbing { element: 0 },
+                "right-absorbing" => vyre_spec::AlgebraicLaw::RightAbsorbing { element: 0 },
+                "involution" => vyre_spec::AlgebraicLaw::Involution,
+                "de-morgan" => vyre_spec::AlgebraicLaw::DeMorgan {
+                    inner_op: "and",
+                    dual_op: "or",
+                },
+                "monotone" => vyre_spec::AlgebraicLaw::Monotone,
+                "monotonic" => vyre_spec::AlgebraicLaw::Monotonic {
+                    direction: vyre_spec::MonotonicDirection::NonDecreasing,
+                },
+                "bounded" => vyre_spec::AlgebraicLaw::Bounded {
+                    lo: 0,
+                    hi: u32::MAX,
+                },
+                "complement" => vyre_spec::AlgebraicLaw::Complement {
+                    complement_op: "not",
+                    universe: u32::MAX,
+                },
+                "distributive" => vyre_spec::AlgebraicLaw::DistributiveOver { over_op: "add" },
+                "lattice-absorption" => {
+                    vyre_spec::AlgebraicLaw::LatticeAbsorption { dual_op: "min" }
+                }
+                "inverse-of" => vyre_spec::AlgebraicLaw::InverseOf { op: "add" },
+                "trichotomy" => vyre_spec::AlgebraicLaw::Trichotomy {
+                    less_op: "lt",
+                    equal_op: "eq",
+                    greater_op: "gt",
+                },
+                "zero-product" => vyre_spec::AlgebraicLaw::ZeroProduct { holds: true },
+                "categorical-identity" => vyre_spec::AlgebraicLaw::CategoricalIdentity,
+                "categorical-associative" => vyre_spec::AlgebraicLaw::CategoricalAssociative,
+                custom => vyre_spec::AlgebraicLaw::Custom {
+                    name: custom,
+                    description: "registered law",
+                    arity: 1,
+                    check: |_, _| true,
+                },
+            };
+            guarded.push(vyre_spec::GuardedLaw::unconditional(law));
+        }
+        vyre_spec::TransformDecision::GuardedLaws(guarded)
+    } else if let Some(reason) = opaque_reason {
+        vyre_spec::TransformDecision::Opaque {
+            reason: reason.to_string(),
+        }
+    } else {
+        vyre_spec::TransformDecision::Opaque {
+            reason: String::new(),
+        }
+    };
+
+    vyre_spec::SemanticContractRecord {
+        id: id.to_string(),
+        signature: sig,
+        effects: eff,
+        aliasing: vyre_spec::AliasingContract::Disjoint,
+        shape_index: vyre_spec::ShapeIndexContract::elementwise(),
+        numerical: num,
+        determinism: vyre_spec::DeterminismClass::Deterministic,
+        range_preconditions: vyre_spec::RangeContract::unbounded(),
+        resource_bounds: vyre_spec::ResourceBoundsContract::Unbounded,
+        decision,
     }
 }

@@ -1,7 +1,7 @@
 //! Structural comparison between compiled Artifacts and SelectedPlans.
 
-use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 use vyre::compiler::{Artifact, SelectedPlan};
 
@@ -88,8 +88,18 @@ pub struct PlanDiff {
 pub fn diff_selected_plans(before: &SelectedPlan, after: &SelectedPlan) -> PlanDiff {
     let fusion_groups_delta = (after.fusion.len() as i64) - (before.fusion.len() as i64);
     let barrier_count_delta = (after.barriers.len() as i64) - (before.barriers.len() as i64);
-    let before_candidates: i64 = before.certificate.derived.iter().map(|d| d.derived as i64).sum();
-    let after_candidates: i64 = after.certificate.derived.iter().map(|d| d.derived as i64).sum();
+    let before_candidates: i64 = before
+        .certificate
+        .derived
+        .iter()
+        .map(|d| d.derived as i64)
+        .sum();
+    let after_candidates: i64 = after
+        .certificate
+        .derived
+        .iter()
+        .map(|d| d.derived as i64)
+        .sum();
     let candidate_count_delta = after_candidates - before_candidates;
 
     let is_identical = fusion_groups_delta == 0

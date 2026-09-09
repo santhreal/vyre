@@ -8,6 +8,9 @@
 
 extern crate self as vyre;
 
+#[doc(hidden)]
+pub use inventory;
+
 /// Shared structured diagnostic protocol.
 pub mod diagnostics;
 /// Strict-IEEE f32 expansion of the approximable transcendentals.
@@ -31,14 +34,14 @@ pub use geometry::{
     ElementPolicy, GeometryConstraintConflict, GeometryRequirements, LaunchGeometry, Uniformity,
 };
 
-/// Typed region-based SSA intermediate representation (Row 103).
-pub mod region_ssa;
 /// Canonical binary codec and verification for schema registry records (Row 121).
 mod canonical_codec;
-/// Explicit failure domains and recovery classes (Row 122).
-mod failure_domain;
 /// Typed configuration schema and resolution (Row 123).
 mod config_schema;
+/// Explicit failure domains and recovery classes (Row 122).
+mod failure_domain;
+/// Typed region-based SSA intermediate representation (Row 103).
+pub mod region_ssa;
 
 pub mod ir {
     //! The vyre intermediate representation.
@@ -67,8 +70,8 @@ pub mod ir {
     pub use crate::ir_inner::model::program_graph::{
         ControlBounds, ExternalEffect, GraphInput, GraphNodeId, GraphOutput, GraphValueId,
         LivenessInterval, ProgramGraph, ProgramGraphBuilder, ProgramGraphError, ProgramGraphNode,
-        ProgramGraphSharingMetrics, ProgramGraphTemplate,
-        ProgramGraphValue, ShapeDim, ValueContract, ValueLifetime,
+        ProgramGraphSharingMetrics, ProgramGraphTemplate, ProgramGraphValue, ShapeDim,
+        ValueContract, ValueLifetime,
     };
     pub use crate::ir_inner::model::program_graph_delta::{
         AffectedGraphClosure, GraphDelta, GraphDeltaError, GraphDeltaOp, GRAPH_DELTA_VERSION,
@@ -76,13 +79,14 @@ pub mod ir {
     pub use crate::ir_inner::model::program_graph_identity::{
         ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,
     };
-    pub use crate::ir_inner::model::tile::{Layout, Residency, Tile};
     pub use crate::ir_inner::model::resource_abi::{
         AdmittedResourceRecord, ColorSpace, ExternalMemoryDescriptor, ExternalMemoryKind,
-        ExternalResourceCapability, ExternalSyncProtocol, ImageAspect, ImageDimension,
-        ImageExtent, ImageFormat, PlaneDescriptor, ResourceAbiError, ResourceUsageFlags,
-        SamplerAddressMode, SamplerDescriptor, SamplerFilter, SubresourceRange,
-        ViewDescriptor,
+        ExternalResourceCapability, ExternalSyncProtocol, ImageAspect, ImageDimension, ImageExtent,
+        ImageFormat, PlaneDescriptor, ResourceAbiError, ResourceUsageFlags, SamplerAddressMode,
+        SamplerDescriptor, SamplerFilter, SubresourceRange, ViewDescriptor,
+    };
+    pub use crate::ir_inner::model::tile::{
+        Layout, Layout as TileLayout, Residency, Tile, Tile as TileType,
     };
     /// Per-Node-variant bit-position constants for `ProgramStats::node_kinds_present`.
     /// Compose with `ProgramStats::has_any_node_kind` for O(1) `analyze_impl` gates.
@@ -103,21 +107,21 @@ pub mod ir {
     };
     pub use crate::ir_inner::model::program::ProgramStats;
     pub use crate::memory_model::{
-        exhaustiveness_check_async_transaction_lifecycle,
-        exhaustiveness_check_atomic_ordering, exhaustiveness_check_barrier_participation,
-        exhaustiveness_check_collective_group,
-        exhaustiveness_check_execution_scope,
-        exhaustiveness_check_failure_cancellation_behavior,
+        exhaustiveness_check_async_transaction_lifecycle, exhaustiveness_check_atomic_ordering,
+        exhaustiveness_check_barrier_participation, exhaustiveness_check_collective_group,
+        exhaustiveness_check_execution_scope, exhaustiveness_check_failure_cancellation_behavior,
         exhaustiveness_check_fence_semantics, exhaustiveness_check_memory_scope,
         exhaustiveness_check_storage_domain, verify_program_obligations, AliasDiscipline,
         AliasToken, AsyncTransactionLifecycle, AtomicOrdering, BarrierParticipation, BorrowKind,
         BorrowToken, CapabilityToken, CollectiveGroup, EffectKind, EffectToken, ExecutionScope,
-        FailureCancellationBehavior, FenceSemantics, MemoryCapability, MemoryOrdering,
-        MemoryScope, Obligation, ObligationError, ObligationKind, ObligationTracker,
-        OwnershipKind, OwnershipToken, StateEpoch, StorageDomain,
+        FailureCancellationBehavior, FenceSemantics, MemoryCapability, MemoryOrdering, MemoryScope,
+        Obligation, ObligationError, ObligationKind, ObligationTracker, OwnershipKind,
+        OwnershipToken, StateEpoch, StorageDomain,
     };
 }
 
+/// Causal Introspection & Unified Causal-Span Schema (Row 117).
+pub mod causal;
 /// CPU reference registration contract.
 pub mod cpu_op;
 /// Backend-neutral literal evaluation used by IR optimization and lowering.
@@ -128,23 +132,21 @@ pub mod loop_bounds;
 pub mod match_result;
 /// Substrate-neutral memory ordering.
 pub mod memory_model;
-/// Closed orthogonal semantic type system (Row 102).
-pub mod types;
-/// Single declarative verifier and certified compilation gate (Row 104).
-pub mod verifier;
-/// Causal Introspection & Unified Causal-Span Schema (Row 117).
-pub mod causal;
-/// Source-derived platform support matrix, wire types, and adapters (Row 118).
-pub mod platform;
-/// Security, Tenant Isolation, Capability Handles & Quota Authority (Row 119).
-pub mod security;
 /// Optimizer performance counters.
 pub mod perf;
+/// Source-derived platform support matrix, wire types, and adapters (Row 118).
+pub mod platform;
 /// Program capability analysis.
 pub mod program_caps;
 /// Single owner of scalar operator semantics, shared by the literal folder
 /// and the reference interpreter.
 pub(crate) mod scalar_ops;
+/// Security, Tenant Isolation, Capability Handles & Quota Authority (Row 119).
+pub mod security;
+/// Closed orthogonal semantic type system (Row 102).
+pub mod types;
+/// Single declarative verifier and certified compilation gate (Row 104).
+pub mod verifier;
 
 /// Inventory-registered algebraic-law registry (`algebraic_law_registry::laws_for_op`).
 pub mod algebraic_law_registry;
@@ -216,9 +218,15 @@ pub use error::{IrError, IrResult};
 /// outside vyre-foundation should depend on these helpers.
 #[cfg(test)]
 pub(crate) mod test_ir_inspect;
-pub use canonical_codec::{CanonicalDecoder, CanonicalEncoder, CanonicalRecord, CanonicalSigner, CanonicalValue, CodecError};
+pub use canonical_codec::{
+    CanonicalDecoder, CanonicalEncoder, CanonicalRecord, CanonicalSigner, CanonicalValue,
+    CodecError,
+};
+pub use config_schema::{
+    ConfigFieldDef, ConfigLayer, ConfigMutability, ConfigPartition, ConfigSecrecy, ConfigType,
+    ConfigValue, IdentityImpact, ResolvedConfiguration, CANONICAL_CONFIG_FIELDS,
+};
 pub use failure_domain::{FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError};
-pub use config_schema::{ConfigFieldDef, ConfigLayer, ConfigMutability, ConfigPartition, ConfigSecrecy, ConfigType, ConfigValue, IdentityImpact, ResolvedConfiguration, CANONICAL_CONFIG_FIELDS};
 pub use vyre_spec::{
     CanonicalField, CompatibilityCell, CompatibilityDisposition, CompatibilityMatrix,
     DefaultsPolicy, FieldType, NegotiatedContract, NegotiationError, ProtocolDomain,

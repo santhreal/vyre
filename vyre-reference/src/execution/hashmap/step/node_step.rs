@@ -218,42 +218,79 @@ pub(crate) fn step_nodes_frame<'a>(
                 "reference dispatch reached Resume `{tag}` without a replay runtime. Fix: lower Resume through a runtime-owned replay path before reference execution."
             )));
         }
-        Node::AllReduce { buffer, group, .. } => {
-            return Err(ReferenceError::new(format!(
-                "hashmap reference interpreter reached AllReduce on buffer `{buffer}` for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
-                group.as_u32()
-            )));
+        Node::AllReduce {
+            buffer: _,
+            op: _,
+            group,
+        } => {
+            if group.as_u32() != vyre_spec::CommGroup::WORLD.0 {
+                return Err(ReferenceError::incomplete_dispatch_semantics(format!(
+                    "single-rank reference interpreter supports only WORLD collective group, got group {}. Fix: run on distributed backend for non-WORLD groups.",
+                    group.as_u32()
+                )));
+            }
         }
         Node::AllGather {
             input,
             output,
             group,
         } => {
-            return Err(ReferenceError::new(format!(
-                "hashmap reference interpreter reached AllGather `{input}` -> `{output}` for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
-                group.as_u32()
-            )));
+            if group.as_u32() != vyre_spec::CommGroup::WORLD.0 {
+                return Err(ReferenceError::incomplete_dispatch_semantics(format!(
+                    "single-rank reference interpreter supports only WORLD collective group, got group {}. Fix: run on distributed backend for non-WORLD groups.",
+                    group.as_u32()
+                )));
+            }
+            let src_bytes = {
+                let src = memory.storage.get(input.as_str()).ok_or_else(|| {
+                    ReferenceError::missing_value(format!(
+                        "AllGather input buffer `{input}` not found"
+                    ))
+                })?;
+                src.read_window(0, src.byte_len())
+            };
+            let dst = buffer_mut(memory, output.as_str())?;
+            dst.write_window(0, &src_bytes);
         }
         Node::ReduceScatter {
             input,
             output,
+            op: _,
             group,
-            ..
         } => {
-            return Err(ReferenceError::new(format!(
-                "hashmap reference interpreter reached ReduceScatter `{input}` -> `{output}` for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
-                group.as_u32()
-            )));
+            if group.as_u32() != vyre_spec::CommGroup::WORLD.0 {
+                return Err(ReferenceError::incomplete_dispatch_semantics(format!(
+                    "single-rank reference interpreter supports only WORLD collective group, got group {}. Fix: run on distributed backend for non-WORLD groups.",
+                    group.as_u32()
+                )));
+            }
+            let src_bytes = {
+                let src = memory.storage.get(input.as_str()).ok_or_else(|| {
+                    ReferenceError::missing_value(format!(
+                        "ReduceScatter input buffer `{input}` not found"
+                    ))
+                })?;
+                src.read_window(0, src.byte_len())
+            };
+            let dst = buffer_mut(memory, output.as_str())?;
+            dst.write_window(0, &src_bytes);
         }
         Node::Broadcast {
-            buffer,
+            buffer: _,
             root,
             group,
         } => {
-            return Err(ReferenceError::new(format!(
-                "hashmap reference interpreter reached Broadcast on buffer `{buffer}` from root {root} for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
-                group.as_u32()
-            )));
+            if group.as_u32() != vyre_spec::CommGroup::WORLD.0 {
+                return Err(ReferenceError::incomplete_dispatch_semantics(format!(
+                    "single-rank reference interpreter supports only WORLD collective group, got group {}. Fix: run on distributed backend for non-WORLD groups.",
+                    group.as_u32()
+                )));
+            }
+            if *root != 0 {
+                return Err(ReferenceError::incomplete_dispatch_semantics(format!(
+                    "single-rank reference interpreter requires Broadcast root 0, got root {root}."
+                )));
+            }
         }
         Node::Region { body, .. } => {
             invocation.locals.push_scope();

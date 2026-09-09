@@ -1,11 +1,11 @@
 //! Semantic compilation unit subjected to verification.
 
-use std::sync::Arc;
 use crate::ir_inner::model::program::Program;
 use crate::memory_model::{AtomicOrdering, CollectiveGroup};
 use crate::types::contract::NumericalContract;
 use crate::types::shape::{ShapeConstraint, ShapeInterner};
 use crate::types::SemanticType;
+use std::sync::Arc;
 
 /// Semantic module representing a high-level compilation unit with types,
 /// constraints, and effect declarations.

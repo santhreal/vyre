@@ -7,23 +7,15 @@
 //! - Rollback atomically evicts new generation resources and restores the prior generation.
 //! - Incompatible version transitions fail before expensive state mutation.
 
-use vyre_runtime::{
-    GenerationScopedNamespace, RollingUpgradeCoordinator, UpgradePhase,
-};
 use vyre_foundation::{ProtocolDomain, ProtocolVersion};
+use vyre_runtime::{GenerationScopedNamespace, RollingUpgradeCoordinator, UpgradePhase};
 
 #[test]
 fn generation_scoped_namespace_prevents_key_collisions() {
-    let ns_v1 = GenerationScopedNamespace::new(
-        ProtocolDomain::Artifact,
-        ProtocolVersion::V1_0_0,
-        1,
-    );
-    let ns_v2 = GenerationScopedNamespace::new(
-        ProtocolDomain::Artifact,
-        ProtocolVersion::V1_1_0,
-        2,
-    );
+    let ns_v1 =
+        GenerationScopedNamespace::new(ProtocolDomain::Artifact, ProtocolVersion::V1_0_0, 1);
+    let ns_v2 =
+        GenerationScopedNamespace::new(ProtocolDomain::Artifact, ProtocolVersion::V1_1_0, 2);
 
     let key1 = ns_v1.scoped_key("megakernel_relu_f32");
     let key2 = ns_v2.scoped_key("megakernel_relu_f32");
@@ -38,10 +30,8 @@ fn generation_scoped_namespace_prevents_key_collisions() {
 
 #[test]
 fn rolling_upgrade_lifecycle_and_resource_reclamation() {
-    let mut coordinator = RollingUpgradeCoordinator::new(
-        ProtocolDomain::RuntimeProtocol,
-        ProtocolVersion::V1_0_0,
-    );
+    let mut coordinator =
+        RollingUpgradeCoordinator::new(ProtocolDomain::RuntimeProtocol, ProtocolVersion::V1_0_0);
     assert_eq!(coordinator.phase(), UpgradePhase::Active);
 
     // Register resources in generation 1
@@ -83,17 +73,13 @@ fn rolling_upgrade_lifecycle_and_resource_reclamation() {
 
 #[test]
 fn rolling_upgrade_rollback_atomically_cleans_target_generation() {
-    let mut coordinator = RollingUpgradeCoordinator::new(
-        ProtocolDomain::RuntimeProtocol,
-        ProtocolVersion::V1_0_0,
-    );
+    let mut coordinator =
+        RollingUpgradeCoordinator::new(ProtocolDomain::RuntimeProtocol, ProtocolVersion::V1_0_0);
 
     coordinator.register_resource("stable_resource_1");
 
     // Begin upgrade to v1.1.0
-    coordinator
-        .begin_upgrade(ProtocolVersion::V1_1_0)
-        .unwrap();
+    coordinator.begin_upgrade(ProtocolVersion::V1_1_0).unwrap();
 
     // Partial resource allocated under target generation
     coordinator.register_resource("incomplete_new_resource");
@@ -101,7 +87,10 @@ fn rolling_upgrade_rollback_atomically_cleans_target_generation() {
 
     // Simulate fault and trigger rollback to v1.0.0
     coordinator
-        .rollback(ProtocolVersion::V1_0_0, "Crash interruption during rolling upgrade")
+        .rollback(
+            ProtocolVersion::V1_0_0,
+            "Crash interruption during rolling upgrade",
+        )
         .expect("Fix: rollback must succeed.");
 
     assert!(matches!(
@@ -127,10 +116,8 @@ fn rolling_upgrade_rollback_atomically_cleans_target_generation() {
 
 #[test]
 fn incompatible_target_version_is_rejected_before_state_change() {
-    let mut coordinator = RollingUpgradeCoordinator::new(
-        ProtocolDomain::RuntimeProtocol,
-        ProtocolVersion::V1_0_0,
-    );
+    let mut coordinator =
+        RollingUpgradeCoordinator::new(ProtocolDomain::RuntimeProtocol, ProtocolVersion::V1_0_0);
 
     let err = coordinator
         .begin_upgrade(ProtocolVersion::V2_0_0)

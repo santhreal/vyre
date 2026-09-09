@@ -83,13 +83,25 @@ where
     validate_arity(op_id, args.len(), signature.inputs.len())?;
     let input = encode_inputs(op_id, args, signature.inputs, eval_arg)?;
     let mut output = Vec::with_capacity(output_reserve(signature.outputs));
-    let cpu_ref = crate::reference_fn(op_id).ok_or_else(|| {
-        ReferenceError::new(format!(
-            "op `{op_id}` has no CPU reference implementation. Fix: register one ReferenceFacet for this canonical operation or inline its composition body."
-        ))
-    })?;
-    invoke_cpu_ref(op_id, cpu_ref, &input, &mut output)?;
-    spec_output_value(output_data_type(op_id, signature.outputs)?, &output)
+    if let Some(cpu_ref) = crate::reference_fn(op_id) {
+        invoke_cpu_ref(op_id, cpu_ref, &input, &mut output)?;
+        spec_output_value(output_data_type(op_id, signature.outputs)?, &output)
+    } else if let Some(prog) = OperationRegistry::global()
+        .get(op_id)
+        .and_then(|op| op.program())
+    {
+        let input_val = Value::from(input);
+        let outputs = crate::execution::reference_eval(&prog, &[input_val])?;
+        if let Some(first_out) = outputs.first() {
+            Ok(first_out.clone())
+        } else {
+            spec_output_value(output_data_type(op_id, signature.outputs)?, &output)
+        }
+    } else {
+        Err(ReferenceError::missing_value(format!(
+            "op `{op_id}` has no CPU reference implementation and no canonical composition program. Fix: register one ReferenceFacet for this canonical operation."
+        )))
+    }
 }
 
 pub(crate) fn invoke_cpu_ref(

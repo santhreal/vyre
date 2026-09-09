@@ -1316,7 +1316,6 @@ dependencies = [
  "toml",
  "tracing",
  "vyre-foundation",
- "vyre-libs",
  "vyre-megakernel",
  "vyre-spec",
 ]
@@ -1333,7 +1332,6 @@ dependencies = [
  "crossbeam-queue",
  "dashmap",
  "fs2",
- "inventory",
  "naga",
  "rustc-hash 2.1.3",
  "serde",
@@ -1345,7 +1343,6 @@ dependencies = [
  "vyre-driver",
  "vyre-emit-naga",
  "vyre-foundation",
- "vyre-libs",
  "vyre-lower",
  "vyre-megakernel",
  "vyre-pass-engine",
@@ -1418,6 +1415,7 @@ dependencies = [
  "thiserror 2.0.19",
  "tracing",
  "vyre-foundation",
+ "vyre-megakernel",
  "vyre-primitives",
  "vyre-spec",
 ]
@@ -1427,11 +1425,13 @@ name = "vyre-lower"
 version = "0.8.0"
 dependencies = [
  "imbl",
+ "inventory",
  "rustc-hash 2.1.3",
  "serde",
  "smallvec",
  "thiserror 2.0.19",
  "vyre-foundation",
+ "vyre-spec",
 ]
 
 [[package]]
@@ -1448,11 +1448,13 @@ name = "vyre-megakernel"
 version = "0.8.0"
 dependencies = [
  "blake3",
+ "inventory",
  "serde",
  "serde_json",
  "thiserror 2.0.19",
  "vyre-foundation",
  "vyre-lower",
+ "vyre-spec",
 ]
 
 [[package]]
@@ -1462,6 +1464,7 @@ dependencies = [
  "rustc-hash 2.1.3",
  "vyre-foundation",
  "vyre-libs",
+ "vyre-megakernel",
  "vyre-primitives",
 ]
 
@@ -1483,6 +1486,8 @@ dependencies = [
  "dashmap",
  "libc",
  "rustc-hash 2.1.3",
+ "serde",
+ "serde_json",
  "smallvec",
  "thiserror 2.0.19",
  "tracing",

@@ -372,7 +372,8 @@ impl PlatformSupportMatrix {
 
     /// Serialize matrix to TOML.
     pub fn to_toml(&self) -> Result<String, UnsupportedPlatformError> {
-        toml::to_string_pretty(self).map_err(|e| UnsupportedPlatformError::Serialization(e.to_string()))
+        toml::to_string_pretty(self)
+            .map_err(|e| UnsupportedPlatformError::Serialization(e.to_string()))
     }
 
     /// Deserialize matrix from TOML, validating schema version fail-closed.

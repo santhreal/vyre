@@ -92,6 +92,10 @@ name = "compile"
 findings = 0
 
 [[gate]]
+name = "configuration-model"
+findings = 0
+
+[[gate]]
 name = "conformance-matrix"
 findings = 0
 
@@ -541,6 +545,10 @@ findings = 0
 
 [[gate]]
 name = "trace-f32"
+findings = 0
+
+[[gate]]
+name = "tracked-modules"
 findings = 0
 
 [[gate]]

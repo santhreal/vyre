@@ -17,6 +17,14 @@ pub fn all_entries() -> impl Iterator<Item = SemanticOperation> {
         .filter(|entry| entry.tier == OperationTier::Library)
 }
 
+/// Ensure all feature-selected library operation registrations are retained by the linker.
+///
+/// Returns the number of canonical library operations contributed by the active feature set.
+#[must_use]
+pub fn link_anchor() -> usize {
+    all_entries().count()
+}
+
 /// Iterate over library operations with complete deterministic execution fixtures.
 ///
 /// Callable composition components remain present in [`all_entries`] for

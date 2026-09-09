@@ -7,9 +7,7 @@ use std::io::{Read, Write};
 use std::time::Instant;
 
 use vyre::ir::Program;
-use vyre_conform_spec::{
-    hash_outputs, WorkerMode, WorkerReceipt, WorkerRequest, WorkerStatus,
-};
+use vyre_conform_spec::{hash_outputs, WorkerMode, WorkerReceipt, WorkerRequest, WorkerStatus};
 
 use crate::backend_selection::backend_registration;
 use crate::oracle::OracleSession;
@@ -88,12 +86,11 @@ pub fn execute_worker_request(request: &WorkerRequest, secret: &[u8]) -> WorkerR
     let runner_binary = current_binary_digest();
     let environment = current_environment_digest();
 
-    let execution_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        match request.mode {
+    let execution_result =
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| match request.mode {
             WorkerMode::Reference => execute_reference(request),
             WorkerMode::Production => execute_production(request),
-        }
-    }));
+        }));
 
     let elapsed_ms = started.elapsed().as_millis() as u64;
     let peak_memory_bytes = estimate_process_memory();
@@ -143,11 +140,8 @@ pub fn execute_worker_request(request: &WorkerRequest, secret: &[u8]) -> WorkerR
             auth_tag: String::new(),
         },
         Ok(Ok(success_data)) => {
-            let total_output_bytes = success_data
-                .outputs
-                .iter()
-                .map(Vec::len)
-                .sum::<usize>() as u64;
+            let total_output_bytes =
+                success_data.outputs.iter().map(Vec::len).sum::<usize>() as u64;
             if total_output_bytes > request.budget.max_output_bytes {
                 WorkerReceipt {
                     receipt_version: WorkerReceipt::SCHEMA_VERSION,
@@ -254,14 +248,11 @@ fn execute_production(request: &WorkerRequest) -> Result<WorkerSuccess, String> 
         .submit(&inputs_borrowed)
         .map_err(|e| format!("production submit failed: {e}"))?;
 
-    let target_facts_blake3 = registration
-        .acquire()
-        .ok()
-        .map(|handle| {
-            let facts = handle.device_profile().compile_facts();
-            let debug_str = format!("{facts:?}");
-            blake3::hash(debug_str.as_bytes()).to_hex().to_string()
-        });
+    let target_facts_blake3 = registration.acquire().ok().map(|handle| {
+        let facts = handle.device_profile().compile_facts();
+        let debug_str = format!("{facts:?}");
+        blake3::hash(debug_str.as_bytes()).to_hex().to_string()
+    });
     Ok(WorkerSuccess {
         outputs: execution.outputs,
         artifact_blake3: Some(execution.artifact.to_hex().to_string()),

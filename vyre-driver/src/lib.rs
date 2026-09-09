@@ -227,6 +227,8 @@ pub mod numeric;
 pub mod persistent;
 /// Domain-neutral semantic resource ABI, logical image/view types, and zero-copy timeline synchronization (Row 111).
 mod semantic_resource_abi;
+/// Production-path support certificate for backend operations.
+pub mod support_certificate;
 
 /// The `inventory` crate `register_backend!` submits through. A concrete
 /// driver expands the macro and needs no `inventory` dependency of its own.
@@ -269,11 +271,6 @@ pub use binding::{
     binding_plans_share_layout, dynamic_element_count_from_bytes, BackendLayoutClass,
     BackendLayoutFingerprint, BackendLayoutSlot, Binding, BindingPlan, BindingRole,
     BindingSetFingerprint,
-};
-pub use semantic_resource_abi::{
-    AdmittedResourceRecord, ColorInterpretation, ExternalMemoryCapability, ImageDimensions,
-    ImageFormat, ResourceAbiError, ResourceLayoutState, ResourceOwnershipState,
-    ResourcePermittedUsages, ResourceUsageTransition, SubresourceRange, TimelineSyncProtocol,
 };
 pub use device_extraction::{
     extract_best_for_device, extract_best_for_devices, DeviceExtraction, ExtractionDevice,
@@ -330,6 +327,22 @@ pub use registry::{
 pub use residency::{ResidentGraphReuseTelemetry, ResidentGraphReuseTelemetryError};
 pub use routing::pgo;
 pub use routing::{select_sort_backend, Distribution, RoutingTable, SortBackend};
+pub use semantic_resource_abi::{
+    all_address_modes, all_alias_set_kinds, all_border_colors, all_color_interpretations,
+    all_compare_functions, all_external_event_kinds, all_external_memory_kinds, all_filter_modes,
+    all_format_classes, all_image_formats, all_image_view_kinds, all_layout_states,
+    all_lifetime_state_kinds, all_mipmap_filter_modes, all_plane_kinds, all_provenance_kinds,
+    all_swizzle_components, all_sync_protocols, all_usage_flags, authenticate_external_import,
+    AddressMode, AdmittedResourceRecord, AdmittedResourceRecordExt, BorderColor,
+    ColorInterpretation, CompareFunction, ComponentSwizzle, DeviceLossInvalidationReport,
+    ExternalEventCapability, ExternalEventKind, ExternalMemoryCapability, ExternalMemoryKind,
+    ExternalResourceRegistry, FilterMode, FormatClass, ImageDimensions, ImageFormat, ImagePlane,
+    ImageViewDescriptor, ImageViewKind, MipmapFilterMode, PlaneKind, ResourceAbiError,
+    ResourceAliasSet, ResourceLayoutState, ResourceLifetimeState, ResourceOwnershipState,
+    ResourcePermittedUsages, ResourceProvenance, ResourceTransitionSchedule,
+    ResourceUsageTransition, SamplerCapability, SamplerDescriptor, SubresourceRange,
+    SwizzleComponent, TimelineSyncProtocol, TransitionExecutionReport,
+};
 pub use specialization::{versioned_specialization_artifact_key, vsa_specialization_key};
 pub use specialization::{SpecCacheKey, SpecMap, SpecValue};
 pub use speculate::{
@@ -345,4 +358,8 @@ pub use subgroup::{
     reduction_offsets, reduction_offsets_into, try_reduction_offsets, try_reduction_offsets_into,
 };
 pub use subgroup::{SubgroupCaps, SubgroupOp};
+pub use support_certificate::{
+    FactStatus, ProductionPathFact, ProductionPathStage, SupportCertificate,
+    SupportCertificateRegistry, SupportStatus, SUPPORT_CERTIFICATE_SCHEMA,
+};
 pub use target::Target;

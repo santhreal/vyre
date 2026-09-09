@@ -22,7 +22,7 @@ impl Default for CompilationQuota {
         Self {
             max_nodes: 50_000,
             max_depth: 128,
-            max_compile_time_ns: 5_000_000_000, // 5.0 seconds
+            max_compile_time_ns: 5_000_000_000,  // 5.0 seconds
             max_memory_bytes: 128 * 1024 * 1024, // 128 MB
         }
     }
@@ -104,7 +104,10 @@ impl RedactedDiagnostic {
             if !result.is_empty() {
                 result.push(' ');
             }
-            if word.starts_with("0x") && word.len() > 8 && word[2..].chars().all(|c| c.is_ascii_hexdigit()) {
+            if word.starts_with("0x")
+                && word.len() > 8
+                && word[2..].chars().all(|c| c.is_ascii_hexdigit())
+            {
                 result.push_str("[REDACTED_ADDR]");
             } else if word.starts_with("secret:") || word.starts_with("key:") {
                 result.push_str("[REDACTED_SECRET]");

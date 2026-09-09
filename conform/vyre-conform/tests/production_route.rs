@@ -114,7 +114,8 @@ fn timed_out_worker_is_reaped_and_next_case_observes_clean_worker() {
         None,
     );
 
-    let clean_receipt = coordinator.execute_reference(&clean_case, Some(WorkerBudget::default_budget()));
+    let clean_receipt =
+        coordinator.execute_reference(&clean_case, Some(WorkerBudget::default_budget()));
     assert_eq!(clean_receipt.status, WorkerStatus::Success);
     assert_eq!(
         clean_receipt.outputs,
@@ -145,9 +146,7 @@ fn contaminated_or_panicking_worker_cannot_influence_later_cases() {
 
     // Next case on the coordinator must run cleanly and succeed
     let identity_program = make_identity_program();
-    let id_wire = identity_program
-        .to_wire()
-        .expect("identity wire encode");
+    let id_wire = identity_program.to_wire().expect("identity wire encode");
 
     let clean_case = CasePayload::new(
         "vyre-conform::production_route::identity",

@@ -41,8 +41,9 @@ impl SequentialWorkgroup {
     #[must_use]
     pub fn invocation_count(&self) -> u32 {
         self.size[0]
-            .saturating_mul(self.size[1])
-            .saturating_mul(self.size[2])
+            .checked_mul(self.size[1])
+            .and_then(|c| c.checked_mul(self.size[2]))
+            .unwrap_or(u32::MAX)
     }
 
     /// Yield the invocation ids in canonical order (z-major, y-major, x-minor).
@@ -53,9 +54,18 @@ impl SequentialWorkgroup {
             (0..sy).flat_map(move |ly| {
                 (0..sx).map(move |lx| InvocationIds {
                     global: [
-                        wg[0].saturating_mul(sx).saturating_add(lx),
-                        wg[1].saturating_mul(sy).saturating_add(ly),
-                        wg[2].saturating_mul(sz).saturating_add(lz),
+                        wg[0]
+                            .checked_mul(sx)
+                            .and_then(|b| b.checked_add(lx))
+                            .unwrap_or(u32::MAX),
+                        wg[1]
+                            .checked_mul(sy)
+                            .and_then(|b| b.checked_add(ly))
+                            .unwrap_or(u32::MAX),
+                        wg[2]
+                            .checked_mul(sz)
+                            .and_then(|b| b.checked_add(lz))
+                            .unwrap_or(u32::MAX),
                     ],
                     workgroup: wg,
                     local: [lx, ly, lz],

@@ -5,10 +5,10 @@
 //! binary for the whole set. A test that cannot share a process stays its own
 //! target and states why in `xtask/test-harness-isolation.toml`.
 
-/// Shared fixture module from `tests/prefix_cache_fixtures/mod.rs`.
+/// Shared fixture module from `tests/retained_cache_fixtures/mod.rs`.
 #[allow(clippy::assertions_on_constants, clippy::needless_range_loop)]
-#[path = "prefix_cache_fixtures/mod.rs"]
-pub mod prefix_cache_fixtures;
+#[path = "retained_cache_fixtures/mod.rs"]
+pub mod retained_cache_fixtures;
 
 /// Shared expectation module from `tests/ring_expectations/mod.rs`.
 #[path = "ring_expectations/mod.rs"]
@@ -54,9 +54,9 @@ pub mod interactive_session_contract;
 #[path = "multi_tenant_scheduler.rs"]
 pub mod multi_tenant_scheduler;
 
-/// Integration tests from `tests/paged_prefix_mtp_contracts.rs`.
-#[path = "paged_prefix_mtp_contracts.rs"]
-pub mod paged_prefix_mtp_contracts;
+/// Integration tests from `tests/generic_runtime_contracts.rs`.
+#[path = "generic_runtime_contracts.rs"]
+pub mod generic_runtime_contracts;
 
 /// Integration tests from `tests/pipeline_fingerprint_surface.rs`.
 #[path = "pipeline_fingerprint_surface.rs"]
@@ -233,9 +233,9 @@ pub mod routing_policy;
 #[path = "routing_standard_policy_contracts.rs"]
 pub mod routing_standard_policy_contracts;
 
-/// Integration tests from `tests/safetensors_transfer_integrity_contracts.rs`.
-#[path = "safetensors_transfer_integrity_contracts.rs"]
-pub mod safetensors_transfer_integrity_contracts;
+/// Integration tests from `tests/resource_transfer_integrity_contracts.rs`.
+#[path = "resource_transfer_integrity_contracts.rs"]
+pub mod resource_transfer_integrity_contracts;
 
 /// Integration tests from `tests/scheduler_model_proptest.rs`.
 #[allow(clippy::needless_range_loop)]
@@ -268,17 +268,24 @@ pub mod uring_completion_pump_contracts;
 #[path = "uring_ingest_telemetry_invariants.rs"]
 pub mod uring_ingest_telemetry_invariants;
 
+/// Integration tests from `tests/failure_domains_and_recovery_contracts.rs`.
+#[path = "failure_domains_and_recovery_contracts.rs"]
+pub mod failure_domains_and_recovery_contracts;
+/// Integration tests from `tests/tenant_capability_contracts.rs` (Row 119).
+#[path = "tenant_capability_contracts.rs"]
+pub mod tenant_capability_contracts;
 /// Integration tests from `tests/uring_smoke.rs`.
 #[cfg(target_os = "linux")]
 #[path = "uring_smoke.rs"]
 pub mod uring_smoke;
-/// Integration tests from `tests/tenant_capability_contracts.rs` (Row 119).
-#[path = "tenant_capability_contracts.rs"]
-pub mod tenant_capability_contracts;
-/// Integration tests from `tests/failure_domains_and_recovery_contracts.rs`.
-#[path = "failure_domains_and_recovery_contracts.rs"]
-pub mod failure_domains_and_recovery_contracts;
 
+/// Integration tests from `tests/external_resource_admission_contracts.rs` (Row 111).
+#[path = "external_resource_admission_contracts.rs"]
+pub mod external_resource_admission_contracts;
 /// Integration tests from `tests/rolling_upgrade_compatibility_contracts.rs`.
 #[path = "rolling_upgrade_compatibility_contracts.rs"]
 pub mod rolling_upgrade_compatibility_contracts;
+
+/// Integration tests from `tests/runtime_quota_and_concurrency_contracts.rs` (Row 92).
+#[path = "runtime_quota_and_concurrency_contracts.rs"]
+pub mod runtime_quota_and_concurrency_contracts;

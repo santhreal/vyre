@@ -22,12 +22,12 @@ pub use mesh::{MeshSession, MeshSessionError, MeshSubmission};
 pub use portfolio::{admit_portfolio, AdmittedPortfolio};
 pub use retained::{RetainedArtifactSession, RetainedSessionPhase, RetainedSessionTransition};
 pub use session::{ArtifactSession, ArtifactSessionError};
-pub use workspace::ArtifactWorkspace;
 use thiserror::Error;
 use vyre_megakernel::allocation::DeviceSlot;
 use vyre_megakernel::{
     Artifact, ArtifactEnvelope, CompileError, Diagnostic, TargetPayload, TargetPayloadFormat,
 };
+pub use workspace::ArtifactWorkspace;
 
 use crate::pipeline_cache::{PipelineCacheStore, PipelineFingerprint};
 

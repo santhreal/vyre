@@ -209,12 +209,9 @@ fn retained_session_refuses_mutations_outside_valid_transitions() {
         .expect("envelope payload");
     let materializer = SessionFixtureMaterializer::new("sm-backend", "sm-device", FORMAT);
 
-    let session = ArtifactSession::from_envelope_with_materializer(
-        &SM_REGISTRATION,
-        envelope,
-        materializer,
-    )
-    .expect("session");
+    let session =
+        ArtifactSession::from_envelope_with_materializer(&SM_REGISTRATION, envelope, materializer)
+            .expect("session");
 
     let counter_0_id = session.resource("counter.0").expect("counter.0 resource");
     let counter_1_id = session.resource("counter.1").expect("counter.1 resource");
@@ -226,14 +223,20 @@ fn retained_session_refuses_mutations_outside_valid_transitions() {
     let retained_session = RetainedArtifactSession::new(session, initial_state)
         .expect("valid retained session initialization");
 
-    assert_eq!(retained_session.phase().unwrap(), RetainedSessionPhase::Ready);
+    assert_eq!(
+        retained_session.phase().unwrap(),
+        RetainedSessionPhase::Ready
+    );
     assert_eq!(retained_session.generation().unwrap(), 1);
 
     // Transition to InFlight
     retained_session
         .transition(RetainedSessionTransition::BeginSubmission)
         .expect("transition to InFlight");
-    assert_eq!(retained_session.phase().unwrap(), RetainedSessionPhase::InFlight);
+    assert_eq!(
+        retained_session.phase().unwrap(),
+        RetainedSessionPhase::InFlight
+    );
 
     // Mutation (replace_retained) while InFlight MUST be refused
     let replacement = BTreeMap::from([
@@ -257,7 +260,10 @@ fn retained_session_refuses_mutations_outside_valid_transitions() {
     retained_session
         .transition(RetainedSessionTransition::CompleteSubmission { new_generation: 2 })
         .expect("complete submission");
-    assert_eq!(retained_session.phase().unwrap(), RetainedSessionPhase::Ready);
+    assert_eq!(
+        retained_session.phase().unwrap(),
+        RetainedSessionPhase::Ready
+    );
     assert_eq!(retained_session.generation().unwrap(), 2);
 
     // Now state replacement succeeds in Ready phase

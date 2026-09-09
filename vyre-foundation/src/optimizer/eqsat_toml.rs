@@ -265,11 +265,7 @@ where
             self.name,
             "each equivalence pair cites a registered region law, resolved when the file is loaded",
         );
-        super::eqsat::RuleCacheKey::from_components(
-            self.name,
-            &fact,
-            &proof.obligation_digest,
-        )
+        super::eqsat::RuleCacheKey::from_components(self.name, &fact, &proof.obligation_digest)
     }
     fn matches(&self, egraph: &EGraph<L>) -> Vec<(EClassId, EClassId)> {
         if self.rules.is_empty() {

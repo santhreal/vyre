@@ -9,12 +9,11 @@
 
 #![forbid(unsafe_code)]
 
-
 use vyre_foundation::ir::{
     AdmittedResourceRecord, ColorSpace, ExternalMemoryDescriptor, ExternalMemoryKind,
-    ExternalResourceCapability, ExternalSyncProtocol, ImageDimension, ImageExtent,
-    ImageFormat, PlaneDescriptor, ResourceAbiError, ResourceUsageFlags, SamplerAddressMode,
-    SamplerDescriptor, SamplerFilter, SubresourceRange, ValueLifetime, ViewDescriptor,
+    ExternalResourceCapability, ExternalSyncProtocol, ImageDimension, ImageExtent, ImageFormat,
+    PlaneDescriptor, ResourceAbiError, ResourceUsageFlags, SamplerAddressMode, SamplerDescriptor,
+    SamplerFilter, SubresourceRange, ValueLifetime, ViewDescriptor,
 };
 
 #[test]
@@ -71,13 +70,17 @@ fn admitted_resource_record_validates_pitch_and_alignment() {
     // 2. Insufficient row pitch fails
     let mut bad_pitch = valid_record.clone();
     bad_pitch.planes[0].row_pitch_bytes = 7000; // less than 1920 * 4 = 7680
-    let err = bad_pitch.validate(&caps).expect_err("insufficient pitch must fail");
+    let err = bad_pitch
+        .validate(&caps)
+        .expect_err("insufficient pitch must fail");
     assert!(matches!(err, ResourceAbiError::InsufficientRowPitch { .. }));
 
     // 3. Unaligned row pitch fails when alignment required
     let mut unaligned_pitch = valid_record.clone();
     unaligned_pitch.planes[0].row_pitch_bytes = 7684; // not multiple of 256
-    let err = unaligned_pitch.validate(&caps).expect_err("unaligned pitch must fail");
+    let err = unaligned_pitch
+        .validate(&caps)
+        .expect_err("unaligned pitch must fail");
     assert!(matches!(err, ResourceAbiError::UnalignedRowPitch { .. }));
 
     // 4. Zero extent fails
@@ -89,8 +92,13 @@ fn admitted_resource_record_validates_pitch_and_alignment() {
     // 5. Incompatible view format size fails
     let mut bad_view = valid_record.clone();
     bad_view.views[0].format = ImageFormat::Rgba16Float; // 8 B/px vs 4 B/px base
-    let err = bad_view.validate(&caps).expect_err("incompatible view format must fail");
-    assert!(matches!(err, ResourceAbiError::IncompatibleViewFormat { .. }));
+    let err = bad_view
+        .validate(&caps)
+        .expect_err("incompatible view format must fail");
+    assert!(matches!(
+        err,
+        ResourceAbiError::IncompatibleViewFormat { .. }
+    ));
 }
 
 #[test]

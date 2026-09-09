@@ -336,15 +336,11 @@ impl ExprArena {
             FlatExpr::SubgroupLocalId => Expr::SubgroupLocalId,
             FlatExpr::SubgroupSize => Expr::SubgroupSize,
             FlatExpr::Opaque(key) => {
-                let idx = self
-                    .opaque_lookup
-                    .get(&key)
-                    .copied()
-                    .unwrap_or_else(|| {
-                        unreachable!(
-                            "rebuild only sees OpaqueContentKeys produced by intern_flat (this arena)"
-                        )
-                    });
+                let idx = self.opaque_lookup.get(&key).copied().unwrap_or_else(|| {
+                    unreachable!(
+                        "rebuild only sees OpaqueContentKeys produced by intern_flat (this arena)"
+                    )
+                });
                 Expr::Opaque(Arc::clone(&self.opaques[idx]))
             }
         }
@@ -648,7 +644,10 @@ mod tests {
         let mut arena = ExprArena::default();
         let id_a = arena.intern(&Expr::Opaque(arc_a));
         let id_b = arena.intern(&Expr::Opaque(arc_b));
-        assert_eq!(id_a, id_b, "two distinct Arcs with equal content must collapse to same ExprId");
+        assert_eq!(
+            id_a, id_b,
+            "two distinct Arcs with equal content must collapse to same ExprId"
+        );
         assert_eq!(arena.len(), 1);
     }
 

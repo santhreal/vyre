@@ -12,6 +12,8 @@ use thiserror::Error;
 
 use super::receipt::BenchmarkReceipt;
 
+/// Maximum allowed byte size for a single benchmark receipt on disk (16 MiB).
+pub const MAX_BENCHMARK_RECEIPT_BYTES: u64 = 16 * 1024 * 1024;
 /// Errors returned by evidence store operations.
 #[derive(Debug, Error)]
 pub enum EvidenceStoreError {
@@ -97,7 +99,11 @@ impl EvidenceStore {
         if let Some(dir) = &self.root_dir {
             let file_path = dir.join(format!("{address}.json"));
             if file_path.exists() {
-                let content = fs::read_to_string(&file_path)?;
+                let content = xtask::output_arg::read_text_bounded(
+                    &file_path,
+                    MAX_BENCHMARK_RECEIPT_BYTES,
+                    "evidence receipt",
+                )?;
                 let receipt: BenchmarkReceipt = serde_json::from_str(&content)?;
                 let computed = receipt.content_address();
                 if computed != address {
@@ -142,5 +148,23 @@ impl EvidenceStore {
         }
         addresses.sort();
         Ok(addresses)
+    }
+
+    /// Find a recorded benchmark receipt matching a specific input cell identity key.
+    ///
+    /// Enables resumable campaigns to discover whether a cell has already been
+    /// executed and stored under the exact same input parameters.
+    pub fn find_by_cell_key(
+        &self,
+        cell_key: &str,
+    ) -> Result<Option<BenchmarkReceipt>, EvidenceStoreError> {
+        for addr in self.list()? {
+            if let Ok(receipt) = self.get(&addr) {
+                if receipt.cell_identity_key() == cell_key {
+                    return Ok(Some(receipt));
+                }
+            }
+        }
+        Ok(None)
     }
 }

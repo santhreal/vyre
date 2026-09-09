@@ -16,6 +16,7 @@ pub mod candidate_plan;
 pub(crate) mod coalesce;
 pub(crate) mod common_subexpr;
 pub(crate) mod const_buffer_promote;
+pub mod contraction_candidates;
 pub(crate) mod dead_op;
 pub(crate) mod def_use;
 pub(crate) mod facts;

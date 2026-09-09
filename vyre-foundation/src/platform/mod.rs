@@ -8,7 +8,9 @@ pub(crate) mod adapters;
 pub(crate) mod matrix;
 pub(crate) mod wire;
 
-pub use adapters::{ClockAdapter, FileSystemAdapter, PlatformAdapterError, ScratchDir, ThreadAdapter};
+pub use adapters::{
+    ClockAdapter, FileSystemAdapter, PlatformAdapterError, ScratchDir, ThreadAdapter,
+};
 pub use matrix::{
     DeviceCapabilityProfile, Endianness, HostArch, HostCell, HostOs, PlatformSupportMatrix,
     PointerWidth, UnsupportedPlatformError, PLATFORM_SUPPORT_MATRIX_SCHEMA_VERSION,

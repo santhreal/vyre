@@ -23,7 +23,7 @@
 //! sits in the integration-test surface (added when CI has spirv-tools).
 
 use thiserror::Error;
-use vyre_foundation::diagnostics::{Diagnostic};
+use vyre_foundation::diagnostics::Diagnostic;
 use vyre_lower::KernelDescriptor;
 pub mod patterns;
 

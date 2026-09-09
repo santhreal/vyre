@@ -29,6 +29,7 @@ proptest.workspace = true
 serde_json.workspace = true
 syn.workspace = true
 toml.workspace = true
+vyre-libs = { workspace = true }
 
 [package.metadata.docs.rs]
 all-features = true

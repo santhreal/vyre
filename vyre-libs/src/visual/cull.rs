@@ -62,7 +62,8 @@ pub fn cull_boxes_2d(
 
     Program::wrapped(
         vec![
-            BufferDecl::storage(boxes, 0, BufferAccess::ReadOnly, DataType::I32).with_count(count * 4),
+            BufferDecl::storage(boxes, 0, BufferAccess::ReadOnly, DataType::I32)
+                .with_count(count * 4),
             BufferDecl::output(visible_mask, 1, DataType::U32).with_count(count),
         ],
         [256, 1, 1],

@@ -160,7 +160,7 @@ impl<'a> UringResidentQueuePump<'a> {
     /// ring can read from. The caller retains ownership  -  the pump
     /// does not close it.
     #[allow(clippy::too_many_arguments)]
-    pub unsafe fn submit_file_scan(
+    pub fn submit_file_scan(
         &mut self,
         fd: i32,
         file_offset: u64,
@@ -186,15 +186,13 @@ impl<'a> UringResidentQueuePump<'a> {
         // behind and the staging order cannot disagree with `pending`.
         let mut scratch = self.acquire_iovec();
         // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
-        let submit_result = unsafe {
-            self.stream.submit_read_to_gpu(
-                fd,
-                file_offset,
-                len,
-                chunk_idx_usize,
-                std::slice::from_mut(&mut *scratch),
-            )
-        };
+        let submit_result = self.stream.submit_read_to_gpu(
+            fd,
+            file_offset,
+            len,
+            chunk_idx_usize,
+            std::slice::from_mut(&mut *scratch),
+        );
         if let Err(error) = submit_result {
             self.release_iovec(scratch);
             return Err(error);

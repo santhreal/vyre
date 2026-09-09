@@ -51,7 +51,9 @@ fn release_evidence_covers_three_unrelated_application_domains() {
             || id.contains("linear")
             || id.contains("quantized")
             || id.contains("elementwise")
-            || tags.iter().any(|t| t == "dense" || t == "numerical" || t == "linear" || t == "quantized")
+            || tags
+                .iter()
+                .any(|t| t == "dense" || t == "numerical" || t == "linear" || t == "quantized")
         {
             domains_covered.insert(ApplicationDomain::DenseNumerical);
             dense_cases.push(case.id().0.to_string());
@@ -63,7 +65,9 @@ fn release_evidence_covers_three_unrelated_application_domains() {
             || id.contains("irregular")
             || id.contains("reachability")
             || id.contains("queue")
-            || tags.iter().any(|t| t == "graph" || t == "dataflow" || t == "sparse" || t == "irregular" || t == "queue")
+            || tags.iter().any(|t| {
+                t == "graph" || t == "dataflow" || t == "sparse" || t == "irregular" || t == "queue"
+            })
         {
             domains_covered.insert(ApplicationDomain::IrregularStateful);
             irregular_cases.push(case.id().0.to_string());
@@ -74,7 +78,9 @@ fn release_evidence_covers_three_unrelated_application_domains() {
             || id.contains("latency")
             || id.contains("interactive")
             || id.contains("stream")
-            || tags.iter().any(|t| t == "interactive" || t == "latency" || t == "routing" || t == "condition")
+            || tags
+                .iter()
+                .any(|t| t == "interactive" || t == "latency" || t == "routing" || t == "condition")
         {
             domains_covered.insert(ApplicationDomain::LatencySensitiveInteractive);
             interactive_cases.push(case.id().0.to_string());

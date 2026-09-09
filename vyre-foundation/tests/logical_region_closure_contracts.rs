@@ -27,7 +27,9 @@ fn logical_region_kind_exhaustive_closure() {
             LogicalRegionKind::RetainedState => assert_eq!(kind, LogicalRegionKind::RetainedState),
             LogicalRegionKind::SegmentedMap => assert_eq!(kind, LogicalRegionKind::SegmentedMap),
             LogicalRegionKind::Scan => assert_eq!(kind, LogicalRegionKind::Scan),
-            LogicalRegionKind::RecurrentState => assert_eq!(kind, LogicalRegionKind::RecurrentState),
+            LogicalRegionKind::RecurrentState => {
+                assert_eq!(kind, LogicalRegionKind::RecurrentState)
+            }
             LogicalRegionKind::Window => assert_eq!(kind, LogicalRegionKind::Window),
             LogicalRegionKind::RaggedExtent => assert_eq!(kind, LogicalRegionKind::RaggedExtent),
             LogicalRegionKind::PartialResultJoin => {
@@ -363,7 +365,11 @@ fn schedule_lowering_distributions_closure() {
             BufferDecl::output("out", 1, DataType::F32).with_count(128),
         ],
         [128, 1, 1],
-        vec![Node::store("out", Expr::gid_x(), Expr::load("in", Expr::gid_x()))],
+        vec![Node::store(
+            "out",
+            Expr::gid_x(),
+            Expr::load("in", Expr::gid_x()),
+        )],
     );
 
     let dist_wg = ScheduleDistribution::workgroup(4, 32);

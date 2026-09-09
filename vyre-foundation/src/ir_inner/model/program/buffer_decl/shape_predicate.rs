@@ -123,7 +123,12 @@ impl ShapePredicate {
                     remainder: *remainder as u64,
                 }]
             }
-            Self::AffineRange { scale, offset, min, max } => {
+            Self::AffineRange {
+                scale,
+                offset,
+                min,
+                max,
+            } => {
                 let scale_expr = interner.constant(*scale as i128);
                 let offset_expr = interner.constant(*offset as i128);
                 let scaled = interner.mul(count_expr, scale_expr);
@@ -158,7 +163,8 @@ impl ShapePredicate {
     ) -> bool {
         match self {
             Self::Or(a, b) => {
-                a.evaluate_with_interner(interner, count) || b.evaluate_with_interner(interner, count)
+                a.evaluate_with_interner(interner, count)
+                    || b.evaluate_with_interner(interner, count)
             }
             Self::Not(inner) => !inner.evaluate_with_interner(interner, count),
             _ => {

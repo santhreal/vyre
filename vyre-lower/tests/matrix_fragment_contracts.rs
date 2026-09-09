@@ -351,7 +351,11 @@ fn tile_matmul_lowering_packs_fragment_operands_as_distinct_words() {
         .find(|op| matches!(op.kind, KernelOpKind::MatrixMma(_)))
         .expect("descriptor must contain a MatrixMma op");
     // Must have 10 operand words (4 for A, 2 for B, 4 for Acc)
-    assert_eq!(mma_op.operands.len(), 10, "MatrixMma operand count mismatch");
+    assert_eq!(
+        mma_op.operands.len(),
+        10,
+        "MatrixMma operand count mismatch"
+    );
 
     // The left tile operands (0..4) must all be distinct packed fragment words,
     // NOT duplicated scalar IDs.
@@ -489,8 +493,14 @@ fn contraction_candidate_analysis_covers_all_supported_strategies() {
         .iter()
         .any(|c| matches!(c.strategy, ContractionStrategy::MatrixInstruction { .. }));
 
-    assert!(has_scalar, "Fix: contraction plan must include scalar baseline");
-    assert!(has_simt, "Fix: contraction plan must include SIMT tiled candidate");
+    assert!(
+        has_scalar,
+        "Fix: contraction plan must include scalar baseline"
+    );
+    assert!(
+        has_simt,
+        "Fix: contraction plan must include SIMT tiled candidate"
+    );
     assert!(has_mma, "Fix: contraction plan must include MMA candidate");
 }
 
@@ -535,10 +545,12 @@ fn contraction_shape_and_dtype_space_is_covered_without_gaps() {
             ),
         );
 
-        let desc = lower(&prog)
-            .unwrap_or_else(|e| panic!("Fix: {dtype:?} 2x2 tile matmul lowering must succeed: {e}"));
-        verify(&desc)
-            .unwrap_or_else(|e| panic!("Fix: {dtype:?} 2x2 tile matmul descriptor must verify: {e:?}"));
+        let desc = lower(&prog).unwrap_or_else(|e| {
+            panic!("Fix: {dtype:?} 2x2 tile matmul lowering must succeed: {e}")
+        });
+        verify(&desc).unwrap_or_else(|e| {
+            panic!("Fix: {dtype:?} 2x2 tile matmul descriptor must verify: {e:?}")
+        });
 
         let plan = analyze(&desc);
         assert!(

@@ -88,7 +88,6 @@ pub mod device_profile_admissibility;
 #[path = "dfa_full_coverage.rs"]
 pub mod dfa_full_coverage;
 
-
 /// Integration tests from `tests/evidence_receipt_contracts.rs`.
 #[path = "evidence_receipt_contracts.rs"]
 pub mod evidence_receipt_contracts;
@@ -230,3 +229,7 @@ pub mod thesis_workload_contracts;
 #[allow(clippy::field_reassign_with_default)]
 #[path = "throughput_consistency.rs"]
 pub mod throughput_consistency;
+
+/// Integration tests from `tests/performance_floor_native_baseline_contracts.rs`.
+#[path = "performance_floor_native_baseline_contracts.rs"]
+pub mod performance_floor_native_baseline_contracts;

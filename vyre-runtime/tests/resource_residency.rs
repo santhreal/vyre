@@ -7,16 +7,14 @@ use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use vyre_driver::{
-    ArtifactInstance, BackendError, DeviceIdentity, ResidentOwner, Resource,
-};
+use vyre_driver::{ArtifactInstance, BackendError, DeviceIdentity, ResidentOwner, Resource};
 use vyre_megakernel::Digest;
-use vyre_test_support::fixture_instance::FixtureInstance;
 use vyre_runtime::resource_residency::{
     ArtifactInstanceBinding, ImmutableResourceUpload, MutableStateSpec, ResidentResourceDevice,
     ResourceAdmissionStatus, ResourceResidency, ResourceResidencyError, ResourceSetAdmission,
     ResourceSetKey,
 };
+use vyre_test_support::fixture_instance::FixtureInstance;
 
 #[derive(Debug)]
 struct RecordingDevice {

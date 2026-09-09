@@ -349,7 +349,10 @@ impl ResolvedConfiguration {
                 | (ConfigValue::U32(_), ConfigType::U32)
                 | (ConfigValue::U64(_), ConfigType::U64)
                 | (ConfigValue::F64(_), ConfigType::F64)
-                | (ConfigValue::String(_), ConfigType::String | ConfigType::Path)
+                | (
+                    ConfigValue::String(_),
+                    ConfigType::String | ConfigType::Path
+                )
         );
         if !type_valid {
             return Err(format!(

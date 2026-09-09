@@ -221,7 +221,9 @@ fn typed_resource_ingestion_validates_abi_and_workspace_bindings() {
         .ingest_with_workspace(&workspace, &missing_dataset)
         .expect_err("must reject missing final_result");
     assert!(
-        missing_err.to_string().contains("missing required resource"),
+        missing_err
+            .to_string()
+            .contains("missing required resource"),
         "error must name missing resource: {missing_err}"
     );
 
@@ -308,12 +310,14 @@ fn partially_valid_dataset_leaves_no_allocation_dispatch_visible() {
     // Case 3: Non-existent file source in dataset
     let mut dataset_missing_file = TypedResourceDataset::new();
     dataset_missing_file.add_memory(weights_id, vec![0u8; 64]);
-    dataset_missing_file.insert(TypedResource::file(
-        state_id,
-        "non_existent_file_path_for_test.bin",
-        0,
-        64,
-    )).expect("insert");
+    dataset_missing_file
+        .insert(TypedResource::file(
+            state_id,
+            "non_existent_file_path_for_test.bin",
+            0,
+            64,
+        ))
+        .expect("insert");
     dataset_missing_file.add_memory(final_id, vec![0u8; 64]);
 
     let alloc_count_before_3 = materializer.allocated.lock().unwrap().len();
@@ -329,7 +333,9 @@ fn partially_valid_dataset_leaves_no_allocation_dispatch_visible() {
         "I/O error check must fail before any allocation becomes dispatch-visible"
     );
     assert!(
-        err_file.to_string().contains("failed to read resource file"),
+        err_file
+            .to_string()
+            .contains("failed to read resource file"),
         "error must name file read error: {err_file}"
     );
 
@@ -348,9 +354,9 @@ fn mismatched_typed_schema_is_rejected_before_upload() {
 
     // 1. Data type mismatch: expected F32, caller specifies U64
     let mut dataset_dtype_mismatch = TypedResourceDataset::new();
-    dataset_dtype_mismatch.insert(
-        TypedResource::memory(weights_id, vec![0u8; 64]).with_dtype(DataType::U64),
-    ).expect("insert");
+    dataset_dtype_mismatch
+        .insert(TypedResource::memory(weights_id, vec![0u8; 64]).with_dtype(DataType::U64))
+        .expect("insert");
     dataset_dtype_mismatch.add_memory(state_id, vec![0u8; 64]);
     dataset_dtype_mismatch.add_memory(final_id, vec![0u8; 64]);
 
@@ -362,7 +368,10 @@ fn mismatched_typed_schema_is_rejected_before_upload() {
 
     let alloc_after = materializer.allocated.lock().unwrap().len();
 
-    assert_eq!(alloc_before, alloc_after, "zero allocations must occur on dtype mismatch");
+    assert_eq!(
+        alloc_before, alloc_after,
+        "zero allocations must occur on dtype mismatch"
+    );
     assert!(
         matches!(
             dtype_err,
@@ -373,9 +382,9 @@ fn mismatched_typed_schema_is_rejected_before_upload() {
 
     // 2. Element count mismatch: expected 16, caller specifies 32
     let mut dataset_elem_mismatch = TypedResourceDataset::new();
-    dataset_elem_mismatch.insert(
-        TypedResource::memory(weights_id, vec![0u8; 64]).with_element_count(32),
-    ).expect("insert");
+    dataset_elem_mismatch
+        .insert(TypedResource::memory(weights_id, vec![0u8; 64]).with_element_count(32))
+        .expect("insert");
     dataset_elem_mismatch.add_memory(state_id, vec![0u8; 64]);
     dataset_elem_mismatch.add_memory(final_id, vec![0u8; 64]);
 
@@ -390,9 +399,12 @@ fn mismatched_typed_schema_is_rejected_before_upload() {
 
     // 3. Lifetime mismatch: expected Constant, caller specifies Invocation
     let mut dataset_lifetime_mismatch = TypedResourceDataset::new();
-    dataset_lifetime_mismatch.insert(
-        TypedResource::memory(weights_id, vec![0u8; 64]).with_lifetime(ResourceLifetime::Invocation),
-    ).expect("insert");
+    dataset_lifetime_mismatch
+        .insert(
+            TypedResource::memory(weights_id, vec![0u8; 64])
+                .with_lifetime(ResourceLifetime::Invocation),
+        )
+        .expect("insert");
     dataset_lifetime_mismatch.add_memory(state_id, vec![0u8; 64]);
     dataset_lifetime_mismatch.add_memory(final_id, vec![0u8; 64]);
 
@@ -407,9 +419,9 @@ fn mismatched_typed_schema_is_rejected_before_upload() {
 
     // 4. Access mismatch: expected ReadOnly, caller specifies WriteOnly
     let mut dataset_access_mismatch = TypedResourceDataset::new();
-    dataset_access_mismatch.insert(
-        TypedResource::memory(weights_id, vec![0u8; 64]).with_access(AbiAccess::WriteOnly),
-    ).expect("insert");
+    dataset_access_mismatch
+        .insert(TypedResource::memory(weights_id, vec![0u8; 64]).with_access(AbiAccess::WriteOnly))
+        .expect("insert");
     dataset_access_mismatch.add_memory(state_id, vec![0u8; 64]);
     dataset_access_mismatch.add_memory(final_id, vec![0u8; 64]);
 
@@ -424,9 +436,9 @@ fn mismatched_typed_schema_is_rejected_before_upload() {
 
     // 5. Device generation mismatch: expected session generation (0), caller specifies 99
     let mut dataset_gen_mismatch = TypedResourceDataset::new();
-    dataset_gen_mismatch.insert(
-        TypedResource::memory(weights_id, vec![0u8; 64]).with_generation(99),
-    ).expect("insert");
+    dataset_gen_mismatch
+        .insert(TypedResource::memory(weights_id, vec![0u8; 64]).with_generation(99))
+        .expect("insert");
     dataset_gen_mismatch.add_memory(state_id, vec![0u8; 64]);
     dataset_gen_mismatch.add_memory(final_id, vec![0u8; 64]);
 
@@ -441,9 +453,9 @@ fn mismatched_typed_schema_is_rejected_before_upload() {
 
     // 6. Identity digest mismatch
     let mut dataset_id_mismatch = TypedResourceDataset::new();
-    dataset_id_mismatch.insert(
-        TypedResource::memory(weights_id, vec![0u8; 64]).with_identity(Digest([0xAA; 32])),
-    ).expect("insert");
+    dataset_id_mismatch
+        .insert(TypedResource::memory(weights_id, vec![0u8; 64]).with_identity(Digest([0xAA; 32])))
+        .expect("insert");
     dataset_id_mismatch.add_memory(state_id, vec![0u8; 64]);
     dataset_id_mismatch.add_memory(final_id, vec![0u8; 64]);
 
@@ -521,7 +533,9 @@ fn typed_resource_ingestion_supports_all_source_variants() {
     let mut dataset2 = TypedResourceDataset::new();
     dataset2.insert(res_range).expect("insert range");
     dataset2.insert(res_resident).expect("insert resident");
-    dataset2.insert(TypedResource::zeroed(final_id, 64)).expect("insert zeroed");
+    dataset2
+        .insert(TypedResource::zeroed(final_id, 64))
+        .expect("insert zeroed");
 
     let bindings2 = session
         .ingest_with_workspace(&workspace, &dataset2)
@@ -582,9 +596,7 @@ fn aot_bundle_manifest_round_trip_and_ingestion() {
                 byte_count: 64,
                 lifetime: ResourceLifetime::Output,
                 access: AbiAccess::WriteOnly,
-                source: ResourceManifestSource::Zeroed {
-                    byte_count: 64,
-                },
+                source: ResourceManifestSource::Zeroed { byte_count: 64 },
                 identity: None,
             },
         ],
@@ -592,7 +604,8 @@ fn aot_bundle_manifest_round_trip_and_ingestion() {
 
     // Round-trip to JSON bytes
     let json_bytes = manifest.to_bytes().expect("manifest serialization");
-    let decoded_manifest = ResourceManifest::from_bytes(&json_bytes).expect("manifest deserialization");
+    let decoded_manifest =
+        ResourceManifest::from_bytes(&json_bytes).expect("manifest deserialization");
     assert_eq!(manifest, decoded_manifest);
 
     // Ingest from manifest

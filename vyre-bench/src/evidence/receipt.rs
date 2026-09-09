@@ -292,4 +292,28 @@ impl BenchmarkReceipt {
         hasher.update(&canonical_bytes);
         hasher.finalize().to_hex().to_string()
     }
+
+    /// Compute the cryptographic input cell identity key for this receipt.
+    ///
+    /// The cell key hashes all input parameters (workload, graph, binaries,
+    /// target facts, budgets, environment) to enable index lookup and invalidation.
+    #[must_use]
+    pub fn cell_identity_key(&self) -> String {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(b"vyre-measurement-cell-v1:");
+        let canonical = serde_json::json!({
+            "workload_and_input": &self.workload_and_input,
+            "semantic_graph": &self.semantic_graph,
+            "resource_identity": &self.resource_identity,
+            "compiler_and_backend_binaries": &self.compiler_and_backend_binaries,
+            "objective": &self.objective,
+            "budgets": &self.budgets,
+            "target_facts": &self.target_facts,
+            "environment": &self.environment,
+        });
+        let bytes =
+            serde_json::to_vec(&canonical).expect("Fix: keep input identity fields serializable");
+        hasher.update(&bytes);
+        hasher.finalize().to_hex().to_string()
+    }
 }

@@ -9,9 +9,7 @@ use vyre_driver::{
 use vyre_foundation::ir::Program;
 
 use super::buffer_plan::{metal_slot_map, output_layout_map, plan_buffers};
-use super::dispatch::{
-    start_validated_dispatch, MetalDispatchLabels, AUTHENTICATED_DISPATCH,
-};
+use super::dispatch::{start_validated_dispatch, MetalDispatchLabels, AUTHENTICATED_DISPATCH};
 use super::metrics::elapsed_ns;
 use super::resident::ns_uint_to_u32_saturating;
 use super::MetalBackend;
@@ -210,8 +208,7 @@ impl MetalBackend {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<TimedDispatchResult, BackendError> {
-        let started =
-            start_validated_dispatch(program, config, &AUTHENTICATED_DISPATCH)?;
+        let started = start_validated_dispatch(program, config, &AUTHENTICATED_DISPATCH)?;
         self.dispatch_compiled(
             &module.artifact,
             &module.pipeline,
@@ -251,8 +248,14 @@ impl MetalBackend {
             &metal_slots,
             &artifact.bindings,
         )?;
-        let result =
-            self.dispatch_planned_buffers(program, &binding_plan, config, artifact, pipeline, buffers)?;
+        let result = self.dispatch_planned_buffers(
+            program,
+            &binding_plan,
+            config,
+            artifact,
+            pipeline,
+            buffers,
+        )?;
         Ok(TimedDispatchResult::split_timed(
             result.outputs,
             elapsed_ns(started, labels.timing_context)?,

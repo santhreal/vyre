@@ -110,7 +110,11 @@ fn fusion_reason(reason: FusionRejectionReason) -> PruneReason {
         FusionRejectionReason::LifecycleBoundary => PruneReason::AliasOrEffect,
         FusionRejectionReason::MultipleConsumers => PruneReason::Representation,
         FusionRejectionReason::WorkgroupMismatch
-        | FusionRejectionReason::SynchronizationBoundary => PruneReason::BarrierVisibility,
+        | FusionRejectionReason::SynchronizationBoundary
+        | FusionRejectionReason::GenuinelyIllegalGeometry => PruneReason::BarrierVisibility,
+        FusionRejectionReason::IncompatibleIterationSpace => PruneReason::Representation,
+        FusionRejectionReason::ExcessiveSharedMemory => PruneReason::Scratch,
+        FusionRejectionReason::ExcessiveRegisters => PruneReason::Occupancy,
     }
 }
 

@@ -4,7 +4,6 @@
 use std::collections::BTreeSet;
 
 use crate::artifact_json::write_json_artifact;
-use vyre_conform::backend_selection::{select_backends, semantic_execution_backends};
 use crate::operation_selection::{select_entries, unified_entries};
 use crate::proof_options::parse_proof_options;
 use crate::proof_plan::{hash_proof_plan, proof_plan_summary, ProofPlanSummary};
@@ -14,6 +13,7 @@ use crate::proof_scheduler::{
 use crate::proof_timing::{emit_proof_timing, ProofTimingReport};
 use ed25519_dalek::{Signer, SigningKey};
 use serde::{Deserialize, Serialize};
+use vyre_conform::backend_selection::{select_backends, semantic_execution_backends};
 use vyre_conform::law_proof::{prove_declared_laws, LawVerdict};
 use vyre_conform_spec::ConformanceResult;
 

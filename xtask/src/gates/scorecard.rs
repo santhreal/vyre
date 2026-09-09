@@ -4,7 +4,6 @@
 //! through `structure_gate::workspace_members`. Adding a crate to the workspace automatically
 //! includes it in the generated scorecard without editing any scorecard code.
 
-
 use std::fs;
 use std::path::Path;
 
@@ -123,8 +122,14 @@ pub fn render_scorecard(scorecard: &EngineeringScorecard) -> String {
          schema_version = 1\n\n\
          [summary]\n",
     );
-    out.push_str(&format!("total_crates = {}\n", scorecard.summary.total_crates));
-    out.push_str(&format!("total_gates = {}\n", scorecard.summary.total_gates));
+    out.push_str(&format!(
+        "total_crates = {}\n",
+        scorecard.summary.total_crates
+    ));
+    out.push_str(&format!(
+        "total_gates = {}\n",
+        scorecard.summary.total_gates
+    ));
     out.push_str(&format!(
         "evaluated_axes = {}\n",
         scorecard.summary.evaluated_axes
@@ -139,10 +144,7 @@ pub fn render_scorecard(scorecard: &EngineeringScorecard) -> String {
         out.push_str(&format!("name = \"{}\"\n", c.name));
         out.push_str(&format!("path = \"{}\"\n", c.path));
         out.push_str(&format!("tier = \"{}\"\n", c.tier));
-        out.push_str(&format!(
-            "public_api_symbols = {}\n",
-            c.public_api_symbols
-        ));
+        out.push_str(&format!("public_api_symbols = {}\n", c.public_api_symbols));
         out.push_str(&format!(
             "testing_guide_present = {}\n",
             c.testing_guide_present
@@ -277,7 +279,9 @@ fn count_covering_gates(package: &str, member_path: &str) -> usize {
     let mut count = 0;
     for d in GATE_METADATA {
         if d.package == package
-            || d.inputs.iter().any(|i| i.contains(member_path) || i.contains(package))
+            || d.inputs
+                .iter()
+                .any(|i| i.contains(member_path) || i.contains(package))
             || d.artifacts.iter().any(|a| a.contains(package))
             || d.proof.contains(package)
             || d.proof.contains(&package.replace('-', "_"))

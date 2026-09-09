@@ -32,3 +32,6 @@ pub mod report;
 /// Context and thread coordination for the test runner.
 #[allow(missing_docs)]
 pub mod runner;
+/// Benchmark workloads, native baseline comparisons, and per-cell floor verdicts.
+#[allow(missing_docs)]
+pub mod workloads;

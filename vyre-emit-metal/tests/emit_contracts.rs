@@ -50,7 +50,10 @@ fn one_store_kernel_emits_buffer_binding_metadata() {
     assert_eq!(artifact.sizes_buffer_index, Some(1));
     assert_eq!(artifact.bindings[0].element_type, DataType::U32);
     assert_eq!(artifact.bindings[0].memory_class, MemoryClass::Global);
-    assert_eq!(artifact.bindings[0].visibility, BindingVisibility::ReadWrite);
+    assert_eq!(
+        artifact.bindings[0].visibility,
+        BindingVisibility::ReadWrite
+    );
     assert!(artifact.threadgroup_memories.is_empty());
     assert!(!artifact.msl.is_empty());
 }

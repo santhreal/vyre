@@ -12,11 +12,9 @@ use vyre_foundation::{
 };
 use vyre_lower::{KernelDescriptor, MemoryClass};
 
-use crate::candidate::ExecutionTopology;
-use crate::{
-    ArtifactAbi, ArtifactNodeId, FusionGroupId, TargetResourceBinding,
-};
 use super::TargetCompileError;
+use crate::candidate::ExecutionTopology;
+use crate::{ArtifactAbi, ArtifactNodeId, FusionGroupId, TargetResourceBinding};
 
 /// One compiler-selected group decoded into verified semantic modules.
 #[derive(Clone, Debug, PartialEq, Eq)]

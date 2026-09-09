@@ -222,6 +222,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - `vyre-aot` exposes `compile_request` accepting a validated compiler request
   and registered target identity, allowing AOT compilation to consume the
   canonical `ValidatedCompileRequest` without inventing default parameters.
+- Registered gate `application-runnable` validates whole-application execution
+  readiness across frontend capabilities, resource rosters, graph closures,
+  megakernel artifact modules, and authenticated domain-neutral evidence
+  receipts.
 - The reference and SPIR-V backends carry a tracked hostile-input closure
   target, `vyre-driver-reference/tests/hostile_input_closure_contract.rs` and
   `vyre-driver-spirv/tests/hostile_input_closure_contract.rs`. Both backends
@@ -313,12 +317,18 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   dependency preservation certificates and cost modeling alongside a
   proof-producing multi-level optimization framework with typed hardware rules,
   Pareto extraction, and replayable step proofs.
-- The xtask tooling layer now provides a typed configuration space model with
-  minimal covering set feature isolation scheduling, build script determinism
-  auditing, and capability-based feature naming.
+- The configuration space model derives typed package, feature, target,
+  toolchain, and backend cells from workspace manifests, enforcing minimal
+  deterministic covering set isolation, build script determinism, and
+  capability-based feature naming.
 - Conformance compares every schedule family a semantic graph reaches against
   the unspecialized baseline under an exact or bounded unit-in-last-place
   contract the operation declares.
+- `vyre-conform` adds connected-graph conformance covering four graph classes
+  (pure dataflow, retained iterative state, irregular ragged work, and
+  independent concurrent arms) executed through the production route
+  (`CompileRequest -> ArtifactEnvelope -> TargetPayload -> ArtifactInstance ->
+  BindingSet -> Completion`) with independent reference oracle validation.
 - A gate over `vyre_libs::graph` rejects the argument-transposition class. It
   walks the module directory and parses every declared signature at run time,
   so a CSR entry point added later is covered without editing a list: closure
@@ -332,14 +342,20 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   descriptors, visitor traversals, binary serialization, validation hooks,
   rewrite matchers, and exhaustive compile-time closure rosters from a single
   declaration.
+- The declarative verifier constructs Verified<SemanticModule> artifacts with
+  cryptographic verification certificates covering twelve canonical invariant
+  categories, solver proof objects, and resource bounds, enabling independent
+  proof replay before optimization, lowering, and remote acceptance without
+  rerunning ad hoc walks.
 - The neural library now executes a reusable dense gated-MLP ProgramGraph with
   learned RMSNorm, checkpoint-native output-major gate and up projections, F32
   SwiGLU math, output-major down projection, and residual addition. F16, BF16,
   and F32 storage use F32 normalization, projection accumulation, activation,
   and residual arithmetic with source-dtype boundaries.
-- The release authority now emits CycloneDX/SPDX SBOMs and signed SLSA v1.2
-  provenance records covering pinned Rust crates, native toolchains,
-  generators, and offline build reproducibility.
+- The release provenance authority emits CycloneDX SBOM and signed SLSA v1.2
+  provenance records covering pinned Rust crate dependencies, native
+  toolchains, code generators, schemas, benchmark baselines, and offline build
+  script invariants.
 - The shared diagnostic protocol now models stable codes, compiler levels,
   typed spans/paths, artifact/target/device identities, bounded context
   key-values, and structured cause chains across compiler boundaries without
@@ -367,6 +383,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   is addressed to the owner of that domain instead of arriving inside one
   whole-registry log. The whole-registry sweep stays as the backstop for a gate
   that belongs to no subset.
+- Moved named model configurations and forward graph construction out of the
+  Vyre workspace into an independent downstream model-compiler consumer package
+  consuming only domain-neutral graph and resource constructs.
 - `vyre-driver/float-lowering-decisions.toml` records, per registered backend,
   whether it lowers each `FloatLoweringMode`, and a registry-derived test fails
   when a backend or a mode has no decision and when a strict dispatch neither
@@ -478,6 +497,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   latency.
 - The algebraic law registry records the identity element of the exact add,
   multiply, exclusive-or, and bitwise-or combines.
+- Add an independent interactive graphical consumer and generic compositions in
+  vyre-libs for path and text rasterization, image conversions, resampling,
+  clipping, blend modes, culling, layout scans, and retained dirty-region
+  patching.
 - Interactive low-latency execution is reinforced with a canonical bounded
   `GraphDelta` transactional contract in `vyre-foundation` that derives dirty
   logical closures while preserving unchanged nodes and values, and a
@@ -611,6 +634,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   alignment, live op range and pool offset, so regions with disjoint lifetimes
   share bytes and a pool above the selected schedule's bound is rejected before
   a target sees the kernel.
+- Every semantic operation carries a generated contract record with exact
+  signature, effects, aliasing, shape and index relations, numerical behavior,
+  determinism, and either proof-producing guarded laws or an explicit
+  exhaustive opaque/no-transform decision across vyre-spec and vyre-foundation.
 - The operation-law-decisions gate enforces that every registered semantic
   operation carries either proof-producing guarded algebraic laws or an
   explicit opaque transform decision.
@@ -652,9 +679,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   form, and analyses, so a level with no verifier or two owners for one
   analysis fails the link-closure suite instead of passing verification by
   default.
+- The benchmark harness validates generic IR and schedule search provenance,
+  enforces 14-dimension equality conditions against version-pinned
+  expert-written native baselines, and evaluates per-cell floor verdicts across
+  representative graph pipelines and adversarial regions.
 - The foundation layer now provides a source-derived platform support matrix,
   checked fixed-width canonical wire conversions, and small typed platform
   adapters without path-string policy.
+- Domain-neutral external resource capabilities, zero-copy import and export
+  negotiation, pre-allocation rejection, schedule transition execution, and
+  timeline synchronization across CUDA, Metal, and WGPU drivers.
 - `scan_prefilter_width_closure` reads the `PrefilterWidth` variants out of the
   width table's own source at run time and fails when a width has no recorded
   dispatch ABI, when a recorded row names a width the source no longer
@@ -761,6 +795,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   admission, rollback, cancellation, generation-checked reset, completion,
   eviction, and manager destruction release resources without exposing stale
   state.
+- The benchmark protocol provides resumable measurement campaigns with
+  deterministic trial randomization, refuses averaging across incompatible
+  cells by name, and requires empirical backing proofs for performance floor
+  records.
 - The scalar sweep is closed against the frozen public surface: every
   `NodeStorage` literal variant in the `vyre-foundation` snapshot must have a
   matrix row, a row naming a variant the surface does not carry fails, each row
@@ -1329,6 +1367,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `xtask::artifact_gate!` now owns that shape and the eleven declarations state
   only what differs. Gates whose `run` does real work, such as
   release-conformance argument parsing, keep their own implementation.
+- Upgrade assurance tooling into a scaling subsystem with declarative gate
+  descriptors, AST-based source analysis, query kinds, topological artifact
+  regeneration, and runtime validation contracts.
 - Gate execution now derives names, owners, areas, artifact paths,
   prerequisites, and mutation proofs from one authoritative descriptor
   registry. Every gate reports non-empty subject coverage, generators declare
@@ -1340,6 +1381,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   was compiled at, no longer persists a launch width no artifact authorized,
   and rejects a file written under a different schema instead of serving it as
   current evidence.
+- Auxiliary product crates `vyre-aot`, `vyre-safetensors`, `vyre-debug`, and
+  the `vyre` facade unify into one workflow consuming validated compile
+  requests, transactional immutable tensor handles, and five-level compiler
+  inspection.
+- Backend support is a 7-stage production-path certificate join, concrete
+  driver crates have zero dependencies on semantic libraries or application
+  policy, physical-IR variants have exhaustive emitter decisions, and Metal
+  artifact metadata uses typed descriptors.
 - Batched dispatch readback has one owner and one allocation for its rows.
   `vyre_driver::BatchOutputs` stores every dispatch's output row end to end in
   a single buffer and hands rows out borrowed, replacing the
@@ -1536,6 +1585,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - C typedef row phases remain canonical callable operations. The operation
   matrix marks them as inlined callees whose execution coverage belongs to
   fixture-backed parent operations.
+- All persisted, transmitted, cached, signed, and evidence records are now
+  governed by a central declarative schema registry with fixed-width types,
+  canonical field numbers, strict bounds, domain separators, and typed
+  pre-validation deserialization.
 - Program capability scanning and backend capability enforcement are proved in
   one place, `vyre-foundation/tests/capability_contracts.rs`. An inline test
   module beside `vyre_foundation::program_caps` exercised the same public
@@ -1584,6 +1637,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   README is still generated. The contract test reads the subcommand count back
   out of the generated README blocks instead of out of the deleted page, and
   the build it runs no longer forces one codegen job.
+- Open IR extensions now require collision-resistant full digests with explicit
+  collision rejection, mandatory proof fields without permissive defaults,
+  canonical decode and re-encode round-trip equality, stable content interning,
+  full-identity program hashing, and reconciled effect and divergence walks.
+- The crate ownership gate enforces a closed layer DAG and circular dependency
+  detection across workspace member internal production dependencies joined
+  against Cargo metadata.
 - The four RFC-0004 collective nodes come from
   `vyre_test_support::collective_programs`, and `ValueContract::dense_1d`
   builds the one-dimensional graph-port contract every connected-graph suite
@@ -1646,6 +1706,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   duplicated lines, `vyre-spec` 244 to 84, `vyre-foundation` 4342 to 4127, and
   `vyre-libs` 11446 to 11425, each with `total_lines` measured. A pin with room
   under it hides the next copy.
+- Conformance schedules cases into disposable worker processes with explicit
+  resource budgets and device leases, replacing thread-abandoned deadlines with
+  process isolation and verified receipts.
 - The standalone `vyre-harness` package is gone. Semantic operation identity,
   tier classification, and registration now live in `vyre-foundation`; library
   fixture views live in `vyre-libs`; conformance execution and parity policy
@@ -2073,6 +2136,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The execution plan reports whether a target declares shapes worth measuring
   and no longer publishes a recommended workgroup, tile, vector width or unroll
   depth ranked against the adapter.
+- Declared explicit compatibility and rollout matrix across all public protocol
+  domains, joined to the schema registry with preregistered negotiation,
+  generation-scoped cache namespaces, and atomic rollout state transitions.
 - An expected expression-shape row is stated as one call. It was an eight-field
   tuple written across ten lines, so a precedence ladder read as three hundred
   lines of columns and two suites expecting the same row for the same operator
@@ -2096,6 +2162,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   shift, where the sign bit replicates instead. Rewrites that re-evaluate their
   operand now clear one duplication budget owned by `strength_reduce`, so a
   remainder of a buffer load no longer emits three loads of the same address.
+- The vyre public facade and vyre-libs expose complete compiler schemas, target
+  profiles with provenance, resource ingestion, and admission sessions for
+  downstream application consumers without internal crate dependencies, native
+  handles, or domain schedule hints.
+- Every mutable runtime and driver state owner declares its failure domain and
+  recovery class with atomic transitions on lock poison and idempotent
+  prepare-commit journals for side-effecting operations.
 - `scripts/check_feature_msrv.sh` printed a hardcoded 19-entry matrix and
   exited 0 without compiling anything. It now derives one entry per publishable
   member per declared feature from tracked manifests and compiles each alone on
@@ -2297,6 +2370,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `vyre_foundation::optimizer::passes::fusion_cse::dce::LiveSet` is new and is
   the one place the live-set type is named, replacing the concrete set spelled
   in four files.
+- The reference interpreter executes as an independent strict oracle through
+  typed versioned ReferenceRequest with mandatory budget, interpreting
+  collectives and composite calls directly without invoking production
+  transforms or silently zero-filling out-of-bounds accesses.
 - Integration tests link one binary per crate and required-feature set instead
   of one per file, cutting 1,342 test targets to 94. Every test file is now a
   module of the harness for its feature set, `autotests = false` in every
@@ -2692,6 +2769,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   predicate per loop form whether that loop dispatches. The finding walk and
   the semantic operation scanner read the same predicates, and one builder
   produces the oracle fixture bodies the gate tests analyze.
+- Every workspace member declares an explicit publication class in manifest
+  metadata and crate ownership, internal non-extension crates default to
+  unpublishable, the public facade curates compiler re-exports to exclude
+  internal modules, and release ordering derives from the dependency graph.
 - One fixture compares a tiled f32 program against its scalar reference.
   fixture_bytes::assert_tiled_matches_reference evaluates both programs and
   compares them lane by lane, and asserts the lane counts match first: zipping
@@ -3018,6 +3099,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   vyre_primitives::math::semiring_gemm::semiring_gemm_wide. The dispatch grid
   is documented as one lane per relation cell, with the lane walking the w
   contiguous words of its cell, so it does not scale with w.
+- vyre-megakernel is the single schedule-selection owner across fusion,
+  geometry, topology, persistence, layout, and placement. Foundation retains
+  semantic analyses and neutral facts only, while drivers report capabilities
+  and runtime submits the selected artifact without post-freeze retuning.
 - The two grouped INT4 linear lowerings, the lane-predicated one and the
   weight-tile-reuse one, shared five stages by copy: the workgroup lane
   decomposition, the packed-column index, the nibble select, the affine
@@ -3224,6 +3309,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   shipped release corpus and over shapes the corpus does not generate: a
   `Block` that owns a binding is a scope, so it survives, while a `Block` that
   owns none is spliced into its parent at every body position.
+- The optimizer replaces closure-based rule predicates with typed fact
+  identities, deterministic cache keys, and replayable proof terms, enforces
+  content-addressed opaque expression interning, and establishes
+  proof-producing multi-level synthesis over device-pure semantic equality
+  saturation and capability-authenticated schedule exploration.
 - Three facts the `vyre-emit-ptx` tests depend on are now stated once each. The
   canonical MMA op kind, six coupled fields naming an `m16n8k16` row-by-column
   f16 multiply accumulating in f32, appeared in four places: twice in
@@ -3344,6 +3434,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   drifted in panic text. The IEEE-754 canonicalization the sweeps compare
   against stays an independent restatement rather than a call into the
   interpreter, so the oracle still does not check itself.
+- The reference interpreter is decoupled from the production backend registry:
+  CPU_REF_BACKEND_ID and CPU_REF_TARGET_ID are removed, physical launch grid
+  parameters are ignored during reference evaluation, and missing input
+  resources are refused by name rather than zero-filled.
 - The reference interpreter holds an invocation's locals in a flat hash map
   instead of a persistent one, so a binding inside a loop body no longer
   allocates trie nodes on every iteration and an assignment hashes the name
@@ -3353,6 +3447,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The duplication baseline pins for vyre-reference and vyre-spec now record the
   measured tree: 971 to 743 and 446 to 244 duplicated lines. Both total line
   counts are corrected to the measured values.
+- Fusion operates over logical regions and schedule tiles with dependence
+  analysis selecting the earliest safe handoff, candidate lowering adds
+  register and shared-memory forwarding, prologue and epilogue fusion,
+  pipelining, and dispatch cuts, and changed schedule-only workgroup geometry
+  fuses.
 - Node::Region cites its parent composition through ir::Ident. The GeneratorRef
   wrapper around String is deleted, so the IR carries one name type and a pass
   that rebuilds a region shares the interned name instead of allocating a copy
@@ -3453,6 +3552,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The duplication baseline pins for vyre-driver and vyre-runtime now record the
   measured tree: 1463 to 1112 and 520 to 412 duplicated lines. The vyre-lower
   total line count is corrected to the measured value.
+- Runtime reduces its public surface to generic bounded routed-work queues,
+  speculative state transactions, content-addressed retained-page caches,
+  paged-resource bindings, and typed resource transfers, eliminating
+  model-specific expert, token, MTP, KV-cache, and safetensors abstractions.
+- Runtime enforces mandatory finite session quotas across all subsystems
+  without unbounded constructors, moves low-level unsafe io_uring and mmap
+  operations into private raw_platform abstractions with exclusive aliasing,
+  provides structured concurrency with bounded cancellation and worker
+  quarantine for unreturnable driver calls, and validates recovery artifact
+  identity parity.
 - Standard routing states that every production compile emits a megakernel
   artifact instead of consulting a foundation predicate that ignored its node
   count and always answered the same route.
@@ -3502,6 +3611,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   semantic operation witnesses, including each operation's declared tolerance.
   The library operation catalog distinguishes the complete semantic inventory
   from its deterministic executable-fixture projection.
+- Memory ordering and concurrency are modeled with separate closed orthogonal
+  types for atomic ordering, memory scope, execution scope, storage domain,
+  fence semantics, barrier participation, async transaction lifecycle,
+  collective group, and failure cancellation behavior, removing implicit
+  defaults and verifying race freedom through bounded reference interleavings.
 - Five helpers that sat at a crate root now sit under the concern they serve.
   The signed fixed-point pair fixed_mul_16_16_expr and
   fixed_sdiv_by_positive_expr is vyre_libs::math::fixed. fixed_u32_matmul and
@@ -3635,6 +3749,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   descriptor was built twice in the same file, once as the corpus entry and
   once inline for the id test with a different binding name; `store_one_kernel`
   takes the id and the slot and owns the shape.
+- Split program_graph, logical, and node_lowering modules in vyre-foundation
+  and vyre-lower into focused submodule hierarchies to satisfy the file size
+  cap while preserving all public and in-crate APIs.
 - The structural graph, causal and logic kernels are reached at
   `vyre_libs::graph`, not through a second set of names in `vyre-libs`.
   `graph::dispatch::structural_kernel_pipeline` held sixty-six wrappers across
@@ -6488,6 +6605,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   widened.
 - The conformance CI lane now rejects a generated conformance matrix that
   differs from the committed release evidence.
+- Logical contractions lower into scalar, SIMT tiled, and matrix-instruction
+  candidate strategies in lowering rather than library builders, and TileMatmul
+  bitwise-packs F16 fragment operand pairs across warp lanes.
 - A failed read while building the workspace source corpus is reported with the
   path and the error instead of dropping the file, so a process out of
   descriptors no longer answers that nothing declares a name that is in the
@@ -7032,6 +7152,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   this one. The resolver walks the root manifest's member roster rather than
   joining the package name onto the root, because a member's directory is not
   always its package name.
+- Enforce execution-ordering and prerequisite closure across registered gates,
+  validate artifact-to-input relations, eliminate registry descriptor leaks,
+  and record complete gate universe subject coverage in gate-dag.
 - Gate mutation detection reports only paths git tracks, so a scratch file
   another process writes into an ignored directory during a run no longer fails
   a gate that mutated nothing.
@@ -7294,6 +7417,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   input byte, including an empty result for empty input, instead of returning
   byte offsets for line starts. Packed-byte and word-backed line-index programs
   now share the same adversarial parity oracle.
+- Driver and backend lock sites are migrated to governed lock APIs with
+  explicit RecoveryClass contracts, replacing silent registry drift and text
+  scans with closed compile-time policy enforcement.
 - Loop fusion no longer skips a fusable pair after a refusal. When two adjacent
   loops could not be fused, the walk advanced its cursor by two instead of one,
   so the pair formed by the second loop and its successor was never considered;

@@ -540,16 +540,24 @@ mod tests {
             let id = self.next_id.fetch_add(1, Ordering::SeqCst);
             // Fresh device memory is garbage (0xFF here) so the zero-init upload
             // path is actually exercised by the test assertions.
-            self.buffers
-                .lock()
-                .unwrap()
-                .insert(id, vec![0xFFu8; byte_len]);
+            crate::lock_policy::govern_mutex(
+                &self.buffers,
+                "resident_dispatch",
+                "buffers",
+                crate::lock_policy::RecoveryClass::TransactionallyRecoverable,
+            )?
+            .insert(id, vec![0xFFu8; byte_len]);
             Ok(Resource::Resident(self.owner.handle(id)))
         }
 
         fn upload_resident(&self, resource: &Resource, bytes: &[u8]) -> Result<(), BackendError> {
             let id = self.resident_id(resource);
-            let mut buffers = self.buffers.lock().unwrap();
+            let mut buffers = crate::lock_policy::govern_mutex(
+                &self.buffers,
+                "resident_dispatch",
+                "buffers",
+                crate::lock_policy::RecoveryClass::TransactionallyRecoverable,
+            )?;
             let buf = buffers.get_mut(&id).expect("resident handle exists");
             assert!(
                 bytes.len() <= buf.len(),
@@ -569,7 +577,12 @@ mod tests {
             output: &mut Vec<u8>,
         ) -> Result<(), BackendError> {
             let id = self.resident_id(resource);
-            let buffers = self.buffers.lock().unwrap();
+            let buffers = crate::lock_policy::govern_mutex(
+                &self.buffers,
+                "resident_dispatch",
+                "buffers",
+                crate::lock_policy::RecoveryClass::TransactionallyRecoverable,
+            )?;
             let buf = buffers.get(&id).expect("resident handle exists");
             output.clear();
             output.extend_from_slice(&buf[byte_offset..byte_offset + byte_len]);
@@ -578,8 +591,20 @@ mod tests {
 
         fn free_resident(&self, resource: Resource) -> Result<(), BackendError> {
             let id = self.resident_id(&resource);
-            self.buffers.lock().unwrap().remove(&id);
-            self.freed.lock().unwrap().push(id);
+            crate::lock_policy::govern_mutex(
+                &self.buffers,
+                "resident_dispatch",
+                "buffers",
+                crate::lock_policy::RecoveryClass::TransactionallyRecoverable,
+            )?
+            .remove(&id);
+            crate::lock_policy::govern_mutex(
+                &self.freed,
+                "resident_dispatch",
+                "freed",
+                crate::lock_policy::RecoveryClass::TransactionallyRecoverable,
+            )?
+            .push(id);
             Ok(())
         }
 
@@ -606,7 +631,12 @@ mod tests {
             }
             let out_slot = out_slot.expect("program declares `out`");
             let id = self.resident_id(&resources[out_slot]);
-            let mut buffers = self.buffers.lock().unwrap();
+            let mut buffers = crate::lock_policy::govern_mutex(
+                &self.buffers,
+                "resident_dispatch",
+                "buffers",
+                crate::lock_policy::RecoveryClass::TransactionallyRecoverable,
+            )?;
             let buf = buffers.get_mut(&id).expect("resident `out` handle exists");
 
             // Apply the segment's `out` stores IN PLACE  -  never clearing the
@@ -664,12 +694,26 @@ mod tests {
         );
         // Every resident resource is freed exactly once.
         assert_eq!(
-            backend.freed.lock().unwrap().len(),
+            crate::lock_policy::govern_mutex(
+                &backend.freed,
+                "resident_dispatch",
+                "freed",
+                crate::lock_policy::RecoveryClass::TransactionallyRecoverable,
+            )
+            .expect("freed lock")
+            .len(),
             1,
             "the single `out` resident buffer is freed"
         );
         assert!(
-            backend.buffers.lock().unwrap().is_empty(),
+            crate::lock_policy::govern_mutex(
+                &backend.buffers,
+                "resident_dispatch",
+                "buffers",
+                crate::lock_policy::RecoveryClass::TransactionallyRecoverable,
+            )
+            .expect("buffers lock")
+            .is_empty(),
             "no resident buffer leaks after dispatch"
         );
     }

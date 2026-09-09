@@ -297,9 +297,13 @@ fn gate_run_bodies_registered(
         let mut out = Vec::new();
         for item in &syntax.items {
             if let syn::Item::Impl(item_impl) = item {
-                let is_gate_behavior = item_impl.trait_.as_ref().is_some_and(|(_, trait_path, _)| {
-                    trait_path.segments.last().is_some_and(|seg| seg.ident == "GateBehavior")
-                });
+                let is_gate_behavior =
+                    item_impl.trait_.as_ref().is_some_and(|(_, trait_path, _)| {
+                        trait_path
+                            .segments
+                            .last()
+                            .is_some_and(|seg| seg.ident == "GateBehavior")
+                    });
                 if !is_gate_behavior {
                     continue;
                 }

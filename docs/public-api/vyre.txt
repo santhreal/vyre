@@ -1,4 +1,5 @@
 pub mod vyre
+pub mod vyre::compiler
 pub use vyre::Artifact
 pub use vyre::ArtifactAdmissionError
 pub use vyre::ArtifactEnvelope
@@ -33,7 +34,20 @@ pub use vyre::TypedResourceDataset
 pub use vyre::ValidatedCompileRequest
 pub use vyre::admit_artifact
 pub use vyre::admit_envelope
-pub use vyre::compiler
+pub use vyre::compiler::Artifact
+pub use vyre::compiler::ArtifactEnvelope
+pub use vyre::compiler::CompileObjective
+pub use vyre::compiler::CompileRequest
+pub use vyre::compiler::DeviceFacts
+pub use vyre::compiler::Digest
+pub use vyre::compiler::ExternalFacts
+pub use vyre::compiler::ObjectiveMetric
+pub use vyre::compiler::SearchBudget
+pub use vyre::compiler::TargetPayload
+pub use vyre::compiler::TargetPayloadFormat
+pub use vyre::compiler::TargetProfile
+pub use vyre::compiler::ValidatedCompileRequest
+pub use vyre::compiler::compile
 pub use vyre::diagnostics
 pub use vyre::dialect
 pub use vyre::ir

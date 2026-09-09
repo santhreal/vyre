@@ -495,7 +495,7 @@ mod tests {
     #[test]
     fn resident_sequence_readback_uses_typed_artifact_binding() {
         let artifact = vyre::compiler::Digest([7; 32]);
-        let value = vyre::compiler::ArtifactValueId(3);
+        let value = vyre_megakernel::ArtifactValueId(3);
         let resource = vyre_driver::Resource::Borrowed(vec![0; 8]);
         let mut bindings = vyre_driver::BindingSet::new(artifact);
         bindings.insert(

@@ -163,6 +163,9 @@ jobs:
           ./cargo_full test -p vyre-pass-engine --features all-solvers
           --test all_tests_all_solvers
 
+      - name: Configuration space model and isolated cells check
+        shell: bash
+        run: ./cargo_full run -p xtask -- configuration-model
       - name: cargo_full doc
         shell: bash
         run: ./cargo_full doc --workspace

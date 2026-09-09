@@ -4,8 +4,8 @@ use smallvec::SmallVec;
 use std::sync::Arc;
 use vyre_foundation::ir::{DataType, Expr, ExprNode};
 use vyre_foundation::optimizer::eqsat::{
-    EChildren, EClassId, EGraph, ENodeLang, HardwarePropertyRule, ProofTerm, Rule,
-    RuleCacheKey, RuleFactIdentity, TargetFact,
+    EChildren, EClassId, EGraph, ENodeLang, HardwarePropertyRule, ProofTerm, Rule, RuleCacheKey,
+    RuleFactIdentity, TargetFact,
 };
 use vyre_foundation::optimizer::expr_arena::ExprArena;
 use vyre_foundation::optimizer::multi_level_eqsat::{
@@ -71,18 +71,21 @@ fn typed_hardware_property_rules_evaluate_deterministically() {
         TargetFact::AsyncCopySupported,
     ];
 
-    let facts_lacking = vec![
-        TargetFact::SubgroupSize(32),
-        TargetFact::AsyncCopySupported,
-    ];
+    let facts_lacking = vec![TargetFact::SubgroupSize(32), TargetFact::AsyncCopySupported];
 
     let inner1: Box<dyn Rule<TestLang>> = Box::new(DummyRule);
     let rule_match = HardwarePropertyRule::new(inner1, required.clone(), facts_matching);
-    assert!(rule_match.is_satisfied(), "all required target facts present");
+    assert!(
+        rule_match.is_satisfied(),
+        "all required target facts present"
+    );
 
     let inner2: Box<dyn Rule<TestLang>> = Box::new(DummyRule);
     let rule_lack = HardwarePropertyRule::new(inner2, required, facts_lacking);
-    assert!(!rule_lack.is_satisfied(), "missing TensorCoreAvailable rejects");
+    assert!(
+        !rule_lack.is_satisfied(),
+        "missing TensorCoreAvailable rejects"
+    );
 }
 
 #[test]
@@ -90,18 +93,51 @@ fn pareto_frontier_multi_objective_extraction() {
     let mut front = ParetoFront::default();
 
     let plan1 = SchedulePlan::new(
-        ScheduleTree::leaf(ScheduleOp::Tile { axis: 0, tile_size: 16, inner_axis: 1 }),
-        ScheduleResourceBounds { logical_points: 512, shared_bytes: 1024, private_bytes: 16, registers_per_invocation: 16, pipeline_slots: 1, queue_capacity: 0 },
+        ScheduleTree::leaf(ScheduleOp::Tile {
+            axis: 0,
+            tile_size: 16,
+            inner_axis: 1,
+        }),
+        ScheduleResourceBounds {
+            logical_points: 512,
+            shared_bytes: 1024,
+            private_bytes: 16,
+            registers_per_invocation: 16,
+            pipeline_slots: 1,
+            queue_capacity: 0,
+        },
     );
 
     let plan2 = SchedulePlan::new(
-        ScheduleTree::leaf(ScheduleOp::Tile { axis: 0, tile_size: 32, inner_axis: 1 }),
-        ScheduleResourceBounds { logical_points: 512, shared_bytes: 2048, private_bytes: 16, registers_per_invocation: 24, pipeline_slots: 1, queue_capacity: 0 },
+        ScheduleTree::leaf(ScheduleOp::Tile {
+            axis: 0,
+            tile_size: 32,
+            inner_axis: 1,
+        }),
+        ScheduleResourceBounds {
+            logical_points: 512,
+            shared_bytes: 2048,
+            private_bytes: 16,
+            registers_per_invocation: 24,
+            pipeline_slots: 1,
+            queue_capacity: 0,
+        },
     );
 
     let plan3_dominated = SchedulePlan::new(
-        ScheduleTree::leaf(ScheduleOp::Tile { axis: 0, tile_size: 8, inner_axis: 1 }),
-        ScheduleResourceBounds { logical_points: 512, shared_bytes: 4096, private_bytes: 32, registers_per_invocation: 48, pipeline_slots: 1, queue_capacity: 0 },
+        ScheduleTree::leaf(ScheduleOp::Tile {
+            axis: 0,
+            tile_size: 8,
+            inner_axis: 1,
+        }),
+        ScheduleResourceBounds {
+            logical_points: 512,
+            shared_bytes: 4096,
+            private_bytes: 32,
+            registers_per_invocation: 48,
+            pipeline_slots: 1,
+            queue_capacity: 0,
+        },
     );
 
     let cand1 = ParetoCandidate {
@@ -139,10 +175,15 @@ fn pareto_frontier_multi_objective_extraction() {
 
     assert!(front.insert(cand1));
     assert!(front.insert(cand2));
-    assert!(!front.insert(cand3), "dominated candidate is not inserted into Pareto front");
+    assert!(
+        !front.insert(cand3),
+        "dominated candidate is not inserted into Pareto front"
+    );
     assert_eq!(front.len(), 2);
 
-    let best = front.select_weighted(1.0, 0.0).expect("non-empty frontier selects best");
+    let best = front
+        .select_weighted(1.0, 0.0)
+        .expect("non-empty frontier selects best");
     assert_eq!(best.cost.latency_cycles, 120);
 }
 
@@ -151,8 +192,19 @@ fn optimization_pass_engine_fixpoint_and_proof_generation() {
     let mut engine = PassEngine::default();
 
     let initial_plan = SchedulePlan::new(
-        ScheduleTree::leaf(ScheduleOp::Tile { axis: 0, tile_size: 16, inner_axis: 1 }),
-        ScheduleResourceBounds { logical_points: 1024, shared_bytes: 1024, private_bytes: 16, registers_per_invocation: 16, pipeline_slots: 1, queue_capacity: 0 },
+        ScheduleTree::leaf(ScheduleOp::Tile {
+            axis: 0,
+            tile_size: 16,
+            inner_axis: 1,
+        }),
+        ScheduleResourceBounds {
+            logical_points: 1024,
+            shared_bytes: 1024,
+            private_bytes: 16,
+            registers_per_invocation: 16,
+            pipeline_slots: 1,
+            queue_capacity: 0,
+        },
     );
 
     let mut step = 0;
@@ -161,8 +213,19 @@ fn optimization_pass_engine_fixpoint_and_proof_generation() {
             if step == 0 {
                 step += 1;
                 let next = SchedulePlan::new(
-                    ScheduleTree::leaf(ScheduleOp::Tile { axis: 0, tile_size: 32, inner_axis: 1 }),
-                    ScheduleResourceBounds { logical_points: 1024, shared_bytes: 2048, private_bytes: 16, registers_per_invocation: 24, pipeline_slots: 1, queue_capacity: 0 },
+                    ScheduleTree::leaf(ScheduleOp::Tile {
+                        axis: 0,
+                        tile_size: 32,
+                        inner_axis: 1,
+                    }),
+                    ScheduleResourceBounds {
+                        logical_points: 1024,
+                        shared_bytes: 2048,
+                        private_bytes: 16,
+                        registers_per_invocation: 24,
+                        pipeline_slots: 1,
+                        queue_capacity: 0,
+                    },
                 );
                 Some((next, "tile_expansion", "improves_l1_reuse"))
             } else {
@@ -217,7 +280,11 @@ fn runtime_enumeration_of_laws_and_rules_verifies_typed_identity_proof_and_cache
                 family: law.family,
             };
             let proof_term = ProofTerm::from_name_and_justification(law.name, law.statement);
-            let cache_key = RuleCacheKey::from_components(law.name, &fact_identity, &proof_term.obligation_digest);
+            let cache_key = RuleCacheKey::from_components(
+                law.name,
+                &fact_identity,
+                &proof_term.obligation_digest,
+            );
 
             assert_eq!(proof_term.rule_name, law.name);
             assert_ne!(proof_term.obligation_digest, [0u8; 32]);
@@ -230,8 +297,14 @@ fn runtime_enumeration_of_laws_and_rules_verifies_typed_identity_proof_and_cache
     // 2. Test concrete Rule instances
     let rule1: Box<dyn Rule<TestLang>> = Box::new(DummyRule);
     assert_eq!(rule1.name(), "dummy_rule");
-    assert_eq!(rule1.witness(), RewriteWitness::Structural("dummy_structural_proof"));
-    assert_eq!(rule1.fact_identity(), RuleFactIdentity::TypedFact("dummy_rule_fact"));
+    assert_eq!(
+        rule1.witness(),
+        RewriteWitness::Structural("dummy_structural_proof")
+    );
+    assert_eq!(
+        rule1.fact_identity(),
+        RuleFactIdentity::TypedFact("dummy_rule_fact")
+    );
     assert_eq!(rule1.proof_term().rule_name, "dummy_rule");
     assert_ne!(rule1.cache_key().0, [0u8; 32]);
 
@@ -288,7 +361,10 @@ fn proof_replay_detects_and_refuses_tampered_proofs_by_name() {
     let mut bad_semantics = valid_artifact.clone();
     bad_semantics.proof_log[1].preserves_semantics = false;
     match OptimizationProofChecker::verify_replay_artifact(&bad_semantics) {
-        Err(ProofReplayError::SemanticsViolation { rule_name, step_index }) => {
+        Err(ProofReplayError::SemanticsViolation {
+            rule_name,
+            step_index,
+        }) => {
             assert_eq!(rule_name, "comm_mul");
             assert_eq!(step_index, 1);
         }
@@ -299,7 +375,12 @@ fn proof_replay_detects_and_refuses_tampered_proofs_by_name() {
     let mut bad_continuity = valid_artifact.clone();
     bad_continuity.proof_log[1].before_digest = [99u8; 32];
     match OptimizationProofChecker::verify_replay_artifact(&bad_continuity) {
-        Err(ProofReplayError::ContinuityBroken { rule_name, step_index, expected_digest, actual_digest }) => {
+        Err(ProofReplayError::ContinuityBroken {
+            rule_name,
+            step_index,
+            expected_digest,
+            actual_digest,
+        }) => {
             assert_eq!(rule_name, "comm_mul");
             assert_eq!(step_index, 1);
             assert_eq!(expected_digest, intermediate_digest);
@@ -312,7 +393,11 @@ fn proof_replay_detects_and_refuses_tampered_proofs_by_name() {
     let mut bad_step = valid_artifact.clone();
     bad_step.proof_log[1].step_index = 5;
     match OptimizationProofChecker::verify_replay_artifact(&bad_step) {
-        Err(ProofReplayError::TamperedProof { rule_name, step_index, .. }) => {
+        Err(ProofReplayError::TamperedProof {
+            rule_name,
+            step_index,
+            ..
+        }) => {
             assert_eq!(rule_name, "comm_mul");
             assert_eq!(step_index, 1);
         }
@@ -323,7 +408,11 @@ fn proof_replay_detects_and_refuses_tampered_proofs_by_name() {
     let mut bad_justification = valid_artifact.clone();
     bad_justification.proof_log[0].law_justification = String::new();
     match OptimizationProofChecker::verify_replay_artifact(&bad_justification) {
-        Err(ProofReplayError::TamperedProof { rule_name, step_index, reason }) => {
+        Err(ProofReplayError::TamperedProof {
+            rule_name,
+            step_index,
+            reason,
+        }) => {
             assert_eq!(rule_name, "assoc_add");
             assert_eq!(step_index, 0);
             assert!(reason.contains("empty law justification"));
@@ -370,9 +459,18 @@ fn structurally_equal_opaque_expressions_intern_to_one_identity_and_distinct_dif
     let fp2 = [0x22; 32];
 
     // Two distinct Arc allocations wrapping structurally equal contents (same kind + same fingerprint)
-    let ext_a1 = Arc::new(DummyExt { kind: "vendor.op.custom", fingerprint: fp1 });
-    let ext_a2 = Arc::new(DummyExt { kind: "vendor.op.custom", fingerprint: fp1 });
-    assert!(!Arc::ptr_eq(&ext_a1, &ext_a2), "must be two distinct Arc pointers");
+    let ext_a1 = Arc::new(DummyExt {
+        kind: "vendor.op.custom",
+        fingerprint: fp1,
+    });
+    let ext_a2 = Arc::new(DummyExt {
+        kind: "vendor.op.custom",
+        fingerprint: fp1,
+    });
+    assert!(
+        !Arc::ptr_eq(&ext_a1, &ext_a2),
+        "must be two distinct Arc pointers"
+    );
 
     let expr_a1 = Expr::Opaque(ext_a1);
     let expr_a2 = Expr::Opaque(ext_a2);
@@ -387,7 +485,10 @@ fn structurally_equal_opaque_expressions_intern_to_one_identity_and_distinct_dif
     );
 
     // A third expression with a different fingerprint
-    let ext_b = Arc::new(DummyExt { kind: "vendor.op.custom", fingerprint: fp2 });
+    let ext_b = Arc::new(DummyExt {
+        kind: "vendor.op.custom",
+        fingerprint: fp2,
+    });
     let expr_b = Expr::Opaque(ext_b);
     let id_b = arena.intern(&expr_b);
 
@@ -398,7 +499,10 @@ fn structurally_equal_opaque_expressions_intern_to_one_identity_and_distinct_dif
     );
 
     // A fourth expression with a different extension kind
-    let ext_c = Arc::new(DummyExt { kind: "vendor.other.op", fingerprint: fp1 });
+    let ext_c = Arc::new(DummyExt {
+        kind: "vendor.other.op",
+        fingerprint: fp1,
+    });
     let expr_c = Expr::Opaque(ext_c);
     let id_c = arena.intern(&expr_c);
 
@@ -417,5 +521,7 @@ fn semantic_equality_saturation_consumes_no_device_facts() {
     let sat = SemanticEqualitySaturation::default();
     assert_eq!(sat.class_growth_limit, 4096);
     assert_eq!(sat.max_iterations, 16);
-    assert!(sat.admits_contract(vyre_foundation::optimizer::rewrite_contract::NumericalContract::BitExact));
+    assert!(sat.admits_contract(
+        vyre_foundation::optimizer::rewrite_contract::NumericalContract::BitExact
+    ));
 }

@@ -4,13 +4,13 @@
 //! target artifact envelopes, and binds physical resources into executable sessions.
 
 use thiserror::Error;
-use vyre_foundation::ir::DataType;
+use vyre::ir::DataType;
 use std::collections::BTreeMap;
-use vyre_megakernel::{
-    compile, AbiAccess, Artifact, ArtifactEnvelope, CompileError, CompileRequest, DeviceFacts, Digest,
-    ExternalFacts, ResourceLifetime, ValidatedCompileRequest,
+use vyre::compiler::{
+    compile, AbiAccess, Artifact, ArtifactEnvelope, ArtifactValueId, CompileError, CompileRequest,
+    DeviceFacts, Digest, ExternalFacts, ResourceLifetime, ValidatedCompileRequest,
 };
-use vyre_runtime::artifact_admission::{
+use vyre::{
     ResourceIngestionError, ResourceManifest, ResourceManifestEntry, ResourceManifestSource,
     TypedResourceDataset,
 };
@@ -93,9 +93,23 @@ impl ModelCompiler {
         let builder = ModelGraphBuilder::new(config, workload);
         let graph = builder.build_graph()?;
 
-        let external_facts = ExternalFacts::new(Digest([0u8; 32]), BTreeMap::new())
-            .with_expected_launch_batch(workload.expected_launch_count);
+        let mut constant_identities = BTreeMap::new();
+        for val in graph.values() {
+            if val.contract.lifetime == vyre_foundation::ir::ValueLifetime::Constant {
+                let mut hash = [0u8; 32];
+                let name_bytes = val.name.as_bytes();
+                for (i, b) in name_bytes.iter().enumerate() {
+                    hash[i % 32] ^= *b;
+                }
+                hash[0] = (val.id.0 & 0xFF) as u8;
+                hash[31] = 0xAA;
+                constant_identities.insert(val.id, Digest(hash));
+            }
+        }
 
+        let mut external_facts = ExternalFacts::new(Digest([1u8; 32]), BTreeMap::new())
+            .with_expected_launch_batch(workload.expected_launch_count);
+        external_facts.constant_identities = constant_identities;
         let device_facts = DeviceFacts::unknown();
 
         let request = CompileRequest::new(
@@ -138,7 +152,7 @@ impl ModelCompiler {
                 .unwrap_or(DataType::U8);
 
             entries.push(ResourceManifestEntry {
-                value: vyre_megakernel::ArtifactValueId(idx as u32),
+                value: ArtifactValueId(idx as u32),
                 name: Some(resource.name.clone()),
                 dtype,
                 element_count: byte_count,

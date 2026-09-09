@@ -62,23 +62,65 @@ pub(crate) fn program_for_interpreter(
     } else {
         Cow::Borrowed(program)
     };
-    let collectives_lowered =
-        match vyre_foundation::transform::collectives::lower_single_rank_collectives(
-            normalized.as_ref(),
-        ) {
-            Ok(Some(lowered)) => Cow::Owned(lowered),
-            Ok(None) => normalized,
-            Err(error) => return Err(crate::ReferenceError::new(error.to_string())),
-        };
-    // A composite op IS its IR body, so run the body. Only intrinsics reach
-    // `eval_call`, and those are the only ops that register a CPU function.
-    // Skipping this made every composite call fall through to the empty
-    // lowering table's placeholder, which cleared the output buffer instead
-    // of computing anything.
-    let inlined =
-        vyre_foundation::transform::inline::inline_composite_calls(collectives_lowered.as_ref())
-            .map_err(|error| crate::ReferenceError::new(error.to_string()))?;
-    Ok(Cow::Owned(inlined))
+    Ok(normalized)
+}
+
+pub(crate) fn run_with_request(
+    request: &crate::request::ReferenceRequest,
+) -> Result<(Vec<Value>, u64), crate::ReferenceError> {
+    let runnable = program_for_interpreter(&request.program)?;
+    let budget = step_budget::arm_with(&runnable, request.budget.work_ceiling);
+    let lane_order = match request.schedule_policy {
+        crate::request::DeterministicSchedulePolicy::Forward => hashmap::LaneOrder::Forward,
+        crate::request::DeterministicSchedulePolicy::LaneReversed => hashmap::LaneOrder::Reversed,
+        crate::request::DeterministicSchedulePolicy::LaneRotated(by) => {
+            hashmap::LaneOrder::Rotated(by)
+        }
+        crate::request::DeterministicSchedulePolicy::BoundedInterleaving => {
+            hashmap::LaneOrder::Forward
+        }
+    };
+    let min_dispatch = request.workload_envelope.min_dispatch_elements.unwrap_or(0);
+    let outputs = hashmap::run_hashmap_reference(
+        &runnable,
+        &request.resource_abi.inputs,
+        min_dispatch,
+        lane_order,
+        request.workload_envelope.workgroup_grid,
+    )?;
+    let steps = step_budget::charged();
+    drop(budget);
+    Ok((outputs, steps))
+}
+
+pub(crate) fn run_permissive_with_request(
+    request: &crate::request::ReferenceRequest,
+) -> Result<(Vec<Value>, u64, crate::oob::OobReport), crate::ReferenceError> {
+    crate::oob::reset_oob_report();
+    let runnable = program_for_interpreter(&request.program)?;
+    let budget = step_budget::arm_with(&runnable, request.budget.work_ceiling);
+    let lane_order = match request.schedule_policy {
+        crate::request::DeterministicSchedulePolicy::Forward => hashmap::LaneOrder::Forward,
+        crate::request::DeterministicSchedulePolicy::LaneReversed => hashmap::LaneOrder::Reversed,
+        crate::request::DeterministicSchedulePolicy::LaneRotated(by) => {
+            hashmap::LaneOrder::Rotated(by)
+        }
+        crate::request::DeterministicSchedulePolicy::BoundedInterleaving => {
+            hashmap::LaneOrder::Forward
+        }
+    };
+    let min_dispatch = request.workload_envelope.min_dispatch_elements.unwrap_or(0);
+    let outputs = hashmap::run_hashmap_reference(
+        &runnable,
+        &request.resource_abi.inputs,
+        min_dispatch,
+        lane_order,
+        request.workload_envelope.workgroup_grid,
+    )?;
+    let steps = step_budget::charged();
+    let oob = crate::oob::oob_report();
+    drop(budget);
+    Ok((outputs, steps, oob))
 }
 
 /// The interpreter's output ABI, single-homed: [`is_reference_output`] is the exact

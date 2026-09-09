@@ -349,7 +349,9 @@ mod tests {
             }
         ));
 
-        let err_bp_max = reg.register_with_backpressure("bp_max", u64::MAX).unwrap_err();
+        let err_bp_max = reg
+            .register_with_backpressure("bp_max", u64::MAX)
+            .unwrap_err();
         assert!(matches!(err_bp_max, TenantError::NonFiniteQuota { .. }));
 
         // Finite registration succeeds

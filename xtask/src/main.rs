@@ -37,7 +37,10 @@ fn main() {
         let registry = subcommands::registry();
         match xtask::gate_dag::regenerate_all(&root, &registry) {
             Ok(report) => {
-                println!("Executed {} writer gate(s) in topological DAG order.", report.executed_writers.len());
+                println!(
+                    "Executed {} writer gate(s) in topological DAG order.",
+                    report.executed_writers.len()
+                );
                 if !report.changed_artifacts.is_empty() {
                     println!("Changed {} artifact(s):", report.changed_artifacts.len());
                     for artifact in &report.changed_artifacts {

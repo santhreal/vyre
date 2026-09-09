@@ -91,6 +91,14 @@ pub use plumbing::operand::tensor_ref::{
 pub use plumbing::program::descriptor::{BufferDescriptor, ProgramDescriptor};
 pub use plumbing::registration::{contracts, operation_catalog};
 
+/// Ensure all feature-selected library operation registrations are retained by the linker.
+///
+/// Calling this references the operation catalog and guarantees that `inventory` registrations
+/// compiled into this artifact are retained with zero workspace-only link knowledge.
+#[must_use]
+pub fn link_anchor() -> usize {
+    operation_catalog::link_anchor()
+}
 /// Per-module call counters for the composition surface.
 #[cfg(feature = "telemetry")]
 pub use plumbing::host::telemetry;

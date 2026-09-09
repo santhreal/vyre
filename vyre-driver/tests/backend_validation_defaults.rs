@@ -97,11 +97,22 @@ fn default_supported_ops_contains_every_async_transfer_node() {
 #[test]
 fn default_supported_ops_contains_every_tile_node() {
     use vyre::ir::{DataType, Layout, Residency, SubgroupReduceOp, Tile};
-    let tile = Tile::new(DataType::F32, vec![4, 4], Layout::RowMajor, Residency::Register);
+    let tile = Tile::new(
+        DataType::F32,
+        vec![4, 4],
+        Layout::RowMajor,
+        Residency::Register,
+    );
     let ops = default_supported_ops();
     for node in [
         Node::tile_decl("t", tile.clone()),
-        Node::tile_load("t", tile.clone(), "buf", vec![Expr::u32(0)], Layout::RowMajor),
+        Node::tile_load(
+            "t",
+            tile.clone(),
+            "buf",
+            vec![Expr::u32(0)],
+            Layout::RowMajor,
+        ),
         Node::tile_store("buf", vec![Expr::u32(0)], "t"),
         Node::tile_matmul("c", "a", "b"),
         Node::tile_reduce("r", "t", SubgroupReduceOp::Add, 1),
@@ -114,7 +125,6 @@ fn default_supported_ops_contains_every_tile_node() {
         );
     }
 }
-
 
 #[test]
 fn node_op_id_async_store_is_stable() {

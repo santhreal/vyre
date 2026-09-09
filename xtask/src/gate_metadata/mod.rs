@@ -9,8 +9,8 @@
 
 use std::collections::BTreeSet;
 
-pub use crate::gate_proof_validation::{validate_all_descriptors, validate_proof_symbol};
 use crate::gate::{GateDescriptor, ResourceClass};
+pub use crate::gate_proof_validation::{validate_all_descriptors, validate_proof_symbol};
 
 pub mod artifacts;
 pub mod descriptors_a_g;
@@ -23,10 +23,10 @@ use descriptors_h_p::GATES_H_P;
 use descriptors_q_z::GATES_Q_Z;
 
 const fn concat_descriptors(
-    a: &[GateDescriptor; 52],
+    a: &[GateDescriptor; 53],
     b: &[GateDescriptor; 59],
-    c: &[GateDescriptor; 36],
-) -> [GateDescriptor; 147] {
+    c: &[GateDescriptor; 37],
+) -> [GateDescriptor; 149] {
     let mut out = [GateDescriptor {
         name: "",
         help: "",
@@ -38,7 +38,7 @@ const fn concat_descriptors(
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
         proof: "",
-    }; 147];
+    }; 149];
     let mut i = 0;
     while i < a.len() {
         out[i] = a[i];
@@ -58,7 +58,8 @@ const fn concat_descriptors(
 }
 
 /// Complete array holding all registered gate descriptors.
-pub static GATE_METADATA_ARRAY: [GateDescriptor; 147] = concat_descriptors(&GATES_A_G, &GATES_H_P, &GATES_Q_Z);
+pub static GATE_METADATA_ARRAY: [GateDescriptor; 149] =
+    concat_descriptors(&GATES_A_G, &GATES_H_P, &GATES_Q_Z);
 
 /// Every gate descriptor, sorted by gate name.
 pub static GATE_METADATA: &[GateDescriptor] = &GATE_METADATA_ARRAY;
@@ -200,4 +201,3 @@ mod tests {
         }
     }
 }
-

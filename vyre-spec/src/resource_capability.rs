@@ -149,7 +149,10 @@ impl ImageFormat {
             | Self::Rg32Sint
             | Self::Rg32Float => 8,
             Self::Rgba32Uint | Self::Rgba32Sint | Self::Rgba32Float => 16,
-            Self::Yuv420Planar | Self::Yuv420SemiPlanar | Self::Yuv422Planar | Self::Yuv444Planar => 1,
+            Self::Yuv420Planar
+            | Self::Yuv420SemiPlanar
+            | Self::Yuv422Planar
+            | Self::Yuv444Planar => 1,
         }
     }
 
@@ -258,10 +261,7 @@ impl ImageFormat {
     pub const fn is_planar_video(&self) -> bool {
         matches!(
             self,
-            Self::Yuv420Planar
-                | Self::Yuv420SemiPlanar
-                | Self::Yuv422Planar
-                | Self::Yuv444Planar
+            Self::Yuv420Planar | Self::Yuv420SemiPlanar | Self::Yuv422Planar | Self::Yuv444Planar
         )
     }
 }
@@ -758,7 +758,10 @@ impl TimelineSyncProtocol {
     /// Whether this protocol is a monotonically increasing timeline point.
     #[must_use]
     pub const fn is_timeline(&self) -> bool {
-        matches!(self, Self::TimelineSemaphore { .. } | Self::MetalSharedEvent { .. })
+        matches!(
+            self,
+            Self::TimelineSemaphore { .. } | Self::MetalSharedEvent { .. }
+        )
     }
 }
 
@@ -1158,7 +1161,10 @@ impl AdmittedResourceRecord {
                 resource_id: self.resource_id,
             });
         }
-        if !self.permitted_usages.contains(ResourcePermittedUsages::EXTERNAL_IMPORT) {
+        if !self
+            .permitted_usages
+            .contains(ResourcePermittedUsages::EXTERNAL_IMPORT)
+        {
             return Err(ResourceAbiError::UsageNotPermitted {
                 resource_id: self.resource_id,
                 requested_usage: ResourcePermittedUsages::EXTERNAL_IMPORT,
@@ -1166,7 +1172,9 @@ impl AdmittedResourceRecord {
         }
         self.provenance = ResourceProvenance::ExternalImport {
             memory_kind,
-            exportable: self.permitted_usages.contains(ResourcePermittedUsages::EXTERNAL_EXPORT),
+            exportable: self
+                .permitted_usages
+                .contains(ResourcePermittedUsages::EXTERNAL_EXPORT),
             handle_tag,
         };
         self.is_zero_copy = true;
@@ -1227,18 +1235,39 @@ impl fmt::Display for ResourceAbiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ResourceInvalidated { resource_id } => {
-                write!(f, "resource {resource_id} is invalidated due to device loss")
+                write!(
+                    f,
+                    "resource {resource_id} is invalidated due to device loss"
+                )
             }
-            Self::GenerationMismatch { resource_id, expected, actual } => {
+            Self::GenerationMismatch {
+                resource_id,
+                expected,
+                actual,
+            } => {
                 write!(f, "stale resource {resource_id} generation access: expected {expected}, got {actual}")
             }
-            Self::UsageNotPermitted { resource_id, requested_usage } => {
-                write!(f, "usage {requested_usage:?} is not permitted for resource {resource_id}")
+            Self::UsageNotPermitted {
+                resource_id,
+                requested_usage,
+            } => {
+                write!(
+                    f,
+                    "usage {requested_usage:?} is not permitted for resource {resource_id}"
+                )
             }
-            Self::UnsupportedZeroCopyNegotiation { resource_id, format, memory_kind } => {
+            Self::UnsupportedZeroCopyNegotiation {
+                resource_id,
+                format,
+                memory_kind,
+            } => {
                 write!(f, "unsupported zero-copy memory negotiation for resource {resource_id}: format {format:?} with {memory_kind:?}")
             }
-            Self::InvalidDimensionsOrPitch { resource_id, provided_pitch, required_pitch } => {
+            Self::InvalidDimensionsOrPitch {
+                resource_id,
+                provided_pitch,
+                required_pitch,
+            } => {
                 write!(f, "invalid pitch {provided_pitch} for resource {resource_id}, required {required_pitch}")
             }
             Self::DeviceLoss { device_id } => {
@@ -1508,11 +1537,7 @@ pub const fn all_lifetime_state_kinds() -> &'static [&'static str] {
 /// Exhaustive slice of canonical string names for provenance kinds.
 #[must_use]
 pub const fn all_provenance_kinds() -> &'static [&'static str] {
-    &[
-        "internal_allocation",
-        "external_import",
-        "view_derived",
-    ]
+    &["internal_allocation", "external_import", "view_derived"]
 }
 
 /// Exhaustive slice of canonical string names for alias set kinds.

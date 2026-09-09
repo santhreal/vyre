@@ -4,8 +4,8 @@
 //! used by the conformance coordinator, disposable workers, and certificate
 //! issuance pipeline.
 
-use std::fmt;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// Explicit resource budget for one conformance worker process.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -180,8 +180,10 @@ impl NumericalPolicy {
             }
             match self {
                 Self::Exact => {
-                    if let Some(byte_idx) =
-                        base_buf.iter().zip(found_buf.iter()).position(|(a, b)| a != b)
+                    if let Some(byte_idx) = base_buf
+                        .iter()
+                        .zip(found_buf.iter())
+                        .position(|(a, b)| a != b)
                     {
                         return Err(NumericalMismatch::ExactByteMismatch {
                             buffer_idx,
@@ -305,21 +307,39 @@ impl fmt::Display for NumericalMismatch {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::BufferCount { expected, found } => {
-                write!(f, "output buffer count mismatch: expected {expected}, found {found}")
+                write!(
+                    f,
+                    "output buffer count mismatch: expected {expected}, found {found}"
+                )
             }
-            Self::BufferLength { buffer_idx, expected, found } => {
+            Self::BufferLength {
+                buffer_idx,
+                expected,
+                found,
+            } => {
                 write!(
                     f,
                     "output buffer {buffer_idx} length mismatch: expected {expected} bytes, found {found} bytes"
                 )
             }
-            Self::ExactByteMismatch { buffer_idx, byte_idx, expected, found } => {
+            Self::ExactByteMismatch {
+                buffer_idx,
+                byte_idx,
+                expected,
+                found,
+            } => {
                 write!(
                     f,
                     "output buffer {buffer_idx} byte {byte_idx} mismatch: expected {expected:#04x}, found {found:#04x}"
                 )
             }
-            Self::LaneMismatch { buffer_idx, lane_idx, expected, found, distance } => {
+            Self::LaneMismatch {
+                buffer_idx,
+                lane_idx,
+                expected,
+                found,
+                distance,
+            } => {
                 write!(
                     f,
                     "output buffer {buffer_idx} lane {lane_idx} mismatch: expected {expected:#010x}, found {found:#010x}, ULP distance {distance}"
@@ -539,12 +559,18 @@ impl fmt::Display for WorkerStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Success => f.write_str("success"),
-            Self::Timeout { elapsed_ms, budget_ms } => {
+            Self::Timeout {
+                elapsed_ms,
+                budget_ms,
+            } => {
                 write!(f, "timed out after {elapsed_ms}ms (budget {budget_ms}ms)")
             }
             Self::Panicked { message } => write!(f, "worker panicked: {message}"),
             Self::DriverLost { message } => write!(f, "driver lost: {message}"),
-            Self::Leak { bytes_leaked, message } => {
+            Self::Leak {
+                bytes_leaked,
+                message,
+            } => {
                 write!(f, "resource leak ({bytes_leaked} bytes): {message}")
             }
             Self::ProtocolViolation { message } => {
@@ -747,7 +773,10 @@ pub enum CertificateRejection {
 impl fmt::Display for CertificateRejection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::MismatchedCaseIdentity { ref_case, prod_case } => {
+            Self::MismatchedCaseIdentity {
+                ref_case,
+                prod_case,
+            } => {
                 write!(
                     f,
                     "case identity mismatch: reference case `{ref_case}` does not match production case `{prod_case}`"

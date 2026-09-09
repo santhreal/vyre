@@ -21,7 +21,13 @@ pub struct DiskPipelineCache {
 
 impl DiskPipelineCache {
     fn try_lock_pending_flushes(&self) -> std::io::Result<MutexGuard<'_, Vec<std::path::PathBuf>>> {
-        self.pending_flushes.lock().map_err(|error| {
+        crate::lock_policy::govern_mutex(
+            &self.pending_flushes,
+            "pipeline_cache",
+            "pending_flushes",
+            crate::lock_policy::RecoveryClass::TransactionallyRecoverable,
+        )
+        .map_err(|error| {
             std::io::Error::other(format!(
                 "Vyre disk pipeline cache pending-flush lock was poisoned: {error}. Fix: discard this cache instance after a panic; continuing could lose or duplicate compiled-pipeline fsync work."
             ))

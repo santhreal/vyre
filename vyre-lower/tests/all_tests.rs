@@ -73,9 +73,9 @@ pub mod storage_layout_contracts;
 #[path = "target_capabilities.rs"]
 pub mod target_capabilities;
 
-/// Integration tests from `tests/verify_result_id_uniqueness.rs`.
-#[path = "verify_result_id_uniqueness.rs"]
-pub mod verify_result_id_uniqueness;
 /// Integration tests from `tests/tile_lowering_contracts.rs`.
 #[path = "tile_lowering_contracts.rs"]
 pub mod tile_lowering_contracts;
+/// Integration tests from `tests/verify_result_id_uniqueness.rs`.
+#[path = "verify_result_id_uniqueness.rs"]
+pub mod verify_result_id_uniqueness;

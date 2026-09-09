@@ -67,10 +67,17 @@ pub(crate) mod resample;
 /// Subpixel text run and glyph accumulation.
 pub(crate) mod text_run;
 // Re-exports for the public API surface.
+pub use blend::{composite_blend, BlendMode};
 pub use blur::{gaussian_blur_2pass, GaussianBlurStages};
 pub use blur::{gaussian_blur_2pass_with_kernel, GaussianKernel, GaussianKernelError};
 pub use cell_grid::{cell_grid_fill, GridShape};
+pub use clip::{apply_clip_mask, apply_scissor_rect};
+pub use color_convert::{
+    grayscale_to_rgba, premultiply_alpha, rgba_to_grayscale, unpremultiply_alpha,
+};
 pub use composite::alpha_over;
+pub use cull::cull_boxes_2d;
+pub use dirty_region::{dirty_region_patch_direct, dirty_region_patch_rgba};
 pub use downsample::downsample_2x;
 pub use filter_chain::filter_chain;
 #[cfg(test)]
@@ -81,19 +88,12 @@ pub use glass::{glass_blur_stage, glass_filter_stage, glass_stages, GlassParams}
 pub use glyph_grid::glyph_grid_blend;
 pub use gradient::try_linear_gradient;
 pub use gradient::{linear_gradient, ColorStop};
-pub use shadow::box_shadow;
-pub use upsample::upsample_2x;
-pub use blend::{composite_blend, BlendMode};
-pub use clip::{apply_clip_mask, apply_scissor_rect};
-pub use color_convert::{
-    grayscale_to_rgba, premultiply_alpha, rgba_to_grayscale, unpremultiply_alpha,
-};
-pub use cull::cull_boxes_2d;
-pub use dirty_region::{dirty_region_patch_direct, dirty_region_patch_rgba};
 pub use layout_scan::{layout_prefix_scan_u32, reduce_bounding_boxes_2d};
 pub use path_raster::path_rasterize_segments;
 pub use resample::bilinear_resample_rgba;
+pub use shadow::box_shadow;
 pub use text_run::text_run_blend;
+pub use upsample::upsample_2x;
 
 pub(crate) use crate::builder::stencil::fixed_mul_16_16 as fixed_mul_16_16_unsigned_expr;
 pub(crate) use crate::builder::stencil::wide_mul_shr_u32;

@@ -1,10 +1,10 @@
 //! Gate descriptors for gates starting with Q through Z.
 
-use crate::gate::{GateDescriptor, ResourceClass};
 use super::artifacts::*;
+use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with Q through Z.
-pub const GATES_Q_Z: [GateDescriptor; 36] = [
+pub const GATES_Q_Z: [GateDescriptor; 37] = [
     GateDescriptor {
         name: "readback-ring",
         help: "Enforce readback-ring contracts",
@@ -325,6 +325,18 @@ pub const GATES_Q_Z: [GateDescriptor; 36] = [
         prerequisites: &[],
         resource_class: ResourceClass::Process,
         proof: "xtask_registry::trace_f32::tests::render_run_formats_hex_buffer_literals",
+    },
+    GateDescriptor {
+        name: "tracked-modules",
+        help: "Enforce that every committed module declaration has a tracked file",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "rust sources",
+        inputs: &[],
+        artifacts: &[],
+        prerequisites: &[],
+        resource_class: ResourceClass::Io,
+        proof: "crate::gates::tracked_modules::tests::an_untracked_file_behind_a_declaration_is_a_finding",
     },
     GateDescriptor {
         name: "unification",

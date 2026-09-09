@@ -31,13 +31,21 @@ fn configuration_precedence_explicit_overrides_cli_and_toml() {
 
     // TOML sets opt_level = 1
     config
-        .apply_override("compile.opt_level", ConfigValue::U32(1), ConfigLayer::TomlFile)
+        .apply_override(
+            "compile.opt_level",
+            ConfigValue::U32(1),
+            ConfigLayer::TomlFile,
+        )
         .expect("Fix: TOML override must succeed.");
     assert_eq!(config.get("compile.opt_level"), Some(&ConfigValue::U32(1)));
 
     // CLI overrides TOML with opt_level = 3
     config
-        .apply_override("compile.opt_level", ConfigValue::U32(3), ConfigLayer::CliOverride)
+        .apply_override(
+            "compile.opt_level",
+            ConfigValue::U32(3),
+            ConfigLayer::CliOverride,
+        )
         .expect("Fix: CLI override must succeed over TOML.");
     assert_eq!(config.get("compile.opt_level"), Some(&ConfigValue::U32(3)));
 
@@ -53,7 +61,11 @@ fn configuration_precedence_explicit_overrides_cli_and_toml() {
 
     // Lower precedence TOML cannot overwrite ExplicitLibrary
     config
-        .apply_override("compile.opt_level", ConfigValue::U32(0), ConfigLayer::TomlFile)
+        .apply_override(
+            "compile.opt_level",
+            ConfigValue::U32(0),
+            ConfigLayer::TomlFile,
+        )
         .expect("Fix: Lower precedence layer cannot fail, but must not overwrite.");
     assert_eq!(
         config.get("compile.opt_level"),
@@ -85,7 +97,9 @@ fn secret_credentials_are_redacted_in_inspection_views() {
 
                 config
                     .apply_override(def.key, secret_probe.clone(), ConfigLayer::ExplicitLibrary)
-                    .unwrap_or_else(|e| panic!("Fix: override for secret field {} failed: {e}", def.key));
+                    .unwrap_or_else(|e| {
+                        panic!("Fix: override for secret field {} failed: {e}", def.key)
+                    });
 
                 let view = config.redacted_view();
                 let redacted_val = view

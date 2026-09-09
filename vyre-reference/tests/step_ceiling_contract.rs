@@ -119,7 +119,9 @@ fn a_named_program_is_refused_under_its_entry_op_id() {
     program.entry_op_id = Some("hostile::trip_count_op".to_string());
     let start = std::time::Instant::now();
     let error = reference_eval_with_step_ceiling(&program, &trip_inputs(u32::MAX), 4_096)
-        .expect_err("Fix: a hostile trip count no declared extent bounds must reach the work ceiling");
+        .expect_err(
+            "Fix: a hostile trip count no declared extent bounds must reach the work ceiling",
+        );
     assert!(
         start.elapsed() < std::time::Duration::from_secs(2),
         "Fix: the interpreter must refuse an unbounded trip count promptly; elapsed {:?}",
@@ -340,4 +342,3 @@ fn the_heaviest_legitimate_corpus_work_completes_under_the_ceiling_with_margin()
         "Fix: legitimate workload must complete under ceiling with margin, charged {steps} against ceiling {MAX_REFERENCE_STEPS}"
     );
 }
-

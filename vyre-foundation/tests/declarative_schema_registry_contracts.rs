@@ -115,7 +115,10 @@ fn canonical_codec_enforces_max_bytes_bound() {
     let err = CanonicalDecoder::decode(&oversized_bytes)
         .expect_err("Fix: payload exceeding max_bytes bound must fail closed.");
 
-    assert!(matches!(err, CodecError::PayloadOversized { .. } | CodecError::UnknownSchema(_)));
+    assert!(matches!(
+        err,
+        CodecError::PayloadOversized { .. } | CodecError::UnknownSchema(_)
+    ));
 }
 
 #[test]

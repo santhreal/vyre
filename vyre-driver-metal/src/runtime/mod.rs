@@ -30,9 +30,9 @@ use self::buffer_plan::{
     PlannedBuffer,
 };
 use self::dispatch::{
-    dispatch_planned_buffers_with_queue, submit_planned_buffers_with_queue,
-    start_validated_dispatch, MetalDispatchResult, MetalPendingDispatch, BORROWED_DISPATCH,
-    RESIDENT_DISPATCH,
+    dispatch_planned_buffers_with_queue, start_validated_dispatch,
+    submit_planned_buffers_with_queue, MetalDispatchResult, MetalPendingDispatch,
+    BORROWED_DISPATCH, RESIDENT_DISPATCH,
 };
 pub(crate) use self::metrics::push_resident_table_metrics;
 use self::metrics::{

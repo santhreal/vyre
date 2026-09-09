@@ -4,7 +4,7 @@
 //! context window boundaries, search budgets, and optimization objectives.
 
 use serde::{Deserialize, Serialize};
-use vyre_megakernel::{CompileObjective, SearchBudget};
+use vyre::compiler::{CompileObjective, ObjectiveMetric, SearchBudget};
 
 /// Autoregressive execution phase.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -48,7 +48,8 @@ impl WorkloadEnvelope {
             max_seq_len,
             expected_launch_count: 1_000,
             search_budget: SearchBudget::new(16, 1_000, 1, 0, 10_000_000),
-            objective: CompileObjective::minimize_latency(),
+            objective: CompileObjective::minimize_latency()
+                .with_bound(ObjectiveMetric::ArtifactBytes, 128 * 1024 * 1024),
         }
     }
 
@@ -63,7 +64,8 @@ impl WorkloadEnvelope {
             max_seq_len,
             expected_launch_count: 10_000,
             search_budget: SearchBudget::new(16, 1_000, 1, 0, 10_000_000),
-            objective: CompileObjective::minimize_latency(),
+            objective: CompileObjective::minimize_latency()
+                .with_bound(ObjectiveMetric::ArtifactBytes, 128 * 1024 * 1024),
         }
     }
 
@@ -82,7 +84,8 @@ impl WorkloadEnvelope {
             max_seq_len,
             expected_launch_count: 50_000,
             search_budget: SearchBudget::new(64, 10_000, 4, 1, 100_000_000),
-            objective: CompileObjective::minimize_latency(),
+            objective: CompileObjective::minimize_latency()
+                .with_bound(ObjectiveMetric::ArtifactBytes, 128 * 1024 * 1024),
         }
     }
 
@@ -101,7 +104,8 @@ impl WorkloadEnvelope {
             max_seq_len,
             expected_launch_count: 100_000,
             search_budget: SearchBudget::new(32, 2_000, 2, 0, 20_000_000),
-            objective: CompileObjective::maximize_throughput(100_000),
+            objective: CompileObjective::maximize_throughput(100_000)
+                .with_bound(ObjectiveMetric::ArtifactBytes, 128 * 1024 * 1024),
         }
     }
 }

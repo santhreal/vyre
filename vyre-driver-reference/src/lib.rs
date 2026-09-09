@@ -8,7 +8,6 @@ use vyre_driver::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
 
-
 /// Lane count the interpreter's subgroup simulator models.
 ///
 /// [`vyre_reference::subgroup::SubgroupSimulator`] is built at this width, and
@@ -93,4 +92,3 @@ fn reference_values(program: &Program, inputs: &[&[u8]]) -> Result<Vec<Value>, B
         ))
     })
 }
-

@@ -1,7 +1,7 @@
 //! Structural comparison for frontend Program and ProgramGraph representations.
 
-use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 use vyre::ir::{Program, ProgramGraph};
 
@@ -27,8 +27,16 @@ pub fn diff_programs(before: &Program, after: &Program) -> ProgramDiff {
     let mut buffers_added = Vec::new();
     let mut buffers_dropped = Vec::new();
 
-    let before_bufs: BTreeMap<String, _> = before.buffers.iter().map(|b| (b.name.to_string(), b)).collect();
-    let after_bufs: BTreeMap<String, _> = after.buffers.iter().map(|b| (b.name.to_string(), b)).collect();
+    let before_bufs: BTreeMap<String, _> = before
+        .buffers
+        .iter()
+        .map(|b| (b.name.to_string(), b))
+        .collect();
+    let after_bufs: BTreeMap<String, _> = after
+        .buffers
+        .iter()
+        .map(|b| (b.name.to_string(), b))
+        .collect();
 
     for name in after_bufs.keys() {
         if !before_bufs.contains_key(name) {
@@ -76,8 +84,13 @@ pub fn diff_program_graphs(before: &ProgramGraph, after: &ProgramGraph) -> Graph
     let mut nodes_added = Vec::new();
     let mut nodes_removed = Vec::new();
 
-    let before_nodes: BTreeMap<&str, _> = before.nodes().iter().map(|n| (n.name.as_str(), n)).collect();
-    let after_nodes: BTreeMap<&str, _> = after.nodes().iter().map(|n| (n.name.as_str(), n)).collect();
+    let before_nodes: BTreeMap<&str, _> = before
+        .nodes()
+        .iter()
+        .map(|n| (n.name.as_str(), n))
+        .collect();
+    let after_nodes: BTreeMap<&str, _> =
+        after.nodes().iter().map(|n| (n.name.as_str(), n)).collect();
 
     for name in after_nodes.keys() {
         if !before_nodes.contains_key(name) {
@@ -90,9 +103,7 @@ pub fn diff_program_graphs(before: &ProgramGraph, after: &ProgramGraph) -> Graph
         }
     }
 
-    let is_identical = node_count_delta == 0
-        && nodes_added.is_empty()
-        && nodes_removed.is_empty();
+    let is_identical = node_count_delta == 0 && nodes_added.is_empty() && nodes_removed.is_empty();
 
     GraphDiff {
         node_count_delta,

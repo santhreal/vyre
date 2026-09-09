@@ -6,7 +6,9 @@
 //! source text alone belongs in `xtask::gates`, which links none of this.
 
 pub mod abstraction_gate;
+pub mod application_runnable;
 pub mod composition_budget;
+pub mod configuration_model;
 pub mod cross_target;
 pub mod dialect_lowering;
 pub mod gate1;

@@ -10,19 +10,13 @@ use std::collections::BTreeMap;
 use std::time::Instant;
 
 use vyre::compiler::{
-    compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
+    CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     SearchBudget,
 };
-use vyre_foundation::ir::{GraphValueId, ValueLifetime};
+use vyre::ir::{GraphValueId, ValueLifetime};
 use vyre_libs::graph_compositions::{
     build_interactive_graphics_pipeline, InteractiveGraphicsPipelineParams,
 };
-use vyre_libs::visual::{
-    apply_scissor_rect, cull_boxes_2d, dirty_region_patch_rgba, path_rasterize_segments,
-    text_run_blend,
-};
-use vyre_reference::reference_eval;
-use vyre_reference::value::Value;
 /// Interactive user or system event.
 #[derive(Debug, Clone)]
 pub enum InteractiveEvent {
@@ -46,10 +40,8 @@ pub enum InteractiveEvent {
     BurstInput { count: usize },
     /// Simulated sudden device loss.
     DeviceLoss,
-    /// Memory pressure condition.
-    MemoryPressure { allocation_mb: usize },
-    /// Background compute interference.
-    BackgroundInterference { job_count: usize },
+    /// Retained resource state reset.
+    ResetRetainedState,
 }
 
 /// Retained scene graph holding renderable items.
@@ -286,19 +278,10 @@ impl GraphicsRenderer {
             InteractiveEvent::DeviceLoss => {
                 self.is_device_lost = true;
             }
-            InteractiveEvent::MemoryPressure { allocation_mb } => {
-                let _temp = vec![0u8; allocation_mb * 1024 * 1024];
+            InteractiveEvent::ResetRetainedState => {
+                let pixel_count = (self.scene.width * self.scene.height) as usize;
+                self.retained_framebuffer = vec![0; pixel_count];
             }
-            InteractiveEvent::BackgroundInterference { job_count } => {
-                // Simulate background compute kernels
-                for _ in 0..job_count {
-                    let mut dummy = [1u32, 2, 3, 4];
-                    for x in &mut dummy {
-                        *x = x.wrapping_mul(1664525).wrapping_add(1013904223);
-                    }
-                }
-            }
-        }
         Ok(())
     }
 
@@ -313,125 +296,116 @@ impl GraphicsRenderer {
         let box_count = (self.scene.boxes.len() / 4) as u32;
         let segment_count = (self.scene.segments.len() / 4) as u32;
         let glyph_count = (self.scene.glyphs.len() / 7) as u32;
+        let (c_min_x, c_min_y, c_max_x, c_max_y) = self.scene.clip_rect;
+        let (p_dx, p_dy) = self.scene.patch_dest;
 
-        let _p_cull = if box_count > 0 {
-            cull_boxes_2d(
-                "boxes",
-                box_count,
-                0,
-                0,
-                self.scene.width as i32,
-                self.scene.height as i32,
-                "mask",
-            )
-        } else {
-            cull_boxes_2d("boxes", 1, 0, 0, 1, 1, "mask")
+        let params = InteractiveGraphicsPipelineParams {
+            width: self.scene.width,
+            height: self.scene.height,
+            box_count: box_count.max(1),
+            segment_count: segment_count.max(1),
+            stroke_radius: self.scene.stroke_radius,
+            stroke_color: self.scene.stroke_color,
+            glyph_count: glyph_count.max(1),
+            atlas_w: self.scene.atlas_w.max(1),
+            atlas_h: self.scene.atlas_h.max(1),
+            clip_rect: (c_min_x, c_min_y, c_max_x, c_max_y),
+            patch_w: self.scene.patch_w.max(1),
+            patch_h: self.scene.patch_h.max(1),
+            patch_dest: (p_dx, p_dy),
         };
 
-        // Evaluate rasterization stages via reference execution
-        let mut framebuffer = self.scene.background.clone();
+        let graph = build_interactive_graphics_pipeline(params)
+            .map_err(|e| format!("Failed to build interactive graphics pipeline graph: {e}"))?;
 
-        // 1. Path rasterization
-        if segment_count > 0 {
-            let p_path = path_rasterize_segments(
-                "segments",
-                "bg",
-                "out",
-                self.scene.width,
-                self.scene.height,
-                segment_count,
-                self.scene.stroke_radius,
-                self.scene.stroke_color,
-            );
-            let inputs = vec![
-                Value::from(vyre_primitives::wire::pack_u32_slice(&self.scene.segments)),
-                Value::from(vyre_primitives::wire::pack_u32_slice(&framebuffer)),
-            ];
-            let out = reference_eval(&p_path, &inputs)
-                .map_err(|e| format!("Path rasterization failed: {e:?}"))?;
-            if let Some(val) = out.first() {
-                let bytes = val.to_bytes();
-                framebuffer = vyre_primitives::wire::decode_u32_le_bytes_all(&bytes);
+        let mut facts = ExternalFacts::new(Digest([76; 32]), BTreeMap::new());
+        for (v_id, v) in graph.values().iter().enumerate() {
+            if v.contract.lifetime == ValueLifetime::Constant {
+                facts.constant_identities.insert(GraphValueId(v_id as u32), Digest([76; 32]));
             }
         }
 
-        // 2. Text run rasterization
-        if glyph_count > 0 {
-            let p_text = text_run_blend(
-                "glyphs",
-                glyph_count,
-                "atlas",
-                self.scene.atlas_w,
-                self.scene.atlas_h,
-                "bg",
-                "out",
-                self.scene.width,
-                self.scene.height,
-            );
-            let inputs = vec![
-                Value::from(vyre_primitives::wire::pack_u32_slice(&self.scene.glyphs)),
-                Value::from(vyre_primitives::wire::pack_u32_slice(&self.scene.glyph_atlas)),
-                Value::from(vyre_primitives::wire::pack_u32_slice(&framebuffer)),
-            ];
-            let out = reference_eval(&p_text, &inputs)
-                .map_err(|e| format!("Text rasterization failed: {e:?}"))?;
-            if let Some(val) = out.first() {
-                let bytes = val.to_bytes();
-                framebuffer = vyre_primitives::wire::decode_u32_le_bytes_all(&bytes);
-            }
+        let request = CompileRequest::new(
+            graph,
+            facts,
+            DeviceFacts::unknown(),
+            SearchBudget::new(1, 1, 1, 0, 100_000),
+            CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
+        )
+        .validate()
+        .map_err(|e| format!("Pipeline compile request validation failed: {e}"))?;
+
+        let backends = vyre::registered_backends().map_err(|e| e.to_string())?;
+        let backend = backends
+            .iter()
+            .find(|b| b.id == "cuda")
+            .or_else(|| backends.iter().find(|b| b.id == "wgpu"))
+            .or_else(|| backends.first())
+            .copied()
+            .ok_or_else(|| {
+                "no admitted device backend registered for interactive graphics frame submission; expected cuda or wgpu".to_string()
+            })?;
+
+        let session = vyre::ArtifactSession::compile(backend, &request)
+            .map_err(|e| format!("ArtifactSession compilation failed: {e}"))?;
+
+        let mut boxes = self.scene.boxes.clone();
+        if boxes.is_empty() {
+            boxes = vec![0, 0, 1, 1];
+        }
+        let mut segments = self.scene.segments.clone();
+        if segments.is_empty() {
+            segments = vec![0, 0, 0, 0];
+        }
+        let mut glyphs = self.scene.glyphs.clone();
+        if glyphs.is_empty() {
+            glyphs = vec![0, 0, 1, 1, 0, 0, 0];
+        }
+        let mut atlas = self.scene.glyph_atlas.clone();
+        if atlas.is_empty() {
+            atlas = vec![0];
+        }
+        let bg = self.scene.background.clone();
+        let mut patch = self.scene.patch.clone();
+        if patch.is_empty() {
+            patch = vec![0; (self.scene.patch_w.max(1) * self.scene.patch_h.max(1)) as usize];
         }
 
-        // 3. Scissor clipping
-        let (c_min_x, c_min_y, c_max_x, c_max_y) = self.scene.clip_rect;
-        let p_clip = apply_scissor_rect(
-            "in",
-            "out",
-            self.scene.width,
-            self.scene.height,
-            c_min_x,
-            c_min_y,
-            c_max_x,
-            c_max_y,
-        );
-        let inputs = vec![Value::from(vyre_primitives::wire::pack_u32_slice(&framebuffer))];
-        let out = reference_eval(&p_clip, &inputs)
-            .map_err(|e| format!("Clipping failed: {e:?}"))?;
-        if let Some(val) = out.first() {
-            let bytes = val.to_bytes();
-            framebuffer = vyre_primitives::wire::decode_u32_le_bytes_all(&bytes);
-        }
+        let boxes_bytes: Vec<u8> = boxes.iter().flat_map(|x| x.to_le_bytes()).collect();
+        let segments_bytes: Vec<u8> = segments.iter().flat_map(|x| x.to_le_bytes()).collect();
+        let glyphs_bytes: Vec<u8> = glyphs.iter().flat_map(|x| x.to_le_bytes()).collect();
+        let atlas_bytes: Vec<u8> = atlas.iter().flat_map(|x| x.to_le_bytes()).collect();
+        let bg_bytes: Vec<u8> = bg.iter().flat_map(|x| x.to_le_bytes()).collect();
+        let patch_bytes: Vec<u8> = patch.iter().flat_map(|x| x.to_le_bytes()).collect();
 
-        // 4. Dirty patch update
-        if self.scene.patch_w > 0 && self.scene.patch_h > 0 && !self.scene.patch.is_empty() {
-            let (p_dx, p_dy) = self.scene.patch_dest;
-            let p_patch = dirty_region_patch_rgba(
-                "atlas",
-                "patch",
-                self.scene.width,
-                self.scene.height,
-                self.scene.patch_w,
-                self.scene.patch_h,
-                p_dx,
-                p_dy,
-                "out",
-            );
-            let inputs = vec![
-                Value::from(vyre_primitives::wire::pack_u32_slice(&framebuffer)),
-                Value::from(vyre_primitives::wire::pack_u32_slice(&self.scene.patch)),
-            ];
-            let out = reference_eval(&p_patch, &inputs)
-                .map_err(|e| format!("Dirty region patch failed: {e:?}"))?;
-            if let Some(val) = out.first() {
-                let bytes = val.to_bytes();
-                framebuffer = vyre_primitives::wire::decode_u32_le_bytes_all(&bytes);
-            }
-        }
+        let inputs = [
+            &boxes_bytes[..],
+            &segments_bytes[..],
+            &glyphs_bytes[..],
+            &atlas_bytes[..],
+            &bg_bytes[..],
+            &patch_bytes[..],
+        ];
+        let completion = session
+            .submit_host_inputs(&inputs)
+            .map_err(|e| format!("Frame submission failed: {e}"))?;
+
+        let outputs = session
+            .ordered_outputs(&completion)
+            .map_err(|e| format!("Frame output projection failed: {e}"))?;
+
+        let out_bytes = outputs
+            .last()
+            .ok_or_else(|| "missing framebuffer output".to_string())?;
+        let framebuffer = out_bytes
+            .chunks_exact(4)
+            .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+            .collect::<Vec<u32>>();
 
         self.retained_framebuffer = framebuffer.clone();
         self.total_frames_rendered += 1;
         Ok(framebuffer)
     }
-
     /// Recover from simulated device loss by resetting state and invalidating retained resources.
     pub fn recover_device_loss(&mut self) -> Result<(), String> {
         self.is_device_lost = false;

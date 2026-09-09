@@ -10,8 +10,6 @@ use super::builder::linear;
 
 pub(super) const LINEAR_TILED_OP_ID: &str = "vyre-libs::nn::linear_tiled";
 pub(super) const LINEAR_TILED_REFERENCE_OP_ID: &str = "vyre-libs::nn::linear_tiled_reference";
-pub(super) const LINEAR_TILED_TILE: u32 = 32;
-pub(super) const LINEAR_TILED_MIN_WORK: u32 = 1024;
 
 /// Build a tiled linear-layer Program: `out[j] = b[j] + sum_k x[k] * w[k, j]`.
 ///

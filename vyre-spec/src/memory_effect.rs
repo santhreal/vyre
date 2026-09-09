@@ -50,7 +50,12 @@ impl MemoryEffect {
     pub const fn is_synchronizing(self) -> bool {
         match self {
             Self::Synchronizing | Self::Collective => true,
-            Self::Pure | Self::Read | Self::Write | Self::Atomic | Self::AsyncTransfer | Self::Fault => false,
+            Self::Pure
+            | Self::Read
+            | Self::Write
+            | Self::Atomic
+            | Self::AsyncTransfer
+            | Self::Fault => false,
         }
     }
 }

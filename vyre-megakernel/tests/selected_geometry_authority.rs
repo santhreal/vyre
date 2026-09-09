@@ -18,9 +18,9 @@ use vyre_megakernel::allocation::{
 use vyre_megakernel::{
     compile, compile_selected_modules, Artifact, ArtifactNodeId, ArtifactValueId, CompileObjective,
     CompileRequest, DependencyEndpoint, DeviceFacts, Digest, EmittedTargetModule, EntryPersistence,
-    ExecutionMode, ExternalFacts, GeometryRecord, ObjectiveMetric, ResourceLifetime, ResourceRecord,
-    SearchBudget, TargetEntryPoint, TargetModuleBundle, TargetPayload, TargetPayloadFormat,
-    TargetProfile,
+    ExecutionMode, ExternalFacts, GeometryRecord, ObjectiveMetric, ResourceLifetime,
+    ResourceRecord, SearchBudget, TargetEntryPoint, TargetModuleBundle, TargetPayload,
+    TargetPayloadFormat, TargetProfile,
 };
 
 use vyre_test_support::graph_values::{graph_output, u32_symbolic};

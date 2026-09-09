@@ -17,8 +17,14 @@ fn poisoned_bind_group_cache_lock_recovers_without_aborting_dispatch_path() {
 
     std::panic::catch_unwind(|| {
         let inner = cache.lock_cache();
-        assert!(inner.entries.is_empty(), "recovered cache entries must be empty after poison");
-        assert!(inner.lru.is_empty(), "recovered cache LRU must be empty after poison");
+        assert!(
+            inner.entries.is_empty(),
+            "recovered cache entries must be empty after poison"
+        );
+        assert!(
+            inner.lru.is_empty(),
+            "recovered cache LRU must be empty after poison"
+        );
     })
     .expect("Fix: poisoned bind-group cache must recover cleanly so GPU dispatch does not abort");
 }

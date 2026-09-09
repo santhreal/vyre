@@ -68,8 +68,7 @@ fn chained_artifact() -> Artifact {
         ExternalFacts::new(Digest([0xA5; 32]), BTreeMap::from([("items".into(), 24)])),
         DeviceFacts::unknown(),
         SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
-        CompileObjective::minimize_latency()
-            .with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
     .expect("Fix: keep the fixture request validatable.");

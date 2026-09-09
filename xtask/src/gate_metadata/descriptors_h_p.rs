@@ -1,7 +1,7 @@
 //! Gate descriptors for gates starting with H through P.
 
-use crate::gate::{GateDescriptor, ResourceClass};
 use super::artifacts::*;
+use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with H through P.
 pub const GATES_H_P: [GateDescriptor; 59] = [

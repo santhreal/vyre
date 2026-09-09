@@ -95,40 +95,28 @@ pub fn bilinear_resample_rgba(
             "p00",
             Expr::load(
                 input,
-                Expr::add(
-                    Expr::var("x0"),
-                    Expr::mul(Expr::var("y0"), Expr::u32(in_w)),
-                ),
+                Expr::add(Expr::var("x0"), Expr::mul(Expr::var("y0"), Expr::u32(in_w))),
             ),
         ),
         Node::let_bind(
             "p10",
             Expr::load(
                 input,
-                Expr::add(
-                    Expr::var("x1"),
-                    Expr::mul(Expr::var("y0"), Expr::u32(in_w)),
-                ),
+                Expr::add(Expr::var("x1"), Expr::mul(Expr::var("y0"), Expr::u32(in_w))),
             ),
         ),
         Node::let_bind(
             "p01",
             Expr::load(
                 input,
-                Expr::add(
-                    Expr::var("x0"),
-                    Expr::mul(Expr::var("y1"), Expr::u32(in_w)),
-                ),
+                Expr::add(Expr::var("x0"), Expr::mul(Expr::var("y1"), Expr::u32(in_w))),
             ),
         ),
         Node::let_bind(
             "p11",
             Expr::load(
                 input,
-                Expr::add(
-                    Expr::var("x1"),
-                    Expr::mul(Expr::var("y1"), Expr::u32(in_w)),
-                ),
+                Expr::add(Expr::var("x1"), Expr::mul(Expr::var("y1"), Expr::u32(in_w))),
             ),
         ),
         // Interpolate R

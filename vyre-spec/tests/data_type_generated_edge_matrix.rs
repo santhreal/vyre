@@ -6,11 +6,11 @@
 
 use std::collections::BTreeSet;
 
+use vyre_spec::{DataType, QuantizationScale, QuantizationZeroPoint};
 use vyre_spec::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionRuleConditionId,
     ExtensionTernaryOpId, ExtensionUnOpId,
 };
-use vyre_spec::{DataType, QuantizationScale, QuantizationZeroPoint};
 
 use crate::data_type_edge_matrix_cases;
 

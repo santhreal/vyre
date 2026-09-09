@@ -3333,6 +3333,7 @@ dependencies = [
  "vyre-driver-cuda",
  "vyre-driver-wgpu",
  "vyre-foundation",
+ "vyre-libs",
  "vyre-megakernel",
  "vyre-runtime",
  "vyre-spec",

@@ -104,7 +104,9 @@ impl AsyncTransactionLifecycle {
     pub const fn can_transition_to(self, next: Self) -> bool {
         match (self, next) {
             (Self::Submitted, Self::InFlight | Self::Failed | Self::Aborted) => true,
-            (Self::InFlight, Self::Arrived | Self::Committed | Self::Failed | Self::Aborted) => true,
+            (Self::InFlight, Self::Arrived | Self::Committed | Self::Failed | Self::Aborted) => {
+                true
+            }
             (Self::Arrived, Self::Committed | Self::Failed | Self::Aborted) => true,
             _ => false,
         }

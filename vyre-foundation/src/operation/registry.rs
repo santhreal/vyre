@@ -26,6 +26,9 @@ impl OperationRegistry {
             .collect::<Vec<_>>();
         ordered.sort_unstable_by_key(|entry| entry.id);
         let mut by_id = BTreeMap::new();
+        let known_laws: std::collections::BTreeSet<&str> =
+            vyre_spec::law_catalog().iter().copied().collect();
+
         for entry in &ordered {
             if entry.semantic_version == 0 {
                 return Err(OperationRegistryError::InvalidVersion { id: entry.id });
@@ -34,6 +37,48 @@ impl OperationRegistry {
                 return Err(OperationRegistryError::MissingSemantics { id: entry.id });
             }
             validate_identity(entry)?;
+            if !entry.has_transform_decision() {
+                return Err(OperationRegistryError::MissingTransformDecision { id: entry.id });
+            }
+            if let Some(reason) = entry.opaque_reason() {
+                let trimmed = reason.trim();
+                let mut lower = trimmed.to_ascii_lowercase();
+                lower.retain(|c| !c.is_whitespace());
+                if trimmed.len() < 5
+                    || matches!(
+                        lower.as_str(),
+                        "todo"
+                            | "tbd"
+                            | "placeholder"
+                            | "none"
+                            | "unimplemented"
+                            | "opaque"
+                            | "no-op"
+                            | "notransform"
+                            | "notransforms"
+                            | "notimplemented"
+                    )
+                    || lower.starts_with("todo:")
+                    || lower.starts_with("placeholder:")
+                {
+                    return Err(OperationRegistryError::InvalidOpaqueReason {
+                        id: entry.id,
+                        reason,
+                    });
+                }
+            }
+            for &law in entry.laws {
+                if !known_laws.contains(law) {
+                    return Err(OperationRegistryError::UnknownAlgebraicLaw { id: entry.id, law });
+                }
+            }
+            let record = entry.contract_record();
+            if let Err(err) = record.validate() {
+                return Err(OperationRegistryError::ContractValidationFailed {
+                    id: entry.id,
+                    message: err.to_string(),
+                });
+            }
             if by_id.insert(entry.id, *entry).is_some() {
                 return Err(OperationRegistryError::DuplicateId { id: entry.id });
             }

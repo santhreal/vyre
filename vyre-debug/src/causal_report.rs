@@ -28,7 +28,9 @@ impl CausalReceiptReport {
         let mut phase_durations_ms: BTreeMap<String, f64> = BTreeMap::new();
 
         for event in &receipt.events {
-            let entry = phase_durations_ms.entry(event.phase.name().to_string()).or_default();
+            let entry = phase_durations_ms
+                .entry(event.phase.name().to_string())
+                .or_default();
             *entry += (event.wall_time_ns as f64) / 1_000_000.0;
         }
 

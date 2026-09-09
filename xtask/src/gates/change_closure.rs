@@ -293,7 +293,10 @@ fn extract_file_closures(
     for item in &file.items {
         if let syn::Item::Enum(e) = item {
             // Only process public or crate-visible enums, or enums with variants
-            let is_pub = matches!(e.vis, syn::Visibility::Public(_) | syn::Visibility::Restricted(_));
+            let is_pub = matches!(
+                e.vis,
+                syn::Visibility::Public(_) | syn::Visibility::Restricted(_)
+            );
             if !is_pub && e.variants.is_empty() {
                 continue;
             }
@@ -307,7 +310,10 @@ fn extract_file_closures(
                 .cloned()
                 .unwrap_or_else(|| "leaf".to_string());
 
-            let ctors = impl_constructors.get(&type_name).cloned().unwrap_or_default();
+            let ctors = impl_constructors
+                .get(&type_name)
+                .cloned()
+                .unwrap_or_default();
 
             for variant in &e.variants {
                 let var_name = variant.ident.to_string();

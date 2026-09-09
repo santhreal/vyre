@@ -1264,7 +1264,11 @@ mod tests {
         );
         let anchor = "static PRIMARY_PROVIDER_LINK: fn() -> Option<&'static str> = vyre_driver_cuda::registered_backend_id;";
         assert!(
-            words_in(&CONTRACT, &mask_optional_backend_interface(anchor, &interfaces)).is_empty(),
+            words_in(
+                &CONTRACT,
+                &mask_optional_backend_interface(anchor, &interfaces)
+            )
+            .is_empty(),
             "Fix: the exact private link anchor is a manifest-proven compiler interface."
         );
 

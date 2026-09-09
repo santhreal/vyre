@@ -52,14 +52,12 @@ impl PrerecordedDispatch {
     ///
     /// Returns a backend error when this command buffer was already submitted.
     pub fn replay(&self, queue: &wgpu::Queue) -> Result<wgpu::SubmissionIndex, BackendError> {
-        let command_buffer = self
-            .cb
-            .lock()
-            .map_err(|source| {
-                BackendError::new(format!(
-                    "pre-recorded dispatch mutex poisoned: {source}. Fix: drop this dispatch and record a fresh command buffer."
-                ))
-            })?
+        let command_buffer = vyre_driver::lock_policy::govern_mutex(
+            &self.cb,
+            "wgpu_prerecorded",
+            "cb",
+            vyre_driver::lock_policy::RecoveryClass::DeviceContextFatal,
+        )?
             .take()
             .ok_or_else(|| {
                 BackendError::new(

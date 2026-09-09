@@ -24,11 +24,6 @@ pub struct AsyncUringStream<'a> {
     pub(crate) pending_submissions: u32,
 }
 
-// SAFETY: raw pointer fields covered by GpuMappedBuffer's contract +
-// the constructor's safety commitment on megakernel_tail_ptr.
-unsafe impl Send for AsyncUringStream<'_> {}
-unsafe impl Sync for AsyncUringStream<'_> {}
-
 impl<'a> AsyncUringStream<'a> {
     /// Create a stream bound to the given ring state, GPU-mapped
     /// buffer, and megakernel tail pointer.
@@ -67,7 +62,7 @@ impl<'a> AsyncUringStream<'a> {
     ///
     /// `iovs_storage` must live until this SQE's completion is reaped;
     /// the kernel dereferences `iov_base` at I/O time, not submit time.
-    pub unsafe fn submit_read_to_gpu(
+    pub fn submit_read_to_gpu(
         &mut self,
         fd: i32,
         offset: u64,
@@ -80,7 +75,7 @@ impl<'a> AsyncUringStream<'a> {
         }
         let target_offset = checked_chunk_target_offset(chunk_idx, len)?;
         // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
-        unsafe { self.submit_read_to_gpu_at(fd, offset, len, target_offset, iovs_storage) }
+        self.submit_read_to_gpu_at(fd, offset, len, target_offset, iovs_storage)
     }
 
     /// Submit a read directly into a byte offset inside the mapped buffer.
@@ -99,7 +94,7 @@ impl<'a> AsyncUringStream<'a> {
     /// # Safety
     ///
     /// `iovs_storage` must live until this SQE's completion is reaped.
-    pub unsafe fn submit_read_to_gpu_at(
+    pub fn submit_read_to_gpu_at(
         &mut self,
         fd: i32,
         offset: u64,
@@ -109,16 +104,14 @@ impl<'a> AsyncUringStream<'a> {
     ) -> Result<(), PipelineError> {
         // SAFETY: registered fixed buffers + file index are valid for the lifetime
         // of the ring; the SQE is built on the ring's own SQ slot.
-        unsafe {
-            self.submit_read_to_gpu_at_with_user_data(
-                fd,
-                offset,
-                len,
-                target_offset,
-                target_offset,
-                iovs_storage,
-            )
-        }
+        self.submit_read_to_gpu_at_with_user_data(
+            fd,
+            offset,
+            len,
+            target_offset,
+            target_offset,
+            iovs_storage,
+        )
     }
 
     /// Submit a read into an arbitrary byte offset and preserve caller-defined
@@ -134,7 +127,7 @@ impl<'a> AsyncUringStream<'a> {
     /// # Safety
     ///
     /// `iovs_storage` must live until this SQE's completion is reaped.
-    pub unsafe fn submit_read_to_gpu_at_with_user_data(
+    pub fn submit_read_to_gpu_at_with_user_data(
         &mut self,
         fd: i32,
         offset: u64,
@@ -166,11 +159,10 @@ impl<'a> AsyncUringStream<'a> {
 
         // SAFETY: bounds-checked above; writing to a sub-region of
         // the host-visible GpuMappedBuffer the caller committed.
-        let target_addr = unsafe {
-            self.gpu_buffer
-                .as_ptr()
-                .add(u64_to_usize(target_offset, "target offset")?)
-        };
+        let target_addr = self
+            .gpu_buffer
+            .as_ptr()
+            .wrapping_add(u64_to_usize(target_offset, "target offset")?);
 
         iovs_storage[0] = Iovec {
             iov_base: target_addr.cast::<core::ffi::c_void>(),
@@ -342,7 +334,7 @@ impl<'a> AsyncUringStream<'a> {
     ///   rejection returns an errno on the CQE, but a forged payload
     ///   can still trigger device-level misbehavior.
     #[cfg(feature = "uring-cmd-nvme")]
-    pub unsafe fn submit_nvme_passthrough(
+    pub fn submit_nvme_passthrough(
         &mut self,
         fd: i32,
         user_data: u64,
@@ -406,7 +398,7 @@ impl<'a> AsyncUringStream<'a> {
     /// region overlaps `chunk_idx * len .. (chunk_idx + 1) * len`
     /// inside the [`GpuMappedBuffer`]. Mis-indexing produces a kernel
     /// DMA into the wrong region  -  silent data corruption.
-    pub unsafe fn submit_read_fixed(
+    pub fn submit_read_fixed(
         &mut self,
         fd: i32,
         offset: u64,
@@ -416,16 +408,14 @@ impl<'a> AsyncUringStream<'a> {
     ) -> Result<(), PipelineError> {
         let target_offset = checked_chunk_target_offset(chunk_idx, len)?;
         // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
-        unsafe {
-            self.submit_read_fixed_at(
-                fd,
-                offset,
-                len,
-                target_offset,
-                buf_index,
-                usize_to_u64(chunk_idx, "chunk index")?,
-            )
-        }
+        self.submit_read_fixed_at(
+            fd,
+            offset,
+            len,
+            target_offset,
+            buf_index,
+            usize_to_u64(chunk_idx, "chunk index")?,
+        )
     }
 
     /// Submit an `IORING_OP_READ_FIXED` into a registered buffer at an
@@ -447,7 +437,7 @@ impl<'a> AsyncUringStream<'a> {
     /// `buf_index` must reference a still-registered iovec covering the
     /// target range, and `user_data` must remain meaningful to the caller
     /// until the CQE is reaped.
-    pub unsafe fn submit_read_fixed_at(
+    pub fn submit_read_fixed_at(
         &mut self,
         fd: i32,
         offset: u64,
@@ -476,11 +466,10 @@ impl<'a> AsyncUringStream<'a> {
 
         // SAFETY: bounds-checked target address inside the host-visible
         // GpuMappedBuffer the caller committed at construction.
-        let target_addr = unsafe {
-            self.gpu_buffer
-                .as_ptr()
-                .add(u64_to_usize(target_offset, "target offset")?)
-        };
+        let target_addr = self
+            .gpu_buffer
+            .as_ptr()
+            .wrapping_add(u64_to_usize(target_offset, "target offset")?);
 
         sqe.opcode = IORING_OP_READ_FIXED;
         sqe.fd = fd;
@@ -511,7 +500,7 @@ impl<'a> AsyncUringStream<'a> {
     /// `file_index` must name a still-registered fd.
     /// `iovs_storage` must outlive the completion. All other
     /// conditions match `submit_read_to_gpu`.
-    pub unsafe fn submit_read_to_gpu_fixed_file(
+    pub fn submit_read_to_gpu_fixed_file(
         &mut self,
         file_index: i32,
         offset: u64,
@@ -543,11 +532,10 @@ impl<'a> AsyncUringStream<'a> {
 
         // SAFETY: same invariants as submit_read_to_gpu, plus the
         // caller committed that file_index is a registered fd.
-        let target_addr = unsafe {
-            self.gpu_buffer
-                .as_ptr()
-                .add(u64_to_usize(target_offset, "target offset")?)
-        };
+        let target_addr = self
+            .gpu_buffer
+            .as_ptr()
+            .wrapping_add(u64_to_usize(target_offset, "target offset")?);
         iovs_storage[0] = Iovec {
             iov_base: target_addr.cast::<core::ffi::c_void>(),
             iov_len: u32_to_usize(len, "read length")?,
@@ -573,7 +561,7 @@ impl<'a> AsyncUringStream<'a> {
     /// structured error rather than a link failure.
     #[cfg(not(feature = "uring-cmd-nvme"))]
     #[allow(clippy::unused_self, clippy::missing_safety_doc)]
-    pub unsafe fn submit_nvme_passthrough(
+    pub fn submit_nvme_passthrough(
         &mut self,
         _fd: i32,
         _user_data: u64,

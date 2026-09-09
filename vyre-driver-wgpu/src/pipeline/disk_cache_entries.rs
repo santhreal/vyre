@@ -61,20 +61,27 @@ static TEST_DISK_PIPELINE_CACHE_ROOT: LazyLock<Mutex<Option<PathBuf>>> =
 
 #[cfg(test)]
 pub(crate) fn set_test_disk_pipeline_cache_root(path: Option<PathBuf>) -> Option<PathBuf> {
-    let mut guard = TEST_DISK_PIPELINE_CACHE_ROOT
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut guard = vyre_driver::lock_policy::govern_mutex(
+        &TEST_DISK_PIPELINE_CACHE_ROOT,
+        "wgpu_disk_cache_entries",
+        "TEST_DISK_PIPELINE_CACHE_ROOT",
+        vyre_driver::lock_policy::RecoveryClass::TransactionallyRecoverable,
+    )
+    .ok()?;
     std::mem::replace(&mut *guard, path)
 }
 
 pub(crate) fn disk_pipeline_cache_dir() -> PathBuf {
     #[cfg(test)]
-    if let Some(root) = TEST_DISK_PIPELINE_CACHE_ROOT
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-        .clone()
-    {
-        return root.join("pipeline");
+    if let Ok(guard) = vyre_driver::lock_policy::govern_mutex(
+        &TEST_DISK_PIPELINE_CACHE_ROOT,
+        "wgpu_disk_cache_entries",
+        "TEST_DISK_PIPELINE_CACHE_ROOT",
+        vyre_driver::lock_policy::RecoveryClass::TransactionallyRecoverable,
+    ) {
+        if let Some(root) = guard.clone() {
+            return root.join("pipeline");
+        }
     }
 
     std::env::var_os("VYRE_CACHE_DIR")

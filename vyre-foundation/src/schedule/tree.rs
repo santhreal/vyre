@@ -232,7 +232,11 @@ impl ScheduleTree {
     pub fn validate(&self) -> Result<(), ScheduleLegalityError> {
         match self {
             Self::Leaf(op) => validate_op(op),
-            Self::Node { op, child, certificate } => {
+            Self::Node {
+                op,
+                child,
+                certificate,
+            } => {
                 validate_op(op)?;
                 if let Some(cert) = certificate {
                     if !cert.direction_preserved {
@@ -280,7 +284,9 @@ fn validate_op(op: &ScheduleOp) -> Result<(), ScheduleLegalityError> {
                 return Err(ScheduleLegalityError::Zero("vector_width"));
             }
         }
-        ScheduleOp::AsyncPipeline { stages, ring_size, .. } => {
+        ScheduleOp::AsyncPipeline {
+            stages, ring_size, ..
+        } => {
             if *stages == 0 || *ring_size == 0 {
                 return Err(ScheduleLegalityError::InvalidPipelineRoles);
             }

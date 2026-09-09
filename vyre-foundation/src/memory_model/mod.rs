@@ -23,7 +23,9 @@ pub mod storage;
 pub use async_tx::{exhaustiveness_check_async_transaction_lifecycle, AsyncTransactionLifecycle};
 pub use atomic::{exhaustiveness_check_atomic_ordering, AtomicOrdering};
 pub use collective::{exhaustiveness_check_collective_group, CollectiveGroup};
-pub use failure::{exhaustiveness_check_failure_cancellation_behavior, FailureCancellationBehavior};
+pub use failure::{
+    exhaustiveness_check_failure_cancellation_behavior, FailureCancellationBehavior,
+};
 pub use fence::{
     exhaustiveness_check_barrier_participation, exhaustiveness_check_fence_semantics,
     BarrierParticipation, FenceSemantics,

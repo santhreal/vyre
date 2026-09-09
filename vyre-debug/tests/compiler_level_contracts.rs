@@ -1,8 +1,8 @@
 //! Tests for 5-level compiler inspection, candidate reports, allocation reports, and structural diffs.
 
 use vyre::compiler::{
-    compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
-    ObjectiveMetric, SearchBudget,
+    compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
+    SearchBudget,
 };
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
 use vyre_debug::{
@@ -153,8 +153,10 @@ fn program_and_graph_structural_diffs() {
 
     let g1 = sample_graph();
     let mut g2 = ProgramGraph::new();
-    g2.add_node("node1", sample_program(), Vec::new(), Vec::new()).unwrap();
-    g2.add_node("node2", sample_program(), Vec::new(), Vec::new()).unwrap();
+    g2.add_node("node1", sample_program(), Vec::new(), Vec::new())
+        .unwrap();
+    g2.add_node("node2", sample_program(), Vec::new(), Vec::new())
+        .unwrap();
 
     let diff_g = diff_program_graphs(&g1, &g2);
     assert!(!diff_g.is_identical);

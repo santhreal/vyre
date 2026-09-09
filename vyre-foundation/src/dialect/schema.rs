@@ -320,7 +320,10 @@ impl ExternalLayoutDeclaration {
     /// # Errors
     ///
     /// Returns [`SchemaTranslationError::OverflowingLayout`] on extent arithmetic overflow.
-    pub fn compute_extent_bytes(&self, dialect: &'static str) -> Result<u64, SchemaTranslationError> {
+    pub fn compute_extent_bytes(
+        &self,
+        dialect: &'static str,
+    ) -> Result<u64, SchemaTranslationError> {
         let elem_size = self.element_type.min_bytes() as u64;
         let mut max_offset = 0_u64;
         for (&d, &s) in self.shape.iter().zip(self.strides.iter()) {
@@ -637,7 +640,10 @@ pub fn validate_node_fields(
                 field: field_name.clone(),
             });
         }
-        if let Some(contract) = declared_fields.iter().find(|f| f.name == field_name.as_str()) {
+        if let Some(contract) = declared_fields
+            .iter()
+            .find(|f| f.name == field_name.as_str())
+        {
             if let Err(reason) = contract.field_type.parse_and_validate(field_val) {
                 return Err(SchemaTranslationError::OverflowingField {
                     dialect,

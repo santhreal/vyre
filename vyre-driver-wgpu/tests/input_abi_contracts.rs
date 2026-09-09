@@ -43,7 +43,11 @@ fn sample_test_programs() -> Vec<Program> {
                 BufferDecl::output("out", 1, DataType::U32).with_count(4),
             ],
             [1, 1, 1],
-            vec![Node::store("out", Expr::gid_x(), Expr::load("in", Expr::gid_x()))],
+            vec![Node::store(
+                "out",
+                Expr::gid_x(),
+                Expr::load("in", Expr::gid_x()),
+            )],
         ),
         // 1 read, 1 output, 1 read-write, 1 workgroup -> 2 host inputs
         Program::wrapped(
@@ -64,7 +68,8 @@ fn sample_test_programs() -> Vec<Program> {
             vec![
                 BufferDecl::read("in1", 0, DataType::U32).with_count(4),
                 BufferDecl::read("in2", 1, DataType::U32).with_count(4),
-                BufferDecl::storage("params", 2, BufferAccess::Uniform, DataType::U32).with_count(1),
+                BufferDecl::storage("params", 2, BufferAccess::Uniform, DataType::U32)
+                    .with_count(1),
                 BufferDecl::output("out", 3, DataType::U32).with_count(4),
             ],
             [1, 1, 1],
@@ -89,7 +94,11 @@ fn sample_test_programs() -> Vec<Program> {
                 BufferDecl::output("out", 2, DataType::U32).with_count(4),
             ],
             [1, 1, 1],
-            vec![Node::store("out", Expr::gid_x(), Expr::load("in", Expr::gid_x()))],
+            vec![Node::store(
+                "out",
+                Expr::gid_x(),
+                Expr::load("in", Expr::gid_x()),
+            )],
         ),
     ]
 }
@@ -100,11 +109,7 @@ fn canonical_inputs_for_program(program: &Program) -> Vec<Vec<u8>> {
         .iter()
         .filter(|decl| decl.consumes_host_input())
         .map(|decl| {
-            let bytes = decl
-                .static_byte_len()
-                .ok()
-                .flatten()
-                .unwrap_or(16);
+            let bytes = decl.static_byte_len().ok().flatten().unwrap_or(16);
             vec![0u8; bytes]
         })
         .collect()
@@ -127,11 +132,7 @@ fn host_input_abi_refusal_contracts_non_device() {
         let canonical_inputs = canonical_inputs_for_program(program);
         assert_eq!(canonical_inputs.len(), expected_count);
 
-        let ref_inputs: Vec<Value> = canonical_inputs
-            .iter()
-            .cloned()
-            .map(Value::from)
-            .collect();
+        let ref_inputs: Vec<Value> = canonical_inputs.iter().cloned().map(Value::from).collect();
 
         assert!(
             vyre_reference::reference_eval(program, &ref_inputs).is_ok(),
@@ -289,11 +290,7 @@ fn reference_interpreter_and_wgpu_backend_agree_on_accepted_input_counts() {
 
         // Exact inputs
         let wgpu_inputs = canonical_inputs_for_program(program);
-        let ref_inputs: Vec<Value> = wgpu_inputs
-            .iter()
-            .cloned()
-            .map(Value::from)
-            .collect();
+        let ref_inputs: Vec<Value> = wgpu_inputs.iter().cloned().map(Value::from).collect();
 
         assert!(
             vyre_reference::reference_eval(program, &ref_inputs).is_ok(),
@@ -309,11 +306,7 @@ fn reference_interpreter_and_wgpu_backend_agree_on_accepted_input_counts() {
         // One extra input
         let mut wgpu_extra = wgpu_inputs.clone();
         wgpu_extra.push(vec![0u8; 4]);
-        let ref_extra: Vec<Value> = wgpu_extra
-            .iter()
-            .cloned()
-            .map(Value::from)
-            .collect();
+        let ref_extra: Vec<Value> = wgpu_extra.iter().cloned().map(Value::from).collect();
 
         let ref_extra_err = vyre_reference::reference_eval(program, &ref_extra)
             .expect_err("reference_eval must reject extra input");
@@ -338,11 +331,7 @@ fn reference_interpreter_and_wgpu_backend_agree_on_accepted_input_counts() {
         // One fewer input (if expected_count > 0)
         if expected_count > 0 {
             let wgpu_under = wgpu_inputs[..expected_count - 1].to_vec();
-            let ref_under: Vec<Value> = wgpu_under
-                .iter()
-                .cloned()
-                .map(Value::from)
-                .collect();
+            let ref_under: Vec<Value> = wgpu_under.iter().cloned().map(Value::from).collect();
 
             let ref_under_err = vyre_reference::reference_eval(program, &ref_under)
                 .expect_err("reference_eval must reject missing input");

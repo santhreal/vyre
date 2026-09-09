@@ -109,12 +109,11 @@ pub use identity::{
 };
 pub use level_stage::{registered_level_stage, PayloadAttachment};
 pub use objective::{
-    BoundViolation, CompileObjective, CoveragePolicy, EnergyPolicy,
-    InputToVisibleMeasurement, InterferenceAssumptions, LatencyPercentile, MetricFigures,
-    MetricSequence, ObjectiveBounds, ObjectiveMetric, PortfolioPolicy, RealTimeDeadline,
-    RealTimeObjective, RealTimeViolation, RequiredFact, RiskStatistic, WarmColdState,
-    WorkloadAggregation, WorkloadArrivalTrace, WorkloadClass, WorkloadProfile,
-    OBJECTIVE_SCHEMA_VERSION, REAL_TIME_OBJECTIVE_SCHEMA_VERSION,
+    BoundViolation, CompileObjective, CoveragePolicy, EnergyPolicy, InputToVisibleMeasurement,
+    InterferenceAssumptions, LatencyPercentile, MetricFigures, MetricSequence, ObjectiveBounds,
+    ObjectiveMetric, PortfolioPolicy, RealTimeDeadline, RealTimeObjective, RealTimeViolation,
+    RequiredFact, RiskStatistic, WarmColdState, WorkloadAggregation, WorkloadArrivalTrace,
+    WorkloadClass, WorkloadProfile, OBJECTIVE_SCHEMA_VERSION, REAL_TIME_OBJECTIVE_SCHEMA_VERSION,
 };
 pub use portfolio::{compile_portfolio, compile_portfolio_measured, ArtifactPortfolio};
 pub use request::{

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Runtime reduces its public surface to generic bounded routed-work queues, speculative state transactions, content-addressed retained-page caches, paged-resource bindings, and typed resource transfers, eliminating model-specific expert, token, MTP, KV-cache, and safetensors abstractions."

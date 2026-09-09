@@ -230,6 +230,9 @@ impl std::fmt::Display for FullReport {
 pub use verify::format_verify_errors;
 pub use verify::{verify, VerifyError, VerifyErrorKind, VerifyResult};
 
+pub use analyses::contraction_candidates::{
+    ContractionCandidate, ContractionPlan, ContractionStrategy,
+};
 pub use descriptor::{
     descriptor_trap_tags, scan_construct_intent_mapping, AsyncTransaction, AsyncTransactionError,
     AsyncWaitSpec, BarrierPhase, BindingLayout, BindingSlot, BindingVisibility, DescriptorIntent,
@@ -246,9 +249,6 @@ pub use descriptor::{
 pub use descriptor::{KernelOpsIter, Name};
 pub use equivalence::{check_effects, BindingEffects, EffectSignature, EquivalenceError};
 pub use error::LowerError;
-pub use analyses::contraction_candidates::{
-    ContractionCandidate, ContractionPlan, ContractionStrategy,
-};
 pub use level_stage::registered_level_stage;
 /// Re-exported so a caller building a `KernelDescriptor` by hand through
 /// `descriptor_builder` can place a Shared or Scratch binding in the range

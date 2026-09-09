@@ -48,7 +48,9 @@ impl EmitError {
     pub fn retargeted_diagnostic(&self, target: &str, stage_note: &'static str) -> Diagnostic {
         let mut diagnostic = self.diagnostic();
         diagnostic.target = Some(target.to_string());
-        diagnostic.notes.push(std::borrow::Cow::Borrowed(stage_note));
+        diagnostic
+            .notes
+            .push(std::borrow::Cow::Borrowed(stage_note));
         diagnostic
     }
 
@@ -68,7 +70,9 @@ impl EmitError {
                 "NAGA002_UNSUPPORTED_CAPABILITY",
                 format!("unsupported emission capability `{cap}`"),
             )
-            .with_fix("select a target that supports this capability or disable optional shader feature")
+            .with_fix(
+                "select a target that supports this capability or disable optional shader feature",
+            )
             .with_cause("unsupported_capability", (*cap).to_string())
             .with_context_value("capability", (*cap).to_string())
             .with_retry(RetryClass::Never),

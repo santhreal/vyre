@@ -20,11 +20,11 @@ static PRIMARY_PROVIDER_LINK: fn() -> Option<&'static str> =
 static PORTABLE_PROVIDER_LINK: fn() -> Option<&'static str> =
     vyre_driver_wgpu::registered_backend_id;
 
-/// The vyre Program model.
+/// The vyre Program and Graph model.
 ///
-/// This module defines `Program`, the frozen, serializable model that every
-/// frontend emits and every backend consumes. It has zero external
-/// dependencies so that spec tools can parse it without pulling in GPU
+/// This module defines `Program` and `ProgramGraph`, the frozen, serializable
+/// model that every frontend emits and every backend consumes. It has zero
+/// external dependencies so that spec tools can parse it without pulling in GPU
 /// libraries.
 /// Public API re-export.
 pub use vyre_foundation::ir;
@@ -32,23 +32,57 @@ pub use vyre_foundation::ir;
 /// Domain-neutral schema and dialect translation contracts.
 pub use vyre_foundation::dialect;
 
+/// Numerical contracts, quantization schemas, and floating-point precision policies.
+pub use vyre_foundation::numeric;
+
+/// Canonical semantic operation registration and target facet views.
+pub use vyre_foundation::operation;
+
 /// Soundness markers and precision contracts from the frozen specification.
 /// Public API re-export.
 pub use vyre_spec::soundness;
 
-/// Whole-program compiler request, artifact, payload, and target-facet APIs.
+/// Whole-program compiler request, artifact, payload, receipt, and target-facet APIs.
 pub mod compiler {
+    pub use vyre_megakernel::specialization::{
+        compile_specialized_portfolio, compile_specialized_portfolio_measured, AxisDomain,
+        AxisValue, CoverageProof, GuardTerm, PortfolioEnvelope, PortfolioVariant, RemainderKind,
+        SpecializationAxis, SpecializationContract, SpecializedPortfolio, SpecializedRemainder,
+        TargetCapabilityAxis, TargetResourceAxis, VariantGuard, MAX_COVERAGE_CELLS,
+        MAX_PROPOSED_VARIANTS, PORTFOLIO_ENVELOPE_SCHEMA_VERSION, SPECIALIZATION_SCHEMA_VERSION,
+    };
     pub use vyre_megakernel::{
-        compile, Artifact, ArtifactEnvelope, CompileObjective, CompileRequest, DeviceFacts,
-        Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetPayload, TargetPayloadFormat,
-        TargetProfile, ValidatedCompileRequest,
+        attach_target, compile, compile_measured, compile_portfolio, compile_portfolio_measured,
+        compile_selected_modules, target_identity, AbiAccess, Artifact, ArtifactAbi,
+        ArtifactEnvelope, ArtifactNodeId, ArtifactPortfolio, ArtifactValueId, BarrierPhaseRecord,
+        BarrierRecord, BoundViolation, CompileError, CompileObjective, CompileRequest,
+        CoveragePolicy, DeclaredConstraints, DependencyEdge, DependencyEndpoint, DependencyKind,
+        DerivationStep, DerivedFamily, DeviceFacts, Digest, EmittedResources, EmittedTargetModule,
+        EntryAbiRecord, EntryPersistence, EntryResourceBinding, ExecutionMode, ExternalFacts,
+        FinalistEvaluator, FrontierTopology, FusionGroupId, FusionRecord, FusionRejection,
+        GeometryRecord, LaunchObservation, LaunchResourceIntent, LawCitation,
+        MaterializationReason, MaterializationRecord, MetricFigures, MetricSequence,
+        ModuleNumericRecord, NodeRecord, NumericRecord, ObjectiveBounds, ObjectiveMetric,
+        PlanMeasurement, PortfolioPolicy, Provenance, PruneReason, PrunedFamily, PrunedLaw,
+        RealTimeDeadline, RealTimeObjective, RealTimeViolation, RequiredFact, RequiredSchedule,
+        ResourceAbiRecord, ResourceEnvelope, ResourceLifetime, ResourceNameCollision,
+        ResourceRecord, RiskStatistic, ScheduleProduction, SearchBudget, SearchCertificate,
+        SearchWork, SelectedLowering, SelectedModule, SelectedPlan, TargetArmAssignment,
+        TargetCompileError, TargetCompiler, TargetEntryPoint, TargetModuleBundle,
+        TargetModuleImage, TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess,
+        TargetResourceBinding, TargetResourceMemory, ValidatedCompileRequest, WorkloadAggregation,
+        WorkloadArrivalTrace, WorkloadClass, WorkloadProfile, ARTIFACT_ENVELOPE_SCHEMA_VERSION,
+        ARTIFACT_SCHEMA_VERSION, OBJECTIVE_SCHEMA_VERSION, REAL_TIME_OBJECTIVE_SCHEMA_VERSION,
+        SCHEDULE_GRAMMAR_VERSION, TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
+        TARGET_PAYLOAD_SCHEMA_VERSION,
     };
 }
 
-/// Canonical compiler artifact and request types.
+/// Canonical compiler artifact, request, and workload types.
 pub use compiler::{
-    Artifact, ArtifactEnvelope, CompileObjective, CompileRequest, ExternalFacts, ObjectiveMetric,
-    SearchBudget, TargetPayload, TargetPayloadFormat, TargetProfile, ValidatedCompileRequest,
+    Artifact, ArtifactEnvelope, ArtifactPortfolio, CompileObjective, CompileRequest, DeviceFacts,
+    Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetPayload, TargetPayloadFormat,
+    TargetProfile, ValidatedCompileRequest, WorkloadProfile,
 };
 
 /// Shared structured diagnostic protocol.
@@ -67,15 +101,17 @@ pub use vyre_runtime::artifact_admission::{
 /// Resident-queue submission against an admitted artifact.
 pub use vyre_runtime::persistent_executor::PersistentExecutor;
 
-pub use vyre_driver::{ArtifactInstance, BindingSet, Completion, DeviceIdentity, Submission};
+pub use vyre_driver::{
+    registered_backends, ArtifactInstance, BackendRegistration, BindingSet, Completion,
+    DeviceIdentity, Submission,
+};
 
 /// Canonical frontend IR program and validation entry point.
-pub use ir::Program;
+pub use ir::{Program, ProgramGraph};
 pub use vyre_foundation::validate::validate;
 
 /// Domain-neutral tagged byte range shared by source-processing products.
 pub use vyre_foundation::match_result::ByteRange;
-
 #[cfg(test)]
 mod tests {
     // Both cases that call this are feature-selected, so a default build links

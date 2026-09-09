@@ -111,9 +111,15 @@ fn find_ast_silent_skips(file: &syn::File, sink: &mut Vec<(u32, &'static str)>) 
 fn check_attr_for_silent_skip(attr: &syn::Attribute, sink: &mut Vec<(u32, &'static str)>) {
     let s = quote::quote!(#attr).to_string();
     if s.contains("cfg (not (") && s.contains("gpu") {
-        sink.push((attr.pound_token.span.start().line as u32, "a cfg that compiles the test out without a device"));
+        sink.push((
+            attr.pound_token.span.start().line as u32,
+            "a cfg that compiles the test out without a device",
+        ));
     } else if s.contains("cfg_attr") && s.contains("gpu") && s.contains("ignore") {
-        sink.push((attr.pound_token.span.start().line as u32, "a cfg_attr that ignores the test without the gpu feature"));
+        sink.push((
+            attr.pound_token.span.start().line as u32,
+            "a cfg_attr that ignores the test without the gpu feature",
+        ));
     }
 }
 
@@ -151,18 +157,31 @@ fn check_expr_for_silent_skips(expr: &syn::Expr, sink: &mut Vec<(u32, &'static s
     match expr {
         syn::Expr::If(expr_if) => {
             let cond_str = quote::quote!(#expr_if).to_string();
-            if cond_str.contains("is_err ()") && (cond_str.contains("return Ok (())") || cond_str.contains("return ;")) {
-                sink.push((expr_if.if_token.span.start().line as u32, "an is_err guard returning early"));
+            if cond_str.contains("is_err ()")
+                && (cond_str.contains("return Ok (())") || cond_str.contains("return ;"))
+            {
+                sink.push((
+                    expr_if.if_token.span.start().line as u32,
+                    "an is_err guard returning early",
+                ));
             } else if cond_str.contains("if let Err") && cond_str.contains("return") {
-                sink.push((expr_if.if_token.span.start().line as u32, "an if-let-Err guard returning early"));
+                sink.push((
+                    expr_if.if_token.span.start().line as u32,
+                    "an if-let-Err guard returning early",
+                ));
             }
         }
         syn::Expr::Macro(expr_macro) => {
             let mac_str = quote::quote!(#expr_macro).to_string();
             if (mac_str.contains("println !") || mac_str.contains("eprintln !"))
-                && (mac_str.contains("skipped") || mac_str.contains("no GPU") || mac_str.contains("GPU unavailable"))
+                && (mac_str.contains("skipped")
+                    || mac_str.contains("no GPU")
+                    || mac_str.contains("GPU unavailable"))
             {
-                sink.push((expr_macro.mac.path.segments[0].ident.span().start().line as u32, "a printed excuse for not running"));
+                sink.push((
+                    expr_macro.mac.path.segments[0].ident.span().start().line as u32,
+                    "a printed excuse for not running",
+                ));
             }
         }
         _ => {}

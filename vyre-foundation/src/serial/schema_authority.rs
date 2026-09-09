@@ -194,7 +194,9 @@ impl SchemaAuthority {
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum SchemaAuthorityError {
     /// Input bytes exceed descriptor maximum length limit.
-    #[error("payload length {got_bytes} B exceeds maximum allowed {max_bytes} B for {schema_name}")]
+    #[error(
+        "payload length {got_bytes} B exceeds maximum allowed {max_bytes} B for {schema_name}"
+    )]
     PayloadTooLarge {
         /// Schema canonical name.
         schema_name: &'static str,
@@ -212,7 +214,9 @@ pub enum SchemaAuthorityError {
         details: String,
     },
     /// Incompatible schema version.
-    #[error("incompatible schema version {found} for {schema_name}; minimum required is {min_required}")]
+    #[error(
+        "incompatible schema version {found} for {schema_name}; minimum required is {min_required}"
+    )]
     IncompatibleVersion {
         /// Schema canonical name.
         schema_name: &'static str,
@@ -265,15 +269,18 @@ impl BoundedDecoder {
         })?;
 
         let mut deserializer = serde_json::Deserializer::from_str(s);
-        let value = T::deserialize(&mut deserializer).map_err(|e| SchemaAuthorityError::DecodeFailure {
-            schema_name: desc.canonical_name,
-            details: e.to_string(),
-        })?;
+        let value =
+            T::deserialize(&mut deserializer).map_err(|e| SchemaAuthorityError::DecodeFailure {
+                schema_name: desc.canonical_name,
+                details: e.to_string(),
+            })?;
 
-        deserializer.end().map_err(|e| SchemaAuthorityError::DecodeFailure {
-            schema_name: desc.canonical_name,
-            details: format!("trailing characters after payload: {e}"),
-        })?;
+        deserializer
+            .end()
+            .map_err(|e| SchemaAuthorityError::DecodeFailure {
+                schema_name: desc.canonical_name,
+                details: format!("trailing characters after payload: {e}"),
+            })?;
 
         Ok(value)
     }

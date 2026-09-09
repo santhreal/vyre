@@ -1,5 +1,4 @@
 /// Registration contract: the reference oracle is not registered as a VyreBackend.
-
 use vyre_driver::{acquire, registered_backends};
 use vyre_driver_reference::CpuRefEvaluator;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};

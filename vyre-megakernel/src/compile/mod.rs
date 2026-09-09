@@ -5,7 +5,7 @@ mod measured;
 #[cfg(test)]
 mod tests;
 
-pub use measured::{EmittedResources, FinalistEvaluator, LaunchObservation, compile_measured};
+pub use measured::{compile_measured, EmittedResources, FinalistEvaluator, LaunchObservation};
 
 use crate::certificate::SearchCertificate;
 use crate::error::{failure, overflow, serialization_failure, CompileError, CompilerFailureKind};

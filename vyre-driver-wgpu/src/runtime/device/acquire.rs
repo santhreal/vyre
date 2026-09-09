@@ -35,12 +35,14 @@ const TIMESTAMP_PROBE_READBACK_TIMEOUT: Duration = Duration::from_secs(10);
 /// caller gets is the SIGSEGV the comment above describes, in an ICD frame that
 /// names no vyre code. Loader state is also not this process's to rebuild.
 fn loader_startup() -> MutexGuard<'static, ()> {
-    match LOADER_STARTUP.lock() {
+    match vyre_driver::lock_policy::govern_mutex(
+        &LOADER_STARTUP,
+        "the wgpu device factory",
+        "the graphics loader dispatch table",
+        vyre_driver::lock_policy::RecoveryClass::ProcessFatal,
+    ) {
         Ok(guard) => guard,
-        Err(_) => vyre_driver::lock_policy::process_fatal_poison(
-            "the wgpu device factory",
-            "the graphics loader dispatch table",
-        ),
+        Err(_) => unreachable!(),
     }
 }
 

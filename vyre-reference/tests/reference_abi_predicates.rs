@@ -210,7 +210,11 @@ fn the_borrowed_input_walk_consumes_exactly_the_predicate_inputs() {
     let program = Program::wrapped(
         buffers,
         [4, 1, 1],
-        vec![Node::store("out", Expr::gid_x(), Expr::load("fed", Expr::gid_x()))],
+        vec![Node::store(
+            "out",
+            Expr::gid_x(),
+            Expr::load("fed", Expr::gid_x()),
+        )],
     );
 
     let bytes = vyre_primitives::wire::pack_u32_slice(&[1, 2, 3, 4]);
@@ -238,7 +242,11 @@ fn a_short_borrowed_input_list_names_the_buffer_it_is_missing() {
     let program = Program::wrapped(
         buffers,
         [4, 1, 1],
-        vec![Node::store("out", Expr::gid_x(), Expr::load("fed", Expr::gid_x()))],
+        vec![Node::store(
+            "out",
+            Expr::gid_x(),
+            Expr::load("fed", Expr::gid_x()),
+        )],
     );
 
     let bytes = vyre_primitives::wire::pack_u32_slice(&[1, 2, 3, 4]);
@@ -263,7 +271,11 @@ fn a_long_borrowed_input_list_is_refused_with_both_counts() {
     let program = Program::wrapped(
         buffers,
         [4, 1, 1],
-        vec![Node::store("out", Expr::gid_x(), Expr::load("fed", Expr::gid_x()))],
+        vec![Node::store(
+            "out",
+            Expr::gid_x(),
+            Expr::load("fed", Expr::gid_x()),
+        )],
     );
 
     let bytes = vyre_primitives::wire::pack_u32_slice(&[1, 2, 3, 4]);
@@ -283,7 +295,11 @@ fn the_borrowed_walk_produces_the_vector_reference_eval_accepts() {
     let program = Program::wrapped(
         buffers,
         [4, 1, 1],
-        vec![Node::store("acc", Expr::gid_x(), Expr::load("in", Expr::gid_x()))],
+        vec![Node::store(
+            "acc",
+            Expr::gid_x(),
+            Expr::load("in", Expr::gid_x()),
+        )],
     );
     let input = vyre_primitives::wire::pack_u32_slice(&[1, 2, 3, 4]);
     let seed = vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]);

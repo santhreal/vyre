@@ -72,11 +72,8 @@ pub fn int4_batched_matmul_scaled_extension_id() -> vyre_spec::ExtensionTernaryO
 
 /// Stable extension id for fused packed INT4 matmul top-1 routing.
 #[must_use]
-pub fn int4_batched_matmul_top1_scaled_extension_id() -> vyre_spec::ExtensionTernaryOpId
-{
-    vyre_spec::ExtensionTernaryOpId::from_name(
-        INT4_BATCHED_MATMUL_TOP1_SCALED_EXTENSION_NAME,
-    )
+pub fn int4_batched_matmul_top1_scaled_extension_id() -> vyre_spec::ExtensionTernaryOpId {
+    vyre_spec::ExtensionTernaryOpId::from_name(INT4_BATCHED_MATMUL_TOP1_SCALED_EXTENSION_NAME)
 }
 
 /// Build a packed signed INT4 dot-product Program.
@@ -700,9 +697,7 @@ mod tests {
     fn batched_matmul_extension_id_matches_spec_name_contract() {
         assert_eq!(
             int4_batched_matmul_scaled_extension_id(),
-            vyre_spec::ExtensionTernaryOpId::from_name(
-                INT4_BATCHED_MATMUL_SCALED_EXTENSION_NAME
-            )
+            vyre_spec::ExtensionTernaryOpId::from_name(INT4_BATCHED_MATMUL_SCALED_EXTENSION_NAME)
         );
     }
 
@@ -758,9 +753,7 @@ mod tests {
         );
         assert_eq!(
             int4_batched_matvec_scaled_extension_id(),
-            vyre_spec::ExtensionTernaryOpId::from_name(
-                "quant.int4.batched_matvec.scaled"
-            )
+            vyre_spec::ExtensionTernaryOpId::from_name("quant.int4.batched_matvec.scaled")
         );
         assert!(int4_batched_matvec_scaled_extension_id().is_extension());
         assert_ne!(

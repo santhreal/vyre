@@ -408,10 +408,13 @@ mod tests {
             let launch = config
                 .launch
                 .expect("Fix: a resident step must submit the launch it states.");
-            self.submitted
-                .lock()
-                .expect("Fix: the recording lock must stay usable.")
-                .push((launch.workgroup(), launch.grid()));
+            crate::lock_policy::govern_mutex(
+                &self.submitted,
+                "resident_sequence",
+                "submitted",
+                crate::lock_policy::RecoveryClass::TransactionallyRecoverable,
+            )?
+            .push((launch.workgroup(), launch.grid()));
             Ok(TimedDispatchResult::host_timed(Vec::new(), 1))
         }
     }
@@ -454,11 +457,14 @@ mod tests {
 
         dispatch_resident_steps(&backend, &steps).expect("Fix: the fixture sequence must run.");
 
-        let submitted = backend
-            .submitted
-            .lock()
-            .expect("Fix: the recording lock must stay usable.")
-            .clone();
+        let submitted = crate::lock_policy::govern_mutex(
+            &backend.submitted,
+            "resident_sequence",
+            "submitted",
+            crate::lock_policy::RecoveryClass::TransactionallyRecoverable,
+        )
+        .expect("Fix: the recording lock must stay usable.")
+        .clone();
         assert_eq!(submitted, stated.to_vec());
     }
 }

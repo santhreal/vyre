@@ -2,7 +2,12 @@
 
 use vyre_registry_link::backend::live_backend_registry;
 
-pub(crate) fn backend_registration(
+/// Find a linked backend registration by ID, or find the default backend if "auto".
+///
+/// # Errors
+///
+/// Returns an error message if the registry fails or the backend ID is not linked.
+pub fn backend_registration(
     backend_id: &str,
 ) -> Result<&'static vyre_driver::BackendRegistration, String> {
     let registrations = live_backend_registry()
@@ -35,7 +40,12 @@ pub(crate) fn backend_registration(
         })
 }
 
-pub(crate) fn semantic_execution_backends(
+/// Enumerate all registered backends supporting semantic execution.
+///
+/// # Errors
+///
+/// Returns an error message if the registry fails to initialize.
+pub fn semantic_execution_backends(
 ) -> Result<Vec<&'static vyre_driver::BackendRegistration>, String> {
     let registrations = live_backend_registry()
         .map_err(|error| format!("backend registry startup failed: {error}"))?;
@@ -67,7 +77,12 @@ const fn admits_semantic_execution(
     !reference_oracle && has_target_compiler && has_materializer
 }
 
-pub(crate) fn select_backends(
+/// Filter a list of backends by a selector string ("all", backend ID, or comma-separated list).
+///
+/// # Errors
+///
+/// Returns an error message if the filter matches no registered backend.
+pub fn select_backends(
     all_backends: &[&'static vyre_driver::BackendRegistration],
     filter: &str,
 ) -> Result<Vec<&'static vyre_driver::BackendRegistration>, String> {

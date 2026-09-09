@@ -123,8 +123,12 @@ impl ImageFormat {
             | Self::Bgra8UnormSrgb
             | Self::Depth32Float
             | Self::Depth24PlusStencil8 => 4,
-            Self::Rg32Uint | Self::Rg32Sint | Self::Rg32Float | Self::Rgba16Uint
-            | Self::Rgba16Sint | Self::Rgba16Float => 8,
+            Self::Rg32Uint
+            | Self::Rg32Sint
+            | Self::Rg32Float
+            | Self::Rgba16Uint
+            | Self::Rgba16Sint
+            | Self::Rgba16Float => 8,
             Self::Rgba32Uint | Self::Rgba32Sint | Self::Rgba32Float => 16,
         }
     }
@@ -585,7 +589,10 @@ pub enum ResourceAbiError {
 impl AdmittedResourceRecord {
     /// Validate all structural and alignment constraints of this record.
     pub fn validate(&self, caps: &ExternalResourceCapability) -> Result<(), ResourceAbiError> {
-        if self.extent.width == 0 || self.extent.height == 0 || self.extent.depth_or_array_layers == 0 {
+        if self.extent.width == 0
+            || self.extent.height == 0
+            || self.extent.depth_or_array_layers == 0
+        {
             return Err(ResourceAbiError::ZeroExtent {
                 name: self.name.clone(),
                 width: self.extent.width,

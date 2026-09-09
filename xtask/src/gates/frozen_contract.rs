@@ -207,21 +207,21 @@ impl crate::gate::GateBehavior for BackendExtension {
                     "keep a backend one crate that implements the backend trait",
                 ));
             }
-        if tree.exists("vyre-driver-reference/src") {
-            if let Ok(ref_sources) = tree.rust(&["vyre-driver-reference/src"]) {
-                for file in &ref_sources {
-                    if let Ok(content) = tree.read(file) {
-                        if content.contains("impl ") && content.contains("VyreBackend for") {
-                            report.find(Finding::in_file(
+            if tree.exists("vyre-driver-reference/src") {
+                if let Ok(ref_sources) = tree.rust(&["vyre-driver-reference/src"]) {
+                    for file in &ref_sources {
+                        if let Ok(content) = tree.read(file) {
+                            if content.contains("impl ") && content.contains("VyreBackend for") {
+                                report.find(Finding::in_file(
                                 "vyre-driver-reference/src",
                                 "vyre-driver-reference must not implement VyreBackend",
                                 "keep reference execution decoupled from production VyreBackend drivers",
                             ));
+                            }
                         }
                     }
                 }
             }
-        }
             // A crate that expands the shared macro submits exactly what the
             // macro submits, and the macro body is checked above. A crate that
             // writes its own submissions is checked record by record here.

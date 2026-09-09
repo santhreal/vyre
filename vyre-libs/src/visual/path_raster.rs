@@ -136,7 +136,11 @@ pub fn path_rasterize_segments(
             Expr::var("bg_px"),
         ),
     ));
-    body.push(Node::store(output, Expr::var("idx"), Expr::var("final_color")));
+    body.push(Node::store(
+        output,
+        Expr::var("idx"),
+        Expr::var("final_color"),
+    ));
 
     Program::wrapped(
         vec![
@@ -154,7 +158,10 @@ pub fn path_rasterize_segments(
                 Ident::from(OP_ID),
                 vec![
                     Node::let_bind("idx_guard", Expr::logical_index(0)),
-                    Node::if_then(Expr::lt(Expr::var("idx_guard"), Expr::u32(pixel_count)), body),
+                    Node::if_then(
+                        Expr::lt(Expr::var("idx_guard"), Expr::u32(pixel_count)),
+                        body,
+                    ),
                 ],
             )],
         )],

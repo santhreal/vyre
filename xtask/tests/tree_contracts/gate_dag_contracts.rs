@@ -5,7 +5,7 @@
 
 use xtask::gate::{GateBehavior, GateCtx};
 use xtask::gate_dag::{DagError, GateDag};
-use xtask::gate_metadata::{GATE_METADATA, descriptor_by_name};
+use xtask::gate_metadata::{descriptor_by_name, GATE_METADATA};
 use xtask::gates::gate_dag_gate::GateDagGate;
 
 /// WHY: Section 182 requires the gate DAG to be a complete acyclic ordering over all registered gates.
@@ -178,8 +178,8 @@ fn runtime_registered_gate_set_has_owner_proof_and_baseline() {
     let root = xtask::checkout::checkout_root();
     let baseline_content = std::fs::read_to_string(root.join("xtask/gate-baselines.toml"))
         .expect("gate-baselines.toml must be readable");
-    let baseline_data: toml::Value = toml::from_str(&baseline_content)
-        .expect("gate-baselines.toml must parse as valid TOML");
+    let baseline_data: toml::Value =
+        toml::from_str(&baseline_content).expect("gate-baselines.toml must parse as valid TOML");
     let baseline_gates = baseline_data
         .get("gate")
         .and_then(|g| g.as_array())
@@ -248,7 +248,9 @@ fn runtime_gate_validation_fails_on_missing_owner_proof_or_baseline() {
     desc_no_proof.proof = "";
     let failures = desc_no_proof.failures();
     assert!(
-        failures.iter().any(|f| f.contains("declares no mutation-proof test")),
+        failures
+            .iter()
+            .any(|f| f.contains("declares no mutation-proof test")),
         "validation must fail on missing mutation proof: {failures:?}"
     );
 }

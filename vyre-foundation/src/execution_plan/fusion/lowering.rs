@@ -11,10 +11,10 @@
 
 use rustc_hash::FxHashMap;
 
-use crate::ir::{BufferAccess, Ident, MemoryOrdering, Node, Program};
 use super::candidate::{FusionCandidate, FusionCandidateKind};
 use super::fuse::upgrade_buffer_access;
 use super::FusionError;
+use crate::ir::{BufferAccess, Ident, MemoryOrdering, Node, Program};
 
 /// Lower a [`FusionCandidate`] into an executable [`Program`].
 ///
@@ -86,7 +86,11 @@ fn lower_register_forwarding(programs: &[Program]) -> Result<Program, FusionErro
         combined_entry.extend_from_slice(prog.entry());
     }
 
-    Ok(Program::wrapped(merged_buffers, fused_workgroup, combined_entry))
+    Ok(Program::wrapped(
+        merged_buffers,
+        fused_workgroup,
+        combined_entry,
+    ))
 }
 
 /// Lower a producer-consumer pair via workgroup shared-memory tile forwarding.
@@ -134,7 +138,11 @@ fn lower_shared_memory_forwarding(programs: &[Program]) -> Result<Program, Fusio
         }
     }
 
-    Ok(Program::wrapped(merged_buffers, fused_workgroup, combined_entry))
+    Ok(Program::wrapped(
+        merged_buffers,
+        fused_workgroup,
+        combined_entry,
+    ))
 }
 
 /// Lower prologue fusion by inlining prologue nodes at the head of the consumer.
@@ -202,5 +210,9 @@ fn lower_dispatch_cut(programs: &[Program]) -> Result<Program, FusionError> {
         }
     }
 
-    Ok(Program::wrapped(merged_buffers, fused_workgroup, combined_entry))
+    Ok(Program::wrapped(
+        merged_buffers,
+        fused_workgroup,
+        combined_entry,
+    ))
 }

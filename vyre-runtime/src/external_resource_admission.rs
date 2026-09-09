@@ -83,7 +83,9 @@ pub enum ExternalAdmissionError {
         resource_id: u64,
     },
     /// Stale frame access detected (generation counter mismatch).
-    #[error("stale generation access on resource {resource_id}: expected {expected}, actual {actual}")]
+    #[error(
+        "stale generation access on resource {resource_id}: expected {expected}, actual {actual}"
+    )]
     GenerationMismatch {
         /// Resource ID.
         resource_id: u64,
@@ -140,9 +142,9 @@ impl From<ResourceAbiError> for ExternalAdmissionError {
                 provided: provided_pitch,
                 required: required_pitch,
             },
-            ResourceAbiError::DeviceLoss { device_id } => {
-                Self::ResourceInvalidated { resource_id: device_id }
-            }
+            ResourceAbiError::DeviceLoss { device_id } => Self::ResourceInvalidated {
+                resource_id: device_id,
+            },
         }
     }
 }
@@ -194,7 +196,10 @@ impl ExternalResourceAdmissionManager {
         }
 
         // 2. Validate pitch alignment
-        let min_pitch = record.dimensions.width.saturating_mul(record.format.bytes_per_pixel());
+        let min_pitch = record
+            .dimensions
+            .width
+            .saturating_mul(record.format.bytes_per_pixel());
         let required_pitch = (min_pitch + 255) & !255;
         if record.row_pitch_bytes < min_pitch || (record.row_pitch_bytes & 255) != 0 {
             return Err(ExternalAdmissionError::InvalidPitch {
@@ -205,7 +210,10 @@ impl ExternalResourceAdmissionManager {
         }
 
         // 3. Validate usage flags
-        if !record.permitted_usages.contains(ResourcePermittedUsages::EXTERNAL_IMPORT) {
+        if !record
+            .permitted_usages
+            .contains(ResourcePermittedUsages::EXTERNAL_IMPORT)
+        {
             return Err(ExternalAdmissionError::UsageNotPermitted {
                 resource_id: record.resource_id,
                 requested: ResourcePermittedUsages::EXTERNAL_IMPORT,
@@ -213,7 +221,9 @@ impl ExternalResourceAdmissionManager {
         }
 
         // 4. Authenticate memory kind and format combination before allocation
-        if let vyre_driver::ResourceProvenance::ExternalImport { memory_kind, .. } = record.provenance {
+        if let vyre_driver::ResourceProvenance::ExternalImport { memory_kind, .. } =
+            record.provenance
+        {
             match memory_kind {
                 ExternalMemoryKind::DmaBuf | ExternalMemoryKind::OpaqueFd => {
                     if record.format.is_depth_stencil() {
@@ -225,7 +235,9 @@ impl ExternalResourceAdmissionManager {
                     }
                 }
                 ExternalMemoryKind::Win32Nt | ExternalMemoryKind::Win32Kmt => {
-                    if record.format.is_planar_video() && record.format != ImageFormat::Yuv420SemiPlanar {
+                    if record.format.is_planar_video()
+                        && record.format != ImageFormat::Yuv420SemiPlanar
+                    {
                         return Err(ExternalAdmissionError::InvalidCombination {
                             resource_id: record.resource_id,
                             format: record.format,
@@ -318,7 +330,10 @@ impl ExternalResourceAdmissionManager {
         drop(map);
 
         let mut pipelines = self.dependent_pipelines.write().unwrap();
-        pipelines.entry(resource_id).or_default().insert(pipeline_id);
+        pipelines
+            .entry(resource_id)
+            .or_default()
+            .insert(pipeline_id);
         Ok(())
     }
 
@@ -337,9 +352,13 @@ impl ExternalResourceAdmissionManager {
         for (resource_id, _) in &schedule.transitions {
             let record = map
                 .get(resource_id)
-                .ok_or(ExternalAdmissionError::ResourceNotFound { resource_id: *resource_id })?;
+                .ok_or(ExternalAdmissionError::ResourceNotFound {
+                    resource_id: *resource_id,
+                })?;
             if !record.is_valid {
-                return Err(ExternalAdmissionError::ResourceInvalidated { resource_id: *resource_id });
+                return Err(ExternalAdmissionError::ResourceInvalidated {
+                    resource_id: *resource_id,
+                });
             }
         }
 

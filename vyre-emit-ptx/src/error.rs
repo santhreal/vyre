@@ -1,5 +1,5 @@
 use thiserror::Error;
-use vyre_foundation::diagnostics::{Diagnostic};
+use vyre_foundation::diagnostics::Diagnostic;
 
 /// Target identity every diagnostic this emitter raises carries.
 const TARGET: &str = "ptx";
@@ -72,7 +72,9 @@ impl EmitError {
                 "PTX005_UNSUPPORTED_DATA_TYPE",
                 format!("unsupported data type for PTX scalar emit: {dt}"),
             )
-            .with_fix("cast the value to a supported PTX scalar type (e.g. f32, f16, u32, i32, u64)")
+            .with_fix(
+                "cast the value to a supported PTX scalar type (e.g. f32, f16, u32, i32, u64)",
+            )
             .with_cause("unsupported_data_type", dt.clone())
             .with_context_value("data_type", dt.clone()),
         }

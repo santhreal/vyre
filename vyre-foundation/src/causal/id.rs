@@ -4,7 +4,9 @@ use core::fmt;
 use serde::{Deserialize, Serialize};
 
 /// Stable typed 64-bit identifier for a causal span.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize,
+)]
 #[repr(transparent)]
 pub struct CausalSpanId(pub u64);
 
@@ -27,7 +29,9 @@ impl fmt::Display for CausalSpanId {
 }
 
 /// Stable 128-bit identifier for a causal trace execution.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize,
+)]
 pub struct TraceId(pub u128);
 
 impl TraceId {

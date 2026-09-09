@@ -7,9 +7,7 @@
 //! a parser, which is what these cases rule out. A coordinate the failure does
 //! not carry emits no key at all, so a consumer can tell "unknown" from zero.
 
-use vyre_debug::{
-    PmuExpectation, PmuMeasurement, PmuWarning, SanitizerFailure, SanitizerKind,
-};
+use vyre_debug::{PmuExpectation, PmuMeasurement, PmuWarning, SanitizerFailure, SanitizerKind};
 use vyre_foundation::diagnostics::{Diagnostic, DiagnosticStage, Severity};
 
 fn context_value<'a>(diag: &'a Diagnostic, key: &str) -> Option<&'a str> {

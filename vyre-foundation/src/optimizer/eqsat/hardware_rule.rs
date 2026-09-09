@@ -3,9 +3,9 @@
 //! Replaces opaque closure predicates with typed, serializable, deterministic
 //! target and cost model facts, proof terms, and cache keys.
 
-use serde::{Deserialize, Serialize};
 use super::{EClassId, EGraph, ENodeLang, Rule};
 use crate::optimizer::rewrite_contract::RewriteWitness;
+use serde::{Deserialize, Serialize};
 
 /// Typed identity of the fact or law authorizing a rewrite rule.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -55,7 +55,10 @@ impl ProofTerm {
 
     /// Construct a proof term by hashing the rule name and justification.
     #[must_use]
-    pub fn from_name_and_justification(rule_name: &'static str, justification: &'static str) -> Self {
+    pub fn from_name_and_justification(
+        rule_name: &'static str,
+        justification: &'static str,
+    ) -> Self {
         let mut hasher = blake3::Hasher::new();
         hasher.update(b"ProofTerm:v1:");
         hasher.update(rule_name.as_bytes());

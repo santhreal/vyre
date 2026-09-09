@@ -106,7 +106,10 @@ impl GateBehavior for ReleaseProvenanceGate {
         ));
 
         let mut report = settle_inspection(ctx, "release-provenance", inspection);
-        report.cover_complete("release provenance dependencies", authority.dependencies.len());
+        report.cover_complete(
+            "release provenance dependencies",
+            authority.dependencies.len(),
+        );
         Ok(report)
     }
 }
@@ -142,16 +145,23 @@ mod tests {
             .expect("inspect workspace for release provenance");
 
         // Simulate injection of banned dependency
-        authority.dependencies.push(crate::provenance::PinnedCrateDependency {
-            name: "proc-macro1".to_string(),
-            version: "1.0.0".to_string(),
-            checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".to_string(),
-            source: "registry+https://github.com/rust-lang/crates.io-index".to_string(),
-            license: "MIT".to_string(),
-            is_policy_approved: false,
-        });
+        authority
+            .dependencies
+            .push(crate::provenance::PinnedCrateDependency {
+                name: "proc-macro1".to_string(),
+                version: "1.0.0".to_string(),
+                checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                    .to_string(),
+                source: "registry+https://github.com/rust-lang/crates.io-index".to_string(),
+                license: "MIT".to_string(),
+                is_policy_approved: false,
+            });
 
-        let unapproved = authority.dependencies.iter().filter(|d| !d.is_policy_approved).count();
+        let unapproved = authority
+            .dependencies
+            .iter()
+            .filter(|d| !d.is_policy_approved)
+            .count();
         assert_eq!(unapproved, 1);
     }
 
@@ -161,17 +171,22 @@ mod tests {
         let mut authority = ReleaseProvenanceAuthority::inspect_workspace(&root)
             .expect("inspect workspace for release provenance");
 
-        authority.build_scripts.push(crate::provenance::BuildScriptContract {
-            crate_name: "hostile-crate".to_string(),
-            path: "vyre-bench/build.rs".to_string(),
-            declared_inputs: vec![],
-            declared_outputs: vec![],
-            has_network_access: true,
-            has_bounded_reads: true,
-        });
+        authority
+            .build_scripts
+            .push(crate::provenance::BuildScriptContract {
+                crate_name: "hostile-crate".to_string(),
+                path: "vyre-bench/build.rs".to_string(),
+                declared_inputs: vec![],
+                declared_outputs: vec![],
+                has_network_access: true,
+                has_bounded_reads: true,
+            });
 
         let result = authority.verify_build_scripts(&root);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("network access is strictly forbidden"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("network access is strictly forbidden"));
     }
 }

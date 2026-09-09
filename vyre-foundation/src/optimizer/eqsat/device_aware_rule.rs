@@ -18,7 +18,10 @@ mod tests {
         let rule = HardwarePropertyRule::new(
             inner,
             vec![TargetFact::TensorCoreAvailable],
-            vec![TargetFact::TensorCoreAvailable, TargetFact::SubgroupSize(32)],
+            vec![
+                TargetFact::TensorCoreAvailable,
+                TargetFact::SubgroupSize(32),
+            ],
         );
         assert!(
             !rule.matches(&egraph).is_empty(),

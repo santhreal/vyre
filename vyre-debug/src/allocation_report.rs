@@ -1,7 +1,7 @@
 //! Physical allocation, memory layout, and resource lifetime inspection.
 
-use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 use vyre::compiler::Artifact;
 
@@ -52,7 +52,8 @@ impl AllocationReport {
         let mut dynamic_shared = 0;
         for geom in artifact.geometry() {
             dynamic_shared = dynamic_shared.max(geom.dynamic_shared_bytes);
-            workgroup_shared = workgroup_shared.max(geom.workgroup_size[0] * geom.workgroup_size[1] * geom.workgroup_size[2]);
+            workgroup_shared = workgroup_shared
+                .max(geom.workgroup_size[0] * geom.workgroup_size[1] * geom.workgroup_size[2]);
         }
 
         Self {
@@ -79,10 +80,7 @@ pub struct AllocationDiff {
 
 /// Compare two allocation plans structurally.
 #[must_use]
-pub fn diff_allocations(
-    before: &AllocationReport,
-    after: &AllocationReport,
-) -> AllocationDiff {
+pub fn diff_allocations(before: &AllocationReport, after: &AllocationReport) -> AllocationDiff {
     let global_bytes_delta = (after.total_global_bytes as i64) - (before.total_global_bytes as i64);
     let mut resources_added = Vec::new();
     let mut resources_removed = Vec::new();
@@ -98,9 +96,8 @@ pub fn diff_allocations(
         }
     }
 
-    let is_identical = global_bytes_delta == 0
-        && resources_added.is_empty()
-        && resources_removed.is_empty();
+    let is_identical =
+        global_bytes_delta == 0 && resources_added.is_empty() && resources_removed.is_empty();
 
     AllocationDiff {
         global_bytes_delta,

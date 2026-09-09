@@ -117,7 +117,8 @@ fn runtime_enumerates_all_kernel_op_kind_variants_from_source() {
 #[test]
 fn unsupported_variants_are_refused_by_name_on_naga() {
     // 1. IndirectDispatch must be refused by name
-    let desc_indirect = sample_descriptor_for_kind(KernelOpKind::IndirectDispatch { count_offset: 0 });
+    let desc_indirect =
+        sample_descriptor_for_kind(KernelOpKind::IndirectDispatch { count_offset: 0 });
     let err_indirect = emit(&desc_indirect).unwrap_err();
     let msg_indirect = err_indirect.to_string();
     assert!(
@@ -127,7 +128,11 @@ fn unsupported_variants_are_refused_by_name_on_naga() {
 
     // 2. MatrixMma must be refused by name
     let desc_mma = sample_descriptor_for_kind(KernelOpKind::MatrixMma(Box::new(MatrixMmaSpec {
-        tile: MatrixTileShape { m: 16, n: 16, k: 16 },
+        tile: MatrixTileShape {
+            m: 16,
+            n: 16,
+            k: 16,
+        },
         left: FragmentValue {
             element: MatrixMmaElement::F16,
             layout: MatrixMmaLayout::RowMajor,
@@ -161,15 +166,18 @@ fn unsupported_variants_are_refused_by_name_on_naga() {
     let err_call = emit(&desc_call).unwrap_err();
     let msg_call = err_call.to_string();
     assert!(
-        msg_call.contains("unsupported_callee") || msg_call.contains("Call") || msg_call.contains("call"),
+        msg_call.contains("unsupported_callee")
+            || msg_call.contains("Call")
+            || msg_call.contains("call"),
         "error message must cite callee/Call: {msg_call}"
     );
 
     // 4. OpaqueNode must be refused by name
-    let desc_opaque_node = sample_descriptor_for_kind(KernelOpKind::OpaqueNode(Box::new(OpaqueNodeData {
-        extension_kind: "test_opaque_node".into(),
-        payload: vec![1, 2, 3],
-    })));
+    let desc_opaque_node =
+        sample_descriptor_for_kind(KernelOpKind::OpaqueNode(Box::new(OpaqueNodeData {
+            extension_kind: "test_opaque_node".into(),
+            payload: vec![1, 2, 3],
+        })));
     let err_opaque_node = emit(&desc_opaque_node).unwrap_err();
     let msg_opaque_node = err_opaque_node.to_string();
     assert!(

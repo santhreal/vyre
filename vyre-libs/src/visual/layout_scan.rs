@@ -123,7 +123,8 @@ pub fn reduce_bounding_boxes_2d(boxes: &str, count: u32, output_bbox: &str) -> P
 
     Program::wrapped(
         vec![
-            BufferDecl::storage(boxes, 0, BufferAccess::ReadOnly, DataType::I32).with_count(count * 4),
+            BufferDecl::storage(boxes, 0, BufferAccess::ReadOnly, DataType::I32)
+                .with_count(count * 4),
             BufferDecl::output(output_bbox, 1, DataType::I32).with_count(4),
         ],
         [1, 1, 1],

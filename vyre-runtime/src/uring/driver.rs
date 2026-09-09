@@ -378,15 +378,13 @@ impl<'a> NvmeGpuIngestDriver<'a> {
         let target_offset = slot_byte_offset(slot_usize, self.slot_bytes)?;
         let slot_iovec = &mut self.registered_iovecs[slot_usize..slot_usize + 1];
         // SAFETY: `slot_iovec` and file descriptor stay live until the CQE is reaped.
-        unsafe {
-            self.stream.submit_read_to_gpu_at(
-                file.as_raw_fd(),
-                0,
-                byte_count,
-                target_offset,
-                slot_iovec,
-            )?;
-        }
+        self.stream.submit_read_to_gpu_at(
+            file.as_raw_fd(),
+            0,
+            byte_count,
+            target_offset,
+            slot_iovec,
+        )?;
         self.telemetry
             .record_submit(NativeReadPath::RegisteredMappedRead, byte_count)?;
         self.pending[slot_usize] = Some(PendingIngest {
@@ -421,7 +419,7 @@ impl<'a> NvmeGpuIngestDriver<'a> {
     /// a valid peer-DMA destination until its CQE is reaped.
     #[cfg(feature = "uring-cmd-nvme")]
     #[allow(clippy::too_many_arguments)]
-    pub unsafe fn submit_native_nvme_read(
+    pub fn submit_native_nvme_read(
         &mut self,
         nvme_fd: i32,
         namespace_id: u32,
@@ -493,10 +491,8 @@ impl<'a> NvmeGpuIngestDriver<'a> {
         let user_data = slot_byte_offset(slot_usize, self.slot_bytes)?;
         // SAFETY: forwarded from this method's contract; the SQE is built
         // from validated scalar fields and a slot-local BAR1 destination.
-        unsafe {
-            self.stream
-                .submit_nvme_passthrough(nvme_fd, user_data, &sqe)?;
-        }
+        self.stream
+            .submit_nvme_passthrough(nvme_fd, user_data, &sqe)?;
         self.telemetry
             .record_submit(NativeReadPath::GpuDirectNvmePassthrough, byte_count)?;
         self.pending[slot_usize] = Some(PendingIngest {
@@ -521,7 +517,7 @@ impl<'a> NvmeGpuIngestDriver<'a> {
     /// structured across feature sets.
     #[cfg(not(feature = "uring-cmd-nvme"))]
     #[allow(clippy::too_many_arguments)]
-    pub unsafe fn submit_native_nvme_read(
+    pub fn submit_native_nvme_read(
         &mut self,
         _nvme_fd: i32,
         _namespace_id: u32,

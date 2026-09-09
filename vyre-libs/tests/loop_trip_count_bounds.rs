@@ -175,25 +175,15 @@ fn csr_traversal_scan_body_bounds_its_trip_counts() {
         findings(&row_loop)
     );
 
-    let expand = composer.emit_edge_expand(
-        "front_out",
-        Expr::u32(0),
-        |idx| idx,
-        Vec::new,
-    );
+    let expand = composer.emit_edge_expand("front_out", Expr::u32(0), |idx| idx, Vec::new);
     assert!(
         findings(&expand).is_empty(),
         "emit_edge_expand: {:?}",
         findings(&expand)
     );
 
-    let backward = composer.emit_backward_scan_full(
-        Expr::u32(0),
-        "front_in",
-        "front_out",
-        Vec::new,
-        Vec::new,
-    );
+    let backward =
+        composer.emit_backward_scan_full(Expr::u32(0), "front_in", "front_out", Vec::new, Vec::new);
     assert!(
         findings(&backward).is_empty(),
         "emit_backward_scan_full: {:?}",
@@ -214,7 +204,8 @@ fn hostile_state_machine_linear_scan_returns_in_bounded_steps() {
     let program = Program::wrapped(
         vec![
             BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(4),
-            BufferDecl::storage("transitions", 1, BufferAccess::ReadOnly, DataType::U32).with_count(256),
+            BufferDecl::storage("transitions", 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(256),
             BufferDecl::storage("lengths", 2, BufferAccess::ReadOnly, DataType::U32).with_count(1),
             BufferDecl::storage("accept", 3, BufferAccess::ReadOnly, DataType::U32).with_count(16),
             BufferDecl::storage("matches", 4, BufferAccess::ReadWrite, DataType::U32).with_count(4),
@@ -225,11 +216,31 @@ fn hostile_state_machine_linear_scan_returns_in_bounded_steps() {
 
     let hostile_len: u32 = u32::MAX;
     let inputs = vec![
-        Value::from(vec![1u32, 2, 3, 4].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
-        Value::from(vec![0u32; 256].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
+        Value::from(
+            vec![1u32, 2, 3, 4]
+                .into_iter()
+                .flat_map(u32::to_le_bytes)
+                .collect::<Vec<_>>(),
+        ),
+        Value::from(
+            vec![0u32; 256]
+                .into_iter()
+                .flat_map(u32::to_le_bytes)
+                .collect::<Vec<_>>(),
+        ),
         Value::from(hostile_len.to_le_bytes().to_vec()),
-        Value::from(vec![0u32; 16].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
-        Value::from(vec![0u32; 4].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
+        Value::from(
+            vec![0u32; 16]
+                .into_iter()
+                .flat_map(u32::to_le_bytes)
+                .collect::<Vec<_>>(),
+        ),
+        Value::from(
+            vec![0u32; 4]
+                .into_iter()
+                .flat_map(u32::to_le_bytes)
+                .collect::<Vec<_>>(),
+        ),
     ];
 
     let (outputs, steps) = vyre_reference::reference_eval_step_count(&program, &inputs)
@@ -245,7 +256,9 @@ fn hostile_state_machine_linear_scan_returns_in_bounded_steps() {
 #[cfg(feature = "decode")]
 #[test]
 fn hostile_ziftsieve_literal_copy_returns_in_bounded_steps() {
-    use vyre_libs::decode::ziftsieve::{ziftsieve_literal_copy, ZiftsieveBuffers, ZiftsieveExtents};
+    use vyre_libs::decode::ziftsieve::{
+        ziftsieve_literal_copy, ZiftsieveBuffers, ZiftsieveExtents,
+    };
 
     let buffers = ZiftsieveBuffers {
         input: "input",
@@ -263,11 +276,21 @@ fn hostile_ziftsieve_literal_copy_returns_in_bounded_steps() {
 
     let hostile_len: u32 = u32::MAX;
     let inputs = vec![
-        Value::from(vec![10u32, 20, 30, 40].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
+        Value::from(
+            vec![10u32, 20, 30, 40]
+                .into_iter()
+                .flat_map(u32::to_le_bytes)
+                .collect::<Vec<_>>(),
+        ),
         Value::from(0u32.to_le_bytes().to_vec()),
         Value::from(hostile_len.to_le_bytes().to_vec()),
         Value::from(0u32.to_le_bytes().to_vec()),
-        Value::from(vec![0u32; 4].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
+        Value::from(
+            vec![0u32; 4]
+                .into_iter()
+                .flat_map(u32::to_le_bytes)
+                .collect::<Vec<_>>(),
+        ),
     ];
 
     let (outputs, steps) = vyre_reference::reference_eval_step_count(&program, &inputs)
@@ -283,7 +306,9 @@ fn hostile_ziftsieve_literal_copy_returns_in_bounded_steps() {
 #[cfg(feature = "decode")]
 #[test]
 fn in_contract_ziftsieve_literal_copy_produces_identical_bytes() {
-    use vyre_libs::decode::ziftsieve::{ziftsieve_literal_copy, ZiftsieveBuffers, ZiftsieveExtents};
+    use vyre_libs::decode::ziftsieve::{
+        ziftsieve_literal_copy, ZiftsieveBuffers, ZiftsieveExtents,
+    };
 
     let buffers = ZiftsieveBuffers {
         input: "input",
@@ -300,11 +325,21 @@ fn in_contract_ziftsieve_literal_copy_produces_identical_bytes() {
     let program = ziftsieve_literal_copy(buffers, extents);
 
     let inputs = vec![
-        Value::from(vec![10u32, 20, 30, 40].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
+        Value::from(
+            vec![10u32, 20, 30, 40]
+                .into_iter()
+                .flat_map(u32::to_le_bytes)
+                .collect::<Vec<_>>(),
+        ),
         Value::from(0u32.to_le_bytes().to_vec()),
         Value::from(3u32.to_le_bytes().to_vec()),
         Value::from(0u32.to_le_bytes().to_vec()),
-        Value::from(vec![0u32; 4].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
+        Value::from(
+            vec![0u32; 4]
+                .into_iter()
+                .flat_map(u32::to_le_bytes)
+                .collect::<Vec<_>>(),
+        ),
     ];
 
     let outputs = vyre_reference::reference_eval(&program, &inputs)

@@ -188,7 +188,6 @@ fn domain_4_interactive_graphics_pipeline_compiles_through_production_path() {
     assert!(!bytes.is_empty());
 }
 
-
 #[test]
 fn three_unrelated_domains_share_identical_production_compilation_route() {
     let g1 = build_dense_neural_pipeline(2, 8, 16, 4).expect("domain 1 build");

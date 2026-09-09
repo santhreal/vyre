@@ -129,9 +129,7 @@ impl ResidentIoLoop {
 
                 for req in requests.iter().copied() {
                     match req.op_type {
-                        // SAFETY: io_uring submission queue entry initialized in-place; the SQE
-                        // memory is owned by the ring and lives for the duration of the submit.
-                        io_op::READ => unsafe {
+                        io_op::READ => {
                             let fd = req.src_handle as i32;
                             if let Ok(destination_idx) = registered_destinations
                                 .binary_search_by_key(&req.dst_handle, |destination| {
@@ -139,12 +137,6 @@ impl ResidentIoLoop {
                                 })
                             {
                                 let destination = registered_destinations[destination_idx];
-                                // Bug fix: a submit_read_fixed_at error
-                                // previously returned via `?` while the
-                                // slot was still CLAIMED, hanging the
-                                // GPU which never saw a completion.
-                                // Mark the slot failed first, then
-                                // propagate the error.
                                 if let Err(e) = stream.submit_read_fixed_at(
                                     fd,
                                     req.offset,
@@ -167,7 +159,7 @@ impl ResidentIoLoop {
                                     fix: "register the destination with ResidentIoLoop::spawn_with_registered_destinations before publishing READ requests",
                                 });
                             }
-                        },
+                        }
                         io_op::FENCE => complete_io_request(io_queue_mapped, req.slot_idx, true)?,
                         io_op::WRITE => complete_io_request(io_queue_mapped, req.slot_idx, false)?,
                         _ => complete_io_request(io_queue_mapped, req.slot_idx, false)?,

@@ -13,7 +13,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::{Path, PathBuf};
 
 /// Valid publication classes for workspace members.
-pub const VALID_PUBLICATION_CLASSES: &[&str] = &[
+pub(crate) const VALID_PUBLICATION_CLASSES: &[&str] = &[
     "stable-consumer-sdk",
     "extension-sdk",
     "concrete-backend",
@@ -23,7 +23,7 @@ pub const VALID_PUBLICATION_CLASSES: &[&str] = &[
 ];
 
 /// Known publishable package roster.
-pub const EXPECTED_PUBLISHABLE_PACKAGES: &[&str] = &[
+pub(crate) const EXPECTED_PUBLISHABLE_PACKAGES: &[&str] = &[
     "vyre",
     "vyre-foundation",
     "vyre-megakernel",
@@ -53,21 +53,19 @@ pub const EXPECTED_PUBLISHABLE_PACKAGES: &[&str] = &[
 
 fn workspace_root() -> PathBuf {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir
-        .parent()
-        .expect("workspace root")
-        .to_path_buf()
+    manifest_dir.parent().expect("workspace root").to_path_buf()
 }
 
 #[derive(Debug, Clone)]
-pub struct MemberInfo {
-    pub name: String,
-    pub path: String,
-    pub publication_class: Option<String>,
-    pub publish: bool,
-    pub normal_deps: Vec<String>,
-    pub build_deps: Vec<String>,
-    pub dev_deps: Vec<String>,
+#[allow(dead_code)]
+pub(crate) struct MemberInfo {
+    pub(crate) name: String,
+    pub(crate) path: String,
+    pub(crate) publication_class: Option<String>,
+    pub(crate) publish: bool,
+    pub(crate) normal_deps: Vec<String>,
+    pub(crate) build_deps: Vec<String>,
+    pub(crate) dev_deps: Vec<String>,
 }
 
 fn load_workspace_members(root: &Path) -> BTreeMap<String, MemberInfo> {
@@ -89,8 +87,7 @@ fn load_workspace_members(root: &Path) -> BTreeMap<String, MemberInfo> {
         let member_cargo_path = root.join(member_path_str).join("Cargo.toml");
         let content = std::fs::read_to_string(&member_cargo_path)
             .unwrap_or_else(|e| panic!("failed to read {}: {e}", member_cargo_path.display()));
-        let member_toml: toml::Value =
-            toml::from_str(&content).expect("parse member Cargo.toml");
+        let member_toml: toml::Value = toml::from_str(&content).expect("parse member Cargo.toml");
 
         let pkg = member_toml.get("package").expect("package table");
         let name = pkg
@@ -171,7 +168,8 @@ fn load_workspace_members(root: &Path) -> BTreeMap<String, MemberInfo> {
 
 fn load_ownership_classes(root: &Path) -> BTreeMap<String, String> {
     let ownership_path = root.join("docs/CRATE_OWNERSHIP.toml");
-    let content = std::fs::read_to_string(&ownership_path).expect("CRATE_OWNERSHIP.toml must exist");
+    let content =
+        std::fs::read_to_string(&ownership_path).expect("CRATE_OWNERSHIP.toml must exist");
     let toml_val: toml::Value = toml::from_str(&content).expect("parse CRATE_OWNERSHIP.toml");
 
     let mut map = BTreeMap::new();
@@ -190,7 +188,7 @@ fn load_ownership_classes(root: &Path) -> BTreeMap<String, String> {
 }
 
 /// Validates that all members declare explicit and valid publication classes.
-pub fn validate_publication_classes(
+pub(crate) fn validate_publication_classes(
     members: &BTreeMap<String, MemberInfo>,
     ownership_classes: &BTreeMap<String, String>,
 ) -> Result<(), Vec<String>> {
@@ -233,7 +231,7 @@ pub fn validate_publication_classes(
 }
 
 /// Validates that no publishable package depends on a non-publishable package via normal or build deps.
-pub fn validate_publishable_dependency_closure(
+pub(crate) fn validate_publishable_dependency_closure(
     members: &BTreeMap<String, MemberInfo>,
 ) -> Result<(), Vec<String>> {
     let mut errors = Vec::new();
@@ -272,7 +270,7 @@ pub fn validate_publishable_dependency_closure(
 }
 
 /// Validates that every publishable crate is known in the expected roster.
-pub fn validate_publishable_roster(
+pub(crate) fn validate_publishable_roster(
     members: &BTreeMap<String, MemberInfo>,
 ) -> Result<(), Vec<String>> {
     let mut errors = Vec::new();
@@ -294,7 +292,7 @@ pub fn validate_publishable_roster(
 }
 
 /// Computes the topological release order for all publishable packages.
-pub fn derive_release_ordering(
+pub(crate) fn derive_release_ordering(
     members: &BTreeMap<String, MemberInfo>,
 ) -> Result<Vec<String>, String> {
     let publishable_names: BTreeSet<String> = members
@@ -474,7 +472,9 @@ fn mutation_missing_publication_class_is_caught() {
         "stripping publication class must fail validation"
     );
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| e.contains("does not declare `[package.metadata.vyre.publication_class]`")));
+    assert!(errors
+        .iter()
+        .any(|e| e.contains("does not declare `[package.metadata.vyre.publication_class]`")));
 }
 
 #[test]
@@ -494,7 +494,9 @@ fn mutation_invalid_publication_class_is_caught() {
         "invalid publication class must fail validation"
     );
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| e.contains("declares invalid publication_class")));
+    assert!(errors
+        .iter()
+        .any(|e| e.contains("declares invalid publication_class")));
 }
 
 #[test]
@@ -513,7 +515,12 @@ fn mutation_unpublished_dependency_in_publishable_crate_is_caught() {
         "depending on publish = false package must fail validation"
     );
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| e.contains("has normal dependency on non-publishable crate `vyre-registry-link`")));
+    assert!(
+        errors
+            .iter()
+            .any(|e| e
+                .contains("has normal dependency on non-publishable crate `vyre-registry-link`"))
+    );
 }
 
 #[test]
@@ -541,5 +548,7 @@ fn mutation_newly_publishable_unclassified_package_is_caught() {
         "unexpected publishable package must fail validation"
     );
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| e.contains("unexpected newly publishable package `vyre-unclassified-new-pkg`")));
+    assert!(errors
+        .iter()
+        .any(|e| e.contains("unexpected newly publishable package `vyre-unclassified-new-pkg`")));
 }

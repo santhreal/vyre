@@ -9,7 +9,8 @@ use serde::{Deserialize, Serialize};
 use super::catalog::{ValidationRule, VALIDATION_RULES};
 use crate::diagnostics::{
     CompilerLevel, Diagnostic, DiagnosticCause, DiagnosticCode, DiagnosticStage, OpLocation,
-    RetryClass, Severity, };
+    RetryClass, Severity,
+};
 
 /// Stable validation rule identity.
 ///
@@ -527,4 +528,3 @@ mod tests {
         assert!(issue.message().contains("Fix:"));
     }
 }
-

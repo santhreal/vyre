@@ -1,12 +1,12 @@
 //! Proof plan summary, its catalog and execution hashes, and the `plan` subcommand.
 
 use crate::artifact_json::write_json_artifact;
-use vyre_conform::backend_selection::{select_backends, semantic_execution_backends};
 use crate::operation_selection::{
     prepare_entry, select_entries, unified_entries, PreparedEntry, UnifiedEntry,
 };
 use crate::proof_options::{parse_proof_options, ProofOptions};
 use serde::{Deserialize, Serialize};
+use vyre_conform::backend_selection::{select_backends, semantic_execution_backends};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub(crate) struct ProofPlanSummary {

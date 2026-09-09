@@ -75,7 +75,8 @@ impl CompileError {
             },
             Self::ProgramPreparation(ir_err) => {
                 let mut diag = ir_err.diagnostic();
-                diag.notes.push("during AOT frontend Program preparation".into());
+                diag.notes
+                    .push("during AOT frontend Program preparation".into());
                 diag
             }
             Self::ArtifactLayout(msg) => Diagnostic {
@@ -112,7 +113,8 @@ impl CompileError {
             }
             Self::CanonicalArtifact { stage, source } => {
                 let mut diag = source.diagnostic.clone();
-                diag.notes.push(format!("during AOT stage `{stage}`").into());
+                diag.notes
+                    .push(format!("during AOT stage `{stage}`").into());
                 diag
             }
         }
@@ -132,10 +134,11 @@ pub fn compile_request(
     request: &ValidatedCompileRequest,
     target: TargetId,
 ) -> Result<ArtifactEnvelope, CompileError> {
-    let artifact = vyre_megakernel::compile(request).map_err(|source| CompileError::CanonicalArtifact {
-        stage: "canonical-compile",
-        source,
-    })?;
+    let artifact =
+        vyre_megakernel::compile(request).map_err(|source| CompileError::CanonicalArtifact {
+            stage: "canonical-compile",
+            source,
+        })?;
     let compiler = registered_target_compiler(&target)?;
     vyre_megakernel::attach_target(artifact, compiler.as_ref())
         .map_err(CompileError::TargetCompilation)
@@ -148,4 +151,3 @@ fn registered_target_compiler(target: &TargetId) -> Result<Box<dyn TargetCompile
         .map_err(|_| CompileError::TargetNotEnabled(target.clone()))
 }
 vyre_foundation::diagnostic_conversions!(CompileError, diagnostic);
-

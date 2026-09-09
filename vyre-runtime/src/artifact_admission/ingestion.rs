@@ -126,27 +126,28 @@ impl ResourceDataSource {
     pub fn fetch_bytes(&self) -> Result<Option<Vec<u8>>, ResourceIngestionError> {
         match self {
             Self::Memory(bytes) => Ok(Some(bytes.clone())),
-            Self::File { path, offset, length } => {
-                let mut file = std::fs::File::open(path).map_err(|err| {
-                    ResourceIngestionError::Io {
+            Self::File {
+                path,
+                offset,
+                length,
+            } => {
+                let mut file =
+                    std::fs::File::open(path).map_err(|err| ResourceIngestionError::Io {
                         path: path.display().to_string(),
                         error: err.to_string(),
-                    }
-                })?;
+                    })?;
                 use std::io::{Read, Seek, SeekFrom};
-                file.seek(SeekFrom::Start(*offset)).map_err(|err| {
-                    ResourceIngestionError::Io {
+                file.seek(SeekFrom::Start(*offset))
+                    .map_err(|err| ResourceIngestionError::Io {
                         path: path.display().to_string(),
                         error: err.to_string(),
-                    }
-                })?;
+                    })?;
                 let mut buf = vec![0u8; *length as usize];
-                file.read_exact(&mut buf).map_err(|err| {
-                    ResourceIngestionError::Io {
+                file.read_exact(&mut buf)
+                    .map_err(|err| ResourceIngestionError::Io {
                         path: path.display().to_string(),
                         error: err.to_string(),
-                    }
-                })?;
+                    })?;
                 Ok(Some(buf))
             }
             Self::ByteRange { bytes, length, .. } => {
@@ -235,7 +236,12 @@ impl TypedResource {
 
     /// File slice resource.
     #[must_use]
-    pub fn file(value: ArtifactValueId, path: impl Into<PathBuf>, offset: u64, length: u64) -> Self {
+    pub fn file(
+        value: ArtifactValueId,
+        path: impl Into<PathBuf>,
+        offset: u64,
+        length: u64,
+    ) -> Self {
         Self::new(value, ResourceDataSource::file(path, offset, length))
     }
 
@@ -352,7 +358,8 @@ impl TypedResourceDataset {
 
     /// Helper to add an in-memory byte buffer.
     pub fn add_memory(&mut self, value: ArtifactValueId, bytes: impl Into<Vec<u8>>) -> &mut Self {
-        self.resources.insert(value, TypedResource::memory(value, bytes));
+        self.resources
+            .insert(value, TypedResource::memory(value, bytes));
         self
     }
 
@@ -522,7 +529,11 @@ impl ResourceManifest {
         let mut dataset = TypedResourceDataset::new();
         for entry in &self.entries {
             let source = match &entry.source {
-                ResourceManifestSource::File { path, offset, length } => {
+                ResourceManifestSource::File {
+                    path,
+                    offset,
+                    length,
+                } => {
                     let full_path = if Path::new(path).is_absolute() {
                         PathBuf::from(path)
                     } else {

@@ -41,6 +41,44 @@ pub enum OperationRegistryError {
         /// Whether the minting crate is inside the workspace.
         origin: &'static str,
     },
+    /// A registration has neither an algebraic law nor an explicit opaque decision.
+    #[error("operation `{id}` has no transform decision: must declare either algebraic laws or an explicit opaque decision")]
+    MissingTransformDecision {
+        /// Invalid operation id.
+        id: &'static str,
+    },
+    /// A registration cited an invalid or placeholder opaque reason.
+    #[error("operation `{id}` records an invalid or placeholder opaque reason `{reason}`")]
+    InvalidOpaqueReason {
+        /// Invalid operation id.
+        id: &'static str,
+        /// Invalid reason string.
+        reason: &'static str,
+    },
+    /// A registration cited an unknown algebraic law.
+    #[error("operation `{id}` cites unknown algebraic law `{law}`")]
+    UnknownAlgebraicLaw {
+        /// Invalid operation id.
+        id: &'static str,
+        /// Unknown law name.
+        law: &'static str,
+    },
+    /// A declared law has no executable proof evidence.
+    #[error("operation `{id}` law `{law}` has no executable proof evidence")]
+    NoExecutableProofEvidence {
+        /// Invalid operation id.
+        id: &'static str,
+        /// Law name.
+        law: &'static str,
+    },
+    /// Semantic contract record failed validation.
+    #[error("operation `{id}` semantic contract record validation failed: {message}")]
+    ContractValidationFailed {
+        /// Invalid operation id.
+        id: &'static str,
+        /// Failure diagnostic.
+        message: String,
+    },
 }
 
 pub(crate) fn validate_identity(

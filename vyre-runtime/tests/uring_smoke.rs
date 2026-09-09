@@ -33,7 +33,7 @@ fn reads_from_dev_zero_into_host_buffer() {
     // never hand this buffer to a GPU backend  -  the kernel is the
     // only consumer, and the kernel treats `iov_base` as plain
     // host-writable memory.
-    let gpu_buffer = unsafe { GpuMappedBuffer::from_host_visible_slice(&mut target) };
+    let gpu_buffer = GpuMappedBuffer::from_host_visible_slice(&mut target);
 
     let tail = AtomicU32::new(0);
     // SAFETY (test-only): we keep `tail` alive for the duration of
@@ -49,11 +49,9 @@ fn reads_from_dev_zero_into_host_buffer() {
 
     // SAFETY: iovs lives until poll completes below (owned by this
     // test frame). fd is live. gpu_buffer was registered above.
-    unsafe {
-        stream
-            .submit_read_to_gpu(fd, 0, CHUNK as u32, 0, &mut iovs)
-            .expect("submit /dev/zero read");
-    }
+    stream
+        .submit_read_to_gpu(fd, 0, CHUNK as u32, 0, &mut iovs)
+        .expect("submit /dev/zero read");
 
     assert_eq!(stream.inflight(), 1, "one read in flight after submit");
 
@@ -94,16 +92,14 @@ fn empty_iovs_storage_reports_the_missing_iovec_slot() {
     };
 
     let mut target = [0u8; 16];
-    let gpu_buffer = unsafe { GpuMappedBuffer::from_host_visible_slice(&mut target) };
+    let gpu_buffer = GpuMappedBuffer::from_host_visible_slice(&mut target);
     let tail = AtomicU32::new(0);
     let mut stream = AsyncUringStream::new(ring, gpu_buffer, &tail);
 
     let mut empty: [Iovec; 0] = [];
-    let err = unsafe {
-        stream
-            .submit_read_to_gpu(0, 0, 4, 0, &mut empty)
-            .expect_err("empty iovs must be rejected")
-    };
+    let err = stream
+        .submit_read_to_gpu(0, 0, 4, 0, &mut empty)
+        .expect_err("empty iovs must be rejected");
     // An empty iovec array is a malformed request, not a full queue: the
     // submission queue was never consulted.
     assert!(
@@ -129,7 +125,7 @@ fn out_of_bounds_chunk_reports_the_range_past_the_mapped_buffer() {
     };
 
     let mut target = [0u8; 16];
-    let gpu_buffer = unsafe { GpuMappedBuffer::from_host_visible_slice(&mut target) };
+    let gpu_buffer = GpuMappedBuffer::from_host_visible_slice(&mut target);
     let tail = AtomicU32::new(0);
     let mut stream = AsyncUringStream::new(ring, gpu_buffer, &tail);
 
@@ -138,11 +134,9 @@ fn out_of_bounds_chunk_reports_the_range_past_the_mapped_buffer() {
         iov_len: 0,
     }];
     // chunk_idx=4 * len=8 = 32 bytes > 16-byte buffer
-    let err = unsafe {
-        stream
-            .submit_read_to_gpu(0, 0, 8, 4, &mut iovs)
-            .expect_err("out-of-bounds chunk must be rejected")
-    };
+    let err = stream
+        .submit_read_to_gpu(0, 0, 8, 4, &mut iovs)
+        .expect_err("out-of-bounds chunk must be rejected");
     // The destination range, not the queue, is what the stream rejected, and
     // the offset and region length it observed are part of the fault.
     assert!(

@@ -118,7 +118,8 @@ fn runtime_enumerates_all_kernel_op_kind_variants_from_source() {
 #[test]
 fn unsupported_variants_are_refused_by_name_on_ptx() {
     // 1. IndirectDispatch must be refused by name with UnsupportedOp
-    let desc_indirect = sample_descriptor_for_kind(KernelOpKind::IndirectDispatch { count_offset: 0 });
+    let desc_indirect =
+        sample_descriptor_for_kind(KernelOpKind::IndirectDispatch { count_offset: 0 });
     let err_indirect = emit(&desc_indirect).unwrap_err();
     match err_indirect {
         EmitError::UnsupportedOp(op) => {
@@ -140,11 +141,12 @@ fn unsupported_variants_are_refused_by_name_on_ptx() {
     }
 
     // 3. OpaqueExpr must be refused by name with UnsupportedOp
-    let desc_opaque_expr = sample_descriptor_for_kind(KernelOpKind::OpaqueExpr(Box::new(OpaqueExprData {
-        extension_id: 1,
-        extension_kind: "custom_expr".into(),
-        payload: vec![1, 2, 3],
-    })));
+    let desc_opaque_expr =
+        sample_descriptor_for_kind(KernelOpKind::OpaqueExpr(Box::new(OpaqueExprData {
+            extension_id: 1,
+            extension_kind: "custom_expr".into(),
+            payload: vec![1, 2, 3],
+        })));
     let err_opaque_expr = emit(&desc_opaque_expr).unwrap_err();
     match err_opaque_expr {
         EmitError::UnsupportedOp(op) => {
@@ -154,10 +156,11 @@ fn unsupported_variants_are_refused_by_name_on_ptx() {
     }
 
     // 4. OpaqueNode must be refused by name with UnsupportedOp
-    let desc_opaque_node = sample_descriptor_for_kind(KernelOpKind::OpaqueNode(Box::new(OpaqueNodeData {
-        extension_kind: "custom_node".into(),
-        payload: vec![4, 5, 6],
-    })));
+    let desc_opaque_node =
+        sample_descriptor_for_kind(KernelOpKind::OpaqueNode(Box::new(OpaqueNodeData {
+            extension_kind: "custom_node".into(),
+            payload: vec![4, 5, 6],
+        })));
     let err_opaque_node = emit(&desc_opaque_node).unwrap_err();
     match err_opaque_node {
         EmitError::UnsupportedOp(op) => {

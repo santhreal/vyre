@@ -8,8 +8,8 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use vyre_conform_spec::{
-    verify_receipts_for_certificate, CasePayload, CertificateRejection, DeviceLease,
-    WorkerBudget, WorkerMode, WorkerReceipt, WorkerRequest, WorkerStatus,
+    verify_receipts_for_certificate, CasePayload, CertificateRejection, DeviceLease, WorkerBudget,
+    WorkerMode, WorkerReceipt, WorkerRequest, WorkerStatus,
 };
 
 use crate::backend_selection::backend_registration;
@@ -44,7 +44,10 @@ impl DeviceLeaseManager {
 
         let id_num = LEASE_COUNTER.fetch_add(1, Ordering::Relaxed);
         let lease_id = format!("lease-{backend_id}-{id_num:06}");
-        let lease_token = format!("tok-{backend_id}-{id_num:06}-{}", current_environment_digest());
+        let lease_token = format!(
+            "tok-{backend_id}-{id_num:06}-{}",
+            current_environment_digest()
+        );
 
         if quarantined.contains(&lease_id) {
             return Err(format!("device lease `{lease_id}` is quarantined"));
@@ -133,7 +136,10 @@ impl WorkerCoordinator {
         budget: Option<WorkerBudget>,
     ) -> WorkerReceipt {
         let budget = budget.unwrap_or_default();
-        let req_id = format!("req-ref-{}", REQUEST_COUNTER.fetch_add(1, Ordering::Relaxed));
+        let req_id = format!(
+            "req-ref-{}",
+            REQUEST_COUNTER.fetch_add(1, Ordering::Relaxed)
+        );
         let binary_digest = current_binary_digest();
         let env_digest = current_environment_digest();
 
@@ -186,7 +192,10 @@ impl WorkerCoordinator {
             }
         };
 
-        let req_id = format!("req-prod-{}", REQUEST_COUNTER.fetch_add(1, Ordering::Relaxed));
+        let req_id = format!(
+            "req-prod-{}",
+            REQUEST_COUNTER.fetch_add(1, Ordering::Relaxed)
+        );
         let binary_digest = current_binary_digest();
         let env_digest = current_environment_digest();
         let target_facts_digest = backend_registration(backend_id)
@@ -311,10 +320,7 @@ impl WorkerCoordinator {
 
         let mut cmd = std::process::Command::new(&exe);
         cmd.env("VYRE_CONFORM_WORKER", "1");
-        cmd.env(
-            "VYRE_CONFORM_WORKER_SECRET",
-            hex::encode(&self.auth_secret),
-        );
+        cmd.env("VYRE_CONFORM_WORKER_SECRET", hex::encode(&self.auth_secret));
         cmd.stdin(std::process::Stdio::piped());
         cmd.stdout(std::process::Stdio::piped());
         cmd.stderr(std::process::Stdio::piped());

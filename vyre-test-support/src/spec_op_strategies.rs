@@ -17,10 +17,8 @@ use proptest::prelude::*;
 use crate::spec_variant_tables::{
     builtin_atomic_ops, builtin_bin_ops, builtin_ternary_ops, builtin_un_ops,
 };
-use vyre_spec::{
-    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionTernaryOpId, ExtensionUnOpId,
-};
 use vyre_spec::{AtomicOp, BinOp, TernaryOp, UnOp};
+use vyre_spec::{ExtensionAtomicOpId, ExtensionBinOpId, ExtensionTernaryOpId, ExtensionUnOpId};
 
 /// An extension operator id: the high bit is what separates the extension space
 /// from the builtin tags, so it is always set.

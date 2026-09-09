@@ -10,10 +10,8 @@
 use smallvec::smallvec;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_spec::{
-    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionUnOpId,
-};
 use vyre_spec::TypeId;
+use vyre_spec::{ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionUnOpId};
 use vyre_test_support::spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
 use vyre_test_support::wire_round_trip::assert_canonical_wire_round_trip;
 

@@ -4,15 +4,13 @@
 //! Provides typed atomic state machines that fail into terminal/rebuilding states on poison,
 //! prepare/commit journaling with idempotency keys, and supervised worker restart budgets.
 
+use core::sync::atomic::{AtomicU64, Ordering};
 use std::collections::BTreeMap;
 use std::format;
 use std::string::String;
-use core::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
-pub use vyre_foundation::{
-    FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError,
-};
+use vyre_foundation::{FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError};
 
 /// Lifecycle state for an atomic guarded resource.
 #[derive(Clone, Debug, PartialEq)]
@@ -325,10 +323,14 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
                 Err(p) => p.into_inner(),
             };
             let (saved_ticket, _) = prepared.get(&key).ok_or_else(|| {
-                E::from(String::from("Fix: no prepared transaction found for key during commit phase."))
+                E::from(String::from(
+                    "Fix: no prepared transaction found for key during commit phase.",
+                ))
             })?;
             if *saved_ticket != ticket {
-                return Err(E::from(String::from("Fix: ticket mismatch during prepare-commit transaction commit.")));
+                return Err(E::from(String::from(
+                    "Fix: ticket mismatch during prepare-commit transaction commit.",
+                )));
             }
         }
 
@@ -539,10 +541,7 @@ pub fn authoritative_runtime_state_owner_registry(
     );
     map.insert(
         "vyre-runtime/src/atomic_recovery.rs:restart_count",
-        (
-            FailureDomain::WorkerProcess,
-            RecoveryClass::ProcessFatal,
-        ),
+        (FailureDomain::WorkerProcess, RecoveryClass::ProcessFatal),
     );
     map.insert(
         "vyre-runtime/src/artifact_admission/interactive_session.rs:records",
@@ -601,7 +600,7 @@ pub fn authoritative_runtime_state_owner_registry(
         ),
     );
     map.insert(
-        "vyre-runtime/src/prefix_cache/mod.rs:inner",
+        "vyre-runtime/src/retained_page_cache/mod.rs:inner",
         (
             FailureDomain::MemoryState,
             RecoveryClass::RestartableFromCanonicalInput,
@@ -634,6 +633,31 @@ pub fn authoritative_runtime_state_owner_registry(
             FailureDomain::MemoryState,
             RecoveryClass::RestartableFromCanonicalInput,
         ),
+    );
+    map.insert(
+        "vyre-runtime/src/external_resource_admission.rs:resources",
+        (
+            FailureDomain::DeviceContext,
+            RecoveryClass::DeviceContextFatal,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/external_resource_admission.rs:dependent_views",
+        (
+            FailureDomain::DeviceContext,
+            RecoveryClass::DeviceContextFatal,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/external_resource_admission.rs:dependent_pipelines",
+        (
+            FailureDomain::DeviceContext,
+            RecoveryClass::DeviceContextFatal,
+        ),
+    );
+    map.insert(
+        "vyre-runtime/src/structured_concurrency.rs:workers",
+        (FailureDomain::WorkerProcess, RecoveryClass::ProcessFatal),
     );
     map
 }

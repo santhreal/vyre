@@ -1,13 +1,15 @@
 //! Unforgeable, generation-bound, least-privilege capability handles (Row 119).
 
-use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 
 use super::error::SecurityError;
 use super::label::{Permission, TenantId};
 
 /// Monotonic generation identifier to prevent use-after-free and reuse aliasing.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize,
+)]
 #[repr(transparent)]
 pub struct GenerationId(pub u64);
 
@@ -84,8 +86,12 @@ impl CapabilityAuthenticator {
 
     /// Create an authenticator with a system-derived deterministic key.
     pub fn default_system() -> Self {
-        let key_bytes = blake3::hash(b"vyre_default_system_capability_key").as_bytes().to_owned();
-        Self { master_key: key_bytes }
+        let key_bytes = blake3::hash(b"vyre_default_system_capability_key")
+            .as_bytes()
+            .to_owned();
+        Self {
+            master_key: key_bytes,
+        }
     }
 
     fn compute_mac(
@@ -123,7 +129,8 @@ impl CapabilityAuthenticator {
         generation: GenerationId,
         permissions: BTreeSet<Permission>,
     ) -> UnforgeableCapability {
-        let auth_mac = self.compute_mac(tenant_id, device_id, resource_id, generation, &permissions);
+        let auth_mac =
+            self.compute_mac(tenant_id, device_id, resource_id, generation, &permissions);
         UnforgeableCapability {
             tenant_id,
             device_id,

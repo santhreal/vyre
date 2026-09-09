@@ -41,7 +41,6 @@ pub enum BlendMode {
 /// Build a Program that composites `fg` over `bg` using the specified [`BlendMode`].
 #[must_use]
 pub fn composite_blend(fg: &str, bg: &str, output: &str, count: u32, mode: BlendMode) -> Program {
-
     let body = vec![
         Node::let_bind("fg_px", Expr::load(fg, Expr::var("idx"))),
         Node::let_bind("bg_px", Expr::load(bg, Expr::var("idx"))),
@@ -320,9 +319,7 @@ pub fn composite_blend(fg: &str, bg: &str, output: &str, count: u32, mode: Blend
     )
 }
 
-const EXPECTED_BLEND_ADD_OUTPUT_BYTES: [u8; 8] = [
-    0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0x00, 0xFF, 0xFF,
-];
+const EXPECTED_BLEND_ADD_OUTPUT_BYTES: [u8; 8] = [0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0x00, 0xFF, 0xFF];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library_unconstrained(

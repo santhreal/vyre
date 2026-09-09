@@ -27,23 +27,40 @@ fn causal_receipt_records_events_and_reconstructs_critical_path() {
 
     // Span 2: Optimizer (child of 1)
     let span2 = CausalSpanId::new(2);
-    let mut ev2 = CausalEvent::new(span2, Some(root_span), CausalPhase::SemanticOptimizer, "canonicalize");
+    let mut ev2 = CausalEvent::new(
+        span2,
+        Some(root_span),
+        CausalPhase::SemanticOptimizer,
+        "canonicalize",
+    );
     ev2.wall_time_ns = 2_000_000; // 2ms
     receipt.record_event(ev2);
 
     // Span 3: Lowering (child of 2)
     let span3 = CausalSpanId::new(3);
-    let mut ev3 = CausalEvent::new(span3, Some(span2), CausalPhase::TargetLowering, "physical_lower");
+    let mut ev3 = CausalEvent::new(
+        span3,
+        Some(span2),
+        CausalPhase::TargetLowering,
+        "physical_lower",
+    );
     ev3.wall_time_ns = 5_000_000; // 5ms
     receipt.record_event(ev3);
 
     // Span 4: Fast branch (child of 1)
     let span4 = CausalSpanId::new(4);
-    let mut ev4 = CausalEvent::new(span4, Some(root_span), CausalPhase::SemanticOptimizer, "constant_fold");
+    let mut ev4 = CausalEvent::new(
+        span4,
+        Some(root_span),
+        CausalPhase::SemanticOptimizer,
+        "constant_fold",
+    );
     ev4.wall_time_ns = 500_000; // 0.5ms
     receipt.record_event(ev4);
 
-    let critical_path = receipt.reconstruct_critical_path().expect("critical path reconstruction failed");
+    let critical_path = receipt
+        .reconstruct_critical_path()
+        .expect("critical path reconstruction failed");
     assert_eq!(critical_path, &[root_span, span2, span3]);
     assert_eq!(receipt.total_wall_time_ns, 8_500_000);
     assert_eq!(receipt.total_allocations, 10);
@@ -56,7 +73,12 @@ fn counterfactual_decision_recording_and_lookup() {
     let root_span = CausalSpanId::new(1);
     let mut receipt = CausalReceipt::new(trace_id, root_span);
 
-    let mut event = CausalEvent::new(root_span, None, CausalPhase::MegakernelCompilation, "schedule_search");
+    let mut event = CausalEvent::new(
+        root_span,
+        None,
+        CausalPhase::MegakernelCompilation,
+        "schedule_search",
+    );
     event.counterfactual_decision = Some(CounterfactualDecision {
         chosen_schedule: "tiled_fused_gemm".to_string(),
         chosen_cost: 42.5,
@@ -70,7 +92,9 @@ fn counterfactual_decision_recording_and_lookup() {
 
     receipt.record_event(event);
 
-    let decision = receipt.explain_decision(root_span).expect("decision must exist");
+    let decision = receipt
+        .explain_decision(root_span)
+        .expect("decision must exist");
     assert_eq!(decision.chosen_schedule, "tiled_fused_gemm");
     assert_eq!(decision.alternatives.len(), 1);
     assert_eq!(decision.alternatives[0].schedule_name, "naive_unfused");
@@ -82,7 +106,12 @@ fn disabled_tracer_allocates_zero_events() {
     assert!(!tracer.is_active());
     assert_eq!(tracer.mode(), CausalTraceMode::Off);
 
-    let event = CausalEvent::new(CausalSpanId::new(1), None, CausalPhase::DriverSubmission, "queue_submit");
+    let event = CausalEvent::new(
+        CausalSpanId::new(1),
+        None,
+        CausalPhase::DriverSubmission,
+        "queue_submit",
+    );
     tracer.record_event(event);
 
     let receipt = tracer.finalize();
@@ -95,7 +124,12 @@ fn causal_receipt_json_toml_roundtrip() {
     let root_span = CausalSpanId::new(1);
     let mut receipt = CausalReceipt::new(trace_id, root_span);
 
-    let mut event = CausalEvent::new(root_span, None, CausalPhase::RuntimeExecution, "kernel_execute");
+    let mut event = CausalEvent::new(
+        root_span,
+        None,
+        CausalPhase::RuntimeExecution,
+        "kernel_execute",
+    );
     event.wall_time_ns = 12345;
     event.device_time_ns = Some(9876);
     event.work_units = 512;
@@ -119,5 +153,11 @@ fn stale_causal_receipt_schema_fails_closed() {
 
     let json = serde_json::to_string(&receipt).unwrap();
     let err = CausalReceipt::from_json(&json).unwrap_err();
-    assert!(matches!(err, CausalError::StaleSchemaVersion { expected: 1, found: 999 }));
+    assert!(matches!(
+        err,
+        CausalError::StaleSchemaVersion {
+            expected: 1,
+            found: 999
+        }
+    ));
 }

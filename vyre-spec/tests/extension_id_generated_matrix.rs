@@ -77,11 +77,26 @@ fn generated_raw_extension_ids_preserve_range_semantics_and_serde_shape() {
 fn named_extension_id_vectors_are_frozen() {
     let vectors = [
         ("", ExtensionDataTypeId::from_name("").as_u32()),
-        ("dialect.tensor", ExtensionDataTypeId::from_name("dialect.tensor").as_u32()),
-        ("dialect.binop", ExtensionDataTypeId::from_name("dialect.binop").as_u32()),
-        ("graph.reachability.wave", ExtensionDataTypeId::from_name("graph.reachability.wave").as_u32()),
-        ("runtime.megakernel.queue", ExtensionDataTypeId::from_name("runtime.megakernel.queue").as_u32()),
-        ("cuda.resident.crc32.map_reduce", ExtensionDataTypeId::from_name("cuda.resident.crc32.map_reduce").as_u32()),
+        (
+            "dialect.tensor",
+            ExtensionDataTypeId::from_name("dialect.tensor").as_u32(),
+        ),
+        (
+            "dialect.binop",
+            ExtensionDataTypeId::from_name("dialect.binop").as_u32(),
+        ),
+        (
+            "graph.reachability.wave",
+            ExtensionDataTypeId::from_name("graph.reachability.wave").as_u32(),
+        ),
+        (
+            "runtime.megakernel.queue",
+            ExtensionDataTypeId::from_name("runtime.megakernel.queue").as_u32(),
+        ),
+        (
+            "cuda.resident.crc32.map_reduce",
+            ExtensionDataTypeId::from_name("cuda.resident.crc32.map_reduce").as_u32(),
+        ),
     ];
 
     for (name, expected) in vectors {

@@ -231,4 +231,3 @@ mod tests {
         assert_eq!(RecoveryClass::ALL.len(), 5);
     }
 }
-

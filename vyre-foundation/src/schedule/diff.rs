@@ -3,8 +3,8 @@
 //! Compares two [`SchedulePlan`] or [`ScheduleTree`] structures and produces
 //! structured change records.
 
-use serde::{Deserialize, Serialize};
 use super::tree::{ScheduleOp, SchedulePlan, ScheduleTree};
+use serde::{Deserialize, Serialize};
 
 /// One discrete difference between two schedules.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -72,7 +72,9 @@ impl ScheduleDiff {
                 after: after.resource_bounds.logical_points,
             });
         }
-        if before.resource_bounds.registers_per_invocation != after.resource_bounds.registers_per_invocation {
+        if before.resource_bounds.registers_per_invocation
+            != after.resource_bounds.registers_per_invocation
+        {
             diff.items.push(ScheduleDiffItem::ResourceBoundChanged {
                 name: "registers_per_invocation".into(),
                 before: before.resource_bounds.registers_per_invocation as u64,
@@ -110,8 +112,16 @@ fn diff_tree_recursive(
             }
         }
         (
-            ScheduleTree::Node { op: op_a, child: child_a, .. },
-            ScheduleTree::Node { op: op_b, child: child_b, .. },
+            ScheduleTree::Node {
+                op: op_a,
+                child: child_a,
+                ..
+            },
+            ScheduleTree::Node {
+                op: op_b,
+                child: child_b,
+                ..
+            },
         ) => {
             if op_a != op_b {
                 out.push(ScheduleDiffItem::OpModified {

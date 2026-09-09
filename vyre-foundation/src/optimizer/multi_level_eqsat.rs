@@ -3,8 +3,8 @@
 //! Spans semantic IR expressions and compositional schedule calculus terms while
 //! preserving region/effect boundaries, value identity, and generating replayable step proofs.
 
-use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 
 use crate::schedule::SchedulePlan;
 
@@ -65,12 +65,17 @@ impl ParetoFront {
     /// it is discarded. If it dominates existing candidates, they are removed.
     pub fn insert(&mut self, candidate: ParetoCandidate) -> bool {
         // Check if existing candidate dominates this one
-        if self.candidates.iter().any(|c| c.cost.dominates(&candidate.cost)) {
+        if self
+            .candidates
+            .iter()
+            .any(|c| c.cost.dominates(&candidate.cost))
+        {
             return false;
         }
 
         // Remove candidates dominated by the new one
-        self.candidates.retain(|c| !candidate.cost.dominates(&c.cost));
+        self.candidates
+            .retain(|c| !candidate.cost.dominates(&c.cost));
         self.candidates.push(candidate);
         true
     }
@@ -89,13 +94,19 @@ impl ParetoFront {
 
     /// Select the best candidate under a linear scalarization weighting.
     #[must_use]
-    pub fn select_weighted(&self, latency_weight: f64, memory_weight: f64) -> Option<&ParetoCandidate> {
+    pub fn select_weighted(
+        &self,
+        latency_weight: f64,
+        memory_weight: f64,
+    ) -> Option<&ParetoCandidate> {
         self.candidates.iter().min_by(|a, b| {
             let score_a = (a.cost.latency_cycles as f64) * latency_weight
                 + (a.cost.memory_traffic_bytes as f64) * memory_weight;
             let score_b = (b.cost.latency_cycles as f64) * latency_weight
                 + (b.cost.memory_traffic_bytes as f64) * memory_weight;
-            score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal)
+            score_a
+                .partial_cmp(&score_b)
+                .unwrap_or(std::cmp::Ordering::Equal)
         })
     }
 }
@@ -230,10 +241,18 @@ fn hex_digest(digest: &[u8; 32]) -> String {
 impl std::fmt::Display for ProofReplayError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::SemanticsViolation { rule_name, step_index } => {
+            Self::SemanticsViolation {
+                rule_name,
+                step_index,
+            } => {
                 write!(f, "proof replay refused rule '{rule_name}' at step {step_index}: violated semantics preservation")
             }
-            Self::ContinuityBroken { rule_name, step_index, expected_digest, actual_digest } => {
+            Self::ContinuityBroken {
+                rule_name,
+                step_index,
+                expected_digest,
+                actual_digest,
+            } => {
                 write!(
                     f,
                     "proof replay refused rule '{rule_name}' at step {step_index}: digest continuity broken (expected {}, got {})",
@@ -241,15 +260,29 @@ impl std::fmt::Display for ProofReplayError {
                     hex_digest(actual_digest)
                 )
             }
-            Self::TamperedProof { rule_name, step_index, reason } => {
+            Self::TamperedProof {
+                rule_name,
+                step_index,
+                reason,
+            } => {
                 write!(f, "proof replay refused rule '{rule_name}' at step {step_index}: tampered proof ({reason})")
             }
             Self::EmptyProofLog => write!(f, "proof replay failed: proof log is empty"),
             Self::InitialDigestMismatch { expected, actual } => {
-                write!(f, "proof replay initial digest mismatch: expected {}, got {}", hex_digest(expected), hex_digest(actual))
+                write!(
+                    f,
+                    "proof replay initial digest mismatch: expected {}, got {}",
+                    hex_digest(expected),
+                    hex_digest(actual)
+                )
             }
             Self::FinalDigestMismatch { expected, actual } => {
-                write!(f, "proof replay final digest mismatch: expected {}, got {}", hex_digest(expected), hex_digest(actual))
+                write!(
+                    f,
+                    "proof replay final digest mismatch: expected {}, got {}",
+                    hex_digest(expected),
+                    hex_digest(actual)
+                )
             }
             Self::CycleDetected { step_index } => {
                 write!(f, "pass engine detected cycle at step {step_index}")
@@ -315,7 +348,10 @@ impl OptimizationProofChecker {
                 return Err(ProofReplayError::TamperedProof {
                     rule_name: step.rule_name.clone(),
                     step_index: idx,
-                    reason: format!("step index mismatch: expected {idx}, found {}", step.step_index),
+                    reason: format!(
+                        "step index mismatch: expected {idx}, found {}",
+                        step.step_index
+                    ),
                 });
             }
             if !step.preserves_semantics {
@@ -471,7 +507,9 @@ impl Default for SemanticEqualitySaturation {
         Self {
             class_growth_limit: 4096,
             max_iterations: 16,
-            admitted_numerical_contracts: vec![crate::optimizer::rewrite_contract::NumericalContract::BitExact],
+            admitted_numerical_contracts: vec![
+                crate::optimizer::rewrite_contract::NumericalContract::BitExact,
+            ],
         }
     }
 }
@@ -479,7 +517,10 @@ impl Default for SemanticEqualitySaturation {
 impl SemanticEqualitySaturation {
     /// Check if a numerical contract is admitted.
     #[must_use]
-    pub fn admits_contract(&self, contract: crate::optimizer::rewrite_contract::NumericalContract) -> bool {
+    pub fn admits_contract(
+        &self,
+        contract: crate::optimizer::rewrite_contract::NumericalContract,
+    ) -> bool {
         self.admitted_numerical_contracts.contains(&contract)
     }
 
@@ -500,7 +541,8 @@ impl SemanticEqualitySaturation {
             &current,
             &self.admitted_numerical_contracts,
             budget,
-        ).map_err(|e| ProofReplayError::TamperedProof {
+        )
+        .map_err(|e| ProofReplayError::TamperedProof {
             rule_name: "semantic_derivation".into(),
             step_index: 0,
             reason: format!("region law derivation error: {e}"),

@@ -1,10 +1,10 @@
 //! Gate descriptors for gates starting with A through G.
 
-use crate::gate::{GateDescriptor, ResourceClass};
 use super::artifacts::*;
+use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with A through G.
-pub const GATES_A_G: [GateDescriptor; 52] = [
+pub const GATES_A_G: [GateDescriptor; 53] = [
     GateDescriptor {
         name: "abstraction-gate",
         help: "Enforce registered building-block boundaries",
@@ -20,19 +20,24 @@ pub const GATES_A_G: [GateDescriptor; 52] = [
     GateDescriptor {
         name: "application-runnable",
         help: "Enforce whole-application production route and evidence receipts",
-        package: "xtask",
-        areas: &["prepublish"],
+        package: "xtask-registry",
+        areas: &["prepublish", "conformance"],
         subject: "whole-application execution readiness",
         inputs: &[
             "conform/vyre-conform/tests/connected_graph_conformance.rs",
+            "release/evidence/benchmarks/release-workload-matrix.json",
+            "release/evidence/conformance/cuda-conformance.json",
+            "release/evidence/conformance/reference-conformance.json",
+            "release/evidence/conformance/release-all-backends-certificate.json",
+            "release/evidence/conformance/wgpu-conformance.json",
             "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
             "vyre-foundation/src/dialect/schema.rs",
             "vyre-foundation/tests/dialect_schema_translation_closure_contracts.rs",
         ],
-        artifacts: &[],
+        artifacts: &["release/evidence/conformance/application-readiness.json"],
         prerequisites: &[],
-        resource_class: ResourceClass::Io,
-        proof: "crate::gates::application_runnable::tests::application_runnable_proves_closure_and_receipts",
+        resource_class: ResourceClass::Process,
+        proof: "xtask_registry::gates::application_runnable::tests::application_runnable_proves_closure_and_receipts",
     },
     GateDescriptor {
         name: "architecture-contract",
@@ -280,6 +285,18 @@ pub const GATES_A_G: [GateDescriptor; 52] = [
         prerequisites: &[],
         resource_class: ResourceClass::Process,
         proof: "xtask_registry::compile::tests::linked_target_compiler_emits_authenticated_payload",
+    },
+    GateDescriptor {
+        name: "configuration-model",
+        help: "Generate typed configuration space model from Cargo metadata, target predicates, backend capabilities, publication classes, and declared incompatibilities; proves satisfiability and isolated covering set closure",
+        package: "xtask-registry",
+        areas: &["prepublish"],
+        subject: "workspace configuration space",
+        inputs: &["Cargo.toml"],
+        artifacts: &["docs/generated/configuration-space.toml"],
+        prerequisites: &[],
+        resource_class: ResourceClass::Process,
+        proof: "xtask_registry::gates::configuration_model::tests::configuration_space_model_is_satisfiable_and_deterministic",
     },
     GateDescriptor {
         name: "conformance-matrix",

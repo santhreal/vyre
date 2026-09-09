@@ -267,12 +267,15 @@ fn tile_node_variants_report_tile_operands_as_uses_and_survive_dce() {
     );
 
     let tile_nodes: Vec<(Node, Vec<Ident>)> = vec![
+        (Node::tile_decl("decl_t", tile_2x2.clone()), vec![]),
         (
-            Node::tile_decl("decl_t", tile_2x2.clone()),
-            vec![],
-        ),
-        (
-            Node::tile_load("load_t", tile_2x2.clone(), "buf", vec![Expr::u32(0)], Layout::RowMajor),
+            Node::tile_load(
+                "load_t",
+                tile_2x2.clone(),
+                "buf",
+                vec![Expr::u32(0)],
+                Layout::RowMajor,
+            ),
             vec![],
         ),
         (
@@ -281,7 +284,11 @@ fn tile_node_variants_report_tile_operands_as_uses_and_survive_dce() {
         ),
         (
             Node::tile_matmul("mat_acc", "mat_a", "mat_b"),
-            vec![Ident::from("mat_acc"), Ident::from("mat_a"), Ident::from("mat_b")],
+            vec![
+                Ident::from("mat_acc"),
+                Ident::from("mat_a"),
+                Ident::from("mat_b"),
+            ],
         ),
         (
             Node::tile_reduce("red_out", "red_in", SubgroupReduceOp::Max, 1),
@@ -319,7 +326,8 @@ fn tile_node_variants_report_tile_operands_as_uses_and_survive_dce() {
         );
         let prog = Program::wrapped(
             vec![
-                BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::F32).with_count(16),
+                BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::F32)
+                    .with_count(16),
                 BufferDecl::output("out", 1, DataType::F32).with_count(16),
             ],
             [1, 1, 1],
@@ -348,24 +356,24 @@ fn tile_node_variants_report_tile_operands_as_uses_and_survive_dce() {
             Node::tile_elementwise(
                 "exp_scores",
                 vec![Ident::from("scores")],
-                vec![Node::let_bind(
-                    "exp_scores",
-                    Expr::f32(1.0),
-                )],
+                vec![Node::let_bind("exp_scores", Expr::f32(1.0))],
             ),
             Node::tile_store("buf", vec![Expr::u32(0)], "exp_scores"),
         ],
     );
     let opt_result = dce(fused_prog);
     let opt_entry = opt_result.entry();
-    let elementwise_node = opt_entry.iter().find_map(|node| match node {
-        Node::TileElementwise { body, .. } => Some(body),
-        Node::Region { body, .. } => body.iter().find_map(|n| match n {
+    let elementwise_node = opt_entry
+        .iter()
+        .find_map(|node| match node {
             Node::TileElementwise { body, .. } => Some(body),
+            Node::Region { body, .. } => body.iter().find_map(|n| match n {
+                Node::TileElementwise { body, .. } => Some(body),
+                _ => None,
+            }),
             _ => None,
-        }),
-        _ => None,
-    }).expect("TileElementwise must be preserved");
+        })
+        .expect("TileElementwise must be preserved");
     assert_eq!(
         elementwise_node.len(),
         1,

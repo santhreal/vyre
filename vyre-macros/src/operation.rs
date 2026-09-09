@@ -116,9 +116,7 @@ pub(crate) fn vyre_operation_impl(input: TokenStream) -> TokenStream {
         .map(|e| quote!(#e))
         .unwrap_or_else(|| quote!(None));
 
-    let laws: TokenStream2 = laws_expr
-        .map(|e| quote!(#e))
-        .unwrap_or_else(|| quote!(&[]));
+    let laws: TokenStream2 = laws_expr.map(|e| quote!(#e)).unwrap_or_else(|| quote!(&[]));
 
     let numeric: TokenStream2 = numeric_expr
         .map(|e| quote!(#e))

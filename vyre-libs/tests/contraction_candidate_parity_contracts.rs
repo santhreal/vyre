@@ -9,7 +9,9 @@ use vyre_foundation::validate::validate;
 use vyre_libs::gemm::ContractionComposer;
 use vyre_libs::math::linalg::{matmul, matmul_bias};
 use vyre_libs::math::semiring_gemm::semiring_gemm;
-use vyre_libs::nn::linear::{batch_matmul, linear, linear_relu, linear_rows, linear_silu, linear_tiled};
+use vyre_libs::nn::linear::{
+    batch_matmul, linear, linear_relu, linear_rows, linear_silu, linear_tiled,
+};
 use vyre_libs::TensorRef;
 use vyre_primitives::wire::pack_f32_slice;
 use vyre_reference::value::Value;
@@ -18,7 +20,11 @@ use vyre_spec::Semiring;
 fn contraction_users_build_through_unified_composer() {
     // 1. matmul
     let p_matmul = matmul("a", "b", "out", 4, 4, 4);
-    assert!(validate(&p_matmul).is_empty(), "matmul invalid: {:?}", validate(&p_matmul));
+    assert!(
+        validate(&p_matmul).is_empty(),
+        "matmul invalid: {:?}",
+        validate(&p_matmul)
+    );
 
     // 2. matmul_bias
     let p_matmul_bias = matmul_bias("a", "b", "bias", "out", 4, 4, 4);
@@ -33,7 +39,8 @@ fn contraction_users_build_through_unified_composer() {
     assert!(validate(&p_linear_rows).is_empty());
 
     // 5. batch_matmul
-    let p_batch_matmul = batch_matmul("a", "b", "out", 2, 4, 4, 4).expect("batch_matmul must build");
+    let p_batch_matmul =
+        batch_matmul("a", "b", "out", 2, 4, 4, 4).expect("batch_matmul must build");
     assert!(validate(&p_batch_matmul).is_empty());
 
     // 6. semiring_gemm
@@ -69,7 +76,9 @@ fn contraction_u32_matches_reference_oracle_across_shapes() {
             for j in 0..n as usize {
                 let mut sum = 0u32;
                 for p in 0..k as usize {
-                    sum = sum.wrapping_add(a_vals[i * (k as usize) + p].wrapping_mul(b_vals[p * (n as usize) + j]));
+                    sum = sum.wrapping_add(
+                        a_vals[i * (k as usize) + p].wrapping_mul(b_vals[p * (n as usize) + j]),
+                    );
                 }
                 expected[i * (n as usize) + j] = sum;
             }
@@ -85,10 +94,7 @@ fn contraction_u32_matches_reference_oracle_across_shapes() {
 
         let a_bytes: Vec<u8> = a_vals.iter().flat_map(|v| v.to_le_bytes()).collect();
         let b_bytes: Vec<u8> = b_vals.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let inputs = vec![
-            Value::from(a_bytes),
-            Value::from(b_bytes),
-        ];
+        let inputs = vec![Value::from(a_bytes), Value::from(b_bytes)];
 
         let outputs = vyre_reference::reference_eval(&prog, &inputs).expect("eval");
         let out_bytes = outputs[0].to_bytes();
@@ -127,9 +133,10 @@ fn contraction_f32_matches_reference_oracle_across_shapes() {
         let b_ref = TensorRef::f32_2d("b", k, n);
         let out_ref = TensorRef::f32_2d("out", m, n);
 
-        let prog = ContractionComposer::matmul_2d("matmul_f32_test", a_ref, b_ref, out_ref, m, k, n)
-            .build()
-            .unwrap_or_else(|e| panic!("Fix: {m}x{k}x{n} f32 matmul must build: {e}"));
+        let prog =
+            ContractionComposer::matmul_2d("matmul_f32_test", a_ref, b_ref, out_ref, m, k, n)
+                .build()
+                .unwrap_or_else(|e| panic!("Fix: {m}x{k}x{n} f32 matmul must build: {e}"));
 
         let inputs = vec![
             Value::from(pack_f32_slice(&a_vals)),
@@ -138,8 +145,9 @@ fn contraction_f32_matches_reference_oracle_across_shapes() {
 
         let outputs = vyre_reference::reference_eval(&prog, &inputs).expect("eval");
         let out_bytes = outputs[0].to_bytes();
-        let actual = vyre_primitives::wire::unpack_f32_slice(&out_bytes, (m * n) as usize, "matmul_out")
-            .expect("unpack f32 slice");
+        let actual =
+            vyre_primitives::wire::unpack_f32_slice(&out_bytes, (m * n) as usize, "matmul_out")
+                .expect("unpack f32 slice");
         for (idx, (&act, &exp)) in actual.iter().zip(expected.iter()).enumerate() {
             assert!(
                 (act - exp).abs() < 1e-4,

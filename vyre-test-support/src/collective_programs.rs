@@ -5,9 +5,7 @@
 //! variant would assert a narrower contract under the same name, so the list
 //! has one owner and each suite chooses only the group its scoped nodes carry.
 
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, CollectiveOp, CommGroup, DataType, Node,
-};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, CollectiveOp, CommGroup, DataType, Node};
 
 /// The three buffers [`collective_nodes`] addresses, eight `u32` elements each.
 ///

@@ -164,7 +164,13 @@ impl CatalogBundle {
         self.schemas
             .values()
             .filter(|s| s.identity.namespace.as_str() == namespace)
-            .max_by_key(|s| (s.identity.version.major, s.identity.version.minor, s.identity.version.patch))
+            .max_by_key(|s| {
+                (
+                    s.identity.version.major,
+                    s.identity.version.minor,
+                    s.identity.version.patch,
+                )
+            })
     }
 
     /// Validate all registered schemas within the bundle.
@@ -218,7 +224,11 @@ impl CatalogBundle {
     /// Compute a canonical fingerprint over the entire catalog bundle.
     #[must_use]
     pub fn canonical_fingerprint(&self) -> [u8; 32] {
-        let mut identities: Vec<_> = self.schemas.keys().map(|id| id.to_canonical_string()).collect();
+        let mut identities: Vec<_> = self
+            .schemas
+            .keys()
+            .map(|id| id.to_canonical_string())
+            .collect();
         identities.sort();
         let mut bytes = Vec::new();
         bytes.extend_from_slice(self.bundle_id.as_bytes());
@@ -654,8 +664,12 @@ mod tests {
             proof_fields: proof_b,
         };
 
-        bundle.register(schema_a).expect("schema A registers cleanly");
-        bundle.register(schema_b).expect("schema B registers cleanly");
+        bundle
+            .register(schema_a)
+            .expect("schema A registers cleanly");
+        bundle
+            .register(schema_b)
+            .expect("schema B registers cleanly");
 
         assert_eq!(bundle.len(), 2);
         assert_eq!(bundle.get(&id_a).unwrap().display_name, "Extension A");

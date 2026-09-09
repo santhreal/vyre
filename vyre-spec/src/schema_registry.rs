@@ -5,7 +5,6 @@
 //! fixed-width types, canonical field numbers, bounds, identity fields, and signature domain separators
 //! in one central declarative registry.
 
-
 use core::fmt;
 
 use crate::compatibility::{CompatibilityDisposition, ProtocolDomain, ProtocolVersion};
@@ -280,7 +279,12 @@ impl SchemaDefinition {
     pub fn generate_documentation(&self) -> String {
         use core::fmt::Write as _;
         let mut doc = String::new();
-        let _ = writeln!(doc, "# Schema: `{}` (ID: {})", self.id.as_str(), self.id as u32);
+        let _ = writeln!(
+            doc,
+            "# Schema: `{}` (ID: {})",
+            self.id.as_str(),
+            self.id as u32
+        );
         let _ = writeln!(doc, "- **Version**: `{}`", self.semver);
         let _ = writeln!(doc, "- **Owning Package**: `{}`", self.owning_package);
         let _ = writeln!(doc, "- **Domain Separator**: `{}`", self.domain_separator);
@@ -307,7 +311,11 @@ impl SchemaDefinition {
         use core::fmt::Write as _;
         let mut grammar = String::new();
         let name = self.id.as_str();
-        let _ = writeln!(grammar, "<{name}_record> ::= \"VYRE\" <u32_id_{}> <semver_{}> <fields_{name}>", self.id as u32, self.semver);
+        let _ = writeln!(
+            grammar,
+            "<{name}_record> ::= \"VYRE\" <u32_id_{}> <semver_{}> <fields_{name}>",
+            self.id as u32, self.semver
+        );
         let mut fields_str = String::new();
         for field in self.fields {
             let _ = write!(fields_str, " <field_{}_{}>", name, field.number);
@@ -325,184 +333,859 @@ impl SchemaDefinition {
 }
 
 static CONFORMANCE_CERT_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "certificate_id", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 3, name: "backend_id", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 4, name: "pass_count", field_type: FieldType::U64, is_identity: true, required: true },
-    CanonicalField { number: 5, name: "fail_count", field_type: FieldType::U64, is_identity: true, required: true },
-    CanonicalField { number: 6, name: "timestamp_utc", field_type: FieldType::U64, is_identity: false, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "certificate_id",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "backend_id",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "pass_count",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 5,
+        name: "fail_count",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 6,
+        name: "timestamp_utc",
+        field_type: FieldType::U64,
+        is_identity: false,
+        required: true,
+    },
 ];
 
 static ARTIFACT_PAYLOAD_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "artifact_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 3, name: "target_backend", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 4, name: "bytecode", field_type: FieldType::VarBytes, is_identity: true, required: true },
-    CanonicalField { number: 5, name: "entrypoint", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 6, name: "required_workgroup_size", field_type: FieldType::FixedBytes(12), is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "artifact_hash",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "target_backend",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "bytecode",
+        field_type: FieldType::VarBytes,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 5,
+        name: "entrypoint",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 6,
+        name: "required_workgroup_size",
+        field_type: FieldType::FixedBytes(12),
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static SCHEDULE_RECORD_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "schedule_id", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 3, name: "fusion_plan", field_type: FieldType::VarBytes, is_identity: true, required: true },
-    CanonicalField { number: 4, name: "tiling_x", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 5, name: "tiling_y", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "schedule_id",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "fusion_plan",
+        field_type: FieldType::VarBytes,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "tiling_x",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 5,
+        name: "tiling_y",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static PROOF_RECEIPT_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "proof_digest", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 3, name: "checker_identity", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 4, name: "verified_claims", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "proof_digest",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "checker_identity",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "verified_claims",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static MEASUREMENT_RECORD_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "workload_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 3, name: "duration_nanos", field_type: FieldType::U64, is_identity: true, required: true },
-    CanonicalField { number: 4, name: "warm_iterations", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "workload_hash",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "duration_nanos",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "warm_iterations",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static TRACE_EVENT_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "event_id", field_type: FieldType::U64, is_identity: true, required: true },
-    CanonicalField { number: 3, name: "phase_tag", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 4, name: "timestamp_ns", field_type: FieldType::U64, is_identity: false, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "event_id",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "phase_tag",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "timestamp_ns",
+        field_type: FieldType::U64,
+        is_identity: false,
+        required: true,
+    },
 ];
 
 static CACHE_ENTRY_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "key_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 3, name: "value_payload", field_type: FieldType::VarBytes, is_identity: true, required: true },
-    CanonicalField { number: 4, name: "generation_id", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "key_hash",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "value_payload",
+        field_type: FieldType::VarBytes,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "generation_id",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static CONFIG_RECEIPT_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "config_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 3, name: "behavior_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 4, name: "resolved_keys", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "config_hash",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "behavior_hash",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "resolved_keys",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static WIRE_OP_METADATA_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "op_id", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 3, name: "category", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 4, name: "input_count", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "op_id",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "category",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "input_count",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static INVARIANT_DIGEST_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "invariant_id", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 3, name: "digest", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "invariant_id",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "digest",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static ANALYSIS_FACT_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "fact_kind", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 3, name: "provenance_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "fact_kind",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "provenance_hash",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static EXTENSION_SCHEMA_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "extension_id", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 3, name: "extension_name", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 4, name: "op_count", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 5, name: "proof_digest", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "extension_id",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "extension_name",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "op_count",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 5,
+        name: "proof_digest",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static REPLAY_CAPSULE_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "op_id", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 3, name: "backend_id", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 4, name: "case_index", field_type: FieldType::U64, is_identity: true, required: true },
-    CanonicalField { number: 5, name: "replay_command", field_type: FieldType::Utf8String, is_identity: false, required: true },
-    CanonicalField { number: 6, name: "program_blake3", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 7, name: "witness_input_blake3", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 8, name: "reference_output_blake3", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 9, name: "backend_output_blake3", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "op_id",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "backend_id",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "case_index",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 5,
+        name: "replay_command",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: true,
+    },
+    CanonicalField {
+        number: 6,
+        name: "program_blake3",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 7,
+        name: "witness_input_blake3",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 8,
+        name: "reference_output_blake3",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 9,
+        name: "backend_output_blake3",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static BUNDLE_CERT_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "bundle_blake3", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 3, name: "corpus_blake3", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 4, name: "reference_output_blake3", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 5, name: "witness_count", field_type: FieldType::U64, is_identity: true, required: true },
-    CanonicalField { number: 6, name: "timestamp", field_type: FieldType::Utf8String, is_identity: false, required: true },
-    CanonicalField { number: 7, name: "pubkey", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "bundle_blake3",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "corpus_blake3",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "reference_output_blake3",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 5,
+        name: "witness_count",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 6,
+        name: "timestamp",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: true,
+    },
+    CanonicalField {
+        number: 7,
+        name: "pubkey",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static PROVE_ARTIFACT_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "wire_format_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "program_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 3, name: "backend_id", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 4, name: "plan_digest", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 5, name: "pair_count", field_type: FieldType::U64, is_identity: true, required: true },
-    CanonicalField { number: 6, name: "law_count", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "wire_format_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "program_hash",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "backend_id",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "plan_digest",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 5,
+        name: "pair_count",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 6,
+        name: "law_count",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static PROOF_PLAN_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "wire_format_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "catalog_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 3, name: "execution_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 4, name: "backend_count", field_type: FieldType::U64, is_identity: true, required: true },
-    CanonicalField { number: 5, name: "op_count", field_type: FieldType::U64, is_identity: true, required: true },
-    CanonicalField { number: 6, name: "pair_count", field_type: FieldType::U64, is_identity: true, required: true },
-    CanonicalField { number: 7, name: "witness_case_count", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "wire_format_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "catalog_hash",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "execution_hash",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "backend_count",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 5,
+        name: "op_count",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 6,
+        name: "pair_count",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 7,
+        name: "witness_case_count",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static SAFETENSOR_INDEX_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "framing_version", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 3, name: "total_tensor_count", field_type: FieldType::U64, is_identity: true, required: true },
-    CanonicalField { number: 4, name: "shard_count", field_type: FieldType::U64, is_identity: true, required: true },
-    CanonicalField { number: 5, name: "total_bytes", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "framing_version",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "total_tensor_count",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "shard_count",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 5,
+        name: "total_bytes",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static AOT_MANIFEST_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "schema_name", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 3, name: "aot_version", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 4, name: "artifact_name", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 5, name: "envelope_sha256_hex", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 6, name: "neutral_artifact_digest_hex", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 7, name: "target_payload_digest_hex", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 8, name: "weights_sha256_hex", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "schema_name",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "aot_version",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "artifact_name",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 5,
+        name: "envelope_sha256_hex",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 6,
+        name: "neutral_artifact_digest_hex",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 7,
+        name: "target_payload_digest_hex",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 8,
+        name: "weights_sha256_hex",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static ARTIFACT_REPORT_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "format_version", field_type: FieldType::U16, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "artifact_digest", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 3, name: "source_graph", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 4, name: "semantic_graph", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 5, name: "compiler_version", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 6, name: "target_count", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "format_version",
+        field_type: FieldType::U16,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "artifact_digest",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "source_graph",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "semantic_graph",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 5,
+        name: "compiler_version",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 6,
+        name: "target_count",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static WIRE_FRAMING_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "wire_format_version", field_type: FieldType::U16, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "magic", field_type: FieldType::FixedBytes(4), is_identity: true, required: true },
-    CanonicalField { number: 3, name: "dialect_manifest_len", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 4, name: "body_len", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "wire_format_version",
+        field_type: FieldType::U16,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "magic",
+        field_type: FieldType::FixedBytes(4),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "dialect_manifest_len",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "body_len",
+        field_type: FieldType::U64,
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static TARGET_FACET_MATRIX_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "platform_name", field_type: FieldType::Utf8String, is_identity: true, required: true },
-    CanonicalField { number: 3, name: "facet_count", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 4, name: "matrix_digest", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "platform_name",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "facet_count",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "matrix_digest",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
 ];
 
 static CAUSAL_RECEIPT_FIELDS: &[CanonicalField] = &[
-    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
-    CanonicalField { number: 2, name: "session_id", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 3, name: "receipt_id", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
-    CanonicalField { number: 4, name: "causality_digest", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "session_id",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "receipt_id",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "causality_digest",
+        field_type: FieldType::FixedBytes(32),
+        is_identity: true,
+        required: true,
+    },
 ];
 
-static STALE_CERT_FIXTURES: &[&str] = &["vyre-conformance-certificate-v0", "vyre-conformance-certificate-v1"];
+static STALE_CERT_FIXTURES: &[&str] = &[
+    "vyre-conformance-certificate-v0",
+    "vyre-conformance-certificate-v1",
+];
 static STALE_ARTIFACT_FIXTURES: &[&str] = &["vyre-artifact-v0"];
 static STALE_SCHEDULE_FIXTURES: &[&str] = &["vyre-schedule-v0"];
 static STALE_PROOF_FIXTURES: &[&str] = &["vyre-proof-receipt-v0"];
@@ -519,7 +1202,11 @@ static STALE_BUNDLE_FIXTURES: &[&str] = &["vyre-conformance-certificate-v1"];
 static STALE_PROVE_FIXTURES: &[&str] = &["vyre-prove-artifact-v1"];
 static STALE_PROOF_PLAN_FIXTURES: &[&str] = &["vyre-proof-plan-v0"];
 static STALE_SAFETENSOR_FIXTURES: &[&str] = &["vyre-safetensors-v0"];
-static STALE_AOT_FIXTURES: &[&str] = &["vyre-aot-manifest-v3", "vyre-aot-manifest-v2", "vyre-aot-manifest-v1"];
+static STALE_AOT_FIXTURES: &[&str] = &[
+    "vyre-aot-manifest-v3",
+    "vyre-aot-manifest-v2",
+    "vyre-aot-manifest-v1",
+];
 static STALE_REPORT_FIXTURES: &[&str] = &["vyre-artifact-report-v0"];
 static STALE_WIRE_FRAMING_FIXTURES: &[&str] = &["vyre-wire-v3", "vyre-wire-v2", "vyre-wire-v1"];
 static STALE_TARGET_FACET_FIXTURES: &[&str] = &["vyre-target-facet-v0"];
@@ -532,7 +1219,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::V1_0_0,
         fields: CONFORMANCE_CERT_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        bounds: SchemaBounds {
+            max_bytes: 65536,
+            max_depth: 4,
+            max_elements: 1024,
+        },
         domain_separator: "VYRE_CONFORMANCE_CERT_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_CERT_FIXTURES,
@@ -543,7 +1234,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::V1_0_0,
         fields: ARTIFACT_PAYLOAD_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 67108864, max_depth: 4, max_elements: 65536 },
+        bounds: SchemaBounds {
+            max_bytes: 67108864,
+            max_depth: 4,
+            max_elements: 65536,
+        },
         domain_separator: "VYRE_ARTIFACT_PAYLOAD_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_ARTIFACT_FIXTURES,
@@ -554,7 +1249,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::V1_0_0,
         fields: SCHEDULE_RECORD_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 1048576, max_depth: 4, max_elements: 4096 },
+        bounds: SchemaBounds {
+            max_bytes: 1048576,
+            max_depth: 4,
+            max_elements: 4096,
+        },
         domain_separator: "VYRE_SCHEDULE_RECORD_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_SCHEDULE_FIXTURES,
@@ -565,7 +1264,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::V1_0_0,
         fields: PROOF_RECEIPT_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        bounds: SchemaBounds {
+            max_bytes: 65536,
+            max_depth: 4,
+            max_elements: 1024,
+        },
         domain_separator: "VYRE_PROOF_RECEIPT_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_PROOF_FIXTURES,
@@ -576,7 +1279,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::V1_0_0,
         fields: MEASUREMENT_RECORD_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        bounds: SchemaBounds {
+            max_bytes: 65536,
+            max_depth: 4,
+            max_elements: 1024,
+        },
         domain_separator: "VYRE_MEASUREMENT_RECORD_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_MEASUREMENT_FIXTURES,
@@ -587,7 +1294,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::V1_0_0,
         fields: TRACE_EVENT_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        bounds: SchemaBounds {
+            max_bytes: 65536,
+            max_depth: 4,
+            max_elements: 1024,
+        },
         domain_separator: "VYRE_TRACE_EVENT_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_TRACE_FIXTURES,
@@ -598,7 +1309,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::V1_0_0,
         fields: CACHE_ENTRY_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 67108864, max_depth: 4, max_elements: 65536 },
+        bounds: SchemaBounds {
+            max_bytes: 67108864,
+            max_depth: 4,
+            max_elements: 65536,
+        },
         domain_separator: "VYRE_CACHE_ENTRY_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_CACHE_FIXTURES,
@@ -609,7 +1324,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::V1_0_0,
         fields: CONFIG_RECEIPT_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        bounds: SchemaBounds {
+            max_bytes: 65536,
+            max_depth: 4,
+            max_elements: 1024,
+        },
         domain_separator: "VYRE_CONFIG_RECEIPT_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_CONFIG_FIXTURES,
@@ -620,7 +1339,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::V1_0_0,
         fields: WIRE_OP_METADATA_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        bounds: SchemaBounds {
+            max_bytes: 65536,
+            max_depth: 4,
+            max_elements: 1024,
+        },
         domain_separator: "VYRE_WIRE_OP_METADATA_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_WIRE_OP_FIXTURES,
@@ -631,7 +1354,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::V1_0_0,
         fields: INVARIANT_DIGEST_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        bounds: SchemaBounds {
+            max_bytes: 65536,
+            max_depth: 4,
+            max_elements: 1024,
+        },
         domain_separator: "VYRE_INVARIANT_DIGEST_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_INVARIANT_FIXTURES,
@@ -642,7 +1369,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::V1_0_0,
         fields: ANALYSIS_FACT_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
+        bounds: SchemaBounds {
+            max_bytes: 65536,
+            max_depth: 4,
+            max_elements: 1024,
+        },
         domain_separator: "VYRE_ANALYSIS_FACT_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_ANALYSIS_FIXTURES,
@@ -653,7 +1384,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::V1_0_0,
         fields: EXTENSION_SCHEMA_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 1048576, max_depth: 4, max_elements: 4096 },
+        bounds: SchemaBounds {
+            max_bytes: 1048576,
+            max_depth: 4,
+            max_elements: 4096,
+        },
         domain_separator: "VYRE_EXTENSION_SCHEMA_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_EXTENSION_FIXTURES,
@@ -664,7 +1399,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::new(2, 0, 0),
         fields: REPLAY_CAPSULE_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 67108864, max_depth: 4, max_elements: 65536 },
+        bounds: SchemaBounds {
+            max_bytes: 67108864,
+            max_depth: 4,
+            max_elements: 65536,
+        },
         domain_separator: "VYRE_REPLAY_CAPSULE_V2",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_REPLAY_FIXTURES,
@@ -675,7 +1414,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::new(2, 0, 0),
         fields: BUNDLE_CERT_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 1048576, max_depth: 4, max_elements: 4096 },
+        bounds: SchemaBounds {
+            max_bytes: 1048576,
+            max_depth: 4,
+            max_elements: 4096,
+        },
         domain_separator: "VYRE_BUNDLE_CERT_V2",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_BUNDLE_FIXTURES,
@@ -686,7 +1429,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::new(2, 0, 0),
         fields: PROVE_ARTIFACT_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 33554432, max_depth: 4, max_elements: 32768 },
+        bounds: SchemaBounds {
+            max_bytes: 33554432,
+            max_depth: 4,
+            max_elements: 32768,
+        },
         domain_separator: "VYRE_PROVE_ARTIFACT_V2",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_PROVE_FIXTURES,
@@ -697,7 +1444,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::new(1, 0, 0),
         fields: PROOF_PLAN_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 1048576, max_depth: 4, max_elements: 4096 },
+        bounds: SchemaBounds {
+            max_bytes: 1048576,
+            max_depth: 4,
+            max_elements: 4096,
+        },
         domain_separator: "VYRE_PROOF_PLAN_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_PROOF_PLAN_FIXTURES,
@@ -708,7 +1459,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::new(1, 0, 0),
         fields: SAFETENSOR_INDEX_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 67108864, max_depth: 4, max_elements: 1000000 },
+        bounds: SchemaBounds {
+            max_bytes: 67108864,
+            max_depth: 4,
+            max_elements: 1000000,
+        },
         domain_separator: "VYRE_SAFETENSOR_INDEX_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_SAFETENSOR_FIXTURES,
@@ -719,7 +1474,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::new(4, 0, 0),
         fields: AOT_MANIFEST_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 1048576, max_depth: 4, max_elements: 4096 },
+        bounds: SchemaBounds {
+            max_bytes: 1048576,
+            max_depth: 4,
+            max_elements: 4096,
+        },
         domain_separator: "VYRE_AOT_MANIFEST_V4",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_AOT_FIXTURES,
@@ -730,7 +1489,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::new(1, 0, 0),
         fields: ARTIFACT_REPORT_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 16777216, max_depth: 4, max_elements: 8192 },
+        bounds: SchemaBounds {
+            max_bytes: 16777216,
+            max_depth: 4,
+            max_elements: 8192,
+        },
         domain_separator: "VYRE_ARTIFACT_REPORT_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_REPORT_FIXTURES,
@@ -741,7 +1504,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::new(8, 0, 0),
         fields: WIRE_FRAMING_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 536870912, max_depth: 32, max_elements: 1048576 },
+        bounds: SchemaBounds {
+            max_bytes: 536870912,
+            max_depth: 32,
+            max_elements: 1048576,
+        },
         domain_separator: "VYRE_WIRE_FRAMING_V8",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_WIRE_FRAMING_FIXTURES,
@@ -752,7 +1519,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::new(1, 0, 0),
         fields: TARGET_FACET_MATRIX_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 8388608, max_depth: 4, max_elements: 4096 },
+        bounds: SchemaBounds {
+            max_bytes: 8388608,
+            max_depth: 4,
+            max_elements: 4096,
+        },
         domain_separator: "VYRE_TARGET_FACET_MATRIX_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_TARGET_FACET_FIXTURES,
@@ -763,7 +1534,11 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         semver: ProtocolVersion::new(1, 0, 0),
         fields: CAUSAL_RECEIPT_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
-        bounds: SchemaBounds { max_bytes: 4194304, max_depth: 4, max_elements: 2048 },
+        bounds: SchemaBounds {
+            max_bytes: 4194304,
+            max_depth: 4,
+            max_elements: 2048,
+        },
         domain_separator: "VYRE_CAUSAL_RECEIPT_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_CAUSAL_FIXTURES,

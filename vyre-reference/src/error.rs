@@ -3,6 +3,189 @@ use vyre_foundation::diagnostics::{
     CompilerLevel, Diagnostic, DiagnosticCause, DiagnosticCode, DiagnosticStage, RetryClass,
     Severity, ToDiagnostic,
 };
+
+/// The eight closed failure classes returned by the strict reference oracle.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub enum ReferenceErrorClass {
+    /// Absent input buffer, unassigned variable, or missing callee.
+    MissingValue,
+    /// Ill-typed argument, operand, or invalid type conversion.
+    TypeMismatch,
+    /// Poisoned synchronization primitive or memory lock.
+    Poison,
+    /// Arithmetic overflow in dimensions, strides, or indexing.
+    Overflow,
+    /// Out-of-bounds load, store, or atomic memory access.
+    OutOfBoundsAccess,
+    /// Unsupported dispatch grid, non-uniform barrier, or non-WORLD collective in single-rank.
+    IncompleteDispatchSemantics,
+    /// Infinite loop or non-terminating program execution.
+    Nontermination,
+    /// Work step ceiling, memory limit, or recursion depth budget exhausted.
+    BudgetExhaustion,
+}
+
+impl ReferenceErrorClass {
+    /// All eight failure classes in the closed enum.
+    pub const ALL: [Self; 8] = [
+        Self::MissingValue,
+        Self::TypeMismatch,
+        Self::Poison,
+        Self::Overflow,
+        Self::OutOfBoundsAccess,
+        Self::IncompleteDispatchSemantics,
+        Self::Nontermination,
+        Self::BudgetExhaustion,
+    ];
+
+    /// Stable identifier for this error class.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::MissingValue => "missing_value",
+            Self::TypeMismatch => "type_mismatch",
+            Self::Poison => "poison",
+            Self::Overflow => "overflow",
+            Self::OutOfBoundsAccess => "out_of_bounds_access",
+            Self::IncompleteDispatchSemantics => "incomplete_dispatch_semantics",
+            Self::Nontermination => "nontermination",
+            Self::BudgetExhaustion => "budget_exhaustion",
+        }
+    }
+}
+
+/// Structured failure payload for one of the eight reference oracle failure classes.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ReferenceErrorKind {
+    /// Absent input buffer, unassigned variable, or missing callee.
+    MissingValue {
+        /// Detail message.
+        detail: String,
+    },
+    /// Ill-typed argument, operand, or invalid type conversion.
+    TypeMismatch {
+        /// Detail message.
+        detail: String,
+    },
+    /// Poisoned synchronization primitive or memory lock.
+    Poison {
+        /// Detail message.
+        detail: String,
+    },
+    /// Arithmetic overflow in dimensions, strides, or indexing.
+    Overflow {
+        /// Detail message.
+        detail: String,
+    },
+    /// Out-of-bounds load, store, or atomic memory access.
+    OutOfBoundsAccess {
+        /// Detail message.
+        detail: String,
+    },
+    /// Unsupported dispatch grid, non-uniform barrier, or non-WORLD collective in single-rank.
+    IncompleteDispatchSemantics {
+        /// Detail message.
+        detail: String,
+    },
+    /// Infinite loop or non-terminating program execution.
+    Nontermination {
+        /// Detail message.
+        detail: String,
+    },
+    /// Work step ceiling, memory limit, or recursion depth budget exhausted.
+    BudgetExhaustion {
+        /// Detail message.
+        detail: String,
+    },
+}
+
+impl ReferenceErrorKind {
+    /// Return the error class for this kind.
+    #[must_use]
+    pub const fn error_class(&self) -> ReferenceErrorClass {
+        match self {
+            Self::MissingValue { .. } => ReferenceErrorClass::MissingValue,
+            Self::TypeMismatch { .. } => ReferenceErrorClass::TypeMismatch,
+            Self::Poison { .. } => ReferenceErrorClass::Poison,
+            Self::Overflow { .. } => ReferenceErrorClass::Overflow,
+            Self::OutOfBoundsAccess { .. } => ReferenceErrorClass::OutOfBoundsAccess,
+            Self::IncompleteDispatchSemantics { .. } => {
+                ReferenceErrorClass::IncompleteDispatchSemantics
+            }
+            Self::Nontermination { .. } => ReferenceErrorClass::Nontermination,
+            Self::BudgetExhaustion { .. } => ReferenceErrorClass::BudgetExhaustion,
+        }
+    }
+
+    /// Return the detail message string.
+    #[must_use]
+    pub fn detail(&self) -> &str {
+        match self {
+            Self::MissingValue { detail }
+            | Self::TypeMismatch { detail }
+            | Self::Poison { detail }
+            | Self::Overflow { detail }
+            | Self::OutOfBoundsAccess { detail }
+            | Self::IncompleteDispatchSemantics { detail }
+            | Self::Nontermination { detail }
+            | Self::BudgetExhaustion { detail } => detail.as_str(),
+        }
+    }
+}
+
+fn classify_message(msg: &str) -> ReferenceErrorKind {
+    let lower = msg.to_ascii_lowercase();
+    if lower.contains("out of bounds")
+        || lower.contains("out of range")
+        || lower.contains("oob")
+        || lower.contains("past buffer")
+    {
+        ReferenceErrorKind::OutOfBoundsAccess {
+            detail: msg.to_string(),
+        }
+    } else if lower.contains("missing")
+        || lower.contains("not found")
+        || lower.contains("unassigned")
+    {
+        ReferenceErrorKind::MissingValue {
+            detail: msg.to_string(),
+        }
+    } else if lower.contains("mismatch")
+        || lower.contains("cannot be represented")
+        || lower.contains("invalid type")
+        || lower.contains("must be u32")
+        || lower.contains("type")
+    {
+        ReferenceErrorKind::TypeMismatch {
+            detail: msg.to_string(),
+        }
+    } else if lower.contains("poison") {
+        ReferenceErrorKind::Poison {
+            detail: msg.to_string(),
+        }
+    } else if lower.contains("overflow") {
+        ReferenceErrorKind::Overflow {
+            detail: msg.to_string(),
+        }
+    } else if lower.contains("nontermination") || lower.contains("infinite loop") {
+        ReferenceErrorKind::Nontermination {
+            detail: msg.to_string(),
+        }
+    } else if lower.contains("step")
+        || lower.contains("ceiling")
+        || lower.contains("budget")
+        || lower.contains("exceeded")
+    {
+        ReferenceErrorKind::BudgetExhaustion {
+            detail: msg.to_string(),
+        }
+    } else {
+        ReferenceErrorKind::IncompleteDispatchSemantics {
+            detail: msg.to_string(),
+        }
+    }
+}
+
 /// The work one reference evaluation was allowed and what it exceeded.
 ///
 /// A caller waiting on the parity oracle reads the ceiling and the program that
@@ -19,27 +202,136 @@ pub struct StepCeilingExceeded {
 /// Reference-interpreter failure with owner-local recovery guidance.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ReferenceError {
-    message: String,
+    kind: ReferenceErrorKind,
     validation: Option<vyre_foundation::validate::ValidationError>,
     step_ceiling: Option<StepCeilingExceeded>,
 }
 
 impl ReferenceError {
-    /// Build a reference-interpreter failure.
+    /// Build a reference-interpreter failure with classified kind.
     #[must_use]
     pub fn new(message: impl Into<String>) -> Self {
+        let msg = message.into();
+        let kind = classify_message(&msg);
         Self {
-            message: message.into(),
+            kind,
             validation: None,
             step_ceiling: None,
         }
     }
 
+    /// Build a MissingValue error.
+    #[must_use]
+    pub fn missing_value(detail: impl Into<String>) -> Self {
+        let msg = detail.into();
+        Self {
+            kind: ReferenceErrorKind::MissingValue { detail: msg },
+            validation: None,
+            step_ceiling: None,
+        }
+    }
+
+    /// Build a TypeMismatch error.
+    #[must_use]
+    pub fn type_mismatch(detail: impl Into<String>) -> Self {
+        let msg = detail.into();
+        Self {
+            kind: ReferenceErrorKind::TypeMismatch { detail: msg },
+            validation: None,
+            step_ceiling: None,
+        }
+    }
+
+    /// Build a Poison error.
+    #[must_use]
+    pub fn poison(detail: impl Into<String>) -> Self {
+        let msg = detail.into();
+        Self {
+            kind: ReferenceErrorKind::Poison { detail: msg },
+            validation: None,
+            step_ceiling: None,
+        }
+    }
+
+    /// Build an Overflow error.
+    #[must_use]
+    pub fn overflow(detail: impl Into<String>) -> Self {
+        let msg = detail.into();
+        Self {
+            kind: ReferenceErrorKind::Overflow { detail: msg },
+            validation: None,
+            step_ceiling: None,
+        }
+    }
+
+    /// Build an OutOfBoundsAccess error.
+    #[must_use]
+    pub fn out_of_bounds(detail: impl Into<String>) -> Self {
+        let msg = detail.into();
+        Self {
+            kind: ReferenceErrorKind::OutOfBoundsAccess { detail: msg },
+            validation: None,
+            step_ceiling: None,
+        }
+    }
+
+    /// Build an IncompleteDispatchSemantics error.
+    #[must_use]
+    pub fn incomplete_dispatch_semantics(detail: impl Into<String>) -> Self {
+        let msg = detail.into();
+        Self {
+            kind: ReferenceErrorKind::IncompleteDispatchSemantics { detail: msg },
+            validation: None,
+            step_ceiling: None,
+        }
+    }
+
+    /// Build a Nontermination error.
+    #[must_use]
+    pub fn nontermination(detail: impl Into<String>) -> Self {
+        let msg = detail.into();
+        Self {
+            kind: ReferenceErrorKind::Nontermination { detail: msg },
+            validation: None,
+            step_ceiling: None,
+        }
+    }
+
+    /// Build a BudgetExhaustion error.
+    #[must_use]
+    pub fn budget_exhaustion(detail: impl Into<String>) -> Self {
+        let msg = detail.into();
+        Self {
+            kind: ReferenceErrorKind::BudgetExhaustion { detail: msg },
+            validation: None,
+            step_ceiling: None,
+        }
+    }
+
+    /// Return the error class.
+    #[must_use]
+    pub fn error_class(&self) -> ReferenceErrorClass {
+        self.kind.error_class()
+    }
+
+    /// Return the structured error kind.
+    #[must_use]
+    pub fn kind(&self) -> &ReferenceErrorKind {
+        &self.kind
+    }
+
+    /// Return the error detail message.
+    #[must_use]
+    pub fn message(&self) -> &str {
+        self.kind.detail()
+    }
+
     /// Preserve a foundation validation issue as owner-local context.
     #[must_use]
     pub fn validation(source: vyre_foundation::validate::ValidationError) -> Self {
+        let message = source.to_string();
         Self {
-            message: source.to_string(),
+            kind: classify_message(&message),
             validation: Some(source),
             step_ceiling: None,
         }
@@ -53,7 +345,7 @@ impl ReferenceError {
             source.program, source.ceiling
         );
         Self {
-            message,
+            kind: ReferenceErrorKind::BudgetExhaustion { detail: message },
             validation: None,
             step_ceiling: Some(source),
         }
@@ -80,7 +372,11 @@ impl From<vyre_foundation::validate::ValidationError> for ReferenceError {
 
 impl fmt::Display for ReferenceError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "vyre reference interpreter: {}", self.message)
+        write!(
+            formatter,
+            "vyre reference interpreter: {}",
+            self.kind.detail()
+        )
     }
 }
 
@@ -98,7 +394,7 @@ impl ToDiagnostic for ReferenceError {
             let mut diag = validation.to_diagnostic();
             diag.cause_chain.push(DiagnosticCause {
                 kind: "reference_validation_failure".to_string(),
-                detail: self.message.clone(),
+                detail: self.kind.detail().to_string(),
             });
             return diag;
         }
@@ -112,7 +408,7 @@ impl ToDiagnostic for ReferenceError {
             code: DiagnosticCode::new("REF001_REFERENCE_ERROR"),
             stage: DiagnosticStage::Submit,
             compiler_level: Some(CompilerLevel::DriverRuntime),
-            message: self.message.clone().into(),
+            message: self.kind.detail().to_string().into(),
             location: None,
             artifact_id: None,
             target: None,
@@ -122,11 +418,11 @@ impl ToDiagnostic for ReferenceError {
             }),
             cause: Some(DiagnosticCause {
                 kind: "reference_execution_error".to_string(),
-                detail: self.message.clone(),
+                detail: self.kind.detail().to_string(),
             }),
             cause_chain: vec![DiagnosticCause {
                 kind: "reference_execution_error".to_string(),
-                detail: self.message.clone(),
+                detail: self.kind.detail().to_string(),
             }],
             retry,
             context_values: self.step_ceiling.as_ref().map_or_else(Vec::new, |sc| {

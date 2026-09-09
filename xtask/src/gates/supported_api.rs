@@ -15,7 +15,9 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
-use crate::gates::crate_registry::{load_registry, CrateRecord, REGISTRY, VALID_PUBLICATION_CLASSES};
+use crate::gates::crate_registry::{
+    load_registry, CrateRecord, REGISTRY, VALID_PUBLICATION_CLASSES,
+};
 use crate::gates::public_api::{roster, SNAPSHOT_DIR};
 use crate::gates::scan::Tree;
 
@@ -131,13 +133,19 @@ pub fn render_manifest(packages: &[PackageClassification]) -> String {
         out.push_str(&format!("name = \"{}\"\n", pkg.name));
         out.push_str(&format!("path = \"{}\"\n", pkg.path));
         out.push_str(&format!("owner = \"{}\"\n", pkg.owner));
-        out.push_str(&format!("publication_class = \"{}\"\n", pkg.publication_class));
+        out.push_str(&format!(
+            "publication_class = \"{}\"\n",
+            pkg.publication_class
+        ));
         out.push_str(&format!("stability = \"{}\"\n", pkg.stability));
         out.push_str(&format!("exported_item_count = {}\n", pkg.items.len()));
         out.push_str("\n");
         for item in &pkg.items {
             out.push_str("  [[package.item]]\n");
-            out.push_str(&format!("  path = {}\n", crate::toml_text::quote(&item.path)));
+            out.push_str(&format!(
+                "  path = {}\n",
+                crate::toml_text::quote(&item.path)
+            ));
             out.push_str(&format!("  kind = \"{}\"\n", item.kind));
             out.push_str(&format!("  stability = \"{}\"\n", item.stability));
             out.push_str(&format!("  feature = \"{}\"\n", item.feature));
@@ -168,8 +176,14 @@ pub fn classify_workspace(
         let Some(record) = by_package.get(pkg.package.as_str()) else {
             report.find(Finding::in_file(
                 REGISTRY,
-                format!("publishable package `{}` has no row in {REGISTRY}", pkg.package),
-                format!("add a [[crate]] row for `{}` with an explicit publication_class", pkg.package),
+                format!(
+                    "publishable package `{}` has no row in {REGISTRY}",
+                    pkg.package
+                ),
+                format!(
+                    "add a [[crate]] row for `{}` with an explicit publication_class",
+                    pkg.package
+                ),
             ));
             continue;
         };
@@ -177,7 +191,10 @@ pub fn classify_workspace(
         if record.publication_class.is_empty() {
             report.find(Finding::in_file(
                 REGISTRY,
-                format!("package `{}` declares no publication_class in {REGISTRY}", pkg.package),
+                format!(
+                    "package `{}` declares no publication_class in {REGISTRY}",
+                    pkg.package
+                ),
                 format!("declare one of: {}", VALID_PUBLICATION_CLASSES.join(", ")),
             ));
             continue;
@@ -193,7 +210,10 @@ pub fn classify_workspace(
             other => {
                 report.find(Finding::in_file(
                     REGISTRY,
-                    format!("package `{}` declares unknown publication_class `{other}`", pkg.package),
+                    format!(
+                        "package `{}` declares unknown publication_class `{other}`",
+                        pkg.package
+                    ),
                     format!("declare one of: {}", VALID_PUBLICATION_CLASSES.join(", ")),
                 ));
                 "unknown"
@@ -297,7 +317,10 @@ mod tests {
         assert_eq!(item.stability, "stable");
         assert_eq!(item.wire_compatibility, "api-only");
 
-        let wire_item = classify_line("pub fn vyre_foundation::ir::to_wire_bytes()", "internal-engine");
+        let wire_item = classify_line(
+            "pub fn vyre_foundation::ir::to_wire_bytes()",
+            "internal-engine",
+        );
         assert_eq!(wire_item.kind, "fn");
         assert_eq!(wire_item.stability, "internal");
         assert_eq!(wire_item.wire_compatibility, "wire-bound");
@@ -328,12 +351,33 @@ mod tests {
     #[test]
     fn classify_line_covers_all_kinds() {
         assert_eq!(classify_line("pub mod foo", "extension-sdk").kind, "mod");
-        assert_eq!(classify_line("pub use foo::bar", "extension-sdk").kind, "use");
-        assert_eq!(classify_line("pub enum foo::Bar", "extension-sdk").kind, "enum");
-        assert_eq!(classify_line("pub trait foo::Baz", "extension-sdk").kind, "trait");
-        assert_eq!(classify_line("pub type foo::T = u32", "extension-sdk").kind, "type");
-        assert_eq!(classify_line("pub const foo::C: u32 = 1", "extension-sdk").kind, "const");
-        assert_eq!(classify_line("pub static foo::S: u32 = 1", "extension-sdk").kind, "static");
-        assert_eq!(classify_line("pub proc macro foo::bar!()", "extension-sdk").kind, "macro");
+        assert_eq!(
+            classify_line("pub use foo::bar", "extension-sdk").kind,
+            "use"
+        );
+        assert_eq!(
+            classify_line("pub enum foo::Bar", "extension-sdk").kind,
+            "enum"
+        );
+        assert_eq!(
+            classify_line("pub trait foo::Baz", "extension-sdk").kind,
+            "trait"
+        );
+        assert_eq!(
+            classify_line("pub type foo::T = u32", "extension-sdk").kind,
+            "type"
+        );
+        assert_eq!(
+            classify_line("pub const foo::C: u32 = 1", "extension-sdk").kind,
+            "const"
+        );
+        assert_eq!(
+            classify_line("pub static foo::S: u32 = 1", "extension-sdk").kind,
+            "static"
+        );
+        assert_eq!(
+            classify_line("pub proc macro foo::bar!()", "extension-sdk").kind,
+            "macro"
+        );
     }
 }

@@ -76,6 +76,21 @@ Every workspace member declares one publication class in `docs/CRATE_OWNERSHIP.t
 - `conformance-tooling`: Tooling, gates, and benchmarks (`structure-gate`, `vyre-conform-spec`, `vyre-conform`, `xtask`, `xtask-registry`, `xtask-evidence`, `vyre-alloc-probe`, `vyre-bench`, `vyre-lints`).
 - `private-test-support`: Private test harnesses (`vyre-test-support`).
 
+## Consumers
+
+`consumers/` holds independently versioned application packages. Each one is
+excluded from the workspace, carries its own lockfile, and depends on the
+published `vyre` facade plus selected `vyre-libs` features. A consumer package
+declares no dependency on an internal engine package, and a seam test fails
+when one reaches an internal path.
+
+- `consumers/vyre-graphics-app` compiles and runs an interactive frame
+  pipeline.
+- `consumers/vyre-model-compiler` compiles a prefill and decode workload.
+
+A composition a consumer needs is domain-neutral and lives in `vyre-libs`. The
+domain vocabulary stays in the consumer package.
+
 ## Production route
 
 ```text

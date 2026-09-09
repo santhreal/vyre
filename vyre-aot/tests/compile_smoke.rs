@@ -6,8 +6,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use vyre_aot::{
     compile, compile_request, emit_launcher_rust, install_package, load_installed_package,
-    package_artifact, rollback_package, update_package, CompileError, LauncherError,
-    LauncherOpts, TargetId, ValidatedCompileRequest,
+    package_artifact, rollback_package, update_package, CompileError, LauncherError, LauncherOpts,
+    TargetId, ValidatedCompileRequest,
 };
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
 use vyre_megakernel::{
@@ -122,8 +122,8 @@ fn the_neutral_stage_admits_workgroup_scratch_before_any_target_is_resolved() {
     .expect("validated request");
 
     let target = TargetId::expect_valid("unlinked-fixture-target");
-    let error = compile(&request, target.clone())
-        .expect_err("an unlinked target cannot emit bytes");
+    let error =
+        compile(&request, target.clone()).expect_err("an unlinked target cannot emit bytes");
     assert!(
         matches!(&error, CompileError::TargetNotEnabled(id) if id == &target),
         "Fix: the neutral artifact must be built before the target is resolved, got {error:?}."
@@ -146,8 +146,8 @@ fn compile_request_produces_artifact_envelope_with_linked_target() {
 fn compile_request_fails_with_unlinked_target() {
     let request = validated_xor_request();
     let target = TargetId::expect_valid("unlinked-fixture-target");
-    let err = compile_request(&request, target.clone())
-        .expect_err("unlinked target compiler must fail");
+    let err =
+        compile_request(&request, target.clone()).expect_err("unlinked target compiler must fail");
     assert!(
         matches!(&err, CompileError::TargetNotEnabled(id) if id == &target),
         "Fix: missing target compiler must report target-not-enabled, got {err:?}."
@@ -173,8 +173,8 @@ const MANDATORY_COMPILE_REQUEST_FIELDS: &[&str] = &[
 #[test]
 fn aot_and_direct_compile_construct_identical_compile_request() {
     let request = validated_xor_request();
-    let direct_artifact = vyre_megakernel::compile(&request)
-        .expect("direct megakernel compile must succeed");
+    let direct_artifact =
+        vyre_megakernel::compile(&request).expect("direct megakernel compile must succeed");
     let aot_envelope = vyre_aot::compile(&request, fixture_target::fixture_target())
         .expect("aot compile must succeed");
 
@@ -192,7 +192,8 @@ fn aot_and_direct_compile_construct_identical_compile_request() {
 
     // Dynamic schema validation over CompileRequest field closure:
     // Derives field presence to ensure adding any field without a decision turns suite red.
-    let observed_fields: BTreeSet<&'static str> = MANDATORY_COMPILE_REQUEST_FIELDS.iter().copied().collect();
+    let observed_fields: BTreeSet<&'static str> =
+        MANDATORY_COMPILE_REQUEST_FIELDS.iter().copied().collect();
     assert_eq!(
         observed_fields.len(),
         MANDATORY_COMPILE_REQUEST_FIELDS.len(),
@@ -253,8 +254,7 @@ fn archive_install_load_update_and_rollback_lifecycle() {
     // 3. Update to v2
     let m2 = update_package(&install_dir, &archive_v2).expect("update to v2");
     assert_eq!(m2.artifact_name, "package-v2");
-    let (_, _, updated_weights) =
-        load_installed_package(&install_dir).expect("load updated v2");
+    let (_, _, updated_weights) = load_installed_package(&install_dir).expect("load updated v2");
     assert_eq!(updated_weights, weights_v2);
 
     // 4. Rollback to v1

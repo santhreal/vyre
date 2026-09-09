@@ -1,8 +1,8 @@
 //! The `dispatch` subcommand: sequential single-backend conformance over selected ops.
 
-use crate::backend_selection::backend_registration;
 use crate::operation_selection::{prepare_entry, select_entries, unified_entries, PreparedEntry};
 use crate::reference_parity::compare_backend_against_reference;
+use vyre_conform::backend_selection::backend_registration;
 use vyre_conform::oracle::OracleSession;
 use vyre_conform::witness_plan::plan_witness_inputs_into;
 use vyre_conform_spec::ConformanceResult;

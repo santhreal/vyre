@@ -7,7 +7,9 @@
 /// physical ids, launch geometry, memory placement, synchronization,
 /// persistence, device partitioning, or target instruction strategy, so a
 /// declaration that states its level also states which of those it may touch.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 #[non_exhaustive]
 pub enum IrLevel {
     /// Whole-program graph: connected regions, their dataflow, and identity.

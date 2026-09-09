@@ -8,16 +8,10 @@ publish = false
 [dependencies]
 vyre = { path = "../../vyre", default-features = false }
 vyre-libs = { path = "../../vyre-libs", default-features = false, features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-moe", "nn-inference", "math-scan", "reduce", "graph"] }
-vyre-foundation = { path = "../../vyre-foundation" }
-vyre-megakernel = { path = "../../vyre-megakernel" }
-vyre-runtime = { path = "../../vyre-runtime" }
-vyre-driver = { path = "../../vyre-driver" }
-vyre-reference = { path = "../../vyre-reference" }
-vyre-spec = { path = "../../vyre-spec" }
-vyre-safetensors = { path = "../../vyre-safetensors" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "1.0"
 
 [dev-dependencies]
+toml = "0.8"
 vyre-driver-reference = { path = "../../vyre-driver-reference" }

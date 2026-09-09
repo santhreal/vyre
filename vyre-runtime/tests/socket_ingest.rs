@@ -40,7 +40,7 @@ fn reads_from_tcp_socket_into_host_buffer() {
     let fd = client.as_raw_fd();
 
     let mut target = vec![0xAAu8; CHUNK];
-    let gpu_buffer = unsafe { GpuMappedBuffer::from_host_visible_slice(&mut target) };
+    let gpu_buffer = GpuMappedBuffer::from_host_visible_slice(&mut target);
     let tail = AtomicU32::new(0);
     let mut stream = AsyncUringStream::new(ring, gpu_buffer, &tail);
 
@@ -51,11 +51,9 @@ fn reads_from_tcp_socket_into_host_buffer() {
 
     // SAFETY: iovs + target outlive the completion thanks to the
     // poll loop below. fd is live until end-of-test.
-    unsafe {
-        stream
-            .submit_read_to_gpu(fd, 0, CHUNK as u32, 0, &mut iovs)
-            .expect("submit socket read");
-    }
+    stream
+        .submit_read_to_gpu(fd, 0, CHUNK as u32, 0, &mut iovs)
+        .expect("submit socket read");
 
     let deadline = Instant::now() + Duration::from_secs(5);
     while stream.inflight() > 0 {

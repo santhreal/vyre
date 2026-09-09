@@ -20,22 +20,14 @@ use vyre_spec::{
 fn all_protocol_domains_are_covered_in_canonical_matrix() {
     let matrix = CompatibilityMatrix::canonical();
     for &domain in ProtocolDomain::ALL {
-        let disp = matrix.check(
-            domain,
-            ProtocolVersion::V1_0_0,
-            ProtocolVersion::V1_0_0,
-        );
+        let disp = matrix.check(domain, ProtocolVersion::V1_0_0, ProtocolVersion::V1_0_0);
         assert_eq!(
             disp,
             CompatibilityDisposition::Supported,
             "Fix: domain '{domain}' must have a supported cell for v1.0.0 -> v1.0.0."
         );
 
-        let disp_1_1 = matrix.check(
-            domain,
-            ProtocolVersion::V1_1_0,
-            ProtocolVersion::V1_1_0,
-        );
+        let disp_1_1 = matrix.check(domain, ProtocolVersion::V1_1_0, ProtocolVersion::V1_1_0);
         assert_eq!(
             disp_1_1,
             CompatibilityDisposition::Supported,
@@ -150,8 +142,9 @@ fn schema_registry_covers_every_schema_id() {
     );
 
     for &id in SchemaId::ALL {
-        let def = SchemaRegistry::lookup(id)
-            .unwrap_or_else(|| panic!("Fix: SchemaId::{id:?} must be registered in SchemaRegistry"));
+        let def = SchemaRegistry::lookup(id).unwrap_or_else(|| {
+            panic!("Fix: SchemaId::{id:?} must be registered in SchemaRegistry")
+        });
         assert_eq!(def.id, id);
         assert!(
             def.validate_invariants(),
@@ -419,7 +412,9 @@ fn mixed_client_operation_under_negotiation_maintains_isolation() {
         status: SessionStatus::Active,
     };
 
-    assert!(session_a.validate(GenerationId::INITIAL, &contract_a).is_ok());
+    assert!(session_a
+        .validate(GenerationId::INITIAL, &contract_a)
+        .is_ok());
     let mismatch_err = session_a
         .validate(GenerationId::INITIAL, &contract_b)
         .expect_err("Fix: session validated with mismatched contract must fail");

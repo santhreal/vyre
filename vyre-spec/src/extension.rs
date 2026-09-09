@@ -9,16 +9,15 @@
 //! `inventory`. The trait signatures below describe the stable contract;
 //! actual registration and resolution lives in `vyre_foundation::extension`.
 //!
+use crate::data_type::DataType;
+use crate::op_contract::SideEffectClass;
+use crate::region_law::RegionLawFamily;
 /// Every extension id occupies the range `0x8000_0000..=0xFFFF_FFFF`  -  the
 /// high bit of the wire tag distinguishes extension ids from the frozen
 /// core tag space `0x00..=0x7F`. The `ExtensionDataTypeId::from_name`
 /// constructor computes a collision-resistant 256-bit cryptographic digest
 /// and folds it into the reserved range with explicit collision resolution.
-
 use core::fmt::Debug;
-use crate::data_type::DataType;
-use crate::op_contract::SideEffectClass;
-use crate::region_law::RegionLawFamily;
 macro_rules! impl_extension_id {
     ($id:ident) => {
         impl $id {
@@ -160,7 +159,9 @@ pub struct ExtensionRuleConditionId(pub u32);
 impl_extension_id!(ExtensionRuleConditionId);
 
 /// Globally unique namespace identifying an extension domain or package.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub struct ExtensionNamespace(pub String);
 
 impl ExtensionNamespace {
@@ -173,7 +174,10 @@ impl ExtensionNamespace {
         if ns.is_empty() {
             return Err("Extension namespace cannot be empty");
         }
-        if !ns.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_') {
+        if !ns
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_')
+        {
             return Err("Extension namespace contains invalid characters; expected [a-zA-Z0-9._-]");
         }
         Ok(Self(ns))
@@ -193,7 +197,9 @@ impl core::fmt::Display for ExtensionNamespace {
 }
 
 /// Semantic version for an extension schema.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub struct ExtensionSemVer {
     /// Major version.
     pub major: u32,
@@ -207,7 +213,11 @@ impl ExtensionSemVer {
     /// Construct a new semantic version.
     #[must_use]
     pub const fn new(major: u32, minor: u32, patch: u32) -> Self {
-        Self { major, minor, patch }
+        Self {
+            major,
+            minor,
+            patch,
+        }
     }
 }
 
@@ -218,7 +228,9 @@ impl core::fmt::Display for ExtensionSemVer {
 }
 
 /// 256-bit cryptographic digest over a canonical extension schema definition.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub struct ExtensionSchemaDigest(pub [u8; 32]);
 
 impl ExtensionSchemaDigest {
@@ -249,7 +261,9 @@ impl ExtensionSchemaDigest {
 /// Full collision-resistant identity for an extension schema.
 ///
 /// Combines a globally unique namespace, semantic version, and 256-bit schema digest.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub struct ExtensionIdentity {
     /// Globally unique namespace.
     pub namespace: ExtensionNamespace,
@@ -274,11 +288,15 @@ impl ExtensionIdentity {
         }
     }
 
-
     /// Canonical display string `namespace@major.minor.patch#hex_digest`.
     #[must_use]
     pub fn to_canonical_string(&self) -> String {
-        format!("{}@{}#{}", self.namespace.as_str(), self.version, self.schema_digest.to_hex())
+        format!(
+            "{}@{}#{}",
+            self.namespace.as_str(),
+            self.version,
+            self.schema_digest.to_hex()
+        )
     }
 }
 
@@ -402,7 +420,9 @@ impl Default for ExtensionNumericalContract {
 }
 
 /// Hardware resource bounds and limits declared by an extension.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize, Default,
+)]
 pub struct ExtensionResourceBounds {
     /// Maximum workgroup-shared memory in bytes.
     pub max_shared_bytes: u64,
@@ -608,7 +628,9 @@ pub struct ExtensionProofFields {
 }
 
 /// Exhaustive enumeration of all required proof fields on an extension schema.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub enum ExtensionProofFieldKind {
     /// Host shareability (`host_shareable`).
     HostShareability,
@@ -685,7 +707,10 @@ mod tests {
         let name_b = "x.ta";
         let id_a = ExtensionDataTypeId::from_name(name_a);
         let id_b = ExtensionDataTypeId::from_name(name_b);
-        assert_ne!(id_a, id_b, "Collision-resistant IDs must distinguish distinct names");
+        assert_ne!(
+            id_a, id_b,
+            "Collision-resistant IDs must distinguish distinct names"
+        );
 
         let ns_a = ExtensionNamespace::new(name_a).expect("valid namespace");
         let ver = ExtensionSemVer::new(1, 0, 0);

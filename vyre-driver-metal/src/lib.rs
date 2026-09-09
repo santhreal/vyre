@@ -18,6 +18,12 @@ pub const METAL_BACKEND_ID: &str = "metal";
 pub const METAL_TARGET_ID: vyre_foundation::operation::TargetId =
     vyre_foundation::operation::TargetId::expect_valid(METAL_BACKEND_ID);
 
+/// Metal external resource import/export and timeline synchronization (Row 111).
+pub mod external_resource;
+pub use external_resource::{
+    MetalExternalMemoryDescriptor, MetalExternalMemoryHandle, MetalExternalResourceImporter,
+    MetalImportedResource,
+};
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod materializer;
 #[cfg(any(target_os = "macos", target_os = "ios"))]

@@ -81,8 +81,12 @@ impl CatalogBundle {
 
         // Also bridge from OperationRegistration for backwards compatibility
         for reg in inventory::iter::<OperationRegistration> {
-            descriptors.entry(reg.id).or_insert_with(|| reg.descriptor());
-            lowering_providers.entry(reg.id).or_insert_with(|| reg.lowering_provider());
+            descriptors
+                .entry(reg.id)
+                .or_insert_with(|| reg.descriptor());
+            lowering_providers
+                .entry(reg.id)
+                .or_insert_with(|| reg.lowering_provider());
         }
 
         let digest = Self::compute_digest(1, &descriptors, &lowering_providers, &extensions);

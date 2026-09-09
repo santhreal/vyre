@@ -170,7 +170,9 @@ fn outer_root(vyre_root: &Path) -> Option<(PathBuf, String)> {
     let mut candidate = vyre_root.to_path_buf();
     let mut climbed = 0usize;
     while climbed < 4 {
-        let Some(parent) = candidate.parent() else { break };
+        let Some(parent) = candidate.parent() else {
+            break;
+        };
         if parent.components().count() < 3 {
             break;
         }

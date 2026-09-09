@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::{AtomicOp, BinOp, CollectiveOp, SubgroupReduceOp};
+use serde::{Deserialize, Serialize};
 
 /// Every combine, in law-id order, with the lower-case spelling, the frozen
 /// subgroup wire tag, and whether it operates on bit patterns.

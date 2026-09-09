@@ -528,10 +528,7 @@ impl Diagnostic {
 
     /// Attach a structured cause chain.
     #[must_use]
-    pub fn with_cause_chain(
-        mut self,
-        chain: impl IntoIterator<Item = DiagnosticCause>,
-    ) -> Self {
+    pub fn with_cause_chain(mut self, chain: impl IntoIterator<Item = DiagnosticCause>) -> Self {
         for cause in chain {
             if self.cause.is_none() {
                 self.cause = Some(cause.clone());

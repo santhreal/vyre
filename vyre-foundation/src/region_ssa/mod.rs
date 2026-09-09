@@ -19,11 +19,11 @@ pub use dominance::{verify_dominance, DominanceVerifier};
 pub use lower::{lower_program_to_region_ssa, lower_region_ssa_to_program, RegionSsaError};
 pub use opt::{RegionSsaConstProp, RegionSsaDce, RegionSsaOptimizer, ValueRemap};
 
-use std::fmt;
+use crate::extension::CatalogBundle;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use vyre_spec::ExtensionIdentity;
 use vyre_spec::{BinOp, CombineKind, DataType, SideEffectClass, TernaryOp, UnOp};
-use crate::extension::CatalogBundle;
 
 /// Stable identifier of an immutable SSA value.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]

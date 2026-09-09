@@ -213,35 +213,80 @@ pub(crate) fn execute_node<'a>(
         Node::Resume { tag } => Err(crate::ReferenceError::new(format!(
             "reference dispatch reached Resume `{tag}` without a replay runtime. Fix: lower Resume through a runtime-owned replay path before reference execution."
         ))),
-        Node::AllReduce { buffer, group, .. } => Err(crate::ReferenceError::new(format!(
-            "reference dispatch reached AllReduce on buffer `{buffer}` for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
-            group.as_u32()
-        ))),
+        Node::AllReduce { buffer: _, op: _, group } => {
+            if group.as_u32() != vyre_spec::CommGroup::WORLD.0 {
+                return Err(crate::ReferenceError::incomplete_dispatch_semantics(format!(
+                    "single-rank reference interpreter supports only WORLD collective group, got group {}. Fix: run on distributed backend for non-WORLD groups.",
+                    group.as_u32()
+                )));
+            }
+            Ok(())
+        }
         Node::AllGather {
             input,
             output,
             group,
-        } => Err(crate::ReferenceError::new(format!(
-            "reference dispatch reached AllGather `{input}` -> `{output}` for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
-            group.as_u32()
-        ))),
+        } => {
+            if group.as_u32() != vyre_spec::CommGroup::WORLD.0 {
+                return Err(crate::ReferenceError::incomplete_dispatch_semantics(format!(
+                    "single-rank reference interpreter supports only WORLD collective group, got group {}. Fix: run on distributed backend for non-WORLD groups.",
+                    group.as_u32()
+                )));
+            }
+            let src_bytes = {
+                let src = memory.storage.get(input.as_str()).ok_or_else(|| {
+                    crate::ReferenceError::missing_value(format!("AllGather input buffer `{input}` not found"))
+                })?;
+                src.read_window(0, src.byte_len())
+            };
+            let dst = memory.storage.get_mut(output.as_str()).ok_or_else(|| {
+                crate::ReferenceError::missing_value(format!("AllGather output buffer `{output}` not found"))
+            })?;
+            dst.write_window(0, &src_bytes);
+            Ok(())
+        }
         Node::ReduceScatter {
             input,
             output,
+            op: _,
             group,
-            ..
-        } => Err(crate::ReferenceError::new(format!(
-            "reference dispatch reached ReduceScatter `{input}` -> `{output}` for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
-            group.as_u32()
-        ))),
+        } => {
+            if group.as_u32() != vyre_spec::CommGroup::WORLD.0 {
+                return Err(crate::ReferenceError::incomplete_dispatch_semantics(format!(
+                    "single-rank reference interpreter supports only WORLD collective group, got group {}. Fix: run on distributed backend for non-WORLD groups.",
+                    group.as_u32()
+                )));
+            }
+            let src_bytes = {
+                let src = memory.storage.get(input.as_str()).ok_or_else(|| {
+                    crate::ReferenceError::missing_value(format!("ReduceScatter input buffer `{input}` not found"))
+                })?;
+                src.read_window(0, src.byte_len())
+            };
+            let dst = memory.storage.get_mut(output.as_str()).ok_or_else(|| {
+                crate::ReferenceError::missing_value(format!("ReduceScatter output buffer `{output}` not found"))
+            })?;
+            dst.write_window(0, &src_bytes);
+            Ok(())
+        }
         Node::Broadcast {
-            buffer,
+            buffer: _,
             root,
             group,
-        } => Err(crate::ReferenceError::new(format!(
-            "reference dispatch reached Broadcast on buffer `{buffer}` from root {root} for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
-            group.as_u32()
-        ))),
+        } => {
+            if group.as_u32() != vyre_spec::CommGroup::WORLD.0 {
+                return Err(crate::ReferenceError::incomplete_dispatch_semantics(format!(
+                    "single-rank reference interpreter supports only WORLD collective group, got group {}. Fix: run on distributed backend for non-WORLD groups.",
+                    group.as_u32()
+                )));
+            }
+            if *root != 0 {
+                return Err(crate::ReferenceError::incomplete_dispatch_semantics(format!(
+                    "single-rank reference interpreter requires Broadcast root 0, got root {root}."
+                )));
+            }
+            Ok(())
+        }
         Node::Region { body, .. } => eval_block(body, invocation),
         Node::Opaque(extension) => Err(crate::ReferenceError::new(format!(
             "reference interpreter does not support opaque node extension `{}`/`{}`. Fix: provide a reference evaluator for this NodeExtension or lower it to core Node variants before evaluation.",
@@ -490,7 +535,7 @@ mod tests {
             .expect("Fix: test buffer exists")
             .bytes
             .read()
-            .unwrap_or_else(|error| error.into_inner())
+            .expect("reference Buffer byte lock was poisoned")
             .clone()
     }
 

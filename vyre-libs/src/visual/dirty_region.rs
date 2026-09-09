@@ -45,14 +45,8 @@ pub fn dirty_region_patch_rgba(
                 ),
             ),
         ),
-        Node::let_bind(
-            "patch_x",
-            Expr::sub(Expr::var("ax"), Expr::u32(dest_x)),
-        ),
-        Node::let_bind(
-            "patch_y",
-            Expr::sub(Expr::var("ay"), Expr::u32(dest_y)),
-        ),
+        Node::let_bind("patch_x", Expr::sub(Expr::var("ax"), Expr::u32(dest_x))),
+        Node::let_bind("patch_y", Expr::sub(Expr::var("ay"), Expr::u32(dest_y))),
         Node::let_bind(
             "patch_idx",
             Expr::add(
@@ -124,7 +118,10 @@ pub fn dirty_region_patch_direct(
         Node::let_bind("ty", Expr::add(Expr::var("py"), Expr::u32(dest_y))),
         Node::let_bind(
             "target_idx",
-            Expr::add(Expr::var("tx"), Expr::mul(Expr::var("ty"), Expr::u32(target_w))),
+            Expr::add(
+                Expr::var("tx"),
+                Expr::mul(Expr::var("ty"), Expr::u32(target_w)),
+            ),
         ),
         Node::let_bind("patch_px", Expr::load(patch, Expr::var("idx"))),
         Node::if_then(
@@ -132,7 +129,11 @@ pub fn dirty_region_patch_direct(
                 Expr::lt(Expr::var("tx"), Expr::u32(target_w)),
                 Expr::lt(Expr::var("ty"), Expr::u32(target_h)),
             ),
-            vec![Node::store(target, Expr::var("target_idx"), Expr::var("patch_px"))],
+            vec![Node::store(
+                target,
+                Expr::var("target_idx"),
+                Expr::var("patch_px"),
+            )],
         ),
     ];
 
@@ -151,7 +152,10 @@ pub fn dirty_region_patch_direct(
                 Ident::from(OP_ID_DIRECT),
                 vec![
                     Node::let_bind("idx_guard", Expr::logical_index(0)),
-                    Node::if_then(Expr::lt(Expr::var("idx_guard"), Expr::u32(patch_count)), body),
+                    Node::if_then(
+                        Expr::lt(Expr::var("idx_guard"), Expr::u32(patch_count)),
+                        body,
+                    ),
                 ],
             )],
         )],

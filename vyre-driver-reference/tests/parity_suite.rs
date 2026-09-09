@@ -233,11 +233,7 @@ fn evaluators_produce_identical_bytes_on_same_inputs() {
     let input_bytes = 77u32.to_le_bytes();
 
     let out1 = evaluator
-        .evaluate(
-            &program,
-            &[&input_bytes[..]],
-            &DispatchConfig::default(),
-        )
+        .evaluate(&program, &[&input_bytes[..]], &DispatchConfig::default())
         .expect("eval 1");
     let out2 = evaluator
         .evaluate(&program, &[&input_bytes[..]], &DispatchConfig::default())
@@ -257,11 +253,7 @@ fn extra_input_buffers_rejected() {
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
     );
-    let result = evaluator.evaluate(
-        &program,
-        &[&[0; 4], &[0; 4]],
-        &DispatchConfig::default(),
-    );
+    let result = evaluator.evaluate(&program, &[&[0; 4], &[0; 4]], &DispatchConfig::default());
     assert!(
         result.is_err(),
         "Fix: extra input buffers must be rejected."
@@ -293,7 +285,9 @@ fn determinism_guarantee() {
     let out1 = evaluator
         .evaluate(&program, &[&input[..]], &config)
         .unwrap();
-    let out2 = evaluator.evaluate(&program, &[&input[..]], &config).unwrap();
+    let out2 = evaluator
+        .evaluate(&program, &[&input[..]], &config)
+        .unwrap();
     assert_eq!(
         out1, out2,
         "Fix: cpu-ref must be deterministic  -  identical inputs must produce identical outputs."
@@ -309,16 +303,11 @@ fn caller_supplied_physical_grid_cannot_change_the_semantic_answer() {
             u32_out_buffer("out", 2),
         ],
         [1, 1, 1],
-        vec![
-            Node::store(
-                "out",
-                Expr::u32(0),
-                Expr::add(
-                    Expr::load("a", Expr::u32(0)),
-                    Expr::load("b", Expr::u32(0)),
-                ),
-            ),
-        ],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::add(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
+        )],
     );
     let a = 17u32.to_le_bytes();
     let b = 25u32.to_le_bytes();

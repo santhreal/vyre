@@ -10,12 +10,12 @@ use vyre_test_support::spec_variant_tables;
 use std::collections::BTreeSet;
 
 use vyre_spec::{
-    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionTernaryOpId,
-    ExtensionUnOpId,
-};
-use vyre_spec::{
     AtomicOp, BinOp, CollectiveOp, DataType, QuantizationScale, QuantizationZeroPoint, TernaryOp,
     TypeId, UnOp,
+};
+use vyre_spec::{
+    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionTernaryOpId,
+    ExtensionUnOpId,
 };
 
 #[test]

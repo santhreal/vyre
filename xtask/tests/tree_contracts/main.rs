@@ -37,12 +37,11 @@ mod nested_byte_rows;
 #[cfg(feature = "public-api-tool")]
 mod public_api_snapshot_inventory;
 mod relation_import_certificates;
+mod release_provenance_contracts;
 /// Unix only: the subject is a shell script, and the release hosts run it.
 #[cfg(unix)]
 mod release_shell_toml_reader;
-mod release_provenance_contracts;
 mod subcommand_dispatch;
 mod test_mutation_hygiene;
 mod testing_guides;
 mod tree_walk_order;
-

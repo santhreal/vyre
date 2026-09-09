@@ -1,9 +1,6 @@
 //! Target compilation, emission, and attachment boundaries.
 
-use vyre_foundation::{
-    execution_plan::fusion::merge_programs_shared,
-    ir::Program,
-};
+use vyre_foundation::{execution_plan::fusion::merge_programs_shared, ir::Program};
 use vyre_lower::PhysicalSchedule;
 
 use crate::target_bindings::{
@@ -47,9 +44,7 @@ pub fn attach_target(
 }
 
 /// Decode compiler-selected modules from one authenticated neutral artifact.
-fn selected_modules(
-    artifact: &Artifact,
-) -> Result<Vec<SelectedModule>, TargetCompileError> {
+fn selected_modules(artifact: &Artifact) -> Result<Vec<SelectedModule>, TargetCompileError> {
     artifact
         .fusion()
         .iter()

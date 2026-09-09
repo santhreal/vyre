@@ -319,7 +319,9 @@ fn layer_reversal_dependency_fails_closed() {
     let report = run(temp.path());
     let messages = messages(&report);
     assert!(
-        messages.contains("`low` in layer `layer-low` (rank 0) depends on `high` in layer `layer-high` (rank 5)"),
+        messages.contains(
+            "`low` in layer `layer-low` (rank 0) depends on `high` in layer `layer-high` (rank 5)"
+        ),
         "Fix: layer reversal must name source, destination, and ranks; got\n{messages}"
     );
 }
@@ -328,13 +330,19 @@ fn layer_reversal_dependency_fails_closed() {
 #[test]
 fn hidden_feature_unified_edge_fails_closed() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
-    fs::create_dir_all(temp.path().join("docs")).expect("Fix: fixture docs directory must be creatable");
+    fs::create_dir_all(temp.path().join("docs"))
+        .expect("Fix: fixture docs directory must be creatable");
     fs::write(
         temp.path().join("Cargo.toml"),
         "[workspace]\nresolver = \"2\"\nmembers = [\"a\", \"b\"]\n[workspace.dependencies]\nb = { version = \"0.1.0\", path = \"b\", features = [\"unified-flag\"] }\n",
     )
     .expect("Fix: fixture workspace manifest must be writable");
-    write_member(temp.path(), "a", "a", "[dependencies]\nb = { workspace = true }\n");
+    write_member(
+        temp.path(),
+        "a",
+        "a",
+        "[dependencies]\nb = { workspace = true }\n",
+    );
     write_member(temp.path(), "b", "b", "\n[features]\nunified-flag = []\n");
     seal(
         temp.path(),

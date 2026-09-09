@@ -189,7 +189,6 @@ impl fmt::Display for CodecError {
     }
 }
 
-
 /// Canonical binary encoder for schema records.
 pub struct CanonicalEncoder;
 
@@ -228,7 +227,11 @@ impl CanonicalEncoder {
 
             // Check for stale fixture versions in string fields
             if let CanonicalValue::Utf8String(s) = val {
-                if schema.stale_fixtures.iter().any(|&stale| stale == s.as_str()) {
+                if schema
+                    .stale_fixtures
+                    .iter()
+                    .any(|&stale| stale == s.as_str())
+                {
                     return Err(CodecError::StaleSchemaVersion {
                         schema_id: record.schema_id,
                         found: s.clone(),
@@ -251,7 +254,11 @@ impl CanonicalEncoder {
         }
         // Verify all required fields were encoded
         for req_field in schema.fields.iter().filter(|f| f.required) {
-            if !record.fields.iter().any(|(num, _)| *num == req_field.number) {
+            if !record
+                .fields
+                .iter()
+                .any(|(num, _)| *num == req_field.number)
+            {
                 return Err(CodecError::MissingRequiredField {
                     field_number: req_field.number,
                     field_name: req_field.name,
@@ -360,8 +367,8 @@ impl CanonicalDecoder {
             .find(|&s| (s as u32) == schema_id_raw)
             .ok_or(CodecError::UnknownSchema(SchemaId::ConformanceCertificate))?;
 
-        let schema = SchemaRegistry::lookup(schema_id)
-            .ok_or(CodecError::UnknownSchema(schema_id))?;
+        let schema =
+            SchemaRegistry::lookup(schema_id).ok_or(CodecError::UnknownSchema(schema_id))?;
 
         if bytes.len() > schema.bounds.max_bytes {
             return Err(CodecError::PayloadOversized {
@@ -397,21 +404,24 @@ impl CanonicalDecoder {
             }
             last_field_num = field_num;
 
-            let field_def = schema
-                .fields
-                .iter()
-                .find(|f| f.number == field_num)
-                .ok_or(CodecError::NonCanonicalFieldOrder {
+            let field_def = schema.fields.iter().find(|f| f.number == field_num).ok_or(
+                CodecError::NonCanonicalFieldOrder {
                     expected_after: last_field_num,
                     got: field_num,
-                })?;
+                },
+            )?;
 
-            let (val, consumed) = Self::decode_value(&bytes[offset..], field_def.field_type, field_num, schema, 1)?;
+            let (val, consumed) =
+                Self::decode_value(&bytes[offset..], field_def.field_type, field_num, schema, 1)?;
             offset += consumed;
 
             // Check for stale version strings
             if let CanonicalValue::Utf8String(s) = &val {
-                if schema.stale_fixtures.iter().any(|&stale| stale == s.as_str()) {
+                if schema
+                    .stale_fixtures
+                    .iter()
+                    .any(|&stale| stale == s.as_str())
+                {
                     return Err(CodecError::StaleSchemaVersion {
                         schema_id,
                         found: s.clone(),
@@ -451,55 +461,103 @@ impl CanonicalDecoder {
         match field_type {
             FieldType::U8 => {
                 if bytes.is_empty() {
-                    return Err(CodecError::UnexpectedEof { expected: 1, remaining: 0 });
+                    return Err(CodecError::UnexpectedEof {
+                        expected: 1,
+                        remaining: 0,
+                    });
                 }
                 Ok((CanonicalValue::U8(bytes[0]), 1))
             }
             FieldType::U16 => {
                 if bytes.len() < 2 {
-                    return Err(CodecError::UnexpectedEof { expected: 2, remaining: bytes.len() });
+                    return Err(CodecError::UnexpectedEof {
+                        expected: 2,
+                        remaining: bytes.len(),
+                    });
                 }
-                Ok((CanonicalValue::U16(u16::from_le_bytes(bytes[0..2].try_into().unwrap())), 2))
+                Ok((
+                    CanonicalValue::U16(u16::from_le_bytes(bytes[0..2].try_into().unwrap())),
+                    2,
+                ))
             }
             FieldType::U32 => {
                 if bytes.len() < 4 {
-                    return Err(CodecError::UnexpectedEof { expected: 4, remaining: bytes.len() });
+                    return Err(CodecError::UnexpectedEof {
+                        expected: 4,
+                        remaining: bytes.len(),
+                    });
                 }
-                Ok((CanonicalValue::U32(u32::from_le_bytes(bytes[0..4].try_into().unwrap())), 4))
+                Ok((
+                    CanonicalValue::U32(u32::from_le_bytes(bytes[0..4].try_into().unwrap())),
+                    4,
+                ))
             }
             FieldType::U64 => {
                 if bytes.len() < 8 {
-                    return Err(CodecError::UnexpectedEof { expected: 8, remaining: bytes.len() });
+                    return Err(CodecError::UnexpectedEof {
+                        expected: 8,
+                        remaining: bytes.len(),
+                    });
                 }
-                Ok((CanonicalValue::U64(u64::from_le_bytes(bytes[0..8].try_into().unwrap())), 8))
+                Ok((
+                    CanonicalValue::U64(u64::from_le_bytes(bytes[0..8].try_into().unwrap())),
+                    8,
+                ))
             }
             FieldType::I32 => {
                 if bytes.len() < 4 {
-                    return Err(CodecError::UnexpectedEof { expected: 4, remaining: bytes.len() });
+                    return Err(CodecError::UnexpectedEof {
+                        expected: 4,
+                        remaining: bytes.len(),
+                    });
                 }
-                Ok((CanonicalValue::I32(i32::from_le_bytes(bytes[0..4].try_into().unwrap())), 4))
+                Ok((
+                    CanonicalValue::I32(i32::from_le_bytes(bytes[0..4].try_into().unwrap())),
+                    4,
+                ))
             }
             FieldType::I64 => {
                 if bytes.len() < 8 {
-                    return Err(CodecError::UnexpectedEof { expected: 8, remaining: bytes.len() });
+                    return Err(CodecError::UnexpectedEof {
+                        expected: 8,
+                        remaining: bytes.len(),
+                    });
                 }
-                Ok((CanonicalValue::I64(i64::from_le_bytes(bytes[0..8].try_into().unwrap())), 8))
+                Ok((
+                    CanonicalValue::I64(i64::from_le_bytes(bytes[0..8].try_into().unwrap())),
+                    8,
+                ))
             }
             FieldType::F32 => {
                 if bytes.len() < 4 {
-                    return Err(CodecError::UnexpectedEof { expected: 4, remaining: bytes.len() });
+                    return Err(CodecError::UnexpectedEof {
+                        expected: 4,
+                        remaining: bytes.len(),
+                    });
                 }
-                Ok((CanonicalValue::F32(f32::from_le_bytes(bytes[0..4].try_into().unwrap())), 4))
+                Ok((
+                    CanonicalValue::F32(f32::from_le_bytes(bytes[0..4].try_into().unwrap())),
+                    4,
+                ))
             }
             FieldType::F64 => {
                 if bytes.len() < 8 {
-                    return Err(CodecError::UnexpectedEof { expected: 8, remaining: bytes.len() });
+                    return Err(CodecError::UnexpectedEof {
+                        expected: 8,
+                        remaining: bytes.len(),
+                    });
                 }
-                Ok((CanonicalValue::F64(f64::from_le_bytes(bytes[0..8].try_into().unwrap())), 8))
+                Ok((
+                    CanonicalValue::F64(f64::from_le_bytes(bytes[0..8].try_into().unwrap())),
+                    8,
+                ))
             }
             FieldType::Bool => {
                 if bytes.is_empty() {
-                    return Err(CodecError::UnexpectedEof { expected: 1, remaining: 0 });
+                    return Err(CodecError::UnexpectedEof {
+                        expected: 1,
+                        remaining: 0,
+                    });
                 }
                 if bytes[0] > 1 {
                     return Err(CodecError::NonCanonicalEncoding {
@@ -511,35 +569,59 @@ impl CanonicalDecoder {
             }
             FieldType::FixedBytes(n) => {
                 if bytes.len() < n {
-                    return Err(CodecError::UnexpectedEof { expected: n, remaining: bytes.len() });
+                    return Err(CodecError::UnexpectedEof {
+                        expected: n,
+                        remaining: bytes.len(),
+                    });
                 }
                 Ok((CanonicalValue::FixedBytes(bytes[0..n].to_vec()), n))
             }
             FieldType::VarBytes => {
                 if bytes.len() < 4 {
-                    return Err(CodecError::UnexpectedEof { expected: 4, remaining: bytes.len() });
+                    return Err(CodecError::UnexpectedEof {
+                        expected: 4,
+                        remaining: bytes.len(),
+                    });
                 }
                 let len = u32::from_le_bytes(bytes[0..4].try_into().unwrap()) as usize;
                 if bytes.len() < 4 + len {
-                    return Err(CodecError::UnexpectedEof { expected: 4 + len, remaining: bytes.len() });
+                    return Err(CodecError::UnexpectedEof {
+                        expected: 4 + len,
+                        remaining: bytes.len(),
+                    });
                 }
-                Ok((CanonicalValue::VarBytes(bytes[4..4 + len].to_vec()), 4 + len))
+                Ok((
+                    CanonicalValue::VarBytes(bytes[4..4 + len].to_vec()),
+                    4 + len,
+                ))
             }
             FieldType::Utf8String => {
                 if bytes.len() < 4 {
-                    return Err(CodecError::UnexpectedEof { expected: 4, remaining: bytes.len() });
+                    return Err(CodecError::UnexpectedEof {
+                        expected: 4,
+                        remaining: bytes.len(),
+                    });
                 }
                 let len = u32::from_le_bytes(bytes[0..4].try_into().unwrap()) as usize;
                 if bytes.len() < 4 + len {
-                    return Err(CodecError::UnexpectedEof { expected: 4 + len, remaining: bytes.len() });
+                    return Err(CodecError::UnexpectedEof {
+                        expected: 4 + len,
+                        remaining: bytes.len(),
+                    });
                 }
-                let s = core::str::from_utf8(&bytes[4..4 + len])
-                    .map_err(|_| CodecError::InvalidUtf8 { field_number: field_num })?;
+                let s = core::str::from_utf8(&bytes[4..4 + len]).map_err(|_| {
+                    CodecError::InvalidUtf8 {
+                        field_number: field_num,
+                    }
+                })?;
                 Ok((CanonicalValue::Utf8String(String::from(s)), 4 + len))
             }
             FieldType::List(elem_type) => {
                 if bytes.len() < 4 {
-                    return Err(CodecError::UnexpectedEof { expected: 4, remaining: bytes.len() });
+                    return Err(CodecError::UnexpectedEof {
+                        expected: 4,
+                        remaining: bytes.len(),
+                    });
                 }
                 let count = u32::from_le_bytes(bytes[0..4].try_into().unwrap()) as usize;
                 if count > schema.bounds.max_elements {
@@ -551,7 +633,13 @@ impl CanonicalDecoder {
                 let mut offset = 4;
                 let mut items = Vec::with_capacity(count);
                 for _ in 0..count {
-                    let (item, consumed) = Self::decode_value(&bytes[offset..], *elem_type, field_num, schema, depth + 1)?;
+                    let (item, consumed) = Self::decode_value(
+                        &bytes[offset..],
+                        *elem_type,
+                        field_num,
+                        schema,
+                        depth + 1,
+                    )?;
                     offset += consumed;
                     items.push(item);
                 }
@@ -583,7 +671,11 @@ impl CanonicalSigner {
         hasher.update(&(record.schema_id as u32).to_le_bytes());
 
         for field_def in schema.fields.iter().filter(|f| f.is_identity) {
-            if let Some((_, val)) = record.fields.iter().find(|(num, _)| *num == field_def.number) {
+            if let Some((_, val)) = record
+                .fields
+                .iter()
+                .find(|(num, _)| *num == field_def.number)
+            {
                 let mut buf = Vec::new();
                 CanonicalEncoder::encode_value(val, field_def.field_type, schema, 1, &mut buf)?;
                 hasher.update(&field_def.number.to_le_bytes());

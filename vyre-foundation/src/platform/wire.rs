@@ -68,7 +68,9 @@ pub fn checked_i64_to_isize(val: i64) -> Result<isize, ConversionError> {
 }
 
 /// Fixed canonical 32-bit unsigned integer with explicit little-endian byte layout.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize,
+)]
 #[repr(transparent)]
 pub struct CanonicalU32(pub u32);
 
@@ -101,7 +103,9 @@ impl fmt::Display for CanonicalU32 {
 }
 
 /// Fixed canonical 64-bit unsigned integer with explicit little-endian byte layout.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize,
+)]
 #[repr(transparent)]
 pub struct CanonicalU64(pub u64);
 

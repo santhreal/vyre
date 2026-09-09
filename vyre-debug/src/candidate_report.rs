@@ -1,7 +1,7 @@
 //! Search certificate, candidate funnel, and prune reason diagnostics.
 
-use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 use vyre::compiler::SearchCertificate;
 

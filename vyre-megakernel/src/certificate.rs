@@ -98,6 +98,49 @@ impl PruneReason {
             Self::ScheduleRequirement => "MKC016_SCHEDULE_REQUIREMENT",
         }
     }
+
+    /// One sentence stating why the family was eliminated.
+    ///
+    /// A certificate reader needs the reason in words, and the enum is the
+    /// single definition of it. The match has no catch-all arm, so a new
+    /// variant fails compilation here as well as in [`Self::code`].
+    #[must_use]
+    pub const fn explanation(self) -> &'static str {
+        match self {
+            Self::Numerical => "a derived transform would change the numerical result",
+            Self::Dependence => "the derived plan breaks the dependence order of the graph",
+            Self::AliasOrEffect => "two arms alias storage or conflict on an effect",
+            Self::BarrierVisibility => {
+                "a write is not visible where a barrier phase or proxy read consumes it"
+            }
+            Self::PipelineCapacity => {
+                "the derived pipeline ring does not fit the available storage"
+            }
+            Self::Occupancy => "the derived plan exceeds the occupancy the device holds resident",
+            Self::Scratch => {
+                "the derived plan exceeds the workgroup-shared scratch the device grants"
+            }
+            Self::Workspace => {
+                "the derived workspace is not representable in the addressable range"
+            }
+            Self::Progress => "the derived plan has no forward-progress guarantee on this device",
+            Self::ObjectiveDominated => {
+                "the proved bound is no better than the best proved candidate under the objective"
+            }
+            Self::TargetFacts => {
+                "the authenticated target facts do not grant the derived capability"
+            }
+            Self::Representation => "the artifact cannot represent the derived plan",
+            Self::ScheduleLegality => "a schedule transform precondition failed",
+            Self::Emission => "target compilation rejected the plan before measurement",
+            Self::ObjectiveBound => {
+                "the aggregated figures exceed a hard bound the objective states"
+            }
+            Self::ScheduleRequirement => {
+                "the candidate does not exercise the schedule family the caller required"
+            }
+        }
+    }
 }
 
 /// One production family eliminated for one reason, with how often.

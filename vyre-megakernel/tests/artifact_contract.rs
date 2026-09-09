@@ -360,15 +360,17 @@ fn fusion_legality_reasons_are_stable_for_geometry_and_synchronization() {
     }
 
     let geometry = fusion_pair_graph([32, 1, 1], [64, 1, 1], GeometryPin::None);
+    assert_eq!(decide(&geometry), FusionDecision::Legal);
+
+    let genuinely_illegal = fusion_pair_graph([32, 2, 1], [64, 1, 1], GeometryPin::None);
     assert_eq!(
-        decide(&geometry),
+        decide(&genuinely_illegal),
         FusionDecision::Rejected(FusionRejectionReason::WorkgroupMismatch)
     );
     assert_eq!(
         FusionRejectionReason::WorkgroupMismatch.code(),
         "MKL005_WORKGROUP_MISMATCH"
     );
-
     for pin in [GeometryPin::Barrier, GeometryPin::WorkgroupScratch] {
         let widened = fusion_pair_graph([32, 1, 1], [64, 1, 1], pin);
         assert_eq!(

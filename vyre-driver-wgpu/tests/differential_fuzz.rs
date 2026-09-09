@@ -17,12 +17,6 @@
 
 #![cfg(feature = "device-tests")]
 #![allow(deprecated)]
-#![cfg(all(
-    feature = "math-linalg",
-    feature = "math-scan",
-    feature = "pattern-substring",
-    feature = "pattern-dfa",
-))]
 
 use crate::harness;
 

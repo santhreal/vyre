@@ -31,10 +31,7 @@ pub fn rgba_to_grayscale(input: &str, output: &str, count: u32) -> Program {
                         Expr::mul(Expr::var("r"), Expr::u32(77)),
                         Expr::mul(Expr::var("g"), Expr::u32(150)),
                     ),
-                    Expr::add(
-                        Expr::mul(Expr::var("b"), Expr::u32(29)),
-                        Expr::u32(128),
-                    ),
+                    Expr::add(Expr::mul(Expr::var("b"), Expr::u32(29)), Expr::u32(128)),
                 ),
                 Expr::u32(8),
             )),
@@ -227,9 +224,7 @@ pub fn unpremultiply_alpha(input: &str, output: &str, count: u32) -> Program {
     )
 }
 
-const EXPECTED_GRAYSCALE_OUTPUT_BYTES: [u8; 8] = [
-    0x4C, 0x4C, 0x4C, 0xFF, 0x96, 0x96, 0x96, 0xFF,
-];
+const EXPECTED_GRAYSCALE_OUTPUT_BYTES: [u8; 8] = [0x4C, 0x4C, 0x4C, 0xFF, 0x96, 0x96, 0x96, 0xFF];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library_unconstrained(

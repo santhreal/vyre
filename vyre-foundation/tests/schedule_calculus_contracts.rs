@@ -1,9 +1,9 @@
 //! Contract tests for Row 107: Compositional schedule calculus.
 
 use vyre_foundation::schedule::{
-    DependencyPreservationCertificate, MappingLevel, ScheduleCostModel,
-    ScheduleDiff, ScheduleDiffItem, ScheduleOp, SchedulePlan,
-    ScheduleResourceBounds, ScheduleTree, SynchronizationScope,
+    DependencyPreservationCertificate, MappingLevel, ScheduleCostModel, ScheduleDiff,
+    ScheduleDiffItem, ScheduleOp, SchedulePlan, ScheduleResourceBounds, ScheduleTree,
+    SynchronizationScope,
 };
 
 #[test]
@@ -14,11 +14,8 @@ fn schedule_calculus_composition_and_validation() {
         vector_width: 4,
     });
 
-    let cert = DependencyPreservationCertificate::new(
-        "polyhedral_tiling_legality_v1",
-        vec![0, 1],
-        true,
-    );
+    let cert =
+        DependencyPreservationCertificate::new("polyhedral_tiling_legality_v1", vec![0, 1], true);
 
     let tiled_node = ScheduleTree::node(
         ScheduleOp::Tile {
@@ -51,7 +48,8 @@ fn schedule_calculus_composition_and_validation() {
 
     let plan = SchedulePlan::new(map_node, bounds);
     assert_eq!(plan.version, 2);
-    plan.validate().expect("well-formed schedule plan validates cleanly");
+    plan.validate()
+        .expect("well-formed schedule plan validates cleanly");
     assert_eq!(plan.root.node_count(), 3);
 }
 
@@ -125,7 +123,10 @@ fn schedule_calculus_diffing_and_cost_modeling() {
     );
 
     let diff = ScheduleDiff::diff_plans(&plan_a, &plan_b);
-    assert!(!diff.is_empty(), "diff detects parameter and resource changes");
+    assert!(
+        !diff.is_empty(),
+        "diff detects parameter and resource changes"
+    );
     assert!(diff.items.iter().any(|item| matches!(
         item,
         ScheduleDiffItem::ResourceBoundChanged { name, before: 2048, after: 4096 } if name == "shared_bytes"

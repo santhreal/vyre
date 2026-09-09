@@ -9,9 +9,7 @@ use std::collections::BTreeMap;
 use std::format;
 use std::string::String;
 
-use vyre_foundation::{
-    CompatibilityMatrix, ProtocolDomain, ProtocolVersion,
-};
+use vyre_foundation::{CompatibilityMatrix, ProtocolDomain, ProtocolVersion};
 
 /// Generation-scoped cache namespace preventing cross-version contamination.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -161,7 +159,11 @@ impl RollingUpgradeCoordinator {
     }
 
     /// Abort and rollback the upgrade atomically.
-    pub fn rollback(&mut self, previous_version: ProtocolVersion, reason: &'static str) -> Result<(), String> {
+    pub fn rollback(
+        &mut self,
+        previous_version: ProtocolVersion,
+        reason: &'static str,
+    ) -> Result<(), String> {
         match self.phase {
             UpgradePhase::RollingUpgrade {
                 draining_generation,

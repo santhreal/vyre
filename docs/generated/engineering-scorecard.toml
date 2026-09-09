@@ -5,7 +5,7 @@ schema_version = 1
 
 [summary]
 total_crates = 35
-total_gates = 146
+total_gates = 147
 evaluated_axes = 22
 overall_verdict = "qualified"
 
@@ -367,7 +367,7 @@ path = "xtask"
 tier = "tooling"
 public_api_symbols = 0
 testing_guide_present = true
-gate_count = 146
+gate_count = 147
 axes_passed = 22
 axes_total = 22
 status = "qualified"

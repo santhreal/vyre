@@ -222,10 +222,7 @@ fn case_matmul_2x2() -> (Program, Vec<Vec<f32>>, Vec<f32>) {
             Node::tile_store("out", vec![Expr::u32(0), Expr::u32(0)], "c"),
         ],
     );
-    let inputs = vec![
-        vec![1.0f32, 2.0, 3.0, 4.0],
-        vec![5.0f32, 6.0, 7.0, 8.0],
-    ];
+    let inputs = vec![vec![1.0f32, 2.0, 3.0, 4.0], vec![5.0f32, 6.0, 7.0, 8.0]];
     let expected = vec![19.0f32, 22.0, 43.0, 50.0];
     (prog, inputs, expected)
 }

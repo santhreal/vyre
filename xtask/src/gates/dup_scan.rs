@@ -118,7 +118,10 @@ fn is_type_segment(segment: &str) -> bool {
 /// True when `line` states nothing on its own: a delimiter run, an attribute, a
 /// `use`, a `mod` header, or a bare variant pattern.
 fn is_structural_line(line: &str) -> bool {
-    if line.chars().all(|character| "{}()[];,?".contains(character)) {
+    if line
+        .chars()
+        .all(|character| "{}()[];,?".contains(character))
+    {
         return true;
     }
     if line.starts_with("#[") || line.starts_with("#![") {
@@ -139,7 +142,10 @@ fn is_module_header(line: &str) -> bool {
         .strip_prefix("pub(crate) ")
         .or_else(|| line.strip_prefix("pub "))
         .unwrap_or(line);
-    let Some(name) = body.strip_prefix("mod ").and_then(|rest| rest.strip_suffix('{')) else {
+    let Some(name) = body
+        .strip_prefix("mod ")
+        .and_then(|rest| rest.strip_suffix('{'))
+    else {
         return false;
     };
     let name = name.trim();

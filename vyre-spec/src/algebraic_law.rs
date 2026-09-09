@@ -1,5 +1,10 @@
 //! Frozen algebraic-law declarations that conformance engines verify per operation.
 
+use alloc::string::String;
+use alloc::vec::Vec;
+
+use crate::float_type::FloatType;
+use crate::ir_level::IrLevel;
 use crate::monotonic_direction::MonotonicDirection;
 
 /// Function pointer used by custom algebraic law checks.
@@ -445,6 +450,76 @@ impl PartialEq for AlgebraicLaw {
         }
     }
 }
+
+impl Eq for AlgebraicLaw {}
+
+fn default_custom_check(_: fn(&[u8]) -> Vec<u8>, _: &[u32]) -> bool {
+    true
+}
+
+impl serde::Serialize for AlgebraicLaw {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.name())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for AlgebraicLaw {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = alloc::string::String::deserialize(deserializer)?;
+        match s.as_str() {
+            "commutative" => Ok(Self::Commutative),
+            "associative" => Ok(Self::Associative),
+            "identity" => Ok(Self::Identity { element: 0 }),
+            "left-identity" => Ok(Self::LeftIdentity { element: 0 }),
+            "right-identity" => Ok(Self::RightIdentity { element: 0 }),
+            "self-inverse" => Ok(Self::SelfInverse { result: 0 }),
+            "idempotent" => Ok(Self::Idempotent),
+            "absorbing" => Ok(Self::Absorbing { element: 0 }),
+            "left-absorbing" => Ok(Self::LeftAbsorbing { element: 0 }),
+            "right-absorbing" => Ok(Self::RightAbsorbing { element: 0 }),
+            "involution" => Ok(Self::Involution),
+            "de-morgan" => Ok(Self::DeMorgan {
+                inner_op: "and",
+                dual_op: "or",
+            }),
+            "monotone" => Ok(Self::Monotone),
+            "monotonic" => Ok(Self::Monotonic {
+                direction: MonotonicDirection::NonDecreasing,
+            }),
+            "bounded" => Ok(Self::Bounded {
+                lo: 0,
+                hi: u32::MAX,
+            }),
+            "complement" => Ok(Self::Complement {
+                complement_op: "not",
+                universe: u32::MAX,
+            }),
+            "distributive" => Ok(Self::DistributiveOver { over_op: "add" }),
+            "lattice-absorption" => Ok(Self::LatticeAbsorption { dual_op: "min" }),
+            "inverse-of" => Ok(Self::InverseOf { op: "add" }),
+            "trichotomy" => Ok(Self::Trichotomy {
+                less_op: "lt",
+                equal_op: "eq",
+                greater_op: "gt",
+            }),
+            "zero-product" => Ok(Self::ZeroProduct { holds: true }),
+            "categorical-identity" => Ok(Self::CategoricalIdentity),
+            "categorical-associative" => Ok(Self::CategoricalAssociative),
+            _ => Ok(Self::Custom {
+                name: "custom",
+                description: "deserialized custom law",
+                arity: 1,
+                check: default_custom_check,
+            }),
+        }
+    }
+}
 /// Precondition under which an algebraic law holds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
@@ -492,5 +567,410 @@ impl LawGuard {
 impl Default for LawGuard {
     fn default() -> Self {
         Self::Unconditional
+    }
+}
+
+/// Direction of an algebraic equivalence or rewrite law.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
+#[non_exhaustive]
+pub enum LawDirection {
+    /// Equivalence holds symmetrically in both directions (`a = b <-> b = a`).
+    Bidirectional,
+    /// Simplification or reduction oriented left-to-right (`f(a, 0) -> a`).
+    LeftToRight,
+    /// Expansion or synthesis oriented right-to-left.
+    RightToLeft,
+    /// Canonicalization ordering rule.
+    Canonicalize,
+}
+
+impl LawDirection {
+    /// Return the name of the law direction.
+    #[must_use]
+    pub const fn name(&self) -> &'static str {
+        match self {
+            Self::Bidirectional => "bidirectional",
+            Self::LeftToRight => "left-to-right",
+            Self::RightToLeft => "right-to-left",
+            Self::Canonicalize => "canonicalize",
+        }
+    }
+
+    /// Whether the law is bidirectional equivalence.
+    #[must_use]
+    pub const fn is_bidirectional(&self) -> bool {
+        matches!(self, Self::Bidirectional)
+    }
+}
+
+impl Default for LawDirection {
+    fn default() -> Self {
+        Self::Bidirectional
+    }
+}
+
+/// Verification or formal proof method attached to an algebraic law.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub enum ProofMethod {
+    /// Exhaustively checked on all `u8` inputs.
+    ExhaustiveU8,
+    /// Exhaustively checked on all `u16` inputs.
+    ExhaustiveU16,
+    /// Witnessed over `u32` with a deterministic pseudo-random seed and iteration count.
+    WitnessedU32 {
+        /// Deterministic seed.
+        seed: u64,
+        /// Witness iteration count.
+        count: u64,
+    },
+    /// Exhaustively verified over a restricted float domain.
+    ExhaustiveFloat {
+        /// Float type covered.
+        typ: FloatType,
+    },
+    /// Discharged by SMT bit-vector solver logic.
+    SmtQfBv {
+        /// SMT-LIB logic string (e.g. `"QF_BV"`).
+        logic: String,
+    },
+    /// Discharged by a closed decision procedure.
+    DecisionProcedure {
+        /// Decision procedure name.
+        name: String,
+    },
+    /// No executable proof method provided (invalid for production contracts).
+    None,
+}
+
+impl ProofMethod {
+    /// Return the name of the proof method.
+    #[must_use]
+    pub const fn name(&self) -> &'static str {
+        match self {
+            Self::ExhaustiveU8 => "exhaustive-u8",
+            Self::ExhaustiveU16 => "exhaustive-u16",
+            Self::WitnessedU32 { .. } => "witnessed-u32",
+            Self::ExhaustiveFloat { .. } => "exhaustive-float",
+            Self::SmtQfBv { .. } => "smt-qf-bv",
+            Self::DecisionProcedure { .. } => "decision-procedure",
+            Self::None => "none",
+        }
+    }
+
+    /// Whether this method provides executable proof evidence.
+    #[must_use]
+    pub const fn has_executable_proof(&self) -> bool {
+        !matches!(self, Self::None)
+    }
+}
+
+impl Default for ProofMethod {
+    fn default() -> Self {
+        Self::WitnessedU32 {
+            seed: 0x5EED_C0DE,
+            count: 1024,
+        }
+    }
+}
+
+/// Adversarial counterexample generator for validating and falsifying law hypotheses.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub struct CounterexampleGenerator {
+    /// Generator strategy name.
+    pub name: String,
+    /// Deterministic pseudo-random seed.
+    pub seed: u64,
+    /// Maximum sample attempts before certifying absence of counterexamples in search space.
+    pub max_attempts: usize,
+}
+
+impl CounterexampleGenerator {
+    /// Construct a counterexample generator with explicit parameters.
+    #[must_use]
+    pub fn new(name: impl Into<String>, seed: u64, max_attempts: usize) -> Self {
+        Self {
+            name: name.into(),
+            seed,
+            max_attempts,
+        }
+    }
+
+    /// Construct a canonical deterministic generator with default search parameters.
+    #[must_use]
+    pub fn deterministic(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            seed: 0x5EED_C0DE,
+            max_attempts: 1024,
+        }
+    }
+
+    /// Generate a deterministic stream of adversarial input tuples for an operation of given arity.
+    #[must_use]
+    pub fn generate_adversarial_inputs(&self, arity: usize) -> Vec<Vec<u64>> {
+        let mut results = Vec::with_capacity(self.max_attempts.min(256));
+        let corner_cases: &[u64] = &[
+            0,
+            1,
+            2,
+            u64::MAX,
+            u64::MAX - 1,
+            u32::MAX as u64,
+            (u32::MAX as u64) + 1,
+            0x8000_0000,
+            0x7FFF_FFFF,
+            0x5555_5555_5555_5555,
+            0xAAAA_AAAA_AAAA_AAAA,
+        ];
+        if arity == 1 {
+            for &c in corner_cases {
+                results.push(alloc::vec![c]);
+            }
+        } else if arity == 2 {
+            for &c1 in corner_cases {
+                for &c2 in corner_cases {
+                    results.push(alloc::vec![c1, c2]);
+                    if results.len() >= self.max_attempts {
+                        return results;
+                    }
+                }
+            }
+        } else {
+            let mut tuple = alloc::vec![0u64; arity];
+            for &c in corner_cases {
+                tuple.fill(c);
+                results.push(tuple.clone());
+            }
+        }
+
+        let mut state = self.seed ^ 0x9E37_79B9_7F4A_7C15;
+        while results.len() < self.max_attempts {
+            let mut tuple = Vec::with_capacity(arity);
+            for _ in 0..arity {
+                state = state
+                    .wrapping_mul(6364136223846793005)
+                    .wrapping_add(1442695040888963407);
+                tuple.push(state);
+            }
+            results.push(tuple);
+        }
+        results
+    }
+
+    /// Search for a counterexample that falsifies the given predicate `predicate(&inputs) -> bool`.
+    /// Returns `Some(LawCounterexample)` if a violating input is found.
+    pub fn find_counterexample<F>(
+        &self,
+        arity: usize,
+        mut predicate: F,
+    ) -> Option<LawCounterexample>
+    where
+        F: FnMut(&[u64]) -> bool,
+    {
+        let inputs_stream = self.generate_adversarial_inputs(arity);
+        for inputs in inputs_stream {
+            if !predicate(&inputs) {
+                return Some(LawCounterexample {
+                    description: alloc::format!(
+                        "counterexample found by generator `{}` at input {:?}",
+                        self.name,
+                        inputs
+                    ),
+                    inputs,
+                    observed: None,
+                    expected: None,
+                });
+            }
+        }
+        None
+    }
+}
+
+impl Default for CounterexampleGenerator {
+    fn default() -> Self {
+        Self::deterministic("canonical-adversarial-generator")
+    }
+}
+
+/// Counterexample discovered by validation or metamorphic testing.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub struct LawCounterexample {
+    /// Human-readable explanation.
+    pub description: String,
+    /// Concrete input tuple that falsified the law.
+    pub inputs: Vec<u64>,
+    /// Observed output value, if applicable.
+    pub observed: Option<u64>,
+    /// Expected output value, if applicable.
+    pub expected: Option<u64>,
+}
+
+/// Error encountered during law contract validation.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum LawValidationError {
+    /// Law has no executable proof evidence.
+    NoExecutableProofEvidence {
+        /// Name of the rejected law.
+        law: String,
+    },
+    /// A counterexample generator refuted the law hypothesis.
+    CounterexampleFound {
+        /// Name of the refuted law.
+        law: String,
+        /// Falsifying counterexample.
+        counterexample: LawCounterexample,
+    },
+    /// Guard specification is inconsistent or invalid.
+    InvalidGuard {
+        /// Name of the law.
+        law: String,
+        /// Invalidation reason.
+        reason: String,
+    },
+}
+
+impl core::fmt::Display for LawValidationError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::NoExecutableProofEvidence { law } => {
+                write!(
+                    f,
+                    "law `{law}` rejected: no executable proof evidence provided"
+                )
+            }
+            Self::CounterexampleFound {
+                law,
+                counterexample,
+            } => {
+                write!(f, "law `{law}` refuted: {}", counterexample.description)
+            }
+            Self::InvalidGuard { law, reason } => {
+                write!(f, "law `{law}` has invalid guard: {reason}")
+            }
+        }
+    }
+}
+
+/// Fully characterized algebraic law carrying guard, direction, numerical contract,
+/// proof method, counterexample generator, canonical form, and affected compiler levels.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct GuardedLaw {
+    /// Underlying algebraic law pattern.
+    pub law: AlgebraicLaw,
+    /// Rewrite directionality.
+    pub direction: LawDirection,
+    /// Precondition guard.
+    pub guard: LawGuard,
+    /// Numerical contract under which this law holds.
+    pub numerical_contract: crate::op_contract::NumericBehavior,
+    /// Executable proof method.
+    pub proof_method: ProofMethod,
+    /// Adversarial counterexample generator.
+    pub counterexample_generator: CounterexampleGenerator,
+    /// Optional canonical normal form representation.
+    pub canonical_form: Option<String>,
+    /// Compiler levels affected by this law.
+    pub affected_compiler_levels: smallvec::SmallVec<[IrLevel; 4]>,
+}
+
+impl GuardedLaw {
+    /// Construct a guarded law with unconditional exact semantics.
+    #[must_use]
+    pub fn unconditional(law: AlgebraicLaw) -> Self {
+        let mut affected = smallvec::SmallVec::new();
+        affected.push(IrLevel::Logical);
+        affected.push(IrLevel::Schedule);
+        Self {
+            law,
+            direction: LawDirection::Bidirectional,
+            guard: LawGuard::Unconditional,
+            numerical_contract: crate::op_contract::NumericBehavior::Exact,
+            proof_method: ProofMethod::WitnessedU32 {
+                seed: 0x5EED_C0DE,
+                count: 1024,
+            },
+            counterexample_generator: CounterexampleGenerator::deterministic("default-generator"),
+            canonical_form: None,
+            affected_compiler_levels: affected,
+        }
+    }
+
+    /// Attach a proof method.
+    #[must_use]
+    pub fn with_proof_method(mut self, proof_method: ProofMethod) -> Self {
+        self.proof_method = proof_method;
+        self
+    }
+
+    /// Attach a guard.
+    #[must_use]
+    pub fn with_guard(mut self, guard: LawGuard) -> Self {
+        self.guard = guard;
+        self
+    }
+
+    /// Attach a direction.
+    #[must_use]
+    pub fn with_direction(mut self, direction: LawDirection) -> Self {
+        self.direction = direction;
+        self
+    }
+
+    /// Attach a counterexample generator.
+    #[must_use]
+    pub fn with_counterexample_generator(
+        mut self,
+        counterexample_generator: CounterexampleGenerator,
+    ) -> Self {
+        self.counterexample_generator = counterexample_generator;
+        self
+    }
+
+    /// Attach canonical form.
+    #[must_use]
+    pub fn with_canonical_form(mut self, canonical_form: impl Into<String>) -> Self {
+        self.canonical_form = Some(canonical_form.into());
+        self
+    }
+
+    /// Validate the law: rejects laws with no executable proof evidence.
+    ///
+    /// # Errors
+    /// Returns [`LawValidationError::NoExecutableProofEvidence`] if `proof_method` is `None`.
+    pub fn validate(&self) -> Result<(), LawValidationError> {
+        if !self.proof_method.has_executable_proof() {
+            return Err(LawValidationError::NoExecutableProofEvidence {
+                law: self.law.name().into(),
+            });
+        }
+        Ok(())
+    }
+
+    /// Run counterexample verification against an implementation predicate.
+    ///
+    /// # Errors
+    /// Returns [`LawValidationError::CounterexampleFound`] if a counterexample is discovered.
+    pub fn verify_with_predicate<F>(
+        &self,
+        arity: usize,
+        predicate: F,
+    ) -> Result<(), LawValidationError>
+    where
+        F: FnMut(&[u64]) -> bool,
+    {
+        self.validate()?;
+        if let Some(counterexample) = self
+            .counterexample_generator
+            .find_counterexample(arity, predicate)
+        {
+            return Err(LawValidationError::CounterexampleFound {
+                law: self.law.name().into(),
+                counterexample,
+            });
+        }
+        Ok(())
     }
 }

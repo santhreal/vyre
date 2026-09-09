@@ -37,8 +37,8 @@ pub(crate) mod egraph_device_image;
 /// CUDA launch-wave planning for resident e-graph device images.
 pub(crate) mod egraph_kernel_plan;
 mod egraph_readback;
-/// Adapter from frontier-typed IR plans to CUDA frontier wave envelopes.
-pub(crate) mod frontier_typed_ir_adapter;
+/// CUDA external resource import/export and timeline synchronization (Row 111).
+pub mod external_resource;
 mod instrumentation;
 /// Cross-process persistent CUDA JIT cache wiring (E4 + E5): configures
 /// the NVIDIA driver's built-in disk cache at backend bring-up so the
@@ -76,10 +76,6 @@ mod stream;
 /// live probe: never derive a hardware decision from it.
 pub mod synthetic_device_caps;
 mod target_compiler;
-/// CUDA execution planning for unified token/fact graph frontier waves.
-pub(crate) mod token_fact_frontier_execution;
-#[cfg(test)]
-mod token_fact_frontier_execution_tests;
 /// CUDA warp-word bit-parallel automata layout evidence.
 pub(crate) mod warp_word_automata;
 
@@ -87,6 +83,10 @@ pub use backend::CachedCudaGraph;
 pub use backend::{
     CudaBackend, CudaPtxSourceCacheSnapshot, CudaResidentBuffer, CudaStreamOrderedPool,
     CudaTelemetrySnapshot,
+};
+pub use external_resource::{
+    CudaExternalMemoryDescriptor, CudaExternalMemoryHandle, CudaExternalResourceImporter,
+    CudaImportedResource,
 };
 pub use stream::CudaLaunchResourceCounts;
 /// CUDA megakernel global-barrier minimization for dependency-typed waves.
@@ -131,10 +131,6 @@ pub use egraph_kernel_plan::{
     CUDA_EGRAPH_STRUCTURAL_EQUIVALENCE_KERNEL_ENTRY,
     CUDA_EGRAPH_STRUCTURAL_EQUIVALENCE_KERNEL_PARAM_COUNT,
 };
-pub use frontier_typed_ir_adapter::adapt_frontier_typed_ir_to_cuda_into;
-pub use frontier_typed_ir_adapter::{
-    adapt_frontier_typed_ir_to_cuda, CudaFrontierTypedIrAdapterError, CudaFrontierTypedIrInput,
-};
 pub use kernel_failure_diagnostics::{
     diagnose_cuda_kernel_launch, diagnose_cuda_kernel_launch_shape,
     diagnose_cuda_kernel_launch_with_scratch, CudaKernelCapabilityFailure,
@@ -170,15 +166,6 @@ pub use resident_graph_session::{
     CudaResidentGraphSessionError, CudaResidentGraphSessionEvidence,
     CudaResidentGraphSessionEvidenceError, CudaResidentGraphSessionPlan,
     CudaResidentGraphSessionProfile,
-};
-pub use token_fact_frontier_execution::{
-    plan_cuda_token_fact_frontier_execution, plan_cuda_token_fact_frontier_execution_with_scratch,
-    CudaTokenFactFrontierExecutionError, CudaTokenFactFrontierExecutionPlan,
-};
-pub use token_fact_frontier_execution::{
-    plan_cuda_token_fact_frontier_execution_envelope,
-    plan_cuda_token_fact_frontier_execution_envelope_with_scratch,
-    CudaTokenFactFrontierExecutionEnvelope, CudaTokenFactGraphResidency,
 };
 pub use warp_word_automata::{
     plan_cuda_warp_word_automata_layout, CudaWarpWordAutomataLayoutError,

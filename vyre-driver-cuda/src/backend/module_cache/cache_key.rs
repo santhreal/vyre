@@ -45,7 +45,11 @@ pub(super) fn ptx_source_cache_key_from_program_identity(
     subgroup_size: u32,
     feature_flags: vyre_driver::PipelineFeatureFlags,
 ) -> Result<PtxSourceCacheKey, BackendError> {
-    BackendError::reject_blocked_contraction(program, config.float_lowering, crate::CUDA_BACKEND_ID)?;
+    BackendError::reject_blocked_contraction(
+        program,
+        config.float_lowering,
+        crate::CUDA_BACKEND_ID,
+    )?;
     let normalized_digest = probe::measure_nested(probe::Nested::PtxDigest, || {
         vyre_driver::try_normalized_program_cache_digest(program)
     })

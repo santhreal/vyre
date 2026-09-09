@@ -147,7 +147,10 @@ fn unconsumed_async_transfer_obligation_is_refused_by_name() {
     );
 
     let result = verify_program_obligations(&unconsumed_prog);
-    assert!(result.is_err(), "unconsumed async transfer obligation must be refused");
+    assert!(
+        result.is_err(),
+        "unconsumed async transfer obligation must be refused"
+    );
     let err_str = result.unwrap_err().to_string();
     assert!(
         err_str.contains("async_wait:transfer_stage_0"),
@@ -211,5 +214,9 @@ fn grid_rendezvous_is_represented_as_execution_scope_and_cut_in_schedule_layer()
         ],
     );
     let segments = split_on_grid_sync(&prog).expect("grid sync split succeeds");
-    assert_eq!(segments.len(), 2, "grid sync fence splits program into 2 scheduled segments");
+    assert_eq!(
+        segments.len(),
+        2,
+        "grid sync fence splits program into 2 scheduled segments"
+    );
 }

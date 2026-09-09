@@ -3,12 +3,10 @@
 use rustc_hash::FxHashMap;
 use vyre_spec::{BinOp, DataType};
 
+use super::builder::{DominanceError, RegionBuilder};
+use super::{GlobalDecl, RegionKind, RegionModule, RegionOp, RegionOpKind, ScalarLiteral, ValueId};
 use crate::ir::{BufferAccess, BufferDecl, Expr, Node, Program};
 use crate::visit::child_bodies;
-use super::builder::{DominanceError, RegionBuilder};
-use super::{
-    GlobalDecl, RegionKind, RegionModule, RegionOp, RegionOpKind, ScalarLiteral, ValueId,
-};
 
 /// Error produced when lowering between Program and Region SSA.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -117,12 +115,7 @@ fn lower_node_to_ssa(
                         })?;
                     }
                     let one = b.emit_constant(ScalarLiteral::U32(1))?;
-                    let next_iv = b.emit_binary(
-                        BinOp::Add,
-                        inner_iv,
-                        one,
-                        DataType::U32,
-                    )?;
+                    let next_iv = b.emit_binary(BinOp::Add, inner_iv, one, DataType::U32)?;
                     Ok(vec![next_iv])
                 },
             )?;
@@ -260,7 +253,11 @@ fn lower_ssa_op_to_nodes(
                 body.push(Node::let_bind(var_name, expr));
             }
         }
-        RegionOpKind::Binary { op: binop, left, right } => {
+        RegionOpKind::Binary {
+            op: binop,
+            left,
+            right,
+        } => {
             let l_expr = val_to_expr
                 .get(left)
                 .cloned()
@@ -352,32 +349,32 @@ fn lower_ssa_op_to_nodes(
                 .unwrap_or_else(|| Expr::var(format!("v_{}", value.0)));
             body.push(Node::store(buffer.as_str(), idx_expr, val_expr));
         }
-        RegionOpKind::Region(region) => {
-            match &region.kind {
-                RegionKind::Recurrence { trip_count_bound, .. } => {
-                    let mut inner_body = Vec::new();
-                    for b in &region.blocks {
-                        for inner_op in &b.ops {
-                            lower_ssa_op_to_nodes(inner_op, &mut inner_body, val_to_expr)?;
-                        }
+        RegionOpKind::Region(region) => match &region.kind {
+            RegionKind::Recurrence {
+                trip_count_bound, ..
+            } => {
+                let mut inner_body = Vec::new();
+                for b in &region.blocks {
+                    for inner_op in &b.ops {
+                        lower_ssa_op_to_nodes(inner_op, &mut inner_body, val_to_expr)?;
                     }
-                    let var_name = "i";
-                    body.push(Node::loop_(
-                        var_name,
-                        Expr::LitU32(0),
-                        Expr::LitU32(*trip_count_bound as u32),
-                        inner_body,
-                    ));
                 }
-                _ => {
-                    for b in &region.blocks {
-                        for inner_op in &b.ops {
-                            lower_ssa_op_to_nodes(inner_op, body, val_to_expr)?;
-                        }
+                let var_name = "i";
+                body.push(Node::loop_(
+                    var_name,
+                    Expr::LitU32(0),
+                    Expr::LitU32(*trip_count_bound as u32),
+                    inner_body,
+                ));
+            }
+            _ => {
+                for b in &region.blocks {
+                    for inner_op in &b.ops {
+                        lower_ssa_op_to_nodes(inner_op, body, val_to_expr)?;
                     }
                 }
             }
-        }
+        },
         _ => {}
     }
     Ok(())

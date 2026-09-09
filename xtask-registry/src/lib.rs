@@ -23,6 +23,10 @@ use xtask::gate::GateBehavior;
 /// name and this table resolves it, so the two lists have to agree; the test
 /// below is what enforces that.
 pub static GATES: &[(&str, &'static dyn GateBehavior)] = &[
+    (
+        "application-runnable",
+        &gates::application_runnable::ApplicationRunnable,
+    ),
     ("compile", &compile::Compile),
     ("catalog", &docs::catalog::Catalog),
     ("error-codes", &docs::error_codes::ErrorCodes),
@@ -39,6 +43,10 @@ pub static GATES: &[(&str, &'static dyn GateBehavior)] = &[
     (
         "abstraction-gate",
         &gates::abstraction_gate::AbstractionGate,
+    ),
+    (
+        "configuration-model",
+        &gates::configuration_model::ConfigurationModelGate,
     ),
     ("cross-target", &gates::cross_target::CrossTarget),
     (

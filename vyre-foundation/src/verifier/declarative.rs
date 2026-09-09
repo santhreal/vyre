@@ -7,7 +7,6 @@
 //! Records the exact list of invariants actually evaluated into the
 //! [`VerificationCertificate`].
 
-use thiserror::Error;
 use super::certificate::{
     CheckedInvariant, InvariantCategory, ResourceBounds, VerificationCertificate,
 };
@@ -15,6 +14,7 @@ use super::module::SemanticModule;
 use super::verified::Verified;
 use crate::types::shape::solver::ShapeSolver;
 use crate::validate::rule_pipeline::validate as legacy_validate;
+use thiserror::Error;
 
 /// Semantic verification error.
 #[derive(Debug, Error)]
@@ -101,7 +101,9 @@ impl DeclarativeVerifier {
             checked_invariants.push(CheckedInvariant {
                 category: InvariantCategory::DominanceUseDef,
                 code: "INV-DOM-001",
-                description: "Module without executable body trivially satisfies SSA use-def invariant".into(),
+                description:
+                    "Module without executable body trivially satisfies SSA use-def invariant"
+                        .into(),
                 passed: true,
             });
         }
@@ -111,21 +113,26 @@ impl DeclarativeVerifier {
             checked_invariants.push(CheckedInvariant {
                 category: InvariantCategory::TypeShapeRank,
                 code: "INV-TYPE-001",
-                description: format!("Verified {} declared orthogonal semantic type(s)", module.types.len()),
+                description: format!(
+                    "Verified {} declared orthogonal semantic type(s)",
+                    module.types.len()
+                ),
                 passed: true,
             });
         } else {
             checked_invariants.push(CheckedInvariant {
                 category: InvariantCategory::TypeShapeRank,
                 code: "INV-TYPE-001",
-                description: "Type, shape, and rank consistency verified for module signature".into(),
+                description: "Type, shape, and rank consistency verified for module signature"
+                    .into(),
                 passed: true,
             });
         }
 
         // Solve symbolic shape constraints via ShapeSolver
         for constraint in &module.shape_constraints {
-            let (holds, cert) = ShapeSolver::prove_constraint(&module.shape_interner, constraint, None);
+            let (holds, cert) =
+                ShapeSolver::prove_constraint(&module.shape_interner, constraint, None);
             solver_proofs.push(cert);
             checked_invariants.push(CheckedInvariant {
                 category: InvariantCategory::TypeShapeRank,
@@ -134,7 +141,9 @@ impl DeclarativeVerifier {
                 passed: holds,
             });
             if !holds {
-                return Err(VerificationError::ShapeProofFailure(format!("{constraint:?}")));
+                return Err(VerificationError::ShapeProofFailure(format!(
+                    "{constraint:?}"
+                )));
             }
         }
 
@@ -146,14 +155,18 @@ impl DeclarativeVerifier {
                     return Err(VerificationError::InvariantViolation {
                         code: "INV-ALIAS-001",
                         category: InvariantCategory::AliasOwnership,
-                        message: format!("Duplicate buffer declaration `{}` violates alias freedom", buf.name()),
+                        message: format!(
+                            "Duplicate buffer declaration `{}` violates alias freedom",
+                            buf.name()
+                        ),
                     });
                 }
             }
             checked_invariants.push(CheckedInvariant {
                 category: InvariantCategory::AliasOwnership,
                 code: "INV-ALIAS-001",
-                description: "Unique buffer declaration names ensure no conflicting alias ownership".into(),
+                description:
+                    "Unique buffer declaration names ensure no conflicting alias ownership".into(),
                 passed: true,
             });
         } else {
@@ -171,7 +184,10 @@ impl DeclarativeVerifier {
                 checked_invariants.push(CheckedInvariant {
                     category: InvariantCategory::Effects,
                     code: "INV-EFFECT-001",
-                    description: format!("Atomic ordering effect `{}` is explicitly stated", eff.name()),
+                    description: format!(
+                        "Atomic ordering effect `{}` is explicitly stated",
+                        eff.name()
+                    ),
                     passed: true,
                 });
             }
@@ -222,7 +238,9 @@ impl DeclarativeVerifier {
             checked_invariants.push(CheckedInvariant {
                 category: InvariantCategory::TerminationProgress,
                 code: "INV-TERM-001",
-                description: "Control flow graph exhibits forward execution progress and bounded iteration".into(),
+                description:
+                    "Control flow graph exhibits forward execution progress and bounded iteration"
+                        .into(),
                 passed: true,
             });
         }
@@ -249,12 +267,16 @@ impl DeclarativeVerifier {
                 ),
                 passed: true,
             });
-            assumptions.push(format!("NumericalContract: fast_math={}", num_contract.fast_math));
+            assumptions.push(format!(
+                "NumericalContract: fast_math={}",
+                num_contract.fast_math
+            ));
         } else {
             checked_invariants.push(CheckedInvariant {
                 category: InvariantCategory::NumericContracts,
                 code: "INV-NUM-001",
-                description: "Standard IEEE 754 precision and rounding numerical contract verified".into(),
+                description: "Standard IEEE 754 precision and rounding numerical contract verified"
+                    .into(),
                 passed: true,
             });
         }
@@ -265,7 +287,10 @@ impl DeclarativeVerifier {
                 checked_invariants.push(CheckedInvariant {
                     category: InvariantCategory::CollectiveGroups,
                     code: "INV-COLL-001",
-                    description: format!("Collective communication group `{}` topology verified", cg.name()),
+                    description: format!(
+                        "Collective communication group `{}` topology verified",
+                        cg.name()
+                    ),
                     passed: true,
                 });
             }
@@ -273,7 +298,9 @@ impl DeclarativeVerifier {
             checked_invariants.push(CheckedInvariant {
                 category: InvariantCategory::CollectiveGroups,
                 code: "INV-COLL-001",
-                description: "Single-workgroup execution topology verified with no collective divergence".into(),
+                description:
+                    "Single-workgroup execution topology verified with no collective divergence"
+                        .into(),
                 passed: true,
             });
         }
@@ -284,7 +311,9 @@ impl DeclarativeVerifier {
                 checked_invariants.push(CheckedInvariant {
                     category: InvariantCategory::StateTransitions,
                     code: "INV-STATE-001",
-                    description: format!("Asynchronous stage transition `{from}` -> `{to}` verified"),
+                    description: format!(
+                        "Asynchronous stage transition `{from}` -> `{to}` verified"
+                    ),
                     passed: true,
                 });
             }

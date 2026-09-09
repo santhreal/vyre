@@ -74,16 +74,13 @@ impl VarScope {
     }
 
     pub(super) fn get_tile(&self, name: &Ident) -> Option<TileBinding> {
-        self.tile_bindings
-            .get(name)
-            .cloned()
-            .or_else(|| {
-                self.bindings.get(name).map(|&id| TileBinding {
-                    extents: vec![1],
-                    element: DataType::F32,
-                    results: vec![id],
-                })
+        self.tile_bindings.get(name).cloned().or_else(|| {
+            self.bindings.get(name).map(|&id| TileBinding {
+                extents: vec![1],
+                element: DataType::F32,
+                results: vec![id],
             })
+        })
     }
 
     pub(super) fn snapshot(&self) -> ScopeSnapshot {
@@ -114,7 +111,8 @@ impl VarScope {
                 self.bindings.insert(name.clone(), *updated);
             }
             if let Some(updated_tile) = loop_exit.tile_bindings.get(name) {
-                self.tile_bindings.insert(name.clone(), updated_tile.clone());
+                self.tile_bindings
+                    .insert(name.clone(), updated_tile.clone());
             }
         }
         for name in incoming.tile_bindings.keys() {
@@ -122,7 +120,8 @@ impl VarScope {
                 continue;
             }
             if let Some(updated_tile) = loop_exit.tile_bindings.get(name) {
-                self.tile_bindings.insert(name.clone(), updated_tile.clone());
+                self.tile_bindings
+                    .insert(name.clone(), updated_tile.clone());
             }
             if let Some(updated) = loop_exit.bindings.get(name) {
                 self.bindings.insert(name.clone(), *updated);

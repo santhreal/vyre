@@ -543,11 +543,11 @@ fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(work
         vyre_block_scope_0_ = 0u;
         vyre_block_scope_1_ = _vyre_global_id.x;
         let _e10 = vyre_block_scope_1_;
-        let _e13 = b[_e10];
+        let _e13 = a[_e10];
         vyre_block_scope_2_ = _e13;
         vyre_block_scope_3_ = _vyre_global_id.x;
         let _e23 = vyre_block_scope_3_;
-        let _e26 = a[_e23];
+        let _e26 = b[_e23];
         vyre_block_scope_4_ = _e26;
         let _e31 = vyre_block_scope_2_;
         let _e33 = vyre_block_scope_4_;
@@ -561,11 +561,11 @@ fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(work
         vyre_block_scope_6_ = 1u;
         vyre_block_scope_7_ = _vyre_global_id.x;
         let _e59 = vyre_block_scope_7_;
-        let _e62 = b[_e59];
+        let _e62 = a[_e59];
         vyre_block_scope_8_ = _e62;
         vyre_block_scope_9_ = _vyre_global_id.x;
         let _e72 = vyre_block_scope_9_;
-        let _e75 = a[_e72];
+        let _e75 = b[_e72];
         vyre_block_scope_10_ = _e75;
         let _e80 = vyre_block_scope_8_;
         let _e82 = vyre_block_scope_10_;
@@ -579,11 +579,11 @@ fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(work
         vyre_block_scope_12_ = 2u;
         vyre_block_scope_13_ = _vyre_global_id.x;
         let _e108 = vyre_block_scope_13_;
-        let _e111 = b[_e108];
+        let _e111 = a[_e108];
         vyre_block_scope_14_ = _e111;
         vyre_block_scope_15_ = _vyre_global_id.x;
         let _e121 = vyre_block_scope_15_;
-        let _e124 = a[_e121];
+        let _e124 = b[_e121];
         vyre_block_scope_16_ = _e124;
         let _e129 = vyre_block_scope_14_;
         let _e131 = vyre_block_scope_16_;
@@ -892,11 +892,11 @@ fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(work
         vyre_block_scope_0_ = 0u;
         vyre_block_scope_1_ = _vyre_global_id.x;
         let _e10 = vyre_block_scope_1_;
-        let _e13 = b[_e10];
+        let _e13 = a[_e10];
         vyre_block_scope_2_ = _e13;
         vyre_block_scope_3_ = _vyre_global_id.x;
         let _e23 = vyre_block_scope_3_;
-        let _e26 = a[_e23];
+        let _e26 = b[_e23];
         vyre_block_scope_4_ = _e26;
         let _e31 = vyre_block_scope_2_;
         let _e33 = vyre_block_scope_4_;
@@ -912,11 +912,11 @@ fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(work
         vyre_block_scope_7_ = 1u;
         vyre_block_scope_8_ = _vyre_global_id.x;
         let _e65 = vyre_block_scope_8_;
-        let _e68 = b[_e65];
+        let _e68 = a[_e65];
         vyre_block_scope_9_ = _e68;
         vyre_block_scope_10_ = _vyre_global_id.x;
         let _e78 = vyre_block_scope_10_;
-        let _e81 = a[_e78];
+        let _e81 = b[_e78];
         vyre_block_scope_11_ = _e81;
         let _e86 = vyre_block_scope_9_;
         let _e88 = vyre_block_scope_11_;
@@ -2051,25 +2051,23 @@ fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(work
     var vyre_block_scope_2_: u32;
     var vyre_block_scope_3_: bool;
     var vyre_named_carry_acc: u32;
-    var vyre_named_carry_snapshot_4_: u32;
-    var vyre_block_scope_4_: u32;
+    var vyre_named_carry_snapshot_5_: u32;
     var vyre_block_scope_5_: u32;
     var vyre_block_scope_6_: u32;
+    var vyre_block_scope_7_: u32;
     var i_end: u32;
     var i: u32;
-    var vyre_block_scope_7_: u32;
-    var vyre_named_carry_snapshot_8_: u32;
     var vyre_block_scope_8_: u32;
+    var vyre_named_carry_snapshot_9_: u32;
     var vyre_block_scope_9_: u32;
     var vyre_block_scope_10_: u32;
+    var vyre_block_scope_11_: u32;
     var j_end: u32;
     var j: u32;
-    var vyre_block_scope_11_: u32;
-    var vyre_named_carry_snapshot_12_: u32;
     var vyre_block_scope_12_: u32;
+    var vyre_named_carry_snapshot_13_: u32;
     var vyre_block_scope_13_: u32;
     var vyre_block_scope_14_: u32;
-    var vyre_named_carry_snapshot_15_: u32;
     var vyre_block_scope_15_: u32;
     var vyre_named_carry_snapshot_16_: u32;
     var vyre_block_scope_16_: u32;
@@ -2077,12 +2075,14 @@ fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(work
     var vyre_block_scope_17_: u32;
     var vyre_named_carry_snapshot_18_: u32;
     var vyre_block_scope_18_: u32;
+    var vyre_named_carry_snapshot_19_: u32;
     var vyre_block_scope_19_: u32;
-    var vyre_named_carry_snapshot_20_: u32;
     var vyre_block_scope_20_: u32;
     var vyre_named_carry_snapshot_21_: u32;
     var vyre_block_scope_21_: u32;
+    var vyre_named_carry_snapshot_22_: u32;
     var vyre_block_scope_22_: u32;
+    var vyre_block_scope_23_: u32;
 
     {
         vyre_block_scope_0_ = 0u;
@@ -2096,15 +2096,15 @@ fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(work
         let _e25 = vyre_block_scope_3_;
         if _e25 {
             let _e27 = vyre_named_carry_acc;
-            vyre_named_carry_snapshot_4_ = _e27;
-            let _e30 = vyre_named_carry_snapshot_4_;
-            vyre_block_scope_4_ = _e30;
-            vyre_block_scope_5_ = 0u;
-            vyre_block_scope_6_ = 4u;
-            let _e43 = vyre_block_scope_4_;
+            vyre_named_carry_snapshot_5_ = _e27;
+            let _e30 = vyre_named_carry_snapshot_5_;
+            vyre_block_scope_5_ = _e30;
+            vyre_block_scope_6_ = 0u;
+            vyre_block_scope_7_ = 4u;
+            let _e43 = vyre_block_scope_5_;
             vyre_named_carry_acc = _e43;
-            let _e46 = vyre_block_scope_5_;
-            let _e48 = vyre_block_scope_6_;
+            let _e46 = vyre_block_scope_6_;
+            let _e48 = vyre_block_scope_7_;
             i_end = _e48;
             i = _e46;
             loop {
@@ -2114,17 +2114,17 @@ fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(work
                     break;
                 }
                 let _e57 = i;
-                vyre_block_scope_7_ = _e57;
+                vyre_block_scope_8_ = _e57;
                 let _e62 = vyre_named_carry_acc;
-                vyre_named_carry_snapshot_8_ = _e62;
-                let _e65 = vyre_named_carry_snapshot_8_;
-                vyre_block_scope_8_ = _e65;
-                vyre_block_scope_9_ = 0u;
-                vyre_block_scope_10_ = 2u;
-                let _e78 = vyre_block_scope_8_;
+                vyre_named_carry_snapshot_9_ = _e62;
+                let _e65 = vyre_named_carry_snapshot_9_;
+                vyre_block_scope_9_ = _e65;
+                vyre_block_scope_10_ = 0u;
+                vyre_block_scope_11_ = 2u;
+                let _e78 = vyre_block_scope_9_;
                 vyre_named_carry_acc = _e78;
-                let _e81 = vyre_block_scope_9_;
-                let _e83 = vyre_block_scope_10_;
+                let _e81 = vyre_block_scope_10_;
+                let _e83 = vyre_block_scope_11_;
                 j_end = _e83;
                 j = _e81;
                 loop {
@@ -2134,23 +2134,23 @@ fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(work
                         break;
                     }
                     let _e92 = j;
-                    vyre_block_scope_11_ = _e92;
+                    vyre_block_scope_12_ = _e92;
                     let _e97 = vyre_named_carry_acc;
-                    vyre_named_carry_snapshot_12_ = _e97;
-                    let _e100 = vyre_named_carry_snapshot_12_;
-                    vyre_block_scope_12_ = _e100;
-                    let _e105 = vyre_block_scope_7_;
-                    let _e107 = vyre_block_scope_11_;
-                    vyre_block_scope_13_ = (_e105 * _e107);
-                    let _e113 = vyre_block_scope_12_;
-                    let _e115 = vyre_block_scope_13_;
-                    vyre_block_scope_14_ = (_e113 + _e115);
-                    let _e121 = vyre_block_scope_14_;
+                    vyre_named_carry_snapshot_13_ = _e97;
+                    let _e100 = vyre_named_carry_snapshot_13_;
+                    vyre_block_scope_13_ = _e100;
+                    let _e105 = vyre_block_scope_8_;
+                    let _e107 = vyre_block_scope_12_;
+                    vyre_block_scope_14_ = (_e105 * _e107);
+                    let _e113 = vyre_block_scope_13_;
+                    let _e115 = vyre_block_scope_14_;
+                    vyre_block_scope_15_ = (_e113 + _e115);
+                    let _e121 = vyre_block_scope_15_;
                     vyre_named_carry_acc = _e121;
                     let _e124 = vyre_named_carry_acc;
-                    vyre_named_carry_snapshot_15_ = _e124;
-                    let _e127 = vyre_named_carry_snapshot_15_;
-                    vyre_block_scope_15_ = _e127;
+                    vyre_named_carry_snapshot_16_ = _e124;
+                    let _e127 = vyre_named_carry_snapshot_16_;
+                    vyre_block_scope_16_ = _e127;
                     continuing {
                         let _e132 = j;
                         j = (_e132 + 1u);
@@ -2160,9 +2160,9 @@ fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(work
                     }
                 }
                 let _e141 = vyre_named_carry_acc;
-                vyre_named_carry_snapshot_16_ = _e141;
-                let _e144 = vyre_named_carry_snapshot_16_;
-                vyre_block_scope_16_ = _e144;
+                vyre_named_carry_snapshot_17_ = _e141;
+                let _e144 = vyre_named_carry_snapshot_17_;
+                vyre_block_scope_17_ = _e144;
                 continuing {
                     let _e149 = i;
                     i = (_e149 + 1u);
@@ -2172,30 +2172,30 @@ fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(work
                 }
             }
             let _e158 = vyre_named_carry_acc;
-            vyre_named_carry_snapshot_17_ = _e158;
-            let _e161 = vyre_named_carry_snapshot_17_;
-            vyre_block_scope_17_ = _e161;
+            vyre_named_carry_snapshot_18_ = _e158;
+            let _e161 = vyre_named_carry_snapshot_18_;
+            vyre_block_scope_18_ = _e161;
         } else {
             let _e166 = vyre_named_carry_acc;
-            vyre_named_carry_snapshot_18_ = _e166;
-            let _e169 = vyre_named_carry_snapshot_18_;
-            vyre_block_scope_18_ = _e169;
-            vyre_block_scope_19_ = 1u;
-            let _e178 = vyre_block_scope_19_;
+            vyre_named_carry_snapshot_19_ = _e166;
+            let _e169 = vyre_named_carry_snapshot_19_;
+            vyre_block_scope_19_ = _e169;
+            vyre_block_scope_20_ = 1u;
+            let _e178 = vyre_block_scope_20_;
             vyre_named_carry_acc = _e178;
             let _e181 = vyre_named_carry_acc;
-            vyre_named_carry_snapshot_20_ = _e181;
-            let _e184 = vyre_named_carry_snapshot_20_;
-            vyre_block_scope_20_ = _e184;
+            vyre_named_carry_snapshot_21_ = _e181;
+            let _e184 = vyre_named_carry_snapshot_21_;
+            vyre_block_scope_21_ = _e184;
         }
         let _e189 = vyre_named_carry_acc;
-        vyre_named_carry_snapshot_21_ = _e189;
-        let _e192 = vyre_named_carry_snapshot_21_;
-        vyre_block_scope_21_ = _e192;
-        vyre_block_scope_22_ = _vyre_global_id.x;
-        let _e202 = vyre_block_scope_22_;
-        let _e206 = vyre_block_scope_21_;
-        let _e208 = vyre_block_scope_22_;
+        vyre_named_carry_snapshot_22_ = _e189;
+        let _e192 = vyre_named_carry_snapshot_22_;
+        vyre_block_scope_22_ = _e192;
+        vyre_block_scope_23_ = _vyre_global_id.x;
+        let _e202 = vyre_block_scope_23_;
+        let _e206 = vyre_block_scope_22_;
+        let _e208 = vyre_block_scope_23_;
         if (_e208 < arrayLength((&out))) {
             out[_e202] = _e206;
         }

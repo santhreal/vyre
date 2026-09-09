@@ -439,9 +439,7 @@ impl Reader<'_> {
         if tag == 0x80 {
             // Opaque: u32 extension id follows.
             let id = reject_reserved_extension_id(self.u32()?, "DataType")?;
-            return Ok(DataType::Opaque(vyre_spec::ExtensionDataTypeId(
-                id,
-            )));
+            return Ok(DataType::Opaque(vyre_spec::ExtensionDataTypeId(id)));
         }
         data_type_from_tag(tag)
     }

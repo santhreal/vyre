@@ -96,3 +96,6 @@ pub mod topology_contract;
 /// Integration tests from `tests/real_time_objectives.rs`.
 #[path = "real_time_objectives.rs"]
 pub mod real_time_objectives;
+/// Integration tests from `tests/region_fusion_legality_contracts.rs`.
+#[path = "region_fusion_legality_contracts.rs"]
+pub mod region_fusion_legality_contracts;

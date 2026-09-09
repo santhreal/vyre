@@ -4,11 +4,11 @@
 //! native tools, toolchain versions, code generators, benchmark baselines, and schemas.
 //! Generates CycloneDX/SPDX SBOMs and signed SLSA v1.2 provenance records.
 
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-use serde::{Deserialize, Serialize};
 
 /// Canonical schema version for ReleaseProvenance.
 pub const RELEASE_PROVENANCE_SCHEMA_VERSION: u32 = 1;
@@ -66,7 +66,10 @@ impl std::fmt::Display for ProvenanceError {
         match self {
             Self::Lockfile(msg) => write!(f, "lockfile error: {msg}"),
             Self::StaleSchemaVersion { expected, found } => {
-                write!(f, "stale schema version: expected {expected}, found {found}")
+                write!(
+                    f,
+                    "stale schema version: expected {expected}, found {found}"
+                )
             }
             Self::UnapprovedLicense { package, license } => {
                 write!(f, "unapproved license '{license}' for package '{package}'")
@@ -74,8 +77,14 @@ impl std::fmt::Display for ProvenanceError {
             Self::BannedDependency { package, reason } => {
                 write!(f, "banned dependency '{package}': {reason}")
             }
-            Self::UndeclaredBuildInput { build_script, undeclared_input } => {
-                write!(f, "undeclared build input in '{build_script}': {undeclared_input}")
+            Self::UndeclaredBuildInput {
+                build_script,
+                undeclared_input,
+            } => {
+                write!(
+                    f,
+                    "undeclared build input in '{build_script}': {undeclared_input}"
+                )
             }
             Self::MissingChecksum(msg) => write!(f, "missing checksum: {msg}"),
             Self::Serialization(msg) => write!(f, "serialization error: {msg}"),
@@ -202,8 +211,8 @@ impl ReleaseProvenanceAuthority {
 
         let lockfile_digest = blake3::hash(lockfile_text.as_bytes()).to_hex().to_string();
 
-        let lock_val: toml::Value = toml::from_str(&lockfile_text)
-            .map_err(|e| ProvenanceError::Lockfile(e.to_string()))?;
+        let lock_val: toml::Value =
+            toml::from_str(&lockfile_text).map_err(|e| ProvenanceError::Lockfile(e.to_string()))?;
 
         let (allowed_licenses, banned_crates) = load_deny_policy(root);
 
@@ -236,15 +245,20 @@ impl ReleaseProvenanceAuthority {
                     .to_string();
 
                 let key = format!("{name}@{version}");
-                let raw_license = if name.starts_with("vyre") || name == "structure-gate" || name == "xtask" {
-                    "Apache-2.0 OR MIT".to_string()
-                } else if let Some(lic) = metadata_licenses.get(&key).or_else(|| metadata_licenses.get(&name)) {
-                    lic.clone()
-                } else {
-                    "MIT OR Apache-2.0".to_string()
-                };
+                let raw_license =
+                    if name.starts_with("vyre") || name == "structure-gate" || name == "xtask" {
+                        "Apache-2.0 OR MIT".to_string()
+                    } else if let Some(lic) = metadata_licenses
+                        .get(&key)
+                        .or_else(|| metadata_licenses.get(&name))
+                    {
+                        lic.clone()
+                    } else {
+                        "MIT OR Apache-2.0".to_string()
+                    };
 
-                let is_license_valid = is_license_expression_approved(&raw_license, &allowed_licenses);
+                let is_license_valid =
+                    is_license_expression_approved(&raw_license, &allowed_licenses);
                 let is_banned = banned_crates.iter().any(|banned| {
                     if banned.contains('@') {
                         banned == &key
@@ -411,13 +425,15 @@ impl ReleaseProvenanceAuthority {
             if script.has_network_access {
                 return Err(ProvenanceError::UndeclaredBuildInput {
                     build_script: script.path.clone(),
-                    undeclared_input: "network access is strictly forbidden in build scripts".to_string(),
+                    undeclared_input: "network access is strictly forbidden in build scripts"
+                        .to_string(),
                 });
             }
             if !script.has_bounded_reads {
                 return Err(ProvenanceError::UndeclaredBuildInput {
                     build_script: script.path.clone(),
-                    undeclared_input: "unbounded filesystem reads violate build script integrity".to_string(),
+                    undeclared_input: "unbounded filesystem reads violate build script integrity"
+                        .to_string(),
                 });
             }
         }
@@ -427,7 +443,9 @@ impl ReleaseProvenanceAuthority {
     /// Verify offline integrity: every third-party dependency must be pinned by checksum.
     pub fn verify_offline_integrity(&self) -> Result<(), ProvenanceError> {
         for dep in &self.dependencies {
-            if dep.source != "workspace" && (dep.checksum.is_empty() || dep.checksum == "local_workspace") {
+            if dep.source != "workspace"
+                && (dep.checksum.is_empty() || dep.checksum == "local_workspace")
+            {
                 return Err(ProvenanceError::MissingChecksum(format!(
                     "package '{}' has no content-addressed checksum",
                     dep.name
@@ -566,8 +584,8 @@ impl ReleaseProvenanceAuthority {
 
     /// Deserialize provenance authority from TOML with fail-closed schema validation.
     pub fn from_toml(toml_str: &str) -> Result<Self, ProvenanceError> {
-        let authority: Self = toml::from_str(toml_str)
-            .map_err(|e| ProvenanceError::Serialization(e.to_string()))?;
+        let authority: Self =
+            toml::from_str(toml_str).map_err(|e| ProvenanceError::Serialization(e.to_string()))?;
         if authority.schema_version != RELEASE_PROVENANCE_SCHEMA_VERSION {
             return Err(ProvenanceError::StaleSchemaVersion {
                 expected: RELEASE_PROVENANCE_SCHEMA_VERSION,
@@ -589,14 +607,22 @@ fn load_deny_policy(root: &Path) -> (BTreeSet<String>, BTreeSet<String>) {
     let deny_path = root.join("deny.toml");
     if let Ok(text) = fs::read_to_string(&deny_path) {
         if let Ok(val) = toml::from_str::<toml::Value>(&text) {
-            if let Some(arr) = val.get("licenses").and_then(|l| l.get("allow")).and_then(|a| a.as_array()) {
+            if let Some(arr) = val
+                .get("licenses")
+                .and_then(|l| l.get("allow"))
+                .and_then(|a| a.as_array())
+            {
                 for item in arr {
                     if let Some(s) = item.as_str() {
                         allowed.insert(s.to_string());
                     }
                 }
             }
-            if let Some(arr) = val.get("bans").and_then(|b| b.get("deny")).and_then(|d| d.as_array()) {
+            if let Some(arr) = val
+                .get("bans")
+                .and_then(|b| b.get("deny"))
+                .and_then(|d| d.as_array())
+            {
                 for item in arr {
                     if let Some(s) = item.get("crate").and_then(|c| c.as_str()) {
                         banned.insert(s.to_string());
@@ -609,9 +635,18 @@ fn load_deny_policy(root: &Path) -> (BTreeSet<String>, BTreeSet<String>) {
     if allowed.is_empty() {
         // Fallback to standard deny.toml baseline
         for lic in &[
-            "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "MIT",
-            "BSD-2-Clause", "BSD-3-Clause", "ISC", "Unicode-DFS-2016",
-            "Unicode-3.0", "Zlib", "CC0-1.0", "MPL-2.0", "0BSD",
+            "Apache-2.0",
+            "Apache-2.0 WITH LLVM-exception",
+            "MIT",
+            "BSD-2-Clause",
+            "BSD-3-Clause",
+            "ISC",
+            "Unicode-DFS-2016",
+            "Unicode-3.0",
+            "Zlib",
+            "CC0-1.0",
+            "MPL-2.0",
+            "0BSD",
             "CDLA-Permissive-2.0",
         ] {
             allowed.insert((*lic).to_string());
@@ -636,7 +671,10 @@ fn load_metadata_licenses(root: &Path) -> BTreeMap<String, String> {
                 if let Some(packages) = json.get("packages").and_then(|p| p.as_array()) {
                     for pkg in packages {
                         let name = pkg.get("name").and_then(|n| n.as_str()).unwrap_or_default();
-                        let version = pkg.get("version").and_then(|v| v.as_str()).unwrap_or_default();
+                        let version = pkg
+                            .get("version")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or_default();
                         if let Some(lic) = pkg.get("license").and_then(|l| l.as_str()) {
                             map.insert(format!("{name}@{version}"), lic.to_string());
                             map.insert(name.to_string(), lic.to_string());
@@ -660,7 +698,10 @@ pub fn is_license_expression_approved(license_expr: &str, allowed_set: &BTreeSet
     // Handle AND conjunctions: e.g. "(MIT OR Apache-2.0) AND Unicode-3.0"
     if trimmed.contains(" AND ") {
         return trimmed.split(" AND ").all(|part| {
-            is_license_expression_approved(part.trim_matches(|c| c == '(' || c == ')' || c == ' '), allowed_set)
+            is_license_expression_approved(
+                part.trim_matches(|c| c == '(' || c == ')' || c == ' '),
+                allowed_set,
+            )
         });
     }
 
@@ -668,7 +709,10 @@ pub fn is_license_expression_approved(license_expr: &str, allowed_set: &BTreeSet
     for delim in &[" OR ", " / ", "/"] {
         if trimmed.contains(delim) {
             return trimmed.split(delim).any(|part| {
-                is_license_expression_approved(part.trim_matches(|c| c == '(' || c == ')' || c == ' '), allowed_set)
+                is_license_expression_approved(
+                    part.trim_matches(|c| c == '(' || c == ')' || c == ' '),
+                    allowed_set,
+                )
             });
         }
     }
@@ -750,7 +794,9 @@ fn collect_persisted_schemas(root: &Path) -> Vec<SchemaInput> {
                         continue;
                     }
                 }
-                let is_schema = path.extension().is_some_and(|ext| ext == "json" || ext == "toml");
+                let is_schema = path
+                    .extension()
+                    .is_some_and(|ext| ext == "json" || ext == "toml");
                 if is_schema {
                     if let Ok(rel) = path.strip_prefix(root) {
                         if let Ok(bytes) = fs::read(&path) {

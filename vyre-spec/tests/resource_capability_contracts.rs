@@ -15,8 +15,8 @@ use vyre_spec::{
     all_swizzle_components, all_sync_protocols, all_usage_flags, AddressMode,
     AdmittedResourceRecord, BorderColor, ColorInterpretation, CompareFunction, ComponentSwizzle,
     ExternalEventKind, ExternalMemoryCapability, ExternalMemoryKind, FilterMode, FormatClass,
-    ImageDimensions, ImageFormat, ImagePlane, ImageViewDescriptor, ImageViewKind,
-    MipmapFilterMode, PlaneKind, ResourceAliasSet, ResourceLayoutState, ResourceLifetimeState,
+    ImageDimensions, ImageFormat, ImagePlane, ImageViewDescriptor, ImageViewKind, MipmapFilterMode,
+    PlaneKind, ResourceAliasSet, ResourceLayoutState, ResourceLifetimeState,
     ResourceOwnershipState, ResourcePermittedUsages, ResourceProvenance, ResourceUsageTransition,
     SamplerDescriptor, SubresourceRange, SwizzleComponent, TimelineSyncProtocol,
 };
@@ -24,13 +24,23 @@ use vyre_spec::{
 #[test]
 fn image_formats_classification_and_channel_properties() {
     for &format in all_image_formats() {
-        assert!(format.bytes_per_pixel() >= 1, "format {format:?} must have positive byte width");
-        assert!(format.channel_count() >= 1 && format.channel_count() <= 4, "format {format:?} invalid channel count");
+        assert!(
+            format.bytes_per_pixel() >= 1,
+            "format {format:?} must have positive byte width"
+        );
+        assert!(
+            format.channel_count() >= 1 && format.channel_count() <= 4,
+            "format {format:?} invalid channel count"
+        );
         let class = format.format_class();
         match class {
             FormatClass::DepthStencil => assert!(format.is_depth_stencil()),
             FormatClass::PlanarVideo => assert!(format.is_planar_video()),
-            FormatClass::Unorm | FormatClass::Srgb | FormatClass::Float | FormatClass::Uint | FormatClass::Sint => {
+            FormatClass::Unorm
+            | FormatClass::Srgb
+            | FormatClass::Float
+            | FormatClass::Uint
+            | FormatClass::Sint => {
                 assert!(!format.is_depth_stencil());
             }
         }
@@ -51,7 +61,10 @@ fn all_format_classes_are_represented() {
             FormatClass::PlanarVideo => class_covered[6] = true,
         }
     }
-    assert!(class_covered.iter().all(|&c| c), "every format class must have at least one format variant");
+    assert!(
+        class_covered.iter().all(|&c| c),
+        "every format class must have at least one format variant"
+    );
     assert_eq!(all_format_classes().len(), 7);
 }
 
@@ -64,11 +77,17 @@ fn image_dimensions_and_subresource_ranges() {
 
     let dims2d = ImageDimensions::d2(1920, 1080);
     assert!(dims2d.is_valid());
-    assert_eq!(dims2d.unpadded_layer_bytes(ImageFormat::Rgba8Unorm), 1920 * 1080 * 4);
+    assert_eq!(
+        dims2d.unpadded_layer_bytes(ImageFormat::Rgba8Unorm),
+        1920 * 1080 * 4
+    );
 
     let dims3d = ImageDimensions::d3(64, 64, 64);
     assert!(dims3d.is_valid());
-    assert_eq!(dims3d.unpadded_layer_bytes(ImageFormat::R32Float), 64 * 64 * 64 * 4);
+    assert_eq!(
+        dims3d.unpadded_layer_bytes(ImageFormat::R32Float),
+        64 * 64 * 64 * 4
+    );
 
     let full_range = SubresourceRange::full(&dims2d);
     assert_eq!(full_range.base_mip_level, 0);
@@ -127,13 +146,18 @@ fn image_planes_and_plane_kinds() {
 fn resource_usage_transitions_and_compare_samplers() {
     let transition = ResourceUsageTransition::storage_to_color_attachment();
     assert_eq!(transition.from_layout, ResourceLayoutState::General);
-    assert_eq!(transition.to_layout, ResourceLayoutState::ColorAttachmentOptimal);
+    assert_eq!(
+        transition.to_layout,
+        ResourceLayoutState::ColorAttachmentOptimal
+    );
     assert!(transition.requires_barrier);
 
-    let to_sampled = ResourceUsageTransition::to_sampled(ResourceLayoutState::ColorAttachmentOptimal);
+    let to_sampled =
+        ResourceUsageTransition::to_sampled(ResourceLayoutState::ColorAttachmentOptimal);
     assert_eq!(to_sampled.to_layout, ResourceLayoutState::ShaderReadOnly);
 
-    let to_present = ResourceUsageTransition::to_present(ResourceLayoutState::ColorAttachmentOptimal);
+    let to_present =
+        ResourceUsageTransition::to_present(ResourceLayoutState::ColorAttachmentOptimal);
     assert_eq!(to_present.to_layout, ResourceLayoutState::PresentSrc);
 
     let mut shadow_sampler = SamplerDescriptor::linear_clamp();
@@ -173,7 +197,10 @@ fn external_memory_and_event_capabilities() {
         wait_value: 10,
         signal_value: 11,
     };
-    assert_eq!(timeline_proto.event_kind(), ExternalEventKind::TimelineSemaphore);
+    assert_eq!(
+        timeline_proto.event_kind(),
+        ExternalEventKind::TimelineSemaphore
+    );
     assert!(timeline_proto.is_timeline());
 
     let fence_proto = TimelineSyncProtocol::Fence {
@@ -221,12 +248,16 @@ fn admitted_resource_record_encodes_all_ten_row111_elements() {
     assert_eq!(record.dimensions.width, 1920);
     assert_eq!(record.dimensions.height, 1080);
     assert_eq!(record.row_pitch_bytes, 1920 * 4); // 7680 is 256-byte aligned
-    // 4. Subresource range
+                                                  // 4. Subresource range
     assert_eq!(record.subresource.mip_level_count, 1);
     assert_eq!(record.subresource.array_layer_count, 1);
     // 5. Permitted usages
-    assert!(record.permitted_usages.contains(ResourcePermittedUsages::SAMPLED));
-    assert!(record.permitted_usages.contains(ResourcePermittedUsages::COLOR_ATTACHMENT));
+    assert!(record
+        .permitted_usages
+        .contains(ResourcePermittedUsages::SAMPLED));
+    assert!(record
+        .permitted_usages
+        .contains(ResourcePermittedUsages::COLOR_ATTACHMENT));
     // 6. Ownership state
     assert_eq!(record.ownership, ResourceOwnershipState::Exclusive(42));
     // 7. Alias set
@@ -237,7 +268,10 @@ fn admitted_resource_record_encodes_all_ten_row111_elements() {
     assert_eq!(record.sync_protocol, TimelineSyncProtocol::ImplicitQueue);
     // 10. Provenance
     match record.provenance {
-        ResourceProvenance::InternalAllocation { allocator_tag, byte_size } => {
+        ResourceProvenance::InternalAllocation {
+            allocator_tag,
+            byte_size,
+        } => {
             assert_eq!(allocator_tag, 1);
             assert_eq!(byte_size, 7680 * 1080);
         }
@@ -275,7 +309,11 @@ fn admitted_external_import_record_properties() {
     assert_eq!(record.ownership, ResourceOwnershipState::ExternalHost);
 
     match record.provenance {
-        ResourceProvenance::ExternalImport { memory_kind, exportable, handle_tag } => {
+        ResourceProvenance::ExternalImport {
+            memory_kind,
+            exportable,
+            handle_tag,
+        } => {
             assert_eq!(memory_kind, ExternalMemoryKind::DmaBuf);
             assert!(exportable);
             assert_eq!(handle_tag, 0xDEAD_BEEF);
@@ -316,12 +354,12 @@ fn resource_generation_advance_and_invalidation() {
     // Invalidation on device loss
     record.invalidate_on_device_loss();
     assert!(!record.is_valid);
-    let err_invalid = record.advance_generation(2).expect_err("invalidated resource");
+    let err_invalid = record
+        .advance_generation(2)
+        .expect_err("invalidated resource");
     assert_eq!(
         err_invalid,
-        vyre_spec::resource_capability::ResourceAbiError::ResourceInvalidated {
-            resource_id: 3003,
-        }
+        vyre_spec::resource_capability::ResourceAbiError::ResourceInvalidated { resource_id: 3003 }
     );
 }
 

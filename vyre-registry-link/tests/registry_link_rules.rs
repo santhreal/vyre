@@ -131,7 +131,12 @@ fn members_submitting(registration_type: &str) -> Vec<String> {
     let mut submitters = Vec::new();
     for member in workspace_members(&root) {
         let name = crate_name(&member);
-        if registration_type == "BackendRegistration" && (name == "vyre-driver" || name == "xtask" || name == "xtask-registry" || name == "xtask-evidence") {
+        if registration_type == "BackendRegistration"
+            && (name == "vyre-driver"
+                || name == "xtask"
+                || name == "xtask-registry"
+                || name == "xtask-evidence")
+        {
             continue;
         }
         let mut files = Vec::new();
@@ -364,8 +369,7 @@ fn every_live_operation_has_descriptor_lowering_and_conformance_provider() {
     let bundle = registry.catalog_bundle();
     let conformance = vyre_foundation::operation::ConformanceRegistry::from_registry();
 
-    let all_registered_ids: BTreeSet<&'static str> =
-        registry.iter().map(|op| op.id).collect();
+    let all_registered_ids: BTreeSet<&'static str> = registry.iter().map(|op| op.id).collect();
 
     assert!(
         !all_registered_ids.is_empty(),

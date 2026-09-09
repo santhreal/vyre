@@ -371,15 +371,21 @@ fn a_class_budget_stops_the_expansion() {
 /// The optimizer must refuse to apply a guarded law outside its guard.
 #[test]
 fn optimizer_refuses_to_apply_guarded_law_outside_its_guard() {
-    use vyre_foundation::optimizer::law_saturation::{saturate_laws, DerivedRewrite, DerivedRewriteKind, ExprMirror};
+    use vyre_foundation::optimizer::law_saturation::{
+        saturate_laws, DerivedRewrite, DerivedRewriteKind, ExprMirror,
+    };
     use vyre_foundation::optimizer::rewrite_contract::RewriteWitness;
     use vyre_spec::{LawGuard, RegionLawFamily};
 
     // 1. ExactOnly guard: derived_rewrites(false) refuses to include ExactOnly rewrites
     let exact_rewrites = derived_rewrites(true);
     let non_exact_rewrites = derived_rewrites(false);
-    assert!(exact_rewrites.iter().any(|r| r.guard == LawGuard::ExactOnly || r.name.contains("reassociate")));
-    assert!(!non_exact_rewrites.iter().any(|r| r.guard == LawGuard::ExactOnly));
+    assert!(exact_rewrites
+        .iter()
+        .any(|r| r.guard == LawGuard::ExactOnly || r.name.contains("reassociate")));
+    assert!(!non_exact_rewrites
+        .iter()
+        .any(|r| r.guard == LawGuard::ExactOnly));
 
     // 2. NonZero guard: saturation refuses to apply rewrite when an operand is zero
     let expr_with_zero = bin(BinOp::Div, load("a"), Expr::u32(0));
@@ -393,8 +399,12 @@ fn optimizer_refuses_to_apply_guarded_law_outside_its_guard() {
         kind: DerivedRewriteKind::Idempotent,
         guard: LawGuard::NonZero,
     };
-    let report_zero = saturate_laws(&mut mirror_zero, &[guarded_div_rewrite], 4, 100).expect("saturation");
-    assert_eq!(report_zero.applied_equivalences, 0, "Fix: NonZero guarded law must not apply when operand is zero");
+    let report_zero =
+        saturate_laws(&mut mirror_zero, &[guarded_div_rewrite], 4, 100).expect("saturation");
+    assert_eq!(
+        report_zero.applied_equivalences, 0,
+        "Fix: NonZero guarded law must not apply when operand is zero"
+    );
 
     // 3. Range guard: saturation refuses to apply rewrite when operand is outside the range [1, 10]
     let expr_out_of_range = bin(BinOp::Add, load("a"), Expr::u32(50));
@@ -408,6 +418,10 @@ fn optimizer_refuses_to_apply_guarded_law_outside_its_guard() {
         kind: DerivedRewriteKind::RightIdentity { element: 50 },
         guard: LawGuard::Range { lo: 1, hi: 10 },
     };
-    let report_oor = saturate_laws(&mut mirror_oor, &[guarded_range_rewrite], 4, 100).expect("saturation");
-    assert_eq!(report_oor.applied_equivalences, 0, "Fix: Range guarded law must not apply when operand is outside [1, 10]");
+    let report_oor =
+        saturate_laws(&mut mirror_oor, &[guarded_range_rewrite], 4, 100).expect("saturation");
+    assert_eq!(
+        report_oor.applied_equivalences, 0,
+        "Fix: Range guarded law must not apply when operand is outside [1, 10]"
+    );
 }

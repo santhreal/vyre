@@ -54,9 +54,7 @@ pub(super) fn classify_file_roles(
     }
 
     // 3. Whole-graph compositions
-    if (first == "graph_compositions" || rel.starts_with("graph_compositions/"))
-        && !is_registered
-    {
+    if (first == "graph_compositions" || rel.starts_with("graph_compositions/")) && !is_registered {
         roles.push(FileRole::WholeGraphComposition);
     }
 
@@ -273,10 +271,36 @@ pub(super) fn recognized_domains() -> BTreeSet<String> {
     let mut domains = BTreeSet::new();
     // Static baseline domains
     for d in [
-        "analysis", "bitset", "decode", "device", "encoding", "fixpoint", "geom", "graph",
-        "hash", "label", "llm", "logical", "math", "nfa", "nn", "opt", "parsing", "pattern",
-        "predicate", "reasoning", "reduce", "representation", "rule", "scheduling", "security",
-        "solvers", "text", "topology", "vfs", "visual",
+        "analysis",
+        "bitset",
+        "decode",
+        "device",
+        "encoding",
+        "fixpoint",
+        "geom",
+        "graph",
+        "hash",
+        "label",
+        "llm",
+        "logical",
+        "math",
+        "nfa",
+        "nn",
+        "opt",
+        "parsing",
+        "pattern",
+        "predicate",
+        "reasoning",
+        "reduce",
+        "representation",
+        "rule",
+        "scheduling",
+        "security",
+        "solvers",
+        "text",
+        "topology",
+        "vfs",
+        "visual",
     ] {
         domains.insert(d.to_string());
     }
@@ -288,7 +312,10 @@ pub(super) fn recognized_domains() -> BTreeSet<String> {
                 for item in syntax.items {
                     if let syn::Item::Mod(item_mod) = item {
                         let name = item_mod.ident.to_string();
-                        if !matches!(name.as_str(), "builder" | "plumbing" | "prelude" | "graph_compositions") {
+                        if !matches!(
+                            name.as_str(),
+                            "builder" | "plumbing" | "prelude" | "graph_compositions"
+                        ) {
                             domains.insert(name);
                         }
                     }

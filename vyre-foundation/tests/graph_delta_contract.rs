@@ -382,13 +382,16 @@ fn oversized_graph_delta_string_length_fails() {
     bytes.extend_from_slice(&1_u32.to_le_bytes()); // 1 op
     bytes.push(1); // InsertExternalValue
     bytes.extend_from_slice(&100_000_u32.to_le_bytes()); // string len exceeds MAX_NAME_BYTES (4096)
-    let err = GraphDelta::from_wire(&bytes)
-        .expect_err("Fix: hostile string length must be rejected");
+    let err =
+        GraphDelta::from_wire(&bytes).expect_err("Fix: hostile string length must be rejected");
     let msg = match err {
         GraphDeltaError::Wire(m) => m,
         other => panic!("expected Wire error, got {other:?}"),
     };
-    assert!(msg.contains("string length 100000 exceeds limit 4096"), "got: {msg}");
+    assert!(
+        msg.contains("string length 100000 exceeds limit 4096"),
+        "got: {msg}"
+    );
 }
 
 /// Prevents hostile port counts in graph delta operations from allocating unbounded memory.
@@ -406,13 +409,15 @@ fn oversized_graph_delta_port_count_fails() {
     bytes.extend_from_slice(&(prog_bytes.len() as u32).to_le_bytes());
     bytes.extend_from_slice(&prog_bytes);
     bytes.extend_from_slice(&2_000_000_u32.to_le_bytes()); // in_count exceeds MAX_PORTS_PER_NODE
-    let err = GraphDelta::from_wire(&bytes)
-        .expect_err("Fix: hostile port count must be rejected");
+    let err = GraphDelta::from_wire(&bytes).expect_err("Fix: hostile port count must be rejected");
     let msg = match err {
         GraphDeltaError::Wire(m) => m,
         other => panic!("expected Wire error, got {other:?}"),
     };
-    assert!(msg.contains("input port count is 2000000; maximum is 1000000"), "got: {msg}");
+    assert!(
+        msg.contains("input port count is 2000000; maximum is 1000000"),
+        "got: {msg}"
+    );
 }
 
 #[test]

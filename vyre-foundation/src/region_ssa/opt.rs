@@ -77,7 +77,11 @@ impl RegionSsaConstProp {
                     known_constants.insert(res.id, lit.clone());
                 }
             }
-            RegionOpKind::Binary { op: binop, left, right } => {
+            RegionOpKind::Binary {
+                op: binop,
+                left,
+                right,
+            } => {
                 *left = remap.resolve(*left);
                 *right = remap.resolve(*right);
                 if let (Some(l_lit), Some(r_lit)) =
@@ -125,7 +129,11 @@ impl RegionSsaConstProp {
         op
     }
 
-    fn fold_binary(op: BinOp, left: &ScalarLiteral, right: &ScalarLiteral) -> Option<ScalarLiteral> {
+    fn fold_binary(
+        op: BinOp,
+        left: &ScalarLiteral,
+        right: &ScalarLiteral,
+    ) -> Option<ScalarLiteral> {
         match (left, right) {
             (ScalarLiteral::U32(a), ScalarLiteral::U32(b)) => match op {
                 BinOp::Add => Some(ScalarLiteral::U32(a.wrapping_add(*b))),
@@ -250,7 +258,9 @@ impl RegionSsaDce {
 
     fn mark_op_uses(op: &RegionOp, used: &mut FxHashSet<ValueId>) {
         match &op.kind {
-            RegionOpKind::Unary { input, .. } | RegionOpKind::Cast { input, .. } | RegionOpKind::View { input, .. } => {
+            RegionOpKind::Unary { input, .. }
+            | RegionOpKind::Cast { input, .. }
+            | RegionOpKind::View { input, .. } => {
                 used.insert(*input);
             }
             RegionOpKind::Binary { left, right, .. } => {

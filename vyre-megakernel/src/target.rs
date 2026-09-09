@@ -16,7 +16,5 @@ pub use bundle::{
     ModuleNumericRecord, SelectedLowering, SelectedModule, TargetArmAssignment, TargetModuleBundle,
     TargetModuleImage, TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
 };
-pub use compile::{
-    attach_target, compile_selected_modules, EmittedTargetModule, TargetCompiler,
-};
+pub use compile::{attach_target, compile_selected_modules, EmittedTargetModule, TargetCompiler};
 pub use error::TargetCompileError;

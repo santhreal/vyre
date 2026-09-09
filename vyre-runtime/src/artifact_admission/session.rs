@@ -277,7 +277,10 @@ impl ArtifactSession {
     /// is missing, unknown, or has a mismatched schema (dtype, element count,
     /// lifetime, access, generation, byte length, or digest). Returns a driver
     /// error if allocation or upload fails, rolling back all partial allocations.
-    pub fn ingest(&self, dataset: &TypedResourceDataset) -> Result<BindingSet, ArtifactSessionError> {
+    pub fn ingest(
+        &self,
+        dataset: &TypedResourceDataset,
+    ) -> Result<BindingSet, ArtifactSessionError> {
         self.ingest_with_workspace_opt(None, dataset)
     }
 
@@ -342,7 +345,8 @@ impl ArtifactSession {
         // -------------------------------------------------------------------------
 
         // 1. Gather all required resources across all target entries.
-        let mut required_by_entry: BTreeMap<ArtifactValueId, Vec<&TargetEntryPoint>> = BTreeMap::new();
+        let mut required_by_entry: BTreeMap<ArtifactValueId, Vec<&TargetEntryPoint>> =
+            BTreeMap::new();
         for entry in entries {
             for target_binding in &entry.resource_bindings {
                 required_by_entry
@@ -514,26 +518,23 @@ impl ArtifactSession {
                         .and_then(|b| b.as_ref())
                         .expect("Fix: prepare a payload in phase 1 for every non-resident dataset entry before resolving resources");
 
-                    let resource = state
-                        .materializer
-                        .allocate_resident(bytes.len())
-                        .map_err(|err| {
-                            ResourceIngestionError::AllocationFailed {
+                    let resource =
+                        state
+                            .materializer
+                            .allocate_resident(bytes.len())
+                            .map_err(|err| ResourceIngestionError::AllocationFailed {
                                 value: *val_id,
                                 error: err.to_string(),
-                            }
-                        })?;
+                            })?;
 
                     guard.allocated.push(resource.clone());
 
                     state
                         .materializer
                         .upload_resident(&resource, bytes)
-                        .map_err(|err| {
-                            ResourceIngestionError::UploadFailed {
-                                value: *val_id,
-                                error: err.to_string(),
-                            }
+                        .map_err(|err| ResourceIngestionError::UploadFailed {
+                            value: *val_id,
+                            error: err.to_string(),
                         })?;
 
                     resolved_resources.insert(*val_id, resource);

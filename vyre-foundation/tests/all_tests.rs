@@ -355,12 +355,12 @@ pub mod memory_ordering;
 #[path = "memory_ordering_adversarial.rs"]
 pub mod memory_ordering_adversarial;
 
-/// Integration tests from `tests/memory_model_contracts.rs`.
-#[path = "memory_model_contracts.rs"]
-pub mod memory_model_contracts;
 /// Integration tests from `tests/memory_model_closed_types_contracts.rs`.
 #[path = "memory_model_closed_types_contracts.rs"]
 pub mod memory_model_closed_types_contracts;
+/// Integration tests from `tests/memory_model_contracts.rs`.
+#[path = "memory_model_contracts.rs"]
+pub mod memory_model_contracts;
 
 /// Integration tests from `tests/type_system_composition_contracts.rs`.
 #[path = "type_system_composition_contracts.rs"]
@@ -813,6 +813,9 @@ pub mod typed_configuration_schema_contracts;
 #[path = "resource_abi_contract.rs"]
 pub mod resource_abi_contract;
 
+/// Integration tests from `tests/region_fusion_contracts.rs`.
+#[path = "region_fusion_contracts.rs"]
+pub mod region_fusion_contracts;
 /// Integration tests from `tests/schema_authority_contract.rs`.
 #[path = "schema_authority_contract.rs"]
 pub mod schema_authority_contract;

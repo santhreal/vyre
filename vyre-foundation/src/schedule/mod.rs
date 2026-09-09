@@ -16,9 +16,7 @@ mod tree;
 pub use cost::{ScheduleCostModel, ScheduleCostRecord};
 pub use diff::{ScheduleDiff, ScheduleDiffItem};
 pub use error::ScheduleLegalityError;
-pub use tree::{
-    DependencyPreservationCertificate, ScheduleOp, SchedulePlan, ScheduleTree,
-};
+pub use tree::{DependencyPreservationCertificate, ScheduleOp, SchedulePlan, ScheduleTree};
 
 use std::collections::BTreeSet;
 

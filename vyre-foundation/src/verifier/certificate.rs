@@ -160,13 +160,14 @@ pub enum ReplayError {
         category: InvariantCategory,
     },
     /// Solver proof replay failed for a shape/layout proof object.
-    #[error("SolverProofReplayFailed: shape or layout proof certificate failed independent replay")]
+    #[error(
+        "SolverProofReplayFailed: shape or layout proof certificate failed independent replay"
+    )]
     SolverProofReplayFailed,
     /// Resource bounds contain invalid dimensions or limits.
     #[error("ResourceBoundsViolation: {0}")]
     ResourceBoundsViolation(String),
 }
-
 
 /// Cryptographic and semantic verification certificate produced by [`DeclarativeVerifier`](super::DeclarativeVerifier).
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -205,11 +206,25 @@ impl VerificationCertificate {
                     (InvariantCategory::Bounds, InvariantCategory::BoundsTermination)
                     | (InvariantCategory::BoundsTermination, InvariantCategory::Bounds) => true,
                     (InvariantCategory::Determinism, InvariantCategory::DeterminismNumeric)
-                    | (InvariantCategory::DeterminismNumeric, InvariantCategory::Determinism) => true,
-                    (InvariantCategory::NumericContracts, InvariantCategory::DeterminismNumeric)
-                    | (InvariantCategory::DeterminismNumeric, InvariantCategory::NumericContracts) => true,
-                    (InvariantCategory::TerminationProgress, InvariantCategory::BoundsTermination)
-                    | (InvariantCategory::BoundsTermination, InvariantCategory::TerminationProgress) => true,
+                    | (InvariantCategory::DeterminismNumeric, InvariantCategory::Determinism) => {
+                        true
+                    }
+                    (
+                        InvariantCategory::NumericContracts,
+                        InvariantCategory::DeterminismNumeric,
+                    )
+                    | (
+                        InvariantCategory::DeterminismNumeric,
+                        InvariantCategory::NumericContracts,
+                    ) => true,
+                    (
+                        InvariantCategory::TerminationProgress,
+                        InvariantCategory::BoundsTermination,
+                    )
+                    | (
+                        InvariantCategory::BoundsTermination,
+                        InvariantCategory::TerminationProgress,
+                    ) => true,
                     _ => false,
                 }
         })
@@ -218,7 +233,9 @@ impl VerificationCertificate {
     /// Replay solver proofs recorded in this certificate.
     #[must_use]
     pub fn replay_solver_proofs(&self, interner: &ShapeInterner) -> bool {
-        self.solver_proofs.iter().all(|proof| proof.replay(interner))
+        self.solver_proofs
+            .iter()
+            .all(|proof| proof.replay(interner))
     }
 
     /// Independent lightweight proof replay of this certificate against a semantic module.

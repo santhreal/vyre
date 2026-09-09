@@ -11,6 +11,8 @@ pub(crate) mod sanitize;
 
 pub use capability::{CapabilityAuthenticator, GenerationId, UnforgeableCapability};
 pub use error::SecurityError;
-pub use label::{AuthorityLabel, ConfidentialityLevel, Permission, RetentionPolicy, SecurityRole, TenantId};
+pub use label::{
+    AuthorityLabel, ConfidentialityLevel, Permission, RetentionPolicy, SecurityRole, TenantId,
+};
 pub use quota::{CompilationBudgetEnforcer, CompilationQuota, RedactedDiagnostic};
 pub use sanitize::{SanitizedBuffer, TenantCacheNamespace};

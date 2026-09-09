@@ -722,18 +722,26 @@ fn symlink_swap_between_verification_and_binding_reads_original_verified_content
         std::os::unix::fs::symlink(&target_b, &symlink_path).expect("swap symlink to b");
 
         // The transactional checkpoint holds the open verified handle from target_a.
-        let bytes = checkpoint.read_tensor("weights").expect("read from transactional checkpoint");
-        assert_eq!(bytes, payload_a, "Transactional handle must read original verified content, not swapped symlink target");
+        let bytes = checkpoint
+            .read_tensor("weights")
+            .expect("read from transactional checkpoint");
+        assert_eq!(
+            bytes, payload_a,
+            "Transactional handle must read original verified content, not swapped symlink target"
+        );
 
         // Attempting to re-open index or verify against swapped symlink with expected_digest fails with mismatch by name!
-        let new_index = ShardedSafetensorIndex::open(temp.path(), &index_path).expect("reopen index");
+        let new_index =
+            ShardedSafetensorIndex::open(temp.path(), &index_path).expect("reopen index");
         let err = new_index
             .verify_shards([ExpectedShardDigest {
                 shard: shard_rel,
                 blake3: expected_digest,
             }])
             .expect_err("verification on swapped symlink must fail");
-        assert!(matches!(err, SafetensorError::ShardDigestMismatch { ref shard, .. } if shard == shard_rel));
+        assert!(
+            matches!(err, SafetensorError::ShardDigestMismatch { ref shard, .. } if shard == shard_rel)
+        );
     }
 }
 
@@ -778,7 +786,9 @@ fn resource_content_change_between_verification_and_binding_is_refused_by_name()
         .expect("set_len");
 
     // Subsequent read on the tensor handle detects the length change and refuses by name!
-    let err = checkpoint.read_tensor("layer.weight").expect_err("read after file length modification must fail");
+    let err = checkpoint
+        .read_tensor("layer.weight")
+        .expect_err("read after file length modification must fail");
     assert!(
         matches!(&err, SafetensorError::ShardLengthChanged { shard, .. } if shard == shard_rel),
         "Fix: resource content modification must be refused by name, got {err:?}"
@@ -813,6 +823,10 @@ fn transactional_tensor_reader_operations() {
     assert_eq!(buf, bytes);
 
     // Nonexistent tensor is refused by name
-    let missing_err = checkpoint.read_tensor("missing.tensor").expect_err("missing tensor must fail");
-    assert!(matches!(missing_err, SafetensorError::MissingRequiredTensor { name } if name == "missing.tensor"));
+    let missing_err = checkpoint
+        .read_tensor("missing.tensor")
+        .expect_err("missing tensor must fail");
+    assert!(
+        matches!(missing_err, SafetensorError::MissingRequiredTensor { name } if name == "missing.tensor")
+    );
 }

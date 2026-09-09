@@ -1,7 +1,7 @@
 //! Memory zeroization, cryptographic discard, and tenant cache namespace isolation (Row 119).
 
-use core::ops::{Deref, DerefMut};
 use super::label::{ConfidentialityLevel, TenantId};
+use core::ops::{Deref, DerefMut};
 
 /// Buffer that guarantees its allocated bytes are zeroized upon drop or reset.
 #[derive(Debug, PartialEq, Eq)]

@@ -11,7 +11,14 @@ pub mod dual_impls;
 mod dual_registry;
 pub use dual_registry::{dual_op_ids, resolve_dual, DualReferenceFacet};
 mod error;
-pub use error::{ReferenceError, StepCeilingExceeded};
+pub use error::{ReferenceError, ReferenceErrorClass, ReferenceErrorKind, StepCeilingExceeded};
+/// Typed, versioned reference execution requests, contracts, and certificates.
+pub mod request;
+pub use request::{
+    DeterministicSchedulePolicy, DiagnosticPermissiveReport, ExactResourceAbi, ExecutionStrictness,
+    ReferenceBudget, ReferenceCertificate, ReferenceRequest, StrictExecutionResult,
+    WorkloadEnvelope, REFERENCE_ORACLE_VERSION, REFERENCE_REQUEST_SCHEMA_VERSION,
+};
 mod reference_facet;
 pub use reference_facet::{reference_facets, reference_fn, ReferenceFacet};
 /// Independent sequential mathematical witnesses for composite operations.

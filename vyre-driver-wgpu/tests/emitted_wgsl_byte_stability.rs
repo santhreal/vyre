@@ -24,8 +24,10 @@
 //!
 //! The corpus, the section format, and the comparison live in
 //! `vyre_lower::artifact_golden`. This file supplies only the programs.
-
-#![cfg(feature = "device-tests")]
+//!
+//! Emission is host-side, so this file carries no device feature gate. Gating
+//! it behind `device-tests` is what let the corpus drift: the only host that
+//! ran it was the device runner, long after the change that moved the bytes.
 
 use std::path::PathBuf;
 

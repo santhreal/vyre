@@ -6,7 +6,6 @@
 //! resource allocations, and runtime protocols must declare explicit supported
 //! version pairs, negotiation contracts, and rollout dispositions.
 
-
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -490,7 +489,11 @@ impl CompatibilityMatrix {
 
     /// Check the disposition of a schema version under the compatibility matrix.
     #[must_use]
-    pub fn check_schema(&self, schema_id: crate::schema_registry::SchemaId, client_version: ProtocolVersion) -> CompatibilityDisposition {
+    pub fn check_schema(
+        &self,
+        schema_id: crate::schema_registry::SchemaId,
+        client_version: ProtocolVersion,
+    ) -> CompatibilityDisposition {
         let domain = schema_id.domain();
         if let Some(def) = crate::schema_registry::SchemaRegistry::lookup(schema_id) {
             self.check(domain, client_version, def.semver)
@@ -641,7 +644,10 @@ impl CacheNamespace {
     /// # Errors
     ///
     /// Returns `StaleGenerationError` if the record generation does not match the active generation.
-    pub fn validate_generation(&self, active_generation: GenerationId) -> Result<(), StaleGenerationError> {
+    pub fn validate_generation(
+        &self,
+        active_generation: GenerationId,
+    ) -> Result<(), StaleGenerationError> {
         if self.generation == active_generation {
             Ok(())
         } else {
@@ -817,7 +823,8 @@ impl RolloutManager {
                 s.status = SessionStatus::Interrupted;
             }
         }
-        self.retained_sessions.retain(|s| s.status != SessionStatus::Interrupted);
+        self.retained_sessions
+            .retain(|s| s.status != SessionStatus::Interrupted);
     }
 
     /// Atomically commit the staged generation, advancing the active generation.
@@ -848,7 +855,8 @@ impl RolloutManager {
                 s.status = SessionStatus::RolledBack;
             }
         }
-        self.retained_sessions.retain(|s| s.generation <= target_generation);
+        self.retained_sessions
+            .retain(|s| s.generation <= target_generation);
     }
 
     /// Register a session under the manager.

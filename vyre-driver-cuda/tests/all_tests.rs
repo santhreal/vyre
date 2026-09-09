@@ -95,6 +95,11 @@ pub mod char_class_bracket_match_gpu_parity;
 #[path = "closure_gpu_parity.rs"]
 pub mod closure_gpu_parity;
 
+/// Integration tests from `tests/connected_graph_cuda_contracts.rs`.
+#[cfg(all(test, feature = "device-tests"))]
+#[path = "connected_graph_cuda_contracts.rs"]
+pub mod connected_graph_cuda_contracts;
+
 /// Integration tests from `tests/cooperative_launch_contracts.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "cooperative_launch_contracts.rs"]
@@ -689,6 +694,9 @@ pub mod unsupported_ir_errors;
 #[path = "vectorized_memory_live_cuda.rs"]
 pub mod vectorized_memory_live_cuda;
 
+/// Integration tests from `tests/external_resource_cuda_contracts.rs` (Row 111).
+#[path = "external_resource_cuda_contracts.rs"]
+pub mod external_resource_cuda_contracts;
 /// Integration tests from `tests/widening_cast_64_cuda_parity.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "widening_cast_64_cuda_parity.rs"]

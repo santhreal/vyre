@@ -25,7 +25,10 @@ fn facade_compiles_multi_stage_connected_dataflow_graph() {
     let mut graph = ProgramGraph::new();
 
     let in_val = graph
-        .add_external_value("raw_in", contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count))
+        .add_external_value(
+            "raw_in",
+            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count),
+        )
         .unwrap();
 
     let prog_a = Program::wrapped(

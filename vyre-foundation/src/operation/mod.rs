@@ -4,6 +4,7 @@
 mod call_graph;
 mod catalog_bundle;
 mod conformance;
+mod dialect;
 mod records;
 mod registration;
 mod registry;
@@ -15,8 +16,10 @@ mod target_facet;
 pub use self::call_graph::CallGraphClosure;
 pub use self::catalog_bundle::{CatalogBundle, ExtensionProvenance};
 pub use self::conformance::ConformanceRegistry;
+pub use self::dialect::{DialectOperationSpec, OperationVisitor};
 pub use self::records::{
-    ConformanceProvider, LoweringProvider, OperationFixtures, SemanticDescriptor,
+    ConformanceProvider, ContractProvider, LoweringProvider, OperationContractBuilder,
+    OperationFixtures, SemanticDescriptor,
 };
 pub use self::registration::OperationRegistration;
 pub use self::registry::OperationRegistry;
@@ -25,8 +28,8 @@ pub use self::semantic_op::SemanticOperation;
 pub use self::semantics::{operation_id_namespace, IdNamespace, OperationEffects, OperationTier};
 pub use self::target_facet::{TargetId, TargetOperationFacet};
 
-/// Declarative operation macro generating three identity-joined submissions:
-/// `SemanticDescriptor`, `LoweringProvider`, and `ConformanceProvider`.
+/// Declarative operation macro generating four identity-joined submissions:
+/// `SemanticDescriptor`, `LoweringProvider`, `ConformanceProvider`, and `ContractProvider`.
 #[macro_export]
 macro_rules! declare_operation {
     (
@@ -36,6 +39,7 @@ macro_rules! declare_operation {
         $(signature: $sig:expr,)?
         $(category: $cat:expr,)?
         $(laws: $laws:expr,)?
+        $(opaque_reason: $opaque:expr,)?
         $(numeric: $num:expr,)?
         $(geometry_requirements: $geom:expr,)?
         $(explicit_effects: $eff:expr,)?
@@ -52,11 +56,24 @@ macro_rules! declare_operation {
                     signature: None $(.or(Some($sig)))?,
                     tier: $tier,
                     category: None $(.or(Some($cat)))?,
-                    laws: &[] $(.or($laws))?,
-                    numeric: $crate::numeric::NumericContract::EXACT $(.or($num))?,
-                    geometry_requirements: $crate::geometry::GeometryRequirements::agnostic() $(.or($geom))?,
+                    laws: {
+                        let mut val: &'static [&'static str] = &[];
+                        $(val = $laws;)?
+                        val
+                    },
+                    numeric: {
+                        let mut val = $crate::numeric::NumericContract::EXACT;
+                        $(val = $num;)?
+                        val
+                    },
+                    geometry_requirements: {
+                        let mut val = $crate::geometry::GeometryRequirements::agnostic();
+                        $(val = $geom;)?
+                        val
+                    },
                     explicit_effects: None $(.or(Some($eff)))?,
                     explicit_capabilities: None $(.or(Some($caps)))?,
+                    opaque_reason: None $(.or(Some($opaque)))?,
                 }
             }
             $crate::inventory::submit! {
@@ -70,6 +87,12 @@ macro_rules! declare_operation {
                     id: $id,
                     test_inputs: None $(.or(Some($inputs)))?,
                     expected_output: None $(.or(Some($expected)))?,
+                }
+            }
+            $crate::inventory::submit! {
+                $crate::operation::ContractProvider {
+                    id: $id,
+                    contract: None,
                 }
             }
         };

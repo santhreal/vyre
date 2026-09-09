@@ -42,7 +42,10 @@ fn racing_uncoordinated_program_is_reported_by_interleaving_search() {
         MemoryScope::Workgroup,
         StorageDomain::WorkgroupLocal,
     );
-    assert!(res1.is_err(), "concurrent unsynchronized write must be reported as a data race");
+    assert!(
+        res1.is_err(),
+        "concurrent unsynchronized write must be reported as a data race"
+    );
     let err = res1.unwrap_err();
     assert!(
         err.to_string().contains("Data race detected"),

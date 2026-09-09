@@ -35,6 +35,8 @@ pub struct SemanticDescriptor {
     pub explicit_effects: Option<OperationEffects>,
     /// Optional explicit closed capabilities.
     pub explicit_capabilities: Option<RequiredCapabilities>,
+    /// Optional explicit opaque / no-transform reason.
+    pub opaque_reason: Option<&'static str>,
 }
 
 /// Implementation constructor and lowering provider.
@@ -57,6 +59,19 @@ pub struct ConformanceProvider {
     pub expected_output: Option<OperationFixtures>,
 }
 
+/// Deterministic contract builder function for semantic operations.
+pub type OperationContractBuilder = fn() -> vyre_spec::SemanticContractRecord;
+
+/// Contract-record provider for semantic operations.
+#[derive(Clone, Copy, Debug)]
+pub struct ContractProvider {
+    /// Stable operation identifier matching the semantic descriptor.
+    pub id: &'static str,
+    /// Contract record builder.
+    pub contract: Option<OperationContractBuilder>,
+}
+
 inventory::collect!(SemanticDescriptor);
 inventory::collect!(LoweringProvider);
 inventory::collect!(ConformanceProvider);
+inventory::collect!(ContractProvider);

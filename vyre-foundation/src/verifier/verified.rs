@@ -4,9 +4,9 @@
 //! Compilation and backend lowering entry points require a `&Verified<SemanticModule>`
 //! to ensure unverified syntax can never reach compilation.
 
-use std::ops::Deref;
 use super::certificate::{ReplayError, VerificationCertificate};
 use super::module::SemanticModule;
+use std::ops::Deref;
 /// Type-safe proof wrapper witnessing that `T` has passed semantic verification.
 ///
 /// Cannot be constructed directly: must be obtained via
@@ -51,7 +51,6 @@ impl Verified<SemanticModule> {
         self.certificate.replay_proof(&self.inner)
     }
 }
-
 
 impl<T> Deref for Verified<T> {
     type Target = T;

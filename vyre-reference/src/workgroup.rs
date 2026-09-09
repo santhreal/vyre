@@ -163,7 +163,6 @@ impl Memory {
             workgroup: BufferMap::new(),
         }
     }
-
     /// Return the byte payload for canonical primitive evaluators.
     #[must_use]
     pub fn bytes(&self) -> Vec<u8> {
@@ -171,7 +170,7 @@ impl Memory {
             buffer
                 .bytes
                 .read()
-                .unwrap_or_else(|error| error.into_inner())
+                .expect("reference Buffer byte lock was poisoned")
                 .clone()
         })
     }
@@ -184,9 +183,14 @@ impl Memory {
             .find_map(|(name, buffer)| {
                 (name.as_ref() == "__value").then(|| {
                     std::sync::Arc::try_unwrap(buffer.bytes)
-                        .map(|rw| rw.into_inner().unwrap_or_else(|error| error.into_inner()))
+                        .map(|rw| {
+                            rw.into_inner()
+                                .expect("reference Buffer byte lock was poisoned")
+                        })
                         .unwrap_or_else(|a| {
-                            a.read().unwrap_or_else(|error| error.into_inner()).clone()
+                            a.read()
+                                .expect("reference Buffer byte lock was poisoned")
+                                .clone()
                         })
                 })
             })
@@ -194,8 +198,8 @@ impl Memory {
     }
 }
 
-/// Shared slot layout for all locals in one program.
-#[derive(Debug, Default)]
+/// Thread-local slot layout for node execution.
+#[derive(Default)]
 pub struct LocalSlots {
     names: rustc_hash::FxHashMap<Arc<str>, usize>,
     slot_names: Vec<Arc<str>>,

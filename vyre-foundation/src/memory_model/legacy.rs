@@ -123,7 +123,9 @@ impl MemoryOrdering {
     pub const fn execution_scope(self) -> ExecutionScope {
         match self {
             Self::Relaxed => ExecutionScope::Thread,
-            Self::Acquire | Self::Release | Self::AcqRel | Self::SeqCst => ExecutionScope::Workgroup,
+            Self::Acquire | Self::Release | Self::AcqRel | Self::SeqCst => {
+                ExecutionScope::Workgroup
+            }
             Self::GridSync => ExecutionScope::Grid,
         }
     }

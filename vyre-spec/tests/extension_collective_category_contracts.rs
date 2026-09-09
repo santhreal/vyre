@@ -4,11 +4,11 @@
 //! conformance certificates and downstream extension crates can depend on
 //! `vyre-spec` without linking the full `vyre` workspace.
 
+use vyre_spec::{BackendAvailabilityPredicate, Category, CommGroup};
 use vyre_spec::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionRuleConditionId,
     ExtensionTernaryOpId, ExtensionUnOpId,
 };
-use vyre_spec::{BackendAvailabilityPredicate, Category, CommGroup};
 
 #[test]
 fn every_extension_id_family_uses_the_reserved_high_bit_range() {

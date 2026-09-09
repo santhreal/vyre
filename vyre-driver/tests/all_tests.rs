@@ -358,3 +358,11 @@ pub mod resource_abi_contracts;
 /// Integration tests from `tests/lock_policy_closure.rs`.
 #[path = "lock_policy_closure.rs"]
 pub mod lock_policy_closure;
+
+/// Integration tests from `tests/support_certificate_join.rs`.
+#[path = "support_certificate_join.rs"]
+pub mod support_certificate_join;
+
+/// Integration tests from `tests/concrete_driver_dependency_boundaries.rs`.
+#[path = "concrete_driver_dependency_boundaries.rs"]
+pub mod concrete_driver_dependency_boundaries;

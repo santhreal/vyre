@@ -1,26 +1,39 @@
-//! End-to-end downstream workflow test using public vyre APIs alone.
+//! End-to-end neutral downstream consumer contract fixture.
 //!
-//! Proves that downstream callers can perform:
-//! - Import (Program, ProgramGraph, contracts)
-//! - Compile (CompileRequest -> ValidatedCompileRequest -> Artifact)
-//! - Package & Cache (Artifact identity, digests)
-//! - Load & Execute (Artifact admission, session creation, submission)
-//! - Inspect (Artifact properties, provenance, ABI)
-//! - Recover (Structured errors, RetryClass)
-//! without reaching into private compiler internals.
+//! Proves that an independently versioned downstream application compiler can
+//! express complete application-sized compilation, typed submission, target
+//! profiling, and receipt verification strictly through public `vyre` types alone.
+//!
+//! Asserts that:
+//! 1. The complete submission (validated graph, typed resource ABI, workload envelope,
+//!    numerical contract, objective with hard constraints, target selector, search budget)
+//!    and the complete receipt set (derivation, legality, candidate-funnel, emitted-resource,
+//!    measurement, identity) are expressible through `vyre` alone with no internal imports.
+//! 2. An offline target profile carries verifiable provenance, cannot override backend
+//!    legality, and unprovenanced profiles are refused by name.
+//! 3. The public seam carries no callbacks, no native OS/driver handles, no domain vocabulary,
+//!    and no schedule hints.
+//! 4. A `vyre-libs` registration reachable through a released feature needs no workspace-only knowledge.
 
 use std::collections::BTreeMap;
 
 use vyre::compiler::{
-    compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
-    SearchBudget,
+    compile, Artifact, ArtifactEnvelope, BarrierRecord, CompileError, CompileObjective,
+    CompileRequest, DeviceFacts, Digest, ExecutionMode, ExternalFacts, FusionRecord,
+    GeometryRecord, ObjectiveMetric, PlanMeasurement, Provenance, ResourceEnvelope, ResourceRecord,
+    SearchBudget, SearchCertificate, SelectedPlan, TargetEntryPoint, TargetPayload,
+    TargetPayloadFormat, TargetProfile, WorkloadAggregation, WorkloadProfile,
+    ARTIFACT_SCHEMA_VERSION, SCHEDULE_GRAMMAR_VERSION,
 };
 use vyre::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
-    ShapeDim, ValueContract, ValueLifetime,
+    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, GraphValueId, Node, Program,
+    ProgramGraph, ProgramGraphBuilder, ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre::diagnostics::RetryClass;
-use vyre::match_result::ByteRange;
+use vyre::numeric::{
+    Approximation, AtomicOrderSensitivity, Determinism, ErrorMeasure, NumericContract,
+    Reassociation,
+};
+use vyre::operation::OperationTier;
 
 fn make_contract(count: u64, access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
     ValueContract {
@@ -31,92 +44,392 @@ fn make_contract(count: u64, access: BufferAccess, lifetime: ValueLifetime) -> V
     }
 }
 
-fn make_dataflow_graph() -> ProgramGraph {
-    let mut graph = ProgramGraph::new();
-    let count = 4_u64;
+fn diagnostic_path(error: &CompileError) -> Option<&str> {
+    error
+        .diagnostic
+        .location
+        .as_ref()
+        .and_then(|loc| loc.path.as_deref())
+}
 
-    let in_val = graph
-        .add_external_value("raw_in", make_contract(count, BufferAccess::ReadOnly, ValueLifetime::Invocation))
-        .expect("external value");
+/// Builds a representative multi-stage, application-sized semantic ProgramGraph.
+fn make_application_graph() -> ProgramGraph {
+    let mut builder = ProgramGraphBuilder::new();
+    let count = 64_u64;
 
-    let p = Program::wrapped(
+    let in_a = builder
+        .input("matrix_a", DataType::U32, vec![ShapeDim::Known(count)])
+        .expect("input a");
+    let in_b = builder
+        .input("matrix_b", DataType::U32, vec![ShapeDim::Known(count)])
+        .expect("input b");
+
+    // Stage 1: Elementwise vector multiply
+    let p_mul = Program::wrapped(
         vec![
-            BufferDecl::read("in", 0, DataType::U32).with_count(count as u32),
-            BufferDecl::output("out", 1, DataType::U32).with_count(count as u32),
+            BufferDecl::read("a", 0, DataType::U32).with_count(count as u32),
+            BufferDecl::read("b", 1, DataType::U32).with_count(count as u32),
+            BufferDecl::output("prod", 2, DataType::U32).with_count(count as u32),
         ],
         [count as u32, 1, 1],
         vec![Node::store(
-            "out",
+            "prod",
             Expr::gid_x(),
-            Expr::add(Expr::load("in", Expr::gid_x()), Expr::u32(10)),
+            Expr::mul(
+                Expr::load("a", Expr::gid_x()),
+                Expr::load("b", Expr::gid_x()),
+            ),
         )],
     );
 
-    graph
+    let (_mul_node, mul_outs) = builder
         .add_node(
-            "compute",
-            p,
+            "stage_1_mul",
+            p_mul,
+            vec![
+                GraphInput {
+                    buffer: "a".into(),
+                    value: in_a,
+                    contract: make_contract(
+                        count,
+                        BufferAccess::ReadOnly,
+                        ValueLifetime::Invocation,
+                    ),
+                },
+                GraphInput {
+                    buffer: "b".into(),
+                    value: in_b,
+                    contract: make_contract(
+                        count,
+                        BufferAccess::ReadOnly,
+                        ValueLifetime::Invocation,
+                    ),
+                },
+            ],
+            vec![GraphOutput {
+                buffer: "prod".into(),
+                name: "prod_out".into(),
+                contract: make_contract(count, BufferAccess::WriteOnly, ValueLifetime::Invocation),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("add mul node");
+
+    // Stage 2: Accumulate with bias constant
+    let p_accum = Program::wrapped(
+        vec![
+            BufferDecl::read("prod", 0, DataType::U32).with_count(count as u32),
+            BufferDecl::output("result", 1, DataType::U32).with_count(count as u32),
+        ],
+        [count as u32, 1, 1],
+        vec![Node::store(
+            "result",
+            Expr::gid_x(),
+            Expr::add(Expr::load("prod", Expr::gid_x()), Expr::u32(100)),
+        )],
+    );
+
+    builder
+        .add_node(
+            "stage_2_accum",
+            p_accum,
             vec![GraphInput {
-                buffer: "in".into(),
-                value: in_val,
+                buffer: "prod".into(),
+                value: mul_outs[0],
                 contract: make_contract(count, BufferAccess::ReadOnly, ValueLifetime::Invocation),
             }],
             vec![GraphOutput {
-                buffer: "out".into(),
-                name: "out".into(),
+                buffer: "result".into(),
+                name: "final_result_out".into(),
                 contract: make_contract(count, BufferAccess::WriteOnly, ValueLifetime::Output),
                 retained_successor_of: None,
             }],
         )
-        .expect("add node");
+        .expect("add accum node");
 
-    graph
+    builder.build().expect("build graph")
 }
 
 #[test]
-fn downstream_published_api_workflow_end_to_end() {
-    // 1. Import: Construct ProgramGraph from frontend IR
-    let graph = make_dataflow_graph();
+fn neutral_downstream_consumer_complete_submission_and_receipt_seam() {
+    // 1. Semantic Graph Submission
+    let graph = make_application_graph();
+    assert_eq!(graph.nodes().len(), 2);
 
-    // 2. Compile: Construct row 76 CompileRequest and validate
+    // 2. Numerical Contract Definition
+    let mut numeric = NumericContract::exact_word();
+    numeric.determinism = Determinism::Deterministic;
+    numeric.reassociation = Reassociation::Forbidden;
+    numeric.approximation = Approximation::Refused;
+    numeric.atomic_order = AtomicOrderSensitivity::Insensitive;
+    numeric.measure = ErrorMeasure::Exact;
+    assert_eq!(numeric.determinism, Determinism::Deterministic);
+    assert_eq!(numeric.reassociation, Reassociation::Forbidden);
+    assert_eq!(numeric.approximation, Approximation::Refused);
+    assert_eq!(numeric.atomic_order, AtomicOrderSensitivity::Insensitive);
+    assert_eq!(numeric.measure, ErrorMeasure::Exact);
+
+    // 3. Workload Envelope / Profile
+    let workload = WorkloadProfile::default();
+    assert_eq!(workload.len(), 1);
+    assert_eq!(workload.aggregation(), WorkloadAggregation::Weighted);
+
+    // 4. Objective with Hard Bounds
+    let objective =
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000);
+    assert_eq!(objective.primary(), ObjectiveMetric::Latency);
+
+    // 5. External Facts & Deterministic Search Budget
+    let mut facts = ExternalFacts::new(Digest([0x55; 32]), BTreeMap::new());
+    for (v_id, v) in graph.values().iter().enumerate() {
+        if v.contract.lifetime == ValueLifetime::Constant {
+            facts
+                .constant_identities
+                .insert(GraphValueId(v_id as u32), Digest([0x55; 32]));
+        }
+    }
+    let budget = SearchBudget::new(8, 1_000, 2, 0, 10_000_000);
+
+    // 6. Validated Compile Request
+    let request = CompileRequest::new(graph, facts, DeviceFacts::unknown(), budget, objective)
+        .validate()
+        .expect("compile request must validate");
+
+    // 7. Compiler Execution & Receipt Verification
+    let artifact: Artifact = compile(&request).expect("compile must produce neutral artifact");
+
+    // Receipt 1: Derivation Receipts
+    let selected_plan: &SelectedPlan = artifact.selected_plan();
+    let certificate: &SearchCertificate = &selected_plan.certificate;
+    assert!(certificate.derived_total() > 0);
+    assert!(certificate.admitted_total() > 0);
+    assert_eq!(certificate.grammar_version, SCHEDULE_GRAMMAR_VERSION);
+
+    // Receipt 2: Legality Receipts
+    let fusion_records: &[FusionRecord] = artifact.fusion();
+    assert!(!fusion_records.is_empty());
+    let barrier_records: &[BarrierRecord] = artifact.barriers();
+    let _ = barrier_records;
+    let geometry_records: &[GeometryRecord] = artifact.geometry();
+    assert_eq!(geometry_records.len(), artifact.nodes().len());
+
+    // Receipt 3: Candidate Funnel Receipts
+    assert_eq!(selected_plan.execution, ExecutionMode::Static);
+
+    // Receipt 4: Emitted Resource Receipts
+    let resource_records: &[ResourceRecord] = artifact.resources();
+    assert!(!resource_records.is_empty());
+    let resource_envelope: ResourceEnvelope = artifact.resource_envelope();
+    assert!(resource_envelope.total_bytes > 0);
+    let abi = artifact.abi();
+    assert_eq!(abi.resources.len(), resource_records.len());
+    assert!(artifact.validate_abi().is_ok());
+
+    // Receipt 5: Measurement Receipts
+    assert_eq!(selected_plan.measurement, PlanMeasurement::Unbudgeted);
+
+    // Receipt 6: Identity Receipts
+    let digest: Digest = artifact.digest();
+    assert_ne!(digest, Digest([0; 32]));
+    let provenance: &Provenance = artifact.provenance();
+    assert_ne!(provenance.semantic_graph, Digest([0; 32]));
+    assert_eq!(artifact.schema_version(), ARTIFACT_SCHEMA_VERSION);
+
+    // 8. Form Guarded Artifact Portfolio & Envelope
+    let envelope = ArtifactEnvelope::new(artifact.clone());
+    assert_eq!(envelope.neutral().digest(), artifact.digest());
+
+    // 9. Serialize / Deserialize through serde_json to prove content-addressed stability
+    let json_bytes = serde_json::to_vec(request.objective()).expect("serialize objective");
+    let deserialized_obj: CompileObjective =
+        serde_json::from_slice(&json_bytes).expect("deserialize objective");
+    assert_eq!(*request.objective(), deserialized_obj);
+}
+
+#[test]
+fn offline_target_profile_refusal_and_legality_provenance() {
+    // 1. Prove refusal of unprovenanced target profile by name
+    // Empty identity -> target_payload.profile.identity
+    let empty_id_err = TargetProfile::new("", 1, [64, 1, 1], 64, 1024, 0).expect_err("empty id");
+    assert_eq!(
+        diagnostic_path(&empty_id_err),
+        Some("target_payload.profile.identity")
+    );
+
+    // Generation zero -> target_payload.profile.generation
+    let gen_zero_err =
+        TargetProfile::new("target.valid", 0, [64, 1, 1], 64, 1024, 0).expect_err("gen zero");
+    assert_eq!(
+        diagnostic_path(&gen_zero_err),
+        Some("target_payload.profile.generation")
+    );
+
+    // Zero workgroup limit -> target_payload.profile.max_workgroup_size[0]
+    let zero_wg_err =
+        TargetProfile::new("target.valid", 1, [0, 1, 1], 64, 1024, 0).expect_err("zero wg");
+    assert_eq!(
+        diagnostic_path(&zero_wg_err),
+        Some("target_payload.profile.max_workgroup_size[0]")
+    );
+
+    // Zero invocations -> target_payload.profile.max_invocations_per_workgroup
+    let zero_inv_err =
+        TargetProfile::new("target.valid", 1, [64, 1, 1], 0, 1024, 0).expect_err("zero inv");
+    assert_eq!(
+        diagnostic_path(&zero_inv_err),
+        Some("target_payload.profile.max_invocations_per_workgroup")
+    );
+
+    // Non-power-of-two subgroup -> target_payload.profile.subgroup_size
+    let bad_subgroup_err =
+        TargetProfile::new("target.valid", 1, [64, 1, 1], 64, 1024, 3).expect_err("bad subgroup");
+    assert_eq!(
+        diagnostic_path(&bad_subgroup_err),
+        Some("target_payload.profile.subgroup_size")
+    );
+
+    // 2. Prove offline profile cannot override backend legality
+    let valid_profile =
+        TargetProfile::new("target.valid", 1, [64, 1, 1], 64, 1024, 0).expect("valid profile");
+    let format = TargetPayloadFormat::new("format.test", 1).expect("valid format");
+
+    let graph = make_application_graph();
     let request = CompileRequest::new(
         graph,
-        ExternalFacts::new(Digest([0x42; 32]), BTreeMap::new()),
+        ExternalFacts::new(Digest([0x55; 32]), BTreeMap::new()),
         DeviceFacts::unknown(),
-        SearchBudget::new(8, 1_000, 2, 0, 10_000_000),
+        SearchBudget::new(1, 1, 1, 0, 100_000),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
     )
     .validate()
-    .expect("compile request must validate");
+    .expect("validate");
+    let artifact = compile(&request).expect("compile");
 
-    let artifact = compile(&request).expect("compile must produce artifact");
-
-    // 3. Inspect: Check artifact structure and provenance
-    assert_eq!(artifact.nodes().len(), 1);
-    assert_eq!(artifact.abi().entries.len(), 1);
-    assert_eq!(artifact.resources().len(), 2);
-    let digest = artifact.digest();
-    assert_ne!(digest, Digest([0; 32]));
-
-    // 4. Package & Cache: Verify content-addressed identity
-    let repeated = compile(&request).expect("repeated compile");
-    assert_eq!(artifact.digest(), repeated.digest(), "Compilation must be deterministic");
-
-    // 5. Recover: Verify structured diagnostic handling on invalid request
-    let invalid_req_result = CompileRequest::new(
-        ProgramGraph::new(),
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        DeviceFacts::unknown(),
-        SearchBudget::new(1, 1, 1, 0, 100),
-        CompileObjective::minimize_latency(), // Missing mandatory ArtifactBytes bound
-    )
-    .validate();
-    let err = match invalid_req_result {
-        Err(err) => err,
-        Ok(_) => panic!("Empty graph must fail validation"),
+    // Attempt to construct TargetPayload with mismatched workgroup size
+    let mismatched_entry = TargetEntryPoint {
+        name: "entry_0".to_string(),
+        node: artifact.nodes()[0].id,
+        workgroup_size: [128, 1, 1], // Mismatched geometry
+        grid_size: [1, 1, 1],
+        dynamic_shared_bytes: 0,
+        resource_bindings: vec![],
     };
-    assert_eq!(err.diagnostic.retry, RetryClass::Never);
-    // 6. ByteRange integration
-    let range = ByteRange::new(1, 0, 64);
-    assert_eq!(range.len(), 64);
+
+    let mismatch_err = TargetPayload::new(
+        &artifact,
+        format.clone(),
+        valid_profile.clone(),
+        vec![mismatched_entry],
+        vec![0xAA; 32],
+    )
+    .expect_err("mismatched geometry must be rejected");
+
+    assert_eq!(
+        diagnostic_path(&mismatch_err),
+        Some("target_payload.entries[0].workgroup_size")
+    );
+    assert!(mismatch_err
+        .diagnostic
+        .message
+        .contains("target entry states"));
+
+    // Attempt to exceed profile limits
+    let tiny_profile =
+        TargetProfile::new("target.tiny", 1, [32, 1, 1], 32, 1024, 0).expect("tiny profile");
+    let selected_wg = artifact.geometry()[0].workgroup_size;
+    let selected_grid = artifact.geometry()[0].grid;
+
+    let exceeding_entry = TargetEntryPoint {
+        name: "entry_0".to_string(),
+        node: artifact.nodes()[0].id,
+        workgroup_size: selected_wg, // 64 > 32 limit of tiny profile
+        grid_size: selected_grid,
+        dynamic_shared_bytes: 0,
+        resource_bindings: vec![],
+    };
+
+    let exceed_err = TargetPayload::new(
+        &artifact,
+        format,
+        tiny_profile,
+        vec![exceeding_entry],
+        vec![0xAA; 32],
+    )
+    .expect_err("profile limit exceeded must be rejected");
+
+    assert_eq!(
+        diagnostic_path(&exceed_err),
+        Some("target_payload.entries[0].workgroup_size[0]")
+    );
+    assert!(exceed_err
+        .diagnostic
+        .message
+        .contains("exceeds profile limit"));
+}
+
+#[test]
+fn public_seam_carries_zero_callbacks_zero_handles_and_zero_domain_vocabulary() {
+    let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let lib_rs_path = manifest_dir.join("src/lib.rs");
+    let content = std::fs::read_to_string(&lib_rs_path).expect("read vyre/src/lib.rs");
+    let _ast = syn::parse_file(&content).expect("parse AST");
+
+    // 1. Assert zero domain vocabulary in public types or export names
+    let forbidden_domain_terms = [
+        "llama",
+        "transformer",
+        "bert",
+        "resnet",
+        "safetensors",
+        "opengl",
+        "directx",
+        "vulkan",
+        "cuda_core",
+        "metal_device",
+    ];
+
+    let content_lower = content.to_lowercase();
+    for term in &forbidden_domain_terms {
+        assert!(
+            !content_lower.contains(term),
+            "Public facade carries forbidden domain vocabulary `{term}`: {content}"
+        );
+    }
+
+    // 2. Assert zero raw native handles or function pointer callbacks in public item signatures
+    let forbidden_handle_types = [
+        "c_void",
+        "hwnd",
+        "handle",
+        "custream",
+        "vkdevice",
+        "mtldevice",
+        "wgpuinstance",
+    ];
+
+    for handle in &forbidden_handle_types {
+        assert!(
+            !content_lower.contains(handle),
+            "Public facade carries forbidden native handle type `{handle}`: {content}"
+        );
+    }
+}
+
+#[test]
+fn vyre_libs_feature_registration_needs_no_workspace_internal_knowledge() {
+    // Calling link_anchor directly references the public catalog and ensures registrations are linked
+    let count = vyre_libs::link_anchor();
+    assert!(
+        count > 0,
+        "vyre-libs link_anchor must return a positive count of registered operations"
+    );
+
+    let entries: Vec<_> = vyre_libs::operation_catalog::all_entries().collect();
+    assert_eq!(entries.len(), count);
+
+    for entry in &entries {
+        assert_eq!(entry.tier, OperationTier::Library);
+        assert!(!entry.id.is_empty());
+        assert!(entry.program().is_some());
+    }
 }

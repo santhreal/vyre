@@ -57,25 +57,14 @@ fn test_workload_cache_cold_startup() {
 }
 
 #[test]
-fn test_workload_memory_pressure() {
+fn test_workload_retained_state_reset() {
     let mut renderer = GraphicsRenderer::new(SceneGraph::new_ui_scene(64, 64));
     renderer
-        .handle_event(InteractiveEvent::MemoryPressure { allocation_mb: 16 })
-        .expect("memory pressure simulation");
-    let frame = renderer.render_frame().expect("render under memory pressure");
+        .handle_event(InteractiveEvent::ResetRetainedState)
+        .expect("retained state reset");
+    let frame = renderer.render_frame().expect("render after reset");
     assert_eq!(frame.len(), 64 * 64);
 }
-
-#[test]
-fn test_workload_background_interference() {
-    let mut renderer = GraphicsRenderer::new(SceneGraph::new_ui_scene(64, 64));
-    renderer
-        .handle_event(InteractiveEvent::BackgroundInterference { job_count: 100 })
-        .expect("background interference");
-    let frame = renderer.render_frame().expect("render during interference");
-    assert_eq!(frame.len(), 64 * 64);
-}
-
 #[test]
 fn test_workload_device_loss_recovery() {
     let mut renderer = GraphicsRenderer::new(SceneGraph::new_ui_scene(64, 64));

@@ -44,10 +44,10 @@ use vyre_lower::{TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
 
 pub(crate) use self::artifact::AuthenticatedTarget;
 use self::artifact::CachedPipelineArtifact;
-pub use self::descriptor_metadata::{descriptor_buffer_bindings, BufferBindingInfo};
 use self::descriptor_metadata::{
     bind_group_layout_fingerprint, create_bind_group_layouts, descriptor_trap_tags,
 };
+pub use self::descriptor_metadata::{descriptor_buffer_bindings, BufferBindingInfo};
 use self::tuning::wgpu_effective_dispatch_config;
 use crate::buffer::{BindGroupCache, StagingBufferPool};
 use crate::descriptor_mapping::descriptor_binding_key;

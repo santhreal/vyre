@@ -38,7 +38,6 @@ pub enum PlatformAdapterError {
     },
 }
 
-
 static PROCESS_START: std::sync::LazyLock<Instant> = std::sync::LazyLock::new(Instant::now);
 
 /// Monotonic clock adapter providing high-resolution duration and nanosecond timestamps.

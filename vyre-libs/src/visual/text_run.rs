@@ -141,10 +141,22 @@ pub fn text_run_blend(
             Node::let_bind(&fg_r, crate::builder::stencil::unpack_channel(&g_col, 0)),
             Node::let_bind(&fg_g, crate::builder::stencil::unpack_channel(&g_col, 8)),
             Node::let_bind(&fg_b, crate::builder::stencil::unpack_channel(&g_col, 16)),
-            Node::let_bind(&bg_r, crate::builder::stencil::unpack_channel(&format!("curr_px_{g}"), 0)),
-            Node::let_bind(&bg_g, crate::builder::stencil::unpack_channel(&format!("curr_px_{g}"), 8)),
-            Node::let_bind(&bg_b, crate::builder::stencil::unpack_channel(&format!("curr_px_{g}"), 16)),
-            Node::let_bind(&bg_a, crate::builder::stencil::unpack_channel(&format!("curr_px_{g}"), 24)),
+            Node::let_bind(
+                &bg_r,
+                crate::builder::stencil::unpack_channel(&format!("curr_px_{g}"), 0),
+            ),
+            Node::let_bind(
+                &bg_g,
+                crate::builder::stencil::unpack_channel(&format!("curr_px_{g}"), 8),
+            ),
+            Node::let_bind(
+                &bg_b,
+                crate::builder::stencil::unpack_channel(&format!("curr_px_{g}"), 16),
+            ),
+            Node::let_bind(
+                &bg_a,
+                crate::builder::stencil::unpack_channel(&format!("curr_px_{g}"), 24),
+            ),
             // Channel blending: (fg * cov + bg * (255 - cov) + 128) / 255
             Node::let_bind(
                 &out_r,
@@ -204,7 +216,11 @@ pub fn text_run_blend(
         ]);
     }
 
-    body.push(Node::store(output, Expr::var("idx"), Expr::var(format!("curr_px_{glyph_count}"))));
+    body.push(Node::store(
+        output,
+        Expr::var("idx"),
+        Expr::var(format!("curr_px_{glyph_count}")),
+    ));
 
     Program::wrapped(
         vec![
@@ -224,7 +240,10 @@ pub fn text_run_blend(
                 Ident::from(OP_ID),
                 vec![
                     Node::let_bind("idx_guard", Expr::logical_index(0)),
-                    Node::if_then(Expr::lt(Expr::var("idx_guard"), Expr::u32(pixel_count)), body),
+                    Node::if_then(
+                        Expr::lt(Expr::var("idx_guard"), Expr::u32(pixel_count)),
+                        body,
+                    ),
                 ],
             )],
         )],

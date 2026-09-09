@@ -4,10 +4,10 @@
 //! explicitly discharging or preserving obligations, without mutating cached
 //! validation bits on the semantic value.
 
-use std::marker::PhantomData;
 use super::certificate::VerificationCertificate;
 use super::module::SemanticModule;
 use super::verified::Verified;
+use std::marker::PhantomData;
 
 /// Marker trait for compilation and lowering pipeline stages.
 pub trait StageKind: 'static + Send + Sync {

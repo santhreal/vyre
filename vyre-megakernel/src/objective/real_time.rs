@@ -335,7 +335,10 @@ impl RealTimeObjective {
 
         if let Some(jitter_cap) = self.jitter_limit_ns {
             // Worst-case synchronization/rendezvous overhead as variance floor
-            let estimated_variance_ns = cost.barriers.saturating_mul(1_000).saturating_add(cost.grid_syncs.saturating_mul(10_000));
+            let estimated_variance_ns = cost
+                .barriers
+                .saturating_mul(1_000)
+                .saturating_add(cost.grid_syncs.saturating_mul(10_000));
             if estimated_variance_ns > jitter_cap {
                 return Err(RealTimeViolation::JitterExceeded {
                     limit_ns: jitter_cap,
@@ -394,17 +397,35 @@ pub enum RealTimeViolation {
 impl core::fmt::Display for RealTimeViolation {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::DeadlineExceeded { limit_ns, achieved_ns } => {
+            Self::DeadlineExceeded {
+                limit_ns,
+                achieved_ns,
+            } => {
                 write!(f, "hard deadline exceeded: {achieved_ns}ns > {limit_ns}ns")
             }
-            Self::JitterExceeded { limit_ns, achieved_ns } => {
+            Self::JitterExceeded {
+                limit_ns,
+                achieved_ns,
+            } => {
                 write!(f, "jitter limit exceeded: {achieved_ns}ns > {limit_ns}ns")
             }
-            Self::QueueingExceeded { limit_ns, achieved_ns } => {
-                write!(f, "queueing delay limit exceeded: {achieved_ns}ns > {limit_ns}ns")
+            Self::QueueingExceeded {
+                limit_ns,
+                achieved_ns,
+            } => {
+                write!(
+                    f,
+                    "queueing delay limit exceeded: {achieved_ns}ns > {limit_ns}ns"
+                )
             }
-            Self::MemoryCeilingExceeded { limit_bytes, achieved_bytes } => {
-                write!(f, "memory ceiling exceeded: {achieved_bytes}B > {limit_bytes}B")
+            Self::MemoryCeilingExceeded {
+                limit_bytes,
+                achieved_bytes,
+            } => {
+                write!(
+                    f,
+                    "memory ceiling exceeded: {achieved_bytes}B > {limit_bytes}B"
+                )
             }
         }
     }
@@ -463,7 +484,10 @@ impl InputToVisibleMeasurement {
             + presentation_handoff_ns;
 
         let missed_deadlines_count = match deadline_ns {
-            Some(limit) => raw_samples_ns.iter().filter(|&&sample| sample > limit).count() as u32,
+            Some(limit) => raw_samples_ns
+                .iter()
+                .filter(|&&sample| sample > limit)
+                .count() as u32,
             None => 0,
         };
 

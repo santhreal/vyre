@@ -1,11 +1,13 @@
 //! Explicit tenant, authority, confidentiality, and retention labels (Row 119).
 
 use core::fmt;
-use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 
 /// Strongly-typed 128-bit tenant identifier.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize,
+)]
 pub struct TenantId(pub u128);
 
 impl TenantId {
@@ -140,7 +142,9 @@ impl AuthorityLabel {
 }
 
 /// Multi-level security confidentiality lattice.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum ConfidentialityLevel {
     /// Unclassified public data.
@@ -165,7 +169,9 @@ impl ConfidentialityLevel {
 }
 
 /// Retention policy for compiled artifacts, cached kernels, and retained resources.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum RetentionPolicy {
     /// Ephemeral: zeroized and discarded immediately after kernel execution finishes.

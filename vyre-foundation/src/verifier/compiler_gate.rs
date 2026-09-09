@@ -2,10 +2,10 @@
 //!
 //! Enforces the semantic assurance invariant: unverified syntax cannot reach compilation.
 
-use thiserror::Error;
 use super::certificate::{ReplayError, VerificationCertificate};
 use super::module::SemanticModule;
 use super::verified::Verified;
+use thiserror::Error;
 
 /// Compilation error produced when attempting to compile invalid or unverified IR.
 #[derive(Debug, Error)]
@@ -61,7 +61,10 @@ impl SemanticCompiler {
         let module = verified.as_inner();
         let cert = verified.certificate();
 
-        if module.program.is_none() && module.types.is_empty() && module.shape_constraints.is_empty() {
+        if module.program.is_none()
+            && module.types.is_empty()
+            && module.shape_constraints.is_empty()
+        {
             return Err(CompileError::EmptyModule(module.name.clone()));
         }
 
@@ -100,7 +103,10 @@ impl SemanticCompiler {
             other => CompileError::CertificateReplayFailed(other.to_string()),
         })?;
 
-        if module.program.is_none() && module.types.is_empty() && module.shape_constraints.is_empty() {
+        if module.program.is_none()
+            && module.types.is_empty()
+            && module.shape_constraints.is_empty()
+        {
             return Err(CompileError::EmptyModule(module.name.clone()));
         }
 

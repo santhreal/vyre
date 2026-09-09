@@ -31,10 +31,10 @@ fn is_invocation_id_expr(expr: &crate::ir::Expr) -> bool {
     )
 }
 
-/// Deterministic semantic optimizer corpus used by release evidence.
-pub mod corpus;
 /// Deterministic compilation budget bounds and accounting.
 pub(crate) mod compile_budget;
+/// Deterministic semantic optimizer corpus used by release evidence.
+pub mod corpus;
 pub use compile_budget::CompileBudget;
 /// Cost certificates for cost-monotone-down pass enforcement.
 /// `CostCertificate::for_program` reads cached `ProgramStats`; the optimizer
@@ -112,10 +112,10 @@ pub mod level_pipeline;
 /// matroid subset selection). Hoisted from `pass_substrate/` in audit
 /// cleanup A9 (2026-04-30) so megakernel scheduling lives in one place.
 pub mod megakernel;
-/// Contributor-facing optimizer catalog derived from the live pass registry.
-pub mod pass_catalog;
 /// Proof-producing multi-level equality saturation and Pareto-optimal extraction.
 pub mod multi_level_eqsat;
+/// Contributor-facing optimizer catalog derived from the live pass registry.
+pub mod pass_catalog;
 /// Stable pass-explanation records derived from scheduler metrics and the live
 /// optimizer catalog.
 pub(crate) mod pass_explain;

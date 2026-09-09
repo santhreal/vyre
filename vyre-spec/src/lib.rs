@@ -47,9 +47,6 @@ pub mod c11_token;
 /// Specification element.
 mod catalog_is_complete;
 mod catalog_slices;
-/// Category enum (A/B/C) + backend-availability predicates.
-/// Compatibility and rollout matrix contracts.
-mod compatibility;
 /// Specification element.
 mod category;
 /// Collective communication operators and communicator handles.
@@ -58,6 +55,9 @@ mod collective_op;
 /// Combine kinds shared by atomics, subgroup reductions and collectives.
 /// Specification element.
 mod combine;
+/// Category enum (A/B/C) + backend-availability predicates.
+/// Compatibility and rollout matrix contracts.
+mod compatibility;
 /// Calling conventions between CPU host and GPU kernels.
 /// Specification element.
 mod convention;
@@ -91,9 +91,6 @@ mod invariant;
 /// Classification buckets grouping related invariants (numeric, memory, …).
 /// Specification element.
 mod invariant_category;
-/// Catalog of invariants every registered op is checked against.
-/// Declarative schema registry for all persisted and wire formats.
-mod schema_registry;
 /// Specification element.
 mod invariants;
 /// Compiler level a declaration owns.
@@ -117,9 +114,6 @@ mod memory_effect;
 /// Metadata classification for `OpMetadata` entries.
 /// Specification element.
 mod metadata_category;
-/// Monotonicity direction (increasing / decreasing / none) for op outputs.
-/// Domain-neutral resource, image, view, plane, sampler, external memory, and timeline sync capabilities.
-pub mod resource_capability;
 /// Specification element.
 mod monotonic_direction;
 /// Versioned numeric semantics table and datatype conversion helpers.
@@ -143,6 +137,12 @@ pub mod python_token;
 /// Declarative law families a rewrite may cite.
 /// Specification element.
 mod region_law;
+/// Monotonicity direction (increasing / decreasing / none) for op outputs.
+/// Domain-neutral resource, image, view, plane, sampler, external memory, and timeline sync capabilities.
+pub mod resource_capability;
+/// Catalog of invariants every registered op is checked against.
+/// Declarative schema registry for all persisted and wire formats.
+mod schema_registry;
 /// Canonical semiring selector for dataflow and algebraic kernels.
 mod semiring;
 /// Soundness markers and precision contracts for cross-engine analysis data.
@@ -171,7 +171,10 @@ mod verification;
 pub use adversarial_input::AdversarialInput;
 /// See [`algebraic_law::AlgebraicLaw`].
 /// Specification element for algebraic laws.
-pub use algebraic_law::{AlgebraicLaw, LawCheckFn, LawGuard};
+pub use algebraic_law::{
+    AlgebraicLaw, CounterexampleGenerator, GuardedLaw, LawCheckFn, LawCounterexample, LawDirection,
+    LawGuard, LawValidationError, ProofMethod,
+};
 /// See [`all_algebraic_laws::all_algebraic_laws`].
 /// Specification element.
 pub use all_algebraic_laws::all_algebraic_laws;
@@ -212,20 +215,19 @@ pub use data_type::{DataType, QuantizationScale, QuantizationZeroPoint, TypeId};
 /// See [`engine_invariant::EngineInvariant`].
 /// Specification element.
 pub use engine_invariant::{EngineInvariant, InvariantId};
+/// See [`expr_variant::expr_variants`].
+/// Specification element.
+pub use expr_variant::expr_variants;
 /// See [`ExtensionSchema`].
 /// Specification element.
 pub use extension::{
     ExtensionAtomicOp, ExtensionAtomicOpId, ExtensionBinOp, ExtensionBinOpId, ExtensionDataType,
-    ExtensionDataTypeId, ExtensionField, ExtensionFieldType, ExtensionIdentity,
-    ExtensionNamespace, ExtensionNumericalContract, ExtensionOperand,
-    ExtensionOperandKind, ExtensionProofFieldKind, ExtensionProofFields,
-    ExtensionResourceBounds, ExtensionRuleConditionId, ExtensionSchema,
-    ExtensionSchemaDigest, ExtensionSemVer, ExtensionShapeRule,
-    ExtensionTernaryOp, ExtensionTernaryOpId, ExtensionUnOp, ExtensionUnOpId,
+    ExtensionDataTypeId, ExtensionField, ExtensionFieldType, ExtensionIdentity, ExtensionNamespace,
+    ExtensionNumericalContract, ExtensionOperand, ExtensionOperandKind, ExtensionProofFieldKind,
+    ExtensionProofFields, ExtensionResourceBounds, ExtensionRuleConditionId, ExtensionSchema,
+    ExtensionSchemaDigest, ExtensionSemVer, ExtensionShapeRule, ExtensionTernaryOp,
+    ExtensionTernaryOpId, ExtensionUnOp, ExtensionUnOpId,
 };
-/// See [`expr_variant::expr_variants`].
-/// Specification element.
-pub use expr_variant::expr_variants;
 /// See [`float_type::FloatType`].
 /// Specification element.
 pub use float_type::FloatType;
@@ -280,7 +282,10 @@ pub use numeric_semantics::{
 };
 /// See [`op_contract::OperationContract`] and its component types.
 pub use op_contract::{
-    CapabilityId, CostHint, DeterminismClass, OperationContract, SideEffectClass,
+    AliasingContract, CapabilityId, ContractValidationError, CostHint, DeterminismClass,
+    NumericBehavior, OperationContract, RangeContract, RangePrecondition, ResourceBoundsContract,
+    SemanticContractRecord, ShapeIndexContract, ShapeIndexRelation, SideEffectClass,
+    TransformDecision,
 };
 /// See [`op_metadata::OpMetadata`].
 /// Specification element.
@@ -316,14 +321,14 @@ pub use verification::Verification;
 /// Intrinsic descriptors.
 /// Specification element.
 mod intrinsic_descriptor;
-/// See [`intrinsic_descriptor::IntrinsicDescriptor`] and its identifying types.
-pub use intrinsic_descriptor::{Backend, BackendId, CpuFn, IntrinsicDescriptor};
 pub use compatibility::{
     derive_artifact_identity, CacheNamespace, CompatibilityCell, CompatibilityDisposition,
     CompatibilityMatrix, GenerationId, NegotiatedContract, NegotiationError, ProtocolDomain,
     ProtocolVersion, RetainedSessionScope, RolloutManager, SessionScopeError, SessionStatus,
     StaleGenerationError, CANONICAL_COMPATIBILITY_CELLS,
 };
+/// See [`intrinsic_descriptor::IntrinsicDescriptor`] and its identifying types.
+pub use intrinsic_descriptor::{Backend, BackendId, CpuFn, IntrinsicDescriptor};
 pub use schema_registry::{
     CanonicalField, DefaultsPolicy, FieldType, SchemaBounds, SchemaDefinition, SchemaId,
     SchemaRegistry, CANONICAL_SCHEMA_REGISTRY,

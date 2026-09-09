@@ -4,9 +4,8 @@ use rustc_hash::FxHashSet;
 use vyre_spec::{BinOp, CombineKind, DataType, TernaryOp, UnOp};
 
 use super::{
-    Block, BlockArg, BlockId, EffectToken, RegionFunction, RegionId, RegionKind,
-    RegionOp, RegionOpKind, ScalarLiteral, StructuredRegion, Terminator, ValueId,
-    ViewOp,
+    Block, BlockArg, BlockId, EffectToken, RegionFunction, RegionId, RegionKind, RegionOp,
+    RegionOpKind, ScalarLiteral, StructuredRegion, Terminator, ValueId, ViewOp,
 };
 
 /// Error produced when a builder operation violates dominance or typing invariants.
@@ -121,7 +120,10 @@ impl RegionBuilder {
         for (ty, name_hint) in param_types {
             let val = builder.alloc_value();
             builder.scope.define(val);
-            builder.function.params.push(BlockArg::new(val, ty, name_hint));
+            builder
+                .function
+                .params
+                .push(BlockArg::new(val, ty, name_hint));
         }
 
         // Create entry block
@@ -259,10 +261,8 @@ impl RegionBuilder {
         result_type: DataType,
     ) -> Result<ValueId, DominanceError> {
         self.check_operand(input)?;
-        let res = self.emit_op_internal(
-            RegionOpKind::Unary { op, input },
-            vec![(result_type, None)],
-        )?;
+        let res =
+            self.emit_op_internal(RegionOpKind::Unary { op, input }, vec![(result_type, None)])?;
         Ok(res[0])
     }
 
@@ -293,7 +293,10 @@ impl RegionBuilder {
     ) -> Result<ValueId, DominanceError> {
         self.check_operand(input)?;
         let res = self.emit_op_internal(
-            RegionOpKind::Cast { input, target_type: target_type.clone() },
+            RegionOpKind::Cast {
+                input,
+                target_type: target_type.clone(),
+            },
             vec![(target_type, None)],
         )?;
         Ok(res[0])
@@ -456,10 +459,8 @@ impl RegionBuilder {
         };
 
         let result_tuples = yield_types.into_iter().map(|ty| (ty, None)).collect();
-        let results = self.emit_op_internal(
-            RegionOpKind::Region(Box::new(region)),
-            result_tuples,
-        )?;
+        let results =
+            self.emit_op_internal(RegionOpKind::Region(Box::new(region)), result_tuples)?;
 
         Ok(results)
     }
@@ -629,10 +630,8 @@ impl RegionBuilder {
         };
 
         let result_tuples = state_types.into_iter().map(|ty| (ty, None)).collect();
-        let results = self.emit_op_internal(
-            RegionOpKind::Region(Box::new(region)),
-            result_tuples,
-        )?;
+        let results =
+            self.emit_op_internal(RegionOpKind::Region(Box::new(region)), result_tuples)?;
 
         Ok(results)
     }

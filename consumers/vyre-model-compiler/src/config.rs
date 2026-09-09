@@ -4,7 +4,7 @@
 //! and architecture variants for frontier models.
 
 use serde::{Deserialize, Serialize};
-use vyre_foundation::ir::DataType;
+use vyre::ir::DataType;
 
 /// Frontier model architecture family.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

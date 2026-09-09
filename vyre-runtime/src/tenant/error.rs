@@ -7,9 +7,7 @@ use crate::PipelineError;
 #[non_exhaustive]
 pub enum TenantError {
     /// Tenant registration failed because the provided quota was not finite or was zero.
-    #[error(
-        "tenant quota field '{field}' has non-finite or zero value {value}. Fix: {fix}"
-    )]
+    #[error("tenant quota field '{field}' has non-finite or zero value {value}. Fix: {fix}")]
     NonFiniteQuota {
         /// Quota field that violated the finite-bound requirement.
         field: &'static str,

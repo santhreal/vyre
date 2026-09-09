@@ -7,15 +7,19 @@
 
 pub(crate) mod solver;
 
-use std::sync::RwLock;
 use rustc_hash::FxHashMap;
+use std::sync::RwLock;
 
 /// Interned identifier for a canonical symbolic dimension expression.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone, Copy, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, serde::Deserialize, serde::Serialize,
+)]
 pub struct ShapeExprId(pub u32);
 
 /// Interned identifier for an ordered multidimensional tensor shape.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone, Copy, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, serde::Deserialize, serde::Serialize,
+)]
 pub struct ShapeId(pub u32);
 
 /// Symbolic dimension expression node.

@@ -210,7 +210,9 @@ fn the_registry_submitter_scan_is_not_vacuous() {
         );
     }
     assert!(
-        !submitters.iter().any(|found| found == "vyre-driver-reference"),
+        !submitters
+            .iter()
+            .any(|found| found == "vyre-driver-reference"),
         "`vyre-driver-reference` submits an inventory registration again. The interpreter is not \
          a dispatch target; move the registration out or record why the oracle is one."
     );

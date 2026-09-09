@@ -18,6 +18,7 @@ mod driver;
 mod gpudirect;
 mod io_loop;
 mod pump;
+pub(crate) mod raw_platform;
 mod ring;
 mod stream;
 

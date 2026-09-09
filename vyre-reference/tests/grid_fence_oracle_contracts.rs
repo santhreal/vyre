@@ -104,8 +104,7 @@ fn a_fence_inside_a_wrapper_still_partitions_the_program() {
     // the value the whole grid agreed on at the fence.
     let program = Program::wrapped(
         vec![
-            BufferDecl::storage("scratch", 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(4),
+            BufferDecl::storage("scratch", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4),
             BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(4),
         ],
         [1, 1, 1],

@@ -7,11 +7,15 @@
 //! warm, cold, transfer and cache state, power/energy where available, raw samples,
 //! uncertainty model, parity, and failures.
 
+pub mod campaign;
+pub mod floor;
 pub mod receipt;
 pub mod store;
 
 use std::path::Path;
 
+pub use campaign::*;
+pub use floor::*;
 pub use receipt::*;
 pub use store::*;
 
@@ -110,7 +114,10 @@ pub fn receipt_from_case_report(case: &CaseReport, report: &ReportSchema) -> Ben
 
     let environment = EnvironmentReceipt {
         os: report.environment.os.clone(),
-        kernel: format!("{}-{}", report.environment.os, report.environment.architecture),
+        kernel: format!(
+            "{}-{}",
+            report.environment.os, report.environment.architecture
+        ),
         cpu_model: report
             .environment
             .cpu_model
@@ -166,16 +173,8 @@ pub fn receipt_from_case_report(case: &CaseReport, report: &ReportSchema) -> Ben
             .get("warm_ns")
             .map(|stat| stat.p50)
             .unwrap_or(case.wall_ns.unwrap_or(0.0) as u64),
-        host_to_device_transfer_ns: case
-            .metrics
-            .get("h2d_ns")
-            .map(|stat| stat.p50)
-            .unwrap_or(0),
-        device_to_host_transfer_ns: case
-            .metrics
-            .get("d2h_ns")
-            .map(|stat| stat.p50)
-            .unwrap_or(0),
+        host_to_device_transfer_ns: case.metrics.get("h2d_ns").map(|stat| stat.p50).unwrap_or(0),
+        device_to_host_transfer_ns: case.metrics.get("d2h_ns").map(|stat| stat.p50).unwrap_or(0),
         cache_hit_count: case
             .metrics
             .get("cache_hits")

@@ -97,6 +97,35 @@ pub struct SafetensorEntry {
     pub file_range: Range<u64>,
 }
 
+/// Typed transfer descriptor mapping container entry to byte range and element layout.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SafetensorTransferDescriptor {
+    /// Resource or tensor name.
+    pub name: String,
+    /// Element data type representation.
+    pub dtype: SafetensorDtype,
+    /// Ordered dimensions.
+    pub shape: Vec<u64>,
+    /// Byte offset within shard file.
+    pub offset: u64,
+    /// Byte length of payload.
+    pub length: u64,
+}
+
+impl SafetensorEntry {
+    /// Map this entry into a typed transfer descriptor without model conventions.
+    #[must_use]
+    pub fn to_transfer_descriptor(&self) -> SafetensorTransferDescriptor {
+        SafetensorTransferDescriptor {
+            name: self.name.clone(),
+            dtype: self.dtype,
+            shape: self.shape.clone(),
+            offset: self.file_range.start,
+            length: self.file_range.end.saturating_sub(self.file_range.start),
+        }
+    }
+}
+
 /// Metadata-only immutable shard identity.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SafetensorShardIdentity {
@@ -268,14 +297,23 @@ impl SafetensorIndex {
     }
 
     /// Read tensor bytes directly from a shard file, verifying bounds and file length.
-    pub fn read_tensor_from_file(&self, name: &str, file: &mut File) -> Result<Vec<u8>, SafetensorError> {
-        let entry = self.tensor(name).ok_or_else(|| SafetensorError::MissingRequiredTensor {
-            name: name.to_string(),
-        })?;
-        let current_len = file.metadata().map_err(|source| SafetensorError::Io {
-            path: self.path.clone(),
-            detail: source.to_string(),
-        })?.len();
+    pub fn read_tensor_from_file(
+        &self,
+        name: &str,
+        file: &mut File,
+    ) -> Result<Vec<u8>, SafetensorError> {
+        let entry = self
+            .tensor(name)
+            .ok_or_else(|| SafetensorError::MissingRequiredTensor {
+                name: name.to_string(),
+            })?;
+        let current_len = file
+            .metadata()
+            .map_err(|source| SafetensorError::Io {
+                path: self.path.clone(),
+                detail: source.to_string(),
+            })?
+            .len();
         if current_len != self.identity.file_len {
             return Err(SafetensorError::ShardLengthChanged {
                 shard: self.path.clone(),
@@ -284,17 +322,20 @@ impl SafetensorIndex {
             });
         }
         let byte_len = entry.file_range.end - entry.file_range.start;
-        let byte_len_usize = usize::try_from(byte_len).map_err(|_| SafetensorError::OffsetOverflow)?;
+        let byte_len_usize =
+            usize::try_from(byte_len).map_err(|_| SafetensorError::OffsetOverflow)?;
         let mut buffer = vec![0_u8; byte_len_usize];
         use std::io::Seek;
-        file.seek(std::io::SeekFrom::Start(entry.file_range.start)).map_err(|source| SafetensorError::Io {
-            path: self.path.clone(),
-            detail: source.to_string(),
-        })?;
-        file.read_exact(&mut buffer).map_err(|source| SafetensorError::Io {
-            path: self.path.clone(),
-            detail: source.to_string(),
-        })?;
+        file.seek(std::io::SeekFrom::Start(entry.file_range.start))
+            .map_err(|source| SafetensorError::Io {
+                path: self.path.clone(),
+                detail: source.to_string(),
+            })?;
+        file.read_exact(&mut buffer)
+            .map_err(|source| SafetensorError::Io {
+                path: self.path.clone(),
+                detail: source.to_string(),
+            })?;
         Ok(buffer)
     }
 }
@@ -436,10 +477,13 @@ impl VerifiedTensorHandle {
             path: self.shard_path.clone(),
             detail: "mutex poisoned".to_string(),
         })?;
-        let current_len = file.metadata().map_err(|source| SafetensorError::Io {
-            path: self.shard_path.clone(),
-            detail: source.to_string(),
-        })?.len();
+        let current_len = file
+            .metadata()
+            .map_err(|source| SafetensorError::Io {
+                path: self.shard_path.clone(),
+                detail: source.to_string(),
+            })?
+            .len();
         if current_len != self.expected_file_len {
             return Err(SafetensorError::ShardLengthChanged {
                 shard: self.shard_path.clone(),
@@ -449,17 +493,20 @@ impl VerifiedTensorHandle {
         }
         let range = &self.tensor.file_range;
         let byte_len = range.end - range.start;
-        let byte_len_usize = usize::try_from(byte_len).map_err(|_| SafetensorError::OffsetOverflow)?;
+        let byte_len_usize =
+            usize::try_from(byte_len).map_err(|_| SafetensorError::OffsetOverflow)?;
         let mut buffer = vec![0_u8; byte_len_usize];
         use std::io::Seek;
-        file.seek(std::io::SeekFrom::Start(range.start)).map_err(|source| SafetensorError::Io {
-            path: self.shard_path.clone(),
-            detail: source.to_string(),
-        })?;
-        file.read_exact(&mut buffer).map_err(|source| SafetensorError::Io {
-            path: self.shard_path.clone(),
-            detail: source.to_string(),
-        })?;
+        file.seek(std::io::SeekFrom::Start(range.start))
+            .map_err(|source| SafetensorError::Io {
+                path: self.shard_path.clone(),
+                detail: source.to_string(),
+            })?;
+        file.read_exact(&mut buffer)
+            .map_err(|source| SafetensorError::Io {
+                path: self.shard_path.clone(),
+                detail: source.to_string(),
+            })?;
         Ok(buffer)
     }
 
@@ -520,7 +567,9 @@ impl TransactionalCheckpoint {
 
     /// All verified tensors in canonical name order.
     pub fn tensors(&self) -> impl ExactSizeIterator<Item = (&str, &VerifiedTensorHandle)> {
-        self.tensors.iter().map(|(name, tensor)| (name.as_str(), tensor))
+        self.tensors
+            .iter()
+            .map(|(name, tensor)| (name.as_str(), tensor))
     }
 
     /// Shard handle by relative shard path.
@@ -536,16 +585,23 @@ impl TransactionalCheckpoint {
 
     /// Read tensor bytes by name.
     pub fn read_tensor(&self, name: &str) -> Result<Vec<u8>, SafetensorError> {
-        let handle = self.tensor(name).ok_or_else(|| SafetensorError::MissingRequiredTensor {
-            name: name.to_string(),
-        })?;
+        let handle = self
+            .tensor(name)
+            .ok_or_else(|| SafetensorError::MissingRequiredTensor {
+                name: name.to_string(),
+            })?;
         handle.read_bytes()
     }
     /// Obtain a transactional reader for one tensor by name.
-    pub fn tensor_reader(&self, name: &str) -> Result<TransactionalTensorReader<'_>, SafetensorError> {
-        let handle = self.tensor(name).ok_or_else(|| SafetensorError::MissingRequiredTensor {
-            name: name.to_string(),
-        })?;
+    pub fn tensor_reader(
+        &self,
+        name: &str,
+    ) -> Result<TransactionalTensorReader<'_>, SafetensorError> {
+        let handle = self
+            .tensor(name)
+            .ok_or_else(|| SafetensorError::MissingRequiredTensor {
+                name: name.to_string(),
+            })?;
         Ok(handle.reader())
     }
 }
@@ -759,9 +815,9 @@ impl ShardedSafetensorIndex {
         &self,
         expected: impl IntoIterator<Item = ExpectedShardDigest<'a>>,
     ) -> Result<VerifiedCheckpointIdentity, SafetensorError> {
-        self.verify_transactional(expected).map(|checkpoint| checkpoint.identity)
+        self.verify_transactional(expected)
+            .map(|checkpoint| checkpoint.identity)
     }
-
 
     /// Stream every complete shard through a fixed-size buffer, compare with
     /// trusted BLAKE3 digests, and return a [`TransactionalCheckpoint`] holding
@@ -820,10 +876,11 @@ impl ShardedSafetensorIndex {
                 });
             }
             use std::io::Seek;
-            file.seek(std::io::SeekFrom::Start(0)).map_err(|source| SafetensorError::Io {
-                path: index.path().to_path_buf(),
-                detail: source.to_string(),
-            })?;
+            file.seek(std::io::SeekFrom::Start(0))
+                .map_err(|source| SafetensorError::Io {
+                    path: index.path().to_path_buf(),
+                    detail: source.to_string(),
+                })?;
             let mut hasher = blake3::Hasher::new();
             let mut buffer = vec![0_u8; SHARD_VERIFY_BUFFER_BYTES];
             loop {
@@ -835,7 +892,7 @@ impl ShardedSafetensorIndex {
                     })?;
                 if read == 0 {
                     break;
-                 }
+                }
                 hasher.update(&buffer[..read]);
             }
             let actual_digest = *hasher.finalize().as_bytes();
@@ -1110,7 +1167,9 @@ pub enum SafetensorError {
         shard: PathBuf,
     },
     /// Resource content changed between verification and binding.
-    #[error("resource `{name}` in shard `{shard}` content changed between verification and binding")]
+    #[error(
+        "resource `{name}` in shard `{shard}` content changed between verification and binding"
+    )]
     ResourceContentModified {
         /// Resource / tensor name.
         name: String,

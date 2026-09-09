@@ -356,11 +356,12 @@ impl WgpuBackend {
             });
 
         let predicted = {
-            let mut history = self.shape_history.lock().map_err(|_| {
-                vyre_driver::BackendError::new(
-                    "wgpu shape-prediction history lock was poisoned. Fix: abort the current backend instance and reacquire the GPU backend.",
-                )
-            })?;
+            let mut history = vyre_driver::lock_policy::govern_mutex(
+                &self.shape_history,
+                "wgpu_backend",
+                "shape_history",
+                vyre_driver::lock_policy::RecoveryClass::TransactionallyRecoverable,
+            )?;
             history.record(fingerprint);
             self.predicted_programs
                 .retain(|candidate, _| history.contains(candidate));

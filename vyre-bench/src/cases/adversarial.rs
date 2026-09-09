@@ -6,7 +6,7 @@ use crate::api::suite::SuiteKind;
 use crate::cases::harness::{CaseOps, HarnessCase, WorkloadDescription};
 use crate::cases::reference_sample::timed_reference;
 use rand::{RngExt, SeedableRng};
-use vyre_foundation::ir::*;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Lanes, and so the element count of both buffers.
 const LANES: u32 = 1024;

@@ -3,8 +3,8 @@
 //! Produces replayable satisfiability, equality, bound, divisibility,
 //! and layout-compatibility proofs without embedding host `usize`.
 
-use rustc_hash::FxHashMap;
 use super::{ShapeConstraint, ShapeExprId, ShapeId, ShapeInterner, SymbolicDim};
+use rustc_hash::FxHashMap;
 
 /// Category of shape proof produced by the solver.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, serde::Deserialize, serde::Serialize)]
@@ -75,7 +75,8 @@ impl ShapeProofCertificate {
                 let Some(rhs) = self.rhs_shape else {
                     return false;
                 };
-                let (holds, _) = ShapeSolver::solve_layout_compatible(interner, self.lhs_shape, rhs);
+                let (holds, _) =
+                    ShapeSolver::solve_layout_compatible(interner, self.lhs_shape, rhs);
                 holds
             }
         }
@@ -139,7 +140,11 @@ impl ShapeSolver {
                 )
             }
             (Some(l), Some(r)) => {
-                steps.push(format!("Rank mismatch: lhs rank {} != rhs rank {}", l.len(), r.len()));
+                steps.push(format!(
+                    "Rank mismatch: lhs rank {} != rhs rank {}",
+                    l.len(),
+                    r.len()
+                ));
                 (
                     false,
                     ShapeProofCertificate {
@@ -174,7 +179,9 @@ impl ShapeSolver {
         dst: ShapeId,
     ) -> (bool, ShapeProofCertificate) {
         let mut steps = Vec::new();
-        steps.push(format!("Solving layout compatibility between {src:?} and {dst:?}"));
+        steps.push(format!(
+            "Solving layout compatibility between {src:?} and {dst:?}"
+        ));
 
         if src == dst {
             steps.push("Identical shape ID; layout is trivially compatible".into());
@@ -196,8 +203,12 @@ impl ShapeSolver {
 
         if let (Some(s), Some(d)) = (src_dims, dst_dims) {
             // Compute total volume expression for each
-            let src_vol = s.iter().fold(interner.constant(1), |acc, &dim| interner.mul(acc, dim));
-            let dst_vol = d.iter().fold(interner.constant(1), |acc, &dim| interner.mul(acc, dim));
+            let src_vol = s
+                .iter()
+                .fold(interner.constant(1), |acc, &dim| interner.mul(acc, dim));
+            let dst_vol = d
+                .iter()
+                .fold(interner.constant(1), |acc, &dim| interner.mul(acc, dim));
 
             if src_vol == dst_vol {
                 steps.push(format!("Total symbolic volume matches: {src_vol:?}"));
@@ -460,7 +471,9 @@ impl ShapeSolver {
                 }
                 if let Some(SymbolicDim::Constant(c)) = interner.get_expr(*expr) {
                     let ok = c % (*divisor as i128) == 0;
-                    steps.push(format!("Constant divisibility: {c} % {divisor} == 0 => {ok}"));
+                    steps.push(format!(
+                        "Constant divisibility: {c} % {divisor} == 0 => {ok}"
+                    ));
                     return (
                         ok,
                         ShapeProofCertificate {
@@ -476,7 +489,9 @@ impl ShapeSolver {
                 if let Some(e) = env {
                     if let Some(v) = Self::evaluate_expr(interner, *expr, e) {
                         let ok = v % (*divisor as i128) == 0;
-                        steps.push(format!("Valuation divisibility: {v} % {divisor} == 0 => {ok}"));
+                        steps.push(format!(
+                            "Valuation divisibility: {v} % {divisor} == 0 => {ok}"
+                        ));
                         return (
                             ok,
                             ShapeProofCertificate {
@@ -547,7 +562,11 @@ impl ShapeSolver {
                     },
                 )
             }
-            ShapeConstraint::ModuloEqual { expr, modulus, remainder } => {
+            ShapeConstraint::ModuloEqual {
+                expr,
+                modulus,
+                remainder,
+            } => {
                 if *modulus == 0 || *remainder >= *modulus {
                     steps.push("Invalid modulo parameters".into());
                     return (
@@ -564,7 +583,9 @@ impl ShapeSolver {
                 }
                 if let Some(SymbolicDim::Constant(c)) = interner.get_expr(*expr) {
                     let ok = (c % (*modulus as i128)) == (*remainder as i128);
-                    steps.push(format!("Constant mod equals: {c} % {modulus} == {remainder} => {ok}"));
+                    steps.push(format!(
+                        "Constant mod equals: {c} % {modulus} == {remainder} => {ok}"
+                    ));
                     return (
                         ok,
                         ShapeProofCertificate {
@@ -580,7 +601,9 @@ impl ShapeSolver {
                 if let Some(e) = env {
                     if let Some(v) = Self::evaluate_expr(interner, *expr, e) {
                         let ok = (v % (*modulus as i128)) == (*remainder as i128);
-                        steps.push(format!("Valuation mod equals: {v} % {modulus} == {remainder} => {ok}"));
+                        steps.push(format!(
+                            "Valuation mod equals: {v} % {modulus} == {remainder} => {ok}"
+                        ));
                         return (
                             ok,
                             ShapeProofCertificate {

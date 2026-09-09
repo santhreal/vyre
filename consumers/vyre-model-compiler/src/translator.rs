@@ -5,15 +5,13 @@
 //! compositions without target-specific templates or schedule hints.
 
 use thiserror::Error;
-use vyre_foundation::ir::{
+use vyre::ir::{
     BufferAccess, DataType, GraphInput, GraphOutput, GraphValueId,
     ProgramGraph, ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_libs::nn::{
     activation::{embedding_typed, residual_add_typed, swiglu_typed},
-    attention::mla_decode,
     linear::linear_rows_no_bias_out_in_typed,
-    moe::moe_layer_route_and_accumulate,
     norm::learned_rms_norm,
 };
 

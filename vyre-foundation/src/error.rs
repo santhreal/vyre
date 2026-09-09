@@ -275,13 +275,15 @@ impl IrError {
                     code: DiagnosticCode::new("IRC005_INLINE_NO_OUTPUT"),
                     stage: DiagnosticStage::Optimize,
                     compiler_level: Some(CompilerLevel::Optimizer),
-                    message: format!("IR inlining found no output write for operation `{op_id}`").into(),
+                    message: format!("IR inlining found no output write for operation `{op_id}`")
+                        .into(),
                     location: Some(OpLocation::op(op_id.clone())),
                     artifact_id: None,
                     target: None,
                     device: None,
                     suggested_fix: Some(
-                        "ensure the op's program() body writes to its output buffer at least once".into(),
+                        "ensure the op's program() body writes to its output buffer at least once"
+                            .into(),
                     ),
                     cause: Some(cause.clone()),
                     cause_chain: vec![cause],
@@ -560,4 +562,3 @@ mod tests {
         assert!(msg.contains("got 1"));
     }
 }
-

@@ -10,7 +10,6 @@ use crate::{
     plumbing::operand::tensor_ref::{TensorRef, TensorRefError},
 };
 
-
 pub(super) const LINEAR_OP_ID: &str = "vyre-libs::nn::linear";
 /// Typed Cat-A builder for [`linear`].
 #[derive(Debug, Clone)]
@@ -144,7 +143,6 @@ pub fn linear(
     in_dim: u32,
     out_dim: u32,
 ) -> Result<Program, String> {
-
     Linear::new(
         TensorRef::u32_1d(x, in_dim),
         TensorRef::u32_2d(w, in_dim, out_dim),

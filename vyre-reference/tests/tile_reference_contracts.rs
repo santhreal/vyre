@@ -242,13 +242,7 @@ fn reference_eval_tile_elementwise_broadcast_per_row_and_rejection() {
                 vec![Expr::u32(0), Expr::u32(0)],
                 Layout::RowMajor,
             ),
-            Node::tile_load(
-                "t_b",
-                tile_b,
-                "b",
-                vec![Expr::u32(0)],
-                Layout::RowMajor,
-            ),
+            Node::tile_load("t_b", tile_b, "b", vec![Expr::u32(0)], Layout::RowMajor),
             Node::tile_elementwise(
                 "sum",
                 vec![

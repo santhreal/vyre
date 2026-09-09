@@ -164,6 +164,9 @@ pub mod reference_eval_fma_select_generated;
 /// Integration tests from `tests/reference_output_byte_stability.rs`.
 #[path = "reference_output_byte_stability.rs"]
 pub mod reference_output_byte_stability;
+/// Integration tests from `tests/reference_strictness_and_budget_contracts.rs`.
+#[path = "reference_strictness_and_budget_contracts.rs"]
+pub mod reference_strictness_and_budget_contracts;
 
 /// Integration tests from `tests/region_frame_lifetime.rs`.
 #[path = "region_frame_lifetime.rs"]

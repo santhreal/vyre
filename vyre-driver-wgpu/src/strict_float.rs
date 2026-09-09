@@ -176,27 +176,27 @@ fn measure(backend: &WgpuBackend) -> Verdict {
 /// admission check reads never changes between two calls.
 fn verdict(backend: &WgpuBackend) -> Verdict {
     let key = AdapterIdentity::from_info(&backend.adapter_info);
-    {
-        let verdicts = match VERDICTS.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => {
-                let mut guard = poisoned.into_inner();
-                guard.clear();
-                guard
-            }
-        };
+    if let Ok(verdicts) = vyre_driver::lock_policy::govern_mutex_with_reset(
+        &VERDICTS,
+        "wgpu_strict_float",
+        "VERDICTS",
+        vyre_driver::lock_policy::RecoveryClass::RestartableFromCanonicalInput,
+        |guard| guard.clear(),
+    ) {
         if let Some(known) = verdicts.get(&key) {
             return known.clone();
         }
     }
     let measured = measure(backend);
-    let mut verdicts = match VERDICTS.lock() {
+    let mut verdicts = match vyre_driver::lock_policy::govern_mutex_with_reset(
+        &VERDICTS,
+        "wgpu_strict_float",
+        "VERDICTS",
+        vyre_driver::lock_policy::RecoveryClass::RestartableFromCanonicalInput,
+        |guard| guard.clear(),
+    ) {
         Ok(guard) => guard,
-        Err(poisoned) => {
-            let mut guard = poisoned.into_inner();
-            guard.clear();
-            guard
-        }
+        Err(_) => return measured,
     };
     verdicts.entry(key).or_insert(measured).clone()
 }

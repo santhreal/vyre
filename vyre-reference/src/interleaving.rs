@@ -189,7 +189,8 @@ pub fn explore_bounded_interleavings(
     config: &InterleavingConfig,
 ) -> Result<InterleavingReport, ReferenceError> {
     let mut shadow = ShadowMemory::new();
-    let num_invocations = (config.workgroup_size[0] * config.workgroup_size[1] * config.workgroup_size[2]) as usize;
+    let num_invocations =
+        (config.workgroup_size[0] * config.workgroup_size[1] * config.workgroup_size[2]) as usize;
 
     let mut invocations = Vec::with_capacity(num_invocations);
     for z in 0..config.workgroup_size[2] {
@@ -207,7 +208,13 @@ pub fn explore_bounded_interleavings(
     let mut reversed_invocations = invocations.clone();
     reversed_invocations.reverse();
     let mut shadow_rev = ShadowMemory::new();
-    simulate_schedule(program, inputs, &reversed_invocations, &mut shadow_rev, false)?;
+    simulate_schedule(
+        program,
+        inputs,
+        &reversed_invocations,
+        &mut shadow_rev,
+        false,
+    )?;
 
     // Schedule 3: Interleaved barrier-step execution
     let mut shadow_interleaved = ShadowMemory::new();
@@ -259,7 +266,9 @@ fn walk_and_check_nodes(
                 let exec_scope = ordering.execution_scope();
                 shadow.advance_barrier_phase(exec_scope);
             }
-            Node::If { then, otherwise, .. } => {
+            Node::If {
+                then, otherwise, ..
+            } => {
                 walk_and_check_nodes(then, invocations, shadow)?;
                 walk_and_check_nodes(otherwise, invocations, shadow)?;
             }

@@ -75,8 +75,10 @@ pub(crate) fn merge_certificates(args: impl IntoIterator<Item = String>) -> Resu
         merge_hasher.update(shard.artifact.program_hash.as_bytes());
         merge_hasher.update(shard.artifact.plan.execution_hash.as_bytes());
         source_hashes.push(shard.artifact.program_hash.clone());
-        witness_case_count = witness_case_count.saturating_add(shard.artifact.plan.witness_case_count);
-        universe_backend_count = universe_backend_count.max(shard.artifact.plan.selection.universe_backend_count);
+        witness_case_count =
+            witness_case_count.saturating_add(shard.artifact.plan.witness_case_count);
+        universe_backend_count =
+            universe_backend_count.max(shard.artifact.plan.selection.universe_backend_count);
         universe_op_count = universe_op_count.max(shard.artifact.plan.selection.universe_op_count);
 
         if shard.artifact.pairs.len() != shard.artifact.plan.pair_count {
@@ -106,7 +108,9 @@ pub(crate) fn merge_certificates(args: impl IntoIterator<Item = String>) -> Resu
         }
 
         for law in shard.artifact.laws {
-            if let Some(existing) = law_map.insert((law.op_id.clone(), law.law.clone()), law.clone()) {
+            if let Some(existing) =
+                law_map.insert((law.op_id.clone(), law.law.clone()), law.clone())
+            {
                 if existing != law {
                     return Err(format!(
                         "merge refused law ({}, {}) from `{}`: shards disagree about its proof. Fix: re-run prove on one registry revision.",

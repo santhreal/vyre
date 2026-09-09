@@ -384,7 +384,10 @@ fn test_external_schema_adversarial_rejections() {
     };
     let err = validate_external_node(&overflowing_field_node)
         .expect_err("overflowing field value must be rejected");
-    assert!(matches!(err, SchemaTranslationError::OverflowingField { .. }));
+    assert!(matches!(
+        err,
+        SchemaTranslationError::OverflowingField { .. }
+    ));
     assert!(err.to_string().contains("Fix:"));
 
     // Complete external schema with unused declared resource
@@ -410,12 +413,9 @@ fn test_external_schema_adversarial_rejections() {
         ],
         declared_layouts: vec![],
     };
-    let err = validate_external_schema(
-        "vyre-unit::dialect",
-        &unused_res_schema,
-        3,
-        |node| validate_external_node(node).map(|_| ()),
-    )
+    let err = validate_external_schema("vyre-unit::dialect", &unused_res_schema, 3, |node| {
+        validate_external_node(node).map(|_| ())
+    })
     .expect_err("unused declared resource must be rejected");
     assert!(matches!(err, SchemaTranslationError::UnusedResource { .. }));
     assert!(err.to_string().contains("Fix:"));
@@ -447,7 +447,10 @@ fn test_external_schema_adversarial_rejections() {
         |node| validate_external_node(node).map(|_| ()),
     )
     .expect_err("overflowing layout must be rejected");
-    assert!(matches!(err, SchemaTranslationError::OverflowingLayout { .. }));
+    assert!(matches!(
+        err,
+        SchemaTranslationError::OverflowingLayout { .. }
+    ));
     assert!(err.to_string().contains("Fix:"));
 
     // Complete external schema with incompatible layout element type
@@ -477,7 +480,10 @@ fn test_external_schema_adversarial_rejections() {
         |node| validate_external_node(node).map(|_| ()),
     )
     .expect_err("incompatible layout element type must be rejected");
-    assert!(matches!(err, SchemaTranslationError::IncompatibleLayout { .. }));
+    assert!(matches!(
+        err,
+        SchemaTranslationError::IncompatibleLayout { .. }
+    ));
     assert!(err.to_string().contains("Fix:"));
 
     // Valid complete external schema
@@ -500,12 +506,9 @@ fn test_external_schema_adversarial_rejections() {
             alignment: 16,
         }],
     };
-    let bound = validate_external_schema(
-        "vyre-unit::dialect",
-        &valid_schema,
-        3,
-        |node| validate_external_node(node).map(|_| ()),
-    )
+    let bound = validate_external_schema("vyre-unit::dialect", &valid_schema, 3, |node| {
+        validate_external_node(node).map(|_| ())
+    })
     .expect("valid complete schema must pass validation");
     assert!(bound.contains("scratch_buf"));
 

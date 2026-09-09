@@ -443,7 +443,11 @@ fn declarations(text: &str) -> Vec<Declaration> {
                     for attr in &item_mod.attrs {
                         if attr.path().is_ident("path") {
                             if let syn::Meta::NameValue(nv) = &attr.meta {
-                                if let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(s), .. }) = &nv.value {
+                                if let syn::Expr::Lit(syn::ExprLit {
+                                    lit: syn::Lit::Str(s),
+                                    ..
+                                }) = &nv.value
+                                {
                                     explicit_path = Some(s.value());
                                 }
                             }

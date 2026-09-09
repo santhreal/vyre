@@ -562,7 +562,11 @@ fn cycle_findings(state: &WorkspaceState) -> Vec<Finding> {
     for (package, destinations) in &state.dependencies {
         let entry = adjacency.entry(package.as_str()).or_default();
         for (destination, use_) in destinations {
-            if use_.kinds.iter().any(|kind| kind == "normal" || kind == "build") {
+            if use_
+                .kinds
+                .iter()
+                .any(|kind| kind == "normal" || kind == "build")
+            {
                 entry.push(destination.as_str());
             }
         }
@@ -604,7 +608,8 @@ fn cycle_findings(state: &WorkspaceState) -> Vec<Finding> {
                                 canonical.push(item.to_string());
                             }
                             if reported.insert(canonical.clone()) {
-                                let cycle_str = format!("{} -> {}", canonical.join(" -> "), canonical[0]);
+                                let cycle_str =
+                                    format!("{} -> {}", canonical.join(" -> "), canonical[0]);
                                 findings.push(Finding::in_file(
                                     REGISTRY,
                                     format!("dependency cycle detected: {cycle_str}"),
@@ -626,7 +631,14 @@ fn cycle_findings(state: &WorkspaceState) -> Vec<Finding> {
 
     for package in state.paths.keys() {
         if visit_state.get(package.as_str()).copied().unwrap_or(0) == 0 {
-            dfs(package.as_str(), &adjacency, &mut visit_state, &mut path, &mut reported, &mut findings);
+            dfs(
+                package.as_str(),
+                &adjacency,
+                &mut visit_state,
+                &mut path,
+                &mut reported,
+                &mut findings,
+            );
         }
     }
 
@@ -1462,7 +1474,10 @@ mod tests {
             members: vec!["vyre-bench".to_string(), "vyre-driver-cuda".to_string()],
             paths: BTreeMap::from([
                 ("vyre-bench".to_string(), "vyre-bench".to_string()),
-                ("vyre-driver-cuda".to_string(), "vyre-driver-cuda".to_string()),
+                (
+                    "vyre-driver-cuda".to_string(),
+                    "vyre-driver-cuda".to_string(),
+                ),
             ]),
             dependencies: BTreeMap::from([
                 (
@@ -1500,7 +1515,9 @@ mod tests {
         state.dependencies.get_mut("vyre-bench").unwrap().clear();
         let findings = contract_findings(&state, &records);
         assert_eq!(findings.len(), 1, "{findings:?}");
-        assert!(findings[0].message.contains("declares a record for `vyre-driver-cuda` and no manifest edge resolves to it"));
+        assert!(findings[0].message.contains(
+            "declares a record for `vyre-driver-cuda` and no manifest edge resolves to it"
+        ));
     }
 
     /// WHY: when a manifest adds an internal dependency not in the registry,
@@ -1511,7 +1528,9 @@ mod tests {
         records[0].dependencies.clear();
         let findings = contract_findings(&state, &records);
         assert_eq!(findings.len(), 1, "{findings:?}");
-        assert!(findings[0].message.contains("depends on `vyre-driver-cuda` and declares no record for it"));
+        assert!(findings[0]
+            .message
+            .contains("depends on `vyre-driver-cuda` and declares no record for it"));
     }
 
     /// WHY: mismatched dependency attributes (features, conditions, kinds, optional, default_features)
@@ -1523,8 +1542,12 @@ mod tests {
         records[0].dependencies[0].optional = true;
         let findings = contract_findings(&state, &records);
         assert_eq!(findings.len(), 2, "{findings:?}");
-        assert!(findings.iter().any(|f| f.message.contains("declares conditions `always`")));
-        assert!(findings.iter().any(|f| f.message.contains("declares optional `true`")));
+        assert!(findings
+            .iter()
+            .any(|f| f.message.contains("declares conditions `always`")));
+        assert!(findings
+            .iter()
+            .any(|f| f.message.contains("declares optional `true`")));
     }
 
     /// WHY: declaring a seam that does not match the destination crate's owner
@@ -1535,7 +1558,9 @@ mod tests {
         records[0].dependencies[0].seam = "wrong-seam".to_string();
         let findings = contract_findings(&state, &records);
         assert_eq!(findings.len(), 1, "{findings:?}");
-        assert!(findings[0].message.contains("declares seam `wrong-seam` and the destination owner is `cuda-driver`"));
+        assert!(findings[0]
+            .message
+            .contains("declares seam `wrong-seam` and the destination owner is `cuda-driver`"));
     }
     /// WHY: internal production dependency cycles (including intra-layer cycles)
     /// must fail closed with a finding naming the exact cycle path.
@@ -1543,7 +1568,10 @@ mod tests {
     fn dependency_cycle_is_a_finding() {
         let state = WorkspaceState {
             members: vec!["a".to_string(), "b".to_string()],
-            paths: BTreeMap::from([("a".to_string(), "a".to_string()), ("b".to_string(), "b".to_string())]),
+            paths: BTreeMap::from([
+                ("a".to_string(), "a".to_string()),
+                ("b".to_string(), "b".to_string()),
+            ]),
             dependencies: BTreeMap::from([
                 (
                     "a".to_string(),
@@ -1569,7 +1597,9 @@ mod tests {
         };
         let findings = cycle_findings(&state);
         assert_eq!(findings.len(), 1, "{findings:?}");
-        assert!(findings[0].message.contains("dependency cycle detected: a -> b -> a"));
+        assert!(findings[0]
+            .message
+            .contains("dependency cycle detected: a -> b -> a"));
     }
 
     /// WHY: a feature inherited from workspace dependencies or feature unification
@@ -1580,7 +1610,9 @@ mod tests {
         records[0].dependencies[0].features = vec!["unregistered-feature".to_string()];
         let findings = contract_findings(&state, &records);
         assert_eq!(findings.len(), 1, "{findings:?}");
-        assert!(findings[0].message.contains("declares features `unregistered-feature` and cargo resolves ``"));
+        assert!(findings[0]
+            .message
+            .contains("declares features `unregistered-feature` and cargo resolves ``"));
     }
 
     /// WHY: declaring normal dependency kind when cargo resolves build (or vice-versa)
@@ -1591,7 +1623,9 @@ mod tests {
         records[0].dependencies[0].kinds = vec!["build".to_string()];
         let findings = contract_findings(&state, &records);
         assert_eq!(findings.len(), 1, "{findings:?}");
-        assert!(findings[0].message.contains("declares kinds `build` and cargo resolves `normal`"));
+        assert!(findings[0]
+            .message
+            .contains("declares kinds `build` and cargo resolves `normal`"));
     }
 
     /// WHY: a lower layer (e.g. foundation, rank 0) depending on facade (rank 6)

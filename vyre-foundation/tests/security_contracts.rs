@@ -15,11 +15,18 @@ fn capability_authenticator_validates_legitimate_handle() {
     permissions.insert(Permission::CompileProgram);
     permissions.insert(Permission::SubmitWork);
 
-    let handle = authenticator.issue_handle(tenant_id, device_id, resource_id, generation, permissions);
+    let handle =
+        authenticator.issue_handle(tenant_id, device_id, resource_id, generation, permissions);
 
     // Legitimate validation must succeed
     assert!(authenticator
-        .validate_handle(&handle, tenant_id, device_id, generation, &Permission::SubmitWork)
+        .validate_handle(
+            &handle,
+            tenant_id,
+            device_id,
+            generation,
+            &Permission::SubmitWork
+        )
         .is_ok());
 }
 
@@ -34,7 +41,8 @@ fn handle_forgery_is_detected_and_rejected() {
     let mut permissions = BTreeSet::new();
     permissions.insert(Permission::CompileProgram);
 
-    let mut handle = authenticator.issue_handle(tenant_id, device_id, resource_id, generation, permissions);
+    let mut handle =
+        authenticator.issue_handle(tenant_id, device_id, resource_id, generation, permissions);
 
     // Adversarial modification: forge extra permission
     handle.permissions.insert(Permission::SubmitWork);
@@ -61,7 +69,8 @@ fn stale_generation_is_rejected_on_resource_reuse() {
     let mut permissions = BTreeSet::new();
     permissions.insert(Permission::ReadbackMemory);
 
-    let handle_gen1 = authenticator.issue_handle(tenant_id, device_id, resource_id, gen1, permissions);
+    let handle_gen1 =
+        authenticator.issue_handle(tenant_id, device_id, resource_id, gen1, permissions);
 
     // Device advanced generation to gen2, handle_gen1 presented
     let result = authenticator.validate_handle(
@@ -92,7 +101,8 @@ fn cross_tenant_presentation_is_rejected() {
     let mut permissions = BTreeSet::new();
     permissions.insert(Permission::AllocateBuffer);
 
-    let handle_a = authenticator.issue_handle(tenant_a, device_id, resource_id, generation, permissions);
+    let handle_a =
+        authenticator.issue_handle(tenant_a, device_id, resource_id, generation, permissions);
 
     // Tenant B attempts to use Tenant A's handle
     let result = authenticator.validate_handle(
@@ -144,8 +154,10 @@ fn tenant_cache_namespace_partitions_keys() {
     let tenant_2 = TenantId::new(102);
     let raw_key = b"kernel_sha256_hash_12345";
 
-    let key_t1 = TenantCacheNamespace::derive_key(tenant_1, ConfidentialityLevel::Confidential, raw_key);
-    let key_t2 = TenantCacheNamespace::derive_key(tenant_2, ConfidentialityLevel::Confidential, raw_key);
+    let key_t1 =
+        TenantCacheNamespace::derive_key(tenant_1, ConfidentialityLevel::Confidential, raw_key);
+    let key_t2 =
+        TenantCacheNamespace::derive_key(tenant_2, ConfidentialityLevel::Confidential, raw_key);
 
     assert_ne!(key_t1, key_t2);
 }
@@ -167,14 +179,18 @@ fn compilation_quota_enforcer_bounds_untrusted_workloads() {
     }
     // 11th node must exceed quota
     let err = enforcer.increment_node_count().unwrap_err();
-    assert!(matches!(err, SecurityError::QuotaExceeded { ref resource, .. } if resource == "ir_nodes"));
+    assert!(
+        matches!(err, SecurityError::QuotaExceeded { ref resource, .. } if resource == "ir_nodes")
+    );
 
     // Exceed depth
     assert!(enforcer.enter_scope().is_ok()); // 1
     assert!(enforcer.enter_scope().is_ok()); // 2
     assert!(enforcer.enter_scope().is_ok()); // 3
     let depth_err = enforcer.enter_scope().unwrap_err(); // 4 > 3
-    assert!(matches!(depth_err, SecurityError::QuotaExceeded { ref resource, .. } if resource == "ast_depth"));
+    assert!(
+        matches!(depth_err, SecurityError::QuotaExceeded { ref resource, .. } if resource == "ast_depth")
+    );
 }
 
 #[test]

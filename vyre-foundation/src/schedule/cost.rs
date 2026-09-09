@@ -1,7 +1,7 @@
 //! Cost modeling and multi-objective performance estimation for schedules.
 
-use serde::{Deserialize, Serialize};
 use super::tree::{ScheduleOp, SchedulePlan, ScheduleTree};
+use serde::{Deserialize, Serialize};
 
 /// Detailed multi-dimensional cost record for a schedule plan.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -61,10 +61,16 @@ impl ScheduleCostModel {
     pub fn evaluate(&self, plan: &SchedulePlan) -> ScheduleCostRecord {
         let mut traffic = plan.resource_bounds.logical_points * 4; // base traffic estimate
         let mut shared_penalty = 0.0;
-        let mut estimated_cycles = plan.resource_bounds.logical_points / (self.subgroup_size as u64).max(1);
+        let mut estimated_cycles =
+            plan.resource_bounds.logical_points / (self.subgroup_size as u64).max(1);
 
         // Traverse tree to refine estimates
-        self.evaluate_tree(&plan.root, &mut traffic, &mut shared_penalty, &mut estimated_cycles);
+        self.evaluate_tree(
+            &plan.root,
+            &mut traffic,
+            &mut shared_penalty,
+            &mut estimated_cycles,
+        );
 
         let reg_score = if self.max_registers_per_thread > 0 {
             (plan.resource_bounds.registers_per_invocation as f64)

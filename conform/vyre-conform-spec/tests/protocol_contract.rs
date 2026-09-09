@@ -35,8 +35,7 @@ fn device_lease_serialization_round_trip() {
         "tok-abcdef123456",
     );
     let serialized = serde_json::to_string(&lease).expect("serialize lease");
-    let deserialized: DeviceLease =
-        serde_json::from_str(&serialized).expect("deserialize lease");
+    let deserialized: DeviceLease = serde_json::from_str(&serialized).expect("deserialize lease");
     assert_eq!(lease, deserialized);
 }
 
@@ -92,8 +91,13 @@ fn content_addressed_case_payload_is_deterministic_and_distinct() {
     let case2_diff_op = CasePayload::new("op.sub", wire1.clone(), inputs1.clone(), policy1, None);
     assert_ne!(case1_a.case_id, case2_diff_op.case_id);
 
-    let case3_diff_inputs =
-        CasePayload::new("op.add", wire1.clone(), vec![vec![10, 21], vec![30, 40]], policy1, None);
+    let case3_diff_inputs = CasePayload::new(
+        "op.add",
+        wire1.clone(),
+        vec![vec![10, 21], vec![30, 40]],
+        policy1,
+        None,
+    );
     assert_ne!(case1_a.case_id, case3_diff_inputs.case_id);
 
     let case4_diff_policy = CasePayload::new(
@@ -105,13 +109,8 @@ fn content_addressed_case_payload_is_deterministic_and_distinct() {
     );
     assert_ne!(case1_a.case_id, case4_diff_policy.case_id);
 
-    let case5_diff_schedule = CasePayload::new(
-        "op.add",
-        wire1,
-        inputs1,
-        policy1,
-        Some("tiled".to_string()),
-    );
+    let case5_diff_schedule =
+        CasePayload::new("op.add", wire1, inputs1, policy1, Some("tiled".to_string()));
     assert_ne!(case1_a.case_id, case5_diff_schedule.case_id);
 }
 

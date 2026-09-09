@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use vyre_foundation::ir::{Program, ProgramGraph, ValueLifetime};
+use vyre_foundation::ir::{BufferAccess, Program, ProgramGraph, ValueLifetime};
 
 use crate::candidate::{CandidatePlan, ExecutionTopology, ResidentPartitionMode};
 use crate::dependency_order::group_stages;
@@ -27,6 +27,14 @@ pub enum FusionRejectionReason {
     SynchronizationBoundary,
     /// Contracting the proposed group would create a dependency cycle.
     DependencyCycle,
+    /// Iteration spaces have incompatible ranks, extents, or tiling shapes.
+    IncompatibleIterationSpace,
+    /// Required workgroup shared memory exceeds target or adapter budget.
+    ExcessiveSharedMemory,
+    /// Register pressure of the fused kernel exceeds hardware bounds.
+    ExcessiveRegisters,
+    /// The geometry semantics or invocation guards explicitly conflict.
+    GenuinelyIllegalGeometry,
 }
 
 impl FusionRejectionReason {
@@ -41,6 +49,10 @@ impl FusionRejectionReason {
             Self::WorkgroupMismatch => "MKL005_WORKGROUP_MISMATCH",
             Self::SynchronizationBoundary => "MKL006_SYNCHRONIZATION_BOUNDARY",
             Self::DependencyCycle => "MKL007_DEPENDENCY_CYCLE",
+            Self::IncompatibleIterationSpace => "MKL008_INCOMPATIBLE_ITERATION_SPACE",
+            Self::ExcessiveSharedMemory => "MKL009_EXCESSIVE_SHARED_MEMORY",
+            Self::ExcessiveRegisters => "MKL010_EXCESSIVE_REGISTERS",
+            Self::GenuinelyIllegalGeometry => "MKL011_GENUINELY_ILLEGAL_GEOMETRY",
         }
     }
 }
@@ -404,13 +416,27 @@ pub fn analyze_fusion_pair(
     if value.consumers.len() != 1 {
         return FusionDecision::Rejected(FusionRejectionReason::MultipleConsumers);
     }
-    let pinned =
-        pins_workgroup_geometry(&producer.program) || pins_workgroup_geometry(&consumer.program);
+    let prod_pinned = pins_workgroup_geometry(&producer.program);
+    let cons_pinned = pins_workgroup_geometry(&consumer.program);
     if producer.program.workgroup_size != consumer.program.workgroup_size {
-        if pinned {
-            return FusionDecision::Rejected(FusionRejectionReason::SynchronizationBoundary);
+        if prod_pinned || cons_pinned {
+            if producer.program.stats().has_node_barrier()
+                || consumer.program.stats().has_node_barrier()
+                || producer
+                    .program
+                    .buffers()
+                    .iter()
+                    .any(|b| b.access() == BufferAccess::Workgroup)
+                || consumer
+                    .program
+                    .buffers()
+                    .iter()
+                    .any(|b| b.access() == BufferAccess::Workgroup)
+            {
+                return FusionDecision::Rejected(FusionRejectionReason::SynchronizationBoundary);
+            }
+            return FusionDecision::Rejected(FusionRejectionReason::WorkgroupMismatch);
         }
-        return FusionDecision::Rejected(FusionRejectionReason::WorkgroupMismatch);
     }
     FusionDecision::Legal
 }

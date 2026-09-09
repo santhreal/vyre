@@ -112,6 +112,11 @@ pub mod cat_a_gpu_differential;
 #[path = "cli_contract.rs"]
 pub mod cli_contract;
 
+/// Integration tests from `tests/connected_graph_wgpu_contracts.rs`.
+#[cfg(all(test, feature = "device-tests"))]
+#[path = "connected_graph_wgpu_contracts.rs"]
+pub mod connected_graph_wgpu_contracts;
+
 /// Integration tests from `tests/crc32_gpu_parity.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "crc32_gpu_parity.rs"]
@@ -186,7 +191,6 @@ pub mod dispatch_preemption;
 pub mod div_zero_shift_mask_parity;
 
 /// Integration tests from `tests/emitted_wgsl_byte_stability.rs`.
-#[cfg(feature = "device-tests")]
 #[path = "emitted_wgsl_byte_stability.rs"]
 pub mod emitted_wgsl_byte_stability;
 
@@ -508,6 +512,9 @@ pub mod wgpu_subgroup_scan_plan_registry;
 #[path = "wgsl_scan_uniformity_certificates.rs"]
 pub mod wgsl_scan_uniformity_certificates;
 
+/// Integration tests from `tests/external_resource_wgpu_contracts.rs` (Row 111).
+#[path = "external_resource_wgpu_contracts.rs"]
+pub mod external_resource_wgpu_contracts;
 /// Integration tests from `tests/widening_cast_64_parity.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "widening_cast_64_parity.rs"]

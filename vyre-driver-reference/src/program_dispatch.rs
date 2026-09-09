@@ -10,7 +10,6 @@ use vyre_megakernel::{
 };
 use vyre_reference::value::Value;
 
-
 pub(crate) const REFERENCE_TARGET_FORMAT: &str = "reference-graph";
 /// Payload format version the reference dialect emits and admits.
 pub(crate) const REFERENCE_TARGET_FORMAT_VERSION: u16 = 1;

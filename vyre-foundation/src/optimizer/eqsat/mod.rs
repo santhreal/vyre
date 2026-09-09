@@ -279,7 +279,6 @@ pub struct SaturationReport {
     pub rebuild_unions: usize,
 }
 
-
 /// One family's saturation result: how many iterations were spent in
 /// that family's [`saturate`] call.
 #[derive(Debug, Clone, PartialEq, Eq)]

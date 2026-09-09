@@ -12,8 +12,8 @@ use vyre_libs::reasoning::do_calculus_change_impact::{
     ImpactedLineageProjectionScratch,
 };
 #[cfg(feature = "libs-compositions")]
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
-
+use vyre_megakernel::SemanticExecutionError;
+use vyre_megakernel::{SemanticExecutionPolicy, SemanticExecutor};
 /// Error raised by GPU-resident cache invalidation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CacheInvalidationError {
@@ -60,8 +60,8 @@ pub struct CacheInvalidationScratch {
 /// explicitly disable `libs-compositions` fail loudly instead of running
 /// a hidden reference cache-invalidation path.
 pub fn impacted_entries_into(
-    #[cfg(feature = "libs-compositions")] executor: &dyn SemanticExecutor,
-    #[cfg(feature = "libs-compositions")] policy: &SemanticExecutionPolicy,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     intervention_mask: &[u32],
     rule_adj: &[u32],
     state: &[u32],
@@ -75,6 +75,8 @@ pub fn impacted_entries_into(
     #[cfg(not(feature = "libs-compositions"))]
     {
         let _ = (
+            executor,
+            policy,
             intervention_mask,
             rule_adj,
             state,
@@ -178,8 +180,8 @@ pub fn impacted_entries_into(
 /// Compute a 0/1 impact mask using temporary scratch.
 #[must_use]
 pub fn impacted_entries(
-    #[cfg(feature = "libs-compositions")] executor: &dyn SemanticExecutor,
-    #[cfg(feature = "libs-compositions")] policy: &SemanticExecutionPolicy,
+    executor: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
     intervention_mask: &[u32],
     rule_adj: &[u32],
     state: &[u32],
@@ -191,9 +193,7 @@ pub fn impacted_entries(
     let mut out = reserved_impact_mask(lineage_cells.len())?;
     let mut scratch = CacheInvalidationScratch::default();
     impacted_entries_into(
-        #[cfg(feature = "libs-compositions")]
         executor,
-        #[cfg(feature = "libs-compositions")]
         policy,
         intervention_mask,
         rule_adj,

@@ -52,7 +52,11 @@ fn sample_optimizable_program() -> Program {
         vec![
             Node::let_bind("c1", Expr::add(Expr::u32(10), Expr::u32(20))),
             Node::let_bind("c2", Expr::add(Expr::u32(10), Expr::u32(20))),
-            Node::store("dst", Expr::u32(0), Expr::add(Expr::var("c1"), Expr::var("c2"))),
+            Node::store(
+                "dst",
+                Expr::u32(0),
+                Expr::add(Expr::var("c1"), Expr::var("c2")),
+            ),
         ],
     )
 }
@@ -67,7 +71,11 @@ fn bounded_compilation_cpu_steps_overrun_reported_as_refusal_with_budget_in_mess
     let result = scheduler.run(program);
 
     match result {
-        Err(OptimizerError::BudgetExceeded { resource, budget, consumed }) => {
+        Err(OptimizerError::BudgetExceeded {
+            resource,
+            budget,
+            consumed,
+        }) => {
             assert_eq!(resource, "cpu_steps");
             assert_eq!(budget, 0);
             assert!(consumed > 0);
@@ -102,7 +110,11 @@ fn bounded_compilation_transform_steps_overrun_reported_as_refusal_with_budget_i
     let result = scheduler.run(program);
 
     match result {
-        Err(OptimizerError::BudgetExceeded { resource, budget, consumed }) => {
+        Err(OptimizerError::BudgetExceeded {
+            resource,
+            budget,
+            consumed,
+        }) => {
             assert_eq!(resource, "transform_steps");
             assert_eq!(budget, 0);
             assert!(consumed > 0);
@@ -137,7 +149,11 @@ fn bounded_compilation_code_size_overrun_reported_as_refusal_with_budget_in_mess
     let result = scheduler.run(program);
 
     match result {
-        Err(OptimizerError::BudgetExceeded { resource, budget, consumed }) => {
+        Err(OptimizerError::BudgetExceeded {
+            resource,
+            budget,
+            consumed,
+        }) => {
             assert_eq!(resource, "code_size");
             assert_eq!(budget, 1);
             let msg = format!(
@@ -167,7 +183,11 @@ fn bounded_compilation_memory_bytes_overrun_reported_as_refusal_with_budget_in_m
     let result = scheduler.run(program);
 
     match result {
-        Err(OptimizerError::BudgetExceeded { resource, budget, consumed }) => {
+        Err(OptimizerError::BudgetExceeded {
+            resource,
+            budget,
+            consumed,
+        }) => {
             assert_eq!(resource, "memory_bytes");
             assert_eq!(budget, 1);
             let msg = format!(
@@ -375,7 +395,13 @@ fn structural_sharing_canonicalization_deduplicates_independent_copies() {
     // After canonicalization: all 4 share the same Arc pointers
     let nodes = graph.nodes();
     for i in 1..4 {
-        assert!(Arc::ptr_eq(&nodes[0].program.entry, &nodes[i].program.entry));
-        assert!(Arc::ptr_eq(&nodes[0].program.buffers, &nodes[i].program.buffers));
+        assert!(Arc::ptr_eq(
+            &nodes[0].program.entry,
+            &nodes[i].program.entry
+        ));
+        assert!(Arc::ptr_eq(
+            &nodes[0].program.buffers,
+            &nodes[i].program.buffers
+        ));
     }
 }

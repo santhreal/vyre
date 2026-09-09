@@ -37,19 +37,6 @@ pub mod moe;
 #[cfg(any(feature = "nn-linear", feature = "nn-norm"))]
 pub(crate) mod rms;
 
-#[cfg(feature = "nn-norm")]
-#[cfg(any(
-    feature = "nn-inference",
-    all(
-        feature = "nn-activation",
-        feature = "nn-linear",
-        feature = "nn-norm",
-        feature = "nn-attention",
-        feature = "nn-moe"
-    )
-))]
-pub mod inference_graph;
-
 #[cfg(feature = "nn-inference")]
 pub mod model;
 

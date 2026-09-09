@@ -20,7 +20,11 @@ fn hostile_input_closure_rejects_missing_and_extra_inputs() {
             BufferDecl::output("out", 1, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::load("in", Expr::u32(0)))],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::load("in", Expr::u32(0)),
+        )],
     );
 
     // Missing input

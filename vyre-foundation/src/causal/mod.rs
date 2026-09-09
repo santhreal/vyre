@@ -11,7 +11,9 @@ pub(crate) mod phase;
 pub(crate) mod receipt;
 pub(crate) mod tracer;
 
-pub use event::{AlternativeSchedule, CacheHitRecord, CausalEvent, CounterfactualDecision, PruneReason};
+pub use event::{
+    AlternativeSchedule, CacheHitRecord, CausalEvent, CounterfactualDecision, PruneReason,
+};
 pub use id::{CausalSpanId, SourceSpanRef, TraceId};
 pub use mode::CausalTraceMode;
 pub use phase::{exhaustiveness_check_causal_phase, CausalPhase};

@@ -11,14 +11,12 @@
 //!    that exercises more than one.
 
 use std::sync::Arc;
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Node, Program,
-};
 use vyre_foundation::ir::{AtomicOrdering, CollectiveGroup};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 use vyre_foundation::types::NumericalContract;
 use vyre_foundation::types::ScalarType;
-use vyre_foundation::types::{ShapeConstraint, ShapeInterner};
 use vyre_foundation::types::SemanticType;
+use vyre_foundation::types::{ShapeConstraint, ShapeInterner};
 use vyre_foundation::verifier::{
     CompileError, DeclarativeVerifier, InvariantCategory, LoweredStage, OptimizedStage,
     ReplayError, SemanticCompiler, SemanticModule, VerifiedIrStage, VerifiedStageWrapper,
@@ -41,7 +39,8 @@ fn verified_module_compiles_successfully_with_certificate() {
     let prog = Program::wrapped(
         vec![
             BufferDecl::storage("buf_in", 0, BufferAccess::ReadOnly, DataType::U32).with_count(64),
-            BufferDecl::storage("buf_out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(64),
+            BufferDecl::storage("buf_out", 1, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(64),
         ],
         [2, 1, 1],
         vec![Node::Return],
@@ -57,7 +56,8 @@ fn verified_module_compiles_successfully_with_certificate() {
     assert!(cert.invariant_count() > 0);
 
     // Compilation succeeds because a &Verified<SemanticModule> is provided
-    let compiled = SemanticCompiler::compile(&verified).expect("compilation of verified module should succeed");
+    let compiled = SemanticCompiler::compile(&verified)
+        .expect("compilation of verified module should succeed");
     assert_eq!(compiled.name, "certified_kernel");
     assert_eq!(compiled.certified_invariant_count, cert.invariant_count());
 }
@@ -151,7 +151,11 @@ fn certificate_lists_invariants_checked_for_multi_feature_module() {
 
     // Every invariant recorded in the certificate must have passed
     for inv in &cert.checked_invariants {
-        assert!(inv.passed, "invariant {} failed: {}", inv.code, inv.description);
+        assert!(
+            inv.passed,
+            "invariant {} failed: {}",
+            inv.code, inv.description
+        );
     }
 
     // Check that shape solver proof objects are recorded and replayable
@@ -227,7 +231,8 @@ fn tampered_certificate_refused_by_name_on_input_identity_mismatch() {
     let mut tampered_cert = verified.certificate().clone();
 
     // Tamper with the certificate's input identity digest
-    tampered_cert.input_identity = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into();
+    tampered_cert.input_identity =
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into();
 
     let module = verified.into_inner();
 
@@ -264,7 +269,8 @@ fn independent_proof_replay_accepts_valid_certificate_without_rerunning_full_ver
     let module = verified.into_inner();
 
     // Independent proof replay succeeds cleanly without rerunning AST traversal
-    cert.replay_proof(&module).expect("valid certificate must replay successfully");
+    cert.replay_proof(&module)
+        .expect("valid certificate must replay successfully");
 
     // SemanticCompiler can compile by replaying the certificate
     let artifact = SemanticCompiler::replay_and_compile(&module, &cert)
@@ -312,7 +318,13 @@ fn independent_proof_replay_rejects_schema_version_mismatch() {
 
     let err = bad_cert.replay_proof(&module).unwrap_err();
     assert!(
-        matches!(err, ReplayError::SchemaVersionMismatch { expected: 1, found: 999 }),
+        matches!(
+            err,
+            ReplayError::SchemaVersionMismatch {
+                expected: 1,
+                found: 999
+            }
+        ),
         "expected SchemaVersionMismatch, got: {err:?}"
     );
 }
@@ -334,17 +346,20 @@ fn verified_stage_wrapper_transitions_preserve_certificate() {
     assert_eq!(ir_stage.certificate(), &initial_cert);
 
     // Stage 2: Transition to OptimizedStage
-    let opt_stage: VerifiedStageWrapper<OptimizedStage, SemanticModule> = ir_stage.transition_to(|mut m| {
-        m.name = "stage_pipeline_module_optimized".into();
-        m
-    });
+    let opt_stage: VerifiedStageWrapper<OptimizedStage, SemanticModule> =
+        ir_stage.transition_to(|mut m| {
+            m.name = "stage_pipeline_module_optimized".into();
+            m
+        });
     assert_eq!(opt_stage.certificate(), &initial_cert);
     assert_eq!(opt_stage.as_inner().name, "stage_pipeline_module_optimized");
 
     // Stage 3: Transition to LoweredStage
-    let lowered_stage: VerifiedStageWrapper<LoweredStage, String> = opt_stage.transition_to(|m| {
-        format!("lowered_binary_for_{}", m.name)
-    });
+    let lowered_stage: VerifiedStageWrapper<LoweredStage, String> =
+        opt_stage.transition_to(|m| format!("lowered_binary_for_{}", m.name));
     assert_eq!(lowered_stage.certificate(), &initial_cert);
-    assert_eq!(lowered_stage.as_inner(), "lowered_binary_for_stage_pipeline_module_optimized");
+    assert_eq!(
+        lowered_stage.as_inner(),
+        "lowered_binary_for_stage_pipeline_module_optimized"
+    );
 }

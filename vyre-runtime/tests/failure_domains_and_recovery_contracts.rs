@@ -17,9 +17,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::thread;
 
-use vyre_foundation::{
-    FailureDomain, RecoveryClass, RecoveryDisposition,
-};
+use vyre_foundation::{FailureDomain, RecoveryClass, RecoveryDisposition};
 use vyre_megakernel::{Digest, RealTimeDeadline};
 use vyre_runtime::artifact_admission::{
     InteractiveAdmissionError, InteractiveChannelId, InteractiveCompletion,
@@ -75,10 +73,7 @@ fn atomic_guarded_state_transitions_to_poisoned_terminal_on_panic() {
             reason,
         } => {
             assert_eq!(domain, FailureDomain::MemoryState);
-            assert_eq!(
-                recovery_class,
-                RecoveryClass::RestartableFromCanonicalInput
-            );
+            assert_eq!(recovery_class, RecoveryClass::RestartableFromCanonicalInput);
             assert!(reason.contains("poisoned"));
         }
         other => panic!("Expected PoisonedTerminal variant, got {other:?}"),
@@ -126,10 +121,7 @@ fn prepare_commit_journal_aborted_ticket_cleans_state() {
     let journal = PrepareCommitJournal::<String, u64>::new();
     let key = String::from("submission_key_abort");
 
-    let ticket = journal
-        .prepare(key.clone(), 100)
-        .unwrap()
-        .unwrap();
+    let ticket = journal.prepare(key.clone(), 100).unwrap().unwrap();
 
     journal.abort(&key, ticket);
     assert!(!journal.is_committed(&key));
@@ -148,13 +140,22 @@ fn supervised_restart_budget_exhausts_and_fails_closed() {
     assert_eq!(budget.max_restarts(), 3);
     assert_eq!(budget.remaining_restarts(), 3);
 
-    assert_eq!(budget.record_restart(FailureDomain::WorkerProcess).unwrap(), 1);
+    assert_eq!(
+        budget.record_restart(FailureDomain::WorkerProcess).unwrap(),
+        1
+    );
     assert_eq!(budget.remaining_restarts(), 2);
 
-    assert_eq!(budget.record_restart(FailureDomain::WorkerProcess).unwrap(), 2);
+    assert_eq!(
+        budget.record_restart(FailureDomain::WorkerProcess).unwrap(),
+        2
+    );
     assert_eq!(budget.remaining_restarts(), 1);
 
-    assert_eq!(budget.record_restart(FailureDomain::WorkerProcess).unwrap(), 3);
+    assert_eq!(
+        budget.record_restart(FailureDomain::WorkerProcess).unwrap(),
+        3
+    );
     assert_eq!(budget.remaining_restarts(), 0);
 
     // 4th restart exceeds ceiling of 3
@@ -347,14 +348,21 @@ fn interactive_session_state_machine_fault_injection_and_idempotency() {
         artifact: Digest([1; 32]),
     };
 
-    let id1 = sm.admit(req1, 1_000_000).expect("Fix: admission must succeed");
+    let id1 = sm
+        .admit(req1, 1_000_000)
+        .expect("Fix: admission must succeed");
     sm.prepare(id1).expect("Fix: prepare must succeed");
     sm.submit(id1).expect("Fix: submit must succeed");
 
-    let completion = sm.complete(id1, 2_000_000).expect("Fix: complete must succeed");
-    assert!(matches!(completion, InteractiveCompletion::Success { request_id, .. } if request_id == id1));
+    let completion = sm
+        .complete(id1, 2_000_000)
+        .expect("Fix: complete must succeed");
+    assert!(
+        matches!(completion, InteractiveCompletion::Success { request_id, .. } if request_id == id1)
+    );
     // Fault injection: simulate device loss / state machine fault
-    sm.fault_all("Simulated GPU device reset").expect("Fix: fault_all must succeed");
+    sm.fault_all("Simulated GPU device reset")
+        .expect("Fix: fault_all must succeed");
 
     let req2 = InteractiveSubmissionRequest {
         channel_id: channel,
@@ -368,11 +376,10 @@ fn interactive_session_state_machine_fault_injection_and_idempotency() {
         artifact: Digest([2; 32]),
     };
 
-    let admit_err = sm.admit(req2, 3_000_000).expect_err("Fix: faulted session must reject admission");
-    assert!(matches!(
-        admit_err,
-        InteractiveAdmissionError::DeviceLoss
-    ));
+    let admit_err = sm
+        .admit(req2, 3_000_000)
+        .expect_err("Fix: faulted session must reject admission");
+    assert!(matches!(admit_err, InteractiveAdmissionError::DeviceLoss));
 }
 
 #[test]
@@ -386,7 +393,10 @@ fn bounded_cleanup_and_supervision_ceilings() {
 
     // Cleanup with bound of 5 removes at most 5 items
     let cleaned = journal.cleanup_stale_prepared(0, 5);
-    assert_eq!(cleaned, 5, "cleanup must be strictly bounded by limit parameter");
+    assert_eq!(
+        cleaned, 5,
+        "cleanup must be strictly bounded by limit parameter"
+    );
 
     // Second cleanup cleans the next 5 items
     let cleaned_2 = journal.cleanup_stale_prepared(0, 5);

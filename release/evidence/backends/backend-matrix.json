@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:585fbeae622524cd57d1c874cfcc1afcd8cfd148:dirty=false",
+  "source_fingerprint": "git:68756fb0107183f69fd9cef6c9f3357d00894e0c:dirty=true:worktree=cc6628b7126e4556096b593cc3edc940686b3c5025578941c68974224138e36c",
   "schema_version": 3,
   "cuda_first": true,
   "wgpu_fallback_present": true,
@@ -8,18 +8,18 @@
   "gpu_probe": {
     "nvidia_smi_ok": true,
     "nvidia_smi_devices": [
-      "GPU 0: NVIDIA GeForce RTX 3080 Ti (UUID: GPU-1a712ff2-2809-aae9-3889-68a9e34c2a4e)"
+      "GPU 0: NVIDIA GeForce RTX 5090 (UUID: GPU-2b1cf7db-1c55-23e8-5324-5342631e4ef5)"
     ],
     "nvidia_smi_device_details": [
       {
-        "name": "NVIDIA GeForce RTX 3080 Ti",
-        "driver_version": "580.173.02",
-        "memory_total_mib": 12288,
-        "compute_capability_major": 8,
-        "compute_capability_minor": 6
+        "name": "NVIDIA GeForce RTX 5090",
+        "driver_version": "580.178.04",
+        "memory_total_mib": 32607,
+        "compute_capability_major": 12,
+        "compute_capability_minor": 0
       }
     ],
-    "nvidia_driver_version": "580.173.02",
+    "nvidia_driver_version": "580.178.04",
     "nvidia_cuda_version": "13.0",
     "nvidia_smi_error": null
   },
@@ -307,7 +307,7 @@
       "path": "vyre-runtime/src/artifact_admission/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 94736,
+      "source_bytes": 124482,
       "implementation_tokens": [
         "ArtifactSession",
         "materialize"
@@ -393,7 +393,7 @@
       "path": "vyre-driver-wgpu/src/runtime/device/selector.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 23830,
+      "source_bytes": 23851,
       "implementation_tokens": [
         "has_real_gpu_adapter",
         "DeviceType::Cpu"
@@ -442,7 +442,7 @@
       "backend_id": "cuda",
       "capability_id": "live-sm-release-floor",
       "probe_source": "nvidia-smi --query-gpu=compute_cap",
-      "probed_value": "sm_86",
+      "probed_value": "sm_120",
       "supported": true,
       "unsupported_reason": null,
       "fix": "Fix: repair CUDA driver/device visibility or route release benchmarks to a supported NVIDIA GPU."
@@ -451,7 +451,7 @@
       "backend_id": "cuda",
       "capability_id": "live-memory-release-floor",
       "probe_source": "nvidia-smi --query-gpu=memory.total",
-      "probed_value": "12288 MiB",
+      "probed_value": "32607 MiB",
       "supported": true,
       "unsupported_reason": null,
       "fix": "Fix: run release benchmark evidence on a CUDA GPU with at least 2048 MiB VRAM, which is the largest registered workload plus its CUDA context."
@@ -513,13 +513,6 @@
     {
       "id": "wgpu",
       "precedence": 30,
-      "dispatches": true,
-      "acquire_ok": true,
-      "acquire_error": null
-    },
-    {
-      "id": "cpu-ref",
-      "precedence": 900,
       "dispatches": true,
       "acquire_ok": true,
       "acquire_error": null

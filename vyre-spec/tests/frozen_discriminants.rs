@@ -5,13 +5,13 @@
 //! extension ids, and return conservative sentinels for unbounded types.
 
 use vyre_spec::{
-    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionTernaryOpId,
-    ExtensionUnOpId,
-};
-use vyre_spec::{
     BufferAccess, CapabilityId, Category, CostHint, DataType, DeterminismClass, EngineInvariant,
     FloatType, InvariantCategory, OpSignature, OperationContract, PgNodeKind, SideEffectClass,
     Verification,
+};
+use vyre_spec::{
+    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionTernaryOpId,
+    ExtensionUnOpId,
 };
 
 // ------------------------------------------------------------------

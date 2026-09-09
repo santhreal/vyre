@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use syn::{Item, ItemMod, ItemUse, UsePath, UseRename, UseTree, Visibility};
 
 /// Disallowed module path segments in public facade re-exports.
-pub const FORBIDDEN_INTERNAL_PATH_SEGMENTS: &[&str] = &[
+pub(crate) const FORBIDDEN_INTERNAL_PATH_SEGMENTS: &[&str] = &[
     "optimizer",
     "passes",
     "search",
@@ -40,14 +40,14 @@ fn facade_source_path() -> PathBuf {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ExportedPath {
+pub(crate) struct ExportedPath {
     pub segments: Vec<String>,
     pub is_whole_crate_alias: bool,
     pub is_glob: bool,
 }
 
 impl ExportedPath {
-    pub fn full_path(&self) -> String {
+    pub(crate) fn full_path(&self) -> String {
         self.segments.join("::")
     }
 }
@@ -96,7 +96,7 @@ fn collect_use_paths(tree: &UseTree, prefix: &mut Vec<String>, out: &mut Vec<Exp
     }
 }
 
-pub fn extract_public_exports_from_ast(file: &syn::File) -> Vec<ExportedPath> {
+pub(crate) fn extract_public_exports_from_ast(file: &syn::File) -> Vec<ExportedPath> {
     let mut exports = Vec::new();
 
     for item in &file.items {
@@ -136,7 +136,7 @@ pub fn extract_public_exports_from_ast(file: &syn::File) -> Vec<ExportedPath> {
 }
 
 /// Validates that no exported path carries internal module segments or whole-crate aliases.
-pub fn validate_facade_exports(exports: &[ExportedPath]) -> Result<(), Vec<String>> {
+pub(crate) fn validate_facade_exports(exports: &[ExportedPath]) -> Result<(), Vec<String>> {
     let mut errors = Vec::new();
 
     for exp in exports {
@@ -159,7 +159,10 @@ pub fn validate_facade_exports(exports: &[ExportedPath]) -> Result<(), Vec<Strin
         // 3. Check for forbidden internal module segments
         for seg in &exp.segments {
             for &forbidden in FORBIDDEN_INTERNAL_PATH_SEGMENTS {
-                if seg == forbidden || seg.starts_with(&format!("{forbidden}::")) || seg.ends_with(&format!("::{forbidden}")) {
+                if seg == forbidden
+                    || seg.starts_with(&format!("{forbidden}::"))
+                    || seg.ends_with(&format!("::{forbidden}"))
+                {
                     errors.push(format!(
                         "facade exposes internal `{forbidden}` symbol via re-export path `{full}`"
                     ));
@@ -183,10 +186,7 @@ fn facade_exposes_zero_internal_implementation_symbols() {
     let ast = syn::parse_file(&content).expect("parse vyre/src/lib.rs with syn");
 
     let exports = extract_public_exports_from_ast(&ast);
-    assert!(
-        !exports.is_empty(),
-        "facade must have valid public exports"
-    );
+    assert!(!exports.is_empty(), "facade must have valid public exports");
 
     let result = validate_facade_exports(&exports);
     if let Err(errors) = result {
@@ -255,7 +255,9 @@ fn mutation_injecting_whole_crate_alias_is_caught() {
 
     assert!(result.is_err(), "whole crate alias must fail validation");
     let errs = result.unwrap_err();
-    assert!(errs.iter().any(|e| e.contains("facade re-exports whole crate alias")));
+    assert!(errs
+        .iter()
+        .any(|e| e.contains("facade re-exports whole crate alias")));
 }
 
 #[test]
@@ -267,7 +269,9 @@ fn mutation_injecting_optimizer_reexport_is_caught() {
 
     assert!(result.is_err(), "optimizer re-export must fail validation");
     let errs = result.unwrap_err();
-    assert!(errs.iter().any(|e| e.contains("facade exposes internal `optimizer` symbol")));
+    assert!(errs
+        .iter()
+        .any(|e| e.contains("facade exposes internal `optimizer` symbol")));
 }
 
 #[test]
@@ -279,7 +283,9 @@ fn mutation_injecting_search_reexport_is_caught() {
 
     assert!(result.is_err(), "search re-export must fail validation");
     let errs = result.unwrap_err();
-    assert!(errs.iter().any(|e| e.contains("facade exposes internal `search` symbol")));
+    assert!(errs
+        .iter()
+        .any(|e| e.contains("facade exposes internal `search` symbol")));
 }
 
 #[test]
@@ -291,7 +297,9 @@ fn mutation_injecting_lowering_reexport_is_caught() {
 
     assert!(result.is_err(), "lowering re-export must fail validation");
     let errs = result.unwrap_err();
-    assert!(errs.iter().any(|e| e.contains("facade exposes internal `lower`") || e.contains("lowering")));
+    assert!(errs
+        .iter()
+        .any(|e| e.contains("facade exposes internal `lower`") || e.contains("lowering")));
 }
 
 #[test]
@@ -301,7 +309,12 @@ fn mutation_injecting_runtime_worker_reexport_is_caught() {
     let exports = extract_public_exports_from_ast(&ast);
     let result = validate_facade_exports(&exports);
 
-    assert!(result.is_err(), "runtime worker re-export must fail validation");
+    assert!(
+        result.is_err(),
+        "runtime worker re-export must fail validation"
+    );
     let errs = result.unwrap_err();
-    assert!(errs.iter().any(|e| e.contains("facade exposes internal `worker_process` symbol")));
+    assert!(errs
+        .iter()
+        .any(|e| e.contains("facade exposes internal `worker_process` symbol")));
 }

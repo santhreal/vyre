@@ -442,7 +442,11 @@ pub(crate) unsafe fn dispatch_program(
     inputs: &[&[u8]],
     config: &vyre_driver::DispatchConfig,
 ) -> Result<Vec<Vec<u8>>, BackendError> {
-    BackendError::reject_blocked_contraction(program, config.float_lowering, crate::SPIRV_BACKEND_ID)?;
+    BackendError::reject_blocked_contraction(
+        program,
+        config.float_lowering,
+        crate::SPIRV_BACKEND_ID,
+    )?;
     if config.cooperative {
         return Err(BackendError::UnsupportedFeature {
             name: "SPIR-V cooperative grid dispatch".to_string(),

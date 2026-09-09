@@ -155,21 +155,18 @@ pub(crate) fn run_hashmap_reference(
     lane_order: LaneOrder,
     explicit_grid: Option<[u32; 3]>,
 ) -> Result<Vec<Value>, ReferenceError> {
-    #[cfg(feature = "subgroup-ops")]
     let validation_report = vyre_foundation::validate::validate_with_options(
         program,
         vyre_foundation::validate::ValidationOptions::default().with_backend_capabilities(
             vyre_foundation::validate::BackendCapabilities {
+                #[cfg(feature = "subgroup-ops")]
                 supports_subgroup_ops: true,
                 supports_tensor_cores: true,
+                supports_distributed_collectives: true,
+                has_shared_memory: true,
                 ..Default::default()
             },
         ),
-    );
-    #[cfg(not(feature = "subgroup-ops"))]
-    let validation_report = vyre_foundation::validate::validate_with_options(
-        program,
-        vyre_foundation::validate::ValidationOptions::default(),
     );
     if let Some(source) = validation_report.errors.into_iter().next() {
         return Err(ReferenceError::validation(source));

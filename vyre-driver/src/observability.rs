@@ -17,6 +17,7 @@ use vyre_libs::analysis::decision_telemetry as decision_obs;
 #[cfg(feature = "libs-compositions")]
 use vyre_libs::telemetry as substrate_obs;
 
+use crate::lock_policy::{govern_mutex, RecoveryClass};
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
@@ -510,7 +511,12 @@ pub fn record_substrate_audit_event(event: SubstrateAuditEvent) {
     if !trace_enabled() {
         return;
     }
-    if let Ok(mut events) = trace_events().lock() {
+    if let Ok(mut events) = govern_mutex(
+        trace_events(),
+        "observability",
+        "EVENTS",
+        RecoveryClass::TransactionallyRecoverable,
+    ) {
         if events.len() == TRACE_EVENT_CAPACITY {
             events.pop_front();
         }
@@ -528,20 +534,29 @@ pub fn record_substrate_audit_event(event: SubstrateAuditEvent) {
 
 #[cfg(feature = "libs-compositions")]
 fn snapshot_trace_events() -> Vec<SubstrateAuditEvent> {
-    trace_events()
-        .lock()
-        .map(|events| {
-            let mut snapshot = Vec::new();
-            let _ = snapshot.try_reserve_exact(events.len());
-            snapshot.extend(events.iter().cloned());
-            snapshot
-        })
-        .unwrap_or_default()
+    govern_mutex(
+        trace_events(),
+        "observability",
+        "EVENTS",
+        RecoveryClass::TransactionallyRecoverable,
+    )
+    .map(|events| {
+        let mut snapshot = Vec::new();
+        let _ = snapshot.try_reserve_exact(events.len());
+        snapshot.extend(events.iter().cloned());
+        snapshot
+    })
+    .unwrap_or_default()
 }
 
 #[cfg(test)]
 pub(crate) fn record_substrate_audit_event_for_test(event: SubstrateAuditEvent) {
-    if let Ok(mut events) = trace_events().lock() {
+    if let Ok(mut events) = govern_mutex(
+        trace_events(),
+        "observability",
+        "EVENTS",
+        RecoveryClass::TransactionallyRecoverable,
+    ) {
         if events.len() == TRACE_EVENT_CAPACITY {
             events.pop_front();
         }
@@ -551,10 +566,14 @@ pub(crate) fn record_substrate_audit_event_for_test(event: SubstrateAuditEvent) 
 
 #[cfg(test)]
 pub(crate) fn snapshot_for_test() -> DriverObservability {
-    let audit_events = trace_events()
-        .lock()
-        .map(|events| events.iter().cloned().collect())
-        .unwrap_or_default();
+    let audit_events = govern_mutex(
+        trace_events(),
+        "observability",
+        "EVENTS",
+        RecoveryClass::TransactionallyRecoverable,
+    )
+    .map(|events| events.iter().cloned().collect())
+    .unwrap_or_default();
     DriverObservability {
         substrate_calls: Vec::new(),
         substrate_total_calls: 0,
@@ -566,17 +585,26 @@ pub(crate) fn snapshot_for_test() -> DriverObservability {
 
 #[cfg(test)]
 pub(crate) fn clear_substrate_audit_events_for_test() {
-    if let Ok(mut events) = trace_events().lock() {
+    if let Ok(mut events) = govern_mutex(
+        trace_events(),
+        "observability",
+        "EVENTS",
+        RecoveryClass::TransactionallyRecoverable,
+    ) {
         events.clear();
     }
 }
 
 #[cfg(test)]
-pub(crate) fn audit_events_test_lock() -> std::sync::MutexGuard<'static, ()> {
+pub(crate) fn audit_events_test_lock() -> Option<std::sync::MutexGuard<'static, ()>> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
-        .lock()
-        .expect("Fix: audit event test lock must not be poisoned")
+    govern_mutex(
+        LOCK.get_or_init(|| Mutex::new(())),
+        "observability",
+        "LOCK",
+        RecoveryClass::TransactionallyRecoverable,
+    )
+    .ok()
 }
 
 // Inline: the suite drives the `#[cfg(test)]` `audit_events_test_lock`,

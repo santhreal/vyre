@@ -60,11 +60,7 @@ pub fn analyze(desc: &KernelDescriptor) -> ContractionPlan {
         candidates.push(ContractionCandidate {
             contraction_id: format!("{}_mma_m16n8k16", desc.id),
             strategy: ContractionStrategy::MatrixInstruction {
-                tile: MatrixTileShape {
-                    m: 16,
-                    n: 8,
-                    k: 16,
-                },
+                tile: MatrixTileShape { m: 16, n: 8, k: 16 },
                 left_layout: MatrixMmaLayout::RowMajor,
                 right_layout: MatrixMmaLayout::ColMajor,
                 left_element: MatrixMmaElement::F16,

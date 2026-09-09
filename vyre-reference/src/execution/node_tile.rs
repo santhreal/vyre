@@ -68,10 +68,11 @@ pub(crate) fn eval_tile_matmul(
     b_name: &str,
     invocation: &mut Invocation<'_>,
 ) -> Result<(), ReferenceError> {
-    let acc_val = invocation
-        .local(acc_name)
-        .cloned()
-        .unwrap_or(Value::Array(Vec::new()));
+    let acc_val = invocation.local(acc_name).cloned().ok_or_else(|| {
+        ReferenceError::missing_value(format!(
+            "tile accumulator `{acc_name}` not found for matmul"
+        ))
+    })?;
     let a_val = invocation
         .local(a_name)
         .cloned()
@@ -147,19 +148,22 @@ pub(crate) fn eval_tile_elementwise<'a>(
         for (i, input) in inputs.iter().enumerate() {
             let n = input_arrays[i].len();
             let elem_idx = if n > 0 { idx / (max_len / n) } else { 0 };
-            let elem = input_arrays[i]
-                .get(elem_idx)
-                .cloned()
-                .unwrap_or(Value::Float(0.0));
+            let elem = input_arrays[i].get(elem_idx).cloned().ok_or_else(|| {
+                ReferenceError::missing_value(format!(
+                    "tile elementwise input `{}` index {} missing",
+                    inputs[i], elem_idx
+                ))
+            })?;
             invocation.bind(input.as_str(), elem)?;
         }
         for node in body {
             execute_node(node, invocation, memory, program)?;
         }
-        let out_val = invocation
-            .local(out_name)
-            .cloned()
-            .unwrap_or(Value::Float(0.0));
+        let out_val = invocation.local(out_name).cloned().ok_or_else(|| {
+            ReferenceError::missing_value(format!(
+                "tile elementwise output `{out_name}` not assigned in body"
+            ))
+        })?;
         out_elems.push(out_val);
         invocation.pop_scope();
     }

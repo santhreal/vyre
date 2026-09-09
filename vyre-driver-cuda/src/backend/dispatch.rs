@@ -313,7 +313,11 @@ impl CudaBackend {
                 backend: crate::CUDA_BACKEND_ID.to_string(),
             });
         }
-        BackendError::reject_blocked_contraction(program, config.float_lowering, crate::CUDA_BACKEND_ID)?;
+        BackendError::reject_blocked_contraction(
+            program,
+            config.float_lowering,
+            crate::CUDA_BACKEND_ID,
+        )?;
         Ok(())
     }
 

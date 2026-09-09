@@ -4,9 +4,7 @@
 
 use vyre_emit_spirv::*;
 use vyre_foundation::ir::DataType;
-use vyre_lower::descriptor_builder::{
-    body, descriptor, global_rw, lit, op, store_literal_kernel,
-};
+use vyre_lower::descriptor_builder::{body, descriptor, global_rw, lit, op, store_literal_kernel};
 use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
 fn one_store_kernel() -> KernelDescriptor {

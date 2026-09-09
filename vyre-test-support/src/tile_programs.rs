@@ -7,9 +7,7 @@
 //! sizes, so a statement whose operand order changed had two places to be
 //! updated and one of them would keep compiling.
 
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, Expr, Layout, Node, Program, Residency, Tile,
-};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, Expr, Layout, Node, Program, Residency, Tile};
 use vyre_spec::DataType;
 
 /// One tile operand: the tile and the element count of the buffer it moves

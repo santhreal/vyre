@@ -554,7 +554,11 @@ mod tests {
         .join();
 
         // Under RestartableFromCanonicalInput, accessing the poisoned shard resets it cleanly to empty
-        assert_eq!(cache.len(), 0, "poisoned shard must reset to empty valid state");
+        assert_eq!(
+            cache.len(),
+            0,
+            "poisoned shard must reset to empty valid state"
+        );
         assert_eq!(cache.get(&fp), None);
 
         // Subsequent put succeeds normally

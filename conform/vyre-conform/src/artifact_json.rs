@@ -57,6 +57,7 @@ pub(crate) fn read_prove_artifact_bounded(path: &str) -> Result<String, String> 
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn value_field<'a>(
     value: &'a serde_json::Value,
     field: &str,
@@ -67,6 +68,7 @@ pub(crate) fn value_field<'a>(
         .ok_or_else(|| format!("certificate `{path}` missing `{field}`. Fix: regenerate it."))
 }
 
+#[allow(dead_code)]
 pub(crate) fn string_field<'a>(
     value: &'a serde_json::Value,
     field: &str,
@@ -77,6 +79,7 @@ pub(crate) fn string_field<'a>(
     })
 }
 
+#[allow(dead_code)]
 pub(crate) fn u32_field(value: &serde_json::Value, field: &str, path: &str) -> Result<u32, String> {
     let raw = value_field(value, field, path)?.as_u64().ok_or_else(|| {
         format!(
@@ -88,6 +91,7 @@ pub(crate) fn u32_field(value: &serde_json::Value, field: &str, path: &str) -> R
     })
 }
 
+#[allow(dead_code)]
 pub(crate) fn usize_field(
     value: &serde_json::Value,
     field: &str,

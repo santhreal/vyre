@@ -1,11 +1,11 @@
 //! Formal dominance and SSA use-def verification for Region SSA.
 
-use rustc_hash::{FxHashMap, FxHashSet};
 use super::builder::DominanceError;
 use super::{
-    Block, RegionFunction, RegionKind, RegionOp, RegionOpKind, StructuredRegion,
-    Terminator, ValueId,
+    Block, RegionFunction, RegionKind, RegionOp, RegionOpKind, StructuredRegion, Terminator,
+    ValueId,
 };
+use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Verifier checking that dominance holds strictly for every use in a [`RegionFunction`].
 #[derive(Debug, Default)]
@@ -162,7 +162,9 @@ impl DominanceVerifier {
             RegionKind::Stencil { input, .. } => {
                 self.check_use(*input, outer_dominating)?;
             }
-            RegionKind::Gather { source, indices, .. } => {
+            RegionKind::Gather {
+                source, indices, ..
+            } => {
                 self.check_use(*source, outer_dominating)?;
                 self.check_use(*indices, outer_dominating)?;
             }

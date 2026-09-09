@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
+use crate::artifact_session_fixtures::{fixture_backend_factory, fixture_supported_ops};
 use vyre_driver::materialize::{DeviceSpec, MaterializerDevice};
 use vyre_driver::BackendRegistration;
 use vyre_driver::{
@@ -27,7 +28,6 @@ use vyre_runtime::artifact_admission::{
     admit_artifact, admit_cached_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession,
     MeshSession, MeshSessionError, RetainedArtifactSession, TypedResource, TypedResourceDataset,
 };
-use crate::artifact_session_fixtures::{fixture_backend_factory, fixture_supported_ops};
 use vyre_runtime::persistent_executor::{PersistentExecutor, ResidentQueueState};
 use vyre_runtime::pipeline_cache::{
     InMemoryPipelineCache, PipelineCacheStore, PipelineFingerprint,

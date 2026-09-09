@@ -1,2 +1,2 @@
 category = "Added"
-text = "The release authority now emits CycloneDX/SPDX SBOMs and signed SLSA v1.2 provenance records covering pinned Rust crates, native toolchains, generators, and offline build reproducibility."
+text = "The release provenance authority emits CycloneDX SBOM and signed SLSA v1.2 provenance records covering pinned Rust crate dependencies, native toolchains, code generators, schemas, benchmark baselines, and offline build script invariants."

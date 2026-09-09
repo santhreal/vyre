@@ -1,7 +1,7 @@
 //! Versioned causal receipt, critical-path reconstruction, and serialization.
 
-use std::collections::{BTreeMap, BTreeSet};
 use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
 use thiserror::Error;
 
 use super::event::{CausalEvent, CounterfactualDecision};
@@ -137,13 +137,17 @@ impl CausalReceipt {
             }
             visiting.insert(node);
 
-            let event = span_by_id.get(&node).copied().ok_or(CausalError::SpanNotFound(node))?;
+            let event = span_by_id
+                .get(&node)
+                .copied()
+                .ok_or(CausalError::SpanNotFound(node))?;
             let mut max_child_cost = 0;
             let mut best_child_path = Vec::new();
 
             if let Some(children) = children_map.get(&node) {
                 for &child in children {
-                    let (child_cost, child_path) = dfs(child, span_by_id, children_map, memo, visiting)?;
+                    let (child_cost, child_path) =
+                        dfs(child, span_by_id, children_map, memo, visiting)?;
                     if child_cost >= max_child_cost {
                         max_child_cost = child_cost;
                         best_child_path = child_path;
@@ -164,7 +168,9 @@ impl CausalReceipt {
         let mut max_cost = 0;
 
         for root in roots {
-            if let Ok((cost, path)) = dfs(root, &span_by_id, &children_map, &mut memo, &mut visiting) {
+            if let Ok((cost, path)) =
+                dfs(root, &span_by_id, &children_map, &mut memo, &mut visiting)
+            {
                 if cost >= max_cost {
                     max_cost = cost;
                     longest_path = path;
@@ -191,7 +197,8 @@ impl CausalReceipt {
 
     /// Deserialize from JSON, validating schema version fail-closed.
     pub fn from_json(json_str: &str) -> Result<Self, CausalError> {
-        let receipt: Self = serde_json::from_str(json_str).map_err(|e| CausalError::Json(e.to_string()))?;
+        let receipt: Self =
+            serde_json::from_str(json_str).map_err(|e| CausalError::Json(e.to_string()))?;
         if receipt.schema_version != CAUSAL_RECEIPT_SCHEMA_VERSION {
             return Err(CausalError::StaleSchemaVersion {
                 expected: CAUSAL_RECEIPT_SCHEMA_VERSION,
@@ -208,7 +215,8 @@ impl CausalReceipt {
 
     /// Deserialize from TOML, validating schema version fail-closed.
     pub fn from_toml(toml_str: &str) -> Result<Self, CausalError> {
-        let receipt: Self = toml::from_str(toml_str).map_err(|e| CausalError::Toml(e.to_string()))?;
+        let receipt: Self =
+            toml::from_str(toml_str).map_err(|e| CausalError::Toml(e.to_string()))?;
         if receipt.schema_version != CAUSAL_RECEIPT_SCHEMA_VERSION {
             return Err(CausalError::StaleSchemaVersion {
                 expected: CAUSAL_RECEIPT_SCHEMA_VERSION,
@@ -225,7 +233,8 @@ impl CausalReceipt {
 
     /// Deserialize from canonical bytes with fail-closed schema check.
     pub fn from_canonical_bytes(bytes: &[u8]) -> Result<Self, CausalError> {
-        let receipt: Self = serde_json::from_slice(bytes).map_err(|e| CausalError::Json(e.to_string()))?;
+        let receipt: Self =
+            serde_json::from_slice(bytes).map_err(|e| CausalError::Json(e.to_string()))?;
         if receipt.schema_version != CAUSAL_RECEIPT_SCHEMA_VERSION {
             return Err(CausalError::StaleSchemaVersion {
                 expected: CAUSAL_RECEIPT_SCHEMA_VERSION,

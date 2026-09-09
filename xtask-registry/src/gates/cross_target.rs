@@ -179,7 +179,9 @@ enum TripleResult {
 /// declares in its own configuration or the answer is about a build nobody runs.
 fn installed_targets(root: &Path) -> std::collections::BTreeSet<String> {
     let mut command = std::process::Command::new("rustup");
-    command.current_dir(root).args(["target", "list", "--installed"]);
+    command
+        .current_dir(root)
+        .args(["target", "list", "--installed"]);
     if let Ok(output) = command.output() {
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);

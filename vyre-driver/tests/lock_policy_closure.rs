@@ -9,16 +9,16 @@
 
 #![forbid(unsafe_code)]
 
-use std::collections::BTreeMap;
-use std::fs;
-use std::path::Path;
 use std::sync::{Arc, Mutex, RwLock};
 
+use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
+
 use vyre_driver::lock_policy::{
-    govern_mutex, govern_mutex_with_reset, govern_rwlock_read, FailureDomain,
+    govern_mutex, govern_mutex_with_reset, govern_rwlock_read, govern_rwlock_write,
+    govern_rwlock_write_with_reset, RecoveryClass,
 };
 use vyre_driver::BackendError;
-use vyre_test_support::monorepo::vyre_workspace_root;
 
 #[test]
 fn transactional_domain_reports_typed_error_on_poison() {
@@ -34,10 +34,13 @@ fn transactional_domain_reports_typed_error_on_poison() {
         &mutex,
         "test_owner",
         "test_state",
-        FailureDomain::Transactional,
+        RecoveryClass::TransactionallyRecoverable,
     );
     assert!(res.is_err());
-    assert!(matches!(res.unwrap_err(), BackendError::PoisonedLock { .. }));
+    assert!(matches!(
+        res.unwrap_err(),
+        BackendError::PoisonedLock { .. }
+    ));
 }
 
 #[test]
@@ -54,11 +57,13 @@ fn device_context_fatal_domain_reports_device_lost_on_poison() {
         &mutex,
         "wgpu_device",
         "command_queue",
-        FailureDomain::DeviceContextFatal,
+        RecoveryClass::DeviceContextFatal,
     );
     assert!(res.is_err());
     match res.unwrap_err() {
-        BackendError::DeviceLost { backend, device, .. } => {
+        BackendError::DeviceLost {
+            backend, device, ..
+        } => {
             assert_eq!(backend, "wgpu_device");
             assert_eq!(device, "command_queue");
         }
@@ -81,7 +86,7 @@ fn restartable_domain_resets_state_and_recovers_guard() {
         &mutex,
         "staging_buffer_pool",
         "free_list",
-        FailureDomain::RestartableFromCanonical,
+        RecoveryClass::RestartableFromCanonicalInput,
         |list: &mut Vec<i32>| list.clear(),
     )
     .expect("restartable domain must recover guard");
@@ -103,131 +108,217 @@ fn rwlock_transactional_read_reports_typed_error_on_poison() {
         &rwlock,
         "registry",
         "table",
-        FailureDomain::Transactional,
+        RecoveryClass::TransactionallyRecoverable,
     );
     assert!(res.is_err());
-    assert!(matches!(res.unwrap_err(), BackendError::PoisonedLock { .. }));
+    assert!(matches!(
+        res.unwrap_err(),
+        BackendError::PoisonedLock { .. }
+    ));
 }
 
-use vyre_driver::lock_policy::{authoritative_driver_lock_registry, RecoveryClass};
+#[test]
+fn rwlock_transactional_write_reports_typed_error_on_poison() {
+    let rwlock = Arc::new(RwLock::new(100));
+    let rwlock_clone = Arc::clone(&rwlock);
+
+    let _ = std::panic::catch_unwind(move || {
+        let _guard = rwlock_clone.write().unwrap();
+        panic!("simulated write panic");
+    });
+
+    let res = govern_rwlock_write(
+        &rwlock,
+        "registry",
+        "table",
+        RecoveryClass::TransactionallyRecoverable,
+    );
+    assert!(res.is_err());
+    assert!(matches!(
+        res.unwrap_err(),
+        BackendError::PoisonedLock { .. }
+    ));
+}
 
 #[test]
-fn lock_failure_domain_closure_from_source() {
-    let registry = authoritative_driver_lock_registry();
+fn rwlock_restartable_resets_state_and_recovers_guard() {
+    let rwlock = Arc::new(RwLock::new(vec![1, 2, 3]));
+    let rwlock_clone = Arc::clone(&rwlock);
 
-    fn scan_dir(dir: &Path, lock_files: &mut BTreeMap<String, usize>) {
-        if !dir.exists() {
-            return;
-        }
-        for entry in fs::read_dir(dir).unwrap() {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            if path.is_dir() {
-                let name = path.file_name().unwrap().to_str().unwrap();
-                if name != "target" && name != "tests" {
-                    scan_dir(&path, lock_files);
-                }
-            } else if path.extension().is_some_and(|ext| ext == "rs") {
-                let file_name = path.file_name().unwrap().to_str().unwrap();
-                if file_name == "tests.rs" || file_name.ends_with("_tests.rs") || file_name == "lock_policy.rs" {
-                    continue;
-                }
-                let content = fs::read_to_string(&path).unwrap();
-                let mut lock_count = 0;
-                let mut in_test_cfg = false;
-                for line in content.lines() {
-                    let trimmed = line.trim();
-                    if trimmed.starts_with("#[cfg(test)]") {
-                        in_test_cfg = true;
+    let _ = std::panic::catch_unwind(move || {
+        let mut guard = rwlock_clone.write().unwrap();
+        guard.push(4);
+        panic!("simulated panic during write");
+    });
+
+    let guard = govern_rwlock_write_with_reset(
+        &rwlock,
+        "staging_pool",
+        "free_list",
+        RecoveryClass::RestartableFromCanonicalInput,
+        |list: &mut Vec<i32>| list.clear(),
+    )
+    .expect("restartable domain must recover guard");
+
+    assert!(guard.is_empty(), "state must be cleared on restart");
+}
+
+#[test]
+fn all_recovery_classes_handled_exhaustively() {
+    for class in RecoveryClass::ALL {
+        match class {
+            RecoveryClass::TransactionallyRecoverable => {
+                let mutex = Arc::new(Mutex::new(42));
+                let mutex_clone = Arc::clone(&mutex);
+                let _ = std::panic::catch_unwind(move || {
+                    let _guard = mutex_clone.lock().unwrap();
+                    panic!("simulated panic");
+                });
+                let res = govern_mutex(&mutex, "test_owner", "test_state", *class);
+                assert!(matches!(res, Err(BackendError::PoisonedLock { .. })));
+            }
+            RecoveryClass::RestartableFromCanonicalInput => {
+                let mutex = Arc::new(Mutex::new(vec![1, 2, 3]));
+                let mutex_clone = Arc::clone(&mutex);
+                let _ = std::panic::catch_unwind(move || {
+                    let mut guard = mutex_clone.lock().unwrap();
+                    guard.push(4);
+                    panic!("simulated panic");
+                });
+                let mut reset_ran = false;
+                let guard = govern_mutex_with_reset(
+                    &mutex,
+                    "test_owner",
+                    "test_state",
+                    *class,
+                    |list: &mut Vec<i32>| {
+                        reset_ran = true;
+                        list.clear();
+                    },
+                )
+                .expect("restartable must succeed");
+                assert!(reset_ran, "reset closure must have executed");
+                assert!(guard.is_empty(), "state must be cleared");
+            }
+            RecoveryClass::DeviceContextFatal => {
+                let mutex = Arc::new(Mutex::new(42));
+                let mutex_clone = Arc::clone(&mutex);
+                let _ = std::panic::catch_unwind(move || {
+                    let _guard = mutex_clone.lock().unwrap();
+                    panic!("simulated panic");
+                });
+                let res = govern_mutex(&mutex, "device_backend", "device_queue", *class);
+                match res {
+                    Err(BackendError::DeviceLost {
+                        backend, device, ..
+                    }) => {
+                        assert_eq!(backend, "device_backend");
+                        assert_eq!(device, "device_queue");
                     }
-                    if in_test_cfg {
-                        continue;
-                    }
-                    if (line.contains("Mutex<") || line.contains("RwLock<"))
-                        && !trimmed.starts_with("//")
-                        && !trimmed.starts_with("/*")
-                        && !line.contains("use ")
-                        && !line.contains("fn ")
-                    {
-                        lock_count += 1;
-                    }
+                    other => panic!("expected DeviceLost, got {other:?}"),
                 }
-                if lock_count > 0 {
-                    let path_str = path.to_str().unwrap().replace('\\', "/");
-                    lock_files.insert(path_str, lock_count);
-                }
+            }
+            RecoveryClass::ProcessFatal | RecoveryClass::InvariantViolation => {
+                // Abort semantics are verified by child process execution tests.
             }
         }
     }
+}
+fn run_abort_child_process(test_name: &str) -> (bool, String) {
+    let test_exe = std::env::current_exe().expect("test binary path");
+    let mut child = Command::new(&test_exe)
+        .arg(test_name)
+        .arg("--ignored")
+        .arg("--nocapture")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawn child test process");
 
-    let mut lock_files = BTreeMap::new();
-    let root = vyre_workspace_root();
-    scan_dir(&root.join("vyre-driver/src"), &mut lock_files);
-    scan_dir(&root.join("vyre-driver-wgpu/src"), &mut lock_files);
+    let timeout = Duration::from_secs(15);
+    let start = Instant::now();
+    let mut exit_status = None;
+    while start.elapsed() < timeout {
+        match child.try_wait().expect("try_wait child process") {
+            Some(status) => {
+                exit_status = Some(status);
+                break;
+            }
+            None => std::thread::sleep(Duration::from_millis(50)),
+        }
+    }
 
-    assert!(
-        !lock_files.is_empty(),
-        "scan must locate existing driver locks from source"
-    );
-
-    // 1. Verify every source file with locks is covered in registry
-    for (file_path, count) in &lock_files {
-        let has_entry = registry.keys().any(|key| {
-            let prefix = key.split(':').next().unwrap_or("");
-            file_path.ends_with(prefix)
-        });
-        assert!(
-            has_entry,
-            "Source file {file_path} contains {count} lock(s) but has no declared FailureDomain in authoritative registry! Fix: register failure domain in authoritative_driver_lock_registry()."
+    if exit_status.is_none() {
+        let _ = child.kill();
+        panic!(
+            "child test process timed out after {} seconds",
+            timeout.as_secs()
         );
     }
 
-    // 2. Verify each registered lock belongs to a valid failure domain and recovery class
-    for (key, domain) in &registry {
-        assert!(
-            matches!(
-                domain,
-                FailureDomain::Transactional
-                    | FailureDomain::RestartableFromCanonical
-                    | FailureDomain::DeviceContextFatal
-                    | FailureDomain::ProcessFatal
-                    | FailureDomain::InvariantViolation
-            ),
-            "registered lock {key} must have a valid failure domain"
-        );
-
-        let class = RecoveryClass::from(*domain);
-        let roundtrip = FailureDomain::from(class);
-        assert_eq!(
-            *domain, roundtrip,
-            "RecoveryClass roundtrip must be identity for {key}"
-        );
-    }
+    let output = child.wait_with_output().expect("wait_with_output");
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    (!output.status.success(), stderr)
 }
 
 #[test]
-fn failure_domain_recovery_class_bijection_preserves_semantics() {
-    for domain in [
-        FailureDomain::Transactional,
-        FailureDomain::RestartableFromCanonical,
-        FailureDomain::DeviceContextFatal,
-        FailureDomain::ProcessFatal,
-        FailureDomain::InvariantViolation,
-    ] {
-        let class: RecoveryClass = domain.into();
-        let back: FailureDomain = class.into();
-        assert_eq!(domain, back);
-    }
-
-    for class in [
-        RecoveryClass::TransactionallyRecoverable,
-        RecoveryClass::RestartableFromCanonicalInput,
-        RecoveryClass::DeviceContextFatal,
+#[ignore]
+fn child_process_fatal_abort_case() {
+    let mutex = Arc::new(Mutex::new(42));
+    let mutex_clone = Arc::clone(&mutex);
+    let _ = std::panic::catch_unwind(move || {
+        let _guard = mutex_clone.lock().unwrap();
+        panic!("simulated panic to poison mutex");
+    });
+    let _unused = govern_mutex(
+        &mutex,
+        "foreign_loader",
+        "graphics_loader_dispatch_table",
         RecoveryClass::ProcessFatal,
+    );
+}
+
+#[test]
+#[ignore]
+fn child_invariant_violation_abort_case() {
+    let mutex = Arc::new(Mutex::new(42));
+    let mutex_clone = Arc::clone(&mutex);
+    let _ = std::panic::catch_unwind(move || {
+        let _guard = mutex_clone.lock().unwrap();
+        panic!("simulated panic to poison mutex");
+    });
+    let _unused = govern_mutex(
+        &mutex,
+        "compiler_ir",
+        "critical_symbol_table",
         RecoveryClass::InvariantViolation,
-    ] {
-        let domain: FailureDomain = class.into();
-        let back: RecoveryClass = domain.into();
-        assert_eq!(class, back);
-    }
+    );
+}
+
+#[test]
+fn process_fatal_policy_aborts_process_with_owner_and_state() {
+    let (aborted, stderr) = run_abort_child_process("child_process_fatal_abort_case");
+    assert!(aborted, "ProcessFatal must terminate abnormally");
+    assert!(
+        stderr.contains("foreign_loader"),
+        "stderr must name owner, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("graphics_loader_dispatch_table"),
+        "stderr must name state, got: {stderr}"
+    );
+}
+
+#[test]
+fn invariant_violation_policy_aborts_process_with_owner_and_state() {
+    let (aborted, stderr) = run_abort_child_process("child_invariant_violation_abort_case");
+    assert!(aborted, "InvariantViolation must terminate abnormally");
+    assert!(
+        stderr.contains("compiler_ir"),
+        "stderr must name owner, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("critical_symbol_table"),
+        "stderr must name state, got: {stderr}"
+    );
 }

@@ -660,7 +660,12 @@ impl GateDescriptor {
         if self.package == "xtask-evidence" {
             return QueryKind::EvidenceRecord;
         }
-        if self.subject == "ci workflows" || self.inputs.iter().any(|i| i.ends_with(".yml") || i.ends_with(".yaml")) {
+        if self.subject == "ci workflows"
+            || self
+                .inputs
+                .iter()
+                .any(|i| i.ends_with(".yml") || i.ends_with(".yaml"))
+        {
             return QueryKind::YamlWorkflow;
         }
         if self.inputs.iter().any(|i| i.ends_with(".json")) {
@@ -672,7 +677,8 @@ impl GateDescriptor {
         if self.subject.contains("workspace") || self.subject.contains("crate") {
             return QueryKind::WorkspaceGraph;
         }
-        if self.inputs.iter().any(|i| i.ends_with(".md")) || self.subject.contains("documentation") {
+        if self.inputs.iter().any(|i| i.ends_with(".md")) || self.subject.contains("documentation")
+        {
             return QueryKind::TextLiteral;
         }
         QueryKind::RustAst

@@ -2,9 +2,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
     operation_id_namespace, registry_error::validate_identity, CatalogBundle, ConformanceProvider,
-    ConformanceRegistry, ExtensionProvenance, IdNamespace, LoweringProvider,
-    OperationRegistration, OperationRegistry, OperationRegistryError, OperationTier,
-    SemanticDescriptor,
+    ConformanceRegistry, ExtensionProvenance, IdNamespace, LoweringProvider, OperationRegistration,
+    OperationRegistry, OperationRegistryError, OperationTier, SemanticDescriptor,
 };
 use crate::numeric::NumericContract;
 
@@ -178,8 +177,7 @@ fn every_registered_operation_has_descriptor_lowering_and_conformance_provider()
     let bundle = registry.catalog_bundle();
     let conformance = ConformanceRegistry::from_registry();
 
-    let all_registered_ids: BTreeSet<&'static str> =
-        registry.iter().map(|op| op.id).collect();
+    let all_registered_ids: BTreeSet<&'static str> = registry.iter().map(|op| op.id).collect();
 
     assert!(
         !all_registered_ids.is_empty(),
@@ -254,6 +252,7 @@ fn missing_provider_fails_closure_validation() {
         geometry_requirements: crate::geometry::GeometryRequirements::agnostic(),
         explicit_effects: None,
         explicit_capabilities: None,
+        opaque_reason: Some("test operation placeholder rationale"),
     };
     let low = LoweringProvider { id, build: None };
     let conf = ConformanceProvider {
@@ -313,6 +312,7 @@ fn production_catalog_read_cannot_reach_fixtures_and_changing_fixtures_preserves
         geometry_requirements: crate::geometry::GeometryRequirements::agnostic(),
         explicit_effects: None,
         explicit_capabilities: None,
+        opaque_reason: None,
     };
     let lowering = LoweringProvider { id, build: None };
 
@@ -373,8 +373,7 @@ fn production_catalog_read_cannot_reach_fixtures_and_changing_fixtures_preserves
             ..desc
         },
     );
-    let bundle3 =
-        CatalogBundle::from_parts(modified_descriptors, lowering_providers, extensions);
+    let bundle3 = CatalogBundle::from_parts(modified_descriptors, lowering_providers, extensions);
     let digest3 = *bundle3.digest();
     assert_ne!(
         digest1, digest3,
@@ -403,6 +402,7 @@ fn catalog_bundle_digest_is_part_of_artifact_identity() {
             geometry_requirements: crate::geometry::GeometryRequirements::agnostic(),
             explicit_effects: None,
             explicit_capabilities: None,
+            opaque_reason: Some("external custom dialect operation"),
         }],
         vec![LoweringProvider {
             id: "custom_dialect::op_a",
@@ -425,6 +425,7 @@ fn catalog_bundle_digest_is_part_of_artifact_identity() {
             geometry_requirements: crate::geometry::GeometryRequirements::agnostic(),
             explicit_effects: None,
             explicit_capabilities: None,
+            opaque_reason: Some("external custom dialect operation v2"),
         }],
         vec![LoweringProvider {
             id: "custom_dialect::op_a",
@@ -463,4 +464,134 @@ fn catalog_bundle_digest_is_part_of_artifact_identity() {
     );
     assert!(bundle_v1.contains("custom_dialect::op_a"));
     assert!(bundle_v2.contains("custom_dialect::op_a"));
+}
+
+/// A test enumerates the operation roster at run time and fails when an operation has no contract
+/// record, or a record with neither a law nor an explicit no-transform decision.
+#[test]
+fn every_registered_operation_has_contract_record_with_valid_decision() {
+    let registry = OperationRegistry::global();
+    let all_ops: Vec<super::SemanticOperation> = registry.iter().collect();
+    assert!(
+        !all_ops.is_empty(),
+        "Fix: registry must contain registered operations"
+    );
+
+    let mut violations = Vec::new();
+    let mut covered_count = 0usize;
+
+    for op in &all_ops {
+        covered_count += 1;
+        if !op.has_transform_decision() {
+            violations.push(format!(
+                "operation `{}` has neither algebraic laws nor an explicit opaque decision",
+                op.id
+            ));
+            continue;
+        }
+        let record = op.contract_record();
+        if let Err(err) = record.validate() {
+            violations.push(format!(
+                "operation `{}` contract record failed validation: {err}",
+                op.id
+            ));
+        }
+    }
+
+    assert!(
+        violations.is_empty(),
+        "Fix: {} operations failed contract decision check: {violations:#?}",
+        violations.len()
+    );
+    assert!(
+        covered_count > 0,
+        "Fix: expected covered operations in registry, found {covered_count}"
+    );
+}
+
+/// A test proves adding an operation without a decision turns the registry red.
+#[test]
+fn adding_operation_without_decision_turns_registry_red() {
+    let undecidable_reg = OperationRegistration::new_unconstrained(
+        "vyre-foundation::test::undecided_operation",
+        OperationTier::Foundation,
+        None,
+        None,
+        None,
+    );
+    assert!(!undecidable_reg.has_transform_decision());
+    let record = undecidable_reg.contract_record();
+    assert!(
+        record.validate().is_err(),
+        "Contract record without a decision must fail validation"
+    );
+}
+
+/// A test proves placeholder opaque reasons are rejected by name.
+#[test]
+fn placeholder_opaque_reasons_are_rejected() {
+    for placeholder in [
+        "todo",
+        "none",
+        "opaque",
+        "tbd",
+        "placeholder",
+        "no-op",
+        "not implemented",
+    ] {
+        let reg = OperationRegistration::new_unconstrained(
+            "vyre-foundation::test::placeholder_op",
+            OperationTier::Foundation,
+            None,
+            None,
+            None,
+        )
+        .with_opaque(placeholder);
+        let record = reg.contract_record();
+        assert!(
+            record.validate().is_err(),
+            "Placeholder reason `{placeholder}` must fail contract validation"
+        );
+    }
+}
+
+/// A test proves declarative dialect operations generate builders, documentation, and contract joins.
+#[test]
+fn declarative_dialect_operation_generation() {
+    fn dummy_builder() -> crate::ir::Program {
+        crate::ir::Program::empty()
+    }
+
+    crate::declare_dialect_op! {
+        id: "vyre-foundation::test::generated_dialect_op",
+        tier: OperationTier::Foundation,
+        category: "test_dialect",
+        doc: "A generated dialect test operation for verifying single-source generation.",
+        reference_obligation: "Pure value identity reference semantics.",
+        laws: &["idempotent"],
+        builder: dummy_builder,
+    }
+
+    let op = super::SemanticOperation {
+        id: "vyre-foundation::test::generated_dialect_op",
+        semantic_version: 1,
+        signature: None,
+        tier: OperationTier::Foundation,
+        category: Some("test_dialect"),
+        build: Some(dummy_builder),
+        test_inputs: None,
+        expected_output: None,
+        laws: &["idempotent"],
+        numeric: NumericContract::EXACT,
+        geometry_requirements: crate::geometry::GeometryRequirements::agnostic(),
+        source_file: file!(),
+        explicit_effects: None,
+        explicit_capabilities: None,
+        opaque_reason: None,
+    };
+
+    let record = op.contract_record();
+    assert_eq!(record.validate(), Ok(()));
+    assert_eq!(record.decision.laws().len(), 1);
+    assert_eq!(record.decision.laws()[0].law.name(), "idempotent");
 }

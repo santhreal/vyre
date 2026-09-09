@@ -8,12 +8,11 @@
 //! `gates::sweep` is the runner and the wiring meta-check that keeps every
 //! registered gate connected to a pinned baseline and a workflow.
 
-pub mod application_runnable;
 pub mod architecture_contract;
 pub mod backend_parity;
 pub mod bench;
-pub mod check_tier_deps;
 pub mod change_closure;
+pub mod check_tier_deps;
 pub mod ci_contract;
 pub mod ci_registry;
 pub mod ci_steps;
@@ -38,8 +37,8 @@ pub mod finding_capability;
 #[cfg(test)]
 pub mod fixture_checkout;
 pub mod frozen_contract;
-pub mod gate_dag_gate;
 pub mod gate_canon;
+pub mod gate_dag_gate;
 pub mod gpu_loudness;
 mod host_oracle_closure;
 pub mod host_oracle_elimination;
@@ -84,10 +83,10 @@ pub mod release_provenance;
 pub mod repo_hygiene;
 pub mod scan;
 pub mod schedule_ownership;
+pub mod scorecard;
 pub mod script_ledger;
 pub mod shader_source;
 pub mod source_reachability;
-pub mod scorecard;
 pub mod supported_api;
 pub mod sweep;
 pub mod test_harness_isolation;
@@ -95,6 +94,7 @@ pub mod test_material;
 pub mod test_only_capability;
 pub mod test_target_membership;
 pub mod testing_guides;
+pub mod tracked_modules;
 pub mod unification;
 pub mod use_paths;
 pub mod variant_list_closure;
@@ -107,10 +107,6 @@ use crate::gate::GateBehavior;
 /// Every gate behavior this module implements, keyed only to pair it with its
 /// authoritative descriptor at registry construction.
 pub static GATES: &[(&str, &dyn GateBehavior)] = &[
-    (
-        "application-runnable",
-        &application_runnable::ApplicationRunnable,
-    ),
     (
         "architecture-contract",
         &architecture_contract::ArchitectureContract,
@@ -210,7 +206,10 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("proptest-coverage", &proptest_coverage::ProptestCoverage),
     ("public-api-snapshot", &public_api::PublicApiSnapshot),
     ("public-api-paths", &public_api_paths::PublicApiPaths),
-    ("release-provenance", &release_provenance::ReleaseProvenanceGate),
+    (
+        "release-provenance",
+        &release_provenance::ReleaseProvenanceGate,
+    ),
     ("repo-hygiene", &repo_hygiene::RepoHygiene),
     ("single-backlog", &repo_hygiene::SingleBacklog),
     ("schedule-ownership", &schedule_ownership::ScheduleOwnership),
@@ -243,6 +242,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
         &test_target_membership::TestTargetMembership,
     ),
     ("testing-guides", &testing_guides::TestingGuides),
+    ("tracked-modules", &tracked_modules::TrackedModules),
     ("unification", &unification::Unification),
     (
         "variant-list-closure",

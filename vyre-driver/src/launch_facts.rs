@@ -14,6 +14,7 @@
 //! the process that measured them: a selection persisted across runs would
 //! outlive the artifact that authorized it.
 
+use crate::lock_policy::{govern_mutex, RecoveryClass};
 use std::collections::BTreeMap;
 use std::sync::{LazyLock, Mutex};
 
@@ -115,9 +116,14 @@ pub fn record_launch_measurement(
         return false;
     }
     let key = LaunchFactKey::new(program, declared, element_count, limits);
-    let mut guard = LAUNCH_MEASUREMENTS
-        .lock()
-        .unwrap_or_else(|poison| poison.into_inner());
+    let Ok(mut guard) = govern_mutex(
+        &LAUNCH_MEASUREMENTS,
+        "launch_facts",
+        "LAUNCH_MEASUREMENTS",
+        RecoveryClass::TransactionallyRecoverable,
+    ) else {
+        return false;
+    };
     while guard.len() >= MAX_MEASURED_PROGRAMS && !guard.contains_key(&key) {
         let Some(oldest) = guard.keys().next().copied() else {
             break;
@@ -146,9 +152,15 @@ pub fn launch_width_measurements(
     element_count: u32,
 ) -> BTreeMap<[u32; 3], u64> {
     let key = LaunchFactKey::new(program, program.workgroup_size(), element_count, limits);
-    let guard = LAUNCH_MEASUREMENTS
-        .lock()
-        .unwrap_or_else(|poison| poison.into_inner());
+    let guard = match govern_mutex(
+        &LAUNCH_MEASUREMENTS,
+        "launch_facts",
+        "LAUNCH_MEASUREMENTS",
+        RecoveryClass::TransactionallyRecoverable,
+    ) {
+        Ok(guard) => guard,
+        Err(_) => return BTreeMap::new(),
+    };
     guard.get(&key).cloned().unwrap_or_default()
 }
 
@@ -271,10 +283,14 @@ pub(crate) fn forget_launch_measurements(
     element_count: u32,
 ) {
     let key = LaunchFactKey::new(program, program.workgroup_size(), element_count, limits);
-    let mut guard = LAUNCH_MEASUREMENTS
-        .lock()
-        .unwrap_or_else(|poison| poison.into_inner());
-    guard.remove(&key);
+    if let Ok(mut guard) = govern_mutex(
+        &LAUNCH_MEASUREMENTS,
+        "launch_facts",
+        "LAUNCH_MEASUREMENTS",
+        RecoveryClass::TransactionallyRecoverable,
+    ) {
+        guard.remove(&key);
+    }
 }
 
 #[path = "launch_facts_tests.rs"]

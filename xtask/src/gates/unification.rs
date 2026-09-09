@@ -174,7 +174,9 @@ fn find_unification_ast_hits(file: &syn::File, row_name: &str) -> Vec<u32> {
             ("child-bodies-owner", syn::Item::Fn(f)) if f.sig.ident == "child_bodies" => {
                 lines.push(f.sig.ident.span().start().line as u32);
             }
-            ("cpu-reference-implementations", syn::Item::Fn(f)) if f.sig.ident == "cpu_reference" => {
+            ("cpu-reference-implementations", syn::Item::Fn(f))
+                if f.sig.ident == "cpu_reference" =>
+            {
                 lines.push(f.sig.ident.span().start().line as u32);
             }
             ("fusion-planning-entry", syn::Item::Fn(f))

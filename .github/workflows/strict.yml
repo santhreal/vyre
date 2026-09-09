@@ -37,6 +37,9 @@ jobs:
       - name: Abstraction gate
         run: |
           ./cargo_full run -p xtask -- abstraction-gate
+      - name: Configuration model gate
+        run: |
+          ./cargo_full run -p xtask -- configuration-model
       - name: Clippy (advisory, never gating)
         continue-on-error: true
         run: |

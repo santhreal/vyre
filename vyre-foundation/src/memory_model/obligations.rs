@@ -112,7 +112,19 @@ pub struct CapabilityToken {
 }
 
 /// Monotonic state and memory epoch counter.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    serde::Deserialize,
+    serde::Serialize,
+)]
 pub struct StateEpoch(pub u64);
 
 impl StateEpoch {
@@ -253,7 +265,9 @@ pub enum ObligationError {
         details: String,
     },
     /// Attempted to consume an obligation that does not exist or was already consumed.
-    #[error("InvalidObligationConsumption: failed to consume obligation `{name}`. Details: {details}")]
+    #[error(
+        "InvalidObligationConsumption: failed to consume obligation `{name}`. Details: {details}"
+    )]
     InvalidObligationConsumption {
         /// Obligation name.
         name: String,
@@ -261,7 +275,9 @@ pub enum ObligationError {
         details: String,
     },
     /// Conflicting obligations detected.
-    #[error("ConflictingObligation: conflict between `{first_name}` and `{second_name}`: {reason}")]
+    #[error(
+        "ConflictingObligation: conflict between `{first_name}` and `{second_name}`: {reason}"
+    )]
     ConflictingObligation {
         /// First obligation name.
         first_name: String,
@@ -271,7 +287,9 @@ pub enum ObligationError {
         reason: String,
     },
     /// Borrow exclusivity rule violated.
-    #[error("BorrowExclusivityViolation: resource `{buffer}` has conflicting active borrows: {details}")]
+    #[error(
+        "BorrowExclusivityViolation: resource `{buffer}` has conflicting active borrows: {details}"
+    )]
     BorrowExclusivityViolation {
         /// Resource name.
         buffer: String,
@@ -311,7 +329,12 @@ impl ObligationTracker {
     }
 
     /// Produce an explicit obligation.
-    pub fn produce(&mut self, name: impl Into<String>, kind: ObligationKind, node_idx: usize) -> u64 {
+    pub fn produce(
+        &mut self,
+        name: impl Into<String>,
+        kind: ObligationKind,
+        node_idx: usize,
+    ) -> u64 {
         let id = self.next_id;
         self.next_id += 1;
         self.obligations.push(Obligation {
@@ -421,7 +444,12 @@ fn walk_and_track_obligations(
     let mut current_idx = start_idx;
     for node in nodes {
         match node {
-            Node::AsyncLoad { tag, source, destination, .. } => {
+            Node::AsyncLoad {
+                tag,
+                source,
+                destination,
+                ..
+            } => {
                 tracker.produce(
                     format!("async_wait:{}", tag.as_str()),
                     ObligationKind::PendingAsyncWait {
@@ -432,7 +460,12 @@ fn walk_and_track_obligations(
                     current_idx,
                 );
             }
-            Node::AsyncStore { tag, source, destination, .. } => {
+            Node::AsyncStore {
+                tag,
+                source,
+                destination,
+                ..
+            } => {
                 tracker.produce(
                     format!("async_wait:{}", tag.as_str()),
                     ObligationKind::PendingAsyncWait {
@@ -456,7 +489,9 @@ fn walk_and_track_obligations(
                     });
                 }
             }
-            Node::If { then, otherwise, .. } => {
+            Node::If {
+                then, otherwise, ..
+            } => {
                 let mut then_tracker = tracker.clone();
                 walk_and_track_obligations(then, &mut then_tracker, current_idx + 1)?;
                 let mut else_tracker = tracker.clone();

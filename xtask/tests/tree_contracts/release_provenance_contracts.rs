@@ -62,7 +62,9 @@ fn adding_unapproved_dependency_or_missing_license_turns_suite_red() {
     authority2.dependencies.push(agpl_dep);
 
     let err2 = authority2.verify_offline_integrity().unwrap_err();
-    assert!(matches!(err2, ProvenanceError::UnapprovedLicense { package, license } if package == "agpl-crate" && license == "AGPL-3.0-only"));
+    assert!(
+        matches!(err2, ProvenanceError::UnapprovedLicense { package, license } if package == "agpl-crate" && license == "AGPL-3.0-only")
+    );
 }
 
 #[test]
@@ -82,7 +84,9 @@ fn unpinned_dependency_checksum_is_refused() {
     });
 
     let err = authority.verify_offline_integrity().unwrap_err();
-    assert!(matches!(&err, ProvenanceError::MissingChecksum(msg) if msg.contains("unpinned-crate")));
+    assert!(
+        matches!(&err, ProvenanceError::MissingChecksum(msg) if msg.contains("unpinned-crate"))
+    );
 }
 
 #[test]
@@ -102,7 +106,10 @@ fn unpinned_or_network_reading_build_input_is_refused_by_name() {
 
     let err = authority.verify_build_scripts(&root).unwrap_err();
     match err {
-        ProvenanceError::UndeclaredBuildInput { build_script, undeclared_input } => {
+        ProvenanceError::UndeclaredBuildInput {
+            build_script,
+            undeclared_input,
+        } => {
             assert_eq!(build_script, "vyre-bench/build.rs");
             assert!(undeclared_input.contains("network access is strictly forbidden"));
         }
@@ -127,7 +134,10 @@ fn unbounded_build_script_reads_are_refused() {
 
     let err = authority.verify_build_scripts(&root).unwrap_err();
     match err {
-        ProvenanceError::UndeclaredBuildInput { build_script, undeclared_input } => {
+        ProvenanceError::UndeclaredBuildInput {
+            build_script,
+            undeclared_input,
+        } => {
             assert_eq!(build_script, "vyre-driver-wgpu/build.rs");
             assert!(undeclared_input.contains("unbounded filesystem reads"));
         }
@@ -152,7 +162,9 @@ fn sbom_and_slsa_provenance_generation_succeeds() {
     assert!(sbom_val["metadata"]["tools"].as_array().unwrap().len() >= 2);
 
     // 2. SLSA v1.2 Provenance generation
-    let slsa_json = authority.generate_slsa_provenance(&root).expect("slsa provenance generation");
+    let slsa_json = authority
+        .generate_slsa_provenance(&root)
+        .expect("slsa provenance generation");
     let slsa_val: serde_json::Value = serde_json::from_str(&slsa_json).expect("valid slsa json");
     assert_eq!(slsa_val["_type"], "https://in-toto.io/Statement/v1");
     assert_eq!(slsa_val["predicateType"], "https://slsa.dev/provenance/v1");
@@ -160,11 +172,13 @@ fn sbom_and_slsa_provenance_generation_succeeds() {
         slsa_val["predicate"]["buildDefinition"]["buildType"],
         "https://vyre.dev/build/v1"
     );
-    assert!(slsa_val["predicate"]["buildDefinition"]["resolvedDependencies"]
-        .as_array()
-        .unwrap()
-        .len()
-        > 100);
+    assert!(
+        slsa_val["predicate"]["buildDefinition"]["resolvedDependencies"]
+            .as_array()
+            .unwrap()
+            .len()
+            > 100
+    );
 }
 
 #[test]

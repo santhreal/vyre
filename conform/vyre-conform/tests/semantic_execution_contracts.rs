@@ -598,5 +598,8 @@ fn every_registered_operation_reconciles_outputs_under_grid_sync_cuts() {
         }
         tested_count += 1;
     }
-    assert!(tested_count > 0, "must test at least one registered operation");
+    assert!(
+        tested_count > 0,
+        "must test at least one registered operation"
+    );
 }

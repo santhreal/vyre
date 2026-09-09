@@ -129,7 +129,9 @@ fn a_column_walk_over_workgroup_memory_is_padded_in_emitted_ptx() {
     );
     let row_counts = secondary_text
         .lines()
-        .filter(|line| line.trim_start().starts_with("shr.u32") && line.trim_end().ends_with(", 5;"))
+        .filter(|line| {
+            line.trim_start().starts_with("shr.u32") && line.trim_end().ends_with(", 5;")
+        })
         .count();
     let row_displacements = secondary_text
         .lines()

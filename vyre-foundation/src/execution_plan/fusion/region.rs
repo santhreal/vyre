@@ -72,7 +72,9 @@ impl IterationSpace {
         tile_shape
             .iter()
             .zip(&self.extents)
-            .all(|(&tile_dim, &extent)| tile_dim > 0 && (extent == 0 || extent >= u64::from(tile_dim)))
+            .all(|(&tile_dim, &extent)| {
+                tile_dim > 0 && (extent == 0 || extent >= u64::from(tile_dim))
+            })
     }
 }
 
@@ -100,10 +102,7 @@ pub struct RegionFusionPlanner;
 impl RegionFusionPlanner {
     /// Classify the iteration space relationship between a producer and consumer region.
     #[must_use]
-    pub fn classify_relation(
-        producer: &LogicalRegion,
-        consumer: &LogicalRegion,
-    ) -> RegionRelation {
+    pub fn classify_relation(producer: &LogicalRegion, consumer: &LogicalRegion) -> RegionRelation {
         let prod_space = IterationSpace::from_region(producer);
         let cons_space = IterationSpace::from_region(consumer);
 

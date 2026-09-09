@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use vyre_foundation::ir::DataType;
+use vyre::ir::DataType;
 
 use crate::config::ModelConfig;
 

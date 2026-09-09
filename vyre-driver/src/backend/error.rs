@@ -1,7 +1,6 @@
 //! Actionable backend error taxonomy.
 
-use vyre_foundation::diagnostics::{
-    CompilerLevel, Diagnostic, DiagnosticStage, RetryClass, };
+use vyre_foundation::diagnostics::{CompilerLevel, Diagnostic, DiagnosticStage, RetryClass};
 
 /// Machine-readable classification of a backend failure kind.
 ///

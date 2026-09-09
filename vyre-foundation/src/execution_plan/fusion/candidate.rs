@@ -6,11 +6,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::logical::LogicalRegion;
 use super::dependence::HandoffLocation;
 use super::legality::FusionRejectionReason;
 use super::region::{RegionFusionPlanner, RegionRelation};
 use super::tile::ScheduleTile;
+use crate::logical::LogicalRegion;
 
 /// Explicit classification of a fusion candidate strategy.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

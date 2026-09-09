@@ -8,15 +8,15 @@
 //! see. The registry wrapper now refuses it, which only helps for a backend
 //! whose decision somebody recorded.
 //!
-//! Both halves of the closure are derived at run time. The backend set comes
-//! from the live registry and the linked driver crates, and the mode set from
-//! `FloatLoweringMode::EVERY`, so a driver crate added without a decision and a
-//! mode added without one both turn this red instead of inheriting whatever the
-//! trait default happens to say.
+//! The closure is derived at run time. The backend set comes from the linked
+//! driver crates and the mode set from `FloatLoweringMode::EVERY`, so a driver
+//! crate added without a decision and a mode added without one both turn this
+//! red instead of inheriting whatever the trait default happens to say.
 //!
-//! Whether a shipped backend answers what its row claims needs a device, so
-//! that half is `float_lowering_device_decisions.rs` behind `device-tests`.
-//! The decision's presence is checked here, in every lane.
+//! Constructing a backend opens a device context, so every case that does it
+//! is in `float_lowering_device_decisions.rs` behind `device-tests`. The
+//! decision's presence and the codegen refusal are checked here, in every
+//! lane.
 
 #![forbid(unsafe_code)]
 
@@ -24,14 +24,12 @@ use std::collections::BTreeSet;
 
 use vyre_driver::DispatchConfig;
 use vyre_foundation::fp_parity::FloatLoweringMode;
-use vyre_registry_link::backend::{linked_backend_sources, live_backend_registry, DECLARED_SOURCES};
+use vyre_registry_link::backend::{linked_backend_sources, DECLARED_SOURCES};
 
 use vyre_foundation::ir::UnOp;
 use vyre_test_support::strict_float_programs::f32_multiply_add_program;
 
-use crate::float_lowering::{
-    backends_needing_a_decision, f32_bytes, honored_or_refused_by_name, ledger_path, read_ledger,
-};
+use crate::float_lowering::{backends_needing_a_decision, ledger_path, read_ledger};
 /// Every backend states a decision for every mode.
 #[test]
 fn every_backend_records_a_decision_for_every_float_lowering_mode() {
@@ -107,59 +105,4 @@ fn unsupported_backend_refuses_strict_ieee_compilation_and_cache_key_generation(
             "Fix: CUDA PTX codegen refusal must name the mode, operation, and corrective action: {error}"
         );
     }
-}
-
-/// For every registered backend, strict-IEEE lowering either produces the
-/// expanded form or refuses with a diagnostic naming the operation.
-///
-/// Closure: dynamically enumerates `live_backend_registry()`.
-/// Adding a backend without honoring strict IEEE or refusing with an actionable
-/// diagnostic naming the operation turns this red.
-#[test]
-fn every_registered_backend_strict_ieee_lowering_honored_or_refused_naming_operation() {
-    let program_with_sin = f32_multiply_add_program(4, Some(UnOp::Sin));
-    let program_with_exp2 = f32_multiply_add_program(4, Some(UnOp::Exp2));
-    let inputs = vec![
-        f32_bytes(&[0.5, 1.25, -2.5, 3.75]),
-        f32_bytes(&[1.000_244_2, 0.5, 2.0, -1.5]),
-        f32_bytes(&[-1.0, 0.25, 0.5, -0.125]),
-    ];
-    let mut config = DispatchConfig::default();
-    config.float_lowering = FloatLoweringMode::StrictIeee;
-
-    let registry = live_backend_registry().expect("Fix: backend registry must be readable");
-    let mut findings = Vec::new();
-
-    for registration in registry {
-        let Ok(backend) = registration.acquire() else {
-            continue;
-        };
-
-        // Sin has an exact f32 expansion, so a backend that honors the strict
-        // mode answers it and one that does not refuses by name.
-        let honors_strict = backend.honors_float_lowering(FloatLoweringMode::StrictIeee);
-        findings.extend(honored_or_refused_by_name(
-            registration.id,
-            honors_strict,
-            FloatLoweringMode::StrictIeee,
-            Some("Sin"),
-            &backend.dispatch(&program_with_sin, &inputs, &config),
-        ));
-
-        // Exp2 has no exact f32 expansion, so no backend may accept it under
-        // the strict mode whatever it claims about the mode itself.
-        findings.extend(honored_or_refused_by_name(
-            registration.id,
-            false,
-            FloatLoweringMode::StrictIeee,
-            Some("Exp2"),
-            &backend.dispatch(&program_with_exp2, &inputs, &config),
-        ));
-    }
-
-    assert!(
-        findings.is_empty(),
-        "Fix: every registered backend must either honor strict-IEEE lowering with expanded form or refuse naming the operation:\n{}",
-        findings.join("\n")
-    );
 }

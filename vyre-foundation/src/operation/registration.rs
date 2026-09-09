@@ -7,7 +7,7 @@ use crate::geometry::{GeometryConstraintConflict, GeometryRequirements};
 use crate::ir::Program;
 use crate::numeric::NumericContract;
 use crate::operation::records::{
-    ConformanceProvider, LoweringProvider, OperationFixtures, SemanticDescriptor,
+    ConformanceProvider, ContractProvider, LoweringProvider, OperationFixtures, SemanticDescriptor,
 };
 use crate::operation::semantic_op::SemanticOperation;
 use crate::operation::semantics::{OperationEffects, OperationTier};
@@ -202,10 +202,7 @@ impl OperationRegistration {
 
     /// Attach target-neutral execution geometry requirements.
     #[must_use]
-    pub const fn with_geometry_requirements(
-        mut self,
-        requirements: GeometryRequirements,
-    ) -> Self {
+    pub const fn with_geometry_requirements(mut self, requirements: GeometryRequirements) -> Self {
         self.geometry_requirements = requirements;
         self
     }
@@ -242,9 +239,7 @@ impl OperationRegistration {
     /// # Errors
     ///
     /// Returns a stable conflict when the recorded decision contradicts semantics.
-    pub fn schedule_constraints(
-        &self,
-    ) -> Result<GeometryRequirements, GeometryConstraintConflict> {
+    pub fn schedule_constraints(&self) -> Result<GeometryRequirements, GeometryConstraintConflict> {
         match self.program() {
             Some(program) => self
                 .geometry_requirements
@@ -295,6 +290,7 @@ impl OperationRegistration {
             geometry_requirements: self.geometry_requirements,
             explicit_effects: self.explicit_effects,
             explicit_capabilities: self.explicit_capabilities,
+            opaque_reason: self.opaque_reason,
         }
     }
 
@@ -315,6 +311,28 @@ impl OperationRegistration {
             test_inputs: self.test_inputs,
             expected_output: self.expected_output,
         }
+    }
+
+    /// Extract the contract provider from this registration.
+    #[must_use]
+    pub fn contract_provider(&'static self) -> ContractProvider {
+        ContractProvider {
+            id: self.id,
+            contract: None,
+        }
+    }
+
+    /// Construct the canonical semantic contract record.
+    #[must_use]
+    pub fn contract_record(&self) -> vyre_spec::SemanticContractRecord {
+        super::semantic_op::build_contract_record(
+            self.id,
+            self.signature.as_ref(),
+            self.explicit_effects,
+            self.numeric,
+            self.laws,
+            self.opaque_reason,
+        )
     }
 }
 

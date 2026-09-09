@@ -5,10 +5,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ir::Program;
-use crate::logical::LogicalRegion;
 use super::dependence::{classify_program_handoff, HandoffLocation};
 use super::region::{RegionFusionPlanner, RegionRelation};
+use crate::ir::Program;
+use crate::logical::LogicalRegion;
 
 /// Stable machine-readable reason that prevents two regions or programs from fusing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -60,19 +60,24 @@ impl FusionRejectionReason {
 
 impl std::fmt::Display for FusionRejectionReason {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} ({})", self.code(), match self {
-            Self::UnknownGraphMember => "unknown graph member",
-            Self::NotProducerConsumer => "not producer-consumer connected",
-            Self::LifecycleBoundary => "crosses lifecycle boundary",
-            Self::MultipleConsumers => "multiple consumers for intermediate value",
-            Self::WorkgroupMismatch => "workgroup mismatch",
-            Self::SynchronizationBoundary => "synchronization boundary",
-            Self::DependencyCycle => "dependency cycle",
-            Self::IncompatibleIterationSpace => "incompatible iteration space",
-            Self::ExcessiveSharedMemory => "excessive shared memory",
-            Self::ExcessiveRegisters => "excessive registers",
-            Self::GenuinelyIllegalGeometry => "genuinely illegal geometry",
-        })
+        write!(
+            f,
+            "{} ({})",
+            self.code(),
+            match self {
+                Self::UnknownGraphMember => "unknown graph member",
+                Self::NotProducerConsumer => "not producer-consumer connected",
+                Self::LifecycleBoundary => "crosses lifecycle boundary",
+                Self::MultipleConsumers => "multiple consumers for intermediate value",
+                Self::WorkgroupMismatch => "workgroup mismatch",
+                Self::SynchronizationBoundary => "synchronization boundary",
+                Self::DependencyCycle => "dependency cycle",
+                Self::IncompatibleIterationSpace => "incompatible iteration space",
+                Self::ExcessiveSharedMemory => "excessive shared memory",
+                Self::ExcessiveRegisters => "excessive registers",
+                Self::GenuinelyIllegalGeometry => "genuinely illegal geometry",
+            }
+        )
     }
 }
 
@@ -144,7 +149,9 @@ pub fn analyze_program_fusion_legality(
     if prod_wg != cons_wg {
         if !prod_sched_only || !cons_sched_only {
             if producer.stats().has_node_barrier() || consumer.stats().has_node_barrier() {
-                return FusionLegalityVerdict::Rejected(FusionRejectionReason::SynchronizationBoundary);
+                return FusionLegalityVerdict::Rejected(
+                    FusionRejectionReason::SynchronizationBoundary,
+                );
             }
             return FusionLegalityVerdict::Rejected(FusionRejectionReason::WorkgroupMismatch);
         }
