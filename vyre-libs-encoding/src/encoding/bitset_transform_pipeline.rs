@@ -191,7 +191,7 @@ mod tests {
         ];
 
         for (program, expected) in cases {
-            let actual = vyre_libs_builder::test_parity_oracles::region_operation_id(&program)
+            let actual = vyre_test_support::test_parity_oracles::region_operation_id(&program)
                 .expect("Fix: build a primitive program that carries a region generator");
             assert_eq!(actual, expected);
         }

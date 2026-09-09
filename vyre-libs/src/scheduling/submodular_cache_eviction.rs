@@ -227,7 +227,7 @@ pub fn greedy_quality_bound(optimum: u32) -> u32 {
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use crate::test_parity_oracles::{canonical_inputs, policy, semantic_output, StaticOutputs};
+    use vyre_test_support::test_parity_oracles::{canonical_inputs, policy, semantic_output, StaticOutputs};
     use vyre_megakernel::{SemanticExecutionOutput, SemanticExecutionRequest};
     use vyre_reference::composition_witness::argmax_of_marginals_witness;
 

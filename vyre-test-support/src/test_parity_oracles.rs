@@ -1,9 +1,7 @@
-//! Dispatcher doubles and program sequencing for this crate's own unit tests.
+//! Dispatcher doubles, request decoders, and program sequencing for semantic parity tests.
 //!
-//! The 16.16 oracles that used to live here are arithmetic with no dependency
-//! on this crate, and their only callers are integration suites. They are owned
-//! by `vyre_test_support::fixed_point`, a dev-dependency, so a library consumer
-//! no longer sees test tooling in this crate's published surface.
+//! A parity oracle runs against an executor double to verify graph construction,
+//! dispatch invariants, or output decoding without invoking a physical device backend.
 
 use std::collections::BTreeMap;
 
@@ -19,7 +17,7 @@ use vyre_megakernel::{
 /// request declares how many the node has. Fifteen solver oracles each padded
 /// and projected in their own copy of the same epilogue, so a change to how a
 /// short result is padded reached one of them and not the rest.
-pub(crate) fn semantic_output_padded(
+pub fn semantic_output_padded(
     request: &SemanticExecutionRequest<'_>,
     mut ordered: Vec<Vec<u8>>,
 ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
@@ -37,7 +35,7 @@ pub(crate) fn semantic_output_padded(
 /// reported `None` and fell through to another operation's arm, and one returned
 /// an invalid-request error. A program with no region generator is a request no
 /// oracle can serve, so it is one error here.
-pub(crate) fn region_operation_id(program: &Program) -> Result<&str, SemanticExecutionError> {
+pub fn region_operation_id(program: &Program) -> Result<&str, SemanticExecutionError> {
     program
         .entry()
         .iter()
@@ -53,8 +51,9 @@ pub(crate) fn region_operation_id(program: &Program) -> Result<&str, SemanticExe
         })
 }
 
-pub(crate) fn policy() -> SemanticExecutionPolicy {
-    vyre_test_support::semantic_requests::unknown_policy(
+/// The default execution policy used for semantic requests in parity suites.
+pub fn policy() -> SemanticExecutionPolicy {
+    crate::semantic_requests::unknown_policy(
         Digest([3; 32]),
         SearchBudget::new(8, 64, 1, 0, 1_000),
         1_000_000,
@@ -66,7 +65,7 @@ pub(crate) fn policy() -> SemanticExecutionPolicy {
 /// Buffers and entry nodes are appended in argument order, which is the
 /// order a multi-stage parity suite dispatches them in.
 #[must_use]
-pub(crate) fn wrap_program_sequence(programs: &[&Program], workgroup_size: [u32; 3]) -> Program {
+pub fn wrap_program_sequence(programs: &[&Program], workgroup_size: [u32; 3]) -> Program {
     let buffer_count = programs.iter().map(|program| program.buffers().len()).sum();
     let entry_count = programs.iter().map(|program| program.entry().len()).sum();
     let mut buffers = Vec::with_capacity(buffer_count);
@@ -85,7 +84,7 @@ pub(crate) fn wrap_program_sequence(programs: &[&Program], workgroup_size: [u32;
 /// Reaching the backend at all is what a reject-before-dispatch, short-circuit, or cache-hit
 /// contract forbids, so the assertion has to live in `dispatch` rather than after the call. The
 /// message names the contract that was supposed to stop first.
-pub(crate) struct NeverDispatches(pub(crate) &'static str);
+pub struct NeverDispatches(pub &'static str);
 
 impl SemanticExecutor for NeverDispatches {
     fn execute(
@@ -99,7 +98,7 @@ impl SemanticExecutor for NeverDispatches {
 /// A semantic executor that returns fixed output buffers.
 ///
 /// `contract` states the logical input contract represented by the double.
-pub(crate) struct StaticOutputs {
+pub struct StaticOutputs {
     contract: &'static str,
     outputs: Vec<Vec<u8>>,
     expect_inputs: &'static [usize],
@@ -110,7 +109,7 @@ pub(crate) struct StaticOutputs {
 
 impl StaticOutputs {
     /// Returns `outputs` from every dispatch, checking nothing.
-    pub(crate) fn new(contract: &'static str, outputs: Vec<Vec<u8>>) -> Self {
+    pub fn new(contract: &'static str, outputs: Vec<Vec<u8>>) -> Self {
         Self {
             contract,
             outputs,
@@ -125,31 +124,44 @@ impl StaticOutputs {
     ///
     /// More than one count is a real contract: a builder that grew an optional
     /// buffer accepts both the shape with it and the shape without.
-    pub(crate) fn expecting_inputs(mut self, counts: &'static [usize]) -> Self {
+    pub fn expecting_inputs(mut self, counts: &'static [usize]) -> Self {
         self.expect_inputs = counts;
         self
     }
 
     /// Rejects a dispatch whose input at `index` is not `bytes` long.
-    pub(crate) fn expecting_input_bytes(mut self, index: usize, bytes: usize) -> Self {
+    pub fn expecting_input_bytes(mut self, index: usize, bytes: usize) -> Self {
         self.expect_input_bytes = Some((index, bytes));
         self
     }
 
     /// Records the input at `index`, decoded as little-endian `u32`s, once per
     /// dispatch.
-    pub(crate) fn recording_input(mut self, index: usize) -> Self {
+    pub fn recording_input(mut self, index: usize) -> Self {
         self.record_input = Some(index);
         self
     }
 
     /// The recorded inputs in dispatch order.
-    pub(crate) fn recorded(&self) -> Vec<Vec<u32>> {
+    pub fn recorded(&self) -> Vec<Vec<u32>> {
         self.recorded
             .lock()
             .expect("Fix: static-output dispatcher recorder mutex should not be poisoned")
             .clone()
     }
+}
+
+fn read_u32s(bytes: &[u8]) -> Vec<u32> {
+    bytes
+        .chunks_exact(4)
+        .map(|chunk| {
+            u32::from_le_bytes(
+                chunk
+                    .try_into()
+                    .expect("Fix: four-byte chunk is a u32 word; state a buffer that holds the word."),
+            )
+        })
+        .collect()
 }
 
 impl SemanticExecutor for StaticOutputs {
@@ -184,7 +196,7 @@ impl SemanticExecutor for StaticOutputs {
             self.recorded
                 .lock()
                 .expect("Fix: static-output dispatcher recorder mutex should not be poisoned")
-                .push(crate::dispatch_buffers::read_u32s(&inputs[index]));
+                .push(read_u32s(&inputs[index]));
         }
         semantic_output(request, self.outputs.clone())
     }
@@ -196,13 +208,14 @@ impl SemanticExecutor for StaticOutputs {
 /// `graph-dispatch` features carry, so this is declared on the same pair. A
 /// blanket `dead_code` allowance is what stood here before, and it hid the
 /// unselected configurations from the only lint that reports them.
-pub(crate) struct SequentialOutputs {
+pub struct SequentialOutputs {
     contract: &'static str,
     steps: std::sync::Mutex<Vec<Vec<Vec<u8>>>>,
 }
 
 impl SequentialOutputs {
-    pub(crate) fn new(contract: &'static str, steps: Vec<Vec<Vec<u8>>>) -> Self {
+    /// Create a new sequential output dispatcher with the expected output steps.
+    pub fn new(contract: &'static str, steps: Vec<Vec<Vec<u8>>>) -> Self {
         Self {
             contract,
             steps: std::sync::Mutex::new(steps),
@@ -229,7 +242,8 @@ impl SemanticExecutor for SequentialOutputs {
     }
 }
 
-pub(crate) fn canonical_inputs(
+/// Collect canonical input buffers in the order declared on the graph's first node.
+pub fn canonical_inputs(
     request: &SemanticExecutionRequest<'_>,
 ) -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
     let graph = request.logical().graph();
@@ -269,7 +283,7 @@ pub(crate) fn canonical_inputs(
 /// A program that declares read-write working storage writes buffers a wrapper
 /// never reads, and their declaration order is not the wrapper's. Use
 /// [`semantic_output_named`] there.
-pub(crate) fn semantic_output(
+pub fn semantic_output(
     request: &SemanticExecutionRequest<'_>,
     ordered: Vec<Vec<u8>>,
 ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
@@ -312,7 +326,7 @@ pub(crate) fn semantic_output(
 /// backend leaves in read-write working storage a wrapper never reads. A name
 /// the program does not write is rejected: it is a stale test, not a backend
 /// that returned too much.
-pub(crate) fn semantic_output_named(
+pub fn semantic_output_named(
     request: &SemanticExecutionRequest<'_>,
     named: Vec<(&str, Vec<u8>)>,
 ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
@@ -354,4 +368,41 @@ pub(crate) fn semantic_output_named(
         payload: Digest([2; 32]),
         outputs,
     })
+}
+
+/// Run a program through the reference interpreter and hand back raw buffers.
+///
+/// Every module test that wanted a reference answer used to pack its own
+/// buffers, call `reference_eval`, and decode the result, so the same eight
+/// lines existed once per module under a local `run`. Two of those copies had
+/// already drifted into passing a differently sized output buffer than the
+/// program declared. This is the one place the call is made.
+///
+/// `buffers` is the complete argument list in declaration order, outputs
+/// included: a zeroed vector of the right length is what the interpreter
+/// writes into, and a zero-length one is a real argument, not an omission.
+pub fn eval_bytes(
+    label: &str,
+    program: &Program,
+    buffers: Vec<Vec<u8>>,
+) -> Vec<Vec<u8>> {
+    try_eval_bytes(program, buffers).unwrap_or_else(|error| {
+        panic!("Fix: {label} program must execute in the reference interpreter: {error:?}")
+    })
+}
+
+/// Run a program that is expected to trap, and hand back the refusal.
+///
+/// A trap contract asserts on the error, so it cannot go through
+/// [`eval_bytes`], which panics. Both share this body so the interpreter is
+/// still reached from one place.
+pub fn try_eval_bytes(
+    program: &Program,
+    buffers: Vec<Vec<u8>>,
+) -> Result<Vec<Vec<u8>>, vyre_reference::ReferenceError> {
+    let values = vyre_reference::reference_inputs(program, buffers);
+    Ok(vyre_reference::reference_eval(program, &values)?
+        .iter()
+        .map(|value| value.to_bytes())
+        .collect())
 }

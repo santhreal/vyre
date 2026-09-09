@@ -614,7 +614,7 @@ mod tests {
                 request: &vyre_megakernel::SemanticExecutionRequest<'_>,
             ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError>
             {
-                crate::test_parity_oracles::canonical_inputs(request)?;
+                vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
                 let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                     panic!("invalid zero-region inputs must fail before dispatch");
                 };
@@ -624,7 +624,7 @@ mod tests {
                 if ordered.len() < output_count {
                     ordered.resize(output_count, Vec::new());
                 }
-                crate::test_parity_oracles::semantic_output(request, ordered)
+                vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
             }
         }
 
@@ -636,7 +636,7 @@ mod tests {
         let mut out = vec![3.0];
         let err = fmm_compress_pairwise_via_with_scratch_into(
             &NoDispatch,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[],
             &[],
             &[1.0],
@@ -755,7 +755,7 @@ mod tests {
 
         let out = fmm_compress_pairwise_via(
             &dispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &scores,
             &cells,
             &distances,
@@ -780,7 +780,7 @@ mod tests {
 
         let err = fmm_compress_pairwise_via(
             &dispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &scores,
             &cells,
             &distances,
@@ -803,7 +803,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 let call = self.calls.fetch_add(1, Ordering::Relaxed);
                 match call {
@@ -815,7 +815,7 @@ mod tests {
                     ))),
                 }
             };
-            crate::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 

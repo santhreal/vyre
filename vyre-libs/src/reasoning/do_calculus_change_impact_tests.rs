@@ -85,7 +85,7 @@ fn zero_node_validation_precedes_scratch_mutation() {
                 panic!("invalid zero-node inputs must fail before dispatch");
             };
             let ordered = compute_ordered()?;
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -102,7 +102,7 @@ fn zero_node_validation_precedes_scratch_mutation() {
     let mut scratch = seeded_impact_scratch();
     let result = predict_impact_via_into(
         &NoDispatch,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[1],
         &[],
         0,
@@ -117,7 +117,7 @@ fn zero_node_validation_precedes_scratch_mutation() {
     let mut scratch = seeded_impact_scratch();
     let result = predict_impact_via_into(
         &NoDispatch,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[],
         &[1],
         0,
@@ -132,7 +132,7 @@ fn zero_node_validation_precedes_scratch_mutation() {
     let mut scratch = seeded_impact_scratch();
     let result = predict_impact_observation_form_via_into(
         &NoDispatch,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[1],
         &[],
         0,
@@ -147,7 +147,7 @@ fn zero_node_validation_precedes_scratch_mutation() {
     let mut scratch = seeded_impact_scratch();
     let result = predict_impact_observation_form_via_into(
         &NoDispatch,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[],
         &[1],
         0,
@@ -465,7 +465,7 @@ impl SemanticExecutor for InterventionDispatcher {
         &self,
         request: &vyre_megakernel::SemanticExecutionRequest<'_>,
     ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-        let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+        let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
         let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
             assert_mock_dispatch_contract(&inputs, 3);
             let adj = crate::dispatch_buffers::read_u32s(&inputs[0]);
@@ -482,7 +482,7 @@ impl SemanticExecutor for InterventionDispatcher {
             Ok(vec![u32_slice_to_le_bytes(&out)])
         };
         let ordered = compute_ordered()?;
-        crate::test_parity_oracles::semantic_output(request, ordered)
+        vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
     }
 }
 
@@ -491,7 +491,7 @@ fn intervention_delete_incoming_via_dispatches_rule1() {
     let adj = vec![1, 2, 3, 4];
     let out = intervention_delete_incoming_via(
         &InterventionDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &adj,
         &[1, 0],
         2,
@@ -504,7 +504,7 @@ fn intervention_delete_incoming_via_dispatches_rule1() {
 fn intervention_delete_incoming_via_rejects_bad_shape() {
     let err = intervention_delete_incoming_via(
         &InterventionDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[1, 2, 3],
         &[1, 0],
         2,
@@ -520,7 +520,7 @@ impl SemanticExecutor for Rule2Dispatcher {
         &self,
         request: &vyre_megakernel::SemanticExecutionRequest<'_>,
     ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-        let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+        let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
         let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
             assert_mock_dispatch_contract(&inputs, 3);
             let adj = crate::dispatch_buffers::read_u32s(&inputs[0]);
@@ -545,7 +545,7 @@ impl SemanticExecutor for Rule2Dispatcher {
             Ok(vec![u32_slice_to_le_bytes(&out)])
         };
         let ordered = compute_ordered()?;
-        crate::test_parity_oracles::semantic_output(request, ordered)
+        vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
     }
 }
 
@@ -558,7 +558,7 @@ fn rule2_reverse_incoming_via_dispatches_rule2() {
     ];
     let out = rule2_reverse_incoming_via(
         &Rule2Dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &adj,
         &[0, 1, 0],
         3,
@@ -579,7 +579,7 @@ fn rule2_reverse_incoming_via_preserves_bidirectional_fully_treated_edges() {
     let adj = vec![0, 1, 1, 0];
     let out = rule2_reverse_incoming_via(
         &Rule2Dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &adj,
         &[1, 1],
         2,
@@ -592,7 +592,7 @@ fn rule2_reverse_incoming_via_preserves_bidirectional_fully_treated_edges() {
 fn rule2_reverse_incoming_via_rejects_bad_shape() {
     let err = rule2_reverse_incoming_via(
         &Rule2Dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[1, 2, 3],
         &[1, 0],
         2,
@@ -605,7 +605,7 @@ fn rule2_reverse_incoming_via_rejects_bad_shape() {
 fn intervention_delete_incoming_via_handles_zero_nodes() {
     let out = intervention_delete_incoming_via(
         &InterventionDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[],
         &[],
         0,
@@ -618,7 +618,7 @@ fn intervention_delete_incoming_via_handles_zero_nodes() {
 fn intervention_delete_incoming_via_rejects_non_empty_when_n_zero() {
     let err = intervention_delete_incoming_via(
         &InterventionDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[1],
         &[],
         0,
@@ -642,12 +642,12 @@ fn intervention_delete_incoming_via_rejects_extra_outputs() {
                 ])
             };
             let ordered = compute_ordered()?;
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
     let err = intervention_delete_incoming_via(
         &ExtraOutDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[1, 2, 3, 4],
         &[1, 0],
         2,
@@ -660,7 +660,7 @@ fn intervention_delete_incoming_via_rejects_extra_outputs() {
 fn rule2_reverse_incoming_via_handles_zero_nodes() {
     let out = rule2_reverse_incoming_via(
         &Rule2Dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[],
         &[],
         0,
@@ -684,12 +684,12 @@ fn rule2_reverse_incoming_via_rejects_extra_outputs() {
                 ])
             };
             let ordered = compute_ordered()?;
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
     let err = rule2_reverse_incoming_via(
         &ExtraOutDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[0, 1, 1, 0],
         &[1, 1],
         2,
@@ -710,12 +710,12 @@ fn rule3_subgraph_via_handles_zero_nodes() {
                 panic!("dispatch should not be invoked for n=0");
             };
             let ordered = compute_ordered()?;
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
     let (reduced, kept) = rule3_subgraph_via(
         &DummyDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[],
         &[],
         0,
@@ -741,12 +741,12 @@ fn rule3_subgraph_via_derives_shape_from_inputs_not_gpu_scalar() {
                 ])
             };
             let ordered = compute_ordered()?;
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
     let (reduced, kept) = rule3_subgraph_via(
         &CorruptedRedundantScalarDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[0, 1, 0, 0],
         &[1, 1],
         2,
@@ -766,7 +766,7 @@ fn rule3_subgraph_via_rejects_missing_outputs() {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let mut output = crate::test_parity_oracles::semantic_output(
+            let mut output = vyre_test_support::test_parity_oracles::semantic_output(
                 request,
                 vec![
                     u32_slice_to_le_bytes(&[0, 1, 0, 0]),
@@ -784,7 +784,7 @@ fn rule3_subgraph_via_rejects_missing_outputs() {
     }
     let err = rule3_subgraph_via(
         &MissingOutDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[0, 1, 0, 0],
         &[1, 1],
         2,
@@ -810,12 +810,12 @@ fn rule3_subgraph_via_rejects_extra_outputs() {
                 ])
             };
             let ordered = compute_ordered()?;
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
     let err = rule3_subgraph_via(
         &ExtraOutDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[0, 1, 0, 0],
         &[1, 1],
         2,
@@ -836,14 +836,14 @@ fn project_impacted_lineage_entries_handles_empty_lineage() {
                 panic!("empty lineage cells must not dispatch");
             };
             let ordered = compute_ordered()?;
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
     let mut out = vec![99; 4];
     let mut scratch = ImpactedLineageProjectionScratch::default();
     project_impacted_lineage_entries_via_into(
         &PanicDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[1, 0],
         &[0; 4],
         2,
@@ -867,7 +867,7 @@ fn project_impacted_lineage_entries_parity_via_reference() {
     let mut scratch = ImpactedLineageProjectionScratch::default();
     project_impacted_lineage_entries_via_into(
         &dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &impact_mask,
         &closure,
         3,
@@ -888,7 +888,7 @@ fn project_impacted_lineage_entries_zero_n_nonempty_lineage_dispatches_zeros() {
     let mut scratch = ImpactedLineageProjectionScratch::default();
     project_impacted_lineage_entries_via_into(
         &dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[],
         &[],
         0,

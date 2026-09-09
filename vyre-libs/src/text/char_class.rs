@@ -171,7 +171,7 @@ fn char_class_with_source_type(
     n: u32,
     source_type: DataType,
 ) -> Program {
-    let output_byte_len = usize::try_from(n).unwrap_or(usize::MAX).saturating_mul(4);
+    let output_byte_len = u64::from(n).saturating_mul(4);
     Program::wrapped(
         vec![
             BufferDecl::storage(source, 0, BufferAccess::ReadOnly, source_type).with_count(n),

@@ -167,7 +167,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             if inputs.len() != 3 {
                 return Err(SemanticExecutionError::InvalidRequest(
                     "functor semantic input shape mismatch".into(),
@@ -178,7 +178,7 @@ mod tests {
             let target_n_cols = inputs[2].len() / std::mem::size_of::<u32>();
             assert_eq!(source.len(), mapping.len());
             let out = apply_pass_functor(&source, &mapping, target_n_cols as u32);
-            crate::test_parity_oracles::semantic_output(request, vec![u32_slice_to_le_bytes(&out)])
+            vyre_test_support::test_parity_oracles::semantic_output(request, vec![u32_slice_to_le_bytes(&out)])
         }
     }
 
@@ -217,7 +217,7 @@ mod tests {
         let mapping = vec![2u32, 0, 1];
         let out = apply_pass_functor_via(
             &FunctorDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &view_in,
             &mapping,
             4,
@@ -232,7 +232,7 @@ mod tests {
         let mapping = vec![1u32, 1, 1];
         let out = apply_pass_functor_via(
             &FunctorDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &view_in,
             &mapping,
             3,
@@ -245,7 +245,7 @@ mod tests {
     fn apply_pass_functor_via_rejects_shape_mismatch() {
         let err = apply_pass_functor_via(
             &FunctorDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1, 2],
             &[0],
             2,

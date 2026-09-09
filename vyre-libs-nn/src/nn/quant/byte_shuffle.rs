@@ -38,7 +38,7 @@ pub fn byte_shuffle(input: &str, output: &str, n: u32, elem_bytes: u32) -> Resul
         BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(total);
     let out_decl = BufferDecl::output(output, 1, DataType::U32)
         .with_count(total)
-        .with_output_byte_range(0..(total as usize).saturating_mul(4));
+        .with_output_byte_range(0..u64::from(total).saturating_mul(4));
 
     Ok(build_indexed_map(
         OP_ID,

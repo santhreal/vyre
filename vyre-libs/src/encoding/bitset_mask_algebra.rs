@@ -429,9 +429,9 @@ mod tests {
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
             let program = &request.logical().graph().nodes()[0].program;
-            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
-                let op_id = crate::test_parity_oracles::region_operation_id(program)?;
+                let op_id = vyre_test_support::test_parity_oracles::region_operation_id(program)?;
                 match op_id {
                     crate::bitset::and::OP_ID => binary(&inputs, |a, b| a & b),
                     crate::bitset::or::OP_ID => binary(&inputs, |a, b| a | b),
@@ -475,7 +475,7 @@ mod tests {
                 }
             };
             let ordered = compute_ordered()?;
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -519,7 +519,7 @@ mod tests {
         assert_eq!(
             mask_and_via(
                 &MaskDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &lhs,
                 &rhs
             )
@@ -529,7 +529,7 @@ mod tests {
         assert_eq!(
             mask_or_via(
                 &MaskDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &lhs,
                 &rhs
             )
@@ -539,7 +539,7 @@ mod tests {
         assert_eq!(
             mask_xor_via(
                 &MaskDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &lhs,
                 &rhs
             )
@@ -553,7 +553,7 @@ mod tests {
         assert_eq!(
             mask_not_via(
                 &MaskDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &[0x0F0F_F0F0],
             )
             .unwrap(),
@@ -561,28 +561,28 @@ mod tests {
         );
         assert!(mask_equal_via(
             &MaskDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1, 2],
             &[1, 2],
         )
         .unwrap());
         assert!(mask_subset_of_via(
             &MaskDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0b0011],
             &[0b1111],
         )
         .unwrap());
         assert!(mask_contains_via(
             &MaskDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0b1010],
             1,
         )
         .unwrap());
         assert!(mask_test_bit_via(
             &MaskDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0b1010],
             1,
         )
@@ -590,7 +590,7 @@ mod tests {
         assert_eq!(
             mask_set_bit_via(
                 &MaskDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &[0],
                 1,
             )
@@ -600,7 +600,7 @@ mod tests {
         assert_eq!(
             mask_clear_bit_via(
                 &MaskDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &[0b11],
                 1,
             )
@@ -615,7 +615,7 @@ mod tests {
         let mut out = Vec::with_capacity(4);
         mask_binary_via_with_scratch_into(
             &MaskDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             BitsetMaskBinaryOp::And,
             &[0xFFFF],
             &[0x00FF],
@@ -628,7 +628,7 @@ mod tests {
 
         mask_binary_via_with_scratch_into(
             &MaskDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             BitsetMaskBinaryOp::Or,
             &[0xF000],
             &[0x000F],
@@ -649,7 +649,7 @@ mod tests {
     fn length_mismatch_is_actionable() {
         let err = mask_and_via(
             &MaskDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1],
             &[1, 2],
         )

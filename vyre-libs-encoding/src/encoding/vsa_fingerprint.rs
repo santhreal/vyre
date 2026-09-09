@@ -228,7 +228,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = vyre_libs_builder::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 let [a_bytes, b_bytes] = inputs.as_slice() else {
                     return Err(SemanticExecutionError::InvalidRequest(format!(
@@ -253,7 +253,7 @@ mod tests {
                     .collect::<Vec<_>>();
                 Ok(vec![u32_slice_to_le_bytes(&out)])
             })()?;
-            vyre_libs_builder::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -304,7 +304,7 @@ mod tests {
         let region = vec![0x9ABC_DEF0u32; 8];
         let got = fingerprint_via(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &kind,
             &sig,
             &region,
@@ -324,7 +324,7 @@ mod tests {
 
         fingerprint_via_into(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &kind,
             &sig,
             &region,
@@ -347,7 +347,7 @@ mod tests {
 
         fingerprint_via_with_scratch_into(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &kind,
             &sig,
             &region,
@@ -362,7 +362,7 @@ mod tests {
 
         fingerprint_via_with_scratch_into(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &region,
             &kind,
             &sig,
@@ -385,7 +385,7 @@ mod tests {
         let dispatcher = XorDispatcher;
         let error = fingerprint_via(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1, 2],
             &[1],
             &[1, 2],

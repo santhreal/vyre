@@ -3795,6 +3795,7 @@ dependencies = [
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -3838,6 +3839,7 @@ dependencies = [
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -3913,6 +3915,7 @@ dependencies = [
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -4100,6 +4103,7 @@ dependencies = [
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -4120,7 +4124,9 @@ dependencies = [
  "vyre-libs-builder",
  "vyre-megakernel",
  "vyre-primitives",
+ "vyre-reference",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -4141,6 +4147,7 @@ dependencies = [
  "vyre-libs-builder",
  "vyre-megakernel",
  "vyre-primitives",
+ "vyre-reference",
  "vyre-spec",
 ]
 
@@ -4167,6 +4174,7 @@ dependencies = [
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -4215,6 +4223,7 @@ dependencies = [
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]

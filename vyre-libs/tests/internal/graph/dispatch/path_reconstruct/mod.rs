@@ -41,7 +41,7 @@ fn try_cpu_ref_batched(
         parent, targets, max_depth, paths, lens,
     )
 }
-use crate::test_parity_oracles::{canonical_inputs, policy, semantic_output, StaticOutputs};
+use vyre_test_support::test_parity_oracles::{canonical_inputs, policy, semantic_output, StaticOutputs};
 use vyre_megakernel::{
     SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest, SemanticExecutor,
 };

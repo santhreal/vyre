@@ -306,7 +306,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 match inputs.len() {
                     2 => {
@@ -346,7 +346,7 @@ mod tests {
                     }
                 }
             };
-            crate::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -358,7 +358,7 @@ mod tests {
     fn fixed_pick_config_normalizes_pre_exp_weights() {
         let out = pick_config_pre_exp_fixed_via(
             &DifferentiableDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[65_536, 131_072, 65_536],
         )
         .expect("Fix: dispatch should normalize pre-exp weights");
@@ -376,7 +376,7 @@ mod tests {
         let out_ptr = out.as_ptr();
         pick_config_pre_exp_fixed_via_with_scratch_into(
             &DifferentiableDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[65_536, 65_536],
             &mut scratch,
             &mut out,
@@ -394,7 +394,7 @@ mod tests {
         let mut out = Vec::new();
         config_gradient_magnitude_pre_exp_fixed_via_with_scratch_into(
             &DifferentiableDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[65_536, 196_608],
             &mut scratch,
             &mut out,
@@ -411,7 +411,7 @@ mod tests {
 
         let out = natural_config_gradient_magnitude_pre_exp_fixed_via(
             &DifferentiableDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[one, one],
             &m_inv_sqrt,
         )
@@ -431,7 +431,7 @@ mod tests {
 
         natural_config_gradient_magnitude_pre_exp_fixed_via_with_scratch_into(
             &DifferentiableDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[one, one],
             &m_inv_sqrt,
             &mut scratch,
@@ -444,7 +444,7 @@ mod tests {
 
         natural_config_gradient_magnitude_pre_exp_fixed_via_with_scratch_into(
             &DifferentiableDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[one, one],
             &m_inv_sqrt,
             &mut scratch,
@@ -466,7 +466,7 @@ mod tests {
     fn fixed_pick_config_rejects_empty_candidates() {
         let err = pick_config_pre_exp_fixed_via(
             &DifferentiableDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[],
         )
         .expect_err("empty candidate grids are invalid");

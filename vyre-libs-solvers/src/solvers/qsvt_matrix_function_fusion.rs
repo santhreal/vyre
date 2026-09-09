@@ -308,7 +308,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = vyre_libs_builder::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 // chebyshev_filter: 3 RO (cost/weights/coeffs) + plain-RW output(3)+scratch(4) = 5.
                 assert_eq!(inputs.len(), 5);
@@ -319,7 +319,7 @@ mod tests {
                 assert_eq!(coeffs, vec![1, 0]);
                 Ok(vec![u32_slice_to_le_bytes(&weights)])
             };
-            vyre_libs_builder::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -416,7 +416,7 @@ mod tests {
     fn transport_residual_fixed_via_dispatches_chebyshev_path() {
         let out = transport_residual_fixed_via(
             &QsvtDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1, 0, 0, 1],
             &[7, 11],
             &[1, 0],
@@ -431,7 +431,7 @@ mod tests {
     fn transport_residual_fixed_via_rejects_bad_shapes() {
         let err = transport_residual_fixed_via(
             &QsvtDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1, 0, 0],
             &[7, 11],
             &[1, 0],
@@ -457,13 +457,13 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = vyre_libs_builder::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 let weights = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
                 let scratch = vec![0u8; weights.len() * 2 * 4];
                 Ok(vec![u32_slice_to_le_bytes(&weights), scratch])
             };
-            vyre_libs_builder::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -474,9 +474,9 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            vyre_libs_builder::test_parity_oracles::canonical_inputs(request)?;
+            vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let ordered: Vec<Vec<u8>> = Vec::new();
-            vyre_libs_builder::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -487,13 +487,13 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            vyre_libs_builder::test_parity_oracles::canonical_inputs(request)?;
+            vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let mut ordered: Vec<Vec<u8>> = vec![vec![1, 2, 3]];
             let output_count = request.logical().graph().nodes()[0].outputs.len();
             if ordered.len() < output_count {
                 ordered.resize(output_count, Vec::new());
             }
-            vyre_libs_builder::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -501,7 +501,7 @@ mod tests {
     fn transport_residual_fixed_via_accepts_sibling_scratch_output() {
         let out = transport_residual_fixed_via(
             &SiblingScratchDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1, 0, 0, 1],
             &[7, 11],
             &[1, 0],
@@ -516,7 +516,7 @@ mod tests {
     fn transport_residual_fixed_via_fails_on_empty_outputs() {
         let err = transport_residual_fixed_via(
             &EmptyOutputDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1, 0, 0, 1],
             &[7, 11],
             &[1, 0],
@@ -531,7 +531,7 @@ mod tests {
     fn transport_residual_fixed_via_fails_on_malformed_output_bytes() {
         let err = transport_residual_fixed_via(
             &MalformedOutputDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1, 0, 0, 1],
             &[7, 11],
             &[1, 0],

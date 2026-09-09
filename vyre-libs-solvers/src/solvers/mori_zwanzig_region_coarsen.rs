@@ -370,7 +370,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = vyre_libs_builder::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 3);
                 let p = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
@@ -388,7 +388,7 @@ mod tests {
                 }
                 Ok(vec![u32_slice_to_le_bytes(&out)])
             };
-            vyre_libs_builder::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -398,7 +398,7 @@ mod tests {
         let half = 1u32 << 15;
         let out = coarsen_region_state_fixed_via(
             &MoriDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[half, half, half, half],
             &[10 * one, 20 * one],
             2,
@@ -411,7 +411,7 @@ mod tests {
     fn fixed_via_rejects_shape_mismatch() {
         let err = coarsen_region_state_fixed_via(
             &MoriDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1, 0, 0],
             &[1, 1],
             2,
@@ -429,7 +429,7 @@ mod tests {
 
         coarsen_region_state_fixed_via_with_scratch_into(
             &MoriDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[half, half, half, half],
             &[10 * one, 20 * one],
             2,
@@ -440,7 +440,7 @@ mod tests {
         let input_ptrs: Vec<*const u8> = scratch.inputs.iter().map(Vec::as_ptr).collect();
         coarsen_region_state_fixed_via_with_scratch_into(
             &MoriDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[half, half, half, half],
             &[12 * one, 18 * one],
             2,

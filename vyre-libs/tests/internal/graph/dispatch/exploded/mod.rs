@@ -8,7 +8,7 @@ use vyre_test_support::exploded_ifds_cases::{arm_coverage, declared_groups, Expl
 
 mod ifds_doubles;
 
-use crate::test_parity_oracles::StaticOutputs;
+use vyre_test_support::test_parity_oracles::StaticOutputs;
 use ifds_doubles::{canonical_expected, RecordingIfdsOracle};
 
 /// The readback shapes below are deliberately malformed, so the executor
@@ -54,7 +54,7 @@ fn assert_via_dispatch_matches_reference(cases: &[ExplodedIfdsCase]) {
         );
         let actual = build_ifds_csr_via(
             &dispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             case.num_procs,
             case.blocks_per_proc,
             case.facts_per_proc,
@@ -160,7 +160,7 @@ fn via_decodes_exact_csr_outputs_into_reused_buffers() {
     let col_idx_ptr = col_idx.as_ptr();
     build_ifds_csr_via_into(
         &dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         1,
         2,
         1,
@@ -189,7 +189,7 @@ fn via_refreshes_static_rule_inputs_for_same_shape_rule_content_change() {
 
     build_ifds_csr_via_with_scratch_into(
         &dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         1,
         2,
         1,
@@ -204,7 +204,7 @@ fn via_refreshes_static_rule_inputs_for_same_shape_rule_content_change() {
     .expect("Fix: first IFDS same-shape dispatch should succeed");
     build_ifds_csr_via_with_scratch_into(
         &dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         1,
         2,
         1,
@@ -242,7 +242,7 @@ fn via_with_scratch_reuses_split_dispatch_decode_and_output_storage() {
 
     build_ifds_csr_via_with_scratch_into(
         &dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         1,
         2,
         1,
@@ -270,7 +270,7 @@ fn via_with_scratch_reuses_split_dispatch_decode_and_output_storage() {
 
     build_ifds_csr_via_with_scratch_into(
         &dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         1,
         2,
         1,
@@ -308,7 +308,7 @@ fn via_with_scratch_reuses_split_dispatch_decode_and_output_storage() {
 
     build_ifds_csr_via_with_scratch_into(
         &dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         1,
         2,
         1,
@@ -329,7 +329,7 @@ fn via_with_scratch_reuses_split_dispatch_decode_and_output_storage() {
 
     build_ifds_csr_via_with_scratch_into(
         &dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         1,
         2,
         1,
@@ -358,7 +358,7 @@ fn empty_via_path_does_not_materialize_program_or_dispatch() {
 
     build_ifds_csr_via_with_scratch_into(
         &dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         0,
         0,
         0,
@@ -400,7 +400,7 @@ fn via_rejects_extra_outputs() {
     );
     let err = build_ifds_csr_via(
         &dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         1,
         1,
         1,
@@ -429,7 +429,7 @@ fn via_rejects_trailing_col_len_bytes() {
     );
     let err = build_ifds_csr_via(
         &dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         1,
         1,
         1,
@@ -458,7 +458,7 @@ fn via_rejects_inconsistent_row_ptr_readback() {
     );
     let err = build_ifds_csr_via(
         &dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         1,
         1,
         1,

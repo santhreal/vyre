@@ -38,7 +38,7 @@ impl SemanticExecutor for RecordingIfdsOracle {
         &self,
         request: &SemanticExecutionRequest<'_>,
     ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
-        let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+        let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
         if inputs.len() >= 2 {
             self.intra_src_blocks
                 .lock()

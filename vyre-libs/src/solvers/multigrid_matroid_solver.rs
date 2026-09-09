@@ -409,7 +409,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 5);
                 let a = crate::dispatch_buffers::read_u32s(&inputs[0]);
@@ -435,7 +435,7 @@ mod tests {
 
                 Ok(vec![u32_slice_to_le_bytes(&out)])
             };
-            crate::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -444,7 +444,7 @@ mod tests {
         let one = 1u32 << 16;
         let out = matroid_solve_step_fixed_via(
             &JacobiDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[one, 0, 0, one],
             &[3 * one, 4 * one],
             &[0, 0],
@@ -459,7 +459,7 @@ mod tests {
     fn fixed_via_rejects_bad_shapes() {
         let err = matroid_solve_step_fixed_via(
             &JacobiDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1, 0, 0],
             &[1, 1],
             &[0, 0],
@@ -478,7 +478,7 @@ mod tests {
 
         matroid_solve_step_fixed_via_with_scratch_into(
             &JacobiDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[one, 0, 0, one],
             &[3 * one, 4 * one],
             &[0, 0],
@@ -491,7 +491,7 @@ mod tests {
         let input_ptrs: Vec<*const u8> = scratch.inputs.iter().map(Vec::as_ptr).collect();
         matroid_solve_step_fixed_via_with_scratch_into(
             &JacobiDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[one, 0, 0, one],
             &[2 * one, 5 * one],
             &[0, 0],

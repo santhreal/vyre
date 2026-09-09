@@ -4,7 +4,7 @@ use crate::graph::toposort::{
     reference_all_reachable, reference_reachable_set, reference_topo_order,
     toposort as toposort_cpu, toposort_csr_into, ToposortError, TOPOSORT_ORDER_OUT_BUFFER,
 };
-use crate::test_parity_oracles::{canonical_inputs, policy, semantic_output_named};
+use vyre_test_support::test_parity_oracles::{canonical_inputs, policy, semantic_output_named};
 use std::sync::Mutex;
 use vyre_megakernel::{
     SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest, SemanticExecutor,

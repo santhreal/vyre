@@ -16,7 +16,7 @@ impl SemanticExecutor for QuantizedDispatcher {
         &self,
         request: &vyre_megakernel::SemanticExecutionRequest<'_>,
     ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-        let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+        let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
         let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
             assert_eq!(inputs.len(), 2);
             let packed = crate::dispatch_buffers::read_u32s(&inputs[0]);
@@ -26,7 +26,7 @@ impl SemanticExecutor for QuantizedDispatcher {
             Ok(vec![vyre_primitives::wire::pack_i32_slice(&out)])
         };
         let ordered = compute_ordered();
-        crate::test_parity_oracles::semantic_output(request, ordered?)
+        vyre_test_support::test_parity_oracles::semantic_output(request, ordered?)
     }
 }
 
@@ -37,7 +37,7 @@ impl SemanticExecutor for QuantizedDotDispatcher {
         &self,
         request: &vyre_megakernel::SemanticExecutionRequest<'_>,
     ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-        let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+        let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
         let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
             // Four input-consuming buffers (lhs/rhs/lhs_scale/rhs_scale RO); `out` is backend-allocated.
             assert_eq!(inputs.len(), 4);
@@ -56,7 +56,7 @@ impl SemanticExecutor for QuantizedDotDispatcher {
             Ok(vec![vyre_primitives::wire::pack_f32_slice(&[out])])
         };
         let ordered = compute_ordered();
-        crate::test_parity_oracles::semantic_output(request, ordered?)
+        vyre_test_support::test_parity_oracles::semantic_output(request, ordered?)
     }
 }
 
@@ -67,7 +67,7 @@ impl SemanticExecutor for QuantizedMatvecDispatcher {
         &self,
         request: &vyre_megakernel::SemanticExecutionRequest<'_>,
     ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-        let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+        let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
         let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
             // Three input-consuming buffers (weights/x/row_scales RO); `out` is backend-allocated.
             assert_eq!(inputs.len(), 3);
@@ -81,7 +81,7 @@ impl SemanticExecutor for QuantizedMatvecDispatcher {
             Ok(vec![vyre_primitives::wire::pack_f32_slice(&out)])
         };
         let ordered = compute_ordered();
-        crate::test_parity_oracles::semantic_output(request, ordered?)
+        vyre_test_support::test_parity_oracles::semantic_output(request, ordered?)
     }
 }
 
@@ -92,7 +92,7 @@ impl SemanticExecutor for QuantizedBatchedMatvecDispatcher {
         &self,
         request: &vyre_megakernel::SemanticExecutionRequest<'_>,
     ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-        let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+        let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
         let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
             // Three input-consuming buffers (weights/x_batches/row_scales RO); `out` is backend-allocated.
             assert_eq!(inputs.len(), 3);
@@ -122,7 +122,7 @@ impl SemanticExecutor for QuantizedBatchedMatvecDispatcher {
             Ok(vec![vyre_primitives::wire::pack_f32_slice(&out)])
         };
         let ordered = compute_ordered();
-        crate::test_parity_oracles::semantic_output(request, ordered?)
+        vyre_test_support::test_parity_oracles::semantic_output(request, ordered?)
     }
 }
 
@@ -133,7 +133,7 @@ impl SemanticExecutor for QuantizedBatchedMatmulDispatcher {
         &self,
         request: &vyre_megakernel::SemanticExecutionRequest<'_>,
     ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-        let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+        let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
         let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
             // Four input-consuming buffers (weights/activations/row_scales/batch_scales RO); `out` is
             // backend-allocated.
@@ -158,7 +158,7 @@ impl SemanticExecutor for QuantizedBatchedMatmulDispatcher {
             Ok(vec![vyre_primitives::wire::pack_f32_slice(&out)])
         };
         let ordered = compute_ordered();
-        crate::test_parity_oracles::semantic_output(request, ordered?)
+        vyre_test_support::test_parity_oracles::semantic_output(request, ordered?)
     }
 }
 
@@ -169,7 +169,7 @@ impl SemanticExecutor for QuantizedBatchedMatmulTop1Dispatcher {
         &self,
         request: &vyre_megakernel::SemanticExecutionRequest<'_>,
     ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-        let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+        let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
         let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
             // Four input-consuming buffers (weights/activations/row_scales/batch_scales RO); the single
             // `out` buffer is backend-allocated.
@@ -200,7 +200,7 @@ impl SemanticExecutor for QuantizedBatchedMatmulTop1Dispatcher {
             Ok(vec![vyre_primitives::wire::pack_f32_slice(&packed)])
         };
         let ordered = compute_ordered();
-        crate::test_parity_oracles::semantic_output(request, ordered?)
+        vyre_test_support::test_parity_oracles::semantic_output(request, ordered?)
     }
 }
 
@@ -262,7 +262,7 @@ fn run_batched_matvec_via(
 ) -> Result<Vec<f32>, SemanticExecutionError> {
     i4x8_batched_matvec_f32_scaled_via(
         &QuantizedBatchedMatvecDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         weights,
         x_batches,
         row_scales,
@@ -283,7 +283,7 @@ fn run_batched_matmul_via(
 ) -> Result<Vec<f32>, SemanticExecutionError> {
     i4x8_batched_matmul_f32_scaled_via(
         &QuantizedBatchedMatmulDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &PackedI4BatchedMatmul {
             weights_packed: weights,
             activation_batches_packed: activations,
@@ -307,7 +307,7 @@ fn run_batched_matmul_top1_via(
 ) -> Result<(Vec<f32>, Vec<u32>), SemanticExecutionError> {
     i4x8_batched_matmul_top1_f32_scaled_via(
         &QuantizedBatchedMatmulTop1Dispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &PackedI4BatchedMatmul {
             weights_packed: weights,
             activation_batches_packed: activations,

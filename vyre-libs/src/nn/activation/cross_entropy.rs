@@ -83,7 +83,7 @@ pub fn try_cross_entropy(
             BufferDecl::workgroup("ce_target_logit", 1, DataType::F32),
             BufferDecl::output(loss_out, 2, DataType::F32)
                 .with_count(padded_output_count)
-                .with_output_byte_range(0..((n as usize) * core::mem::size_of::<f32>())),
+                .with_output_byte_range(0..(u64::from(n) * 4)),
         ],
         [256, 1, 1],
         vec![wrap_anonymous_region(OP_ID, body)],

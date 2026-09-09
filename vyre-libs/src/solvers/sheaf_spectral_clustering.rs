@@ -391,7 +391,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 // Real-backend input contract: one input per input-consuming buffer in buffer order
                 // restriction_diag RO (0), v RW (1, zero slot), lambda RW (2, zero slot), one_fp RO (3).
@@ -418,7 +418,7 @@ mod tests {
                     max_r.to_le_bytes().to_vec(),
                 ])
             };
-            crate::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -429,7 +429,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            crate::test_parity_oracles::canonical_inputs(request)?;
+            vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![
                     u32_slice_to_le_bytes(&[1]),
@@ -437,7 +437,7 @@ mod tests {
                     u32_slice_to_le_bytes(&[1]),
                 ])
             };
-            crate::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -448,11 +448,11 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            crate::test_parity_oracles::canonical_inputs(request)?;
+            vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![u32_slice_to_le_bytes(&[1]), vec![1, 0, 0, 0, 2]])
             };
-            crate::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -463,7 +463,7 @@ mod tests {
         // initial vector is ignored by the diagonal kernel.
         let spectrum = dominant_spectrum_fixed_via(
             &SpectrumDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[one, one / 2],
             &[8 * one, 4 * one],
             2,
@@ -494,7 +494,7 @@ mod tests {
         let out_ptr = eigenvector.as_ptr();
         let lambda = dominant_spectrum_fixed_via_with_scratch_into(
             &SpectrumDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[one, one / 2],
             &[8 * one, 4 * one],
             2,
@@ -517,7 +517,7 @@ mod tests {
     fn fixed_via_rejects_shape_mismatch() {
         let err = dominant_spectrum_fixed_via(
             &SpectrumDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1, 2, 3],
             &[1, 2],
             2,
@@ -532,7 +532,7 @@ mod tests {
     fn fixed_via_rejects_extra_outputs() {
         let err = dominant_spectrum_fixed_via(
             &ExtraSpectrumDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1],
             &[1],
             1,
@@ -550,7 +550,7 @@ mod tests {
     fn fixed_via_rejects_trailing_lambda_bytes() {
         let err = dominant_spectrum_fixed_via(
             &TrailingLambdaDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1],
             &[1],
             1,

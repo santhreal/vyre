@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_parity_oracles::{canonical_inputs, semantic_output};
+use vyre_test_support::test_parity_oracles::{canonical_inputs, semantic_output};
 use vyre_megakernel::{
     SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest, SemanticExecutor,
 };

@@ -11,7 +11,7 @@ fn i4x8_dot_f32_scaled_via_dispatches_signed_boundary_accumulators() {
     let rhs_scale = 0.25;
 
     let out = i4x8_dot_f32_scaled_via(
-        &QuantizedDotDispatcher, &crate::test_parity_oracles::policy(),
+        &QuantizedDotDispatcher, &vyre_test_support::test_parity_oracles::policy(),
         &lhs,
         &rhs,
         lhs_scale,
@@ -45,7 +45,7 @@ fn i4x8_dot_f32_scaled_via_reuses_cached_program_for_same_lane_shape() {
             };
             i4x8_dot_f32_scaled_via_with_scratch_into(
                 &QuantizedDotDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 lhs,
                 rhs,
                 0.5,
@@ -76,7 +76,7 @@ fn generated_i4x8_dot_hot_warm_cache_survives_alternating_shapes() {
         let rhs_scale = 0.015625 * f32::from((seed % 5) as u8 + 1);
 
         i4x8_dot_f32_scaled_via_with_scratch_into(
-            &QuantizedDotDispatcher, &crate::test_parity_oracles::policy(),
+            &QuantizedDotDispatcher, &vyre_test_support::test_parity_oracles::policy(),
             &lhs,
             &rhs,
             lhs_scale,
@@ -106,7 +106,7 @@ fn generated_i4x8_dot_hot_warm_cache_survives_alternating_shapes() {
 fn i4x8_dot_f32_scaled_via_rejects_bad_shape_before_dispatch() {
     let err = i4x8_dot_f32_scaled_via(
         &QuantizedDotDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[0],
         &[0],
         1.0,
@@ -118,7 +118,7 @@ fn i4x8_dot_f32_scaled_via_rejects_bad_shape_before_dispatch() {
 
     let err = i4x8_dot_f32_scaled_via(
         &QuantizedDotDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[],
         &[0],
         1.0,

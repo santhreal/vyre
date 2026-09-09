@@ -57,7 +57,7 @@ use vyre_megakernel::SemanticExecutionError;
 
 mod dispatcher_doubles;
 
-use crate::test_parity_oracles::{policy, StaticOutputs};
+use vyre_test_support::test_parity_oracles::{policy, StaticOutputs};
 use dispatcher_doubles::{DominatorInputShapeDispatcher, RecordingDominatorDispatcher};
 
 const DOMINATOR_CONTRACT: &str = "dominance frontier dispatch";

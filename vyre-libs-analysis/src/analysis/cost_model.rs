@@ -360,7 +360,7 @@ mod tests {
 
         let (point, upper) = predict_runtime_fixed_via(
             &CostModelDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &kinds,
             &offsets,
             &counts,
@@ -388,7 +388,7 @@ mod tests {
 
         let err = predict_runtime_fixed_via(
             &CostModelDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &kinds,
             &offsets,
             &counts,
@@ -410,7 +410,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = vyre_libs_builder::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 match inputs.len() {
                     8 => dispatch_sum_product(&inputs),
@@ -421,7 +421,7 @@ mod tests {
                 }
             };
             let ordered = compute_ordered()?;
-            vyre_libs_builder::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 

@@ -46,7 +46,7 @@ mod tests {
         let p3 = scallop_provenance_wide_program("s3", "n3", "j3", "c3", 4, 1, 5);
 
         let final_p =
-            vyre_libs_builder::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
+            vyre_test_support::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
         let region_count = final_p
             .entry()
             .iter()

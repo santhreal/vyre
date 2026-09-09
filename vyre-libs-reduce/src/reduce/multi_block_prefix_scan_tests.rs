@@ -1,7 +1,7 @@
 //! Tests for the multi-block prefix scan against a host oracle.
 
 use super::*;
-use vyre_libs_builder::fixture_bytes::eval_bytes;
+use vyre_test_support::test_parity_oracles::eval_bytes;
 use vyre_foundation::visit::any_descendant;
 
 fn reference_inclusive_scan(input: &[u32]) -> Vec<u32> {

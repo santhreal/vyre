@@ -33,12 +33,12 @@ pub fn f32_bytes(values: &[f32]) -> Vec<u8> {
     vyre_primitives::wire::pack_f32_slice(values)
 }
 
-#[cfg(test)]
+/// Decode an entire slice of little-endian bytes into f32 words.
 pub fn decode_f32(bytes: &[u8]) -> Vec<f32> {
     vyre_primitives::wire::decode_f32_le_bytes_all(bytes)
 }
 
-#[cfg(test)]
+/// Decode the first f32 value from little-endian bytes.
 pub fn decode_f32_one(bytes: &[u8]) -> f32 {
     match try_decode_f32_one(bytes) {
         Ok(value) => value,
@@ -46,12 +46,12 @@ pub fn decode_f32_one(bytes: &[u8]) -> f32 {
     }
 }
 
-#[cfg(test)]
+/// Try to decode the first f32 value from little-endian bytes.
 pub fn try_decode_f32_one(bytes: &[u8]) -> Result<f32, String> {
     vyre_primitives::wire::read_f32_le_word(bytes, 0, "f32 scalar fixture output")
 }
 
-#[cfg(test)]
+/// Decode the first u32 value from little-endian bytes.
 pub fn decode_u32_one(bytes: &[u8]) -> u32 {
     match try_decode_u32_one(bytes) {
         Ok(value) => value,
@@ -59,12 +59,12 @@ pub fn decode_u32_one(bytes: &[u8]) -> u32 {
     }
 }
 
-#[cfg(test)]
+/// Try to decode the first u32 value from little-endian bytes.
 pub fn try_decode_u32_one(bytes: &[u8]) -> Result<u32, String> {
     vyre_primitives::wire::read_u32_le_word(bytes, 0, "u32 scalar fixture output")
 }
 
-#[cfg(test)]
+/// Decode an entire slice of little-endian bytes into u32 words.
 pub fn bytes_to_u32(slice: &[u8]) -> Vec<u32> {
     vyre_primitives::wire::decode_u32_le_bytes_all(slice)
 }
@@ -197,7 +197,6 @@ pub fn eval_u32(
     buffers.push(vec![0u8; output_len * 4]);
     bytes_to_u32(&eval_bytes(label, program, buffers)[0])
 }
-
 /// Run a one-in one-out f32 program through the reference interpreter.
 ///
 /// The argument shape is the one every elementwise and per-row nn program under

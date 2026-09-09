@@ -69,7 +69,7 @@ fn i4x8_batched_matmul_f32_scaled_via_reuses_cached_program_for_same_shape() {
                 (&activations, &batch_scales[..2], 2)
             };
             i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
-                &QuantizedBatchedMatmulDispatcher, &crate::test_parity_oracles::policy(),
+                &QuantizedBatchedMatmulDispatcher, &vyre_test_support::test_parity_oracles::policy(),
                 &PackedI4BatchedMatmul {
                     weights_packed: &weights,
                     activation_batches_packed: activations,

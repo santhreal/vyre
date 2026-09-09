@@ -549,7 +549,7 @@ fn byte_count(words: usize, label: &str) -> Result<usize, SemanticExecutionError
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::test_parity_oracles::StaticOutputs;
+    use vyre_test_support::test_parity_oracles::StaticOutputs;
     use vyre_reference::composition_witness::sinkhorn_clustering_witness;
 
     /// Real-backend contract: 4 RO inputs + u/v plain-RW = 6 input-consuming
@@ -676,7 +676,7 @@ mod tests {
         let ptr = out.as_ptr();
         sinkhorn_clustering_via_into(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0.0, 0.0, 10.0, 10.0],
             &[0.0, 0.0, 10.0, 10.0],
             &[1.0, 1.0],
@@ -710,7 +710,7 @@ mod tests {
 
         sinkhorn_clustering_via_with_scratch_into(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0.0, 0.0, 10.0, 10.0],
             &[0.0, 0.0, 10.0, 10.0],
             &[1.0, 1.0],
@@ -730,7 +730,7 @@ mod tests {
 
         sinkhorn_clustering_via_with_scratch_into(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0.0, 0.0, 10.0, 10.0],
             &[0.0, 0.0, 10.0, 10.0],
             &[1.0, 1.0],
@@ -768,7 +768,7 @@ mod tests {
         .expecting_inputs(&[6]);
         let err = sinkhorn_clustering_via(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0.0],
             &[0.0],
             &[1.0],
@@ -800,7 +800,7 @@ mod tests {
         .expecting_inputs(&[6]);
         let err = sinkhorn_clustering_via(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0.0],
             &[0.0],
             &[1.0],

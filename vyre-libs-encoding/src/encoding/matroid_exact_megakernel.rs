@@ -621,7 +621,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = vyre_libs_builder::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 12);
                 let exchange_adj = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
@@ -649,7 +649,7 @@ mod tests {
                 Ok(vec![u32_slice_to_le_bytes(&out)])
             };
             let ordered = compute_ordered()?;
-            vyre_libs_builder::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -665,7 +665,7 @@ mod tests {
 
         let result = select_optimal_subset_via(
             &MatroidDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &adj,
             &sources,
             &sinks,
@@ -682,7 +682,7 @@ mod tests {
     fn select_optimal_subset_via_rejects_invalid_shapes() {
         let err = select_optimal_subset_via(
             &MatroidDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0],
             &[1, 0],
             &[0, 1],
@@ -703,7 +703,7 @@ mod tests {
     fn select_optimal_subset_via_empty_input_is_zero_work() {
         let result = select_optimal_subset_via(
             &MatroidDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[],
             &[],
             &[],
@@ -730,7 +730,7 @@ mod tests {
 
         select_optimal_subset_via_with_scratch_into(
             &MatroidDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &adj,
             &sources,
             &sinks,
@@ -744,7 +744,7 @@ mod tests {
         let input_ptrs: Vec<*const u8> = scratch.inputs.iter().map(Vec::as_ptr).collect();
         select_optimal_subset_via_with_scratch_into(
             &MatroidDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &adj,
             &sources,
             &sinks,
