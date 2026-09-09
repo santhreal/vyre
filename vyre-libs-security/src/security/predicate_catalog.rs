@@ -1,6 +1,6 @@
 //! Data-backed catalog rows for security bitset predicates.
 //!
-//! The source of truth is `vyre-libs/rules/security_predicates.toml`.
+//! The source of truth is `vyre-libs-security/rules/security_predicates.toml`.
 //! Public security primitives keep their stable Rust functions, while release
 //! gates and inventory witness registration consume these rows for op id,
 //! inputs, soundness, witness fixtures, and external-engine mapping metadata.
@@ -90,7 +90,7 @@ pub fn try_security_predicate_rows() -> Result<&'static [SecurityPredicateRow], 
 pub fn security_predicate_rows() -> &'static [SecurityPredicateRow] {
     try_security_predicate_rows().expect(
         "the bundled Tier-B predicate data did not parse. \
-         Fix: repair vyre-libs/rules/security_predicates.toml, or call \
+         Fix: repair vyre-libs-security/rules/security_predicates.toml, or call \
          try_security_predicate_rows to handle the parse failure",
     )
 }

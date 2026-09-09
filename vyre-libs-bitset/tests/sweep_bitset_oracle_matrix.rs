@@ -398,7 +398,7 @@ fn in_place_indexed_bitset_updates_match_independent_oracles() {
 #[test]
 fn bitset_registry_is_fully_covered() {
     let covered = swept_ids();
-    for operation in vyre_foundation::operation::all_entries() {
+    for operation in vyre_primitives::operation_catalog::all_entries() {
         if !operation.id.starts_with("vyre-libs::bitset::") {
             continue;
         }
@@ -415,7 +415,7 @@ fn bitset_registry_is_fully_covered() {
             "Fix: bitset operation {id} is both swept here and exempted to {owner}. Drop the exemption."
         );
         assert!(
-            vyre_foundation::operation::all_entries()
+            vyre_primitives::operation_catalog::all_entries()
                 .any(|op| op.id == *id),
             "Fix: exempted bitset operation {id} is no longer registered. Drop the exemption, or restore the registration `{owner}` proves."
         );

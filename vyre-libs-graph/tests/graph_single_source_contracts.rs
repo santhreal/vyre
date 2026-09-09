@@ -1,9 +1,10 @@
-//! Contracts for graph-domain single-sourcing between `vyre-libs::graph` and the
-//! dispatch wrappers in this crate.
+//! Contracts for graph-domain single-sourcing between this crate's `graph`
+//! module and the dispatch wrappers beside it.
 //!
-//! `vyre-libs::graph` owns graph algorithms and primitive Program builders. A wrapper
-//! under `src/graph/dispatch/` may add scratch buffers, batching, a plan cache
-//! and backend wiring, and must not fork the algorithm it dispatches.
+//! `vyre_libs_graph::graph` owns graph algorithms and primitive Program
+//! builders. A wrapper under `src/graph/dispatch/` may add scratch buffers,
+//! batching, a plan cache and backend wiring, and must not fork the algorithm
+//! it dispatches.
 //!
 //! WHY these rules are derived rather than listed: the wrapper set, the primitive
 //! each wrapper wraps, and the reference functions each primitive publishes are
@@ -20,7 +21,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// A dispatch wrapper: a directory under `src/graph/dispatch/` that pairs with
-/// a canonical primitive module in `vyre-libs/src/graph/`.
+/// a canonical primitive module in `vyre-libs-graph/src/graph/`.
 #[derive(Debug)]
 struct Wrapper {
     name: String,
@@ -36,8 +37,10 @@ struct Wrapper {
 /// every rule here vacuous while still passing.
 const WRAPPER_FLOOR: usize = 9;
 
-/// Known non-wrapper dispatch infrastructure / pipeline modules under `src/graph/dispatch/`.
+/// Known non-wrapper dispatch infrastructure, fixture and pipeline modules
+/// under `src/graph/dispatch/`.
 const KNOWN_DISPATCH_INFRASTRUCTURE: &[&str] = &[
+    "csr_fixtures",
     "dispatch_bridge",
     "frontier",
     "mod",
@@ -62,16 +65,16 @@ fn find_second_graph_owners(workspace_root: &Path, canonical_crate_root: &Path) 
     other_owners
 }
 
-/// Assert that `vyre-libs` is the single canonical graph owner in the workspace.
+/// Assert that `vyre-libs-graph` is the single canonical graph owner in the workspace.
 fn assert_single_graph_owner() {
     let workspace_root = crate_root()
         .parent()
-        .expect("Fix: vyre-libs must live under the workspace root")
+        .expect("Fix: vyre-libs-graph must live under the workspace root")
         .to_path_buf();
     let other_owners = find_second_graph_owners(&workspace_root, &crate_root());
     assert!(
         other_owners.is_empty(),
-        "Fix: detected a second graph owner in the workspace:\n{}\n`vyre-libs/src/graph` is the single canonical owner of the graph domain.",
+        "Fix: detected a second graph owner in the workspace:\n{}\n`vyre-libs-graph/src/graph` is the single canonical owner of the graph domain.",
         other_owners.join("\n")
     );
 }
@@ -120,7 +123,7 @@ fn the_wrapper_set_is_derived_and_not_empty() {
     let wrappers = wrappers();
     assert!(
         wrappers.len() >= WRAPPER_FLOOR,
-        "Fix: only {} graph dispatch wrappers were derived, below the floor of {WRAPPER_FLOOR}; the pairing between `vyre-libs/src/graph/dispatch/<name>` and `vyre-libs/src/graph/<name>` broke, and every rule in this file would otherwise pass by judging nothing",
+        "Fix: only {} graph dispatch wrappers were derived, below the floor of {WRAPPER_FLOOR}; the pairing between `vyre-libs-graph/src/graph/dispatch/<name>` and `vyre-libs-graph/src/graph/<name>` broke, and every rule in this file would otherwise pass by judging nothing",
         wrappers.len()
     );
 }
@@ -251,13 +254,13 @@ fn the_dispatch_module_declares_every_wrapper_once() {
 #[test]
 fn the_single_graph_owner_check_detects_workspace_duplicates() {
     let temp = std::env::temp_dir().join(format!("vyre_test_single_owner_{}", std::process::id()));
-    let fake_vyre_libs = temp.join("vyre-libs");
+    let fake_canonical = temp.join("vyre-libs-graph");
     let fake_other_crate = temp.join("vyre-primitives");
     let fake_other_graph = fake_other_crate.join("src/graph");
-    let _ = fs::create_dir_all(&fake_vyre_libs);
+    let _ = fs::create_dir_all(&fake_canonical);
     let _ = fs::create_dir_all(&fake_other_graph);
 
-    let foreign = find_second_graph_owners(&temp, &fake_vyre_libs);
+    let foreign = find_second_graph_owners(&temp, &fake_canonical);
     let _ = fs::remove_dir_all(&temp);
     assert_eq!(foreign.len(), 1);
     assert!(foreign[0].contains("vyre-primitives"));
@@ -421,7 +424,7 @@ fn cpu_reference_functions(primitive_source: &str) -> Vec<String> {
 
 /// This crate's directory, resolved from the checkout this run is inside.
 fn crate_root() -> PathBuf {
-    vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs")
+    vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs-graph")
 }
 
 fn read(path: &Path) -> String {

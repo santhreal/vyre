@@ -37,9 +37,13 @@ pub(crate) fn bit_count_u32_program(
     size: u32,
     kind: BitCountKind,
 ) -> Program {
-    vyre_libs_builder::builder::elementwise::u32_elementwise_unary(op_id, input, out, size, |value| {
-        kind.expr(value)
-    })
+    vyre_libs_builder::builder::elementwise::u32_elementwise_unary(
+        op_id,
+        input,
+        out,
+        size,
+        |value| kind.expr(value),
+    )
 }
 
 #[cfg(test)]

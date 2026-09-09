@@ -5,7 +5,7 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_libs_rule::predicate::node_kind;
+use vyre_libs_security::predicate::node_kind;
 
 type NodeKindFilter = fn(&[u32], u32) -> Vec<u32>;
 type NodeKindFilterInto = fn(&[u32], u32, &mut Vec<u32>);

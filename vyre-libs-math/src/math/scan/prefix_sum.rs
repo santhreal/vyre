@@ -7,10 +7,10 @@
 //! chooses.
 
 use crate::math::prefix_scan::{prefix_scan, ScanKind, MAX_SINGLE_BLOCK_SCAN};
-use vyre_libs_builder::plumbing::program::attribution::attribute_child_nodes;
-use vyre_libs_reduce::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::Program;
+use vyre_libs_builder::plumbing::program::attribution::attribute_child_nodes;
+use vyre_libs_reduce::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
 
 const OP_ID: &str = "vyre-libs::math::scan_prefix_sum";
 
@@ -81,12 +81,12 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_foundation::ir::{BufferAccess, Expr, Node};
+    use vyre_foundation::visit::any_descendant;
     use vyre_test_support::test_parity_oracles::bytes_to_u32 as decode_u32_words;
     use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_test_support::test_parity_oracles::try_eval_bytes;
     use vyre_test_support::test_parity_oracles::u32_bytes;
-    use vyre_foundation::ir::{BufferAccess, Expr, Node};
-    use vyre_foundation::visit::any_descendant;
 
     /// Run `scan_prefix_sum` through the reference interpreter and return the
     /// `output` buffer. `reference_eval` takes one Value per non-workgroup buffer

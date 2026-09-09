@@ -23,10 +23,10 @@
 //! from. Recomputing it is `dominator_tree_depth`'s query, and the fixpoint
 //! runs that one first.
 
-use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 
 use super::program::IDOM_NONE;
 

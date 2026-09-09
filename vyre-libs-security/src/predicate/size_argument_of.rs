@@ -8,8 +8,8 @@
 use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
 
-use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
 use crate::predicate::arg_of::arg_of;
+use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::predicate::size_argument_of";

@@ -5,12 +5,12 @@
 //!
 //! Every op here is a pure Category A composition over foundation IR primitives.
 
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_libs_builder::builder::{build_elementwise_unary, BuildOptions};
 use vyre_libs_builder::plumbing::operand::tensor_ref::{
     check_dtype, check_shape, check_unique_names, TensorRef, TensorRefError,
 };
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
-use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const JOIN_OP_ID: &str = "vyre-libs::math::algebra::join";
 const MEET_OP_ID: &str = "vyre-libs::math::algebra::meet";

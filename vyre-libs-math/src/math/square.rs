@@ -2,8 +2,8 @@
 //!
 //! Category-A composition.
 
-use vyre_libs_builder::builder::elementwise::{f32_elementwise_mul, F32MulRhs};
 use vyre_foundation::ir::Program;
+use vyre_libs_builder::builder::elementwise::{f32_elementwise_mul, F32MulRhs};
 
 /// Build a Program that computes `output[i] = input[i] * input[i]`.
 #[must_use]

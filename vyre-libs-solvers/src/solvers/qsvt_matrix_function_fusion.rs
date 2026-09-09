@@ -312,14 +312,20 @@ mod tests {
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 // chebyshev_filter: 3 RO (cost/weights/coeffs) + plain-RW output(3)+scratch(4) = 5.
                 assert_eq!(inputs.len(), 5);
-                let matrix = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
-                let weights = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
-                let coeffs = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2]);
+                let matrix =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
+                let weights =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
+                let coeffs =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2]);
                 assert_eq!(matrix, vec![1, 0, 0, 1]);
                 assert_eq!(coeffs, vec![1, 0]);
                 Ok(vec![u32_slice_to_le_bytes(&weights)])
             };
-            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(
+                request,
+                compute_ordered()?,
+            )
         }
     }
 
@@ -459,11 +465,15 @@ mod tests {
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
-                let weights = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
+                let weights =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
                 let scratch = vec![0u8; weights.len() * 2 * 4];
                 Ok(vec![u32_slice_to_le_bytes(&weights), scratch])
             };
-            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(
+                request,
+                compute_ordered()?,
+            )
         }
     }
 

@@ -78,8 +78,8 @@ inventory::submit! {
         || matmul_strassen_2x2("a", "b", "c"),
         Some(|| {
             // A = [[1, 2], [3, 4]], B = [[5, 6], [7, 8]]
-            let a = vyre_test_support::test_parity_oracles::f32_bytes(&[1.0, 2.0, 3.0, 4.0]);
-            let b = vyre_test_support::test_parity_oracles::f32_bytes(&[5.0, 6.0, 7.0, 8.0]);
+            let a = vyre_primitives::wire::pack_f32_slice(&[1.0, 2.0, 3.0, 4.0]);
+            let b = vyre_primitives::wire::pack_f32_slice(&[5.0, 6.0, 7.0, 8.0]);
             vec![vec![a, b]]
         }),
         Some(|| {
@@ -147,8 +147,8 @@ pub fn matmul_strassen_one_level(a: &str, b: &str, c: &str, n: u32) -> Result<Pr
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_primitives::wire::pack_f32_slice;
     use vyre_test_support::test_parity_oracles::eval_bytes;
-    use vyre_test_support::test_parity_oracles::f32_bytes;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {
         bytes
@@ -171,7 +171,7 @@ mod tests {
         let outputs = eval_bytes(
             "matmul_strassen",
             &prog,
-            vec![f32_bytes(a), f32_bytes(b), vec![0u8; 16]],
+            vec![pack_f32_slice(a), pack_f32_slice(b), vec![0u8; 16]],
         );
         decode(&outputs[0])
     }
@@ -232,8 +232,8 @@ mod tests {
             "matmul_strassen",
             &prog,
             vec![
-                f32_bytes(a),
-                f32_bytes(b),
+                pack_f32_slice(a),
+                pack_f32_slice(b),
                 vec![0u8; (n as usize) * (n as usize) * 4],
             ],
         );

@@ -6,8 +6,8 @@
 
 use vyre_foundation::ir::{Expr, Node};
 
-use vyre_libs_builder::builder::csr::CsrTraversalComposer;
 use crate::graph::program_graph::ProgramGraphShape;
+use vyre_libs_builder::builder::csr::CsrTraversalComposer;
 
 /// Emit ONLY the CSR edge walk for source node `src` (no source-activity guard):
 /// load the `[edge_start, edge_end)` range, and for every edge passing

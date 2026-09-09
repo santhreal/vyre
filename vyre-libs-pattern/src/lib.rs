@@ -1,7 +1,9 @@
 //! Substring matching, DFA, NFA, regex scanning pipelines, and bracket matching.
 
-pub mod pattern;
+#[cfg(feature = "nfa")]
 pub mod nfa;
+#[cfg(feature = "pattern")]
+pub mod pattern;
 
 /// Ensure all feature-selected library operation registrations are retained by the linker.
 #[must_use]

@@ -4,9 +4,9 @@
 //! dominator tree or a transitive dominance closure. Exact strict-dominance
 //! checks use the independent `cpu_dominator_sets` test oracle.
 
-use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
 use crate::predicate::edge_kind;
 use vyre_foundation::ir::Program;
+use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
 
 use crate::security::flow_composition::{
     security_flow_program, FlowPredicate, SecurityFlowOptions,
@@ -52,9 +52,9 @@ pub(crate) fn cpu_dominator_sets(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_test_support::test_parity_oracles::eval_bytes;
     use crate::security::flow_composition::diamond_dominance_tree;
     use vyre_reference::composition_witness::csr_backward_traverse_witness as cpu_ref;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     #[test]
     fn cpu_dominator_sets_linear_chain() {

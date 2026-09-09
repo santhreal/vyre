@@ -18,6 +18,7 @@ fn pack_spine_fixture(node_count: u32) -> (Vec<u8>, Vec<u8>) {
     let region = full[start..start + node_len].to_vec();
     (full, region)
 }
+use vyre_foundation::validate::validate;
 use vyre_reference::value::Value;
 use wire_words::decode_u32_words;
 
@@ -66,7 +67,7 @@ fn preorder_empty_tree_is_a_valid_noop() {
     let outz = vec![0u8; 32];
     let program = vyre_libs_graph::graph::ast_walk_preorder("nodes", "out", 0, 8);
     assert!(
-        vyre::validate(&program).is_empty(),
+        validate(&program).is_empty(),
         "empty preorder walk must still be a valid program"
     );
 
@@ -139,7 +140,7 @@ fn preorder_branching_tree_matches_host() {
 fn preorder_program_validates() {
     let p = vyre_libs_graph::graph::ast_walk_preorder("nodes", "out", 4, 8);
     assert!(
-        vyre::validate(&p).is_empty(),
+        validate(&p).is_empty(),
         "preorder program must pass validation"
     );
 }
@@ -174,7 +175,7 @@ fn postorder_empty_tree_is_a_valid_noop() {
     let outz = vec![0u8; 32];
     let program = vyre_libs_graph::graph::ast_walk_postorder("out", 0);
     assert!(
-        vyre::validate(&program).is_empty(),
+        validate(&program).is_empty(),
         "empty postorder walk must still be a valid program"
     );
 
@@ -199,7 +200,7 @@ fn postorder_matches_reverse_of_preorder_spine() {
 fn postorder_program_validates() {
     let p = vyre_libs_graph::graph::ast_walk_postorder("out", 4);
     assert!(
-        vyre::validate(&p).is_empty(),
+        validate(&p).is_empty(),
         "postorder program must pass validation"
     );
 }

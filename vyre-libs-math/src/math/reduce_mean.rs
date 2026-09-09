@@ -2,10 +2,10 @@
 //!
 //! Category-A composition with a workgroup-tiled sum reduction.
 
-use vyre_libs_reduce::reduce::reduction_tree::tiled_mean;
 use vyre_foundation::ir::Program;
 #[cfg(test)]
 use vyre_foundation::ir::{Expr, Node};
+use vyre_libs_reduce::reduce::reduction_tree::tiled_mean;
 
 const OP_ID: &str = "vyre-libs::math::reduce_mean";
 #[cfg(test)]

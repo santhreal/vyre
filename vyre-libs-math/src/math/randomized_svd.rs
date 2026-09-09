@@ -80,11 +80,21 @@ pub fn try_randomized_projection_step(
         return Err("Fix: randomized_projection_step requires l > 0, got 0.".to_string());
     }
 
-    let a_cells = vyre_libs_builder::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} A input"), m, n)?;
-    let omega_cells =
-        vyre_libs_builder::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} omega input"), n, l)?;
-    let cells =
-        vyre_libs_builder::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} projection output"), m, l)?;
+    let a_cells = vyre_libs_builder::plumbing::operand::shape::matrix_cells(
+        &format!("{OP_ID} A input"),
+        m,
+        n,
+    )?;
+    let omega_cells = vyre_libs_builder::plumbing::operand::shape::matrix_cells(
+        &format!("{OP_ID} omega input"),
+        n,
+        l,
+    )?;
+    let cells = vyre_libs_builder::plumbing::operand::shape::matrix_cells(
+        &format!("{OP_ID} projection output"),
+        m,
+        l,
+    )?;
     let t = Expr::LogicalIndex { axis: 0 };
 
     // i = t / l, j = t % l

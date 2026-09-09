@@ -45,8 +45,6 @@ mod dispatch_plan;
 mod encoding;
 mod layout;
 mod program_ir;
-#[cfg(test)]
-mod reference_adapter;
 mod validation;
 
 pub use abi::{
@@ -99,8 +97,3 @@ pub fn round_trip_dense(dense: u32, blocks_per_proc: u32, facts_per_proc: u32) -
 
 #[cfg(test)]
 pub use canonicalize::canonicalize_csr_within_rows as reference_canonicalize_csr_within_rows;
-#[cfg(test)]
-pub(crate) use reference_adapter::{
-    build_cpu_reference, try_build_cpu_reference, try_build_cpu_reference_into,
-    ExplodedIfdsCpuScratch,
-};

@@ -20,6 +20,7 @@
 //! only up to intermediate parent links, not byte-for-byte), so the assertion is a full partition-equality
 //! check (exact, no tolerance).
 
+#![cfg(feature = "graph-dispatch")]
 use crate::bounded_compile_policy;
 
 use vyre_libs_graph::graph::dispatch::union_find_emit::union_find_alias_via;

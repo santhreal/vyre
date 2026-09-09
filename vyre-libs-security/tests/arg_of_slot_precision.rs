@@ -13,8 +13,8 @@
 #![cfg(feature = "predicate")]
 
 use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
-use vyre_libs_rule::predicate::arg_of::arg_of_slot;
-use vyre_libs_rule::predicate::edge_kind;
+use vyre_libs_security::predicate::arg_of::arg_of_slot;
+use vyre_libs_security::predicate::edge_kind;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::composition_witness::csr_backward_traverse_witness;
 use vyre_reference::value::Value;

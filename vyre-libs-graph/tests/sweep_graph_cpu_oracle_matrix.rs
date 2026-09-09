@@ -8,6 +8,7 @@
 //! every family draws from them, so no two families can disagree about what a
 //! given seed means. CPU reference paths only - no mock dispatchers.
 
+#![cfg(feature = "graph-dispatch")]
 #![forbid(unsafe_code)]
 use crate::bounded_compile_policy;
 

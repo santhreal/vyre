@@ -15,10 +15,10 @@
 //! Soundness: ``Exact``. The set difference
 //! is bit-precise on every word; no over- or under-approximation.
 
-use vyre_libs_bitset::bitset::and_not::bitset_and_not;
-use vyre_libs_bitset::bitset::bitset_words;
 use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
+use vyre_libs_bitset::bitset::and_not::bitset_and_not;
+use vyre_libs_bitset::bitset::bitset_words;
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::taint_kill";
 

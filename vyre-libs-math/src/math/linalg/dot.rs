@@ -91,9 +91,7 @@ impl Dot {
         let workgroup = self.options.workgroup_size.unwrap_or([256, 1, 1]);
         let tile = workgroup[0].max(1);
         let generator = self.options.region_generator.unwrap_or(OP_ID);
-        Ok(tiled_dot(
-            generator, lhs, rhs, out, n, tile,
-        ))
+        Ok(tiled_dot(generator, lhs, rhs, out, n, tile))
     }
 }
 

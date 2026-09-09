@@ -4,8 +4,8 @@ use super::*;
 use crate::graph::padded_u32_slice_fingerprint as csr_bidirectional_padded_slice_fingerprint;
 use vyre_foundation::ir::Program;
 
-use vyre_libs_bitset::bitset::bitset_words;
 use crate::graph::program_graph::ProgramGraphShape;
+use vyre_libs_bitset::bitset::bitset_words;
 
 /// Validated dispatch layout for bidirectional CSR traversal.
 ///

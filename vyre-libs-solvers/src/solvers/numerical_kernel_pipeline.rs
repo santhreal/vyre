@@ -3,12 +3,12 @@
 //! These functions give scheduler and optimizer code named self-consumers for
 //! math primitives without reimplementing the primitive algorithms here.
 
+use vyre_foundation::ir::Program;
 use vyre_libs_math::math::{
     dp_accountant::gaussian_rdp_step,
     preconditioner::{newton_schulz_poly5_f32, newton_schulz_y_step},
     randomized_svd::randomized_projection_step,
 };
-use vyre_foundation::ir::Program;
 
 /// Build a randomized projection dispatch for low-rank optimizer telemetry.
 #[must_use]
@@ -57,8 +57,8 @@ pub fn dispatch_gaussian_rdp_step(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_math::math::sinkhorn_iterate::{SinkhornBuffers, SinkhornExtents};
     use vyre_foundation::ir::Node;
+    use vyre_libs_math::math::sinkhorn_iterate::{SinkhornBuffers, SinkhornExtents};
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-6 * (1.0 + a.abs() + b.abs())
@@ -163,10 +163,25 @@ mod tests {
         sinkhorn_iterate_witness as reference_sinkhorn_quantized, try_sinkhorn_iterate_witness_into,
     };
 
-    use vyre_libs_math::math::sinkhorn_iterate::{
-        sinkhorn_iterate_f64 as reference_sinkhorn_f64,
-        sinkhorn_iterate_f64_into as reference_sinkhorn_f64_into,
+    use vyre_reference::composition_witness::{
+        sinkhorn_iterate_f64_witness as reference_sinkhorn_f64,
+        try_sinkhorn_iterate_f64_witness_into,
     };
+
+    #[allow(clippy::too_many_arguments)]
+    fn reference_sinkhorn_f64_into(
+        k: &[f64],
+        a: &[f64],
+        b: &[f64],
+        tolerance: f64,
+        max_iterations: u32,
+        u: &mut Vec<f64>,
+        v: &mut Vec<f64>,
+        u_old: &mut Vec<f64>,
+    ) -> u32 {
+        try_sinkhorn_iterate_f64_witness_into(k, a, b, tolerance, max_iterations, u, v, u_old)
+            .expect("Fix: the Sinkhorn f64 witness rejected the fixture parameters")
+    }
 
     fn reference_sinkhorn_row_residual(k: &[f64], u: &[f64], v: &[f64], a: &[f64]) -> f64 {
         vyre_reference::composition_witness::sinkhorn_row_residual_witness(k, u, v, a)

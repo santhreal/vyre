@@ -392,6 +392,3 @@ pub fn anchored_window_extract_program(
         )],
     )
 }
-
-#[cfg(all(test, feature = "pattern-regex", feature = "pattern-dfa"))]
-mod tests;

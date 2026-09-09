@@ -58,9 +58,12 @@ pub fn csr_frontier_degree_sum(shape: ProgramGraphShape) -> Program {
         None,
         Expr::LogicalIndex { axis: 0 },
         {
-            let [off_lo, off_hi, deg] =
-                vyre_libs_builder::builder::csr::CsrTraversalComposer::new(OP_ID, OP_ID, shape.node_count)
-                    .emit_row_degree(Expr::var("src"), "off_lo", "off_hi", "degree");
+            let [off_lo, off_hi, deg] = vyre_libs_builder::builder::csr::CsrTraversalComposer::new(
+                OP_ID,
+                OP_ID,
+                shape.node_count,
+            )
+            .emit_row_degree(Expr::var("src"), "off_lo", "off_hi", "degree");
             vec![
                 off_lo,
                 off_hi,

@@ -26,4 +26,3 @@ pub mod scan_hit_buffer_layout_contracts;
 
 #[path = "wire_words/mod.rs"]
 pub mod wire_words;
-

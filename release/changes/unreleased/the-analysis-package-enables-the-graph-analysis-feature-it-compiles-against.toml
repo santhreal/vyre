@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The analysis package enables the graph analysis feature its reachability and dominance queries compile against, so it builds standalone instead of failing on unresolved graph items."

@@ -2,10 +2,10 @@
 //! a sink-family bitset. Used by rules that want a fractional
 //! confidence ("X% of nodes reachable from source landed in sinks").
 
+use vyre_foundation::ir::Program;
 use vyre_libs_bitset::bitset::and::bitset_and;
 use vyre_libs_bitset::bitset::bitset_words;
 use vyre_libs_reduce::reduce::count::reduce_count;
-use vyre_foundation::ir::Program;
 
 use crate::security::flow_composition::fuse_security_flow;
 

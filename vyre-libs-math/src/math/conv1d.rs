@@ -15,8 +15,8 @@
 //! `stride=1` convolves along rows (horizontal) and `stride=W`
 //! convolves along columns (vertical).
 
-use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -218,10 +218,10 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_reference::composition_witness::{
         conv1d_witness as cpu_conv1d, conv1d_witness_into as cpu_conv1d_into,
     };
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     #[test]
     fn cpu_conv1d_identity_kernel() {
         // Identity kernel: [0, 1.0, 0] in fixed-point = [0, 65536, 0]

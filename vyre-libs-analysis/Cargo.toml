@@ -40,13 +40,21 @@ rayon.workspace = true
 vyre-libs-builder = { workspace = true }
 vyre-libs-device = { workspace = true }
 vyre-libs-math = { workspace = true }
-vyre-libs-graph = { workspace = true }
+vyre-libs-graph = { workspace = true, features = ["analysis"] }
 vyre-libs-fixpoint = { workspace = true }
 
 [dev-dependencies]
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
 vyre-reference = { workspace = true }
+# The routed convergence wrapper here is checked against the one shared routing
+# contract, which the crate that owns the routing exposes as test material.
+vyre-libs-fixpoint = { workspace = true, features = ["test-fixtures"] }
+# The provenance parity suite compares this crate's dataflow against the
+# encoding compositions it is derived from.
+vyre-libs-encoding = { workspace = true }
+# The cost-model and semiring suites score against the reference executor.
+vyre-driver-reference = { workspace = true }
 
 [[test]]
 name = "all_tests"

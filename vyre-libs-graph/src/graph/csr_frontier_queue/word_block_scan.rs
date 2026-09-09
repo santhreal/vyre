@@ -184,7 +184,7 @@ pub fn frontier_word_block_offsets_in_place(block_totals: &str, node_count: u32)
 fn frontier_word_block_offsets_single_workgroup(
     block_totals: &str,
     num_blocks: u32,
-    block_total_bytes: usize,
+    block_total_bytes: u64,
 ) -> Program {
     let lane = Expr::var("fwbo_lane");
     let scratch_a = format!("__{block_totals}_fwbo_scratch_a");
@@ -207,9 +207,11 @@ fn frontier_word_block_offsets_single_workgroup(
         ordering: MemoryOrdering::SeqCst,
     });
 
-    body.extend(vyre_libs_reduce::reduce::workgroup_scan::blelloch_inclusive_sum_nodes(
-        &scratch_a, &scratch_b, &lane, 1024,
-    ));
+    body.extend(
+        vyre_libs_reduce::reduce::workgroup_scan::blelloch_inclusive_sum_nodes(
+            &scratch_a, &scratch_b, &lane, 1024,
+        ),
+    );
 
     body.push(Node::if_then(
         Expr::lt(lane.clone(), Expr::u32(num_blocks)),
@@ -249,7 +251,7 @@ fn frontier_word_block_offsets_single_workgroup(
 fn frontier_word_block_offsets_single_lane(
     block_totals: &str,
     num_blocks: u32,
-    block_total_bytes: usize,
+    block_total_bytes: u64,
 ) -> Program {
     let body = vec![
         Node::let_bind("fwbo_running", Expr::u32(0)),

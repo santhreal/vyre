@@ -10,12 +10,12 @@
 //! correctly computed (the caller is responsible for that  -  usually
 //! via `vyre-libs::dataflow::ssa::compute_dominators`).
 
-use vyre_libs_bitset::bitset::bitset_words;
-use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_libs_bitset::bitset::bitset_words;
+use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::graph::dominator_frontier";

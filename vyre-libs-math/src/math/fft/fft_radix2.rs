@@ -217,7 +217,7 @@ inventory::submit! {
             .unwrap_or_else(|_| unreachable!("Fix: catalog fixture uses a valid radix-2 FFT size.")),
         Some(|| {
             vec![vec![
-                vyre_test_support::test_parity_oracles::f32_bytes(&[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+                vyre_primitives::wire::pack_f32_slice(&[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
             ]]
         }),
         Some(|| {

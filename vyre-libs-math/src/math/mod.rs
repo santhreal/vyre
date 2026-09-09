@@ -355,7 +355,6 @@ pub mod matrix_identity_fill;
 #[cfg(feature = "math-kernels")]
 pub mod symmetric_eigen_jacobi;
 
-
 /// Tensor-train decomposition via SVD-truncation per mode (#P-PRIM-12).
 #[cfg(feature = "math-kernels")]
 pub mod tensor_train_decompose;
@@ -412,6 +411,8 @@ pub mod bellman_shortest_path;
 #[cfg(feature = "math-kernels")]
 mod scallop_persistent;
 
+#[cfg(feature = "math-kernels")]
+pub mod fixed;
 /// Scallop-style probabilistic Datalog join. Emits a lineage
 /// semiring join inside a GPU-resident fixpoint kernel over `w`-word
 /// lineage cells. User dialect: probabilistic Datalog.
@@ -425,11 +426,9 @@ pub mod stream_compact;
 /// SCC-local matrix fixpoint primitive for recursive graph components.
 #[cfg(feature = "math-kernels")]
 pub mod tensor_scc;
-#[cfg(feature = "math-kernels")]
-pub mod fixed;
 
+#[cfg(feature = "math-kernels")]
+pub(crate) mod cooperative_argmax;
 /// Fixed-point u32 matrix and matrix-vector program builders.
 #[cfg(feature = "math-kernels")]
 pub mod fixed_u32_matmul;
-#[cfg(feature = "math-kernels")]
-pub(crate) mod cooperative_argmax;

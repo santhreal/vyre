@@ -236,10 +236,10 @@ pub fn fused_region_evidence_program(
 #[cfg(all(test, feature = "pattern-regex", feature = "pattern-dfa"))]
 mod tests {
     use super::*;
-    use vyre_test_support::test_parity_oracles::eval_bytes;
     use crate::pattern::haystack::pack_haystack_u32;
     use crate::pattern::regex_region_admission::tests::dfa_for;
     use vyre_primitives::wire::pack_u32_slice;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     fn log2_regions(region_count: u32) -> u32 {
         (32 - (region_count.max(2) - 1).leading_zeros()).max(1)

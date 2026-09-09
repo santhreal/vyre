@@ -62,4 +62,3 @@ impl DominanceFrontierGpuScratch {
 pub fn frontier_size(frontier: &[u32]) -> u32 {
     primitive_frontier_size(frontier)
 }
-

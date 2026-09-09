@@ -261,8 +261,12 @@ pub fn aggregate_to_cells_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[1], cell_assignment);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
 
-    let outputs =
-        vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
+    let outputs = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(
+        dispatcher,
+        program,
+        &scratch.inputs,
+        policy,
+    )?;
     let output = require_exactly_one_output(&outputs, "aggregate_to_cells_via")?;
     decode_f32_output_exact(output, n_cells as usize, "aggregate_to_cells_via", out)
 }
@@ -324,8 +328,12 @@ pub fn translate_to_targets_via_with_scratch_into(
     write_f32_slice_le_bytes(&mut scratch.inputs[1], cell_distances);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
 
-    let outputs =
-        vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
+    let outputs = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(
+        dispatcher,
+        program,
+        &scratch.inputs,
+        policy,
+    )?;
     let output = require_exactly_one_output(&outputs, "translate_to_targets_via")?;
     decode_f32_output_exact(output, n_cells as usize, "translate_to_targets_via", out)
 }
@@ -400,8 +408,12 @@ pub fn evaluate_at_regions_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[1], cell_assignment);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
 
-    let outputs =
-        vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
+    let outputs = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(
+        dispatcher,
+        program,
+        &scratch.inputs,
+        policy,
+    )?;
     let output = require_exactly_one_output(&outputs, "evaluate_at_regions_via")?;
     decode_f32_output_exact(output, out_len, "evaluate_at_regions_via", out)
 }
@@ -598,8 +610,8 @@ fn bytes_for_f32_count(count: usize, context: &str) -> Result<usize, SemanticExe
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::plumbing::host::dispatch_buffers::f32_slice_to_le_bytes;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use vyre_libs_builder::plumbing::host::dispatch_buffers::f32_slice_to_le_bytes;
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-6 * (1.0 + a.abs() + b.abs())
@@ -815,7 +827,10 @@ mod tests {
                     ))),
                 }
             };
-            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(
+                request,
+                compute_ordered()?,
+            )
         }
     }
 
@@ -826,10 +841,14 @@ mod tests {
                 inputs.len()
             )));
         };
-        let scores =
-            vyre_libs_builder::plumbing::host::dispatch_buffers::decode_f32_input_aligned(score_bytes, "FMM test dispatcher")?;
-        let cells =
-            vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_input_aligned(cell_bytes, "FMM test dispatcher")?;
+        let scores = vyre_libs_builder::plumbing::host::dispatch_buffers::decode_f32_input_aligned(
+            score_bytes,
+            "FMM test dispatcher",
+        )?;
+        let cells = vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_input_aligned(
+            cell_bytes,
+            "FMM test dispatcher",
+        )?;
         let n_cells = out_bytes.len() / std::mem::size_of::<f32>();
         let mut out = vec![0.0_f32; n_cells];
         for (score, &cell) in scores.iter().zip(&cells) {
@@ -846,11 +865,15 @@ mod tests {
             )));
         };
         let moments =
-            vyre_libs_builder::plumbing::host::dispatch_buffers::decode_f32_input_aligned(moment_bytes, "FMM test dispatcher")?;
-        let distances = vyre_libs_builder::plumbing::host::dispatch_buffers::decode_f32_input_aligned(
-            distance_bytes,
-            "FMM test dispatcher",
-        )?;
+            vyre_libs_builder::plumbing::host::dispatch_buffers::decode_f32_input_aligned(
+                moment_bytes,
+                "FMM test dispatcher",
+            )?;
+        let distances =
+            vyre_libs_builder::plumbing::host::dispatch_buffers::decode_f32_input_aligned(
+                distance_bytes,
+                "FMM test dispatcher",
+            )?;
         let n_cells = out_bytes.len() / std::mem::size_of::<f32>();
         let mut out = vec![0.0_f32; n_cells];
         for target in 0..n_cells {
@@ -871,10 +894,14 @@ mod tests {
                 inputs.len()
             )));
         };
-        let local =
-            vyre_libs_builder::plumbing::host::dispatch_buffers::decode_f32_input_aligned(local_bytes, "FMM test dispatcher")?;
-        let cells =
-            vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_input_aligned(cell_bytes, "FMM test dispatcher")?;
+        let local = vyre_libs_builder::plumbing::host::dispatch_buffers::decode_f32_input_aligned(
+            local_bytes,
+            "FMM test dispatcher",
+        )?;
+        let cells = vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_input_aligned(
+            cell_bytes,
+            "FMM test dispatcher",
+        )?;
         let out_len = out_bytes.len() / std::mem::size_of::<f32>();
         let mut out = Vec::with_capacity(out_len);
         for &cell in cells.iter().take(out_len) {

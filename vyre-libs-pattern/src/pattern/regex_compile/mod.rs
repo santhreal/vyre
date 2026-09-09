@@ -427,8 +427,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::{regex_construct_diagnostic_code, RegexConstruct};
-    use vyre_test_support::test_parity_oracles::eval_bytes;
     use std::collections::BTreeSet;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     /// WHY: conformance accepts registered bytes as proof for every backend row, so the regex
     /// scan fixture must equal an independent reference execution rather than merely be present.

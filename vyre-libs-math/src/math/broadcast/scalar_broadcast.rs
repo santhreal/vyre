@@ -4,9 +4,9 @@
 //! shape-broadcasting version (NumPy semantics) belongs in a future
 //! `broadcast_shaped` function that takes source + target shapes.
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 /// Broadcast a scalar into every element of `dst`. `n` is the target
 /// element count  -  `dst` receives `n × sizeof(U32)` bytes.

@@ -104,13 +104,13 @@ inventory::submit! {
         },
         Some(|| {
             // 4x4 input = identity matrix; 3x3 box kernel
-            let input = vyre_test_support::test_parity_oracles::f32_bytes(&[
+            let input = vyre_primitives::wire::pack_f32_slice(&[
                 1.0, 0.0, 0.0, 0.0,
                 0.0, 1.0, 0.0, 0.0,
                 0.0, 0.0, 1.0, 0.0,
                 0.0, 0.0, 0.0, 1.0,
             ]);
-            let kernel = vyre_test_support::test_parity_oracles::f32_bytes(&[1.0; 9]);
+            let kernel = vyre_primitives::wire::pack_f32_slice(&[1.0; 9]);
             vec![vec![input, kernel]]
         }),
         Some(|| {
@@ -141,7 +141,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_test_support::test_parity_oracles::f32_bytes;
+    use vyre_primitives::wire::pack_f32_slice;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {
         bytes
@@ -179,7 +179,7 @@ mod tests {
             &vyre_test_support::test_parity_oracles::eval_bytes(
                 "conv2d_3x3_direct",
                 &program,
-                vec![f32_bytes(input), f32_bytes(kernel)],
+                vec![pack_f32_slice(input), pack_f32_slice(kernel)],
             )[0],
         )
     }

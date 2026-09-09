@@ -1,7 +1,7 @@
 //! Shared u32 binary elementwise map builder for math primitives.
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{DataType, Expr, Program};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 fn u32_two_input_map_program<F>(
     op_id: &'static str,

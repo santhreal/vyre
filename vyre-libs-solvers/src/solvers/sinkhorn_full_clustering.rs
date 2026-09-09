@@ -8,8 +8,8 @@
 //! Composes the `vyre_libs_math::math::sinkhorn_iterate` primitive to run
 //! entirely on device without host round-trips.
 
-use vyre_libs_math::math::sinkhorn_iterate::{sinkhorn_iterate, SinkhornBuffers, SinkhornExtents};
 use vyre_foundation::ir::Program;
+use vyre_libs_math::math::sinkhorn_iterate::{sinkhorn_iterate, SinkhornBuffers, SinkhornExtents};
 
 /// Stable op identifier for the full-clustering Sinkhorn iteration self-consumer.
 pub const OP_ID: &str = "vyre-libs::self_substrate::sinkhorn_full_clustering";
@@ -145,7 +145,8 @@ mod tests {
         );
 
         let borrowed = programs.iter().collect::<Vec<_>>();
-        let final_p = vyre_test_support::test_parity_oracles::wrap_program_sequence(&borrowed, [256, 1, 1]);
+        let final_p =
+            vyre_test_support::test_parity_oracles::wrap_program_sequence(&borrowed, [256, 1, 1]);
         crate::solvers::test_helpers::assert_min_region_count(&final_p, 3);
     }
 

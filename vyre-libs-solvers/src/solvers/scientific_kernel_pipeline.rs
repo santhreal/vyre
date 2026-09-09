@@ -8,6 +8,7 @@
 //! primitive crate owns the executable semantics; this crate owns only the
 //! self-consumer dispatch surface and reusable CPU parity adapters.
 
+use vyre_foundation::ir::Program;
 use vyre_libs_math::math::{
     bigint_add_carry::bigint_add_carry,
     conformal::conformal_threshold,
@@ -25,7 +26,6 @@ use vyre_libs_math::math::{
     tensor_network::tn_pair_contract,
     tensor_train::tt_contract_step,
 };
-use vyre_foundation::ir::Program;
 
 /// Build a Bhattacharyya per-element information-geometry dispatch.
 #[must_use]

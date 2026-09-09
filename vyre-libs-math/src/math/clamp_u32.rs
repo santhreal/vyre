@@ -9,8 +9,8 @@
 //!
 //! CPU reference: `u32::clamp` bit-exact.
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{DataType, Expr, Program};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 const OP_ID: &str = "vyre-libs::math::clamp_u32";
 

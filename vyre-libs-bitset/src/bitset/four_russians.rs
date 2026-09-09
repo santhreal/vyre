@@ -5,7 +5,7 @@
 //! boolean-matrix and reachability kernels can specialize the LUT once, then
 //! replace branchy byte logic with coalesced table loads.
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-fixtures"))]
 use std::sync::LazyLock;
 use vyre_foundation::composition::wrap_anonymous_region;
 
@@ -62,7 +62,7 @@ pub fn binary_byte_lut(op: BooleanTileOp) -> Vec<u32> {
 /// The Method-of-Four-Russians table is 65,536 `u32`s. Rebuilding it for every
 /// rule batch or graph shard is pure allocator and cache churn, so common
 /// operations share one immutable table per process.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-fixtures"))]
 #[must_use]
 pub fn cached_binary_byte_lut(op: BooleanTileOp) -> &'static [u32] {
     static AND: LazyLock<Vec<u32>> = LazyLock::new(|| binary_byte_lut(BooleanTileOp::And));

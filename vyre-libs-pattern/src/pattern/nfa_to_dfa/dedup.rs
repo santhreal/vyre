@@ -2,8 +2,8 @@
 
 use std::collections::HashMap;
 
-use vyre_libs_hash::hash::fnv1a::{fnv1a64_initial_state, fnv1a64_update_byte};
 use crate::pattern::dfa_compile::CompiledDfa;
+use vyre_libs_hash::hash::fnv1a::{fnv1a64_initial_state, fnv1a64_update_byte};
 
 /// Stable content fingerprint for a compiled dense DFA.
 ///

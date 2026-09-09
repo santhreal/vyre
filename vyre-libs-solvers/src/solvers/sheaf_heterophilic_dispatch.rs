@@ -377,9 +377,12 @@ mod tests {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 4);
-                let stalks = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
-                let restrictions = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
-                let damping = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2])[0];
+                let stalks =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
+                let restrictions =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
+                let damping =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2])[0];
                 assert_eq!(inputs[3].len(), stalks.len() * std::mem::size_of::<u32>());
                 let out: Vec<u32> = stalks
                     .iter()
@@ -392,7 +395,10 @@ mod tests {
                     .collect();
                 Ok(vec![u32_slice_to_le_bytes(&out)])
             };
-            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(
+                request,
+                compute_ordered()?,
+            )
         }
     }
 

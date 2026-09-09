@@ -97,7 +97,8 @@ pub fn try_chebyshev_filter(
     n: u32,
     k_steps: u32,
 ) -> Result<Program, String> {
-    let laplacian_cells = vyre_libs_builder::plumbing::operand::shape::square_matrix_cells(OP_ID, n)?;
+    let laplacian_cells =
+        vyre_libs_builder::plumbing::operand::shape::square_matrix_cells(OP_ID, n)?;
     if k_steps > MAX_K {
         return Err(format!(
             "Fix: chebyshev_filter k_steps must be <= MAX_K={MAX_K}, got {k_steps}."

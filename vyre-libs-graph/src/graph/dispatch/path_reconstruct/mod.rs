@@ -43,4 +43,3 @@ impl PathReconstructGpuScratch {
         self.batched_program_cache.builds()
     }
 }
-

@@ -7,8 +7,8 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_chi
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_libs_builder::builder::cooperative::for_each_index;
 use crate::math::cooperative_argmax::LANES;
+use vyre_libs_builder::builder::cooperative::for_each_index;
 use vyre_libs_builder::plumbing::operand::shape::square_matrix_cells;
 
 /// Op id.

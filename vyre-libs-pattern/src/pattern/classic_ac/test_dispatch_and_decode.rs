@@ -5,9 +5,9 @@ use crate::pattern::CompiledDfa;
 use vyre_foundation::ir::Program;
 use vyre_primitives::wire::pack_u32_slice;
 
+use crate::pattern::haystack::pack_haystack_u32;
 use vyre_test_support::test_parity_oracles::bytes_to_u32;
 use vyre_test_support::test_parity_oracles::eval_bytes;
-use crate::pattern::haystack::pack_haystack_u32;
 
 /// A u32 slice as one reference-backend input value.
 pub(crate) fn u32_input(words: &[u32]) -> Vec<u8> {
@@ -92,7 +92,9 @@ pub(crate) fn with_reference_dispatch_lanes(program: Program, lanes: u32) -> Pro
         .cloned()
         .map(|buffer| {
             if buffer.name() == "match_count" {
-                buffer.with_count(lanes.max(1)).with_output_byte_range(0..4)
+                buffer
+                    .with_count(lanes.max(1))
+                    .with_output_byte_range(0u64..4)
             } else {
                 buffer
             }

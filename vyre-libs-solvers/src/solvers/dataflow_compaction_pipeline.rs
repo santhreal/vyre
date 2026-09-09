@@ -5,19 +5,17 @@
 //! sparse recovery, DP clipping, differentiable selection, and attention dot
 //! partials. The kernel domains in this crate own the executable semantics.
 
-use crate::{
-    bitset::stochastic_compute::stochastic_and_mul,
-    fixpoint::bitset_fixpoint::{bitset_fixpoint, bitset_fixpoint_warm_start},
-    math::{
-        differentiable::softmax_step,
-        dot_partial::{dot_partial, dot_partial_program},
-        dp_clip::dp_clip_per_sample,
-        interval::{interval_merge_body, interval_merge_program},
-        sparse_recovery::iht_threshold,
-        stream_compact::stream_compact,
-    },
-};
 use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_libs_bitset::bitset::stochastic_compute::stochastic_and_mul;
+use vyre_libs_fixpoint::fixpoint::bitset_fixpoint::{bitset_fixpoint, bitset_fixpoint_warm_start};
+use vyre_libs_math::math::{
+    differentiable::softmax_step,
+    dot_partial::{dot_partial, dot_partial_program},
+    dp_clip::dp_clip_per_sample,
+    interval::{interval_merge_body, interval_merge_program},
+    sparse_recovery::iht_threshold,
+    stream_compact::stream_compact,
+};
 
 /// Build a cold bitset fixpoint convergence-flag dispatch.
 #[must_use]

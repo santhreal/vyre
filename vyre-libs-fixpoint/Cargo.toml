@@ -21,6 +21,9 @@ workspace = true
 [features]
 default = ["fixpoint"]
 fixpoint = []
+# The routing contract and the program-width query are test material that a
+# dependent crate's suite reads, so they compile only when a caller opts in.
+test-fixtures = []
 
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }
@@ -43,6 +46,9 @@ vyre-libs-bitset = { workspace = true }
 [dev-dependencies]
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
+# The grid-contract suite asserts the emitted wave structure through the
+# neutral grid-sync split the driver states.
+vyre-driver = { workspace = true }
 
 [[test]]
 name = "all_tests"

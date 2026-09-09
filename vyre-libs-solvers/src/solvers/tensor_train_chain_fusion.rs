@@ -13,8 +13,8 @@
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_libs_math::math::tensor_train::tt_contract_step;
 use vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity;
+use vyre_libs_math::math::tensor_train::tt_contract_step;
 use vyre_megakernel::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
@@ -240,14 +240,16 @@ mod tests {
                         inputs.len()
                     )));
                 };
-                let acc = vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_input_aligned(
-                    acc_bytes,
-                    "TT test dispatcher",
-                )?;
-                let core = vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_input_aligned(
-                    core_bytes,
-                    "TT test dispatcher",
-                )?;
+                let acc =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_input_aligned(
+                        acc_bytes,
+                        "TT test dispatcher",
+                    )?;
+                let core =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_input_aligned(
+                        core_bytes,
+                        "TT test dispatcher",
+                    )?;
                 let out_len = out_bytes.len() / 4;
                 if out_len == 0 || acc.is_empty() || core.len() != acc.len() * out_len {
                     return Err(SemanticExecutionError::InvalidRequest(format!(
@@ -318,9 +320,12 @@ mod tests {
     fn via_pressure_matches_unit_core_reference() {
         let dispatcher = ReferenceDispatcher;
         let ranks = vec![2, 3, 5];
-        let pressure =
-            fusion_pressure_via(&dispatcher, &vyre_test_support::test_parity_oracles::policy(), &ranks)
-                .expect("Fix: TT dispatch succeeds");
+        let pressure = fusion_pressure_via(
+            &dispatcher,
+            &vyre_test_support::test_parity_oracles::policy(),
+            &ranks,
+        )
+        .expect("Fix: TT dispatch succeeds");
         assert!(approx_eq(pressure, reference_fusion_pressure(&ranks)));
     }
 

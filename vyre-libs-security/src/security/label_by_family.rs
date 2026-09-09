@@ -54,8 +54,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_test_support::test_parity_oracles::eval_bytes;
     use proptest::prelude::*;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     #[test]
     fn label_by_family_program_emits_buffers() {

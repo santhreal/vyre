@@ -12,6 +12,7 @@
 //! returned length AND the full padded path buffer (no tolerance). The walk is bounded by `max_depth`, so
 //! even cyclic parent arrays terminate (both the GPU IR and `cpu_ref` bound-walk identically).
 
+#![cfg(feature = "graph-dispatch")]
 use crate::bounded_compile_policy;
 
 use vyre_libs_graph::graph::dispatch::path_reconstruct::reconstruct_path_via;

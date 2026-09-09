@@ -58,4 +58,3 @@ mod edge_buffer_copy_tests {
         assert!(!can_dispatch_edge_buffers_without_padding(2, 3, 3));
     }
 }
-

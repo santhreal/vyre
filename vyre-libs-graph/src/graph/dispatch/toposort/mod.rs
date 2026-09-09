@@ -30,4 +30,3 @@ impl ToposortGpuScratch {
         self.program_cache.builds()
     }
 }
-

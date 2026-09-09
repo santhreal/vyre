@@ -59,7 +59,7 @@ pub enum RuleBuildError {
 /// # Examples
 ///
 /// ```
-/// use vyre_libs::rule::{build_rule_program, RuleCondition, RuleFormula};
+/// use vyre_libs_rule::rule::{build_rule_program, RuleCondition, RuleFormula};
 ///
 /// let formula = RuleFormula::condition(RuleCondition::LiteralTrue);
 /// let program = build_rule_program(&[(formula, 3)]).expect("Fix: literal rule lowers");

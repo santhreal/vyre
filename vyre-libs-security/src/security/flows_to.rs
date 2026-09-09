@@ -15,9 +15,9 @@
 //! signature from the inert v2 API has been deleted  -  the shim
 //! now takes only the canonical frontier / sink buffer names.
 
-use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
 use crate::predicate::edge_kind;
 use vyre_foundation::ir::Program;
+use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
 
 use crate::security::flow_composition::{
     security_flow_program, FlowPredicate, SecurityFlowOptions,
@@ -98,9 +98,9 @@ pub fn flows_to_alias_only(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_test_support::test_parity_oracles::try_eval_bytes;
     use crate::predicate::edge_kind;
     use vyre_reference::composition_witness::csr_forward_traverse_witness;
+    use vyre_test_support::test_parity_oracles::try_eval_bytes;
 
     #[test]
     fn flows_to_mask_excludes_control_and_dominance() {
@@ -206,12 +206,14 @@ mod tests {
         // matching `max_iterations` is the contract, not a hygiene gap.
         // Their IR differs (distinct OP_ID tags) but their fixpoint
         // depths are identical by construction.
-        let c_flows =
-            vyre_libs_builder::operation_catalog::convergence_contract("vyre-libs::security::flows_to")
-                .expect("Fix: flows_to must have a ConvergenceContract");
-        let c_taint =
-            vyre_libs_builder::operation_catalog::convergence_contract("vyre-libs::security::taint_flow")
-                .expect("Fix: taint_flow must have a ConvergenceContract");
+        let c_flows = vyre_libs_builder::operation_catalog::convergence_contract(
+            "vyre-libs::security::flows_to",
+        )
+        .expect("Fix: flows_to must have a ConvergenceContract");
+        let c_taint = vyre_libs_builder::operation_catalog::convergence_contract(
+            "vyre-libs::security::taint_flow",
+        )
+        .expect("Fix: taint_flow must have a ConvergenceContract");
         assert_eq!(
             c_flows.max_iterations, c_taint.max_iterations,
             "flows_to and taint_flow MUST share max_iterations: they close the \

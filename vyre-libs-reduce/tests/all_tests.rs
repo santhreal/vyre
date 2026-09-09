@@ -1,5 +1,12 @@
 //! One binary for every integration test in this crate.
 
+#[macro_use]
+#[path = "gate_fixtures/mod.rs"]
+pub mod gate_fixtures;
+
+#[path = "wire_words/mod.rs"]
+pub mod wire_words;
+
 #[path = "adversarial_reduce_gather.rs"]
 pub mod adversarial_reduce_gather;
 
@@ -18,9 +25,6 @@ pub mod adversarial_reduce_segment_reduce;
 #[path = "bounded_compile_policy.rs"]
 pub mod bounded_compile_policy;
 
-#[path = "gate_fixtures/mod.rs"]
-pub mod gate_fixtures;
-
 #[path = "reduction_metrics_via_reference_parity.rs"]
 pub mod reduction_metrics_via_reference_parity;
 
@@ -32,7 +36,3 @@ pub mod sweep_reduce_oracle_matrix;
 
 #[path = "sweep_segment_reduce_oracle_matrix.rs"]
 pub mod sweep_segment_reduce_oracle_matrix;
-
-#[path = "wire_words/mod.rs"]
-pub mod wire_words;
-

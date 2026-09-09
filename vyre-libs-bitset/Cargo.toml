@@ -19,8 +19,9 @@ publication_class = "extension-sdk"
 workspace = true
 
 [features]
-default = ["bitset"]
+default = ["bitset", "logical"]
 bitset = []
+test-fixtures = []
 logical = ["bitset"]
 
 [dependencies]

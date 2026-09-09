@@ -25,9 +25,9 @@
 //! caller is responsible for the fixpoint loop, which is the same
 //! contract every other reachability primitive in this module honours.
 
-use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
 use crate::predicate::edge_kind;
 use vyre_foundation::ir::Program;
+use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
 #[cfg(test)]
 use vyre_spec::soundness::DynamicPrimitiveSoundness;
 use vyre_spec::{analysis::AnalysisFactKind, soundness::Soundness};

@@ -4,11 +4,11 @@ use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
 use super::{SinkhornBuffers, SinkhornExtents, OP_ID};
-#[cfg(test)]
-use vyre_libs_fixpoint::fixpoint::persistent_fixpoint::persistent_fixpoint;
-use vyre_libs_fixpoint::fixpoint::persistent_fixpoint::{routed_persistent_fixpoint, FixpointState};
 use crate::math::semiring_gemm::{semiring_gemm, Semiring};
 use crate::math::sinkhorn::sinkhorn_scale;
+use vyre_libs_fixpoint::fixpoint::persistent_fixpoint::{
+    routed_persistent_fixpoint, FixpointState,
+};
 
 /// Sinkhorn full iteration.
 ///
@@ -220,32 +220,4 @@ pub(super) fn sinkhorn_wrap(
             BufferDecl::storage(ktu, 9, BufferAccess::ReadWrite, DataType::U32).with_count(n),
         ],
     )
-}
-
-/// The pre-routing program: the Sinkhorn transfer body on the single-word
-/// convergence harness at ANY size, which is exactly what [`sinkhorn_iterate`]
-/// emitted before the dispatch-span routing landed.
-///
-/// Exists only so the divergence test can OBSERVE what the racing shared flag
-/// produces above one workgroup. Production code must never take this path above
-/// one workgroup width.
-#[cfg(test)]
-pub(super) fn sinkhorn_single_word_harness(
-    buffers: SinkhornBuffers<'_>,
-    extents: SinkhornExtents,
-) -> Program {
-    let matrix_cells = extents
-        .m
-        .checked_mul(extents.n)
-        .expect("Fix: the divergence fixture must use non-overflowing extents.");
-    let transfer_body = sinkhorn_transfer_body(buffers, extents);
-    let inner = persistent_fixpoint(
-        transfer_body,
-        buffers.u_curr,
-        buffers.u_next,
-        buffers.changed,
-        extents.m,
-        extents.max_iterations,
-    );
-    sinkhorn_wrap(&inner, buffers, extents, matrix_cells, 1)
 }

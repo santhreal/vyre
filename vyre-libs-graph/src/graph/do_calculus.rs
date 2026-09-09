@@ -221,7 +221,7 @@ mod tests {
 /// into an n-element impact mask on device.
 #[cfg(feature = "reasoning")]
 #[must_use]
-pub(crate) fn impact_mask_from_closure(
+pub fn impact_mask_from_closure(
     intervention_mask: &str,
     closure: &str,
     impact_mask: &str,
@@ -244,7 +244,8 @@ pub(crate) fn try_impact_mask_from_closure(
     if n == 0 {
         return Err(format!("Fix: {IMPACT_MASK_OP_ID} requires n > 0."));
     }
-    let cells = vyre_libs_builder::plumbing::operand::shape::square_matrix_cells(IMPACT_MASK_OP_ID, n)?;
+    let cells =
+        vyre_libs_builder::plumbing::operand::shape::square_matrix_cells(IMPACT_MASK_OP_ID, n)?;
     let j = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(j.clone(), Expr::u32(n)),

@@ -2,8 +2,8 @@
 //!
 //! Category-A compositions over `UnOp::Unpack*` primitives.
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{DataType, Expr, Program};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 /// Unpack 4-bit values from a u32 buffer into f32.
 /// Input: `n/8` u32s (each holds 8 4-bit values), Output: `n` f32s.
@@ -35,7 +35,7 @@ inventory::submit! {
             // Pack 16 4-bit values: 0..15 into 2 u32s (8 nibbles each)
             // u32[0] = 0x76543210, u32[1] = 0xFEDCBA98
             vec![vec![
-                vyre_test_support::test_parity_oracles::u32_bytes(&[0x7654_3210, 0xFEDC_BA98]), // input: 2 packed u32s
+                vyre_primitives::wire::pack_u32_slice(&[0x7654_3210, 0xFEDC_BA98]), // input: 2 packed u32s
             ]]
         }),
         Some(|| {

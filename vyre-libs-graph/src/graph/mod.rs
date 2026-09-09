@@ -236,6 +236,10 @@ pub mod adjustment_set;
 #[cfg(feature = "graph")]
 pub mod matroid;
 
+/// Matroid intersection full Edmonds algorithm (#P-PRIM-10).
+#[cfg(feature = "graph")]
+pub mod matroid_intersection_full;
+
 /// Sheaf neural network diagonal-form diffusion step.
 #[cfg(feature = "graph")]
 pub mod sheaf;

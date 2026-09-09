@@ -518,9 +518,6 @@ fn tree_walk_program(
 }
 
 #[cfg(test)]
-mod internal_tests;
-
-#[cfg(test)]
 mod tests {
     use super::*;
 

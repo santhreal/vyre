@@ -14,4 +14,3 @@
 //! parameters in that order. A wrapper that forwards is not an owner: it gave
 //! the algorithm a second name, no second behaviour, and a second signature to
 //! keep in step. Callers name `crate::graph` directly.
-

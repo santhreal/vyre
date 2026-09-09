@@ -10,7 +10,7 @@ impl PatternExists {
     /// # Examples
     ///
     /// ```
-    /// use vyre_libs::rule::pattern_exists::PatternExists;
+    /// use vyre_libs_rule::rule::pattern_exists::PatternExists;
     ///
     /// assert!(!PatternExists::program().entry().is_empty());
     /// ```

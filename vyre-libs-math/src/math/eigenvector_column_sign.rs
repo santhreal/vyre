@@ -15,10 +15,10 @@
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
-use vyre_libs_builder::builder::cooperative::for_each_index;
 use crate::math::cooperative_argmax::LANES;
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_libs_builder::builder::cooperative::for_each_index;
 
 /// Op id.
 pub const OP_ID: &str = "vyre-libs::math::eigenvector_column_sign";

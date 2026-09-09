@@ -95,14 +95,14 @@ pub fn build_ac_bounded_count_suffix2_prefilter_program(dfa: &CompiledDfa) -> Pr
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_test_support::test_parity_oracles::bytes_to_u32 as decode_u32;
-    use vyre_test_support::test_parity_oracles::eval_bytes;
     use crate::pattern::classic_ac::test_dispatch_and_decode::{
         ac_dfa_table_inputs, u32_input, with_reference_dispatch_lanes,
     };
     use crate::pattern::classic_ac::{
         classic_ac_candidate_end_byte_mask_words, classic_ac_compile, classic_ac_scan_counts,
     };
+    use vyre_test_support::test_parity_oracles::bytes_to_u32 as decode_u32;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     fn suffix2_candidate(
         previous: u8,

@@ -13,9 +13,6 @@ mod validate;
 
 mod registry;
 
-#[cfg(test)]
-mod reference_adapter;
-
 pub use body::{
     csr_forward_or_changed_body, csr_forward_or_changed_body_prefixed,
     csr_forward_or_changed_child, csr_forward_or_changed_child_prefixed,

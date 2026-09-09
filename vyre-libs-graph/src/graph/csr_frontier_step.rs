@@ -6,12 +6,12 @@
 //! `dst` while scanning a source row.
 //!
 
-use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 use crate::graph::program_graph::{
     ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS,
     NAME_EDGE_TARGETS,
 };
 use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 
 /// Canonical binding index for the input frontier bitset.
 pub const BINDING_FRONTIER_IN: u32 = BINDING_PRIMITIVE_START;
@@ -46,22 +46,26 @@ pub(crate) fn csr_frontier_step_program(
     allow_mask: u32,
 ) -> Program {
     match kind {
-        CsrFrontierStepKind::Forward => vyre_libs_builder::builder::csr::CsrTraversalComposer::forward(
-            op_id,
-            shape.node_count,
-            shape.edge_count,
-            allow_mask,
-        )
-        .with_workgroup_size(CSR_FRONTIER_STEP_WORKGROUP_SIZE)
-        .build_forward_step(frontier_in, frontier_out),
-        CsrFrontierStepKind::Backward => vyre_libs_builder::builder::csr::CsrTraversalComposer::backward(
-            op_id,
-            shape.node_count,
-            shape.edge_count,
-            allow_mask,
-        )
-        .with_workgroup_size(CSR_FRONTIER_STEP_WORKGROUP_SIZE)
-        .build_backward_step(frontier_in, frontier_out),
+        CsrFrontierStepKind::Forward => {
+            vyre_libs_builder::builder::csr::CsrTraversalComposer::forward(
+                op_id,
+                shape.node_count,
+                shape.edge_count,
+                allow_mask,
+            )
+            .with_workgroup_size(CSR_FRONTIER_STEP_WORKGROUP_SIZE)
+            .build_forward_step(frontier_in, frontier_out)
+        }
+        CsrFrontierStepKind::Backward => {
+            vyre_libs_builder::builder::csr::CsrTraversalComposer::backward(
+                op_id,
+                shape.node_count,
+                shape.edge_count,
+                allow_mask,
+            )
+            .with_workgroup_size(CSR_FRONTIER_STEP_WORKGROUP_SIZE)
+            .build_backward_step(frontier_in, frontier_out)
+        }
     }
 }
 /// Build a forward CSR step that excludes active source nodes selected by

@@ -8,7 +8,6 @@
 mod inputs;
 mod u32_outputs;
 
-pub(crate) use vyre_libs_builder::plumbing::host::program_cache::ProgramCache;
 pub(crate) use inputs::{
     fingerprint_u32_slice, refresh_keyed_dispatch_inputs, DispatchInput, U32SliceFingerprint,
 };
@@ -16,6 +15,7 @@ pub(crate) use u32_outputs::{
     dispatch_single_u32_output_from_prepared_into, dispatch_two_u32_outputs_from_prepared_into,
     dispatch_u32_outputs_from_prepared_into, U32Readback,
 };
+pub(crate) use vyre_libs_builder::plumbing::host::program_cache::ProgramCache;
 
 use vyre_foundation::ir::Program;
 

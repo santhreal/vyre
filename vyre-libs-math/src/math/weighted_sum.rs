@@ -77,8 +77,8 @@ inventory::submit! {
                 .unwrap_or_else(|error| super::trap_f32_output_program(OP_ID, "output", error))
         },
         Some(|| {
-            let weights = vyre_test_support::test_parity_oracles::f32_bytes(&[0.5, 0.25, 0.125, 0.125]);
-            let values = vyre_test_support::test_parity_oracles::f32_bytes(&[1.0, 2.0, 4.0, 8.0]);
+            let weights = vyre_primitives::wire::pack_f32_slice(&[0.5, 0.25, 0.125, 0.125]);
+            let values = vyre_primitives::wire::pack_f32_slice(&[1.0, 2.0, 4.0, 8.0]);
             vec![vec![weights, values]]
         }),
         Some(|| {

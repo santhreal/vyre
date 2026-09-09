@@ -45,13 +45,13 @@
 //! full V-cycle composes this step with explicit restriction and
 //! prolongation primitives.
 
+#[cfg(test)]
+use vyre_foundation::pass_substrate::multigrid_matroid_solver as foundation_multigrid;
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     checked_square_cells, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
 use vyre_libs_math::math::multigrid::jacobi_smooth_step;
-#[cfg(test)]
-use vyre_foundation::pass_substrate::multigrid_matroid_solver as foundation_multigrid;
 use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned dispatch scratch for fixed-point multigrid Jacobi smoothing.
@@ -414,8 +414,10 @@ mod tests {
                 assert_eq!(inputs.len(), 5);
                 let a = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
                 let b = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
-                let x_in = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2]);
-                let omega = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[3])[0];
+                let x_in =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2]);
+                let omega =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[3])[0];
                 assert_eq!(inputs[4].len(), b.len() * std::mem::size_of::<u32>());
                 let n = b.len();
                 let mut out = Vec::with_capacity(n);
@@ -435,7 +437,10 @@ mod tests {
 
                 Ok(vec![u32_slice_to_le_bytes(&out)])
             };
-            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(
+                request,
+                compute_ordered()?,
+            )
         }
     }
 

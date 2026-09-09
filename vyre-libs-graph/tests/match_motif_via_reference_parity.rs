@@ -13,6 +13,7 @@
 //! `motif_witness` from `vyre-reference` is the authoritative witness;
 //! values are integer witnesses / bool / counts → BIT-EXACT (no tolerance).
 
+#![cfg(feature = "graph-dispatch")]
 use crate::bounded_compile_policy;
 
 use vyre_libs_graph::graph::dispatch::motif::{

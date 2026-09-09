@@ -668,9 +668,9 @@ pub fn grid_sync_barrier() -> Node {
 /// with its own `match node` ending in `_ => 0`, which classifies an
 /// unrecognised nesting variant as containing no fences. A fence hidden inside
 /// such a variant makes an under-fenced program's structure test pass.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-fixtures"))]
 #[must_use]
-pub(crate) fn count_grid_sync(nodes: &[Node]) -> usize {
+pub fn count_grid_sync(nodes: &[Node]) -> usize {
     let mut total = 0;
     let mut stack: Vec<&Node> = nodes.iter().collect();
     while let Some(node) = stack.pop() {
@@ -698,7 +698,7 @@ pub(crate) fn count_grid_sync(nodes: &[Node]) -> usize {
 /// recoverable from the program's own declarations, which is what lets a test
 /// confirm the routing decision against the emission instead of against a
 /// restatement of the rule.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-fixtures"))]
 #[must_use]
 pub fn declared_dispatch_span(program: &Program) -> u32 {
     program
@@ -713,7 +713,7 @@ pub fn declared_dispatch_span(program: &Program) -> u32 {
 ///
 /// [`declared_dispatch_span`] over the program's own declared workgroup width, so
 /// neither half can be pinned to a stale constant.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-fixtures"))]
 #[must_use]
 pub fn required_workgroups(program: &Program) -> u32 {
     declared_dispatch_span(program).div_ceil(program.workgroup_size()[0])
@@ -730,7 +730,7 @@ pub fn required_workgroups(program: &Program) -> u32 {
 /// Panics when `buffer` names no declared buffer. A program that does not
 /// declare the buffer a caller is asking about is a defect in the emission
 /// rather than a zero-width buffer.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-fixtures"))]
 #[must_use]
 pub fn declared_words(program: &Program, buffer: &str) -> u32 {
     program

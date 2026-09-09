@@ -11,11 +11,11 @@ use crate::graph::csr_forward_or_changed::{
 use crate::graph::dispatch::dispatch_bridge::{
     refresh_keyed_dispatch_inputs, CachedProgram, DispatchInput, ProgramCache,
 };
-use vyre_libs_builder::plumbing::host::scratch::reserve_vec as reserve_graph_vec;
 use vyre_foundation::ir::{
     GraphInput, GraphOutput, GraphValueId, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_foundation::logical::LogicalProgramGraph;
+use vyre_libs_builder::plumbing::host::scratch::reserve_vec as reserve_graph_vec;
 use vyre_megakernel::{
     returned_graph_values, SemanticExecutionError, SemanticExecutionPolicy,
     SemanticExecutionRequest, SemanticExecutor,

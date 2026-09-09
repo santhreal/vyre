@@ -107,8 +107,10 @@ mod fixed_via_tests {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 3);
-                let dist = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
-                let epsilon = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1])[0];
+                let dist =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
+                let epsilon =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1])[0];
                 let n = integer_sqrt(dist.len());
                 let mut mask = vec![0u32; dist.len()];
                 for i in 0..n {
@@ -121,7 +123,10 @@ mod fixed_via_tests {
                 }
                 Ok(vec![u32_slice_to_le_bytes(&mask)])
             };
-            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(
+                request,
+                compute_ordered()?,
+            )
         }
     }
 

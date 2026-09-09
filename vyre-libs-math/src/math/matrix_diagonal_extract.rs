@@ -10,8 +10,8 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_chi
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_libs_builder::builder::cooperative::for_each_index;
 use crate::math::cooperative_argmax::LANES;
+use vyre_libs_builder::builder::cooperative::for_each_index;
 
 /// Op id.
 pub const OP_ID: &str = "vyre-libs::math::matrix_diagonal_extract";

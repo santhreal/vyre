@@ -143,14 +143,14 @@ pub(in crate::pattern::classic_ac) fn suffix3_bloom_bit_index_expr(suffix: Expr)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_test_support::test_parity_oracles::bytes_to_u32 as decode_u32;
-    use vyre_test_support::test_parity_oracles::eval_bytes;
     use crate::pattern::classic_ac::{
         classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
         classic_ac_compile, classic_ac_scan_counts,
         test_dispatch_and_decode::{ac_dfa_table_inputs, u32_input, with_reference_dispatch_lanes},
         CLASSIC_AC_SUFFIX2_MASK_WORDS,
     };
+    use vyre_test_support::test_parity_oracles::bytes_to_u32 as decode_u32;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     #[test]
     fn suffix3_bloom_marks_inserted_short_and_long_pattern_suffixes() {
         let patterns: [&[u8]; 4] = [b"z", b"ab", b"token", b"BEGIN"];

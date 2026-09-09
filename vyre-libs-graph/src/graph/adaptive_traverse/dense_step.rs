@@ -6,8 +6,8 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::{ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE, OP_ID};
-use vyre_libs_bitset::bitset::bitset_words;
 use crate::graph::frontier_bits::{set_bit, BitAccess};
+use vyre_libs_bitset::bitset::bitset_words;
 
 /// Build the GPU Program for one dense step. Invocation `d`
 /// computes `frontier_out[d] = any bit of (adj_rows[d] &

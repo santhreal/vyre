@@ -19,7 +19,7 @@ publication_class = "extension-sdk"
 workspace = true
 
 [features]
-default = ["math"]
+default = ["math", "geom", "opt", "representation"]
 math = ["math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct"]
 "math-dialect" = []
 "math-kernels" = []
@@ -55,6 +55,8 @@ vyre-libs-fixpoint = { workspace = true }
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
+proptest.workspace = true
+vyre-libs-fixpoint = { workspace = true, features = ["test-fixtures"] }
 
 [[test]]
 name = "all_tests"

@@ -264,6 +264,16 @@ mod tests {
     }
 
     #[test]
+    fn closure_converges_over_two_distinct_paths() {
+        let one_step =
+            cpu_ref_closure(CsrClosureInputs::allow_all(graphs::DIAMOND_4, 1), &[0b0001]);
+        assert_eq!(one_step, vec![0b0111]);
+        let two_steps =
+            cpu_ref_closure(CsrClosureInputs::allow_all(graphs::DIAMOND_4, 2), &[0b0001]);
+        assert_eq!(two_steps, vec![0b1111]);
+    }
+
+    #[test]
     fn closure_into_reuses_caller_buffers() {
         let mut current = Vec::with_capacity(8);
         let mut next = Vec::with_capacity(8);

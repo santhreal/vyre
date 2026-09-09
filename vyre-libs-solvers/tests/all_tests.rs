@@ -65,4 +65,3 @@ pub mod transport_residual_via_reference_parity;
 
 #[path = "vietoris_rips_via_reference_parity.rs"]
 pub mod vietoris_rips_via_reference_parity;
-

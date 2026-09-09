@@ -3,10 +3,10 @@
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 
-use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 use crate::graph::program_graph::{
     word_buffer, ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_TARGETS,
 };
+use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 
 use super::pattern::MotifEdge;
 use super::{MOTIF_HITS_BUFFER, MOTIF_WITNESS_OUT_BUFFER, MOTIF_WORKGROUP_SIZE, OP_ID};
@@ -98,8 +98,11 @@ pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -
         let actual_kind = format!("actual_kind_{idx}");
         scan_edges.push(Node::let_bind(&edge_found, Expr::u32(0)));
         if edge.from < shape.node_count {
-            let csr =
-                vyre_libs_builder::builder::csr::CsrTraversalComposer::new(OP_ID, "motif", shape.node_count);
+            let csr = vyre_libs_builder::builder::csr::CsrTraversalComposer::new(
+                OP_ID,
+                "motif",
+                shape.node_count,
+            );
             let [edge_start_node, edge_end_node] =
                 csr.emit_row_offsets(Expr::u32(edge.from), &edge_start, &edge_end);
             scan_edges.push(edge_start_node);

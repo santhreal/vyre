@@ -1,5 +1,6 @@
 //! Workgroup reduction trees, atomic scalar reductions, and prefix scans.
 
+#[cfg(feature = "reduce")]
 pub mod reduce;
 
 /// Ensure all feature-selected library operation registrations are retained by the linker.

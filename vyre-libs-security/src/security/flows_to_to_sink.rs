@@ -26,8 +26,8 @@
 //! [`MayOver`](vyre_spec::soundness::Soundness::MayOver) on a single
 //! step, `Exact` when iterated to fixpoint with sanitizer gating.
 
-use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
 use vyre_foundation::ir::Program;
+use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
 
 #[cfg(test)]
 use crate::security::flow_composition::dataflow_hit_cpu_ref;

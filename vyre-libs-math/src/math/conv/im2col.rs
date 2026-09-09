@@ -18,7 +18,7 @@ use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_test_support::test_parity_oracles::f32_bytes;
+use vyre_primitives::wire::pack_f32_slice;
 
 const OP_ID: &str = "vyre-libs::math::conv::im2col_3x3";
 
@@ -120,7 +120,7 @@ inventory::submit! {
                 .unwrap_or_else(|error| super::trap_f32_output_program(OP_ID, "output", error))
         },
         Some(|| {
-            vec![vec![f32_bytes(&im2col_fixture_input())]]
+            vec![vec![pack_f32_slice(&im2col_fixture_input())]]
         }),
         Some(|| {
             vec![vec![EXPECTED_IM2COL_OUTPUT_BYTES.to_vec()]]
@@ -137,7 +137,7 @@ fn im2col_fixture_input() -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_test_support::test_parity_oracles::f32_bytes;
+    use vyre_primitives::wire::pack_f32_slice;
     use vyre_reference::composition_witness::im2col_3x3_witness;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {
@@ -146,7 +146,13 @@ mod tests {
 
     fn columns(input: &[f32], h: u32, w: u32) -> Vec<f32> {
         let program = im2col_3x3("input", "output", h, w).expect("Fix: build");
-        decode(&vyre_test_support::test_parity_oracles::eval_bytes("im2col_3x3", &program, vec![f32_bytes(input)])[0])
+        decode(
+            &vyre_test_support::test_parity_oracles::eval_bytes(
+                "im2col_3x3",
+                &program,
+                vec![pack_f32_slice(input)],
+            )[0],
+        )
     }
 
     /// Im2col on a 4x4 input matches the naive reference layout.

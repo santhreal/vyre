@@ -130,82 +130,19 @@ pub fn semiring_gemm(
         .unwrap_or_else(|err| trap_program(OP_ID, Some((c, DataType::U32)), format!("Fix: {err}")))
 }
 
-/// CPU reference - exact byte-for-byte target the GPU dispatch must hit.
-#[must_use]
-#[cfg(test)]
-pub(crate) fn semiring_gemm_cpu(
-    a: &[u32],
-    b: &[u32],
-    m: u32,
-    n: u32,
-    k: u32,
-    semiring: Semiring,
-) -> Vec<u32> {
-    let mut c = Vec::new();
-    try_semiring_gemm_cpu_into(a, b, m, n, k, semiring, &mut c)
-        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - semiring_gemm_cpu failed: invalid GEMM shape");
-    c
-}
-
-/// Fallible CPU reference using a caller-owned output buffer.
-#[cfg(test)]
-pub(crate) fn try_semiring_gemm_cpu_into(
-    a: &[u32],
-    b: &[u32],
-    m: u32,
-    n: u32,
-    k: u32,
-    semiring: Semiring,
-    c: &mut Vec<u32>,
-) -> Result<(), String> {
-    if m == 0 || n == 0 || k == 0 {
-        return Err(format!(
-            "semiring_gemm CPU oracle requires non-zero dimensions, got m={m}, n={n}, k={k}."
-        ));
-    }
-    let m_usize =
-        usize::try_from(m).map_err(|_| format!("semiring_gemm m={m} does not fit usize."))?;
-    let n_usize =
-        usize::try_from(n).map_err(|_| format!("semiring_gemm n={n} does not fit usize."))?;
-    let k_usize =
-        usize::try_from(k).map_err(|_| format!("semiring_gemm k={k} does not fit usize."))?;
-    let cell_count = m_usize
-        .checked_mul(n_usize)
-        .ok_or_else(|| format!("semiring_gemm CPU oracle output cells overflow: m={m}, n={n}."))?;
-    m_usize.checked_mul(k_usize).ok_or_else(|| {
-        format!("semiring_gemm CPU oracle A buffer cells overflow: m={m}, k={k}.")
-    })?;
-    k_usize.checked_mul(n_usize).ok_or_else(|| {
-        format!("semiring_gemm CPU oracle B buffer cells overflow: k={k}, n={n}.")
-    })?;
-    if cell_count > c.capacity() {
-        vyre_libs_builder::plumbing::host::scratch::reserve_items(
-            c,
-            cell_count - c.len(),
-            "semiring GEMM CPU oracle",
-            "output matrix",
-        )?;
-    }
-    vyre_reference::composition_witness::semiring_gemm_witness_into(
-        a, b, m_usize, n_usize, k_usize, semiring, c,
-    );
-    Ok(())
-}
-
-fn fixture_u32(words: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(words)
-}
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
         || semiring_gemm("a", "b", "c", 2, 2, 2, Semiring::Real),
         Some(|| vec![vec![
-            fixture_u32(&[1, 2, 3, 4]),
-            fixture_u32(&[5, 6, 7, 8]),
+            vyre_primitives::wire::pack_u32_slice(&[1, 2, 3, 4]),
+            vyre_primitives::wire::pack_u32_slice(&[5, 6, 7, 8]),
         ]]),
-        Some(|| vec![vec![vyre_test_support::test_parity_oracles::MATMUL_2X2_EXPECTED_BYTES.to_vec()]]),
+        Some(|| {
+            vec![vec![vyre_primitives::wire::pack_u32_slice(
+                &crate::MATMUL_2X2_EXPECTED_WORDS,
+            )]]
+        }),
     )
     .with_laws(&["distributive"])
 }
-

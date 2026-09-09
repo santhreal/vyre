@@ -7,9 +7,9 @@
 //! Source filtering is part of the CSR traversal stage. No intermediate
 //! clean-frontier buffer or cross-dispatch synchronization is required.
 
+use vyre_foundation::composition::tag_program;
 use vyre_libs_graph::graph::csr_forward_traverse::csr_forward_traverse_excluding;
 use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
-use vyre_foundation::composition::tag_program;
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::sanitized_by";
 
@@ -61,8 +61,8 @@ pub(crate) fn sanitized_by_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_test_support::test_parity_oracles::eval_bytes;
     use crate::predicate::edge_kind;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     #[test]
     fn test_sanitized_by_expected_bytes_identity() {

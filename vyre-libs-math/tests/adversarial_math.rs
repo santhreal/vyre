@@ -4,7 +4,9 @@
 #![cfg(feature = "math")]
 
 use vyre_foundation::ir::{Expr, Node};
-use vyre_libs_math::math::conv1d::{conv1d_program, pack_params, MAX_RADIUS, OP_ID as CONV1D_OP_ID};
+use vyre_libs_math::math::conv1d::{
+    conv1d_program, pack_params, MAX_RADIUS, OP_ID as CONV1D_OP_ID,
+};
 use vyre_libs_math::math::prefix_scan::ScanKind;
 use vyre_reference::composition_witness::{
     prefix_scan_witness, stream_compact_witness as stream_compact_cpu_ref,

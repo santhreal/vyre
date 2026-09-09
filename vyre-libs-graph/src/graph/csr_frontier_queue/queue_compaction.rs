@@ -8,8 +8,8 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use super::{
     FRONTIER_QUEUE_LEN_INIT_OP_ID, FRONTIER_TO_QUEUE_OP_ID, FRONTIER_TO_QUEUE_PARALLEL_OP_ID,
 };
-use vyre_libs_bitset::bitset::bitset_words;
 use crate::graph::frontier_bits::when_bit_set;
+use vyre_libs_bitset::bitset::bitset_words;
 
 /// Build a GPU program that initializes the active queue length scalar.
 ///

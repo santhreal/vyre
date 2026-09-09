@@ -14,7 +14,7 @@
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 
-use vyre_libs_rule::predicate::node_kind_eq::node_kind_eq;
+use vyre_libs_security::predicate::node_kind_eq::node_kind_eq;
 fn cpu_ref(kinds: &[u32], target: u32) -> Vec<u32> {
     vyre_reference::composition_witness::node_kind_eq_witness(kinds, target)
 }

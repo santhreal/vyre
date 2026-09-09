@@ -5,10 +5,10 @@
 //! (mul / add / shl) AND at least one operand is reachable from
 //! `@http_input_family` AND there is no dominating overflow check.
 
+use vyre_foundation::ir::Program;
 use vyre_libs_bitset::bitset::and::bitset_and;
 use vyre_libs_bitset::bitset::and_not::bitset_and_not;
 use vyre_libs_bitset::bitset::bitset_words;
-use vyre_foundation::ir::Program;
 
 use crate::security::flow_composition::fuse_security_flow;
 

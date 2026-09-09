@@ -8,13 +8,13 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 
 use super::layout::{PersistentBfsBuffers, BATCH_OP_ID, OP_ID, PERSISTENT_BFS_WORKGROUP_SIZE};
-use vyre_libs_bitset::bitset::bitset_words;
-use vyre_libs_fixpoint::fixpoint::persistent_fixpoint::grid_sync_barrier;
 use crate::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_snapshot_child_prefixed_with_active;
 use crate::graph::frontier_bits::bind_bit_address;
 use crate::graph::persistent_bfs_step::persistent_bfs_step_child_prefixed_with_active;
 use crate::graph::program_graph::ProgramGraphShape;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_libs_bitset::bitset::bitset_words;
+use vyre_libs_fixpoint::fixpoint::persistent_fixpoint::grid_sync_barrier;
 
 /// Build the IR `Program` for persistent BFS.
 ///

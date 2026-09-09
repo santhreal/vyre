@@ -247,12 +247,14 @@ inventory::submit! {
         || matmul_tiled("a", "b", "out", 2, 2, 2, 2),
         Some(|| {
             vec![vec![
-                vyre_test_support::test_parity_oracles::u32_bytes(&[1, 2, 3, 4]),
-                vyre_test_support::test_parity_oracles::u32_bytes(&[5, 6, 7, 8]),
+                vyre_primitives::wire::pack_u32_slice(&[1, 2, 3, 4]),
+                vyre_primitives::wire::pack_u32_slice(&[5, 6, 7, 8]),
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_test_support::test_parity_oracles::MATMUL_2X2_EXPECTED_BYTES.to_vec()]]
+            vec![vec![vyre_primitives::wire::pack_u32_slice(
+                &crate::MATMUL_2X2_EXPECTED_WORDS,
+            )]]
         }),
     )
     .with_category("math")
@@ -397,8 +399,8 @@ mod tests {
         let actual = run_program(
             &program,
             vec![
-                vyre_test_support::test_parity_oracles::u32_bytes(&a),
-                vyre_test_support::test_parity_oracles::u32_bytes(&b),
+                vyre_primitives::wire::pack_u32_slice(&a),
+                vyre_primitives::wire::pack_u32_slice(&b),
                 output_zero_bytes(&program),
             ],
         );
@@ -427,9 +429,9 @@ mod tests {
         let actual = run_program(
             &program,
             vec![
-                vyre_test_support::test_parity_oracles::u32_bytes(&a),
-                vyre_test_support::test_parity_oracles::u32_bytes(&b),
-                vyre_test_support::test_parity_oracles::u32_bytes(&bias),
+                vyre_primitives::wire::pack_u32_slice(&a),
+                vyre_primitives::wire::pack_u32_slice(&b),
+                vyre_primitives::wire::pack_u32_slice(&bias),
                 output_zero_bytes(&program),
             ],
         );

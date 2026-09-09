@@ -15,14 +15,6 @@
 //!   any_hit = bitset_any(hits)                (sink projection, optional)
 //! ```
 
-use vyre_libs_bitset::bitset::and::bitset_and;
-use vyre_libs_bitset::bitset::and_not::bitset_and_not;
-use vyre_libs_bitset::bitset::any::bitset_any;
-use vyre_libs_bitset::bitset::bitset_words;
-use vyre_libs_graph::graph::csr_backward_traverse::csr_backward_traverse;
-use vyre_libs_graph::graph::csr_forward_traverse::csr_forward_traverse;
-use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
-use vyre_libs_builder::plumbing::program::outputs::demote_intermediate_outputs;
 #[cfg(test)]
 use crate::predicate::edge_kind;
 use vyre_foundation::composition::{
@@ -31,6 +23,14 @@ use vyre_foundation::composition::{
 use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_foundation::ir::DataType;
 use vyre_foundation::ir::Program;
+use vyre_libs_bitset::bitset::and::bitset_and;
+use vyre_libs_bitset::bitset::and_not::bitset_and_not;
+use vyre_libs_bitset::bitset::any::bitset_any;
+use vyre_libs_bitset::bitset::bitset_words;
+use vyre_libs_builder::plumbing::program::outputs::demote_intermediate_outputs;
+use vyre_libs_graph::graph::csr_backward_traverse::csr_backward_traverse;
+use vyre_libs_graph::graph::csr_forward_traverse::csr_forward_traverse;
+use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     bitset_and_not_witness as bitset_and_not_cpu_ref, bitset_and_witness as bitset_and_cpu_ref,

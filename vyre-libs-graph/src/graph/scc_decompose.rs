@@ -17,8 +17,8 @@ use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_libs_bitset::bitset::bitset_words;
 use crate::graph::frontier_bits::{bind_bit_address, bind_word, bit_is_set, BitAccess};
+use vyre_libs_bitset::bitset::bitset_words;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::graph::scc_decompose";
@@ -126,7 +126,7 @@ pub(crate) fn try_dense_reachability_bitsets(
 /// Build a program that packs one pivot row from each dense closure into bitsets.
 #[cfg(any(test, feature = "analysis"))]
 #[must_use]
-pub(crate) fn dense_reachability_bitsets(
+pub fn dense_reachability_bitsets(
     node_count: u32,
     dense_count: u32,
     pivot: u32,

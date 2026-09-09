@@ -1,8 +1,8 @@
 //! Graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort.
 
 pub mod graph;
-pub mod topology;
 pub mod graph_compositions;
+pub mod topology;
 
 /// Ensure all feature-selected library operation registrations are retained by the linker.
 #[must_use]

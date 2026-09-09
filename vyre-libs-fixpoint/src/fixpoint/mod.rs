@@ -33,5 +33,5 @@ pub mod bitset_fixpoint;
 pub mod persistent_fixpoint;
 
 /// The one assertion of the routing contract every routed convergence op obeys.
-#[cfg(test)]
-pub(crate) mod routing_contract;
+#[cfg(any(test, feature = "test-fixtures"))]
+pub mod routing_contract;

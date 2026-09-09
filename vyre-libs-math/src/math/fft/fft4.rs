@@ -32,7 +32,7 @@ inventory::submit! {
         || fft4_complex("input", "output"),
         Some(|| {
             // Real-valued sequence [1, 0, 0, 0] (impulse): all bins = 1+0i
-            let input = vyre_test_support::test_parity_oracles::f32_bytes(&[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+            let input = vyre_primitives::wire::pack_f32_slice(&[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
             vec![vec![input]]
         }),
         Some(|| {

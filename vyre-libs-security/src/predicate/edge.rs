@@ -33,8 +33,8 @@ pub fn edge(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_graph::graph::csr_forward_traverse::cpu_ref_into;
     use crate::predicate::traversal::assert_region_op_id;
+    use vyre_reference::composition_witness::csr_forward_traverse_witness_into;
 
     #[test]
     fn preserves_wrapper_op_id() {
@@ -43,9 +43,9 @@ mod tests {
     }
 
     #[test]
-    fn cpu_ref_into_reuses_forward_edge_nodeset() {
+    fn forward_edge_nodeset_matches_the_reference_witness() {
         let mut out = Vec::with_capacity(4);
-        cpu_ref_into(
+        csr_forward_traverse_witness_into(
             4,
             &[0, 1, 2, 2, 2],
             &[1, 2],

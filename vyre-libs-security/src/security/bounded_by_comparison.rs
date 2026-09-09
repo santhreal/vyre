@@ -12,9 +12,9 @@
 //! then a bound-check intersects to prove the access is covered
 //! by some dominating bound-check."
 
-use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
 use crate::predicate::edge_kind;
 use vyre_foundation::ir::Program;
+use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
 
 use crate::security::flow_composition::{
     security_flow_program, FlowPredicate, SecurityFlowOptions,

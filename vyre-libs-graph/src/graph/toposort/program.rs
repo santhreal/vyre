@@ -1,8 +1,8 @@
 //! The emitted program: Kahn on lane zero, one invocation.
 
-use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 
 use super::OP_ID;
 
@@ -29,10 +29,12 @@ pub fn toposort_program(
 ) -> Program {
     let lane0 = Expr::eq(Expr::LogicalIndex { axis: 0 }, Expr::u32(0));
 
-    let csr =
-        vyre_libs_builder::builder::csr::CsrTraversalComposer::new(OP_ID, OP_ID, node_count).with_buffers(
-            vyre_libs_builder::builder::csr::CsrBuffers::new(offsets_buf, targets_buf, None),
-        );
+    let csr = vyre_libs_builder::builder::csr::CsrTraversalComposer::new(OP_ID, OP_ID, node_count)
+        .with_buffers(vyre_libs_builder::builder::csr::CsrBuffers::new(
+            offsets_buf,
+            targets_buf,
+            None,
+        ));
     let [edge_start, edge_end] = csr.emit_row_offsets(Expr::var("v"), "edge_start", "edge_end");
     let step_inner = vec![
         Node::let_bind("v", Expr::load(queue_scratch, Expr::var("read_head"))),

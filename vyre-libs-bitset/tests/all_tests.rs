@@ -33,3 +33,6 @@ pub mod proptest_bitset_zero;
 
 #[path = "sweep_logical_reference_matrix.rs"]
 pub mod sweep_logical_reference_matrix;
+
+#[path = "sweep_bitset_oracle_matrix.rs"]
+pub mod sweep_bitset_oracle_matrix;

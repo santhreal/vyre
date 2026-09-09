@@ -11,8 +11,6 @@ mod hash;
 mod layout;
 mod plan;
 mod program;
-#[cfg(test)]
-mod reference_adapter;
 mod resident_plan;
 mod validate;
 
@@ -39,15 +37,3 @@ pub use validate::{
     validate_persistent_bfs_graph_layout, validate_persistent_bfs_inputs,
 };
 
-#[cfg(test)]
-pub(crate) use {
-    layout::{
-        PersistentBfsBatchLayout, PersistentBfsFrontierLayout, PersistentBfsLayout,
-        PersistentBfsPlanCacheKind,
-    },
-    reference_adapter::{
-        cpu_ref, cpu_ref_into, try_cpu_ref, try_cpu_ref_converged, try_cpu_ref_density,
-        try_cpu_ref_into, try_cpu_ref_into_with_scratch, PersistentBfsConvergence,
-        PersistentBfsCpuScratch,
-    },
-};

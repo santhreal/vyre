@@ -3,8 +3,8 @@
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 use crate::graph::frontier_bits::bind_bit_address;
+use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 
 /// Lane assignment and in-bounds rule for one queued CSR source row.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -1,6 +1,6 @@
 //! Exact (Edmonds) matroid intersection for megakernel fusion-grouping.
 //!
-//! Self-consumer for [`matroid_intersection_full`](vyre_libs_math::math::matroid_intersection_full).
+//! Self-consumer for [`matroid_intersection_full`](vyre_libs_graph::graph::matroid_intersection_full).
 //!
 //! Today the megakernel scheduler uses
 //! [`vyre_foundation::optimizer::megakernel::matroid_subset::max_fusion_subset`] which is
@@ -33,7 +33,7 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_libs_math::math::matroid_intersection_full::matroid_intersection_full;
+use vyre_libs_graph::graph::matroid_intersection_full::matroid_intersection_full;
 use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned dispatch scratch for exact megakernel matroid certification.

@@ -11,7 +11,9 @@ use vyre_libs_fixpoint::fixpoint::persistent_fixpoint::{
     declared_words, fixpoint_route, persistent_fixpoint, required_workgroups,
     PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
 };
-use vyre_libs_fixpoint::fixpoint::persistent_fixpoint::{routed_persistent_fixpoint, FixpointState};
+use vyre_libs_fixpoint::fixpoint::persistent_fixpoint::{
+    routed_persistent_fixpoint, FixpointState,
+};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::math::bellman_shortest_path";
@@ -359,9 +361,9 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::bellman_shortest_path_witness as cpu_ref;
     use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_test_support::test_parity_oracles::eval_bytes_lane_order;
-    use vyre_reference::composition_witness::bellman_shortest_path_witness as cpu_ref;
 
     #[allow(clippy::too_many_arguments)]
     fn cpu_ref_into(

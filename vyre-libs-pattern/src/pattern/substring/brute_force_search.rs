@@ -145,12 +145,12 @@ inventory::submit! {
             let to_u32_vec = |s: &str| s.bytes().map(u32::from).collect::<Vec<_>>();
             vec![
                 vec![
-                    vyre_test_support::test_parity_oracles::u32_bytes(&to_u32_vec("abcabc++")),
-                    vyre_test_support::test_parity_oracles::u32_bytes(&to_u32_vec("abc")),
+                    vyre_primitives::wire::pack_u32_slice(&to_u32_vec("abcabc++")),
+                    vyre_primitives::wire::pack_u32_slice(&to_u32_vec("abc")),
                 ],
                 vec![
-                    vyre_test_support::test_parity_oracles::u32_bytes(&to_u32_vec("xyzxyzxy")),
-                    vyre_test_support::test_parity_oracles::u32_bytes(&to_u32_vec("xyz")),
+                    vyre_primitives::wire::pack_u32_slice(&to_u32_vec("xyzxyzxy")),
+                    vyre_primitives::wire::pack_u32_slice(&to_u32_vec("xyz")),
                 ]
             ]
         }),

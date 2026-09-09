@@ -10,8 +10,10 @@
 //! We dispatch `vyre_libs_math::math::bellman_shortest_path` to find the
 //! globally optimal sequence of pairwise fusions.
 
-use vyre_libs_math::math::bellman_shortest_path::{bellman_shortest_path, BellmanBuffers, BellmanExtents};
 use vyre_foundation::ir::Program;
+use vyre_libs_math::math::bellman_shortest_path::{
+    bellman_shortest_path, BellmanBuffers, BellmanExtents,
+};
 
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
@@ -239,8 +241,8 @@ pub fn bellman_tn_order_via_with_scratch_into(
 mod tests {
     use super::*;
     use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_test_support::test_parity_oracles::NeverDispatches;
     use vyre_reference::composition_witness::bellman_shortest_path_witness as reference_bellman_shortest_path;
+    use vyre_test_support::test_parity_oracles::NeverDispatches;
 
     /// Terse binding names, for the tests that only care about the program.
     const FIXTURE: BellmanBuffers<'static> = BellmanBuffers::TERSE;
@@ -304,12 +306,18 @@ mod tests {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 6);
-                let dist = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
-                let next_dist = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
-                let changed = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2]);
-                let src = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[3]);
-                let dst = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[4]);
-                let weight = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[5]);
+                let dist =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
+                let next_dist =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
+                let changed =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2]);
+                let src =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[3]);
+                let dst =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[4]);
+                let weight =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[5]);
                 assert_eq!(dist, next_dist);
                 // The invariant is a CLEARED flag buffer of whatever width the routed
                 // program declares, not a one-word buffer. Pinning `vec![0]` here would
@@ -328,7 +336,10 @@ mod tests {
                 );
                 Ok(vec![u32_slice_to_le_bytes(&out)])
             };
-            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(
+                request,
+                compute_ordered()?,
+            )
         }
     }
 
@@ -385,7 +396,8 @@ mod tests {
                 let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
                 let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                     self.changed_words.store(
-                        vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2]).len(),
+                        vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2])
+                            .len(),
                         Ordering::Relaxed,
                     );
                     Ok(vec![u32_slice_to_le_bytes(&vec![0_u32; self.n_nodes])])
@@ -448,8 +460,10 @@ mod tests {
         let p2 = bellman_tn_order_program(stage("dist2", "nd2", "c2"), extents(4, 4, 5));
         let p3 = bellman_tn_order_program(stage("dist3", "nd3", "c3"), extents(4, 4, 5));
 
-        let final_p =
-            vyre_test_support::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
+        let final_p = vyre_test_support::test_parity_oracles::wrap_program_sequence(
+            &[&p1, &p2, &p3],
+            [256, 1, 1],
+        );
         crate::solvers::test_helpers::assert_min_region_count(&final_p, 3);
     }
 

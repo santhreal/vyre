@@ -256,7 +256,7 @@ fn the_leaf_table_covers_every_rule_operation_declared_in_the_tree() {
     // One module layout: `rule/mod.rs` is inside the directory the walk reads,
     // so there is no sibling `rule.rs` to add.
     let mut sources = Vec::new();
-    for entry in std::fs::read_dir(&root).expect("Fix: vyre-libs/src/rule must be readable") {
+    for entry in std::fs::read_dir(&root).expect("Fix: vyre-libs-rule/src/rule must be readable") {
         let path = entry
             .expect("Fix: a rule source entry must be readable")
             .path();

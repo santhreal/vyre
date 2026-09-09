@@ -10,12 +10,19 @@ const OP_ID: &str = "vyre-libs::math::avg_floor";
 /// Computes average floor.
 #[must_use]
 pub fn avg_floor(a: &str, b: &str, out: &str, size: u32) -> Program {
-    vyre_libs_builder::builder::elementwise::u32_elementwise_binary(OP_ID, a, b, out, size, |lx, rx| {
-        Expr::add(
-            Expr::bitand(lx.clone(), rx.clone()),
-            Expr::shr(Expr::bitxor(lx, rx), Expr::u32(1)),
-        )
-    })
+    vyre_libs_builder::builder::elementwise::u32_elementwise_binary(
+        OP_ID,
+        a,
+        b,
+        out,
+        size,
+        |lx, rx| {
+            Expr::add(
+                Expr::bitand(lx.clone(), rx.clone()),
+                Expr::shr(Expr::bitxor(lx, rx), Expr::u32(1)),
+            )
+        },
+    )
 }
 
 inventory::submit! {

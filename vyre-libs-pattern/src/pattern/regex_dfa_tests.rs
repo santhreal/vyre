@@ -42,7 +42,9 @@ fn single_pass_accept_ends(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<usize> {
     let mut ends = Vec::new();
     for (i, &b) in haystack.iter().enumerate() {
         state = dfa.transitions
-            [vyre_libs_builder::builder::state_machine::TableStateMachineComposer::flat_byte_index(state, b)];
+            [vyre_libs_builder::builder::state_machine::TableStateMachineComposer::flat_byte_index(
+                state, b,
+            )];
         if dfa.accept[state as usize] != 0 {
             ends.push(i + 1);
         }
@@ -67,7 +69,9 @@ fn single_pass_leftmost_longest_ends(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<
     let mut prev_accept = false;
     for (i, &b) in haystack.iter().enumerate() {
         state = dfa.transitions
-            [vyre_libs_builder::builder::state_machine::TableStateMachineComposer::flat_byte_index(state, b)];
+            [vyre_libs_builder::builder::state_machine::TableStateMachineComposer::flat_byte_index(
+                state, b,
+            )];
         let accept = dfa.accept[state as usize] != 0;
         if prev_accept && !accept {
             // The accepting run ended: `prev_end` was its maximal end.
@@ -327,7 +331,9 @@ fn unanchored_build_succeeds_and_is_actually_unanchored() {
     let mut accepted = false;
     for &b in b"xxabc" {
         state = pipeline.dfa.transitions
-            [vyre_libs_builder::builder::state_machine::TableStateMachineComposer::flat_byte_index(state, b)];
+            [vyre_libs_builder::builder::state_machine::TableStateMachineComposer::flat_byte_index(
+                state, b,
+            )];
         if pipeline.dfa.accept[state as usize] != 0 {
             accepted = true;
         }
@@ -347,7 +353,9 @@ fn walk_unanchored_local_hits(dfa: &CompiledDfa, hay: &[u8]) -> Vec<(u32, usize)
     let mut hits = Vec::new();
     for (i, &b) in hay.iter().enumerate() {
         state = dfa.transitions
-            [vyre_libs_builder::builder::state_machine::TableStateMachineComposer::flat_byte_index(state, b)];
+            [vyre_libs_builder::builder::state_machine::TableStateMachineComposer::flat_byte_index(
+                state, b,
+            )];
         let s = state as usize;
         let lo = dfa.output_offsets[s] as usize;
         let hi = dfa.output_offsets[s + 1] as usize;

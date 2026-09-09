@@ -29,7 +29,7 @@ use vyre_foundation::ir::Program;
 /// # Examples
 ///
 /// ```
-/// use vyre_libs::rule::RuleCondition;
+/// use vyre_libs_rule::rule::RuleCondition;
 ///
 /// let condition = RuleCondition::PatternCountGte {
 ///     pattern_id: 7,
@@ -263,7 +263,7 @@ impl Eq for RuleCondition {}
 /// # Examples
 ///
 /// ```
-/// use vyre_libs::rule::{RuleCondition, RuleFormula};
+/// use vyre_libs_rule::rule::{RuleCondition, RuleFormula};
 ///
 /// let formula = RuleFormula::and(
 ///     RuleFormula::condition(RuleCondition::PatternExists { pattern_id: 0 }),
@@ -327,7 +327,7 @@ impl RuleFormula {
     /// # Examples
     ///
     /// ```
-    /// use vyre_libs::rule::{RuleCondition, RuleFormula};
+    /// use vyre_libs_rule::rule::{RuleCondition, RuleFormula};
     ///
     /// let program = RuleFormula::condition(RuleCondition::LiteralTrue)
     ///     .to_program()

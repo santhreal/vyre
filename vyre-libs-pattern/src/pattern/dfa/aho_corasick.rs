@@ -66,8 +66,9 @@ pub fn aho_corasick_bounded(
     state_count: u32,
     max_pattern_len: u32,
 ) -> Program {
-    let body = vyre_libs_builder::builder::state_machine::TableStateMachineComposer::new(transitions)
-        .bounded_suffix_scan_body(haystack, accept, matches, max_pattern_len);
+    let body =
+        vyre_libs_builder::builder::state_machine::TableStateMachineComposer::new(transitions)
+            .bounded_suffix_scan_body(haystack, accept, matches, max_pattern_len);
 
     Program::wrapped(
         vec![
@@ -129,9 +130,9 @@ inventory::submit! {
             let haystack = b"abracadabra";
 
             vec![vec![
-                vyre_test_support::test_parity_oracles::u32_bytes(&haystack.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()),
-                vyre_test_support::test_parity_oracles::u32_bytes(&compiled.transitions),
-                vyre_test_support::test_parity_oracles::u32_bytes(&compiled.accept),
+                vyre_primitives::wire::pack_u32_slice(&haystack.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()),
+                vyre_primitives::wire::pack_u32_slice(&compiled.transitions),
+                vyre_primitives::wire::pack_u32_slice(&compiled.accept),
             ]]
         }),
         Some(|| vec![vec![EXPECTED_AHO_CORASICK_OUTPUT_BYTES.to_vec()]]),

@@ -241,13 +241,14 @@ pub fn smooth_matroid_flow_fixed_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[8], coarse_bytes);
     write_zero_bytes(&mut scratch.inputs[9], coarse_bytes);
     write_zero_bytes(&mut scratch.inputs[10], coarse_bytes);
-    let out_buf = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program_first_output(
-        dispatcher,
-        program,
-        &scratch.inputs,
-        policy,
-        "smooth_matroid_flow_fixed_via",
-    )?;
+    let out_buf =
+        vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program_first_output(
+            dispatcher,
+            program,
+            &scratch.inputs,
+            policy,
+            "smooth_matroid_flow_fixed_via",
+        )?;
     decode_u32_output_exact(
         &out_buf,
         n_fine as usize,
@@ -493,7 +494,10 @@ mod tests {
                     .collect();
                 Ok(vec![u32_slice_to_le_bytes(&out)])
             };
-            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(
+                request,
+                compute_ordered()?,
+            )
         }
     }
 

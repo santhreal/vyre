@@ -25,9 +25,8 @@ impl Lcg {
     }
 }
 
-pub(crate) use vyre_primitives::wire::pack_u32_slice as u32_bytes;
 pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as decode_u32_words;
-pub(crate) use vyre_primitives::wire::pack_u32_slice as bytes_to_u32;
+pub(crate) use vyre_primitives::wire::pack_u32_slice as u32_bytes;
 
 pub(crate) fn lcg_u32(count: usize, seed: u64) -> Vec<u32> {
     let mut rng = Lcg::new(seed);
@@ -41,9 +40,7 @@ pub(crate) fn ramp(count: usize, start: u32, step: u32) -> Vec<u32> {
 }
 
 pub(crate) fn alternating(count: usize, a: u32, b: u32) -> Vec<u32> {
-    (0..count)
-        .map(|i| if i % 2 == 0 { a } else { b })
-        .collect()
+    (0..count).map(|i| if i % 2 == 0 { a } else { b }).collect()
 }
 
 pub(crate) fn hostile_bytes(seed: u32) -> Vec<u8> {

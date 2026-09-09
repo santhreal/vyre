@@ -416,8 +416,8 @@ inventory::submit! {
             let b: Vec<u32> = (0..16).map(|i| i + 1).collect();
 
             vec![vec![
-                vyre_test_support::test_parity_oracles::u32_bytes(&a),
-                vyre_test_support::test_parity_oracles::u32_bytes(&b),
+                vyre_primitives::wire::pack_u32_slice(&a),
+                vyre_primitives::wire::pack_u32_slice(&b),
             ]]
         }),
         Some(|| {
@@ -466,9 +466,9 @@ inventory::submit! {
         || matmul_bias("a", "b", "bias", "out", 1, 1, 1),
         Some(|| {
             vec![vec![
-                vyre_test_support::test_parity_oracles::u32_bytes(&[2]),
-                vyre_test_support::test_parity_oracles::u32_bytes(&[3]),
-                vyre_test_support::test_parity_oracles::u32_bytes(&[5]),
+                vyre_primitives::wire::pack_u32_slice(&[2]),
+                vyre_primitives::wire::pack_u32_slice(&[3]),
+                vyre_primitives::wire::pack_u32_slice(&[5]),
             ]]
         }),
         Some(|| {

@@ -8,8 +8,8 @@
 //! to invert the block-diagonal Fisher information matrix of the
 //! autotuner's policy network.
 
-use vyre_libs_math::math::kfac_block_inverse::kfac_block_inverse;
 use vyre_foundation::ir::Program;
+use vyre_libs_math::math::kfac_block_inverse::kfac_block_inverse;
 
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
@@ -150,8 +150,8 @@ pub fn kfac_autotune_step_via_with_scratch_into(
 mod tests {
     use super::*;
     use vyre_libs_builder::plumbing::host::dispatch_buffers::f32_slice_to_le_bytes;
-    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_reference::composition_witness::kfac_block_inverse_witness as reference_kfac_block_inverse;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     struct KfacDispatcher;
 
@@ -165,11 +165,15 @@ mod tests {
                 assert_eq!(inputs.len(), 3);
                 assert_eq!(inputs[0].len(), inputs[1].len());
                 assert_eq!(inputs[2].len(), inputs[1].len());
-                let blocks_in = vyre_libs_builder::plumbing::host::dispatch_buffers::read_f32s(&inputs[1]);
+                let blocks_in =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_f32s(&inputs[1]);
                 let out = reference_kfac_block_inverse(&blocks_in, 1, 2);
                 Ok(vec![f32_slice_to_le_bytes(&out)])
             };
-            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(
+                request,
+                compute_ordered()?,
+            )
         }
     }
 
@@ -218,8 +222,10 @@ mod tests {
         let p2 = kfac_autotune_step_program("bo2", "bi2", "s2", 1, 4);
         let p3 = kfac_autotune_step_program("bo3", "bi3", "s3", 1, 4);
 
-        let final_p =
-            vyre_test_support::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
+        let final_p = vyre_test_support::test_parity_oracles::wrap_program_sequence(
+            &[&p1, &p2, &p3],
+            [256, 1, 1],
+        );
         crate::solvers::test_helpers::assert_min_region_count(&final_p, 3);
     }
 

@@ -12,8 +12,10 @@
 //! The expected word count is passed in and checked, so a short readback is an
 //! error rather than a silently truncated result.
 
-use vyre_libs_builder::plumbing::host::dispatch_buffers::{decode_u32_output_exact, HOST_WRAPPER_NODE};
 use vyre_foundation::ir::Program;
+use vyre_libs_builder::plumbing::host::dispatch_buffers::{
+    decode_u32_output_exact, HOST_WRAPPER_NODE,
+};
 use vyre_megakernel::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
     SingleProgramExecutionOutput,

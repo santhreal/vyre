@@ -1,0 +1,2 @@
+category = "Added"
+text = "The fixpoint package publishes its routing contract and program width queries behind a test-fixtures feature, so dependent packages assert grid sync counts and dispatch spans against the owning crate."

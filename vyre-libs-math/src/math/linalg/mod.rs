@@ -48,9 +48,9 @@ pub(crate) fn apply_contraction_options(
 #[must_use]
 pub(crate) fn matmul_bias_2x2_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
-        vyre_test_support::test_parity_oracles::u32_bytes(&[1, 2, 3, 4]),
-        vyre_test_support::test_parity_oracles::u32_bytes(&[5, 6, 7, 8]),
-        vyre_test_support::test_parity_oracles::u32_bytes(&[10, 20]),
+        vyre_primitives::wire::pack_u32_slice(&[1, 2, 3, 4]),
+        vyre_primitives::wire::pack_u32_slice(&[5, 6, 7, 8]),
+        vyre_primitives::wire::pack_u32_slice(&[10, 20]),
     ]]
 }
 

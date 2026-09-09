@@ -2,10 +2,10 @@
 //!
 //! Category-A composition with a workgroup-tiled Welford reduction.
 
-use vyre_libs_builder::builder::reduction::ReductionComposer;
 use vyre_foundation::ir::Program;
 #[cfg(test)]
 use vyre_foundation::ir::{Expr, Node};
+use vyre_libs_builder::builder::reduction::ReductionComposer;
 
 const OP_ID: &str = "vyre-libs::math::reduce_variance";
 #[cfg(test)]

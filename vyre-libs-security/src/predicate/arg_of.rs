@@ -11,9 +11,9 @@
 use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
 
+use crate::predicate::edge_kind;
 use vyre_libs_graph::graph::csr_backward_traverse::csr_backward_traverse;
 use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
-use crate::predicate::edge_kind;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::predicate::arg_of";

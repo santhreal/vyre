@@ -13,7 +13,7 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
 use vyre_libs_graph::graph::do_calculus::{
     impact_mask_from_closure, intervention_delete_incoming, rule2_reverse_incoming, rule3_subgraph,
 };
-use vyre_libs_builder::prelude::reachability_closure_via_into;
+use vyre_libs_analysis::analysis::dataflow_fixpoint::reachability_closure_via_into;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_megakernel::{

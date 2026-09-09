@@ -19,12 +19,12 @@
 
 use vyre_foundation::ir::Program;
 
-#[cfg(test)]
-use vyre_libs_bitset::bitset::bitset_words;
 use crate::graph::csr_frontier_queue::{
     define_csr_queue_forward_entry_point, CsrQueueForwardTraverseParams,
 };
 use crate::graph::csr_frontier_step::{csr_queue_step_program, CsrQueueLanes};
+#[cfg(test)]
+use vyre_libs_bitset::bitset::bitset_words;
 
 /// Canonical op id for row-strided queue-driven CSR expansion.
 pub const CSR_QUEUE_STRIDED_FORWARD_OP_ID: &str =

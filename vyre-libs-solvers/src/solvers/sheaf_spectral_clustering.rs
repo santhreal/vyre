@@ -399,8 +399,10 @@ mod tests {
                 // e_argmax) (so this double stays truthful to the IR under test (Law 6)).
 
                 assert_eq!(inputs.len(), 4);
-                let restriction = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
-                let one_fp = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[3])[0];
+                let restriction =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
+                let one_fp =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[3])[0];
                 assert_eq!(one_fp, 1u32 << 16);
                 let mut max_r = 0u32;
                 let mut argmax = 0usize;
@@ -418,7 +420,10 @@ mod tests {
                     max_r.to_le_bytes().to_vec(),
                 ])
             };
-            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(
+                request,
+                compute_ordered()?,
+            )
         }
     }
 
@@ -437,7 +442,10 @@ mod tests {
                     u32_slice_to_le_bytes(&[1]),
                 ])
             };
-            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(
+                request,
+                compute_ordered()?,
+            )
         }
     }
 
@@ -452,7 +460,10 @@ mod tests {
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![u32_slice_to_le_bytes(&[1]), vec![1, 0, 0, 0, 2]])
             };
-            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(
+                request,
+                compute_ordered()?,
+            )
         }
     }
 

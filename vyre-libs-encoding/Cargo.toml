@@ -21,6 +21,7 @@ workspace = true
 [features]
 default = ["encoding"]
 encoding = []
+nn-paging = ["vyre-libs-nn/nn-attention"]
 
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }
@@ -42,9 +43,9 @@ vyre-libs-device = { workspace = true }
 vyre-libs-bitset = { workspace = true }
 vyre-libs-reduce = { workspace = true }
 vyre-libs-fixpoint = { workspace = true }
-vyre-libs-math = { workspace = true }
+vyre-libs-math = { workspace = true, features = ["math-kernels"] }
 vyre-libs-nn = { workspace = true }
-vyre-libs-graph = { workspace = true }
+vyre-libs-graph = { workspace = true, features = ["graph"] }
 vyre-libs-pattern = { workspace = true }
 vyre-libs-parsing = { workspace = true }
 vyre-libs-hash = { workspace = true }
@@ -53,6 +54,8 @@ vyre-libs-hash = { workspace = true }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
 vyre-reference = { workspace = true }
+vyre-driver-reference = { workspace = true }
+vyre-libs-bitset = { workspace = true, features = ["test-fixtures"] }
 
 [[test]]
 name = "all_tests"

@@ -15,57 +15,6 @@ pub use programs::{
     unpack_i4x8,
 };
 
-#[cfg(test)]
-pub(crate) use vyre_reference::composition_witness::{
-    i4x8_batched_matmul_f32_scaled_witness as i4x8_batched_matmul_f32_scaled_cpu,
-    i4x8_batched_matmul_top1_f32_scaled_witness as i4x8_batched_matmul_top1_f32_scaled_cpu,
-    i4x8_batched_matvec_f32_scaled_witness as i4x8_batched_matvec_f32_scaled_cpu,
-    i4x8_dot_f32_scaled_witness as i4x8_dot_f32_scaled_cpu,
-    i4x8_dot_i32_witness as i4x8_dot_i32_cpu,
-    i4x8_matvec_f32_scaled_witness as i4x8_matvec_f32_scaled_cpu,
-    pack_i4x8_witness as pack_i4x8_cpu, unpack_i4x8_witness as unpack_i4x8_cpu,
-};
-
-#[cfg(test)]
-pub(crate) fn try_pack_i4x8_cpu_into(values: &[i32], out: &mut Vec<u32>) -> Result<(), String> {
-    let lane_count = u32::try_from(values.len()).map_err(|_| {
-        format!(
-            "pack_i4x8 CPU oracle received {} lanes, exceeding u32 lane count. Fix: shard quantized activations before parity evaluation.",
-            values.len()
-        )
-    })?;
-    let word_count = i4_packed_words(lane_count) as usize;
-    if word_count > out.capacity() {
-        vyre_libs_builder::plumbing::host::scratch::reserve_items(
-            out,
-            word_count - out.len(),
-            "quantized INT4 CPU oracle",
-            "pack_i4x8 output words",
-        )?;
-    }
-    vyre_reference::composition_witness::pack_i4x8_witness_into(values, out);
-    Ok(())
-}
-
-#[cfg(test)]
-pub(crate) fn try_unpack_i4x8_cpu_into(
-    packed: &[u32],
-    lane_count: u32,
-    out: &mut Vec<i32>,
-) -> Result<(), String> {
-    let count = usize::try_from(lane_count)
-        .map_err(|_| format!("unpack_i4x8 CPU oracle received invalid lane count {lane_count}"))?;
-    if count > out.capacity() {
-        vyre_libs_builder::plumbing::host::scratch::reserve_items(
-            out,
-            count - out.len(),
-            "quantized INT4 CPU oracle",
-            "unpack_i4x8 output lanes",
-        )?;
-    }
-    vyre_reference::composition_witness::unpack_i4x8_witness_into(packed, lane_count, out);
-    Ok(())
-}
 /// Canonical op id for packed signed INT4 unpacking.
 pub const UNPACK_I4_OP_ID: &str = "vyre-libs::math::quantized::unpack_i4x8";
 

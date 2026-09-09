@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "vyre-libs-solvers resolves the dataflow compaction wrappers. The bitset, fixpoint and math kernels they call are defined in vyre-libs-bitset, vyre-libs-fixpoint and vyre-libs-math, and the imports name those crates."

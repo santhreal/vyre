@@ -11,9 +11,9 @@
 //! an approximate root x of `f(x) ≡ 0 (mod p^k)` and the formal
 //! derivative `f'(x)`, return a refined root accurate `mod p^{2k}`.
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 /// Op id.
 pub const OP_ID: &str = "vyre-libs::math::hensel_lift_step";

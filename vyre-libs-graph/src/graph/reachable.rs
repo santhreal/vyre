@@ -17,13 +17,13 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 
+use crate::graph::edge_scan::csr_edge_expand_nodes;
+use crate::graph::frontier_bits::when_bit_set;
+use crate::graph::program_graph::{word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START};
 use vyre_libs_bitset::bitset::bitset_words;
 use vyre_libs_bitset::bitset::frontier::{
     frontier_absorb_new_bits_body_prefixed_with_flag, frontier_tail_mask,
 };
-use crate::graph::edge_scan::csr_edge_expand_nodes;
-use crate::graph::frontier_bits::when_bit_set;
-use crate::graph::program_graph::{word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::graph::reachable_program";

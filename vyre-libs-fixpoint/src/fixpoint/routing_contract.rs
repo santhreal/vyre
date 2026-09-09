@@ -48,7 +48,7 @@ const FENCES_PER_WAVE: usize = 2;
 /// that span is the op's business: a scaling vector, a node count, an edge list
 /// and a kernel matrix all reach it differently, and that is exactly the
 /// knowledge the contract must not restate.
-pub(crate) struct RoutedFixpointOp<'a> {
+pub struct RoutedFixpointOp<'a> {
     /// Op name, quoted in every failure message so a red run names the member.
     pub name: &'a str,
     /// Convergence-flag buffer name the op declares.
@@ -73,7 +73,7 @@ const ITERATION_BUDGETS: [u32; 4] = [1, 2, 8, 64];
 /// # Panics
 ///
 /// On any violation, naming `op.name` and the obligation.
-pub(crate) fn assert_routes_on_dispatch_span(op: &RoutedFixpointOp<'_>) {
+pub fn assert_routes_on_dispatch_span(op: &RoutedFixpointOp<'_>) {
     let width = PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
 
     let single = (op.at_one_workgroup)(8);
@@ -148,7 +148,7 @@ pub(crate) fn assert_routes_on_dispatch_span(op: &RoutedFixpointOp<'_>) {
 ///
 /// Saves each caller from restating the harness's positional parameter order,
 /// which is the argument list a transposition would hide in.
-pub(crate) fn bare_grid_harness(
+pub fn bare_grid_harness(
     current: &str,
     next: &str,
     changed: &str,

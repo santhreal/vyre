@@ -16,15 +16,16 @@
 //!
 //! Composes `matroid_exchange_bfs_step` and `path_reconstruct`.
 
-use vyre_libs_builder::builder::trip_count::clamped_by_extents;
-use vyre_libs_graph::graph::path_reconstruct::path_reconstruct;
 use std::sync::Arc;
+
+use crate::graph::path_reconstruct::path_reconstruct;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 
 /// Op id.
-pub const OP_ID: &str = "vyre-libs::math::matroid_intersection_full";
+pub const OP_ID: &str = "vyre-libs::graph::matroid_intersection_full";
 
 /// Build a full matroid intersection Program.
 #[must_use]

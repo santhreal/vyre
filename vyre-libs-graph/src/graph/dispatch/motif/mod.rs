@@ -39,4 +39,3 @@ impl MotifGpuScratch {
         self.program_cache.builds()
     }
 }
-
