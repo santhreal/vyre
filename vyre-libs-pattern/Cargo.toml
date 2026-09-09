@@ -50,3 +50,4 @@ regex-syntax = { workspace = true, optional = true }
 
 [dev-dependencies]
 vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-reference = { workspace = true }

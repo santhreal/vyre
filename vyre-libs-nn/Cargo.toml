@@ -52,3 +52,4 @@ vyre-libs-math = { workspace = true }
 
 [dev-dependencies]
 vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-reference = { workspace = true }

@@ -46,3 +46,4 @@ vyre-libs-graph = { workspace = true }
 
 [dev-dependencies]
 vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-reference = { workspace = true }

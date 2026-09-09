@@ -47,3 +47,5 @@ vyre-libs-hash = { workspace = true }
 
 [dev-dependencies]
 vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-reference = { workspace = true }
+vyre-test-support = { workspace = true }

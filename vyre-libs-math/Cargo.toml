@@ -53,3 +53,4 @@ vyre-libs-fixpoint = { workspace = true }
 
 [dev-dependencies]
 vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-reference = { workspace = true }

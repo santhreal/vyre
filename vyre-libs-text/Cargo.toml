@@ -42,3 +42,4 @@ vyre-libs-reduce = { workspace = true }
 
 [dev-dependencies]
 vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-reference = { workspace = true }
