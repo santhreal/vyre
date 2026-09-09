@@ -207,8 +207,8 @@ impl BufferDecl {
     /// Attach an output byte range for backends that can read back a slice.
     #[must_use]
     #[inline]
-    pub fn with_output_byte_range(mut self, range: Range<u64>) -> Self {
-        self.output_byte_range = Some(range);
+    pub fn with_output_byte_range(mut self, range: impl IntoOutputByteRange) -> Self {
+        self.output_byte_range = Some(range.into_output_byte_range());
         self
     }
 
@@ -595,5 +595,53 @@ impl BufferDecl {
     #[inline]
     pub fn shape_predicate(&self) -> Option<&ShapePredicate> {
         self.shape_predicate.as_ref()
+    }
+}
+
+/// Conversion helper allowing `with_output_byte_range` to accept integer ranges.
+pub trait IntoOutputByteRange {
+    /// Convert into `Range<u64>`.
+    fn into_output_byte_range(self) -> Range<u64>;
+}
+
+impl IntoOutputByteRange for Range<u64> {
+    #[inline]
+    fn into_output_byte_range(self) -> Range<u64> {
+        self
+    }
+}
+
+impl IntoOutputByteRange for Range<usize> {
+    #[inline]
+    fn into_output_byte_range(self) -> Range<u64> {
+        (self.start as u64)..(self.end as u64)
+    }
+}
+
+impl IntoOutputByteRange for Range<u32> {
+    #[inline]
+    fn into_output_byte_range(self) -> Range<u64> {
+        u64::from(self.start)..u64::from(self.end)
+    }
+}
+
+impl IntoOutputByteRange for Range<i32> {
+    #[inline]
+    fn into_output_byte_range(self) -> Range<u64> {
+        (self.start as u64)..(self.end as u64)
+    }
+}
+
+impl IntoOutputByteRange for Range<i64> {
+    #[inline]
+    fn into_output_byte_range(self) -> Range<u64> {
+        (self.start as u64)..(self.end as u64)
+    }
+}
+
+impl IntoOutputByteRange for Range<isize> {
+    #[inline]
+    fn into_output_byte_range(self) -> Range<u64> {
+        (self.start as u64)..(self.end as u64)
     }
 }

@@ -68,35 +68,42 @@ pub(crate) fn program_for_interpreter(
 pub(crate) fn run_with_request(
     request: &crate::request::ReferenceRequest,
 ) -> Result<(Vec<Value>, u64), crate::ReferenceError> {
-    let runnable = program_for_interpreter(&request.program)?;
-    let budget = step_budget::arm_with(&runnable, request.budget.work_ceiling);
-    let lane_order = match request.schedule_policy {
-        crate::request::DeterministicSchedulePolicy::Forward => hashmap::LaneOrder::Forward,
-        crate::request::DeterministicSchedulePolicy::LaneReversed => hashmap::LaneOrder::Reversed,
-        crate::request::DeterministicSchedulePolicy::LaneRotated(by) => {
-            hashmap::LaneOrder::Rotated(by)
-        }
-        crate::request::DeterministicSchedulePolicy::BoundedInterleaving => {
-            hashmap::LaneOrder::Forward
-        }
-    };
-    let min_dispatch = request.workload_envelope.min_dispatch_elements.unwrap_or(0);
-    let outputs = hashmap::run_hashmap_reference(
-        &runnable,
-        &request.resource_abi.inputs,
-        min_dispatch,
-        lane_order,
-        request.workload_envelope.workgroup_grid,
-    )?;
-    let steps = step_budget::charged();
-    drop(budget);
-    Ok((outputs, steps))
+    crate::oob::reset_oob_report();
+    crate::oob::set_strict_mode(true);
+    let result = (|| {
+        let runnable = program_for_interpreter(&request.program)?;
+        let budget = step_budget::arm_with(&runnable, request.budget.work_ceiling);
+        let lane_order = match request.schedule_policy {
+            crate::request::DeterministicSchedulePolicy::Forward => hashmap::LaneOrder::Forward,
+            crate::request::DeterministicSchedulePolicy::LaneReversed => hashmap::LaneOrder::Reversed,
+            crate::request::DeterministicSchedulePolicy::LaneRotated(by) => {
+                hashmap::LaneOrder::Rotated(by)
+            }
+            crate::request::DeterministicSchedulePolicy::BoundedInterleaving => {
+                hashmap::LaneOrder::Forward
+            }
+        };
+        let min_dispatch = request.workload_envelope.min_dispatch_elements.unwrap_or(0);
+        let outputs = hashmap::run_hashmap_reference(
+            &runnable,
+            &request.resource_abi.inputs,
+            min_dispatch,
+            lane_order,
+            request.workload_envelope.workgroup_grid,
+        )?;
+        let steps = step_budget::charged();
+        drop(budget);
+        Ok((outputs, steps))
+    })();
+    crate::oob::set_strict_mode(false);
+    result
 }
 
 pub(crate) fn run_permissive_with_request(
     request: &crate::request::ReferenceRequest,
 ) -> Result<(Vec<Value>, u64, crate::oob::OobReport), crate::ReferenceError> {
     crate::oob::reset_oob_report();
+    crate::oob::set_strict_mode(false);
     let runnable = program_for_interpreter(&request.program)?;
     let budget = step_budget::arm_with(&runnable, request.budget.work_ceiling);
     let lane_order = match request.schedule_policy {
@@ -219,6 +226,22 @@ pub fn reference_input_values(
         .iter()
         .filter(|decl| is_reference_input(decl))
         .count();
+    let non_wg_count = program
+        .buffers()
+        .iter()
+        .filter(|decl| decl.access() != vyre_foundation::ir::BufferAccess::Workgroup)
+        .count();
+    if inputs.len() == non_wg_count && non_wg_count != expected {
+        let values: Vec<Value> = program
+            .buffers()
+            .iter()
+            .filter(|decl| decl.access() != vyre_foundation::ir::BufferAccess::Workgroup)
+            .zip(inputs)
+            .filter(|(decl, _)| is_reference_input(decl))
+            .map(|(_, bytes)| Value::from(*bytes))
+            .collect();
+        return Ok(values);
+    }
     if expected != inputs.len() {
         let missing = program
             .buffers()

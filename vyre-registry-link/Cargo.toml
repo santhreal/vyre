@@ -45,6 +45,7 @@ vyre-driver-wgpu = { workspace = true, optional = true }
 # nothing. A source that contributes part of itself is the state this crate's
 # floor exists to reject.
 vyre-libs = { workspace = true, optional = true, features = ["full"] }
+vyre-libs-builder = { workspace = true, optional = true }
 # `hardware` is what this crate needs from vyre-primitives and what the
 # intrinsic registrations are gated on. The domain features that used to be
 # named here left for vyre-libs.
@@ -71,7 +72,7 @@ vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 default = ["operations", "cuda", "metal", "spirv", "wgpu"]
 # The two operation-owning crates. `docs/ARCHITECTURE.md` gives the workspace
 # exactly two, and the rules fail when the tree grows a third.
-operations = ["dep:vyre-libs", "dep:vyre-primitives"]
+operations = ["dep:vyre-libs", "dep:vyre-libs-builder", "dep:vyre-primitives"]
 cuda = ["dep:vyre-driver-cuda"]
 metal = ["dep:vyre-driver-metal"]
 spirv = ["dep:vyre-driver-spirv"]

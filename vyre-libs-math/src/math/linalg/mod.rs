@@ -3,14 +3,18 @@
 mod dot;
 mod matmul;
 mod matmul_strassen;
-pub(crate) mod matmul_tiled;
+pub mod matmul_tiled;
 
 pub use dot::{dot, Dot};
 pub use matmul::{matmul, matmul_bias, Matmul, MatmulBias};
 pub use matmul_strassen::{matmul_strassen_2x2, matmul_strassen_one_level};
 
 // Keep the tiled builders on the linear-algebra sub-dialect surface.
-pub use matmul_tiled::{matmul_bias_tiled, matmul_tiled, MatmulBiasTiled, MatmulTiled};
+pub use matmul_tiled::{
+    matmul_bias_tiled, matmul_tiled, plan_matmul_kernel, F32MatmulMode, MatmulBiasTiled,
+    MatmulFallbackReason, MatmulKernelCapabilities, MatmulKernelPath, MatmulKernelPlan,
+    MatmulTiled, MatrixShape, TensorCoreTileShape,
+};
 
 use vyre_libs_builder::builder::gemm::ContractionComposer;
 use vyre_libs_builder::builder::BuildOptions;

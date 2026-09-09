@@ -20,7 +20,6 @@
 //!
 //! Both paths produce the same IR.
 
-use vyre_libs_builder::builder::reduction::ReductionComposer;
 use vyre_libs_builder::builder::{check_same_shape, check_tensors, checked_element_count, BuildOptions};
 use vyre_libs_builder::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 use vyre_foundation::composition::{trap_program, wrap_region};
@@ -123,7 +122,7 @@ fn softmax_tiled_program(
     workgroup: [u32; 3],
     generator: &'static str,
 ) -> Program {
-    ReductionComposer::tiled_softmax(generator, input, output, n, workgroup)
+    vyre_libs_reduce::reduce::reduction_tree::tiled_softmax(generator, input, output, n, workgroup)
 }
 
 fn softmax_reference_program(

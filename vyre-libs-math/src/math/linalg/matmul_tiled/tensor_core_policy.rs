@@ -4,50 +4,76 @@ use vyre_foundation::ir::DataType;
 
 use super::shape::MatrixShape;
 
+/// Selected kernel lowering path for tiled matrix multiplication.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum MatmulKernelPath {
+pub enum MatmulKernelPath {
+    /// Cooperative workgroup tiled execution.
     Cooperative,
+    /// F16 tensor core execution.
     TensorCoreF16M16N8K16,
+    /// BF16 tensor core execution.
     TensorCoreBf16M16N8K16,
+    /// TF32 tensor core execution.
     TensorCoreTf32M16N8K4,
 }
 
+/// Floating-point precision mode for F32 matrix multiplication.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum F32MatmulMode {
+pub enum F32MatmulMode {
+    /// Strict F32 arithmetic without contraction.
     StrictF32,
+    /// TF32 tensor core arithmetic.
     Tf32TensorCore,
 }
 
+/// Tensor core tile geometry.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum TensorCoreTileShape {
+pub enum TensorCoreTileShape {
+    /// 16x8x16 tile.
     M16N8K16,
+    /// 16x8x4 tile.
     M16N8K4,
 }
 
+/// Reason why a tensor core path was not selected.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum MatmulFallbackReason {
+pub enum MatmulFallbackReason {
+    /// Strict F32 arithmetic was requested.
     StrictF32Requested,
+    /// Data type is unsupported for tensor cores.
     UnsupportedDtype,
+    /// Tile size mismatch.
     TileSizeMismatch {
+        /// Required k-tile.
         required_k_tile: u32,
+        /// Found tile.
         found_tile: u32,
     },
+    /// Ragged tiles are unsupported on this target.
     RaggedTileUnsupported,
+    /// Split-k is unsupported on this target.
     SplitKUnsupported,
+    /// Tensor core data type is unsupported.
     TensorCoreDtypeUnsupported,
 }
 
+/// Hardware capabilities for matrix multiplication.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) struct MatmulKernelCapabilities {
-    pub(crate) f16_tensor_cores: bool,
-    pub(crate) bf16_tensor_cores: bool,
-    pub(crate) tf32_tensor_cores: bool,
-    pub(crate) split_k: bool,
-    pub(crate) ragged_tensor_tiles: bool,
+pub struct MatmulKernelCapabilities {
+    /// Whether F16 tensor cores are supported.
+    pub f16_tensor_cores: bool,
+    /// Whether BF16 tensor cores are supported.
+    pub bf16_tensor_cores: bool,
+    /// Whether TF32 tensor cores are supported.
+    pub tf32_tensor_cores: bool,
+    /// Whether split-K is supported.
+    pub split_k: bool,
+    /// Whether ragged tensor tiles are supported.
+    pub ragged_tensor_tiles: bool,
 }
-
 impl MatmulKernelCapabilities {
-    pub(crate) const fn current_codegen() -> Self {
+    /// Default capabilities for current target code generation.
+    pub const fn current_codegen() -> Self {
         Self {
             f16_tensor_cores: true,
             bf16_tensor_cores: false,
@@ -69,14 +95,21 @@ impl MatmulKernelCapabilities {
     }
 }
 
+/// Selected kernel plan for matrix multiplication.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) struct MatmulKernelPlan {
-    pub(crate) selected_path: MatmulKernelPath,
-    pub(crate) candidate_path: Option<MatmulKernelPath>,
-    pub(crate) tile_shape: Option<TensorCoreTileShape>,
-    pub(crate) split_k_slices: u32,
-    pub(crate) ragged_tiles: bool,
-    pub(crate) fallback_reason: Option<MatmulFallbackReason>,
+pub struct MatmulKernelPlan {
+    /// Selected lowering path.
+    pub selected_path: MatmulKernelPath,
+    /// Candidate tensor core path.
+    pub candidate_path: Option<MatmulKernelPath>,
+    /// Candidate tile shape.
+    pub tile_shape: Option<TensorCoreTileShape>,
+    /// Number of split-k slices.
+    pub split_k_slices: u32,
+    /// Whether ragged tiles are needed.
+    pub ragged_tiles: bool,
+    /// Reason for falling back to cooperative path.
+    pub fallback_reason: Option<MatmulFallbackReason>,
 }
 
 pub(crate) fn select_matmul_kernel(
@@ -95,7 +128,8 @@ pub(crate) fn select_matmul_kernel(
     .selected_path
 }
 
-pub(crate) fn plan_matmul_kernel(
+/// Plan the kernel execution path for matrix multiplication given data type, shape, and capabilities.
+pub fn plan_matmul_kernel(
     dtype: &DataType,
     shape: MatrixShape,
     tile: u32,

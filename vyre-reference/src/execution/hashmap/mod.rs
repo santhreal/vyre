@@ -369,8 +369,28 @@ pub(crate) fn run_hashmap_reference(
             )?;
         }
     }
+    let oob = crate::oob::oob_report();
+    if crate::oob::is_strict_mode() && oob.total() > 0 {
+        return Err(ReferenceError::out_of_bounds(format!(
+            "out-of-bounds access detected during strict reference evaluation: loads={}, stores={}, atomics={}. Fix: gate buffer accesses with explicit bounds checks.",
+            oob.oob_loads, oob.oob_stores, oob.oob_atomics
+        )));
+    }
     let mut storage = memory.storage;
-    output_decls . into_iter () . map (| decl | { storage . remove (decl . name ()) . map (| buffer | output_value (buffer , & decl)) . ok_or_else (| | { let name = decl . name () ; ReferenceError::new(format ! ("missing output buffer `{name}` after dispatch. Fix: keep buffer declarations unique.")) }) }) . collect ()
+    output_decls
+        .into_iter()
+        .map(|decl| {
+            storage
+                .remove(decl.name())
+                .map(|buffer| output_value(buffer, &decl))
+                .ok_or_else(|| {
+                    let name = decl.name();
+                    ReferenceError::new(format!(
+                        "missing output buffer `{name}` after dispatch. Fix: keep buffer declarations unique."
+                    ))
+                })
+        })
+        .collect()
 }
 
 /// Reject a caller-supplied buffer that is smaller than its declaration.

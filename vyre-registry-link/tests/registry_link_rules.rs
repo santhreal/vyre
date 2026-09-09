@@ -405,3 +405,31 @@ fn every_live_operation_has_descriptor_lowering_and_conformance_provider() {
         "Fix: every registered operation must have a ConformanceProvider, missing: {missing_conformance:?}"
     );
 }
+
+#[test]
+fn backend_registry_contains_no_cpu_or_reference_execution_route() {
+    let registry = live_backend_registry().expect("live backend registry must freeze cleanly");
+    assert!(
+        !registry.is_empty(),
+        "live backend registry must contain registered GPU drivers"
+    );
+    for backend in registry {
+        let id_str = backend.id.to_lowercase();
+        assert!(
+            !id_str.contains("ref") && !id_str.contains("cpu"),
+            "backend registry must not contain reference or CPU execution route: `{}`",
+            backend.id
+        );
+        let target_str = backend.target_id.as_str().to_lowercase();
+        assert!(
+            !target_str.contains("ref") && !target_str.contains("cpu"),
+            "backend target ID must not be CPU or reference: `{}`",
+            backend.target_id.as_str()
+        );
+        assert!(
+            !backend.reference_oracle,
+            "backend registration must not claim to be a reference oracle: `{}`",
+            backend.id
+        );
+    }
+}

@@ -5,11 +5,15 @@ use vyre_foundation::ir::Expr;
 
 use vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError;
 
-#[derive(Copy, Clone)]
-pub(crate) struct MatrixShape {
-    pub(crate) m: u32,
-    pub(crate) k: u32,
-    pub(crate) n: u32,
+/// 2D matrix shape `(m, k, n)` for matrix multiplication.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct MatrixShape {
+    /// Left matrix rows and output rows.
+    pub m: u32,
+    /// Shared contraction dimension.
+    pub k: u32,
+    /// Right matrix columns and output columns.
+    pub n: u32,
 }
 
 #[derive(Copy, Clone)]

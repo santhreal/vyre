@@ -81,6 +81,23 @@ impl OracleSession {
 
     /// Execute the program on caller-supplied input buffers and return declaration-ordered outputs.
     pub fn execute(&self, inputs: &[&[u8]]) -> Result<Vec<Vec<u8>>, OracleError> {
+        for i in 0..inputs.len() {
+            for j in (i + 1)..inputs.len() {
+                let a = inputs[i];
+                let b = inputs[j];
+                if !a.is_empty() && !b.is_empty() {
+                    let a_start = a.as_ptr() as usize;
+                    let a_end = a_start + a.len();
+                    let b_start = b.as_ptr() as usize;
+                    let b_end = b_start + b.len();
+                    if a_start < b_end && b_start < a_end {
+                        return Err(OracleError::Evaluation(format!(
+                            "aliased input buffers detected between input {i} and input {j}. Fix: provide distinct, non-overlapping input buffers."
+                        )));
+                    }
+                }
+            }
+        }
         let expanded = if self.float_lowering.blocks_contraction() {
             vyre_foundation::fp_expansion::expand_strict_transcendentals(&self.program)
                 .map_err(|error| OracleError::FloatExpansion(error.to_string()))?
@@ -89,10 +106,16 @@ impl OracleSession {
         };
         let program = expanded.as_ref().unwrap_or(&self.program);
         let values = reference_values(program, inputs)?;
-        let outputs = vyre_reference::reference_eval(program, &values)
+        let request = vyre_reference::ReferenceRequest::new(
+            program.clone(),
+            values,
+            vyre_reference::ReferenceBudget::standard(),
+        );
+        let result = request
+            .execute()
             .map_err(|error| OracleError::Evaluation(error.to_string()))?;
 
-        Ok(outputs.into_iter().map(|v| v.to_bytes()).collect())
+        Ok(result.outputs.into_iter().map(|v| v.to_bytes()).collect())
     }
 }
 
