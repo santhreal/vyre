@@ -54,6 +54,8 @@ thread_local! {
         oob_stores: 0,
         oob_atomics: 0,
     }) };
+    /// Per-thread strict mode flag. When true, OOB accesses result in structured errors.
+    static STRICT_MODE: Cell<bool> = const { Cell::new(false) };
 }
 
 fn record_oob_load() {
@@ -78,6 +80,17 @@ fn record_oob_atomic() {
         r.oob_atomics = r.oob_atomics.saturating_add(1);
         c.set(r);
     });
+}
+
+/// Set this thread's strict execution mode.
+pub(crate) fn set_strict_mode(strict: bool) {
+    STRICT_MODE.with(|s| s.set(strict));
+}
+
+/// Return whether strict execution mode is active on this thread.
+#[must_use]
+pub(crate) fn is_strict_mode() -> bool {
+    STRICT_MODE.with(Cell::get)
 }
 
 /// Reset this thread's OOB tally to zero. Call before a tracked run.

@@ -7,6 +7,7 @@
 pub use vyre_libs_builder::prelude;
 pub use vyre_libs_builder::builder;
 pub use vyre_libs_builder::plumbing;
+pub use vyre_libs_builder::plumbing::host::dispatch_buffers;
 
 pub use vyre_libs_builder::builder::*;
 pub use vyre_libs_builder::plumbing::registration::{contracts, operation_catalog};

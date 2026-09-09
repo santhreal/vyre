@@ -4,11 +4,11 @@
 //! [`rms_norm_reference`] entry remains available as the correctness oracle.
 
 use vyre_libs_reduce::reduce::workgroup_tree::{self, WorkgroupReductionScope};
-use crate::{
+use vyre_libs_builder::{
     builder::reduction::{ReductionComposer, ReductionPhase},
     builder::{strided_accumulate_child, strided_writeback_child},
-    nn::rms::{inverse_rms_expr, square_expr, EMPTY_RMS_FIX},
 };
+use crate::nn::rms::{inverse_rms_expr, square_expr, EMPTY_RMS_FIX};
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

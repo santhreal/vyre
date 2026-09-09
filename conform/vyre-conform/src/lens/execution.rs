@@ -10,7 +10,9 @@ use crate::production::ProductionSession;
 
 /// Execute `program` on the reference interpreter and return its output bytes.
 pub fn run_cpu(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, ReferenceError> {
-    let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
+    let inputs_slices: Vec<&[u8]> = inputs.iter().map(|v| v.as_slice()).collect();
+    let values = vyre_reference::reference_input_values(program, &inputs_slices)
+        .map_err(|m| ReferenceError::new(format!("input mismatch: {m}")))?;
     let outputs = vyre_reference::reference_eval(program, &values)?;
     Ok(outputs.into_iter().map(|value| value.to_bytes()).collect())
 }

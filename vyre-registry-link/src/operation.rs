@@ -11,10 +11,14 @@ use vyre_foundation::operation::OperationRegistry;
 /// One entry per crate that submits operation registrations, with the count it
 /// contributed. Computing this is what references the source crates.
 static SOURCES: LazyLock<[(&str, usize); 2]> = LazyLock::new(|| {
+    let libs_count = {
+        let _ = vyre_libs::link_anchor();
+        vyre_libs::operation_catalog::all_entries().count()
+    };
     [
         (
-            "vyre-libs",
-            vyre_libs::operation_catalog::all_entries().count(),
+            "vyre-libs-builder",
+            libs_count,
         ),
         (
             "vyre-primitives",

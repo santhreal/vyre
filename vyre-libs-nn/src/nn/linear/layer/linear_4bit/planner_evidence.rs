@@ -8,7 +8,7 @@ use super::{
     QuantizedLinear4BitPlannerEvidence, QuantizedLinear4BitSpec,
     LINEAR_4BIT_AFFINE_GROUPED_OUTPUT_DRIFT_ABS_TOLERANCE,
 };
-use crate::{
+use vyre_libs_math::math::linalg::{
     plan_matmul_kernel, F32MatmulMode, MatmulFallbackReason, MatmulKernelCapabilities,
     MatmulKernelPath, MatmulKernelPlan, MatrixShape,
 };

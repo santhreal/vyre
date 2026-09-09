@@ -32,3 +32,8 @@ mod tensor_core_policy;
 mod tile_coords;
 
 pub use ops::{matmul_bias_tiled, matmul_tiled, MatmulBiasTiled, MatmulTiled};
+pub use shape::MatrixShape;
+pub use tensor_core_policy::{
+    plan_matmul_kernel, F32MatmulMode, MatmulFallbackReason, MatmulKernelCapabilities,
+    MatmulKernelPath, MatmulKernelPlan, TensorCoreTileShape,
+};

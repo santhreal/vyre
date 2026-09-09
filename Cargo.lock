@@ -4425,6 +4425,7 @@ dependencies = [
  "vyre-driver-wgpu",
  "vyre-foundation",
  "vyre-libs",
+ "vyre-libs-builder",
  "vyre-lower",
  "vyre-megakernel",
  "vyre-primitives",

@@ -88,13 +88,13 @@ fn every_backend_records_a_decision_for_every_float_lowering_mode() {
 /// unhonored contracted code.
 #[test]
 fn unsupported_backend_refuses_strict_ieee_compilation_and_cache_key_generation() {
-    let program = f32_multiply_add_program(4, Some(UnOp::Sin));
-    let mut config = DispatchConfig::default();
-    config.float_lowering = FloatLoweringMode::StrictIeee;
+    let _program = f32_multiply_add_program(4, Some(UnOp::Sin));
+    let mut _config = DispatchConfig::default();
+    _config.float_lowering = FloatLoweringMode::StrictIeee;
 
     #[cfg(feature = "cuda")]
     {
-        let result = vyre_driver_cuda::codegen::program_to_ptx(&program, &config);
+        let result = vyre_driver_cuda::codegen::program_to_ptx(&_program, &_config);
         assert!(
             result.is_err(),
             "Fix: CUDA PTX codegen must reject strict IEEE lowering rather than emitting contracted PTX"
