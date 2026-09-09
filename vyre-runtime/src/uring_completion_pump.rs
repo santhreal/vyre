@@ -35,7 +35,7 @@ impl<'a> UringCompletionPump<'a> {
     /// # Examples
     ///
     /// ```
-    /// use vyre_runtime::UringCompletionPump;
+    /// use vyre_runtime::uring_completion_pump::UringCompletionPump;
     ///
     /// let pump = UringCompletionPump::new();
     ///

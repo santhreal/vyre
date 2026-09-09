@@ -911,6 +911,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   commented-out axis satisfies, so an axis could be deleted and the check
   stayed green. The gate reads the axis values out of the matrix block, which
   is what expands into jobs.
+- `vyre-reference` publishes `MemoryAccessRecord`, the access the interleaving
+  oracle records per invocation, and `verify_closed_type_coverage_in_oracle`,
+  which reports whether that oracle handles every closed memory model type.
 - vyre-libs gains an llm composition layer behind the llm feature.
   paged_kv_gather and paged_kv_append address a block-table paged key-value
   cache through the attention layout base, so a paged read is the same index
@@ -4417,6 +4420,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   item of its own: every line was a `pub use` of a `planner` or `policy` item,
   so each of those 77 items had two public paths and a reader had to pick. Its
   one caller, `telemetry.rs`, imports from `super::policy` directly.
+- `vyre_reference::request` and `vyre_reference::interleaving` are no longer
+  public module paths. `ReferenceRequest`, `ReferenceBudget`,
+  `WorkloadEnvelope`, `ExactResourceAbi`, `InterleavingConfig`, `ShadowMemory`
+  and the rest of both modules publish only at the crate root.
 - The `vyre-spec` submodule visibility test read `lib.rs` as text and required
   every module declaration to be `pub mod`, which is the shape it inspected
   rather than a contract a caller can observe. The published surface is owned

@@ -518,7 +518,7 @@ mod tests {
     }
 }
 
-impl crate::StateOwnerRecovery for DiskCache {
+impl crate::atomic_recovery::StateOwnerRecovery for DiskCache {
     fn failure_domain(&self) -> crate::FailureDomain {
         crate::FailureDomain::DiskJournal
     }

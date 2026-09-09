@@ -6,7 +6,7 @@ pub mod nfa;
 pub mod pattern;
 
 /// Ensure all feature-selected library operation registrations are retained by the linker.
-#[must_use]
-pub fn link_anchor() -> usize {
-    vyre_libs_builder::link_anchor()
+#[inline(never)]
+pub fn link_anchor() {
+    vyre_libs_builder::link_anchor();
 }

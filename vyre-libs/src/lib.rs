@@ -17,95 +17,58 @@ pub use vyre_libs_builder::plumbing::host::telemetry;
 pub use vyre_libs_builder::plumbing::registration::signatures::*;
 pub use vyre_libs_builder::plumbing::registration::{contracts, operation_catalog};
 
-/// Ensure all feature-selected library operation registrations are retained by the linker.
+/// Reference every feature-selected domain crate so the linker retains its
+/// operation registrations, and report how many library operations the active
+/// feature set registers.
+///
+/// A domain crate's anchor returns nothing. Registrations are link-time records
+/// in one process-wide registry, so the count is read from that registry once.
 #[must_use]
 pub fn link_anchor() -> usize {
-    let mut count = vyre_libs_builder::link_anchor();
+    vyre_libs_builder::link_anchor();
     #[cfg(feature = "bitset")]
-    {
-        count += vyre_libs_bitset::link_anchor();
-    }
+    vyre_libs_bitset::link_anchor();
     #[cfg(feature = "reduce")]
-    {
-        count += vyre_libs_reduce::link_anchor();
-    }
+    vyre_libs_reduce::link_anchor();
     #[cfg(feature = "fixpoint")]
-    {
-        count += vyre_libs_fixpoint::link_anchor();
-    }
+    vyre_libs_fixpoint::link_anchor();
     #[cfg(any(feature = "math", feature = "math-kernels", feature = "math-dialect"))]
-    {
-        count += vyre_libs_math::link_anchor();
-    }
+    vyre_libs_math::link_anchor();
     #[cfg(any(feature = "nn", feature = "nn-kernels"))]
-    {
-        count += vyre_libs_nn::link_anchor();
-    }
+    vyre_libs_nn::link_anchor();
     #[cfg(feature = "graph")]
-    {
-        count += vyre_libs_graph::link_anchor();
-    }
+    vyre_libs_graph::link_anchor();
     #[cfg(any(feature = "pattern", feature = "pattern-kernels"))]
-    {
-        count += vyre_libs_pattern::link_anchor();
-    }
+    vyre_libs_pattern::link_anchor();
     #[cfg(feature = "hash")]
-    {
-        count += vyre_libs_hash::link_anchor();
-    }
+    vyre_libs_hash::link_anchor();
     #[cfg(feature = "text")]
-    {
-        count += vyre_libs_text::link_anchor();
-    }
+    vyre_libs_text::link_anchor();
     #[cfg(feature = "decode")]
-    {
-        count += vyre_libs_decode::link_anchor();
-    }
+    vyre_libs_decode::link_anchor();
     #[cfg(any(feature = "parsing", feature = "parsing-kernels"))]
-    {
-        count += vyre_libs_parsing::link_anchor();
-    }
+    vyre_libs_parsing::link_anchor();
     #[cfg(feature = "security")]
-    {
-        count += vyre_libs_security::link_anchor();
-    }
+    vyre_libs_security::link_anchor();
     #[cfg(feature = "visual")]
-    {
-        count += vyre_libs_visual::link_anchor();
-    }
+    vyre_libs_visual::link_anchor();
     #[cfg(feature = "rule")]
-    {
-        count += vyre_libs_rule::link_anchor();
-    }
+    vyre_libs_rule::link_anchor();
     #[cfg(feature = "vfs")]
-    {
-        count += vyre_libs_vfs::link_anchor();
-    }
+    vyre_libs_vfs::link_anchor();
     #[cfg(feature = "device")]
-    {
-        count += vyre_libs_device::link_anchor();
-    }
+    vyre_libs_device::link_anchor();
     #[cfg(feature = "solvers")]
-    {
-        count += vyre_libs_solvers::link_anchor();
-    }
+    vyre_libs_solvers::link_anchor();
     #[cfg(feature = "encoding")]
-    {
-        count += vyre_libs_encoding::link_anchor();
-    }
+    vyre_libs_encoding::link_anchor();
     #[cfg(feature = "analysis")]
-    {
-        count += vyre_libs_analysis::link_anchor();
-    }
+    vyre_libs_analysis::link_anchor();
     #[cfg(feature = "reasoning")]
-    {
-        count += vyre_libs_reasoning::link_anchor();
-    }
+    vyre_libs_reasoning::link_anchor();
     #[cfg(feature = "scheduling")]
-    {
-        count += vyre_libs_scheduling::link_anchor();
-    }
-    count
+    vyre_libs_scheduling::link_anchor();
+    operation_catalog::all_entries().count()
 }
 
 #[cfg(feature = "geom")]

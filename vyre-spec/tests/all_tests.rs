@@ -145,6 +145,10 @@ pub mod op_wire_property_contracts;
 #[path = "operation_contract_property_contracts.rs"]
 pub mod operation_contract_property_contracts;
 
+/// Integration tests from `tests/one_public_path_per_item.rs`.
+#[path = "one_public_path_per_item.rs"]
+pub mod one_public_path_per_item;
+
 /// Integration tests from `tests/semiring_property_contracts.rs`.
 #[path = "semiring_property_contracts.rs"]
 pub mod semiring_property_contracts;

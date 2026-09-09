@@ -9,7 +9,7 @@ use core::fmt;
 use std::string::String;
 use std::vec::Vec;
 
-use vyre_spec::{FieldType, SchemaId, SchemaRegistry};
+use vyre_spec::schema_registry::{FieldType, SchemaId, SchemaRegistry};
 
 /// Value representation for canonical record fields.
 #[derive(Clone, Debug, PartialEq)]
@@ -300,7 +300,7 @@ impl CanonicalEncoder {
         expected_type: FieldType,
         field_number: u32,
         field_name: &'static str,
-        schema: &vyre_spec::SchemaDefinition,
+        schema: &vyre_spec::schema_registry::SchemaDefinition,
         depth: usize,
         out: &mut Vec<u8>,
     ) -> Result<(), CodecError> {
@@ -478,7 +478,7 @@ impl CanonicalDecoder {
         bytes: &[u8],
         field_type: FieldType,
         field_num: u32,
-        schema: &vyre_spec::SchemaDefinition,
+        schema: &vyre_spec::schema_registry::SchemaDefinition,
         depth: usize,
     ) -> Result<(CanonicalValue, usize), CodecError> {
         if depth > schema.bounds.max_depth {
