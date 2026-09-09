@@ -71,7 +71,6 @@ pub enum QuantizationZeroPoint {
 /// use this canonical contract path. Example: `DataType::Vec4U32` records a
 /// four-word lane value and has a minimum byte width of 16.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
-#[non_exhaustive]
 pub enum DataType {
     /// Unsigned 8-bit integer.
     U8,
@@ -103,7 +102,7 @@ pub enum DataType {
     /// `N * element_size` where N is encoded by the value.
     Array {
         /// Byte size of each element.
-        element_size: usize,
+        element_size: u32,
     },
     /// Strict IEEE 754 binary16 floating-point.
     F16,

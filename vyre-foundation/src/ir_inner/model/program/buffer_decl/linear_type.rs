@@ -14,7 +14,6 @@
 /// `Unrestricted` is the safe default when authoring a `BufferDecl`
 /// for back-compat  -  every existing program continues to type-check.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-#[non_exhaustive]
 pub enum LinearType {
     /// Use exactly once on every path. Forbids both drop-without-use
     /// and double-use.

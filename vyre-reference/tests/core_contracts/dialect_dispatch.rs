@@ -23,16 +23,19 @@ inventory::submit! {
     OperationRegistration::new_unconstrained(ECHO_ID, OperationTier::External, None, None, None)
         .with_signature(EMPTY_SIGNATURE)
         .with_category("test")
+        .with_opaque("test fixture")
 }
 inventory::submit! {
     OperationRegistration::new_unconstrained(PANIC_ID, OperationTier::External, None, None, None)
         .with_signature(EMPTY_SIGNATURE)
         .with_category("test")
+        .with_opaque("test fixture")
 }
 inventory::submit! {
     OperationRegistration::new_unconstrained(MISSING_ID, OperationTier::External, None, None, None)
         .with_signature(EMPTY_SIGNATURE)
         .with_category("test")
+        .with_opaque("test fixture")
 }
 
 fn echo(input: &[u8], output: &mut Vec<u8>) {

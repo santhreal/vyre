@@ -696,7 +696,6 @@ fn access_label(access: &BufferAccess) -> &'static str {
         BufferAccess::WriteOnly => "WriteOnly",
         BufferAccess::Uniform => "Uniform",
         BufferAccess::Workgroup => "Workgroup",
-        _ => UNKNOWN_ACCESS,
     }
 }
 

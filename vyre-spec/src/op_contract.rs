@@ -141,7 +141,6 @@ impl Default for AliasingContract {
 
 /// Structural relationship between input and output tensor/buffer shapes and index spaces.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
-#[non_exhaustive]
 pub enum ShapeIndexRelation {
     /// Output shape identical to input shape; 1:1 index map.
     Elementwise,

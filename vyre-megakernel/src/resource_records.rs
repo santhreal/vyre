@@ -150,6 +150,14 @@ fn value_element_count(
                     "bind every symbolic graph dimension before compilation",
                 )
             })?,
+            ShapeDim::Unresolved | ShapeDim::Expr(_) => {
+                return Err(failure(
+                    CompilerFailureKind::MissingSymbol,
+                    format!("graph.values[{}].shape", value.name),
+                    "unresolved or symbolic expression extent has no exact binding",
+                    "bind every dynamic graph dimension before compilation",
+                ));
+            }
         };
         element_count = element_count.checked_mul(extent).ok_or_else(|| {
             overflow(

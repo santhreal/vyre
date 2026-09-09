@@ -124,9 +124,6 @@ impl ScalarFormat {
             | DataType::SparseCoo { element }
             | DataType::SparseBsr { element, .. } => Self::of(element),
             DataType::Quantized { storage, .. } => Self::of(storage),
-            // `DataType` is `#[non_exhaustive]`, so a cross-crate match needs a
-            // rest arm. The arm answers None, and the closure that a new variant
-            // must be classified is a test that reads the enum's own source.
             DataType::Bool
             | DataType::Bytes
             | DataType::Array { .. }
@@ -134,7 +131,6 @@ impl ScalarFormat {
             | DataType::Handle(_)
             | DataType::DeviceMesh { .. }
             | DataType::Opaque(_) => None,
-            _ => None,
         }
     }
 

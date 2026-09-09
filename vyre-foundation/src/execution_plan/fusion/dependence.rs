@@ -119,7 +119,7 @@ impl RegionDependenceGraph {
                             }
                         }
                     }
-                    BufferAccess::Workgroup | _ => {}
+                    BufferAccess::Workgroup => {}
                 }
             }
         }

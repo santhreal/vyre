@@ -36,7 +36,9 @@ pub fn flat_buffer_element_types(element_size: usize) -> Vec<DataType> {
         DataType::Vec4U32,
         DataType::Bool,
         DataType::Bytes,
-        DataType::Array { element_size },
+        DataType::Array {
+            element_size: element_size as u32,
+        },
         DataType::F16,
         DataType::BF16,
         DataType::F32,

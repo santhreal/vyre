@@ -157,8 +157,8 @@ pub(super) fn read_memory_regions(
             format!("TruncatedPayload: dense shape count cannot fit u32 ({err}). Fix: split the memory region.")
         })?;
         let element = if element_tag == 0x08 {
-            let element_size = usize::try_from(shape_reader.leb_u64()?).map_err(|err| {
-                format!("TruncatedPayload: array element size cannot fit usize ({err}). Fix: reject this payload on this target.")
+            let element_size = u32::try_from(shape_reader.leb_u64()?).map_err(|err| {
+                format!("TruncatedPayload: array element size cannot fit u32 ({err}). Fix: reject this payload on this target.")
             })?;
             DataType::Array { element_size }
         } else if element_tag == 0x13 {

@@ -131,6 +131,14 @@ fn row_major_strides(
                     "bind every symbolic graph dimension before compilation",
                 )
             })?,
+            ShapeDim::Unresolved | ShapeDim::Expr(_) => {
+                return Err(failure(
+                    CompilerFailureKind::MissingSymbol,
+                    format!("graph.values[{name}].shape"),
+                    "unresolved or symbolic expression extent has no exact binding",
+                    "bind every dynamic graph dimension before compilation",
+                ));
+            }
         };
         running = running.checked_mul(extent).ok_or_else(|| {
             overflow(

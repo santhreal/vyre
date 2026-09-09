@@ -46,7 +46,7 @@ impl<'a> LogicalProgramGraph<'a> {
             .flat_map(|value| &value.contract.shape)
             .filter_map(|dim| match dim {
                 ShapeDim::Symbol(symbol) => Some(symbol.as_str()),
-                ShapeDim::Known(_) => None,
+                ShapeDim::Known(_) | ShapeDim::Unresolved | ShapeDim::Expr(_) => None,
             })
             .collect::<BTreeSet<_>>();
         for symbol in &required {
@@ -84,6 +84,13 @@ impl<'a> LogicalProgramGraph<'a> {
                             axis,
                         }),
                         ShapeDim::Known(bound) => Ok(LogicalExtent::Static(*bound)),
+                        ShapeDim::Unresolved | ShapeDim::Expr(_) => {
+                            Err(LogicalProgramError::UnresolvedExtent {
+                                node: node.id,
+                                value,
+                                axis,
+                            })
+                        }
                         ShapeDim::Symbol(symbol) => {
                             let bound = bindings.get(symbol).copied().ok_or_else(|| {
                                 LogicalProgramError::MissingSymbol(symbol.clone())

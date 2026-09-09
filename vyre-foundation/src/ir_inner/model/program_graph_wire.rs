@@ -8,7 +8,7 @@ use super::program_graph::{
 };
 
 const MAGIC: &[u8; 4] = b"VGR0";
-const VERSION: u16 = 2;
+const VERSION: u16 = 3;
 const MAX_GRAPH_WIRE_BYTES: usize = 256 * 1024 * 1024;
 const MAX_GRAPH_ITEMS: usize = 1_000_000;
 const MAX_PORTS_PER_NODE: usize = 1_000_000;
@@ -209,6 +209,13 @@ fn put_contract(bytes: &mut Vec<u8>, contract: &ValueContract) -> Result<(), Pro
                 bytes.push(1);
                 put_string(bytes, symbol)?;
             }
+            ShapeDim::Unresolved => {
+                bytes.push(2);
+            }
+            ShapeDim::Expr(expr_id) => {
+                bytes.push(3);
+                bytes.extend_from_slice(&expr_id.0.to_le_bytes());
+            }
         }
     }
     bytes.push(access_tag(contract.access.clone())?);
@@ -228,9 +235,7 @@ fn access_tag(access: BufferAccess) -> Result<u8, ProgramGraphError> {
         BufferAccess::ReadWrite => Ok(1),
         BufferAccess::WriteOnly => Ok(2),
         BufferAccess::Uniform => Ok(3),
-        _ => Err(wire_error(format!(
-            "unsupported BufferAccess variant {access:?}"
-        ))),
+        BufferAccess::Workgroup => Ok(4),
     }
 }
 
@@ -340,9 +345,11 @@ impl<'a> Reader<'a> {
             shape.push(match self.u8()? {
                 0 => ShapeDim::Known(self.u64()?),
                 1 => ShapeDim::Symbol(self.string()?),
+                2 => ShapeDim::Unresolved,
+                3 => ShapeDim::Expr(crate::types::ShapeExprId(self.u32()?)),
                 tag => {
                     return Err(wire_error(format!(
-                        "shape dimension tag is {tag}; expected 0 or 1"
+                        "shape dimension tag is {tag}; expected 0, 1, 2, or 3"
                     )))
                 }
             });
@@ -352,6 +359,7 @@ impl<'a> Reader<'a> {
             1 => BufferAccess::ReadWrite,
             2 => BufferAccess::WriteOnly,
             3 => BufferAccess::Uniform,
+            4 => BufferAccess::Workgroup,
             tag => return Err(wire_error(format!("unknown buffer access tag {tag}"))),
         };
         let lifetime = match self.u8()? {

@@ -69,7 +69,7 @@ impl DataType {
     #[must_use]
     pub const fn element_size(&self) -> Option<usize> {
         match self {
-            Self::Array { element_size } => Some(*element_size),
+            Self::Array { element_size } => Some(*element_size as usize),
             Self::Vec { element, .. }
             | Self::TensorShaped { element, .. }
             | Self::SparseCsr { element }
@@ -97,7 +97,7 @@ impl DataType {
             Self::Vec4U32 => Some(16),
             Self::Handle(_) => Some(4),
             Self::Bytes => Some(1),
-            Self::Array { element_size } => Some(*element_size),
+            Self::Array { element_size } => Some(*element_size as usize),
             Self::Vec { element, count } => match element.size_bytes() {
                 Some(bytes) => bytes.checked_mul(*count as usize),
                 None => None,
@@ -235,7 +235,7 @@ impl DataType {
             Self::Vec4U32 => Ok(Some(16)),
             Self::Handle(_) => Ok(Some(4)),
             Self::Bytes => Ok(Some(1)),
-            Self::Array { element_size } => Ok(Some(*element_size)),
+            Self::Array { element_size } => Ok(Some(*element_size as usize)),
             Self::Vec { element, count } => {
                 let Some(bytes) = element.checked_size_bytes_for_packed_size()? else {
                     return Ok(None);

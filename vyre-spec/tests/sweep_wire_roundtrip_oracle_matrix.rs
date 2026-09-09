@@ -197,7 +197,7 @@ fn hostile_datatype(rng: &mut Rng) -> DataType {
         10 => DataType::Bool,
         11 => DataType::Bytes,
         12 => DataType::Array {
-            element_size: 1 + rng.range(64) as usize,
+            element_size: 1 + rng.range(64) as u32,
         },
         13 => DataType::F16,
         14 => DataType::BF16,

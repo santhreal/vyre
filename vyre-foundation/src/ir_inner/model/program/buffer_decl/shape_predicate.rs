@@ -11,7 +11,6 @@
 /// `None` (the default) is "unconstrained"; existing programs keep
 /// their current behavior.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[non_exhaustive]
 pub enum ShapePredicate {
     /// `count >= n`. Holds when the runtime element count is at
     /// least `n`. Used to prove non-empty workgroup buffers and

@@ -242,6 +242,14 @@ fn contract_bytes(
             ShapeDim::Symbol(symbol) => *bindings
                 .get(symbol)
                 .ok_or_else(|| format!("exchange payload needs symbolic extent `{symbol}`"))?,
+            ShapeDim::Unresolved => {
+                return Err(
+                    "exchange payload cannot compute byte size for unresolved extent".to_owned(),
+                );
+            }
+            ShapeDim::Expr(expr_id) => {
+                return Err(format!("exchange payload cannot compute byte size for symbolic expression `{expr_id:?}`"));
+            }
         };
         count = count
             .checked_mul(bound)

@@ -5,7 +5,6 @@
 /// Example: `BufferAccess::ReadWrite` records that a storage buffer may be
 /// both read and written by a lowered operation.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
-#[non_exhaustive]
 pub enum BufferAccess {
     /// Read-only storage buffer.
     ReadOnly,

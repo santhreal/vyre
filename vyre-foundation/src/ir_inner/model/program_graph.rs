@@ -13,5 +13,5 @@ pub use graph::ProgramGraph;
 pub use types::{
     ControlBounds, ExternalEffect, GraphInput, GraphNodeId, GraphOutput, GraphValueId,
     LivenessInterval, ProgramGraphError, ProgramGraphNode, ProgramGraphSharingMetrics,
-    ProgramGraphTemplate, ProgramGraphValue, ShapeDim, ValueContract, ValueLifetime,
+    ProgramGraphTemplate, ProgramGraphValue, ShapeDim, ShapeExprId, ValueContract, ValueLifetime,
 };

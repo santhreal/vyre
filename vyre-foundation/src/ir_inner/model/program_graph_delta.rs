@@ -863,6 +863,13 @@ fn put_contract(bytes: &mut Vec<u8>, contract: &ValueContract) -> Result<(), Gra
                 bytes.push(2);
                 put_string(bytes, sym)?;
             }
+            ShapeDim::Unresolved => {
+                bytes.push(3);
+            }
+            ShapeDim::Expr(expr_id) => {
+                bytes.push(4);
+                bytes.extend_from_slice(&expr_id.0.to_le_bytes());
+            }
         }
     }
     Ok(())
@@ -975,8 +982,17 @@ fn read_contract(bytes: &[u8], cursor: &mut usize) -> Result<ValueContract, Grap
                 let sym = read_string(bytes, cursor)?;
                 shape.push(ShapeDim::Symbol(sym));
             }
-            _ => {
-                return Err(GraphDeltaError::Wire("invalid shape dim tag".into()));
+            3 => {
+                shape.push(ShapeDim::Unresolved);
+            }
+            4 => {
+                let id = read_u32(bytes, cursor)?;
+                shape.push(ShapeDim::Expr(crate::types::ShapeExprId(id)));
+            }
+            unknown => {
+                return Err(GraphDeltaError::Wire(format!(
+                    "shape dim tag {unknown} is not a valid `ShapeDim` tag"
+                )));
             }
         }
     }

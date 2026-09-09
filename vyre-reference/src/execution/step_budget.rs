@@ -73,7 +73,7 @@ thread_local! {
     /// Steps charged by the evaluation armed on this thread and the ceiling it
     /// was armed with. `None` while no evaluation is armed. A `Cell` so the
     /// charging path is one read and one write with no borrow flag.
-    static BUDGET: Cell<Option<(u64, u64)>> = const { Cell::new(None) };
+    static BUDGET: Cell<Option<(u64, u64, bool)>> = const { Cell::new(None) };
     /// The armed program's name, read only when a refusal is built.
     static PROGRAM: RefCell<String> = const { RefCell::new(String::new()) };
 }
@@ -97,7 +97,7 @@ impl Drop for BudgetGuard {
 /// Arm [`MAX_REFERENCE_STEPS`] for one evaluation of `program`, or join the
 /// enclosing evaluation's budget.
 pub(crate) fn arm(program: &Program) -> BudgetGuard {
-    arm_with(program, MAX_REFERENCE_STEPS)
+    arm_with_mode(program, MAX_REFERENCE_STEPS, false)
 }
 
 /// Arm an explicit ceiling for one evaluation, or join the enclosing one.
@@ -105,12 +105,16 @@ pub(crate) fn arm(program: &Program) -> BudgetGuard {
 /// Only the measurement harness picks a ceiling; production evaluation uses
 /// [`arm`] so one number governs every caller.
 pub(crate) fn arm_with(program: &Program, ceiling: u64) -> BudgetGuard {
+    arm_with_mode(program, ceiling, true)
+}
+
+pub(crate) fn arm_with_mode(program: &Program, ceiling: u64, exact: bool) -> BudgetGuard {
     if BUDGET.with(Cell::get).is_some() {
         return BudgetGuard { outermost: false };
     }
     let label = program_label(program);
     PROGRAM.with_borrow_mut(|armed| *armed = label);
-    BUDGET.with(|budget| budget.set(Some((0, ceiling))));
+    BUDGET.with(|budget| budget.set(Some((0, ceiling, exact))));
     BudgetGuard { outermost: true }
 }
 
@@ -135,9 +139,9 @@ pub(crate) fn admit_declared_work(body: &[Node], invocations: u64) {
         .saturating_add(per_invocation)
         .saturating_mul(DECLARED_WORK_HEADROOM);
     BUDGET.with(|budget| {
-        if let Some((charged, ceiling)) = budget.get() {
-            if declared > ceiling {
-                budget.set(Some((charged, declared)));
+        if let Some((charged, ceiling, exact)) = budget.get() {
+            if !exact && declared > ceiling {
+                budget.set(Some((charged, declared, false)));
             }
         }
     });
@@ -208,12 +212,12 @@ fn constant_u32(expr: &Expr) -> Option<u32> {
 pub(crate) fn charge() -> Result<(), ReferenceError> {
     let exceeded = BUDGET.with(|budget| match budget.get() {
         None => None,
-        Some((charged, ceiling)) => {
+        Some((charged, ceiling, exact)) => {
             let charged = charged + 1;
             if charged > ceiling {
                 return Some(ceiling);
             }
-            budget.set(Some((charged, ceiling)));
+            budget.set(Some((charged, ceiling, exact)));
             None
         }
     });
@@ -228,7 +232,7 @@ pub(crate) fn charge() -> Result<(), ReferenceError> {
 
 /// Steps charged by the armed evaluation, or `0` when none is armed.
 pub(crate) fn charged() -> u64 {
-    BUDGET.with(|budget| budget.get().map_or(0, |(charged, _)| charged))
+    BUDGET.with(|budget| budget.get().map_or(0, |(charged, _, _)| charged))
 }
 
 /// The name a program is refused under: its entry operation id when it declares
@@ -412,9 +416,9 @@ mod tests {
         let program = tiny_program();
         let leaf = vec![Node::store("out", Expr::u32(0), Expr::u32(7))];
 
-        let guard = arm_with(&program, MAX_REFERENCE_STEPS);
+        let guard = arm(&program);
         admit_declared_work(&leaf, 1);
-        let (_, ceiling) = BUDGET
+        let (_, ceiling, _) = BUDGET
             .with(Cell::get)
             .expect("Fix: the budget stays armed through admission");
         assert_eq!(
@@ -426,7 +430,7 @@ mod tests {
         // the smallest shape whose declared work exceeds it.
         let invocations = MAX_REFERENCE_STEPS + 1;
         admit_declared_work(&leaf, invocations);
-        let (_, raised) = BUDGET
+        let (_, raised, _) = BUDGET
             .with(Cell::get)
             .expect("Fix: the budget stays armed through admission");
         assert_eq!(
@@ -442,7 +446,7 @@ mod tests {
             leaf,
         )];
         admit_declared_work(&data_derived, u64::MAX);
-        let (_, unchanged) = BUDGET
+        let (_, unchanged, _) = BUDGET
             .with(Cell::get)
             .expect("Fix: the budget stays armed through admission");
         assert_eq!(

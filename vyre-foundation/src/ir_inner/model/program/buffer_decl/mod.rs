@@ -60,7 +60,7 @@ pub struct BufferDecl {
     ///
     /// `None` preserves the historical behavior and reads back the full
     /// declared output buffer.
-    pub output_byte_range: Option<Range<usize>>,
+    pub output_byte_range: Option<Range<u64>>,
     /// Non-binding backend optimization hints.
     pub hints: MemoryHints,
     /// When true, admits `DataType::Bytes` load/store despite V013.
@@ -207,7 +207,7 @@ impl BufferDecl {
     /// Attach an output byte range for backends that can read back a slice.
     #[must_use]
     #[inline]
-    pub fn with_output_byte_range(mut self, range: Range<usize>) -> Self {
+    pub fn with_output_byte_range(mut self, range: Range<u64>) -> Self {
         self.output_byte_range = Some(range);
         self
     }
@@ -222,8 +222,8 @@ impl BufferDecl {
     #[must_use]
     #[inline]
     pub fn with_full_output_byte_range(self) -> Self {
-        let element = self.element.size_bytes().unwrap_or(4);
-        let end = (self.count as usize).saturating_mul(element);
+        let element = self.element.size_bytes().unwrap_or(4) as u64;
+        let end = (self.count as u64).saturating_mul(element);
         self.with_output_byte_range(0..end)
     }
 
@@ -579,7 +579,7 @@ impl BufferDecl {
     /// Byte range the consumer needs from this output buffer, if declared.
     #[must_use]
     #[inline]
-    pub fn output_byte_range(&self) -> Option<Range<usize>> {
+    pub fn output_byte_range(&self) -> Option<Range<u64>> {
         self.output_byte_range.clone()
     }
 

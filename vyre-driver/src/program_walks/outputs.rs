@@ -173,8 +173,18 @@ pub fn output_binding_layout_parts(
     name: &Arc<str>,
     element: &DataType,
     count: u32,
-    output_byte_range: Option<Range<usize>>,
+    output_byte_range: Option<Range<u64>>,
 ) -> Result<OutputBindingLayout, BackendError> {
+    let output_byte_range = match output_byte_range {
+        Some(range) => {
+            let start = usize::try_from(range.start)
+                .map_err(|_| BackendError::new("output byte range start exceeds usize"))?;
+            let end = usize::try_from(range.end)
+                .map_err(|_| BackendError::new("output byte range end exceeds usize"))?;
+            Some(start..end)
+        }
+        None => None,
+    };
     let count = usize::try_from(count).map_err(|_| {
         BackendError::new(
             "program output element count exceeds usize. Fix: split the dispatch into smaller output buffers.",

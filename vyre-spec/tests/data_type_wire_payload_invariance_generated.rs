@@ -115,7 +115,7 @@ fn generated_payload_cases(seed: u32) -> [(&'static str, DataType); 10] {
         (
             "Array",
             DataType::Array {
-                element_size: generated_nonzero_usize(seed),
+                element_size: generated_nonzero_u32(seed),
             },
         ),
         ("Handle", DataType::Handle(TypeId(mix32(seed)))),
@@ -228,7 +228,7 @@ fn generated_block_dim(seed: u32) -> u32 {
     (mix32(seed ^ 0x9E37_79B9) % 512) + 1
 }
 
-fn generated_nonzero_usize(seed: u32) -> usize {
+fn generated_nonzero_u32(seed: u32) -> u32 {
     match mix32(seed) % 8 {
         0 => 1,
         1 => 2,
@@ -237,7 +237,7 @@ fn generated_nonzero_usize(seed: u32) -> usize {
         4 => 8,
         5 => 16,
         6 => 255,
-        _ => usize::MAX,
+        _ => u32::MAX,
     }
 }
 

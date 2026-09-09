@@ -105,9 +105,9 @@ pub enum PlanError {
         /// Buffer name.
         name: String,
         /// Inclusive start byte offset.
-        start: usize,
+        start: u64,
         /// Exclusive end byte offset.
-        end: usize,
+        end: u64,
         /// Full buffer size in bytes.
         full_size: u64,
     },
@@ -332,7 +332,7 @@ fn memory_plan(program: &Program, adapter_caps: &AdapterCaps) -> Result<MemoryPl
         if buffer.is_output() {
             let full_size = size.unwrap_or(0);
             let visible = if let Some(range) = output_range.clone() {
-                if range.start > range.end || range.end as u64 > full_size {
+                if range.start > range.end || range.end > full_size {
                     return Err(PlanError::InvalidOutputRange {
                         name: buffer.name().to_string(),
                         start: range.start,
@@ -340,7 +340,7 @@ fn memory_plan(program: &Program, adapter_caps: &AdapterCaps) -> Result<MemoryPl
                         full_size,
                     });
                 }
-                (range.end - range.start) as u64
+                range.end - range.start
             } else {
                 full_size
             };
@@ -508,7 +508,7 @@ pub struct BufferPlan {
     /// Static byte size when `count` is nonzero.
     pub static_size_bytes: Option<u64>,
     /// Caller-visible output byte range, when trimmed.
-    pub output_range: Option<Range<usize>>,
+    pub output_range: Option<Range<u64>>,
 }
 
 /// Region/provenance facts used to decide trace strategy.

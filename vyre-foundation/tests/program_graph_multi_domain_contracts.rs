@@ -8,7 +8,7 @@
 
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
-    ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
+    ProgramGraphError, ShapeDim, ShapeExprId, ValueContract, ValueLifetime,
 };
 
 fn contract(
@@ -654,11 +654,18 @@ fn lifetime_and_shape_enum_exhaustive_closure() {
     }
 
     // Compile-time closure over ShapeDim
-    let dims = [ShapeDim::Known(42), ShapeDim::Symbol("dim".into())];
+    let dims = [
+        ShapeDim::Known(42),
+        ShapeDim::Unresolved,
+        ShapeDim::Symbol("dim".into()),
+        ShapeDim::Expr(ShapeExprId(7)),
+    ];
     for dim in dims {
         match dim {
             ShapeDim::Known(k) => assert_eq!(k, 42),
+            ShapeDim::Unresolved => assert_eq!(dim, ShapeDim::Unresolved),
             ShapeDim::Symbol(s) => assert_eq!(s, "dim"),
+            ShapeDim::Expr(id) => assert_eq!(id, ShapeExprId(7)),
         }
     }
 
@@ -670,7 +677,6 @@ fn lifetime_and_shape_enum_exhaustive_closure() {
             BufferAccess::ReadWrite => assert_eq!(access, BufferAccess::ReadWrite),
             BufferAccess::Uniform => assert_eq!(access, BufferAccess::Uniform),
             BufferAccess::Workgroup => assert_eq!(access, BufferAccess::Workgroup),
-            _ => panic!("unhandled BufferAccess variant: {access:?}"),
         }
     }
 }

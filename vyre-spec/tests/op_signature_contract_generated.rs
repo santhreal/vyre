@@ -170,7 +170,7 @@ fn generated_type(seed: u64) -> DataType {
     match idx - leaves {
         0 => DataType::Handle(TypeId((seed >> 8) as u32)),
         1 => DataType::Array {
-            element_size: ((seed >> 13) as usize % 64) + 1,
+            element_size: ((seed >> 13) as u32 % 64) + 1,
         },
         2 => DataType::Vec {
             element: Box::new(DataType::U32),

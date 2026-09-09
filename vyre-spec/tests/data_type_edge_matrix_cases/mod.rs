@@ -178,7 +178,7 @@ pub(crate) fn leaf_edge_types() -> Vec<DataType> {
         DataType::Array { element_size: 0 },
         DataType::Array { element_size: 1 },
         DataType::Array {
-            element_size: usize::MAX / 8,
+            element_size: u32::MAX / 8,
         },
         DataType::Handle(TypeId(0)),
         DataType::Handle(TypeId(u32::MAX)),
