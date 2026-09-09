@@ -17,6 +17,7 @@ pub mod ci_contract;
 pub mod ci_registry;
 pub mod ci_steps;
 pub mod codeowners;
+pub mod consumer_compilation;
 pub mod crate_pages;
 pub mod crate_readmes;
 pub mod crate_registry;
@@ -135,6 +136,10 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     (
         "device-test-compilation",
         &device_test_compilation::DeviceTestCompilation,
+    ),
+    (
+        "consumer-compilation",
+        &consumer_compilation::ConsumerCompilation,
     ),
     ("hot-path-nested-rows", &dispatch_surface::NestedRows),
     ("hot-path-owned-dispatch", &dispatch_surface::OwnedDispatch),

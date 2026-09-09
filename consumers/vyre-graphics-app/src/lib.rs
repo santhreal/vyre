@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use std::time::Instant;
 
 use vyre::compiler::{
-    CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
+    compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     SearchBudget,
 };
 use vyre::ir::{GraphValueId, ValueLifetime};
@@ -116,8 +116,14 @@ impl SceneGraph {
 
         // Scene bounding boxes: a header bar, sidebar, and 10 content cards
         let mut boxes = vec![
-            0, 0, width as i32, 40,             // Header
-            0, 40, 200, height as i32,           // Sidebar
+            0,
+            0,
+            width as i32,
+            40, // Header
+            0,
+            40,
+            200,
+            height as i32, // Sidebar
         ];
         for i in 0..10 {
             let cx = 220 + (i % 3) * 150;
@@ -127,10 +133,10 @@ impl SceneGraph {
 
         // Vector path segments: border lines and icon curves
         let segments = vec![
-            0, 40, width, 40,                    // Header bottom border
-            200, 40, 200, height,                // Sidebar right border
-            250, 80, 300, 120,                   // Line 1
-            300, 120, 350, 80,                   // Line 2
+            0, 40, width, 40, // Header bottom border
+            200, 40, 200, height, // Sidebar right border
+            250, 80, 300, 120, // Line 1
+            300, 120, 350, 80, // Line 2
         ];
 
         // Glyph atlas: 16x16 with mock glyphs
@@ -146,10 +152,34 @@ impl SceneGraph {
 
         // Text glyphs: "Vyre Graphics UI"
         let glyphs = vec![
-            10, 10, 8, 8, 0, 0, 0xFF00_FFFF,     // Yellow 'V'
-            20, 10, 8, 8, 0, 0, 0xFF00_FFFF,     // 'y'
-            30, 10, 8, 8, 0, 0, 0xFF00_FFFF,     // 'r'
-            40, 10, 8, 8, 0, 0, 0xFF00_FFFF,     // 'e'
+            10,
+            10,
+            8,
+            8,
+            0,
+            0,
+            0xFF00_FFFF, // Yellow 'V'
+            20,
+            10,
+            8,
+            8,
+            0,
+            0,
+            0xFF00_FFFF, // 'y'
+            30,
+            10,
+            8,
+            8,
+            0,
+            0,
+            0xFF00_FFFF, // 'r'
+            40,
+            10,
+            8,
+            8,
+            0,
+            0,
+            0xFF00_FFFF, // 'e'
         ];
 
         // Patch: 4x4 cursor/badge at (100, 10)
@@ -230,12 +260,18 @@ impl GraphicsRenderer {
             InteractiveEvent::Resize { width, height } => {
                 self.scene.width = width;
                 self.scene.height = height;
-                self.scene.background.resize((width * height) as usize, 0xFF20_2020);
-                self.retained_framebuffer.resize((width * height) as usize, 0);
+                self.scene
+                    .background
+                    .resize((width * height) as usize, 0xFF20_2020);
+                self.retained_framebuffer
+                    .resize((width * height) as usize, 0);
                 self.scene.clip_rect = (0, 0, width, height);
             }
             InteractiveEvent::PointerMove { x, y } => {
-                self.scene.patch_dest = (x.min(self.scene.width.saturating_sub(self.scene.patch_w)), y.min(self.scene.height.saturating_sub(self.scene.patch_h)));
+                self.scene.patch_dest = (
+                    x.min(self.scene.width.saturating_sub(self.scene.patch_w)),
+                    y.min(self.scene.height.saturating_sub(self.scene.patch_h)),
+                );
             }
             InteractiveEvent::PointerClick { x, y } => {
                 // Insert a click ripple / highlight segment
@@ -266,13 +302,19 @@ impl GraphicsRenderer {
             } => {
                 self.scene.patch_w = patch_w;
                 self.scene.patch_h = patch_h;
-                self.scene.patch_dest = (dest_x, dest_y);
+                self.scene.patch_dest = (
+                    dest_x.min(self.scene.width.saturating_sub(patch_w)),
+                    dest_y.min(self.scene.height.saturating_sub(patch_h)),
+                );
                 self.scene.patch = pixels;
             }
             InteractiveEvent::BurstInput { count } => {
                 for i in 0..count {
                     let offset = (i as u32) % 50;
-                    self.scene.patch_dest = (100 + offset, 10 + offset);
+                    let px = (10 + offset).min(self.scene.width.saturating_sub(self.scene.patch_w));
+                    let py =
+                        (10 + offset).min(self.scene.height.saturating_sub(self.scene.patch_h));
+                    self.scene.patch_dest = (px, py);
                 }
             }
             InteractiveEvent::DeviceLoss => {
@@ -298,7 +340,17 @@ impl GraphicsRenderer {
         let segment_count = (self.scene.segments.len() / 4) as u32;
         let glyph_count = (self.scene.glyphs.len() / 7) as u32;
         let (c_min_x, c_min_y, c_max_x, c_max_y) = self.scene.clip_rect;
-        let (p_dx, p_dy) = self.scene.patch_dest;
+        let has_patch =
+            !self.scene.patch.is_empty() && self.scene.patch_w > 0 && self.scene.patch_h > 0;
+        let (patch_w, patch_h, patch_dest) = if has_patch {
+            (
+                self.scene.patch_w,
+                self.scene.patch_h,
+                self.scene.patch_dest,
+            )
+        } else {
+            (1, 1, (self.scene.width, self.scene.height))
+        };
 
         let params = InteractiveGraphicsPipelineParams {
             width: self.scene.width,
@@ -311,9 +363,9 @@ impl GraphicsRenderer {
             atlas_w: self.scene.atlas_w.max(1),
             atlas_h: self.scene.atlas_h.max(1),
             clip_rect: (c_min_x, c_min_y, c_max_x, c_max_y),
-            patch_w: self.scene.patch_w.max(1),
-            patch_h: self.scene.patch_h.max(1),
-            patch_dest: (p_dx, p_dy),
+            patch_w,
+            patch_h,
+            patch_dest,
         };
 
         let graph = build_interactive_graphics_pipeline(params)
@@ -322,7 +374,9 @@ impl GraphicsRenderer {
         let mut facts = ExternalFacts::new(Digest([76; 32]), BTreeMap::new());
         for (v_id, v) in graph.values().iter().enumerate() {
             if v.contract.lifetime == ValueLifetime::Constant {
-                facts.constant_identities.insert(GraphValueId(v_id as u32), Digest([76; 32]));
+                facts
+                    .constant_identities
+                    .insert(GraphValueId(v_id as u32), Digest([76; 32]));
             }
         }
 
@@ -331,7 +385,8 @@ impl GraphicsRenderer {
             facts,
             DeviceFacts::unknown(),
             SearchBudget::new(1, 1, 1, 0, 100_000),
-            CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
+            CompileObjective::minimize_latency()
+                .with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
         )
         .validate()
         .map_err(|e| format!("Pipeline compile request validation failed: {e}"))?;
@@ -342,7 +397,6 @@ impl GraphicsRenderer {
             .find(|b| b.id == "cuda")
             .or_else(|| backends.iter().find(|b| b.id == "wgpu"))
             .or_else(|| backends.first())
-            .copied()
             .ok_or_else(|| {
                 "no admitted device backend registered for interactive graphics frame submission; expected cuda or wgpu".to_string()
             })?;
@@ -367,10 +421,11 @@ impl GraphicsRenderer {
             atlas = vec![0];
         }
         let bg = self.scene.background.clone();
-        let mut patch = self.scene.patch.clone();
-        if patch.is_empty() {
-            patch = vec![0; (self.scene.patch_w.max(1) * self.scene.patch_h.max(1)) as usize];
-        }
+        let patch = if has_patch {
+            self.scene.patch.clone()
+        } else {
+            vec![0; 1]
+        };
 
         let boxes_bytes: Vec<u8> = boxes.iter().flat_map(|x| x.to_le_bytes()).collect();
         let segments_bytes: Vec<u8> = segments.iter().flat_map(|x| x.to_le_bytes()).collect();
@@ -472,7 +527,9 @@ impl BenchmarkHarness {
         let mut facts = ExternalFacts::new(Digest([42; 32]), BTreeMap::new());
         for (v_id, v) in graph.values().iter().enumerate() {
             if v.contract.lifetime == ValueLifetime::Constant {
-                facts.constant_identities.insert(GraphValueId(v_id as u32), Digest([42; 32]));
+                facts
+                    .constant_identities
+                    .insert(GraphValueId(v_id as u32), Digest([42; 32]));
             }
         }
         let request = CompileRequest::new(
@@ -480,7 +537,8 @@ impl BenchmarkHarness {
             facts,
             DeviceFacts::unknown(),
             SearchBudget::new(1, 1, 1, 0, 100_000),
-            CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
+            CompileObjective::minimize_latency()
+                .with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
         )
         .validate()
         .expect("validate");

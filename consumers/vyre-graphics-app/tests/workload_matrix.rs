@@ -30,7 +30,10 @@ fn test_workload_rapid_resize() {
     let resolutions = [(128, 72), (256, 144), (32, 32), (64, 128), (80, 60)];
     for (w, h) in resolutions {
         renderer
-            .handle_event(InteractiveEvent::Resize { width: w, height: h })
+            .handle_event(InteractiveEvent::Resize {
+                width: w,
+                height: h,
+            })
             .expect("resize event");
         let frame = renderer.render_frame().expect("frame render after resize");
         assert_eq!(frame.len(), (w * h) as usize);

@@ -47,12 +47,21 @@ fn test_consumer_uses_only_public_seam_and_standard_ir() {
             "node name must be non-empty neutral identifier"
         );
         for inner_node in node.program.entry() {
-            record_node_kinds(inner_node, &mut observed_node_kinds, &mut observed_expr_kinds);
+            record_node_kinds(
+                inner_node,
+                &mut observed_node_kinds,
+                &mut observed_expr_kinds,
+            );
         }
     }
 
     // Assert that no domain-specific or graphics-specific opcode exists in IR
-    let forbidden_patterns = ["gpu_draw", "raster_intrinsic", "texture_sample_hw", "scissor_hw"];
+    let forbidden_patterns = [
+        "gpu_draw",
+        "raster_intrinsic",
+        "texture_sample_hw",
+        "scissor_hw",
+    ];
     for kind in &observed_node_kinds {
         for forbidden in forbidden_patterns {
             assert!(
@@ -66,7 +75,9 @@ fn test_consumer_uses_only_public_seam_and_standard_ir() {
     let mut facts = ExternalFacts::new(Digest([76; 32]), std::collections::BTreeMap::new());
     for (v_id, v) in graph.values().iter().enumerate() {
         if v.contract.lifetime == ValueLifetime::Constant {
-            facts.constant_identities.insert(GraphValueId(v_id as u32), Digest([76; 32]));
+            facts
+                .constant_identities
+                .insert(GraphValueId(v_id as u32), Digest([76; 32]));
         }
     }
     let request = CompileRequest::new(
@@ -97,7 +108,8 @@ fn consumer_manifest_carries_zero_forbidden_publication_class_dependencies() {
     let ownership_path = workspace_root.join("docs/CRATE_OWNERSHIP.toml");
     let ownership_str = std::fs::read_to_string(&ownership_path)
         .unwrap_or_else(|e| panic!("failed to read {}: {e}", ownership_path.display()));
-    let ownership: toml::Value = toml::from_str(&ownership_str).expect("parse CRATE_OWNERSHIP.toml");
+    let ownership: toml::Value =
+        toml::from_str(&ownership_str).expect("parse CRATE_OWNERSHIP.toml");
 
     let mut forbidden_classes = std::collections::BTreeMap::new();
     if let Some(crates) = ownership.get("crate").and_then(|c| c.as_array()) {
@@ -166,7 +178,9 @@ vyre-megakernel = { path = "../../vyre-megakernel" }
     if let Some(deps) = manifest_toml.get("dependencies").and_then(|d| d.as_table()) {
         for dep_name in deps.keys() {
             if let Some(class) = forbidden_classes.get(dep_name.as_str()) {
-                errors.push(format!("found forbidden dep `{dep_name}` with class `{class}`"));
+                errors.push(format!(
+                    "found forbidden dep `{dep_name}` with class `{class}`"
+                ));
             }
         }
     }
@@ -176,8 +190,8 @@ vyre-megakernel = { path = "../../vyre-megakernel" }
 
 #[test]
 fn test_reference_driver_is_registered_in_dev_dependencies() {
-    let backend_id = vyre_driver_reference::registered_backend_id();
-    assert_eq!(backend_id, Some("reference"));
+    let profile = vyre_driver_reference::target_profile().expect("reference target profile");
+    assert_eq!(profile.identity(), "reference-graph");
 }
 
 fn record_node_kinds(
@@ -195,7 +209,11 @@ fn record_node_kinds(
             record_expr_kinds(index, expr_kinds);
             record_expr_kinds(value, expr_kinds);
         }
-        Node::If { cond, then, otherwise } => {
+        Node::If {
+            cond,
+            then,
+            otherwise,
+        } => {
             node_kinds.insert("If".into());
             record_expr_kinds(cond, expr_kinds);
             for n in then {
@@ -213,7 +231,9 @@ fn record_node_kinds(
                 record_node_kinds(n, node_kinds, expr_kinds);
             }
         }
-        Node::Region { generator, body, .. } => {
+        Node::Region {
+            generator, body, ..
+        } => {
             node_kinds.insert(format!("Region:{generator}"));
             for n in body.iter() {
                 record_node_kinds(n, node_kinds, expr_kinds);
@@ -227,7 +247,9 @@ fn record_node_kinds(
 
 fn record_expr_kinds(expr: &Expr, expr_kinds: &mut BTreeSet<String>) {
     match expr {
-        Expr::Var(..) => { expr_kinds.insert("Var".into()); }
+        Expr::Var(..) => {
+            expr_kinds.insert("Var".into());
+        }
         Expr::LitU32(..) | Expr::LitI32(..) | Expr::LitF32(..) | Expr::LitBool(..) => {
             expr_kinds.insert("Lit".into());
         }
@@ -240,7 +262,11 @@ fn record_expr_kinds(expr: &Expr, expr_kinds: &mut BTreeSet<String>) {
             expr_kinds.insert(format!("UnOp:{op:?}"));
             record_expr_kinds(operand, expr_kinds);
         }
-        Expr::Select { cond, true_val, false_val } => {
+        Expr::Select {
+            cond,
+            true_val,
+            false_val,
+        } => {
             expr_kinds.insert("Select".into());
             record_expr_kinds(cond, expr_kinds);
             record_expr_kinds(true_val, expr_kinds);
