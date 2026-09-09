@@ -32,9 +32,11 @@ use crate::gates::scan::Tree;
 
 /// Crates that evaluate a user program on the host.
 ///
-/// `vyre-reference` is the interpreter. `vyre-driver-reference` registers it as
-/// a backend, so linking that crate makes host execution reachable by backend
-/// id without naming the interpreter at all.
+/// `vyre-reference` is the interpreter. `vyre-driver-reference` wraps it in
+/// `CpuRefEvaluator` and `ReferenceSemanticExecutor`, so linking that crate
+/// makes host execution reachable without naming the interpreter at all. It
+/// registers no backend, so the route is a named call rather than a backend
+/// id, which is why a shipped crate still may not link it.
 const HOST_EVALUATORS: &[&str] = &["vyre-reference", "vyre-driver-reference"];
 
 /// The dependency kind that ends up in a shipped artifact.

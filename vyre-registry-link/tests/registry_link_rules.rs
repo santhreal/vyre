@@ -406,29 +406,31 @@ fn every_live_operation_has_descriptor_lowering_and_conformance_provider() {
     );
 }
 
+/// WHY: this rule rejected an id whose text contained `ref` or `cpu`, so a
+/// host evaluator registered under any other name passed it while the rule's
+/// name claimed the route was closed. The decision now comes from
+/// `vyre_test_support::backend_execution_domain`, which has one variant per
+/// decided backend and an exhaustive match with no catch-all arm, so an
+/// undecided id fails here and a new variant fails to compile until someone
+/// records its domain.
+///
+/// This binary reads the registry under this crate's default features, which
+/// is the widest driver selection the tree declares. The same ledger judges
+/// the explicit four-driver selection in
+/// `vyre-driver-reference/tests/production_registry_execution_domain.rs`.
 #[test]
-fn backend_registry_contains_no_cpu_or_reference_execution_route() {
+fn no_registered_backend_executes_on_the_host() {
     let registry = live_backend_registry().expect("live backend registry must freeze cleanly");
     assert!(
         !registry.is_empty(),
-        "live backend registry must contain registered GPU drivers"
+        "Fix: the live backend registry is empty, so this rule judges nothing"
     );
     for backend in registry {
-        let id_str = backend.id.to_lowercase();
-        assert!(
-            !id_str.contains("ref") && !id_str.contains("cpu"),
-            "backend registry must not contain reference or CPU execution route: `{}`",
-            backend.id
-        );
-        let target_str = backend.target_id.as_str().to_lowercase();
-        assert!(
-            !target_str.contains("ref") && !target_str.contains("cpu"),
-            "backend target ID must not be CPU or reference: `{}`",
-            backend.target_id.as_str()
-        );
+        vyre_test_support::backend_execution_domain::assert_dispatch_leaves_the_host(backend.id);
         assert!(
             !backend.reference_oracle,
-            "backend registration must not claim to be a reference oracle: `{}`",
+            "Fix: backend `{}` sets `reference_oracle`, so a conformance oracle is in the \
+             production registry",
             backend.id
         );
     }

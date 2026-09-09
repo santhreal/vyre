@@ -37,16 +37,23 @@ pub fn assert_backend_registry_metadata<LinkRegistration: 'static>(
     );
 }
 
-/// Assert preferred dispatch acquires `expected_backend_id` and never a host
-/// oracle.
+/// Assert preferred dispatch acquires `expected_backend_id` and that the
+/// acquired backend dispatches to a device.
 ///
 /// `LinkRegistration` is the backend's registration type, named for the same
 /// linking reason as in [`assert_backend_registry_metadata`].
 ///
+/// The domain check reads
+/// [`crate::backend_execution_domain`] rather than rejecting the two ids the
+/// interpreter used to register under. Those two `assert_ne!` calls sat after
+/// the equality above, so they could only fire for an `expected_backend_id`
+/// the caller itself named, and they said nothing about a host path registered
+/// under a third name.
+///
 /// # Panics
 /// Panics with `acquisition_message` when no backend is acquired, with
-/// `selection_message` when another backend wins, and when the selection is a
-/// reference interpreter.
+/// `selection_message` when another backend wins, and when the selection
+/// carries no device execution-domain decision.
 pub fn assert_preferred_dispatch_selects<LinkRegistration: 'static>(
     expected_backend_id: &str,
     acquisition_message: &str,
@@ -60,6 +67,5 @@ pub fn assert_preferred_dispatch_selects<LinkRegistration: 'static>(
         actual_id, expected_backend_id,
         "{selection_message}; preferred dispatch got `{actual_id}`"
     );
-    assert_ne!(actual_id, "reference");
-    assert_ne!(actual_id, "cpu-ref");
+    crate::backend_execution_domain::assert_dispatch_leaves_the_host(actual_id);
 }
