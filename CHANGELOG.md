@@ -4344,6 +4344,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   and the masker is built on the same `opaque_span` the registration parser
   uses, so a masker and a parser can no longer disagree about whether a raw
   string or a nested block comment holds code.
+- Workspace lints deny dead code, unused variables, and unreachable public
+  items across all feature lanes, eliminating unowned helpers in conform,
+  metal, math, and megakernel crates.
 - Three duplication pins record what the tree measures: `xtask-evidence` 475 to
   91 duplicated lines, `xtask-registry` 58 to 49, and `vyre-foundation` 4127 to
   4028, each with `total_lines` measured. A pin with room under it hides the
@@ -6735,6 +6738,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   held to its own declared tolerance, and the attribution is refused rather
   than guessed when the second stage writes the piped buffer. No budget was
   widened.
+- Conformance execution enforces bounded worker process isolation, timeout
+  termination bounds, and aligned certificate signing contracts across all
+  failure modes.
 - The conformance CI lane now rejects a generated conformance matrix that
   differs from the committed release evidence.
 - Logical contractions lower into scalar, SIMT tiled, and matrix-instruction
