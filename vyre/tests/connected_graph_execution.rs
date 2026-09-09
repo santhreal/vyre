@@ -99,7 +99,10 @@ fn facade_compiles_multi_stage_connected_dataflow_graph() {
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0x56; 32]), BTreeMap::new()),
-        DeviceFacts::new(vyre_foundation::validate::BackendCapabilities::default(), 1024),
+        DeviceFacts::new(
+            vyre_foundation::validate::BackendCapabilities::default(),
+            1024,
+        ),
         SearchBudget::new(32, 1_000_000, 4, 0, 10_000_000),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
     )

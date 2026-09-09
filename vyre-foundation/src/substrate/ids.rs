@@ -7,7 +7,9 @@ use core::fmt;
 use serde::{Deserialize, Serialize};
 
 /// Canonical identifier for an interned string or symbol.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 pub struct InternedStringId(pub u32);
 
 impl fmt::Display for InternedStringId {
@@ -17,7 +19,9 @@ impl fmt::Display for InternedStringId {
 }
 
 /// Canonical identifier for an interned data or tensor type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 pub struct InternedTypeId(pub u32);
 
 impl fmt::Display for InternedTypeId {
@@ -27,7 +31,9 @@ impl fmt::Display for InternedTypeId {
 }
 
 /// Canonical identifier for an interned constant value or literal blob.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 pub struct InternedConstId(pub u32);
 
 impl fmt::Display for InternedConstId {
@@ -37,7 +43,9 @@ impl fmt::Display for InternedConstId {
 }
 
 /// Canonical identifier for an interned tensor or buffer layout.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 pub struct InternedLayoutId(pub u32);
 
 impl fmt::Display for InternedLayoutId {
@@ -47,7 +55,9 @@ impl fmt::Display for InternedLayoutId {
 }
 
 /// Canonical identifier for an expression in a hash-consed expression arena.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 pub struct ExprId(pub u32);
 
 impl fmt::Display for ExprId {
@@ -57,7 +67,9 @@ impl fmt::Display for ExprId {
 }
 
 /// Canonical identifier for a node in a hash-consed node arena.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 pub struct NodeId(pub u32);
 
 impl fmt::Display for NodeId {
@@ -67,7 +79,9 @@ impl fmt::Display for NodeId {
 }
 
 /// Canonical identifier for a logical region.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 pub struct RegionId(pub u32);
 
 impl fmt::Display for RegionId {
@@ -77,7 +91,9 @@ impl fmt::Display for RegionId {
 }
 
 /// Canonical identifier for a schedule node in selected schedule IR.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 pub struct ScheduleNodeId(pub u32);
 
 impl fmt::Display for ScheduleNodeId {
@@ -87,7 +103,9 @@ impl fmt::Display for ScheduleNodeId {
 }
 
 /// Canonical identifier for a lowered physical kernel descriptor.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 pub struct PhysicalKernelId(pub u32);
 
 impl fmt::Display for PhysicalKernelId {
@@ -97,7 +115,9 @@ impl fmt::Display for PhysicalKernelId {
 }
 
 /// Canonical identifier for a compiled target artifact.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 pub struct ArtifactId(pub u32);
 
 impl fmt::Display for ArtifactId {
@@ -107,7 +127,9 @@ impl fmt::Display for ArtifactId {
 }
 
 /// Monotonic revision sequence for compiler query tracking and invalidation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 pub struct Revision(pub u64);
 
 impl Revision {

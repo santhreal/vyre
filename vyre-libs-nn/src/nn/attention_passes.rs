@@ -4,11 +4,11 @@ use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
-use vyre_libs_math::math::dot_partial::{dot_partial, OP_ID as DOT_PARTIAL_OP_ID};
 use crate::nn::attention_stability::{
     bounded_exp_arg, bounded_score, direct_score_expr, positive_denominator,
 };
 use crate::nn::f32_stability::{finite_or, flush_tiny};
+use vyre_libs_math::math::dot_partial::{dot_partial, OP_ID as DOT_PARTIAL_OP_ID};
 
 /// Stable op id for the max-score pass.
 pub const ATTENTION_MAX_PASS_OP_ID: &str = "vyre-libs::nn::attention_max_pass";

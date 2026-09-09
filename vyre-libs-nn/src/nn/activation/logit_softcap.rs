@@ -3,8 +3,8 @@
 //! Category A composition  -  element-wise. Used in the Parameter Golf
 //! recipe to bound logits before cross-entropy loss (default cap=30.0).
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{Expr, Program, UnOp};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 use crate::nn::f32_stability::flush_tiny;
 

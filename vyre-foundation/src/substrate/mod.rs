@@ -22,9 +22,7 @@ pub use ids::{
     ArtifactId, ExprId, InternedConstId, InternedLayoutId, InternedStringId, InternedTypeId,
     NodeId, PhysicalKernelId, RegionId, Revision, ScheduleNodeId,
 };
-pub use pass_contracts::{
-    derive_registered_pass_descriptors, PassDescriptor, TransformOutcome,
-};
+pub use pass_contracts::{derive_registered_pass_descriptors, PassDescriptor, TransformOutcome};
 pub use query::{
     CancellationToken, MemoryAccounting, Query, QueryEngine, QueryError, QueryKey, QueryOutput,
 };

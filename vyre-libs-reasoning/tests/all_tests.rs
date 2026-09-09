@@ -17,4 +17,3 @@ pub mod predict_impact_via_reference_parity;
 
 #[path = "string_diagram_via_reference_parity.rs"]
 pub mod string_diagram_via_reference_parity;
-

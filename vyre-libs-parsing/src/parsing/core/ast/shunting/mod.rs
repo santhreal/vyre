@@ -4,12 +4,12 @@
 //! Each statement owns a fixed slot budget, so the whole pass is one launch with
 //! no per-statement allocation.
 
-use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 use crate::parsing::composition::child_phase;
 use emit::{binary_token_body, emit_value_leaf, final_sweep_body, rparen_body};
 use operator::{is_assignment_token, is_value_token, precedence};
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 use vyre_spec::c11_token::*;
 
 mod emit;

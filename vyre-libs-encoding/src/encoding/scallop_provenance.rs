@@ -53,11 +53,11 @@
 //! See `vyre-libs::math::scallop_join::PROVENANCE_SELF_CONSUMER`
 //! for the cross-link from the primitive's docs back here.
 
+use vyre_foundation::ir::Program;
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_libs_math::math::scallop_join;
-use vyre_foundation::ir::Program;
 use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Default safety cap on Datalog fixpoint iterations. Monotone Datalog

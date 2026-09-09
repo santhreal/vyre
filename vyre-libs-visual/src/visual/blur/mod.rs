@@ -214,7 +214,8 @@ fn gaussian_blur_pass(
         vec![
             Node::let_bind("idx", Expr::logical_index(0)),
             Node::if_then(Expr::lt(Expr::var("idx"), Expr::u32(count)), {
-                let (py, px) = vyre_libs_builder::builder::stencil::decompose_index(&Expr::var("idx"), width);
+                let (py, px) =
+                    vyre_libs_builder::builder::stencil::decompose_index(&Expr::var("idx"), width);
                 let mut body = vec![
                     Node::let_bind("px", px),
                     Node::let_bind("py", py),
@@ -319,7 +320,11 @@ fn gaussian_blur_pass(
                 ));
                 body.push(Node::let_bind(
                     "oidx",
-                    vyre_libs_builder::builder::stencil::flat_index(Expr::var("py"), width, Expr::var("px")),
+                    vyre_libs_builder::builder::stencil::flat_index(
+                        Expr::var("py"),
+                        width,
+                        Expr::var("px"),
+                    ),
                 ));
                 body.push(Node::store(output, Expr::var("oidx"), Expr::var("packed")));
                 body

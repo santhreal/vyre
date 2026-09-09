@@ -2,10 +2,10 @@
 
 #![forbid(unsafe_code)]
 
-use crate::wire_words;
-use wire_words::{f32_bytes, f32_words_of as decode_f32};
+use crate::wire_words::f32_words_of as decode_f32;
+use vyre_test_support::test_parity_oracles::f32_bytes;
 
-use vyre::ir::{
+use vyre_foundation::ir::{
     BufferAccess, DataType, GraphInput, GraphOutput, Program, ProgramGraph, ShapeDim,
     ValueContract, ValueLifetime,
 };

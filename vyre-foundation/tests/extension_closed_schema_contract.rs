@@ -11,9 +11,8 @@ use vyre_foundation::ir::{
 };
 use vyre_foundation::optimizer::expr_arena::ExprArena;
 use vyre_spec::{
-    ExtensionIdentity, ExtensionNamespace, ExtensionNumericalContract,
-    ExtensionProofFields, ExtensionResourceBounds, ExtensionSchema, ExtensionSemVer,
-    SideEffectClass,
+    ExtensionIdentity, ExtensionNamespace, ExtensionNumericalContract, ExtensionProofFields,
+    ExtensionResourceBounds, ExtensionSchema, ExtensionSemVer, SideEffectClass,
 };
 
 #[derive(Debug)]
@@ -169,7 +168,9 @@ fn catalog_bundle_refuses_duplicate_identities_and_version_collisions_by_name() 
         proof_fields: proof_a.clone(),
     };
 
-    bundle.register(schema_a.clone()).expect("initial registration succeeds");
+    bundle
+        .register(schema_a.clone())
+        .expect("initial registration succeeds");
 
     // 1. Exact duplicate identity refusal
     let duplicate_err = bundle
@@ -368,8 +369,9 @@ fn wire_decode_rejects_payloads_that_do_not_round_trip_canonically() {
     );
 
     let invalid_wire = invalid_prog.to_wire().expect("encodes wire bytes");
-    let decode_err = Program::from_wire(&invalid_wire)
-        .expect_err("Decoder must reject extension whose deserialization fails byte equality round-trip");
+    let decode_err = Program::from_wire(&invalid_wire).expect_err(
+        "Decoder must reject extension whose deserialization fails byte equality round-trip",
+    );
     assert!(
         decode_err
             .to_string()

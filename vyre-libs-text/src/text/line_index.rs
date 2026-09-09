@@ -19,11 +19,11 @@
 use std::sync::Arc;
 use vyre_foundation::composition::{tag_program, trap_program, wrap_anonymous_region};
 
-use vyre_libs_reduce::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32_with_block_lanes;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Node, Program, PORTABLE_WORKGROUP_INVOCATIONS,
 };
 use vyre_foundation::GeometryRequirements;
+use vyre_libs_reduce::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32_with_block_lanes;
 
 /// Stable op id for the registered dialect wrapper.
 pub const LINE_INDEX_OP_ID: &str = "vyre-libs::text::line_index";
@@ -212,7 +212,7 @@ fn empty_line_index_program(source: &str, lines: &str, source_type: DataType) ->
             BufferDecl::storage(source, 0, BufferAccess::ReadOnly, source_type).with_count(0),
             BufferDecl::output(lines, 1, DataType::U32)
                 .with_count(0)
-                .with_output_byte_range(0..0),
+                .with_full_output_byte_range(),
         ],
         [1, 1, 1],
         vec![wrap_anonymous_region(LINE_INDEX_OP_ID, Vec::new())],

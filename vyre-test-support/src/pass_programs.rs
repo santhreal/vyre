@@ -415,7 +415,7 @@ pub fn atomic_sum_program(count: u32, output_byte_range: bool) -> Program {
     let mut accumulator =
         BufferDecl::storage("sum", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1);
     if output_byte_range {
-        accumulator = accumulator.with_output_byte_range(0..4);
+        accumulator = accumulator.with_full_output_byte_range();
     }
     Program::wrapped(
         vec![

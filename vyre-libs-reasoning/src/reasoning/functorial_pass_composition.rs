@@ -39,7 +39,9 @@
 //! Whole-pass migrations compose this primitive with the tree topology
 //! helpers instead of changing this row-level contract.
 
-use vyre_libs_builder::plumbing::host::dispatch_buffers::{decode_u32_output_exact, u32_slice_to_le_bytes};
+use vyre_libs_builder::plumbing::host::dispatch_buffers::{
+    decode_u32_output_exact, u32_slice_to_le_bytes,
+};
 use vyre_libs_graph::graph::functorial::functor_apply_sized;
 use vyre_megakernel::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
@@ -174,11 +176,15 @@ mod tests {
                 ));
             }
             let source = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
-            let mapping = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
+            let mapping =
+                vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
             let target_n_cols = inputs[2].len() / std::mem::size_of::<u32>();
             assert_eq!(source.len(), mapping.len());
             let out = apply_pass_functor(&source, &mapping, target_n_cols as u32);
-            vyre_test_support::test_parity_oracles::semantic_output(request, vec![u32_slice_to_le_bytes(&out)])
+            vyre_test_support::test_parity_oracles::semantic_output(
+                request,
+                vec![u32_slice_to_le_bytes(&out)],
+            )
         }
     }
 

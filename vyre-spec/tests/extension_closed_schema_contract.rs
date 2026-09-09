@@ -98,14 +98,8 @@ fn canonical_schema_digest_and_identity_round_trip() {
         target_capability: "sm_90a".into(),
     };
 
-    let digest = ExtensionSchema::compute_digest(
-        namespace.as_str(),
-        &version,
-        &[],
-        &[],
-        &[],
-        &proof_fields,
-    );
+    let digest =
+        ExtensionSchema::compute_digest(namespace.as_str(), &version, &[], &[], &[], &proof_fields);
 
     let identity = ExtensionIdentity::new(namespace.clone(), version, digest);
     let canonical_str = identity.to_canonical_string();
@@ -146,7 +140,10 @@ fn canonical_schema_digest_and_identity_round_trip() {
         &[],
         &modified_proof,
     );
-    assert_ne!(digest, modified_digest, "Digest must differ when purity changes");
+    assert_ne!(
+        digest, modified_digest,
+        "Digest must differ when purity changes"
+    );
 
     let mut modified_proof2 = proof_fields.clone();
     modified_proof2.target_capability = "sm_80".into();
@@ -158,5 +155,8 @@ fn canonical_schema_digest_and_identity_round_trip() {
         &[],
         &modified_proof2,
     );
-    assert_ne!(digest, modified_digest2, "Digest must differ when target capability changes");
+    assert_ne!(
+        digest, modified_digest2,
+        "Digest must differ when target capability changes"
+    );
 }

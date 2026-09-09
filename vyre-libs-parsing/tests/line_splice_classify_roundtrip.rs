@@ -5,7 +5,9 @@
 #![cfg(feature = "parsing-kernels")]
 
 use vyre_foundation::ir::DataType;
-use vyre_libs_parsing::parsing::line_splice_classify::{line_splice_classify, line_splice_classify_u8};
+use vyre_libs_parsing::parsing::line_splice_classify::{
+    line_splice_classify, line_splice_classify_u8,
+};
 use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_mask;
 use vyre_reference::value::Value;
 

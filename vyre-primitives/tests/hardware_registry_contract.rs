@@ -87,7 +87,10 @@ fn canonical_catalog_is_deterministic_and_fixture_complete() {
 #[test]
 fn all_hardware_intrinsics_carry_valid_contract_records_with_explicit_decisions() {
     let entries = all_entries().collect::<Vec<_>>();
-    assert!(!entries.is_empty(), "hardware intrinsic entries must not be empty");
+    assert!(
+        !entries.is_empty(),
+        "hardware intrinsic entries must not be empty"
+    );
 
     for intrinsic in entries {
         assert!(

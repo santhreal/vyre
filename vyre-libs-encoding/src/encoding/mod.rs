@@ -28,5 +28,10 @@ pub(crate) fn decode_first_output(
             "Fix: {context} expected at least one output buffer, got 0."
         )));
     }
-    vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_output_exact(&outputs[0], words, context, out)
+    vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_output_exact(
+        &outputs[0],
+        words,
+        context,
+        out,
+    )
 }

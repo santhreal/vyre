@@ -6,6 +6,9 @@
 //!
 //! This replaces ad-hoc cache invalidation with formal causal analysis.
 
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_libs_analysis::analysis::dataflow_fixpoint::reachability_closure_via_into;
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     checked_square_cells, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
@@ -13,9 +16,6 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
 use vyre_libs_graph::graph::do_calculus::{
     impact_mask_from_closure, intervention_delete_incoming, rule2_reverse_incoming, rule3_subgraph,
 };
-use vyre_libs_analysis::analysis::dataflow_fixpoint::reachability_closure_via_into;
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_megakernel::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
@@ -776,7 +776,10 @@ pub(crate) fn try_do_project_impacted_lineage_entries(
     let closure_count = if n == 0 {
         1
     } else {
-        vyre_libs_builder::plumbing::operand::shape::square_matrix_cells(PROJECT_LINEAGE_IMPACT_OP_ID, n)?
+        vyre_libs_builder::plumbing::operand::shape::square_matrix_cells(
+            PROJECT_LINEAGE_IMPACT_OP_ID,
+            n,
+        )?
     };
     let j = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(

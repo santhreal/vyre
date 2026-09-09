@@ -27,7 +27,7 @@ use std::collections::BTreeSet;
 
 use vyre_foundation::guarded_logical_span;
 use vyre_foundation::ir::{DataType, Program};
-use vyre_libs::llm::paged_kv::{paged_kv_append, paged_kv_gather, PagedKvCache, PagedKvError};
+use vyre_libs_nn::llm::paged_kv::{paged_kv_append, paged_kv_gather, PagedKvCache, PagedKvError};
 use vyre_libs_nn::nn::attention::{
     attention_head_to_token, attention_token_to_head, kv_cache_append, partial_rope,
     AttentionPermuteSpec, KvCacheAppendSpec, ATTENTION_LAYOUT_WORKGROUP_SIZE,

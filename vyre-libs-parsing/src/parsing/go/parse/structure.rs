@@ -1,13 +1,13 @@
 //! Go declaration and span extraction, and the record widths a host reader
 //! decodes them with.
 
-use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 use crate::parsing::go::parse::token_predicates::{
     emit_keyword_span_record_nodes, emit_span_record_nodes, token_is_ident, token_is_keyword,
     token_len, token_start, token_type_eq,
 };
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 use vyre_spec::go_token::{TOK_LBRACE, TOK_LPAREN, TOK_RBRACE, TOK_RPAREN, TOK_STRING};
 
 /// Words per emitted Go declaration record.

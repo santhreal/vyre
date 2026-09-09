@@ -32,7 +32,9 @@ use crate::harness;
 use harness::ir_fingerprint::assert_pinned_ir_fingerprints;
 use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_foundation::operation::OperationRegistry;
-use vyre_libs_parsing::parsing::core::ast::shunting::{ast_shunting_yard, ast_shunting_yard_with_capacity};
+use vyre_libs_parsing::parsing::core::ast::shunting::{
+    ast_shunting_yard, ast_shunting_yard_with_capacity,
+};
 use vyre_libs_parsing::parsing::go::parse::structure::{
     go_extract_declarations, go_extract_packages_and_imports,
 };

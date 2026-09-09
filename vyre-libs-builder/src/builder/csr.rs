@@ -9,7 +9,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
 /// Words needed to store `bit_count` bits.
 #[inline]
 #[must_use]
-pub const fn bitset_words(bit_count: u32) -> u32 { (bit_count + 31) / 32 }
+pub const fn bitset_words(bit_count: u32) -> u32 {
+    (bit_count + 31) / 32
+}
 
 /// Default workgroup size for CSR traversal and frontier step programs.
 pub const CSR_TRAVERSAL_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];

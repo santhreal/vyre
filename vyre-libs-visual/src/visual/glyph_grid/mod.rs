@@ -106,7 +106,11 @@ pub fn glyph_grid_blend(
         "texel",
         Expr::add(
             Expr::mul(Expr::var("glyph"), Expr::u32(cell_area)),
-            vyre_libs_builder::builder::stencil::flat_index(Expr::var("py"), shape.cell_width, Expr::var("px")),
+            vyre_libs_builder::builder::stencil::flat_index(
+                Expr::var("py"),
+                shape.cell_width,
+                Expr::var("px"),
+            ),
         ),
     ));
     body.push(Node::let_bind(

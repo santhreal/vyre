@@ -271,9 +271,9 @@ inventory::submit! {
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod primitive_tests {
     use super::*;
+    use vyre_reference::composition_witness::ziftsieve_extract_literals_witness as ziftsieve_reference_extract_literals;
     use vyre_test_support::test_parity_oracles::bytes_to_u32;
     use vyre_test_support::test_parity_oracles::eval_bytes;
-    use vyre_reference::composition_witness::ziftsieve_extract_literals_witness as ziftsieve_reference_extract_literals;
 
     fn literals(
         input: &[u8],

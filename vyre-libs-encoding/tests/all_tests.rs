@@ -32,4 +32,3 @@ pub mod self_consumer_conform;
 
 #[path = "vsa_fingerprint_via_reference_parity.rs"]
 pub mod vsa_fingerprint_via_reference_parity;
-

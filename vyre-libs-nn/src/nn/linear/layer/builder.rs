@@ -4,11 +4,11 @@ use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::{DataType, Expr, Node, Program};
 
 use vyre_libs_builder::builder::gemm::ContractionComposer;
-use vyre_libs_math::math::linalg::MatmulBias;
 use vyre_libs_builder::{
     builder::{check_tensors, BuildOptions},
     plumbing::operand::tensor_ref::{TensorRef, TensorRefError},
 };
+use vyre_libs_math::math::linalg::MatmulBias;
 
 pub(super) const LINEAR_OP_ID: &str = "vyre-libs::nn::linear";
 /// Typed Cat-A builder for [`linear`].

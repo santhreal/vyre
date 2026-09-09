@@ -34,6 +34,6 @@ pub mod workgroup_any;
 // Crate-private: the sweep and its pass are `pub(crate)` composition
 // internals, so a `pub mod` here would add a module to the published surface
 // with nothing in it.
+pub mod reduction_tree;
 pub mod workgroup_scan;
 pub mod workgroup_tree;
-pub mod reduction_tree;

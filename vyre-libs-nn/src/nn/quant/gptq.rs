@@ -2,8 +2,8 @@
 //!
 //! `clip_threshold = k * std(row)`  -  int6 uses k=12.85, int8 uses k=20.0.
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{DataType, Expr, Program};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 use crate::nn::f32_stability::{finite_or, positive_finite_or_min as positive_scale};
 

@@ -44,7 +44,9 @@
 //! (the greedy schedule never picks two overlapping rewrites).
 
 use super::{checked_product_count, decode_u32_output_exact};
-use vyre_libs_builder::plumbing::host::dispatch_buffers::{ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes};
+use vyre_libs_builder::plumbing::host::dispatch_buffers::{
+    ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
+};
 use vyre_libs_parsing::parsing::planar_rewrite::planar_rewrite_schedule;
 use vyre_megakernel::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
@@ -173,11 +175,11 @@ pub fn schedule_disjoint_rewrites_via_with_scratch_into(
 mod tests {
     use super::*;
     use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_test_support::test_parity_oracles::{policy, StaticOutputs};
     use vyre_reference::composition_witness::{
         planar_rewrite_schedule_witness as reference_planar_rewrite_schedule,
         reduce_count_non_zero_witness as count_scheduled,
     };
+    use vyre_test_support::test_parity_oracles::{policy, StaticOutputs};
 
     fn schedule_disjoint_rewrites(candidates: &[u32], h: u32, w: u32, k: u32) -> Vec<u32> {
         use vyre_libs_builder::telemetry::{bump, planar_rewrite_pass_scheduler_calls};

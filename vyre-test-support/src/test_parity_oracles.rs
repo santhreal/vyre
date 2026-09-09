@@ -156,9 +156,9 @@ fn read_u32s(bytes: &[u8]) -> Vec<u32> {
         .chunks_exact(4)
         .map(|chunk| {
             u32::from_le_bytes(
-                chunk
-                    .try_into()
-                    .expect("Fix: four-byte chunk is a u32 word; state a buffer that holds the word."),
+                chunk.try_into().expect(
+                    "Fix: four-byte chunk is a u32 word; state a buffer that holds the word.",
+                ),
             )
         })
         .collect()
@@ -381,11 +381,7 @@ pub fn semantic_output_named(
 /// `buffers` is the complete argument list in declaration order, outputs
 /// included: a zeroed vector of the right length is what the interpreter
 /// writes into, and a zero-length one is a real argument, not an omission.
-pub fn eval_bytes(
-    label: &str,
-    program: &Program,
-    buffers: Vec<Vec<u8>>,
-) -> Vec<Vec<u8>> {
+pub fn eval_bytes(label: &str, program: &Program, buffers: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
     try_eval_bytes(program, buffers).unwrap_or_else(|error| {
         panic!("Fix: {label} program must execute in the reference interpreter: {error:?}")
     })
@@ -412,15 +408,6 @@ pub fn try_eval_bytes(
 pub fn u32_bytes(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
-
-/// `math/linalg/matmul_tiled` and `math/semiring_gemm` are the only matmul
-/// witnesses.
-pub const MATMUL_2X2_EXPECTED_BYTES: [u8; 16] = [
-    0x13, 0x00, 0x00, 0x00, // 19
-    0x16, 0x00, 0x00, 0x00, // 22
-    0x2b, 0x00, 0x00, 0x00, // 43
-    0x32, 0x00, 0x00, 0x00, // 50
-];
 
 /// Every registration checked against f32 bytes is a conv, fft, weighted-sum,
 /// strassen or fused-activation op.
@@ -506,35 +493,21 @@ pub fn eval_bytes_lane_order(
 }
 
 /// Run a program whose arguments and one output are all f32.
-pub fn eval_f32(
-    label: &str,
-    program: &Program,
-    inputs: &[&[f32]],
-    output_len: usize,
-) -> Vec<f32> {
+pub fn eval_f32(label: &str, program: &Program, inputs: &[&[f32]], output_len: usize) -> Vec<f32> {
     let mut buffers: Vec<Vec<u8>> = inputs.iter().map(|input| f32_bytes(input)).collect();
     buffers.push(vec![0u8; output_len * 4]);
     decode_f32(&eval_bytes(label, program, buffers)[0])
 }
 
 /// Run a program whose arguments and one output are all u32.
-pub fn eval_u32(
-    label: &str,
-    program: &Program,
-    inputs: &[&[u32]],
-    output_len: usize,
-) -> Vec<u32> {
+pub fn eval_u32(label: &str, program: &Program, inputs: &[&[u32]], output_len: usize) -> Vec<u32> {
     let mut buffers: Vec<Vec<u8>> = inputs.iter().map(|input| u32_bytes(input)).collect();
     buffers.push(vec![0u8; output_len * 4]);
     bytes_to_u32(&eval_bytes(label, program, buffers)[0])
 }
 
 /// Run a one-in one-out f32 program through the reference interpreter.
-pub fn eval_f32_unary(
-    label: &str,
-    input: &[f32],
-    program: &Program,
-) -> Vec<f32> {
+pub fn eval_f32_unary(label: &str, input: &[f32], program: &Program) -> Vec<f32> {
     eval_f32(label, program, &[input], input.len())
 }
 
@@ -564,12 +537,6 @@ pub fn assert_tiled_matches_reference(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_matmul_2x2_expected_bytes_identity() {
-        let constructed = u32_bytes(&[19, 22, 43, 50]);
-        assert_eq!(constructed, MATMUL_2X2_EXPECTED_BYTES);
-    }
 
     #[test]
     fn test_round_trip() {

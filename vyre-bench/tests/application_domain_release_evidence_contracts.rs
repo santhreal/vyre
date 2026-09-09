@@ -11,7 +11,10 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ValueContract, ValueLifetime};
+use vyre::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ValueContract,
+    ValueLifetime,
+};
 use vyre_bench::workloads::{
     all_whole_application_workloads, dense_numerical_pipeline,
     generate_whole_application_evidence_suite, interactive_event_pipeline,
@@ -81,9 +84,15 @@ fn test_whole_application_domain_class_completeness_and_runtime_closure() {
             record.parity_result.is_exact_match,
             "Parity against reference must be exact"
         );
-        assert!(record.compile_time_ns > 0, "Compile time must be recorded in ns");
+        assert!(
+            record.compile_time_ns > 0,
+            "Compile time must be recorded in ns"
+        );
         assert!(record.load_time_ns > 0, "Load time must be recorded in ns");
-        assert!(record.p50_latency_ns > 0, "p50 latency must be recorded in ns");
+        assert!(
+            record.p50_latency_ns > 0,
+            "p50 latency must be recorded in ns"
+        );
         assert!(
             record.p99_latency_ns >= record.p50_latency_ns,
             "p99 latency must be >= p50 latency"
@@ -112,7 +121,10 @@ fn test_whole_application_domain_class_completeness_and_runtime_closure() {
             "Native baseline comparison must be recorded"
         );
         assert!(
-            !record.native_baseline_comparison.identical_input_digest.is_empty(),
+            !record
+                .native_baseline_comparison
+                .identical_input_digest
+                .is_empty(),
             "Native baseline must evaluate identical input digest"
         );
         assert!(
@@ -177,7 +189,12 @@ fn test_isolated_kernel_cannot_satisfy_whole_application_class() {
     single_node_graph
         .add_external_value(
             "out",
-            ValueContract::dense_1d(DataType::U32, 16, BufferAccess::WriteOnly, ValueLifetime::Output),
+            ValueContract::dense_1d(
+                DataType::U32,
+                16,
+                BufferAccess::WriteOnly,
+                ValueLifetime::Output,
+            ),
         )
         .unwrap();
     single_node_graph
@@ -206,13 +223,23 @@ fn test_isolated_kernel_cannot_satisfy_whole_application_class() {
     disconnected_graph
         .add_external_value(
             "out1",
-            ValueContract::dense_1d(DataType::U32, 16, BufferAccess::WriteOnly, ValueLifetime::Output),
+            ValueContract::dense_1d(
+                DataType::U32,
+                16,
+                BufferAccess::WriteOnly,
+                ValueLifetime::Output,
+            ),
         )
         .unwrap();
     disconnected_graph
         .add_external_value(
             "out2",
-            ValueContract::dense_1d(DataType::U32, 16, BufferAccess::WriteOnly, ValueLifetime::Output),
+            ValueContract::dense_1d(
+                DataType::U32,
+                16,
+                BufferAccess::WriteOnly,
+                ValueLifetime::Output,
+            ),
         )
         .unwrap();
     disconnected_graph
@@ -311,7 +338,10 @@ fn test_end_to_end_whole_application_reference_parity_and_execution() {
     // Irregular Stateful
     let irregular = irregular_stateful_traversal();
     let irregular_record = irregular.execute_and_measure(30).unwrap();
-    assert_eq!(irregular_record.domain, ApplicationDomain::IrregularStateful);
+    assert_eq!(
+        irregular_record.domain,
+        ApplicationDomain::IrregularStateful
+    );
     assert_eq!(irregular_record.graph_node_count, 3);
     assert!(irregular_record.graph_edge_count >= 2);
     assert!(irregular_record.parity_result.is_exact_match);
@@ -320,7 +350,10 @@ fn test_end_to_end_whole_application_reference_parity_and_execution() {
     // Latency-Sensitive Interactive
     let interactive = interactive_event_pipeline();
     let interactive_record = interactive.execute_and_measure(30).unwrap();
-    assert_eq!(interactive_record.domain, ApplicationDomain::LatencySensitiveInteractive);
+    assert_eq!(
+        interactive_record.domain,
+        ApplicationDomain::LatencySensitiveInteractive
+    );
     assert_eq!(interactive_record.graph_node_count, 3);
     assert!(interactive_record.graph_edge_count >= 2);
     assert!(interactive_record.parity_result.is_exact_match);
@@ -353,17 +386,23 @@ fn test_whole_application_evidence_artifact_generation() {
         assert_eq!(deserialized.p99_latency_ns, record.p99_latency_ns);
         assert_eq!(deserialized.peak_bytes, record.peak_bytes);
         assert_eq!(deserialized.resident_bytes, record.resident_bytes);
-        assert_eq!(deserialized.selected_schedule_id, record.selected_schedule_id);
+        assert_eq!(
+            deserialized.selected_schedule_id,
+            record.selected_schedule_id
+        );
         assert_eq!(deserialized.parity_result, record.parity_result);
         assert_eq!(deserialized.equality_conditions, record.equality_conditions);
         deserialized.validate_required_fields().unwrap();
     }
 
-    let target_dir = vyre_test_support::monorepo::vyre_workspace_root().join("release/evidence/benchmarks");
-    let written = vyre_bench::workloads::write_whole_application_evidence_artifacts(
-        &target_dir,
-        30,
-    )
-    .expect("Writing evidence artifacts must succeed");
-    assert_eq!(written.len(), 4, "Must write 4 evidence artifacts (1 matrix + 3 records)");
+    let target_dir =
+        vyre_test_support::monorepo::vyre_workspace_root().join("release/evidence/benchmarks");
+    let written =
+        vyre_bench::workloads::write_whole_application_evidence_artifacts(&target_dir, 30)
+            .expect("Writing evidence artifacts must succeed");
+    assert_eq!(
+        written.len(),
+        4,
+        "Must write 4 evidence artifacts (1 matrix + 3 records)"
+    );
 }

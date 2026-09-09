@@ -357,7 +357,10 @@ mod tests {
                     out[i * 2 + j] = acc;
                 }
             }
-            vyre_test_support::test_parity_oracles::semantic_output(request, vec![u32_slice_to_le_bytes(&out)])
+            vyre_test_support::test_parity_oracles::semantic_output(
+                request,
+                vec![u32_slice_to_le_bytes(&out)],
+            )
         }
     }
 

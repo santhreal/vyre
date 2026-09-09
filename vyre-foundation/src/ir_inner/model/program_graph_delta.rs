@@ -298,7 +298,12 @@ impl GraphDelta {
                     });
                 }
             }
-            GraphDeltaOp::InsertNode { name, inputs, outputs, .. } => {
+            GraphDeltaOp::InsertNode {
+                name,
+                inputs,
+                outputs,
+                ..
+            } => {
                 if name.len() > MAX_NAME_BYTES {
                     return Err(GraphDeltaError::NameLengthExceeded {
                         name: name.clone(),
@@ -311,7 +316,9 @@ impl GraphDelta {
                     });
                 }
             }
-            GraphDeltaOp::ReplaceNode { inputs, outputs, .. } => {
+            GraphDeltaOp::ReplaceNode {
+                inputs, outputs, ..
+            } => {
                 if inputs.len() > MAX_PORTS_PER_NODE || outputs.len() > MAX_PORTS_PER_NODE {
                     return Err(GraphDeltaError::OperationLimitExceeded {
                         limit: MAX_PORTS_PER_NODE,

@@ -32,8 +32,8 @@
 //!   position, output bit = 1 iff > k/2 input bits are 1. Ties
 //!   (k even, exactly k/2) round to 0 (callers typically use odd k).
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

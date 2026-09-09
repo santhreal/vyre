@@ -25,8 +25,8 @@ use vyre_foundation::composition::tag_program;
 use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_libs_builder::builder::build_indexed_map;
 use crate::nn::moe::softmax_top_k::{softmax_top_k, OP_ID as SOFTMAX_TOP_K_OP_ID};
+use vyre_libs_builder::builder::build_indexed_map;
 use vyre_libs_builder::plumbing::program::attribution::{attribute_child, attribute_serial_child};
 use vyre_libs_builder::plumbing::program::outputs::demote_intermediate_outputs;
 

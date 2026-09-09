@@ -16,8 +16,8 @@ pub mod store;
 use std::path::Path;
 
 pub use campaign::*;
-pub use floor::*;
 pub use fleet::*;
+pub use floor::*;
 pub use receipt::*;
 pub use store::*;
 

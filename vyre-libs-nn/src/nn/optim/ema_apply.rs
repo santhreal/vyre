@@ -4,8 +4,8 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
-use vyre_libs_builder::builder::build_indexed_map;
 use crate::nn::f32_stability::flush_tiny;
+use vyre_libs_builder::builder::build_indexed_map;
 
 const OP_ID: &str = "vyre-libs::optim::ema_apply";
 

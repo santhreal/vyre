@@ -8,7 +8,9 @@
 //! scheduler consume as fusion hints.
 
 use super::{checked_square_cells, decode_u32_output_exact};
-use vyre_libs_builder::plumbing::host::dispatch_buffers::{ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes};
+use vyre_libs_builder::plumbing::host::dispatch_buffers::{
+    ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
+};
 use vyre_libs_graph::graph::chebyshev_filter::{chebyshev_filter, MAX_K as CHEBYSHEV_MAX_K};
 use vyre_libs_math::math::spectral_shape::mp_edge_clip;
 use vyre_megakernel::{
@@ -287,11 +289,11 @@ mod tests {
     use super::*;
     use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_libs_math::math::spectral_shape::mp_upper_edge;
-    use vyre_test_support::test_parity_oracles::{policy, StaticOutputs};
     use vyre_reference::composition_witness::{
         mp_edge_clip_witness as reference_mp_edge_clip,
         try_chebyshev_filter_witness as reference_chebyshev_filter,
     };
+    use vyre_test_support::test_parity_oracles::{policy, StaticOutputs};
 
     fn reference_fusion_scores(laplacian: &[f32], n: u32) -> Vec<f32> {
         use vyre_libs_builder::telemetry::{bump, spectral_schedule_calls};

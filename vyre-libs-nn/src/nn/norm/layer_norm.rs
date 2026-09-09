@@ -12,11 +12,11 @@
 //!
 //! Both paths emit byte-identical IR.
 
-use vyre_libs_reduce::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 use vyre_foundation::composition::trap_program;
 #[cfg(test)]
 use vyre_foundation::composition::wrap_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_libs_reduce::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 use vyre_libs_builder::builder::reduction::{ReductionComposer, ReductionPhase};
 use vyre_libs_builder::builder::{

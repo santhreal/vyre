@@ -196,11 +196,11 @@ pub fn count_sketch_update(table: &str, hashes: &str, signs: &str, d: u32, w: u3
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_reference::composition_witness::{
         count_sketch_query_witness, count_sketch_table_len, count_sketch_update_witness,
         try_count_sketch_query_into_witness,
     };
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     fn count_sketch_update_cpu(table: &mut [u32], hashes: &[u32], signs: &[i32], d: u32, w: u32) {
         count_sketch_update_witness(table, hashes, signs, d, w);

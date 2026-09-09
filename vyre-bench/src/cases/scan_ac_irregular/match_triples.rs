@@ -142,7 +142,7 @@ pub(super) fn with_matches_readback_range(
         .map(|buffer| {
             if buffer.name() == "matches" && buffer.is_output() {
                 found_matches_output = true;
-                buffer.with_output_byte_range(0..byte_len)
+                buffer.with_output_byte_range(0u64..(byte_len as u64))
             } else {
                 buffer
             }

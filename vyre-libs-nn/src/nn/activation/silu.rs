@@ -2,8 +2,8 @@
 //!
 //! Category A composition.
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{Expr, Program, UnOp};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 use crate::nn::f32_stability::flush_tiny;
 

@@ -1,7 +1,8 @@
 //! Neural network activations, linear, normalization, attention, MoE, and LLM inference.
 
-pub mod nn;
+#[cfg(feature = "llm")]
 pub mod llm;
+pub mod nn;
 
 /// Ensure all feature-selected library operation registrations are retained by the linker.
 #[must_use]

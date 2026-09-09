@@ -124,7 +124,7 @@ pub fn utf8_shape_counts(histogram: &str, out: &str) -> Program {
                 .with_count(256),
             BufferDecl::output(out, 1, DataType::U32)
                 .with_count(2)
-                .with_output_byte_range(0..8),
+                .with_full_output_byte_range(),
         ],
         [1, 1, 1],
         // The scan walks all 256 histogram slots and writes two words at constant

@@ -11,13 +11,7 @@ pub const OP_ID: &str = "vyre-libs::reduce::all";
 /// Build a Program: `out[0] = (forall i: values[i] != 0) ? 1 : 0`.
 #[must_use]
 pub fn reduce_all(values: &str, out: &str, count: u32) -> Program {
-    atomic_scalar_reduction(
-        OP_ID,
-        values,
-        out,
-        count,
-        AtomicReduceKind::AllNonZero,
-    )
+    atomic_scalar_reduction(OP_ID, values, out, count, AtomicReduceKind::AllNonZero)
 }
 
 inventory::submit! {

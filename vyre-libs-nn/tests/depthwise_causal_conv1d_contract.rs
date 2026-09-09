@@ -2,10 +2,9 @@
 
 #![forbid(unsafe_code)]
 
-use crate::wire_words;
-use wire_words::f32_bytes;
+use vyre_test_support::test_parity_oracles::f32_bytes;
 
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 use vyre_libs_nn::nn::conv::{
     depthwise_causal_conv1d, CausalConvActivation, DepthwiseCausalConv1dError,
 };

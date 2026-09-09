@@ -11,4 +11,3 @@ pub mod primitive_vs_consumer;
 
 #[path = "semiring_gemm_via_reference_parity.rs"]
 pub mod semiring_gemm_via_reference_parity;
-

@@ -11,13 +11,7 @@ pub const OP_ID: &str = "vyre-libs::reduce::count";
 /// Build a Program: `out[0] = sum_{w} popcount(bitset[w])`.
 #[must_use]
 pub fn reduce_count(bitset: &str, out: &str, words: u32) -> Program {
-    atomic_scalar_reduction(
-        OP_ID,
-        bitset,
-        out,
-        words,
-        AtomicReduceKind::PopcountSum,
-    )
+    atomic_scalar_reduction(OP_ID, bitset, out, words, AtomicReduceKind::PopcountSum)
 }
 
 inventory::submit! {

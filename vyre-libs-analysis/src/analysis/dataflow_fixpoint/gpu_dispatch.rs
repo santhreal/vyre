@@ -8,8 +8,8 @@ use super::{SccComponentsGpuScratch, Semiring, SemiringGemmGpuScratch};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_libs_graph::graph::scc_decompose::dense_reachability_bitsets;
 use vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity;
+use vyre_libs_graph::graph::scc_decompose::dense_reachability_bitsets;
 use vyre_megakernel::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
@@ -120,13 +120,18 @@ pub fn semiring_gemm_via_with_scratch_into(
         )));
     }
 
-    let program = vyre_libs_math::math::semiring_gemm::semiring_gemm("a", "b", "c", m, n, k, semiring);
+    let program =
+        vyre_libs_math::math::semiring_gemm::semiring_gemm("a", "b", "c", m, n, k, semiring);
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], a);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], b);
 
-    let outputs =
-        vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
+    let outputs = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(
+        dispatcher,
+        program,
+        &scratch.inputs,
+        policy,
+    )?;
     let [c_out] = match outputs.as_slice() {
         [c_out] => [c_out],
         _ => {
@@ -587,8 +592,12 @@ pub fn scc_components_via_substrate_with_scratch_into(
         write_u32_slice_le_bytes(&mut scratch.inputs[0], &scratch.forward);
         write_u32_slice_le_bytes(&mut scratch.inputs[1], &scratch.backward);
         write_u32_slice_le_bytes(&mut scratch.inputs[2], components);
-        let outputs =
-            vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
+        let outputs = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(
+            dispatcher,
+            program,
+            &scratch.inputs,
+            policy,
+        )?;
         let [comp_out] = match outputs.as_slice() {
             [comp_out] => [comp_out],
             _ => {
@@ -618,8 +627,8 @@ mod tests {
         semiring_gemm_via, semiring_gemm_via_into,
     };
     use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_test_support::test_parity_oracles::StaticOutputs;
     use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
+    use vyre_test_support::test_parity_oracles::StaticOutputs;
 
     struct SequenceDispatcher {
         outputs: Vec<Vec<Vec<u8>>>,

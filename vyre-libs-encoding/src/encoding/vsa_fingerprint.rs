@@ -8,12 +8,12 @@
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
-#[cfg(test)]
-use vyre_reference::composition_witness::hamming_similarity_witness as hamming_similarity;
 use vyre_libs_hash::hash::hypervector::hypervector_xor_bind;
 use vyre_megakernel::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
+#[cfg(test)]
+use vyre_reference::composition_witness::hamming_similarity_witness as hamming_similarity;
 
 /// Caller-owned GPU dispatch scratch for VSA fingerprint XOR binding.
 #[derive(Debug, Default)]
@@ -236,14 +236,16 @@ mod tests {
                         inputs.len()
                     )));
                 };
-                let a = vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_input_aligned(
-                    a_bytes,
-                    "XOR test dispatcher",
-                )?;
-                let b = vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_input_aligned(
-                    b_bytes,
-                    "XOR test dispatcher",
-                )?;
+                let a =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_input_aligned(
+                        a_bytes,
+                        "XOR test dispatcher",
+                    )?;
+                let b =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_input_aligned(
+                        b_bytes,
+                        "XOR test dispatcher",
+                    )?;
                 let out_len = a.len().min(b.len());
                 let out = a
                     .iter()

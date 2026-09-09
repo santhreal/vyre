@@ -2,12 +2,11 @@
 
 #![cfg(feature = "nn-attention")]
 
-use crate::wire_words;
-use wire_words::{f32_bytes, f32_words as decode_f32};
+use vyre_test_support::test_parity_oracles::{decode_f32, f32_bytes};
 
 use std::collections::HashMap;
 
-use vyre::ir::Node;
+use vyre_foundation::ir::Node;
 use vyre_foundation::visit::walk_nodes;
 use vyre_libs_math::math::dot_partial::OP_ID as DOT_PARTIAL_OP_ID;
 use vyre_libs_nn::nn::attention::gqa_attention;

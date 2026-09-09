@@ -19,14 +19,38 @@ pub fn alpha_over(fg: &str, bg: &str, output: &str, count: u32) -> Program {
         // Load foreground and background pixels.
         Node::let_bind("fg_px", Expr::load(fg, Expr::var("idx"))),
         Node::let_bind("bg_px", Expr::load(bg, Expr::var("idx"))),
-        Node::let_bind("fg_r", vyre_libs_builder::builder::stencil::unpack_channel("fg_px", 0)),
-        Node::let_bind("fg_g", vyre_libs_builder::builder::stencil::unpack_channel("fg_px", 8)),
-        Node::let_bind("fg_b", vyre_libs_builder::builder::stencil::unpack_channel("fg_px", 16)),
-        Node::let_bind("fg_a", vyre_libs_builder::builder::stencil::unpack_channel("fg_px", 24)),
-        Node::let_bind("bg_r", vyre_libs_builder::builder::stencil::unpack_channel("bg_px", 0)),
-        Node::let_bind("bg_g", vyre_libs_builder::builder::stencil::unpack_channel("bg_px", 8)),
-        Node::let_bind("bg_b", vyre_libs_builder::builder::stencil::unpack_channel("bg_px", 16)),
-        Node::let_bind("bg_a", vyre_libs_builder::builder::stencil::unpack_channel("bg_px", 24)),
+        Node::let_bind(
+            "fg_r",
+            vyre_libs_builder::builder::stencil::unpack_channel("fg_px", 0),
+        ),
+        Node::let_bind(
+            "fg_g",
+            vyre_libs_builder::builder::stencil::unpack_channel("fg_px", 8),
+        ),
+        Node::let_bind(
+            "fg_b",
+            vyre_libs_builder::builder::stencil::unpack_channel("fg_px", 16),
+        ),
+        Node::let_bind(
+            "fg_a",
+            vyre_libs_builder::builder::stencil::unpack_channel("fg_px", 24),
+        ),
+        Node::let_bind(
+            "bg_r",
+            vyre_libs_builder::builder::stencil::unpack_channel("bg_px", 0),
+        ),
+        Node::let_bind(
+            "bg_g",
+            vyre_libs_builder::builder::stencil::unpack_channel("bg_px", 8),
+        ),
+        Node::let_bind(
+            "bg_b",
+            vyre_libs_builder::builder::stencil::unpack_channel("bg_px", 16),
+        ),
+        Node::let_bind(
+            "bg_a",
+            vyre_libs_builder::builder::stencil::unpack_channel("bg_px", 24),
+        ),
         // inv_a = 255 - fg_a
         Node::let_bind("inv_a", Expr::sub(Expr::u32(255), Expr::var("fg_a"))),
         // Porter-Duff over per channel.
@@ -63,10 +87,22 @@ pub fn alpha_over(fg: &str, bg: &str, output: &str, count: u32) -> Program {
             ),
         ),
         // Clamp to 255 and pack RGBA.
-        Node::let_bind("cr", vyre_libs_builder::builder::stencil::clamp_u8(Expr::var("out_r"))),
-        Node::let_bind("cg", vyre_libs_builder::builder::stencil::clamp_u8(Expr::var("out_g"))),
-        Node::let_bind("cb", vyre_libs_builder::builder::stencil::clamp_u8(Expr::var("out_b"))),
-        Node::let_bind("ca", vyre_libs_builder::builder::stencil::clamp_u8(Expr::var("out_a"))),
+        Node::let_bind(
+            "cr",
+            vyre_libs_builder::builder::stencil::clamp_u8(Expr::var("out_r")),
+        ),
+        Node::let_bind(
+            "cg",
+            vyre_libs_builder::builder::stencil::clamp_u8(Expr::var("out_g")),
+        ),
+        Node::let_bind(
+            "cb",
+            vyre_libs_builder::builder::stencil::clamp_u8(Expr::var("out_b")),
+        ),
+        Node::let_bind(
+            "ca",
+            vyre_libs_builder::builder::stencil::clamp_u8(Expr::var("out_a")),
+        ),
         Node::let_bind(
             "packed",
             vyre_libs_builder::builder::stencil::pack_rgba_named("cr", "cg", "cb", "ca"),

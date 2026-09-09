@@ -121,10 +121,7 @@ fn output_byte_range_converts_from_no_signed_range() {
          admitted set from source and cannot prove anything against none."
     );
 
-    let signed: Vec<&&str> = admitted
-        .iter()
-        .filter(|ty| ty.starts_with('i'))
-        .collect();
+    let signed: Vec<&&str> = admitted.iter().filter(|ty| ty.starts_with('i')).collect();
     assert!(
         signed.is_empty(),
         "Fix: `IntoOutputByteRange` admits signed range(s) {signed:?}. A byte \

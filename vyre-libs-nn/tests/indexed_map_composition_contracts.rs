@@ -1,6 +1,6 @@
 //! Composition contracts for operations migrated to the canonical indexed-map skeleton.
 
-use vyre::ir::Node;
+use vyre_foundation::ir::Node;
 use vyre_libs_math::math::square;
 use vyre_libs_nn::nn::activation::parallel_residual_block;
 

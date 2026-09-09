@@ -2,10 +2,10 @@
 
 #![forbid(unsafe_code)]
 
-use crate::wire_words;
-use wire_words::{f32_bytes as bytes, f32_words_of as decode};
+use crate::wire_words::f32_words_of as decode;
+use vyre_test_support::test_parity_oracles::f32_bytes as bytes;
 
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 use vyre_libs_nn::nn::linear::{linear_rows, linear_rows_no_bias_out_in_typed};
 use vyre_reference::value::Value;
 

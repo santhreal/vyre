@@ -16,10 +16,7 @@ static SOURCES: LazyLock<[(&str, usize); 2]> = LazyLock::new(|| {
         vyre_libs::operation_catalog::all_entries().count()
     };
     [
-        (
-            "vyre-libs-builder",
-            libs_count,
-        ),
+        ("vyre-libs-builder", libs_count),
         (
             "vyre-primitives",
             vyre_primitives::operation_catalog::all_entries().count(),

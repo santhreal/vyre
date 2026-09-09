@@ -7,10 +7,10 @@ use super::inflate::{
     STORED_HEADER_FIX,
 };
 use vyre_libs_builder::plumbing::operand::buffer_names::fixed_name;
-use vyre_test_support::test_parity_oracles::eval_bytes;
 use vyre_libs_pattern::pattern::dfa_compile;
 use vyre_primitives::wire::pack_u32_slice as pack_words;
 use vyre_reference::composition_witness::{inflate_stored_witness, InflateStoredWitness};
+use vyre_test_support::test_parity_oracles::eval_bytes;
 
 fn inflate_error(input: &[u32]) -> &'static str {
     match input.first().copied().unwrap_or(0) >> 1 & 0x3 {
@@ -165,7 +165,6 @@ fn reference_names_dynamic_huffman_gap() {
 }
 
 #[test]
-#[cfg(feature = "pattern-dfa")]
 fn fused_stored_block_matches_parity_with_separate_inflate_then_aho() {
     let patterns: [&[u8]; 1] = [b"ell"];
     let compiled = dfa_compile(&patterns);

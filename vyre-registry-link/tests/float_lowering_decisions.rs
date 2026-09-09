@@ -105,7 +105,10 @@ fn unsupported_backend_refuses_strict_ieee_compilation_and_cache_key_generation(
             "Fix: refusal error code must be UnsupportedFeature for {backend}"
         );
         match err {
-            vyre_driver::BackendError::UnsupportedFeature { name, backend: err_backend } => {
+            vyre_driver::BackendError::UnsupportedFeature {
+                name,
+                backend: err_backend,
+            } => {
                 assert!(
                     name.contains("strict-ieee") && name.contains("Sin"),
                     "Fix: refusal name must contain mode and operation: {name}"

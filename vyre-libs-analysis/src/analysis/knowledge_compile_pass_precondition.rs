@@ -49,8 +49,8 @@
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
-use vyre_libs_graph::graph::knowledge_compile::ddnnf_evaluate;
 use vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity;
+use vyre_libs_graph::graph::knowledge_compile::ddnnf_evaluate;
 use vyre_megakernel::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
@@ -483,13 +483,20 @@ mod tests {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 7);
-                let node_kinds = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
-                let node_var = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
-                let child_offsets = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2]);
-                let child_counts = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[3]);
-                let children = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[4]);
-                let assignments = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[5]);
-                let mut out = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[6]);
+                let node_kinds =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
+                let node_var =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
+                let child_offsets =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2]);
+                let child_counts =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[3]);
+                let children =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[4]);
+                let assignments =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[5]);
+                let mut out =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[6]);
                 for node in 0..node_kinds.len() {
                     match node_kinds[node] {
                         LITERAL_TRUE => {

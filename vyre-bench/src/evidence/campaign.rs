@@ -479,7 +479,10 @@ impl CompatibleCellCohort {
     ///
     /// Refuses with `CellIncompatibilityRefusal` if the receipt differs in any
     /// identity dimension from the cohort's primary identity.
-    pub fn try_push(&mut self, receipt: BenchmarkReceipt) -> Result<(), CellIncompatibilityRefusal> {
+    pub fn try_push(
+        &mut self,
+        receipt: BenchmarkReceipt,
+    ) -> Result<(), CellIncompatibilityRefusal> {
         assert_cells_compatible(&self.primary, &receipt)?;
         self.receipts.push(receipt);
         Ok(())

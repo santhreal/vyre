@@ -6,6 +6,7 @@
 //! and AST constant-fold wave construction all route through
 //! `vyre-primitives::parsing` rather than duplicating layout rules here.
 
+use vyre_foundation::ir::{Expr, Node};
 use vyre_libs_parsing::parsing::ast_cse_constant_fold::{
     ast_cse_constant_fold, OP_ID as AST_CSE_CONSTANT_FOLD_PRIMITIVE_ID,
 };
@@ -14,7 +15,6 @@ use vyre_libs_parsing::parsing::bytecode_dispatch_table_pack::{
     pack_dispatch_table_into, packed_dispatch_table_len, unpack_entry, OpcodeHandlerEntry,
     PackError,
 };
-use vyre_foundation::ir::{Expr, Node};
 
 /// Stable primitive id for the bytecode dispatch-table packing contract.
 pub const BYTECODE_DISPATCH_TABLE_PACK_PRIMITIVE_ID: &str =

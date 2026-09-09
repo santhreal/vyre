@@ -63,12 +63,7 @@ impl crate::gate::GateBehavior for DeviceTestCompilation {
                 features.extend(target.required_features.iter().cloned());
             }
 
-            let findings = check_package_targets(
-                &ctx.root,
-                package_name,
-                targets,
-                &features,
-            )?;
+            let findings = check_package_targets(&ctx.root, package_name, targets, &features)?;
             for finding in findings {
                 report.find(finding);
             }
@@ -79,16 +74,10 @@ impl crate::gate::GateBehavior for DeviceTestCompilation {
 }
 
 /// Find all workspace packages declaring `device-tests` and their admitted test targets.
-pub fn admitted_test_targets(
-    tree: &Tree,
-) -> Result<BTreeMap<String, Vec<TestTarget>>, GateError> {
+pub fn admitted_test_targets(tree: &Tree) -> Result<BTreeMap<String, Vec<TestTarget>>, GateError> {
     let mut admitted = BTreeMap::new();
     for member in tree.member_manifests()? {
-        let Some(features) = member
-            .manifest
-            .get("features")
-            .and_then(Value::as_table)
-        else {
+        let Some(features) = member.manifest.get("features").and_then(Value::as_table) else {
             continue;
         };
         if !features.contains_key(FEATURE) {
@@ -183,7 +172,10 @@ pub fn workflow_feature_pairings(
                     }
                 }
                 for pkg in packages {
-                    pairings.entry(pkg).or_default().extend(features.iter().cloned());
+                    pairings
+                        .entry(pkg)
+                        .or_default()
+                        .extend(features.iter().cloned());
                 }
             }
         }
@@ -224,15 +216,16 @@ fn check_package_targets(
 
     let output = cmd.output().map_err(|error| {
         GateError::new(
-            format!(
-                "cannot run `cargo check -p {package} --features {feature_list}`: {error}"
-            ),
+            format!("cannot run `cargo check -p {package} --features {feature_list}`: {error}"),
             "restore the cargo_full wrapper at the workspace root",
         )
     })?;
 
     let target_names: BTreeSet<String> = targets.iter().map(|t| t.name.clone()).collect();
-    let primary_target = targets.first().map(|t| t.name.as_str()).unwrap_or("all_tests");
+    let primary_target = targets
+        .first()
+        .map(|t| t.name.as_str())
+        .unwrap_or("all_tests");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let diagnostics = parse_compiler_diagnostics(&stdout);
@@ -265,7 +258,9 @@ fn check_package_targets(
             _ => primary_target,
         };
         let msg = format!("{package} (test target `{tgt}`): {}", diag.message);
-        let fix = format!("repair test target `{tgt}` in `{package}` or remove its `{FEATURE}` admission");
+        let fix = format!(
+            "repair test target `{tgt}` in `{package}` or remove its `{FEATURE}` admission"
+        );
 
         let finding = match (diag.file, diag.line) {
             (Some(file), Some(line)) => {
@@ -395,7 +390,10 @@ mod tests {
             vec!["all_tests".to_string()],
         );
         let (_dir, tree) = fixture_tree(&[
-            ("vyre-driver-wgpu/tests/all_tests.rs", "pub mod connected_graph;"),
+            (
+                "vyre-driver-wgpu/tests/all_tests.rs",
+                "pub mod connected_graph;",
+            ),
             (
                 "vyre-driver-wgpu/tests/connected_graph.rs",
                 "#![cfg(feature = \"device-tests\")]\nfn live() {}",
@@ -442,7 +440,10 @@ jobs:
             line: Some(42),
             message: "no method named `target_payload` found".to_string(),
         };
-        let finding_msg = format!("vyre-driver-wgpu (test target `all_tests`): {}", diag.message);
+        let finding_msg = format!(
+            "vyre-driver-wgpu (test target `all_tests`): {}",
+            diag.message
+        );
         let fix = "repair test target `all_tests` in `vyre-driver-wgpu` or remove its `device-tests` admission";
         let finding = Finding::at(
             Path::new("vyre-driver-wgpu/tests/connected_graph.rs"),

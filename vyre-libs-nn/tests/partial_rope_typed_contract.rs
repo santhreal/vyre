@@ -2,10 +2,10 @@
 
 #![forbid(unsafe_code)]
 
-use crate::wire_words;
-use wire_words::{bf16_bytes, bf16_word, f32_bytes};
+use crate::wire_words::{bf16_bytes, bf16_word};
+use vyre_test_support::test_parity_oracles::f32_bytes;
 
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 use vyre_libs_nn::nn::attention::partial_rope_at_offset_typed;
 use vyre_reference::value::Value;
 

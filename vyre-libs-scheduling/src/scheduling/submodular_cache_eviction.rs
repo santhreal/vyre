@@ -54,10 +54,12 @@
 //! ```
 
 use super::decode_u32_output_exact;
-use vyre_libs_builder::plumbing::host::dispatch_buffers::{ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes};
-use vyre_libs_math::math::submodular_greedy::{argmax_of_marginals, NO_WINNER};
+use vyre_libs_builder::plumbing::host::dispatch_buffers::{
+    ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
+};
 #[cfg(test)]
 use vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity_or_panic;
+use vyre_libs_math::math::submodular_greedy::{argmax_of_marginals, NO_WINNER};
 use vyre_megakernel::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
@@ -227,9 +229,11 @@ pub fn greedy_quality_bound(optimum: u32) -> u32 {
 mod tests {
     use super::*;
     use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_test_support::test_parity_oracles::{canonical_inputs, policy, semantic_output, StaticOutputs};
     use vyre_megakernel::{SemanticExecutionOutput, SemanticExecutionRequest};
     use vyre_reference::composition_witness::argmax_of_marginals_witness;
+    use vyre_test_support::test_parity_oracles::{
+        canonical_inputs, policy, semantic_output, StaticOutputs,
+    };
 
     fn select_retention_set(gains: &mut [u32], n: u32, k: u32) -> Vec<u32> {
         assert!(n > 0, "Fix: select_retention_set requires n > 0.");
@@ -285,7 +289,8 @@ mod tests {
                 ));
             }
             let gains = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(gains_bytes);
-            let picked = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(picked_bytes);
+            let picked =
+                vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(picked_bytes);
             if gains.len() != picked.len() {
                 return Err(SemanticExecutionError::InvalidRequest(format!(
                     "Fix: argmax semantic executor requires equal gains and picked lengths, got {} and {}.",

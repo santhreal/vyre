@@ -4,8 +4,8 @@
 //! buffer is CSR-style: `offsets[i]..offsets[i+1]` is the range of
 //! `input` belonging to segment `i`.
 
-use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

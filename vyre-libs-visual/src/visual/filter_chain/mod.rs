@@ -45,10 +45,22 @@ pub fn filter_chain(
     let mut body = vec![
         Node::let_bind("pixel", Expr::load(pixels, Expr::var("idx"))),
         // Unpack RGBA.
-        Node::let_bind("r", vyre_libs_builder::builder::stencil::unpack_channel("pixel", 0)),
-        Node::let_bind("g", vyre_libs_builder::builder::stencil::unpack_channel("pixel", 8)),
-        Node::let_bind("b", vyre_libs_builder::builder::stencil::unpack_channel("pixel", 16)),
-        Node::let_bind("a", vyre_libs_builder::builder::stencil::unpack_channel("pixel", 24)),
+        Node::let_bind(
+            "r",
+            vyre_libs_builder::builder::stencil::unpack_channel("pixel", 0),
+        ),
+        Node::let_bind(
+            "g",
+            vyre_libs_builder::builder::stencil::unpack_channel("pixel", 8),
+        ),
+        Node::let_bind(
+            "b",
+            vyre_libs_builder::builder::stencil::unpack_channel("pixel", 16),
+        ),
+        Node::let_bind(
+            "a",
+            vyre_libs_builder::builder::stencil::unpack_channel("pixel", 24),
+        ),
         // 1. Brightness: channel = channel * brightness >> 16
         Node::assign(
             "r",

@@ -237,10 +237,7 @@ pub fn require_exactly_one_output<'a>(
 /// Output buffers correspond to non-Workgroup buffers that are either backend-allocated
 /// or declared with `BufferAccess::ReadWrite`, in `program.buffers()` order.
 #[must_use]
-pub fn output_buffer_index(
-    program: &vyre_foundation::ir::Program,
-    name: &str,
-) -> Option<usize> {
+pub fn output_buffer_index(program: &vyre_foundation::ir::Program, name: &str) -> Option<usize> {
     program.output_buffer_indices().iter().position(|&index| {
         program
             .buffers()

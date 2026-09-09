@@ -1,7 +1,7 @@
 //! Shared F32 unary activation Program builder.
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{DataType, Expr, Program};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 /// Build `output[i] = op(input[i])` for an F32 activation.
 #[must_use]

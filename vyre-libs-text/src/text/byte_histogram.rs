@@ -135,7 +135,7 @@ fn byte_histogram_256_with_source_type(
             input_decl,
             BufferDecl::output(histogram, 1, DataType::U32)
                 .with_count(256)
-                .with_output_byte_range(0..256 * 4),
+                .with_full_output_byte_range(),
         ],
         [256, 1, 1],
         vec![wrap_anonymous_region(

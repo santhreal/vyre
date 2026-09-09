@@ -644,7 +644,7 @@ impl ContractionComposer {
                                 op: self.op_id,
                             });
                         }
-                        
+
                         {
                             let _ = (generator, a_tile_name, b_tile_name);
                             Err(TensorRefError::ShapeMismatch {

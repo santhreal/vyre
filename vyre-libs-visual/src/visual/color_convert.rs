@@ -19,10 +19,22 @@ const OP_ID_UNPREMULTIPLY: &str = "vyre-libs::visual::unpremultiply_alpha";
 pub fn rgba_to_grayscale(input: &str, output: &str, count: u32) -> Program {
     let body = vec![
         Node::let_bind("px", Expr::load(input, Expr::var("idx"))),
-        Node::let_bind("r", vyre_libs_builder::builder::stencil::unpack_channel("px", 0)),
-        Node::let_bind("g", vyre_libs_builder::builder::stencil::unpack_channel("px", 8)),
-        Node::let_bind("b", vyre_libs_builder::builder::stencil::unpack_channel("px", 16)),
-        Node::let_bind("a", vyre_libs_builder::builder::stencil::unpack_channel("px", 24)),
+        Node::let_bind(
+            "r",
+            vyre_libs_builder::builder::stencil::unpack_channel("px", 0),
+        ),
+        Node::let_bind(
+            "g",
+            vyre_libs_builder::builder::stencil::unpack_channel("px", 8),
+        ),
+        Node::let_bind(
+            "b",
+            vyre_libs_builder::builder::stencil::unpack_channel("px", 16),
+        ),
+        Node::let_bind(
+            "a",
+            vyre_libs_builder::builder::stencil::unpack_channel("px", 24),
+        ),
         Node::let_bind(
             "luma",
             vyre_libs_builder::builder::stencil::clamp_u8(Expr::shr(
@@ -67,8 +79,14 @@ pub fn rgba_to_grayscale(input: &str, output: &str, count: u32) -> Program {
 pub fn grayscale_to_rgba(input: &str, output: &str, count: u32) -> Program {
     let body = vec![
         Node::let_bind("px", Expr::load(input, Expr::var("idx"))),
-        Node::let_bind("y", vyre_libs_builder::builder::stencil::unpack_channel("px", 0)),
-        Node::let_bind("a", vyre_libs_builder::builder::stencil::unpack_channel("px", 24)),
+        Node::let_bind(
+            "y",
+            vyre_libs_builder::builder::stencil::unpack_channel("px", 0),
+        ),
+        Node::let_bind(
+            "a",
+            vyre_libs_builder::builder::stencil::unpack_channel("px", 24),
+        ),
         Node::let_bind(
             "packed_rgba",
             Expr::bitor(
@@ -103,10 +121,22 @@ pub fn grayscale_to_rgba(input: &str, output: &str, count: u32) -> Program {
 pub fn premultiply_alpha(input: &str, output: &str, count: u32) -> Program {
     let body = vec![
         Node::let_bind("px", Expr::load(input, Expr::var("idx"))),
-        Node::let_bind("r", vyre_libs_builder::builder::stencil::unpack_channel("px", 0)),
-        Node::let_bind("g", vyre_libs_builder::builder::stencil::unpack_channel("px", 8)),
-        Node::let_bind("b", vyre_libs_builder::builder::stencil::unpack_channel("px", 16)),
-        Node::let_bind("a", vyre_libs_builder::builder::stencil::unpack_channel("px", 24)),
+        Node::let_bind(
+            "r",
+            vyre_libs_builder::builder::stencil::unpack_channel("px", 0),
+        ),
+        Node::let_bind(
+            "g",
+            vyre_libs_builder::builder::stencil::unpack_channel("px", 8),
+        ),
+        Node::let_bind(
+            "b",
+            vyre_libs_builder::builder::stencil::unpack_channel("px", 16),
+        ),
+        Node::let_bind(
+            "a",
+            vyre_libs_builder::builder::stencil::unpack_channel("px", 24),
+        ),
         Node::let_bind(
             "pr",
             vyre_libs_builder::builder::stencil::clamp_u8(Expr::div(
@@ -160,10 +190,22 @@ pub fn premultiply_alpha(input: &str, output: &str, count: u32) -> Program {
 pub fn unpremultiply_alpha(input: &str, output: &str, count: u32) -> Program {
     let body = vec![
         Node::let_bind("px", Expr::load(input, Expr::var("idx"))),
-        Node::let_bind("r", vyre_libs_builder::builder::stencil::unpack_channel("px", 0)),
-        Node::let_bind("g", vyre_libs_builder::builder::stencil::unpack_channel("px", 8)),
-        Node::let_bind("b", vyre_libs_builder::builder::stencil::unpack_channel("px", 16)),
-        Node::let_bind("a", vyre_libs_builder::builder::stencil::unpack_channel("px", 24)),
+        Node::let_bind(
+            "r",
+            vyre_libs_builder::builder::stencil::unpack_channel("px", 0),
+        ),
+        Node::let_bind(
+            "g",
+            vyre_libs_builder::builder::stencil::unpack_channel("px", 8),
+        ),
+        Node::let_bind(
+            "b",
+            vyre_libs_builder::builder::stencil::unpack_channel("px", 16),
+        ),
+        Node::let_bind(
+            "a",
+            vyre_libs_builder::builder::stencil::unpack_channel("px", 24),
+        ),
         Node::let_bind(
             "ur",
             Expr::select(

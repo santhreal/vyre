@@ -202,7 +202,10 @@ fn source_derived_mutable_state_owner_closure_test() {
                 let mut pending_test_cfg = false;
                 for line in content.lines() {
                     let trimmed = line.trim();
-                    if trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*') {
+                    if trimmed.starts_with("//")
+                        || trimmed.starts_with("/*")
+                        || trimmed.starts_with('*')
+                    {
                         continue;
                     }
                     if trimmed.starts_with("#[cfg(test)]") {

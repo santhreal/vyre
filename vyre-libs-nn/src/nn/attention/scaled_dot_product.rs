@@ -16,11 +16,11 @@ use vyre_foundation::composition::{trap_program, wrap_child_region, wrap_region}
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
-use vyre_libs_builder::builder::{check_tensors, BuildOptions};
 use crate::nn::attention_stability::{
     bounded_exp_arg, bounded_score, direct_score_expr, positive_denominator,
 };
 use crate::nn::f32_stability::flush_tiny;
+use vyre_libs_builder::builder::{check_tensors, BuildOptions};
 use vyre_libs_builder::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
 const OP_ID: &str = "vyre-libs::nn::attention";

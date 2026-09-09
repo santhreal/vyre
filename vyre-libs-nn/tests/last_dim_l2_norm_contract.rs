@@ -2,10 +2,9 @@
 
 #![forbid(unsafe_code)]
 
-use crate::wire_words;
-use wire_words::f32_bytes;
+use vyre_test_support::test_parity_oracles::f32_bytes;
 
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 use vyre_libs_nn::nn::norm::{last_dim_l2_norm, LastDimL2NormError};
 use vyre_reference::value::Value;
 

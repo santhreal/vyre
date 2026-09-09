@@ -5,6 +5,7 @@
 //! accumulator growth, symmetric-difference change detection, select navigation,
 //! and Method-of-Four-Russians byte-tile application.
 
+use vyre_foundation::ir::Program;
 use vyre_libs_bitset::bitset::{
     and_into::bitset_and_into,
     and_not::bitset_and_not,
@@ -19,7 +20,6 @@ use vyre_libs_bitset::bitset::{
     select::select1_query,
     xor_into::bitset_xor_into,
 };
-use vyre_foundation::ir::Program;
 
 /// Build `out = lhs & !rhs` for subtracting an exclusion mask.
 #[must_use]

@@ -30,10 +30,7 @@ pub fn reserve_items_with<T, E>(
 }
 
 /// Grow `buffer` to hold at least `capacity` items.
-pub fn try_reserve_vec_capacity<T>(
-    buffer: &mut Vec<T>,
-    capacity: usize,
-) -> Result<(), String> {
+pub fn try_reserve_vec_capacity<T>(buffer: &mut Vec<T>, capacity: usize) -> Result<(), String> {
     vyre_foundation::allocation::try_reserve_vec_to_capacity(buffer, capacity)
         .map_err(|error| error.to_string())
 }

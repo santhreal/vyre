@@ -1,7 +1,7 @@
 //! Shared per-word unary bitset kernel builder.
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program, UnOp};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 pub(crate) fn bitset_unary_word_program(
     op_id: &'static str,

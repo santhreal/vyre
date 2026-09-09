@@ -6,7 +6,7 @@
 
 #![cfg(all(feature = "nn-attention", feature = "nn-norm"))]
 
-use vyre::ir::Node;
+use vyre_foundation::ir::Node;
 
 fn has_barrier(nodes: &[Node]) -> bool {
     nodes.iter().any(|node| match node {

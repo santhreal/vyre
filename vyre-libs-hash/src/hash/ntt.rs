@@ -285,8 +285,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_reference::composition_witness::{ntt_forward_witness, ntt_inverse_witness};
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     fn ntt_forward_cpu(a: &mut [u32]) {
         ntt_forward_witness(a);

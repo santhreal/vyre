@@ -342,8 +342,8 @@ fn linear_4bit_affine_grouped_batch_impl(
 
 #[cfg(test)]
 mod tests {
-    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_foundation::ir::{Expr, Node};
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     use super::super::grouped_layout::AFFINE_GROUPED_WORKGROUP_SIZE;
     use super::super::planner_evidence::linear_4bit_affine_grouped_planner_evidence;

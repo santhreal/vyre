@@ -2,4 +2,3 @@
 
 #[path = "smoke.rs"]
 pub mod smoke;
-

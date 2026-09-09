@@ -8,10 +8,10 @@ use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-#[cfg(test)]
-use vyre_libs_builder::plumbing::operand::buffer_names::fixed_name;
 use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decoded_output_buffer};
 use crate::decode::scan::tiled_decode_aho_scan_body;
+#[cfg(test)]
+use vyre_libs_builder::plumbing::operand::buffer_names::fixed_name;
 use vyre_primitives::wire::pack_u32_slice as pack_words;
 
 /// Canonical op id for ASCII hex decode.
@@ -60,7 +60,9 @@ pub const fn hex_decoded_capacity(input_len: u32) -> u32 {
 }
 
 fn nibble_expr(byte: Expr, table: &str) -> Expr {
-    vyre_libs_builder::builder::state_machine::TableStateMachineComposer::byte_table_lookup(table, byte)
+    vyre_libs_builder::builder::state_machine::TableStateMachineComposer::byte_table_lookup(
+        table, byte,
+    )
 }
 
 /// Decode one hex byte pair into a single u32 byte value.

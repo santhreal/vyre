@@ -762,7 +762,7 @@ mod tests {
             assert_eq!(program.buffers()[0].access(), BufferAccess::ReadWrite);
             assert_eq!(
                 program.buffers()[0].output_byte_range(),
-                Some(0..output_words * 4)
+                Some(0u64..(output_words as u64 * 4))
             );
             assert_eq!(program.buffers()[1].name.as_ref(), "pattern_bitmap");
             assert_eq!(program.buffers()[1].count, records);

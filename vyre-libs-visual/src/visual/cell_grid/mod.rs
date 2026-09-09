@@ -57,7 +57,9 @@ impl GridShape {
     }
 
     #[inline]
-    pub(crate) const fn to_stencil_shape(self) -> vyre_libs_builder::builder::stencil::CellGridShape {
+    pub(crate) const fn to_stencil_shape(
+        self,
+    ) -> vyre_libs_builder::builder::stencil::CellGridShape {
         vyre_libs_builder::builder::stencil::CellGridShape {
             cols: self.cols,
             rows: self.rows,

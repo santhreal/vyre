@@ -59,7 +59,7 @@ pub(super) fn string_bitmap_scatter_program(records: u32) -> Program {
         vec![
             BufferDecl::storage("out_flags", 0, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(output_words)
-                .with_output_byte_range(0..(output_words as usize * 4)),
+                .with_output_byte_range(0u64..(output_words as u64 * 4)),
             BufferDecl::storage("pattern_bitmap", 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(records),
             BufferDecl::storage("rule_bitmap", 2, BufferAccess::ReadOnly, DataType::U32)

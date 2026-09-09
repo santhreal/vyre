@@ -2,8 +2,8 @@
 //!
 //! `grad_gate = grad_out * σ(g) * (1-σ(g)) * (branch - skip)`
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{DataType, Expr, Program, UnOp};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 const OP_ID: &str = "vyre-libs::nn::skip_gate_backward";
 

@@ -209,10 +209,8 @@ fn runtime_derived_operation_and_target_sets_require_certificate_join() {
         for op in op_registry.iter() {
             let op_id = OpId::from(op.id);
             // Query an unregistered combination
-            let status = cert_registry.evaluate_support(
-                &format!("unregistered_{}", backend.id),
-                &op_id,
-            );
+            let status =
+                cert_registry.evaluate_support(&format!("unregistered_{}", backend.id), &op_id);
             assert!(
                 !status.is_supported(),
                 "Fix: unregistered backend `{}` and op `{}` must evaluate to unsupported",
@@ -242,7 +240,10 @@ fn device_execution_stage_cannot_be_fabricated_and_requires_hardware_proof() {
     );
 
     match status {
-        SupportStatus::Unsupported { missing_stage, reason } => {
+        SupportStatus::Unsupported {
+            missing_stage,
+            reason,
+        } => {
             assert_eq!(
                 missing_stage,
                 ProductionPathStage::DeviceExecution,
@@ -253,6 +254,8 @@ fn device_execution_stage_cannot_be_fabricated_and_requires_hardware_proof() {
                 "Fix: reason must explicitly state device_execution is unproven: {reason}"
             );
         }
-        SupportStatus::Supported { .. } => panic!("unproven device execution must not be supported"),
+        SupportStatus::Supported { .. } => {
+            panic!("unproven device execution must not be supported")
+        }
     }
 }

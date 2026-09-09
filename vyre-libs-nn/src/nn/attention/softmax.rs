@@ -20,10 +20,12 @@
 //!
 //! Both paths produce the same IR.
 
-use vyre_libs_builder::builder::{check_same_shape, check_tensors, checked_element_count, BuildOptions};
-use vyre_libs_builder::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 use vyre_foundation::composition::{trap_program, wrap_region};
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_libs_builder::builder::{
+    check_same_shape, check_tensors, checked_element_count, BuildOptions,
+};
+use vyre_libs_builder::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
 /// Canonical op id; matches the region generator name so conformance
 /// certificates stay self-describing.

@@ -958,39 +958,87 @@ fn delta_retains_unaffected_interned_storage_certificates_and_cache_entries_by_i
     // Now test a disjoint graph where node3 is independent
     let mut independent_graph = ProgramGraph::new();
     let ind_in = independent_graph
-        .add_external_value("ext_a", tensor(DataType::F32, vec![ShapeDim::Known(100)], BufferAccess::ReadOnly, ValueLifetime::Invocation))
+        .add_external_value(
+            "ext_a",
+            tensor(
+                DataType::F32,
+                vec![ShapeDim::Known(100)],
+                BufferAccess::ReadOnly,
+                ValueLifetime::Invocation,
+            ),
+        )
         .unwrap();
     let (n_a, _) = independent_graph
-        .add_node("node_a", make_unary_node("a.in", "a.out"), vec![GraphInput {
-            buffer: "a.in".into(),
-            value: ind_in,
-            contract: tensor(DataType::F32, vec![ShapeDim::Known(100)], BufferAccess::ReadOnly, ValueLifetime::Invocation),
-        }], vec![GraphOutput {
-            buffer: "a.out".into(),
-            name: "a_out".into(),
-            contract: tensor(DataType::F32, vec![ShapeDim::Known(100)], BufferAccess::ReadWrite, ValueLifetime::Invocation),
-            retained_successor_of: None,
-        }])
+        .add_node(
+            "node_a",
+            make_unary_node("a.in", "a.out"),
+            vec![GraphInput {
+                buffer: "a.in".into(),
+                value: ind_in,
+                contract: tensor(
+                    DataType::F32,
+                    vec![ShapeDim::Known(100)],
+                    BufferAccess::ReadOnly,
+                    ValueLifetime::Invocation,
+                ),
+            }],
+            vec![GraphOutput {
+                buffer: "a.out".into(),
+                name: "a_out".into(),
+                contract: tensor(
+                    DataType::F32,
+                    vec![ShapeDim::Known(100)],
+                    BufferAccess::ReadWrite,
+                    ValueLifetime::Invocation,
+                ),
+                retained_successor_of: None,
+            }],
+        )
         .unwrap();
 
     let ind_in_b = independent_graph
-        .add_external_value("ext_b", tensor(DataType::F32, vec![ShapeDim::Known(100)], BufferAccess::ReadOnly, ValueLifetime::Invocation))
+        .add_external_value(
+            "ext_b",
+            tensor(
+                DataType::F32,
+                vec![ShapeDim::Known(100)],
+                BufferAccess::ReadOnly,
+                ValueLifetime::Invocation,
+            ),
+        )
         .unwrap();
     let (n_b, _) = independent_graph
-        .add_node("node_b", make_unary_node("b.in", "b.out"), vec![GraphInput {
-            buffer: "b.in".into(),
-            value: ind_in_b,
-            contract: tensor(DataType::F32, vec![ShapeDim::Known(100)], BufferAccess::ReadOnly, ValueLifetime::Invocation),
-        }], vec![GraphOutput {
-            buffer: "b.out".into(),
-            name: "b_out".into(),
-            contract: tensor(DataType::F32, vec![ShapeDim::Known(100)], BufferAccess::ReadWrite, ValueLifetime::Invocation),
-            retained_successor_of: None,
-        }])
+        .add_node(
+            "node_b",
+            make_unary_node("b.in", "b.out"),
+            vec![GraphInput {
+                buffer: "b.in".into(),
+                value: ind_in_b,
+                contract: tensor(
+                    DataType::F32,
+                    vec![ShapeDim::Known(100)],
+                    BufferAccess::ReadOnly,
+                    ValueLifetime::Invocation,
+                ),
+            }],
+            vec![GraphOutput {
+                buffer: "b.out".into(),
+                name: "b_out".into(),
+                contract: tensor(
+                    DataType::F32,
+                    vec![ShapeDim::Known(100)],
+                    BufferAccess::ReadWrite,
+                    ValueLifetime::Invocation,
+                ),
+                retained_successor_of: None,
+            }],
+        )
         .unwrap();
 
-    let n_b_buffers_before = std::sync::Arc::as_ptr(&independent_graph.node(n_b).unwrap().program.buffers);
-    let n_b_entry_before = std::sync::Arc::as_ptr(&independent_graph.node(n_b).unwrap().program.entry);
+    let n_b_buffers_before =
+        std::sync::Arc::as_ptr(&independent_graph.node(n_b).unwrap().program.buffers);
+    let n_b_entry_before =
+        std::sync::Arc::as_ptr(&independent_graph.node(n_b).unwrap().program.entry);
 
     // Apply delta mutating ONLY node_a
     let mut ind_delta = GraphDelta::new();
@@ -1000,12 +1048,22 @@ fn delta_retains_unaffected_interned_storage_certificates_and_cache_entries_by_i
         inputs: vec![GraphInput {
             buffer: "a.in".into(),
             value: ind_in,
-            contract: tensor(DataType::F32, vec![ShapeDim::Known(100)], BufferAccess::ReadOnly, ValueLifetime::Invocation),
+            contract: tensor(
+                DataType::F32,
+                vec![ShapeDim::Known(100)],
+                BufferAccess::ReadOnly,
+                ValueLifetime::Invocation,
+            ),
         }],
         outputs: vec![GraphOutput {
             buffer: "a.out".into(),
             name: "a_out".into(),
-            contract: tensor(DataType::F32, vec![ShapeDim::Known(100)], BufferAccess::ReadWrite, ValueLifetime::Invocation),
+            contract: tensor(
+                DataType::F32,
+                vec![ShapeDim::Known(100)],
+                BufferAccess::ReadWrite,
+                ValueLifetime::Invocation,
+            ),
             retained_successor_of: None,
         }],
     });
@@ -1041,12 +1099,20 @@ fn rejected_delta_leaves_no_partial_state_under_all_error_modes() {
         node_id: GraphNodeId(9999),
     });
     assert!(bad_delta1.apply_transactional(&graph).is_err());
-    assert_eq!(graph.to_wire().unwrap(), orig_wire, "Base graph must remain untouched");
+    assert_eq!(
+        graph.to_wire().unwrap(),
+        orig_wire,
+        "Base graph must remain untouched"
+    );
 
     // 2. Dependency violation error
     let bad_delta2 = GraphDelta::new().with_op(GraphDeltaOp::DeleteNode { node_id: node1 });
     assert!(bad_delta2.apply_transactional(&graph).is_err());
-    assert_eq!(graph.to_wire().unwrap(), orig_wire, "Base graph must remain untouched");
+    assert_eq!(
+        graph.to_wire().unwrap(),
+        orig_wire,
+        "Base graph must remain untouched"
+    );
 
     // 3. Unknown shape symbol
     let bad_delta3 = GraphDelta::new().with_op(GraphDeltaOp::UpdateShapeBound {
@@ -1055,7 +1121,11 @@ fn rejected_delta_leaves_no_partial_state_under_all_error_modes() {
         new_bound: 20,
     });
     assert!(bad_delta3.apply_transactional(&graph).is_err());
-    assert_eq!(graph.to_wire().unwrap(), orig_wire, "Base graph must remain untouched");
+    assert_eq!(
+        graph.to_wire().unwrap(),
+        orig_wire,
+        "Base graph must remain untouched"
+    );
 
     // 4. Illegal shape bound (zero bound)
     let bad_delta4 = GraphDelta::new().with_op(GraphDeltaOp::UpdateShapeBound {
@@ -1064,7 +1134,11 @@ fn rejected_delta_leaves_no_partial_state_under_all_error_modes() {
         new_bound: 0,
     });
     assert!(bad_delta4.apply_transactional(&graph).is_err());
-    assert_eq!(graph.to_wire().unwrap(), orig_wire, "Base graph must remain untouched");
+    assert_eq!(
+        graph.to_wire().unwrap(),
+        orig_wire,
+        "Base graph must remain untouched"
+    );
 }
 
 #[test]
@@ -1122,11 +1196,19 @@ fn bounded_delta_rejects_oversized_names_and_ranks() {
     let huge_name = "x".repeat(5000);
     let bad_op = GraphDeltaOp::InsertExternalValue {
         name: huge_name,
-        contract: tensor(DataType::F32, vec![ShapeDim::Known(10)], BufferAccess::ReadOnly, ValueLifetime::Invocation),
+        contract: tensor(
+            DataType::F32,
+            vec![ShapeDim::Known(10)],
+            BufferAccess::ReadOnly,
+            ValueLifetime::Invocation,
+        ),
     };
 
     let push_res = delta.try_push(bad_op);
-    assert!(matches!(push_res, Err(GraphDeltaError::NameLengthExceeded { .. })));
+    assert!(matches!(
+        push_res,
+        Err(GraphDeltaError::NameLengthExceeded { .. })
+    ));
 }
 
 #[test]
@@ -1163,6 +1245,9 @@ fn affected_graph_closure_derives_exact_invalidated_queries() {
     let (_mutated, closure) = delta.apply_transactional(&graph).unwrap();
     let query_keys = closure.invalidated_query_keys();
 
-    assert!(!query_keys.is_empty(), "Dirty closure must produce invalidated query keys");
+    assert!(
+        !query_keys.is_empty(),
+        "Dirty closure must produce invalidated query keys"
+    );
     assert!(query_keys.iter().any(|k| matches!(k, vyre_foundation::substrate::QueryKey::SemanticFacts { node_id, .. } if *node_id == node1.0)));
 }

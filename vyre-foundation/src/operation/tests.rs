@@ -569,10 +569,7 @@ fn law_label_without_executable_proof_evidence_is_rejected() {
 
     let zero_witness_law =
         vyre_spec::GuardedLaw::unconditional(vyre_spec::AlgebraicLaw::Commutative)
-            .with_proof_method(vyre_spec::ProofMethod::WitnessedU32 {
-                seed: 42,
-                count: 0,
-            });
+            .with_proof_method(vyre_spec::ProofMethod::WitnessedU32 { seed: 42, count: 0 });
     assert_eq!(
         zero_witness_law.validate(),
         Err(vyre_spec::LawValidationError::NoExecutableProofEvidence {
@@ -649,4 +646,3 @@ fn declarative_dialect_operation_generation() {
     assert_eq!(record.decision.laws().len(), 1);
     assert_eq!(record.decision.laws()[0].law.name(), "idempotent");
 }
-

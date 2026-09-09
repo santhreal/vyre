@@ -21,8 +21,8 @@ use vyre_bench::evidence::{
     BENCHMARK_RECEIPT_SCHEMA_VERSION,
 };
 use vyre_bench::registry::collect_all;
-use vyre_bench::workloads::{all_whole_application_workloads, WorkloadSpecification};
 use vyre_bench::runner::{execute_suite, RunConfig};
+use vyre_bench::workloads::{all_whole_application_workloads, WorkloadSpecification};
 /// Create a fully populated baseline benchmark receipt.
 fn sample_benchmark_receipt() -> BenchmarkReceipt {
     BenchmarkReceipt {
@@ -749,8 +749,9 @@ fn compatible_cell_cohort_enforces_homogeneous_identity_and_safe_averaging() {
     assert_eq!(cohort.len(), 2);
 
     // 4. Constructing from slice of compatible receipts
-    let cohort2 = CompatibleCellCohort::try_from_receipts(&[base_receipt.clone(), compatible_trial2])
-        .expect("Constructing cohort from compatible receipts must succeed");
+    let cohort2 =
+        CompatibleCellCohort::try_from_receipts(&[base_receipt.clone(), compatible_trial2])
+            .expect("Constructing cohort from compatible receipts must succeed");
     assert_eq!(cohort2.len(), 2);
 
     // 5. Constructing from empty slice is refused
@@ -919,7 +920,12 @@ fn device_fleet_leasing_clock_and_interference_calibration_contracts() {
 
     // 8. Device can now be leased by campaign_beta
     let lease_beta = coordinator
-        .lease_idle_device("gpu_node_01", "campaign_beta", duration_ns, now_ns + 6_000_000)
+        .lease_idle_device(
+            "gpu_node_01",
+            "campaign_beta",
+            duration_ns,
+            now_ns + 6_000_000,
+        )
         .expect("Leasing released device must succeed");
     assert_eq!(lease_beta.holder, "campaign_beta");
 
@@ -990,7 +996,7 @@ fn compiler_source_crates_name_zero_workload_or_expert_baselines() {
 
     // Whole-application workload identifiers
     for app in all_whole_application_workloads() {
-        corpus_identifiers.push(app.id.clone());
+        corpus_identifiers.push(app.id.to_string());
     }
 
     assert!(
@@ -1014,7 +1020,9 @@ fn compiler_source_crates_name_zero_workload_or_expert_baselines() {
         "vyre/src",
     ];
 
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent().expect("workspace root");
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root");
 
     let mut violations = Vec::new();
 

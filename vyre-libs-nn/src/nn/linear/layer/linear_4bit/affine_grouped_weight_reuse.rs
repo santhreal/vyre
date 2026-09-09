@@ -154,8 +154,8 @@ pub(super) fn linear_4bit_affine_grouped_weight_reuse(
 
 #[cfg(test)]
 mod tests {
-    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_foundation::ir::BufferAccess;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     use super::super::affine_grouped::linear_4bit_affine_grouped_batched;
     use super::super::grouped_layout::AFFINE_GROUPED_WEIGHT_TILE;

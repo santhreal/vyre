@@ -96,7 +96,9 @@ pub enum StaleCacheError {
         found: CompilerLevelStage,
     },
     /// Target hardware fingerprint mismatch.
-    #[error("Target fingerprint mismatch: expected target 0x{expected:016x}, found 0x{found:016x}")]
+    #[error(
+        "Target fingerprint mismatch: expected target 0x{expected:016x}, found 0x{found:016x}"
+    )]
     TargetMismatch {
         /// Current target fingerprint.
         expected: u64,

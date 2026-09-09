@@ -9,7 +9,9 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, require_exactly_one_output,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_libs_graph::graph::sum_product_circuit::{sum_product_depths, sum_product_evaluate_leveled};
+use vyre_libs_graph::graph::sum_product_circuit::{
+    sum_product_depths, sum_product_evaluate_leveled,
+};
 use vyre_libs_math::math::conformal::{conformal_threshold, try_conformal_rank};
 use vyre_megakernel::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,

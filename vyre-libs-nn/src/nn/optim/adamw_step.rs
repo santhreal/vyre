@@ -4,8 +4,8 @@
 //! `v = β₂*v + (1-β₂)*g²`
 //! `θ = θ * (1 - lr*wd) - lr * m̂ / (√v̂ + ε)`
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program, UnOp};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 use crate::nn::f32_stability::flush_tiny;
 

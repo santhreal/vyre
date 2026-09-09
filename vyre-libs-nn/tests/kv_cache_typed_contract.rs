@@ -5,7 +5,7 @@
 use crate::wire_words;
 use wire_words::{kv_cache_append_test_spec as spec, u16_bytes as bytes, u16_words_of as words};
 
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 use vyre_libs_nn::nn::attention::{kv_cache_append, KvCacheAppendError};
 use vyre_reference::value::Value;
 

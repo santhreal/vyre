@@ -4,7 +4,7 @@
 #![allow(deprecated)]
 use crate::wire_words;
 
-use vyre::ir::Expr;
+use vyre_foundation::ir::Expr;
 use vyre_libs_parsing::parsing::core::ast::node::*;
 use vyre_libs_parsing::parsing::core::ast::shunting::ast_shunting_yard_with_capacity;
 use vyre_reference::value::Value;

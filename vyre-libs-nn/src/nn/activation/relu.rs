@@ -3,8 +3,8 @@
 //! Category A composition  -  one primitive per invocation. Element-wise
 //! so the optimizer can trivially fuse into any upstream operation.
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{Expr, Program};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 /// Shared unsigned ReLU expression used by the standalone activation builder.
 #[must_use]

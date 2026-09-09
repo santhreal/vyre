@@ -3,6 +3,7 @@
 //! These helpers keep reduction planning in `vyre-pass-engine` while the
 //! executable IR and reference contracts stay in `vyre-primitives`.
 
+use vyre_foundation::ir::{Node, Program};
 use vyre_libs_reduce::reduce::{
     multi_block_prefix_scan::{
         multi_block_prefix_scan_sum_u32, pass_a_local_scan, pass_c_broadcast_offsets,
@@ -18,7 +19,6 @@ use vyre_libs_reduce::reduce::{
         workgroup_sum_u32, WorkgroupReductionScope,
     },
 };
-use vyre_foundation::ir::{Node, Program};
 
 /// Build the self-substrate f32 workgroup sum dispatch program.
 #[must_use]

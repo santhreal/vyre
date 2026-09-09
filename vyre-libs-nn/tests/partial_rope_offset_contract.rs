@@ -2,8 +2,8 @@
 
 #![forbid(unsafe_code)]
 
-use crate::wire_words;
-use wire_words::{f32_bytes as bytes, f32_words_of as decode};
+use crate::wire_words::f32_words_of as decode;
+use vyre_test_support::test_parity_oracles::f32_bytes as bytes;
 
 use vyre_libs_nn::nn::attention::partial_rope_at_offset;
 use vyre_reference::value::Value;

@@ -624,10 +624,14 @@ mod tests {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 12);
-                let exchange_adj = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
-                let sources = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
-                let sinks = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2]);
-                let seed_x = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[3]);
+                let exchange_adj =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
+                let sources =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
+                let sinks =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2]);
+                let seed_x =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[3]);
                 let n = seed_x.len();
                 assert_eq!(exchange_adj.len(), n * n);
                 assert_eq!(sources.len(), n);

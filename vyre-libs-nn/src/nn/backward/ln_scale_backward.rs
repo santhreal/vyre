@@ -4,8 +4,8 @@
 //! Backward: `grad_x[i] = grad_out[i] * scale[i]`
 //!           `grad_scale[i] = grad_out[i] * x[i]`
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 const OP_ID: &str = "vyre-libs::nn::ln_scale_backward";
 

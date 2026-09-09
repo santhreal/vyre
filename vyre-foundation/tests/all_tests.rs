@@ -816,12 +816,12 @@ pub mod typed_configuration_schema_contracts;
 #[path = "resource_abi_contract.rs"]
 pub mod resource_abi_contract;
 
+/// Integration tests from `tests/compiler_substrate_contract.rs` (Row 89).
+#[path = "compiler_substrate_contract.rs"]
+pub mod compiler_substrate_contract;
 /// Integration tests from `tests/region_fusion_contracts.rs`.
 #[path = "region_fusion_contracts.rs"]
 pub mod region_fusion_contracts;
 /// Integration tests from `tests/schema_authority_contract.rs`.
 #[path = "schema_authority_contract.rs"]
 pub mod schema_authority_contract;
-/// Integration tests from `tests/compiler_substrate_contract.rs` (Row 89).
-#[path = "compiler_substrate_contract.rs"]
-pub mod compiler_substrate_contract;

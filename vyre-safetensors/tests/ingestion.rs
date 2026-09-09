@@ -889,8 +889,7 @@ fn shard_substitution_between_verification_and_binding_fails_atomically() {
     );
 
     // 2. Re-verifying or opening index against the substituted shard fails with digest mismatch
-    let new_index =
-        ShardedSafetensorIndex::open(temp.path(), &index_path).expect("reopen index");
+    let new_index = ShardedSafetensorIndex::open(temp.path(), &index_path).expect("reopen index");
     let err = new_index
         .verify_shards([
             ExpectedShardDigest {

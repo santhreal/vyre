@@ -1,7 +1,7 @@
 //! Backward for `qk_gain`: `grad_q = grad_out * gain[h]`.
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{BinOp, BufferAccess, DataType, Expr, Program};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 const OP_ID: &str = "vyre-libs::nn::qk_gain_backward";
 

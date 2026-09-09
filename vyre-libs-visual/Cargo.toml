@@ -43,6 +43,7 @@ vyre-libs-math = { workspace = true }
 [dev-dependencies]
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
 vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-reference = { workspace = true }
 
 [[test]]
 name = "all_tests"

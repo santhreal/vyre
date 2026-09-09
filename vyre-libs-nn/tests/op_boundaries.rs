@@ -1,24 +1,20 @@
 //! Test crate.
 
 #![cfg(all(
-    feature = "math-linalg",
-    feature = "math-scan",
-    feature = "math-broadcast",
     feature = "nn-linear",
     feature = "nn-attention",
     feature = "nn-norm",
     feature = "nn-activation",
-    feature = "pattern-substring"
 ))]
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use vyre_foundation::optimizer::AdapterCaps;
+use vyre_libs_builder::prelude::TensorRef;
 use vyre_libs_nn::nn::{
     attention::{Attention, Softmax},
     norm::LayerNorm,
 };
-use vyre_libs::TensorRef;
 
 const MAX_WORKGROUP_LANES: u32 = AdapterCaps::high_end().max_invocations_per_workgroup;
 
@@ -53,15 +49,6 @@ fn scan_prefix_sum_boundaries_do_not_panic() {
     for &n in &[0, 1, MAX_WORKGROUP_LANES, MAX_WORKGROUP_LANES + 1] {
         assert_no_panic("scan_prefix_sum", || {
             let _ = vyre_libs_math::math::scan::scan_prefix_sum("input", "output", n);
-        });
-    }
-}
-
-#[test]
-fn substring_search_boundaries_do_not_panic() {
-    for &n in &[0, 1, MAX_WORKGROUP_LANES, MAX_WORKGROUP_LANES + 1] {
-        assert_no_panic("substring_search", || {
-            let _ = vyre_libs_pattern::pattern::substring_search("haystack", "needle", "matches", n, 1);
         });
     }
 }

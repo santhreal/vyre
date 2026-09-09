@@ -2,14 +2,16 @@
 
 #![forbid(unsafe_code)]
 
-use crate::wire_words;
-use wire_words::{default_gated_delta_spec, f32_bytes as bytes, f32_words_of as decode};
+use crate::wire_words::{default_gated_delta_spec, f32_words_of as decode};
+use vyre_test_support::test_parity_oracles::f32_bytes as bytes;
 
-use vyre::ir::{
+use vyre_foundation::ir::{
     BufferAccess, DataType, GraphInput, GraphOutput, ProgramGraph, ShapeDim, ValueContract,
     ValueLifetime,
 };
-use vyre_libs_nn::nn::attention::{recurrent_gated_delta, GatedDeltaSpec, RecurrentGatedDeltaError};
+use vyre_libs_nn::nn::attention::{
+    recurrent_gated_delta, GatedDeltaSpec, RecurrentGatedDeltaError,
+};
 use vyre_reference::value::Value;
 
 #[allow(clippy::too_many_arguments)]

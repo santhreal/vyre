@@ -48,8 +48,10 @@ impl StringInterner {
         let mut strings_guard = self.strings.write().expect("Lock poisoned");
         let id = InternedStringId(strings_guard.len() as u32);
         let arc_str: Arc<str> = text.into();
-        self.allocated_bytes
-            .fetch_add(text.len() + std::mem::size_of::<Arc<str>>(), Ordering::Relaxed);
+        self.allocated_bytes.fetch_add(
+            text.len() + std::mem::size_of::<Arc<str>>(),
+            Ordering::Relaxed,
+        );
         write_guard.insert(Arc::clone(&arc_str), id);
         strings_guard.push(arc_str);
         id

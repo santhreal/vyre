@@ -52,11 +52,7 @@ pub fn attribute_child(parent_op_id: &str, child_op_id: &str, program: Program) 
 /// The gate names the invocation the body belongs to. Fusion reads the gate
 /// too: an invocation-gated store makes the arm a grid-sync writer, so the
 /// arms that consume its result wait for it.
-pub fn attribute_serial_child(
-    parent_op_id: &str,
-    child_op_id: &str,
-    program: Program,
-) -> Program {
+pub fn attribute_serial_child(parent_op_id: &str, child_op_id: &str, program: Program) -> Program {
     let gated = single_invocation(entry_body(&program));
     let node = attributed_region(parent_op_id, child_op_id, gated);
     program.with_rewritten_wrapped_entry(vec![node])

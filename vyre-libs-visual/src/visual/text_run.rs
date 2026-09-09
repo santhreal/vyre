@@ -138,9 +138,18 @@ pub fn text_run_blend(
             ),
             Node::let_bind(&g_inv_cov, Expr::sub(Expr::u32(255), Expr::var(&g_cov))),
             // Unpack fg and current bg
-            Node::let_bind(&fg_r, vyre_libs_builder::builder::stencil::unpack_channel(&g_col, 0)),
-            Node::let_bind(&fg_g, vyre_libs_builder::builder::stencil::unpack_channel(&g_col, 8)),
-            Node::let_bind(&fg_b, vyre_libs_builder::builder::stencil::unpack_channel(&g_col, 16)),
+            Node::let_bind(
+                &fg_r,
+                vyre_libs_builder::builder::stencil::unpack_channel(&g_col, 0),
+            ),
+            Node::let_bind(
+                &fg_g,
+                vyre_libs_builder::builder::stencil::unpack_channel(&g_col, 8),
+            ),
+            Node::let_bind(
+                &fg_b,
+                vyre_libs_builder::builder::stencil::unpack_channel(&g_col, 16),
+            ),
             Node::let_bind(
                 &bg_r,
                 vyre_libs_builder::builder::stencil::unpack_channel(&format!("curr_px_{g}"), 0),

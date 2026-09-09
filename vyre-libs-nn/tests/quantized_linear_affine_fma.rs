@@ -2,8 +2,7 @@
 
 #![cfg(feature = "nn-linear-4bit")]
 
-use crate::wire_words;
-use wire_words::{f32_bytes, f32_words as decode_f32};
+use vyre_test_support::test_parity_oracles::{decode_f32, f32_bytes};
 
 use vyre_libs_nn::nn::linear::{linear_4bit_affine_grouped_typed, QuantizedLinear4BitSpec};
 use vyre_reference::value::Value;

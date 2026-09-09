@@ -6,11 +6,13 @@
 //! summaries through `vyre-primitives::reduce` programs instead of open-coding
 //! host loops in each pass.
 
-use vyre_libs_builder::plumbing::host::dispatch_buffers::{ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes};
 use crate::reduce::{
     all::reduce_all, any::reduce_any, count_non_zero::reduce_count_non_zero,
     histogram::histogram_atomic_scatter, max::reduce_max, min::reduce_min,
     segment_reduce::segment_reduce_sum, sum::reduce_sum,
+};
+use vyre_libs_builder::plumbing::host::dispatch_buffers::{
+    ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_megakernel::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
@@ -357,7 +359,12 @@ fn decode_first_output(
             "Fix: {context} expected at least one output buffer, got 0."
         )));
     }
-    vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_output_exact(&outputs[0], words, context, out)
+    vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_output_exact(
+        &outputs[0],
+        words,
+        context,
+        out,
+    )
 }
 
 fn decode_scalar(
@@ -373,9 +380,6 @@ fn decode_scalar(
 mod tests {
     use super::*;
     use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_test_support::test_parity_oracles::{
-        canonical_inputs, policy, semantic_output, NeverDispatches, StaticOutputs,
-    };
     use vyre_megakernel::{SemanticExecutionOutput, SemanticExecutionRequest};
     use vyre_reference::composition_witness::{
         histogram_witness as reference_histogram_atomic_scatter,
@@ -385,6 +389,9 @@ mod tests {
         reduce_max_witness as reference_reduce_max, reduce_min_witness as reference_reduce_min,
         segment_reduce_sum_witness as primitive_segment_reduce_sum,
         wrapping_sum_witness as reference_reduce_sum,
+    };
+    use vyre_test_support::test_parity_oracles::{
+        canonical_inputs, policy, semantic_output, NeverDispatches, StaticOutputs,
     };
 
     fn reference_reduce_any(values: &[u32]) -> bool {
@@ -414,7 +421,9 @@ mod tests {
                 .program;
             let inputs = canonical_inputs(request)?;
             let op_id = vyre_test_support::test_parity_oracles::region_operation_id(program)?;
-            let values = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(required_input(&inputs, 0, op_id)?);
+            let values = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                required_input(&inputs, 0, op_id)?,
+            );
             let ordered = match op_id {
                 crate::reduce::sum::OP_ID => {
                     require_input_count(&inputs, 2, op_id)?;
@@ -442,8 +451,9 @@ mod tests {
                 }
                 crate::reduce::segment_reduce::OP_ID => {
                     require_input_count(&inputs, 3, op_id)?;
-                    let offsets =
-                        vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(required_input(&inputs, 1, op_id)?);
+                    let offsets = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                        required_input(&inputs, 1, op_id)?,
+                    );
                     vec![u32_slice_to_le_bytes(&primitive_segment_reduce_sum(
                         &values, &offsets,
                     ))]

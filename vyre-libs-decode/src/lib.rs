@@ -1,5 +1,6 @@
 //! Base64, hex, DEFLATE, and encodex data decoding and decompression compositions.
 
+#[cfg(feature = "decode")]
 pub mod decode;
 
 /// Ensure all feature-selected library operation registrations are retained by the linker.

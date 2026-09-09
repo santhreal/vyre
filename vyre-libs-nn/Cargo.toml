@@ -19,7 +19,7 @@ publication_class = "extension-sdk"
 workspace = true
 
 [features]
-default = ["nn"]
+default = ["nn", "nn-inference", "llm"]
 nn = ["nn-activation", "nn-linear", "nn-norm", "nn-attention"]
 "nn-kernels" = []
 "nn-activation" = ["nn-kernels"]
@@ -51,10 +51,11 @@ vyre-libs-reduce = { workspace = true }
 vyre-libs-math = { workspace = true }
 
 [dev-dependencies]
+proptest.workspace = true
+vyre-lower = { workspace = true }
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
-
 [[test]]
 name = "all_tests"
 path = "tests/all_tests.rs"

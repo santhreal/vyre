@@ -40,19 +40,20 @@ pub fn linear_tiled(
     let w_ref = TensorRef::u32_2d(w, in_dim, out_dim);
     let b_ref = TensorRef::u32_1d(b, out_dim);
     let out_ref = TensorRef::u32_2d(out, 1, out_dim);
-    let program = ContractionComposer::tiled_2d(
+    let mut composer = ContractionComposer::matmul_bias_2d(
         LINEAR_TILED_OP_ID,
         x_ref,
         w_ref,
-        Some(b_ref),
+        b_ref,
         out_ref,
         1,
         in_dim,
         out_dim,
-        tile,
-    )
-    .build()
-    .map_err(|error| format!("Fix: linear_tiled matmul_tiled build failed: {error}"))?;
+    );
+    composer.tiling = ContractionTiling::Block1D { tile };
+    let program = composer
+        .build()
+        .map_err(|error| format!("Fix: linear_tiled matmul_tiled build failed: {error}"))?;
     Ok(tag_program(LINEAR_TILED_OP_ID, program))
 }
 
@@ -124,9 +125,9 @@ inventory::submit! {
         //   out[3] = 0*3 + 1*7 + 2*11 + 3*15 =  7 + 22 + 45 = 74
         Some(|| {
 
-            let x = vyre_test_support::test_parity_oracles::u32_bytes(&(0..4).collect::<Vec<_>>());
-            let w = vyre_test_support::test_parity_oracles::u32_bytes(&(0..16).collect::<Vec<_>>());
-            let bias = vyre_test_support::test_parity_oracles::u32_bytes(&[0, 0, 0, 0]);
+            let x = vyre_primitives::wire::pack_u32_slice(&(0..4).collect::<Vec<_>>());
+            let w = vyre_primitives::wire::pack_u32_slice(&(0..16).collect::<Vec<_>>());
+            let bias = vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]);
             // The output buffer is declared with `with_count(out_dim) = 4`
             // u32s = 16 bytes. The CPU reference and the GPU dispatch both
             // honor that buffer length; an over-allocated input slot would
@@ -151,9 +152,9 @@ inventory::submit! {
         },
         Some(|| {
 
-            let x = vyre_test_support::test_parity_oracles::u32_bytes(&(0..4).collect::<Vec<_>>());
-            let w = vyre_test_support::test_parity_oracles::u32_bytes(&(0..16).collect::<Vec<_>>());
-            let bias = vyre_test_support::test_parity_oracles::u32_bytes(&[0, 0, 0, 0]);
+            let x = vyre_primitives::wire::pack_u32_slice(&(0..4).collect::<Vec<_>>());
+            let w = vyre_primitives::wire::pack_u32_slice(&(0..16).collect::<Vec<_>>());
+            let bias = vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]);
             vec![vec![x, w, bias]]
         }),
         Some(|| {

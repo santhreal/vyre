@@ -24,8 +24,8 @@ use vyre::ir::{
 };
 use vyre_reference::value::Value;
 
-use crate::api::metric::elapsed_ns;
 use super::equality::NativeComparisonConditions;
+use crate::api::metric::elapsed_ns;
 
 /// Schema version for whole-application measurement records.
 pub const WHOLE_APPLICATION_RECORD_SCHEMA_V1: &str = "vyre.whole-application-record.v1";
@@ -437,7 +437,10 @@ impl WholeApplicationRecord {
             missing.push("selected_schedule_identity".to_string());
         }
         if self.native_baseline_comparison.baseline_id.is_empty()
-            || self.native_baseline_comparison.identical_input_digest.is_empty()
+            || self
+                .native_baseline_comparison
+                .identical_input_digest
+                .is_empty()
             || self.native_baseline_comparison.native_p50_latency_ns == 0
             || self.native_baseline_comparison.speedup_ratio <= 0.0
         {
@@ -563,7 +566,9 @@ impl WholeApplicationWorkload {
             }
 
             let node_outputs = vyre_reference::reference_eval(&node.program, &node_inputs)
-                .map_err(|err| format!("Reference eval failed on node `{}`: {:?}", node.name, err))?;
+                .map_err(|err| {
+                    format!("Reference eval failed on node `{}`: {:?}", node.name, err)
+                })?;
 
             for (out_idx, out_val_id) in node.outputs.iter().enumerate() {
                 if let Some(out_val) = node_outputs.get(out_idx) {
@@ -575,7 +580,9 @@ impl WholeApplicationWorkload {
         // Collect final graph outputs
         let mut final_outputs = BTreeMap::new();
         for val in graph.values() {
-            if val.contract.lifetime == ValueLifetime::Output || (val.producer.is_some() && val.consumers.is_empty()) {
+            if val.contract.lifetime == ValueLifetime::Output
+                || (val.producer.is_some() && val.consumers.is_empty())
+            {
                 if let Some(bytes) = value_map.get(&val.id) {
                     final_outputs.insert(val.name.clone(), bytes.clone());
                 }

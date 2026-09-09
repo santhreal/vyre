@@ -75,7 +75,9 @@ pub(crate) fn run_with_request(
         let budget = step_budget::arm_with(&runnable, request.budget.work_ceiling);
         let lane_order = match request.schedule_policy {
             crate::request::DeterministicSchedulePolicy::Forward => hashmap::LaneOrder::Forward,
-            crate::request::DeterministicSchedulePolicy::LaneReversed => hashmap::LaneOrder::Reversed,
+            crate::request::DeterministicSchedulePolicy::LaneReversed => {
+                hashmap::LaneOrder::Reversed
+            }
             crate::request::DeterministicSchedulePolicy::LaneRotated(by) => {
                 hashmap::LaneOrder::Rotated(by)
             }

@@ -10,12 +10,11 @@
 //! 7. Asymptotic memory accounting and budget ceiling enforcement.
 //! 8. Pass immutability contracts derived from source at runtime.
 
-
 use vyre_foundation::ir::{DataType, Expr, Node, ProgramGraph};
 use vyre_foundation::substrate::{
     derive_registered_pass_descriptors, enforce_level_boundary, CancellationToken, CanonicalConst,
-    CanonicalLayout, CompilerLevelStage, LevelAccessError, Query, QueryEngine, QueryError, QueryKey,
-    QueryOutput, StaleCacheError, SubstrateArena, VersionedCacheEntry, VersionedCacheKey,
+    CanonicalLayout, CompilerLevelStage, LevelAccessError, Query, QueryEngine, QueryError,
+    QueryKey, QueryOutput, StaleCacheError, SubstrateArena, VersionedCacheEntry, VersionedCacheKey,
     WholeProgramGraphView, SUBSTRATE_CACHE_SCHEMA_VERSION,
 };
 
@@ -133,7 +132,10 @@ fn hash_consed_arenas_and_interners_guarantee_structural_sharing() {
 
     assert_eq!(id_a1, id_a2, "Identical strings must share stable ID");
     assert_ne!(id_a1, id_b, "Distinct strings must have distinct IDs");
-    assert_eq!(substrate.strings.lookup(id_a1).unwrap().as_ref(), "buffer_alpha");
+    assert_eq!(
+        substrate.strings.lookup(id_a1).unwrap().as_ref(),
+        "buffer_alpha"
+    );
     assert_eq!(substrate.strings.len(), 2);
 
     // 2. Type Interning
@@ -174,7 +176,10 @@ fn hash_consed_arenas_and_interners_guarantee_structural_sharing() {
     let eid2 = substrate.exprs.intern(expr2);
     let eid3 = substrate.exprs.intern(expr3);
 
-    assert_eq!(eid1, eid2, "Equivalent expressions must hash-cons to same ExprId");
+    assert_eq!(
+        eid1, eid2,
+        "Equivalent expressions must hash-cons to same ExprId"
+    );
     assert_ne!(eid1, eid3, "Distinct expressions must have distinct ExprId");
     assert_eq!(substrate.exprs.len(), 2);
 
@@ -250,7 +255,9 @@ fn parallel_and_serial_query_evaluations_produce_byte_identical_results() {
         digest[1] = ((i >> 8) & 0xFF) as u8;
 
         queries.push(MockValidationQuery {
-            key: QueryKey::ParseValidate { program_digest: digest },
+            key: QueryKey::ParseValidate {
+                program_digest: digest,
+            },
             payload: format!("program_ir_payload_chunk_{i}").into_bytes(),
             diagnostics: vec![
                 format!("diag_warning_b_{i}"),
@@ -276,7 +283,11 @@ fn parallel_and_serial_query_evaluations_produce_byte_identical_results() {
 
     assert_eq!(serial_outputs.len(), parallel_outputs.len());
 
-    for (idx, (s_out, p_out)) in serial_outputs.iter().zip(parallel_outputs.iter()).enumerate() {
+    for (idx, (s_out, p_out)) in serial_outputs
+        .iter()
+        .zip(parallel_outputs.iter())
+        .enumerate()
+    {
         assert_eq!(
             s_out.output_bytes, p_out.output_bytes,
             "Byte mismatch at index {idx} between serial and parallel run"
@@ -357,8 +368,12 @@ fn precise_invalidation_clears_only_transitive_dependents() {
     let engine = QueryEngine::new();
     let token = CancellationToken::new();
 
-    let parent_key_1 = QueryKey::ParseValidate { program_digest: [1u8; 32] };
-    let parent_key_2 = QueryKey::ParseValidate { program_digest: [2u8; 32] };
+    let parent_key_1 = QueryKey::ParseValidate {
+        program_digest: [1u8; 32],
+    };
+    let parent_key_2 = QueryKey::ParseValidate {
+        program_digest: [2u8; 32],
+    };
 
     let child_key_1 = QueryKey::SemanticFacts {
         node_id: 10,
@@ -405,11 +420,17 @@ fn precise_invalidation_clears_only_transitive_dependents() {
     // Invalidate parent 1: only parent 1 and child 1 must be removed.
     // Parent 2 and child 2 MUST remain intact in cache!
     let invalidated_count = engine.invalidate(&[parent_key_1.clone()]);
-    assert_eq!(invalidated_count, 2, "Parent 1 + Child 1 must be invalidated");
+    assert_eq!(
+        invalidated_count, 2,
+        "Parent 1 + Child 1 must be invalidated"
+    );
 
     assert!(!engine.is_cached(&parent_key_1), "Parent 1 must be purged");
     assert!(!engine.is_cached(&child_key_1), "Child 1 must be purged");
-    assert!(engine.is_cached(&parent_key_2), "Parent 2 must be preserved");
+    assert!(
+        engine.is_cached(&parent_key_2),
+        "Parent 2 must be preserved"
+    );
     assert!(engine.is_cached(&child_key_2), "Child 2 must be preserved");
     assert_eq!(engine.cached_count(), 2);
 }
@@ -419,8 +440,12 @@ fn cyclic_query_dependencies_are_detected_and_rejected() {
     let engine = QueryEngine::new();
     let token = CancellationToken::new();
 
-    let key_a = QueryKey::EquivalenceFacts { op_name: "op_alpha".into() };
-    let key_b = QueryKey::EquivalenceFacts { op_name: "op_beta".into() };
+    let key_a = QueryKey::EquivalenceFacts {
+        op_name: "op_alpha".into(),
+    };
+    let key_b = QueryKey::EquivalenceFacts {
+        op_name: "op_beta".into(),
+    };
 
     let query_a = MockCyclicQuery {
         key: key_a.clone(),
@@ -439,7 +464,9 @@ fn query_cancellation_leaves_zero_partial_cache_entries() {
     let engine = QueryEngine::new();
     let token = CancellationToken::new();
 
-    let key = QueryKey::ParseValidate { program_digest: [9u8; 32] };
+    let key = QueryKey::ParseValidate {
+        program_digest: [9u8; 32],
+    };
     let query = MockValidationQuery {
         key: key.clone(),
         payload: vec![1, 2, 3],
@@ -463,7 +490,9 @@ fn memory_budget_ceiling_is_enforced() {
     let engine = QueryEngine::with_memory_budget(64);
     let token = CancellationToken::new();
 
-    let key = QueryKey::ParseValidate { program_digest: [5u8; 32] };
+    let key = QueryKey::ParseValidate {
+        program_digest: [5u8; 32],
+    };
     let query = MockValidationQuery {
         key: key.clone(),
         payload: vec![0u8; 256], // 256 bytes exceeds 64 byte budget

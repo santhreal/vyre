@@ -8,11 +8,11 @@
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
+use vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity;
 use vyre_libs_pattern::pattern::{
     bracket_match, dedup_regions_flag_program, region_sort_program, RegionTriple,
     BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_OTHER,
 };
-use vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity;
 use vyre_megakernel::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
@@ -162,8 +162,12 @@ pub fn sort_regions_via_with_scratch_into(
             regions.len() * std::mem::size_of::<u32>(),
         );
     }
-    let outputs =
-        vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
+    let outputs = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(
+        dispatcher,
+        program,
+        &scratch.inputs,
+        policy,
+    )?;
     decode_region_outputs_into(&outputs, regions.len(), "sort_regions_via", scratch, out)
 }
 
@@ -417,7 +421,9 @@ mod tests {
                 2,
                 "Fix: bracket_pairs_via must pass exactly the two input-consuming buffers (kinds, stack); match_pairs is backend-allocated."
             );
-                        let kinds = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
+                        let kinds = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                            &inputs[0],
+                        );
                         let depth_words = inputs[1].len() / std::mem::size_of::<u32>();
 
                         // Model the real backend: return ALL writable buffers in binding order
@@ -440,9 +446,15 @@ mod tests {
                 "Fix: sort_regions_via must pass all six input-consuming buffers (3 RO + 3 plain-RW outputs)."
             );
                         let regions = join_regions(
-                            &vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]),
-                            &vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]),
-                            &vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2]),
+                            &vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                                &inputs[0],
+                            ),
+                            &vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                                &inputs[1],
+                            ),
+                            &vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                                &inputs[2],
+                            ),
                         );
 
                         let sorted = reference_sort_regions(regions);
@@ -462,9 +474,15 @@ mod tests {
                 "Fix: dedup_region_survivor_flags_via must pass exactly the three RO buffers; survivors is backend-allocated."
             );
                         let regions = join_regions(
-                            &vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]),
-                            &vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]),
-                            &vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[2]),
+                            &vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                                &inputs[0],
+                            ),
+                            &vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                                &inputs[1],
+                            ),
+                            &vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                                &inputs[2],
+                            ),
                         );
 
                         let flags = survivor_flags(&regions);

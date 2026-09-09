@@ -37,8 +37,8 @@ pub use verdict::{
 pub use whole_app::{
     all_whole_application_workloads, dense_numerical_pipeline,
     generate_whole_application_evidence_suite, interactive_event_pipeline,
-    irregular_stateful_traversal, write_whole_application_evidence_artifacts,
-    ApplicationDomain, MissingRequiredWholeAppFieldsError, RequiredWholeApplicationField,
+    irregular_stateful_traversal, write_whole_application_evidence_artifacts, ApplicationDomain,
+    MissingRequiredWholeAppFieldsError, RequiredWholeApplicationField,
     WholeAppNativeComparisonRecord, WholeAppParityRecord, WholeAppStateMetrics,
     WholeAppThroughputRecord, WholeApplicationDomainMatrixRecord, WholeApplicationRecord,
     WholeApplicationRefusal, WholeApplicationWorkload, WHOLE_APPLICATION_RECORD_SCHEMA_V1,

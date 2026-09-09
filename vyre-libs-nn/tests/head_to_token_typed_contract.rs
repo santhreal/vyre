@@ -2,7 +2,7 @@
 
 #![forbid(unsafe_code)]
 
-use vyre::ir::{DataType, Program};
+use vyre_foundation::ir::{DataType, Program};
 use vyre_libs_nn::nn::attention::{
     attention_head_to_token, attention_token_to_head, AttentionPermuteSpec,
 };

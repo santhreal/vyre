@@ -44,7 +44,7 @@ pub(super) fn affine_grouped_buffers(
     sidecar_count: u32,
     out_dim: u32,
     padded_output_count: u32,
-    output_byte_len: usize,
+    output_byte_len: u64,
 ) -> Vec<BufferDecl> {
     let [x, w_packed, scale, zero_point, b, out] = names;
     vec![

@@ -3,8 +3,8 @@
 //! Forward: `out = x + attn_out + mlp_out`
 //! Backward: `grad_x = grad_attn = grad_mlp = grad_out` (addition broadcast).
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 const OP_ID: &str = "vyre-libs::nn::residual_block_backward";
 

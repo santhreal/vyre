@@ -48,5 +48,7 @@ pub(crate) fn ramp(len: usize, start: u32) -> Vec<u32> {
 }
 
 pub(crate) fn alternating(len: usize, even: u32, odd: u32) -> Vec<u32> {
-    (0..len).map(|idx| if idx % 2 == 0 { even } else { odd }).collect()
+    (0..len)
+        .map(|idx| if idx % 2 == 0 { even } else { odd })
+        .collect()
 }

@@ -14,7 +14,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use vyre_spec::python_token::*;
 
 fn load_byte(buffer: &str, index: Expr) -> Expr {
-    vyre_libs_builder::builder::state_machine::TableStateMachineComposer::masked_byte_load(buffer, index)
+    vyre_libs_builder::builder::state_machine::TableStateMachineComposer::masked_byte_load(
+        buffer, index,
+    )
 }
 
 /// A source byte at `index`, or zero past the end of the source.

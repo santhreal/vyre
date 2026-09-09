@@ -84,7 +84,7 @@ fn prepare_builds_cuda_compatible_bounded_ranges_program() {
         .expect("bounded-ranges program must expose matches output");
     assert_eq!(
         matches_output.output_byte_range(),
-        Some(0..selected_match_bytes)
+        Some(0u64..(selected_match_bytes as u64))
     );
     assert!(
         selected_match_bytes < match_triples_output_bytes(MAX_MATCHES).unwrap(),
@@ -208,7 +208,9 @@ fn with_reference_dispatch_lanes(program: Program, lanes: u32) -> Program {
         .cloned()
         .map(|buffer| {
             if buffer.name() == "match_count" {
-                buffer.with_count(lanes.max(1)).with_output_byte_range(0..4)
+                buffer
+                    .with_count(lanes.max(1))
+                    .with_output_byte_range(0u64..4)
             } else {
                 buffer
             }

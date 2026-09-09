@@ -6,7 +6,7 @@ use crate::wire_words;
 use vyre_libs_nn::nn::attention::gqa_attention_causal_typed;
 use wire_words::{bf16_word, execute_causal_gqa_typed};
 
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 
 fn bf16_value(value: f32) -> f32 {
     f32::from_bits(u32::from(bf16_word(value)) << 16)

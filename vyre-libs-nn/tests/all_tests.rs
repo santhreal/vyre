@@ -1,5 +1,7 @@
 //! One binary for every integration test in this crate.
 
+extern crate vyre_foundation as vyre;
+
 #[path = "attention_head_to_token_contract.rs"]
 pub mod attention_head_to_token_contract;
 
@@ -101,4 +103,3 @@ pub mod wire_words;
 
 #[path = "workgroup_cooperative_tiling.rs"]
 pub mod workgroup_cooperative_tiling;
-

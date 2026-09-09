@@ -45,6 +45,7 @@ pub mod reduction;
 /// `STRIDED_ACCUMULATE_OP_ID` are catalog entries, and a catalog entry is
 /// enabled by a feature. The skeletons themselves stay ungated: a dialect
 /// composes them without asking for their registrations.
+#[cfg(feature = "builder-ops")]
 mod registrations;
 /// Shared table-walking state machine / DFA composer.
 pub mod state_machine;

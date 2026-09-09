@@ -77,10 +77,22 @@ pub fn apply_clip_mask(input: &str, mask: &str, output: &str, count: u32) -> Pro
     let body = vec![
         Node::let_bind("in_px", Expr::load(input, Expr::var("idx"))),
         Node::let_bind("mask_px", Expr::load(mask, Expr::var("idx"))),
-        Node::let_bind("r", vyre_libs_builder::builder::stencil::unpack_channel("in_px", 0)),
-        Node::let_bind("g", vyre_libs_builder::builder::stencil::unpack_channel("in_px", 8)),
-        Node::let_bind("b", vyre_libs_builder::builder::stencil::unpack_channel("in_px", 16)),
-        Node::let_bind("a", vyre_libs_builder::builder::stencil::unpack_channel("in_px", 24)),
+        Node::let_bind(
+            "r",
+            vyre_libs_builder::builder::stencil::unpack_channel("in_px", 0),
+        ),
+        Node::let_bind(
+            "g",
+            vyre_libs_builder::builder::stencil::unpack_channel("in_px", 8),
+        ),
+        Node::let_bind(
+            "b",
+            vyre_libs_builder::builder::stencil::unpack_channel("in_px", 16),
+        ),
+        Node::let_bind(
+            "a",
+            vyre_libs_builder::builder::stencil::unpack_channel("in_px", 24),
+        ),
         Node::let_bind(
             "mask_a",
             vyre_libs_builder::builder::stencil::unpack_channel("mask_px", 24),

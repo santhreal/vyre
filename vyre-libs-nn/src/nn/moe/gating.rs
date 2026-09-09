@@ -6,15 +6,17 @@
 //! reduces the score vector across the lanes of one workgroup exactly as
 //! softmax does rather than walking it in lane zero.
 
-use vyre_libs_builder::builder::cooperative::chunks;
-use vyre_libs_builder::builder::reduction::{ReductionComposer, ReductionPhase};
-use vyre_libs_builder::builder::{strided_accumulate_child, strided_writeback_child};
 use crate::nn::quest_paging_passes::{quest_select_top_k_body, QUEST_SELECT_TOP_K_OP_ID};
-use vyre_libs_reduce::reduce::workgroup_tree::{max_f32_child, sum_f32_child, WorkgroupReductionScope};
 use vyre_foundation::composition::wrap_child_region;
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp, PORTABLE_WORKGROUP_INVOCATIONS,
+};
+use vyre_libs_builder::builder::cooperative::chunks;
+use vyre_libs_builder::builder::reduction::{ReductionComposer, ReductionPhase};
+use vyre_libs_builder::builder::{strided_accumulate_child, strided_writeback_child};
+use vyre_libs_reduce::reduce::workgroup_tree::{
+    max_f32_child, sum_f32_child, WorkgroupReductionScope,
 };
 
 const OP_ID: &str = "vyre-libs::nn::moe_gate";

@@ -168,8 +168,8 @@ inventory::submit! {
             // q = [1.0, 1.0].
             vec![vec![
                 to_f32_bytes(&[1.0, 1.0]),
-                vyre_test_support::test_parity_oracles::u32_bytes(&[0x8D1u32]),
-                vyre_test_support::test_parity_oracles::u32_bytes(&[0x201u32]),
+                vyre_primitives::wire::pack_u32_slice(&[0x8D1u32]),
+                vyre_primitives::wire::pack_u32_slice(&[0x201u32]),
                 vec![0u8; 2 * 4],
             ]]
         }),
@@ -184,21 +184,21 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_primitives::wire::pack_f32_slice;
     use vyre_test_support::test_parity_oracles::decode_f32;
     use vyre_test_support::test_parity_oracles::eval_bytes;
-    use vyre_test_support::test_parity_oracles::f32_bytes;
 
     #[test]
     fn turboquant_nan_in_q_propagates_to_output() {
         let q = [f32::NAN, 1.0];
         // k_packed: 4 values in 1 u32, all zeros
-        let kp = vyre_test_support::test_parity_oracles::u32_bytes(&[0u32]);
-        let vp = vyre_test_support::test_parity_oracles::u32_bytes(&[0u32]);
+        let kp = vyre_primitives::wire::pack_u32_slice(&[0u32]);
+        let vp = vyre_primitives::wire::pack_u32_slice(&[0u32]);
         let program = turboquant_attention("q", "kp", "vp", "out", 2, 2);
         let outputs = eval_bytes(
             "turboquant",
             &program,
-            vec![f32_bytes(&q), kp, vp, vec![0u8; 8]],
+            vec![pack_f32_slice(&q), kp, vp, vec![0u8; 8]],
         );
         let out = decode_f32(&outputs[0]);
         assert!(
@@ -211,13 +211,13 @@ mod tests {
     #[test]
     fn turboquant_zero_seq_len() {
         let q = [1.0f32, 1.0];
-        let kp = vyre_test_support::test_parity_oracles::u32_bytes(&[0u32]);
-        let vp = vyre_test_support::test_parity_oracles::u32_bytes(&[0u32]);
+        let kp = vyre_primitives::wire::pack_u32_slice(&[0u32]);
+        let vp = vyre_primitives::wire::pack_u32_slice(&[0u32]);
         let program = turboquant_attention("q", "kp", "vp", "out", 0, 2);
         let outputs = eval_bytes(
             "turboquant",
             &program,
-            vec![f32_bytes(&q), kp, vp, vec![0u8; 8]],
+            vec![pack_f32_slice(&q), kp, vp, vec![0u8; 8]],
         );
         let out = decode_f32(&outputs[0]);
         assert_eq!(
@@ -232,14 +232,14 @@ mod tests {
         let q = [1.0f32, 1.0];
         // k_packed: 2 values in 1 u32: both 1 (bits 0 and 3)
         // word = 1 | (1<<3) = 1 + 8 = 9
-        let kp = vyre_test_support::test_parity_oracles::u32_bytes(&[9u32]);
+        let kp = vyre_primitives::wire::pack_u32_slice(&[9u32]);
         // v_packed: same
-        let vp = vyre_test_support::test_parity_oracles::u32_bytes(&[9u32]);
+        let vp = vyre_primitives::wire::pack_u32_slice(&[9u32]);
         let program = turboquant_attention("q", "kp", "vp", "out", 1, 2);
         let outputs = eval_bytes(
             "turboquant",
             &program,
-            vec![f32_bytes(&q), kp, vp, vec![0u8; 8]],
+            vec![pack_f32_slice(&q), kp, vp, vec![0u8; 8]],
         );
         let out = decode_f32(&outputs[0]);
         // score = dot([1,1], [1,1]) = 2

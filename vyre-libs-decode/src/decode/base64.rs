@@ -6,10 +6,10 @@ use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-#[cfg(test)]
-use vyre_libs_builder::plumbing::operand::buffer_names::fixed_name;
 use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decoded_output_buffer};
 use crate::decode::scan::linear_aho_scan_body;
+#[cfg(test)]
+use vyre_libs_builder::plumbing::operand::buffer_names::fixed_name;
 use vyre_primitives::wire::pack_u32_slice as pack_words;
 #[cfg(test)]
 use vyre_reference::composition_witness::{

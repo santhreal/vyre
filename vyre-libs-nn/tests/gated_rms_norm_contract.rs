@@ -2,10 +2,9 @@
 
 #![forbid(unsafe_code)]
 
-use crate::wire_words;
-use wire_words::{f32_bytes, f32_words as decode_f32};
+use vyre_test_support::test_parity_oracles::{decode_f32, f32_bytes};
 
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 use vyre_libs_nn::nn::norm::{gated_rms_norm, gated_rms_norm_with_weight_dtype, GatedRmsNormError};
 use vyre_reference::value::Value;
 

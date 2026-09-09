@@ -278,7 +278,9 @@ fn archive_install_load_execute_update_and_rollback_lifecycle() {
         .expect("materialize v2");
     assert_eq!(instance_v2.artifact(), loaded_env_v2.neutral().digest());
     let sub_v2 = instance_v2
-        .submit(vyre_driver::BindingSet::new(loaded_env_v2.neutral().digest()))
+        .submit(vyre_driver::BindingSet::new(
+            loaded_env_v2.neutral().digest(),
+        ))
         .expect("submit v2");
     let comp_v2 = sub_v2.wait().expect("wait v2");
     assert_eq!(comp_v2.artifact, loaded_env_v2.neutral().digest());
@@ -296,7 +298,9 @@ fn archive_install_load_execute_update_and_rollback_lifecycle() {
         .expect("materialize rb");
     assert_eq!(instance_rb.artifact(), loaded_env_rb.neutral().digest());
     let sub_rb = instance_rb
-        .submit(vyre_driver::BindingSet::new(loaded_env_rb.neutral().digest()))
+        .submit(vyre_driver::BindingSet::new(
+            loaded_env_rb.neutral().digest(),
+        ))
         .expect("submit rb");
     let comp_rb = sub_rb.wait().expect("wait rb");
     assert_eq!(comp_rb.artifact, loaded_env_rb.neutral().digest());
@@ -327,7 +331,10 @@ fn product_entry_points_require_mandatory_compile_request_fields() {
         Err(e) => e,
         Ok(_) => panic!("zero candidate search budget must fail"),
     };
-    assert_eq!(err_budget.diagnostic.code.as_str(), "MKC022_INVALID_SEARCH_BUDGET");
+    assert_eq!(
+        err_budget.diagnostic.code.as_str(),
+        "MKC022_INVALID_SEARCH_BUDGET"
+    );
 
     // 2. Unbounded artifact bytes in objective fails validation with structured error
     let unbounded_objective = CompileObjective::minimize_latency();
@@ -360,7 +367,10 @@ fn product_entry_points_require_mandatory_compile_request_fields() {
         Err(e) => e,
         Ok(_) => panic!("zero expected launch batch must fail"),
     };
-    assert_eq!(err_facts.diagnostic.code.as_str(), "MKC025_INVALID_DEVICE_FACTS");
+    assert_eq!(
+        err_facts.diagnostic.code.as_str(),
+        "MKC025_INVALID_DEVICE_FACTS"
+    );
 
     // 4. AOT compilation with unlinked target fails with structured error, never invented defaults
     let valid_req = CompileRequest::new(

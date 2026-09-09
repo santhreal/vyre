@@ -3,8 +3,8 @@
 //! Unpack: `x = packed * scale[row]` (F32 output).
 //! Pack: mask to 8 bits (U32→U32).
 
-use vyre_libs_builder::builder::elementwise::{u32_elementwise_unary, ElementwiseComposer};
 use vyre_foundation::ir::{BinOp, BufferAccess, DataType, Expr, Program};
+use vyre_libs_builder::builder::elementwise::{u32_elementwise_unary, ElementwiseComposer};
 
 const PACK_OP_ID: &str = "vyre-libs::quant::int8_pack";
 const UNPACK_OP_ID: &str = "vyre-libs::quant::int8_unpack";

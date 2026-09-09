@@ -9,9 +9,7 @@
 use std::fs;
 
 use tempfile::tempdir;
-use xtask::gates::device_test_compilation::{
-    admitted_test_targets, workflow_feature_pairings,
-};
+use xtask::gates::device_test_compilation::{admitted_test_targets, workflow_feature_pairings};
 use xtask::gates::scan::Tree;
 
 use super::workspace_sources::track_fixture;

@@ -45,6 +45,9 @@ vyre-libs-text = { workspace = true }
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
+# The IR aliasing suite fuses a decode program with a parser scanner to prove
+# their generic buffer names stay disjoint.
+vyre-libs-parsing = { workspace = true }
 
 [[test]]
 name = "all_tests"

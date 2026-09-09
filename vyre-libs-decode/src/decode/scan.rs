@@ -1,7 +1,7 @@
 //! Shared decode-to-DFA scan bodies.
 
-use vyre_libs_builder::builder::state_machine::TableStateMachineComposer;
 use vyre_foundation::ir::{Expr, Node};
+use vyre_libs_builder::builder::state_machine::TableStateMachineComposer;
 
 /// Build a bounded Aho-Corasick scan body for fused decoders.
 ///

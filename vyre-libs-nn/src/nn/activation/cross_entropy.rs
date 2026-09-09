@@ -3,9 +3,9 @@
 //! Category A composition. One workgroup owns one token row and cooperatively
 //! reduces the vocabulary dimension with log-sum-exp stabilization.
 
-use vyre_libs_reduce::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_libs_reduce::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 use vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError;
 
@@ -331,7 +331,9 @@ mod tests {
     fn try_cross_entropy_rejects_zero_and_overflow_dimensions() {
         assert!(matches!(
             try_cross_entropy("logits", "targets", "loss", 0, 4),
-            Err(vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch { .. })
+            Err(
+                vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch { .. }
+            )
         ));
         assert!(matches!(
             try_cross_entropy("logits", "targets", "loss", u32::MAX, 2),

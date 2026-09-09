@@ -1,8 +1,8 @@
 //! Shape tests for optimized Cat-A programs.
 
 #[cfg(feature = "nn-attention")]
-use vyre::ir::Expr;
-use vyre::ir::{MemoryKind, Node};
+use vyre_foundation::ir::Expr;
+use vyre_foundation::ir::{MemoryKind, Node};
 
 #[cfg(feature = "nn-linear")]
 #[test]

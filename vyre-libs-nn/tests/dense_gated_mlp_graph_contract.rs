@@ -2,12 +2,12 @@
 
 #![forbid(unsafe_code)]
 
-use crate::wire_words;
-use wire_words::{bf16_bytes, bf16_word, f32_bytes, f32_words_of as decode_f32};
+use crate::wire_words::{bf16_bytes, bf16_word, f32_words_of as decode_f32};
+use vyre_test_support::test_parity_oracles::f32_bytes;
 
 use std::collections::HashMap;
 
-use vyre::ir::{DataType, ProgramGraph};
+use vyre_foundation::ir::{DataType, ProgramGraph};
 use vyre_libs_nn::nn::model::{dense_gated_mlp_graph, DenseGatedMlpSpec};
 use vyre_reference::value::Value;
 

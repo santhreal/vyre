@@ -2,7 +2,7 @@
 
 #![cfg(feature = "nn-linear-4bit")]
 
-use vyre::ir::{Node, Program};
+use vyre_foundation::ir::{Node, Program};
 use vyre_libs_nn::nn::quant::{
     int4_batched_matmul_f32_scaled, int4_batched_matmul_top1_f32_scaled,
     int4_batched_matvec_f32_scaled, int4_dot_f32_scaled, int4_dot_i32, int4_matvec_f32_scaled,

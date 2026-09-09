@@ -11,13 +11,7 @@ pub const OP_ID: &str = "vyre-libs::reduce::count_non_zero";
 /// Build a Program: `out[0] = |{ i | values[i] != 0 }|`.
 #[must_use]
 pub fn reduce_count_non_zero(values: &str, out: &str, count: u32) -> Program {
-    atomic_scalar_reduction(
-        OP_ID,
-        values,
-        out,
-        count,
-        AtomicReduceKind::CountNonZero,
-    )
+    atomic_scalar_reduction(OP_ID, values, out, count, AtomicReduceKind::CountNonZero)
 }
 
 inventory::submit! {

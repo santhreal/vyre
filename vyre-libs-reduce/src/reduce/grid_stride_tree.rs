@@ -69,7 +69,9 @@ pub fn grid_stride_tree_sum_u32(
     let pass2 = pass2_combine_reduction(&partials, out, blocks, tile);
 
     match fuse_programs(&[pass1, pass2]) {
-        Ok(fused) => vyre_libs_builder::plumbing::program::outputs::demote_intermediate_outputs(fused, out),
+        Ok(fused) => {
+            vyre_libs_builder::plumbing::program::outputs::demote_intermediate_outputs(fused, out)
+        }
         Err(error) => panic!("grid_stride_tree_sum_u32 fusion failed: {error}"),
     }
 }

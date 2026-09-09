@@ -2,10 +2,12 @@
 
 #![forbid(unsafe_code)]
 
-use crate::wire_words;
-use wire_words::{f32_bytes, f32_words_of, u32_bytes, words_from_bytes};
+use crate::wire_words::{f32_words_of, words_from_bytes};
+use vyre_test_support::test_parity_oracles::{f32_bytes, u32_bytes};
 
-use vyre_libs_nn::nn::quest_paging_passes::{quest_score_pages, quest_select_top_k, quest_zero_fill};
+use vyre_libs_nn::nn::quest_paging_passes::{
+    quest_score_pages, quest_select_top_k, quest_zero_fill,
+};
 use vyre_reference::value::Value;
 
 /// Standalone quest page-scoring must write every declared page in the scores buffer.

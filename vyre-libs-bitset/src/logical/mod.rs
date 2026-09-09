@@ -3,11 +3,11 @@
 //! `and`, `or`, and `xor` are registered once, in `crate::bitset`.
 //! Only the synthesized combinations with no single-kernel equivalent live here.
 
-use vyre_libs_builder::builder::elementwise::u32_elementwise_binary;
 use vyre_foundation::define_dialect;
 use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::ir::Program;
 use vyre_foundation::operation::OperationTier;
+use vyre_libs_builder::builder::elementwise::u32_elementwise_binary;
 
 const LOGICAL_BINARY_SIG: Signature = Signature {
     inputs: &[

@@ -6,7 +6,9 @@
 #![forbid(unsafe_code)]
 #![cfg(feature = "text")]
 
-use vyre_libs_text::text::{UTF8_ASCII, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_2, UTF8_LEAD_3, UTF8_LEAD_4};
+use vyre_libs_text::text::{
+    UTF8_ASCII, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_2, UTF8_LEAD_3, UTF8_LEAD_4,
+};
 use vyre_reference::composition_witness::utf8_validate_witness as reference_utf8_validate;
 
 const UTF8_CASES: u32 = 1024;

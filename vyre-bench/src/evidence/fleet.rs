@@ -365,13 +365,12 @@ impl DeviceFleetCoordinator {
             .ok_or_else(|| FleetLeaseError::DeviceNotFound(device_id.to_string()))?;
 
         // 1. Check calibration status
-        let clock_cal = device
-            .clock_calibration
-            .as_ref()
-            .ok_or_else(|| FleetLeaseError::DeviceUncalibrated {
+        let clock_cal = device.clock_calibration.as_ref().ok_or_else(|| {
+            FleetLeaseError::DeviceUncalibrated {
                 device_id: device_id.to_string(),
                 missing: "clock calibration record".into(),
-            })?;
+            }
+        })?;
         clock_cal
             .validate()
             .map_err(|err| FleetLeaseError::CalibrationFailed {
@@ -379,13 +378,12 @@ impl DeviceFleetCoordinator {
                 reason: err.to_string(),
             })?;
 
-        let interf_cal = device
-            .interference_calibration
-            .as_ref()
-            .ok_or_else(|| FleetLeaseError::DeviceUncalibrated {
+        let interf_cal = device.interference_calibration.as_ref().ok_or_else(|| {
+            FleetLeaseError::DeviceUncalibrated {
                 device_id: device_id.to_string(),
                 missing: "interference calibration record".into(),
-            })?;
+            }
+        })?;
         interf_cal
             .validate()
             .map_err(|err| FleetLeaseError::CalibrationFailed {
@@ -479,7 +477,7 @@ impl DeviceFleetCoordinator {
         &self,
         spec: &BenchmarkCampaignSpec,
         store: &EvidenceStore,
-        current_time_ns: u64,
+        _current_time_ns: u64,
         measure_fn: F,
     ) -> Result<CampaignExecutionReport, FleetLeaseError>
     where

@@ -32,4 +32,3 @@ pub mod sweep_text_utf8_oracle_matrix;
 
 #[path = "text_char_class_runner/mod.rs"]
 pub mod text_char_class_runner;
-

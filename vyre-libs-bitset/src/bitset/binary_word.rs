@@ -4,8 +4,8 @@
 //! and buffer contracts, but the IR shape is intentionally centralized here so
 //! new bitset binary ops do not fork the same load/op/store kernel body.
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program, PORTABLE_WORKGROUP_INVOCATIONS};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 /// Supported per-word bitwise binary operators.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

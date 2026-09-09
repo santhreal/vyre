@@ -5,8 +5,8 @@ use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_libs_reduce::reduce::range_counts::range_counts_u32_child;
 use crate::text::utf8_shape_counts::utf8_shape_counts_child;
+use vyre_libs_reduce::reduce::range_counts::range_counts_u32_child;
 
 /// Canonical op id for histogram-based encoding classification.
 pub const ENCODING_CLASSIFY_OP_ID: &str = "vyre-libs::text::encoding_classify";
@@ -118,7 +118,7 @@ pub fn encoding_classify(histogram: &str, output: &str, count: u32) -> Program {
                 .with_count(256),
             BufferDecl::output(output, 1, DataType::U32)
                 .with_count(1)
-                .with_output_byte_range(0..4),
+                .with_full_output_byte_range(),
         ],
         ENCODING_CLASSIFY_WORKGROUP_SIZE,
         vec![wrap_anonymous_region(
@@ -147,8 +147,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_reference::composition_witness::encoding_classify_histogram_witness as classify_from_histogram;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     #[test]
     fn classifies_ascii_histogram() {

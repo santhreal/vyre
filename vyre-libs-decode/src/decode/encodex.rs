@@ -18,16 +18,16 @@
 //! - The host reference mirrors the GPU heuristics so conformance can
 //!   prove the on-device path without routing production work through it.
 
+use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 use vyre_libs_text::text::byte_histogram_256_child;
 use vyre_libs_text::text::encoding_classify_child;
 #[cfg(test)]
 use vyre_libs_text::text::{ENC_ASCII, ENC_ISO8859_1, ENC_UTF16LE, ENC_UTF8};
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
+use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decode_output_buffer};
 #[cfg(test)]
 use vyre_libs_builder::plumbing::operand::buffer_names::fixed_name;
-use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decode_output_buffer};
 
 const OP_ID: &str = "vyre-libs::decode::encodex";
 const FAMILY_PREFIX: &str = "decode_encodex";

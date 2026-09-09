@@ -3,8 +3,8 @@
 //! Resident graph pipelines use this to clear scratch/output bitsets on device
 //! instead of uploading zero-filled host buffers every iteration.
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::bitset::zero";

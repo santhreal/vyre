@@ -28,11 +28,23 @@
 //! `[build-dependencies]` or `[target.*.dependencies]` entry may name the test
 //! support crate. A dev edge is how a suite reaches it; any other edge links it
 //! into the artifact.
+//!
+//! The third rule is the source counterpart of the second. No line a release
+//! build compiles, in a publishable crate's `src/`, may name the test support
+//! crate. The manifest rule alone cannot see this: a crate whose only edge is
+//! the dev one still compiles a production `use` of that crate in its own test
+//! build, so the leak reaches every suite and is reported nowhere. An operation
+//! registration carrying its fixture bytes is product code, compiled into the
+//! artifact, so the byte encoder it calls has to be the production one.
+//! Registrations in three `vyre-libs` crates reached the test crate for a
+//! little-endian pack `vyre-primitives` already owned.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
-use crate::gates::scan::{cfg_test_lines, is_test_only_attribute, scan_code, Member, Tree};
+use crate::gates::scan::{
+    cfg_test_lines, is_test_only_attribute, scan_code, Code, CodeCursor, Member, Tree,
+};
 
 /// Stem segments that make a file test material by name.
 const TOKENS: &[&str] = &[
@@ -42,6 +54,10 @@ const TOKENS: &[&str] = &[
 
 /// The crate whose whole subject is test support.
 const SUPPORT_CRATE: &str = "vyre-test-support";
+
+/// How a source line spells that crate. A manifest names the package and a
+/// `use` names the crate, so the two rules match different strings.
+const SUPPORT_IDENT: &str = "vyre_test_support";
 
 /// Manifest tables whose entries link into the published artifact.
 const SHIPPING_TABLES: &[&str] = &["dependencies", "build-dependencies"];
@@ -86,7 +102,8 @@ struct Reach {
     any: Option<String>,
 }
 
-/// Test material in a shipping `src/` tree, and shipping edges to test support.
+/// Test material in a shipping `src/` tree, shipping edges to test support, and
+/// production lines that name it.
 pub struct TestMaterialPlacement;
 
 impl crate::gate::GateBehavior for TestMaterialPlacement {
@@ -133,6 +150,34 @@ impl crate::gate::GateBehavior for TestMaterialPlacement {
             .iter()
             .filter(|member| member.publishable())
             .collect();
+
+        for member in publishable
+            .iter()
+            .filter(|member| member.name != SUPPORT_CRATE)
+        {
+            let defaults = default_features(member);
+            let prefix = format!("{}/src/", member.path);
+            for path in tree.paths() {
+                let Some(file) = path.to_str() else { continue };
+                if !file.starts_with(&prefix) || !file.ends_with(".rs") {
+                    continue;
+                }
+                if chain(&tree, &member.path, file, &defaults)?.test_only {
+                    continue;
+                }
+                for line in support_references(&tree.read(file)?) {
+                    report.find(Finding::at(
+                        file,
+                        line,
+                        format!(
+                            "names `{SUPPORT_IDENT}` outside a test build, so test support is product code in `{}`",
+                            member.name
+                        ),
+                        format!("call the production owner instead; the edge to `{SUPPORT_CRATE}` is a dev edge, so product code cannot rely on it being linked"),
+                    ));
+                }
+            }
+        }
         let mut candidates = Vec::new();
         for member in &publishable {
             let defaults = default_features(member);
@@ -601,6 +646,46 @@ fn identifiers(code: &str) -> Vec<&str> {
         .collect()
 }
 
+/// Every line of one file that names the test support crate where a release
+/// build compiles it.
+///
+/// The walk is over code spans, so a doc comment and a string literal that
+/// spell the crate name are not references. Reading the line's text instead
+/// convicted a diagnostic that quoted the crate name, which is the defect
+/// `CodeCursor` owns: an opaque span is taken whole and its newlines still
+/// advance the line, so a multi-line literal does not shift every number after
+/// it. A `#[cfg(test)]` block is where a suite is meant to reach the crate, so
+/// a line inside one does not count.
+fn support_references(text: &str) -> Vec<u32> {
+    let lines: Vec<&str> = text.lines().collect();
+    let test_only = cfg_test_lines(&lines);
+    let mut code: Vec<String> = vec![String::new(); lines.len()];
+    let mut cursor = CodeCursor::new(text);
+    let mut line = 0usize;
+    while let Some((offset, span)) = cursor.step() {
+        match span {
+            Code::Opaque(taken) => {
+                line += taken.bytes().filter(|byte| *byte == b'\n').count();
+                cursor.seek(offset + taken.len());
+            }
+            Code::Byte(byte) => {
+                if byte == b'\n' {
+                    line += 1;
+                } else if let Some(row) = code.get_mut(line) {
+                    row.push(char::from(byte));
+                }
+                cursor.seek(offset + 1);
+            }
+        }
+    }
+    code.iter()
+        .enumerate()
+        .filter(|(number, _)| !test_only.get(*number).copied().unwrap_or(false))
+        .filter(|(_, row)| identifiers(row).contains(&SUPPORT_IDENT))
+        .map(|(number, _)| u32::try_from(number).unwrap_or(u32::MAX).saturating_add(1))
+        .collect()
+}
+
 /// WHY: the readers below decide the verdict and none is reachable from an
 /// integration test, because the gate exposes one report over one tree and that
 /// tree contains no instance of most of the shapes. The stem filter is the one
@@ -691,6 +776,20 @@ mod tests {
             identifiers("use crate::fixture_bytes::pack_u32(x);"),
             vec!["use", "crate", "fixture_bytes", "pack_u32", "x"]
         );
+    }
+
+    #[test]
+    fn a_support_reference_counts_only_where_a_release_build_compiles_it() {
+        let text = concat!(
+            "use vyre_test_support::test_parity_oracles::u32_bytes;\n",
+            "//! vyre_test_support is named in prose here.\n",
+            "const NAME: &str = \"vyre_test_support\";\n",
+            "#[cfg(test)]\n",
+            "mod tests {\n",
+            "    use vyre_test_support::test_parity_oracles::f32_bytes;\n",
+            "}\n",
+        );
+        assert_eq!(support_references(text), vec![1]);
     }
 
     #[test]

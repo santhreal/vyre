@@ -101,12 +101,10 @@ impl QueryKey {
             Self::ParseValidate { .. }
             | Self::ProgramGraphValidate { .. }
             | Self::TypeCheck { .. } => CompilerLevelStage::WholeProgramGraph,
-            Self::SemanticFacts { .. } | Self::ShapeFacts { .. } | Self::EquivalenceFacts { .. } => {
-                CompilerLevelStage::LogicalRegion
-            }
-            Self::Legality { .. } | Self::CostInput { .. } => {
-                CompilerLevelStage::SelectedSchedule
-            }
+            Self::SemanticFacts { .. }
+            | Self::ShapeFacts { .. }
+            | Self::EquivalenceFacts { .. } => CompilerLevelStage::LogicalRegion,
+            Self::Legality { .. } | Self::CostInput { .. } => CompilerLevelStage::SelectedSchedule,
             Self::Lowering { .. } => CompilerLevelStage::PhysicalKernel,
             Self::Emission { .. } | Self::Artifact { .. } => CompilerLevelStage::TargetPayload,
         }
@@ -117,10 +115,18 @@ impl fmt::Display for QueryKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ParseValidate { program_digest } => {
-                write!(f, "parse_validate({:02x}{:02x})", program_digest[0], program_digest[1])
+                write!(
+                    f,
+                    "parse_validate({:02x}{:02x})",
+                    program_digest[0], program_digest[1]
+                )
             }
             Self::ProgramGraphValidate { graph_digest } => {
-                write!(f, "graph_validate({:02x}{:02x})", graph_digest[0], graph_digest[1])
+                write!(
+                    f,
+                    "graph_validate({:02x}{:02x})",
+                    graph_digest[0], graph_digest[1]
+                )
             }
             Self::SemanticFacts { node_id, .. } => write!(f, "semantic_facts(node:{node_id})"),
             Self::TypeCheck { .. } => write!(f, "type_check"),
@@ -129,7 +135,11 @@ impl fmt::Display for QueryKey {
             Self::Legality { .. } => write!(f, "legality"),
             Self::CostInput { .. } => write!(f, "cost_input"),
             Self::Lowering { node_id, .. } => write!(f, "lowering(node:{node_id})"),
-            Self::Emission { node_id, target_format, .. } => {
+            Self::Emission {
+                node_id,
+                target_format,
+                ..
+            } => {
                 write!(f, "emission(node:{node_id}, {target_format})")
             }
             Self::Artifact { .. } => write!(f, "artifact"),
@@ -530,7 +540,10 @@ impl QueryEngine {
             ordered_outputs[original_idx] = Some(results[i].clone());
         }
 
-        Ok(ordered_outputs.into_iter().map(|opt| opt.expect("All outputs present")).collect())
+        Ok(ordered_outputs
+            .into_iter()
+            .map(|opt| opt.expect("All outputs present"))
+            .collect())
     }
 
     /// Invalidate queries matching `dirty_keys` and all their transitive dependents.
@@ -556,8 +569,8 @@ impl QueryEngine {
         let count = to_invalidate.len();
         for key in &to_invalidate {
             if let Some(removed) = cache_guard.remove(key) {
-                let bytes = removed.output.output_bytes.len()
-                    + std::mem::size_of::<CachedQueryResult>();
+                let bytes =
+                    removed.output.output_bytes.len() + std::mem::size_of::<CachedQueryResult>();
                 self.memory.record_dealloc(bytes);
             }
         }
@@ -579,13 +592,21 @@ impl QueryEngine {
     /// Revision when a cached entry was computed.
     #[must_use]
     pub fn entry_revision(&self, key: &QueryKey) -> Option<Revision> {
-        self.cache.read().expect("Lock poisoned").get(key).map(|e| e.revision)
+        self.cache
+            .read()
+            .expect("Lock poisoned")
+            .get(key)
+            .map(|e| e.revision)
     }
 
     /// Declared dependencies of a cached entry.
     #[must_use]
     pub fn entry_dependencies(&self, key: &QueryKey) -> Option<Vec<QueryKey>> {
-        self.cache.read().expect("Lock poisoned").get(key).map(|e| e.dependencies.clone())
+        self.cache
+            .read()
+            .expect("Lock poisoned")
+            .get(key)
+            .map(|e| e.dependencies.clone())
     }
 
     /// Clear all cached query results.

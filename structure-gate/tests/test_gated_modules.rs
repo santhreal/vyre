@@ -78,7 +78,10 @@ fn no_domain_crate_declares_relative_tests_include() {
             };
             for (line_no, line) in text.lines().enumerate() {
                 let trimmed = line.trim();
-                if trimmed.contains("#[path") && trimmed.contains("tests/") && trimmed.contains("../") {
+                if trimmed.contains("#[path")
+                    && trimmed.contains("tests/")
+                    && trimmed.contains("../")
+                {
                     failures.push(format!("{path}:{}: {trimmed}", line_no + 1));
                 }
             }

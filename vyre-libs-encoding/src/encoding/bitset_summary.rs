@@ -5,10 +5,10 @@
 //! summarize how saturated their reachability / alias / dirty-set bitsets are
 //! without each pass re-implementing popcount inline.
 
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Maximum word count where the sum of bit counts is guaranteed not to wrap a u32 reduction accumulator.
@@ -140,17 +140,19 @@ pub fn per_word_popcount_via_with_scratch_into(
             input.len()
         ))
     })?;
-    let program = vyre_libs_bitset::bitset::popcount::bitset_popcount("input", "count_words", word_count);
+    let program =
+        vyre_libs_bitset::bitset::popcount::bitset_popcount("input", "count_words", word_count);
     ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
 
-    let out_buf = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program_first_output(
-        dispatcher,
-        program,
-        &scratch.inputs,
-        policy,
-        "per_word_popcount_via",
-    )?;
+    let out_buf =
+        vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program_first_output(
+            dispatcher,
+            program,
+            &scratch.inputs,
+            policy,
+            "per_word_popcount_via",
+        )?;
     decode_u32_output_exact(&out_buf, input.len(), "per_word_popcount_via", out)
 }
 
@@ -187,13 +189,14 @@ pub fn total_set_bits_via_with_scratch_into(
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
     write_zero_bytes(&mut scratch.inputs[1], std::mem::size_of::<u32>());
-    let out_buf = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program_first_output(
-        dispatcher,
-        program,
-        &scratch.inputs,
-        policy,
-        "total_set_bits_via",
-    )?;
+    let out_buf =
+        vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program_first_output(
+            dispatcher,
+            program,
+            &scratch.inputs,
+            policy,
+            "total_set_bits_via",
+        )?;
     decode_u32_output_exact(&out_buf, 1, "total_set_bits_via", &mut scratch.decoded_u32)?;
     Ok(u64::from(scratch.decoded_u32[0]))
 }
@@ -230,13 +233,14 @@ pub fn saturation_ratio_via_with_scratch_into(
     let program = bitset_saturation_ratio("input", "out", word_count);
     ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
-    let out_buf = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program_first_output(
-        dispatcher,
-        program,
-        &scratch.inputs,
-        policy,
-        "saturation_ratio_via",
-    )?;
+    let out_buf =
+        vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program_first_output(
+            dispatcher,
+            program,
+            &scratch.inputs,
+            policy,
+            "saturation_ratio_via",
+        )?;
     let [b0, b1, b2, b3, ..] = match out_buf.as_slice() {
         [b0, b1, b2, b3, ..] => [*b0, *b1, *b2, *b3],
         _ => {
@@ -286,13 +290,15 @@ mod tests {
                 let op_id = vyre_test_support::test_parity_oracles::region_operation_id(program)?;
                 if op_id == vyre_libs_reduce::reduce::count::OP_ID {
                     assert_eq!(inputs.len(), 2);
-                    let input = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
+                    let input =
+                        vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
                     assert_eq!(inputs[1].len(), std::mem::size_of::<u32>());
                     let total: u32 = input.iter().map(|word| word.count_ones()).sum();
                     return Ok(vec![u32_slice_to_le_bytes(&[total])]);
                 }
                 assert_eq!(inputs.len(), 1);
-                let input = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
+                let input =
+                    vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
                 if op_id == SATURATION_RATIO_OP_ID {
                     let total: u32 = input.iter().map(|word| word.count_ones()).sum();
                     let capacity = (input.len() * 32) as f32;

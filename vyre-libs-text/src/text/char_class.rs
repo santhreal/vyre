@@ -10,8 +10,8 @@
 //! op coverage and composition audits can distinguish the reusable
 //! substrate from user-facing library wrappers.
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 /// `\0`
 pub const C_EOF: u32 = 0;

@@ -2,13 +2,12 @@
 
 #![forbid(unsafe_code)]
 
-use crate::wire_words;
-use wire_words::{
-    bf16_bytes, bf16_word, default_gated_delta_spec, f32_bytes as bytes, f32_words,
-    f32_words_of as decode, u16_words,
+use crate::wire_words::{
+    bf16_bytes, bf16_word, default_gated_delta_spec, f32_words, f32_words_of as decode, u16_words,
 };
+use vyre_test_support::test_parity_oracles::f32_bytes as bytes;
 
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 use vyre_libs_nn::nn::attention::{chunked_gated_delta, recurrent_gated_delta, GatedDeltaSpec};
 use vyre_reference::value::Value;
 

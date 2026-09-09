@@ -191,7 +191,10 @@ fn neutral_downstream_consumer_complete_submission_and_receipt_seam() {
     let budget = SearchBudget::new(8, 1_000, 2, 0, 10_000_000);
 
     // 6. Validated Compile Request
-    let target_device = DeviceFacts::new(vyre_foundation::validate::BackendCapabilities::default(), 1024);
+    let target_device = DeviceFacts::new(
+        vyre_foundation::validate::BackendCapabilities::default(),
+        1024,
+    );
     let request = CompileRequest::new(graph, facts, target_device, budget, objective)
         .validate()
         .expect("compile request must validate");
@@ -298,7 +301,10 @@ fn offline_target_profile_refusal_and_legality_provenance() {
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0x55; 32]), BTreeMap::new()),
-        DeviceFacts::new(vyre_foundation::validate::BackendCapabilities::default(), 1024),
+        DeviceFacts::new(
+            vyre_foundation::validate::BackendCapabilities::default(),
+            1024,
+        ),
         SearchBudget::new(8, 1_000, 2, 0, 10_000_000),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
     )

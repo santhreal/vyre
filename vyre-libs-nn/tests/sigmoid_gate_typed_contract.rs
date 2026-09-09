@@ -5,7 +5,7 @@
 use crate::wire_words;
 use wire_words::bf16_word;
 
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 use vyre_libs_nn::nn::activation::sigmoid_gate_typed;
 use vyre_reference::value::Value;
 

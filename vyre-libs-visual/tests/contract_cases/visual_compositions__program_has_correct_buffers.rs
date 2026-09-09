@@ -3,7 +3,9 @@
 // ================================================================
 
 mod blur {
-    use vyre_libs_visual::visual::{gaussian_blur_2pass, gaussian_blur_2pass_with_kernel, GaussianKernel};
+    use vyre_libs_visual::visual::{
+        gaussian_blur_2pass, gaussian_blur_2pass_with_kernel, GaussianKernel,
+    };
 
     #[test]
     fn program_has_correct_buffers() {
@@ -194,7 +196,7 @@ mod gradient {
     use vyre_libs_visual::visual::{linear_gradient, ColorStop};
     use vyre_reference::value::Value;
 
-    fn render_u32(program: &vyre::ir::Program, pixels: usize) -> Vec<u32> {
+    fn render_u32(program: &vyre_foundation::ir::Program, pixels: usize) -> Vec<u32> {
         let init = vec![0u8; pixels * 4];
         let outputs = vyre_reference::reference_eval(
             program,
@@ -371,7 +373,9 @@ mod downsample {
 // ================================================================
 
 mod glass {
-    use vyre_libs_visual::visual::{glass_blur_stage, glass_filter_stage, glass_stages, GlassParams};
+    use vyre_libs_visual::visual::{
+        glass_blur_stage, glass_filter_stage, glass_stages, GlassParams,
+    };
 
     #[test]
     fn program_has_correct_buffers() {

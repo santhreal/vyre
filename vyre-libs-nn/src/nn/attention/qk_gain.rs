@@ -4,9 +4,9 @@
 //!
 //! Category A  -  broadcast mul. Recipe uses gain_init=5.25.
 
-use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Program};
+use vyre_libs_builder::builder::elementwise::ElementwiseComposer;
 
 const OP_ID: &str = "vyre-libs::nn::qk_gain";
 
@@ -27,7 +27,7 @@ pub fn qk_gain(
         return Program::wrapped(
             vec![
                 BufferDecl::storage(q_in, 0, BufferAccess::ReadOnly, DataType::F32).with_count(0),
-                BufferDecl::output(q_out, 1, DataType::F32).with_output_byte_range(0..0),
+                BufferDecl::output(q_out, 1, DataType::F32).with_output_byte_range(0..0u64),
                 BufferDecl::storage(gain, 2, BufferAccess::ReadOnly, DataType::F32)
                     .with_count(num_heads),
             ],

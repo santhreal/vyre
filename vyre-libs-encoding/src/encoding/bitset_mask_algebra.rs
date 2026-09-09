@@ -12,7 +12,9 @@ use vyre_libs_bitset::bitset::{
     not::bitset_not, or::bitset_or, set_bit::bitset_set_bit, subset_of::bitset_subset_of,
     test_bit::bitset_test_bit, xor::bitset_xor,
 };
-use vyre_libs_builder::plumbing::host::dispatch_buffers::{ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes};
+use vyre_libs_builder::plumbing::host::dispatch_buffers::{
+    ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
+};
 use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned dispatch scratch for bitset mask algebra.
@@ -104,8 +106,12 @@ pub fn mask_binary_via_with_scratch_into(
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], lhs);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], rhs);
-    let outputs =
-        vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
+    let outputs = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(
+        dispatcher,
+        program,
+        &scratch.inputs,
+        policy,
+    )?;
     decode_first_output(&outputs, lhs.len(), "mask_binary_via", out)
 }
 
@@ -191,8 +197,12 @@ pub fn mask_not_via_with_scratch_into(
     let program = bitset_not("input", "out", words);
     ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
-    let outputs =
-        vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
+    let outputs = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(
+        dispatcher,
+        program,
+        &scratch.inputs,
+        policy,
+    )?;
     decode_first_output(&outputs, input.len(), "mask_not_via", out)
 }
 
@@ -253,8 +263,12 @@ pub fn mask_contains_via(
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], &[bit_idx]);
     write_zero_bytes(&mut scratch.inputs[2], std::mem::size_of::<u32>());
-    let outputs =
-        vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
+    let outputs = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(
+        dispatcher,
+        program,
+        &scratch.inputs,
+        policy,
+    )?;
     decode_scalar_bool(&outputs, "mask_contains_via")
 }
 
@@ -280,8 +294,12 @@ pub fn mask_test_bit_via(
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
     write_zero_bytes(&mut scratch.inputs[1], std::mem::size_of::<u32>());
-    let outputs =
-        vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
+    let outputs = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(
+        dispatcher,
+        program,
+        &scratch.inputs,
+        policy,
+    )?;
     decode_scalar_bool(&outputs, "mask_test_bit_via")
 }
 
@@ -354,8 +372,12 @@ fn scalar_binary_predicate_via(
     write_u32_slice_le_bytes(&mut scratch.inputs[0], lhs);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], rhs);
     write_zero_bytes(&mut scratch.inputs[2], std::mem::size_of::<u32>());
-    let outputs =
-        vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
+    let outputs = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(
+        dispatcher,
+        program,
+        &scratch.inputs,
+        policy,
+    )?;
     decode_scalar_bool(&outputs, context)
 }
 
@@ -378,8 +400,12 @@ fn scalar_mutate_bit_via(
     let mut scratch = BitsetMaskAlgebraGpuScratch::default();
     ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], target);
-    let outputs =
-        vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
+    let outputs = vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(
+        dispatcher,
+        program,
+        &scratch.inputs,
+        policy,
+    )?;
     let mut out = Vec::new();
     decode_first_output(&outputs, target.len(), context, &mut out)?;
     Ok(out)
@@ -437,37 +463,57 @@ mod tests {
                     vyre_libs_bitset::bitset::or::OP_ID => binary(&inputs, |a, b| a | b),
                     vyre_libs_bitset::bitset::xor::OP_ID => binary(&inputs, |a, b| a ^ b),
                     vyre_libs_bitset::bitset::not::OP_ID => {
-                        let input = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
+                        let input = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                            &inputs[0],
+                        );
                         Ok(vec![u32_slice_to_le_bytes(
                             &input.iter().map(|word| !word).collect::<Vec<_>>(),
                         )])
                     }
                     vyre_libs_bitset::bitset::equal::OP_ID => {
-                        let lhs = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
-                        let rhs = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
+                        let lhs = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                            &inputs[0],
+                        );
+                        let rhs = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                            &inputs[1],
+                        );
                         Ok(vec![u32_slice_to_le_bytes(&[u32::from(lhs == rhs)])])
                     }
                     vyre_libs_bitset::bitset::subset_of::OP_ID => {
-                        let lhs = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
-                        let rhs = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
+                        let lhs = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                            &inputs[0],
+                        );
+                        let rhs = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                            &inputs[1],
+                        );
                         let ok = lhs.iter().zip(rhs.iter()).all(|(a, b)| (a & !b) == 0);
                         Ok(vec![u32_slice_to_le_bytes(&[u32::from(ok)])])
                     }
                     vyre_libs_bitset::bitset::contains::OP_ID => {
-                        let input = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
-                        let index = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1])[0];
+                        let input = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                            &inputs[0],
+                        );
+                        let index = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                            &inputs[1],
+                        )[0];
                         Ok(vec![u32_slice_to_le_bytes(&[u32::from(
                             reference_mask_contains(&input, index),
                         )])])
                     }
-                    vyre_libs_bitset::bitset::test_bit::OP_ID => Ok(vec![u32_slice_to_le_bytes(&[1])]),
+                    vyre_libs_bitset::bitset::test_bit::OP_ID => {
+                        Ok(vec![u32_slice_to_le_bytes(&[1])])
+                    }
                     vyre_libs_bitset::bitset::set_bit::OP_ID => {
-                        let target = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
+                        let target = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                            &inputs[0],
+                        );
                         let target = reference_mask_set_bit(&target, 1);
                         Ok(vec![u32_slice_to_le_bytes(&target)])
                     }
                     vyre_libs_bitset::bitset::clear_bit::OP_ID => {
-                        let target = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[0]);
+                        let target = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(
+                            &inputs[0],
+                        );
                         let target = reference_mask_clear_bit(&target, 1);
                         Ok(vec![u32_slice_to_le_bytes(&target)])
                     }

@@ -17,8 +17,8 @@ pub use plumbing::operand::tensor_ref::*;
 pub use plumbing::program::attribution::*;
 pub use plumbing::program::descriptor::*;
 pub use plumbing::program::outputs::*;
-pub use plumbing::registration::{contracts, operation_catalog};
 pub use plumbing::registration::signatures::*;
+pub use plumbing::registration::{contracts, operation_catalog};
 
 /// Ensure all feature-selected library operation registrations are retained by the linker.
 #[must_use]
