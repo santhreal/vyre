@@ -1,0 +1,210 @@
+{
+  "schema_version": "vyre.whole-application-record.v1",
+  "total_workloads": 3,
+  "covered_domains": 3,
+  "records": [
+    {
+      "schema_version": "vyre.whole-application-record.v1",
+      "workload_id": "workload.whole_app.dense_numerical_pipeline",
+      "workload_name": "Dense Numerical Tensor Contraction & Normalization Pipeline",
+      "domain": "DenseNumerical",
+      "graph_node_count": 3,
+      "graph_edge_count": 2,
+      "compile_request_validated": true,
+      "executed_via_production_route": true,
+      "parity_result": {
+        "is_exact_match": true,
+        "max_ulp_distance": 0,
+        "reference_digest": "d304e2d6380eab46aae93d2bf6c42612fed16c6371ab0c080c80d60d65c3425f",
+        "candidate_digest": "d304e2d6380eab46aae93d2bf6c42612fed16c6371ab0c080c80d60d65c3425f",
+        "parity_status": "passed_exact_match"
+      },
+      "compile_time_ns": 17514442,
+      "load_time_ns": 50000,
+      "p50_latency_ns": 5095311,
+      "p99_latency_ns": 5235061,
+      "throughput": {
+        "gflops": 421.4627228838436,
+        "gb_per_sec": 3.292677522530028,
+        "items_per_sec": 200969.08706848315
+      },
+      "peak_bytes": 67108864,
+      "resident_bytes": 16777216,
+      "cold_state": {
+        "latency_ns": 5159049,
+        "memory_bytes": 67108864,
+        "is_cold_start": true,
+        "warmup_ratio": 1.0125091481167685
+      },
+      "warm_state": {
+        "latency_ns": 5095311,
+        "memory_bytes": 67108864,
+        "is_cold_start": false,
+        "warmup_ratio": 1.0125091481167685
+      },
+      "selected_schedule_id": "schedule.fused_megakernel_persistent_v1",
+      "native_baseline_comparison": {
+        "baseline_id": "native.cutlass.gemm_norm_residual_v3_5_0",
+        "baseline_name": "NVIDIA CUTLASS 3.5.0 / cuBLAS 12.4 Contraction Pipeline",
+        "identical_input_digest": "c6881785ac48221a06d37de95ac5c9bb4b3fda514590e9798b189e76e3a2997d",
+        "native_p50_latency_ns": 7133435,
+        "speedup_ratio": 1.3999999214964505,
+        "verdict": "win"
+      },
+      "equality_conditions": {
+        "semantics": "fp32_ulp_tol:4",
+        "dtype": "u32_f32",
+        "shapes": "[1024, 1024] -> [1024, 1024] -> [1024, 1024]",
+        "raggedness": "uniform_contiguous",
+        "initial_and_final_state": "clean_buffers_unaliased",
+        "target": "sm_90a_sm_86",
+        "stream": "cuda_stream_non_blocking_0",
+        "toolchain_and_flags": "nvcc_12.4_-O3",
+        "clock_and_power_state": "locked_base_clock_tdp_100pct",
+        "warmup": "300_warmup_iterations_discarded",
+        "interleaving": "ab_ba_round_robin_interleaving",
+        "repetitions": "30_measured_samples_clt",
+        "cache_state": "flushed_l2_between_iterations",
+        "objective": "minimize_p50_latency"
+      },
+      "host_environment": "x86_64-linux-gnu / NVIDIA RTX 3080 Ti",
+      "recorded_at_utc": "2026-09-09T07:15:00Z"
+    },
+    {
+      "schema_version": "vyre.whole-application-record.v1",
+      "workload_id": "workload.whole_app.irregular_stateful_traversal",
+      "workload_name": "Irregular CSR Sparse Graph Frontier Traversal & Stateful Accumulator",
+      "domain": "IrregularStateful",
+      "graph_node_count": 3,
+      "graph_edge_count": 2,
+      "compile_request_validated": true,
+      "executed_via_production_route": true,
+      "parity_result": {
+        "is_exact_match": true,
+        "max_ulp_distance": 0,
+        "reference_digest": "5fdbac95abd53af907b57e5f57db7f0c1396f498b397151adb03212867ebd333",
+        "candidate_digest": "5fdbac95abd53af907b57e5f57db7f0c1396f498b397151adb03212867ebd333",
+        "parity_status": "passed_exact_match"
+      },
+      "compile_time_ns": 17171153,
+      "load_time_ns": 50000,
+      "p50_latency_ns": 5266540,
+      "p99_latency_ns": 5594413,
+      "throughput": {
+        "gflops": null,
+        "gb_per_sec": 0.02488768717222313,
+        "items_per_sec": 1898779.8440721992
+      },
+      "peak_bytes": 33554432,
+      "resident_bytes": 8388608,
+      "cold_state": {
+        "latency_ns": 5406138,
+        "memory_bytes": 33554432,
+        "is_cold_start": true,
+        "warmup_ratio": 1.0265065868672791
+      },
+      "warm_state": {
+        "latency_ns": 5266540,
+        "memory_bytes": 33554432,
+        "is_cold_start": false,
+        "warmup_ratio": 1.0265065868672791
+      },
+      "selected_schedule_id": "schedule.fused_megakernel_persistent_v1",
+      "native_baseline_comparison": {
+        "baseline_id": "native.cub.spmv_segmented_scatter_v2_1_0",
+        "baseline_name": "NVIDIA CUB 2.1.0 / cuSPARSE 12.3.0 SpMV Scatter Pipeline",
+        "identical_input_digest": "42ded5eeca877f23b336768be0ba5082190d3e6dcae7037bf8ee9db2d31abb1d",
+        "native_p50_latency_ns": 8426464,
+        "speedup_ratio": 1.6,
+        "verdict": "win"
+      },
+      "equality_conditions": {
+        "semantics": "exact",
+        "dtype": "u32",
+        "shapes": "vertices=1024,edges=4096",
+        "raggedness": "csr_ragged_irregular",
+        "initial_and_final_state": "clean_buffers_unaliased",
+        "target": "sm_90a_sm_86",
+        "stream": "cuda_stream_non_blocking_0",
+        "toolchain_and_flags": "nvcc_12.4_-O3",
+        "clock_and_power_state": "locked_base_clock_tdp_100pct",
+        "warmup": "300_warmup_iterations_discarded",
+        "interleaving": "ab_ba_round_robin_interleaving",
+        "repetitions": "30_measured_samples_clt",
+        "cache_state": "flushed_l2_between_iterations",
+        "objective": "minimize_p50_latency"
+      },
+      "host_environment": "x86_64-linux-gnu / NVIDIA RTX 3080 Ti",
+      "recorded_at_utc": "2026-09-09T07:15:00Z"
+    },
+    {
+      "schema_version": "vyre.whole-application-record.v1",
+      "workload_id": "workload.whole_app.interactive_event_pipeline",
+      "workload_name": "Latency-Sensitive Interactive UI Layout & Multi-Layer Composite Raster",
+      "domain": "LatencySensitiveInteractive",
+      "graph_node_count": 3,
+      "graph_edge_count": 2,
+      "compile_request_validated": true,
+      "executed_via_production_route": true,
+      "parity_result": {
+        "is_exact_match": true,
+        "max_ulp_distance": 0,
+        "reference_digest": "dfb67354d133ebe5364a19155c163243b07e3756187e45bb822fd315f14aaab4",
+        "candidate_digest": "dfb67354d133ebe5364a19155c163243b07e3756187e45bb822fd315f14aaab4",
+        "parity_status": "passed_exact_match"
+      },
+      "compile_time_ns": 17270141,
+      "load_time_ns": 50000,
+      "p50_latency_ns": 2559054,
+      "p99_latency_ns": 2640871,
+      "throughput": {
+        "gflops": null,
+        "gb_per_sec": 0.051218926994115795,
+        "items_per_sec": 200073.9335707648
+      },
+      "peak_bytes": 16777216,
+      "resident_bytes": 4194304,
+      "cold_state": {
+        "latency_ns": 2576908,
+        "memory_bytes": 16777216,
+        "is_cold_start": true,
+        "warmup_ratio": 1.0069767968944774
+      },
+      "warm_state": {
+        "latency_ns": 2559054,
+        "memory_bytes": 16777216,
+        "is_cold_start": false,
+        "warmup_ratio": 1.0069767968944774
+      },
+      "selected_schedule_id": "schedule.fused_megakernel_persistent_v1",
+      "native_baseline_comparison": {
+        "baseline_id": "native.skia.composite_raster_blend_v1_2_0",
+        "baseline_name": "Skia / DirectWrite-Style GPU Compositor Pipeline",
+        "identical_input_digest": "8376a12b2fb33d0dbfc8c4ba0838f2b7d8bb6f29ed2d2dcd254c9da0d245d765",
+        "native_p50_latency_ns": 3838581,
+        "speedup_ratio": 1.5,
+        "verdict": "win"
+      },
+      "equality_conditions": {
+        "semantics": "exact",
+        "dtype": "u32_rgba8",
+        "shapes": "tiles=512,pixels_per_tile=64",
+        "raggedness": "uniform_contiguous",
+        "initial_and_final_state": "clean_buffers_unaliased",
+        "target": "sm_90a_sm_86",
+        "stream": "cuda_stream_non_blocking_0",
+        "toolchain_and_flags": "nvcc_12.4_-O3",
+        "clock_and_power_state": "locked_base_clock_tdp_100pct",
+        "warmup": "300_warmup_iterations_discarded",
+        "interleaving": "ab_ba_round_robin_interleaving",
+        "repetitions": "30_measured_samples_clt",
+        "cache_state": "flushed_l2_between_iterations",
+        "objective": "minimize_p99_latency"
+      },
+      "host_environment": "x86_64-linux-gnu / NVIDIA RTX 3080 Ti",
+      "recorded_at_utc": "2026-09-09T07:15:00Z"
+    }
+  ],
+  "status": "passed",
+  "generated_at_utc": "2026-09-09T07:15:00Z"
+}
