@@ -8,7 +8,7 @@
 
 use core::fmt;
 
-use crate::compatibility::{CompatibilityDisposition, ProtocolVersion};
+use crate::compatibility::{CompatibilityDisposition, ProtocolDomain, ProtocolVersion};
 
 /// Globally unique schema identifier for every persisted, signed, cached, and transmitted record.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -116,6 +116,33 @@ impl SchemaId {
             Self::CausalReceipt => "causal_receipt",
         }
     }
+
+    /// Protocol domain associated with this schema identifier.
+    #[must_use]
+    pub const fn domain(self) -> ProtocolDomain {
+        match self {
+            Self::WireFraming | Self::TargetFacetMatrix => ProtocolDomain::PublicWire,
+            Self::WireOpMetadata
+            | Self::AnalysisFact
+            | Self::ExtensionSchema
+            | Self::ConfigReceipt => ProtocolDomain::Catalog,
+            Self::ConformanceCertificate
+            | Self::ProofReceipt
+            | Self::InvariantDigest
+            | Self::ReplayCapsule
+            | Self::BundleCertificate
+            | Self::ProveArtifact
+            | Self::ProofPlanArtifact => ProtocolDomain::Proof,
+            Self::ScheduleRecord => ProtocolDomain::Schedule,
+            Self::ArtifactPayload
+            | Self::CacheEntry
+            | Self::SafetensorIndex
+            | Self::AotManifest
+            | Self::ArtifactReport => ProtocolDomain::Artifact,
+            Self::MeasurementRecord => ProtocolDomain::Measurement,
+            Self::TraceEvent | Self::CausalReceipt => ProtocolDomain::RuntimeProtocol,
+        }
+    }
 }
 
 impl fmt::Display for SchemaId {
@@ -217,6 +244,12 @@ pub struct SchemaDefinition {
 }
 
 impl SchemaDefinition {
+    /// Protocol domain for this schema definition.
+    #[must_use]
+    pub const fn protocol_domain(&self) -> ProtocolDomain {
+        self.id.domain()
+    }
+
     /// Validate structural invariants of this schema definition.
     #[must_use]
     pub fn validate_invariants(&self) -> bool {
