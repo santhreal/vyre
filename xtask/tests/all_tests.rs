@@ -24,3 +24,7 @@ pub mod release_docs;
 /// Integration tests from `tests/gate_verdict.rs`.
 #[path = "gate_verdict.rs"]
 pub mod gate_verdict;
+
+/// Integration tests from `tests/device_test_compilation.rs`.
+#[path = "device_test_compilation.rs"]
+pub mod device_test_compilation;

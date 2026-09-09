@@ -23,10 +23,10 @@ use descriptors_h_p::GATES_H_P;
 use descriptors_q_z::GATES_Q_Z;
 
 const fn concat_descriptors(
-    a: &[GateDescriptor; 53],
+    a: &[GateDescriptor; 54],
     b: &[GateDescriptor; 59],
     c: &[GateDescriptor; 37],
-) -> [GateDescriptor; 149] {
+) -> [GateDescriptor; 150] {
     let mut out = [GateDescriptor {
         name: "",
         help: "",
@@ -38,7 +38,7 @@ const fn concat_descriptors(
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
         proof: "",
-    }; 149];
+    }; 150];
     let mut i = 0;
     while i < a.len() {
         out[i] = a[i];
@@ -58,7 +58,7 @@ const fn concat_descriptors(
 }
 
 /// Complete array holding all registered gate descriptors.
-pub static GATE_METADATA_ARRAY: [GateDescriptor; 149] =
+pub static GATE_METADATA_ARRAY: [GateDescriptor; 150] =
     concat_descriptors(&GATES_A_G, &GATES_H_P, &GATES_Q_Z);
 
 /// Every gate descriptor, sorted by gate name.

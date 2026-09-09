@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with A through G.
-pub const GATES_A_G: [GateDescriptor; 53] = [
+pub const GATES_A_G: [GateDescriptor; 54] = [
     GateDescriptor {
         name: "abstraction-gate",
         help: "Enforce registered building-block boundaries",
@@ -429,6 +429,18 @@ pub const GATES_A_G: [GateDescriptor; 53] = [
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
         proof: "crate::gates::dep_drift::tests::dep_drift_detects_mismatched_dependency_versions_and_ignores_workspace_inheritance",
+    },
+    GateDescriptor {
+        name: "device-test-compilation",
+        help: "Compile every device-tests admitted test target without running it",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "workspace test targets",
+        inputs: &[],
+        artifacts: &[],
+        prerequisites: &[],
+        resource_class: ResourceClass::Cpu,
+        proof: "crate::gates::device_test_compilation::tests::diagnostic_to_finding_formats_message_and_fix",
     },
     GateDescriptor {
         name: "device-test-gating",
