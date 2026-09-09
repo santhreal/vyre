@@ -475,6 +475,21 @@ impl CandidatePlan {
             law_facts: None,
         }
     }
+    /// Whether this plan represents the unfused, unspecialized sequential baseline.
+    #[allow(dead_code)]
+    #[must_use]
+    pub(crate) fn is_unfused_baseline(&self) -> bool {
+        self.fused_edges.is_empty()
+            && self.derivation.is_empty()
+            && self.workgroup_width.is_none()
+            && self.topology == ExecutionTopology::Sequential
+            && self.law_derivation.is_empty()
+            && self
+                .node_groups
+                .iter()
+                .enumerate()
+                .all(|(i, &g)| g == u32::try_from(i).unwrap_or(u32::MAX))
+    }
 
     /// Same grouping executed with `topology`.
     #[must_use]

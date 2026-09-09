@@ -126,7 +126,10 @@ impl ScheduleCostModel {
         cycles: &mut u64,
     ) {
         match op {
-            ScheduleOp::Tile { tile_size, .. } => {
+            ScheduleOp::Tile { tile_size, .. }
+            | ScheduleOp::StripMine {
+                factor: tile_size, ..
+            } => {
                 // Tiling improves reuse and reduces external memory traffic
                 *traffic = (*traffic / (*tile_size).max(1)).max(1);
             }
@@ -142,6 +145,32 @@ impl ScheduleCostModel {
                 if *staging_bytes > self.max_shared_memory {
                     *shared_penalty += 10.0;
                 }
+            }
+            ScheduleOp::MemoryPlacement {
+                placement, bytes, ..
+            } => {
+                if *placement == super::MemoryPlacement::Workgroup
+                    && *bytes > self.max_shared_memory
+                {
+                    *shared_penalty += 10.0;
+                }
+            }
+            ScheduleOp::SoftwarePipeline {
+                stages,
+                initiation_interval,
+            } => {
+                *cycles = (*cycles / (*stages as u64).max(1)) + u64::from(*initiation_interval);
+            }
+            ScheduleOp::AsyncPipeline { stages, .. } => {
+                *cycles = (*cycles / (*stages as u64).max(1)).max(1);
+            }
+            ScheduleOp::RegisterTile {
+                register_dim_m,
+                register_dim_n,
+                ..
+            } => {
+                let factor = u64::from(register_dim_m.saturating_mul(*register_dim_n)).max(1);
+                *cycles = (*cycles / factor).max(1);
             }
             ScheduleOp::Synchronize { .. } => {
                 // Synchronization adds a fixed cycle penalty

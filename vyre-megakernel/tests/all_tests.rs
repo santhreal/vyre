@@ -99,3 +99,6 @@ pub mod real_time_objectives;
 /// Integration tests from `tests/region_fusion_legality_contracts.rs`.
 #[path = "region_fusion_legality_contracts.rs"]
 pub mod region_fusion_legality_contracts;
+/// Integration tests from `tests/schedule_calculus_megakernel_contracts.rs`.
+#[path = "schedule_calculus_megakernel_contracts.rs"]
+pub mod schedule_calculus_megakernel_contracts;

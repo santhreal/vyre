@@ -79,3 +79,7 @@ pub mod tile_lowering_contracts;
 /// Integration tests from `tests/verify_result_id_uniqueness.rs`.
 #[path = "verify_result_id_uniqueness.rs"]
 pub mod verify_result_id_uniqueness;
+
+/// Integration tests from `tests/physical_kernel_ir_policy_boundary.rs`.
+#[path = "physical_kernel_ir_policy_boundary.rs"]
+pub mod physical_kernel_ir_policy_boundary;
