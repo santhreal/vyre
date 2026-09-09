@@ -2,11 +2,12 @@
 
 #![cfg(feature = "device-tests")]
 #![cfg(target_os = "linux")]
-#![allow(unsafe_code)]
+#![forbid(unsafe_code)]
 
 use core::sync::atomic::AtomicU32;
 use std::fs::File;
 use std::io::{Seek, SeekFrom, Write};
+use std::path::Path;
 use std::time::{Duration, Instant};
 
 use tempfile::tempdir;
@@ -22,9 +23,8 @@ use vyre_runtime::PipelineError;
 const FILE_BYTES: usize = 4 * 1024 * 1024;
 const HASH_WORDS: u32 = 8;
 
-fn write_test_file() -> std::path::PathBuf {
-    let dir = tempdir().expect("tempdir");
-    let path = dir.path().join("nvme-gpu-ingest.bin");
+fn write_test_file(dir: &Path) -> std::path::PathBuf {
+    let path = dir.join("nvme-gpu-ingest.bin");
     let mut file = File::create(&path).expect("create test file");
     let pattern: Vec<u8> = (0..4096).map(|i| ((i * 17) & 0xFF) as u8).collect();
     let mut remaining = FILE_BYTES;
@@ -36,31 +36,7 @@ fn write_test_file() -> std::path::PathBuf {
     }
     file.flush().expect("flush test file");
     file.seek(SeekFrom::Start(0)).expect("rewind test file");
-    // Keep the tempdir alive by leaking it for the process lifetime. This is
-    // test-only and avoids threading the directory owner across helper calls.
-    let leaked = dir.keep();
-    leaked.join("nvme-gpu-ingest.bin")
-}
-
-fn make_driver() -> Result<NvmeGpuIngestDriver<'static>, PipelineError> {
-    let ring = IoUringState::new(8)?;
-    let target = Box::leak(vec![0u8; FILE_BYTES].into_boxed_slice());
-    let gpu_buffer = GpuMappedBuffer::from_host_visible_slice(target);
-    let tail = Box::leak(Box::new(AtomicU32::new(0)));
-    let stream = AsyncUringStream::new(ring, gpu_buffer, tail);
-    NvmeGpuIngestDriver::new(stream, 1, ResidentIoQueue::new(64)?)
-}
-
-fn make_gpudirect_driver() -> Result<NvmeGpuIngestDriver<'static>, PipelineError> {
-    let ring = IoUringState::new(8)?;
-    let target = Box::leak(vec![0u8; FILE_BYTES].into_boxed_slice());
-    // The test buffer is leaked for the process lifetime and stands in for
-    // BAR1-backed memory when the constructor is expected to reject missing
-    // GPUDirect configuration before any native NVMe submission.
-    let gpu_buffer = GpuMappedBuffer::from_host_visible_slice(target);
-    let tail = Box::leak(Box::new(AtomicU32::new(0)));
-    let stream = AsyncUringStream::new(ring, gpu_buffer, tail);
-    NvmeGpuIngestDriver::new_gpudirect(stream, 1, ResidentIoQueue::new(64)?)
+    path
 }
 
 fn copy_hash_program() -> Program {
@@ -88,9 +64,10 @@ fn copy_hash_program() -> Program {
 
 #[test]
 fn ingests_file_and_surfaces_hash_through_live_backend() {
-    let path = write_test_file();
-    let mut driver = match make_driver() {
-        Ok(driver) => driver,
+    let dir = tempdir().expect("tempdir");
+    let path = write_test_file(dir.path());
+    let ring = match IoUringState::new(8) {
+        Ok(ring) => ring,
         Err(PipelineError::IoUringSyscall { errno, .. })
             if errno == libc::EPERM || errno == libc::ENOSYS =>
         {
@@ -101,6 +78,15 @@ fn ingests_file_and_surfaces_hash_through_live_backend() {
         }
         Err(err) => panic!("unexpected driver setup failure: {err}"),
     };
+    let mut target = vec![0u8; FILE_BYTES];
+    let gpu_buffer = GpuMappedBuffer::from_host_visible_slice(&mut target);
+    let tail = AtomicU32::new(0);
+    let stream = AsyncUringStream::new(ring, gpu_buffer, &tail);
+    let mut driver =
+        match NvmeGpuIngestDriver::new(stream, 1, ResidentIoQueue::new(64).expect("io queue")) {
+            Ok(driver) => driver,
+            Err(err) => panic!("unexpected driver setup failure: {err}"),
+        };
     assert_eq!(
         driver.read_path(),
         NativeReadPath::RegisteredMappedRead,
@@ -153,7 +139,27 @@ fn ingests_file_and_surfaces_hash_through_live_backend() {
 
 #[test]
 fn gpudirect_path_fails_loudly_when_native_nvme_is_not_configured() {
-    match make_gpudirect_driver() {
+    let ring = match IoUringState::new(8) {
+        Ok(ring) => ring,
+        Err(PipelineError::IoUringSyscall { errno, .. })
+            if errno == libc::EPERM || errno == libc::ENOSYS =>
+        {
+            panic!(
+                "Fix: io_uring must be available for the native GPUDirect ingest probe; \
+                 EPERM/ENOSYS is a host configuration bug."
+            );
+        }
+        Err(err) => panic!("unexpected ring setup failure: {err}"),
+    };
+    let mut target = vec![0u8; FILE_BYTES];
+    let gpu_buffer = GpuMappedBuffer::from_host_visible_slice(&mut target);
+    let tail = AtomicU32::new(0);
+    let stream = AsyncUringStream::new(ring, gpu_buffer, &tail);
+    let io_queue = match ResidentIoQueue::new(64) {
+        Ok(q) => q,
+        Err(err) => panic!("unexpected io queue failure: {err}"),
+    };
+    match NvmeGpuIngestDriver::new_gpudirect(stream, 1, io_queue) {
         Ok(driver) => assert_eq!(
             driver.read_path(),
             NativeReadPath::GpuDirectNvmePassthrough,

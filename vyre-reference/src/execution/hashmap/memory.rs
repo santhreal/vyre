@@ -34,9 +34,11 @@ impl HashmapMemory {
 pub(crate) fn output_value(buffer: Buffer, decl: &BufferDecl) -> Value {
     let mut bytes = buffer.into_bytes();
     if let Some(range) = decl.output_byte_range() {
-        if range.start <= range.end && range.end <= bytes.len() {
-            bytes.truncate(range.end);
-            bytes.drain(..range.start);
+        let start = usize::try_from(range.start).unwrap_or(0);
+        let end = usize::try_from(range.end).unwrap_or(bytes.len());
+        if start <= end && end <= bytes.len() {
+            bytes.truncate(end);
+            bytes.drain(..start);
         }
     }
     Value::from(bytes)

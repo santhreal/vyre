@@ -88,7 +88,8 @@ fn runtime_closure_no_public_constructor_produces_unbounded_quota() {
     .expect("Fix: standard session quota must construct valid SessionIdentity");
     assert!(session_id.is_finite());
 
-    // 2. Non-finite quotas are rejected fail-closed by SessionIdentity
+    // 2. Non-finite quotas are rejected fail-closed with typed errors naming the missing limit
+    // Subsystem 1: queue
     let bad_queue = QueueQuota::bounded(u64::MAX, 100);
     let bad_quota = SessionQuota::bounded(bad_queue, tenant, cache, retained, io, retry, telemetry);
     assert!(!bad_quota.is_finite());
@@ -102,7 +103,7 @@ fn runtime_closure_no_public_constructor_produces_unbounded_quota() {
         },
         bad_quota,
     )
-    .expect_err("Fix: non-finite quota must be rejected by SessionIdentity");
+    .expect_err("Fix: non-finite queue quota must be rejected");
     assert!(matches!(
         err,
         SessionQuotaError::NonFiniteLimit {
@@ -111,6 +112,143 @@ fn runtime_closure_no_public_constructor_produces_unbounded_quota() {
         }
     ));
 
+    // Subsystem 2: tenant
+    let bad_tenant = TenantQuota::bounded(u64::MAX, 100, 100);
+    let bad_quota = SessionQuota::bounded(queue, bad_tenant, cache, retained, io, retry, telemetry);
+    assert!(!bad_quota.is_finite());
+    let err = SessionIdentity::new(
+        1003,
+        Digest([42; 32]),
+        DeviceIdentity {
+            backend: "cuda",
+            device: "cuda:0".to_string(),
+            generation: 1,
+        },
+        bad_quota,
+    )
+    .expect_err("Fix: non-finite tenant quota must be rejected");
+    assert!(matches!(
+        err,
+        SessionQuotaError::NonFiniteLimit {
+            subsystem: "tenant",
+            ..
+        }
+    ));
+
+    // Subsystem 3: cache
+    let bad_cache = CacheQuota::bounded(usize::MAX, 100);
+    let bad_quota = SessionQuota::bounded(queue, tenant, bad_cache, retained, io, retry, telemetry);
+    assert!(!bad_quota.is_finite());
+    let err = SessionIdentity::new(
+        1004,
+        Digest([42; 32]),
+        DeviceIdentity {
+            backend: "cuda",
+            device: "cuda:0".to_string(),
+            generation: 1,
+        },
+        bad_quota,
+    )
+    .expect_err("Fix: non-finite cache quota must be rejected");
+    assert!(matches!(
+        err,
+        SessionQuotaError::NonFiniteLimit {
+            subsystem: "cache",
+            ..
+        }
+    ));
+
+    // Subsystem 4: retained_generation
+    let bad_retained = RetainedGenerationQuota::bounded(u64::MAX, 100);
+    let bad_quota = SessionQuota::bounded(queue, tenant, cache, bad_retained, io, retry, telemetry);
+    assert!(!bad_quota.is_finite());
+    let err = SessionIdentity::new(
+        1005,
+        Digest([42; 32]),
+        DeviceIdentity {
+            backend: "cuda",
+            device: "cuda:0".to_string(),
+            generation: 1,
+        },
+        bad_quota,
+    )
+    .expect_err("Fix: non-finite retained generation quota must be rejected");
+    assert!(matches!(
+        err,
+        SessionQuotaError::NonFiniteLimit {
+            subsystem: "retained_generation",
+            ..
+        }
+    ));
+
+    // Subsystem 5: io
+    let bad_io = IoQuota::bounded(usize::MAX, 100);
+    let bad_quota = SessionQuota::bounded(queue, tenant, cache, retained, bad_io, retry, telemetry);
+    assert!(!bad_quota.is_finite());
+    let err = SessionIdentity::new(
+        1006,
+        Digest([42; 32]),
+        DeviceIdentity {
+            backend: "cuda",
+            device: "cuda:0".to_string(),
+            generation: 1,
+        },
+        bad_quota,
+    )
+    .expect_err("Fix: non-finite io quota must be rejected");
+    assert!(matches!(
+        err,
+        SessionQuotaError::NonFiniteLimit {
+            subsystem: "io",
+            ..
+        }
+    ));
+
+    // Subsystem 6: retry
+    let bad_retry = RetryQuota::bounded(u32::MAX, 100);
+    let bad_quota = SessionQuota::bounded(queue, tenant, cache, retained, io, bad_retry, telemetry);
+    assert!(!bad_quota.is_finite());
+    let err = SessionIdentity::new(
+        1007,
+        Digest([42; 32]),
+        DeviceIdentity {
+            backend: "cuda",
+            device: "cuda:0".to_string(),
+            generation: 1,
+        },
+        bad_quota,
+    )
+    .expect_err("Fix: non-finite retry quota must be rejected");
+    assert!(matches!(
+        err,
+        SessionQuotaError::NonFiniteLimit {
+            subsystem: "retry",
+            ..
+        }
+    ));
+
+    // Subsystem 7: telemetry
+    let bad_telemetry = TelemetryQuota::bounded(u64::MAX, 100);
+    let bad_quota = SessionQuota::bounded(queue, tenant, cache, retained, io, retry, bad_telemetry);
+    assert!(!bad_quota.is_finite());
+    let err = SessionIdentity::new(
+        1008,
+        Digest([42; 32]),
+        DeviceIdentity {
+            backend: "cuda",
+            device: "cuda:0".to_string(),
+            generation: 1,
+        },
+        bad_quota,
+    )
+    .expect_err("Fix: non-finite telemetry quota must be rejected");
+    assert!(matches!(
+        err,
+        SessionQuotaError::NonFiniteLimit {
+            subsystem: "telemetry",
+            ..
+        }
+    ));
     // 3. Source-derived closure: verify NO `fn unbounded` constructor exists in vyre-runtime source
     let root = vyre_workspace_root();
     let src_dir = root.join("vyre-runtime/src");
@@ -298,4 +436,166 @@ fn session_recovery_enforces_artifact_identity_agreement() {
     let other_digest = Digest([11; 32]);
 
     assert_ne!(expected_digest, other_digest);
+}
+#[test]
+fn source_derived_quota_space_closure_fails_on_unrecorded_fields() {
+    let root = vyre_workspace_root();
+    let session_quota_path = root.join("vyre-runtime/src/session_quota.rs");
+    let tenant_quota_path = root.join("vyre-runtime/src/tenant/quota.rs");
+
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+    struct StructField {
+        struct_name: String,
+        field_name: String,
+        field_type: String,
+    }
+
+    fn parse_quota_structs(file_path: &Path) -> Vec<StructField> {
+        let content = fs::read_to_string(file_path).unwrap();
+        let mut fields = Vec::new();
+        let mut current_struct: Option<String> = None;
+        let mut brace_depth = 0;
+
+        for line in content.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*') {
+                continue;
+            }
+
+            if trimmed.starts_with("pub struct ") || trimmed.starts_with("struct ") {
+                let parts: Vec<&str> = trimmed.split_whitespace().collect();
+                let name_idx = if parts[0] == "pub" { 2 } else { 1 };
+                if name_idx < parts.len() {
+                    let struct_name = parts[name_idx].trim_end_matches('{').trim().to_string();
+                    current_struct = Some(struct_name);
+                }
+            }
+
+            if trimmed.contains('{') {
+                brace_depth += trimmed.matches('{').count();
+            }
+            if let Some(struct_name) = &current_struct {
+                if brace_depth == 1 && trimmed.starts_with("pub ") && trimmed.contains(':') {
+                    let without_pub = trimmed.strip_prefix("pub ").unwrap();
+                    let parts: Vec<&str> = without_pub.split(':').collect();
+                    if parts.len() == 2 {
+                        let field_name = parts[0].trim().to_string();
+                        let field_type = parts[1].trim().trim_end_matches(',').trim().to_string();
+                        fields.push(StructField {
+                            struct_name: struct_name.clone(),
+                            field_name,
+                            field_type,
+                        });
+                    }
+                }
+            }
+
+            if trimmed.contains('}') {
+                let close_count = trimmed.matches('}').count();
+                if close_count >= brace_depth {
+                    brace_depth = 0;
+                    current_struct = None;
+                } else {
+                    brace_depth -= close_count;
+                }
+            }
+        }
+
+        fields
+    }
+
+    let mut derived_fields = Vec::new();
+    derived_fields.extend(parse_quota_structs(&session_quota_path));
+    derived_fields.extend(parse_quota_structs(&tenant_quota_path));
+
+    // Authoritative quota decision registry: maps (struct_name, field_name) to (field_type, justification)
+    let authoritative_quota_decision_registry: BTreeMap<(&str, &str), (&str, &str)> = BTreeMap::from([
+        // SessionQuota subsystem compositions
+        (("SessionQuota", "queue"), ("QueueQuota", "subsystem queue quota with bounded slots and queue depth")),
+        (("SessionQuota", "tenant"), ("TenantQuota", "subsystem tenant quota with bounded slots, staging bytes, and resident handles")),
+        (("SessionQuota", "cache"), ("CacheQuota", "subsystem cache quota with bounded entries and byte budget")),
+        (("SessionQuota", "retained_generation"), ("RetainedGenerationQuota", "subsystem retained generation quota with bounded generations and values")),
+        (("SessionQuota", "io"), ("IoQuota", "subsystem io quota with bounded inflight requests and transfer bytes")),
+        (("SessionQuota", "retry"), ("RetryQuota", "subsystem retry quota with bounded restart attempts and timeout")),
+        (("SessionQuota", "telemetry"), ("TelemetryQuota", "subsystem telemetry quota with bounded events per window and ring buffer capacity")),
+
+        // QueueQuota fields
+        (("QueueQuota", "max_outstanding_slots"), ("u64", "finite ring slot ceiling")),
+        (("QueueQuota", "max_queue_depth"), ("usize", "finite submission queue depth ceiling")),
+
+        // TenantQuota fields
+        (("TenantQuota", "max_outstanding_slots"), ("u64", "finite tenant ring slot ceiling")),
+        (("TenantQuota", "max_staging_bytes"), ("u64", "finite staging buffer bytes ceiling")),
+        (("TenantQuota", "max_resident_handles"), ("u64", "finite resident resource handle ceiling")),
+
+        // CacheQuota fields
+        (("CacheQuota", "max_entries"), ("usize", "finite cache entry count ceiling")),
+        (("CacheQuota", "max_bytes"), ("u64", "finite cache memory byte budget")),
+
+        // RetainedGenerationQuota fields
+        (("RetainedGenerationQuota", "max_generations"), ("u64", "finite generation count ceiling")),
+        (("RetainedGenerationQuota", "max_retained_values"), ("usize", "finite retained value binding ceiling")),
+
+        // IoQuota fields
+        (("IoQuota", "max_inflight_requests"), ("usize", "finite inflight request ceiling")),
+        (("IoQuota", "max_transfer_bytes"), ("u64", "finite transfer buffer byte budget")),
+
+        // RetryQuota fields
+        (("RetryQuota", "max_restarts"), ("u32", "finite restart budget ceiling")),
+        (("RetryQuota", "max_timeout_micros"), ("u64", "finite timeout microseconds ceiling")),
+
+        // TelemetryQuota fields
+        (("TelemetryQuota", "max_events_per_window"), ("u64", "finite telemetry event count ceiling")),
+        (("TelemetryQuota", "ring_buffer_capacity"), ("usize", "finite telemetry ring slot capacity")),
+
+        // SessionIdentity fields
+        (("SessionIdentity", "session_id"), ("u64", "monotonically allocated session identifier")),
+        (("SessionIdentity", "artifact"), ("Digest", "canonical artifact digest")),
+        (("SessionIdentity", "device"), ("DeviceIdentity", "registered device generation identity")),
+        (("SessionIdentity", "quota"), ("SessionQuota", "mandatory finite session quotas")),
+    ]);
+
+    // 1. Every field in source must have a registered decision
+    for field in &derived_fields {
+        let key = (field.struct_name.as_str(), field.field_name.as_str());
+        let decision = authoritative_quota_decision_registry.get(&key);
+        assert!(
+            decision.is_some(),
+            "Found unrecorded quota field `{}.{}: {}` in source without a recorded decision! Fix: record decision in authoritative quota decision table and ensure bounded validation in session_quota.rs.",
+            field.struct_name,
+            field.field_name,
+            field.field_type
+        );
+        let (expected_type, _justification) = decision.unwrap();
+        assert_eq!(
+            field.field_type.as_str(),
+            *expected_type,
+            "Field `{}.{}` has type `{}` in source, but authoritative decision expected `{}`",
+            field.struct_name,
+            field.field_name,
+            field.field_type,
+            expected_type
+        );
+    }
+
+    // 2. Every registered decision must exist in source
+    for ((struct_name, field_name), (expected_type, _)) in &authoritative_quota_decision_registry {
+        let found = derived_fields.iter().any(|f| {
+            f.struct_name == *struct_name
+                && f.field_name == *field_name
+                && f.field_type == *expected_type
+        });
+        assert!(
+            found,
+            "Authoritative decision records field `{struct_name}.{field_name}: {expected_type}`, but it was not found in source!"
+        );
+    }
+
+    assert_eq!(
+        derived_fields.len(),
+        authoritative_quota_decision_registry.len(),
+        "Derived quota field count ({}) must match authoritative registry count ({})",
+        derived_fields.len(),
+        authoritative_quota_decision_registry.len()
+    );
 }
