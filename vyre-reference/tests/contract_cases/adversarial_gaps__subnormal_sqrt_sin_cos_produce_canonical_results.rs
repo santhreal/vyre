@@ -225,7 +225,7 @@ fn zero_sized_buffer_load_returns_zero() {
 #[test]
 fn zero_sized_buffer_store_is_noop() {
     let program = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_output_byte_range(0..0)],
+        vec![BufferDecl::output("out", 0, DataType::U32).with_output_byte_range(0usize..0usize)],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(0xDEAD_BEEF))],
     );

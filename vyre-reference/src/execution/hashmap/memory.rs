@@ -238,7 +238,7 @@ mod tests {
     fn output_value_slices_declared_byte_range_from_buffer_bytes() {
         let decl = BufferDecl::output("out", 0, DataType::U32)
             .with_count(4)
-            .with_output_byte_range(4..12);
+            .with_output_byte_range(4usize..12usize);
         let buffer = Buffer::new((0u8..16).collect(), DataType::U32);
 
         assert_eq!(

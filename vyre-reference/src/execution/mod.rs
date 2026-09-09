@@ -226,22 +226,6 @@ pub fn reference_input_values(
         .iter()
         .filter(|decl| is_reference_input(decl))
         .count();
-    let non_wg_count = program
-        .buffers()
-        .iter()
-        .filter(|decl| decl.access() != vyre_foundation::ir::BufferAccess::Workgroup)
-        .count();
-    if inputs.len() == non_wg_count && non_wg_count != expected {
-        let values: Vec<Value> = program
-            .buffers()
-            .iter()
-            .filter(|decl| decl.access() != vyre_foundation::ir::BufferAccess::Workgroup)
-            .zip(inputs)
-            .filter(|(decl, _)| is_reference_input(decl))
-            .map(|(_, bytes)| Value::from(*bytes))
-            .collect();
-        return Ok(values);
-    }
     if expected != inputs.len() {
         let missing = program
             .buffers()

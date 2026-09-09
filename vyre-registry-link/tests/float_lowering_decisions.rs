@@ -92,6 +92,33 @@ fn unsupported_backend_refuses_strict_ieee_compilation_and_cache_key_generation(
     let mut _config = DispatchConfig::default();
     _config.float_lowering = FloatLoweringMode::StrictIeee;
 
+    for backend in ["cuda", "metal", "spirv"] {
+        let err = vyre_driver::BackendError::reject_blocked_contraction(
+            &_program,
+            FloatLoweringMode::StrictIeee,
+            backend,
+        )
+        .expect_err("Fix: unsupported backend must reject blocked contraction");
+        assert_eq!(
+            err.code(),
+            vyre_driver::ErrorCode::UnsupportedFeature,
+            "Fix: refusal error code must be UnsupportedFeature for {backend}"
+        );
+        match err {
+            vyre_driver::BackendError::UnsupportedFeature { name, backend: err_backend } => {
+                assert!(
+                    name.contains("strict-ieee") && name.contains("Sin"),
+                    "Fix: refusal name must contain mode and operation: {name}"
+                );
+                assert_eq!(
+                    err_backend, backend,
+                    "Fix: refusal backend must match requested backend"
+                );
+            }
+            other => panic!("Fix: expected UnsupportedFeature, got {other:?}"),
+        }
+    }
+
     #[cfg(feature = "cuda")]
     {
         let result = vyre_driver_cuda::codegen::program_to_ptx(&_program, &_config);

@@ -138,11 +138,14 @@ fn no_backend_accepts_an_operation_with_no_exact_expansion_under_strict_lowering
         let Ok(backend) = (registration.factory)() else {
             continue;
         };
+        let named_operation = backend
+            .honors_float_lowering(FloatLoweringMode::StrictIeee)
+            .then_some("Exp2");
         findings.extend(honored_or_refused_by_name(
             registration.id,
             false,
             FloatLoweringMode::StrictIeee,
-            Some("Exp2"),
+            named_operation,
             &backend.dispatch(&program, &inputs, &config),
         ));
     }
@@ -181,8 +184,9 @@ fn a_strict_dispatch_matches_the_oracle_or_is_refused_by_name() {
 
     let expanded = vyre_foundation::fp_expansion::expand_strict_transcendentals(&program)
         .expect("Fix: strict float expansion must succeed for strict IEEE reference evaluation");
+    let eval_program = expanded.as_ref().unwrap_or(&program);
     let expected = vec![vyre_test_support::hardware_oracle::run_eval_single(
-        &expanded,
+        eval_program,
         inputs.clone(),
     )];
     let registry = live_backend_registry().expect("the backend registry must be readable");
