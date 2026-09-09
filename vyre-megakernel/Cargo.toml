@@ -26,6 +26,9 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 
+[package.metadata.vyre]
+publication_class = "internal-engine"
+
 [lints]
 workspace = true
 

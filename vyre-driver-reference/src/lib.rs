@@ -8,11 +8,6 @@ use vyre_driver::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
 
-/// Stable backend id for the pure-Rust reference interpreter.
-pub const CPU_REF_BACKEND_ID: &str = "cpu-ref";
-/// Validated identity for the non-production reference target.
-pub const CPU_REF_TARGET_ID: vyre_foundation::operation::TargetId =
-    vyre_foundation::operation::TargetId::expect_valid(CPU_REF_BACKEND_ID);
 
 /// Lane count the interpreter's subgroup simulator models.
 ///
@@ -53,31 +48,12 @@ fn interpret(
     let expanded = strict_expanded(program, config)?;
     let program = expanded.as_ref().unwrap_or(program);
     let values = reference_values(program, inputs)?;
-    // The interpreter infers its grid from buffer SHAPES, which cannot express
-    // the per-invocation count of a byte-scan program (the haystack is packed
-    // 4 bytes/u32 and the scan length is a runtime value). When the caller
-    // declares the true element-grid coverage via `dispatch_elements`, pass it
-    // as the interpreter's dispatch floor so high positions are covered exactly
-    // as the real GPU dispatch would, otherwise the tail is silently skipped
-    // (the Law-10 under-coverage this backend used to exhibit). `None` (every
-    // megakernel, whose `grid_override` is a work-queue length, not an element
-    // count) keeps buffer-shape inference so its grid is never over-run.
-    // An explicit dispatch grid fully specifies the workgroup coverage (its
-    // N-D shape, e.g. one query per `grid.y` block for batched persistent-BFS),
-    // so it wins over the 1-D `dispatch_elements` floor; the shape-inference
-    // path only applies when neither is set. See `DispatchConfig::dispatch_grid`.
-    let result = match (config.coverage_grid(), config.dispatch_elements) {
-        (Some(grid), _) => vyre_reference::reference_eval_with_grid(program, &values, grid),
-        (None, Some(elements)) => {
-            vyre_reference::reference_eval_with_dispatch(program, &values, elements)
-        }
-        (None, None) => vyre_reference::reference_eval(program, &values),
-    };
+    let result = vyre_reference::reference_eval(program, &values);
     result
         .map(|outputs| outputs.iter().map(Value::to_bytes).collect())
         .map_err(|error| {
             BackendError::new(format!(
-                "cpu-ref reference dispatch failed: {error}. Fix: validate the Program and input buffer ABI before dispatch."
+                "reference evaluation failed: {error}. Fix: validate the Program and input buffer ABI before evaluation."
             ))
         })
 }
@@ -93,7 +69,7 @@ fn strict_expanded(
     }
     vyre_foundation::fp_expansion::expand_strict_transcendentals(program).map_err(|error| {
         BackendError::new(format!(
-            "cpu-ref cannot lower float mode `{}`: {error}. Fix: give the operation an exact f32 \
+            "reference evaluator cannot lower float mode `{}`: {error}. Fix: give the operation an exact f32 \
              expansion in vyre_foundation::fp_expansion, so the oracle evaluates the program a \
              strict device kernel executes.",
             config.float_lowering.cache_label()
@@ -111,7 +87,7 @@ fn reference_values(program: &Program, inputs: &[&[u8]]) -> Result<Vec<Value>, B
     // read the one before it.
     vyre_reference::reference_input_values(program, inputs).map_err(|mismatch| {
         BackendError::new(format!(
-            "cpu-ref input buffers do not match the program: {mismatch}. Fix: pass one buffer per \
+            "reference input buffers do not match the program: {mismatch}. Fix: pass one buffer per \
              reference input in Program::buffers order; a synthesized zero buffer would answer an \
              ABI failure with fabricated data."
         ))

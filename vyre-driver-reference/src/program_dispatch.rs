@@ -10,14 +10,13 @@ use vyre_megakernel::{
 };
 use vyre_reference::value::Value;
 
-use crate::CPU_REF_BACKEND_ID;
 
 pub(crate) const REFERENCE_TARGET_FORMAT: &str = "reference-graph";
 /// Payload format version the reference dialect emits and admits.
 pub(crate) const REFERENCE_TARGET_FORMAT_VERSION: u16 = 1;
 
 const REFERENCE_DIALECT: TargetDialect = TargetDialect {
-    backend_id: CPU_REF_BACKEND_ID,
+    backend_id: "reference",
     dialect: "reference graph",
     format: REFERENCE_TARGET_FORMAT,
     format_version: REFERENCE_TARGET_FORMAT_VERSION,

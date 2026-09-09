@@ -299,3 +299,52 @@ fn determinism_guarantee() {
         "Fix: cpu-ref must be deterministic  -  identical inputs must produce identical outputs."
     );
 }
+#[test]
+fn caller_supplied_physical_grid_cannot_change_the_semantic_answer() {
+    let evaluator = CpuRefEvaluator;
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("a", 0, DataType::U32),
+            BufferDecl::read("b", 1, DataType::U32),
+            u32_out_buffer("out", 2),
+        ],
+        [1, 1, 1],
+        vec![
+            Node::store(
+                "out",
+                Expr::u32(0),
+                Expr::add(
+                    Expr::load("a", Expr::u32(0)),
+                    Expr::load("b", Expr::u32(0)),
+                ),
+            ),
+        ],
+    );
+    let a = 17u32.to_le_bytes();
+    let b = 25u32.to_le_bytes();
+    let inputs = [a.as_slice(), b.as_slice()];
+
+    let default_config = DispatchConfig::default();
+    let default_output = evaluator
+        .evaluate(&program, &inputs, &default_config)
+        .expect("default config evaluate");
+
+    let mut modified_config = DispatchConfig::default();
+    modified_config.dispatch_elements = Some(100_000);
+    modified_config.dispatch_grid = Some([64, 4, 2]);
+    modified_config.grid_override = Some([128, 1, 1]);
+
+    let modified_output = evaluator
+        .evaluate(&program, &inputs, &modified_config)
+        .expect("modified config evaluate");
+
+    assert_eq!(
+        default_output, modified_output,
+        "Fix: physical launch policy (grid_override, dispatch_grid, dispatch_elements) must not change the semantic answer of reference evaluation"
+    );
+    assert_eq!(
+        default_output,
+        vec![42u32.to_le_bytes().to_vec()],
+        "Fix: output must match 17 + 25 = 42"
+    );
+}

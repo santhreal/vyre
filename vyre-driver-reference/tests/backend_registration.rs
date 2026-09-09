@@ -1,4 +1,4 @@
-//! Registration contract: the reference oracle is not registered as a VyreBackend.
+/// Registration contract: the reference oracle is not registered as a VyreBackend.
 
 use vyre_driver::{acquire, registered_backends};
 use vyre_driver_reference::CpuRefEvaluator;
@@ -9,14 +9,33 @@ use crate::dispatch_fixtures::u32_out_buffer;
 #[test]
 fn cpu_ref_does_not_register_as_vyre_backend() {
     if let Ok(registrations) = registered_backends() {
-        assert!(
-            !registrations.iter().any(|reg| reg.id == "cpu-ref" || reg.reference_oracle),
-            "Fix: reference oracle must not appear in the VyreBackend registry"
-        );
+        for reg in registrations {
+            assert_ne!(
+                reg.id, "cpu-ref",
+                "Fix: reference interpreter (cpu-ref) must not appear in the VyreBackend registry"
+            );
+            assert_ne!(
+                reg.id, "reference",
+                "Fix: reference interpreter must not appear in the VyreBackend registry"
+            );
+            assert!(
+                !reg.id.contains("ref") && !reg.id.contains("cpu"),
+                "Fix: reference interpreter must not appear in the VyreBackend registry, found `{}`",
+                reg.id
+            );
+            assert!(
+                !reg.reference_oracle,
+                "Fix: reference oracle flag must not be set in the production VyreBackend registry"
+            );
+        }
     }
     assert!(
         acquire("cpu-ref").is_err(),
         "Fix: acquire('cpu-ref') must fail because cpu-ref is an oracle session, not a VyreBackend"
+    );
+    assert!(
+        acquire("reference").is_err(),
+        "Fix: acquire('reference') must fail because reference is an oracle session, not a VyreBackend"
     );
 }
 

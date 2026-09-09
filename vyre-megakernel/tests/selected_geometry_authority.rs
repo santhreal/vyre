@@ -16,9 +16,11 @@ use vyre_megakernel::allocation::{
     AddressSpace, AllocationPlan, AllocationRegion, RegionOwner, REGION_ALIGNMENT,
 };
 use vyre_megakernel::{
-    compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest,
-    DependencyEndpoint, DeviceFacts, Digest, EntryPersistence, ExecutionMode, ExternalFacts,
-    GeometryRecord, ObjectiveMetric, ResourceLifetime, ResourceRecord, SearchBudget,
+    compile, compile_selected_modules, Artifact, ArtifactNodeId, ArtifactValueId, CompileObjective,
+    CompileRequest, DependencyEndpoint, DeviceFacts, Digest, EmittedTargetModule, EntryPersistence,
+    ExecutionMode, ExternalFacts, GeometryRecord, ObjectiveMetric, ResourceLifetime, ResourceRecord,
+    SearchBudget, TargetEntryPoint, TargetModuleBundle, TargetPayload, TargetPayloadFormat,
+    TargetProfile,
 };
 
 use vyre_test_support::graph_values::{graph_output, u32_symbolic};
@@ -88,6 +90,21 @@ fn facts(launch_batch: u32) -> ExternalFacts {
         .constant_identities
         .insert(vyre_foundation::ir::GraphValueId(1), Digest([0x5A; 32]));
     facts
+}
+fn target_format(version: u16) -> TargetPayloadFormat {
+    TargetPayloadFormat::new("test.target-binary", version).expect("fixture format must be valid")
+}
+
+fn target_profile(version: u16) -> TargetProfile {
+    TargetProfile::new(
+        "test.target-binary",
+        u64::from(version),
+        [64, 1, 1],
+        64,
+        1_024,
+        0,
+    )
+    .expect("fixture profile must be valid")
 }
 
 fn artifact_for(device: DeviceFacts, launch_batch: u32) -> Artifact {
@@ -529,5 +546,156 @@ fn the_artifact_never_allocates_constant_storage() {
     assert_eq!(
         rejection_path(&mutated, "artifact-allocated constant storage"),
         format!("artifact.allocation.regions[{index}].owner")
+    );
+}
+/// WHY: Backlog row 61 acceptance: an artifact's selected schedule is unchanged from
+/// selection through emission and submission. Every launch shape, workgroup size, grid,
+/// vector width, and resource bounds selected by vyre-megakernel must match verbatim
+/// across compilation, target emission, and module bundle encoding.
+#[test]
+fn selected_schedule_is_invariant_from_selection_through_target_emission() {
+    for artifact in [static_artifact(), persistent_artifact()] {
+        let schedule = &artifact.selected_plan().schedule;
+        let payload = compile_selected_modules(
+            &artifact,
+            target_format(1),
+            target_profile(1),
+            |selected, _prof| {
+                Ok(EmittedTargetModule {
+                    entry_point: format!("entry_{}", selected.group.0),
+                    resource_bindings: selected.canonical_bindings.clone(),
+                    bytes: vec![1, 2, 3, 4],
+                })
+            },
+        )
+        .expect("target payload emission must succeed from valid artifact");
+
+        assert_eq!(payload.entries().len(), artifact.fusion().len());
+        for entry in payload.entries() {
+            let record = record_for(&artifact, entry.node);
+            assert_eq!(entry.workgroup_size, record.workgroup_size);
+            assert_eq!(entry.grid_size, record.grid);
+            assert_eq!(entry.dynamic_shared_bytes, record.dynamic_shared_bytes);
+
+            let phase = schedule
+                .phase_for_region(record.node.0)
+                .expect("selected schedule phase exists for node");
+            assert_eq!(entry.workgroup_size, phase.workgroup);
+            assert_eq!(
+                entry.grid_size,
+                GeometryRecord::covering_grid(phase.grid, phase.workgroup).unwrap()
+            );
+        }
+
+        let bundle = TargetModuleBundle::from_bytes(payload.bytes())
+            .expect("target module bundle must decode");
+        assert_eq!(bundle.modules.len(), artifact.fusion().len());
+        for (module, group) in bundle.modules.iter().zip(artifact.fusion()) {
+            assert_eq!(module.group, group.id);
+            let primary_node = module.nodes[0];
+            let record = record_for(&artifact, primary_node);
+            let program = Program::from_wire(&module.program).expect("program wire decodes");
+            assert_eq!(program.workgroup_size, record.workgroup_size);
+        }
+    }
+}
+
+/// WHY: Backlog row 61 acceptance: a retune attempt after freeze is refused by name.
+/// Mutating workgroup, grid, shared memory, node association, or schedule facts after
+/// freeze is rejected with a diagnostic specifically naming the refused field.
+#[test]
+fn retune_attempt_after_freeze_is_refused_by_name() {
+    let artifact = static_artifact();
+    let valid_entries = artifact
+        .geometry()
+        .iter()
+        .map(|geo| TargetEntryPoint {
+            name: format!("entry_{}", geo.node.0),
+            node: geo.node,
+            workgroup_size: geo.workgroup_size,
+            grid_size: geo.grid,
+            dynamic_shared_bytes: geo.dynamic_shared_bytes,
+            resource_bindings: Vec::new(),
+        })
+        .collect::<Vec<_>>();
+
+    // 1. Retuning workgroup_size after freeze is refused by name.
+    let mut retuned_wg = valid_entries.clone();
+    retuned_wg[0].workgroup_size = [64, 1, 1];
+    let err = TargetPayload::new(
+        &artifact,
+        target_format(1),
+        target_profile(1),
+        retuned_wg,
+        vec![1],
+    )
+    .expect_err("retuned workgroup size must be refused");
+    assert_eq!(
+        err.diagnostic.code.as_str(),
+        "MKC020_TARGET_PAYLOAD_ASSOCIATION_MISMATCH"
+    );
+    assert_eq!(
+        err.diagnostic
+            .location
+            .as_ref()
+            .and_then(|loc| loc.path.as_deref()),
+        Some("target_payload.entries[0].workgroup_size")
+    );
+
+    // 2. Retuning grid_size after freeze is refused by name.
+    let mut retuned_grid = valid_entries.clone();
+    retuned_grid[0].grid_size[0] += 10;
+    let err = TargetPayload::new(
+        &artifact,
+        target_format(1),
+        target_profile(1),
+        retuned_grid,
+        vec![1],
+    )
+    .expect_err("retuned grid size must be refused");
+    assert_eq!(
+        err.diagnostic
+            .location
+            .as_ref()
+            .and_then(|loc| loc.path.as_deref()),
+        Some("target_payload.entries[0].grid_size")
+    );
+
+    // 3. Retuning dynamic_shared_bytes after freeze is refused by name.
+    let mut retuned_shared = valid_entries.clone();
+    retuned_shared[0].dynamic_shared_bytes += 256;
+    let err = TargetPayload::new(
+        &artifact,
+        target_format(1),
+        target_profile(1),
+        retuned_shared,
+        vec![1],
+    )
+    .expect_err("retuned dynamic shared memory must be refused");
+    assert_eq!(
+        err.diagnostic
+            .location
+            .as_ref()
+            .and_then(|loc| loc.path.as_deref()),
+        Some("target_payload.entries[0].dynamic_shared_bytes")
+    );
+
+    // 4. Retuning entry node association to a foreign node is refused by name.
+    let mut foreign_node = valid_entries.clone();
+    foreign_node[0].node = ArtifactNodeId(999);
+    let err = TargetPayload::new(
+        &artifact,
+        target_format(1),
+        target_profile(1),
+        foreign_node,
+        vec![1],
+    )
+    .expect_err("foreign node entry must be refused");
+    assert_eq!(
+        err.diagnostic
+            .location
+            .as_ref()
+            .and_then(|loc| loc.path.as_deref()),
+        Some("target_payload.entries[0].node")
     );
 }

@@ -110,6 +110,51 @@ fn a_backend_that_constructs_here_answers_its_recorded_decision() {
     }
 }
 
+/// No backend accepts an operation with no exact f32 expansion under the
+/// strict mode, whatever it claims about the mode itself.
+///
+/// `Sin` has an exact expansion, so honoring the mode is a legitimate answer
+/// for it and the pair test above accepts either outcome. `Exp2` has none, so
+/// there is only one legal outcome and a backend that answers it under a
+/// strict request returned approximate arithmetic to a caller who asked for
+/// one rounding per operation. That is a wrong answer the caller cannot see,
+/// which is why it is separated from the mode-level contract.
+///
+/// The backend set is the live registry, so a driver added to this build takes
+/// the refusal or turns this red.
+#[test]
+fn no_backend_accepts_an_operation_with_no_exact_expansion_under_strict_lowering() {
+    let program = f32_multiply_add_program(4, Some(UnOp::Exp2));
+    let inputs = vec![
+        f32_bytes(&[0.5, 1.25, -2.5, 3.75]),
+        f32_bytes(&[1.000_244_2, 0.5, 2.0, -1.5]),
+        f32_bytes(&[-1.0, 0.25, 0.5, -0.125]),
+    ];
+    let mut config = DispatchConfig::default();
+    config.float_lowering = FloatLoweringMode::StrictIeee;
+
+    let mut findings = Vec::new();
+    for registration in live_backend_registry().expect("the backend registry must be readable") {
+        let Ok(backend) = (registration.factory)() else {
+            continue;
+        };
+        findings.extend(honored_or_refused_by_name(
+            registration.id,
+            false,
+            FloatLoweringMode::StrictIeee,
+            Some("Exp2"),
+            &backend.dispatch(&program, &inputs, &config),
+        ));
+    }
+
+    assert!(
+        findings.is_empty(),
+        "Fix: an operation with no exact f32 expansion must be refused by name under strict \
+         lowering:\n{}",
+        findings.join("\n")
+    );
+}
+
 /// A strict dispatch either matches the oracle bit for bit or is refused.
 ///
 /// This is the whole contract of the mode: a backend that cannot deny its
@@ -134,23 +179,17 @@ fn a_strict_dispatch_matches_the_oracle_or_is_refused_by_name() {
     let mut config = DispatchConfig::default();
     config.float_lowering = FloatLoweringMode::StrictIeee;
 
+    let expanded = vyre_foundation::fp_expansion::expand_strict_transcendentals(&program)
+        .expect("Fix: strict float expansion must succeed for strict IEEE reference evaluation");
+    let expected = vec![vyre_test_support::hardware_oracle::run_eval_single(
+        &expanded,
+        inputs.clone(),
+    )];
     let registry = live_backend_registry().expect("the backend registry must be readable");
-    let oracle = registry
-        .iter()
-        .find(|registration| registration.reference_oracle)
-        .expect("Fix: the strict contract is stated against the reference oracle, which this build must link");
-    let expected = oracle
-        .acquire()
-        .expect("Fix: the reference oracle must construct on every host")
-        .dispatch(&program, &inputs, &config)
-        .expect("Fix: the reference oracle lowers the strict mode and must answer this program");
 
     let mut findings = Vec::new();
     let mut judged = Vec::new();
     for registration in registry {
-        if registration.reference_oracle {
-            continue;
-        }
         let backend = match registration.acquire() {
             Ok(backend) => backend,
             Err(error) => {

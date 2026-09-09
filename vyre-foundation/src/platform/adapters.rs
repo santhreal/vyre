@@ -47,7 +47,7 @@ pub struct ClockAdapter;
 impl ClockAdapter {
     /// Return monotonic nanoseconds elapsed since process initialization.
     pub fn monotonic_now_ns() -> u64 {
-        PROCESS_START.elapsed().as_nanos() as u64
+        u64::try_from(PROCESS_START.elapsed().as_nanos()).unwrap_or(u64::MAX)
     }
 
     /// Calculate elapsed nanoseconds since a previous timestamp.
