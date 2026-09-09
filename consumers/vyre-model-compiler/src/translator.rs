@@ -6,8 +6,8 @@
 
 use thiserror::Error;
 use vyre::ir::{
-    BufferAccess, DataType, GraphInput, GraphOutput, GraphValueId,
-    ProgramGraph, ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
+    BufferAccess, DataType, GraphInput, GraphOutput, GraphValueId, ProgramGraph, ProgramGraphError,
+    ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_libs::nn::{
     activation::{embedding_typed, residual_add_typed, swiglu_typed},
@@ -73,12 +73,13 @@ impl<'a> ModelGraphBuilder<'a> {
         let hidden_dim = self.config.hidden_dim;
         let dtype = self.config.dtype.clone();
 
-        let rows = batch
-            .checked_mul(seq_len)
-            .ok_or_else(|| TranslationError::InvalidDimensions {
-                name: self.config.name.clone(),
-                reason: "batch * sequence_len overflows u32".to_string(),
-            })?;
+        let rows =
+            batch
+                .checked_mul(seq_len)
+                .ok_or_else(|| TranslationError::InvalidDimensions {
+                    name: self.config.name.clone(),
+                    reason: "batch * sequence_len overflows u32".to_string(),
+                })?;
 
         let hidden_shape = vec![
             ShapeDim::Known(u64::from(batch)),
@@ -109,8 +110,8 @@ impl<'a> ModelGraphBuilder<'a> {
                 BufferAccess::ReadOnly,
             );
             let tokens_val = graph.add_external_value("tokens", tokens_contract.clone())?;
-            let embed_table_val =
-                graph.add_external_value("model.embed_tokens.weight", embed_table_contract.clone())?;
+            let embed_table_val = graph
+                .add_external_value("model.embed_tokens.weight", embed_table_contract.clone())?;
 
             let embed_prog = embedding_typed(
                 "embed_table",
@@ -434,7 +435,10 @@ impl<'a> ModelGraphBuilder<'a> {
                 format!("{prefix}.self_attn.q_proj.weight"),
                 make_contract(
                     dtype.clone(),
-                    vec![ShapeDim::Known(u64::from(q_dim)), ShapeDim::Known(u64::from(hidden_dim))],
+                    vec![
+                        ShapeDim::Known(u64::from(q_dim)),
+                        ShapeDim::Known(u64::from(hidden_dim)),
+                    ],
                     ValueLifetime::Constant,
                     BufferAccess::ReadOnly,
                 ),
@@ -443,7 +447,10 @@ impl<'a> ModelGraphBuilder<'a> {
                 format!("{prefix}.self_attn.o_proj.weight"),
                 make_contract(
                     dtype.clone(),
-                    vec![ShapeDim::Known(u64::from(hidden_dim)), ShapeDim::Known(u64::from(q_dim))],
+                    vec![
+                        ShapeDim::Known(u64::from(hidden_dim)),
+                        ShapeDim::Known(u64::from(q_dim)),
+                    ],
                     ValueLifetime::Constant,
                     BufferAccess::ReadOnly,
                 ),
@@ -479,7 +486,10 @@ impl<'a> ModelGraphBuilder<'a> {
                         value: q_weight,
                         contract: make_contract(
                             dtype.clone(),
-                            vec![ShapeDim::Known(u64::from(q_dim)), ShapeDim::Known(u64::from(hidden_dim))],
+                            vec![
+                                ShapeDim::Known(u64::from(q_dim)),
+                                ShapeDim::Known(u64::from(hidden_dim)),
+                            ],
                             ValueLifetime::Constant,
                             BufferAccess::ReadOnly,
                         ),
@@ -537,7 +547,10 @@ impl<'a> ModelGraphBuilder<'a> {
                         value: o_weight,
                         contract: make_contract(
                             dtype.clone(),
-                            vec![ShapeDim::Known(u64::from(hidden_dim)), ShapeDim::Known(u64::from(q_dim))],
+                            vec![
+                                ShapeDim::Known(u64::from(hidden_dim)),
+                                ShapeDim::Known(u64::from(q_dim)),
+                            ],
                             ValueLifetime::Constant,
                             BufferAccess::ReadOnly,
                         ),
@@ -564,7 +577,10 @@ impl<'a> ModelGraphBuilder<'a> {
                 format!("{prefix}.self_attn.q_proj.weight"),
                 make_contract(
                     dtype.clone(),
-                    vec![ShapeDim::Known(u64::from(q_dim)), ShapeDim::Known(u64::from(hidden_dim))],
+                    vec![
+                        ShapeDim::Known(u64::from(q_dim)),
+                        ShapeDim::Known(u64::from(hidden_dim)),
+                    ],
                     ValueLifetime::Constant,
                     BufferAccess::ReadOnly,
                 ),
@@ -573,7 +589,10 @@ impl<'a> ModelGraphBuilder<'a> {
                 format!("{prefix}.self_attn.o_proj.weight"),
                 make_contract(
                     dtype.clone(),
-                    vec![ShapeDim::Known(u64::from(hidden_dim)), ShapeDim::Known(u64::from(q_dim))],
+                    vec![
+                        ShapeDim::Known(u64::from(hidden_dim)),
+                        ShapeDim::Known(u64::from(q_dim)),
+                    ],
                     ValueLifetime::Constant,
                     BufferAccess::ReadOnly,
                 ),
@@ -609,7 +628,10 @@ impl<'a> ModelGraphBuilder<'a> {
                         value: q_weight,
                         contract: make_contract(
                             dtype.clone(),
-                            vec![ShapeDim::Known(u64::from(q_dim)), ShapeDim::Known(u64::from(hidden_dim))],
+                            vec![
+                                ShapeDim::Known(u64::from(q_dim)),
+                                ShapeDim::Known(u64::from(hidden_dim)),
+                            ],
                             ValueLifetime::Constant,
                             BufferAccess::ReadOnly,
                         ),
@@ -667,7 +689,10 @@ impl<'a> ModelGraphBuilder<'a> {
                         value: o_weight,
                         contract: make_contract(
                             dtype.clone(),
-                            vec![ShapeDim::Known(u64::from(hidden_dim)), ShapeDim::Known(u64::from(q_dim))],
+                            vec![
+                                ShapeDim::Known(u64::from(hidden_dim)),
+                                ShapeDim::Known(u64::from(q_dim)),
+                            ],
                             ValueLifetime::Constant,
                             BufferAccess::ReadOnly,
                         ),
@@ -689,14 +714,9 @@ impl<'a> ModelGraphBuilder<'a> {
         };
 
         // 3. Attention Residual Addition: input_hidden + attn_out
-        let attn_residual_prog = residual_add_typed(
-            "a",
-            "b",
-            "out",
-            rows * hidden_dim,
-            dtype.clone(),
-        )
-        .map_err(TranslationError::Primitive)?;
+        let attn_residual_prog =
+            residual_add_typed("a", "b", "out", rows * hidden_dim, dtype.clone())
+                .map_err(TranslationError::Primitive)?;
 
         let (_, attn_res_outs) = graph.add_node(
             format!("{prefix}.attn_residual_add"),
@@ -967,14 +987,8 @@ impl<'a> ModelGraphBuilder<'a> {
             )?;
 
             // SwiGLU activation
-            let swiglu_prog = swiglu_typed(
-                "gate",
-                "up",
-                "out",
-                rows * inter_dim,
-                dtype.clone(),
-            )
-            .map_err(TranslationError::Primitive)?;
+            let swiglu_prog = swiglu_typed("gate", "up", "out", rows * inter_dim, dtype.clone())
+                .map_err(TranslationError::Primitive)?;
 
             let (_, swiglu_outs) = graph.add_node(
                 format!("{prefix}.swiglu"),
@@ -1070,14 +1084,9 @@ impl<'a> ModelGraphBuilder<'a> {
         };
 
         // 6. MLP Residual Addition: hidden_after_attn + mlp_out
-        let mlp_residual_prog = residual_add_typed(
-            "a",
-            "b",
-            "out",
-            rows * hidden_dim,
-            dtype.clone(),
-        )
-        .map_err(TranslationError::Primitive)?;
+        let mlp_residual_prog =
+            residual_add_typed("a", "b", "out", rows * hidden_dim, dtype.clone())
+                .map_err(TranslationError::Primitive)?;
 
         let (_, mlp_res_outs) = graph.add_node(
             format!("{prefix}.mlp_residual_add"),

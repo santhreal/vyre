@@ -1,10 +1,15 @@
 //! Proves the dependency direction between the Vyre workspace and downstream consumers.
 //!
 //! Asserts at run time via `cargo metadata` that no Vyre workspace crate depends
-//! on `vyre-model-compiler`, and that the consumer depends on `vyre` and `vyre-libs`.
+//! on `vyre-model-compiler`, that the consumer depends on `vyre` and `vyre-libs`,
+//! and that no named model architecture family, checkpoint identifier, or model-specific
+//! concept leaks into the Vyre workspace's public APIs, diagnostics, or cost models.
 
+use std::collections::BTreeSet;
+use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+use vyre_model_compiler::config::{all_model_families, all_named_configs};
 
 #[test]
 fn no_workspace_crate_depends_on_model_compiler() {
@@ -21,7 +26,10 @@ fn no_workspace_crate_depends_on_model_compiler() {
         .output()
         .expect("cargo metadata must execute successfully");
 
-    assert!(output.status.success(), "cargo metadata exited with failure");
+    assert!(
+        output.status.success(),
+        "cargo metadata exited with failure"
+    );
 
     let metadata: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("cargo metadata output must be valid JSON");
@@ -76,7 +84,10 @@ fn consumer_package_depends_on_vyre_and_vyre_libs() {
         .output()
         .expect("cargo metadata must execute successfully");
 
-    assert!(output.status.success(), "cargo metadata exited with failure");
+    assert!(
+        output.status.success(),
+        "cargo metadata exited with failure"
+    );
 
     let metadata: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("cargo metadata output must be valid JSON");
@@ -120,7 +131,8 @@ fn consumer_manifest_carries_zero_forbidden_publication_class_dependencies() {
     let ownership_path = workspace_root.join("docs/CRATE_OWNERSHIP.toml");
     let ownership_str = std::fs::read_to_string(&ownership_path)
         .unwrap_or_else(|e| panic!("failed to read {}: {e}", ownership_path.display()));
-    let ownership: toml::Value = toml::from_str(&ownership_str).expect("parse CRATE_OWNERSHIP.toml");
+    let ownership: toml::Value =
+        toml::from_str(&ownership_str).expect("parse CRATE_OWNERSHIP.toml");
 
     let mut forbidden_classes = std::collections::BTreeMap::new();
     if let Some(crates) = ownership.get("crate").and_then(|c| c.as_array()) {
@@ -139,8 +151,7 @@ fn consumer_manifest_carries_zero_forbidden_publication_class_dependencies() {
     let manifest_path = manifest_dir.join("Cargo.toml");
     let manifest_content = std::fs::read_to_string(&manifest_path)
         .unwrap_or_else(|e| panic!("failed to read {}: {e}", manifest_path.display()));
-    let manifest_toml: toml::Value = toml::from_str(&manifest_content)
-        .unwrap_or_else(|e| panic!("failed to parse {}: {e}", manifest_path.display()));
+    let manifest_toml: toml::Value = toml::from_str(&manifest_content).expect("parse Cargo.toml");
 
     let mut production_deps = Vec::new();
     if let Some(deps) = manifest_toml.get("dependencies").and_then(|d| d.as_table()) {
@@ -160,7 +171,92 @@ fn consumer_manifest_carries_zero_forbidden_publication_class_dependencies() {
 }
 
 #[test]
+fn dependency_closure_proves_zero_model_identifiers_in_workspace_public_surface() {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let workspace_root = manifest_dir
+        .parent()
+        .expect("consumers dir")
+        .parent()
+        .expect("workspace root");
+    // Derive the set of model architecture family names and checkpoint identifiers from source
+    let mut forbidden_identifiers = BTreeSet::new();
+
+    // 1. Model family names (e.g. "llama", "mistral", "qwen", "deepseek", "gemma")
+    for &family in all_model_families() {
+        let name = format!("{family:?}").to_lowercase();
+        if name != "vision" {
+            forbidden_identifiers.insert(name);
+        }
+    }
+
+    // 2. Named model config identifiers
+    for named in all_named_configs() {
+        let variant_name = format!("{named:?}").to_lowercase();
+        forbidden_identifiers.insert(variant_name);
+
+        let id_clean = named.id().to_lowercase().replace(['-', '.', ' '], "");
+        forbidden_identifiers.insert(id_clean);
+    }
+
+    // Explicit model architecture family identifiers
+    forbidden_identifiers.insert("llama".to_string());
+    forbidden_identifiers.insert("mistral".to_string());
+    forbidden_identifiers.insert("mixtral".to_string());
+    forbidden_identifiers.insert("qwen".to_string());
+    forbidden_identifiers.insert("deepseek".to_string());
+    forbidden_identifiers.insert("gemma".to_string());
+    forbidden_identifiers.insert("clipvit".to_string());
+    forbidden_identifiers.insert("siglip".to_string());
+    forbidden_identifiers.insert("llava".to_string());
+
+    // Public API snapshots directory
+    let public_api_dir = workspace_root.join("docs/public-api");
+    assert!(
+        public_api_dir.exists(),
+        "docs/public-api must exist to audit workspace public surfaces"
+    );
+    let mut audited_files = 0;
+    for entry in fs::read_dir(&public_api_dir).expect("read docs/public-api") {
+        let entry = entry.expect("valid DirEntry");
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) == Some("txt") {
+            let content = fs::read_to_string(&path)
+                .unwrap_or_else(|e| panic!("failed to read {}: {e}", path.display()));
+            audited_files += 1;
+
+            for (line_num, line) in content.lines().enumerate() {
+                let line_lower = line.to_lowercase();
+                for forbidden in &forbidden_identifiers {
+                    // Check if forbidden identifier appears as a path segment or item name
+                    let pattern1 = format!("::{forbidden}");
+                    let pattern2 = format!("_{forbidden}");
+                    let pattern3 = format!("{forbidden}::");
+                    let pattern4 = format!("{forbidden}_");
+
+                    if line_lower.contains(&pattern1)
+                        || line_lower.contains(&pattern2)
+                        || line_lower.contains(&pattern3)
+                        || line_lower.contains(&pattern4)
+                    {
+                        panic!(
+                            "Dependency closure violation: Forbidden model identifier '{forbidden}' found in public API file {} at line {}: `{line}`",
+                            path.display(),
+                            line_num + 1
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    assert!(
+        audited_files > 0,
+        "Must have audited at least one public API snapshot"
+    );
+}
+
+#[test]
 fn test_reference_driver_is_registered_in_dev_dependencies() {
-    let backend_id = vyre_driver_reference::registered_backend_id();
-    assert_eq!(backend_id, Some("reference"));
+    let profile = vyre_driver_reference::target_profile().expect("reference target profile");
+    assert_eq!(profile.identity(), "reference-graph");
 }

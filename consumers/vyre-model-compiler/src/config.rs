@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use vyre::ir::DataType;
 
 /// Frontier model architecture family.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum ModelFamily {
     /// LLaMA family dense models (LLaMA 2, LLaMA 3, LLaMA 3.1, LLaMA 3.3).
     Llama,
@@ -21,6 +21,43 @@ pub enum ModelFamily {
     Gemma,
     /// Vision Transformer and multimodal backbones (CLIP, SigLIP).
     Vision,
+}
+
+/// Exhaustive slice of all canonical [`ModelFamily`] variants.
+#[must_use]
+pub const fn all_model_families() -> &'static [ModelFamily] {
+    &[
+        ModelFamily::Llama,
+        ModelFamily::Mistral,
+        ModelFamily::Qwen,
+        ModelFamily::DeepSeek,
+        ModelFamily::Gemma,
+        ModelFamily::Vision,
+    ]
+}
+
+impl ModelFamily {
+    /// Exhaustive slice of all canonical [`ModelFamily`] variants.
+    #[must_use]
+    pub const fn all() -> &'static [Self] {
+        all_model_families()
+    }
+
+    /// Exhaustive ordinal index mapping every variant to its dense ordinal.
+    ///
+    /// Compile-time closure: adding a variant to [`ModelFamily`] without updating
+    /// this exhaustive match triggers a compile error (E0004).
+    #[must_use]
+    pub const fn ordinal(self) -> usize {
+        match self {
+            Self::Llama => 0,
+            Self::Mistral => 1,
+            Self::Qwen => 2,
+            Self::DeepSeek => 3,
+            Self::Gemma => 4,
+            Self::Vision => 5,
+        }
+    }
 }
 
 /// Normalization type used by the model architecture.
@@ -115,11 +152,15 @@ impl ModelConfig {
         if let Some(mla) = &self.mla {
             // MLA compresses KV into latent vector + decoupled RoPE key
             let latent_bytes = mla.kv_lora_rank as usize * element_bytes;
-            let rope_bytes = (self.num_heads as usize * mla.qk_rope_head_dim as usize) * element_bytes;
+            let rope_bytes =
+                (self.num_heads as usize * mla.qk_rope_head_dim as usize) * element_bytes;
             self.num_layers as usize * (latent_bytes + rope_bytes)
         } else {
             // Standard MHA / GQA: 2 * num_layers * num_kv_heads * head_dim * element_bytes
-            2 * self.num_layers as usize * self.num_kv_heads as usize * self.head_dim as usize * element_bytes
+            2 * self.num_layers as usize
+                * self.num_kv_heads as usize
+                * self.head_dim as usize
+                * element_bytes
         }
     }
 
@@ -158,6 +199,16 @@ impl ModelConfig {
 
         let layer_total = attn_per_layer + mlp_per_layer + norm_per_layer;
         embed + (self.num_layers as u64 * layer_total) + final_norm + lm_head
+    }
+
+    /// Return the deterministic semantic configuration digest.
+    #[must_use]
+    pub fn configuration_digest(&self) -> vyre::compiler::Digest {
+        let serialized = serde_json::to_vec(self).unwrap_or_default();
+        vyre::compiler::Digest(vyre::hashing::domain_digest(
+            b"vyre-model-configuration\0",
+            &serialized,
+        ))
     }
 }
 

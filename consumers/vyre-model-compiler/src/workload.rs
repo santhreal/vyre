@@ -71,7 +71,12 @@ impl WorkloadEnvelope {
 
     /// Latency-critical serving envelope.
     #[must_use]
-    pub fn latency_critical(phase: ExecutionPhase, batch_size: u32, seq_len: u32, max_seq_len: u32) -> Self {
+    pub fn latency_critical(
+        phase: ExecutionPhase,
+        batch_size: u32,
+        seq_len: u32,
+        max_seq_len: u32,
+    ) -> Self {
         let (sequence_len, context_len) = match phase {
             ExecutionPhase::Prefill => (seq_len, 0),
             ExecutionPhase::Decode => (1, seq_len),
@@ -91,7 +96,12 @@ impl WorkloadEnvelope {
 
     /// High-throughput batched serving envelope.
     #[must_use]
-    pub fn throughput(phase: ExecutionPhase, batch_size: u32, seq_len: u32, max_seq_len: u32) -> Self {
+    pub fn throughput(
+        phase: ExecutionPhase,
+        batch_size: u32,
+        seq_len: u32,
+        max_seq_len: u32,
+    ) -> Self {
         let (sequence_len, context_len) = match phase {
             ExecutionPhase::Prefill => (seq_len, 0),
             ExecutionPhase::Decode => (1, seq_len),

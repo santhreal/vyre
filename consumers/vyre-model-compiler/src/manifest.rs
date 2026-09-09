@@ -4,8 +4,8 @@
 //! to physical checkpoint tensors and validates that all weights and state edges
 //! match model architecture contracts.
 
-use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use thiserror::Error;
 use vyre::ir::DataType;
 
@@ -84,6 +84,16 @@ impl TensorDescriptor {
             byte_size: elements * element_size,
         }
     }
+
+    /// Return the deterministic content identity digest for this checkpoint tensor.
+    #[must_use]
+    pub fn content_identity(&self) -> vyre::compiler::Digest {
+        let serialized = serde_json::to_vec(self).unwrap_or_default();
+        vyre::compiler::Digest(vyre::hashing::domain_digest(
+            b"vyre-model-checkpoint-constant\0",
+            &serialized,
+        ))
+    }
 }
 
 /// Checkpoint manifest declaring the complete tensor set of a model.
@@ -114,6 +124,16 @@ impl CheckpointManifest {
     #[must_use]
     pub fn get(&self, name: &str) -> Option<&TensorDescriptor> {
         self.tensors.get(name)
+    }
+
+    /// Return the deterministic content identity digest for this complete checkpoint manifest.
+    #[must_use]
+    pub fn manifest_digest(&self) -> vyre::compiler::Digest {
+        let serialized = serde_json::to_vec(self).unwrap_or_default();
+        vyre::compiler::Digest(vyre::hashing::domain_digest(
+            b"vyre-checkpoint-manifest\0",
+            &serialized,
+        ))
     }
 
     /// Generate an ideal synthetic manifest matching a given [`ModelConfig`].
@@ -164,12 +184,18 @@ impl CheckpointManifest {
                 // DeepSeek MLA: compressed latent projections + RoPE
                 manifest.insert(TensorDescriptor::new(
                     format!("{prefix}.self_attn.w_uk"),
-                    vec![mla.kv_lora_rank as usize, config.num_heads as usize * config.head_dim as usize],
+                    vec![
+                        mla.kv_lora_rank as usize,
+                        config.num_heads as usize * config.head_dim as usize,
+                    ],
                     dtype.clone(),
                 ));
                 manifest.insert(TensorDescriptor::new(
                     format!("{prefix}.self_attn.w_uv"),
-                    vec![mla.kv_lora_rank as usize, config.num_heads as usize * config.head_dim as usize],
+                    vec![
+                        mla.kv_lora_rank as usize,
+                        config.num_heads as usize * config.head_dim as usize,
+                    ],
                     dtype.clone(),
                 ));
             } else {
@@ -207,17 +233,29 @@ impl CheckpointManifest {
                 ));
                 manifest.insert(TensorDescriptor::new(
                     format!("{prefix}.mlp.experts.gate_proj.weight"),
-                    vec![moe.num_experts as usize, moe.expert_hidden_dim as usize, config.hidden_dim as usize],
+                    vec![
+                        moe.num_experts as usize,
+                        moe.expert_hidden_dim as usize,
+                        config.hidden_dim as usize,
+                    ],
                     dtype.clone(),
                 ));
                 manifest.insert(TensorDescriptor::new(
                     format!("{prefix}.mlp.experts.up_proj.weight"),
-                    vec![moe.num_experts as usize, moe.expert_hidden_dim as usize, config.hidden_dim as usize],
+                    vec![
+                        moe.num_experts as usize,
+                        moe.expert_hidden_dim as usize,
+                        config.hidden_dim as usize,
+                    ],
                     dtype.clone(),
                 ));
                 manifest.insert(TensorDescriptor::new(
                     format!("{prefix}.mlp.experts.down_proj.weight"),
-                    vec![moe.num_experts as usize, config.hidden_dim as usize, moe.expert_hidden_dim as usize],
+                    vec![
+                        moe.num_experts as usize,
+                        config.hidden_dim as usize,
+                        moe.expert_hidden_dim as usize,
+                    ],
                     dtype.clone(),
                 ));
                 if let Some(shared_dim) = moe.shared_expert_hidden_dim {
@@ -263,10 +301,13 @@ impl CheckpointManifest {
     pub fn validate_against_config(&self, config: &ModelConfig) -> Result<(), ManifestError> {
         let reference = Self::from_config(config);
         for (name, expected) in &reference.tensors {
-            let actual = self.tensors.get(name).ok_or_else(|| ManifestError::MissingTensor {
-                name: name.clone(),
-                model: config.name.clone(),
-            })?;
+            let actual = self
+                .tensors
+                .get(name)
+                .ok_or_else(|| ManifestError::MissingTensor {
+                    name: name.clone(),
+                    model: config.name.clone(),
+                })?;
 
             if actual.shape != expected.shape {
                 return Err(ManifestError::ShapeMismatch {
@@ -309,7 +350,11 @@ impl StateEdgeDescriptor {
         for layer_idx in 0..config.num_layers {
             if let Some(mla) = &config.mla {
                 // Compressed latent state edge
-                let shape = vec![batch_size, config.max_seq_len as usize, mla.kv_lora_rank as usize];
+                let shape = vec![
+                    batch_size,
+                    config.max_seq_len as usize,
+                    mla.kv_lora_rank as usize,
+                ];
                 let byte_size = shape.iter().copied().product::<usize>() * element_size;
                 edges.push(Self {
                     name: format!("kv_cache_layer_{layer_idx}"),

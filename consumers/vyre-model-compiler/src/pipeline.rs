@@ -3,13 +3,13 @@
 //! Submits domain-neutral ProgramGraphs through the compiler seam, emits authenticated
 //! target artifact envelopes, and binds physical resources into executable sessions.
 
-use thiserror::Error;
-use vyre::ir::DataType;
 use std::collections::BTreeMap;
+use thiserror::Error;
 use vyre::compiler::{
     compile, AbiAccess, Artifact, ArtifactEnvelope, ArtifactValueId, CompileError, CompileRequest,
-    DeviceFacts, Digest, ExternalFacts, ResourceLifetime, ValidatedCompileRequest,
+    DeviceFacts, ExternalFacts, ResourceLifetime, ValidatedCompileRequest,
 };
+use vyre::ir::DataType;
 use vyre::{
     ResourceIngestionError, ResourceManifest, ResourceManifestEntry, ResourceManifestSource,
     TypedResourceDataset,
@@ -60,20 +60,16 @@ impl CompiledModelArtifact {
         self.artifact.nodes().len()
     }
 
-    /// Return the declared entry points count.
+    /// Return the declared executable ABI entry points count.
     #[must_use]
     pub fn entry_count(&self) -> usize {
-        self.artifact.nodes().len()
+        self.artifact.abi().entries.len()
     }
 
     /// Return the required allocation byte count across all resources.
     #[must_use]
     pub fn required_resource_bytes(&self) -> u64 {
-        self.artifact
-            .resources()
-            .iter()
-            .map(|r| r.byte_count)
-            .sum()
+        self.artifact.resources().iter().map(|r| r.byte_count).sum()
     }
 }
 
@@ -93,21 +89,35 @@ impl ModelCompiler {
         let builder = ModelGraphBuilder::new(config, workload);
         let graph = builder.build_graph()?;
 
+        let manifest = CheckpointManifest::from_config(config);
         let mut constant_identities = BTreeMap::new();
         for val in graph.values() {
-            if val.contract.lifetime == vyre_foundation::ir::ValueLifetime::Constant {
-                let mut hash = [0u8; 32];
-                let name_bytes = val.name.as_bytes();
-                for (i, b) in name_bytes.iter().enumerate() {
-                    hash[i % 32] ^= *b;
-                }
-                hash[0] = (val.id.0 & 0xFF) as u8;
-                hash[31] = 0xAA;
-                constant_identities.insert(val.id, Digest(hash));
+            if val.contract.lifetime == vyre::ir::ValueLifetime::Constant {
+                let digest = if let Some(desc) = manifest.get(&val.name) {
+                    desc.content_identity()
+                } else {
+                    let shape_dims: Vec<usize> = val
+                        .contract
+                        .shape
+                        .iter()
+                        .filter_map(|d| match d {
+                            vyre::ir::ShapeDim::Known(k) => Some(*k as usize),
+                            vyre::ir::ShapeDim::Symbol(_) => None,
+                        })
+                        .collect();
+                    let desc = crate::manifest::TensorDescriptor::new(
+                        &val.name,
+                        shape_dims,
+                        val.contract.dtype.clone(),
+                    );
+                    desc.content_identity()
+                };
+                constant_identities.insert(val.id, digest);
             }
         }
 
-        let mut external_facts = ExternalFacts::new(Digest([1u8; 32]), BTreeMap::new())
+        let config_digest = config.configuration_digest();
+        let mut external_facts = ExternalFacts::new(config_digest, BTreeMap::new())
             .with_expected_launch_batch(workload.expected_launch_count);
         external_facts.constant_identities = constant_identities;
         let device_facts = DeviceFacts::unknown();
@@ -147,9 +157,7 @@ impl ModelCompiler {
                 .map(|d| d.byte_size as u64)
                 .unwrap_or(resource.byte_count);
 
-            let dtype = desc_match
-                .map(|d| d.dtype.clone())
-                .unwrap_or(DataType::U8);
+            let dtype = desc_match.map(|d| d.dtype.clone()).unwrap_or(DataType::U8);
 
             entries.push(ResourceManifestEntry {
                 value: ArtifactValueId(idx as u32),

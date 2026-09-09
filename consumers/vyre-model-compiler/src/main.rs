@@ -1,6 +1,6 @@
 //! CLI binary driver for downstream model compiler prefill and decode execution.
 
-use vyre_model_compiler::config::{all_named_configs, NamedModelConfig};
+use vyre_model_compiler::config::NamedModelConfig;
 use vyre_model_compiler::manifest::CheckpointManifest;
 use vyre_model_compiler::pipeline::ModelCompiler;
 use vyre_model_compiler::workload::WorkloadEnvelope;
@@ -22,7 +22,10 @@ fn main() {
         // Use 4 representative layers for standalone demonstration compile
         config.num_layers = 4.min(config.num_layers);
 
-        println!("\n--- Compiling model: {} (family: {:?}) ---", config.name, config.family);
+        println!(
+            "\n--- Compiling model: {} (family: {:?}) ---",
+            config.name, config.family
+        );
         let manifest = CheckpointManifest::from_config(&config);
 
         // 1. Prefill Phase
@@ -39,7 +42,10 @@ fn main() {
 
         let prefill_session = ModelCompiler::admit_model(&prefill_compiled, &manifest)
             .unwrap_or_else(|e| panic!("Prefill admission failed for {}: {e}", config.name));
-        println!("  [Prefill] Admitted resource buffers: {}", prefill_session.len());
+        println!(
+            "  [Prefill] Admitted resource buffers: {}",
+            prefill_session.len()
+        );
 
         // 2. Decode Phase (if language model with tokens)
         if config.vocab_size > 0 {
@@ -56,7 +62,10 @@ fn main() {
 
             let decode_session = ModelCompiler::admit_model(&decode_compiled, &manifest)
                 .unwrap_or_else(|e| panic!("Decode admission failed for {}: {e}", config.name));
-            println!("  [Decode]  Admitted resource buffers: {}", decode_session.len());
+            println!(
+                "  [Decode]  Admitted resource buffers: {}",
+                decode_session.len()
+            );
         }
     }
 
