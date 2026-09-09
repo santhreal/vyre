@@ -1,10 +1,13 @@
 # vyre-driver-reference
 
-`vyre-driver-reference` registers the pure Rust `cpu-ref` backend adapter.
-It keeps `vyre-reference` independent from the driver layer while still letting
-conformance and parity harnesses acquire a deterministic CPU oracle when this
-crate is linked. Production dispatch must not link this crate as an implicit
-runtime backend; CUDA and WGPU are the supported execution backends.
+`vyre-driver-reference` gives the pure Rust `vyre-reference` interpreter a
+driver-facing surface: the reference target dialect, its compilation profile,
+and the semantic executor a conformance oracle calls. It submits no
+`BackendRegistration`, so the interpreter has no dispatch identity, appears in
+no target discovery or capability negotiation, and cannot be returned by
+autoroute or by any selection over the backend registry. A caller that wants
+reference values names `CpuRefEvaluator` or `ReferenceSemanticExecutor`
+directly.
 
 <!-- BEGIN GENERATED CRATE CONTRACT -->
 ## Crate contract

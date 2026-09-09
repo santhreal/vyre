@@ -283,15 +283,19 @@ fn measure_cub() -> Result<CubMeasurement, BenchError> {
 
 /// Read the one JSON line the baseline prints.
 fn parse_measurement(stdout: &str) -> Result<CubMeasurement, BenchError> {
+    // Every field is required. Typed decoding replaced a dynamic lookup that
+    // demanded each name, and `#[serde(default)]` on `device`,
+    // `compute_capability` and `cub_version` turned three of them optional:
+    // a baseline that printed no capability recorded the empty string, which
+    // `architecture` then keys the compiled-baseline cache by, so two
+    // unidentified devices share one cached binary and the recorded evidence
+    // names no device at all.
     #[derive(serde::Deserialize)]
     struct RawCubOutput {
         checksum: u32,
         samples_ms: Vec<f64>,
-        #[serde(default)]
         device: String,
-        #[serde(default)]
         compute_capability: String,
-        #[serde(default)]
         cub_version: u32,
     }
 

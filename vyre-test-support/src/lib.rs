@@ -187,6 +187,7 @@ pub mod artifact_fixtures;
 pub mod async_span_parity;
 #[cfg(feature = "ir-fixtures")]
 pub mod backend_capabilities;
+pub mod backend_execution_domain;
 pub mod bin_op_variants;
 #[cfg(feature = "ir-fixtures")]
 pub mod binop_parity;
