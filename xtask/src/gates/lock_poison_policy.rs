@@ -108,8 +108,10 @@ fn acquires_lock(line: &str) -> bool {
 /// rather than consuming an owned `Mutex`, `Cell`, or `RefCell`.
 ///
 /// The distinguishing mark is the poison binding the call reads from, which
-/// `rustfmt` may leave up to three code lines above when the recovery is a
-/// block rather than an expression.
+/// `rustfmt` may leave a few lines above when the recovery is a block rather
+/// than an expression. The search stops at the end of the enclosing statement,
+/// so an ordinary `Cell::into_inner` is not judged by whatever the line before
+/// it happened to do.
 fn laundering_context(lines: &[&str], test_mask: &[bool], index: usize) -> bool {
     let marks = |text: &str| {
         text.contains("PoisonError")
@@ -118,13 +120,19 @@ fn laundering_context(lines: &[&str], test_mask: &[bool], index: usize) -> bool 
             || acquires_lock(text)
     };
     let mut at = index;
-    for _ in 0..4 {
-        if let Some(line) = lines.get(at) {
-            let trimmed = line.trim();
-            if !test_mask.get(at).copied().unwrap_or(false)
-                && !is_comment(trimmed)
-                && marks(trimmed)
-            {
+    for step in 0..4 {
+        let Some(line) = lines.get(at) else {
+            break;
+        };
+        let trimmed = line.trim();
+        let masked = test_mask.get(at).copied().unwrap_or(false);
+        if !masked && !is_comment(trimmed) {
+            // A line above that closes a statement belongs to a different one,
+            // so nothing in it describes this `into_inner`.
+            if step > 0 && (trimmed.ends_with(';') || trimmed.ends_with('}')) {
+                break;
+            }
+            if marks(trimmed) {
                 return true;
             }
         }
@@ -348,12 +356,38 @@ mod tests {
             .collect()
     }
 
+    /// The checkout root.
+    ///
+    /// A unit test runs with the cwd set to its own crate directory, so reading
+    /// the tree from there reaches `xtask` and nothing else. That is a green run
+    /// over 151 files reported as a clean workspace.
+    fn workspace_root() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("the xtask manifest directory sits under the checkout root")
+            .to_path_buf()
+    }
+
     #[test]
     fn lock_poison_policy_gate_reports_clean_on_workspace() {
         let gate = LockPoisonPolicy;
-        let root = std::env::current_dir().expect("current dir");
-        let ctx = GateCtx::new(root, vec![]);
+        let ctx = GateCtx::new(workspace_root(), vec![]);
         let report = gate.run(&ctx).expect("gate execution must succeed");
+
+        // A run that reached no file reports zero findings and says nothing. The
+        // scan count is what separates a clean tree from an empty one, and only
+        // the second is a green run that proves nothing.
+        let scanned: usize = report
+            .coverage
+            .iter()
+            .filter(|row| row.subject.contains("scanned for lock governance"))
+            .map(|row| row.discovered)
+            .sum();
+        assert!(
+            scanned > 500,
+            "the gate must have reached the production tree, scanned {scanned} files"
+        );
+
         assert_eq!(
             report.findings.len(),
             0,
@@ -448,7 +482,7 @@ mod tests {
     /// stale entry silently exempting nothing while its file is scanned.
     #[test]
     fn every_policy_owner_path_exists() {
-        let root = std::env::current_dir().expect("current dir");
+        let root = workspace_root();
         for owner in POLICY_OWNER_PATHS {
             assert!(
                 root.join(owner).is_file(),

@@ -207,8 +207,10 @@ impl TypedRecoveryError {
 /// lock excludes concurrent access to.
 pub fn process_fatal_poison(owner: &str, state: &str) -> ! {
     eprintln!(
-        "FATAL: invariant violation: lock over `{state}` in `{owner}` was poisoned by a prior thread panic. \
-         Fix: treat the earlier panic as the root defect; compiler substrate invariants were violated."
+        "vyre: {owner} holds a poisoned lock over {state}. A thread panicked while that lock was \
+         held, and this state has no recovery that leaves the process sound, so the process ends \
+         here rather than continuing on a value nothing can vouch for. \
+         Fix: report the earlier panic."
     );
     std::process::abort();
 }
