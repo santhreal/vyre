@@ -104,13 +104,13 @@ inventory::submit! {
         },
         Some(|| {
             // 4x4 input = identity matrix; 3x3 box kernel
-            let input = vyre_libs_builder::fixture_bytes::f32_bytes(&[
+            let input = vyre_test_support::test_parity_oracles::f32_bytes(&[
                 1.0, 0.0, 0.0, 0.0,
                 0.0, 1.0, 0.0, 0.0,
                 0.0, 0.0, 1.0, 0.0,
                 0.0, 0.0, 0.0, 1.0,
             ]);
-            let kernel = vyre_libs_builder::fixture_bytes::f32_bytes(&[1.0; 9]);
+            let kernel = vyre_test_support::test_parity_oracles::f32_bytes(&[1.0; 9]);
             vec![vec![input, kernel]]
         }),
         Some(|| {
@@ -141,7 +141,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::f32_bytes;
+    use vyre_test_support::test_parity_oracles::f32_bytes;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {
         bytes
@@ -176,7 +176,7 @@ mod tests {
     fn convolved(h: u32, w: u32, input: &[f32], kernel: &[f32]) -> Vec<f32> {
         let program = conv2d_3x3_direct("input", "kernel", "output", h, w).expect("Fix: build");
         decode(
-            &vyre_libs_builder::fixture_bytes::eval_bytes(
+            &vyre_test_support::test_parity_oracles::eval_bytes(
                 "conv2d_3x3_direct",
                 &program,
                 vec![f32_bytes(input), f32_bytes(kernel)],

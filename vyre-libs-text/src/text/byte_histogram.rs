@@ -273,7 +273,7 @@ mod tests {
         // Removing the mask would OOB the atomic scatter (memory corruption on a real GPU)
         // and this test would see report.total() > 0.
         let program = byte_histogram_256("bytes", "histogram", 1);
-        let (outputs, report) = vyre_libs_builder::fixture_bytes::eval_bytes_oob_report(
+        let (outputs, report) = vyre_test_support::test_parity_oracles::eval_bytes_oob_report(
             "byte_histogram_256",
             &program,
             vec![

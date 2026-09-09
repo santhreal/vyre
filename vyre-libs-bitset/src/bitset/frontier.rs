@@ -870,4 +870,13 @@ mod tests {
     }
 
     use crate::bitset::mix32;
+
+    #[test]
+    fn checked_frontier_helpers_contract() {
+        assert_eq!(checked_frontier_popcount(&[0b1011, 0b110]).unwrap(), 5);
+        assert_eq!(checked_frontier_domain_popcount(4, &[0b1111_1111]).unwrap(), 4);
+        let mut queue = Vec::new();
+        assert_eq!(materialize_frontier_queue_into(4, &[0b1011], 4, &mut queue).unwrap(), 3);
+        assert_eq!(queue, vec![0, 1, 3]);
+    }
 }

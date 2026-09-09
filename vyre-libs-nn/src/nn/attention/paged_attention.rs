@@ -780,8 +780,8 @@ pub fn paged_cache_append(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
-    use vyre_libs_builder::fixture_bytes::{
+    use vyre_test_support::test_parity_oracles::eval_bytes;
+    use vyre_test_support::test_parity_oracles::{
         decode_f32 as bytes_to_f32, f32_bytes as f32_to_bytes, u32_bytes as u32_to_bytes,
     };
 

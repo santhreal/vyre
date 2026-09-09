@@ -53,9 +53,9 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
-    use vyre_libs_builder::fixture_bytes::eval_f32;
-    use vyre_libs_builder::fixture_bytes::u32_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_f32;
+    use vyre_test_support::test_parity_oracles::u32_bytes;
 
     #[test]
     fn relu_empty_tensor_produces_no_panic() {

@@ -154,12 +154,12 @@ pub(super) fn linear_4bit_affine_grouped_weight_reuse(
 
 #[cfg(test)]
 mod tests {
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_foundation::ir::BufferAccess;
 
     use super::super::affine_grouped::linear_4bit_affine_grouped_batched;
     use super::super::grouped_layout::AFFINE_GROUPED_WEIGHT_TILE;
-    use vyre_libs_builder::fixture_bytes::{f32_bytes, u32_bytes};
+    use vyre_test_support::test_parity_oracles::{f32_bytes, u32_bytes};
 
     /// WHY: the resident throughput path shares one dequantized weight tile across eight
     /// independent batch rows. Row/output remapping must not alias activations or results.

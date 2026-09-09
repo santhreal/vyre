@@ -10,6 +10,11 @@ use crate::workspace_manifest::crate_ident;
 /// as solvers, encoding, analysis, scheduling, device and graph dispatch. Who
 /// calls it does not move it; only rewriting it in host Rust does.
 pub(crate) const CATEGORY_A_CRATE: &str = "vyre-libs";
+
+/// Returns true if the crate name is the Category A facade or any domain partition crate.
+pub(crate) fn is_category_a_crate(crate_name: &str) -> bool {
+    crate_name == CATEGORY_A_CRATE || crate_name.starts_with("vyre-libs-")
+}
 /// Category C owner: strict hardware intrinsics, one emitter arm and one
 /// reference-interpreter arm each. Absorbed the former standalone hardware
 /// crate on 2026-08-13; the intrinsics live in `vyre-primitives/src/hardware`.
@@ -48,6 +53,28 @@ pub(crate) const ALLOWED_MEMBERS: &[&str] = &[
     "vyre-emit-spirv",
     "vyre-foundation",
     "vyre-libs",
+    "vyre-libs-analysis",
+    "vyre-libs-bitset",
+    "vyre-libs-builder",
+    "vyre-libs-decode",
+    "vyre-libs-device",
+    "vyre-libs-encoding",
+    "vyre-libs-fixpoint",
+    "vyre-libs-graph",
+    "vyre-libs-hash",
+    "vyre-libs-math",
+    "vyre-libs-nn",
+    "vyre-libs-parsing",
+    "vyre-libs-pattern",
+    "vyre-libs-reasoning",
+    "vyre-libs-reduce",
+    "vyre-libs-rule",
+    "vyre-libs-scheduling",
+    "vyre-libs-security",
+    "vyre-libs-solvers",
+    "vyre-libs-text",
+    "vyre-libs-vfs",
+    "vyre-libs-visual",
     "vyre-lints",
     "vyre-lower",
     "vyre-macros",
@@ -131,7 +158,7 @@ pub fn roster_failures(members: &[String]) -> Vec<String> {
 pub fn registration_owner_failures(registrations: &[Registration]) -> Vec<String> {
     registrations
         .iter()
-        .filter(|reg| reg.crate_name != CATEGORY_A_CRATE && reg.crate_name != CATEGORY_C_CRATE)
+        .filter(|reg| !is_category_a_crate(&reg.crate_name) && reg.crate_name != CATEGORY_C_CRATE)
         .map(|reg| {
             format!(
                 "{} registers `{}`; only {CATEGORY_A_CRATE} (Category A) and {CATEGORY_C_CRATE} (Category C) own operations",
@@ -205,7 +232,7 @@ pub fn category_home_failures(registrations: &[Registration]) -> Vec<String> {
         };
         let hardware = matches!(tier, "Intrinsic" | "Hardware");
         if hardware
-            && reg.crate_name == CATEGORY_A_CRATE
+            && is_category_a_crate(&reg.crate_name)
             && !reg.op_id.starts_with("vyre-primitives::")
         {
             failures.push(format!(

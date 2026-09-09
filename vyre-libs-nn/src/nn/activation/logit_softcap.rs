@@ -50,7 +50,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_f32;
+    use vyre_test_support::test_parity_oracles::eval_f32;
 
     fn softcap_ref(x: f32, cap: f32) -> f32 {
         (x / cap).tanh() * cap

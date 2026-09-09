@@ -143,8 +143,8 @@ pub(in crate::pattern::classic_ac) fn suffix3_bloom_bit_index_expr(suffix: Expr)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::bytes_to_u32 as decode_u32;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::bytes_to_u32 as decode_u32;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use crate::pattern::classic_ac::{
         classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
         classic_ac_compile, classic_ac_scan_counts,

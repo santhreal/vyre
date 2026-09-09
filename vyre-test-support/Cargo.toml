@@ -22,7 +22,7 @@ default = []
 # into the dev graph of whichever crate enables it, and most consumers of this
 # crate only want the source-text closure enumerator or the flat element list.
 # The fixtures build inline shapes with smallvec, so it joins the graph too.
-ir-fixtures = ["dep:vyre-foundation", "dep:smallvec", "dep:vyre-reference", "dep:blake3"]
+ir-fixtures = ["dep:vyre-foundation", "dep:smallvec", "dep:vyre-reference", "dep:blake3", "dep:vyre-primitives"]
 # The semantic execution seam: the graph, bindings, and request every backend
 # contract shares, plus the canonical compiler artifact fixtures every crate
 # downstream of vyre-megakernel admits, packages or reports on. Separate from
@@ -65,6 +65,7 @@ vyre-spec = { workspace = true }
 blake3 = { workspace = true, optional = true }
 smallvec = { workspace = true, optional = true }
 vyre-reference = { workspace = true, optional = true }
+vyre-primitives = { workspace = true, optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 inventory = { workspace = true }

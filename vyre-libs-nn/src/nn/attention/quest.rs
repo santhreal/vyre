@@ -127,10 +127,10 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::bytes_to_u32 as decode_u32;
-    use vyre_libs_builder::fixture_bytes::decode_f32;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
-    use vyre_libs_builder::fixture_bytes::f32_bytes;
+    use vyre_test_support::test_parity_oracles::bytes_to_u32 as decode_u32;
+    use vyre_test_support::test_parity_oracles::decode_f32;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
+    use vyre_test_support::test_parity_oracles::f32_bytes;
 
     #[test]
     fn quest_paging_nan_in_query_produces_nan_scores() {

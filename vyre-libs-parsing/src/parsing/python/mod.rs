@@ -12,10 +12,6 @@ pub mod parse;
 /// Content-keyed pipeline Program cache.
 pub mod source_cache;
 
-#[cfg(test)]
-#[path = "../../../tests/internal/parsing/python/mod.rs"]
-mod tests;
-
 pub(crate) const INVALID_POS: u32 = u32::MAX;
 
 pub(crate) const MAX_DOTTED_SEGMENTS: u32 = 8;

@@ -32,6 +32,3 @@ pub use rms_norm::{rms_norm_linear, try_rms_norm_linear};
 pub use silu::linear_silu;
 pub use tiled::{linear_tiled, linear_tiled_reference};
 
-#[cfg(test)]
-#[path = "../../../../tests/internal/nn/linear/layer/mod.rs"]
-mod tests;

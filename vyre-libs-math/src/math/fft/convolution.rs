@@ -374,8 +374,8 @@ inventory::submit! {
         ).unwrap_or_else(|_| unreachable!("Fix: catalog fixture uses valid power-of-two buffers.")),
         Some(|| {
             vec![vec![
-                vyre_libs_builder::fixture_bytes::f32_bytes(&[1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0]),
-                vyre_libs_builder::fixture_bytes::f32_bytes(&[1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+                vyre_test_support::test_parity_oracles::f32_bytes(&[1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0]),
+                vyre_test_support::test_parity_oracles::f32_bytes(&[1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
             ]]
         }),
         Some(|| {
@@ -399,7 +399,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::f32_bytes;
+    use vyre_test_support::test_parity_oracles::f32_bytes;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {
         bytes
@@ -420,7 +420,7 @@ mod tests {
         )
         .expect("Fix: build");
         let byte_len = (2 * n as usize) * 4;
-        let outputs = vyre_libs_builder::fixture_bytes::eval_bytes(
+        let outputs = vyre_test_support::test_parity_oracles::eval_bytes(
             "fft_convolve_circular_complex",
             &program,
             vec![f32_bytes(signal), f32_bytes(kernel), vec![0u8; byte_len]],

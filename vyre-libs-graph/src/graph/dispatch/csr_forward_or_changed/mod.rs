@@ -13,6 +13,3 @@ pub use dispatch::{
     forward_closure_via_change_flag_gpu_with_scratch_into, ForwardChangedGpuScratch,
 };
 
-#[cfg(test)]
-#[path = "../../../../tests/internal/graph/dispatch/csr_forward_or_changed/mod.rs"]
-mod tests;

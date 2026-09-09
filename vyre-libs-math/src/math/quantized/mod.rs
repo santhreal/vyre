@@ -9,10 +9,6 @@ use vyre_foundation::numeric::{QuantizedContract, ScalarFormat};
 
 mod i4_expressions;
 mod programs;
-#[cfg(test)]
-#[path = "../../../tests/internal/math/quantized/mod.rs"]
-mod tests;
-
 pub use programs::{
     i4x8_batched_matmul_f32_scaled, i4x8_batched_matmul_top1_f32_scaled,
     i4x8_batched_matvec_f32_scaled, i4x8_dot_f32_scaled, i4x8_dot_i32, i4x8_matvec_f32_scaled,

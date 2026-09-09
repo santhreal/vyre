@@ -427,7 +427,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::{regex_construct_diagnostic_code, RegexConstruct};
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use std::collections::BTreeSet;
 
     /// WHY: conformance accepts registered bytes as proof for every backend row, so the regex

@@ -50,6 +50,11 @@ vyre-libs-math = { workspace = true }
 vyre-libs-hash = { workspace = true }
 
 [dev-dependencies]
+proptest.workspace = true
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
-vyre-test-support = { workspace = true }
+vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

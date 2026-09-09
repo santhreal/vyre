@@ -230,11 +230,11 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::assert_tiled_matches_reference;
-    use vyre_libs_builder::fixture_bytes::decode_f32;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
-    use vyre_libs_builder::fixture_bytes::eval_f32;
-    use vyre_libs_builder::fixture_bytes::f32_bytes;
+    use vyre_test_support::test_parity_oracles::assert_tiled_matches_reference;
+    use vyre_test_support::test_parity_oracles::decode_f32;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_f32;
+    use vyre_test_support::test_parity_oracles::f32_bytes;
 
     /// A library op states what it needs and stops there. What the region
     /// marker prints in one dialect's text is that emitter's contract, not

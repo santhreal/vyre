@@ -33,10 +33,6 @@ mod program;
 
 mod registry;
 
-#[cfg(test)]
-#[path = "../../../tests/internal/graph/dominator_tree/mod.rs"]
-mod tests;
-
 pub use depth::{
     dominator_tree_depth, dominator_tree_depth_body, dominator_tree_depth_child,
     OP_ID as DOMINATOR_TREE_DEPTH_OP_ID,

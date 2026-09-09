@@ -394,5 +394,4 @@ pub fn anchored_window_extract_program(
 }
 
 #[cfg(all(test, feature = "pattern-regex", feature = "pattern-dfa"))]
-#[path = "../../tests/internal/pattern/regex_anchored_window/mod.rs"]
 mod tests;

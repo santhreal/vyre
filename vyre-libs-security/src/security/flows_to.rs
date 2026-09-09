@@ -98,7 +98,7 @@ pub fn flows_to_alias_only(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::try_eval_bytes;
+    use vyre_test_support::test_parity_oracles::try_eval_bytes;
     use crate::predicate::edge_kind;
     use vyre_reference::composition_witness::csr_forward_traverse_witness;
 

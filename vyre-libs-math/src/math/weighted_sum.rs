@@ -77,8 +77,8 @@ inventory::submit! {
                 .unwrap_or_else(|error| super::trap_f32_output_program(OP_ID, "output", error))
         },
         Some(|| {
-            let weights = vyre_libs_builder::fixture_bytes::f32_bytes(&[0.5, 0.25, 0.125, 0.125]);
-            let values = vyre_libs_builder::fixture_bytes::f32_bytes(&[1.0, 2.0, 4.0, 8.0]);
+            let weights = vyre_test_support::test_parity_oracles::f32_bytes(&[0.5, 0.25, 0.125, 0.125]);
+            let values = vyre_test_support::test_parity_oracles::f32_bytes(&[1.0, 2.0, 4.0, 8.0]);
             vec![vec![weights, values]]
         }),
         Some(|| {
@@ -93,8 +93,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::decode_f32_one as decode_one;
-    use vyre_libs_builder::fixture_bytes::{eval_bytes, f32_bytes};
+    use vyre_test_support::test_parity_oracles::decode_f32_one as decode_one;
+    use vyre_test_support::test_parity_oracles::{eval_bytes, f32_bytes};
 
     fn fma_sum(weights: &[f32], values: &[f32]) -> f32 {
         let n = weights.len() as u32;

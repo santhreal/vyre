@@ -518,7 +518,6 @@ fn tree_walk_program(
 }
 
 #[cfg(test)]
-#[path = "../../tests/internal/graph/dispatch/vast_tree_walk/mod.rs"]
 mod internal_tests;
 
 #[cfg(test)]

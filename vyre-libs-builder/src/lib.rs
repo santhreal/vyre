@@ -3,7 +3,6 @@
 pub mod builder;
 pub mod plumbing;
 pub mod prelude;
-pub mod fixture_bytes;
 
 pub use builder::*;
 pub use plumbing::host::dispatch_buffers::*;

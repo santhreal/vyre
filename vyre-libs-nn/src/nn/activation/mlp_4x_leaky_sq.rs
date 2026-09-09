@@ -338,7 +338,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_f32;
+    use vyre_test_support::test_parity_oracles::eval_f32;
 
     #[test]
     fn mlp_materializes_hidden_once_and_matches_reference() {

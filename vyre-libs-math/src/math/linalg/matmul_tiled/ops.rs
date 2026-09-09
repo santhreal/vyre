@@ -247,12 +247,12 @@ inventory::submit! {
         || matmul_tiled("a", "b", "out", 2, 2, 2, 2),
         Some(|| {
             vec![vec![
-                vyre_libs_builder::fixture_bytes::u32_bytes(&[1, 2, 3, 4]),
-                vyre_libs_builder::fixture_bytes::u32_bytes(&[5, 6, 7, 8]),
+                vyre_test_support::test_parity_oracles::u32_bytes(&[1, 2, 3, 4]),
+                vyre_test_support::test_parity_oracles::u32_bytes(&[5, 6, 7, 8]),
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_libs_builder::fixture_bytes::MATMUL_2X2_EXPECTED_BYTES.to_vec()]]
+            vec![vec![vyre_test_support::test_parity_oracles::MATMUL_2X2_EXPECTED_BYTES.to_vec()]]
         }),
     )
     .with_category("math")
@@ -274,8 +274,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::bytes_to_u32 as decode_u32_words;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::bytes_to_u32 as decode_u32_words;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     fn output_zero_bytes(program: &Program) -> Vec<u8> {
         let output = program
@@ -397,8 +397,8 @@ mod tests {
         let actual = run_program(
             &program,
             vec![
-                vyre_libs_builder::fixture_bytes::u32_bytes(&a),
-                vyre_libs_builder::fixture_bytes::u32_bytes(&b),
+                vyre_test_support::test_parity_oracles::u32_bytes(&a),
+                vyre_test_support::test_parity_oracles::u32_bytes(&b),
                 output_zero_bytes(&program),
             ],
         );
@@ -427,9 +427,9 @@ mod tests {
         let actual = run_program(
             &program,
             vec![
-                vyre_libs_builder::fixture_bytes::u32_bytes(&a),
-                vyre_libs_builder::fixture_bytes::u32_bytes(&b),
-                vyre_libs_builder::fixture_bytes::u32_bytes(&bias),
+                vyre_test_support::test_parity_oracles::u32_bytes(&a),
+                vyre_test_support::test_parity_oracles::u32_bytes(&b),
+                vyre_test_support::test_parity_oracles::u32_bytes(&bias),
                 output_zero_bytes(&program),
             ],
         );

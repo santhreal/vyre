@@ -150,7 +150,7 @@ pub fn kfac_autotune_step_via_with_scratch_into(
 mod tests {
     use super::*;
     use vyre_libs_builder::plumbing::host::dispatch_buffers::f32_slice_to_le_bytes;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_reference::composition_witness::kfac_block_inverse_witness as reference_kfac_block_inverse;
 
     struct KfacDispatcher;

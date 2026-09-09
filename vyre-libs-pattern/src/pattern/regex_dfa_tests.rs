@@ -5,7 +5,7 @@
 //! rather than merely for being present.
 
 use super::*;
-use vyre_libs_builder::fixture_bytes::eval_bytes;
+use vyre_test_support::test_parity_oracles::eval_bytes;
 
 /// WHY: conformance accepts registered bytes as proof for every backend row, so the regex
 /// DFA fixture must equal an independent reference execution rather than merely be present.

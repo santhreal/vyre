@@ -1,7 +1,7 @@
 //! Tests for the region post-processing programs against host oracles.
 
 use super::region::*;
-use vyre_libs_builder::fixture_bytes::eval_bytes;
+use vyre_test_support::test_parity_oracles::eval_bytes;
 
 fn cluster_metadata_for_sorted(input: &[RegionTriple]) -> (Vec<u32>, Vec<u32>) {
     let mut survivors = vec![0u32; input.len()];

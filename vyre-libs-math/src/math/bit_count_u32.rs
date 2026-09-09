@@ -45,7 +45,7 @@ pub(crate) fn bit_count_u32_program(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     fn eval(kind: BitCountKind, input: &[u32]) -> Vec<u32> {
         let program = bit_count_u32_program(

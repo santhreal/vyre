@@ -359,8 +359,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
-    use vyre_libs_builder::fixture_bytes::eval_bytes_lane_order;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes_lane_order;
     use vyre_reference::composition_witness::bellman_shortest_path_witness as cpu_ref;
 
     #[allow(clippy::too_many_arguments)]

@@ -14,12 +14,7 @@ mod validate;
 mod registry;
 
 #[cfg(test)]
-#[path = "../../../tests/internal/graph/csr_forward_or_changed/reference_adapter.rs"]
 mod reference_adapter;
-
-#[cfg(test)]
-#[path = "../../../tests/internal/graph/csr_forward_or_changed/mod.rs"]
-mod tests;
 
 pub use body::{
     csr_forward_or_changed_body, csr_forward_or_changed_body_prefixed,

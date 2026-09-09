@@ -67,9 +67,9 @@ pub fn batch_matmul(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::decode_f32;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
-    use vyre_libs_builder::fixture_bytes::f32_bytes;
+    use vyre_test_support::test_parity_oracles::decode_f32;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
+    use vyre_test_support::test_parity_oracles::f32_bytes;
 
     #[test]
     fn batch_matmul_single_batch_matches_matmul() {

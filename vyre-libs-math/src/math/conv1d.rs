@@ -218,7 +218,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_reference::composition_witness::{
         conv1d_witness as cpu_conv1d, conv1d_witness_into as cpu_conv1d_into,
     };

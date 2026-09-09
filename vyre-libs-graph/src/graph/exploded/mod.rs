@@ -46,13 +46,8 @@ mod encoding;
 mod layout;
 mod program_ir;
 #[cfg(test)]
-#[path = "../../../tests/internal/graph/exploded/reference_adapter.rs"]
 mod reference_adapter;
 mod validation;
-
-#[cfg(test)]
-#[path = "../../../tests/internal/graph/exploded/mod.rs"]
-mod tests;
 
 pub use abi::{
     IFDS_CSR_COL_IDX_BUFFER, IFDS_CSR_COL_LEN_BUFFER, IFDS_CSR_GEN_BLOCK_BUFFER,

@@ -138,9 +138,9 @@ pub fn matmul_bias(a: &str, b: &str, bias: &str, out: &str, m: u32, k: u32, n: u
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::bytes_to_u32 as decode_u32_words;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
-    use vyre_libs_builder::fixture_bytes::try_eval_bytes;
+    use vyre_test_support::test_parity_oracles::bytes_to_u32 as decode_u32_words;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
+    use vyre_test_support::test_parity_oracles::try_eval_bytes;
 
     fn next_u32(state: &mut u32) -> u32 {
         *state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
@@ -416,8 +416,8 @@ inventory::submit! {
             let b: Vec<u32> = (0..16).map(|i| i + 1).collect();
 
             vec![vec![
-                vyre_libs_builder::fixture_bytes::u32_bytes(&a),
-                vyre_libs_builder::fixture_bytes::u32_bytes(&b),
+                vyre_test_support::test_parity_oracles::u32_bytes(&a),
+                vyre_test_support::test_parity_oracles::u32_bytes(&b),
             ]]
         }),
         Some(|| {
@@ -466,9 +466,9 @@ inventory::submit! {
         || matmul_bias("a", "b", "bias", "out", 1, 1, 1),
         Some(|| {
             vec![vec![
-                vyre_libs_builder::fixture_bytes::u32_bytes(&[2]),
-                vyre_libs_builder::fixture_bytes::u32_bytes(&[3]),
-                vyre_libs_builder::fixture_bytes::u32_bytes(&[5]),
+                vyre_test_support::test_parity_oracles::u32_bytes(&[2]),
+                vyre_test_support::test_parity_oracles::u32_bytes(&[3]),
+                vyre_test_support::test_parity_oracles::u32_bytes(&[5]),
             ]]
         }),
         Some(|| {

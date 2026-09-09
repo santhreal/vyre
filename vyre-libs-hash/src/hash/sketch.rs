@@ -196,7 +196,7 @@ pub fn count_sketch_update(table: &str, hashes: &str, signs: &str, d: u32, w: u3
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_reference::composition_witness::{
         count_sketch_query_witness, count_sketch_table_len, count_sketch_update_witness,
         try_count_sketch_query_into_witness,
@@ -449,7 +449,7 @@ mod tests {
         let hashes = [2u32, w + 5, w + 9]; // row0 valid; rows 1,2 far out of range
         let signs = [1u32, 1, 1];
         let program = count_sketch_update("table", "hashes", "signs", d, w);
-        let (_outputs, report) = vyre_libs_builder::fixture_bytes::eval_bytes_oob_report(
+        let (_outputs, report) = vyre_test_support::test_parity_oracles::eval_bytes_oob_report(
             "count_sketch_update",
             &program,
             vec![

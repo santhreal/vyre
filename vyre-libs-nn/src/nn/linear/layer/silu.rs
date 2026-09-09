@@ -79,8 +79,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
-    use vyre_libs_builder::fixture_bytes::f32_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
+    use vyre_test_support::test_parity_oracles::f32_bytes;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {
         vyre_primitives::wire::decode_f32_le_bytes_all(bytes)

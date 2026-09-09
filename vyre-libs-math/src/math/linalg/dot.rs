@@ -188,8 +188,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::decode_u32_one as decode_one;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::decode_u32_one as decode_one;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     #[test]
     fn tiled_dot_matches_scalar_reference_across_multiple_tiles() {
@@ -205,8 +205,8 @@ mod tests {
                 "dot",
                 &program,
                 vec![
-                    vyre_libs_builder::fixture_bytes::u32_bytes(&lhs),
-                    vyre_libs_builder::fixture_bytes::u32_bytes(&rhs),
+                    vyre_test_support::test_parity_oracles::u32_bytes(&lhs),
+                    vyre_test_support::test_parity_oracles::u32_bytes(&rhs),
                     vec![0u8; core::mem::size_of::<u32>()],
                 ],
             );
@@ -233,8 +233,8 @@ mod tests {
             "dot",
             &program,
             vec![
-                vyre_libs_builder::fixture_bytes::u32_bytes(&lhs),
-                vyre_libs_builder::fixture_bytes::u32_bytes(&rhs),
+                vyre_test_support::test_parity_oracles::u32_bytes(&lhs),
+                vyre_test_support::test_parity_oracles::u32_bytes(&rhs),
                 vec![0u8; 4],
             ],
         );
@@ -261,8 +261,8 @@ mod tests {
             "dot",
             &program,
             vec![
-                vyre_libs_builder::fixture_bytes::u32_bytes(&lhs),
-                vyre_libs_builder::fixture_bytes::u32_bytes(&rhs),
+                vyre_test_support::test_parity_oracles::u32_bytes(&lhs),
+                vyre_test_support::test_parity_oracles::u32_bytes(&rhs),
                 vec![0u8; 4],
             ],
         );

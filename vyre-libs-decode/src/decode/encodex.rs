@@ -168,7 +168,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::{bytes_to_u32, decode_u32_one, eval_bytes};
+    use vyre_test_support::test_parity_oracles::{bytes_to_u32, decode_u32_one, eval_bytes};
 
     fn histogram(input: &[u8]) -> (Vec<u32>, u32) {
         let program = encodex_gpu("input", "output", input.len() as u32);

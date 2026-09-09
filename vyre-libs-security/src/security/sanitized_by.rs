@@ -61,12 +61,12 @@ pub(crate) fn sanitized_by_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use crate::predicate::edge_kind;
 
     #[test]
     fn test_sanitized_by_expected_bytes_identity() {
-        let constructed = vyre_libs_builder::fixture_bytes::u32_bytes(&[3]);
+        let constructed = vyre_test_support::test_parity_oracles::u32_bytes(&[3]);
         assert_eq!(constructed, EXPECTED_SANITIZED_BY_OUTPUT_BYTES);
     }
 

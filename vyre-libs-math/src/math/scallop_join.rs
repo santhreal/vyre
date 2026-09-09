@@ -211,7 +211,7 @@ mod tests {
 
     use super::*;
     use vyre_libs_fixpoint::fixpoint::persistent_fixpoint::count_grid_sync;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use crate::math::semiring_gemm::Semiring;
     use vyre_reference::composition_witness::{
         scallop_join_fixpoint_witness as cpu_ref, scallop_join_fixpoint_witness_into,

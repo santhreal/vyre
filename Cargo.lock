@@ -3804,6 +3804,7 @@ dependencies = [
  "blake3",
  "inventory",
  "libm",
+ "proptest",
  "rayon",
  "rustc-hash 2.1.3",
  "serde",
@@ -3818,6 +3819,7 @@ dependencies = [
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -3864,6 +3866,7 @@ dependencies = [
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -3950,6 +3953,7 @@ dependencies = [
  "blake3",
  "inventory",
  "libm",
+ "proptest",
  "rayon",
  "rustc-hash 2.1.3",
  "serde",
@@ -3991,6 +3995,7 @@ dependencies = [
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -4015,6 +4020,7 @@ dependencies = [
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -4039,6 +4045,7 @@ dependencies = [
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -4065,6 +4072,7 @@ dependencies = [
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -4090,6 +4098,7 @@ dependencies = [
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -4099,6 +4108,7 @@ dependencies = [
  "blake3",
  "inventory",
  "libm",
+ "proptest",
  "rayon",
  "rustc-hash 2.1.3",
  "serde",
@@ -4147,6 +4157,7 @@ dependencies = [
  "blake3",
  "inventory",
  "libm",
+ "proptest",
  "rayon",
  "rustc-hash 2.1.3",
  "serde",
@@ -4212,6 +4223,7 @@ dependencies = [
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -4247,6 +4259,7 @@ dependencies = [
  "blake3",
  "inventory",
  "libm",
+ "proptest",
  "rayon",
  "rustc-hash 2.1.3",
  "serde",
@@ -4261,6 +4274,7 @@ dependencies = [
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -4304,6 +4318,7 @@ dependencies = [
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -4497,6 +4512,7 @@ dependencies = [
  "vyre-driver",
  "vyre-foundation",
  "vyre-megakernel",
+ "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
 ]

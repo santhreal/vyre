@@ -52,7 +52,7 @@ pub(crate) fn cpu_dominator_sets(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use crate::security::flow_composition::diamond_dominance_tree;
     use vyre_reference::composition_witness::csr_backward_traverse_witness as cpu_ref;
 

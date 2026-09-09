@@ -236,7 +236,7 @@ pub fn fused_region_evidence_program(
 #[cfg(all(test, feature = "pattern-regex", feature = "pattern-dfa"))]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     use crate::pattern::haystack::pack_haystack_u32;
     use crate::pattern::regex_region_admission::tests::dfa_for;
     use vyre_primitives::wire::pack_u32_slice;

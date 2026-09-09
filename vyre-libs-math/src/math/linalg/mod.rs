@@ -48,9 +48,9 @@ pub(crate) fn apply_contraction_options(
 #[must_use]
 pub(crate) fn matmul_bias_2x2_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
-        vyre_libs_builder::fixture_bytes::u32_bytes(&[1, 2, 3, 4]),
-        vyre_libs_builder::fixture_bytes::u32_bytes(&[5, 6, 7, 8]),
-        vyre_libs_builder::fixture_bytes::u32_bytes(&[10, 20]),
+        vyre_test_support::test_parity_oracles::u32_bytes(&[1, 2, 3, 4]),
+        vyre_test_support::test_parity_oracles::u32_bytes(&[5, 6, 7, 8]),
+        vyre_test_support::test_parity_oracles::u32_bytes(&[10, 20]),
     ]]
 }
 
@@ -67,7 +67,7 @@ mod tests {
 
     #[test]
     fn test_matmul_bias_2x2_expected_bytes_identity() {
-        let constructed = vyre_libs_builder::fixture_bytes::u32_bytes(&[29, 42, 53, 70]);
+        let constructed = vyre_test_support::test_parity_oracles::u32_bytes(&[29, 42, 53, 70]);
         assert_eq!(constructed, MATMUL_BIAS_2X2_EXPECTED_BYTES);
     }
 }

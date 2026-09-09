@@ -39,9 +39,6 @@ mod state_set;
 mod subset;
 
 #[cfg(test)]
-#[path = "../../../tests/internal/pattern/nfa_to_dfa/mod.rs"]
-mod tests;
-#[cfg(test)]
 pub use dedup::{
     dfa_fingerprint, dfa_wire_bytes, DfaDedupBatch, DfaDedupResult, DfaDedupStats, DfaDedupTable,
 };

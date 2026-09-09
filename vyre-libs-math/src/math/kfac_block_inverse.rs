@@ -225,7 +225,7 @@ fn cpu_ref_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
     #[test]
     fn test_cpu_ref_1x1() {
         let blocks_in = vec![2.0];

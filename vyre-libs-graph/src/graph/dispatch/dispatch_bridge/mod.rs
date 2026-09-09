@@ -8,10 +8,6 @@
 mod inputs;
 mod u32_outputs;
 
-#[cfg(test)]
-#[path = "../../../../tests/internal/graph/dispatch/dispatch_bridge/mod.rs"]
-mod tests;
-
 pub(crate) use vyre_libs_builder::plumbing::host::program_cache::ProgramCache;
 pub(crate) use inputs::{
     fingerprint_u32_slice, refresh_keyed_dispatch_inputs, DispatchInput, U32SliceFingerprint,

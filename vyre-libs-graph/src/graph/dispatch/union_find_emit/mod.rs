@@ -10,6 +10,3 @@ pub use dispatch::{
     union_find_alias_via_with_scratch_into, UnionFindGpuScratch,
 };
 
-#[cfg(test)]
-#[path = "../../../../tests/internal/graph/dispatch/union_find_emit/mod.rs"]
-mod tests;

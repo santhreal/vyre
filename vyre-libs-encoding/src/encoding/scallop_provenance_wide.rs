@@ -31,7 +31,7 @@ pub fn scallop_provenance_wide_program(
 mod tests {
     #![allow(clippy::identity_op, clippy::erasing_op)]
     use super::*;
-    use vyre_libs_builder::fixture_bytes::eval_bytes;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     #[test]
     fn test_scallop_provenance_wide_program() {
