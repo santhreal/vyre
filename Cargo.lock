@@ -3955,6 +3955,7 @@ dependencies = [
  "vyre-libs-bitset",
  "vyre-libs-builder",
  "vyre-libs-fixpoint",
+ "vyre-libs-hash",
  "vyre-libs-math",
  "vyre-libs-reduce",
  "vyre-megakernel",

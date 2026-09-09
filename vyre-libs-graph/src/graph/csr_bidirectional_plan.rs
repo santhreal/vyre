@@ -311,8 +311,8 @@ pub fn plan_csr_bidirectional_step(
 ///
 /// Returns caller-mapped errors for malformed seed width, reservation failure,
 /// step execution failure, or frontier shape drift.
-#[cfg(any(test, feature = "graph-dispatch"))]
-#[allow(clippy::too_many_arguments)]
+#[cfg(feature = "graph")]
+#[allow(clippy::too_many_arguments, dead_code)]
 pub(crate) fn run_csr_bidirectional_closure_plan_with_step<E, MapError, Step>(
     plan: &CsrBidirectionalDispatchPlan,
     seed: &[u32],

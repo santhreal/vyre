@@ -13,7 +13,7 @@
 pub(crate) mod ast_walk;
 
 /// Graph traversal, dominance, and dispatch-pipeline compositions.
-#[cfg(feature = "graph-dispatch")]
+#[cfg(feature = "graph")]
 pub mod dispatch;
 
 #[cfg(test)]

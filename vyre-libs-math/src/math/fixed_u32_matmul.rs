@@ -33,17 +33,25 @@ pub(crate) fn fixed_u32_matvec_program(
         .expect("Fix: fixed_u32_matvec_program failed to build contraction program")
 }
 
-pub(crate) struct FixedMatmulContext {
+/// Configuration context for fixed-point u32 matrix multiplication.
+pub struct FixedMatmulContext {
+    /// Operation identifier.
     pub op_id: &'static str,
+    /// Operation name for diagnostic messages.
     pub operation: &'static str,
+    /// LHS operand buffer name.
     pub lhs_label: &'static str,
+    /// RHS operand buffer name.
     pub rhs_label: &'static str,
+    /// Output operand buffer name.
     pub out_label: &'static str,
+    /// Dimension names: [rows, shared, cols].
     pub dimensions: [&'static str; 3],
 }
 
+/// Attempt to build a fixed-point u32 matrix multiplication program.
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn try_fixed_u32_matmul(
+pub fn try_fixed_u32_matmul(
     lhs: &str,
     rhs: &str,
     out: &str,

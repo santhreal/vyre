@@ -11,7 +11,6 @@
 //! id. The CPU reference below shows the composition; the Program
 //! ships one pass.
 
-#[cfg(any(test, feature = "analysis"))]
 use vyre_foundation::composition::trap_program;
 use vyre_foundation::composition::wrap_anonymous_region;
 
@@ -30,13 +29,11 @@ pub const SCC_DECOMPOSE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// Reached only from the dataflow-fixpoint dispatch in `vyre_libs_analysis::analysis`, so it
 /// is compiled with that domain. A build that selects `graph` without
 /// `analysis` has no caller for it.
-#[cfg(any(test, feature = "analysis"))]
-pub(crate) const DENSE_REACHABILITY_BITSETS_OP_ID: &str =
+pub const DENSE_REACHABILITY_BITSETS_OP_ID: &str =
     "vyre-libs::graph::dense_reachability_bitsets";
 
 /// Build a program that packs one pivot row from each dense closure into bitsets with checked dimensions.
-#[cfg(any(test, feature = "analysis"))]
-pub(crate) fn try_dense_reachability_bitsets(
+pub fn try_dense_reachability_bitsets(
     node_count: u32,
     dense_count: u32,
     pivot: u32,
@@ -124,9 +121,8 @@ pub(crate) fn try_dense_reachability_bitsets(
 }
 
 /// Build a program that packs one pivot row from each dense closure into bitsets.
-#[cfg(any(test, feature = "analysis"))]
 #[must_use]
-pub(crate) fn dense_reachability_bitsets(
+pub fn dense_reachability_bitsets(
     node_count: u32,
     dense_count: u32,
     pivot: u32,

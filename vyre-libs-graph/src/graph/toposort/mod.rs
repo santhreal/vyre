@@ -27,10 +27,10 @@ mod program;
 
 // The oracle re-exports exist for the dispatch parity tests, which compile only
 // with the dispatch domain.
-#[cfg(all(test, feature = "graph-dispatch"))]
+#[cfg(test)]
 pub(crate) use csr::{toposort_csr, toposort_csr_into};
 pub use csr::{validate_toposort_csr_inputs, validate_toposort_csr_order, ToposortCsrLayout};
-#[cfg(all(test, feature = "graph-dispatch"))]
+#[cfg(test)]
 pub(crate) use edge_list::{
     reference_all_reachable, reference_reachable_set, reference_topo_order, toposort,
 };
