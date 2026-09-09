@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 //! Artifact execution, resident work queues, resource residency, and zero-copy IO.
 //!
 //! Runtime construction starts from an authenticated [`artifact_admission::ArtifactSession`].
