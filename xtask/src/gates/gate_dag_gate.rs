@@ -1,6 +1,6 @@
 //! Enforces DAG schema consistency, acyclicity, and prerequisite closure across all registered gates.
 
-use crate::gate::{Finding, GateBehavior, GateCtx, GateError, Report};
+use crate::gate::{Coverage, Finding, GateBehavior, GateCtx, GateError, Report};
 use crate::gate_dag::GateDag;
 use crate::gate_metadata::GATE_METADATA;
 
@@ -10,6 +10,12 @@ pub struct GateDagGate;
 impl GateBehavior for GateDagGate {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::default();
+        let identities: Vec<String> = GATE_METADATA.iter().map(|d| d.name.to_string()).collect();
+        report.cover(Coverage::complete_identities(
+            "registered gate DAG",
+            identities,
+        ));
+
         let dag = match GateDag::from_descriptors(GATE_METADATA) {
             Ok(d) => d,
             Err(err) => {
@@ -28,7 +34,11 @@ impl GateBehavior for GateDagGate {
             ));
         }
 
-        report.note(format!("Validated DAG across {} registered gates", dag.len()));
+        report.note(format!(
+            "Validated DAG across {} registered gates ({} dependency edges)",
+            dag.len(),
+            dag.edge_count()
+        ));
         Ok(report)
     }
 }

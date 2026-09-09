@@ -147,15 +147,37 @@ pub fn create_parent_dir(path: &Path) {
 pub fn render_evidence_json(value: &impl serde::Serialize) -> Result<String, String> {
     let json = serde_json::to_string_pretty(value).map_err(|error| error.to_string())?;
     let vyre_root = crate::checkout::checkout_root();
-    let santh_root = vyre_root
-        .parent()
-        .and_then(Path::parent)
-        .and_then(Path::parent)
-        .and_then(Path::parent)
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| vyre_root.clone());
-    let json = normalize_serialized_workspace_paths(&json, &vyre_root, &santh_root);
+    let json = normalize_serialized_workspace_paths(&json, &vyre_root, outer_root(&vyre_root));
     Ok(format!("{json}\n"))
+}
+
+/// The enclosing release root a sibling component is named relative to.
+///
+/// The checkout sits some distance below a root that carries sibling
+/// components, and an artifact names one of those by climbing out of the
+/// repository. The distance is a property of the checkout, not a constant: a
+/// detached worktree sits closer to the root than the primary checkout does.
+/// Walking a fixed four parents from a two-level checkout resolved the root to
+/// `/`, and substituting `/` rewrote every path separator in the artifact, so
+/// `xtask-evidence/Cargo.toml` was recorded as
+/// `xtask-evidence../../../..Cargo.toml`.
+///
+/// A candidate keeps the filesystem root plus two names, so neither the root
+/// itself nor a mount point is ever substituted. A checkout with no enclosing
+/// root has no sibling to name and is left alone. The prefix is always the true
+/// climb from the checkout to the candidate the walk landed on.
+fn outer_root(vyre_root: &Path) -> Option<(PathBuf, String)> {
+    let mut candidate = vyre_root.to_path_buf();
+    let mut climbed = 0usize;
+    while climbed < 4 {
+        let Some(parent) = candidate.parent() else { break };
+        if parent.components().count() < 3 {
+            break;
+        }
+        candidate = parent.to_path_buf();
+        climbed += 1;
+    }
+    (climbed > 0).then(|| (candidate, "../".repeat(climbed)))
 }
 
 /// Write `value` as pretty JSON, exiting with a `Fix:` message on failure.
@@ -177,9 +199,17 @@ pub fn write_json(path: &Path, value: &impl serde::Serialize) {
     }
 }
 
-fn normalize_serialized_workspace_paths(json: &str, vyre_root: &Path, santh_root: &Path) -> String {
+fn normalize_serialized_workspace_paths(
+    json: &str,
+    vyre_root: &Path,
+    outer: Option<(PathBuf, String)>,
+) -> String {
     let json = replace_serialized_root(json, vyre_root, "", ".");
-    replace_serialized_root(&json, santh_root, "../../../../", "../../../..")
+    let Some((outer_root, descendant_prefix)) = outer else {
+        return json;
+    };
+    let exact = descendant_prefix.trim_end_matches('/');
+    replace_serialized_root(&json, &outer_root, &descendant_prefix, exact)
 }
 
 fn replace_serialized_root(
@@ -246,12 +276,10 @@ mod tests {
     /// Public evidence uses repository-relative paths instead of host-private Vyre paths.
     #[test]
     fn serialized_vyre_paths_are_repository_relative() {
+        let vyre_root = Path::new("/srv/Santh/libs/performance/matching/vyre");
         let json = r#"{"path":"/srv/Santh/libs/performance/matching/vyre/docs/RELEASE.md","message":"read /srv/Santh/libs/performance/matching/vyre/README.md"}"#;
-        let normalized = normalize_serialized_workspace_paths(
-            json,
-            Path::new("/srv/Santh/libs/performance/matching/vyre"),
-            Path::new("/srv/Santh"),
-        );
+        let normalized =
+            normalize_serialized_workspace_paths(json, vyre_root, outer_root(vyre_root));
 
         assert_eq!(
             normalized,
@@ -262,16 +290,55 @@ mod tests {
     /// Sibling release components retain a stable path from the public Vyre repository.
     #[test]
     fn serialized_santh_sibling_paths_use_public_relative_locations() {
+        let vyre_root = Path::new("/srv/Santh/libs/performance/matching/vyre");
         let json = r#"{"path":"/srv/Santh/tools/vyrec/README.md","root":"/srv/Santh"}"#;
-        let normalized = normalize_serialized_workspace_paths(
-            json,
-            Path::new("/srv/Santh/libs/performance/matching/vyre"),
-            Path::new("/srv/Santh"),
-        );
+        let normalized =
+            normalize_serialized_workspace_paths(json, vyre_root, outer_root(vyre_root));
 
         assert_eq!(
             normalized,
             r#"{"path":"../../../../tools/vyrec/README.md","root":"../../../.."}"#
+        );
+    }
+
+    /// WHY: closes the class "the climb out of the repository is a constant".
+    /// The prefix is the distance from the checkout to its enclosing root, and a
+    /// detached worktree sits closer to that root than the primary checkout. A
+    /// fixed four-parent walk from a two-level checkout resolved the root to `/`
+    /// and rewrote every path separator, recording `xtask-evidence/Cargo.toml`
+    /// as `xtask-evidence../../../..Cargo.toml` in every generated artifact.
+    #[test]
+    fn the_climb_out_of_the_repository_matches_the_checkout_depth() {
+        let deep = Path::new("/srv/Santh/libs/performance/matching/vyre");
+        let shallow = Path::new("/srv/Santh/worktrees/vyre-device");
+        assert_eq!(
+            outer_root(deep),
+            Some((PathBuf::from("/srv/Santh"), "../../../../".to_string()))
+        );
+        assert_eq!(
+            outer_root(shallow),
+            Some((PathBuf::from("/srv/Santh"), "../../".to_string()))
+        );
+
+        let json = r#"{"manifest":"/srv/Santh/worktrees/vyre-device/xtask-evidence/Cargo.toml","sibling":"/srv/Santh/tools/vyrec/README.md"}"#;
+        assert_eq!(
+            normalize_serialized_workspace_paths(json, shallow, outer_root(shallow)),
+            r#"{"manifest":"xtask-evidence/Cargo.toml","sibling":"../../tools/vyrec/README.md"}"#
+        );
+    }
+
+    /// WHY: a checkout with no enclosing root has no sibling component to name,
+    /// and substituting a single top-level directory would replace a path
+    /// separator with a climb. Nothing outside the repository is rewritten.
+    #[test]
+    fn a_top_level_checkout_rewrites_nothing_outside_itself() {
+        let root = Path::new("/vyre");
+        assert_eq!(outer_root(root), None);
+
+        let json = r#"{"manifest":"/vyre/xtask/Cargo.toml","other":"/opt/tool/README.md"}"#;
+        assert_eq!(
+            normalize_serialized_workspace_paths(json, root, outer_root(root)),
+            r#"{"manifest":"xtask/Cargo.toml","other":"/opt/tool/README.md"}"#
         );
     }
 

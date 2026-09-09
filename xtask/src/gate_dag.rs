@@ -61,7 +61,7 @@ impl std::error::Error for DagError {}
 #[derive(Clone, Debug)]
 pub struct DagNode {
     /// Authoritative metadata descriptor.
-    pub descriptor: &'static GateDescriptor,
+    pub descriptor: GateDescriptor,
     /// Gates this gate directly depends on.
     pub prerequisites: Vec<&'static str>,
     /// Gates that depend on this gate.
@@ -75,12 +75,12 @@ pub struct GateDag {
 }
 
 impl GateDag {
-    /// Build a DAG from a slice of static gate descriptors.
+    /// Build a DAG from a slice of gate descriptors.
     ///
     /// # Errors
     ///
     /// Returns `DagError` if any prerequisite is missing or if a cycle is detected.
-    pub fn from_descriptors(descriptors: &'static [GateDescriptor]) -> Result<Self, DagError> {
+    pub fn from_descriptors(descriptors: &[GateDescriptor]) -> Result<Self, DagError> {
         let mut nodes = BTreeMap::new();
         let known_names: BTreeSet<&'static str> = descriptors.iter().map(|d| d.name).collect();
 
@@ -99,7 +99,7 @@ impl GateDag {
             nodes.insert(
                 desc.name,
                 DagNode {
-                    descriptor: desc,
+                    descriptor: *desc,
                     prerequisites: desc.prerequisites.to_vec(),
                     dependents: Vec::new(),
                 },
@@ -127,12 +127,8 @@ impl GateDag {
     ///
     /// Returns `DagError` if any prerequisite is missing or if a cycle is detected.
     pub fn from_registry(gates: &[RegisteredGate]) -> Result<Self, DagError> {
-        let mut descriptors = Vec::with_capacity(gates.len());
-        for gate in gates {
-            descriptors.push(*gate.descriptor());
-        }
-        let static_slice: &'static [GateDescriptor] = descriptors.leak();
-        Self::from_descriptors(static_slice)
+        let descriptors: Vec<GateDescriptor> = gates.iter().map(|g| *g.descriptor()).collect();
+        Self::from_descriptors(&descriptors)
     }
 
     /// Return the node corresponding to `gate_name`, if registered.
@@ -159,6 +155,11 @@ impl GateDag {
         self.nodes.keys().copied().collect()
     }
 
+    /// Total number of dependency edges in the DAG.
+    #[must_use]
+    pub fn edge_count(&self) -> usize {
+        self.nodes.values().map(|n| n.prerequisites.len()).sum()
+    }
     /// Return the topological ordering of gate execution.
     ///
     /// If gate A depends on gate B, B is guaranteed to precede A in the returned order.
@@ -208,6 +209,17 @@ impl GateDag {
         Ok(ordered)
     }
 
+    /// Whether input path matches artifact path (exact or directory prefix).
+    #[must_use]
+    pub fn path_matches(input: &str, artifact: &str) -> bool {
+        let input_path = Path::new(input);
+        let artifact_path = Path::new(artifact);
+        if input_path == artifact_path {
+            return true;
+        }
+        artifact_path.starts_with(input_path)
+    }
+
     /// Validate the DAG structure, inputs, and prerequisites against the workspace root.
     #[must_use]
     pub fn validate(&self, root: &Path) -> Vec<String> {
@@ -218,30 +230,54 @@ impl GateDag {
             failures.push(format!("DAG ordering error: {err}"));
         }
 
-        // 2. Check each node
+        // 2. Check declared inputs exist on disk
         for (name, node) in &self.nodes {
-            let desc = node.descriptor;
-            if desc.name != *name {
-                failures.push(format!(
-                    "gate `{name}` node key does not match descriptor name `{}`",
-                    desc.name
-                ));
-            }
-            // Check prerequisites exist
-            for prereq in &node.prerequisites {
-                if !self.nodes.contains_key(prereq) {
+            for input in node.descriptor.inputs {
+                let input_path = root.join(input);
+                if !input_path.exists() {
                     failures.push(format!(
-                        "gate `{name}` declares missing prerequisite `{prereq}`"
+                        "gate `{name}` declares input path `{input}`, which does not exist in workspace root",
                     ));
                 }
             }
-            // Check declared inputs exist if specified
-            for input in desc.inputs {
-                let input_path = root.join(input);
-                if !input_path.exists() {
-                    // Could be a relative path or glob
+        }
+
+        // 3. Execution-ordering contract:
+        // When gate B inspects an input that gate A regenerates, B must declare A as a prerequisite.
+        for (b_name, b_node) in &self.nodes {
+            for input in b_node.descriptor.inputs {
+                for (a_name, a_node) in &self.nodes {
+                    if a_name == b_name {
+                        continue;
+                    }
+                    for artifact in a_node.descriptor.artifacts {
+                        if Self::path_matches(input, artifact) && !b_node.prerequisites.contains(a_name) {
+                            failures.push(format!(
+                                "gate `{b_name}` inspects `{input}` which is regenerated by gate `{a_name}` (artifact `{artifact}`), but does not declare `{a_name}` as a prerequisite",
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Reject unjustified prerequisites:
+        // A declared prerequisite A of gate B must produce an artifact matching at least one declared input of B.
+        for (b_name, b_node) in &self.nodes {
+            for prereq in &b_node.prerequisites {
+                let Some(a_node) = self.nodes.get(prereq) else {
+                    continue;
+                };
+                let has_relation = b_node.descriptor.inputs.iter().any(|input| {
+                    a_node
+                        .descriptor
+                        .artifacts
+                        .iter()
+                        .any(|artifact| Self::path_matches(input, artifact))
+                });
+                if !has_relation {
                     failures.push(format!(
-                        "gate `{name}` declares input path `{input}`, which does not exist in workspace root",
+                        "gate `{b_name}` declares prerequisite `{prereq}`, but `{prereq}` produces no artifact matching any declared input of `{b_name}`",
                     ));
                 }
             }
@@ -439,7 +475,7 @@ mod tests {
         areas: &["contract-rules"],
         subject: "test subject",
         inputs: &[],
-        artifacts: &[],
+        artifacts: &["docs/generated/dummy-a.toml"],
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
         proof: "crate::gate_dag::tests::dag_validation_detects_cycles_and_missing_prerequisites",
@@ -451,8 +487,8 @@ mod tests {
         package: "xtask",
         areas: &["contract-rules"],
         subject: "test subject",
-        inputs: &[],
-        artifacts: &[],
+        inputs: &["docs/generated/dummy-a.toml"],
+        artifacts: &["docs/generated/dummy-b.toml"],
         prerequisites: &["gate-a"],
         resource_class: ResourceClass::Cpu,
         proof: "crate::gate_dag::tests::dag_validation_detects_cycles_and_missing_prerequisites",
@@ -464,13 +500,12 @@ mod tests {
         package: "xtask",
         areas: &["contract-rules"],
         subject: "test subject",
-        inputs: &[],
+        inputs: &["docs/generated/dummy-b.toml"],
         artifacts: &[],
         prerequisites: &["gate-b"],
         resource_class: ResourceClass::Cpu,
         proof: "crate::gate_dag::tests::dag_validation_detects_cycles_and_missing_prerequisites",
     };
-
     #[test]
     fn topological_sort_orders_prerequisites_first() {
         static GATES: [GateDescriptor; 3] = [DUMMY_GATE_C, DUMMY_GATE_B, DUMMY_GATE_A];

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Enforce execution-ordering and prerequisite closure across registered gates, validate artifact-to-input relations, eliminate registry descriptor leaks, and record complete gate universe subject coverage in gate-dag."

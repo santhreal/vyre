@@ -30,6 +30,7 @@ mod crate_readmes;
 mod docs_manifest_completeness;
 mod exit_states_a_cause;
 mod feature_isolation;
+mod gate_dag_contracts;
 mod manifest_dependency_tables;
 mod msrv_toolchain;
 mod nested_byte_rows;
