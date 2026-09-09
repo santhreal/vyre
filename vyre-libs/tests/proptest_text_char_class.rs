@@ -49,7 +49,7 @@ proptest! {
                 && buffer.element() == DataType::U32
                 && buffer.count() == n.max(1)
                 && buffer.output_byte_range()
-                    == Some(0..usize::try_from(n).unwrap_or(usize::MAX).saturating_mul(4))
+                    == Some(0u64..u64::try_from(n).unwrap_or(u64::MAX).saturating_mul(4))
                 && buffer.is_output()
         });
 

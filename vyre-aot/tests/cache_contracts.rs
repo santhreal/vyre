@@ -11,7 +11,7 @@ fn add_one_program() -> Program {
             BufferDecl::read("input", 0, DataType::U32).with_count(64),
             BufferDecl::output("out", 1, DataType::U32)
                 .with_count(64)
-                .with_output_byte_range(0..256),
+                .with_output_byte_range(0u64..256),
         ],
         [64, 1, 1],
         vec![Node::return_()],

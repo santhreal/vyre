@@ -56,8 +56,10 @@ fn external_facts(graph: &ProgramGraph, expected_launch_batch: u32) -> ExternalF
         .iter()
         .flat_map(|value| &value.contract.shape)
         .filter_map(|dim| match dim {
-            ShapeDim::Known(_) => None,
             ShapeDim::Symbol(symbol) => Some((symbol.clone(), SYMBOLIC_EXTENT)),
+            // A known extent needs no binding, and neither an unresolved
+            // extent nor an interned expression carries a symbol name to bind.
+            ShapeDim::Known(_) | ShapeDim::Unresolved | ShapeDim::Expr(_) => None,
         })
         .collect();
     let constant_identities = graph

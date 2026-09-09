@@ -189,3 +189,7 @@ workspace = true
 [[test]]
 name = "all_tests"
 path = "tests/all_tests.rs"
+
+[[example]]
+name = "select1_optimizer_parity"
+required-features = ["bitset"]
