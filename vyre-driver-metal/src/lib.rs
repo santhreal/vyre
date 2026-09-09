@@ -19,7 +19,7 @@ pub const METAL_TARGET_ID: vyre_foundation::operation::TargetId =
     vyre_foundation::operation::TargetId::expect_valid(METAL_BACKEND_ID);
 
 /// Metal external resource import/export and timeline synchronization (Row 111).
-pub mod external_resource;
+mod external_resource;
 pub use external_resource::{
     MetalExternalMemoryDescriptor, MetalExternalMemoryHandle, MetalExternalResourceImporter,
     MetalImportedResource,

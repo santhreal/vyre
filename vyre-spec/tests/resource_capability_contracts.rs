@@ -344,7 +344,7 @@ fn resource_generation_advance_and_invalidation() {
     let err = record.advance_generation(1).expect_err("stale generation");
     assert_eq!(
         err,
-        vyre_spec::resource_capability::ResourceAbiError::GenerationMismatch {
+        vyre_spec::ResourceAbiError::GenerationMismatch {
             resource_id: 3003,
             expected: 1,
             actual: 2,
@@ -359,7 +359,7 @@ fn resource_generation_advance_and_invalidation() {
         .expect_err("invalidated resource");
     assert_eq!(
         err_invalid,
-        vyre_spec::resource_capability::ResourceAbiError::ResourceInvalidated { resource_id: 3003 }
+        vyre_spec::ResourceAbiError::ResourceInvalidated { resource_id: 3003 }
     );
 }
 

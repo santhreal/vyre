@@ -32,10 +32,3 @@ struct CachedMotifProgram {
     layout: MotifLayout,
     program: Program,
 }
-
-impl MotifGpuScratch {
-    #[cfg(test)]
-    fn program_builds(&self) -> usize {
-        self.program_cache.builds()
-    }
-}

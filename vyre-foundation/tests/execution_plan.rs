@@ -13,7 +13,7 @@ fn ranged_output_program() -> Program {
     Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)
             .with_count(1024)
-            .with_output_byte_range(4..12)],
+            .with_output_byte_range(4u64..12)],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
     )
@@ -186,7 +186,10 @@ fn zero_count_output_is_rejected_before_strategy() {
 
 #[test]
 fn inverted_output_byte_range_is_rejected_with_named_error() {
-    let inverted = std::ops::Range { start: 12, end: 4 };
+    let inverted = std::ops::Range {
+        start: 12u64,
+        end: 4u64,
+    };
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)
             .with_count(1024)
@@ -210,7 +213,7 @@ fn output_byte_range_past_end_is_rejected_with_named_error() {
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)
             .with_count(4)
-            .with_output_byte_range(0..64)],
+            .with_output_byte_range(0u64..64)],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
     );

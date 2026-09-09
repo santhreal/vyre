@@ -38,7 +38,7 @@ pub(crate) mod egraph_device_image;
 pub(crate) mod egraph_kernel_plan;
 mod egraph_readback;
 /// CUDA external resource import/export and timeline synchronization (Row 111).
-pub mod external_resource;
+mod external_resource;
 mod instrumentation;
 /// Cross-process persistent CUDA JIT cache wiring (E4 + E5): configures
 /// the NVIDIA driver's built-in disk cache at backend bring-up so the

@@ -33,12 +33,5 @@ pub struct IfdsCsrGpuScratch {
 
 type CachedIfdsCsrProgram = CachedProgram;
 
-impl IfdsCsrGpuScratch {
-    #[cfg(test)]
-    fn program_builds(&self) -> usize {
-        self.program_cache.builds()
-    }
-}
-
 #[cfg(test)]
 pub use crate::graph::exploded::{ifds_node_count, round_trip_dense};

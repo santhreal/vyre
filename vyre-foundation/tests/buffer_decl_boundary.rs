@@ -72,7 +72,7 @@ fn output_byte_range_on_non_output_buffer_is_constructible() {
     // output_byte_range can technically be set on any buffer type.
     let buf = BufferDecl::read("in", 0, DataType::U32)
         .with_count(1)
-        .with_output_byte_range(0..16);
+        .with_output_byte_range(0u64..16);
     assert_eq!(buf.output_byte_range(), Some(0..16));
 }
 

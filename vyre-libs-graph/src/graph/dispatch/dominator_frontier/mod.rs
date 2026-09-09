@@ -46,13 +46,6 @@ pub struct DominanceFrontierGpuScratch {
 
 type CachedDominanceFrontierProgram = CachedProgram;
 
-impl DominanceFrontierGpuScratch {
-    #[cfg(test)]
-    fn program_builds(&self) -> usize {
-        self.program_cache.builds()
-    }
-}
-
 /// Number of Regions flagged in the frontier bitset. Useful as a
 /// dispatch-time telemetry value: a high frontier count on a small
 /// seed indicates a wide-merge program shape that fusion passes

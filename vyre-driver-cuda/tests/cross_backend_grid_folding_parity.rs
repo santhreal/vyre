@@ -11,10 +11,9 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_reference::value::Value;
 
 /// A 1D program that stores its own element index at that index, over `words` elements.
 fn identity_program(words: u32) -> Program {
@@ -50,11 +49,7 @@ fn launch_past_the_pinned_per_axis_ceiling_folds_and_matches_cuda_and_reference(
     // 1. Reference interpreter oracle evaluation
     let ref_outputs = vyre_reference::reference_eval(&program, &[])
         .expect("Fix: reference_eval must evaluate the identity program");
-    let ref_bytes: Vec<u8> = match &ref_outputs[0] {
-        Value::U32(val) => val.to_le_bytes().to_vec(),
-        Value::U32Vec(vals) => vals.iter().flat_map(|v| v.to_le_bytes()).collect(),
-        other => panic!("Fix: unexpected reference value {other:?}"),
-    };
+    let ref_bytes: Vec<u8> = ref_outputs[0].to_bytes();
     assert_eq!(
         ref_bytes, expected,
         "Fix: reference interpreter must match explicit byte oracle"

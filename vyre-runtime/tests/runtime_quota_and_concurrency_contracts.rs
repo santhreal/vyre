@@ -17,11 +17,11 @@ use std::time::{Duration, Instant};
 
 use vyre_driver::DeviceIdentity;
 use vyre_megakernel::Digest;
-use vyre_runtime::session_quota::{
+use vyre_runtime::structured_concurrency::{ConcurrencyError, StructuredWorkerScope};
+use vyre_runtime::{
     CacheQuota, IoQuota, QueueQuota, RetainedGenerationQuota, RetryQuota, SessionIdentity,
     SessionQuota, SessionQuotaError, TelemetryQuota, TenantQuota,
 };
-use vyre_runtime::structured_concurrency::{ConcurrencyError, StructuredWorkerScope};
 use vyre_test_support::monorepo::vyre_workspace_root;
 
 #[test]

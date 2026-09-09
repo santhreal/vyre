@@ -13,7 +13,7 @@ pub use dual_registry::{dual_op_ids, resolve_dual, DualReferenceFacet};
 mod error;
 pub use error::{ReferenceError, ReferenceErrorClass, ReferenceErrorKind, StepCeilingExceeded};
 /// Typed, versioned reference execution requests, contracts, and certificates.
-pub mod request;
+mod request;
 pub use request::{
     DeterministicSchedulePolicy, DiagnosticPermissiveReport, ExactResourceAbi, ExecutionStrictness,
     ReferenceBudget, ReferenceCertificate, ReferenceRequest, StrictExecutionResult,
@@ -56,10 +56,10 @@ pub mod subgroup;
 pub mod workgroup;
 
 /// Bounded legal interleaving and race freedom verification oracle.
-pub mod interleaving;
+mod interleaving;
 pub use interleaving::{
-    explore_bounded_interleavings, InterleavingConfig, InterleavingReport, MemoryAccessKind,
-    ShadowMemory,
+    explore_bounded_interleavings, verify_closed_type_coverage_in_oracle, InterleavingConfig,
+    InterleavingReport, MemoryAccessKind, MemoryAccessRecord, ShadowMemory,
 };
 mod float16;
 mod oob;

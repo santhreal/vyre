@@ -124,7 +124,7 @@ pub fn plan_toposort_csr_dispatch(
 
 #[cfg(test)]
 mod dispatch_plan_tests {
-    use super::super::csr::{toposort_csr_into, validate_toposort_csr_order};
+    use super::super::csr::validate_toposort_csr_order;
     use super::*;
 
     #[test]
@@ -155,8 +155,10 @@ mod dispatch_plan_tests {
         let targets = [1, 2, 2];
         let mut order = Vec::with_capacity(3);
 
-        toposort_csr_into(3, &offsets, &targets, &mut order)
-            .expect("Fix: valid DAG CSR should topologically sort.");
+        vyre_reference::composition_witness::toposort_csr_into_witness(
+            3, &offsets, &targets, &mut order,
+        )
+        .expect("Fix: valid DAG CSR should topologically sort.");
 
         validate_toposort_csr_order(3, &offsets, &targets, &order)
             .expect("Fix: toposort_csr_into output must satisfy the public order validator.");

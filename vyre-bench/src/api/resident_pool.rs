@@ -425,8 +425,8 @@ mod tests {
 
         fn materialize(
             &self,
-            _artifact: &vyre::Artifact,
-            _payload: &vyre::TargetPayload,
+            _artifact: &vyre::compiler::Artifact,
+            _payload: &vyre::compiler::TargetPayload,
         ) -> Result<Box<dyn vyre_driver::ArtifactInstance>, BackendError> {
             Err(BackendError::UnsupportedFeature {
                 name: "materialize".to_string(),
@@ -436,7 +436,7 @@ mod tests {
     }
 
     fn pool_with_one_empty_set() -> ResidentInputPool {
-        let profile = vyre::TargetProfile::new("refusing", 1, [64, 1, 1], 64, 1_024, 0)
+        let profile = vyre::compiler::TargetProfile::new("refusing", 1, [64, 1, 1], 64, 1_024, 0)
             .expect("Fix: the fixture target profile must be valid.");
         let device = vyre_driver::materialize::MaterializerDevice::acquire(
             vyre_driver::materialize::DeviceSpec {

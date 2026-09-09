@@ -10,7 +10,7 @@ use vyre_driver::{
     ExternalMemoryKind, ImageDimensions, ImageFormat, ResourceAbiError, ResourcePermittedUsages,
     ResourceTransitionSchedule, ResourceUsageTransition, TimelineSyncProtocol,
 };
-use vyre_driver_cuda::external_resource::{
+use vyre_driver_cuda::{
     CudaExternalMemoryDescriptor, CudaExternalMemoryHandle, CudaExternalResourceImporter,
 };
 

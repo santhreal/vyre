@@ -31,13 +31,6 @@ pub struct BidirectionalGpuScratch {
 
 type CachedBidirectionalProgram = CachedProgram;
 
-impl BidirectionalGpuScratch {
-    #[cfg(test)]
-    fn program_builds(&self) -> usize {
-        self.program_cache.builds()
-    }
-}
-
 #[cfg(test)]
 mod edge_buffer_copy_tests {
     use super::*;

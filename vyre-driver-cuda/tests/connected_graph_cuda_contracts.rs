@@ -8,14 +8,14 @@
 
 use std::collections::BTreeMap;
 
-use vyre_driver::{BoundResource, DeviceIdentity};
+use vyre_driver::BoundResource;
 use vyre_driver_cuda::{registered_backend_id, CUDA_BACKEND_ID};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
-    attach_target, compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
+    attach_target, compile, CompileObjective, CompileRequest, Digest, ExternalFacts,
     ObjectiveMetric, SearchBudget,
 };
 use vyre_runtime::artifact_admission::ArtifactSession;
@@ -37,11 +37,17 @@ fn cuda_executes_pure_dataflow_connected_graph() {
     let _ = registered_backend_id();
     let registration =
         vyre_driver::backend_registration(CUDA_BACKEND_ID).expect("registered CUDA backend");
+    let materializer = registration
+        .materializer()
+        .expect("CUDA materializer acquisition must succeed");
+    assert!(
+        materializer.device().is_healthy(),
+        "CUDA device must be healthy"
+    );
     let device = registration
         .acquire()
         .expect("CUDA device acquisition must succeed");
-    assert!(device.is_healthy(), "CUDA device must be healthy");
-    let facts = device.device_profile().compile_facts();
+    let device_facts = device.device_profile().compile_facts();
 
     // Pure Dataflow: 3-stage connected pipeline
     // Node 0: Y = 3 * X + 5
@@ -177,7 +183,7 @@ fn cuda_executes_pure_dataflow_connected_graph() {
     let request = CompileRequest::new(
         graph,
         facts(),
-        facts,
+        device_facts,
         budget(),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
     )
@@ -190,7 +196,7 @@ fn cuda_executes_pure_dataflow_connected_graph() {
     assert_ne!(artifact.digest(), Digest([0; 32]));
 
     let envelope = attach_target(artifact, compiler.as_ref()).expect("attach target");
-    assert_ne!(envelope.target_payload().digest(), Digest([0; 32]));
+    assert_ne!(envelope.target_payloads()[0].digest(), Digest([0; 32]));
 
     let session = ArtifactSession::from_envelope(registration, envelope).expect("materialization");
     let mut bindings = session.bindings().expect("binding set");
@@ -214,9 +220,8 @@ fn cuda_executes_pure_dataflow_connected_graph() {
 
     // Assert on artifact and payload records
     assert_ne!(completion.artifact, Digest([0; 32]));
-    assert_ne!(completion.payload, Digest([0; 32]));
     assert_eq!(completion.artifact, session.artifact().unwrap());
-    assert_eq!(completion.payload, session.payload().unwrap());
+    assert_ne!(session.payload().unwrap(), Digest([0; 32]));
 
     // Validate outputs against independent oracle:
     // X = [1, 2, 3, 4] -> Y = [8, 11, 14, 17] -> S = 50 -> Z = [58, 61, 64, 67]
@@ -241,11 +246,17 @@ fn cuda_executes_retained_iterative_state_across_steps() {
     let _ = registered_backend_id();
     let registration =
         vyre_driver::backend_registration(CUDA_BACKEND_ID).expect("registered CUDA backend");
+    let materializer = registration
+        .materializer()
+        .expect("CUDA materializer acquisition must succeed");
+    assert!(
+        materializer.device().is_healthy(),
+        "CUDA device must be healthy"
+    );
     let device = registration
         .acquire()
         .expect("CUDA device acquisition must succeed");
-    assert!(device.is_healthy(), "CUDA device must be healthy");
-    let facts = device.device_profile().compile_facts();
+    let device_facts = device.device_profile().compile_facts();
 
     let mut graph = ProgramGraph::new();
 
@@ -314,7 +325,7 @@ fn cuda_executes_retained_iterative_state_across_steps() {
     let request = CompileRequest::new(
         graph,
         facts(),
-        facts,
+        device_facts,
         budget(),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
     )

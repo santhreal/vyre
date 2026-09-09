@@ -7,7 +7,6 @@
 
 use vyre_driver::BindingPlan;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, MemoryKind, Node, Program};
-use vyre_reference::value::Value;
 
 fn sample_mixed_program() -> Program {
     Program::wrapped(
@@ -182,7 +181,7 @@ fn host_input_abi_refusal_contracts_non_device() {
 #[cfg(feature = "device-tests")]
 #[test]
 fn long_form_with_output_placeholder_is_refused_with_both_counts_named() {
-    use vyre_driver::{DispatchConfig, VyreBackend};
+    use vyre_driver::DispatchConfig;
     use vyre_driver_cuda::CudaBackend;
 
     let backend = CudaBackend::acquire()
@@ -237,8 +236,9 @@ fn long_form_with_output_placeholder_is_refused_with_both_counts_named() {
 #[cfg(feature = "device-tests")]
 #[test]
 fn reference_interpreter_and_cuda_backend_agree_on_accepted_input_counts() {
-    use vyre_driver::{DispatchConfig, VyreBackend};
+    use vyre_driver::DispatchConfig;
     use vyre_driver_cuda::CudaBackend;
+    use vyre_reference::value::Value;
 
     let backend = CudaBackend::acquire()
         .expect("Fix: live CUDA backend is required for input ABI contract coverage");

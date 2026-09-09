@@ -645,15 +645,24 @@ impl ContractionComposer {
                             });
                         }
 
-                        {
-                            let _ = (generator, a_tile_name, b_tile_name);
-                            Err(TensorRefError::ShapeMismatch {
-                                name: "tiled".into(),
-                                found: vec![tile],
-                                expected: vec![],
-                                op: self.op_id,
-                            })
-                        }
+                        let wg = self.options.workgroup_size.unwrap_or([tile, tile, 1]);
+                        build_matmul_2d_cooperative(
+                            generator,
+                            self.a.name_str(),
+                            self.b.name_str(),
+                            self.bias.as_ref().map(TensorRef::name_str),
+                            self.out.name_str(),
+                            m,
+                            k,
+                            n,
+                            tile,
+                            a_tile_name,
+                            b_tile_name,
+                            &self.dtype,
+                            &self.semiring,
+                            &self.epilogue,
+                            wg,
+                        )
                     }
                     ContractionTiling::Block1D { tile } => build_block_1d_contraction(
                         generator,

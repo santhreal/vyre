@@ -377,7 +377,7 @@ pub(crate) fn arb_program() -> BoxedStrategy<Program> {
                 vec![
                     BufferDecl::output("out", 0, DataType::U32)
                         .with_count(8)
-                        .with_output_byte_range(0..16),
+                        .with_output_byte_range(0u64..16),
                     BufferDecl::read("input", 1, DataType::U32).with_count(8),
                     BufferDecl::read_write("rw", 2, DataType::U32).with_count(8),
                     BufferDecl::read("counts", 3, DataType::U32).with_count(8),

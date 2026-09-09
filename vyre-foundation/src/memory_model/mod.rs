@@ -10,15 +10,15 @@
 //! capability, state-epoch, and effect tokens; every load, store, atomic, collective, and
 //! state transition consumes and produces explicit obligations.
 
-pub mod async_tx;
-pub mod atomic;
-pub mod collective;
-pub mod failure;
-pub mod fence;
-pub mod legacy;
-pub mod obligations;
-pub mod scope;
-pub mod storage;
+pub(crate) mod async_tx;
+pub(crate) mod atomic;
+pub(crate) mod collective;
+pub(crate) mod failure;
+pub(crate) mod fence;
+pub(crate) mod legacy;
+pub(crate) mod obligations;
+pub(crate) mod scope;
+pub(crate) mod storage;
 
 pub use async_tx::{exhaustiveness_check_async_transaction_lifecycle, AsyncTransactionLifecycle};
 pub use atomic::{exhaustiveness_check_atomic_ordering, AtomicOrdering};

@@ -112,7 +112,7 @@ security = ["label", "predicate", "dep:vyre-libs-security", "vyre-libs-security?
 predicate = ["graph", "bitset", "label", "dep:vyre-libs-security", "vyre-libs-security?/predicate"]
 label = ["bitset", "dep:vyre-libs-security", "vyre-libs-security?/label"]
 
-visual = ["math-kernels", "dep:vyre-libs-visual", "vyre-libs-visual?/visual"]
+visual = ["math-kernels", "dep:vyre-libs-visual", "vyre-libs-visual?/visual", "vyre-libs-graph?/visual"]
 rule = ["builder", "dep:vyre-libs-rule", "vyre-libs-rule?/rule"]
 vfs = ["dep:vyre-libs-vfs", "vyre-libs-vfs?/vfs"]
 
@@ -122,7 +122,7 @@ encoding = ["device", "telemetry", "pattern-kernels", "math-kernels", "nn-kernel
 analysis = ["device", "telemetry", "math-kernels", "graph", "dep:vyre-libs-analysis", "vyre-libs-analysis?/analysis"]
 reasoning = ["analysis", "graph", "dep:vyre-libs-reasoning", "vyre-libs-reasoning?/reasoning"]
 scheduling = ["device", "telemetry", "math-kernels", "parsing-kernels", "graph", "dep:vyre-libs-scheduling", "vyre-libs-scheduling?/scheduling"]
-"graph-dispatch" = ["device", "telemetry", "math-kernels", "graph"]
+"graph-dispatch" = ["device", "telemetry", "math-kernels", "graph", "vyre-libs-graph?/graph-dispatch"]
 
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }

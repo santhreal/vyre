@@ -78,13 +78,6 @@ pub mod compiler {
     };
 }
 
-/// Canonical compiler artifact, request, and workload types.
-pub use compiler::{
-    Artifact, ArtifactEnvelope, ArtifactPortfolio, CompileObjective, CompileRequest, DeviceFacts,
-    Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetPayload, TargetPayloadFormat,
-    TargetProfile, ValidatedCompileRequest, WorkloadProfile,
-};
-
 /// Shared structured diagnostic protocol.
 pub use vyre_foundation::diagnostics;
 /// Retry classification shared by every diagnostic that can be retried.

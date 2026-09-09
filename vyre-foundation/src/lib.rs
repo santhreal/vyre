@@ -134,7 +134,7 @@ pub mod loop_bounds;
 /// Domain-neutral byte-range result types.
 pub mod match_result;
 /// Substrate-neutral memory ordering.
-pub mod memory_model;
+mod memory_model;
 /// Optimizer performance counters.
 pub mod perf;
 /// Source-derived platform support matrix, wire types, and adapters (Row 118).

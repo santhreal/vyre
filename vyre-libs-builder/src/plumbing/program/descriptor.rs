@@ -118,7 +118,7 @@ impl ProgramDescriptor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::BufferDecl;
+    use vyre_foundation::ir::{BufferDecl, Node};
 
     #[test]
     fn descriptor_summarizes_program() {
@@ -126,6 +126,8 @@ mod tests {
             vec![
                 BufferDecl::storage("in", 0, BufferAccess::ReadWrite, DataType::F32).with_count(64),
                 BufferDecl::output("out", 1, DataType::F32).with_count(64),
+                BufferDecl::storage("param", 2, BufferAccess::ReadOnly, DataType::F32)
+                    .with_count(64),
             ],
             [64, 1, 1],
             Vec::new(),
@@ -133,12 +135,21 @@ mod tests {
 
         let desc = ProgramDescriptor::from_program(&program);
 
-        assert_eq!(desc.buffer_count, 2);
+        assert_eq!(desc.buffer_count, 3);
         assert_eq!(desc.workgroup_size, [64, 1, 1]);
-        assert_eq!(desc.entry_node_count, 0);
+        // `Program::wrapped` installs a root region around the entry, so an
+        // empty entry still reports one top-level node.
+        assert_eq!(desc.entry_node_count, 1);
+        assert!(
+            matches!(program.entry()[0], Node::Region { .. }),
+            "Fix: the single top-level node must be the root region wrap."
+        );
         assert_eq!(desc.buffers[0].name, "in");
         assert_eq!(desc.buffers[1].name, "out");
-        // Only the ReadWrite buffer counts: 64 F32 elements at 4 bytes each.
-        assert_eq!(desc.rw_bytes_lower_bound, 256);
+        assert_eq!(desc.buffers[2].name, "param");
+        // `BufferDecl::output` is read-write storage, so "in" and "out" both
+        // count at 64 F32 elements times 4 bytes. The read-only "param" is
+        // excluded, which is what makes the access filter observable here.
+        assert_eq!(desc.rw_bytes_lower_bound, 512);
     }
 }

@@ -289,7 +289,7 @@ pub(crate) fn matroid_intersection_eval(
     max_augmentations: u32,
     min_dispatch: u32,
 ) -> Vec<u32> {
-    use vyre_libs::math::matroid_intersection_full::matroid_intersection_full;
+    use vyre_libs::graph::matroid_intersection_full::matroid_intersection_full;
     use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
     let program = matroid_intersection_full(
         "exchange_adj",

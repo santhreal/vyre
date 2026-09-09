@@ -23,10 +23,3 @@ pub struct ToposortGpuScratch {
 }
 
 type CachedToposortProgram = CachedProgram;
-
-impl ToposortGpuScratch {
-    #[cfg(test)]
-    fn program_builds(&self) -> usize {
-        self.program_cache.builds()
-    }
-}

@@ -4,12 +4,12 @@
 //! for strings, types, constants, and layouts, stage-specific read-only views for
 //! all five compiler levels, versioned caching, and a single deterministic query engine.
 
-pub mod arenas;
-pub mod cache;
-pub mod ids;
-pub mod pass_contracts;
-pub mod query;
-pub mod views;
+mod arenas;
+mod cache;
+mod ids;
+mod pass_contracts;
+mod query;
+mod views;
 
 pub use arenas::{
     CanonicalConst, CanonicalLayout, CanonicalType, ConstInterner, ExprArena, LayoutInterner,

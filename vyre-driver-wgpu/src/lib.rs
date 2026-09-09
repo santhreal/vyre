@@ -11,7 +11,7 @@ mod dispatch_timeout;
 pub mod emit;
 pub mod engine;
 /// WGPU external resource import/export and timeline synchronization (Row 111).
-pub mod external_resource;
+mod external_resource;
 mod materializer;
 mod numeric;
 mod padded_upload;

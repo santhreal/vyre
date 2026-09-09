@@ -12,9 +12,9 @@
 //!
 //! Missing or failing ANY single stage means the operation is unsupported.
 
-use vyre_driver::support_certificate::{
-    FactStatus, ProductionPathStage, SupportCertificate, SupportCertificateRegistry, SupportStatus,
-    SUPPORT_CERTIFICATE_SCHEMA,
+use vyre_driver::{
+    FactStatus, ProductionPathFact, ProductionPathStage, SupportCertificate,
+    SupportCertificateRegistry, SupportStatus, SUPPORT_CERTIFICATE_SCHEMA,
 };
 use vyre_foundation::ir::OpId;
 
@@ -162,7 +162,7 @@ fn support_certificate_registry_filters_unsupported_operations() {
         sample_fully_proven_certificate("mock_backend", "mock_target", op_unsupported.as_ref());
     cert_bad.facts.insert(
         ProductionPathStage::DeviceExecution,
-        vyre_driver::support_certificate::ProductionPathFact {
+        ProductionPathFact {
             stage: ProductionPathStage::DeviceExecution,
             status: FactStatus::Failed {
                 reason: "GridSync not supported in mock runtime".to_string(),

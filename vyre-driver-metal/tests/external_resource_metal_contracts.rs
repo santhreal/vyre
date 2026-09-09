@@ -11,7 +11,7 @@ use vyre_driver::{
     ResourcePermittedUsages, ResourceTransitionSchedule, ResourceUsageTransition,
     TimelineSyncProtocol,
 };
-use vyre_driver_metal::external_resource::{
+use vyre_driver_metal::{
     MetalExternalMemoryDescriptor, MetalExternalMemoryHandle, MetalExternalResourceImporter,
 };
 

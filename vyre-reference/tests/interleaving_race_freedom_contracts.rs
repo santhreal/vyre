@@ -10,7 +10,7 @@ use vyre_foundation::ir::{
     ExecutionScope, Expr, FailureCancellationBehavior, FenceSemantics, Ident, MemoryOrdering,
     MemoryScope, Node, Program, StorageDomain,
 };
-use vyre_reference::interleaving::{
+use vyre_reference::{
     explore_bounded_interleavings, verify_closed_type_coverage_in_oracle, InterleavingConfig,
     MemoryAccessKind, ShadowMemory,
 };

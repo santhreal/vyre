@@ -7,7 +7,7 @@ fn base_buffers() -> Vec<BufferDecl> {
     vec![
         BufferDecl::output("out", 0, DataType::U32)
             .with_count(8)
-            .with_output_byte_range(0..16),
+            .with_output_byte_range(0u64..16),
         BufferDecl::read("input", 1, DataType::U32).with_count(8),
         BufferDecl::read_write("rw", 2, DataType::U32)
             .with_count(8)
@@ -22,7 +22,7 @@ fn reordered_buffers() -> Vec<BufferDecl> {
             .with_bytes_extraction(true),
         BufferDecl::output("out", 0, DataType::U32)
             .with_count(8)
-            .with_output_byte_range(0..16),
+            .with_output_byte_range(0u64..16),
         BufferDecl::read("input", 1, DataType::U32).with_count(8),
     ]
 }

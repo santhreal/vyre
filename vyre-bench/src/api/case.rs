@@ -514,7 +514,6 @@ pub(crate) fn static_program_bytes_touched(program: &vyre::ir::Program) -> (u64,
                 write_bytes = write_bytes.saturating_add(bytes);
             }
             vyre::ir::BufferAccess::Workgroup => {}
-            _ => {}
         }
     }
     (read_bytes, write_bytes)

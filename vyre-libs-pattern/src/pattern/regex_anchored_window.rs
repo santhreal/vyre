@@ -100,72 +100,12 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
         }
     }
 
-    /// Replay the anchored DFA seeded at a single candidate `origin`, appending
-    /// every `(pattern_id, origin, end)` it accepts to `out`.
-    ///
-    /// Emits one [`ByteRange`] per `(accepting state, pattern id in that state's
-    /// output set)`, so a variable-length pattern that accepts at several ends,
-    /// and distinct overlapping patterns that accept at one end, all surface
-    /// (mirrors the whole-buffer AC dispatch's `output_records` fan-out). Does
-    /// not sort or deduplicate; call [`Self::validate_candidates`] for a
-    /// canonical, deduplicated batch result. Out-of-range origins are ignored.
-    pub(crate) fn validate_candidate(
-        &self,
-        haystack: &[u8],
-        origin: u32,
-        out: &mut Vec<ByteRange>,
-    ) {
-        let origin_idx = origin as usize;
-        if origin_idx >= haystack.len() {
-            return;
-        }
-        let window = (self.dfa.max_pattern_len as usize).min(haystack.len() - origin_idx);
-        let mut state = 0u32;
-        for step in 0..window {
-            let byte = haystack[origin_idx + step];
-            let trans_idx =
-                vyre_libs_builder::builder::state_machine::TableStateMachineComposer::flat_byte_index(
-                    state, byte,
-                );
-            state = self.dfa.transitions[trans_idx];
-            if Some(state) == self.dead_state {
-                // Dead sink: self-loops forever, never accepts, no match can
-                // follow, so stop replaying this origin.
-                break;
-            }
-            let end = origin + step as u32 + 1;
-            let lo = self.dfa.output_offsets[state as usize] as usize;
-            let hi = self.dfa.output_offsets[state as usize + 1] as usize;
-            for &pattern_id in &self.dfa.output_records[lo..hi] {
-                out.push(ByteRange::new(pattern_id, origin, end));
-            }
-        }
-    }
-
-    /// Validate a batch of candidate origins, returning the extracted match set
-    /// in canonical `(start, end, pattern_id)` order with exact duplicates
-    /// removed.
-    ///
-    /// Duplicate or overlapping origins that yield the same `(pid, start, end)`
-    /// collapse to one entry, so the result is a set a consumer can union with
-    /// other shards without double counting.
-    #[must_use]
-    pub(crate) fn validate_candidates(&self, haystack: &[u8], origins: &[u32]) -> Vec<ByteRange> {
-        let mut matches = Vec::new();
-        for &origin in origins {
-            self.validate_candidate(haystack, origin, &mut matches);
-        }
-        matches.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
-        matches.dedup();
-        matches
-    }
-
     /// Replay the anchored DFA seeded at `origin` and append only the LONGEST
     /// match per pattern id, the leftmost-longest ("maximal munch") semantics a
     /// scanner wants (to `out`).
     ///
-    /// [`Self::validate_candidate`] emits one [`ByteRange`] per accepting end (the
-    /// raw DFA fan-out); for a variable-length pattern (`{n,m}`, `+`, `*`) that
+    /// The raw DFA fan-out accepts once per accepting end; for a
+    /// variable-length pattern (`{n,m}`, `+`, `*`) that
     /// is `m - n + 1` overlapping partial hits for a single token. A credential
     /// scanner wants exactly one finding covering the whole token, so this
     /// collapses each pattern's accepts to the maximal `end` reachable from
@@ -224,8 +164,7 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
 
     /// Batch [`Self::validate_candidate_leftmost_longest`] over `origins`,
     /// returning the canonical `(start, end, pattern_id)`-ordered set with exact
-    /// duplicates removed, the leftmost-longest analogue of
-    /// [`Self::validate_candidates`].
+    /// duplicates removed.
     #[must_use]
     pub(crate) fn validate_candidates_leftmost_longest(
         &self,

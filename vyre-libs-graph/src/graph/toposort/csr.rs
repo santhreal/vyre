@@ -18,50 +18,6 @@ pub struct ToposortCsrLayout {
     pub target_words: usize,
 }
 
-/// CPU reference over the primitive-native CSR adjacency shape.
-///
-/// `offsets` has `node_count + 1` entries and `targets` stores outgoing
-/// edges from each prerequisite node to its dependent nodes. The returned
-/// order is valid iff every prerequisite appears before every dependent.
-///
-/// # Errors
-///
-/// Returns [`ToposortCsrError::BadCsr`] when the CSR shape is malformed and
-/// [`ToposortCsrError::BadOrder`] only if derived state violates the
-/// topological-order contract after input validation.
-#[cfg(all(test, feature = "graph-dispatch"))]
-pub(crate) fn toposort_csr(
-    node_count: u32,
-    offsets: &[u32],
-    targets: &[u32],
-) -> Result<Vec<u32>, ToposortCsrError> {
-    let mut order = Vec::new();
-    toposort_csr_into(node_count, offsets, targets, &mut order)?;
-    Ok(order)
-}
-
-/// CPU reference over primitive-native CSR adjacency, reusing caller storage.
-///
-/// # Errors
-///
-/// Returns [`ToposortCsrError::BadCsr`] when CSR validation fails and
-/// [`ToposortCsrError::BadOrder`] when the derived order violates the
-/// primitive contract.
-#[cfg(test)]
-pub(crate) fn toposort_csr_into(
-    node_count: u32,
-    offsets: &[u32],
-    targets: &[u32],
-    order: &mut Vec<u32>,
-) -> Result<(), ToposortCsrError> {
-    let layout = validate_toposort_csr_inputs(node_count, offsets, targets)?;
-    vyre_reference::composition_witness::toposort_csr_into_witness(
-        node_count, offsets, targets, order,
-    )
-    .map_err(|message| ToposortCsrError::BadOrder { message })?;
-    validate_toposort_csr_order_with_layout(&layout, offsets, targets, order)
-}
-
 /// Validate primitive-native CSR input shape.
 ///
 /// # Errors

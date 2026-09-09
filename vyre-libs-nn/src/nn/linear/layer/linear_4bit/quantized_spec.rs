@@ -199,7 +199,7 @@ mod tests {
                         );
                         assert_eq!(
                             output.output_byte_range(),
-                            Some(0..(out_dim as usize * core::mem::size_of::<f32>())),
+                            Some(0..(u64::from(out_dim) * core::mem::size_of::<f32>() as u64)),
                             "Fix: grouped INT4 output byte range must trim padded launch storage to the logical tensor."
                         );
                         accepted += 1;

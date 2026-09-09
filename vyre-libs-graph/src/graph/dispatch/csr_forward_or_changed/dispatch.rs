@@ -32,35 +32,6 @@ pub struct ForwardChangedGpuScratch {
 
 type CachedForwardChangedProgram = CachedProgram;
 
-impl ForwardChangedGpuScratch {
-    #[cfg(test)]
-    pub(super) fn program_builds(&self) -> usize {
-        self.program_cache.builds()
-    }
-
-    #[cfg(test)]
-    pub(super) fn with_input_capacities(
-        input_capacities: &[usize],
-        changed_capacity: usize,
-    ) -> Self {
-        let mut inputs = Vec::new();
-        inputs.reserve_exact(input_capacities.len());
-        for &capacity in input_capacities {
-            let mut input = Vec::new();
-            input.reserve_exact(capacity);
-            inputs.push(input);
-        }
-        let mut changed_out = Vec::new();
-        changed_out.reserve_exact(changed_capacity);
-        Self {
-            inputs,
-            changed_out,
-            static_input_key: None,
-            program_cache: ProgramCache::default(),
-        }
-    }
-}
-
 /// Dispatcher-backed closure: build the `csr_forward_or_changed` Program once,
 /// then iterate dispatch + read the `changed` flag to detect fixpoint.
 /// Terminates when no new bits land in the frontier or after `max_iters`.

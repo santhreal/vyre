@@ -3,7 +3,6 @@
 
 use vyre_driver::{BackendError, BackendRegistration};
 use vyre_foundation::ir::Program;
-use vyre_reference::value::Value;
 use vyre_reference::ReferenceError;
 
 use crate::production::ProductionSession;

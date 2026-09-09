@@ -20,10 +20,9 @@ pub use vyre_spec::{
     ExternalEventCapability, ExternalEventKind, ExternalMemoryCapability, ExternalMemoryKind,
     FilterMode, FormatClass, ImageDimensions, ImageFormat, ImagePlane, ImageViewDescriptor,
     ImageViewKind, MipmapFilterMode, PlaneKind, ResourceAbiError, ResourceAliasSet,
-    ResourceLayoutState,
-    ResourceLifetimeState, ResourceOwnershipState, ResourcePermittedUsages, ResourceProvenance,
-    ResourceUsageTransition, SamplerCapability, SamplerDescriptor, SubresourceRange,
-    SwizzleComponent, TimelineSyncProtocol,
+    ResourceLayoutState, ResourceLifetimeState, ResourceOwnershipState, ResourcePermittedUsages,
+    ResourceProvenance, ResourceUsageTransition, SamplerCapability, SamplerDescriptor,
+    SubresourceRange, SwizzleComponent, TimelineSyncProtocol,
 };
 
 use crate::ResidentOwner;

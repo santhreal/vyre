@@ -454,7 +454,11 @@ mod tests {
             ],
         );
         let expected = expected_matmul(&a, &b, None, m, k, n);
-        assert_eq!(&actual[..expected.len()], expected.as_slice());
+        assert_eq!(
+            actual, expected,
+            "Fix: edge-tiled matmul must match the reference across the whole \
+             output buffer, including any lane that maps outside the logical tile."
+        );
     }
 
     #[test]
@@ -485,7 +489,11 @@ mod tests {
             ],
         );
         let expected = expected_matmul(&a, &b, Some(&bias), m, k, n);
-        assert_eq!(&actual[..expected.len()], expected.as_slice());
+        assert_eq!(
+            actual, expected,
+            "Fix: edge-tiled matmul+bias must match the reference across the whole \
+             output buffer, including any lane that maps outside the logical tile."
+        );
     }
 
     #[test]

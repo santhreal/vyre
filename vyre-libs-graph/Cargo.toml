@@ -25,7 +25,7 @@ topology = ["graph"]
 graph-dispatch = ["graph"]
 analysis = ["graph"]
 reasoning = ["graph"]
-visual = ["graph"]
+visual = ["graph", "dep:vyre-libs-visual", "vyre-libs-visual?/visual"]
 
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }
@@ -48,12 +48,14 @@ vyre-libs-reduce = { workspace = true }
 vyre-libs-fixpoint = { workspace = true }
 vyre-libs-math = { workspace = true }
 vyre-libs-hash = { workspace = true }
+vyre-libs-visual = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
+vyre-driver-reference = { workspace = true }
 
 [[test]]
 name = "all_tests"

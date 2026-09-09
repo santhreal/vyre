@@ -4,7 +4,6 @@ pub mod builder;
 pub mod plumbing;
 pub mod prelude;
 
-pub use builder::*;
 pub use plumbing::host::dispatch_buffers::*;
 pub use plumbing::host::program_cache::*;
 pub use plumbing::host::scratch::*;

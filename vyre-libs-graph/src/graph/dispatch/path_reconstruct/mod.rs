@@ -31,15 +31,3 @@ pub struct PathReconstructGpuScratch {
 
 type CachedSinglePathProgram = CachedProgram;
 type CachedBatchedPathProgram = CachedProgram;
-
-impl PathReconstructGpuScratch {
-    #[cfg(test)]
-    fn single_program_builds(&self) -> usize {
-        self.single_program_cache.builds()
-    }
-
-    #[cfg(test)]
-    fn batched_program_builds(&self) -> usize {
-        self.batched_program_cache.builds()
-    }
-}

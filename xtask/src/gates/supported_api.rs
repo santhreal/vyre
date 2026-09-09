@@ -312,7 +312,10 @@ mod tests {
 
     #[test]
     fn classify_line_identifies_kinds_and_stability() {
-        let item = classify_line("pub struct vyre::CompileRequest", "stable-consumer-sdk");
+        let item = classify_line(
+            "pub struct vyre::compiler::CompileRequest",
+            "stable-consumer-sdk",
+        );
         assert_eq!(item.kind, "struct");
         assert_eq!(item.stability, "stable");
         assert_eq!(item.wire_compatibility, "api-only");
@@ -335,7 +338,7 @@ mod tests {
             publication_class: "stable-consumer-sdk".to_string(),
             stability: "stable".to_string(),
             items: vec![ClassifiedItem {
-                path: "vyre::CompileRequest".to_string(),
+                path: "vyre::compiler::CompileRequest".to_string(),
                 kind: "struct".to_string(),
                 stability: "stable".to_string(),
                 feature: "default".to_string(),

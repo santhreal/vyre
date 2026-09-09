@@ -227,12 +227,6 @@ impl std::fmt::Display for FullReport {
         f.write_str(&self.format_short())
     }
 }
-pub use verify::format_verify_errors;
-pub use verify::{verify, VerifyError, VerifyErrorKind, VerifyResult};
-
-pub use analyses::contraction_candidates::{
-    ContractionCandidate, ContractionPlan, ContractionStrategy,
-};
 pub use descriptor::{
     descriptor_trap_tags, scan_construct_intent_mapping, AsyncTransaction, AsyncTransactionError,
     AsyncWaitSpec, BarrierPhase, BindingLayout, BindingSlot, BindingVisibility, DescriptorIntent,
@@ -264,6 +258,8 @@ pub use verified_lowering::{
     lower_baseline, lower_physical, lower_scheduled, PhysicalKernel, PhysicalLowering,
     PhysicalLoweringError,
 };
+pub use verify::format_verify_errors;
+pub use verify::{verify, VerifyError, VerifyErrorKind, VerifyResult};
 /// Re-exported so consumers matching/constructing `KernelOpKind::SubgroupReduce`
 /// can name the reduction operator without depending on `vyre-foundation`.
 pub use vyre_foundation::ir::SubgroupReduceOp;

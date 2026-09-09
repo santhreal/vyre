@@ -33,7 +33,7 @@ mod semantic_execution;
 pub use semantic_execution::RegisteredSemanticExecutor;
 
 /// External resource admission, layout/usage transition execution, and timeline synchronization (Row 111).
-pub mod external_resource_admission;
+mod external_resource_admission;
 /// Paged resource residency contracts, geometry validation, and candidate planning.
 pub mod paged_resource;
 /// Backend-neutral immutable-resource and mutable-state residency.
@@ -91,7 +91,7 @@ pub use uring_completion_pump::{UringCompletionPump, UringPollState};
 /// Mandatory finite session quotas and typed session identity.
 pub use vyre_foundation::{FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError};
 
-pub mod session_quota;
+mod session_quota;
 pub use session_quota::*;
 
 /// Structured concurrency, cancellation propagation, and worker/device quarantine.

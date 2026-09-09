@@ -10,7 +10,7 @@ use vyre_driver::{
     ExternalMemoryKind, ImageDimensions, ImageFormat, ResourceAbiError, ResourcePermittedUsages,
     ResourceTransitionSchedule, ResourceUsageTransition, TimelineSyncProtocol,
 };
-use vyre_driver_wgpu::external_resource::{
+use vyre_driver_wgpu::{
     WgpuExternalMemoryDescriptor, WgpuExternalMemoryHandle, WgpuExternalResourceImporter,
 };
 

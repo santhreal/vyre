@@ -100,10 +100,11 @@ fn acquire_cuda_resident_execution() -> (
     let backend = crate::harness::live_backend();
     let registration =
         vyre_driver::backend_registration(CUDA_BACKEND_ID).expect("registered CUDA backend");
+    let device = registration.acquire().expect("live CUDA backend");
     let executor = RegisteredSemanticExecutor::new(registration);
     let policy = SemanticExecutionPolicy::new(
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        backend.device_profile().compile_facts(),
+        device.device_profile().compile_facts(),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
         SearchBudget::new(128, 128, 0, 0, 128),
     );
