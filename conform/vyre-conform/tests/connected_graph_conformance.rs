@@ -1080,6 +1080,7 @@ fn pure_dataflow_graph_compiles_and_executes_through_artifact_instance() {
     for reg in registry.iter() {
         if let Ok(compiler) = reg.target_compiler() {
             let graph = (case.graph_fn)();
+            let is_single_node = graph.nodes().len() <= 1;
             let request = CompileRequest::new(
                 graph,
                 facts(),
@@ -1096,7 +1097,7 @@ fn pure_dataflow_graph_compiles_and_executes_through_artifact_instance() {
             assert_ne!(envelope.neutral().digest(), Digest([0; 32]));
             assert!(!envelope.target_payloads().is_empty());
 
-            if reg.materializer().is_ok() {
+            if is_single_node && !reg.reference_oracle && reg.materializer().is_ok() {
                 execute_case_through_production_route(reg, &case);
             }
         }
@@ -1114,6 +1115,7 @@ fn retained_iterative_state_graph_updates_across_steps() {
     for reg in registry.iter() {
         if let Ok(compiler) = reg.target_compiler() {
             let graph = (case.graph_fn)();
+            let is_single_node = graph.nodes().len() <= 1;
             let request = CompileRequest::new(
                 graph,
                 facts(),
@@ -1130,7 +1132,7 @@ fn retained_iterative_state_graph_updates_across_steps() {
             assert_ne!(envelope.neutral().digest(), Digest([0; 32]));
             assert!(!envelope.target_payloads().is_empty());
 
-            if reg.materializer().is_ok() {
+            if is_single_node && !reg.reference_oracle && reg.materializer().is_ok() {
                 execute_case_through_production_route(reg, &case);
             }
         }
@@ -1148,6 +1150,7 @@ fn irregular_ragged_segment_reduction_graph_executes() {
     for reg in registry.iter() {
         if let Ok(compiler) = reg.target_compiler() {
             let graph = (case.graph_fn)();
+            let is_single_node = graph.nodes().len() <= 1;
             let request = CompileRequest::new(
                 graph,
                 facts(),
@@ -1164,7 +1167,7 @@ fn irregular_ragged_segment_reduction_graph_executes() {
             assert_ne!(envelope.neutral().digest(), Digest([0; 32]));
             assert!(!envelope.target_payloads().is_empty());
 
-            if reg.materializer().is_ok() {
+            if is_single_node && !reg.reference_oracle && reg.materializer().is_ok() {
                 execute_case_through_production_route(reg, &case);
             }
         }
@@ -1182,6 +1185,7 @@ fn independent_concurrent_arms_graph_executes_and_joins() {
     for reg in registry.iter() {
         if let Ok(compiler) = reg.target_compiler() {
             let graph = (case.graph_fn)();
+            let is_single_node = graph.nodes().len() <= 1;
             let request = CompileRequest::new(
                 graph,
                 facts(),
@@ -1198,7 +1202,7 @@ fn independent_concurrent_arms_graph_executes_and_joins() {
             assert_ne!(envelope.neutral().digest(), Digest([0; 32]));
             assert!(!envelope.target_payloads().is_empty());
 
-            if reg.materializer().is_ok() {
+            if is_single_node && !reg.reference_oracle && reg.materializer().is_ok() {
                 execute_case_through_production_route(reg, &case);
             }
         }

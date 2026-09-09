@@ -23,6 +23,55 @@ fn conform_binary() -> &'static str {
     env!("CARGO_BIN_EXE_vyre-conform")
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+struct SyntheticSelectionSummary {
+    backend_filter: String,
+    ops_filter: String,
+    shard_index: Option<usize>,
+    shard_count: Option<usize>,
+    universe_backend_count: usize,
+    universe_op_count: usize,
+    selected_backend_count: usize,
+    selected_op_count: usize,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct SyntheticPlanSummary {
+    backend_count: usize,
+    op_count: usize,
+    pair_count: usize,
+    witness_case_count: usize,
+    catalog_hash: String,
+    execution_hash: String,
+    selection: SyntheticSelectionSummary,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct SyntheticConformanceResult {
+    op_id: String,
+    backend_id: String,
+    passed: bool,
+    message: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct SyntheticLawRecord {
+    op_id: String,
+    law: String,
+    witness: String,
+    cases: usize,
+}
+
+#[derive(serde::Serialize)]
+struct SyntheticSignableBody<'a> {
+    wire_format_version: u32,
+    program_hash: &'a str,
+    backend_id: &'a str,
+    plan: &'a SyntheticPlanSummary,
+    pairs: &'a [SyntheticConformanceResult],
+    laws: &'a [SyntheticLawRecord],
+}
+
 fn write_signed_shard(
     path: &std::path::Path,
     catalog_hash: &str,
@@ -31,36 +80,37 @@ fn write_signed_shard(
     pairs: Value,
     laws: Value,
 ) {
-    let pairs_array = pairs
-        .as_array()
-        .expect("Fix: synthetic test pairs must be an array");
-    let plan = serde_json::json!({
-        "backend_count": 1,
-        "op_count": pairs_array.len(),
-        "pair_count": pairs_array.len(),
-        "witness_case_count": pairs_array.len(),
-        "catalog_hash": catalog_hash,
-        "execution_hash": execution_hash,
-        "selection": {
-            "backend_filter": "cuda",
-            "ops_filter": "all",
-            "shard_index": 0,
-            "shard_count": 2,
-            "universe_backend_count": 3,
-            "universe_op_count": 2,
-            "selected_backend_count": 1,
-            "selected_op_count": pairs_array.len()
-        }
-    });
+    let pairs_vec: Vec<SyntheticConformanceResult> =
+        serde_json::from_value(pairs.clone()).expect("pairs deserialize");
+    let laws_vec: Vec<SyntheticLawRecord> =
+        serde_json::from_value(laws.clone()).expect("laws deserialize");
+    let plan = SyntheticPlanSummary {
+        backend_count: 1,
+        op_count: pairs_vec.len(),
+        pair_count: pairs_vec.len(),
+        witness_case_count: pairs_vec.len(),
+        catalog_hash: catalog_hash.to_string(),
+        execution_hash: execution_hash.to_string(),
+        selection: SyntheticSelectionSummary {
+            backend_filter: "cuda".to_string(),
+            ops_filter: "all".to_string(),
+            shard_index: Some(0),
+            shard_count: Some(2),
+            universe_backend_count: 3,
+            universe_op_count: 2,
+            selected_backend_count: 1,
+            selected_op_count: pairs_vec.len(),
+        },
+    };
     let key = SigningKey::from_bytes(&[7u8; 32]);
-    let signable = serde_json::json!({
-        "wire_format_version": 2u32,
-        "program_hash": program_hash,
-        "backend_id": "all",
-        "plan": plan,
-        "pairs": pairs,
-        "laws": laws,
-    });
+    let signable = SyntheticSignableBody {
+        wire_format_version: 2u32,
+        program_hash,
+        backend_id: "all",
+        plan: &plan,
+        pairs: &pairs_vec,
+        laws: &laws_vec,
+    };
     let signable_bytes =
         serde_json::to_vec(&signable).expect("Fix: synthetic shard should serialize");
     let signature = key.sign(&signable_bytes);
@@ -68,11 +118,11 @@ fn write_signed_shard(
         "wire_format_version": 2u32,
         "program_hash": program_hash,
         "backend_id": "all",
-        "plan": signable["plan"].clone(),
+        "plan": serde_json::to_value(&signable.plan).expect("plan to_value"),
         "signature": hex::encode(signature.to_bytes()),
         "public_key": hex::encode(key.verifying_key().to_bytes()),
-        "pairs": signable["pairs"].clone(),
-        "laws": signable["laws"].clone(),
+        "pairs": pairs,
+        "laws": laws,
     });
     std::fs::write(
         path,
@@ -100,14 +150,20 @@ fn verify_certificate_signature(parsed: &Value) {
         .expect("Fix: certificate public key must be 32 bytes");
     let verifying_key = VerifyingKey::from_bytes(&public_key_array)
         .expect("Fix: certificate public key must be a valid Ed25519 verifying key");
-    let signable = serde_json::json!({
-        "wire_format_version": parsed["wire_format_version"].clone(),
-        "program_hash": parsed["program_hash"].clone(),
-        "backend_id": parsed["backend_id"].clone(),
-        "plan": parsed["plan"].clone(),
-        "pairs": parsed["pairs"].clone(),
-        "laws": parsed["laws"].clone(),
-    });
+    let plan: SyntheticPlanSummary =
+        serde_json::from_value(parsed["plan"].clone()).expect("plan deserialize");
+    let pairs_vec: Vec<SyntheticConformanceResult> =
+        serde_json::from_value(parsed["pairs"].clone()).expect("pairs deserialize");
+    let laws_vec: Vec<SyntheticLawRecord> =
+        serde_json::from_value(parsed["laws"].clone()).expect("laws deserialize");
+    let signable = SyntheticSignableBody {
+        wire_format_version: parsed["wire_format_version"].as_u64().expect("version") as u32,
+        program_hash: parsed["program_hash"].as_str().expect("program_hash"),
+        backend_id: parsed["backend_id"].as_str().expect("backend_id"),
+        plan: &plan,
+        pairs: &pairs_vec,
+        laws: &laws_vec,
+    };
     let signable_bytes =
         serde_json::to_vec(&signable).expect("Fix: certificate signable body must serialize");
     verifying_key

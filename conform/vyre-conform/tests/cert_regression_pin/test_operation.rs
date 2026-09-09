@@ -31,6 +31,7 @@ inventory::submit! {
     )
     .with_signature(TEST_IDENTITY_U32_SIGNATURE)
     .with_category("vyre-conform-test")
+    .with_opaque("test identity u32")
 }
 inventory::submit! {
     ReferenceFacet::new(TEST_IDENTITY_U32_OP, identity_u32_cpu_ref)
