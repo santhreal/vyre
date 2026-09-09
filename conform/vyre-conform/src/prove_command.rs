@@ -30,6 +30,7 @@ pub(crate) struct ProveArtifact {
     pub(crate) signature: String,
     pub(crate) public_key: String,
     pub(crate) pairs: Vec<ConformanceResult>,
+    #[serde(default)]
     pub(crate) laws: Vec<LawRecord>,
 }
 

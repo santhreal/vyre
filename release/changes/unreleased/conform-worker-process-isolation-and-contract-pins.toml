@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Conformance execution enforces bounded worker process isolation, timeout termination bounds, and aligned certificate signing contracts across all failure modes."

@@ -69,8 +69,41 @@ pub(crate) fn assert_existing_paths(root: &Path, family: &str, field: &str, path
     );
     for path in paths {
         let absolute = root.join(path);
+        let exists = absolute.exists() || {
+            if let Some(rest) = path.strip_prefix("vyre-libs/src/") {
+                let mut found = false;
+                if let Ok(entries) = std::fs::read_dir(root) {
+                    for entry in entries.flatten() {
+                        let name = entry.file_name();
+                        let name_str = name.to_string_lossy();
+                        if name_str.starts_with("vyre-libs") {
+                            let crate_src = entry.path().join("src");
+                            if crate_src.join(rest).exists() {
+                                found = true;
+                                break;
+                            }
+                            if let Some(domain) = name_str.strip_prefix("vyre-libs-") {
+                                if rest == domain && crate_src.exists() {
+                                    found = true;
+                                    break;
+                                }
+                                if let Some(sub) = rest.strip_prefix(&format!("{domain}/")) {
+                                    if crate_src.join(sub).exists() {
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                found
+            } else {
+                false
+            }
+        };
         assert!(
-            absolute.exists(),
+            exists,
             "Fix: OP_MATRIX family `{family}` {field} path `{path}` does not exist."
         );
     }

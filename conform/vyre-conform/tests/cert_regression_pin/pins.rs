@@ -66,59 +66,71 @@ pub(crate) const VERIFYING_KEY_HEX: &str =
 // itself instead of five opaque digests.
 
 /// Wire schema version the pinned digests below were taken under.
-pub(crate) const PINNED_WIRE_FORMAT_VERSION: u16 = 8;
+pub(crate) const PINNED_WIRE_FORMAT_VERSION: u16 = 9;
 
 // --- trivial const ---
 pub(crate) const TRIVIAL_CONST_BUNDLE_BLAKE3: &str =
-    "630f514ac2a978eefec3988c432ae4944544fcd35c20307f5217ba7af07c01df";
+    "53717d96801368d2c0728b54d00922901124a2513a622bd7fa1efa0e0e735b36";
 pub(crate) const TRIVIAL_CONST_WIRE_LEN: usize = 208;
 pub(crate) const TRIVIAL_CONST_SIG_HEX: &str =
-    "87964bae569dd9ccda99e53c4f020d398ce97c3725a40952f5c6f876f806af0729758522998c18cbf3ccc0b50a283d7e07ce0781c7ad20af462d41eba58d370c";
+    "2fbf5a4d728cd280dea52bc8b770ba2894e15194b91424ea7e79b8ebd05a79e288dd10aaec0e357f914043b546d396b4839e334bd93d0fd9c6c3b4eff7c7ec0b";
 
 // --- 1-op add ---
 pub(crate) const ONE_OP_ADD_BUNDLE_BLAKE3: &str =
-    "f939b667b6b9916dc0a3cf20fd6dc7be636d85dac3c77473d1e660392d0f1af9";
+    "94a1949e735e333a6fe83fc8257b3afe4721cf672e753baeb3571a108c08f37c";
 pub(crate) const ONE_OP_ADD_WIRE_LEN: usize = 215;
 pub(crate) const ONE_OP_ADD_SIG_HEX: &str =
-    "ac34ef91b691aab5e61e1b0eaf115b776ccaa31e800fbe11a04d9753e611c7bce23dbbfc8326f54c89363b406a2ce37a70a2f013cc517275162538e0f8353208";
+    "0bc130979b22facbb5c04c1682e1b573b340601a9ee18946717ff6dfacf14c4bbda742e73ec2e5afcf85f64b925719c160ad4c14edc4391e5bfac234363e750d";
 
 // --- loop-add ---
 pub(crate) const LOOP_ADD_BUNDLE_BLAKE3: &str =
-    "3ec9a54beac0e9f2e4e687aa6acee458e790e1d58f543eb2f892befb943ee15f";
+    "7efc94ba0331c134bad1ba3ea15f79e08e96acc3c74d11debff8ae171f697a66";
 pub(crate) const LOOP_ADD_WIRE_LEN: usize = 268;
 pub(crate) const LOOP_ADD_SIG_HEX: &str =
-    "09d76d3bff98b1b9c39dceb66b377f893e3603be71f98cd95d28a10306588225c072b991eed194cf1da330d78d91eed37fdd3fb178ba29f201129502538e1c04";
+    "50a34428247775400c9b8c0eb612c1b082b4afd35447d22da107a8e1c73a3c790bc7e433af0d82ae9ae2b312e804f2bfdb9378a05a39162172b186f94d7dff0a";
 
 // --- composed nested ---
 pub(crate) const COMPOSED_NESTED_BUNDLE_BLAKE3: &str =
-    "6f5dbe12dd9769635341998d67ab6d2e4b69afd6d5a9ee61aae97faaa2abfa69";
+    "317862046a2c4982d772185cbadb1237841c9e12bc96153ca13e13a63d3b67a4";
 pub(crate) const COMPOSED_NESTED_WIRE_LEN: usize = 200;
 pub(crate) const COMPOSED_NESTED_SIG_HEX: &str =
-    "d4bb1b68e57862d06e6427c919230e468c8b25c6c04bc1022bc37d6320c3144514690e1467e0a119be5d6ce2ba66d96b9a42abcfce78f6df3baab12b30a18208";
+    "ff85e7ba654cad9de41f95ba4327670a20b1e31eb43386fa35f59d4f848a52bf2669b76b239809a317fa818959016d6a42c447ec62b72fc391e346daf6a4cb04";
 
 // --- region-chain with intrinsic + dialect op ---
 pub(crate) const REGION_CHAIN_BUNDLE_BLAKE3: &str =
-    "82793e2e1147d9050a94cbe3001f7cb80ab18643c1c3c0860af9f1535649e8b7";
+    "828ffd0b0b066a199b5622ec003b484a0cb1c6a381c50d925e3540a64e5c8b3b";
 pub(crate) const REGION_CHAIN_WIRE_LEN: usize = 325;
 pub(crate) const REGION_CHAIN_SIG_HEX: &str =
-    "85799ff11863311c0486e7cd82c3f4c3e19495a588b2a11f2f4e7728cfb51d9d0d84bfc83df5840d42863e2fbaaa04303e2c5d9ede283d6ace0b35cedfa1a701";
+    "7f5a4635431e97f1bf94c84f55c2395b40110f0e27837d5adde1f00f71780be9150ebf3c0bb1c2b64c0e792ebd4d079aadc1b8dd116635bb47a1f2fd84a62e04";
 // ---------------------------------------------------------------------------
 // Sign a bundle cert with the deterministic key.
 // ---------------------------------------------------------------------------
+#[derive(serde::Serialize)]
+struct BundleCertSignableBody<'a> {
+    version: &'a str,
+    bundle_blake3: &'a str,
+    corpus_blake3: &'a str,
+    reference_output_blake3: &'a str,
+    witness_count: u64,
+    timestamp: &'a str,
+    pubkey: &'a str,
+}
+
 pub(crate) fn sign_bundle_cert(cert: &mut BundleCertificate, key: &SigningKey) {
-    let signable = serde_json::json!({
-        "version": cert.version,
-        "bundle_blake3": cert.bundle_blake3,
-        "corpus_blake3": cert.corpus_blake3,
-        "reference_output_blake3": cert.reference_output_blake3,
-        "witness_count": cert.witness_count,
-        "timestamp": cert.timestamp,
-        "pubkey": hex::encode(key.verifying_key().to_bytes()),
-    });
+    let pubkey_hex = hex::encode(key.verifying_key().to_bytes());
+    let signable = BundleCertSignableBody {
+        version: &cert.version,
+        bundle_blake3: &cert.bundle_blake3,
+        corpus_blake3: &cert.corpus_blake3,
+        reference_output_blake3: &cert.reference_output_blake3,
+        witness_count: cert.witness_count,
+        timestamp: &cert.timestamp,
+        pubkey: &pubkey_hex,
+    };
     let signable_bytes = serde_json::to_vec(&signable).expect("canonical json");
     let signature = key.sign(&signable_bytes);
     cert.signature_ed25519 = hex::encode(signature.to_bytes());
-    cert.pubkey = hex::encode(key.verifying_key().to_bytes());
+    cert.pubkey = pubkey_hex;
 }
 
 // ---------------------------------------------------------------------------

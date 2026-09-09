@@ -333,3 +333,116 @@ fn device_lease_manager_acquire_release_and_quarantine() {
     manager.quarantine_lease(&lease2, "worker leaked memory");
     assert!(manager.is_quarantined(&lease2.lease_id));
 }
+
+#[test]
+fn every_failure_mode_leaves_no_surviving_worker_and_subsequent_case_is_isolated() {
+    let coordinator = WorkerCoordinator::new();
+    let identity_program = make_identity_program();
+    let id_wire = identity_program.to_wire().expect("identity wire encode");
+
+    // 1. Timeout failure mode: bounded termination and worker reaping
+    {
+        let hanging_wire = make_infinite_loop_program()
+            .to_wire()
+            .expect("hanging wire");
+        let hanging_case = CasePayload::new(
+            LIFECYCLE_OP_ID,
+            hanging_wire,
+            vec![1u32.to_le_bytes().to_vec()],
+            NumericalPolicy::Exact,
+            None,
+        );
+        let start = Instant::now();
+        let receipt =
+            coordinator.execute_reference(&hanging_case, Some(WorkerBudget::fast_test_budget(100)));
+        let elapsed = start.elapsed();
+        assert!(
+            elapsed >= Duration::from_millis(80),
+            "Timeout must wait for the budget: {elapsed:?}"
+        );
+        assert!(
+            elapsed < Duration::from_secs(15),
+            "Timeout must terminate within bound: {elapsed:?}"
+        );
+        assert!(
+            matches!(receipt.status, WorkerStatus::Timeout { .. }),
+            "Expected Timeout status, got {:?}",
+            receipt.status
+        );
+
+        // Prove isolation: next case succeeds with exact output
+        let clean_case = CasePayload::new(
+            "vyre-conform::production_route::identity",
+            id_wire.clone(),
+            vec![11u32.to_le_bytes().to_vec()],
+            NumericalPolicy::Exact,
+            None,
+        );
+        let clean = coordinator
+            .execute_reference(&clean_case, Some(WorkerBudget::fast_test_budget(15_000)));
+        assert_eq!(clean.status, WorkerStatus::Success);
+        assert_eq!(clean.outputs, vec![11u32.to_le_bytes().to_vec()]);
+    }
+
+    // 2. Execution error failure mode: invalid wire decode
+    {
+        let bad_case = CasePayload::new(
+            "vyre-conform::production_route::invalid_wire",
+            vec![0xde, 0xad, 0xbe, 0xef],
+            vec![vec![0]],
+            NumericalPolicy::Exact,
+            None,
+        );
+        let budget = WorkerBudget::fast_test_budget(15_000);
+        let receipt = coordinator.execute_reference(&bad_case, Some(budget));
+        assert!(
+            matches!(receipt.status, WorkerStatus::ExecutionError { .. }),
+            "Expected ExecutionError status, got {:?}",
+            receipt.status
+        );
+
+        // Prove isolation: next case succeeds with exact output
+        let clean_case = CasePayload::new(
+            "vyre-conform::production_route::identity",
+            id_wire.clone(),
+            vec![22u32.to_le_bytes().to_vec()],
+            NumericalPolicy::Exact,
+            None,
+        );
+        let clean = coordinator
+            .execute_reference(&clean_case, Some(WorkerBudget::fast_test_budget(15_000)));
+        assert_eq!(clean.status, WorkerStatus::Success);
+        assert_eq!(clean.outputs, vec![22u32.to_le_bytes().to_vec()]);
+    }
+
+    // 3. Output leak failure mode: output bytes exceed max_output_bytes budget
+    {
+        let leak_case = CasePayload::new(
+            "vyre-conform::production_route::identity",
+            id_wire.clone(),
+            vec![12345u32.to_le_bytes().to_vec()],
+            NumericalPolicy::Exact,
+            None,
+        );
+        let tight_budget = WorkerBudget::fast_test_budget(15_000).with_max_output_bytes(2);
+        let receipt = coordinator.execute_reference(&leak_case, Some(tight_budget));
+        assert!(
+            matches!(receipt.status, WorkerStatus::Leak { .. }),
+            "Expected Leak status, got {:?}",
+            receipt.status
+        );
+
+        // Prove isolation: next case succeeds with exact output
+        let clean_case = CasePayload::new(
+            "vyre-conform::production_route::identity",
+            id_wire.clone(),
+            vec![33u32.to_le_bytes().to_vec()],
+            NumericalPolicy::Exact,
+            None,
+        );
+        let clean = coordinator
+            .execute_reference(&clean_case, Some(WorkerBudget::fast_test_budget(15_000)));
+        assert_eq!(clean.status, WorkerStatus::Success);
+        assert_eq!(clean.outputs, vec![33u32.to_le_bytes().to_vec()]);
+    }
+}
