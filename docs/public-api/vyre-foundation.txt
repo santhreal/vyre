@@ -118,6 +118,8 @@ impl core::default::Default for vyre_foundation::optimizer::multi_level_eqsat::S
 impl core::default::Default for vyre_foundation::optimizer::region_law::RegionDerivationBudget
 impl core::default::Default for vyre_foundation::security::CompilationQuota
 impl core::default::Default for vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudget
+impl core::default::Default for vyre_foundation::substrate::query::MemoryAccounting
+impl core::default::Default for vyre_foundation::substrate::query::QueryEngine
 impl core::default::Default for vyre_foundation::verifier::ResourceBounds
 impl core::error::Error for vyre_foundation::GeometryConstraintConflict
 impl core::error::Error for vyre_foundation::TypedRecoveryError
@@ -199,6 +201,21 @@ impl core::fmt::Display for vyre_foundation::serial::EnvelopeError
 impl core::fmt::Display for vyre_foundation::serial::text::TextParseError
 impl core::fmt::Display for vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError
 impl core::fmt::Display for vyre_foundation::serial::wire::encode::WireEncodeErr
+impl core::fmt::Display for vyre_foundation::substrate::cache::VersionedCacheKey
+impl core::fmt::Display for vyre_foundation::substrate::ids::ArtifactId
+impl core::fmt::Display for vyre_foundation::substrate::ids::ExprId
+impl core::fmt::Display for vyre_foundation::substrate::ids::InternedConstId
+impl core::fmt::Display for vyre_foundation::substrate::ids::InternedLayoutId
+impl core::fmt::Display for vyre_foundation::substrate::ids::InternedStringId
+impl core::fmt::Display for vyre_foundation::substrate::ids::InternedTypeId
+impl core::fmt::Display for vyre_foundation::substrate::ids::NodeId
+impl core::fmt::Display for vyre_foundation::substrate::ids::PhysicalKernelId
+impl core::fmt::Display for vyre_foundation::substrate::ids::RegionId
+impl core::fmt::Display for vyre_foundation::substrate::ids::Revision
+impl core::fmt::Display for vyre_foundation::substrate::ids::ScheduleNodeId
+impl core::fmt::Display for vyre_foundation::substrate::pass_contracts::PassDescriptor
+impl core::fmt::Display for vyre_foundation::substrate::query::QueryKey
+impl core::fmt::Display for vyre_foundation::substrate::views::CompilerLevelStage
 impl core::fmt::Display for vyre_foundation::transform::autodiff::AutodiffError
 impl core::fmt::Display for vyre_foundation::transform::collectives::SingleRankCollectiveError
 impl core::fmt::Display for vyre_foundation::validate::ValidationCode
@@ -563,6 +580,22 @@ impl vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence
 impl vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence
 impl vyre_foundation::serial::wire::encode::ScanDatabaseHeader
 impl vyre_foundation::serial::wire::encode::WireEncodeErr
+impl vyre_foundation::substrate::arenas::ConstInterner
+impl vyre_foundation::substrate::arenas::ExprArena
+impl vyre_foundation::substrate::arenas::LayoutInterner
+impl vyre_foundation::substrate::arenas::NodeArena
+impl vyre_foundation::substrate::arenas::RegionArena
+impl vyre_foundation::substrate::arenas::StringInterner
+impl vyre_foundation::substrate::arenas::SubstrateArena
+impl vyre_foundation::substrate::arenas::TypeInterner
+impl vyre_foundation::substrate::cache::VersionedCacheKey
+impl vyre_foundation::substrate::ids::Revision
+impl vyre_foundation::substrate::query::CancellationToken
+impl vyre_foundation::substrate::query::MemoryAccounting
+impl vyre_foundation::substrate::query::QueryEngine
+impl vyre_foundation::substrate::query::QueryKey
+impl vyre_foundation::substrate::query::QueryOutput
+impl vyre_foundation::substrate::views::CompilerLevelStage
 impl vyre_foundation::transform::collectives::CollectiveOpCounts
 impl vyre_foundation::transform::collectives::CollectiveTransportPlan
 impl vyre_foundation::transform::schedule_lowering::ScheduleDistribution
@@ -600,6 +633,11 @@ impl vyre_foundation::verifier::VerificationCertificate
 impl vyre_foundation::verifier::Verified<vyre_foundation::verifier::SemanticModule>
 impl<'a> vyre_foundation::logical::LogicalProgramGraph<'a>
 impl<'a> vyre_foundation::serial::WireReader<'a>
+impl<'a> vyre_foundation::substrate::views::LogicalRegionView<'a>
+impl<'a> vyre_foundation::substrate::views::PhysicalKernelView<'a>
+impl<'a> vyre_foundation::substrate::views::SelectedScheduleView<'a>
+impl<'a> vyre_foundation::substrate::views::TargetPayloadView<'a>
+impl<'a> vyre_foundation::substrate::views::WholeProgramGraphView<'a>
 impl<'a> vyre_foundation::validate::ValidationOptions<'a>
 impl<'a> vyre_foundation::visit::ExprChildren<'a>
 impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::operation::TargetId
@@ -614,6 +652,8 @@ impl<L: vyre_foundation::optimizer::eqsat::ENodeLang> vyre_foundation::optimizer
 impl<L> vyre_foundation::optimizer::eqsat::Rule<L> for vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules where L: vyre_foundation::optimizer::eqsat::ENodeLang + vyre_foundation::optimizer::eqsat_toml::OpIdNode
 impl<S: vyre_foundation::verifier::StageKind, T> vyre_foundation::verifier::VerifiedStageWrapper<S, T>
 impl<T> core::ops::deref::Deref for vyre_foundation::verifier::Verified<T>
+impl<T> vyre_foundation::substrate::cache::VersionedCacheEntry<T>
+impl<T> vyre_foundation::substrate::pass_contracts::TransformOutcome<T>
 impl<T> vyre_foundation::verifier::Verified<T>
 pub const fn vyre_foundation::FailureDomain::as_str(self) -> &'static str
 pub const fn vyre_foundation::GeometryRequirements::agnostic() -> Self
@@ -930,6 +970,16 @@ pub const fn vyre_foundation::serial::SchemaId::as_str(self) -> &'static str
 pub const fn vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::within_budget(&self) -> bool
 pub const fn vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::within_budget(&self) -> bool
 pub const fn vyre_foundation::serial::wire::encode::WireEncodeErr::static_msg(msg: &'static str) -> Self
+pub const fn vyre_foundation::substrate::ids::Revision::next(self) -> Self
+pub const fn vyre_foundation::substrate::ids::Revision::value(self) -> u64
+pub const fn vyre_foundation::substrate::ids::Revision::zero() -> Self
+pub const fn vyre_foundation::substrate::views::CompilerLevelStage::level_number(self) -> u8
+pub const fn vyre_foundation::substrate::views::CompilerLevelStage::name(self) -> &'static str
+pub const fn vyre_foundation::substrate::views::LogicalRegionView<'a>::level(&self) -> vyre_foundation::substrate::views::CompilerLevelStage
+pub const fn vyre_foundation::substrate::views::PhysicalKernelView<'a>::level(&self) -> vyre_foundation::substrate::views::CompilerLevelStage
+pub const fn vyre_foundation::substrate::views::SelectedScheduleView<'a>::level(&self) -> vyre_foundation::substrate::views::CompilerLevelStage
+pub const fn vyre_foundation::substrate::views::TargetPayloadView<'a>::level(&self) -> vyre_foundation::substrate::views::CompilerLevelStage
+pub const fn vyre_foundation::substrate::views::WholeProgramGraphView<'a>::level(&self) -> vyre_foundation::substrate::views::CompilerLevelStage
 pub const fn vyre_foundation::types::LifetimeEpoch::new(epoch_id: u64, scope: vyre_foundation::memory_model::scope::ExecutionScope) -> Self
 pub const fn vyre_foundation::types::NumericalContract::fast_math() -> Self
 pub const fn vyre_foundation::types::NumericalContract::strict_ieee() -> Self
@@ -1123,6 +1173,8 @@ pub const vyre_foundation::serial::wire::framing::WIRE_FORMAT_VERSION: u16
 pub const vyre_foundation::serial::wire_round_trip::WireRoundTrip::MAGIC: [u8; 4]
 pub const vyre_foundation::serial::wire_round_trip::WireRoundTrip::VERSION: u32
 pub const vyre_foundation::source_digest::MAX_SOURCE_DIGEST_BYTES: u64
+pub const vyre_foundation::substrate::SUBSTRATE_CACHE_SCHEMA_VERSION: u16
+pub const vyre_foundation::substrate::cache::SUBSTRATE_CACHE_SCHEMA_VERSION: u16
 pub const vyre_foundation::transform::FOUNDATION_TRANSFORM_CLASSIFICATIONS: &[vyre_foundation::transform::TransformDescriptor]
 pub const vyre_foundation::transform::HOST_REWRITES: &[vyre_foundation::transform::HostRewrite]
 pub const vyre_foundation::validate::BackendCapabilities::NONE: Self
@@ -1359,6 +1411,22 @@ pub enum vyre_foundation::serial::wire::encode::ScanDatabaseSectionKind
 pub enum vyre_foundation::serial::wire::encode::WireEncodeErr
 pub enum vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError
 pub enum vyre_foundation::source_digest::SourceDigestError
+pub enum vyre_foundation::substrate::CanonicalConst
+pub enum vyre_foundation::substrate::CanonicalType
+pub enum vyre_foundation::substrate::CompilerLevelStage
+pub enum vyre_foundation::substrate::LevelAccessError
+pub enum vyre_foundation::substrate::QueryError
+pub enum vyre_foundation::substrate::QueryKey
+pub enum vyre_foundation::substrate::StaleCacheError
+pub enum vyre_foundation::substrate::TransformOutcome<T>
+pub enum vyre_foundation::substrate::arenas::CanonicalConst
+pub enum vyre_foundation::substrate::arenas::CanonicalType
+pub enum vyre_foundation::substrate::cache::StaleCacheError
+pub enum vyre_foundation::substrate::pass_contracts::TransformOutcome<T>
+pub enum vyre_foundation::substrate::query::QueryError
+pub enum vyre_foundation::substrate::query::QueryKey
+pub enum vyre_foundation::substrate::views::CompilerLevelStage
+pub enum vyre_foundation::substrate::views::LevelAccessError
 pub enum vyre_foundation::transform::TransformContractClass
 pub enum vyre_foundation::transform::collectives::CollectiveExchangeKind
 pub enum vyre_foundation::transform::collectives::CollectiveTransportKind
@@ -3610,6 +3678,126 @@ pub fn vyre_foundation::serial::wire_round_trip::assert_envelope_roundtrip<T>(sa
 pub fn vyre_foundation::serial::wire_round_trip::header_only(magic: &[u8; 4], version: u32) -> alloc::vec::Vec<u8>
 pub fn vyre_foundation::source_digest::cargo_directives(package_root: &std::path::Path, env_var: &str, domain: &[u8]) -> core::result::Result<alloc::string::String, vyre_foundation::source_digest::SourceDigestError>
 pub fn vyre_foundation::source_digest::source_tree_digest(package_root: &std::path::Path, domain: &[u8]) -> core::result::Result<alloc::string::String, vyre_foundation::source_digest::SourceDigestError>
+pub fn vyre_foundation::substrate::Query::compute(&self, engine: &vyre_foundation::substrate::query::QueryEngine, token: &vyre_foundation::substrate::query::CancellationToken) -> core::result::Result<Self::Output, vyre_foundation::substrate::query::QueryError>
+pub fn vyre_foundation::substrate::Query::declared_dependencies(&self) -> alloc::vec::Vec<vyre_foundation::substrate::query::QueryKey>
+pub fn vyre_foundation::substrate::Query::key(&self) -> vyre_foundation::substrate::query::QueryKey
+pub fn vyre_foundation::substrate::Query::to_query_output(&self, output: &Self::Output, key: vyre_foundation::substrate::cache::VersionedCacheKey) -> vyre_foundation::substrate::query::QueryOutput
+pub fn vyre_foundation::substrate::arenas::ConstInterner::allocated_bytes(&self) -> usize
+pub fn vyre_foundation::substrate::arenas::ConstInterner::intern(&self, val: vyre_foundation::substrate::arenas::CanonicalConst) -> vyre_foundation::substrate::ids::InternedConstId
+pub fn vyre_foundation::substrate::arenas::ConstInterner::is_empty(&self) -> bool
+pub fn vyre_foundation::substrate::arenas::ConstInterner::len(&self) -> usize
+pub fn vyre_foundation::substrate::arenas::ConstInterner::lookup(&self, id: vyre_foundation::substrate::ids::InternedConstId) -> core::option::Option<vyre_foundation::substrate::arenas::CanonicalConst>
+pub fn vyre_foundation::substrate::arenas::ConstInterner::new() -> Self
+pub fn vyre_foundation::substrate::arenas::ExprArena::allocated_bytes(&self) -> usize
+pub fn vyre_foundation::substrate::arenas::ExprArena::intern(&self, expr: vyre_foundation::ir::Expr) -> vyre_foundation::substrate::ids::ExprId
+pub fn vyre_foundation::substrate::arenas::ExprArena::is_empty(&self) -> bool
+pub fn vyre_foundation::substrate::arenas::ExprArena::len(&self) -> usize
+pub fn vyre_foundation::substrate::arenas::ExprArena::lookup(&self, id: vyre_foundation::substrate::ids::ExprId) -> core::option::Option<alloc::sync::Arc<vyre_foundation::ir::Expr>>
+pub fn vyre_foundation::substrate::arenas::ExprArena::new() -> Self
+pub fn vyre_foundation::substrate::arenas::LayoutInterner::allocated_bytes(&self) -> usize
+pub fn vyre_foundation::substrate::arenas::LayoutInterner::intern(&self, layout: vyre_foundation::substrate::arenas::CanonicalLayout) -> vyre_foundation::substrate::ids::InternedLayoutId
+pub fn vyre_foundation::substrate::arenas::LayoutInterner::is_empty(&self) -> bool
+pub fn vyre_foundation::substrate::arenas::LayoutInterner::len(&self) -> usize
+pub fn vyre_foundation::substrate::arenas::LayoutInterner::lookup(&self, id: vyre_foundation::substrate::ids::InternedLayoutId) -> core::option::Option<vyre_foundation::substrate::arenas::CanonicalLayout>
+pub fn vyre_foundation::substrate::arenas::LayoutInterner::new() -> Self
+pub fn vyre_foundation::substrate::arenas::NodeArena::allocated_bytes(&self) -> usize
+pub fn vyre_foundation::substrate::arenas::NodeArena::intern(&self, node: vyre_foundation::ir::Node) -> vyre_foundation::substrate::ids::NodeId
+pub fn vyre_foundation::substrate::arenas::NodeArena::is_empty(&self) -> bool
+pub fn vyre_foundation::substrate::arenas::NodeArena::len(&self) -> usize
+pub fn vyre_foundation::substrate::arenas::NodeArena::lookup(&self, id: vyre_foundation::substrate::ids::NodeId) -> core::option::Option<alloc::sync::Arc<vyre_foundation::ir::Node>>
+pub fn vyre_foundation::substrate::arenas::NodeArena::new() -> Self
+pub fn vyre_foundation::substrate::arenas::RegionArena::allocated_bytes(&self) -> usize
+pub fn vyre_foundation::substrate::arenas::RegionArena::intern(&self, region: vyre_foundation::logical::LogicalRegion) -> vyre_foundation::substrate::ids::RegionId
+pub fn vyre_foundation::substrate::arenas::RegionArena::is_empty(&self) -> bool
+pub fn vyre_foundation::substrate::arenas::RegionArena::len(&self) -> usize
+pub fn vyre_foundation::substrate::arenas::RegionArena::lookup(&self, id: vyre_foundation::substrate::ids::RegionId) -> core::option::Option<alloc::sync::Arc<vyre_foundation::logical::LogicalRegion>>
+pub fn vyre_foundation::substrate::arenas::RegionArena::new() -> Self
+pub fn vyre_foundation::substrate::arenas::StringInterner::allocated_bytes(&self) -> usize
+pub fn vyre_foundation::substrate::arenas::StringInterner::intern(&self, text: &str) -> vyre_foundation::substrate::ids::InternedStringId
+pub fn vyre_foundation::substrate::arenas::StringInterner::is_empty(&self) -> bool
+pub fn vyre_foundation::substrate::arenas::StringInterner::len(&self) -> usize
+pub fn vyre_foundation::substrate::arenas::StringInterner::lookup(&self, id: vyre_foundation::substrate::ids::InternedStringId) -> core::option::Option<alloc::sync::Arc<str>>
+pub fn vyre_foundation::substrate::arenas::StringInterner::new() -> Self
+pub fn vyre_foundation::substrate::arenas::SubstrateArena::new() -> Self
+pub fn vyre_foundation::substrate::arenas::SubstrateArena::total_allocated_bytes(&self) -> usize
+pub fn vyre_foundation::substrate::arenas::TypeInterner::allocated_bytes(&self) -> usize
+pub fn vyre_foundation::substrate::arenas::TypeInterner::intern(&self, ty: vyre_foundation::substrate::arenas::CanonicalType) -> vyre_foundation::substrate::ids::InternedTypeId
+pub fn vyre_foundation::substrate::arenas::TypeInterner::intern_scalar(&self, dtype: vyre_spec::data_type::DataType) -> vyre_foundation::substrate::ids::InternedTypeId
+pub fn vyre_foundation::substrate::arenas::TypeInterner::is_empty(&self) -> bool
+pub fn vyre_foundation::substrate::arenas::TypeInterner::len(&self) -> usize
+pub fn vyre_foundation::substrate::arenas::TypeInterner::lookup(&self, id: vyre_foundation::substrate::ids::InternedTypeId) -> core::option::Option<vyre_foundation::substrate::arenas::CanonicalType>
+pub fn vyre_foundation::substrate::arenas::TypeInterner::new() -> Self
+pub fn vyre_foundation::substrate::cache::VersionedCacheEntry<T>::new(key: vyre_foundation::substrate::cache::VersionedCacheKey, payload: T, created_revision: u64) -> Self
+pub fn vyre_foundation::substrate::cache::VersionedCacheEntry<T>::validate(&self, expected_version: u16, expected_target: u64) -> core::result::Result<&T, vyre_foundation::substrate::cache::StaleCacheError>
+pub fn vyre_foundation::substrate::cache::VersionedCacheKey::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::cache::VersionedCacheKey::from_content(level: vyre_foundation::substrate::views::CompilerLevelStage, schema_version: u16, input_bytes: &[u8], target_fingerprint: u64) -> Self
+pub fn vyre_foundation::substrate::cache::VersionedCacheKey::new(level: vyre_foundation::substrate::views::CompilerLevelStage, schema_version: u16, content_digest: [u8; 32], target_fingerprint: u64) -> Self
+pub fn vyre_foundation::substrate::derive_registered_pass_descriptors() -> alloc::vec::Vec<vyre_foundation::substrate::pass_contracts::PassDescriptor>
+pub fn vyre_foundation::substrate::enforce_level_boundary(caller_level: vyre_foundation::substrate::views::CompilerLevelStage, target_level: vyre_foundation::substrate::views::CompilerLevelStage) -> core::result::Result<(), vyre_foundation::substrate::views::LevelAccessError>
+pub fn vyre_foundation::substrate::ids::ArtifactId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::ids::ExprId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::ids::InternedConstId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::ids::InternedLayoutId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::ids::InternedStringId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::ids::InternedTypeId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::ids::NodeId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::ids::PhysicalKernelId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::ids::RegionId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::ids::Revision::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::ids::ScheduleNodeId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::pass_contracts::PassDescriptor::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::pass_contracts::TransformOutcome<T>::is_transformed(&self) -> bool
+pub fn vyre_foundation::substrate::pass_contracts::TransformOutcome<T>::is_unchanged(&self) -> bool
+pub fn vyre_foundation::substrate::pass_contracts::TransformOutcome<T>::unwrap_or(self, fallback: T) -> T
+pub fn vyre_foundation::substrate::pass_contracts::derive_registered_pass_descriptors() -> alloc::vec::Vec<vyre_foundation::substrate::pass_contracts::PassDescriptor>
+pub fn vyre_foundation::substrate::query::CancellationToken::cancel(&self)
+pub fn vyre_foundation::substrate::query::CancellationToken::check_cancelled(&self) -> core::result::Result<(), vyre_foundation::substrate::query::QueryError>
+pub fn vyre_foundation::substrate::query::CancellationToken::is_cancelled(&self) -> bool
+pub fn vyre_foundation::substrate::query::CancellationToken::new() -> Self
+pub fn vyre_foundation::substrate::query::MemoryAccounting::budget_bytes(&self) -> usize
+pub fn vyre_foundation::substrate::query::MemoryAccounting::check_budget(&self, additional_bytes: usize) -> core::result::Result<(), vyre_foundation::substrate::query::QueryError>
+pub fn vyre_foundation::substrate::query::MemoryAccounting::current_bytes(&self) -> usize
+pub fn vyre_foundation::substrate::query::MemoryAccounting::default() -> Self
+pub fn vyre_foundation::substrate::query::MemoryAccounting::record_alloc(&self, bytes: usize)
+pub fn vyre_foundation::substrate::query::MemoryAccounting::record_dealloc(&self, bytes: usize)
+pub fn vyre_foundation::substrate::query::MemoryAccounting::with_budget(budget_bytes: usize) -> Self
+pub fn vyre_foundation::substrate::query::Query::compute(&self, engine: &vyre_foundation::substrate::query::QueryEngine, token: &vyre_foundation::substrate::query::CancellationToken) -> core::result::Result<Self::Output, vyre_foundation::substrate::query::QueryError>
+pub fn vyre_foundation::substrate::query::Query::declared_dependencies(&self) -> alloc::vec::Vec<vyre_foundation::substrate::query::QueryKey>
+pub fn vyre_foundation::substrate::query::Query::key(&self) -> vyre_foundation::substrate::query::QueryKey
+pub fn vyre_foundation::substrate::query::Query::to_query_output(&self, output: &Self::Output, key: vyre_foundation::substrate::cache::VersionedCacheKey) -> vyre_foundation::substrate::query::QueryOutput
+pub fn vyre_foundation::substrate::query::QueryEngine::advance_revision(&self) -> vyre_foundation::substrate::ids::Revision
+pub fn vyre_foundation::substrate::query::QueryEngine::cached_count(&self) -> usize
+pub fn vyre_foundation::substrate::query::QueryEngine::clear_cache(&self)
+pub fn vyre_foundation::substrate::query::QueryEngine::current_revision(&self) -> vyre_foundation::substrate::ids::Revision
+pub fn vyre_foundation::substrate::query::QueryEngine::default() -> Self
+pub fn vyre_foundation::substrate::query::QueryEngine::entry_dependencies(&self, key: &vyre_foundation::substrate::query::QueryKey) -> core::option::Option<alloc::vec::Vec<vyre_foundation::substrate::query::QueryKey>>
+pub fn vyre_foundation::substrate::query::QueryEngine::entry_revision(&self, key: &vyre_foundation::substrate::query::QueryKey) -> core::option::Option<vyre_foundation::substrate::ids::Revision>
+pub fn vyre_foundation::substrate::query::QueryEngine::execute<Q: vyre_foundation::substrate::query::Query>(&self, query: &Q, token: &vyre_foundation::substrate::query::CancellationToken) -> core::result::Result<vyre_foundation::substrate::query::QueryOutput, vyre_foundation::substrate::query::QueryError>
+pub fn vyre_foundation::substrate::query::QueryEngine::execute_parallel<Q: vyre_foundation::substrate::query::Query>(&self, queries: &[Q], token: &vyre_foundation::substrate::query::CancellationToken) -> core::result::Result<alloc::vec::Vec<vyre_foundation::substrate::query::QueryOutput>, vyre_foundation::substrate::query::QueryError>
+pub fn vyre_foundation::substrate::query::QueryEngine::invalidate(&self, dirty_keys: &[vyre_foundation::substrate::query::QueryKey]) -> usize
+pub fn vyre_foundation::substrate::query::QueryEngine::is_cached(&self, key: &vyre_foundation::substrate::query::QueryKey) -> bool
+pub fn vyre_foundation::substrate::query::QueryEngine::memory_accounting(&self) -> &vyre_foundation::substrate::query::MemoryAccounting
+pub fn vyre_foundation::substrate::query::QueryEngine::new() -> Self
+pub fn vyre_foundation::substrate::query::QueryEngine::substrate(&self) -> &alloc::sync::Arc<vyre_foundation::substrate::arenas::SubstrateArena>
+pub fn vyre_foundation::substrate::query::QueryEngine::with_memory_budget(budget_bytes: usize) -> Self
+pub fn vyre_foundation::substrate::query::QueryKey::compiler_level(&self) -> vyre_foundation::substrate::views::CompilerLevelStage
+pub fn vyre_foundation::substrate::query::QueryKey::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::query::QueryOutput::new(cache_key: vyre_foundation::substrate::cache::VersionedCacheKey, output_bytes: alloc::vec::Vec<u8>, diagnostics: alloc::vec::Vec<alloc::string::String>) -> Self
+pub fn vyre_foundation::substrate::views::CompilerLevelStage::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::views::LogicalRegionView<'a>::new(logical_graph: &'a vyre_foundation::logical::LogicalProgramGraph<'a>) -> Self
+pub fn vyre_foundation::substrate::views::LogicalRegionView<'a>::region_count(&self) -> usize
+pub fn vyre_foundation::substrate::views::LogicalRegionView<'a>::regions(&self) -> &'a [vyre_foundation::logical::LogicalRegion]
+pub fn vyre_foundation::substrate::views::PhysicalKernelView<'a>::new(entry_point: impl core::convert::Into<alloc::string::String>, workgroup_size: [u32; 3], registers_required: u32, binding_indices: alloc::vec::Vec<u32>) -> Self
+pub fn vyre_foundation::substrate::views::SelectedScheduleView<'a>::new(schedule_digest: [u8; 32], fusion_groups: usize, barrier_count: usize, workgroup_shape: [u32; 3]) -> Self
+pub fn vyre_foundation::substrate::views::TargetPayloadView<'a>::new(format_name: impl core::convert::Into<alloc::string::String>, format_version: u16, payload_bytes: &'a [u8], entry_points: alloc::vec::Vec<alloc::string::String>) -> Self
+pub fn vyre_foundation::substrate::views::WholeProgramGraphView<'a>::new(graph: &'a vyre_foundation::ir::ProgramGraph) -> Self
+pub fn vyre_foundation::substrate::views::WholeProgramGraphView<'a>::node(&self, id: vyre_foundation::ir::GraphNodeId) -> core::option::Option<&'a vyre_foundation::ir::ProgramGraphNode>
+pub fn vyre_foundation::substrate::views::WholeProgramGraphView<'a>::node_count(&self) -> usize
+pub fn vyre_foundation::substrate::views::WholeProgramGraphView<'a>::nodes(&self) -> &'a [vyre_foundation::ir::ProgramGraphNode]
+pub fn vyre_foundation::substrate::views::WholeProgramGraphView<'a>::value(&self, id: vyre_foundation::ir::GraphValueId) -> core::option::Option<&'a vyre_foundation::ir::ProgramGraphValue>
+pub fn vyre_foundation::substrate::views::WholeProgramGraphView<'a>::value_count(&self) -> usize
+pub fn vyre_foundation::substrate::views::WholeProgramGraphView<'a>::values(&self) -> &'a [vyre_foundation::ir::ProgramGraphValue]
+pub fn vyre_foundation::substrate::views::enforce_level_boundary(caller_level: vyre_foundation::substrate::views::CompilerLevelStage, target_level: vyre_foundation::substrate::views::CompilerLevelStage) -> core::result::Result<(), vyre_foundation::substrate::views::LevelAccessError>
 pub fn vyre_foundation::transform::autodiff::AutodiffError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::transform::autodiff::grad(program: &vyre_foundation::ir::Program, outputs: &[&str], inputs: &[&str]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::transform::autodiff::AutodiffError>
 pub fn vyre_foundation::transform::autodiff::grad_with_pullback(program: &vyre_foundation::ir::Program, outputs: &[&str], inputs: &[&str]) -> core::result::Result<(vyre_foundation::ir::Program, vyre_foundation::transform::autodiff::PullbackMap), vyre_foundation::transform::autodiff::AutodiffError>
@@ -4061,6 +4249,13 @@ pub mod vyre_foundation::serial::wire::framing
 pub mod vyre_foundation::serial::wire::tags
 pub mod vyre_foundation::serial::wire_round_trip
 pub mod vyre_foundation::source_digest
+pub mod vyre_foundation::substrate
+pub mod vyre_foundation::substrate::arenas
+pub mod vyre_foundation::substrate::cache
+pub mod vyre_foundation::substrate::ids
+pub mod vyre_foundation::substrate::pass_contracts
+pub mod vyre_foundation::substrate::query
+pub mod vyre_foundation::substrate::views
 pub mod vyre_foundation::transform
 pub mod vyre_foundation::transform::autodiff
 pub mod vyre_foundation::transform::autodiff::rules
@@ -4500,6 +4695,70 @@ pub struct vyre_foundation::serial::wire::encode::ScanDatabaseCompatibilityRecor
 pub struct vyre_foundation::serial::wire::encode::ScanDatabaseHeader
 pub struct vyre_foundation::serial::wire::encode::ScanDatabaseSectionHeader
 pub struct vyre_foundation::serial::wire::encode::UnsupportedScanFeature
+pub struct vyre_foundation::substrate::ArtifactId(pub u32)
+pub struct vyre_foundation::substrate::CancellationToken
+pub struct vyre_foundation::substrate::CanonicalLayout
+pub struct vyre_foundation::substrate::ConstInterner
+pub struct vyre_foundation::substrate::ExprArena
+pub struct vyre_foundation::substrate::ExprId(pub u32)
+pub struct vyre_foundation::substrate::InternedConstId(pub u32)
+pub struct vyre_foundation::substrate::InternedLayoutId(pub u32)
+pub struct vyre_foundation::substrate::InternedStringId(pub u32)
+pub struct vyre_foundation::substrate::InternedTypeId(pub u32)
+pub struct vyre_foundation::substrate::LayoutInterner
+pub struct vyre_foundation::substrate::LogicalRegionView<'a>
+pub struct vyre_foundation::substrate::MemoryAccounting
+pub struct vyre_foundation::substrate::NodeArena
+pub struct vyre_foundation::substrate::NodeId(pub u32)
+pub struct vyre_foundation::substrate::PassDescriptor
+pub struct vyre_foundation::substrate::PhysicalKernelId(pub u32)
+pub struct vyre_foundation::substrate::PhysicalKernelView<'a>
+pub struct vyre_foundation::substrate::QueryEngine
+pub struct vyre_foundation::substrate::QueryOutput
+pub struct vyre_foundation::substrate::RegionArena
+pub struct vyre_foundation::substrate::RegionId(pub u32)
+pub struct vyre_foundation::substrate::Revision(pub u64)
+pub struct vyre_foundation::substrate::ScheduleNodeId(pub u32)
+pub struct vyre_foundation::substrate::SelectedScheduleView<'a>
+pub struct vyre_foundation::substrate::StringInterner
+pub struct vyre_foundation::substrate::SubstrateArena
+pub struct vyre_foundation::substrate::TargetPayloadView<'a>
+pub struct vyre_foundation::substrate::TypeInterner
+pub struct vyre_foundation::substrate::VersionedCacheEntry<T>
+pub struct vyre_foundation::substrate::VersionedCacheKey
+pub struct vyre_foundation::substrate::WholeProgramGraphView<'a>
+pub struct vyre_foundation::substrate::arenas::CanonicalLayout
+pub struct vyre_foundation::substrate::arenas::ConstInterner
+pub struct vyre_foundation::substrate::arenas::ExprArena
+pub struct vyre_foundation::substrate::arenas::LayoutInterner
+pub struct vyre_foundation::substrate::arenas::NodeArena
+pub struct vyre_foundation::substrate::arenas::RegionArena
+pub struct vyre_foundation::substrate::arenas::StringInterner
+pub struct vyre_foundation::substrate::arenas::SubstrateArena
+pub struct vyre_foundation::substrate::arenas::TypeInterner
+pub struct vyre_foundation::substrate::cache::VersionedCacheEntry<T>
+pub struct vyre_foundation::substrate::cache::VersionedCacheKey
+pub struct vyre_foundation::substrate::ids::ArtifactId(pub u32)
+pub struct vyre_foundation::substrate::ids::ExprId(pub u32)
+pub struct vyre_foundation::substrate::ids::InternedConstId(pub u32)
+pub struct vyre_foundation::substrate::ids::InternedLayoutId(pub u32)
+pub struct vyre_foundation::substrate::ids::InternedStringId(pub u32)
+pub struct vyre_foundation::substrate::ids::InternedTypeId(pub u32)
+pub struct vyre_foundation::substrate::ids::NodeId(pub u32)
+pub struct vyre_foundation::substrate::ids::PhysicalKernelId(pub u32)
+pub struct vyre_foundation::substrate::ids::RegionId(pub u32)
+pub struct vyre_foundation::substrate::ids::Revision(pub u64)
+pub struct vyre_foundation::substrate::ids::ScheduleNodeId(pub u32)
+pub struct vyre_foundation::substrate::pass_contracts::PassDescriptor
+pub struct vyre_foundation::substrate::query::CancellationToken
+pub struct vyre_foundation::substrate::query::MemoryAccounting
+pub struct vyre_foundation::substrate::query::QueryEngine
+pub struct vyre_foundation::substrate::query::QueryOutput
+pub struct vyre_foundation::substrate::views::LogicalRegionView<'a>
+pub struct vyre_foundation::substrate::views::PhysicalKernelView<'a>
+pub struct vyre_foundation::substrate::views::SelectedScheduleView<'a>
+pub struct vyre_foundation::substrate::views::TargetPayloadView<'a>
+pub struct vyre_foundation::substrate::views::WholeProgramGraphView<'a>
 pub struct vyre_foundation::transform::HostRewrite
 pub struct vyre_foundation::transform::TransformDescriptor
 pub struct vyre_foundation::transform::autodiff::rules::AdjointContrib
@@ -4577,6 +4836,8 @@ pub trait vyre_foundation::optimizer::level_contract::LevelStage: core::marker::
 pub trait vyre_foundation::schedule::ScheduleScope: core::clone::Clone + core::marker::Copy + core::fmt::Debug + core::cmp::PartialEq + core::cmp::Eq + core::hash::Hash
 pub trait vyre_foundation::schedule::typed::ScheduleScope: core::clone::Clone + core::marker::Copy + core::fmt::Debug + core::cmp::PartialEq + core::cmp::Eq + core::hash::Hash
 pub trait vyre_foundation::serial::wire_round_trip::WireRoundTrip: core::marker::Sized
+pub trait vyre_foundation::substrate::Query: core::marker::Send + core::marker::Sync
+pub trait vyre_foundation::substrate::query::Query: core::marker::Send + core::marker::Sync
 pub trait vyre_foundation::transform::rewrite_walk::NodeRewrite
 pub trait vyre_foundation::validate::BackendValidationCapabilities
 pub trait vyre_foundation::verifier::StageKind: 'static + core::marker::Send + core::marker::Sync
@@ -4602,6 +4863,8 @@ pub type vyre_foundation::optimizer::law_saturation::DerivedKinds = smallvec::Sm
 pub type vyre_foundation::security::SanitizedBuffer::Target = [u8]
 pub type vyre_foundation::serial::wire_round_trip::WireRoundTrip::DecodeError: core::fmt::Debug
 pub type vyre_foundation::serial::wire_round_trip::WireRoundTrip::EncodeError: core::fmt::Debug
+pub type vyre_foundation::substrate::Query::Output: core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
+pub type vyre_foundation::substrate::query::Query::Output: core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
 pub type vyre_foundation::transform::autodiff::PullbackMap = rustc_hash::FxHashMap<usize, vyre_foundation::ir::Expr>
 pub type vyre_foundation::transform::inline::OpResolver = fn(&str) -> core::option::Option<vyre_foundation::ir::Program>
 pub type vyre_foundation::validate::ValidationWarning = vyre_foundation::diagnostics::Diagnostic
@@ -8410,6 +8673,234 @@ pub vyre_foundation::source_digest::SourceDigestError::NonUtf8::path: std::path:
 pub vyre_foundation::source_digest::SourceDigestError::TooLarge
 pub vyre_foundation::source_digest::SourceDigestError::TooLarge::limit: u64
 pub vyre_foundation::source_digest::SourceDigestError::TooLarge::path: std::path::PathBuf
+pub vyre_foundation::substrate::CanonicalConst::Blob(alloc::sync::Arc<[u8]>)
+pub vyre_foundation::substrate::CanonicalConst::Bool(bool)
+pub vyre_foundation::substrate::CanonicalConst::F32(u32)
+pub vyre_foundation::substrate::CanonicalConst::F64(u64)
+pub vyre_foundation::substrate::CanonicalConst::I32(i32)
+pub vyre_foundation::substrate::CanonicalConst::I64(i64)
+pub vyre_foundation::substrate::CanonicalConst::U32(u32)
+pub vyre_foundation::substrate::CanonicalConst::U64(u64)
+pub vyre_foundation::substrate::CanonicalLayout::alignment_bytes: u64
+pub vyre_foundation::substrate::CanonicalLayout::pitch_bytes: core::option::Option<u64>
+pub vyre_foundation::substrate::CanonicalLayout::strides: alloc::vec::Vec<u64>
+pub vyre_foundation::substrate::CanonicalType::Composite
+pub vyre_foundation::substrate::CanonicalType::Composite::fields: alloc::vec::Vec<vyre_foundation::substrate::ids::InternedTypeId>
+pub vyre_foundation::substrate::CanonicalType::Composite::name: vyre_foundation::substrate::ids::InternedStringId
+pub vyre_foundation::substrate::CanonicalType::Scalar(vyre_spec::data_type::DataType)
+pub vyre_foundation::substrate::CanonicalType::Tensor
+pub vyre_foundation::substrate::CanonicalType::Tensor::elem: vyre_spec::data_type::DataType
+pub vyre_foundation::substrate::CanonicalType::Tensor::shape: alloc::vec::Vec<u64>
+pub vyre_foundation::substrate::CanonicalType::Vector
+pub vyre_foundation::substrate::CanonicalType::Vector::elem: vyre_spec::data_type::DataType
+pub vyre_foundation::substrate::CanonicalType::Vector::lanes: u32
+pub vyre_foundation::substrate::CompilerLevelStage::LogicalRegion = 2
+pub vyre_foundation::substrate::CompilerLevelStage::PhysicalKernel = 4
+pub vyre_foundation::substrate::CompilerLevelStage::SelectedSchedule = 3
+pub vyre_foundation::substrate::CompilerLevelStage::TargetPayload = 5
+pub vyre_foundation::substrate::CompilerLevelStage::WholeProgramGraph = 1
+pub vyre_foundation::substrate::LevelAccessError::SmugglingViolation
+pub vyre_foundation::substrate::LevelAccessError::SmugglingViolation::caller: vyre_foundation::substrate::views::CompilerLevelStage
+pub vyre_foundation::substrate::LevelAccessError::SmugglingViolation::target: vyre_foundation::substrate::views::CompilerLevelStage
+pub vyre_foundation::substrate::PassDescriptor::forbids_unversioned_pointer_caching: bool
+pub vyre_foundation::substrate::PassDescriptor::level: vyre_foundation::substrate::views::CompilerLevelStage
+pub vyre_foundation::substrate::PassDescriptor::name: &'static str
+pub vyre_foundation::substrate::PassDescriptor::preserves_ir_immutability: bool
+pub vyre_foundation::substrate::PassDescriptor::zero_alloc_on_no_change: bool
+pub vyre_foundation::substrate::PhysicalKernelView::binding_indices: alloc::vec::Vec<u32>
+pub vyre_foundation::substrate::PhysicalKernelView::entry_point: alloc::string::String
+pub vyre_foundation::substrate::PhysicalKernelView::registers_required: u32
+pub vyre_foundation::substrate::PhysicalKernelView::workgroup_size: [u32; 3]
+pub vyre_foundation::substrate::QueryError::Cancelled
+pub vyre_foundation::substrate::QueryError::Cycle
+pub vyre_foundation::substrate::QueryError::Cycle::path: alloc::vec::Vec<vyre_foundation::substrate::query::QueryKey>
+pub vyre_foundation::substrate::QueryError::Cycle::query: vyre_foundation::substrate::query::QueryKey
+pub vyre_foundation::substrate::QueryError::ExecutionFailed(alloc::string::String)
+pub vyre_foundation::substrate::QueryError::MemoryExceeded
+pub vyre_foundation::substrate::QueryError::MemoryExceeded::budget_bytes: usize
+pub vyre_foundation::substrate::QueryError::MemoryExceeded::requested_bytes: usize
+pub vyre_foundation::substrate::QueryError::StaleCache(vyre_foundation::substrate::cache::StaleCacheError)
+pub vyre_foundation::substrate::QueryKey::Artifact
+pub vyre_foundation::substrate::QueryKey::Artifact::graph_digest: [u8; 32]
+pub vyre_foundation::substrate::QueryKey::Artifact::target_fingerprint: u64
+pub vyre_foundation::substrate::QueryKey::CostInput
+pub vyre_foundation::substrate::QueryKey::CostInput::graph_digest: [u8; 32]
+pub vyre_foundation::substrate::QueryKey::CostInput::target_fingerprint: u64
+pub vyre_foundation::substrate::QueryKey::Emission
+pub vyre_foundation::substrate::QueryKey::Emission::node_id: u32
+pub vyre_foundation::substrate::QueryKey::Emission::target_fingerprint: u64
+pub vyre_foundation::substrate::QueryKey::Emission::target_format: alloc::string::String
+pub vyre_foundation::substrate::QueryKey::EquivalenceFacts
+pub vyre_foundation::substrate::QueryKey::EquivalenceFacts::op_name: alloc::string::String
+pub vyre_foundation::substrate::QueryKey::Legality
+pub vyre_foundation::substrate::QueryKey::Legality::graph_digest: [u8; 32]
+pub vyre_foundation::substrate::QueryKey::Legality::target_fingerprint: u64
+pub vyre_foundation::substrate::QueryKey::Lowering
+pub vyre_foundation::substrate::QueryKey::Lowering::node_id: u32
+pub vyre_foundation::substrate::QueryKey::Lowering::target_fingerprint: u64
+pub vyre_foundation::substrate::QueryKey::ParseValidate
+pub vyre_foundation::substrate::QueryKey::ParseValidate::program_digest: [u8; 32]
+pub vyre_foundation::substrate::QueryKey::ProgramGraphValidate
+pub vyre_foundation::substrate::QueryKey::ProgramGraphValidate::graph_digest: [u8; 32]
+pub vyre_foundation::substrate::QueryKey::SemanticFacts
+pub vyre_foundation::substrate::QueryKey::SemanticFacts::node_id: u32
+pub vyre_foundation::substrate::QueryKey::SemanticFacts::program_digest: [u8; 32]
+pub vyre_foundation::substrate::QueryKey::ShapeFacts
+pub vyre_foundation::substrate::QueryKey::ShapeFacts::program_digest: [u8; 32]
+pub vyre_foundation::substrate::QueryKey::TypeCheck
+pub vyre_foundation::substrate::QueryKey::TypeCheck::program_digest: [u8; 32]
+pub vyre_foundation::substrate::QueryOutput::cache_key: vyre_foundation::substrate::cache::VersionedCacheKey
+pub vyre_foundation::substrate::QueryOutput::diagnostics: alloc::vec::Vec<alloc::string::String>
+pub vyre_foundation::substrate::QueryOutput::output_bytes: alloc::vec::Vec<u8>
+pub vyre_foundation::substrate::QueryOutput::receipt_hash: [u8; 32]
+pub vyre_foundation::substrate::SelectedScheduleView::barrier_count: usize
+pub vyre_foundation::substrate::SelectedScheduleView::fusion_groups: usize
+pub vyre_foundation::substrate::SelectedScheduleView::schedule_digest: [u8; 32]
+pub vyre_foundation::substrate::SelectedScheduleView::workgroup_shape: [u32; 3]
+pub vyre_foundation::substrate::StaleCacheError::CorruptPayload(alloc::string::String)
+pub vyre_foundation::substrate::StaleCacheError::LevelMismatch
+pub vyre_foundation::substrate::StaleCacheError::LevelMismatch::expected: vyre_foundation::substrate::views::CompilerLevelStage
+pub vyre_foundation::substrate::StaleCacheError::LevelMismatch::found: vyre_foundation::substrate::views::CompilerLevelStage
+pub vyre_foundation::substrate::StaleCacheError::TargetMismatch
+pub vyre_foundation::substrate::StaleCacheError::TargetMismatch::expected: u64
+pub vyre_foundation::substrate::StaleCacheError::TargetMismatch::found: u64
+pub vyre_foundation::substrate::StaleCacheError::VersionMismatch
+pub vyre_foundation::substrate::StaleCacheError::VersionMismatch::expected: u16
+pub vyre_foundation::substrate::StaleCacheError::VersionMismatch::found: u16
+pub vyre_foundation::substrate::SubstrateArena::constants: vyre_foundation::substrate::arenas::ConstInterner
+pub vyre_foundation::substrate::SubstrateArena::exprs: vyre_foundation::substrate::arenas::ExprArena
+pub vyre_foundation::substrate::SubstrateArena::layouts: vyre_foundation::substrate::arenas::LayoutInterner
+pub vyre_foundation::substrate::SubstrateArena::nodes: vyre_foundation::substrate::arenas::NodeArena
+pub vyre_foundation::substrate::SubstrateArena::regions: vyre_foundation::substrate::arenas::RegionArena
+pub vyre_foundation::substrate::SubstrateArena::strings: vyre_foundation::substrate::arenas::StringInterner
+pub vyre_foundation::substrate::SubstrateArena::types: vyre_foundation::substrate::arenas::TypeInterner
+pub vyre_foundation::substrate::TargetPayloadView::entry_points: alloc::vec::Vec<alloc::string::String>
+pub vyre_foundation::substrate::TargetPayloadView::format_name: alloc::string::String
+pub vyre_foundation::substrate::TargetPayloadView::format_version: u16
+pub vyre_foundation::substrate::TargetPayloadView::payload_bytes: &'a [u8]
+pub vyre_foundation::substrate::TransformOutcome::Transformed(T)
+pub vyre_foundation::substrate::TransformOutcome::Unchanged
+pub vyre_foundation::substrate::VersionedCacheEntry::created_revision: u64
+pub vyre_foundation::substrate::VersionedCacheEntry::key: vyre_foundation::substrate::cache::VersionedCacheKey
+pub vyre_foundation::substrate::VersionedCacheEntry::payload: T
+pub vyre_foundation::substrate::VersionedCacheKey::content_digest: [u8; 32]
+pub vyre_foundation::substrate::VersionedCacheKey::level: vyre_foundation::substrate::views::CompilerLevelStage
+pub vyre_foundation::substrate::VersionedCacheKey::schema_version: u16
+pub vyre_foundation::substrate::VersionedCacheKey::target_fingerprint: u64
+pub vyre_foundation::substrate::arenas::CanonicalConst::Blob(alloc::sync::Arc<[u8]>)
+pub vyre_foundation::substrate::arenas::CanonicalConst::Bool(bool)
+pub vyre_foundation::substrate::arenas::CanonicalConst::F32(u32)
+pub vyre_foundation::substrate::arenas::CanonicalConst::F64(u64)
+pub vyre_foundation::substrate::arenas::CanonicalConst::I32(i32)
+pub vyre_foundation::substrate::arenas::CanonicalConst::I64(i64)
+pub vyre_foundation::substrate::arenas::CanonicalConst::U32(u32)
+pub vyre_foundation::substrate::arenas::CanonicalConst::U64(u64)
+pub vyre_foundation::substrate::arenas::CanonicalLayout::alignment_bytes: u64
+pub vyre_foundation::substrate::arenas::CanonicalLayout::pitch_bytes: core::option::Option<u64>
+pub vyre_foundation::substrate::arenas::CanonicalLayout::strides: alloc::vec::Vec<u64>
+pub vyre_foundation::substrate::arenas::CanonicalType::Composite
+pub vyre_foundation::substrate::arenas::CanonicalType::Composite::fields: alloc::vec::Vec<vyre_foundation::substrate::ids::InternedTypeId>
+pub vyre_foundation::substrate::arenas::CanonicalType::Composite::name: vyre_foundation::substrate::ids::InternedStringId
+pub vyre_foundation::substrate::arenas::CanonicalType::Scalar(vyre_spec::data_type::DataType)
+pub vyre_foundation::substrate::arenas::CanonicalType::Tensor
+pub vyre_foundation::substrate::arenas::CanonicalType::Tensor::elem: vyre_spec::data_type::DataType
+pub vyre_foundation::substrate::arenas::CanonicalType::Tensor::shape: alloc::vec::Vec<u64>
+pub vyre_foundation::substrate::arenas::CanonicalType::Vector
+pub vyre_foundation::substrate::arenas::CanonicalType::Vector::elem: vyre_spec::data_type::DataType
+pub vyre_foundation::substrate::arenas::CanonicalType::Vector::lanes: u32
+pub vyre_foundation::substrate::arenas::SubstrateArena::constants: vyre_foundation::substrate::arenas::ConstInterner
+pub vyre_foundation::substrate::arenas::SubstrateArena::exprs: vyre_foundation::substrate::arenas::ExprArena
+pub vyre_foundation::substrate::arenas::SubstrateArena::layouts: vyre_foundation::substrate::arenas::LayoutInterner
+pub vyre_foundation::substrate::arenas::SubstrateArena::nodes: vyre_foundation::substrate::arenas::NodeArena
+pub vyre_foundation::substrate::arenas::SubstrateArena::regions: vyre_foundation::substrate::arenas::RegionArena
+pub vyre_foundation::substrate::arenas::SubstrateArena::strings: vyre_foundation::substrate::arenas::StringInterner
+pub vyre_foundation::substrate::arenas::SubstrateArena::types: vyre_foundation::substrate::arenas::TypeInterner
+pub vyre_foundation::substrate::cache::StaleCacheError::CorruptPayload(alloc::string::String)
+pub vyre_foundation::substrate::cache::StaleCacheError::LevelMismatch
+pub vyre_foundation::substrate::cache::StaleCacheError::LevelMismatch::expected: vyre_foundation::substrate::views::CompilerLevelStage
+pub vyre_foundation::substrate::cache::StaleCacheError::LevelMismatch::found: vyre_foundation::substrate::views::CompilerLevelStage
+pub vyre_foundation::substrate::cache::StaleCacheError::TargetMismatch
+pub vyre_foundation::substrate::cache::StaleCacheError::TargetMismatch::expected: u64
+pub vyre_foundation::substrate::cache::StaleCacheError::TargetMismatch::found: u64
+pub vyre_foundation::substrate::cache::StaleCacheError::VersionMismatch
+pub vyre_foundation::substrate::cache::StaleCacheError::VersionMismatch::expected: u16
+pub vyre_foundation::substrate::cache::StaleCacheError::VersionMismatch::found: u16
+pub vyre_foundation::substrate::cache::VersionedCacheEntry::created_revision: u64
+pub vyre_foundation::substrate::cache::VersionedCacheEntry::key: vyre_foundation::substrate::cache::VersionedCacheKey
+pub vyre_foundation::substrate::cache::VersionedCacheEntry::payload: T
+pub vyre_foundation::substrate::cache::VersionedCacheKey::content_digest: [u8; 32]
+pub vyre_foundation::substrate::cache::VersionedCacheKey::level: vyre_foundation::substrate::views::CompilerLevelStage
+pub vyre_foundation::substrate::cache::VersionedCacheKey::schema_version: u16
+pub vyre_foundation::substrate::cache::VersionedCacheKey::target_fingerprint: u64
+pub vyre_foundation::substrate::pass_contracts::PassDescriptor::forbids_unversioned_pointer_caching: bool
+pub vyre_foundation::substrate::pass_contracts::PassDescriptor::level: vyre_foundation::substrate::views::CompilerLevelStage
+pub vyre_foundation::substrate::pass_contracts::PassDescriptor::name: &'static str
+pub vyre_foundation::substrate::pass_contracts::PassDescriptor::preserves_ir_immutability: bool
+pub vyre_foundation::substrate::pass_contracts::PassDescriptor::zero_alloc_on_no_change: bool
+pub vyre_foundation::substrate::pass_contracts::TransformOutcome::Transformed(T)
+pub vyre_foundation::substrate::pass_contracts::TransformOutcome::Unchanged
+pub vyre_foundation::substrate::query::QueryError::Cancelled
+pub vyre_foundation::substrate::query::QueryError::Cycle
+pub vyre_foundation::substrate::query::QueryError::Cycle::path: alloc::vec::Vec<vyre_foundation::substrate::query::QueryKey>
+pub vyre_foundation::substrate::query::QueryError::Cycle::query: vyre_foundation::substrate::query::QueryKey
+pub vyre_foundation::substrate::query::QueryError::ExecutionFailed(alloc::string::String)
+pub vyre_foundation::substrate::query::QueryError::MemoryExceeded
+pub vyre_foundation::substrate::query::QueryError::MemoryExceeded::budget_bytes: usize
+pub vyre_foundation::substrate::query::QueryError::MemoryExceeded::requested_bytes: usize
+pub vyre_foundation::substrate::query::QueryError::StaleCache(vyre_foundation::substrate::cache::StaleCacheError)
+pub vyre_foundation::substrate::query::QueryKey::Artifact
+pub vyre_foundation::substrate::query::QueryKey::Artifact::graph_digest: [u8; 32]
+pub vyre_foundation::substrate::query::QueryKey::Artifact::target_fingerprint: u64
+pub vyre_foundation::substrate::query::QueryKey::CostInput
+pub vyre_foundation::substrate::query::QueryKey::CostInput::graph_digest: [u8; 32]
+pub vyre_foundation::substrate::query::QueryKey::CostInput::target_fingerprint: u64
+pub vyre_foundation::substrate::query::QueryKey::Emission
+pub vyre_foundation::substrate::query::QueryKey::Emission::node_id: u32
+pub vyre_foundation::substrate::query::QueryKey::Emission::target_fingerprint: u64
+pub vyre_foundation::substrate::query::QueryKey::Emission::target_format: alloc::string::String
+pub vyre_foundation::substrate::query::QueryKey::EquivalenceFacts
+pub vyre_foundation::substrate::query::QueryKey::EquivalenceFacts::op_name: alloc::string::String
+pub vyre_foundation::substrate::query::QueryKey::Legality
+pub vyre_foundation::substrate::query::QueryKey::Legality::graph_digest: [u8; 32]
+pub vyre_foundation::substrate::query::QueryKey::Legality::target_fingerprint: u64
+pub vyre_foundation::substrate::query::QueryKey::Lowering
+pub vyre_foundation::substrate::query::QueryKey::Lowering::node_id: u32
+pub vyre_foundation::substrate::query::QueryKey::Lowering::target_fingerprint: u64
+pub vyre_foundation::substrate::query::QueryKey::ParseValidate
+pub vyre_foundation::substrate::query::QueryKey::ParseValidate::program_digest: [u8; 32]
+pub vyre_foundation::substrate::query::QueryKey::ProgramGraphValidate
+pub vyre_foundation::substrate::query::QueryKey::ProgramGraphValidate::graph_digest: [u8; 32]
+pub vyre_foundation::substrate::query::QueryKey::SemanticFacts
+pub vyre_foundation::substrate::query::QueryKey::SemanticFacts::node_id: u32
+pub vyre_foundation::substrate::query::QueryKey::SemanticFacts::program_digest: [u8; 32]
+pub vyre_foundation::substrate::query::QueryKey::ShapeFacts
+pub vyre_foundation::substrate::query::QueryKey::ShapeFacts::program_digest: [u8; 32]
+pub vyre_foundation::substrate::query::QueryKey::TypeCheck
+pub vyre_foundation::substrate::query::QueryKey::TypeCheck::program_digest: [u8; 32]
+pub vyre_foundation::substrate::query::QueryOutput::cache_key: vyre_foundation::substrate::cache::VersionedCacheKey
+pub vyre_foundation::substrate::query::QueryOutput::diagnostics: alloc::vec::Vec<alloc::string::String>
+pub vyre_foundation::substrate::query::QueryOutput::output_bytes: alloc::vec::Vec<u8>
+pub vyre_foundation::substrate::query::QueryOutput::receipt_hash: [u8; 32]
+pub vyre_foundation::substrate::views::CompilerLevelStage::LogicalRegion = 2
+pub vyre_foundation::substrate::views::CompilerLevelStage::PhysicalKernel = 4
+pub vyre_foundation::substrate::views::CompilerLevelStage::SelectedSchedule = 3
+pub vyre_foundation::substrate::views::CompilerLevelStage::TargetPayload = 5
+pub vyre_foundation::substrate::views::CompilerLevelStage::WholeProgramGraph = 1
+pub vyre_foundation::substrate::views::LevelAccessError::SmugglingViolation
+pub vyre_foundation::substrate::views::LevelAccessError::SmugglingViolation::caller: vyre_foundation::substrate::views::CompilerLevelStage
+pub vyre_foundation::substrate::views::LevelAccessError::SmugglingViolation::target: vyre_foundation::substrate::views::CompilerLevelStage
+pub vyre_foundation::substrate::views::PhysicalKernelView::binding_indices: alloc::vec::Vec<u32>
+pub vyre_foundation::substrate::views::PhysicalKernelView::entry_point: alloc::string::String
+pub vyre_foundation::substrate::views::PhysicalKernelView::registers_required: u32
+pub vyre_foundation::substrate::views::PhysicalKernelView::workgroup_size: [u32; 3]
+pub vyre_foundation::substrate::views::SelectedScheduleView::barrier_count: usize
+pub vyre_foundation::substrate::views::SelectedScheduleView::fusion_groups: usize
+pub vyre_foundation::substrate::views::SelectedScheduleView::schedule_digest: [u8; 32]
+pub vyre_foundation::substrate::views::SelectedScheduleView::workgroup_shape: [u32; 3]
+pub vyre_foundation::substrate::views::TargetPayloadView::entry_points: alloc::vec::Vec<alloc::string::String>
+pub vyre_foundation::substrate::views::TargetPayloadView::format_name: alloc::string::String
+pub vyre_foundation::substrate::views::TargetPayloadView::format_version: u16
+pub vyre_foundation::substrate::views::TargetPayloadView::payload_bytes: &'a [u8]
 pub vyre_foundation::transform::HostRewrite::apply: fn(&vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
 pub vyre_foundation::transform::HostRewrite::name: &'static str
 pub vyre_foundation::transform::TransformContractClass::Analysis

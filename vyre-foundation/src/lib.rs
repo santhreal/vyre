@@ -42,6 +42,8 @@ pub mod config_schema;
 mod failure_domain;
 /// Typed region-based SSA intermediate representation (Row 103).
 pub mod region_ssa;
+/// Compiler data substrate, arenas, interners, and query engine (Row 89).
+pub mod substrate;
 
 pub mod ir {
     //! The vyre intermediate representation.
@@ -74,7 +76,8 @@ pub mod ir {
         ValueContract, ValueLifetime,
     };
     pub use crate::ir_inner::model::program_graph_delta::{
-        AffectedGraphClosure, GraphDelta, GraphDeltaError, GraphDeltaOp, GRAPH_DELTA_VERSION,
+        AffectedGraphClosure, GenerationTracker, GraphDelta, GraphDeltaError, GraphDeltaOp,
+        GRAPH_DELTA_VERSION,
     };
     pub use crate::ir_inner::model::program_graph_identity::{
         ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,

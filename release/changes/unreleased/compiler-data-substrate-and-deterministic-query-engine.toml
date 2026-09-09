@@ -1,0 +1,2 @@
+category = "Added"
+text = "The core compiler data substrate establishes immutable hash-consed arenas, stable typed IDs, canonical interners for strings, types, constants, and layouts, stage-specific read-only views for all five compiler levels, versioned cache keys, and a single deterministic query engine with precise invalidation and parallel evaluation."
