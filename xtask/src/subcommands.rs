@@ -31,6 +31,10 @@ const AREA_HELP: &[(&str, &str)] = &[
         "Whether CI workflows and their declared gate registry cover the required checks",
     ),
     (
+        "conformance",
+        "Whether recorded conformance runs cover every backend and route a gate claims",
+    ),
+    (
         "contract-rules",
         "Whether source, manifest, API, parity, and workspace contracts hold",
     ),
@@ -419,5 +423,32 @@ mod tests {
             delegate_table_problems(package, &repeated),
             vec![format!("`{package}` lists a gate more than once")]
         );
+    }
+
+    /// WHY: `subsets()` panics when a declared area has no help text, so a gate
+    /// that introduces an area takes `--help` down for every gate at once. The
+    /// roster is the area set the descriptors declare, so an area added later is
+    /// judged without being listed here.
+    #[test]
+    fn every_declared_gate_area_has_help_text() {
+        let documented: BTreeSet<&str> = AREA_HELP.iter().map(|(area, _)| *area).collect();
+        let undocumented: Vec<&str> = crate::gate_metadata::areas()
+            .into_iter()
+            .filter(|area| !documented.contains(area))
+            .collect();
+        assert_eq!(undocumented, Vec::<&str>::new());
+    }
+
+    /// WHY: an unused row is a claim that an area exists, and `--help` prints it
+    /// as a selectable subset that resolves to no gate.
+    #[test]
+    fn every_help_row_names_a_declared_area() {
+        let declared: BTreeSet<&str> = crate::gate_metadata::areas().into_iter().collect();
+        let orphaned: Vec<&str> = AREA_HELP
+            .iter()
+            .map(|(area, _)| *area)
+            .filter(|area| !declared.contains(area))
+            .collect();
+        assert_eq!(orphaned, Vec::<&str>::new());
     }
 }
