@@ -4,7 +4,6 @@ use thiserror::Error;
 use vyre_foundation::diagnostics::{
     CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, RetryClass, Severity,
 };
-use vyre_foundation::IrError;
 use vyre_megakernel::{
     ArtifactEnvelope, TargetCompileError, TargetCompiler, ValidatedCompileRequest,
 };
@@ -19,14 +18,6 @@ pub enum CompileError {
         "vyre-aot: target `{0}` has no linked target compiler. Fix: link the concrete driver crate that registers this target."
     )]
     TargetNotEnabled(TargetId),
-
-    /// Frontend call expansion failed.
-    #[error("vyre-aot: frontend Program preparation failed: {0}")]
-    ProgramPreparation(#[source] IrError),
-
-    /// The Program cannot be represented accurately in the canonical graph.
-    #[error("vyre-aot: artifact graph rejected Program: {0}")]
-    ArtifactLayout(String),
 
     /// The selected target compiler rejected the canonical artifact.
     #[error("vyre-aot: target compiler rejected artifact: {0}")]
@@ -70,39 +61,6 @@ impl CompileError {
                 }],
                 retry: RetryClass::Never,
                 context_values: vec![("target".to_string(), target.as_str().to_string())],
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::ProgramPreparation(ir_err) => {
-                let mut diag = ir_err.diagnostic();
-                diag.notes
-                    .push("during AOT frontend Program preparation".into());
-                diag
-            }
-            Self::ArtifactLayout(msg) => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("AOT002_ARTIFACT_LAYOUT"),
-                stage: DiagnosticStage::Plan,
-                compiler_level: Some(CompilerLevel::Optimizer),
-                message: format!("artifact graph rejected Program: {msg}").into(),
-                location: None,
-                artifact_id: None,
-                target: None,
-                device: None,
-                suggested_fix: Some(
-                    "ensure Program satisfies canonical graph invariants before AOT compilation"
-                        .into(),
-                ),
-                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "artifact_layout".to_string(),
-                    detail: msg.clone(),
-                }),
-                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "artifact_layout".to_string(),
-                    detail: msg.clone(),
-                }],
-                retry: RetryClass::RecompileSource,
-                context_values: Vec::new(),
                 doc_url: None,
                 notes: Vec::new(),
             },

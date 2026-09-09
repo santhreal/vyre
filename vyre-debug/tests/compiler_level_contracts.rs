@@ -58,8 +58,8 @@ fn compiler_level_views_cover_all_levels() {
     let req = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([1; 32]), std::collections::BTreeMap::new()),
-        DeviceFacts::unknown(),
-        SearchBudget::new(4, 1_000, 1, 0, 1_000_000),
+        DeviceFacts::new(vyre_foundation::validate::BackendCapabilities::default(), 1024),
+        SearchBudget::new(8, 1_000, 2, 0, 1_000_000),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
@@ -87,7 +87,7 @@ fn candidate_report_inspects_search_certificate_and_pruned_families() {
     let req = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([2; 32]), std::collections::BTreeMap::new()),
-        DeviceFacts::unknown(),
+        DeviceFacts::new(vyre_foundation::validate::BackendCapabilities::default(), 1024),
         SearchBudget::new(8, 1_000, 2, 0, 1_000_000),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
@@ -110,8 +110,8 @@ fn allocation_report_and_diff() {
     let req = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([3; 32]), std::collections::BTreeMap::new()),
-        DeviceFacts::unknown(),
-        SearchBudget::new(4, 1_000, 1, 0, 1_000_000),
+        DeviceFacts::new(vyre_foundation::validate::BackendCapabilities::default(), 1024),
+        SearchBudget::new(8, 1_000, 2, 0, 1_000_000),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
@@ -169,8 +169,8 @@ fn artifact_and_plan_structural_diffs() {
     let req = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([4; 32]), std::collections::BTreeMap::new()),
-        DeviceFacts::unknown(),
-        SearchBudget::new(4, 1_000, 1, 0, 1_000_000),
+        DeviceFacts::new(vyre_foundation::validate::BackendCapabilities::default(), 1024),
+        SearchBudget::new(8, 1_000, 2, 0, 1_000_000),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
     )
     .validate()
