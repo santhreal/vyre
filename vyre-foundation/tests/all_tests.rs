@@ -588,10 +588,9 @@ pub mod scalar_operator_agreement;
 #[path = "scan_database_wire_contract.rs"]
 pub mod scan_database_wire_contract;
 
-/// Integration tests from `tests/schedule_calculus_contracts.rs`.
+/// Integration tests from `tests/schedule_calculus_contracts.rs` (calculus row107 v3).
 #[path = "schedule_calculus_contracts.rs"]
 pub mod schedule_calculus_contracts;
-
 /// Integration tests from `tests/schedule_ir_contracts.rs`.
 #[path = "schedule_ir_contracts.rs"]
 pub mod schedule_ir_contracts;

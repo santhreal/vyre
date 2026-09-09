@@ -12,11 +12,19 @@ mod legality;
 mod normalize;
 mod preconditions;
 mod tree;
+pub mod typed;
 
 pub use cost::{ScheduleCostModel, ScheduleCostRecord};
 pub use diff::{ScheduleDiff, ScheduleDiffItem};
 pub use error::ScheduleLegalityError;
-pub use tree::{DependencyPreservationCertificate, ScheduleOp, SchedulePlan, ScheduleTree};
+pub use tree::{
+    DependencyPreservationCertificate, PartialSchedule, ScheduleInverseOp, ScheduleNumericalEffect,
+    ScheduleOp, SchedulePlan, ScheduleTree, SymbolicParameter,
+};
+pub use typed::{
+    DeviceScope, InnermostLoopScope, ScheduleScope, SubgroupScope, ThreadScope, TypedScheduleStage,
+    WorkgroupScope,
+};
 
 use std::collections::BTreeSet;
 

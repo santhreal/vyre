@@ -1,4 +1,4 @@
-//! vyre-foundation  -  substrate-neutral compiler foundation.
+//! vyre-foundation - substrate-neutral compiler foundation.
 //!
 //! Defines the vyre IR (`Expr`, `Node`, `Program`), the type system, the
 //! memory model, the wire format, visitor traits, and extension resolvers.
