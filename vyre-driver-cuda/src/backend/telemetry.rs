@@ -442,8 +442,16 @@ impl CudaTelemetry {
         );
     }
 
-    pub(crate) fn record_cuda_graph_launch(&self) {
+    /// Record one CUDA graph replay and the kernel launches it executes.
+    ///
+    /// A graph replay executes the kernel nodes captured into the graph without
+    /// issuing `cuLaunchKernel` again, so counting only the replay leaves
+    /// `kernel_launches` at zero for a graph-dispatched program. The captured
+    /// count is a property of the fixed-shape graph, so every replay executes
+    /// exactly that many kernels.
+    pub(crate) fn record_cuda_graph_launch(&self, kernel_launches: u64) {
         self.add("cuda_graph_launches", &self.cuda_graph_launches, 1);
+        self.add("kernel_launches", &self.kernel_launches, kernel_launches);
     }
 
     pub(crate) fn record_cuda_graph_materialized_cache_hit(&self) {
@@ -693,7 +701,7 @@ mod tests {
         telemetry.record_transient_allocation_bytes(32);
         telemetry.record_resident_allocation_bytes(64);
         telemetry.record_param_upload_bytes(4);
-        telemetry.record_cuda_graph_launch();
+        telemetry.record_cuda_graph_launch(3);
         telemetry.record_cuda_graph_materialized_cache_hit();
         telemetry.record_cuda_graph_batched_replay(4);
         telemetry.record_sync_point();
@@ -709,6 +717,7 @@ mod tests {
         assert_eq!(snapshot.resident_allocation_bytes_requested, 64);
         assert_eq!(snapshot.param_upload_bytes, 4);
         assert_eq!(snapshot.cuda_graph_launches, 1);
+        assert_eq!(snapshot.kernel_launches, 3);
         assert_eq!(snapshot.cuda_graph_materialized_cache_hits, 1);
         assert_eq!(snapshot.cuda_graph_batched_replay_chunks, 1);
         assert_eq!(snapshot.cuda_graph_batched_replay_lanes, 4);

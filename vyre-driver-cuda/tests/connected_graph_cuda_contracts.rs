@@ -194,7 +194,6 @@ fn cuda_executes_pure_dataflow_connected_graph() {
     let artifact = compile(&request).expect("compile must succeed");
     assert_eq!(artifact.nodes().len(), 3);
     assert_ne!(artifact.digest(), Digest([0; 32]));
-
     let envelope = attach_target(artifact, compiler.as_ref()).expect("attach target");
     assert_ne!(envelope.target_payloads()[0].digest(), Digest([0; 32]));
 

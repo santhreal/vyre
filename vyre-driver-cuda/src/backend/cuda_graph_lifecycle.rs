@@ -573,6 +573,9 @@ pub struct CachedCudaGraph {
     pub(crate) replay_host_upload_operations: u64,
     /// Non-empty device-to-host copy operations captured in each replay.
     pub(crate) replay_device_readback_operations: u64,
+    /// Kernel launches captured in this fixed-shape graph, executed by every
+    /// replay.
+    pub(crate) replay_kernel_launches: u64,
     /// Expected input byte lengths. `dispatch_via_cuda_graph` validates
     /// the caller's input sizes match these  -  a mismatch means the graph
     /// is wrong-shape for the input and must be re-recorded.
