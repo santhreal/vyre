@@ -876,24 +876,34 @@ static REGISTERED_DEVICE: std::sync::Mutex<Option<CudaBackend>> = std::sync::Mut
 
 /// Acquire the registered CUDA device generation, acquiring it on first use.
 ///
+/// The handle is bound to the calling thread before it is returned. Acquiring a
+/// fresh device bound its context as a side effect of creating it, so a shared
+/// handle reused from another thread would load its first module under no
+/// current context and fail with `CUDA_ERROR_INVALID_CONTEXT`.
+///
 /// # Errors
 ///
 /// Returns the concrete acquisition error when the CUDA driver cannot provide
-/// the device, and a lock error when a previous acquisition panicked.
+/// the device, a bind error when the context cannot be made current on this
+/// thread, and a lock error when a previous acquisition panicked.
 pub(crate) fn registered_device() -> Result<CudaBackend, BackendError> {
     let mut slot = REGISTERED_DEVICE.lock().map_err(|_| BackendError::DispatchFailed {
         code: None,
         message: "CUDA registered device acquisition panicked and left the device slot poisoned. Fix: restart the process; a half-acquired CUDA context cannot be reused."
             .to_string(),
     })?;
-    if let Some(device) = slot.as_ref() {
-        return Ok(device.clone());
-    }
-    let device = CudaBackend::acquire().map_err(|e| BackendError::DispatchFailed {
-        code: None,
-        message: format!("CUDA backend acquisition failed: {e}"),
-    })?;
-    Ok(slot.insert(device).clone())
+    let device = match slot.as_ref() {
+        Some(device) => device.clone(),
+        None => {
+            let device = CudaBackend::acquire().map_err(|e| BackendError::DispatchFailed {
+                code: None,
+                message: format!("CUDA backend acquisition failed: {e}"),
+            })?;
+            slot.insert(device).clone()
+        }
+    };
+    device.warmup()?;
+    Ok(device)
 }
 
 /// Factory function for inventory registration.
