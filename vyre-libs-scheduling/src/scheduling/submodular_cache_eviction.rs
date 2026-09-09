@@ -118,7 +118,7 @@ pub fn select_retention_set_via_with_scratch_into(
     scratch: &mut SubmodularEvictionGpuScratch,
     picked: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, submodular_cache_eviction_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, submodular_cache_eviction_calls};
     bump(&submodular_cache_eviction_calls);
     if n == 0 {
         return Err(SemanticExecutionError::InvalidRequest(

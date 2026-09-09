@@ -26,7 +26,8 @@ impl PatternExists {
 pub const OP_ID: &str = "vyre-libs::rule::pattern_exists";
 
 /// Execution contract annotation for the standard catalog.
-pub const CONTRACT: OperationContract = vyre_libs_builder::contracts::RULE_PREDICATE_CHEAP;
+pub const CONTRACT: OperationContract =
+    vyre_libs_builder::plumbing::registration::contracts::RULE_PREDICATE_CHEAP;
 
 /// Pattern existence condition operation.
 #[derive(Debug, Clone, Copy, Default)]

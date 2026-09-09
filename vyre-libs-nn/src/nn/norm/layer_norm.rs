@@ -98,7 +98,7 @@ impl LayerNorm {
     }
 }
 
-vyre_libs_builder::builder::impl_cat_a_builder_options!(LayerNorm);
+vyre_libs_builder::impl_cat_a_builder_options!(LayerNorm);
 
 /// Shape, numerics, and codegen knobs for one tiled layer-norm build.
 struct LayerNormTiledSpec<'a> {

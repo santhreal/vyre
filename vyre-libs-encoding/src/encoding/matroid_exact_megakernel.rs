@@ -282,7 +282,7 @@ pub fn select_optimal_subset_via_with_scratch_into(
     scratch: &mut ExactMatroidDispatchScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, matroid_exact_megakernel_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, matroid_exact_megakernel_calls};
     bump(&matroid_exact_megakernel_calls);
 
     let n_u32 = validate_full_for_dispatch(exchange_adj, sources, sinks, seed_x, n)?;

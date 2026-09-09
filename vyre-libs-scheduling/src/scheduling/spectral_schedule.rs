@@ -105,7 +105,7 @@ pub fn fusion_scores_fixed_via_with_scratch_into(
     scratch: &mut SpectralScheduleGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, spectral_schedule_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, spectral_schedule_calls};
     bump(&spectral_schedule_calls);
 
     if k_steps > CHEBYSHEV_MAX_K {
@@ -296,7 +296,7 @@ mod tests {
     use vyre_test_support::test_parity_oracles::{policy, StaticOutputs};
 
     fn reference_fusion_scores(laplacian: &[f32], n: u32) -> Vec<f32> {
-        use vyre_libs_builder::telemetry::{bump, spectral_schedule_calls};
+        use vyre_libs_builder::plumbing::host::telemetry::{bump, spectral_schedule_calls};
         bump(&spectral_schedule_calls);
         assert_eq!(laplacian.len(), (n * n) as usize);
         let signal: Vec<f32> = (0..n).map(|_| 1.0 / (n as f32).sqrt()).collect();

@@ -6,8 +6,8 @@
 //! `assert_no_cpu_named_api_exports`,
 //! `blake3_compress_optimizer_idempotence_contract` only
 //! `optimizer::assert_optimizer_is_idempotent`,
-//! `nn_attention_clone_family_ir_invariance` and `parsing_walker_clone_family`
-//! only `ir_fingerprint::assert_pinned_ir_fingerprints`, and
+//! `parsing_walker_clone_family` only
+//! `ir_fingerprint::assert_pinned_ir_fingerprints`, and
 //! `attention_layout_launch_domain`, `flash_attention_plan_shared_memory` and
 //! `dedup_conv_ast_walk_family_guard` only the source readers. Each
 //! unused-in-this-binary helper is live in a sibling binary, so `dead_code`

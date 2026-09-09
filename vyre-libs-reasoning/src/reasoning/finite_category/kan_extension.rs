@@ -3,7 +3,7 @@
 #[cfg(test)]
 use super::adjoint::FiniteFunctor;
 #[cfg(test)]
-use vyre_libs_builder::telemetry::{bump, dataflow_fixpoint_calls};
+use vyre_libs_builder::plumbing::host::telemetry::{bump, dataflow_fixpoint_calls};
 #[cfg(test)]
 pub(crate) use vyre_reference::composition_witness::KanDirection;
 

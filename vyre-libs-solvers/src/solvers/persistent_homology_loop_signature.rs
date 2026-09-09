@@ -62,7 +62,9 @@ pub fn region_loop_skeleton_fixed_via_into(
     n: u32,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, persistent_homology_loop_signature_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{
+        bump, persistent_homology_loop_signature_calls,
+    };
     bump(&persistent_homology_loop_signature_calls);
     let cells = checked_square_cells(n, "region_loop_skeleton_fixed_via_into")?;
     if dist_matrix_fixed.len() != cells {

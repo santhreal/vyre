@@ -66,6 +66,94 @@ name = "vyre-libs"
 duplicate_paths = 0
 
 [[crate]]
+name = "vyre-libs-analysis"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-bitset"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-builder"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-decode"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-device"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-encoding"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-fixpoint"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-graph"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-hash"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-math"
+duplicate_paths = 41
+
+[[crate]]
+name = "vyre-libs-nn"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-parsing"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-pattern"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-reasoning"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-reduce"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-rule"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-scheduling"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-security"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-solvers"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-text"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-vfs"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-visual"
+duplicate_paths = 0
+
+[[crate]]
 name = "vyre-lints"
 duplicate_paths = 0
 

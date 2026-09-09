@@ -1,6 +1,6 @@
 //! `persistent_fixpoint`  -  single-dispatch convergence on the GPU.
 //!
-//! Where [`bitset_fixpoint`](super::bitset_fixpoint::bitset_fixpoint)
+//! Where [`bitset_fixpoint`](crate::fixpoint::bitset_fixpoint::bitset_fixpoint)
 //! ships only the comparison + flag half of the loop and leaves the
 //! caller's host code to drive the iteration, `persistent_fixpoint`
 //! takes the caller's transfer-step body and wraps it in a forever-
