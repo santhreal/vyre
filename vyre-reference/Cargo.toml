@@ -45,6 +45,9 @@ rustdoc-args = ["--cfg", "docsrs"]
 default = ["subgroup-ops"]
 subgroup-ops = []
 
+[package.metadata.vyre]
+publication_class = "internal-engine"
+
 [lints]
 workspace = true
 

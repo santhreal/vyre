@@ -23,6 +23,9 @@ thiserror.workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 
+[package.metadata.vyre]
+publication_class = "stable-consumer-sdk"
+
 [lints]
 workspace = true
 

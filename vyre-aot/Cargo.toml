@@ -14,6 +14,9 @@ readme = "README.md"
 keywords = ["vyre", "gpu", "aot", "compiler"]
 categories = ["compilers", "hardware-support"]
 
+[package.metadata.vyre]
+publication_class = "internal-engine"
+
 [lints]
 workspace = true
 

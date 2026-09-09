@@ -12,6 +12,9 @@ readme = "README.md"
 categories = ["development-tools", "compilers"]
 keywords = ["vyre", "lint", "ir", "compiler"]
 
+[package.metadata.vyre]
+publication_class = "conformance-tooling"
+
 [lints]
 workspace = true
 

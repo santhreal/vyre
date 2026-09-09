@@ -32,3 +32,11 @@ pub mod wire_v1_round_trip;
 /// Integration tests from `tests/downstream_workflow_fixture.rs`.
 #[path = "downstream_workflow_fixture.rs"]
 pub mod downstream_workflow_fixture;
+
+/// Integration tests from `tests/publication_classes.rs`.
+#[path = "publication_classes.rs"]
+pub mod publication_classes;
+
+/// Integration tests from `tests/facade_boundary.rs`.
+#[path = "facade_boundary.rs"]
+pub mod facade_boundary;

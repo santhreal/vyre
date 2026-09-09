@@ -14,6 +14,9 @@ keywords = ["vyre", "conformance", "spec", "witness"]
 categories = ["development-tools::testing"]
 publish = false
 
+[package.metadata.vyre]
+publication_class = "conformance-tooling"
+
 [lints]
 workspace = true
 

@@ -12,6 +12,9 @@ documentation = "https://docs.rs/vyre-emit-spirv"
 categories = ["compilers", "hardware-support"]
 keywords = ["vyre", "spirv", "shader", "gpu"]
 
+[package.metadata.vyre]
+publication_class = "internal-engine"
+
 [lints]
 workspace = true
 

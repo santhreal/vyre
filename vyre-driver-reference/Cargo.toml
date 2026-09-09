@@ -24,6 +24,9 @@ vyre-megakernel.workspace = true
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[package.metadata.vyre]
+publication_class = "concrete-backend"
+
 [lints]
 workspace = true
 

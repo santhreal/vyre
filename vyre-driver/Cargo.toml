@@ -56,6 +56,9 @@ toml.workspace = true
 dashmap.workspace = true
 fs2.workspace = true
 
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+
 [lints]
 workspace = true
 

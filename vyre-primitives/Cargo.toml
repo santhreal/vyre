@@ -56,6 +56,9 @@ vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+
 [lints]
 workspace = true
 

@@ -26,11 +26,16 @@ vyre-driver-wgpu = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
+serde_json.workspace = true
+syn.workspace = true
+toml.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[package.metadata.vyre]
+publication_class = "stable-consumer-sdk"
 [features]
 default = []
 cuda = ["dep:vyre-driver-cuda"]

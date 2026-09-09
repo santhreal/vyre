@@ -37,10 +37,16 @@ pub use vyre_foundation::dialect;
 pub use vyre_spec::soundness;
 
 /// Whole-program compiler request, artifact, payload, and target-facet APIs.
-pub use vyre_megakernel as compiler;
+pub mod compiler {
+    pub use vyre_megakernel::{
+        compile, Artifact, ArtifactEnvelope, CompileObjective, CompileRequest, DeviceFacts,
+        Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetPayload, TargetPayloadFormat,
+        TargetProfile, ValidatedCompileRequest,
+    };
+}
 
 /// Canonical compiler artifact and request types.
-pub use vyre_megakernel::{
+pub use compiler::{
     Artifact, ArtifactEnvelope, CompileObjective, CompileRequest, ExternalFacts, ObjectiveMetric,
     SearchBudget, TargetPayload, TargetPayloadFormat, TargetProfile, ValidatedCompileRequest,
 };

@@ -18,6 +18,9 @@ documentation = "https://docs.rs/vyre-pass-engine"
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[package.metadata.vyre]
+publication_class = "internal-engine"
+
 [lints]
 workspace = true
 

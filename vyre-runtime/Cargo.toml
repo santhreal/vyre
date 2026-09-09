@@ -67,6 +67,9 @@ proptest.workspace = true
 [target.'cfg(target_os = "linux")'.dev-dependencies]
 libc.workspace = true
 
+[package.metadata.vyre]
+publication_class = "internal-engine"
+
 [lints]
 workspace = true
 

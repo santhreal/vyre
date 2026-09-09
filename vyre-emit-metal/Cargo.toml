@@ -12,6 +12,9 @@ documentation = "https://docs.rs/vyre-emit-metal"
 categories = ["compilers", "hardware-support"]
 keywords = ["vyre", "metal", "msl", "shader", "gpu"]
 
+[package.metadata.vyre]
+publication_class = "internal-engine"
+
 [lints]
 workspace = true
 

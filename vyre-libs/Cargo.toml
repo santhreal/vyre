@@ -273,6 +273,9 @@ required-features = ["math-scan"]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[package.metadata.vyre]
+publication_class = "stable-consumer-sdk"
+
 [lints]
 workspace = true
 

@@ -30,6 +30,9 @@ vyre-primitives = { path = "../vyre-primitives" }
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+
 [lints]
 workspace = true
 

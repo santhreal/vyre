@@ -18,6 +18,9 @@ publish = false
 # run time, a driver dispatch budget under `cargo test`.
 [dependencies]
 
+[package.metadata.vyre]
+publication_class = "conformance-tooling"
+
 [lints]
 workspace = true
 

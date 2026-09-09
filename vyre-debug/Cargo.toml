@@ -15,6 +15,9 @@ keywords = ["vyre", "debug", "gpu", "shader"]
 [package.metadata.cargo-machete]
 ignored = ["vyre-megakernel"]
 
+[package.metadata.vyre]
+publication_class = "internal-engine"
+
 [lints]
 workspace = true
 

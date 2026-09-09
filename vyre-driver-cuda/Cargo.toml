@@ -18,6 +18,9 @@ categories = ["hardware-support"]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[package.metadata.vyre]
+publication_class = "concrete-backend"
+
 [lints]
 workspace = true
 
@@ -39,9 +42,6 @@ vyre-emit-ptx.workspace = true
 # (DCE/CSE/const-fold) on CUDA. Lives in [dependencies] (not dev-deps)
 # because src/optimizer.rs is shipped lib code.
 vyre-pass-engine = { workspace = true }
-# Device-boundary contracts and the composition trees the CUDA adapters plan
-# against, now owned by the composition crate.
-vyre-libs = { workspace = true, features = ["device", "scheduling", "graph-dispatch"] }
 inventory.workspace = true
 tracing.workspace = true
 blake3.workspace = true

@@ -17,6 +17,9 @@ publish = false
 [package.metadata.cargo-machete]
 ignored = ["vyre-test-support", "vyre-driver-spirv"]
 
+[package.metadata.vyre]
+publication_class = "conformance-tooling"
+
 [lints]
 workspace = true
 

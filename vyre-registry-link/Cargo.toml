@@ -12,6 +12,9 @@ description = "Sole owner of inventory registry link anchors and the per-source 
 # Linkage owner for internal binaries, never published.
 publish = false
 
+[package.metadata.vyre]
+publication_class = "internal-engine"
+
 [lints]
 workspace = true
 

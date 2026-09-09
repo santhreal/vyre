@@ -23,20 +23,13 @@ default = []
 device-tests = []
 wgpu = []
 parity-testing = []
-math-linalg = ["vyre-libs/math-linalg"]
-math-scan = ["vyre-libs/math-scan"]
-nn-attention = ["vyre-libs/nn-attention"]
-pattern-substring = ["vyre-libs/pattern-substring"]
-pattern-dfa = ["vyre-libs/pattern-dfa"]
-pattern-nfa = ["vyre-libs/pattern-nfa"]
 
 [dependencies]
 vyre-spec = { workspace = true }
-vyre-driver = { workspace = true, features = ["libs-compositions"] }
+vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
 vyre-pass-engine = { workspace = true }
-vyre-libs = { workspace = true, features = ["reasoning"] }
 vyre-lower.workspace = true
 vyre-emit-naga.workspace = true
 naga = { workspace = true, features = ["wgsl-out", "spv-out"] }
@@ -111,6 +104,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 # pipeline-cache key invalidates when the shader frontend changes. Bump in
 # lockstep with the workspace `naga` dep.
 [package.metadata.vyre]
+publication_class = "concrete-backend"
 naga_version = "25.0.0"
 
 [lints]

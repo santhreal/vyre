@@ -106,6 +106,9 @@ required-features = ["cli"]
 name = "release"
 harness = false
 
+[package.metadata.vyre]
+publication_class = "conformance-tooling"
+
 [lints]
 workspace = true
 

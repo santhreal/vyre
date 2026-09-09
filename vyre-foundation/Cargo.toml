@@ -42,6 +42,9 @@ libm.workspace = true
 itoa.workspace = true
 arrayvec.workspace = true
 
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+
 [lints]
 workspace = true
 

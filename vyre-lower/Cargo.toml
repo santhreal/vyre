@@ -12,6 +12,9 @@ documentation = "https://docs.rs/vyre-lower"
 categories = ["compilers", "hardware-support"]
 keywords = ["vyre", "lowering", "gpu", "compiler"]
 
+[package.metadata.vyre]
+publication_class = "internal-engine"
+
 [lints]
 workspace = true
 

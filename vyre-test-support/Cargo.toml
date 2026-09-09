@@ -75,6 +75,9 @@ tempfile.workspace = true
 # so the owner set it pins is the declared one rather than a copy here.
 toml = { workspace = true }
 
+[package.metadata.vyre]
+publication_class = "private-test-support"
+
 [lints]
 workspace = true
 
