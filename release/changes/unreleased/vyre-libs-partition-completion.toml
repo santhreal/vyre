@@ -1,2 +1,2 @@
-category = "refactor"
-text = "Finish the vyre-libs domain crate partition by retiring the dead monolith source, establishing individual test targets for domain crates, and consolidating shared test parity fixtures in vyre-test-support."
+category = "Changed"
+text = "Each vyre-libs domain is a separate package that registers its own test target, and the shared test parity fixtures are owned by vyre-test-support."

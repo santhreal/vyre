@@ -274,6 +274,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Candidate search derives alternatives from the declared algebraic and region
   laws, prices each one on its own measurements, and records the law chain it
   was derived through in the selected plan and the search certificate.
+- The canonical graph delta subsystem defines bounded transactional graph
+  modifications over stable semantic identities, providing dirty closure
+  derivation, exact query invalidation, positive retention verification, and
+  monotonic generation tracking.
 - `c_frontend::parity_matrix::assert_case_table_covers_fixture_file` reads a
   fixture family's own source at run time, collects the fixture builders it
   declares, and fails when the family's `CASES` table does not name one of
@@ -3276,11 +3280,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - `conform/vyre-conform` introduces `OracleSession` evaluating programs
   directly through `vyre-reference` interpreter, deleting `cpu-ref` from the
   `VyreBackend` registry, precedence order, and `vyre-registry-link`.
-- Elementwise builder output byte ranges are declared in 64-bit.
-  `add_output_with_byte_range` takes a `Range<u64>`, matching
-  `BufferDecl::with_output_byte_range`, and `add_output` computes its range in
-  `u64` so a buffer larger than a 32-bit host address space states its extent
-  without truncation.
+- Output byte ranges are declared in 64-bit. `add_output_with_byte_range` takes
+  a `Range<u64>`, matching `BufferDecl::with_output_byte_range`, and
+  `add_output` computes its range in `u64`. The multi-block prefix scan derives
+  its output extent in `u64` as well, so a device buffer extent no longer
+  depends on host pointer width and the scan drops an overflow check that could
+  only fire on a 32-bit host.
 - Foundation now exposes IR-specific `IrError` and `IrResult` contracts instead
   of a cross-domain error sink. Reference interpretation, backend execution,
   WGPU device selection, and runtime framing return owner-local typed failures.
@@ -3826,6 +3831,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Split program_graph, logical, and node_lowering modules in vyre-foundation
   and vyre-lower into focused submodule hierarchies to satisfy the file size
   cap while preserving all public and in-crate APIs.
+- Consolidated the reference interpreter onto strict budgeted ReferenceRequest
+  execution with structured error handling, removed the CPU execution route
+  from backend registration and dispatcher discovery, and migrated conformance
+  evaluation to direct OracleSession.
 - The structural graph, causal and logic kernels are reached at
   `vyre_libs::graph`, not through a second set of names in `vyre-libs`.
   `graph::dispatch::structural_kernel_pipeline` held sixty-six wrappers across
@@ -4201,6 +4210,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   measured. What remains between the three match-emitting entry points is their
   frozen positional signatures and the shared value they each construct from
   them, which no owner can absorb without changing the public ABI.
+- Each vyre-libs domain is a separate package that registers its own test
+  target, and the shared test parity fixtures are owned by vyre-test-support.
 - The vyre-libs crate root is a table of contents. Fourteen loose files sat
   beside twenty-five dialect directories, so the root did not say what the
   crate is. Each one now sits under the concern it serves: buffer names, tensor
