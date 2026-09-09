@@ -72,7 +72,7 @@ pub mod ir {
     pub use crate::ir_inner::model::program_graph::{
         ControlBounds, ExternalEffect, GraphInput, GraphNodeId, GraphOutput, GraphValueId,
         LivenessInterval, ProgramGraph, ProgramGraphBuilder, ProgramGraphError, ProgramGraphNode,
-        ProgramGraphSharingMetrics, ProgramGraphTemplate, ProgramGraphValue, ShapeDim, ShapeExprId,
+        ProgramGraphSharingMetrics, ProgramGraphTemplate, ProgramGraphValue, ShapeDim,
         ValueContract, ValueLifetime,
     };
     pub use crate::ir_inner::model::program_graph_delta::{
@@ -225,19 +225,11 @@ pub use canonical_codec::{
     CanonicalDecoder, CanonicalEncoder, CanonicalRecord, CanonicalSigner, CanonicalValue,
     CodecError,
 };
-pub use config_schema::{
-    render_cli_help, render_configuration_reference_markdown, ConfigFieldDef, ConfigLayer,
-    ConfigMutability, ConfigPartition, ConfigSecrecy, ConfigType, ConfigValue, IdentityImpact,
-    ResolvedConfiguration, CANONICAL_CONFIG_FIELDS,
-};
-pub use failure_domain::{
-    govern_mutex_restartable, govern_rwlock_write_restartable, invariant_violation_poison,
-    reclaim_poisoned_for_teardown, reclaim_poisoned_irreplaceable_state, FailureDomain,
-    RecoveryClass, RecoveryDisposition, TypedRecoveryError,
+pub use vyre_spec::schema_registry::{
+    CanonicalField, DefaultsPolicy, FieldType, SchemaBounds, SchemaDefinition, SchemaId,
+    SchemaRegistry, CANONICAL_SCHEMA_REGISTRY,
 };
 pub use vyre_spec::{
-    CanonicalField, CompatibilityCell, CompatibilityDisposition, CompatibilityMatrix,
-    DefaultsPolicy, FieldType, NegotiatedContract, NegotiationError, ProtocolDomain,
-    ProtocolVersion, SchemaBounds, SchemaDefinition, SchemaId, SchemaRegistry,
-    CANONICAL_COMPATIBILITY_CELLS, CANONICAL_SCHEMA_REGISTRY,
+    CompatibilityCell, CompatibilityDisposition, CompatibilityMatrix, NegotiatedContract,
+    NegotiationError, ProtocolDomain, ProtocolVersion, CANONICAL_COMPATIBILITY_CELLS,
 };

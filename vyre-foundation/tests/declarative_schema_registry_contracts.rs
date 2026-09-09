@@ -19,7 +19,7 @@ use vyre_foundation::{
     CanonicalDecoder, CanonicalEncoder, CanonicalRecord, CanonicalSigner, CanonicalValue,
     CodecError,
 };
-use vyre_spec::{FieldType, SchemaId, SchemaRegistry, CANONICAL_SCHEMA_REGISTRY};
+use vyre_spec::schema_registry::{FieldType, SchemaId, SchemaRegistry, CANONICAL_SCHEMA_REGISTRY};
 
 /// A value conforming to `field_type`, distinct per field number.
 ///

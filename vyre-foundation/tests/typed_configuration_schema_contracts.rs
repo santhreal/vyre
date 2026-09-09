@@ -7,7 +7,7 @@
 //! - Unknown keys, schema version mismatches, and bounds violations fail with actionable corrective diagnostics.
 //! - Source-derived field set closure validates that every field declares owner, bounds, default, identity effect, and secrecy.
 
-use vyre_foundation::{
+use vyre_foundation::config_schema::{
     render_cli_help, render_configuration_reference_markdown, ConfigFieldDef, ConfigLayer,
     ConfigMutability, ConfigPartition, ConfigSecrecy, ConfigType, ConfigValue, IdentityImpact,
     ResolvedConfiguration, CANONICAL_CONFIG_FIELDS,

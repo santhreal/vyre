@@ -10,7 +10,7 @@ use std::format;
 use std::string::String;
 use std::sync::Mutex;
 
-use vyre_foundation::{
+use vyre_foundation::failure_domain::{
     reclaim_poisoned_irreplaceable_state, FailureDomain, RecoveryClass, RecoveryDisposition,
     TypedRecoveryError,
 };

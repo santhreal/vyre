@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 
 use thiserror::Error;
 use vyre_driver::BackendError;
-use vyre_foundation::reclaim_poisoned_irreplaceable_state;
+use vyre_foundation::failure_domain::reclaim_poisoned_irreplaceable_state;
 
 /// The subsystem every poison report in this module names as the owner.
 const OWNER: &str = "runtime structured concurrency";

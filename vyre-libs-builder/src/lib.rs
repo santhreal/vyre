@@ -20,7 +20,7 @@ pub use plumbing::registration::signatures::*;
 pub use plumbing::registration::{contracts, operation_catalog};
 
 /// Ensure all feature-selected library operation registrations are retained by the linker.
-#[must_use]
-pub fn link_anchor() -> usize {
-    operation_catalog::link_anchor()
+#[inline(never)]
+pub fn link_anchor() {
+    let _ = operation_catalog::link_anchor();
 }

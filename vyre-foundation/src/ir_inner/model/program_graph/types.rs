@@ -6,7 +6,7 @@ use thiserror::Error;
 use super::graph::ProgramGraph;
 use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
 use crate::ir_inner::model::program::Program;
-pub use crate::types::ShapeExprId;
+use crate::types::ShapeExprId;
 /// Canonical graph-local identity for one connected semantic value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct GraphValueId(pub u32);

@@ -10,10 +10,11 @@
 //! - Crash interruption during rollout leaves no half-migrated state; rollback restores prior generation.
 //! - Negotiated contract digest is bound into artifact identity.
 
+use vyre_spec::schema_registry::{DefaultsPolicy, FieldType, SchemaId, SchemaRegistry};
 use vyre_spec::{
     derive_artifact_identity, CacheNamespace, CompatibilityDisposition, CompatibilityMatrix,
-    DefaultsPolicy, FieldType, GenerationId, ProtocolDomain, ProtocolVersion, RetainedSessionScope,
-    RolloutManager, SchemaId, SchemaRegistry, SessionScopeError, SessionStatus,
+    GenerationId, ProtocolDomain, ProtocolVersion, RetainedSessionScope, RolloutManager,
+    SessionScopeError, SessionStatus,
 };
 
 #[test]

@@ -110,7 +110,7 @@ pub use vyre_foundation::validate::validate;
 pub use vyre_foundation::match_result::ByteRange;
 
 /// Typed configuration schema, precedence resolution, and credential secrecy.
-pub use vyre_foundation::{
+pub use vyre_foundation::config_schema::{
     render_cli_help, render_configuration_reference_markdown, ConfigFieldDef, ConfigLayer,
     ConfigMutability, ConfigPartition, ConfigSecrecy, ConfigType, ConfigValue, IdentityImpact,
     ResolvedConfiguration, CANONICAL_CONFIG_FIELDS,

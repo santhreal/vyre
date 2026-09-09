@@ -13,7 +13,7 @@ pub mod representation;
 pub(crate) const MATMUL_2X2_EXPECTED_WORDS: [u32; 4] = [19, 22, 43, 50];
 
 /// Ensure all feature-selected library operation registrations are retained by the linker.
-#[must_use]
-pub fn link_anchor() -> usize {
-    vyre_libs_builder::link_anchor()
+#[inline(never)]
+pub fn link_anchor() {
+    vyre_libs_builder::link_anchor();
 }

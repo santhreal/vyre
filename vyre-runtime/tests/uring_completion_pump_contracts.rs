@@ -1,9 +1,10 @@
-//! Contracts for `vyre_runtime::UringCompletionPump`.
+//! Contracts for `vyre_runtime::uring_completion_pump::UringCompletionPump`.
 //!
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
-use vyre_runtime::{PipelineError, UringCompletionPump, UringPollState};
+use vyre_runtime::uring_completion_pump::{UringCompletionPump, UringPollState};
+use vyre_runtime::PipelineError;
 
 #[test]
 fn construct_stream_has_no_shutdown() {
