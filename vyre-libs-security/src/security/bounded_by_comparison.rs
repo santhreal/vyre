@@ -122,7 +122,10 @@ mod tests {
             node_count
         );
 
-        let contract = vyre_libs_builder::operation_catalog::convergence_contract(OP_ID)
+        let contract =
+            vyre_libs_builder::plumbing::registration::operation_catalog::convergence_contract(
+                OP_ID,
+            )
             .expect("Fix: bounded_by_comparison must have a ConvergenceContract");
         assert!(
             contract.max_iterations >= node_count,

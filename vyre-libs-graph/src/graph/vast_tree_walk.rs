@@ -182,7 +182,7 @@ pub fn try_ast_walk_order(
     node_count: u32,
     out_cap: u32,
 ) -> Result<Program, String> {
-    use vyre_libs_builder::telemetry::{bump, vast_tree_walk_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, vast_tree_walk_calls};
     bump(&vast_tree_walk_calls);
     let op_id = order.op_id();
     let (stride, node_words, out_words) = checked_tree_walk_shape(node_count, out_cap, op_id)?;

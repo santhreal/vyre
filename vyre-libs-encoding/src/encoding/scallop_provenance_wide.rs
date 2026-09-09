@@ -22,7 +22,7 @@ pub fn scallop_provenance_wide_program(
     w: u32,
     max_iterations: u32,
 ) -> Program {
-    use vyre_libs_builder::telemetry::{bump, scallop_provenance_wide_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, scallop_provenance_wide_calls};
     bump(&scallop_provenance_wide_calls);
     scallop_join(state, next, join_rules, changed, n, w, max_iterations)
 }

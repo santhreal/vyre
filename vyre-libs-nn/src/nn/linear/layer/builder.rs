@@ -125,7 +125,7 @@ impl Linear {
     }
 }
 
-vyre_libs_builder::builder::impl_cat_a_builder_options!(Linear);
+vyre_libs_builder::impl_cat_a_builder_options!(Linear);
 
 /// Build a Program that computes `out[i] = sum_k x[k] * w[k, i] + b[i]`.
 ///

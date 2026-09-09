@@ -89,7 +89,7 @@ pub fn apply_pass_functor_via_into(
     target_n_cols: u32,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, functorial_pass_composition_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, functorial_pass_composition_calls};
     bump(&functorial_pass_composition_calls);
 
     if target_n_cols == 0 {

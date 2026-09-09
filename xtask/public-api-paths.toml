@@ -66,6 +66,34 @@ name = "vyre-libs"
 duplicate_paths = 0
 
 [[crate]]
+name = "vyre-libs-analysis"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-bitset"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-builder"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-decode"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-device"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-encoding"
+duplicate_paths = 0
+
+[[crate]]
+name = "vyre-libs-fixpoint"
+duplicate_paths = 0
+
+[[crate]]
 name = "vyre-lints"
 duplicate_paths = 0
 

@@ -160,7 +160,7 @@ pub fn predict_impact_via_into(
     n: u32,
     scratch: &mut DoCalculusImpactScratch,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, do_calculus_change_impact_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
         if !adj.is_empty() {
@@ -386,7 +386,7 @@ fn dispatch_do_calculus_surgery_into<F>(
 where
     F: FnOnce(&str, &str, &str, u32) -> Program,
 {
-    use vyre_libs_builder::telemetry::{bump, do_calculus_change_impact_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
 
     if n == 0 {
@@ -540,7 +540,7 @@ fn rule3_subgraph_via_into_with_inputs(
     reduced: &mut Vec<u32>,
     kept: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, do_calculus_change_impact_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
 
     if n == 0 {
@@ -679,7 +679,7 @@ pub fn predict_impact_observation_form_via_into(
     n: u32,
     scratch: &mut DoCalculusImpactScratch,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, do_calculus_change_impact_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
         if !adj.is_empty() {

@@ -329,7 +329,9 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
         })?;
     let retained = returned_graph_values(logical.graph());
     let request = SemanticExecutionRequest::new(&logical, request_inputs, policy.clone())?;
-    vyre_libs_builder::telemetry::bump(&vyre_libs_builder::telemetry::graph_dispatch_calls);
+    vyre_libs_builder::plumbing::host::telemetry::bump(
+        &vyre_libs_builder::plumbing::host::telemetry::graph_dispatch_calls,
+    );
     let outputs = dispatcher.execute(&request)?.outputs;
     decode_forward_fixpoint_outputs(
         outputs,

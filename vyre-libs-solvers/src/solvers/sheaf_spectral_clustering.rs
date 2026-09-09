@@ -179,7 +179,7 @@ pub fn dominant_spectrum_fixed_via_with_scratch_into(
     scratch: &mut SheafSpectrumGpuScratch,
     eigenvector_out: &mut Vec<u32>,
 ) -> Result<u32, SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, sheaf_spectral_clustering_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, sheaf_spectral_clustering_calls};
     bump(&sheaf_spectral_clustering_calls);
 
     let cells = checked_product_count(n_nodes, d, "n_nodes", "d", "dominant_spectrum_fixed_via")?;

@@ -109,7 +109,7 @@ pub(crate) fn cluster_projection_matrix_into<'a>(
     k: u32,
     scratch: &'a mut RegionCoarsenScratch,
 ) -> &'a [f64] {
-    use vyre_libs_builder::telemetry::{bump, mori_zwanzig_region_coarsen_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, mori_zwanzig_region_coarsen_calls};
     bump(&mori_zwanzig_region_coarsen_calls);
     cluster_projection_matrix_witness_into(
         assignments,
@@ -194,7 +194,7 @@ pub fn coarsen_region_state_fixed_via_with_scratch_into(
     scratch: &mut RegionCoarsenGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, mori_zwanzig_region_coarsen_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, mori_zwanzig_region_coarsen_calls};
     bump(&mori_zwanzig_region_coarsen_calls);
 
     let cells = checked_square_cells(n, "coarsen_region_state_fixed_via")?;
@@ -262,7 +262,7 @@ pub(crate) fn reference_coarsen_via_clustering_into<'a>(
     k: u32,
     scratch: &'a mut RegionCoarsenScratch,
 ) -> &'a [f64] {
-    use vyre_libs_builder::telemetry::{bump, mori_zwanzig_region_coarsen_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, mori_zwanzig_region_coarsen_calls};
     bump(&mori_zwanzig_region_coarsen_calls);
     mori_zwanzig_coarsen_via_clustering_witness_into(
         state,
