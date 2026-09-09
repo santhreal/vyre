@@ -10,7 +10,6 @@ use vyre_runtime::resident_work_queue::protocol::{
     self, control, debug, opcode as opcodes, slot, DebugRecord, ProtocolError, ARG0_WORD,
     ARGS_PER_SLOT, OPCODE_WORD, SLOT_WORDS,
 };
-use vyre_runtime::resident_work_queue::scheduler;
 use vyre_runtime::resident_work_queue::ResidentWorkQueue;
 use vyre_runtime::resident_work_queue::{
     build_program, build_program_jit, build_program_sharded, build_program_sharded_slots,
@@ -167,7 +166,7 @@ fn encode_control_covers_epoch_and_priority_offsets() {
     let min_len = protocol::control_byte_len(0).expect("control length must fit");
     assert_eq!(ctrl.len(), min_len);
     assert!(ctrl.len() >= (control::EPOCH as usize + 1) * 4);
-    assert!(ctrl.len() >= (scheduler::PRIORITY_OFFSETS_BASE as usize + 6) * 4);
+    assert!(ctrl.len() >= (control::PRIORITY_OFFSETS_BASE as usize + 6) * 4);
 }
 
 #[test]

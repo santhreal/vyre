@@ -10,7 +10,7 @@ pub use plumbing::host::scratch::*;
 #[cfg(feature = "telemetry")]
 pub use plumbing::host::telemetry;
 pub use plumbing::operand::buffer_names::*;
-pub use plumbing::operand::element_zero::*;
+pub use plumbing::operand::element_zero::element_zero;
 pub use plumbing::operand::shape::*;
 pub use plumbing::operand::tensor_ref::*;
 pub use plumbing::program::attribution::*;

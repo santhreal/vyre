@@ -5,7 +5,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use super::gemm_algebra::ContractionSemiring;
 use super::ContractionEpilogue;
-use crate::plumbing::operand::element_zero::element_zero;
+use crate::element_zero;
 use crate::plumbing::operand::tensor_ref::TensorRefError;
 
 /// Assemble 2D GEMM with 1D linear dispatch.

@@ -25,6 +25,16 @@
 //! So the crate source decides: a name the crate declares twice is two items,
 //! and only a name declared at most once can be one item at two paths.
 //!
+//! That decision only holds for a declaration the crate actually publishes, in
+//! the namespace the shared name occupies. Rust keeps module names and item
+//! names apart, so `mod m` beside `pub fn m` is one declaration of each rather
+//! than two of either; an associated item, a `#[cfg(test)]` item, a
+//! `pub(crate)` item and a body inside a private module reach no consumer at
+//! all; and a `pub const X: u32 = other::X;` publishes one value at a second
+//! path, which is the shape measured here rather than a second declaration of
+//! it. Counting any of those as a declaration certifies a crate the gate never
+//! judged.
+//!
 //! `xtask/public-api-paths.toml` records one measurement per crate. A crate with
 //! no row is a finding, so a newly published crate is red until someone measures
 //! it rather than silently unjudged. `--write` lowers a recorded number to what
@@ -68,6 +78,38 @@ struct RowFile {
     crates: Vec<Row>,
 }
 
+/// Which of Rust's two module-scope namespaces a name occupies.
+///
+/// Rust resolves a module name and an item name separately, so `mod m` beside
+/// `pub fn m` is one declaration of each rather than two of either. Counting
+/// both in one namespace read that pair as two items and dropped the function's
+/// second path from the axis, which is how a module holding exactly one public
+/// item of its own name published that item twice invisibly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Namespace {
+    /// A `mod` name.
+    Module,
+    /// A function, constant, static, type, trait, struct, enum or union name.
+    Item,
+}
+
+/// A name one snapshot publishes, in the namespace it occupies.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Published {
+    /// Which namespace the name occupies.
+    pub namespace: Namespace,
+    /// The item path relative to the module it is reachable through.
+    pub tail: String,
+}
+
+impl Published {
+    /// The first tail segment, which is the name a declaration plants. The rest
+    /// of the tail is a member of it, so `Type::field` is decided by `Type`.
+    fn head(&self) -> &str {
+        self.tail.split("::").next().unwrap_or(self.tail.as_str())
+    }
+}
+
 /// One published item, identified by everything about it except its module path.
 ///
 /// The tail carries the type and member names, so `DiskCache::get` stays distinct
@@ -76,6 +118,7 @@ struct RowFile {
 /// name are two items rather than one item at two paths.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct Item {
+    namespace: Namespace,
     tail: String,
     signature: String,
 }
@@ -144,7 +187,19 @@ fn split_line(line: &str, modules: &BTreeSet<String>) -> Option<(Item, String)> 
     signature.push_str(&trimmed[..start]);
     signature.push('|');
     signature.push_str(&trimmed[end..]);
-    Some((Item { tail, signature }, module))
+    let namespace = if trimmed.starts_with("pub mod ") {
+        Namespace::Module
+    } else {
+        Namespace::Item
+    };
+    Some((
+        Item {
+            namespace,
+            tail,
+            signature,
+        },
+        module,
+    ))
 }
 
 /// Every module path one snapshot declares, relative to the crate root.
@@ -195,7 +250,7 @@ fn crate_rooted_path(line: &str) -> Option<(usize, &str)> {
 /// through a prelude keeps that path, because then the prelude is its owner and a
 /// second owner elsewhere is still the defect this measures.
 #[must_use]
-pub fn duplicates(snapshot: &str) -> BTreeMap<String, BTreeSet<String>> {
+pub fn duplicates(snapshot: &str) -> BTreeMap<Published, BTreeSet<String>> {
     let modules = declared_modules(snapshot);
     let mut paths: BTreeMap<Item, BTreeSet<String>> = BTreeMap::new();
     for line in snapshot.lines() {
@@ -212,7 +267,13 @@ pub fn duplicates(snapshot: &str) -> BTreeMap<String, BTreeSet<String>> {
                 .cloned()
                 .collect();
             let owners = if owned.is_empty() { modules } else { owned };
-            (item.tail, owners)
+            (
+                Published {
+                    namespace: item.namespace,
+                    tail: item.tail,
+                },
+                owners,
+            )
         })
         .filter(|(_, modules)| modules.len() > 1)
         .collect()
@@ -227,50 +288,320 @@ fn republishes(module: &str) -> bool {
         .is_some_and(|segment| segment == "prelude")
 }
 
-/// Item names the crate declares more than once, so several sibling modules each
-/// publish their own, and the shared name is not one item at several paths.
+/// Why a module-scope `pub` line plants no declaration the crate publishes.
 ///
-/// A name is read from a module-scope `pub` declaration or from a name slot of a
-/// module-scope macro invocation, because both plant a definition in the module
-/// the file is. Sibling primitives that generate their entry points through one
-/// wrapper macro each own their own function, and reporting them as one item at
-/// two paths would name a defect the tree does not have.
-#[must_use]
-pub fn names_declared_more_than_once(sources: &[String]) -> BTreeSet<String> {
-    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
-    for source in sources {
-        for name in declared_names(source) {
-            *counts.entry(name).or_default() += 1;
-        }
-    }
-    counts
-        .into_iter()
-        .filter(|(_, count)| *count > 1)
-        .map(|(name, _)| name)
-        .collect()
+/// Each variant is a shape that suppressed a real second path while the scan
+/// counted it as a declaration, so this is the gate's class list rather than a
+/// note about one incident. A fifth shape has to be named here before it
+/// compiles, which is what stops the masking test going green on it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum NotPublished {
+    /// Inside an `impl` or `trait` body, so the name is an associated item and
+    /// a snapshot spells it under its type rather than on its own. Reading one
+    /// as module-scope let a `#[cfg(test)]` associated `flat_index` suppress
+    /// the free `flat_index` a sibling module published at two paths.
+    AssociatedItem,
+    /// Behind `#[cfg(test)]`, or inside a module that is, so no consumer
+    /// reaches it.
+    TestOnly,
+    /// Visibility narrower than `pub`, or inside a module that is, so the crate
+    /// keeps it to itself and it cannot be one of several sibling publishers.
+    Restricted,
+    /// A `const`, `static` or `type` whose value is another module's item of the
+    /// same name. That is one value at a second path, which is the shape this
+    /// gate measures, so counting it as a second declaration hid every pair a
+    /// module of such aliases creates.
+    Republication,
 }
 
-/// Every name one source file declares at module scope, by `pub` item or by a
-/// macro invocation slot.
-fn declared_names(source: &str) -> Vec<String> {
-    let mut names = Vec::new();
-    let mut in_invocation = false;
-    for line in source.lines() {
-        if in_invocation {
-            if line.starts_with('}') {
-                in_invocation = false;
-            } else if let Some(name) = macro_slot_name(line) {
-                names.push(name);
-            }
-            continue;
+impl NotPublished {
+    /// Every reason the scan refuses a `pub` line.
+    pub const ALL: [Self; 4] = [
+        Self::AssociatedItem,
+        Self::TestOnly,
+        Self::Restricted,
+        Self::Republication,
+    ];
+
+    /// The index this reason occupies in `ALL`.
+    ///
+    /// An exhaustive match with no catch-all arm: a fifth reason does not
+    /// compile until it is named here, and `ALL` then fails to hold it until it
+    /// is widened too.
+    #[must_use]
+    pub const fn position(self) -> usize {
+        match self {
+            Self::AssociatedItem => 0,
+            Self::TestOnly => 1,
+            Self::Restricted => 2,
+            Self::Republication => 3,
         }
-        if let Some(name) = declared_item_name(line) {
-            names.push(name);
-            continue;
-        }
-        in_invocation = opens_module_scope_invocation(line);
     }
-    names
+}
+
+/// What one crate's sources declare, and what the scan refused to read as a
+/// declaration.
+#[derive(Debug, Default)]
+pub struct Declared {
+    shared: BTreeMap<Namespace, BTreeSet<String>>,
+    refused: BTreeMap<NotPublished, usize>,
+}
+
+impl Declared {
+    /// Whether several sibling modules each declare `name` in `namespace`, so
+    /// the shared name is not one item at several paths.
+    #[must_use]
+    pub fn shares(&self, namespace: Namespace, name: &str) -> bool {
+        self.shared
+            .get(&namespace)
+            .is_some_and(|names| names.contains(name))
+    }
+
+    /// How many `pub` lines the scan refused for `reason`.
+    #[must_use]
+    pub fn refused(&self, reason: NotPublished) -> usize {
+        self.refused.get(&reason).copied().unwrap_or_default()
+    }
+
+    /// How many `pub` lines the scan refused for any reason.
+    #[must_use]
+    pub fn refusals(&self) -> usize {
+        NotPublished::ALL
+            .iter()
+            .map(|reason| self.refused(*reason))
+            .sum()
+    }
+}
+
+/// Names the crate declares more than once in one namespace, so several sibling
+/// modules each publish their own, and the shared name is not one item at
+/// several paths.
+///
+/// A name is read from a module-scope `pub` declaration the crate publishes or
+/// from a name slot of a module-scope macro invocation, because both plant a
+/// definition in the module the file is. Sibling primitives that generate their
+/// entry points through one wrapper macro each own their own function, and
+/// reporting them as one item at two paths would name a defect the tree does
+/// not have.
+#[must_use]
+pub fn declarations(sources: &[String]) -> Declared {
+    let mut counts: BTreeMap<(Namespace, String), usize> = BTreeMap::new();
+    let mut refused: BTreeMap<NotPublished, usize> = BTreeMap::new();
+    for source in sources {
+        let mut scope = Scope::default();
+        for line in source.lines() {
+            match read_line(&mut scope, line) {
+                Reading::Declares(declaration) => {
+                    *counts
+                        .entry((declaration.namespace, declaration.name))
+                        .or_default() += 1;
+                }
+                Reading::Refuses(reason) => *refused.entry(reason).or_default() += 1,
+                Reading::Nothing => {}
+            }
+        }
+    }
+    let mut shared: BTreeMap<Namespace, BTreeSet<String>> = BTreeMap::new();
+    for ((namespace, name), count) in counts {
+        if count > 1 {
+            shared.entry(namespace).or_default().insert(name);
+        }
+    }
+    Declared { shared, refused }
+}
+
+/// One module-scope declaration a source file plants.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Declaration {
+    namespace: Namespace,
+    name: String,
+}
+
+/// What the scan made of one source line.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Reading {
+    /// A module-scope declaration the crate publishes.
+    Declares(Declaration),
+    /// A `pub` line the crate does not publish, and why.
+    Refuses(NotPublished),
+    /// A line that plants no name.
+    Nothing,
+}
+
+/// What the lines before the current one leave open.
+#[derive(Debug, Default)]
+struct Scope {
+    /// Indentation of an open body whose contents the crate does not publish,
+    /// with the reason, so every line inside it is refused for that reason.
+    unpublished: Option<(usize, NotPublished)>,
+    /// Whether the attributes read since the last item gate it on `test`.
+    test_only: bool,
+    /// Whether a module-scope macro invocation is open.
+    invocation: bool,
+}
+
+/// Read one line against what the lines before it left open.
+///
+/// The walk is line-based because the tree is `rustfmt`-formatted, so a body
+/// opened at one indentation closes with a `}` at that same indentation.
+fn read_line(scope: &mut Scope, line: &str) -> Reading {
+    let trimmed = line.trim();
+    if let Some((indent, reason)) = scope.unpublished {
+        if trimmed.starts_with('}') && indentation(line) == indent {
+            scope.unpublished = None;
+        } else if declared_item_name(line).is_some() {
+            return Reading::Refuses(reason);
+        }
+        return Reading::Nothing;
+    }
+    if scope.invocation {
+        if line.starts_with('}') {
+            scope.invocation = false;
+            return Reading::Nothing;
+        }
+        return match macro_slot_name(line) {
+            Some(name) => Reading::Declares(Declaration {
+                namespace: Namespace::Item,
+                name,
+            }),
+            None => Reading::Nothing,
+        };
+    }
+    if trimmed.is_empty() || trimmed.starts_with("//") {
+        return Reading::Nothing;
+    }
+    if trimmed.starts_with("#[") {
+        scope.test_only |= gates_on_test(trimmed);
+        return Reading::Nothing;
+    }
+    let test_only = std::mem::take(&mut scope.test_only);
+    if opens_associated_body(trimmed) {
+        if !trimmed.ends_with('}') {
+            scope.unpublished = Some((indentation(line), NotPublished::AssociatedItem));
+        }
+        return Reading::Nothing;
+    }
+    // A `mod x { ... }` with no `pub` at all publishes nothing under any of the
+    // names inside it, and `declared_item_name` reads only `pub` lines, so the
+    // body has to be closed here or a `#[cfg(test)] mod tests` block's helpers
+    // read as declarations of the module the file is.
+    if declares_module(trimmed) && !trimmed.starts_with("pub") {
+        if trimmed.ends_with('{') {
+            let reason = if test_only {
+                NotPublished::TestOnly
+            } else {
+                NotPublished::Restricted
+            };
+            scope.unpublished = Some((indentation(line), reason));
+        }
+        return Reading::Nothing;
+    }
+    let Some(name) = declared_item_name(line) else {
+        scope.invocation = opens_module_scope_invocation(line);
+        return Reading::Nothing;
+    };
+    let restricted = restricted_visibility(trimmed);
+    let reason = if test_only {
+        Some(NotPublished::TestOnly)
+    } else if restricted {
+        Some(NotPublished::Restricted)
+    } else if republishes_value(trimmed, &name) {
+        Some(NotPublished::Republication)
+    } else {
+        None
+    };
+    let module = declares_module(trimmed);
+    // An inline `mod x { ... }` the crate does not publish holds nothing a
+    // consumer reaches, so the whole body carries the module's own reason.
+    if module && trimmed.ends_with('{') {
+        if let Some(reason) = reason {
+            scope.unpublished = Some((indentation(line), reason));
+        }
+    }
+    match reason {
+        Some(reason) => Reading::Refuses(reason),
+        None => Reading::Declares(Declaration {
+            namespace: if module {
+                Namespace::Module
+            } else {
+                Namespace::Item
+            },
+            name,
+        }),
+    }
+}
+
+/// Leading whitespace of one line, in bytes.
+fn indentation(line: &str) -> usize {
+    line.len() - line.trim_start().len()
+}
+
+/// Whether an attribute gates the item it precedes on the `test` configuration.
+fn gates_on_test(trimmed: &str) -> bool {
+    trimmed.starts_with("#[cfg(") && trimmed.contains("test")
+}
+
+/// Whether a line opens an `impl` or `trait` body, whose `pub` items are
+/// associated items a snapshot spells under their type.
+fn opens_associated_body(trimmed: &str) -> bool {
+    for word in trimmed.split(|ch: char| !(ch.is_alphanumeric() || ch == '_')) {
+        match word {
+            "" => {}
+            "impl" | "trait" => return true,
+            "unsafe" | "default" | "auto" | "pub" | "crate" | "super" | "self" | "in" => {}
+            _ => return false,
+        }
+    }
+    false
+}
+
+/// Whether a declaration line declares a module rather than an item.
+fn declares_module(trimmed: &str) -> bool {
+    trimmed
+        .split(|ch: char| ch.is_whitespace() || matches!(ch, '(' | ')'))
+        .filter(|word| !word.is_empty())
+        .find(|word| ITEM_KEYWORDS.contains(word))
+        .is_some_and(|word| word == "mod")
+}
+
+/// Whether a declaration carries a visibility narrower than `pub`, so the crate
+/// publishes nothing under the name.
+fn restricted_visibility(trimmed: &str) -> bool {
+    trimmed
+        .strip_prefix("pub")
+        .is_some_and(|rest| rest.trim_start().starts_with('('))
+}
+
+/// Whether a `const`, `static` or `type` line republishes another module's item
+/// of the same name instead of declaring a value of its own.
+///
+/// `pub const PRIORITY_OFFSETS_BASE: u32 = control::PRIORITY_OFFSETS_BASE;` is
+/// one word of a protocol at a second public path. A sibling that writes a
+/// value of its own, `pub const SHUTDOWN: u32 = u32::MAX;`, ends in a different
+/// name and stays a declaration.
+fn republishes_value(trimmed: &str, name: &str) -> bool {
+    let mut words = trimmed
+        .split(|ch: char| ch.is_whitespace() || matches!(ch, '(' | ')'))
+        .filter(|word| !word.is_empty())
+        .skip_while(|word| !ITEM_KEYWORDS.contains(word));
+    if !matches!(words.next(), Some("const" | "static" | "type")) {
+        return false;
+    }
+    if words.next().is_some_and(|word| word == "fn") {
+        return false;
+    }
+    let Some((_, initializer)) = trimmed.split_once('=') else {
+        return false;
+    };
+    let value = initializer.trim().trim_end_matches(';').trim_end();
+    let Some((qualifier, last)) = value.rsplit_once("::") else {
+        return false;
+    };
+    last == name
+        && !qualifier.is_empty()
+        && qualifier
+            .chars()
+            .all(|ch| ch.is_alphanumeric() || ch == '_' || ch == ':')
 }
 
 /// Whether a line opens a macro invocation at module scope: `some_macro! {` with
@@ -468,6 +799,7 @@ impl crate::gate::GateBehavior for PublicApiPaths {
         let mut measured = BTreeMap::new();
         let mut examples = BTreeMap::new();
         let mut shared_names = 0;
+        let mut refusals = 0;
         for (name, path) in &files {
             let text = read_text_bounded(path, MAX_SNAPSHOT_BYTES, "public-api snapshot").map_err(
                 |error| GateError::new(format!("{}: {error}", path.display()), SNAPSHOT_FIX),
@@ -479,13 +811,12 @@ impl crate::gate::GateBehavior for PublicApiPaths {
                 )
             })?;
             let sources = crate_sources(&tree, directory)?;
-            let shared = names_declared_more_than_once(&sources);
+            let declared = declarations(&sources);
             let mut found = duplicates(&text);
             let before = found.len();
-            found.retain(|item, _| {
-                !shared.contains(item.split("::").next().unwrap_or(item.as_str()))
-            });
+            found.retain(|published, _| !declared.shares(published.namespace, published.head()));
             shared_names += before - found.len();
+            refusals += declared.refusals();
             measured.insert(name.clone(), found.len());
             examples.insert(name.clone(), found);
         }
@@ -555,9 +886,10 @@ impl crate::gate::GateBehavior for PublicApiPaths {
                     .into_iter()
                     .flatten()
                     .take(EXAMPLES_PER_CRATE)
-                    .map(|(item, modules)| {
+                    .map(|(published, modules)| {
                         format!(
-                            "{item} through {}",
+                            "{} through {}",
+                            published.tail,
                             modules
                                 .iter()
                                 .map(|module| if module.is_empty() {
@@ -586,7 +918,7 @@ impl crate::gate::GateBehavior for PublicApiPaths {
             ));
         }
         report.note(format!(
-            "measured {} snapshot(s); {total} item(s) reachable at more than one path; {shared_names} shared name(s) each declared by several sibling modules",
+            "measured {} snapshot(s); {total} item(s) reachable at more than one path; {shared_names} shared name(s) each declared by several sibling modules; {refusals} `pub` line(s) read as publishing nothing of their own",
             files.len()
         ));
         Ok(report)
@@ -597,6 +929,35 @@ impl crate::gate::GateBehavior for PublicApiPaths {
 mod tests {
     use super::*;
 
+    /// Every duplicate tail one snapshot yields, in report order.
+    fn tails(found: &BTreeMap<Published, BTreeSet<String>>) -> Vec<&str> {
+        found
+            .keys()
+            .map(|published| published.tail.as_str())
+            .collect()
+    }
+
+    /// The owner paths one snapshot records for `tail`.
+    fn owners<'a>(
+        found: &'a BTreeMap<Published, BTreeSet<String>>,
+        tail: &str,
+    ) -> &'a BTreeSet<String> {
+        found
+            .iter()
+            .find(|(published, _)| published.tail == tail)
+            .map(|(_, modules)| modules)
+            .unwrap_or_else(|| panic!("{tail} is published at more than one path: {found:?}"))
+    }
+
+    /// Item names the sources declare more than once.
+    fn shared_items(sources: &[String]) -> BTreeSet<String> {
+        declarations(sources)
+            .shared
+            .get(&Namespace::Item)
+            .cloned()
+            .unwrap_or_default()
+    }
+
     /// WHY: the shape this gate exists for. One type declared in a submodule and
     /// re-exported by its parent is one item a consumer can write two ways, and
     /// the report has to name both ways or the reader cannot delete either.
@@ -606,7 +967,7 @@ mod tests {
             "pub mod vyre_x::inner\npub struct vyre_x::inner::Thing\npub struct vyre_x::Thing\npub struct vyre_x::inner::Other\n",
         );
         assert_eq!(found.len(), 1, "one item is published twice: {found:?}");
-        let modules = &found["Thing"];
+        let modules = owners(&found, "Thing");
         assert!(
             modules.contains("inner") && modules.contains(""),
             "both paths must be named: {modules:?}"
@@ -644,7 +1005,7 @@ mod tests {
             "pub mod vyre_x::inner\nimpl core::fmt::Debug for vyre_x::inner::Thing\nimpl core::fmt::Debug for vyre_x::Thing\n",
         );
         assert_eq!(
-            found.keys().collect::<Vec<_>>(),
+            tails(&found),
             vec!["Thing"],
             "the subject is the vyre-rooted path: {found:?}"
         );
@@ -689,7 +1050,7 @@ mod tests {
             "pub mod vyre_x::inner\npub fn vyre_x::inner::helper() -> u32\npub fn vyre_x::helper() -> u32\n",
         );
         assert_eq!(
-            found.keys().collect::<Vec<_>>(),
+            tails(&found),
             vec!["helper"],
             "a free function published twice: {found:?}"
         );
@@ -731,16 +1092,16 @@ mod tests {
             "pub mod vyre_x::prelude\npub mod vyre_x::math\npub mod vyre_x::nn\npub struct vyre_x::math::MatmulBias\npub struct vyre_x::nn::MatmulBias\npub struct vyre_x::prelude::MatmulBias\n",
         );
         assert_eq!(
-            two_owners.get("MatmulBias").map(BTreeSet::len),
-            Some(2),
+            owners(&two_owners, "MatmulBias").len(),
+            2,
             "two real owners survive the seam: {two_owners:?}"
         );
         let no_owner = duplicates(
             "pub mod vyre_x::prelude\npub mod vyre_x::inner::prelude\npub fn vyre_x::prelude::helper() -> u32\npub fn vyre_x::inner::prelude::helper() -> u32\n",
         );
         assert_eq!(
-            no_owner.get("helper").map(BTreeSet::len),
-            Some(2),
+            owners(&no_owner, "helper").len(),
+            2,
             "with no owner outside a prelude the two paths are the finding: {no_owner:?}"
         );
     }
@@ -751,7 +1112,7 @@ mod tests {
     /// for a re-export, so the crate source has to decide.
     #[test]
     fn a_name_two_sibling_modules_declare_is_not_one_item() {
-        let shared = names_declared_more_than_once(&[
+        let shared = shared_items(&[
             "pub const TOK_LPAREN: u32 = 6;\n".to_string(),
             "pub const TOK_LPAREN: u32 = 11;\n".to_string(),
         ]);
@@ -765,7 +1126,7 @@ mod tests {
     /// declaration re-exported by a parent is still one item at two paths.
     #[test]
     fn a_name_the_crate_declares_once_stays_a_duplicate() {
-        let shared = names_declared_more_than_once(&[
+        let shared = shared_items(&[
             "pub fn pack_u32_slice(values: &[u32]) -> Vec<u8> { Vec::new() }\n".to_string(),
             "pub use crate::wire::pack_u32_slice;\n".to_string(),
         ]);
@@ -784,10 +1145,7 @@ mod tests {
         let invocation = |body: &str| {
             format!("define_entry_points! {{\n    allocating: {body} {{\n        /// doc\n    }},\n    hooked: generated_entry_into_with_step_hook,\n}}\n")
         };
-        let shared = names_declared_more_than_once(&[
-            invocation("generated_entry"),
-            invocation("generated_entry"),
-        ]);
+        let shared = shared_items(&[invocation("generated_entry"), invocation("generated_entry")]);
         assert!(
             shared.contains("generated_entry"),
             "two macro invocations plant two functions: {shared:?}"
@@ -803,7 +1161,7 @@ mod tests {
     /// second declaration.
     #[test]
     fn a_macro_inside_a_body_declares_nothing_and_a_from_clause_names_one_function() {
-        let shared = names_declared_more_than_once(&[
+        let shared = shared_items(&[
             "pub fn run() {\n    assert_eq!(1, 1);\n    build! {\n        allocating: sneaky {\n        },\n    }\n}\n".to_string(),
             "pub fn run_again() {\n    build! {\n        allocating: sneaky {\n        },\n    }\n}\n".to_string(),
         ]);
@@ -811,7 +1169,7 @@ mod tests {
             shared.is_empty(),
             "a macro in a body is not a module-scope declaration: {shared:?}"
         );
-        let wrapped = names_declared_more_than_once(&[
+        let wrapped = shared_items(&[
             "define! {\n    allocating: cpu_ref_closure from try_cpu_ref_closure {\n    },\n}\n"
                 .to_string(),
             "pub fn try_cpu_ref_closure() {}\n".to_string(),
