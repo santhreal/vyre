@@ -165,10 +165,28 @@ pub enum PointerWidth {
 impl PointerWidth {
     /// Return current pointer width.
     pub const fn current() -> Self {
-        if core::mem::size_of::<usize>() == 8 {
+        #[cfg(target_pointer_width = "64")]
+        {
             Self::Bits64
-        } else {
+        }
+        #[cfg(target_pointer_width = "32")]
+        {
             Self::Bits32
+        }
+        #[cfg(not(any(target_pointer_width = "64", target_pointer_width = "32")))]
+        {
+            compile_error!(
+                "unsupported target_pointer_width; vyre requires 64-bit or 32-bit pointer width"
+            );
+        }
+    }
+}
+
+impl fmt::Display for PointerWidth {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Bits32 => write!(f, "32-bit"),
+            Self::Bits64 => write!(f, "64-bit"),
         }
     }
 }
@@ -193,6 +211,21 @@ impl Endianness {
         #[cfg(target_endian = "big")]
         {
             Self::BigEndian
+        }
+        #[cfg(not(any(target_endian = "little", target_endian = "big")))]
+        {
+            compile_error!(
+                "unsupported target_endian; vyre requires little-endian or big-endian byte order"
+            );
+        }
+    }
+}
+
+impl fmt::Display for Endianness {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::LittleEndian => write!(f, "little-endian"),
+            Self::BigEndian => write!(f, "big-endian"),
         }
     }
 }
@@ -237,7 +270,7 @@ impl HostCell {
             arch: HostArch::current(),
             pointer_width: PointerWidth::current(),
             endianness: Endianness::current(),
-            rust_version: "1.80.0".to_string(),
+            rust_version: "1.85".to_string(),
         }
     }
 }
@@ -246,7 +279,9 @@ impl HostCell {
 #[derive(Debug, Error)]
 pub enum UnsupportedPlatformError {
     /// Unsupported host operating system or architecture.
-    #[error("unsupported host target cell: {os} on {arch} ({pointer_width:?}, {endianness:?})")]
+    #[error(
+        "unsupported host target cell: {os} on {arch} ({pointer_width}, {endianness}). Fix: vyre requires a supported Tier 1 host platform (Linux, macOS, or Windows on x86_64 or aarch64, 64-bit little-endian with Rust >= 1.85). Consult docs/generated/platform-support-matrix.toml for claimed support cells."
+    )]
     UnsupportedHost {
         /// Target OS.
         os: HostOs,
@@ -296,42 +331,42 @@ impl PlatformSupportMatrix {
                 arch: HostArch::X86_64,
                 pointer_width: PointerWidth::Bits64,
                 endianness: Endianness::LittleEndian,
-                rust_version: "1.80.0".to_string(),
+                rust_version: "1.85".to_string(),
             },
             HostCell {
                 os: HostOs::Linux,
                 arch: HostArch::AArch64,
                 pointer_width: PointerWidth::Bits64,
                 endianness: Endianness::LittleEndian,
-                rust_version: "1.80.0".to_string(),
+                rust_version: "1.85".to_string(),
             },
             HostCell {
                 os: HostOs::MacOS,
                 arch: HostArch::AArch64,
                 pointer_width: PointerWidth::Bits64,
                 endianness: Endianness::LittleEndian,
-                rust_version: "1.80.0".to_string(),
+                rust_version: "1.85".to_string(),
             },
             HostCell {
                 os: HostOs::MacOS,
                 arch: HostArch::X86_64,
                 pointer_width: PointerWidth::Bits64,
                 endianness: Endianness::LittleEndian,
-                rust_version: "1.80.0".to_string(),
+                rust_version: "1.85".to_string(),
             },
             HostCell {
                 os: HostOs::Windows,
                 arch: HostArch::X86_64,
                 pointer_width: PointerWidth::Bits64,
                 endianness: Endianness::LittleEndian,
-                rust_version: "1.80.0".to_string(),
+                rust_version: "1.85".to_string(),
             },
             HostCell {
                 os: HostOs::Windows,
                 arch: HostArch::AArch64,
                 pointer_width: PointerWidth::Bits64,
                 endianness: Endianness::LittleEndian,
-                rust_version: "1.80.0".to_string(),
+                rust_version: "1.85".to_string(),
             },
         ];
 

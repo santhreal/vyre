@@ -558,6 +558,11 @@ subsets = ["docs"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "platform-support-matrix"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "print-composition"
 subsets = ["prepublish"]
 workflows = ["gates.yml", "release-evidence.yml"]
