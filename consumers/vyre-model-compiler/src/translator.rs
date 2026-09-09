@@ -269,7 +269,7 @@ impl<'a> ModelGraphBuilder<'a> {
                 ShapeDim::Known(u64::from(self.config.vocab_size)),
             ];
 
-            let (_, logits_out) = graph.add_node(
+            let (_node_id, _logits_out) = graph.add_node(
                 "lm_head",
                 lm_head_prog,
                 vec![
@@ -309,7 +309,6 @@ impl<'a> ModelGraphBuilder<'a> {
                     retained_successor_of: None,
                 }],
             )?;
-            let _ = logits_out;
         }
 
         Ok(graph)

@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 //! Explicit ownership, borrow, alias, capability, state-epoch, and effect tokens,
 //! and obligation lifecycle tracking.
 //!

@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 //! Cooperative tiled matrix multiplication.
 //!
 //! Category-A composition. Computes `out = a @ b` where `a` is `m × k`,

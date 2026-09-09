@@ -34,6 +34,7 @@ pub(crate) struct MmaCapabilityRecord {
 }
 
 impl MmaCapabilityRecord {
+    #[cfg(test)]
     /// A target that lowers descriptor MMA at every shape this module emits.
     pub(crate) const fn all_descriptor_mma_shapes() -> Self {
         Self {

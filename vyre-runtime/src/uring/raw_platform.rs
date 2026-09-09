@@ -6,6 +6,7 @@
 
 #![allow(unsafe_code)]
 #![allow(non_camel_case_types)]
+// Linux ABI io_uring structs and constants mirror the kernel interface definitions.
 #![allow(dead_code)]
 #![allow(missing_docs)]
 
