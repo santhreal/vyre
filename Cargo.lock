@@ -3326,6 +3326,9 @@ name = "vyre"
 version = "0.8.0"
 dependencies = [
  "proptest",
+ "serde_json",
+ "syn 2.0.117",
+ "toml",
  "vyre-driver",
  "vyre-driver-cuda",
  "vyre-driver-wgpu",

@@ -63,6 +63,8 @@ exclude = [
     "examples/external_ir_extension",
     "examples/libs-template",
     "vyre-foundation/fuzz",
+    "consumers/vyre-model-compiler",
+    "consumers/vyre-graphics-app",
 ]
 
 [workspace.package]

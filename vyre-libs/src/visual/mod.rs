@@ -48,6 +48,24 @@ pub(crate) mod u32_word_bytes;
 /// 2× nearest-neighbor upsample for the half-resolution blur return path.
 pub(crate) mod upsample;
 
+/// Extended Porter-Duff and UI blend modes.
+pub(crate) mod blend;
+/// Scissor rectangle and alpha mask clipping.
+pub(crate) mod clip;
+/// Image color space and format conversions.
+pub(crate) mod color_convert;
+/// 2D bounding-box viewport culling.
+pub(crate) mod cull;
+/// Retained resource sub-rectangle dirty-region patching.
+pub(crate) mod dirty_region;
+/// Layout-adjacent prefix scans and bounding-box reduction.
+pub(crate) mod layout_scan;
+/// Vector path and polygon rasterization.
+pub(crate) mod path_raster;
+/// Image scaling and bilinear resampling.
+pub(crate) mod resample;
+/// Subpixel text run and glyph accumulation.
+pub(crate) mod text_run;
 // Re-exports for the public API surface.
 pub use blur::{gaussian_blur_2pass, GaussianBlurStages};
 pub use blur::{gaussian_blur_2pass_with_kernel, GaussianKernel, GaussianKernelError};
@@ -65,6 +83,17 @@ pub use gradient::try_linear_gradient;
 pub use gradient::{linear_gradient, ColorStop};
 pub use shadow::box_shadow;
 pub use upsample::upsample_2x;
+pub use blend::{composite_blend, BlendMode};
+pub use clip::{apply_clip_mask, apply_scissor_rect};
+pub use color_convert::{
+    grayscale_to_rgba, premultiply_alpha, rgba_to_grayscale, unpremultiply_alpha,
+};
+pub use cull::cull_boxes_2d;
+pub use dirty_region::{dirty_region_patch_direct, dirty_region_patch_rgba};
+pub use layout_scan::{layout_prefix_scan_u32, reduce_bounding_boxes_2d};
+pub use path_raster::path_rasterize_segments;
+pub use resample::bilinear_resample_rgba;
+pub use text_run::text_run_blend;
 
 pub(crate) use crate::builder::stencil::fixed_mul_16_16 as fixed_mul_16_16_unsigned_expr;
 pub(crate) use crate::builder::stencil::wide_mul_shr_u32;

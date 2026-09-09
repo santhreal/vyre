@@ -19,6 +19,10 @@ use vyre_libs::graph_compositions::{
     build_csr_graph_traversal_pipeline, build_dense_neural_pipeline,
     build_streaming_parser_pipeline,
 };
+#[cfg(feature = "visual")]
+use vyre_libs::graph_compositions::{
+    build_interactive_graphics_pipeline, InteractiveGraphicsPipelineParams,
+};
 
 fn facts_for(graph: &ProgramGraph, domain_byte: u8) -> ExternalFacts {
     let mut facts = ExternalFacts::new(Digest([domain_byte; 32]), BTreeMap::new());
@@ -136,6 +140,54 @@ fn domain_3_streaming_parser_pipeline_compiles_through_production_path() {
         .expect("artifact must serialize to bytes");
     assert!(!bytes.is_empty());
 }
+#[cfg(feature = "visual")]
+#[test]
+fn domain_4_interactive_graphics_pipeline_compiles_through_production_path() {
+    let params = InteractiveGraphicsPipelineParams {
+        width: 16,
+        height: 16,
+        box_count: 8,
+        segment_count: 4,
+        stroke_radius: 1,
+        stroke_color: 0xFF00_00FF,
+        glyph_count: 2,
+        atlas_w: 8,
+        atlas_h: 8,
+        clip_rect: (2, 2, 14, 14),
+        patch_w: 4,
+        patch_h: 4,
+        patch_dest: (4, 4),
+    };
+    let graph = build_interactive_graphics_pipeline(params)
+        .expect("interactive graphics pipeline graph must build");
+
+    let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
+        .expect("logical algorithm stage must validate");
+    assert!(!logical.regions().is_empty());
+
+    let request = CompileRequest::new(
+        graph.clone(),
+        facts_for(&graph, 4),
+        DeviceFacts::unknown(),
+        SearchBudget::new(1, 1, 1, 0, 1_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
+    )
+    .validate()
+    .expect("compile request must validate");
+
+    let artifact = compile(&request).expect("interactive graphics graph must compile to artifact");
+    assert!(!artifact.nodes().is_empty());
+    assert!(!artifact.abi().entries.is_empty());
+    artifact.validate_abi().expect("abi must be valid");
+    artifact
+        .validate_geometry()
+        .expect("geometry must be valid");
+    let bytes = artifact
+        .to_bytes()
+        .expect("artifact must serialize to bytes");
+    assert!(!bytes.is_empty());
+}
+
 
 #[test]
 fn three_unrelated_domains_share_identical_production_compilation_route() {
@@ -179,4 +231,39 @@ fn three_unrelated_domains_share_identical_production_compilation_route() {
     assert!(!a1.to_bytes().unwrap().is_empty());
     assert!(!a2.to_bytes().unwrap().is_empty());
     assert!(!a3.to_bytes().unwrap().is_empty());
+}
+
+#[cfg(feature = "visual")]
+#[test]
+fn four_unrelated_domains_share_identical_production_compilation_route() {
+    three_unrelated_domains_share_identical_production_compilation_route();
+    let g4 = build_interactive_graphics_pipeline(InteractiveGraphicsPipelineParams {
+        width: 8,
+        height: 8,
+        box_count: 4,
+        segment_count: 2,
+        stroke_radius: 1,
+        stroke_color: 0xFF00_00FF,
+        glyph_count: 1,
+        atlas_w: 4,
+        atlas_h: 4,
+        clip_rect: (0, 0, 8, 8),
+        patch_w: 2,
+        patch_h: 2,
+        patch_dest: (0, 0),
+    })
+    .expect("domain 4 build");
+
+    let r4 = CompileRequest::new(
+        g4.clone(),
+        facts_for(&g4, 14),
+        DeviceFacts::unknown(),
+        SearchBudget::new(1, 1, 1, 0, 1_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
+    )
+    .validate()
+    .expect("req 4");
+
+    let a4 = compile(&r4).expect("compile domain 4");
+    assert!(!a4.to_bytes().unwrap().is_empty());
 }

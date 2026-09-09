@@ -1,0 +1,19 @@
+[package]
+name = "vyre-graphics-app"
+version = "0.1.0"
+edition = "2021"
+description = "Independent downstream interactive graphical application consumer using neutral Vyre IR compositions"
+publish = false
+
+[dependencies]
+vyre = { path = "../../vyre", default-features = false }
+vyre-libs = { path = "../../vyre-libs", default-features = false, features = ["visual", "math-scan", "reduce", "graph"] }
+vyre-foundation = { path = "../../vyre-foundation" }
+vyre-spec = { path = "../../vyre-spec" }
+vyre-primitives = { path = "../../vyre-primitives" }
+vyre-reference = { path = "../../vyre-reference" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+vyre-driver-reference = { path = "../../vyre-driver-reference" }
