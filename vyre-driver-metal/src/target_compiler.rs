@@ -35,11 +35,6 @@ fn emit_metal_module(
     Ok(EmittedDialectModule { entry_point, bytes })
 }
 
-#[allow(dead_code)]
-pub(crate) fn target_profile() -> Result<TargetProfile, BackendError> {
-    METAL_DIALECT.profile()
-}
-
 pub(crate) fn target_compiler_factory() -> Result<Box<dyn TargetCompiler>, BackendError> {
     METAL_DIALECT.compiler()
 }

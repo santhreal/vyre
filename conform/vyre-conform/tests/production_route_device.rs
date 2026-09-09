@@ -199,6 +199,7 @@ fn every_artifact_backend_finishes_a_session_lifecycle_including_drop() {
             "Fix: linked artifact backend `{}` must support semantic execution.",
             registration.id
         );
+        let started = std::time::Instant::now();
         let program = Program::wrapped(
             vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
             [1, 1, 1],
@@ -215,6 +216,11 @@ fn every_artifact_backend_finishes_a_session_lifecycle_including_drop() {
             .unwrap_or_else(|error| panic!("Fix: {error}"))
             .outputs;
         drop(session);
+        assert!(
+            started.elapsed() <= LIFECYCLE_DEADLINE,
+            "Fix: {} session lifecycle exceeded deadline {LIFECYCLE_DEADLINE:?}",
+            registration.id
+        );
         assert_eq!(
             outputs,
             vec![LIFECYCLE_OUTPUT.to_le_bytes().to_vec()],

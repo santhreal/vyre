@@ -6,8 +6,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::{Array, SmallVec};
 use vyre_driver::{
     reservation_policy::{
-        reserve_typed_hash_map_to_capacity, reserve_typed_vec_to_capacity,
-        reserved_typed_vec as driver_reserved_typed_vec, ReservationPolicy,
+        reserve_typed_hash_map_to_capacity, reserved_typed_vec as driver_reserved_typed_vec,
+        ReservationPolicy,
     },
     BackendError,
 };
@@ -80,13 +80,14 @@ where
 }
 
 /// Domain error adapter for CUDA planners that use typed reservation failures.
-#[allow(dead_code)]
 pub(crate) trait CudaStorageReserveFailure: Sized {
     /// Build the planner-specific error for a failed staging reservation.
     fn storage_reserve_failed(field: &'static str, requested: usize, message: String) -> Self;
 }
 
-#[allow(dead_code)]
+#[cfg(test)]
+use vyre_driver::reservation_policy::reserve_typed_vec_to_capacity;
+#[cfg(test)]
 pub(crate) fn reserve_typed_vec<T, E>(
     vec: &mut Vec<T>,
     capacity: usize,
@@ -104,7 +105,6 @@ where
     )
 }
 
-#[allow(dead_code)]
 pub(crate) fn reserved_typed_vec<T, E>(capacity: usize, field: &'static str) -> Result<Vec<T>, E>
 where
     E: CudaStorageReserveFailure,
@@ -112,7 +112,6 @@ where
     driver_reserved_typed_vec(CUDA_STAGING, capacity, field, E::storage_reserve_failed)
 }
 
-#[allow(dead_code)]
 pub(crate) fn reserve_typed_hash_map<K, V, E>(
     map: &mut FxHashMap<K, V>,
     capacity: usize,
