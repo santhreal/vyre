@@ -31,10 +31,73 @@ fn unsupported_host_cell_fails_closed_with_typed_diagnostic() {
     };
 
     let result = matrix.is_supported(&unsupported);
+    let err = result.expect_err("unsupported host cell must return Err");
     assert!(matches!(
-        result,
-        Err(UnsupportedPlatformError::UnsupportedHost { .. })
+        err,
+        UnsupportedPlatformError::UnsupportedHost {
+            ref os,
+            ref arch,
+            pointer_width: PointerWidth::Bits32,
+            endianness: Endianness::BigEndian,
+        } if matches!(os, HostOs::Other(name) if name == "obscure_os") && matches!(arch, HostArch::Armv7)
     ));
+
+    let msg = err.to_string();
+    assert!(
+        msg.contains("other(obscure_os)"),
+        "diagnostic must name the offending OS, got: {msg}"
+    );
+    assert!(
+        msg.contains("armv7"),
+        "diagnostic must name the offending architecture, got: {msg}"
+    );
+    assert!(
+        msg.contains("32-bit"),
+        "diagnostic must name pointer width, got: {msg}"
+    );
+    assert!(
+        msg.contains("big-endian"),
+        "diagnostic must name endianness, got: {msg}"
+    );
+    assert!(
+        msg.contains("Fix:"),
+        "diagnostic must provide an actionable Fix: hint, got: {msg}"
+    );
+    assert!(
+        msg.contains("docs/generated/platform-support-matrix.toml"),
+        "diagnostic must reference the generated support matrix, got: {msg}"
+    );
+}
+
+#[test]
+fn unsupported_pointer_width_and_endianness_cells_fail_with_actionable_diagnostics() {
+    let matrix = PlatformSupportMatrix::canonical();
+
+    // 32-bit Linux cell is unsupported for tier 1 runtime execution
+    let cell_32bit = HostCell {
+        os: HostOs::Linux,
+        arch: HostArch::X86_64,
+        pointer_width: PointerWidth::Bits32,
+        endianness: Endianness::LittleEndian,
+        rust_version: "1.85".to_string(),
+    };
+    let err_32bit = matrix.is_supported(&cell_32bit).unwrap_err();
+    let msg_32bit = err_32bit.to_string();
+    assert!(msg_32bit.contains("32-bit"));
+    assert!(msg_32bit.contains("Fix:"));
+
+    // Big-endian Linux cell is unsupported for runtime execution
+    let cell_be = HostCell {
+        os: HostOs::Linux,
+        arch: HostArch::X86_64,
+        pointer_width: PointerWidth::Bits64,
+        endianness: Endianness::BigEndian,
+        rust_version: "1.85".to_string(),
+    };
+    let err_be = matrix.is_supported(&cell_be).unwrap_err();
+    let msg_be = err_be.to_string();
+    assert!(msg_be.contains("big-endian"));
+    assert!(msg_be.contains("Fix:"));
 }
 
 #[test]

@@ -440,6 +440,10 @@ name = "platform-consumer-docs"
 findings = 0
 
 [[gate]]
+name = "platform-support-matrix"
+findings = 0
+
+[[gate]]
 name = "print-composition"
 findings = 0
 

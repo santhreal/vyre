@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with H through P.
-pub const GATES_H_P: [GateDescriptor; 59] = [
+pub const GATES_H_P: [GateDescriptor; 60] = [
     GateDescriptor {
         name: "heuristic-audit",
         help: "Enforce heuristic-audit contracts",
@@ -669,6 +669,27 @@ pub const GATES_H_P: [GateDescriptor; 59] = [
         prerequisites: &["crate-readmes", "op-matrix"],
         resource_class: ResourceClass::Cpu,
         proof: "crate::gates::platform_docs::tests::the_exemption_covers_a_directory_and_a_bare_name",
+    },
+    GateDescriptor {
+        name: "platform-support-matrix",
+        help: "Hold docs/generated/platform-support-matrix.toml to the declared host OS, architecture, toolchain, driver, capability, and package feature population; --write regenerates it",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "platform support matrix",
+        inputs: &[
+            "Cargo.toml",
+            ".github/workflows",
+            "vyre-foundation/src/platform",
+            "vyre-driver/src",
+            "vyre-driver-cuda/src",
+            "vyre-driver-metal/src",
+            "vyre-driver-wgpu/src",
+            "vyre-driver-spirv/src",
+        ],
+        artifacts: &["docs/generated/platform-support-matrix.toml"],
+        prerequisites: &[],
+        resource_class: ResourceClass::Cpu,
+        proof: "crate::gates::platform_support_matrix::tests::unclaimed_or_missing_cell_fails_gate",
     },
     GateDescriptor {
         name: "print-composition",

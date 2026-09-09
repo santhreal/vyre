@@ -19,7 +19,7 @@ workflows = ["ci.yml", "gates.yml", "release-evidence.yml", "strict.yml"]
 
 [[gate]]
 name = "application-runnable"
-subsets = ["prepublish"]
+subsets = ["conformance", "prepublish"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
@@ -125,12 +125,17 @@ workflows = ["gates.yml", "release-evidence.yml"]
 [[gate]]
 name = "configuration-model"
 subsets = ["prepublish"]
-workflows = ["gates.yml", "release-evidence.yml"]
+workflows = ["ci.yml", "gates.yml", "release-evidence.yml", "strict.yml"]
 
 [[gate]]
 name = "conformance-matrix"
 subsets = ["prepublish", "release-evidence"]
 workflows = ["conform.yml", "gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "consumer-compilation"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
 
 [[gate]]
 name = "contract-in-source"
@@ -553,6 +558,11 @@ subsets = ["docs"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "platform-support-matrix"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "print-composition"
 subsets = ["prepublish"]
 workflows = ["gates.yml", "release-evidence.yml"]
@@ -696,6 +706,11 @@ workflows = ["gates.yml"]
 name = "trace-f32"
 subsets = ["prepublish"]
 workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "tracked-modules"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
 
 [[gate]]
 name = "unification"
