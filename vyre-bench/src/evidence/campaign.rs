@@ -425,102 +425,183 @@ pub fn assert_cells_compatible(
     Ok(())
 }
 
+/// A typed, homogeneous collection of benchmark receipts that share an identical cell identity.
+///
+/// BACKLOG row 95 requires:
+/// "never averages across incompatible cells. Make averaging across incompatible cells
+/// impossible to express, not merely unused. Prefer a type that cannot represent the
+/// invalid combination over a runtime check."
+///
+/// By construction, all receipts in a `CompatibleCellCohort` are verified upon entry to share
+/// identical cell identity dimensions (workload, graph, binaries, target facts, environment,
+/// budgets, resources). Averaging across incompatible cells is impossible to express because
+/// the `.average()` method is only defined on this type-safe cohort.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CompatibleCellCohort {
+    primary: BenchmarkReceipt,
+    receipts: Vec<BenchmarkReceipt>,
+}
+
+impl CompatibleCellCohort {
+    /// Create a new homogeneous cohort initialized with a primary receipt.
+    #[must_use]
+    pub fn new(primary: BenchmarkReceipt) -> Self {
+        let receipts = vec![primary.clone()];
+        Self { primary, receipts }
+    }
+
+    /// Construct a homogeneous cohort from a non-empty slice of receipts.
+    ///
+    /// Refuses with `CellIncompatibilityRefusal` if the slice is empty or if any
+    /// receipt differs in any identity dimension from the primary receipt.
+    pub fn try_from_receipts(
+        receipts: &[BenchmarkReceipt],
+    ) -> Result<Self, CellIncompatibilityRefusal> {
+        if receipts.is_empty() {
+            return Err(CellIncompatibilityRefusal {
+                case_id: "empty".into(),
+                dimension: "count".into(),
+                expected: ">= 1".into(),
+                actual: "0".into(),
+            });
+        }
+        let primary = receipts[0].clone();
+        for other in &receipts[1..] {
+            assert_cells_compatible(&primary, other)?;
+        }
+        Ok(Self {
+            primary,
+            receipts: receipts.to_vec(),
+        })
+    }
+
+    /// Attempt to push a receipt into this cohort.
+    ///
+    /// Refuses with `CellIncompatibilityRefusal` if the receipt differs in any
+    /// identity dimension from the cohort's primary identity.
+    pub fn try_push(&mut self, receipt: BenchmarkReceipt) -> Result<(), CellIncompatibilityRefusal> {
+        assert_cells_compatible(&self.primary, &receipt)?;
+        self.receipts.push(receipt);
+        Ok(())
+    }
+
+    /// Get the primary receipt defining this cohort's cell identity.
+    #[must_use]
+    pub fn primary(&self) -> &BenchmarkReceipt {
+        &self.primary
+    }
+
+    /// Get all member receipts in this cohort.
+    #[must_use]
+    pub fn receipts(&self) -> &[BenchmarkReceipt] {
+        &self.receipts
+    }
+
+    /// Total number of receipts in this cohort.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.receipts.len()
+    }
+
+    /// Whether the cohort is empty (always false by invariant).
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.receipts.is_empty()
+    }
+
+    /// Compute the aggregate benchmark receipt across all compatible receipts in this cohort.
+    ///
+    /// This method cannot fail with an incompatibility error because compatibility is a type
+    /// invariant of `CompatibleCellCohort`.
+    #[must_use]
+    pub fn average(&self) -> BenchmarkReceipt {
+        let mut all_samples = Vec::new();
+        for r in &self.receipts {
+            all_samples.extend_from_slice(&r.raw_samples);
+        }
+        all_samples.sort_unstable();
+
+        let n = all_samples.len();
+        let median = if n > 0 {
+            all_samples[n / 2]
+        } else {
+            self.primary.uncertainty_model.median_ns
+        };
+
+        let mean = if n > 0 {
+            all_samples.iter().sum::<u64>() as f64 / n as f64
+        } else {
+            self.primary.uncertainty_model.mean_ns
+        };
+
+        let variance = if n > 1 {
+            all_samples
+                .iter()
+                .map(|&s| {
+                    let diff = s as f64 - mean;
+                    diff * diff
+                })
+                .sum::<f64>()
+                / (n - 1) as f64
+        } else {
+            0.0
+        };
+        let stddev = variance.sqrt();
+
+        let mad = if n > 0 {
+            let mut diffs: Vec<f64> = all_samples
+                .iter()
+                .map(|&s| (s as f64 - median as f64).abs())
+                .collect();
+            diffs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            diffs[n / 2]
+        } else {
+            0.0
+        };
+
+        let p95 = if n > 0 {
+            all_samples[((n as f64 * 0.95).floor() as usize).min(n - 1)]
+        } else {
+            median
+        };
+
+        let p99 = if n > 0 {
+            all_samples[((n as f64 * 0.99).floor() as usize).min(n - 1)]
+        } else {
+            median
+        };
+
+        let std_err = if n > 1 {
+            stddev / (n as f64).sqrt()
+        } else {
+            0.0
+        };
+        let conf_lower = (mean - 1.96 * std_err).max(0.0);
+        let conf_upper = mean + 1.96 * std_err;
+
+        let mut merged = self.primary.clone();
+        merged.raw_samples = all_samples;
+        merged.uncertainty_model = UncertaintyModelReceipt {
+            mean_ns: mean,
+            median_ns: median,
+            stddev_ns: stddev,
+            mad_ns: mad,
+            p95_ns: p95,
+            p99_ns: p99,
+            confidence_95_lower_ns: conf_lower,
+            confidence_95_upper_ns: conf_upper,
+        };
+
+        merged
+    }
+}
+
 /// Average multiple compatible benchmark cell receipts into an aggregated receipt.
 ///
 /// Refuses to average if any pair of receipts fails cell compatibility validation.
 pub fn average_compatible_cells(
     receipts: &[BenchmarkReceipt],
 ) -> Result<BenchmarkReceipt, CellIncompatibilityRefusal> {
-    if receipts.is_empty() {
-        return Err(CellIncompatibilityRefusal {
-            case_id: "empty".into(),
-            dimension: "count".into(),
-            expected: ">= 1".into(),
-            actual: "0".into(),
-        });
-    }
-
-    let primary = &receipts[0];
-    for other in &receipts[1..] {
-        assert_cells_compatible(primary, other)?;
-    }
-
-    let mut all_samples = Vec::new();
-    for r in receipts {
-        all_samples.extend_from_slice(&r.raw_samples);
-    }
-    all_samples.sort_unstable();
-
-    let n = all_samples.len();
-    let median = if n > 0 {
-        all_samples[n / 2]
-    } else {
-        primary.uncertainty_model.median_ns
-    };
-
-    let mean = if n > 0 {
-        all_samples.iter().sum::<u64>() as f64 / n as f64
-    } else {
-        primary.uncertainty_model.mean_ns
-    };
-
-    let variance = if n > 1 {
-        all_samples
-            .iter()
-            .map(|&s| {
-                let diff = s as f64 - mean;
-                diff * diff
-            })
-            .sum::<f64>()
-            / (n - 1) as f64
-    } else {
-        0.0
-    };
-    let stddev = variance.sqrt();
-
-    let mad = if n > 0 {
-        let mut diffs: Vec<f64> = all_samples
-            .iter()
-            .map(|&s| (s as f64 - median as f64).abs())
-            .collect();
-        diffs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        diffs[n / 2]
-    } else {
-        0.0
-    };
-
-    let p95 = if n > 0 {
-        all_samples[((n as f64 * 0.95).floor() as usize).min(n - 1)]
-    } else {
-        median
-    };
-
-    let p99 = if n > 0 {
-        all_samples[((n as f64 * 0.99).floor() as usize).min(n - 1)]
-    } else {
-        median
-    };
-
-    let std_err = if n > 1 {
-        stddev / (n as f64).sqrt()
-    } else {
-        0.0
-    };
-    let conf_lower = (mean - 1.96 * std_err).max(0.0);
-    let conf_upper = mean + 1.96 * std_err;
-
-    let mut merged = primary.clone();
-    merged.raw_samples = all_samples;
-    merged.uncertainty_model = UncertaintyModelReceipt {
-        mean_ns: mean,
-        median_ns: median,
-        stddev_ns: stddev,
-        mad_ns: mad,
-        p95_ns: p95,
-        p99_ns: p99,
-        confidence_95_lower_ns: conf_lower,
-        confidence_95_upper_ns: conf_upper,
-    };
-
-    Ok(merged)
+    let cohort = CompatibleCellCohort::try_from_receipts(receipts)?;
+    Ok(cohort.average())
 }
