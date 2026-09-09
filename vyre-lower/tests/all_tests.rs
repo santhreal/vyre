@@ -83,3 +83,7 @@ pub mod verify_result_id_uniqueness;
 /// Integration tests from `tests/physical_kernel_ir_policy_boundary.rs`.
 #[path = "physical_kernel_ir_policy_boundary.rs"]
 pub mod physical_kernel_ir_policy_boundary;
+
+/// Integration tests from `tests/physical_ir_emitter_exhaustive_decisions.rs`.
+#[path = "physical_ir_emitter_exhaustive_decisions.rs"]
+pub mod physical_ir_emitter_exhaustive_decisions;

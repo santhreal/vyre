@@ -38,10 +38,6 @@ vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
 vyre-lower.workspace = true
 vyre-emit-ptx.workspace = true
-# `optimizer` module dispatches the self-hosted optimizer passes
-# (DCE/CSE/const-fold) on CUDA. Lives in [dependencies] (not dev-deps)
-# because src/optimizer.rs is shipped lib code.
-vyre-pass-engine = { workspace = true }
 inventory.workspace = true
 tracing.workspace = true
 blake3.workspace = true

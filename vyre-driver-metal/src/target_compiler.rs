@@ -35,6 +35,7 @@ fn emit_metal_module(
     Ok(EmittedDialectModule { entry_point, bytes })
 }
 
+#[allow(dead_code)]
 pub(crate) fn target_profile() -> Result<TargetProfile, BackendError> {
     METAL_DIALECT.profile()
 }

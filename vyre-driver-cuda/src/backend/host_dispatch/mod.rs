@@ -42,6 +42,10 @@ impl VyreBackend for GridSyncSplitCudaBackend<'_> {
         CUDA_BACKEND_ID
     }
 
+    fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
+        self.0.honors_float_lowering(mode)
+    }
+
     fn dispatch(
         &self,
         program: &Program,
