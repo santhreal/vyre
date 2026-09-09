@@ -641,9 +641,12 @@ pub fn settle(root: &Path, gate: &str, generated: &[Generated], write: bool) -> 
 /// Whether `path` names a recorded artifact, which must name the tree it came
 /// from.
 ///
-/// Everything under `release/evidence` is a record of what some tree was, read
-/// by someone who no longer has that tree. Generated documentation elsewhere in
-/// the workspace is not: it is read beside the source it describes.
+/// A JSON artifact under `release/evidence` is a record of what some tree was,
+/// read by someone who no longer has that tree. Generated documentation
+/// elsewhere in the workspace is not: it is read beside the source it
+/// describes. Neither is the prose under `release/evidence`, which carries the
+/// release notes rather than a measurement and has no object head to name a
+/// tree in.
 ///
 /// The pair of components is matched wherever it appears rather than only at
 /// the front, because the benchmark writers name their artifacts absolutely
@@ -651,6 +654,9 @@ pub fn settle(root: &Path, gate: &str, generated: &[Generated], write: bool) -> 
 /// them through.
 #[must_use]
 pub fn records_provenance(path: &Path) -> bool {
+    if path.extension().and_then(std::ffi::OsStr::to_str) != Some("json") {
+        return false;
+    }
     let mut components = path.components();
     while let Some(component) = components.next() {
         if component.as_os_str() == std::ffi::OsStr::new("release")

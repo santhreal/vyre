@@ -86,9 +86,14 @@ impl crate::gate::GateBehavior for EvidenceAttribution {
         let mut rows = Vec::new();
         let mut attributed = 0_usize;
         let mut recorded_unknown = 0_usize;
+        let mut prose = 0_usize;
 
         for relative in &artifacts {
             if relative == UNATTRIBUTED_LEDGER {
+                continue;
+            }
+            if !artifact_gate::records_provenance(Path::new(relative)) {
+                prose += 1;
                 continue;
             }
             let text = match crate::output_arg::read_text_bounded(
@@ -158,7 +163,7 @@ impl crate::gate::GateBehavior for EvidenceAttribution {
         report.note(format!(
             "{attributed} artifact(s) name the tree, host and device behind them, \
              {recorded_unknown} record that their origin is unknown, {unattributed} carry no \
-             record and are named in the ledger"
+             record and are named in the ledger, {prose} are prose and carry none"
         ));
         Ok(report)
     }
@@ -247,13 +252,7 @@ fn unattributed_row(
             "carries no provenance record, and `{gate}` reproduces it only on a host carrying \
              the device it measured, which this tree cannot identify"
         ),
-        Some((_, _)) => unreachable!("a gate that needs no device is refused a ledger row"),
-        None => "carries no provenance record, and no registered gate declares it, so nothing \
-                 in this tree states what produced it"
-            .to_string(),
-    };
-    if let Some((gate, class)) = owner {
-        if class != ResourceClass::Device {
+        Some((gate, _)) => {
             return Err(Finding::in_file(
                 PathBuf::from(relative),
                 format!(
@@ -264,7 +263,10 @@ fn unattributed_row(
                 recapture_of(relative, owner),
             ));
         }
-    }
+        None => "carries no provenance record, and no registered gate declares it, so nothing \
+                 in this tree states what produced it"
+            .to_string(),
+    };
     Ok(UnattributedArtifact {
         path: relative.to_string(),
         reason,
