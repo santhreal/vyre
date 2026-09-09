@@ -15,18 +15,14 @@ fn noop_program() -> Program {
     Program::wrapped(Vec::new(), [1, 1, 1], Vec::new())
 }
 
-#[test]
-fn enumerate_by_precedence_puts_wgpu_before_reference() {
-    // V7-EXT-021: precedence is now inventory-driven. wgpu submits
-    // rank 30 in this crate's lib.rs; cpu-ref (when registered)
-    // must trail it.
-    let wgpu_rank = backend_precedence("wgpu").expect("valid backend registry");
-    let ref_rank = backend_precedence("cpu-ref").expect("valid backend registry");
-    assert!(
-        wgpu_rank < ref_rank || ref_rank == u32::MAX,
-        "wgpu (rank {wgpu_rank}) must take precedence over the CPU reference oracle (rank {ref_rank})"
-    );
-}
+// `enumerate_by_precedence_puts_wgpu_before_reference` was here. It compared
+// wgpu's rank against `backend_precedence("cpu-ref")` and passed when that
+// call returned `u32::MAX`, which is what an unregistered id returns. The
+// interpreter submits no registration, so the assertion could no longer fail
+// on the thing its name claimed. What it meant to prove is now proven
+// stronger and elsewhere: `vyre-driver-reference/tests/production_registry_execution_domain.rs`
+// requires that no entry in the registry, and therefore no entry in the
+// precedence order, executes on the host at all.
 
 #[test]
 fn enumerate_by_precedence_is_inventory_driven() {

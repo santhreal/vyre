@@ -1,42 +1,18 @@
-/// Registration contract: the reference oracle is not registered as a VyreBackend.
-use vyre_driver::{acquire, registered_backends};
+//! The reference interpreter is reached through a named evaluator, not a
+//! registration.
+//!
+//! WHY: this file used to loop over the backend registry and reject ids whose
+//! text contained `ref` or `cpu`. That loop ran in a binary linking no driver
+//! crate, so it enumerated an empty registry, and its substring test admitted
+//! any host path named something else. The registry closure now lives in
+//! `production_registry_execution_domain.rs`, which links every declared driver
+//! and decides each entry through an exhaustive match. What is left here is the
+//! evaluator seam itself: it computes reference values from a `Program` and it
+//! has no dispatch identity.
 use vyre_driver_reference::CpuRefEvaluator;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use crate::dispatch_fixtures::u32_out_buffer;
-
-#[test]
-fn cpu_ref_does_not_register_as_vyre_backend() {
-    if let Ok(registrations) = registered_backends() {
-        for reg in registrations {
-            assert_ne!(
-                reg.id, "cpu-ref",
-                "Fix: reference interpreter (cpu-ref) must not appear in the VyreBackend registry"
-            );
-            assert_ne!(
-                reg.id, "reference",
-                "Fix: reference interpreter must not appear in the VyreBackend registry"
-            );
-            assert!(
-                !reg.id.contains("ref") && !reg.id.contains("cpu"),
-                "Fix: reference interpreter must not appear in the VyreBackend registry, found `{}`",
-                reg.id
-            );
-            assert!(
-                !reg.reference_oracle,
-                "Fix: reference oracle flag must not be set in the production VyreBackend registry"
-            );
-        }
-    }
-    assert!(
-        acquire("cpu-ref").is_err(),
-        "Fix: acquire('cpu-ref') must fail because cpu-ref is an oracle session, not a VyreBackend"
-    );
-    assert!(
-        acquire("reference").is_err(),
-        "Fix: acquire('reference') must fail because reference is an oracle session, not a VyreBackend"
-    );
-}
 
 #[test]
 fn cpu_ref_evaluator_evaluates_pure_reference_program() {

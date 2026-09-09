@@ -36,11 +36,12 @@ fn refusal_for_backend(case: &str, backend: &str) -> String {
 /// TEST-034: a certificate signed against the reference executor alone proves
 /// nothing, so `prove` must refuse instead of emitting one.
 ///
-/// The refusal is decided at backend selection, which is the only place that
-/// knows a registered id is the reference oracle: `semantic_execution_backends`
-/// excludes every reference oracle, so the id is unselectable and the proof
-/// loop is never reached. `invariants.rs` pins that `cpu-ref` is registered in
-/// every configuration, so this case is not vacuous.
+/// The refusal is decided at backend selection. The interpreter submits no
+/// `BackendRegistration`, so `cpu-ref` resolves to nothing in the registry and
+/// would otherwise be reported as a typo. `select_backends` names the oracle
+/// spellings ahead of that lookup so the caller is told what it asked for
+/// rather than that it misspelled something, and `semantic_execution_backends`
+/// still excludes a `reference_oracle` registration for an out-of-tree one.
 #[test]
 fn prove_refuses_a_certificate_proving_the_reference_against_itself() {
     let stderr = refusal_for_backend("reference", "cpu-ref");

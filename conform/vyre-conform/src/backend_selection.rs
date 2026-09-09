@@ -172,15 +172,19 @@ mod tests {
     }
 
     /// WHY: the case above proves the rule, not that the tree has an oracle for
-    /// it to exclude. Without a registered oracle the exclusion is unreachable
-    /// WHY: Row 87 requires that no reference oracle appears as a VyreBackend
-    /// in the backend registry.
+    /// it to exclude. Without a registered oracle the exclusion is unreachable,
+    /// so this reads the live registry and requires that no entry claims to be
+    /// one. The `reg.id != "cpu-ref"` half of the condition is gone: naming the
+    /// id the interpreter used to register under judged one spelling, and the
+    /// execution-domain closure in
+    /// `vyre-driver-reference/tests/production_registry_execution_domain.rs`
+    /// judges every entry.
     #[test]
     fn no_registered_backend_is_a_reference_oracle() {
         let registrations = live_backend_registry().expect("Fix: backend registry must start");
         for reg in registrations {
             assert!(
-                !reg.reference_oracle && reg.id != "cpu-ref",
+                !reg.reference_oracle,
                 "Fix: backend `{}` is an oracle and must not appear in the VyreBackend registry",
                 reg.id
             );
