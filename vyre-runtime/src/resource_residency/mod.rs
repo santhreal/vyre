@@ -503,10 +503,11 @@ impl ResourceResidency {
 
 impl Drop for ResourceResidency {
     fn drop(&mut self) {
-        let state = match self.state.get_mut() {
-            Ok(state) => state,
-            Err(poisoned) => poisoned.into_inner(),
-        };
+        let state = vyre_foundation::reclaim_poisoned_for_teardown(
+            self.state.get_mut(),
+            "the resource residency table",
+            "resident device resources awaiting release",
+        );
         let mut resources = std::mem::take(&mut state.states)
             .into_values()
             .flat_map(|state| state.states.into_values())

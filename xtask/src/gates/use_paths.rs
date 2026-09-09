@@ -31,13 +31,20 @@ pub fn collect_use_paths(file: &syn::File) -> Vec<UsePath> {
     collector.paths
 }
 /// Whether a path is test code rather than shipped source.
+///
+/// A `tests.rs` module file inside `src/` is test code: the workspace declares
+/// every one of them as `#[cfg(test)] mod tests;`, so none of it is compiled
+/// into a shipped artifact. `tests_are_declared_under_cfg_test` proves that
+/// holds for every such file, which is what lets the name decide it here.
 pub fn is_test_source_path(path: &std::path::Path) -> bool {
     path.components()
         .any(|component| component.as_os_str() == "tests")
         || path
             .file_stem()
             .and_then(|stem| stem.to_str())
-            .is_some_and(|stem| stem.starts_with("test_") || stem.ends_with("_test"))
+            .is_some_and(|stem| {
+                stem == "tests" || stem.starts_with("test_") || stem.ends_with("_test")
+            })
 }
 
 fn is_test_only(attrs: &[syn::Attribute]) -> bool {

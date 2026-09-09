@@ -825,3 +825,7 @@ pub mod region_fusion_contracts;
 /// Integration tests from `tests/schema_authority_contract.rs`.
 #[path = "schema_authority_contract.rs"]
 pub mod schema_authority_contract;
+
+/// Integration tests from `tests/lock_poison_recovery.rs`.
+#[path = "lock_poison_recovery.rs"]
+pub mod lock_poison_recovery;

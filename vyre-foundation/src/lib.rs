@@ -230,7 +230,10 @@ pub use config_schema::{
     ConfigMutability, ConfigPartition, ConfigSecrecy, ConfigType, ConfigValue, IdentityImpact,
     ResolvedConfiguration, CANONICAL_CONFIG_FIELDS,
 };
-pub use failure_domain::{FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError};
+pub use failure_domain::{
+    govern_mutex_restartable, reclaim_poisoned_for_teardown, FailureDomain, RecoveryClass,
+    RecoveryDisposition, TypedRecoveryError,
+};
 pub use vyre_spec::{
     CanonicalField, CompatibilityCell, CompatibilityDisposition, CompatibilityMatrix,
     DefaultsPolicy, FieldType, NegotiatedContract, NegotiationError, ProtocolDomain,

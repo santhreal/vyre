@@ -870,6 +870,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `single_invocation_region` build the entry of a serial kernel: one anonymous
   composition region whose body runs on invocation zero of axis zero. The shape
   was written out by hand in every serial primitive.
+- The platform-support-matrix xtask gate publishes
+  docs/generated/platform-support-matrix.toml from workspace manifests,
+  workflow axes, and driver capabilities, while unsupported host cells fail
+  with actionable typed diagnostics rather than degrading.
 - A versioned specialization contract states which typed facts a compile may
   specialize on, and rejects a variant guard that reads an undeclared axis or
   states values the axis domain does not admit.
@@ -3697,6 +3701,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   barriers; selected-schedule lowering introduces physical invocation geometry
   and synchronization, and unresolved logical markers fail before backend
   emission.
+- Conformance, benchmark, and manifest records derive schema and wire format
+  versions from the central schema registry, and dynamic value indexing in
+  production decode paths is replaced with typed record deserialization.
 - Repository checks that lived in shell scripts are registered gates with
   pinned finding counts. The frozen contract snapshots, the backend extension
   rule, the readback ring routing, the program wire field classification, the
@@ -3933,6 +3940,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   vector width, pipeline roles, ring slots, barrier phases, dynamic shared
   bytes, launch resource intent, persistence, and the workspace plan a runtime
   allocates.
+- The continuous integration lanes no longer delete preinstalled runner
+  toolchains, because grouping the integration tests into one harness per crate
+  and required-feature set brought the workspace test executables from roughly
+  67 GiB to 5.6 GiB.
 - The command-line contract is a registered gate. `scripts/cli_docs.py`
   declared the binaries, ran every help route and generated the CLI section of
   each crate README, and it read the xtask command set by matching a
@@ -6135,6 +6146,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `structure_gate::workspace_root` instead of the manifest directory baked in
   at compile time, so a unit reused across checkouts that share a target
   directory no longer inspects whichever tree built last.
+- The worktree lifetime gate reports a merged worktree only when its tree
+  carries no modified, staged, or untracked file, so it no longer asks for the
+  removal of a checkout holding the only copy of uncommitted work.
 - Gate scans read a #[cfg(all(test, ...))] attribute wrapped across several
   lines as one predicate, so an item under a wrapped attribute is no longer
   reported as production code whose only callers are tests.
@@ -7063,6 +7077,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   with Pass A and Pass C composed by hand through the block-total scan so a
   per-block total written by the wrong lane or a carry read one block off is a
   failure rather than a hidden detail of the fused build.
+- Five semantic operation registrations that declared no transform decision now
+  state one, and the operation-law-decisions gate reads every registration in
+  the tree so one compiled only in a device lane can no longer panic registry
+  validation and poison the registry for later readers.
 - The release gate reports a requirement that reaches no semantic evidence
   check instead of passing it, and judges the documentation authority the docs
   evidence map requires.
@@ -8363,6 +8381,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   frontend owner table keeps its rust row on purpose: the owner ships outside
   this workspace, so no member matches it and any workspace crate that grows
   rust frontend stages is a second frontend.
+- Govern mutable state owner locks under explicit failure domains and recovery
+  classes with zero unhandled lock poisoning across production crates.
 - Every scalar rule leaf is runnable again.
   `vyre_libs::rule::condition_op::condition_program` declared its verdict slot
   as a backend-allocated output with no static element count, which fails IR

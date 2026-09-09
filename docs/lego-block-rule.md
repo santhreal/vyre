@@ -241,7 +241,7 @@ The third pass dissolved them:
 The `visual/` primitive domain was deleted. The one shared primitive that
 came out of it is `math::conv1d`, which blur composes and future signal
 and audio ops compose too. The domain compositions live in
-`vyre-libs/src/visual/` over `math::conv1d`, existing IR expressions, and
+`vyre-libs-visual/src/visual/` over `math::conv1d`, existing IR expressions, and
 private helpers where one caller exists.
 
 Domain thinking creates domain primitives, and composition thinking dissolves

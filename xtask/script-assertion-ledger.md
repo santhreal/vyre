@@ -981,7 +981,7 @@ The `findings` column is the count with the injection applied, given the pin in
 | `frozen-contracts` | Delete `docs/frozen-traits/MutationClass.txt`. | 1 to 2 |
 | `frozen-contracts` | Reindent the body of `pub enum AlgebraicLaw` by four spaces. | stays 1; indentation is not part of the contract |
 | `file-size` | Append 200 blank lines to `vyre-foundation/src/optimizer/fact_cache/mod.rs` (measured 570, cap 599). | 75 to 76 |
-| `file-size` | Append 60 lines to `vyre-libs/src/decode/inflate.rs` (measured 554, cap 582). | 75 to 76 |
+| `file-size` | Append 60 lines to `vyre-libs-decode/src/decode/inflate.rs` (measured 554, cap 582). | 75 to 76 |
 | `file-size` | Add a row to the audit ceilings naming vyre-does-not-exist/src/lib.rs. | 75 to 76 |
 | `gpu-loudness` | Add `#[cfg(not(feature = "gpu"))]` above a test in `vyre-driver-wgpu/tests/` with no loud abort within ten lines above or twenty below. | 2 to 3 |
 | `gpu-loudness` | Add `if adapter.is_err() { return; }` to a test body. | 2 to 3 |
@@ -1007,7 +1007,7 @@ The `findings` column is the count with the injection applied, given the pin in
 | `doc-claims` | In `contracts/doc_claims_manifest.toml`, change one `phrase` to text its document does not contain. | 0 to 1 |
 | `doc-claims` | Delete the `test` key from one claim. | 0 to 1, reported as an incomplete row rather than as a missing test |
 | `hot-path-owned-dispatch` | In `vyre-driver/src/backend/compiled_pipeline.rs`, make `dispatch` the required method and give `dispatch_borrowed` a default that copies each row with `to_vec`. | 0 to 2, one finding for the requirement and one for the copy it forces |
-| `hot-path-inventory` | In `vyre-libs/src/plumbing/registration/operation_catalog.rs`, serve `convergence_contract` by walking `inventory::iter` instead of probing the frozen index. | 0 to 1, quoting the statement that scans |
+| `hot-path-inventory` | In `vyre-libs-builder/src/plumbing/registration/operation_catalog.rs`, serve `convergence_contract` by walking `inventory::iter` instead of probing the frozen index. | 0 to 1, quoting the statement that scans |
 | `hot-path-nested-rows` | In `vyre-driver/src/backend/vyre_backend.rs`, delete the `dispatch_borrowed_into` declaration. | 0 to 1, naming the returning method that is then the only shape offered |
 | `hot-path-nested-rows` | In `vyre-driver/src/backend/vyre_backend.rs`, replace the slot-preserving replacement in `dispatch_borrowed_into` with `*outputs = self.dispatch_borrowed(program, inputs, config)?;`. | 0 to 1, naming the slot the default replaces |
 | `hot-path-unbounded-read` | Add `fs::read_to_string(` to a file under `vyre-driver/src` outside the reviewed cache modules. | 1 to 3 |

@@ -1045,6 +1045,7 @@ dependencies = [
  "vyre-driver",
  "vyre-foundation",
  "vyre-megakernel",
+ "vyre-spec",
 ]
 
 [[package]]

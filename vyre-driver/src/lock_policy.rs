@@ -22,7 +22,10 @@
 
 use std::sync::{Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-pub use vyre_foundation::{FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError};
+pub use vyre_foundation::{
+    reclaim_poisoned_for_teardown, FailureDomain, RecoveryClass, RecoveryDisposition,
+    TypedRecoveryError,
+};
 
 use crate::BackendError;
 
@@ -94,26 +97,7 @@ where
     }
 }
 
-/// Take a mutex guard for restartable state, resetting on poison.
-pub fn govern_mutex_restartable<'a, T, F>(
-    mutex: &'a Mutex<T>,
-    _owner: &'static str,
-    _state: &'static str,
-    reset_on_restart: F,
-) -> MutexGuard<'a, T>
-where
-    F: FnOnce(&mut T),
-{
-    match mutex.lock() {
-        Ok(guard) => guard,
-        Err(poison) => {
-            mutex.clear_poison();
-            let mut guard = poison.into_inner();
-            reset_on_restart(&mut guard);
-            guard
-        }
-    }
-}
+pub use vyre_foundation::govern_mutex_restartable;
 
 /// Take a read lock governed by an explicit failure domain contract.
 pub fn govern_rwlock_read<'a, T>(

@@ -127,15 +127,15 @@ Own every composition in the workspace: consumer dialects and compiler-internal 
 ### Boundaries
 
 The `product-libraries` owner maintains this `libraries` crate at `vyre-libs`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-foundation`, `vyre-libs-analysis`, `vyre-libs-bitset`, `vyre-libs-builder`, `vyre-libs-decode`, `vyre-libs-device`, `vyre-libs-encoding`, `vyre-libs-fixpoint`, `vyre-libs-graph`, `vyre-libs-hash`, `vyre-libs-math`, `vyre-libs-nn`, `vyre-libs-parsing`, `vyre-libs-pattern`, `vyre-libs-reasoning`, `vyre-libs-reduce`, `vyre-libs-rule`, `vyre-libs-scheduling`, `vyre-libs-security`, `vyre-libs-solvers`, `vyre-libs-text`, `vyre-libs-vfs`, `vyre-libs-visual`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-libs/examples/dominator_tree_e2e.rs`:
+Run the checked-in behavior from `vyre-libs/examples/select1_optimizer_parity.rs`:
 
 ```console
-./cargo_full run -p vyre-libs --example dominator_tree_e2e --features graph
+./cargo_full run -p vyre-libs --example select1_optimizer_parity --features bitset
 ```
 
 ### Features

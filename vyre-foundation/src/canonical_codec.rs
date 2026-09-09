@@ -103,6 +103,13 @@ pub enum CodecError {
         /// Field name.
         field_name: &'static str,
     },
+    /// Record carries a field number the schema does not declare.
+    UndeclaredField {
+        /// Schema the record names.
+        schema_id: SchemaId,
+        /// Field number the schema does not declare.
+        field_number: u32,
+    },
     /// Required field was not present in the record.
     MissingRequiredField {
         /// Field number.
@@ -164,6 +171,10 @@ impl fmt::Display for CodecError {
             Self::TypeMismatch { field_number, field_name } => write!(
                 f,
                 "Fix: type mismatch for field {field_number} ('{field_name}')"
+            ),
+            Self::UndeclaredField { schema_id, field_number } => write!(
+                f,
+                "Fix: field {field_number} is not declared by {schema_id:?}; remove it or declare it in the schema registry"
             ),
             Self::MissingRequiredField { field_number, field_name } => write!(
                 f,
@@ -244,13 +255,21 @@ impl CanonicalEncoder {
                 .fields
                 .iter()
                 .find(|f| f.number == *field_num)
-                .ok_or(CodecError::NonCanonicalFieldOrder {
-                    expected_after: last_field_num,
-                    got: *field_num,
+                .ok_or(CodecError::UndeclaredField {
+                    schema_id: record.schema_id,
+                    field_number: *field_num,
                 })?;
 
             out.extend_from_slice(&field_num.to_le_bytes());
-            Self::encode_value(val, field_def.field_type, schema, 1, &mut out)?;
+            Self::encode_value(
+                val,
+                field_def.field_type,
+                field_def.number,
+                field_def.name,
+                schema,
+                1,
+                &mut out,
+            )?;
         }
         // Verify all required fields were encoded
         for req_field in schema.fields.iter().filter(|f| f.required) {
@@ -279,6 +298,8 @@ impl CanonicalEncoder {
     fn encode_value(
         val: &CanonicalValue,
         expected_type: FieldType,
+        field_number: u32,
+        field_name: &'static str,
         schema: &vyre_spec::SchemaDefinition,
         depth: usize,
         out: &mut Vec<u8>,
@@ -301,9 +322,9 @@ impl CanonicalEncoder {
             (CanonicalValue::Bool(v), FieldType::Bool) => out.push(if *v { 1 } else { 0 }),
             (CanonicalValue::FixedBytes(b), FieldType::FixedBytes(n)) => {
                 if b.len() != *n {
-                    return Err(CodecError::TypeMismatch {
-                        field_number: 0,
-                        field_name: "FixedBytes length mismatch",
+                    return Err(CodecError::NonCanonicalEncoding {
+                        field_number,
+                        details: "fixed-length byte field does not have its declared length",
                     });
                 }
                 out.extend_from_slice(b.as_slice());
@@ -326,13 +347,21 @@ impl CanonicalEncoder {
                 }
                 out.extend_from_slice(&(items.len() as u32).to_le_bytes());
                 for item in items.iter() {
-                    Self::encode_value(item, **elem_type, schema, depth + 1, out)?;
+                    Self::encode_value(
+                        item,
+                        **elem_type,
+                        field_number,
+                        field_name,
+                        schema,
+                        depth + 1,
+                        out,
+                    )?;
                 }
             }
             _ => {
                 return Err(CodecError::TypeMismatch {
-                    field_number: 0,
-                    field_name: "value type does not match schema field type",
+                    field_number,
+                    field_name,
                 });
             }
         }
@@ -677,7 +706,15 @@ impl CanonicalSigner {
                 .find(|(num, _)| *num == field_def.number)
             {
                 let mut buf = Vec::new();
-                CanonicalEncoder::encode_value(val, field_def.field_type, schema, 1, &mut buf)?;
+                CanonicalEncoder::encode_value(
+                    val,
+                    field_def.field_type,
+                    field_def.number,
+                    field_def.name,
+                    schema,
+                    1,
+                    &mut buf,
+                )?;
                 hasher.update(&field_def.number.to_le_bytes());
                 hasher.update(&buf);
             }

@@ -31,9 +31,9 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `dominator_tree_e2e` | `vyre-libs/examples/dominator_tree_e2e.rs` | `graph` | `./cargo_full test -p vyre-libs --example dominator_tree_e2e` |
+| `example` | `dominator_tree_e2e` | `vyre-libs/examples/dominator_tree_e2e.rs` | None | `./cargo_full test -p vyre-libs --example dominator_tree_e2e` |
 | `example` | `jacobi_workgroup_perf` | `vyre-libs/examples/jacobi_workgroup_perf.rs` | None | `./cargo_full test -p vyre-libs --example jacobi_workgroup_perf` |
-| `example` | `prefix_sum_megakernel` | `vyre-libs/examples/prefix_sum_megakernel.rs` | `math-scan` | `./cargo_full test -p vyre-libs --example prefix_sum_megakernel` |
+| `example` | `prefix_sum_megakernel` | `vyre-libs/examples/prefix_sum_megakernel.rs` | None | `./cargo_full test -p vyre-libs --example prefix_sum_megakernel` |
 | `example` | `select1_optimizer_parity` | `vyre-libs/examples/select1_optimizer_parity.rs` | `bitset` | `./cargo_full test -p vyre-libs --example select1_optimizer_parity` |
 | `lib` | `vyre_libs` | `vyre-libs/src/lib.rs` | None | `./cargo_full test -p vyre-libs` |
 | `test` | `all_tests` | `vyre-libs/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs --test all_tests` |
@@ -43,7 +43,6 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `all_tests_decode` | `vyre-libs/tests/all_tests_decode.rs` | `decode` | `./cargo_full test -p vyre-libs --test all_tests_decode` |
 | `test` | `all_tests_decode_parsing` | `vyre-libs/tests/all_tests_decode_parsing.rs` | `decode`, `parsing` | `./cargo_full test -p vyre-libs --test all_tests_decode_parsing` |
 | `test` | `all_tests_encoding` | `vyre-libs/tests/all_tests_encoding.rs` | `encoding` | `./cargo_full test -p vyre-libs --test all_tests_encoding` |
-| `test` | `all_tests_fixpoint` | `vyre-libs/tests/all_tests_fixpoint.rs` | `fixpoint` | `./cargo_full test -p vyre-libs --test all_tests_fixpoint` |
 | `test` | `all_tests_fixpoint_graph_math_kernels` | `vyre-libs/tests/all_tests_fixpoint_graph_math_kernels.rs` | `fixpoint`, `graph`, `math-kernels` | `./cargo_full test -p vyre-libs --test all_tests_fixpoint_graph_math_kernels` |
 | `test` | `all_tests_fixpoint_graph_math_kernels_parsing_kernels` | `vyre-libs/tests/all_tests_fixpoint_graph_math_kernels_parsing_kernels.rs` | `fixpoint`, `graph`, `math-kernels`, `parsing-kernels` | `./cargo_full test -p vyre-libs --test all_tests_fixpoint_graph_math_kernels_parsing_kernels` |
 | `test` | `all_tests_fixpoint_math_kernels` | `vyre-libs/tests/all_tests_fixpoint_math_kernels.rs` | `fixpoint`, `math-kernels` | `./cargo_full test -p vyre-libs --test all_tests_fixpoint_math_kernels` |
@@ -82,7 +81,6 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `all_tests_reduce_telemetry` | `vyre-libs/tests/all_tests_reduce_telemetry.rs` | `reduce`, `telemetry` | `./cargo_full test -p vyre-libs --test all_tests_reduce_telemetry` |
 | `test` | `all_tests_rule` | `vyre-libs/tests/all_tests_rule.rs` | `rule` | `./cargo_full test -p vyre-libs --test all_tests_rule` |
 | `test` | `all_tests_scheduling` | `vyre-libs/tests/all_tests_scheduling.rs` | `scheduling` | `./cargo_full test -p vyre-libs --test all_tests_scheduling` |
-| `test` | `all_tests_security` | `vyre-libs/tests/all_tests_security.rs` | `security` | `./cargo_full test -p vyre-libs --test all_tests_security` |
 | `test` | `all_tests_solvers` | `vyre-libs/tests/all_tests_solvers.rs` | `solvers` | `./cargo_full test -p vyre-libs --test all_tests_solvers` |
 | `test` | `all_tests_text` | `vyre-libs/tests/all_tests_text.rs` | `text` | `./cargo_full test -p vyre-libs --test all_tests_text` |
 

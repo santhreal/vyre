@@ -17,7 +17,7 @@ because it requires `Expr::Atomic`).
 ## Witness sources
 
 - `dot` / `matmul`: NumPy + BLAS ground truth; KAT corpus lives in
-  `tests/cat_a_conform.rs`.
+  `vyre-libs/tests/cat_a_conform.rs`.
 - `matmul_tiled`: must byte-match `matmul` for every witness (same
   semantics, tiled execution).
 - `scan_prefix_sum`: Jax's `jax.numpy.cumsum` reference corpus.
@@ -41,10 +41,10 @@ corpus. Divergences are P0 conformance bugs.
 
 All math builders reject shape mismatches at `build()` time via
 `TensorRef` checks. Expected shape for each op is documented in its
-builder rustdoc; the test in `tests/name_collision.rs` covers the
+builder rustdoc; the test in `vyre-libs/tests/name_collision.rs` covers the
 collision path.
 
 ## Overflow contract
 
 `m * k`, `k * n`, `m * n` products that exceed `u32::MAX` must fail at
-builder time with an overflow message. See `tests/overflow_guards.rs`.
+builder time with an overflow message. See `vyre-libs/tests/overflow_guards.rs`.

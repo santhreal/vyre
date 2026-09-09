@@ -34,4 +34,4 @@ and the scaffolder cannot disagree about where a rule lives.
 
 A workspace-wide op corpus and its schema were described here and have never
 existed in this repository. The rule corpora that do exist are per crate:
-`vyre-libs/rules`, `vyre-lower/rules` and `vyre-lints/rules`.
+`vyre-libs-security/rules`, `vyre-lower/rules` and `vyre-lints/rules`.

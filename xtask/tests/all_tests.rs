@@ -28,3 +28,7 @@ pub mod gate_verdict;
 /// Integration tests from `tests/device_test_compilation.rs`.
 #[path = "device_test_compilation.rs"]
 pub mod device_test_compilation;
+
+/// Integration tests from `tests/test_source_paths.rs`.
+#[path = "test_source_paths.rs"]
+pub mod test_source_paths;

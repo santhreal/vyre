@@ -22,7 +22,7 @@ Program walks the table one byte per step.
 
 - Substring search: simple corpus + edge cases (empty haystack,
   needle-larger-than-haystack, all-zeros, Unicode multi-byte). See
-  `tests/cat_a_conform.rs` and `tests/aho_corasick_kat.rs`.
+  `vyre-libs/tests/cat_a_conform.rs` and `vyre-libs/tests/aho_corasick_kat.rs`.
 - Aho-Corasick: the 1975 paper's "ushers / he she his hers" example,
   hand-picked regression vectors, and the `aho-corasick` crate corpus.
 - DFA budget: `tests` under the DFA compile path exercise
@@ -39,11 +39,11 @@ Program walks the table one byte per step.
 
 `dfa_compile` panics when the default 16 MiB budget is exceeded.
 Structured-error callers use `dfa_compile_with_budget` and match on
-`DfaCompileError::TooLarge`. See `tests/cat_a_conform.rs` for the
+`DfaCompileError::TooLarge`. See `vyre-libs/tests/cat_a_conform.rs` for the
 budget witness corpus.
 
 ## Overflow contract
 
 The substring-search length guard (`needle_len <= haystack_len` and
 `i + needle_len <= haystack_len`) is overflow-safe; see
-`tests/cat_a_conform.rs` edge cases for needle-larger-than-haystack.
+`vyre-libs/tests/cat_a_conform.rs` edge cases for needle-larger-than-haystack.

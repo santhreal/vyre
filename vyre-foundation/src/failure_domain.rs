@@ -6,7 +6,7 @@
 
 use core::fmt;
 use std::string::String;
-use std::sync::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
 /// Explicit failure domain identifying which subsystem boundary failed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FailureDomain {
@@ -211,6 +211,64 @@ pub fn process_fatal_poison(owner: &str, state: &str) -> ! {
     std::process::abort();
 }
 
+/// Take a mutex guard over state that is rebuildable from canonical input.
+///
+/// A poisoned lock here means a panic left the guarded state partly written.
+/// `reset_on_restart` returns it to an empty valid state, the poison flag is
+/// cleared so the next acquisition is an ordinary one, and the guard is handed
+/// back. Every entry discarded this way is derivable again from the input the
+/// owner already holds, which is what makes discarding it correct rather than
+/// lossy.
+pub fn govern_mutex_restartable<'a, T, F>(
+    mutex: &'a Mutex<T>,
+    owner: &'static str,
+    state: &'static str,
+    reset_on_restart: F,
+) -> MutexGuard<'a, T>
+where
+    F: FnOnce(&mut T),
+{
+    match mutex.lock() {
+        Ok(guard) => guard,
+        Err(poison) => {
+            eprintln!(
+                "vyre: {owner} recovered a poisoned lock over {state} by discarding it. A thread \
+                 panicked while that lock was held, so the state behind it is half written and is \
+                 rebuilt from canonical input on demand. Fix: report the earlier panic."
+            );
+            mutex.clear_poison();
+            let mut guard = poison.into_inner();
+            reset_on_restart(&mut guard);
+            guard
+        }
+    }
+}
+
+/// Take poisoned state during teardown so the handles it holds are released.
+///
+/// A destructor is the last owner of whatever a panic left behind. Refusing that
+/// state leaks every handle inside it, and a leaked device resource outlives the
+/// process that could have freed it. Teardown reads the state to release those
+/// handles and never publishes it to a caller, so a half-written value cannot be
+/// observed as if it were whole.
+pub fn reclaim_poisoned_for_teardown<T>(
+    state: Result<T, PoisonError<T>>,
+    owner: &str,
+    guarded: &str,
+) -> T {
+    match state {
+        Ok(value) => value,
+        Err(poison) => {
+            eprintln!(
+                "vyre: {owner} is tearing down a poisoned lock over {guarded}. A thread panicked \
+                 while that lock was held. Teardown releases the handles it still holds rather \
+                 than leaking them. Fix: report the earlier panic."
+            );
+            poison.into_inner()
+        }
+    }
+}
+
 /// Take a mutex guard governed by an explicit failure domain contract.
 pub fn govern_mutex<'a, T>(
     mutex: &'a Mutex<T>,
@@ -253,6 +311,7 @@ where
                 format!("Fix: drop `{owner}` and reacquire a fresh device context."),
             )),
             RecoveryClass::RestartableFromCanonicalInput => {
+                mutex.clear_poison();
                 let mut guard = poison.into_inner();
                 reset_on_restart(&mut guard);
                 Ok(guard)
@@ -339,6 +398,7 @@ where
                 format!("Fix: drop `{owner}` and reacquire a fresh device context."),
             )),
             RecoveryClass::RestartableFromCanonicalInput => {
+                rwlock.clear_poison();
                 let mut guard = poison.into_inner();
                 reset_on_restart(&mut guard);
                 Ok(guard)

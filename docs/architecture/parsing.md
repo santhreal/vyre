@@ -15,16 +15,16 @@ optimizer can see through.
 
 ## The substrate is language-neutral
 
-`vyre-libs/src/parsing/core` owns the pieces no language owns: AST node
+`vyre-libs-parsing/src/parsing/core` owns the pieces no language owns: AST node
 kinds, delimiter handling, bracket matching, and full-grammar
 shunting-yard AST generation. A frontend composes these; it does not
 reimplement them.
 
-`vyre-libs/src/parsing/vast.rs` is the packed AST wire format and its host
+`vyre-libs-parsing/src/parsing/vast.rs` is the packed AST wire format and its host
 walks, re-exported from `vyre-foundation`. A frontend's output is VAST, so
 a consumer reads one shape regardless of which language produced it.
 
-`vyre-libs/src/parsing/lr_tables` holds precomputed LR(1) action and goto
+`vyre-libs-parsing/src/parsing/lr_tables` holds precomputed LR(1) action and goto
 tables plus `parse_lr`. The tables are `&'static [u32]` slices from a
 manual SLR(1) construction of the C expression grammar. `parse_lr` is a
 host reference parser: it is the differential oracle for the device
@@ -75,7 +75,7 @@ target that reports no subgroup at all still runs the same arithmetic.
 
 A loop whose trip count is a load runs for as many iterations as the loaded
 word states, so one out-of-contract `u32` asks for four billion. Every such
-bound under `vyre-libs/src/parsing` passes through one clamp against the
+bound under `vyre-libs-parsing/src/parsing` passes through one clamp against the
 extents of the buffers the body indexes. The shunting-yard statement pass
 clamps its statement end offset to the token array, and the Go extractors clamp
 the caller's token count once per program. An in-contract bound is at or below

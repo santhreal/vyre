@@ -191,16 +191,16 @@ composes the decision with program-derived requirements.
 
 | Dialect | Path | Feature flag |
 | --- | --- | --- |
-| Linear algebra | `src/math/linalg/mod.rs` | `math-linalg` |
-| Scans + reductions | `src/math/scan/mod.rs` | `math-scan` |
-| Broadcasting | `src/math/broadcast/mod.rs` | `math-broadcast` |
-| NN activation | `src/nn/activation/mod.rs` | `nn-activation` |
-| NN linear layers | `src/nn/linear/mod.rs` | `nn-linear` |
-| NN normalization | `src/nn/norm/mod.rs` | `nn-norm` |
-| NN attention | `src/nn/attention/mod.rs` | `nn-attention` |
-| Substring search | `src/pattern/substring/mod.rs` | `pattern-substring` |
-| DFA / Aho-Corasick | `src/pattern/dfa/mod.rs`, `src/pattern/classic_ac/mod.rs` | `pattern-dfa` |
-| BLAKE3 compression | `src/hash/blake3_compress.rs` | `crypto-blake3` |
+| Linear algebra | `vyre-libs-math/src/math/linalg/mod.rs` | `math-linalg` |
+| Scans + reductions | `vyre-libs-math/src/math/scan/mod.rs` | `math-scan` |
+| Broadcasting | `vyre-libs-math/src/math/broadcast/mod.rs` | `math-broadcast` |
+| NN activation | `vyre-libs-nn/src/nn/activation/mod.rs` | `nn-activation` |
+| NN linear layers | `vyre-libs-nn/src/nn/linear/mod.rs` | `nn-linear` |
+| NN normalization | `vyre-libs-nn/src/nn/norm/mod.rs` | `nn-norm` |
+| NN attention | `vyre-libs-nn/src/nn/attention/mod.rs` | `nn-attention` |
+| Substring search | `vyre-libs-pattern/src/pattern/substring/mod.rs` | `pattern-substring` |
+| DFA / Aho-Corasick | `vyre-libs-pattern/src/pattern/dfa/mod.rs`, `vyre-libs-pattern/src/pattern/classic_ac/mod.rs` | `pattern-dfa` |
+| BLAKE3 compression | `vyre-libs-hash/src/hash/blake3_compress.rs` | `crypto-blake3` |
 
 Add a new dialect by creating `src/<dialect>/mod.rs` + registering a
 feature flag in `Cargo.toml`. The op is published at one path: the

@@ -236,24 +236,30 @@ impl<T> ParsedSourceLru<T> {
         self.len() == 0
     }
 
-    /// Lock the LRU inner state, failing closed on a poisoned lock.
+    /// Lock the LRU inner state, discarding it if a panic left it inconsistent.
     ///
-    /// # Panics
-    /// Panics when the lock is poisoned. A poisoned lock means a panic left the LRU links
-    /// inconsistent, and continuing would serve entries the cache no longer owns.
+    /// A poisoned lock means a panic interrupted a mutation of the LRU maps, so
+    /// `entries`, `recency`, and `coldest` can disagree about which keys the
+    /// cache holds. Every cached entry is a parse of source text the caller
+    /// still has, so the maps are emptied and refilled on demand rather than
+    /// served in a state no longer describing what the cache owns. `capacity`
+    /// survives because it is configuration, not cached state.
+    ///
+    /// The in-flight parse table is emptied with the rest. A waiter blocked on a
+    /// dropped `InFlight` observes its panic flag and reparses, which is the
+    /// same path a panicking parse already takes.
     fn lock_inner(&self) -> MutexGuard<'_, LruInner<T>> {
-        // Fail closed on a poisoned lock instead of silently recovering with
-        // `into_inner()` (Law 10). A poison here means another thread panicked
-        // mid-mutation of the LRU maps (entries/recency/coldest can be left
-        // inconsistent), so handing that half-updated state back as if nothing
-        // happened would silently corrupt every subsequent get/insert. Propagate
-        // the panic loudly (same poison policy as the readiness mutex below).
-        // (The in-flight-parse state lock is a SEPARATE, deliberate protocol:
-        // a panicking parse is an expected, flagged condition there.)
-        self.inner.lock().expect(
-            "the parsed-source LRU lock is poisoned, so entries, recency, and coldest \
-             disagree. Fix: drop this cache and build a new one; the panic that poisoned \
-             it is the defect to chase, and it is reported by whichever parse panicked",
+        vyre_foundation::govern_mutex_restartable(
+            &self.inner,
+            "the parsed-source cache",
+            "the parsed-source LRU entries, recency, and in-flight parses",
+            |inner| {
+                inner.entries.clear();
+                inner.recency.clear();
+                inner.coldest.clear();
+                inner.in_flight.clear();
+                inner.clock = 0;
+            },
         )
     }
 
