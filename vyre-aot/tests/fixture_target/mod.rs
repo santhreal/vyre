@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
+use vyre_driver::Device;
 use vyre_aot::{
     ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,
     TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
@@ -74,6 +75,69 @@ fn fixture_target_compiler() -> Result<Box<dyn TargetCompiler>, vyre_driver::Bac
         .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
     Ok(Box::new(FixtureTargetCompiler { format, profile }))
 }
+struct FixtureMaterializer {
+    device: vyre_driver::materialize::MaterializerDevice,
+}
+
+impl FixtureMaterializer {
+    fn new() -> Result<Self, vyre_driver::BackendError> {
+        let profile = TargetProfile::new("fixture-target-format", 1, [64, 1, 1], 64, 1_024, 0)
+            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        let device = vyre_driver::materialize::MaterializerDevice::acquire(
+            vyre_driver::materialize::DeviceSpec {
+                backend: "fixture-target",
+                device: "fixture-device".to_string(),
+                format_extension: "fixture-target-format",
+                format_version: 1,
+                profile,
+            },
+        )?;
+        Ok(Self { device })
+    }
+}
+
+impl vyre_driver::ArtifactMaterializer for FixtureMaterializer {
+    fn device(&self) -> &dyn vyre_driver::Device {
+        &self.device
+    }
+
+    fn materialize(
+        &self,
+        artifact: &vyre_megakernel::Artifact,
+        payload: &TargetPayload,
+    ) -> Result<Box<dyn vyre_driver::ArtifactInstance>, vyre_driver::BackendError> {
+        Ok(vyre_test_support::fixture_instance::FixtureInstance::neutral(
+            artifact,
+            payload,
+            self.device.identity(),
+        ))
+    }
+
+    fn allocate_resident(&self, _byte_len: usize) -> Result<vyre_driver::Resource, vyre_driver::BackendError> {
+        Err(vyre_driver::BackendError::new("not implemented on fixture device"))
+    }
+
+    fn free_resident(&self, _resource: vyre_driver::Resource) -> Result<(), vyre_driver::BackendError> {
+        Ok(())
+    }
+
+    fn upload_resident(&self, _resource: &vyre_driver::Resource, _bytes: &[u8]) -> Result<(), vyre_driver::BackendError> {
+        Ok(())
+    }
+
+    fn upload_resident_at(
+        &self,
+        _resource: &vyre_driver::Resource,
+        _offset_bytes: usize,
+        _bytes: &[u8],
+    ) -> Result<(), vyre_driver::BackendError> {
+        Ok(())
+    }
+}
+
+fn fixture_target_materializer() -> Result<Box<dyn vyre_driver::ArtifactMaterializer>, vyre_driver::BackendError> {
+    Ok(Box::new(FixtureMaterializer::new()?))
+}
 
 inventory::submit! {
     vyre_driver::BackendRegistration {
@@ -85,7 +149,7 @@ inventory::submit! {
         supported_ops: no_operations,
         semantic_operations: no_operations,
         target_compiler: Some(fixture_target_compiler),
-        materializer: None,
+        materializer: Some(fixture_target_materializer),
     }
 }
 
