@@ -252,7 +252,7 @@ pub(crate) fn reference_pick_config_into(
     scaled: &mut Vec<f64>,
     out: &mut Vec<f64>,
 ) {
-    use vyre_libs_builder::telemetry::{bump, differentiable_autotune_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, differentiable_autotune_calls};
     bump(&differentiable_autotune_calls);
     differentiable_autotune_pick_config_witness_into(costs, temperature, neg_costs, scaled, out);
 }
@@ -285,7 +285,7 @@ pub(crate) fn reference_config_gradient_into(
     neg_costs: &mut Vec<f64>,
     out: &mut Vec<f64>,
 ) {
-    use vyre_libs_builder::telemetry::{bump, differentiable_autotune_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, differentiable_autotune_calls};
     bump(&differentiable_autotune_calls);
     assert!(temperature > 0.0, "temperature must be positive");
     differentiable_autotune_gradient_witness_into(costs, temperature, neg_costs, out);

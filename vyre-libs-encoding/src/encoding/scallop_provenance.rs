@@ -113,7 +113,7 @@ pub fn lineage_for_output(closure: &[u32], n: u32, out: u32) -> Vec<u32> {
 /// Project one output row into caller-owned storage.
 #[cfg(test)]
 pub fn lineage_for_output_into(closure: &[u32], n: u32, out: u32, row: &mut Vec<u32>) {
-    use vyre_libs_builder::telemetry::{bump, scallop_provenance_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, scallop_provenance_calls};
     let slice = lineage_for_output_slice(closure, n, out);
     bump(&scallop_provenance_calls);
     row.clear();
@@ -188,7 +188,7 @@ pub fn provenance_closure_via_with_scratch_into(
     scratch: &mut ScallopProvenanceGpuScratch,
     closure: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, scallop_provenance_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, scallop_provenance_calls};
     bump(&scallop_provenance_calls);
 
     let n_usize = n as usize;

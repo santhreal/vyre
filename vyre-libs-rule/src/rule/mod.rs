@@ -36,7 +36,7 @@ macro_rules! define_file_size_condition {
 
             /// Execution contract annotation for the standard catalog.
             pub const CONTRACT: vyre_spec::OperationContract =
-                vyre_libs_builder::contracts::RULE_PREDICATE_CHEAP;
+                vyre_libs_builder::plumbing::registration::contracts::RULE_PREDICATE_CHEAP;
         }
     };
 }
@@ -106,7 +106,7 @@ macro_rules! define_pattern_count_condition {
 
             /// Execution contract annotation for the standard catalog.
             pub const CONTRACT: vyre_spec::OperationContract =
-                vyre_libs_builder::contracts::RULE_PREDICATE_CHEAP;
+                vyre_libs_builder::plumbing::registration::contracts::RULE_PREDICATE_CHEAP;
         }
     };
 }
@@ -180,11 +180,11 @@ mod tests {
     fn file_size_condition_family_uses_rule_predicate_contract() {
         assert_eq!(
             file_size_eq::CONTRACT.cost_hint,
-            vyre_libs_builder::contracts::RULE_PREDICATE_CHEAP.cost_hint
+            vyre_libs_builder::plumbing::registration::contracts::RULE_PREDICATE_CHEAP.cost_hint
         );
         assert_eq!(
             file_size_ne::CONTRACT.determinism,
-            vyre_libs_builder::contracts::RULE_PREDICATE_CHEAP.determinism
+            vyre_libs_builder::plumbing::registration::contracts::RULE_PREDICATE_CHEAP.determinism
         );
     }
 
@@ -219,11 +219,11 @@ mod tests {
     fn pattern_count_condition_family_uses_rule_predicate_contract() {
         assert_eq!(
             pattern_count_gt::CONTRACT.cost_hint,
-            vyre_libs_builder::contracts::RULE_PREDICATE_CHEAP.cost_hint
+            vyre_libs_builder::plumbing::registration::contracts::RULE_PREDICATE_CHEAP.cost_hint
         );
         assert_eq!(
             pattern_count_gte::CONTRACT.determinism,
-            vyre_libs_builder::contracts::RULE_PREDICATE_CHEAP.determinism
+            vyre_libs_builder::plumbing::registration::contracts::RULE_PREDICATE_CHEAP.determinism
         );
     }
 }

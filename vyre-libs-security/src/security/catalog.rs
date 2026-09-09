@@ -130,7 +130,7 @@ macro_rules! reach_flow_entry {
             .with_opaque("static taint analysis and control-flow dominance check")
         }
         inventory::submit! {
-            vyre_libs_builder::operation_catalog::ConvergenceContract {
+            vyre_libs_builder::plumbing::registration::operation_catalog::ConvergenceContract {
                 op_id: $op_id,
                 max_iterations: super::flow_composition::FLOW_MAX_ITERATIONS,
             }
@@ -228,7 +228,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_libs_builder::operation_catalog::ConvergenceContract {
+    vyre_libs_builder::plumbing::registration::operation_catalog::ConvergenceContract {
         op_id: super::sanitized_by::OP_ID,
         max_iterations: 4096,
     }

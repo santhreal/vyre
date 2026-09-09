@@ -127,7 +127,7 @@ pub fn schedule_disjoint_rewrites_via_with_scratch_into(
     scratch: &mut PlanarRewriteScheduleGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, planar_rewrite_pass_scheduler_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, planar_rewrite_pass_scheduler_calls};
     bump(&planar_rewrite_pass_scheduler_calls);
 
     if k == 0 {
@@ -182,7 +182,9 @@ mod tests {
     use vyre_test_support::test_parity_oracles::{policy, StaticOutputs};
 
     fn schedule_disjoint_rewrites(candidates: &[u32], h: u32, w: u32, k: u32) -> Vec<u32> {
-        use vyre_libs_builder::telemetry::{bump, planar_rewrite_pass_scheduler_calls};
+        use vyre_libs_builder::plumbing::host::telemetry::{
+            bump, planar_rewrite_pass_scheduler_calls,
+        };
         bump(&planar_rewrite_pass_scheduler_calls);
         assert!(k > 0, "Fix: rewrite footprint k must be > 0.");
         reference_planar_rewrite_schedule(candidates, h, w, k)

@@ -83,7 +83,7 @@ pub fn mask_binary_via_with_scratch_into(
     scratch: &mut BitsetMaskAlgebraGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bitset_mask_algebra_calls, bump};
+    use vyre_libs_builder::plumbing::host::telemetry::{bitset_mask_algebra_calls, bump};
     bump(&bitset_mask_algebra_calls);
 
     if lhs.len() != rhs.len() {
@@ -186,7 +186,7 @@ pub fn mask_not_via_with_scratch_into(
     scratch: &mut BitsetMaskAlgebraGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bitset_mask_algebra_calls, bump};
+    use vyre_libs_builder::plumbing::host::telemetry::{bitset_mask_algebra_calls, bump};
     bump(&bitset_mask_algebra_calls);
 
     if input.is_empty() {
@@ -253,7 +253,7 @@ pub fn mask_contains_via(
     input: &[u32],
     bit_idx: u32,
 ) -> Result<bool, SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bitset_mask_algebra_calls, bump};
+    use vyre_libs_builder::plumbing::host::telemetry::{bitset_mask_algebra_calls, bump};
     bump(&bitset_mask_algebra_calls);
 
     let words = checked_words(input.len(), "mask_contains_via")?;
@@ -283,7 +283,7 @@ pub fn mask_test_bit_via(
     input: &[u32],
     bit_idx: u32,
 ) -> Result<bool, SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bitset_mask_algebra_calls, bump};
+    use vyre_libs_builder::plumbing::host::telemetry::{bitset_mask_algebra_calls, bump};
     bump(&bitset_mask_algebra_calls);
 
     if (bit_idx / 32) as usize >= input.len() {
@@ -355,7 +355,7 @@ fn scalar_binary_predicate_via(
     rhs: &[u32],
     build: fn(&str, &str, &str, u32) -> vyre_foundation::ir::Program,
 ) -> Result<bool, SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bitset_mask_algebra_calls, bump};
+    use vyre_libs_builder::plumbing::host::telemetry::{bitset_mask_algebra_calls, bump};
     bump(&bitset_mask_algebra_calls);
 
     if lhs.len() != rhs.len() {
@@ -389,7 +389,7 @@ fn scalar_mutate_bit_via(
     bit_idx: u32,
     build: fn(&str, u32, u32) -> vyre_foundation::ir::Program,
 ) -> Result<Vec<u32>, SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bitset_mask_algebra_calls, bump};
+    use vyre_libs_builder::plumbing::host::telemetry::{bitset_mask_algebra_calls, bump};
     bump(&bitset_mask_algebra_calls);
 
     if (bit_idx / 32) as usize >= target.len() {

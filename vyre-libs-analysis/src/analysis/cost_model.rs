@@ -88,7 +88,7 @@ pub fn predict_runtime_fixed_via_with_scratch(
     alpha: f64,
     scratch: &mut CostModelGpuScratch,
 ) -> Result<(u32, u32), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, cost_model_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, cost_model_calls};
     bump(&cost_model_calls);
 
     let n_nodes = validate_circuit(
@@ -299,7 +299,7 @@ mod tests {
         historical_residuals: &[u32],
         alpha: f64,
     ) -> (f64, u32) {
-        use vyre_libs_builder::telemetry::{bump, cost_model_calls};
+        use vyre_libs_builder::plumbing::host::telemetry::{bump, cost_model_calls};
         bump(&cost_model_calls);
         let topo: Vec<u32> = (0..feature_circuit_kinds.len() as u32).collect();
         let result = sum_product_evaluate_witness(

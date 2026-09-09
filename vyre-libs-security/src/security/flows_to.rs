@@ -206,14 +206,16 @@ mod tests {
         // matching `max_iterations` is the contract, not a hygiene gap.
         // Their IR differs (distinct OP_ID tags) but their fixpoint
         // depths are identical by construction.
-        let c_flows = vyre_libs_builder::operation_catalog::convergence_contract(
-            "vyre-libs::security::flows_to",
-        )
-        .expect("Fix: flows_to must have a ConvergenceContract");
-        let c_taint = vyre_libs_builder::operation_catalog::convergence_contract(
-            "vyre-libs::security::taint_flow",
-        )
-        .expect("Fix: taint_flow must have a ConvergenceContract");
+        let c_flows =
+            vyre_libs_builder::plumbing::registration::operation_catalog::convergence_contract(
+                "vyre-libs::security::flows_to",
+            )
+            .expect("Fix: flows_to must have a ConvergenceContract");
+        let c_taint =
+            vyre_libs_builder::plumbing::registration::operation_catalog::convergence_contract(
+                "vyre-libs::security::taint_flow",
+            )
+            .expect("Fix: taint_flow must have a ConvergenceContract");
         assert_eq!(
             c_flows.max_iterations, c_taint.max_iterations,
             "flows_to and taint_flow MUST share max_iterations: they close the \

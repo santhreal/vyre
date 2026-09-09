@@ -122,6 +122,8 @@ impl BuildOptions {
 /// Gated on `cat-a-builder-options`, which every dialect feature whose module
 /// invokes this macro declares in `Cargo.toml`. A build that enables none of
 /// them does not compile the macro at all.
+// `#[macro_export]` publishes at the crate root and a `macro_rules!` macro has no
+// other reachable path, so the crate root is where callers name this one.
 #[macro_export]
 macro_rules! impl_cat_a_builder_options {
     ($builder:ident) => {
@@ -149,8 +151,6 @@ macro_rules! impl_cat_a_builder_options {
         }
     };
 }
-
-pub use impl_cat_a_builder_options;
 
 /// Validate a slice of `TensorRef`s against an expected `DataType`
 /// for each position, plus name-uniqueness across the whole slice.
@@ -257,7 +257,7 @@ mod cat_a_builder_option_macro_tests {
         }
     }
 
-    super::impl_cat_a_builder_options!(DemoBuilder);
+    crate::impl_cat_a_builder_options!(DemoBuilder);
 
     #[test]
     fn generated_option_surface_threads_every_shared_knob() {

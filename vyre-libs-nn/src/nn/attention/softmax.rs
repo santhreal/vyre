@@ -87,7 +87,7 @@ impl Softmax {
     }
 }
 
-vyre_libs_builder::builder::impl_cat_a_builder_options!(Softmax);
+vyre_libs_builder::impl_cat_a_builder_options!(Softmax);
 
 /// Build a softmax Program from raw buffer names through [`Softmax`].
 /// Contract violations produce an explicit trap program.
