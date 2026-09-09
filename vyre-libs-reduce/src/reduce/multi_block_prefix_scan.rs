@@ -55,15 +55,12 @@ pub const fn multi_block_prefix_scan_requirements() -> vyre_foundation::Geometry
 /// bottoms out at the guarded single-workgroup scan once the block count fits
 /// the portable workgroup width.
 pub const SOFT_MAX_N: u32 = PORTABLE_WORKGROUP_INVOCATIONS * PORTABLE_WORKGROUP_INVOCATIONS;
-fn output_byte_range(words: u32, context: &str) -> Result<usize, String> {
-    usize::try_from(words)
-        .ok()
-        .and_then(|count| count.checked_mul(4))
-        .ok_or_else(|| {
-            format!(
-                "{context} words={words} overflows output byte range. Fix: shard the scan before GPU dispatch."
-            )
-        })
+/// Byte extent of a `words`-element `u32` output buffer.
+///
+/// A `u32` word count scaled by four is at most 17179869180, so the extent is
+/// exact in `u64` and the computation cannot fail.
+const fn output_byte_range(words: u32) -> u64 {
+    words as u64 * 4
 }
 
 fn total_partial_words(num_blocks: u32, block_lanes: u32, context: &str) -> Result<u32, String> {
@@ -290,7 +287,6 @@ fn try_exclusive_difference_pass(
     n: u32,
     block_lanes: u32,
 ) -> Result<Program, String> {
-    output_byte_range(n, "exclusive difference pass")?;
     let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(n)),
@@ -406,10 +402,7 @@ fn try_guarded_single_block_scan(
         )],
     ));
 
-    let output_bytes = output_byte_range(
-        n,
-        "vyre multi_block_prefix_scan guarded single-block output",
-    )?;
+    let output_bytes = output_byte_range(n);
     let body = vec![
         Node::let_bind("block", Expr::LogicalTileId { axis: 0 }),
         Node::if_then(Expr::eq(block, Expr::u32(0)), scan_body),
@@ -497,14 +490,8 @@ fn try_pass_a_local_scan(
     )]);
 
     let total_partials = total_partial_words(num_blocks, block_lanes, "Pass A")?;
-    let total_partial_bytes = output_byte_range(
-        total_partials,
-        "vyre multi_block_prefix_scan Pass A partials",
-    )?;
-    let block_total_bytes = output_byte_range(
-        num_blocks,
-        "vyre multi_block_prefix_scan Pass A block_totals",
-    )?;
+    let total_partial_bytes = output_byte_range(total_partials);
+    let block_total_bytes = output_byte_range(num_blocks);
     let buffers = vec![
         BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
         BufferDecl::output(partials, 1, DataType::U32)
@@ -628,7 +615,7 @@ fn try_pass_c_broadcast_offsets(
     ];
 
     let total_partials = total_partial_words(num_blocks, block_lanes, "Pass C")?;
-    let output_bytes = output_byte_range(n, "vyre multi_block_prefix_scan Pass C output")?;
+    let output_bytes = output_byte_range(n);
     let buffers = vec![
         BufferDecl::storage(partials, 0, BufferAccess::ReadOnly, DataType::U32)
             .with_count(total_partials),

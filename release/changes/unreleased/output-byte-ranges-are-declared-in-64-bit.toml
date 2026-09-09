@@ -1,2 +1,2 @@
 category = "Changed"
-text = "Elementwise builder output byte ranges are declared in 64-bit. `add_output_with_byte_range` takes a `Range<u64>`, matching `BufferDecl::with_output_byte_range`, and `add_output` computes its range in `u64` so a buffer larger than a 32-bit host address space states its extent without truncation."
+text = "Output byte ranges are declared in 64-bit. `add_output_with_byte_range` takes a `Range<u64>`, matching `BufferDecl::with_output_byte_range`, and `add_output` computes its range in `u64`. The multi-block prefix scan derives its output extent in `u64` as well, so a device buffer extent no longer depends on host pointer width and the scan drops an overflow check that could only fire on a 32-bit host."
