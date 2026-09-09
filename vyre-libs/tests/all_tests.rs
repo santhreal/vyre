@@ -202,6 +202,11 @@ pub mod clifford_geometric_product_program_parity;
 #[path = "composed_regions_resolve_in_the_catalog.rs"]
 pub mod composed_regions_resolve_in_the_catalog;
 
+/// Integration tests from `tests/contraction_candidate_parity_contracts.rs`.
+#[cfg(all(feature = "math-linalg", feature = "nn-linear"))]
+#[path = "contraction_candidate_parity_contracts.rs"]
+pub mod contraction_candidate_parity_contracts;
+
 /// Integration tests from `tests/consumer_boundary.rs`.
 #[path = "consumer_boundary.rs"]
 pub mod consumer_boundary;

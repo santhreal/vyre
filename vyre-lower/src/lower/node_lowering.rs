@@ -445,54 +445,77 @@ impl LowerCtx {
                             FRAGMENT_LANES,
                         ),
                     };
-                    let words = spec.operand_words().map_err(|reason| {
+                    let _words = spec.operand_words().map_err(|reason| {
                         LowerError::UnsupportedConstruct(format!(
                             "tile matmul declares fragments that cannot be carried: {reason}. Fix: state a tile that distributes across its lanes in whole 32-bit words."
                         ))
                     })?;
-                    let [left_words, right_words, acc_words] = words;
                     let a_words = a_binding.map(|b| b.results).unwrap_or_default();
                     let b_words = b_binding.map(|b| b.results).unwrap_or_default();
-                    let acc_in_words = acc_binding
+                    let mut acc_in_words = acc_binding
                         .as_ref()
                         .map(|b| b.results.clone())
                         .unwrap_or_default();
-
-                    let mut operands =
-                        Vec::with_capacity((left_words + right_words + acc_words) as usize);
-
-                    if a_words.len() >= left_words as usize {
-                        operands.extend_from_slice(&a_words[..left_words as usize]);
-                    } else if let Some(scalar_id) = self.scope.get(a) {
-                        operands.extend(std::iter::repeat_n(scalar_id, left_words as usize));
-                    } else {
-                        for _ in 0..left_words {
-                            let zero_id = self.literal(body, crate::descriptor::LiteralValue::U32(0))?;
-                            operands.push(zero_id);
+                    let get_a = |this: &mut Self, body: &mut KernelBody, idx: usize| -> Result<u32, LowerError> {
+                        if let Some(&id) = a_words.get(idx) {
+                            Ok(id)
+                        } else if let Some(scalar_id) = this.scope.get(a) {
+                            Ok(scalar_id)
+                        } else {
+                            this.literal(body, crate::descriptor::LiteralValue::U32(0))
                         }
-                    }
+                    };
 
-                    if b_words.len() >= right_words as usize {
-                        operands.extend_from_slice(&b_words[..right_words as usize]);
-                    } else if let Some(scalar_id) = self.scope.get(b) {
-                        operands.extend(std::iter::repeat_n(scalar_id, right_words as usize));
-                    } else {
-                        for _ in 0..right_words {
-                            let zero_id = self.literal(body, crate::descriptor::LiteralValue::U32(0))?;
-                            operands.push(zero_id);
+                    let get_b = |this: &mut Self, body: &mut KernelBody, idx: usize| -> Result<u32, LowerError> {
+                        if let Some(&id) = b_words.get(idx) {
+                            Ok(id)
+                        } else if let Some(scalar_id) = this.scope.get(b) {
+                            Ok(scalar_id)
+                        } else {
+                            this.literal(body, crate::descriptor::LiteralValue::U32(0))
                         }
-                    }
+                    };
 
-                    if acc_in_words.len() >= acc_words as usize {
-                        operands.extend_from_slice(&acc_in_words[..acc_words as usize]);
-                    } else if let Some(scalar_id) = self.scope.get(acc) {
-                        operands.extend(std::iter::repeat_n(scalar_id, acc_words as usize));
-                    } else {
-                        for _ in 0..acc_words {
-                            let zero_id = self.literal(body, crate::descriptor::LiteralValue::U32(0))?;
-                            operands.push(zero_id);
+                    let get_acc = |this: &mut Self, body: &mut KernelBody, idx: usize| -> Result<u32, LowerError> {
+                        if let Some(&id) = acc_in_words.get(idx) {
+                            Ok(id)
+                        } else if let Some(scalar_id) = this.scope.get(acc) {
+                            Ok(scalar_id)
+                        } else {
+                            this.literal(body, crate::descriptor::LiteralValue::F32(0.0))
                         }
-                    }
+                    };
+
+                    let a0_low = get_a(self, body, 0)?;
+                    let a0_high = get_a(self, body, 1)?;
+                    let a0 = self.pack_f16_pair(body, a0_low, a0_high)?;
+
+                    let a1_low = get_a(self, body, 8)?;
+                    let a1_high = get_a(self, body, 9)?;
+                    let a1 = self.pack_f16_pair(body, a1_low, a1_high)?;
+
+                    let a2_low = get_a(self, body, 128)?;
+                    let a2_high = get_a(self, body, 129)?;
+                    let a2 = self.pack_f16_pair(body, a2_low, a2_high)?;
+
+                    let a3_low = get_a(self, body, 136)?;
+                    let a3_high = get_a(self, body, 137)?;
+                    let a3 = self.pack_f16_pair(body, a3_low, a3_high)?;
+
+                    let b0_low = get_b(self, body, 0)?;
+                    let b0_high = get_b(self, body, 1)?;
+                    let b0 = self.pack_f16_pair(body, b0_low, b0_high)?;
+
+                    let b1_low = get_b(self, body, 8)?;
+                    let b1_high = get_b(self, body, 9)?;
+                    let b1 = self.pack_f16_pair(body, b1_low, b1_high)?;
+
+                    let c0 = get_acc(self, body, 0)?;
+                    let c1 = get_acc(self, body, 1)?;
+                    let c2 = get_acc(self, body, 64)?;
+                    let c3 = get_acc(self, body, 65)?;
+
+                    let operands = vec![a0, a1, a2, a3, b0, b1, c0, c1, c2, c3];
 
                     let result_count = spec.result_count().map_err(|reason| {
                         LowerError::UnsupportedConstruct(format!(
@@ -507,7 +530,17 @@ impl LowerCtx {
                         operands,
                         result: Some(base_result_id),
                     });
-                    self.scope.bind_tile(acc.clone(), vec![16, 8], DataType::F32, result_ids);
+
+                    while acc_in_words.len() < 128 {
+                        let zero_id = self.literal(body, LiteralValue::F32(0.0))?;
+                        acc_in_words.push(zero_id);
+                    }
+                    acc_in_words[0] = result_ids[0];
+                    acc_in_words[1] = result_ids[1];
+                    acc_in_words[64] = result_ids[2];
+                    acc_in_words[65] = result_ids[3];
+
+                    self.scope.bind_tile(acc.clone(), vec![16, 8], DataType::F32, acc_in_words);
                     Ok(())
                 } else {
                     let a_elems = a_binding.map(|b| b.results).unwrap_or_default();
@@ -1097,6 +1130,35 @@ impl LowerCtx {
             acc = self.binary(body, KernelOpKind::BinOpKind(bin_op), acc, elem)?;
         }
         Ok(acc)
+    }
+    fn pack_f16_pair(
+        &mut self,
+        body: &mut KernelBody,
+        low_id: u32,
+        high_id: u32,
+    ) -> Result<u32, LowerError> {
+        let shift_16 = self.literal(body, LiteralValue::U32(16))?;
+        let mask_16 = self.literal(body, LiteralValue::U32(0xFFFF))?;
+        let low_u32 = self.unary(body, KernelOpKind::Cast { target: DataType::U32 }, low_id)?;
+        let low_masked = self.binary(
+            body,
+            KernelOpKind::BinOpKind(BinOp::BitAnd),
+            low_u32,
+            mask_16,
+        )?;
+        let high_u32 = self.unary(body, KernelOpKind::Cast { target: DataType::U32 }, high_id)?;
+        let high_shifted = self.binary(
+            body,
+            KernelOpKind::BinOpKind(BinOp::Shl),
+            high_u32,
+            shift_16,
+        )?;
+        self.binary(
+            body,
+            KernelOpKind::BinOpKind(BinOp::BitOr),
+            low_masked,
+            high_shifted,
+        )
     }
 }
 

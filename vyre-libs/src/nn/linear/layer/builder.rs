@@ -10,7 +10,6 @@ use crate::{
     plumbing::operand::tensor_ref::{TensorRef, TensorRefError},
 };
 
-use super::tiled::{linear_tiled, LINEAR_TILED_MIN_WORK, LINEAR_TILED_TILE};
 
 pub(super) const LINEAR_OP_ID: &str = "vyre-libs::nn::linear";
 /// Typed Cat-A builder for [`linear`].
@@ -145,12 +144,6 @@ pub fn linear(
     in_dim: u32,
     out_dim: u32,
 ) -> Result<Program, String> {
-    if in_dim
-        .checked_mul(out_dim)
-        .is_some_and(|work| work >= LINEAR_TILED_MIN_WORK)
-    {
-        return linear_tiled(x, w, b, out, in_dim, out_dim, LINEAR_TILED_TILE);
-    }
 
     Linear::new(
         TensorRef::u32_1d(x, in_dim),

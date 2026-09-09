@@ -385,3 +385,165 @@ fn tile_matmul_lowering_packs_fragment_operands_as_distinct_words() {
     assert_eq!(results.len(), 4);
     assert_ne!(results[0], results[1]);
 }
+
+#[test]
+fn tile_matmul_lowering_proves_bitwise_fragment_packing() {
+    use vyre_foundation::ir::{BinOp, DataType, Layout, Residency};
+    use vyre_lower::lower;
+    use vyre_test_support::tile_programs::{tile_matmul_program, TileOperand};
+
+    let prog = tile_matmul_program(
+        [32, 1, 1],
+        &TileOperand::new(
+            DataType::F16,
+            vec![16, 16],
+            Layout::RowMajor,
+            Residency::Subgroup,
+            256,
+        ),
+        &TileOperand::new(
+            DataType::F16,
+            vec![16, 8],
+            Layout::ColumnMajor,
+            Residency::Subgroup,
+            128,
+        ),
+        &TileOperand::new(
+            DataType::F32,
+            vec![16, 8],
+            Layout::RowMajor,
+            Residency::Register,
+            128,
+        ),
+    );
+
+    let desc = lower(&prog).expect("tile matmul program must lower to valid descriptor");
+    let mma_op = desc
+        .ops_iter()
+        .find(|op| matches!(op.kind, KernelOpKind::MatrixMma(_)))
+        .expect("descriptor must contain a MatrixMma op");
+
+    // Operands 0..4 (left fragment A) and 4..6 (right fragment B) must be BitOr ops
+    // combining masked lower and shifted upper 16-bit halfwords.
+    let producers: std::collections::HashMap<u32, &vyre_lower::KernelOp> = desc
+        .ops_iter()
+        .filter_map(|op| op.result.map(|r| (r, op)))
+        .collect();
+
+    for &word_id in &mma_op.operands[0..6] {
+        let producing_op = producers.get(&word_id).expect("word must have producer");
+        assert!(
+            matches!(producing_op.kind, KernelOpKind::BinOpKind(BinOp::BitOr)),
+            "Fix: fragment operand {word_id} must be produced by BitOr packing, got {:?}",
+            producing_op.kind
+        );
+    }
+}
+
+#[test]
+fn contraction_candidate_analysis_covers_all_supported_strategies() {
+    use vyre_foundation::ir::{DataType, Layout, Residency};
+    use vyre_lower::analyses::contraction_candidates::{analyze, ContractionStrategy};
+    use vyre_lower::lower;
+    use vyre_test_support::tile_programs::{tile_matmul_program, TileOperand};
+
+    let prog = tile_matmul_program(
+        [32, 1, 1],
+        &TileOperand::new(
+            DataType::F16,
+            vec![16, 16],
+            Layout::RowMajor,
+            Residency::Subgroup,
+            256,
+        ),
+        &TileOperand::new(
+            DataType::F16,
+            vec![16, 8],
+            Layout::ColumnMajor,
+            Residency::Subgroup,
+            128,
+        ),
+        &TileOperand::new(
+            DataType::F32,
+            vec![16, 8],
+            Layout::RowMajor,
+            Residency::Register,
+            128,
+        ),
+    );
+
+    let desc = lower(&prog).expect("tile matmul program must lower");
+    let plan = analyze(&desc);
+
+    assert!(plan.candidate_count() >= 3);
+    let has_scalar = plan
+        .candidates
+        .iter()
+        .any(|c| matches!(c.strategy, ContractionStrategy::Scalar));
+    let has_simt = plan
+        .candidates
+        .iter()
+        .any(|c| matches!(c.strategy, ContractionStrategy::SimtTiled { .. }));
+    let has_mma = plan
+        .candidates
+        .iter()
+        .any(|c| matches!(c.strategy, ContractionStrategy::MatrixInstruction { .. }));
+
+    assert!(has_scalar, "Fix: contraction plan must include scalar baseline");
+    assert!(has_simt, "Fix: contraction plan must include SIMT tiled candidate");
+    assert!(has_mma, "Fix: contraction plan must include MMA candidate");
+}
+
+#[test]
+fn contraction_shape_and_dtype_space_is_covered_without_gaps() {
+    use vyre_foundation::ir::{DataType, Layout, Residency};
+    use vyre_lower::analyses::contraction_candidates::analyze;
+    use vyre_lower::{lower, verify};
+    use vyre_test_support::tile_programs::{tile_matmul_program, TileOperand};
+
+    let dtypes = [
+        DataType::F32,
+        DataType::F16,
+        DataType::BF16,
+        DataType::U32,
+        DataType::I32,
+    ];
+
+    for dtype in dtypes {
+        let prog = tile_matmul_program(
+            [1, 1, 1],
+            &TileOperand::new(
+                dtype.clone(),
+                vec![2, 2],
+                Layout::RowMajor,
+                Residency::Register,
+                4,
+            ),
+            &TileOperand::new(
+                dtype.clone(),
+                vec![2, 2],
+                Layout::RowMajor,
+                Residency::Register,
+                4,
+            ),
+            &TileOperand::new(
+                dtype.clone(),
+                vec![2, 2],
+                Layout::RowMajor,
+                Residency::Register,
+                4,
+            ),
+        );
+
+        let desc = lower(&prog)
+            .unwrap_or_else(|e| panic!("Fix: {dtype:?} 2x2 tile matmul lowering must succeed: {e}"));
+        verify(&desc)
+            .unwrap_or_else(|e| panic!("Fix: {dtype:?} 2x2 tile matmul descriptor must verify: {e:?}"));
+
+        let plan = analyze(&desc);
+        assert!(
+            plan.candidate_count() > 0,
+            "Fix: every supported dtype {dtype:?} must have at least one contraction candidate"
+        );
+    }
+}
