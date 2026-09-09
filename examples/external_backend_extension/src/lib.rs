@@ -47,6 +47,10 @@ impl VyreBackend for ExternalBackend {
         env!("CARGO_PKG_VERSION")
     }
 
+    fn honors_float_lowering(&self, _mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
+        true
+    }
+
     fn supported_ops(&self) -> &HashSet<OpId> {
         core_supported_ops()
     }

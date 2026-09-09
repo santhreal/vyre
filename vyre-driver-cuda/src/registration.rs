@@ -298,6 +298,10 @@ impl VyreBackend for CudaBackendRegistration {
         env!("CARGO_PKG_VERSION")
     }
 
+    fn honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool {
+        self.inner.honors_float_lowering(mode)
+    }
+
     fn dispatch_async(
         &self,
         program: &Program,

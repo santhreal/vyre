@@ -701,3 +701,12 @@ pub mod external_resource_cuda_contracts;
 #[cfg(feature = "device-tests")]
 #[path = "widening_cast_64_cuda_parity.rs"]
 pub mod widening_cast_64_cuda_parity;
+
+/// Integration tests from `tests/input_abi_contracts.rs` (Row 125).
+#[path = "input_abi_contracts.rs"]
+pub mod input_abi_contracts;
+
+/// Integration tests from `tests/cross_backend_grid_folding_parity.rs` (Row 124).
+#[cfg(feature = "device-tests")]
+#[path = "cross_backend_grid_folding_parity.rs"]
+pub mod cross_backend_grid_folding_parity;
