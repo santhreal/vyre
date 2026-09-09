@@ -23,7 +23,7 @@ use vyre_runtime::artifact_admission::{
     InteractiveAdmissionError, InteractiveChannelId, InteractiveCompletion,
     InteractiveSessionStateMachine, InteractiveSubmissionRequest, PriorityClass,
 };
-use vyre_runtime::{
+use vyre_runtime::atomic_recovery::{
     authoritative_runtime_state_owner_registry, AtomicGuardedState, GuardedState,
     PrepareCommitJournal, SupervisedRestartBudget,
 };

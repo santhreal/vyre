@@ -293,7 +293,7 @@ impl TenantRegistry {
     }
 }
 
-impl crate::StateOwnerRecovery for TenantRegistry {
+impl crate::atomic_recovery::StateOwnerRecovery for TenantRegistry {
     fn failure_domain(&self) -> crate::FailureDomain {
         crate::FailureDomain::MemoryState
     }

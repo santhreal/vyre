@@ -261,7 +261,7 @@ impl RetainedArtifactSession {
     }
 }
 
-impl crate::StateOwnerRecovery for RetainedArtifactSession {
+impl crate::atomic_recovery::StateOwnerRecovery for RetainedArtifactSession {
     fn failure_domain(&self) -> crate::FailureDomain {
         crate::FailureDomain::DeviceContext
     }

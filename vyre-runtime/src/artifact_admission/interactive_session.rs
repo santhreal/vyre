@@ -576,7 +576,7 @@ impl Default for InteractiveSessionStateMachine {
     }
 }
 
-impl crate::StateOwnerRecovery for InteractiveSessionStateMachine {
+impl crate::atomic_recovery::StateOwnerRecovery for InteractiveSessionStateMachine {
     fn failure_domain(&self) -> crate::FailureDomain {
         crate::FailureDomain::SessionLifecycle
     }
