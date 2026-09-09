@@ -7,8 +7,14 @@ pub(super) const TARGET_ROOTS: &[&str] =
     &["vyre-libs/src", "vyre-primitives/src", "vyre-driver/src"];
 
 /// Exact canonical qualified IR builder and operation types representing AST/IR owners.
+///
+/// A function returning one of these owns IR, so it is a production root and
+/// never a host semantic twin. `ProgramGraph` is the whole-program level and
+/// belongs here for the same reason `Program` does: a composition that returns
+/// one has built IR, not computed a result.
 pub(super) const EXACT_CANONICAL_IR_BUILDER_PATHS: &[&str] = &[
     "vyre_foundation::ir::Program",
+    "vyre_foundation::ir::ProgramGraph",
     "vyre_foundation::ir::Node",
     "vyre_foundation::ir::Expr",
     "vyre_foundation::operation::OperationRegistration",

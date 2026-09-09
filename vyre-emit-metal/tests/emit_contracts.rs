@@ -5,7 +5,8 @@
 use vyre_emit_metal::*;
 use vyre_foundation::ir::{DataType, Expr, Node, Program};
 use vyre_lower::descriptor_builder::{
-    body, descriptor, effect, global_ro, global_rw, lit, op, shared_rw, SlotCount,
+    body, descriptor, effect, global_ro, global_rw, lit, op, shared_rw, store_literal_kernel,
+    SlotCount,
 };
 use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
@@ -14,19 +15,11 @@ fn empty_kernel() -> KernelDescriptor {
 }
 
 fn one_store_kernel() -> KernelDescriptor {
-    descriptor("store_one")
-        .slot(global_rw(0, DataType::U32, "out").with_count(1))
-        .dispatch(64, 1, 1)
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    lit(1, 1),
-                    effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
-                ])
-                .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
-        )
-        .build()
+    store_literal_kernel(
+        "store_one",
+        global_rw(0, DataType::U32, "out").with_count(1),
+        [64, 1, 1],
+    )
 }
 
 #[test]

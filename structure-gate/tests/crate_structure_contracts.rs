@@ -183,7 +183,14 @@ fn no_registry_source_is_linked_by_a_discarding_import() {
 /// The submitting-crate scan finds the crates that submit.
 ///
 /// Guards the rule above: a scan that matched nothing would accept every
-/// discarding import in the tree.
+/// discarding import in the tree. The names below are a sample chosen because
+/// each one submits for a different reason: two libraries submit operations,
+/// and the four concrete drivers submit backend registrations. The variant
+/// space is the scan itself; this only proves the scan is not empty.
+///
+/// `vyre-driver-reference` is deliberately absent. The interpreter is not a
+/// registered backend, so that crate submits nothing, and listing it would
+/// make this fail on a correct tree.
 #[test]
 fn the_registry_submitter_scan_is_not_vacuous() {
     let submitters = workspace().registry_submitters;
@@ -193,7 +200,6 @@ fn the_registry_submitter_scan_is_not_vacuous() {
         "vyre-primitives",
         "vyre-driver-cuda",
         "vyre-driver-metal",
-        "vyre-driver-reference",
         "vyre-driver-spirv",
         "vyre-driver-wgpu",
     ] {
@@ -203,6 +209,11 @@ fn the_registry_submitter_scan_is_not_vacuous() {
              discarding import naming it would be accepted. Found: {submitters:?}"
         );
     }
+    assert!(
+        !submitters.iter().any(|found| found == "vyre-driver-reference"),
+        "`vyre-driver-reference` submits an inventory registration again. The interpreter is not \
+         a dispatch target; move the registration out or record why the oracle is one."
+    );
 }
 
 /// No source file sits beside a directory of its own name.

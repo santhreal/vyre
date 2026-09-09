@@ -8,27 +8,13 @@
 
 use vyre_emit_ptx::ComputeCapability;
 use vyre_foundation::ir::{BinOp, DataType};
-use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
+use vyre_lower::descriptor_builder::{
+    body, descriptor, effect, global_rw, lit, op, store_literal_kernel,
+};
 use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
 fn out_slot() -> vyre_lower::BindingSlot {
     global_rw(0, DataType::U32, "out")
-}
-
-/// One store of literal 7 into element 0 of `slot`, dispatched over 64
-/// invocations: the smallest descriptor that reaches every emitter's store path.
-fn store_one_kernel(id: &str, slot: vyre_lower::BindingSlot) -> KernelDescriptor {
-    descriptor(id)
-        .slot(slot)
-        .dispatch(64, 1, 1)
-        .body(
-            body()
-                .literals([LiteralValue::U32(0), LiteralValue::U32(7)])
-                .op(lit(0, 0))
-                .op(lit(1, 1))
-                .op(effect(KernelOpKind::StoreGlobal, [0, 0, 1])),
-        )
-        .build()
 }
 
 /// Every audit layer, substrate-neutral and per-target, reports the kernel id it
@@ -54,7 +40,7 @@ fn empty() -> KernelDescriptor {
 
 /// (2) Single store.
 fn single_store() -> KernelDescriptor {
-    store_one_kernel("single_store", out_slot())
+    store_literal_kernel("single_store", out_slot(), [64, 1, 1])
 }
 
 /// (3) Add and store.
@@ -250,6 +236,10 @@ fn descriptor_verification_and_audits_succeed_on_corpus() {
 
 #[test]
 fn audit_carries_kernel_id_through_every_layer() {
-    let desc = store_one_kernel("named_kernel_42", global_rw(0, DataType::U32, "buf"));
+    let desc = store_literal_kernel(
+        "named_kernel_42",
+        global_rw(0, DataType::U32, "buf"),
+        [64, 1, 1],
+    );
     assert_audits_carry_kernel_id(&desc, ComputeCapability::SM_70);
 }

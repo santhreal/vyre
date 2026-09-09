@@ -1,11 +1,17 @@
+impl core::convert::From<&vyre_aot::CompileError> for vyre_foundation::diagnostics::Diagnostic
+impl core::convert::From<vyre_aot::CompileError> for vyre_foundation::diagnostics::Diagnostic
 impl core::default::Default for vyre_aot::LauncherOpts
+impl vyre_aot::CompileError
 impl vyre_aot::Manifest
+impl vyre_foundation::diagnostics::ToDiagnostic for vyre_aot::CompileError
 pub const vyre_aot::Manifest::SCHEMA_VERSION: &'static str
 pub const vyre_aot::VERSION: &str
 pub enum vyre_aot::BundleError
 pub enum vyre_aot::CompileError
 pub enum vyre_aot::LauncherError
 pub enum vyre_aot::cache::RuntimeCacheError
+pub fn vyre_aot::CompileError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
+pub fn vyre_aot::CompileError::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_aot::LauncherOpts::default() -> Self
 pub fn vyre_aot::bundle(out_dir: &std::path::Path, envelope: &vyre_megakernel::envelope::ArtifactEnvelope, target: vyre_foundation::operation::target_facet::TargetId, weights: &[u8], artifact_name: &str, launcher_opts: &vyre_aot::LauncherOpts, notes: &str) -> core::result::Result<vyre_aot::DeploymentBundle, vyre_aot::BundleError>
 pub fn vyre_aot::cache::emit_runtime_cache_blob(envelope: &vyre_megakernel::envelope::ArtifactEnvelope, cache_dir: &std::path::Path) -> core::result::Result<std::path::PathBuf, vyre_aot::cache::RuntimeCacheError>
@@ -18,6 +24,8 @@ pub fn vyre_aot::observability_snapshot() -> vyre_driver::observability::DriverO
 pub fn vyre_aot::package_artifact(out_dir: &std::path::Path, envelope: &vyre_megakernel::envelope::ArtifactEnvelope, target: vyre_foundation::operation::target_facet::TargetId, weights: &[u8], artifact_name: &str, notes: &str) -> core::result::Result<vyre_aot::DeploymentBundle, vyre_aot::BundleError>
 pub fn vyre_aot::read_bundle_artifact(bundle_dir: &std::path::Path) -> core::result::Result<(vyre_aot::Manifest, vyre_megakernel::envelope::ArtifactEnvelope), vyre_aot::BundleError>
 pub fn vyre_aot::registration(target: &vyre_foundation::operation::target_facet::TargetId) -> core::result::Result<&'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, vyre_driver::backend::error::BackendError>
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_aot::CompileError) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_aot::CompileError) -> Self
 pub mod vyre_aot
 pub mod vyre_aot::cache
 pub struct vyre_aot::DeploymentBundle
@@ -45,8 +53,8 @@ pub vyre_aot::CompileError::ArtifactLayout(alloc::string::String)
 pub vyre_aot::CompileError::CanonicalArtifact
 pub vyre_aot::CompileError::CanonicalArtifact::source: vyre_megakernel::error::CompileError
 pub vyre_aot::CompileError::CanonicalArtifact::stage: &'static str
-pub vyre_aot::CompileError::ProgramPreparation(alloc::string::String)
-pub vyre_aot::CompileError::TargetCompilation(alloc::string::String)
+pub vyre_aot::CompileError::ProgramPreparation(vyre_foundation::error::IrError)
+pub vyre_aot::CompileError::TargetCompilation(vyre_megakernel::target::TargetCompileError)
 pub vyre_aot::CompileError::TargetNotEnabled(vyre_foundation::operation::target_facet::TargetId)
 pub vyre_aot::DeploymentBundle::files: alloc::vec::Vec<std::path::PathBuf>
 pub vyre_aot::LauncherError::Backend(alloc::string::String)

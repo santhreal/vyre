@@ -6,36 +6,14 @@
 
 use std::collections::HashSet;
 
-use vyre::ir::{CollectiveOp, CommGroup, Expr, Node, OpId, Program};
+use vyre::ir::{CommGroup, Expr, Node, OpId, Program};
 use vyre_driver::{
     default_supported_ops, default_supported_ops_with_trap, node_op_id, validate_program,
     BackendError, VyreBackend,
 };
 
 fn collective_nodes() -> [Node; 4] {
-    [
-        Node::AllReduce {
-            buffer: "a".into(),
-            op: CollectiveOp::Sum,
-            group: CommGroup::WORLD,
-        },
-        Node::AllGather {
-            input: "input".into(),
-            output: "out".into(),
-            group: CommGroup::WORLD,
-        },
-        Node::ReduceScatter {
-            input: "input".into(),
-            output: "out".into(),
-            op: CollectiveOp::Max,
-            group: CommGroup(7),
-        },
-        Node::Broadcast {
-            buffer: "a".into(),
-            root: 1,
-            group: CommGroup(7),
-        },
-    ]
+    vyre_test_support::collective_programs::collective_nodes(CommGroup(7), 1)
 }
 
 #[test]

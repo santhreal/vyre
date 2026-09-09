@@ -307,9 +307,21 @@ mod tests {
     /// the on-disk wire format silently corrupts buffer-element types
     /// across encode/decode  -  a contract-invariant the optimizer cache
     /// and AOT artifact format both rely on.
+    ///
+    /// The one-per-variant half of the set is
+    /// [`vyre_test_support::data_type_variants::data_type_variant_samples`],
+    /// which is held to the `pub enum DataType` declaration at run time. This
+    /// case listed the variants itself, so a variant added to the spec left the
+    /// list one short in silence, and the wire format is exactly where a
+    /// variant nobody encoded reads back as a different one. The payloads below
+    /// are what this table can get wrong beyond the discriminant: a
+    /// multi-dimensional shape, a mesh of several axes, and a quantization
+    /// carrying both a scale axis and a zero point.
     #[test]
     fn every_supported_data_type_round_trips_through_the_wire() {
-        let cases: Vec<DataType> = DataType::SCALAR_LEAVES
+        let samples = vyre_test_support::data_type_variants::data_type_variant_samples();
+        vyre_test_support::data_type_variants::assert_covers_every_data_type_variant(&samples);
+        let cases: Vec<DataType> = samples
             .into_iter()
             .chain([
                 DataType::Array { element_size: 16 },
@@ -321,12 +333,6 @@ mod tests {
                 DataType::TensorShaped {
                     element: Box::new(DataType::F32),
                     shape: smallvec![32, 32],
-                },
-                DataType::SparseCsr {
-                    element: Box::new(DataType::F32),
-                },
-                DataType::SparseCoo {
-                    element: Box::new(DataType::F32),
                 },
                 DataType::SparseBsr {
                     element: Box::new(DataType::F32),

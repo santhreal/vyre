@@ -16,9 +16,7 @@ use vyre_foundation::ir::Program;
 use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
-use vyre_megakernel::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Canonical self-substrate op ID for the Bellman TN order.
 pub const OP_ID: &str = "vyre-libs::self_substrate::bellman_tn_order";
@@ -227,21 +225,14 @@ pub fn bellman_tn_order_via_with_scratch_into(
     // program. Sizing the grid off `n_edges` alone leaves every node past the
     // launch width with no lane to publish it whenever `n_nodes` exceeds
     // `n_edges`, silently freezing those distances at their seed values.
-    let outputs = execute_single_program(
+    let output = crate::dispatch_buffers::run_single_first_output(
         dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: bellman_tn_order_via expected at least the dist output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], n_nodes as usize, "bellman_tn_order_via", out)
+        "bellman_tn_order_via",
+    )?;
+    decode_u32_output_exact(&output, n_nodes as usize, "bellman_tn_order_via", out)
 }
 
 #[cfg(test)]

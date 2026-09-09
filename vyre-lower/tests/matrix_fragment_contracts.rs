@@ -316,56 +316,33 @@ fn result_ids_span_the_accumulator_fragment() {
 }
 #[test]
 fn tile_matmul_lowering_packs_fragment_operands_as_distinct_words() {
-    use vyre_foundation::ir::{
-        BufferAccess, BufferDecl, DataType, Expr, Layout, Node, Program, Residency, Tile,
-    };
+    use vyre_foundation::ir::{DataType, Layout, Residency};
     use vyre_lower::lower;
+    use vyre_test_support::tile_programs::{tile_matmul_program, TileOperand};
 
-    let tile_a = Tile::new(
-        DataType::F16,
-        vec![16, 16],
-        Layout::RowMajor,
-        Residency::Subgroup,
-    );
-    let tile_b = Tile::new(
-        DataType::F16,
-        vec![16, 8],
-        Layout::ColumnMajor,
-        Residency::Subgroup,
-    );
-    let tile_c = Tile::new(
-        DataType::F32,
-        vec![16, 8],
-        Layout::RowMajor,
-        Residency::Register,
-    );
-
-    let prog = Program::wrapped(
-        vec![
-            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F16).with_count(256),
-            BufferDecl::storage("b", 1, BufferAccess::ReadOnly, DataType::F16).with_count(128),
-            BufferDecl::output("out", 2, DataType::F32).with_count(128),
-        ],
+    let prog = tile_matmul_program(
         [32, 1, 1],
-        vec![
-            Node::tile_decl("c", tile_c),
-            Node::tile_load(
-                "t_a",
-                tile_a,
-                "a",
-                vec![Expr::u32(0), Expr::u32(0)],
-                Layout::RowMajor,
-            ),
-            Node::tile_load(
-                "t_b",
-                tile_b,
-                "b",
-                vec![Expr::u32(0), Expr::u32(0)],
-                Layout::ColumnMajor,
-            ),
-            Node::tile_matmul("c", "t_a", "t_b"),
-            Node::tile_store("out", vec![Expr::u32(0), Expr::u32(0)], "c"),
-        ],
+        &TileOperand::new(
+            DataType::F16,
+            vec![16, 16],
+            Layout::RowMajor,
+            Residency::Subgroup,
+            256,
+        ),
+        &TileOperand::new(
+            DataType::F16,
+            vec![16, 8],
+            Layout::ColumnMajor,
+            Residency::Subgroup,
+            128,
+        ),
+        &TileOperand::new(
+            DataType::F32,
+            vec![16, 8],
+            Layout::RowMajor,
+            Residency::Register,
+            128,
+        ),
     );
 
     let desc = lower(&prog).expect("tile matmul program must lower to valid descriptor");

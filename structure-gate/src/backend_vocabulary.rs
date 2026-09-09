@@ -25,6 +25,7 @@
 //! wrongly, which no word list can see.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::ops::Range;
 use std::path::Path;
 
 use toml::Value;
@@ -201,8 +202,15 @@ impl Neutrality {
     /// Blanked rather than removed so a reported column still maps to the source,
     /// and so a blanked name cannot join its neighbours into a word that was never
     /// there.
+    ///
+    /// Matched the way [`Neutrality::words_in`] matches, over identifier segments
+    /// rather than raw bytes, so an allowance covers every spelling of its own
+    /// word. A byte-exact allowance covers only the casing whoever wrote the row
+    /// happened to see, and a Rust variant is capitalized where a path is not, so
+    /// the two rules would disagree about the same name on the same line.
     #[must_use]
     pub fn mask_interface_names(&self, line: &str, file: &str) -> String {
+        let (spans, segments) = segment_spans(line);
         let mut masked = line.to_string();
         for interface in self
             .contract
@@ -210,11 +218,17 @@ impl Neutrality {
             .iter()
             .filter(|interface| file.starts_with(&interface.prefix))
         {
-            while let Some(at) = masked.find(&interface.name) {
-                masked.replace_range(
-                    at..at + interface.name.len(),
-                    &" ".repeat(interface.name.len()),
-                );
+            let wanted = segments_of(&interface.name);
+            if wanted.is_empty() || wanted.len() > segments.len() {
+                continue;
+            }
+            for (at, run) in segments.windows(wanted.len()).enumerate() {
+                if !run_states(run, &wanted) {
+                    continue;
+                }
+                let covered = spans[at].start..spans[at + wanted.len() - 1].end;
+                let width = covered.len();
+                masked.replace_range(covered, &" ".repeat(width));
             }
         }
         masked
@@ -337,20 +351,27 @@ fn read_registry(
     Ok((layers, directories))
 }
 
-/// `text` as lowercase identifier segments.
+/// `text` as lowercase identifier segments, each with the byte range it covers.
 ///
 /// A byte that cannot sit inside an identifier ends the current segment, and an
 /// uppercase letter starts a new one when it follows a lowercase letter or digit
 /// or precedes a lowercase letter, which splits `WGSLModule` into `wgsl` and
 /// `module` rather than one run nothing matches.
+///
+/// The ranges let a caller blank the exact bytes a matched run covers. A segment
+/// holds only ASCII alphanumerics, so a range is as wide in bytes as it is in
+/// characters and a mask of spaces keeps every later range valid.
 #[must_use]
-pub fn segments_of(text: &str) -> Vec<String> {
+pub fn segment_spans(text: &str) -> (Vec<Range<usize>>, Vec<String>) {
     let bytes = text.as_bytes();
+    let mut spans = Vec::new();
     let mut segments = Vec::new();
     let mut current = String::new();
+    let mut start = 0usize;
     for (index, letter) in text.char_indices() {
         if !letter.is_ascii_alphanumeric() {
             if !current.is_empty() {
+                spans.push(start..index);
                 segments.push(std::mem::take(&mut current));
             }
             continue;
@@ -361,14 +382,25 @@ pub fn segments_of(text: &str) -> Vec<String> {
             && (previous.is_some_and(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
                 || next.is_some_and(|byte| byte.is_ascii_lowercase()));
         if starts_segment && !current.is_empty() {
+            spans.push(start..index);
             segments.push(std::mem::take(&mut current));
+        }
+        if current.is_empty() {
+            start = index;
         }
         current.push(letter.to_ascii_lowercase());
     }
     if !current.is_empty() {
+        spans.push(start..text.len());
         segments.push(current);
     }
-    segments
+    (spans, segments)
+}
+
+/// `text` as lowercase identifier segments.
+#[must_use]
+pub fn segments_of(text: &str) -> Vec<String> {
+    segment_spans(text).1
 }
 
 /// Whether a run of segments states the term `wanted` spells.
@@ -495,8 +527,17 @@ pub fn contract_failures(root: &Path, neutrality: &Neutrality) -> Vec<String> {
 }
 
 /// Whether any production source under an allowance's directory names it.
+///
+/// Segment-matched like the mask it justifies, so a row is judged used by the
+/// same spellings it excuses.
 fn interface_name_is_used(root: &Path, interface: &Interface) -> bool {
-    production_lines(root, &interface.prefix).any(|(_, _, line)| line.contains(&interface.name))
+    let wanted = segments_of(&interface.name);
+    !wanted.is_empty()
+        && production_lines(root, &interface.prefix).any(|(_, _, line)| {
+            segments_of(&line)
+                .windows(wanted.len())
+                .any(|run| run_states(run, &wanted))
+        })
 }
 
 /// Reject a neutral crate that names a concrete backend in production source.

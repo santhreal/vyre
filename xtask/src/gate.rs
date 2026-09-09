@@ -1041,6 +1041,38 @@ pub fn finish_run(
     }
 }
 
+/// Assert that the registered gate `name` regenerates its artifact clean and
+/// then reports the regenerated tree clean.
+///
+/// Regeneration is a `--write` flag on the gate that owns the artifact, so
+/// every generating gate owes both halves of this: writing must produce no
+/// finding, and comparing the tree it just wrote must produce none either. A
+/// gate that only passed in one mode would either fail the sweep after its own
+/// regeneration or accept a tree it never rewrote.
+#[cfg(test)]
+pub fn assert_regenerates_clean(name: &str) {
+    let root = crate::checkout::checkout_root();
+    let gate = crate::subcommands::find(name).expect("Fix: the gate must be registered");
+    let write_report = gate
+        .run(&GateCtx::new(root.clone(), vec!["--write".to_string()]))
+        .expect("Fix: the gate must run in write mode");
+    assert_eq!(
+        write_report.count(),
+        0,
+        "Fix: `{name} --write` reported {:?}",
+        write_report.findings
+    );
+    let comparison_report = gate
+        .run(&GateCtx::new(root, Vec::new()))
+        .expect("Fix: the gate must run in comparison mode");
+    assert_eq!(
+        comparison_report.count(),
+        0,
+        "Fix: `{name}` reported {:?} against the tree it just wrote",
+        comparison_report.findings
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

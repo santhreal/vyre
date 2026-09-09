@@ -1,3 +1,5 @@
+impl core::convert::From<&vyre_emit_ptx::EmitError> for vyre_foundation::diagnostics::Diagnostic
+impl core::convert::From<vyre_emit_ptx::EmitError> for vyre_foundation::diagnostics::Diagnostic
 impl core::default::Default for vyre_emit_ptx::ComputeCapability
 impl core::default::Default for vyre_emit_ptx::PtxEmitOptions
 impl core::default::Default for vyre_emit_ptx::patterns::ldmatrix_cp_async::AccumulatorLiveness
@@ -8,6 +10,7 @@ impl core::error::Error for vyre_emit_ptx::patterns::ldmatrix_cp_async::Schedule
 impl core::fmt::Display for vyre_emit_ptx::patterns::PtxAuditReport
 impl core::fmt::Display for vyre_emit_ptx::patterns::ldmatrix_cp_async::ScheduleError
 impl vyre_emit_ptx::ComputeCapability
+impl vyre_emit_ptx::EmitError
 impl vyre_emit_ptx::PtxEmitOptions
 impl vyre_emit_ptx::patterns::PtxAuditReport
 impl vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints
@@ -15,6 +18,7 @@ impl vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan
 impl vyre_emit_ptx::patterns::predicated_execution::PredicationPlan
 impl vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile
 impl vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan
+impl vyre_foundation::diagnostics::ToDiagnostic for vyre_emit_ptx::EmitError
 impl vyre_lower::pattern_audit::PatternAudit for vyre_emit_ptx::patterns::PtxAuditReport
 pub const fn vyre_emit_ptx::ComputeCapability::supports_async_copy(&self) -> bool
 pub const fn vyre_emit_ptx::ComputeCapability::supports_ldmatrix(&self) -> bool
@@ -40,6 +44,8 @@ pub enum vyre_emit_ptx::patterns::ldmatrix_cp_async::ScheduleError
 pub enum vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile
 pub enum vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionKind
 pub fn vyre_emit_ptx::ComputeCapability::default() -> Self
+pub fn vyre_emit_ptx::EmitError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
+pub fn vyre_emit_ptx::EmitError::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_emit_ptx::PtxEmitOptions::default() -> Self
 pub fn vyre_emit_ptx::PtxEmitOptions::for_target(target: vyre_emit_ptx::ComputeCapability) -> Self
 pub fn vyre_emit_ptx::emit(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<alloc::string::String, vyre_emit_ptx::EmitError>
@@ -72,6 +78,8 @@ pub fn vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile::supported_on
 pub fn vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan::candidate_count(&self) -> usize
 pub fn vyre_emit_ptx::patterns::tensor_core_fragment::analyze(desc: &vyre_lower::descriptor::KernelDescriptor, target: vyre_emit_ptx::ComputeCapability) -> vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan
 pub fn vyre_emit_ptx::patterns::vec_memory_fusion::analyze(desc: &vyre_lower::descriptor::KernelDescriptor, kind: vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionKind) -> vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionPlan
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_emit_ptx::EmitError) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_emit_ptx::EmitError) -> Self
 pub mod vyre_emit_ptx
 pub mod vyre_emit_ptx::patterns
 pub mod vyre_emit_ptx::patterns::instruction_scheduling

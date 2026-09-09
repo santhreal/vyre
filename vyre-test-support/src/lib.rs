@@ -191,6 +191,8 @@ pub mod binop_parity;
 pub mod case_table;
 #[cfg(feature = "ir-fixtures")]
 pub mod cast_parity;
+#[cfg(feature = "ir-fixtures")]
+pub mod collective_programs;
 pub mod consumer_boundary;
 pub mod data_type_elements;
 #[cfg(feature = "ir-fixtures")]
@@ -244,6 +246,8 @@ pub mod strict_float_programs;
 pub mod sweep_rng;
 #[cfg(feature = "driver-artifact-contracts")]
 pub mod target_compiler_contract;
+#[cfg(feature = "ir-fixtures")]
+pub mod tile_programs;
 #[cfg(feature = "ir-fixtures")]
 pub mod wire_hostile_inputs;
 #[cfg(feature = "ir-fixtures")]

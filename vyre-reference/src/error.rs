@@ -141,14 +141,4 @@ impl ToDiagnostic for ReferenceError {
     }
 }
 
-impl From<&ReferenceError> for Diagnostic {
-    fn from(error: &ReferenceError) -> Self {
-        error.to_diagnostic()
-    }
-}
-
-impl From<ReferenceError> for Diagnostic {
-    fn from(error: ReferenceError) -> Self {
-        error.to_diagnostic()
-    }
-}
+vyre_foundation::diagnostic_conversions!(ReferenceError);

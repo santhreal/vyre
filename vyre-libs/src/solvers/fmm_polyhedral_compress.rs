@@ -46,9 +46,7 @@ use crate::dispatch_buffers::{
     write_f32_slice_le_bytes, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::fmm::{l2p_zeroth_f32_step, m2l_zeroth_f32_step, p2m_zeroth_f32_step};
-use vyre_megakernel::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     try_l2p_zeroth_all_witness_into, try_m2l_zeroth_all_witness_into,
@@ -263,14 +261,8 @@ pub fn aggregate_to_cells_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[1], cell_assignment);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
 
-    let outputs = execute_single_program(
-        dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
-        program,
-        &scratch.inputs,
-        policy,
-    )
-    .map(|output| output.outputs)?;
+    let outputs =
+        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
     let output = require_exactly_one_output(&outputs, "aggregate_to_cells_via")?;
     decode_f32_output_exact(output, n_cells as usize, "aggregate_to_cells_via", out)
 }
@@ -332,14 +324,8 @@ pub fn translate_to_targets_via_with_scratch_into(
     write_f32_slice_le_bytes(&mut scratch.inputs[1], cell_distances);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
 
-    let outputs = execute_single_program(
-        dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
-        program,
-        &scratch.inputs,
-        policy,
-    )
-    .map(|output| output.outputs)?;
+    let outputs =
+        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
     let output = require_exactly_one_output(&outputs, "translate_to_targets_via")?;
     decode_f32_output_exact(output, n_cells as usize, "translate_to_targets_via", out)
 }
@@ -414,14 +400,8 @@ pub fn evaluate_at_regions_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[1], cell_assignment);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
 
-    let outputs = execute_single_program(
-        dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
-        program,
-        &scratch.inputs,
-        policy,
-    )
-    .map(|output| output.outputs)?;
+    let outputs =
+        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
     let output = require_exactly_one_output(&outputs, "evaluate_at_regions_via")?;
     decode_f32_output_exact(output, out_len, "evaluate_at_regions_via", out)
 }

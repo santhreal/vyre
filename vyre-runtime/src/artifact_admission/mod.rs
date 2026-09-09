@@ -12,7 +12,7 @@ pub use ingestion::{
     ResourceManifestEntry, ResourceManifestSource, TypedResource, TypedResourceDataset,
 };
 pub use interactive_session::{
-    CancellationOutcome, DeadlineClass, InteractiveAdmissionError, InteractiveCancellationError,
+    CancellationOutcome, InteractiveAdmissionError, InteractiveCancellationError,
     InteractiveChannelId, InteractiveCompletion, InteractiveRequestId, InteractiveSessionState,
     InteractiveSessionStateMachine, InteractiveSubmissionRequest, PriorityClass,
     INTERACTIVE_DISPATCH_HEADROOM, MAX_INTERACTIVE_STEP_BUDGET_MICROS,

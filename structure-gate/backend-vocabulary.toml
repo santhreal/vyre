@@ -28,6 +28,12 @@ neutral_terms = [
     "artifact",
     "subgroup",
     "lane",
+    "workgroup barrier",
+    "memory fence",
+    "asynchronous transfer",
+    "matrix multiply",
+    "matrix fragment transfer",
+    "subgroup shuffle",
 ]
 
 # `lane` is one of the neutral words above, not a banned one: this workspace
@@ -132,6 +138,20 @@ reason = "a tooling crate names the backends its own rules police"
 # and `hash` is not `ash`. `owner_layer` is the layer that owns the concrete
 # detail the word names, and it must be a layer the rows above call not neutral:
 # a word owned by a neutral layer would be banned from its own owner.
+# An instruction mnemonic is the same drift one step later. A neutral crate that
+# explains its barrier as `bar.sync` has written a rule meant for every backend in
+# one dialect's instruction set, and the next reader implements the mnemonic
+# rather than the ordering it stood for.
+[[term]]
+word = "bar.sync"
+owner_layer = "emitter"
+neutral = "workgroup barrier"
+
+[[term]]
+word = "cp.async"
+owner_layer = "emitter"
+neutral = "asynchronous transfer"
+
 [[term]]
 word = "cubin"
 owner_layer = "concrete-backend"
@@ -158,9 +178,24 @@ owner_layer = "emitter"
 neutral = "secondary text"
 
 [[term]]
+word = "ldmatrix"
+owner_layer = "emitter"
+neutral = "matrix fragment transfer"
+
+[[term]]
+word = "membar"
+owner_layer = "emitter"
+neutral = "memory fence"
+
+[[term]]
 word = "Metal"
 owner_layer = "concrete-backend"
 neutral = "backend"
+
+[[term]]
+word = "mma.sync"
+owner_layer = "emitter"
+neutral = "matrix multiply"
 
 [[term]]
 word = "MSL"
@@ -203,6 +238,11 @@ owner_layer = "concrete-backend"
 neutral = "native module"
 
 [[term]]
+word = "shfl.sync"
+owner_layer = "emitter"
+neutral = "subgroup shuffle"
+
+[[term]]
 word = "SPIR-V"
 owner_layer = "emitter"
 neutral = "primary binary"
@@ -213,6 +253,21 @@ owner_layer = "emitter"
 neutral = "primary binary"
 
 [[term]]
+word = "stmatrix"
+owner_layer = "emitter"
+neutral = "matrix fragment transfer"
+
+[[term]]
+word = "syncthreads"
+owner_layer = "emitter"
+neutral = "workgroup barrier"
+
+[[term]]
+word = "threadgroup_barrier"
+owner_layer = "emitter"
+neutral = "workgroup barrier"
+
+[[term]]
 word = "Vulkan"
 owner_layer = "concrete-backend"
 neutral = "backend"
@@ -221,6 +276,11 @@ neutral = "backend"
 word = "WGPU"
 owner_layer = "concrete-backend"
 neutral = "backend"
+
+[[term]]
+word = "wgmma"
+owner_layer = "emitter"
+neutral = "matrix multiply"
 
 [[term]]
 word = "WGSL"
@@ -256,3 +316,13 @@ reason = "the Cargo feature and the driver crate the facade links a backend regi
 prefix = "vyre-foundation/src/ir_inner/model/program/stats/"
 name = "warp"
 reason = "one vendor spelling of a subgroup intrinsic op id, recognized so a program authored outside this tree still classifies as subgroup work"
+
+[[interface]]
+prefix = "vyre-foundation/src/ir_inner/model/resource_abi.rs"
+name = "metal"
+reason = "the Apple platform sharing mechanism an imported handle is, named beside its `OpaqueWin32`, `D3D11Texture` and `DmaBuf` siblings; a neutral word would describe a mechanism that does not exist"
+
+[[interface]]
+prefix = "vyre-driver/src/semantic_resource_abi.rs"
+name = "metal"
+reason = "the Apple platform sharing mechanism an imported handle is, named beside its `Win32Nt` and `DmaBuf` siblings; a neutral word would describe a mechanism that does not exist"

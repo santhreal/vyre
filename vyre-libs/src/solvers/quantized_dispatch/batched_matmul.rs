@@ -5,11 +5,7 @@ use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticE
 
 /// Compute packed signed INT4 batched matrix multiply through the backend.
 ///
-/// `weights_packed` is row-major `[rows][i4_packed_words(cols)]`.
-/// `activation_batches_packed` is batch-major `[batch][i4_packed_words(cols)]`.
-/// `row_scales` has `rows` f32 values and `batch_scales` has `batch` f32
-/// values. The returned vector has `batch * rows` f32 values in batch-major
-/// order.
+/// The returned vector has `batch * rows` f32 values in batch-major order.
 ///
 /// # Errors
 ///
@@ -18,26 +14,14 @@ use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticE
 pub fn i4x8_batched_matmul_f32_scaled_via(
     dispatcher: &dyn SemanticExecutor,
     policy: &SemanticExecutionPolicy,
-    weights_packed: &[u32],
-    activation_batches_packed: &[u32],
-    row_scales: &[f32],
-    batch_scales: &[f32],
-    batch: u32,
-    rows: u32,
-    cols: u32,
+    operands: &PackedI4BatchedMatmul<'_>,
 ) -> Result<Vec<f32>, SemanticExecutionError> {
     let mut scratch = QuantizedBatchedMatmulGpuScratch::default();
     let mut out = Vec::new();
     i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
         dispatcher,
         policy,
-        weights_packed,
-        activation_batches_packed,
-        row_scales,
-        batch_scales,
-        batch,
-        rows,
-        cols,
+        operands,
         &mut scratch,
         &mut out,
     )?;
@@ -55,13 +39,7 @@ pub fn i4x8_batched_matmul_f32_scaled_via(
 pub fn i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
     dispatcher: &dyn SemanticExecutor,
     policy: &SemanticExecutionPolicy,
-    weights_packed: &[u32],
-    activation_batches_packed: &[u32],
-    row_scales: &[f32],
-    batch_scales: &[f32],
-    batch: u32,
-    rows: u32,
-    cols: u32,
+    operands: &PackedI4BatchedMatmul<'_>,
     scratch: &mut QuantizedBatchedMatmulGpuScratch,
     out: &mut Vec<f32>,
 ) -> Result<(), SemanticExecutionError> {
@@ -73,13 +51,7 @@ pub fn i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
         "i4x8_batched_matmul_f32_scaled_via",
         dispatcher,
         policy,
-        weights_packed,
-        activation_batches_packed,
-        row_scales,
-        batch_scales,
-        batch,
-        rows,
-        cols,
+        operands,
         inputs,
         program_cache,
         None,
@@ -90,9 +62,9 @@ pub fn i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
                 "row_scales",
                 "batch_scales",
                 "out",
-                batch,
-                rows,
-                cols,
+                operands.batch,
+                operands.rows,
+                operands.cols,
             )
         },
         out,

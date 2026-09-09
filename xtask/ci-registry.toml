@@ -648,6 +648,11 @@ subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "supported-api"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "test-harness-isolation"
 subsets = ["contract-rules"]
 workflows = ["gates.yml"]

@@ -5,7 +5,6 @@ use thiserror::Error;
 
 use crate::diagnostics::{
     CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, OpLocation, RetryClass, Severity,
-    ToDiagnostic,
 };
 
 /// Result for foundation-owned IR and Program wire operations.
@@ -499,23 +498,7 @@ impl IrError {
     }
 }
 
-impl ToDiagnostic for IrError {
-    fn to_diagnostic(&self) -> Diagnostic {
-        self.diagnostic()
-    }
-}
-
-impl From<&IrError> for Diagnostic {
-    fn from(error: &IrError) -> Self {
-        error.diagnostic()
-    }
-}
-
-impl From<IrError> for Diagnostic {
-    fn from(error: IrError) -> Self {
-        error.diagnostic()
-    }
-}
+crate::diagnostic_conversions!(IrError, diagnostic);
 
 #[cfg(test)]
 mod tests {
@@ -577,3 +560,4 @@ mod tests {
         assert!(msg.contains("got 1"));
     }
 }
+

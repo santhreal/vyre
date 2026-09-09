@@ -437,7 +437,7 @@ impl Default for SamplerDescriptor {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ExternalMemoryKind {
-    /// POSIX file descriptor (Vulkan opaque FD / Linux).
+    /// POSIX file descriptor, opaque to the importer.
     OpaqueFd,
     /// Linux DMA-BUF handle for direct display and V4L2 integration.
     DmaBuf,
@@ -470,7 +470,7 @@ pub struct ExternalMemoryDescriptor {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ExternalSyncProtocol {
-    /// Monotonically increasing timeline semaphore (Vulkan 1.2 / CUDA / Direct3D 12).
+    /// Monotonically increasing timeline semaphore.
     TimelineSemaphore,
     /// Binary fence or sync object.
     BinaryFence,
@@ -498,7 +498,7 @@ pub struct ExternalResourceCapability {
 }
 
 impl ExternalResourceCapability {
-    /// Standard discrete desktop GPU capability set (Vulkan 1.3 / CUDA 12 / Metal 3).
+    /// Capability set a current discrete desktop device offers.
     #[must_use]
     pub const fn desktop_gpu_standard() -> Self {
         Self {

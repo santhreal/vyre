@@ -6,7 +6,8 @@ use vyre_emit_ptx::*;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, UnOp};
 use vyre_lower::descriptor_builder::{
-    body, descriptor, effect, global_ro, global_wo, lit, mma_f16_m16n8k16, op, SlotCount,
+    body, descriptor, effect, global_ro, global_wo, lit, mma_f16_m16n8k16, op,
+    store_literal_kernel, SlotCount,
 };
 use vyre_lower::{
     AsyncTransaction, AsyncWaitSpec, BindingLayout, BindingSlot, BindingVisibility, Dispatch,
@@ -16,18 +17,11 @@ use vyre_lower::{
 };
 
 fn one_store_kernel() -> KernelDescriptor {
-    descriptor("store_one")
-        .slot(global_wo(0, DataType::U32, "out").with_count(1))
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    lit(1, 1),
-                    effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
-                ])
-                .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
-        )
-        .build()
+    store_literal_kernel(
+        "store_one",
+        global_wo(0, DataType::U32, "out").with_count(1),
+        [1, 1, 1],
+    )
 }
 
 fn two_slot_u32_kernel(

@@ -62,9 +62,14 @@ pub use execution::{expr, node, op_count, sequential, step_budget};
 /// supply a `Value` for, [`is_reference_output`] selects the buffers `reference_eval`
 /// returns, [`output_index`] locates a named output by that predicate, and
 /// [`reference_inputs`] projects a declaration-order buffer list onto the input
-/// ABI, so test harnesses derive every ordering from the interpreter instead of
-/// re-deriving (and drifting from) them.
-pub use execution::{is_reference_input, is_reference_output, output_index, reference_inputs};
+/// ABI, and [`reference_input_values`] does the same for borrowed bytes and
+/// names the buffer it is short of, so test harnesses and backends derive every
+/// ordering from the interpreter instead of re-deriving (and drifting from)
+/// them.
+pub use execution::{
+    is_reference_input, is_reference_output, output_index, reference_input_values,
+    reference_inputs, ReferenceInputMismatch,
+};
 /// Execute a vyre Program on the pure Rust reference interpreter.
 pub use execution::{
     reference_eval, reference_eval_lane_reversed, reference_eval_lane_rotated,

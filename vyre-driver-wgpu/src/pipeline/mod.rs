@@ -9,6 +9,8 @@ pub(crate) mod bindings_reflection;
 pub(crate) mod cache_impact;
 pub(crate) mod compiled_dispatch;
 pub(crate) mod compound;
+#[cfg(test)]
+pub(crate) mod descriptor_fixture;
 pub(crate) mod descriptor_metadata;
 pub(crate) mod disk_cache;
 pub(crate) mod disk_cache_entries;

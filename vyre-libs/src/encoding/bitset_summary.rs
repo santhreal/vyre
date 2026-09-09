@@ -9,9 +9,7 @@ use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_megakernel::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Maximum word count where the sum of bit counts is guaranteed not to wrap a u32 reduction accumulator.
 const MAX_TOTAL_SET_BITS_WORDS: usize = (u32::MAX / 32) as usize;
@@ -146,24 +144,14 @@ pub fn per_word_popcount_via_with_scratch_into(
     ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
 
-    let outputs = execute_single_program(
+    let out_buf = crate::dispatch_buffers::run_single_first_output(
         dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )
-    .map(|output| output.outputs)?;
-    let [out_buf, ..] = match outputs.as_slice() {
-        [out_buf, ..] => [out_buf],
-        [] => {
-            return Err(SemanticExecutionError::Backend(format!(
-                "Fix: per_word_popcount_via expected at least one output buffer, got {}.",
-                outputs.len()
-            )));
-        }
-    };
-    decode_u32_output_exact(out_buf, input.len(), "per_word_popcount_via", out)
+        "per_word_popcount_via",
+    )?;
+    decode_u32_output_exact(&out_buf, input.len(), "per_word_popcount_via", out)
 }
 
 /// GPU-backed total set-bit count.
@@ -199,24 +187,14 @@ pub fn total_set_bits_via_with_scratch_into(
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
     write_zero_bytes(&mut scratch.inputs[1], std::mem::size_of::<u32>());
-    let outputs = execute_single_program(
+    let out_buf = crate::dispatch_buffers::run_single_first_output(
         dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )
-    .map(|output| output.outputs)?;
-    let [out_buf, ..] = match outputs.as_slice() {
-        [out_buf, ..] => [out_buf],
-        [] => {
-            return Err(SemanticExecutionError::Backend(format!(
-                "Fix: total_set_bits_via expected at least one output buffer, got {}.",
-                outputs.len()
-            )));
-        }
-    };
-    decode_u32_output_exact(out_buf, 1, "total_set_bits_via", &mut scratch.decoded_u32)?;
+        "total_set_bits_via",
+    )?;
+    decode_u32_output_exact(&out_buf, 1, "total_set_bits_via", &mut scratch.decoded_u32)?;
     Ok(u64::from(scratch.decoded_u32[0]))
 }
 
@@ -252,23 +230,13 @@ pub fn saturation_ratio_via_with_scratch_into(
     let program = bitset_saturation_ratio("input", "out", word_count);
     ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
-    let outputs = execute_single_program(
+    let out_buf = crate::dispatch_buffers::run_single_first_output(
         dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )
-    .map(|output| output.outputs)?;
-    let [out_buf, ..] = match outputs.as_slice() {
-        [out_buf, ..] => [out_buf],
-        [] => {
-            return Err(SemanticExecutionError::Backend(format!(
-                "Fix: saturation_ratio_via expected at least one output buffer, got {}.",
-                outputs.len()
-            )));
-        }
-    };
+        "saturation_ratio_via",
+    )?;
     let [b0, b1, b2, b3, ..] = match out_buf.as_slice() {
         [b0, b1, b2, b3, ..] => [*b0, *b1, *b2, *b3],
         _ => {

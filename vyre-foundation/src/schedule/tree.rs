@@ -92,8 +92,9 @@ pub enum ScheduleOp {
         /// Number of buffers in the ring (typically 2).
         slots: u32,
     },
-    /// Warp specialization partitioning warps into dedicated producer/consumer roles.
-    WarpSpecialization {
+    /// Subgroup specialization, partitioning subgroups into dedicated
+    /// producer and consumer roles.
+    SubgroupSpecialization {
         /// Dedicated worker groups.
         roles: Vec<PipelineRoleGroup>,
     },

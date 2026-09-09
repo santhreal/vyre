@@ -11,13 +11,13 @@ use crate::optimizer::rewrite_contract::RewriteWitness;
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TargetFact {
-    /// Subgroup/warp size (e.g. 32 on NVIDIA, 64 on AMD, 16 on Intel/Apple).
+    /// Subgroup width in lanes; shipped devices report 16, 32 or 64.
     SubgroupSize(u32),
     /// Maximum workgroup shared memory in bytes.
     SharedMemoryCapacity(u64),
-    /// Availability of dedicated matrix multiply-accumulate (MMA / Tensor Core) hardware.
+    /// Availability of a dedicated matrix multiply-accumulate unit.
     TensorCoreAvailable,
-    /// Availability of asynchronous copy engine (e.g. cp.async).
+    /// Availability of an asynchronous transfer engine.
     AsyncCopySupported,
     /// Subgroup shuffle operations available without shared memory staging.
     SubgroupShuffleAvailable,

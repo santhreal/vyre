@@ -1,11 +1,14 @@
-//! Source-derived platform support matrix for host and device environments (Row 118).
+//! Source-derived host support matrix and canonical byte order.
 
 use core::fmt;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-/// Canonical schema version for PlatformSupportMatrix.
-pub const PLATFORM_SUPPORT_MATRIX_SCHEMA_VERSION: u32 = 1;
+/// Canonical schema version for `PlatformSupportMatrix`.
+///
+/// Version 2 dropped the backend roster the record used to carry. A version 1
+/// payload names backends the reader no longer decides and is rejected.
+pub const PLATFORM_SUPPORT_MATRIX_SCHEMA_VERSION: u32 = 2;
 
 /// Supported host operating systems.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
@@ -194,27 +197,11 @@ impl Endianness {
     }
 }
 
-/// Supported driver and device API families.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum DriverApiFamily {
-    /// NVIDIA CUDA driver and PTX ISA.
-    Cuda,
-    /// Apple Metal and MSL dialect.
-    Metal,
-    /// Portable WebGPU / WGSL backend.
-    Wgpu,
-    /// Vulkan SPIR-V compute dialect.
-    VulkanSpirv,
-    /// Reference CPU oracle (non-production).
-    Reference,
-}
-
 /// Hardware capability profile description.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
 pub struct DeviceCapabilityProfile {
-    /// Subgroup/warp width (e.g. 32 or 64).
-    pub warp_size: u32,
+    /// Subgroup width in lanes (32 or 64 on shipped devices).
+    pub subgroup_size: u32,
     /// Maximum workgroup invocations.
     pub max_invocations: u32,
     /// Shared memory capacity in kilobytes per block.
@@ -283,15 +270,19 @@ pub enum UnsupportedPlatformError {
     Serialization(String),
 }
 
-/// The authoritative, source-derived platform support matrix (Row 118).
+/// The host cells a build is supported on, and the byte order every persisted
+/// payload is written in.
+///
+/// Backend support is not stated here. Which backends a build carries is
+/// answered by the registrations linked into it, so a second roster in a
+/// substrate-neutral crate would name concrete backends and go stale against
+/// the one that decides.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct PlatformSupportMatrix {
     /// Schema version for fail-closed validation.
     pub schema_version: u32,
     /// Supported host execution cells.
     pub supported_hosts: Vec<HostCell>,
-    /// Supported driver API families.
-    pub supported_apis: Vec<DriverApiFamily>,
     /// Required canonical endianness for persistent wire payloads.
     pub canonical_endianness: Endianness,
 }
@@ -344,18 +335,9 @@ impl PlatformSupportMatrix {
             },
         ];
 
-        let supported_apis = vec![
-            DriverApiFamily::Cuda,
-            DriverApiFamily::Metal,
-            DriverApiFamily::Wgpu,
-            DriverApiFamily::VulkanSpirv,
-            DriverApiFamily::Reference,
-        ];
-
         Self {
             schema_version: PLATFORM_SUPPORT_MATRIX_SCHEMA_VERSION,
             supported_hosts,
-            supported_apis,
             canonical_endianness: Endianness::LittleEndian,
         }
     }

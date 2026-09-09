@@ -37,7 +37,8 @@ impl ExternalSchemaVisitor for Recorder {
         field_name: &str,
         field_value: &str,
     ) -> Result<(), Self::Error> {
-        self.fields.push((field_name.to_string(), field_value.to_string()));
+        self.fields
+            .push((field_name.to_string(), field_value.to_string()));
         Ok(())
     }
 
@@ -139,7 +140,9 @@ fn domain_neutral_schema_contracts_require_versions_and_visitors() {
         layouts: Vec::new(),
     };
 
-    schema.accept(&mut recorder).expect("visitor must traverse schema");
+    schema
+        .accept(&mut recorder)
+        .expect("visitor must traverse schema");
     assert_eq!(recorder.nodes.len(), 2);
     assert_eq!(recorder.fields.len(), 2);
     assert_eq!(recorder.layouts.len(), 3);

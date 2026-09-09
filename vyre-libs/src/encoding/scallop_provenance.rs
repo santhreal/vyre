@@ -58,9 +58,7 @@ use crate::dispatch_buffers::{
 };
 use crate::math::scallop_join;
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Default safety cap on Datalog fixpoint iterations. Monotone Datalog
 /// converges in ≤ n² iterations on n-cell systems; this cap is a
@@ -245,21 +243,14 @@ pub fn provenance_closure_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[2], std::mem::size_of::<u32>());
     write_u32_slice_le_bytes(&mut scratch.inputs[3], join_rules);
 
-    let outputs = execute_single_program(
+    let output = crate::dispatch_buffers::run_single_first_output(
         dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: scallop provenance dispatch expected at least the state output, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], cells, "provenance_closure_via state", closure)
+        "scallop provenance dispatch",
+    )?;
+    decode_u32_output_exact(&output, cells, "provenance_closure_via state", closure)
 }
 
 /// Borrowed projection of one output row from a provenance closure matrix.

@@ -162,14 +162,8 @@ pub fn sort_regions_via_with_scratch_into(
             regions.len() * std::mem::size_of::<u32>(),
         );
     }
-    let outputs = execute_single_program(
-        dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
-        program,
-        &scratch.inputs,
-        policy,
-    )
-    .map(|output| output.outputs)?;
+    let outputs =
+        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
     decode_region_outputs_into(&outputs, regions.len(), "sort_regions_via", scratch, out)
 }
 

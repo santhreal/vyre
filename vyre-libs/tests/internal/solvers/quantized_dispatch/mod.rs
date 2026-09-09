@@ -284,13 +284,15 @@ fn run_batched_matmul_via(
     i4x8_batched_matmul_f32_scaled_via(
         &QuantizedBatchedMatmulDispatcher,
         &crate::test_parity_oracles::policy(),
-        weights,
-        activations,
-        row_scales,
-        batch_scales,
-        batch,
-        rows,
-        cols,
+        &PackedI4BatchedMatmul {
+            weights_packed: weights,
+            activation_batches_packed: activations,
+            row_scales: row_scales,
+            batch_scales: batch_scales,
+            batch: batch,
+            rows: rows,
+            cols: cols,
+        },
     )
 }
 
@@ -306,13 +308,15 @@ fn run_batched_matmul_top1_via(
     i4x8_batched_matmul_top1_f32_scaled_via(
         &QuantizedBatchedMatmulTop1Dispatcher,
         &crate::test_parity_oracles::policy(),
-        weights,
-        activations,
-        row_scales,
-        batch_scales,
-        batch,
-        rows,
-        cols,
+        &PackedI4BatchedMatmul {
+            weights_packed: weights,
+            activation_batches_packed: activations,
+            row_scales: row_scales,
+            batch_scales: batch_scales,
+            batch: batch,
+            rows: rows,
+            cols: cols,
+        },
     )
 }
 

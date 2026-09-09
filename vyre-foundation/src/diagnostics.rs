@@ -92,6 +92,42 @@ pub trait ToDiagnostic {
     fn to_diagnostic(&self) -> Diagnostic;
 }
 
+/// Implement the conversions an error type carries alongside `ToDiagnostic`.
+///
+/// A blanket `impl<E: ToDiagnostic> From<E> for Diagnostic` overlaps the
+/// reflexive `From<T> for T`, so coherence rejects it and each error type states
+/// the same three items. Eleven crates stated them by hand, and each copy was
+/// free to project through a different method than the trait it also implements.
+///
+/// One argument names the error type and reuses its existing `ToDiagnostic`
+/// implementation. A second argument names the inherent projection method, and
+/// the macro implements the trait through it as well.
+#[macro_export]
+macro_rules! diagnostic_conversions {
+    ($error:ty) => {
+        impl From<&$error> for $crate::diagnostics::Diagnostic {
+            fn from(error: &$error) -> Self {
+                $crate::diagnostics::ToDiagnostic::to_diagnostic(error)
+            }
+        }
+
+        impl From<$error> for $crate::diagnostics::Diagnostic {
+            fn from(error: $error) -> Self {
+                $crate::diagnostics::ToDiagnostic::to_diagnostic(&error)
+            }
+        }
+    };
+    ($error:ty, $project:ident) => {
+        impl $crate::diagnostics::ToDiagnostic for $error {
+            fn to_diagnostic(&self) -> $crate::diagnostics::Diagnostic {
+                self.$project()
+            }
+        }
+
+        $crate::diagnostic_conversions!($error);
+    };
+}
+
 /// Compiler or workflow stage that produced a diagnostic.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -358,6 +394,25 @@ impl Diagnostic {
     #[must_use]
     pub fn note(code: &'static str, message: impl Into<Cow<'static, str>>) -> Self {
         Self::new(Severity::Note, code, message)
+    }
+
+    /// Construct an emission-stage error for one target, retryable by
+    /// recompiling the source.
+    ///
+    /// Every emitter reports the same shape, and each one used to restate the
+    /// sixteen fields of the struct per error variant. A field added to
+    /// `Diagnostic` then reached whichever copies someone remembered.
+    #[must_use]
+    pub fn emission_error(
+        target: impl Into<String>,
+        code: &'static str,
+        message: impl Into<Cow<'static, str>>,
+    ) -> Self {
+        Self::error(code, message)
+            .with_stage(DiagnosticStage::Emit)
+            .with_compiler_level(CompilerLevel::Emission)
+            .with_target(target)
+            .with_retry(RetryClass::RecompileSource)
     }
 
     fn new(severity: Severity, code: &'static str, message: impl Into<Cow<'static, str>>) -> Self {

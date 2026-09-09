@@ -378,32 +378,73 @@ fn new_buffer_sizes_buffer(
     Ok((slot, new_host_input_buffer(device, &bytes)?))
 }
 
+/// The four labels one Metal dispatch path attaches to its rejections and its
+/// elapsed-time overflow.
+///
+/// A path states them once instead of threading four literals through
+/// validation and timing, which is what let the borrowed and authenticated
+/// prologues become copies of each other.
+pub(super) struct MetalDispatchLabels {
+    /// Feature name a cooperative-grid rejection carries.
+    pub(super) cooperative_feature: &'static str,
+    /// Feature name a repeated-dispatch rejection carries.
+    pub(super) repeated_feature: &'static str,
+    /// Context a zero-iteration rejection names.
+    pub(super) zero_iteration_context: &'static str,
+    /// Context an elapsed-time overflow names.
+    pub(super) timing_context: &'static str,
+}
+
+/// Labels for the borrowed-input dispatch path.
+pub(super) const BORROWED_DISPATCH: MetalDispatchLabels = MetalDispatchLabels {
+    cooperative_feature: "Metal cooperative grid dispatch",
+    repeated_feature: "Metal non-resident repeated dispatch",
+    zero_iteration_context: "Metal dispatch",
+    timing_context: "Metal borrowed timed dispatch",
+};
+
+/// Labels for the authenticated target-module dispatch path.
+pub(super) const AUTHENTICATED_DISPATCH: MetalDispatchLabels = MetalDispatchLabels {
+    cooperative_feature: "Metal authenticated cooperative grid dispatch",
+    repeated_feature: "Metal authenticated repeated dispatch",
+    zero_iteration_context: "Metal authenticated dispatch",
+    timing_context: "Metal authenticated timed dispatch",
+};
+
+/// Labels for the resident-resource dispatch path.
+pub(super) const RESIDENT_DISPATCH: MetalDispatchLabels = MetalDispatchLabels {
+    cooperative_feature: "Metal cooperative grid resident dispatch",
+    repeated_feature: "Metal repeated resident dispatch",
+    zero_iteration_context: "Metal resident dispatch",
+    timing_context: "Metal resident timed dispatch",
+};
+
+/// Start the dispatch clock, then reject a config this backend cannot honor.
+///
+/// The clock starts first so a rejection is charged to the dispatch that asked
+/// for it.
+pub(super) fn start_validated_dispatch(
+    program: &Program,
+    config: &DispatchConfig,
+    labels: &MetalDispatchLabels,
+) -> Result<Instant, BackendError> {
+    let started = Instant::now();
+    validate_metal_dispatch_config(program, config, labels)?;
+    Ok(started)
+}
+
 pub(super) fn validate_metal_dispatch_config(
     program: &Program,
     config: &DispatchConfig,
-    cooperative_feature: &'static str,
-    repeated_feature: &'static str,
-    zero_iteration_context: &'static str,
+    labels: &MetalDispatchLabels,
 ) -> Result<(), BackendError> {
-    if config.float_lowering.blocks_contraction() {
-        let ops = vyre_foundation::fp_parity::approximable_operations(program);
-        let name = if ops.is_empty() {
-            format!(
-                "float lowering mode `{}`",
-                config.float_lowering.cache_label()
-            )
-        } else {
-            format!(
-                "float lowering mode `{}` for operation(s) {}",
-                config.float_lowering.cache_label(),
-                ops.join(", ")
-            )
-        };
-        return Err(BackendError::UnsupportedFeature {
-            name,
-            backend: METAL_BACKEND_ID.to_string(),
-        });
-    }
+    let MetalDispatchLabels {
+        cooperative_feature,
+        repeated_feature,
+        zero_iteration_context,
+        ..
+    } = labels;
+    BackendError::reject_blocked_contraction(program, config.float_lowering, METAL_BACKEND_ID)?;
     if config.cooperative {
         return Err(BackendError::UnsupportedFeature {
             name: cooperative_feature.to_string(),

@@ -1178,10 +1178,10 @@ pub mod wire_cross_crate_compat;
 #[path = "witness_input_abi_closure.rs"]
 pub mod witness_input_abi_closure;
 
+/// Integration tests from `tests/multi_domain_production_graph_compilation.rs`.
+#[path = "multi_domain_production_graph_compilation.rs"]
+pub mod multi_domain_production_graph_compilation;
 /// Integration tests from `tests/workgroup_any_ir_parity_proptest.rs`.
 #[cfg(feature = "reduce")]
 #[path = "workgroup_any_ir_parity_proptest.rs"]
 pub mod workgroup_any_ir_parity_proptest;
-/// Integration tests from `tests/multi_domain_production_graph_compilation.rs`.
-#[path = "multi_domain_production_graph_compilation.rs"]
-pub mod multi_domain_production_graph_compilation;

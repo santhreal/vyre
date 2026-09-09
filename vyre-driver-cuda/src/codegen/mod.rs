@@ -26,17 +26,11 @@ pub fn program_to_ptx_for_sm_and_subgroup(
     target_sm: u32,
     subgroup_size: u32,
 ) -> Result<String, String> {
-    if config.float_lowering.blocks_contraction() {
-        let ops = vyre_foundation::fp_parity::approximable_operations(program);
-        let op_detail = if ops.is_empty() {
-            String::new()
-        } else {
-            format!(" for operation(s) {}", ops.join(", "))
-        };
+    if let Some(feature) =
+        vyre_foundation::fp_parity::blocked_contraction_feature(program, config.float_lowering)
+    {
         return Err(format!(
-            "CUDA backend does not support float lowering mode `{}`{}. Fix: select FloatLoweringMode::Contracted or use a backend that supports strict IEEE lowering (such as wgpu or cpu-ref).",
-            config.float_lowering.cache_label(),
-            op_detail
+            "CUDA backend does not support {feature}. Fix: select FloatLoweringMode::Contracted or dispatch to a backend that separates every f32 rounding."
         ));
     }
     let _profiler_range = crate::profiler::cuda_profiler_range(crate::profiler::CUDA_CODEGEN_RANGE);

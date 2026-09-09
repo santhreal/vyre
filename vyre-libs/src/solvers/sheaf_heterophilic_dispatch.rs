@@ -60,9 +60,7 @@ use crate::dispatch_buffers::{
     write_zero_bytes,
 };
 use crate::graph::sheaf::sheaf_diffusion_step;
-use vyre_megakernel::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned dispatch scratch for fixed-point sheaf diffusion.
 #[derive(Debug, Default)]
@@ -197,21 +195,14 @@ pub fn diffuse_dispatch_stalks_fixed_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[1], restriction_diag_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[2], &scratch.damping);
     write_zero_bytes(&mut scratch.inputs[3], out_bytes);
-    let outputs = execute_single_program(
+    let output = crate::dispatch_buffers::run_single_first_output(
         dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: diffuse_dispatch_stalks_fixed_via expected at least one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], cells, "diffuse_dispatch_stalks_fixed_via", out)
+        "diffuse_dispatch_stalks_fixed_via",
+    )?;
+    decode_u32_output_exact(&output, cells, "diffuse_dispatch_stalks_fixed_via", out)
 }
 
 /// Iterate sheaf diffusion until convergence (stalks stop changing

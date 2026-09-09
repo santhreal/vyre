@@ -18,11 +18,12 @@ use naga::back::msl::{BindTarget, EntryPointResources, Options, PipelineOptions}
 use naga::valid::{Capabilities, ValidationFlags, Validator};
 use naga::{AddressSpace, StorageAccess};
 use thiserror::Error;
-use vyre_foundation::diagnostics::{
-    CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, RetryClass, Severity,
-    ToDiagnostic,
-};
+use vyre_foundation::diagnostics::{CompilerLevel, Diagnostic, DiagnosticStage};
 use vyre_lower::{BindingSlot, KernelDescriptor, MemoryClass};
+
+/// Target identity every diagnostic this emitter raises carries.
+const TARGET: &str = "metal";
+
 /// `native_module` artifact schema version.
 pub const METAL_ARTIFACT_SCHEMA: u32 = 3;
 
@@ -97,214 +98,93 @@ impl EmitError {
     pub fn diagnostic(&self) -> Diagnostic {
         match self {
             Self::NagaEmit(naga_err) => {
-                let mut diag = naga_err.diagnostic();
-                diag.target = Some("metal".to_string());
-                diag.notes.push("during Metal emission from Naga module".into());
-                diag
+                naga_err.retargeted_diagnostic(TARGET, "during Metal emission from Naga module")
             }
-            Self::NagaValidation(msg) => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("MTL001_NAGA_VALIDATION_FAILED"),
-                stage: DiagnosticStage::Emit,
-                compiler_level: Some(CompilerLevel::Emission),
-                message: format!("Naga validation failed before Metal MSL writing: {msg}").into(),
-                location: None,
-                artifact_id: None,
-                target: Some("metal".to_string()),
-                device: None,
-                suggested_fix: Some(
-                    "repair the shared descriptor/Naga emission path before emitting native_module artifacts".into(),
-                ),
-                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "naga_validation".to_string(),
-                    detail: msg.clone(),
-                }),
-                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "naga_validation".to_string(),
-                    detail: msg.clone(),
-                }],
-                retry: RetryClass::RecompileSource,
-                context_values: Vec::new(),
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::EntryPoint { entry_point, reason } => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("MTL002_ENTRY_POINT_UNAVAILABLE"),
-                stage: DiagnosticStage::Emit,
-                compiler_level: Some(CompilerLevel::Emission),
-                message: format!("Metal entry point `{entry_point}` unavailable: {reason}").into(),
-                location: None,
-                artifact_id: None,
-                target: Some("metal".to_string()),
-                device: None,
-                suggested_fix: Some(
-                    "emit a compute KernelDescriptor with entry point `main` or pass the correct entry point name".into(),
-                ),
-                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "entry_point_unavailable".to_string(),
-                    detail: format!("{entry_point}: {reason}"),
-                }),
-                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "entry_point_unavailable".to_string(),
-                    detail: format!("{entry_point}: {reason}"),
-                }],
-                retry: RetryClass::RecompileSource,
-                context_values: vec![
-                    ("entry_point".to_string(), entry_point.clone()),
-                    ("reason".to_string(), reason.clone()),
-                ],
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::MslWriter(msg) => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("MTL003_MSL_WRITER_FAILED"),
-                stage: DiagnosticStage::Emit,
-                compiler_level: Some(CompilerLevel::Emission),
-                message: format!("MSL writer failed: {msg}").into(),
-                location: None,
-                artifact_id: None,
-                target: Some("metal".to_string()),
-                device: None,
-                suggested_fix: Some(
-                    "extend the shared Naga-to-MSL emission seam or lower unsupported constructs before Metal artifact emission".into(),
-                ),
-                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "msl_writer".to_string(),
-                    detail: msg.clone(),
-                }),
-                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "msl_writer".to_string(),
-                    detail: msg.clone(),
-                }],
-                retry: RetryClass::RecompileSource,
-                context_values: Vec::new(),
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::BindingMap { group, binding, reason } => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("MTL004_BINDING_MAP_FAILED"),
-                stage: DiagnosticStage::Emit,
-                compiler_level: Some(CompilerLevel::Emission),
-                message: format!("Metal binding map failed for group {group} binding {binding}: {reason}").into(),
-                location: None,
-                artifact_id: None,
-                target: Some("metal".to_string()),
-                device: None,
-                suggested_fix: Some(
-                    "keep Metal buffer indices within u8::MAX or add argument-buffer metadata before native_module emission".into(),
-                ),
-                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "binding_map".to_string(),
-                    detail: format!("group {group} binding {binding}: {reason}"),
-                }),
-                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "binding_map".to_string(),
-                    detail: format!("group {group} binding {binding}: {reason}"),
-                }],
-                retry: RetryClass::RecompileSource,
-                context_values: vec![
-                    ("group".to_string(), group.to_string()),
-                    ("binding".to_string(), binding.to_string()),
-                ],
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::DescriptorHash(msg) => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("MTL005_DESCRIPTOR_HASH_FAILED"),
-                stage: DiagnosticStage::Emit,
-                compiler_level: Some(CompilerLevel::Emission),
-                message: format!("KernelDescriptor artifact hash failed: {msg}").into(),
-                location: None,
-                artifact_id: None,
-                target: Some("metal".to_string()),
-                device: None,
-                suggested_fix: Some("keep KernelDescriptor serde stable before using it as native_module artifact identity".into()),
-                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "descriptor_hash".to_string(),
-                    detail: msg.clone(),
-                }),
-                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "descriptor_hash".to_string(),
-                    detail: msg.clone(),
-                }],
-                retry: RetryClass::RecompileSource,
-                context_values: Vec::new(),
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::ArtifactSerialization(msg) => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("MTL006_SERIALIZATION_FAILED"),
-                stage: DiagnosticStage::Emit,
-                compiler_level: Some(CompilerLevel::Emission),
-                message: format!("Metal native_module JSON serialization failed: {msg}").into(),
-                location: None,
-                artifact_id: None,
-                target: Some("metal".to_string()),
-                device: None,
-                suggested_fix: Some("keep artifact metadata serde-compatible and deterministic".into()),
-                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "artifact_serialization".to_string(),
-                    detail: msg.clone(),
-                }),
-                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "artifact_serialization".to_string(),
-                    detail: msg.clone(),
-                }],
-                retry: RetryClass::RecompileSource,
-                context_values: Vec::new(),
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::PreEmit(msg) => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("MTL007_PRE_EMIT_FAILED"),
-                stage: DiagnosticStage::Lower,
-                compiler_level: Some(CompilerLevel::Lowering),
-                message: format!("Program physical lowering failed before Metal artifact emission: {msg}").into(),
-                location: None,
-                artifact_id: None,
-                target: Some("metal".to_string()),
-                device: None,
-                suggested_fix: Some("route through vyre-lower::lower_physical and repair the neutral descriptor mapping".into()),
-                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "pre_emit_lowering".to_string(),
-                    detail: msg.clone(),
-                }),
-                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "pre_emit_lowering".to_string(),
-                    detail: msg.clone(),
-                }],
-                retry: RetryClass::RecompileSource,
-                context_values: Vec::new(),
-                doc_url: None,
-                notes: Vec::new(),
-            },
+            Self::NagaValidation(msg) => Diagnostic::emission_error(
+                TARGET,
+                "MTL001_NAGA_VALIDATION_FAILED",
+                format!("Naga validation failed before Metal MSL writing: {msg}"),
+            )
+            .with_fix(
+                "repair the shared descriptor/Naga emission path before emitting native_module artifacts",
+            )
+            .with_cause("naga_validation", msg.clone()),
+            Self::EntryPoint {
+                entry_point,
+                reason,
+            } => Diagnostic::emission_error(
+                TARGET,
+                "MTL002_ENTRY_POINT_UNAVAILABLE",
+                format!("Metal entry point `{entry_point}` unavailable: {reason}"),
+            )
+            .with_fix(
+                "emit a compute KernelDescriptor with entry point `main` or pass the correct entry point name",
+            )
+            .with_cause(
+                "entry_point_unavailable",
+                format!("{entry_point}: {reason}"),
+            )
+            .with_context_values([("entry_point", entry_point.clone()), ("reason", reason.clone())]),
+            Self::MslWriter(msg) => Diagnostic::emission_error(
+                TARGET,
+                "MTL003_MSL_WRITER_FAILED",
+                format!("MSL writer failed: {msg}"),
+            )
+            .with_fix(
+                "extend the shared Naga-to-MSL emission seam or lower unsupported constructs before Metal artifact emission",
+            )
+            .with_cause("msl_writer", msg.clone()),
+            Self::BindingMap {
+                group,
+                binding,
+                reason,
+            } => Diagnostic::emission_error(
+                TARGET,
+                "MTL004_BINDING_MAP_FAILED",
+                format!("Metal binding map failed for group {group} binding {binding}: {reason}"),
+            )
+            .with_fix(
+                "keep Metal buffer indices within u8::MAX or add argument-buffer metadata before native_module emission",
+            )
+            .with_cause(
+                "binding_map",
+                format!("group {group} binding {binding}: {reason}"),
+            )
+            .with_context_values([
+                ("group", group.to_string()),
+                ("binding", binding.to_string()),
+            ]),
+            Self::DescriptorHash(msg) => Diagnostic::emission_error(
+                TARGET,
+                "MTL005_DESCRIPTOR_HASH_FAILED",
+                format!("KernelDescriptor artifact hash failed: {msg}"),
+            )
+            .with_fix(
+                "keep KernelDescriptor serde stable before using it as native_module artifact identity",
+            )
+            .with_cause("descriptor_hash", msg.clone()),
+            Self::ArtifactSerialization(msg) => Diagnostic::emission_error(
+                TARGET,
+                "MTL006_SERIALIZATION_FAILED",
+                format!("Metal native_module JSON serialization failed: {msg}"),
+            )
+            .with_fix("keep artifact metadata serde-compatible and deterministic")
+            .with_cause("artifact_serialization", msg.clone()),
+            Self::PreEmit(msg) => Diagnostic::emission_error(
+                TARGET,
+                "MTL007_PRE_EMIT_FAILED",
+                format!("Program physical lowering failed before Metal artifact emission: {msg}"),
+            )
+            .with_stage(DiagnosticStage::Lower)
+            .with_compiler_level(CompilerLevel::Lowering)
+            .with_fix(
+                "route through vyre-lower::lower_physical and repair the neutral descriptor mapping",
+            )
+            .with_cause("pre_emit_lowering", msg.clone()),
         }
     }
 }
 
-impl ToDiagnostic for EmitError {
-    fn to_diagnostic(&self) -> Diagnostic {
-        self.diagnostic()
-    }
-}
-
-impl From<&EmitError> for Diagnostic {
-    fn from(error: &EmitError) -> Self {
-        error.diagnostic()
-    }
-}
-
-impl From<EmitError> for Diagnostic {
-    fn from(error: EmitError) -> Self {
-        error.diagnostic()
-    }
-}
 /// Maximum direct buffer arguments supported per shader stage in Metal (indices 0..=30).
 pub const MAX_DIRECT_BUFFERS_PER_STAGE: usize = 31;
 
@@ -810,3 +690,5 @@ fn hex_encode(bytes: &[u8]) -> String {
     }
     out
 }
+
+vyre_foundation::diagnostic_conversions!(EmitError, diagnostic);

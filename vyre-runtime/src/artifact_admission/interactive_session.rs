@@ -29,7 +29,7 @@ use std::sync::{Mutex, MutexGuard};
 use thiserror::Error;
 
 use vyre_driver::BackendError;
-use vyre_megakernel::Digest;
+use vyre_megakernel::{Digest, RealTimeDeadline};
 
 /// Heaviest measured interactive dispatch duration in microseconds under maximum
 /// resident buffer binding and command recording across the registered corpus.
@@ -45,45 +45,6 @@ pub const INTERACTIVE_DISPATCH_HEADROOM: u64 = 16;
 /// Derived: `MEASURED_INTERACTIVE_DISPATCH_CEILING_MICROS * INTERACTIVE_DISPATCH_HEADROOM`.
 pub const MAX_INTERACTIVE_STEP_BUDGET_MICROS: u64 =
     MEASURED_INTERACTIVE_DISPATCH_CEILING_MICROS * INTERACTIVE_DISPATCH_HEADROOM;
-
-/// Typed deadline contract governing interactive submission admission and scheduling.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum DeadlineClass {
-    /// Hard real-time service guarantee: work must finish before `deadline_ns` with
-    /// maximum allowed jitter `max_jitter_ns`. Rejected at admission if unreachable.
-    HardRealTime {
-        /// Absolute time budget in nanoseconds.
-        deadline_ns: u64,
-        /// Maximum allowable variance in nanoseconds.
-        max_jitter_ns: u64,
-    },
-    /// Interactive frame target (e.g. 60Hz = 16.6ms, 120Hz = 8.3ms).
-    InteractiveFrame {
-        /// Target frame duration in nanoseconds.
-        frame_target_ns: u64,
-        /// Refresh rate in Hz.
-        target_fps: u32,
-    },
-    /// Background asynchronous computation with loose deadline.
-    Background {
-        /// Maximum acceptable completion window in nanoseconds.
-        max_latency_ns: u64,
-    },
-}
-
-impl DeadlineClass {
-    /// Target budget in nanoseconds.
-    #[must_use]
-    pub const fn budget_ns(&self) -> u64 {
-        match self {
-            Self::HardRealTime { deadline_ns, .. } => *deadline_ns,
-            Self::InteractiveFrame {
-                frame_target_ns, ..
-            } => *frame_target_ns,
-            Self::Background { max_latency_ns } => *max_latency_ns,
-        }
-    }
-}
 
 /// Static and dynamic priority tiers supporting priority inheritance.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -135,7 +96,7 @@ pub struct InteractiveSubmissionRequest {
     /// Monotonically increasing frame generation counter for this channel.
     pub frame_generation: u64,
     /// Declared deadline contract.
-    pub deadline: DeadlineClass,
+    pub deadline: RealTimeDeadline,
     /// Base priority tier.
     pub priority: PriorityClass,
     /// Estimated execution duration in nanoseconds derived from compiler cost model.

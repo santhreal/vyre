@@ -6,6 +6,7 @@ use vyre_foundation::ir::{
 };
 use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
+use vyre_test_support::tile_programs::{tile_matmul_program, TileOperand};
 
 fn decode_f32(bytes: &[u8]) -> Vec<f32> {
     bytes
@@ -26,52 +27,16 @@ fn reference_eval_tile_matmul_2x2() {
     let a_data = vec![1.0f32, 2.0, 3.0, 4.0];
     let b_data = vec![5.0f32, 6.0, 7.0, 8.0];
 
-    let tile_a = Tile::new(
-        DataType::F32,
-        vec![2, 2],
-        Layout::RowMajor,
-        Residency::Register,
-    );
-    let tile_b = Tile::new(
-        DataType::F32,
-        vec![2, 2],
-        Layout::RowMajor,
-        Residency::Register,
-    );
-    let tile_c = Tile::new(
-        DataType::F32,
-        vec![2, 2],
-        Layout::RowMajor,
-        Residency::Register,
-    );
-
-    let prog = Program::wrapped(
-        vec![
-            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::storage("b", 1, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::output("out", 2, DataType::F32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::tile_decl("c", tile_c),
-            Node::tile_load(
-                "t_a",
-                tile_a,
-                "a",
-                vec![Expr::u32(0), Expr::u32(0)],
-                Layout::RowMajor,
-            ),
-            Node::tile_load(
-                "t_b",
-                tile_b,
-                "b",
-                vec![Expr::u32(0), Expr::u32(0)],
-                Layout::RowMajor,
-            ),
-            Node::tile_matmul("c", "t_a", "t_b"),
-            Node::tile_store("out", vec![Expr::u32(0), Expr::u32(0)], "c"),
-        ],
-    );
+    let square = |elements| {
+        TileOperand::new(
+            DataType::F32,
+            vec![2, 2],
+            Layout::RowMajor,
+            Residency::Register,
+            elements,
+        )
+    };
+    let prog = tile_matmul_program([1, 1, 1], &square(4), &square(4), &square(4));
 
     let outputs = reference_eval(
         &prog,

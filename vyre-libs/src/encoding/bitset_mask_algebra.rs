@@ -13,9 +13,7 @@ use crate::bitset::{
     test_bit::bitset_test_bit, xor::bitset_xor,
 };
 use crate::dispatch_buffers::{ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes};
-use vyre_megakernel::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned dispatch scratch for bitset mask algebra.
 #[derive(Debug, Default)]
@@ -106,14 +104,8 @@ pub fn mask_binary_via_with_scratch_into(
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], lhs);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], rhs);
-    let outputs = execute_single_program(
-        dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
-        program,
-        &scratch.inputs,
-        policy,
-    )
-    .map(|output| output.outputs)?;
+    let outputs =
+        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
     decode_first_output(&outputs, lhs.len(), "mask_binary_via", out)
 }
 
@@ -199,14 +191,8 @@ pub fn mask_not_via_with_scratch_into(
     let program = bitset_not("input", "out", words);
     ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
-    let outputs = execute_single_program(
-        dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
-        program,
-        &scratch.inputs,
-        policy,
-    )
-    .map(|output| output.outputs)?;
+    let outputs =
+        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
     decode_first_output(&outputs, input.len(), "mask_not_via", out)
 }
 
@@ -267,14 +253,8 @@ pub fn mask_contains_via(
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], &[bit_idx]);
     write_zero_bytes(&mut scratch.inputs[2], std::mem::size_of::<u32>());
-    let outputs = execute_single_program(
-        dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
-        program,
-        &scratch.inputs,
-        policy,
-    )
-    .map(|output| output.outputs)?;
+    let outputs =
+        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
     decode_scalar_bool(&outputs, "mask_contains_via")
 }
 
@@ -300,14 +280,8 @@ pub fn mask_test_bit_via(
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
     write_zero_bytes(&mut scratch.inputs[1], std::mem::size_of::<u32>());
-    let outputs = execute_single_program(
-        dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
-        program,
-        &scratch.inputs,
-        policy,
-    )
-    .map(|output| output.outputs)?;
+    let outputs =
+        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
     decode_scalar_bool(&outputs, "mask_test_bit_via")
 }
 
@@ -380,14 +354,8 @@ fn scalar_binary_predicate_via(
     write_u32_slice_le_bytes(&mut scratch.inputs[0], lhs);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], rhs);
     write_zero_bytes(&mut scratch.inputs[2], std::mem::size_of::<u32>());
-    let outputs = execute_single_program(
-        dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
-        program,
-        &scratch.inputs,
-        policy,
-    )
-    .map(|output| output.outputs)?;
+    let outputs =
+        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
     decode_scalar_bool(&outputs, context)
 }
 
@@ -410,14 +378,8 @@ fn scalar_mutate_bit_via(
     let mut scratch = BitsetMaskAlgebraGpuScratch::default();
     ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], target);
-    let outputs = execute_single_program(
-        dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
-        program,
-        &scratch.inputs,
-        policy,
-    )
-    .map(|output| output.outputs)?;
+    let outputs =
+        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
     let mut out = Vec::new();
     decode_first_output(&outputs, target.len(), context, &mut out)?;
     Ok(out)

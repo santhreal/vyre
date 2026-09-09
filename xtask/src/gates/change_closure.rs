@@ -405,16 +405,10 @@ mod tests {
         assert!(rendered.contains("variant_name = \"Float32\""));
     }
 
+    /// WHY: a generating gate owes both halves of its contract, so a sweep that
+    /// runs after its own regeneration finds nothing left to report.
     #[test]
     fn change_closure_gate_runs_and_generates() {
-        let root = crate::checkout::checkout_root();
-        let gate = crate::subcommands::find("change-closure").expect("gate must be registered");
-        let write_ctx = GateCtx::new(root.clone(), vec!["--write".to_string()]);
-        let write_report = gate.run(&write_ctx).expect("must run in write mode");
-        assert_eq!(write_report.count(), 0);
-
-        let comp_ctx = GateCtx::new(root, Vec::new());
-        let comp_report = gate.run(&comp_ctx).expect("must run in comparison mode");
-        assert_eq!(comp_report.count(), 0, "findings: {:?}", comp_report.findings);
+        crate::gate::assert_regenerates_clean("change-closure");
     }
 }

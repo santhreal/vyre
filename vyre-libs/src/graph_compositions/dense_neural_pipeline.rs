@@ -5,8 +5,8 @@
 //! using nested reusable subgraphs and domain-neutral whole-graph APIs.
 
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program,
-    ProgramGraph, ProgramGraphBuilder, ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
+    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
+    ProgramGraphBuilder, ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
 };
 
 /// Build a representative dense neural pipeline whole-graph.
@@ -34,21 +34,13 @@ pub fn build_dense_neural_pipeline(
         DataType::F32,
         vec![ShapeDim::Known(in_dim), ShapeDim::Known(hidden_dim)],
     )?;
-    let b1 = builder.constant(
-        "b1",
-        DataType::F32,
-        vec![ShapeDim::Known(hidden_dim)],
-    )?;
+    let b1 = builder.constant("b1", DataType::F32, vec![ShapeDim::Known(hidden_dim)])?;
     let w2 = builder.constant(
         "w2",
         DataType::F32,
         vec![ShapeDim::Known(hidden_dim), ShapeDim::Known(out_dim)],
     )?;
-    let b2 = builder.constant(
-        "b2",
-        DataType::F32,
-        vec![ShapeDim::Known(out_dim)],
-    )?;
+    let b2 = builder.constant("b2", DataType::F32, vec![ShapeDim::Known(out_dim)])?;
 
     // --- Subgraph 1: Dense Linear Layer 1 ---
     let mut l1_builder = ProgramGraphBuilder::new();
@@ -62,11 +54,7 @@ pub fn build_dense_neural_pipeline(
         DataType::F32,
         vec![ShapeDim::Known(in_dim), ShapeDim::Known(hidden_dim)],
     )?;
-    let l1_b = l1_builder.constant(
-        "in_b",
-        DataType::F32,
-        vec![ShapeDim::Known(hidden_dim)],
-    )?;
+    let l1_b = l1_builder.constant("in_b", DataType::F32, vec![ShapeDim::Known(hidden_dim)])?;
 
     let l1_p = Program::wrapped(
         vec![
@@ -84,7 +72,10 @@ pub fn build_dense_neural_pipeline(
                     Expr::load("in_x", Expr::gid_x()),
                     Expr::load("in_w", Expr::gid_x()),
                 ),
-                Expr::load("in_b", Expr::rem(Expr::gid_x(), Expr::u32(hidden_dim as u32))),
+                Expr::load(
+                    "in_b",
+                    Expr::rem(Expr::gid_x(), Expr::u32(hidden_dim as u32)),
+                ),
             ),
         )],
     );
@@ -153,8 +144,10 @@ pub fn build_dense_neural_pipeline(
     )?;
     let l2_p = Program::wrapped(
         vec![
-            BufferDecl::read("act_in", 0, DataType::F32).with_count((batch_size * hidden_dim) as u32),
-            BufferDecl::output("act_out", 1, DataType::F32).with_count((batch_size * hidden_dim) as u32),
+            BufferDecl::read("act_in", 0, DataType::F32)
+                .with_count((batch_size * hidden_dim) as u32),
+            BufferDecl::output("act_out", 1, DataType::F32)
+                .with_count((batch_size * hidden_dim) as u32),
         ],
         [(batch_size * hidden_dim).max(1) as u32, 1, 1],
         vec![Node::store(
@@ -206,18 +199,16 @@ pub fn build_dense_neural_pipeline(
         DataType::F32,
         vec![ShapeDim::Known(hidden_dim), ShapeDim::Known(out_dim)],
     )?;
-    let l3_b = l3_builder.constant(
-        "head_b",
-        DataType::F32,
-        vec![ShapeDim::Known(out_dim)],
-    )?;
+    let l3_b = l3_builder.constant("head_b", DataType::F32, vec![ShapeDim::Known(out_dim)])?;
 
     let l3_p = Program::wrapped(
         vec![
-            BufferDecl::read("head_in", 0, DataType::F32).with_count((batch_size * hidden_dim) as u32),
+            BufferDecl::read("head_in", 0, DataType::F32)
+                .with_count((batch_size * hidden_dim) as u32),
             BufferDecl::read("head_w", 1, DataType::F32).with_count((hidden_dim * out_dim) as u32),
             BufferDecl::read("head_b", 2, DataType::F32).with_count(out_dim as u32),
-            BufferDecl::output("logits", 3, DataType::F32).with_count((batch_size * out_dim) as u32),
+            BufferDecl::output("logits", 3, DataType::F32)
+                .with_count((batch_size * out_dim) as u32),
         ],
         [(batch_size * out_dim).max(1) as u32, 1, 1],
         vec![Node::store(
@@ -228,7 +219,10 @@ pub fn build_dense_neural_pipeline(
                     Expr::load("head_in", Expr::gid_x()),
                     Expr::load("head_w", Expr::gid_x()),
                 ),
-                Expr::load("head_b", Expr::rem(Expr::gid_x(), Expr::u32(out_dim as u32))),
+                Expr::load(
+                    "head_b",
+                    Expr::rem(Expr::gid_x(), Expr::u32(out_dim as u32)),
+                ),
             ),
         )],
     );

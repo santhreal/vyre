@@ -5,8 +5,10 @@ impl core::cmp::Eq for vyre_reference::value::Value
 impl core::cmp::PartialEq for vyre_reference::composition_witness::RuleConditionWitness
 impl core::cmp::PartialEq for vyre_reference::value::Value
 impl core::convert::From<&[u8]> for vyre_reference::value::Value
+impl core::convert::From<&vyre_reference::ReferenceError> for vyre_foundation::diagnostics::Diagnostic
 impl core::convert::From<alloc::vec::Vec<u8>> for vyre_reference::value::Value
 impl core::convert::From<vyre_foundation::validate::validation_error::ValidationError> for vyre_reference::ReferenceError
+impl core::convert::From<vyre_reference::ReferenceError> for vyre_foundation::diagnostics::Diagnostic
 impl core::default::Default for vyre_reference::subgroup::SubgroupSimulator
 impl core::error::Error for vyre_reference::ReferenceError
 impl core::error::Error for vyre_reference::composition_witness::Base64DecodeWitnessError
@@ -15,6 +17,7 @@ impl core::error::Error for vyre_reference::composition_witness::ParseLrWitnessE
 impl core::error::Error for vyre_reference::composition_witness::WitnessPostProcessError
 impl core::error::Error for vyre_reference::dual_impls::EvalError
 impl core::fmt::Display for vyre_reference::ReferenceError
+impl core::fmt::Display for vyre_reference::ReferenceInputMismatch
 impl core::fmt::Display for vyre_reference::composition_witness::Base64DecodeWitnessError
 impl core::fmt::Display for vyre_reference::composition_witness::FrontierTypedPlanWitnessError
 impl core::fmt::Display for vyre_reference::composition_witness::ParseLrWitnessError
@@ -22,6 +25,7 @@ impl core::fmt::Display for vyre_reference::composition_witness::WitnessPostProc
 impl core::fmt::Display for vyre_reference::dual_impls::EvalError
 impl inventory::Collect for vyre_reference::DualReferenceFacet
 impl inventory::Collect for vyre_reference::ReferenceFacet
+impl vyre_foundation::diagnostics::ToDiagnostic for vyre_reference::ReferenceError
 impl vyre_foundation::visit::expr_visitor::ExprVisitor for vyre_reference::workgroup::LocalSlots
 impl vyre_foundation::visit::node_visitor::NodeVisitor for vyre_reference::workgroup::LocalSlots
 impl vyre_reference::DualReferenceFacet
@@ -132,6 +136,8 @@ pub enum vyre_reference::composition_witness::RuleConditionWitness
 pub enum vyre_reference::composition_witness::RuleFormulaWitness
 pub enum vyre_reference::composition_witness::WitnessPostProcessError
 pub enum vyre_reference::composition_witness::ZxColor
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_reference::ReferenceError) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_reference::ReferenceError) -> Self
 pub fn vyre_primitives::markers::ArithAdd::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
 pub fn vyre_primitives::markers::ArithMul::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
 pub fn vyre_primitives::markers::Clz::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
@@ -156,8 +162,10 @@ pub fn vyre_reference::ReferenceError::new(message: impl core::convert::Into<all
 pub fn vyre_reference::ReferenceError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
 pub fn vyre_reference::ReferenceError::step_ceiling(source: vyre_reference::StepCeilingExceeded) -> Self
 pub fn vyre_reference::ReferenceError::step_ceiling_source(&self) -> core::option::Option<&vyre_reference::StepCeilingExceeded>
+pub fn vyre_reference::ReferenceError::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_reference::ReferenceError::validation(source: vyre_foundation::validate::validation_error::ValidationError) -> Self
 pub fn vyre_reference::ReferenceError::validation_source(&self) -> core::option::Option<&vyre_foundation::validate::validation_error::ValidationError>
+pub fn vyre_reference::ReferenceInputMismatch::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_reference::atomics::apply(op: vyre_spec::atomic_op::AtomicOp, old: u32, expected: core::option::Option<u32>, value: u32) -> core::result::Result<(u32, u32), vyre_reference::ReferenceError>
 pub fn vyre_reference::atomics::atomic_add(old: u32, value: u32) -> (u32, u32)
 pub fn vyre_reference::atomics::atomic_and(old: u32, value: u32) -> (u32, u32)
@@ -758,6 +766,7 @@ pub fn vyre_reference::reference_eval_with_grid(program: &vyre_foundation::ir_in
 pub fn vyre_reference::reference_eval_with_step_ceiling(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], ceiling: u64) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, u64), vyre_reference::ReferenceError>
 pub fn vyre_reference::reference_facets() -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &'static vyre_reference::ReferenceFacet>
 pub fn vyre_reference::reference_fn(operation_id: &str) -> core::option::Option<vyre_spec::intrinsic_descriptor::CpuFn>
+pub fn vyre_reference::reference_input_values(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceInputMismatch>
 pub fn vyre_reference::reference_inputs(program: &vyre_foundation::ir_inner::model::program::definition::Program, buffers: alloc::vec::Vec<alloc::vec::Vec<u8>>) -> alloc::vec::Vec<vyre_reference::value::Value>
 pub fn vyre_reference::resolve_dual(operation_id: &str) -> core::option::Option<(vyre_reference::dual::ReferenceFn, vyre_reference::dual::ReferenceFn)>
 pub fn vyre_reference::run_arena_reference(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
@@ -894,6 +903,7 @@ pub struct vyre_reference::DualReferenceFacet
 pub struct vyre_reference::OobReport
 pub struct vyre_reference::ReferenceError
 pub struct vyre_reference::ReferenceFacet
+pub struct vyre_reference::ReferenceInputMismatch
 pub struct vyre_reference::StepCeilingExceeded
 pub struct vyre_reference::composition_witness::AdjointPair
 pub struct vyre_reference::composition_witness::Adler32ChunkWitness
@@ -978,6 +988,9 @@ pub vyre_reference::OobReport::oob_loads: u64
 pub vyre_reference::OobReport::oob_stores: u64
 pub vyre_reference::ReferenceFacet::execute: vyre_spec::intrinsic_descriptor::CpuFn
 pub vyre_reference::ReferenceFacet::operation_id: &'static str
+pub vyre_reference::ReferenceInputMismatch::expected: usize
+pub vyre_reference::ReferenceInputMismatch::missing: core::option::Option<alloc::string::String>
+pub vyre_reference::ReferenceInputMismatch::received: usize
 pub vyre_reference::StepCeilingExceeded::ceiling: u64
 pub vyre_reference::StepCeilingExceeded::program: alloc::string::String
 pub vyre_reference::composition_witness::AdjointPair::is_adjoint: bool

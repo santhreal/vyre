@@ -442,25 +442,7 @@ pub(crate) unsafe fn dispatch_program(
     inputs: &[&[u8]],
     config: &vyre_driver::DispatchConfig,
 ) -> Result<Vec<Vec<u8>>, BackendError> {
-    if config.float_lowering.blocks_contraction() {
-        let ops = vyre_foundation::fp_parity::approximable_operations(program);
-        let name = if ops.is_empty() {
-            format!(
-                "float lowering mode `{}`",
-                config.float_lowering.cache_label()
-            )
-        } else {
-            format!(
-                "float lowering mode `{}` for operation(s) {}",
-                config.float_lowering.cache_label(),
-                ops.join(", ")
-            )
-        };
-        return Err(BackendError::UnsupportedFeature {
-            name,
-            backend: crate::SPIRV_BACKEND_ID.to_string(),
-        });
-    }
+    BackendError::reject_blocked_contraction(program, config.float_lowering, crate::SPIRV_BACKEND_ID)?;
     if config.cooperative {
         return Err(BackendError::UnsupportedFeature {
             name: "SPIR-V cooperative grid dispatch".to_string(),

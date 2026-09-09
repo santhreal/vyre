@@ -14,9 +14,7 @@ use vyre_foundation::ir::Program;
 use crate::dispatch_buffers::{
     decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_megakernel::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Canonical op ID for the autotune step.
 pub const OP_ID: &str = "vyre-libs::self_substrate::kfac_autotune_step";
@@ -138,21 +136,14 @@ pub fn kfac_autotune_step_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[0], byte_len);
     write_f32_slice_le_bytes(&mut scratch.inputs[1], blocks_in);
     write_zero_bytes(&mut scratch.inputs[2], byte_len);
-    let outputs = execute_single_program(
+    let output = crate::dispatch_buffers::run_single_first_output(
         dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: kfac_autotune_step_via expected at least the blocks_out output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_f32_output_exact(&outputs[0], total_cells, "kfac_autotune_step_via", out)
+        "kfac_autotune_step_via",
+    )?;
+    decode_f32_output_exact(&output, total_cells, "kfac_autotune_step_via", out)
 }
 
 #[cfg(test)]

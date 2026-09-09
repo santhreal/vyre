@@ -313,25 +313,7 @@ impl CudaBackend {
                 backend: crate::CUDA_BACKEND_ID.to_string(),
             });
         }
-        if config.float_lowering.blocks_contraction() {
-            let ops = vyre_foundation::fp_parity::approximable_operations(program);
-            let name = if ops.is_empty() {
-                format!(
-                    "float lowering mode `{}`",
-                    config.float_lowering.cache_label()
-                )
-            } else {
-                format!(
-                    "float lowering mode `{}` for operation(s) {}",
-                    config.float_lowering.cache_label(),
-                    ops.join(", ")
-                )
-            };
-            return Err(BackendError::UnsupportedFeature {
-                name,
-                backend: crate::CUDA_BACKEND_ID.to_string(),
-            });
-        }
+        BackendError::reject_blocked_contraction(program, config.float_lowering, crate::CUDA_BACKEND_ID)?;
         Ok(())
     }
 

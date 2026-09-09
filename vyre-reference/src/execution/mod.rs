@@ -126,6 +126,73 @@ pub fn reference_inputs(program: &Program, buffers: Vec<Vec<u8>>) -> Vec<Value> 
         .collect()
 }
 
+/// The reference input list does not match what the program declares.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReferenceInputMismatch {
+    /// Reference inputs the program declares.
+    pub expected: usize,
+    /// Buffers the caller supplied.
+    pub received: usize,
+    /// First declared reference input with no supplied buffer, when the caller
+    /// supplied too few.
+    pub missing: Option<String>,
+}
+
+impl std::fmt::Display for ReferenceInputMismatch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.missing {
+            Some(name) => write!(
+                f,
+                "missing an input buffer for `{name}`: the program declares {} reference input(s) and the caller supplied {}",
+                self.expected, self.received
+            ),
+            None => write!(
+                f,
+                "{} extra input buffer(s): the program declares {} reference input(s) and the caller supplied {}",
+                self.received.saturating_sub(self.expected),
+                self.expected,
+                self.received
+            ),
+        }
+    }
+}
+
+/// One `Value` per [`is_reference_input`] buffer, taken from `inputs` in
+/// declaration order.
+///
+/// A caller holding borrowed bytes reads this rather than walking
+/// `Program::buffers()` itself. Two callers walked it, each spelling the
+/// selection out as `access() != Workgroup && !is_backend_allocated_output()`,
+/// which is the drifted form [`is_reference_input`] documents: it admits a
+/// `Shared` buffer, a `Persistent` buffer, and a non-read-write
+/// `pipeline_live_out`, none of which a device stages from the host. A program
+/// declaring one of those consumed an input the device never asks for, so every
+/// later buffer read the value before it.
+pub fn reference_input_values(
+    program: &Program,
+    inputs: &[&[u8]],
+) -> Result<Vec<Value>, ReferenceInputMismatch> {
+    let expected = program
+        .buffers()
+        .iter()
+        .filter(|decl| is_reference_input(decl))
+        .count();
+    if expected != inputs.len() {
+        let missing = program
+            .buffers()
+            .iter()
+            .filter(|decl| is_reference_input(decl))
+            .nth(inputs.len())
+            .map(|decl| decl.name().to_string());
+        return Err(ReferenceInputMismatch {
+            expected,
+            received: inputs.len(),
+            missing,
+        });
+    }
+    Ok(inputs.iter().copied().map(Value::from).collect())
+}
+
 /// Execute a vyre IR program on the pure Rust reference interpreter.
 ///
 /// The current public [`Program`] model is statement-oriented, so this stable

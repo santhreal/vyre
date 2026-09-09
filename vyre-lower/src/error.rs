@@ -3,7 +3,6 @@
 use thiserror::Error;
 use vyre_foundation::diagnostics::{
     CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, RetryClass, Severity,
-    ToDiagnostic,
 };
 
 /// Failure produced while lowering Vyre IR.
@@ -170,20 +169,4 @@ impl LowerError {
     }
 }
 
-impl ToDiagnostic for LowerError {
-    fn to_diagnostic(&self) -> Diagnostic {
-        self.diagnostic()
-    }
-}
-
-impl From<&LowerError> for Diagnostic {
-    fn from(error: &LowerError) -> Self {
-        error.diagnostic()
-    }
-}
-
-impl From<LowerError> for Diagnostic {
-    fn from(error: LowerError) -> Self {
-        error.diagnostic()
-    }
-}
+vyre_foundation::diagnostic_conversions!(LowerError, diagnostic);

@@ -24,10 +24,9 @@ fn facts_for(graph: &ProgramGraph, domain_byte: u8) -> ExternalFacts {
     let mut facts = ExternalFacts::new(Digest([domain_byte; 32]), BTreeMap::new());
     for (val_id, val) in graph.values().iter().enumerate() {
         if val.contract.lifetime == ValueLifetime::Constant {
-            facts.constant_identities.insert(
-                GraphValueId(val_id as u32),
-                Digest([domain_byte; 32]),
-            );
+            facts
+                .constant_identities
+                .insert(GraphValueId(val_id as u32), Digest([domain_byte; 32]));
         }
     }
     facts
@@ -35,8 +34,8 @@ fn facts_for(graph: &ProgramGraph, domain_byte: u8) -> ExternalFacts {
 
 #[test]
 fn domain_1_dense_neural_pipeline_compiles_through_production_path() {
-    let graph = build_dense_neural_pipeline(4, 16, 32, 8)
-        .expect("dense neural pipeline graph must build");
+    let graph =
+        build_dense_neural_pipeline(4, 16, 32, 8).expect("dense neural pipeline graph must build");
 
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
         .expect("logical algorithm stage must validate");
@@ -60,8 +59,12 @@ fn domain_1_dense_neural_pipeline_compiles_through_production_path() {
     assert!(!artifact.nodes().is_empty());
     assert!(!artifact.abi().entries.is_empty());
     artifact.validate_abi().expect("abi must be valid");
-    artifact.validate_geometry().expect("geometry must be valid");
-    let bytes = artifact.to_bytes().expect("artifact must serialize to bytes");
+    artifact
+        .validate_geometry()
+        .expect("geometry must be valid");
+    let bytes = artifact
+        .to_bytes()
+        .expect("artifact must serialize to bytes");
     assert!(!bytes.is_empty());
 }
 
@@ -74,7 +77,10 @@ fn domain_2_csr_graph_traversal_compiles_through_production_path() {
         .expect("logical algorithm stage must validate");
     assert!(!logical.regions().is_empty());
     let has_stateful = logical.regions().iter().any(|r| r.kind.is_stateful());
-    assert!(has_stateful, "CSR traversal must contain stateful/recurrent regions");
+    assert!(
+        has_stateful,
+        "CSR traversal must contain stateful/recurrent regions"
+    );
 
     let request = CompileRequest::new(
         graph.clone(),
@@ -90,15 +96,19 @@ fn domain_2_csr_graph_traversal_compiles_through_production_path() {
     assert!(!artifact.nodes().is_empty());
     assert!(!artifact.abi().entries.is_empty());
     artifact.validate_abi().expect("abi must be valid");
-    artifact.validate_geometry().expect("geometry must be valid");
-    let bytes = artifact.to_bytes().expect("artifact must serialize to bytes");
+    artifact
+        .validate_geometry()
+        .expect("geometry must be valid");
+    let bytes = artifact
+        .to_bytes()
+        .expect("artifact must serialize to bytes");
     assert!(!bytes.is_empty());
 }
 
 #[test]
 fn domain_3_streaming_parser_pipeline_compiles_through_production_path() {
-    let graph = build_streaming_parser_pipeline(32)
-        .expect("streaming parser pipeline graph must build");
+    let graph =
+        build_streaming_parser_pipeline(32).expect("streaming parser pipeline graph must build");
 
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
         .expect("logical algorithm stage must validate");
@@ -118,8 +128,12 @@ fn domain_3_streaming_parser_pipeline_compiles_through_production_path() {
     assert!(!artifact.nodes().is_empty());
     assert!(!artifact.abi().entries.is_empty());
     artifact.validate_abi().expect("abi must be valid");
-    artifact.validate_geometry().expect("geometry must be valid");
-    let bytes = artifact.to_bytes().expect("artifact must serialize to bytes");
+    artifact
+        .validate_geometry()
+        .expect("geometry must be valid");
+    let bytes = artifact
+        .to_bytes()
+        .expect("artifact must serialize to bytes");
     assert!(!bytes.is_empty());
 }
 
@@ -134,7 +148,9 @@ fn three_unrelated_domains_share_identical_production_compilation_route() {
         DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 1, 0, 1_000_000),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
-    ).validate().expect("req 1");
+    )
+    .validate()
+    .expect("req 1");
 
     let r2 = CompileRequest::new(
         g2.clone(),
@@ -142,7 +158,9 @@ fn three_unrelated_domains_share_identical_production_compilation_route() {
         DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 1, 0, 1_000_000),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
-    ).validate().expect("req 2");
+    )
+    .validate()
+    .expect("req 2");
 
     let r3 = CompileRequest::new(
         g3.clone(),
@@ -150,7 +168,9 @@ fn three_unrelated_domains_share_identical_production_compilation_route() {
         DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 1, 0, 1_000_000),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
-    ).validate().expect("req 3");
+    )
+    .validate()
+    .expect("req 3");
 
     let a1 = compile(&r1).expect("compile domain 1");
     let a2 = compile(&r2).expect("compile domain 2");

@@ -177,6 +177,44 @@ pub fn write_f32_slice_le_bytes(out: &mut Vec<u8>, values: &[f32]) {
     vyre_primitives::wire::pack_f32_slice_into(values, out);
 }
 
+/// Run one schedule-free program through the semantic boundary and return its
+/// output buffers.
+///
+/// Every wrapper in this crate crosses the boundary the same way, with the same
+/// wrapper node identity and the same projection off the execution record.
+/// Twenty-five of them stated that call by hand, so the node identity and the
+/// projection were free to drift apart per module.
+pub fn run_single(
+    dispatcher: &dyn vyre_megakernel::SemanticExecutor,
+    program: vyre_foundation::ir::Program,
+    inputs: &[Vec<u8>],
+    policy: &vyre_megakernel::SemanticExecutionPolicy,
+) -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
+    vyre_megakernel::execute_single_program(dispatcher, HOST_WRAPPER_NODE, program, inputs, policy)
+        .map(|output| output.outputs)
+}
+
+/// Run one program and return its first output buffer.
+///
+/// A wrapper that decodes one result rejects an empty output set with the same
+/// refusal, named for the caller.
+pub fn run_single_first_output(
+    dispatcher: &dyn vyre_megakernel::SemanticExecutor,
+    program: vyre_foundation::ir::Program,
+    inputs: &[Vec<u8>],
+    policy: &vyre_megakernel::SemanticExecutionPolicy,
+    context: &str,
+) -> Result<Vec<u8>, SemanticExecutionError> {
+    run_single(dispatcher, program, inputs, policy)?
+        .into_iter()
+        .next()
+        .ok_or_else(|| {
+            SemanticExecutionError::Backend(format!(
+                "Fix: {context} expected at least one output buffer, got 0."
+            ))
+        })
+}
+
 /// Return the sole dispatcher output buffer and reject missing or surplus buffers.
 ///
 /// Gated to match its callers: the `analysis` cost model and the `solvers` FMM

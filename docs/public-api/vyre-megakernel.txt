@@ -6,6 +6,8 @@
 #[non_exhaustive] pub enum vyre_megakernel::TargetCompileError
 #[non_exhaustive] pub enum vyre_megakernel::WorkloadAggregation
 #[non_exhaustive] pub enum vyre_megakernel::legality::FusionRejectionReason
+impl core::convert::From<&vyre_megakernel::TargetCompileError> for vyre_foundation::diagnostics::Diagnostic
+impl core::convert::From<vyre_megakernel::TargetCompileError> for vyre_foundation::diagnostics::Diagnostic
 impl core::default::Default for vyre_megakernel::ExecutionTopology
 impl core::default::Default for vyre_megakernel::FrontierTopology
 impl core::default::Default for vyre_megakernel::MetricSequence
@@ -20,6 +22,7 @@ impl core::fmt::Display for vyre_megakernel::RealTimeViolation
 impl core::fmt::Display for vyre_megakernel::ResourceNameCollision
 impl core::fmt::Display for vyre_megakernel::specialization::SpecializationAxis
 impl serde_core::ser::Serialize for vyre_megakernel::Digest
+impl vyre_foundation::diagnostics::ToDiagnostic for vyre_megakernel::TargetCompileError
 impl vyre_megakernel::Artifact
 impl vyre_megakernel::ArtifactEnvelope
 impl vyre_megakernel::ArtifactPortfolio
@@ -57,6 +60,7 @@ impl vyre_megakernel::SelectedLowering
 impl vyre_megakernel::SelectedPlan
 impl vyre_megakernel::SemanticExecutionPolicy
 impl vyre_megakernel::SingleProgramExecutionOutput
+impl vyre_megakernel::TargetCompileError
 impl vyre_megakernel::TargetModuleBundle
 impl vyre_megakernel::TargetModuleImage
 impl vyre_megakernel::TargetPayload
@@ -400,6 +404,8 @@ pub enum vyre_megakernel::specialization::SpecializationAxis
 pub enum vyre_megakernel::specialization::SpecializedRemainder
 pub enum vyre_megakernel::specialization::TargetCapabilityAxis
 pub enum vyre_megakernel::specialization::TargetResourceAxis
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_megakernel::TargetCompileError) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_megakernel::TargetCompileError) -> Self
 pub fn vyre_megakernel::Artifact::barriers(&self) -> &[vyre_megakernel::BarrierRecord]
 pub fn vyre_megakernel::Artifact::canonical_value_by_name(&self) -> core::result::Result<alloc::collections::btree::map::BTreeMap<&str, vyre_megakernel::ArtifactValueId>, vyre_megakernel::ResourceNameCollision>
 pub fn vyre_megakernel::Artifact::dependencies(&self) -> &[vyre_megakernel::DependencyEdge]
@@ -485,6 +491,8 @@ pub fn vyre_megakernel::SemanticExecutionRequest<'a>::compile_request(&self) -> 
 pub fn vyre_megakernel::SemanticExecutionRequest<'a>::new(logical: &'a vyre_foundation::logical::LogicalProgramGraph<'a>, inputs: alloc::collections::btree::map::BTreeMap<vyre_foundation::ir_inner::model::program_graph::GraphValueId, &'a [u8]>, policy: vyre_megakernel::SemanticExecutionPolicy) -> core::result::Result<Self, vyre_megakernel::SemanticExecutionError>
 pub fn vyre_megakernel::SemanticExecutor::execute(&self, request: &vyre_megakernel::SemanticExecutionRequest<'_>) -> core::result::Result<vyre_megakernel::SemanticExecutionOutput, vyre_megakernel::SemanticExecutionError>
 pub fn vyre_megakernel::SingleProgramExecutionOutput::buffer(&self, name: &str) -> core::option::Option<&[u8]>
+pub fn vyre_megakernel::TargetCompileError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
+pub fn vyre_megakernel::TargetCompileError::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_megakernel::TargetCompiler::compile(&self, artifact: &vyre_megakernel::Artifact) -> core::result::Result<vyre_megakernel::TargetPayload, vyre_megakernel::TargetCompileError>
 pub fn vyre_megakernel::TargetCompiler::format(&self) -> &vyre_megakernel::TargetPayloadFormat
 pub fn vyre_megakernel::TargetCompiler::profile(&self) -> &vyre_megakernel::TargetProfile

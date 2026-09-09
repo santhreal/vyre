@@ -29,7 +29,6 @@ mod pipeline_error_closure;
 use std::fmt;
 use vyre_foundation::diagnostics::{
     CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, RetryClass, Severity,
-    ToDiagnostic,
 };
 /// Renders a permitted-status set as protocol status names, so a rejection
 /// message states `PUBLISHED, YIELD, REQUEUE` rather than raw words.
@@ -1030,29 +1029,13 @@ impl PipelineError {
     }
 }
 
-impl ToDiagnostic for PipelineError {
-    fn to_diagnostic(&self) -> Diagnostic {
-        self.diagnostic()
-    }
-}
-
-impl From<&PipelineError> for Diagnostic {
-    fn from(error: &PipelineError) -> Self {
-        error.diagnostic()
-    }
-}
-
-impl From<PipelineError> for Diagnostic {
-    fn from(error: PipelineError) -> Self {
-        error.diagnostic()
-    }
-}
-
 impl From<vyre_driver::BackendError> for PipelineError {
     fn from(err: vyre_driver::BackendError) -> Self {
         PipelineError::Backend(err.to_string())
     }
 }
+
+vyre_foundation::diagnostic_conversions!(PipelineError, diagnostic);
 
 /// Canonical artifact-envelope authentication and exact-format admission.
 pub mod artifact_admission;
@@ -1283,3 +1266,4 @@ impl<'a> UringCompletionPump<'a> {
 }
 pub use generation_namespace::{GenerationScopedNamespace, RollingUpgradeCoordinator, UpgradePhase};
 pub use atomic_recovery::{AtomicGuardedState, GuardedState, PrepareCommitJournal, PrepareTicket, SupervisedRestartBudget};
+

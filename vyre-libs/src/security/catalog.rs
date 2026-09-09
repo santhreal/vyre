@@ -6,44 +6,44 @@ use vyre_foundation::operation::OperationRegistration;
 macro_rules! bitset_and_entry {
     ($module:ident, $build:expr) => {
         inventory::submit! {
-            OperationRegistration::library_unconstrained(
-                super::$module::OP_ID,
-                $build,
-                Some(|| {
-                    vec![vec![
-                        vec![12, 0, 0, 0],
-                        vec![10, 0, 0, 0],
-                    ]]
-                }),
-                Some(|| {
-                    vec![vec![vec![8, 0, 0, 0]]]
-                }),
-            )
-            .with_category("security")
-    .with_opaque("static taint analysis and control-flow dominance check")
-}
+                    OperationRegistration::library_unconstrained(
+                        super::$module::OP_ID,
+                        $build,
+                        Some(|| {
+                            vec![vec![
+                                vec![12, 0, 0, 0],
+                                vec![10, 0, 0, 0],
+                            ]]
+                        }),
+                        Some(|| {
+                            vec![vec![vec![8, 0, 0, 0]]]
+                        }),
+                    )
+                    .with_category("security")
+            .with_opaque("static taint analysis and control-flow dominance check")
+        }
     };
 }
 
 macro_rules! bitset_and_not_entry {
     ($module:ident, $build:expr) => {
         inventory::submit! {
-            OperationRegistration::library_unconstrained(
-                super::$module::OP_ID,
-                $build,
-                Some(|| {
-                    vec![vec![
-                        vec![15, 0, 0, 0],
-                        vec![12, 0, 0, 0],
-                    ]]
-                }),
-                Some(|| {
-                    vec![vec![vec![3, 0, 0, 0]]]
-                }),
-            )
-            .with_category("security")
-    .with_opaque("static taint analysis and control-flow dominance check")
-}
+                    OperationRegistration::library_unconstrained(
+                        super::$module::OP_ID,
+                        $build,
+                        Some(|| {
+                            vec![vec![
+                                vec![15, 0, 0, 0],
+                                vec![12, 0, 0, 0],
+                            ]]
+                        }),
+                        Some(|| {
+                            vec![vec![vec![3, 0, 0, 0]]]
+                        }),
+                    )
+                    .with_category("security")
+            .with_opaque("static taint analysis and control-flow dominance check")
+        }
     };
 }
 
@@ -120,15 +120,15 @@ inventory::submit! {
 macro_rules! reach_flow_entry {
     ($op_id:expr, $build:expr, $inputs_fn:expr, $expected_bytes:expr) => {
         inventory::submit! {
-            OperationRegistration::library_unconstrained(
-                $op_id,
-                $build,
-                Some($inputs_fn),
-                Some(|| vec![vec![$expected_bytes.to_vec()]]),
-            )
-            .with_category("security")
-    .with_opaque("static taint analysis and control-flow dominance check")
-}
+                    OperationRegistration::library_unconstrained(
+                        $op_id,
+                        $build,
+                        Some($inputs_fn),
+                        Some(|| vec![vec![$expected_bytes.to_vec()]]),
+                    )
+                    .with_category("security")
+            .with_opaque("static taint analysis and control-flow dominance check")
+        }
         inventory::submit! {
             crate::operation_catalog::ConvergenceContract {
                 op_id: $op_id,

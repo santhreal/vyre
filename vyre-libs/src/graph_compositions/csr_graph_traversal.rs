@@ -5,8 +5,9 @@
 //! one connected validated [`ProgramGraph`].
 
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, ControlBounds, DataType, Expr, GraphInput, GraphOutput, Node, Program,
-    ProgramGraph, ProgramGraphBuilder, ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
+    BufferAccess, BufferDecl, ControlBounds, DataType, Expr, GraphInput, GraphOutput, Node,
+    Program, ProgramGraph, ProgramGraphBuilder, ProgramGraphError, ShapeDim, ValueContract,
+    ValueLifetime,
 };
 
 /// Build a representative CSR graph traversal and PageRank iteration whole-graph.
@@ -77,10 +78,7 @@ pub fn build_csr_graph_traversal_pipeline(
                 "next_ranks",
                 Expr::gid_x(),
                 Expr::add(
-                    Expr::mul(
-                        Expr::load("curr_ranks", Expr::gid_x()),
-                        Expr::f32(0.85),
-                    ),
+                    Expr::mul(Expr::load("curr_ranks", Expr::gid_x()), Expr::f32(0.85)),
                     Expr::f32(0.15 / node_count as f32),
                 ),
             ),

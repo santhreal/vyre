@@ -306,7 +306,7 @@ impl ResourceUsageTransition {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TimelineSyncProtocol {
-    /// Monotonically increasing timeline semaphore (Vulkan / DX12).
+    /// Monotonically increasing timeline semaphore.
     TimelineSemaphore {
         /// Timeline semaphore ID.
         timeline_id: u64,
@@ -344,7 +344,7 @@ pub enum TimelineSyncProtocol {
 pub enum ExternalMemoryCapability {
     /// Linux DMA-BUF file descriptor.
     DmaBuf,
-    /// Windows NT handle (DX12 / Vulkan external memory).
+    /// Windows NT handle for external memory.
     Win32Nt,
     /// Apple Metal shared texture / buffer.
     MetalSharedResource,

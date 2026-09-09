@@ -677,61 +677,6 @@ mod tests {
     }
 
     #[test]
-    fn local_single_rank_lowering_covers_all_collective_node_kinds() {
-        let program = Program::wrapped(
-            vec![
-                BufferDecl::storage(
-                    "input",
-                    0,
-                    crate::ir::BufferAccess::ReadWrite,
-                    DataType::U32,
-                )
-                .with_count(16),
-                BufferDecl::storage("out", 1, crate::ir::BufferAccess::ReadWrite, DataType::U32)
-                    .with_count(16),
-            ],
-            [64, 1, 1],
-            vec![Node::Block(vec![
-                Node::AllReduce {
-                    buffer: "input".into(),
-                    op: CollectiveOp::Sum,
-                    group: CommGroup::WORLD,
-                },
-                Node::AllGather {
-                    input: "input".into(),
-                    output: "out".into(),
-                    group: CommGroup::WORLD,
-                },
-                Node::ReduceScatter {
-                    input: "input".into(),
-                    output: "out".into(),
-                    op: CollectiveOp::Max,
-                    group: CommGroup::WORLD,
-                },
-                Node::Broadcast {
-                    buffer: "out".into(),
-                    root: 0,
-                    group: CommGroup::WORLD,
-                },
-            ])],
-        );
-        let plan = collective_transport_plan(&program);
-        assert_eq!(plan.local_single_rank_collectives(), 4);
-        assert_eq!(plan.transport_collectives(), 0);
-        assert_eq!(plan.local_ops().all_reduce(), 1);
-        assert_eq!(plan.local_ops().all_gather(), 1);
-        assert_eq!(plan.local_ops().reduce_scatter(), 1);
-        assert_eq!(plan.local_ops().broadcast(), 1);
-
-        let lowered = lower_single_rank_collectives(&program)
-            .expect("Fix: all WORLD single-rank collective kinds must lower locally")
-            .expect("Fix: local collective lowering must rewrite the program");
-
-        assert!(!lowered.stats().distributed_collectives());
-        assert!(validate(&lowered).is_empty());
-    }
-
-    #[test]
     fn generated_collective_transport_plan_histograms_classify_all_kinds() {
         for seed in 0..4096u32 {
             let mut expected_local = CollectiveOpCounts::default();

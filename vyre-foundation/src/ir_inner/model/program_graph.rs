@@ -81,6 +81,27 @@ pub struct ValueContract {
     pub lifetime: ValueLifetime,
 }
 
+impl ValueContract {
+    /// A contract over one statically known dimension of `count` elements.
+    ///
+    /// The shape every connected value that is a flat buffer has, which is
+    /// otherwise spelled as a two-line struct literal at each graph port.
+    #[must_use]
+    pub fn dense_1d(
+        dtype: DataType,
+        count: u64,
+        access: BufferAccess,
+        lifetime: ValueLifetime,
+    ) -> Self {
+        Self {
+            dtype,
+            shape: vec![ShapeDim::Known(count)],
+            access,
+            lifetime,
+        }
+    }
+}
+
 /// Bind one existing graph value to a named Program buffer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GraphInput {
@@ -1525,50 +1546,36 @@ fn estimate_node_bytes(node: &crate::ir::Node, bytes: &mut usize) {
             *bytes += name.as_str().len();
             estimate_expr_bytes(value, bytes);
         }
-        Node::Store { buffer, index, value, .. } => {
+        Node::Store {
+            buffer,
+            index,
+            value,
+            ..
+        } => {
             *bytes += buffer.as_str().len();
             estimate_expr_bytes(index, bytes);
             estimate_expr_bytes(value, bytes);
         }
-        Node::If { cond, then, otherwise } => {
-            estimate_expr_bytes(cond, bytes);
-            for node in then.iter().chain(otherwise.iter()) {
-                estimate_node_bytes(node, bytes);
-            }
-        }
-        Node::Loop { from, to, body, .. } => {
+        Node::If { cond, .. } => estimate_expr_bytes(cond, bytes),
+        Node::Loop { from, to, .. } => {
             estimate_expr_bytes(from, bytes);
             estimate_expr_bytes(to, bytes);
-            for node in body {
-                estimate_node_bytes(node, bytes);
-            }
         }
         Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
             estimate_expr_bytes(offset, bytes);
             estimate_expr_bytes(size, bytes);
         }
-        Node::Trap { address, .. } => {
-            estimate_expr_bytes(address, bytes);
-        }
-        Node::Block(body) => {
-            for node in body {
-                estimate_node_bytes(node, bytes);
-            }
-        }
-        Node::Region { body, .. } => {
-            for node in body.iter() {
-                estimate_node_bytes(node, bytes);
-            }
-        }
-        Node::TileElementwise { body, .. } => {
-            for node in body {
-                estimate_node_bytes(node, bytes);
-            }
-        }
-        Node::Opaque(_) => {
-            *bytes += 64;
-        }
+        Node::Trap { address, .. } => estimate_expr_bytes(address, bytes),
+        Node::Opaque(_) => *bytes += 64,
         _ => {}
+    }
+    // Nested statements come from the one owner of `Node` child structure, so
+    // a nesting variant added to `Node` is measured here rather than counted
+    // as its own header and nothing else.
+    for body in crate::visit::child_bodies(node) {
+        for child in body {
+            estimate_node_bytes(child, bytes);
+        }
     }
 }
 

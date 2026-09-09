@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use thiserror::Error;
 use vyre_foundation::fp_parity::FloatLoweringMode;
-use vyre_foundation::ir::{BufferAccess, Program};
+use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
 
 /// Errors returned by [`OracleSession`].
@@ -24,7 +24,10 @@ pub enum OracleError {
     },
 
     /// Strict IEEE transcendental expansion failed.
-    #[error("oracle cannot lower strict IEEE float mode: {0}")]
+    #[error(
+        "oracle cannot lower float mode `{mode}`: {0}. Fix: give the operation an exact f32 expansion in vyre_foundation::fp_expansion.",
+        mode = FloatLoweringMode::StrictIeee.cache_label()
+    )]
     FloatExpansion(String),
 
     /// Pure-Rust reference evaluation failed.
@@ -94,35 +97,16 @@ impl OracleSession {
 }
 
 fn reference_values(program: &Program, inputs: &[&[u8]]) -> Result<Vec<Value>, OracleError> {
-    let mut next_input = 0usize;
-    let mut values = Vec::new();
-    for buffer in program.buffers() {
-        if buffer.access() == BufferAccess::Workgroup {
-            continue;
+    // `vyre_reference::reference_input_values` is the interpreter's own input
+    // ABI. This walk selected buffers as
+    // `access() != Workgroup && !is_backend_allocated_output()`, which admits a
+    // `Shared` buffer, a `Persistent` buffer, and a non-read-write
+    // `pipeline_live_out` that no backend stages from the host, so the oracle
+    // asked a device for one value more than the device consumes.
+    vyre_reference::reference_input_values(program, inputs).map_err(|mismatch| {
+        OracleError::InputBufferCountMismatch {
+            expected: mismatch.expected,
+            received: mismatch.received,
         }
-        if buffer.is_backend_allocated_output() {
-            continue;
-        }
-        let input = inputs.get(next_input).ok_or_else(|| {
-            OracleError::InputBufferCountMismatch {
-                expected: program
-                    .buffers()
-                    .iter()
-                    .filter(|b| {
-                        b.access() != BufferAccess::Workgroup && !b.is_backend_allocated_output()
-                    })
-                    .count(),
-                received: inputs.len(),
-            }
-        })?;
-        next_input += 1;
-        values.push(Value::from(*input));
-    }
-    if next_input != inputs.len() {
-        return Err(OracleError::InputBufferCountMismatch {
-            expected: next_input,
-            received: inputs.len(),
-        });
-    }
-    Ok(values)
+    })
 }

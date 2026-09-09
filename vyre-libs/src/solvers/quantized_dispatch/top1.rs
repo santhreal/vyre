@@ -9,10 +9,7 @@ use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticE
 
 /// Compute top-1 scores and row indices for packed signed INT4 batched matmul through the backend.
 ///
-/// `weights_packed` is row-major `[rows][i4_packed_words(cols)]`.
-/// `activation_batches_packed` is batch-major `[batch][i4_packed_words(cols)]`.
-/// `row_scales` has `rows` f32 values and `batch_scales` has `batch` f32
-/// values. The returned scores and indices each have exactly `batch` values.
+/// The returned scores and indices each have exactly `batch` values.
 ///
 /// # Errors
 ///
@@ -21,13 +18,7 @@ use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticE
 pub fn i4x8_batched_matmul_top1_f32_scaled_via(
     dispatcher: &dyn SemanticExecutor,
     policy: &SemanticExecutionPolicy,
-    weights_packed: &[u32],
-    activation_batches_packed: &[u32],
-    row_scales: &[f32],
-    batch_scales: &[f32],
-    batch: u32,
-    rows: u32,
-    cols: u32,
+    operands: &PackedI4BatchedMatmul<'_>,
 ) -> Result<(Vec<f32>, Vec<u32>), SemanticExecutionError> {
     let mut scratch = QuantizedBatchedMatmulTop1GpuScratch::default();
     let mut scores = Vec::new();
@@ -35,13 +26,7 @@ pub fn i4x8_batched_matmul_top1_f32_scaled_via(
     i4x8_batched_matmul_top1_f32_scaled_via_with_scratch_into(
         dispatcher,
         policy,
-        weights_packed,
-        activation_batches_packed,
-        row_scales,
-        batch_scales,
-        batch,
-        rows,
-        cols,
+        operands,
         &mut scratch,
         &mut scores,
         &mut indices,
@@ -61,17 +46,12 @@ pub fn i4x8_batched_matmul_top1_f32_scaled_via(
 pub fn i4x8_batched_matmul_top1_f32_scaled_via_with_scratch_into(
     dispatcher: &dyn SemanticExecutor,
     policy: &SemanticExecutionPolicy,
-    weights_packed: &[u32],
-    activation_batches_packed: &[u32],
-    row_scales: &[f32],
-    batch_scales: &[f32],
-    batch: u32,
-    rows: u32,
-    cols: u32,
+    operands: &PackedI4BatchedMatmul<'_>,
     scratch: &mut QuantizedBatchedMatmulTop1GpuScratch,
     scores_out: &mut Vec<f32>,
     indices_out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
+    let batch = operands.batch;
     let batch_usize = batch as usize;
     let expected_words = batch_usize.checked_mul(2).ok_or_else(|| {
         SemanticExecutionError::InvalidRequest(format!(
@@ -88,13 +68,7 @@ pub fn i4x8_batched_matmul_top1_f32_scaled_via_with_scratch_into(
         "i4x8_batched_matmul_top1_f32_scaled_via",
         dispatcher,
         policy,
-        weights_packed,
-        activation_batches_packed,
-        row_scales,
-        batch_scales,
-        batch,
-        rows,
-        cols,
+        operands,
         inputs,
         program_cache,
         Some(expected_words),
@@ -105,9 +79,9 @@ pub fn i4x8_batched_matmul_top1_f32_scaled_via_with_scratch_into(
                 "row_scales",
                 "batch_scales",
                 "scores",
-                batch,
-                rows,
-                cols,
+                operands.batch,
+                operands.rows,
+                operands.cols,
             )
         },
         &mut values,

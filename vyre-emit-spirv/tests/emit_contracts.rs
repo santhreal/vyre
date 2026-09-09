@@ -4,22 +4,13 @@
 
 use vyre_emit_spirv::*;
 use vyre_foundation::ir::DataType;
-use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
+use vyre_lower::descriptor_builder::{
+    body, descriptor, global_rw, lit, op, store_literal_kernel,
+};
 use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
 fn one_store_kernel() -> KernelDescriptor {
-    descriptor("store_one")
-        .slot(global_rw(0, DataType::U32, "out"))
-        .dispatch(64, 1, 1)
-        .body(
-            body()
-                .op(lit(0, 0))
-                .op(lit(1, 1))
-                .op(effect(KernelOpKind::StoreGlobal, [0, 0, 1]))
-                .literal(LiteralValue::U32(0))
-                .literal(LiteralValue::U32(7)),
-        )
-        .build()
+    store_literal_kernel("store_one", global_rw(0, DataType::U32, "out"), [64, 1, 1])
 }
 
 #[test]

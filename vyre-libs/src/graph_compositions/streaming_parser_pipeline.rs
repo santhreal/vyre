@@ -15,9 +15,7 @@ use vyre_foundation::ir::{
 /// - Streaming dataflow values (`ValueLifetime::Stream`)
 /// - Sliding-window checksum & token classification subgraphs
 /// - External effect barriers (`ExternalEffect::StorageBarrier`, `TraceMarker`)
-pub fn build_streaming_parser_pipeline(
-    chunk_size: u64,
-) -> Result<ProgramGraph, ProgramGraphError> {
+pub fn build_streaming_parser_pipeline(chunk_size: u64) -> Result<ProgramGraph, ProgramGraphError> {
     let mut builder = ProgramGraphBuilder::new();
 
     let packet_stream = builder.stream(
@@ -28,11 +26,8 @@ pub fn build_streaming_parser_pipeline(
 
     // Subgraph 1: Windowed Checksum / CRC stage
     let mut crc_builder = ProgramGraphBuilder::new();
-    let crc_in = crc_builder.stream(
-        "raw_bytes",
-        DataType::U8,
-        vec![ShapeDim::Known(chunk_size)],
-    )?;
+    let crc_in =
+        crc_builder.stream("raw_bytes", DataType::U8, vec![ShapeDim::Known(chunk_size)])?;
 
     let crc_p = Program::wrapped(
         vec![

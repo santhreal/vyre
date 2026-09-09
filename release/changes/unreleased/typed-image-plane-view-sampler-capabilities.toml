@@ -1,2 +1,2 @@
-category = "added"
-description = "Added domain-neutral typed image, plane, view, sampler, and external-memory capabilities to the IR model."
+category = "Added"
+text = "The IR model carries typed image, plane, view, sampler and external-memory capabilities in domain-neutral terms, so a backend states which of them it admits instead of a dialect naming its own."

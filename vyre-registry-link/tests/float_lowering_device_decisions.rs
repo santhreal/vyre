@@ -23,7 +23,9 @@ use vyre_foundation::ir::UnOp;
 use vyre_registry_link::backend::live_backend_registry;
 use vyre_test_support::strict_float_programs::f32_multiply_add_program;
 
-use crate::float_lowering::{f32_bytes, first_divergence, ledger_path, read_ledger, Lowering};
+use crate::float_lowering::{
+    f32_bytes, first_divergence, honored_or_refused_by_name, ledger_path, read_ledger, Lowering,
+};
 
 /// A backend that constructs here answers what its row records.
 ///
@@ -213,51 +215,22 @@ fn every_backend_and_float_lowering_mode_pair_is_honored_or_refused_with_remedia
     let mut findings = Vec::new();
 
     for registration in registry {
-        let backend = match registration.acquire() {
-            Ok(backend) => backend,
-            Err(_) => continue,
+        let Ok(backend) = registration.acquire() else {
+            continue;
         };
         for mode in FloatLoweringMode::EVERY {
             let mut config = DispatchConfig::default();
             config.float_lowering = *mode;
-            let honors = backend.honors_float_lowering(*mode);
-            match backend.dispatch(&program, &inputs, &config) {
-                Ok(_) => {
-                    if !honors {
-                        findings.push(format!(
-                            "  backend `{}` returned Ok for mode `{}` but honors_float_lowering returned false",
-                            registration.id,
-                            mode.cache_label()
-                        ));
-                    }
-                }
-                Err(error) => {
-                    if honors {
-                        findings.push(format!(
-                            "  backend `{}` failed dispatch for honored mode `{}`: {error}",
-                            registration.id,
-                            mode.cache_label()
-                        ));
-                    } else {
-                        let message = error.to_string();
-                        let names_mode = message.contains(mode.cache_label());
-                        let names_backend = message.contains(registration.id);
-                        let names_op = if *mode == FloatLoweringMode::StrictIeee {
-                            message.contains("Sin")
-                        } else {
-                            true
-                        };
-                        let has_fix = message.contains("Fix:");
-                        if !names_mode || !names_backend || !names_op || !has_fix {
-                            findings.push(format!(
-                                "  backend `{}` refused unhonored mode `{}` without naming mode, operation, backend, and Fix: in error: {message}",
-                                registration.id,
-                                mode.cache_label()
-                            ));
-                        }
-                    }
-                }
-            }
+            // Only a mode that blocks contraction can refuse over an
+            // operation, so only then is naming one part of the contract.
+            let named_operation = mode.blocks_contraction().then_some("Sin");
+            findings.extend(honored_or_refused_by_name(
+                registration.id,
+                backend.honors_float_lowering(*mode),
+                *mode,
+                named_operation,
+                &backend.dispatch(&program, &inputs, &config),
+            ));
         }
     }
 

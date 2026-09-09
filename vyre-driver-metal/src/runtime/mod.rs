@@ -31,7 +31,8 @@ use self::buffer_plan::{
 };
 use self::dispatch::{
     dispatch_planned_buffers_with_queue, submit_planned_buffers_with_queue,
-    validate_metal_dispatch_config, MetalDispatchResult, MetalPendingDispatch,
+    start_validated_dispatch, MetalDispatchResult, MetalPendingDispatch, BORROWED_DISPATCH,
+    RESIDENT_DISPATCH,
 };
 pub(crate) use self::metrics::push_resident_table_metrics;
 use self::metrics::{
@@ -314,42 +315,17 @@ impl VyreBackend for MetalBackend {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<TimedDispatchResult, BackendError> {
-        let started = Instant::now();
-        validate_metal_dispatch_config(
-            program,
-            config,
-            "Metal cooperative grid dispatch",
-            "Metal non-resident repeated dispatch",
-            "Metal dispatch",
-        )?;
-        let binding_plan = BindingPlan::from_borrowed_inputs(program, inputs)?;
-        let output_layouts = output_binding_layouts(program)?;
-        let output_by_binding = output_layout_map(output_layouts)?;
+        let started = start_validated_dispatch(program, config, &BORROWED_DISPATCH)?;
         let (_, artifact, pipeline) = self.compile_pipeline(program, config)?;
-        let metal_slots = metal_slot_map(&artifact)?;
-        let buffers = plan_buffers(
-            &self.device,
-            &binding_plan,
-            inputs,
-            &output_by_binding,
-            &metal_slots,
-            &artifact.bindings,
-        )?;
-        let result = self.dispatch_planned_buffers(
-            program,
-            &binding_plan,
-            config,
+        self.dispatch_compiled(
             &artifact,
             &pipeline,
-            buffers,
-        )?;
-        Ok(TimedDispatchResult::split_timed(
-            result.outputs,
-            elapsed_ns(started, "Metal borrowed timed dispatch")?,
-            None,
-            result.enqueue_ns,
-            result.wait_ns,
-        ))
+            program,
+            inputs,
+            config,
+            started,
+            &BORROWED_DISPATCH,
+        )
     }
 
     fn allocate_resident(&self, byte_len: usize) -> Result<Resource, BackendError> {
@@ -652,14 +628,7 @@ impl VyreBackend for MetalBackend {
         resources: &[Resource],
         config: &DispatchConfig,
     ) -> Result<Box<dyn PendingDispatch>, BackendError> {
-        let started = Instant::now();
-        validate_metal_dispatch_config(
-            program,
-            config,
-            "Metal cooperative grid resident dispatch",
-            "Metal repeated resident dispatch",
-            "Metal resident dispatch",
-        )?;
+        let started = start_validated_dispatch(program, config, &RESIDENT_DISPATCH)?;
 
         let base_plan = BindingPlan::build(program)?;
         let resolved = self.resolve_resident_resources(&base_plan, resources)?;

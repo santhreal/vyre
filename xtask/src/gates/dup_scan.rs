@@ -9,8 +9,21 @@
 //! The measure is deliberately crude and therefore stable: normalize away
 //! blank lines and comments, cut every file into 8-line shingles, and count a
 //! line as duplicated when a shingle covering it also appears in another file.
-//! Eight lines is long enough that shared boilerplate such as a use block or a
-//! derive list does not trip it, and short enough to catch a copied function.
+//! Eight lines is short enough to catch a copied function.
+//!
+//! A window counts only when at least two of its lines state something. A
+//! delimiter, an attribute, a `use`, a `mod` header, and a bare enum match-arm
+//! pattern do not, so eight of those in a row are not a copy. Eight lines were
+//! assumed to be past the reach of shared boilerplate and are not: a closing
+//! brace run followed by `#[cfg(test)] mod tests { use super::*;` fills a whole
+//! window, and so does one exhaustive variant list. `Node` and `Expr` are
+//! `#[non_exhaustive]` and `vyre_foundation::visit` requires every analysis to
+//! decide every variant with no catch-all arm, so counting the variant list
+//! priced the exhaustiveness the IR requires and pushed an author toward the
+//! catch-all that lets a new variant pass unexamined. One stating line does not
+//! reach the threshold either, because `Ok(report)` above that brace run is the
+//! tail of every gate in the registry. A window holding two statements counts,
+//! so a copied body is still caught.
 //!
 //! Per-crate counts are pinned in `xtask/dup-baseline.toml`. More duplication
 //! than the pin fails. Less is reported so the owning PR can lower it, which is
@@ -63,6 +76,94 @@ fn normalize(text: &str) -> Vec<String> {
         .filter(|line| !line.is_empty() && !line.starts_with("//"))
         .map(str::to_string)
         .collect()
+}
+
+/// True when `line` is only enum variant patterns, as an exhaustive match arm
+/// list is written.
+///
+/// `Node::Store { .. }`, `| Expr::LitU32(_)`, and
+/// `Node::Block(_) | Node::Region { .. }` qualify. Anything carrying a body, a
+/// binding, a guard, or `=>` does not, because that line states a decision
+/// rather than naming a variant.
+fn is_variant_pattern_line(line: &str) -> bool {
+    let body = line.strip_prefix('|').unwrap_or(line).trim_end();
+    let body = body.strip_suffix('|').unwrap_or(body);
+    if body.is_empty() {
+        return false;
+    }
+    body.split('|').all(|part| {
+        let part = part.trim();
+        let path = part
+            .strip_suffix("{ .. }")
+            .or_else(|| part.strip_suffix("(_)"))
+            .or_else(|| part.strip_suffix("(..)"))
+            .unwrap_or(part)
+            .trim_end();
+        !path.is_empty()
+            && path.contains("::")
+            && path
+                .split("::")
+                .all(|segment| is_type_segment(segment.trim()))
+    })
+}
+
+/// True when `segment` is a bare path segment starting with an uppercase
+/// letter, which is what a variant path is made of.
+fn is_type_segment(segment: &str) -> bool {
+    let mut chars = segment.chars();
+    chars.next().is_some_and(char::is_uppercase)
+        && chars.all(|character| character.is_alphanumeric() || character == '_')
+}
+
+/// True when `line` states nothing on its own: a delimiter run, an attribute, a
+/// `use`, a `mod` header, or a bare variant pattern.
+fn is_structural_line(line: &str) -> bool {
+    if line.chars().all(|character| "{}()[];,?".contains(character)) {
+        return true;
+    }
+    if line.starts_with("#[") || line.starts_with("#![") {
+        return true;
+    }
+    if line.starts_with("use ") || line.starts_with("pub use ") {
+        return true;
+    }
+    if is_module_header(line) {
+        return true;
+    }
+    is_variant_pattern_line(line)
+}
+
+/// True when `line` opens a module and nothing else, as a test module does.
+fn is_module_header(line: &str) -> bool {
+    let body = line
+        .strip_prefix("pub(crate) ")
+        .or_else(|| line.strip_prefix("pub "))
+        .unwrap_or(line);
+    let Some(name) = body.strip_prefix("mod ").and_then(|rest| rest.strip_suffix('{')) else {
+        return false;
+    };
+    let name = name.trim();
+    !name.is_empty()
+        && name
+            .chars()
+            .all(|character| character.is_alphanumeric() || character == '_')
+}
+
+/// True when `window` states fewer than two things, so the shared run is shape
+/// rather than logic.
+///
+/// One statement wrapped in scaffolding is not a copied body. Every gate `run`
+/// ends `Ok(report)` above a closing brace run and `#[cfg(test)] mod tests {
+/// use super::*;`, which fills a whole window and matched every other gate in
+/// the registry. Two stating lines is the shortest run that can carry a
+/// decision and its consequence, so a copied body still counts and a shared
+/// tail expression does not.
+fn window_is_structural(window: &[String]) -> bool {
+    window
+        .iter()
+        .filter(|line| !is_structural_line(line))
+        .nth(1)
+        .is_none()
 }
 
 /// The crate a repository-relative path belongs to.
@@ -120,6 +221,9 @@ pub(crate) fn measure(root: &Path) -> Result<BTreeMap<String, CrateCount>, GateE
         entry.total_lines += lines.len();
         let mut duplicated: HashSet<usize> = HashSet::new();
         for (start, window) in lines.windows(SHINGLE).enumerate() {
+            if window_is_structural(window) {
+                continue;
+            }
             if seen.get(&hash(window)).is_some_and(|(_, shared)| *shared) {
                 for offset in 0..SHINGLE {
                     duplicated.insert(start + offset);
@@ -216,6 +320,9 @@ pub(crate) fn report_for(root: &Path, only: Option<&str>) -> Result<Vec<FileRepo
         let mut duplicated: HashSet<usize> = HashSet::new();
         let mut partners: HashMap<u32, usize> = HashMap::new();
         for (start, window) in lines.windows(SHINGLE).enumerate() {
+            if window_is_structural(window) {
+                continue;
+            }
             let Some(occupants) = index.get(&hash(window)) else {
                 continue;
             };
@@ -661,6 +768,149 @@ mod tests {
 
         let counts = measure(&dir).expect("the fixture checkout is measurable");
         assert_eq!(counts["crate-a"].duplicate_lines, 0);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// WHY: `Node` and `Expr` are `#[non_exhaustive]` and every analysis states
+    /// a decision per variant with no catch-all, so the same variant list is
+    /// restated by design. Counting it charged an author for the exhaustiveness
+    /// the IR requires, and the cheapest way to lower the count was the
+    /// catch-all that lets a new variant pass unexamined.
+    #[test]
+    fn a_shared_variant_arm_list_is_not_duplication() {
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-arms-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        crate::fixture_checkout::empty(&dir);
+        fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
+        fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
+        let arms = "        Node::Return\n        | Node::Barrier { .. }\n        | Node::LogicalBarrier { .. }\n        | Node::AsyncWait { .. }\n        | Node::Resume { .. }\n        | Node::TileMatmul { .. }\n        | Node::TileReduce { .. }\n        | Node::TileDecl { .. }\n";
+        fs::write(dir.join("crate-a/src/lib.rs"), arms).expect("write");
+        fs::write(dir.join("crate-b/src/lib.rs"), arms).expect("write");
+
+        let counts = measure(&dir).expect("the fixture checkout is measurable");
+        assert_eq!(counts["crate-a"].duplicate_lines, 0);
+        assert_eq!(counts["crate-b"].duplicate_lines, 0);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// WHY: the exclusion is for the variant list alone. A copied match body is
+    /// the duplication the scan exists to find, and one arm sharing the window
+    /// must not carry the body out of the count.
+    #[test]
+    fn a_copied_match_body_still_counts_beside_its_arms() {
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-body-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        crate::fixture_checkout::empty(&dir);
+        fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
+        fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
+        let block = "        Node::Return\n        | Node::Barrier { .. }\n        | Node::TileDecl { .. } => {\n            let mut total = 0;\n            total += weigh(node);\n            total += weigh_operands(node);\n            record(total);\n            total\n        }\n";
+        fs::write(dir.join("crate-a/src/lib.rs"), block).expect("write");
+        fs::write(dir.join("crate-b/src/lib.rs"), block).expect("write");
+
+        let counts = measure(&dir).expect("the fixture checkout is measurable");
+        assert!(
+            counts["crate-a"].duplicate_lines >= SHINGLE,
+            "a copied body must still be counted, got {}",
+            counts["crate-a"].duplicate_lines
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// WHY: the predicate decides what the scan stops charging for, so its
+    /// boundary is the contract. A line carrying a binding, a guard, a decision,
+    /// a call, or a lowercase path is code, and one of those in a window brings
+    /// the whole window back into the count.
+    #[test]
+    fn only_lines_that_state_nothing_are_structural() {
+        for line in [
+            "Node::Return",
+            "| Expr::LitU32(_)",
+            "Node::Block(_) | Node::Region { .. }",
+            "| Node::TileDecl { .. }",
+            "Node::Opaque(..) |",
+            "}",
+            "});",
+            "#[cfg(test)]",
+            "#![forbid(unsafe_code)]",
+            "use super::*;",
+            "pub use crate::gate::Finding;",
+            "mod tests {",
+            "pub(crate) mod scan {",
+        ] {
+            assert!(is_structural_line(line), "{line} states nothing");
+        }
+        for line in [
+            "Node::Store { index, value, .. } => {",
+            "Node::Return => ProgramEffects::empty(),",
+            "| Node::Loop { .. } if depth > 0",
+            "self.visit(node);",
+            "crate::visit::child_bodies(node)",
+            "let total = 0;",
+            "fn measure(root: &Path) {",
+            "mod tests;",
+        ] {
+            assert!(!is_structural_line(line), "{line} states something");
+        }
+    }
+
+    /// WHY: eight lines were assumed to be past the reach of shared boilerplate.
+    /// A closing-brace run followed by a test module header fills a whole window
+    /// in every gate file in this crate, and counting it made the pin a tax on
+    /// having tests rather than a measure of copied logic.
+    #[test]
+    fn a_shared_closing_run_and_test_module_header_is_not_duplication() {
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-shape-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        crate::fixture_checkout::empty(&dir);
+        fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
+        fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
+        let tail = "    }\n}\n}\n}\n#[cfg(test)]\nmod tests {\n    use super::*;\n    #[test]\n";
+        fs::write(dir.join("crate-a/src/lib.rs"), tail).expect("write");
+        fs::write(dir.join("crate-b/src/lib.rs"), tail).expect("write");
+
+        let counts = measure(&dir).expect("the fixture checkout is measurable");
+        assert_eq!(counts["crate-a"].duplicate_lines, 0);
+        assert_eq!(counts["crate-b"].duplicate_lines, 0);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// WHY: `Ok(report)` above that same closing run is the tail of every gate
+    /// in the registry, so one stating line surrounded by shape matched every
+    /// other gate file and charged each of them for having a test module.
+    #[test]
+    fn one_stating_line_amid_shape_is_not_duplication() {
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-one-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        crate::fixture_checkout::empty(&dir);
+        fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
+        fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
+        let tail = "    ));\n    Ok(report)\n}\n}\n#[cfg(test)]\nmod tests {\n    use super::*;\n    #[test]\n";
+        fs::write(dir.join("crate-a/src/lib.rs"), tail).expect("write");
+        fs::write(dir.join("crate-b/src/lib.rs"), tail).expect("write");
+
+        let counts = measure(&dir).expect("the fixture checkout is measurable");
+        assert_eq!(counts["crate-a"].duplicate_lines, 0);
+        assert_eq!(counts["crate-b"].duplicate_lines, 0);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// WHY: the threshold is two, and a rule that skipped a window because most
+    /// of it is shape would hide a copied body that happens to sit between
+    /// braces. Two statements in an otherwise structural window still count.
+    #[test]
+    fn two_stating_lines_amid_shape_are_duplication() {
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-two-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        crate::fixture_checkout::empty(&dir);
+        fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
+        fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
+        let tail = "    ));\n    let total = plan.len();\n    Ok(report)\n}\n}\n#[cfg(test)]\nmod tests {\n    use super::*;\n";
+        fs::write(dir.join("crate-a/src/lib.rs"), tail).expect("write");
+        fs::write(dir.join("crate-b/src/lib.rs"), tail).expect("write");
+
+        let counts = measure(&dir).expect("the fixture checkout is measurable");
+        assert_eq!(counts["crate-a"].duplicate_lines, SHINGLE);
+        assert_eq!(counts["crate-b"].duplicate_lines, SHINGLE);
         let _ = fs::remove_dir_all(&dir);
     }
 

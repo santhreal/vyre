@@ -14,7 +14,7 @@ use std::collections::BTreeMap;
 use vyre_driver::BoundResource;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
-    ShapeDim, ValueContract, ValueLifetime,
+    ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
     attach_target, compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
@@ -24,12 +24,7 @@ use vyre_registry_link::backend::live_backend_registry;
 use vyre_runtime::artifact_admission::ArtifactSession;
 
 fn contract(access: BufferAccess, lifetime: ValueLifetime, count: u64) -> ValueContract {
-    ValueContract {
-        dtype: DataType::U32,
-        shape: vec![ShapeDim::Known(count)],
-        access,
-        lifetime,
-    }
+    ValueContract::dense_1d(DataType::U32, count, access, lifetime)
 }
 
 fn budget() -> SearchBudget {

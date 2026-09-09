@@ -37,8 +37,8 @@ impl ScheduleCostRecord {
 /// Cost evaluator for schedule plans.
 #[derive(Clone, Debug, Default)]
 pub struct ScheduleCostModel {
-    /// Target warp size.
-    pub warp_size: u32,
+    /// Target subgroup width in lanes.
+    pub subgroup_size: u32,
     /// Target max shared memory per workgroup.
     pub max_shared_memory: u64,
     /// Target max registers per thread.
@@ -48,9 +48,9 @@ pub struct ScheduleCostModel {
 impl ScheduleCostModel {
     /// Create a new cost model with hardware parameters.
     #[must_use]
-    pub fn new(warp_size: u32, max_shared_memory: u64, max_registers_per_thread: u32) -> Self {
+    pub fn new(subgroup_size: u32, max_shared_memory: u64, max_registers_per_thread: u32) -> Self {
         Self {
-            warp_size,
+            subgroup_size,
             max_shared_memory,
             max_registers_per_thread,
         }
@@ -61,7 +61,7 @@ impl ScheduleCostModel {
     pub fn evaluate(&self, plan: &SchedulePlan) -> ScheduleCostRecord {
         let mut traffic = plan.resource_bounds.logical_points * 4; // base traffic estimate
         let mut shared_penalty = 0.0;
-        let mut estimated_cycles = plan.resource_bounds.logical_points / (self.warp_size as u64).max(1);
+        let mut estimated_cycles = plan.resource_bounds.logical_points / (self.subgroup_size as u64).max(1);
 
         // Traverse tree to refine estimates
         self.evaluate_tree(&plan.root, &mut traffic, &mut shared_penalty, &mut estimated_cycles);

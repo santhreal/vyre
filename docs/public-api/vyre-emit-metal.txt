@@ -1,8 +1,14 @@
+impl core::convert::From<&vyre_emit_metal::EmitError> for vyre_foundation::diagnostics::Diagnostic
+impl core::convert::From<vyre_emit_metal::EmitError> for vyre_foundation::diagnostics::Diagnostic
 impl core::default::Default for vyre_emit_metal::MetalEmitOptions
+impl vyre_emit_metal::EmitError
+impl vyre_foundation::diagnostics::ToDiagnostic for vyre_emit_metal::EmitError
 pub const vyre_emit_metal::DEFAULT_MSL_VERSION: (u8, u8)
 pub const vyre_emit_metal::MAX_DIRECT_BUFFERS_PER_STAGE: usize
 pub const vyre_emit_metal::METAL_ARTIFACT_SCHEMA: u32
 pub enum vyre_emit_metal::EmitError
+pub fn vyre_emit_metal::EmitError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
+pub fn vyre_emit_metal::EmitError::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_emit_metal::MetalEmitOptions::default() -> Self
 pub fn vyre_emit_metal::emit(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<alloc::string::String, vyre_emit_metal::EmitError>
 pub fn vyre_emit_metal::emit_artifact(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<vyre_emit_metal::MetalArtifact, vyre_emit_metal::EmitError>
@@ -11,6 +17,8 @@ pub fn vyre_emit_metal::emit_artifact_json(desc: &vyre_lower::descriptor::Kernel
 pub fn vyre_emit_metal::emit_artifact_with_options(desc: &vyre_lower::descriptor::KernelDescriptor, options: &vyre_emit_metal::MetalEmitOptions) -> core::result::Result<vyre_emit_metal::MetalArtifact, vyre_emit_metal::EmitError>
 pub fn vyre_emit_metal::emit_from_naga_module(module: &naga::ir::Module, options: &vyre_emit_metal::MetalEmitOptions) -> core::result::Result<alloc::string::String, vyre_emit_metal::EmitError>
 pub fn vyre_emit_metal::emit_with_options(desc: &vyre_lower::descriptor::KernelDescriptor, options: &vyre_emit_metal::MetalEmitOptions) -> core::result::Result<alloc::string::String, vyre_emit_metal::EmitError>
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_emit_metal::EmitError) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_emit_metal::EmitError) -> Self
 pub mod vyre_emit_metal
 pub struct vyre_emit_metal::MetalArtifact
 pub struct vyre_emit_metal::MetalBindingMetadata
@@ -26,7 +34,7 @@ pub vyre_emit_metal::EmitError::EntryPoint
 pub vyre_emit_metal::EmitError::EntryPoint::entry_point: alloc::string::String
 pub vyre_emit_metal::EmitError::EntryPoint::reason: alloc::string::String
 pub vyre_emit_metal::EmitError::MslWriter(alloc::string::String)
-pub vyre_emit_metal::EmitError::NagaEmit(alloc::string::String)
+pub vyre_emit_metal::EmitError::NagaEmit(vyre_emit_naga::error::EmitError)
 pub vyre_emit_metal::EmitError::NagaValidation(alloc::string::String)
 pub vyre_emit_metal::EmitError::PreEmit(alloc::string::String)
 pub vyre_emit_metal::MetalArtifact::bindings: alloc::vec::Vec<vyre_emit_metal::MetalBindingMetadata>

@@ -43,9 +43,7 @@ use crate::dispatch_buffers::{
     write_zero_bytes,
 };
 use crate::math::natural_gradient::natural_gradient_block_apply;
-use vyre_megakernel::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     identity_matrix_witness_into, natural_gradient_autotune_step_witness_into,
@@ -186,22 +184,15 @@ pub fn precondition_autotune_gradient_fixed_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[0], m_inv_sqrt_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], grad_fixed);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
-    let outputs = execute_single_program(
+    let output = crate::dispatch_buffers::run_single_first_output(
         dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-        "Fix: precondition_autotune_gradient_fixed_via expected at least one output buffer, got {}.",
-        outputs.len()
-    )));
-    }
+        "precondition_autotune_gradient_fixed_via",
+    )?;
     decode_u32_output_exact(
-        &outputs[0],
+        &output,
         n_us,
         "precondition_autotune_gradient_fixed_via",
         out,

@@ -31,9 +31,7 @@ use crate::dispatch_buffers::{
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::amg_v_cycle::amg_v_cycle;
-use vyre_megakernel::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned dispatch scratch for fixed-point AMG V-cycle execution.
 #[derive(Debug, Default)]
@@ -243,25 +241,15 @@ pub fn smooth_matroid_flow_fixed_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[8], coarse_bytes);
     write_zero_bytes(&mut scratch.inputs[9], coarse_bytes);
     write_zero_bytes(&mut scratch.inputs[10], coarse_bytes);
-    let outputs = execute_single_program(
+    let out_buf = crate::dispatch_buffers::run_single_first_output(
         dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )
-    .map(|output| output.outputs)?;
-    let [out_buf, ..] = match outputs.as_slice() {
-        [b, ..] => [b],
-        _ => {
-            return Err(SemanticExecutionError::Backend(format!(
-                "Fix: smooth_matroid_flow_fixed_via expected at least one output buffer, got {}.",
-                outputs.len()
-            )))
-        }
-    };
+        "smooth_matroid_flow_fixed_via",
+    )?;
     decode_u32_output_exact(
-        out_buf,
+        &out_buf,
         n_fine as usize,
         "smooth_matroid_flow_fixed_via",
         out,

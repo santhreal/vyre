@@ -844,7 +844,8 @@ fn reported_groups(
 /// `aggregate_peak_bytes`, which counts caller-owned regions the backend
 /// allocator never holds: on a host-input launch the caller's bytes are staged,
 /// not resident, so every plan with a caller region failed by exactly the
-/// caller's share. A CUDA sweep refused 278 of 349 operations under each.
+/// caller's share. A sweep on one backend refused 278 of 349 operations
+/// under each.
 fn reconcile_resident_bytes(artifact: &Artifact, observed: u64) -> Result<(), CompileError> {
     let planned = artifact.allocation().artifact_peak_bytes()?;
     if observed >= planned {

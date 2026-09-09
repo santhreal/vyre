@@ -9,8 +9,7 @@ use serde::{Deserialize, Serialize};
 use super::catalog::{ValidationRule, VALIDATION_RULES};
 use crate::diagnostics::{
     CompilerLevel, Diagnostic, DiagnosticCause, DiagnosticCode, DiagnosticStage, OpLocation,
-    RetryClass, Severity, ToDiagnostic,
-};
+    RetryClass, Severity, };
 
 /// Stable validation rule identity.
 ///
@@ -393,24 +392,6 @@ impl ValidationError {
     }
 }
 
-impl ToDiagnostic for ValidationError {
-    fn to_diagnostic(&self) -> Diagnostic {
-        self.diagnostic()
-    }
-}
-
-impl From<&ValidationError> for Diagnostic {
-    fn from(issue: &ValidationError) -> Self {
-        issue.diagnostic()
-    }
-}
-
-impl From<ValidationError> for Diagnostic {
-    fn from(issue: ValidationError) -> Self {
-        issue.diagnostic()
-    }
-}
-
 impl fmt::Display for ValidationError {
     fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(output, "vyre IR validation: {}", self.message())
@@ -418,6 +399,8 @@ impl fmt::Display for ValidationError {
 }
 
 impl std::error::Error for ValidationError {}
+
+crate::diagnostic_conversions!(ValidationError, diagnostic);
 
 #[cfg(test)]
 mod tests {
@@ -544,3 +527,4 @@ mod tests {
         assert!(issue.message().contains("Fix:"));
     }
 }
+

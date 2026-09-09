@@ -52,9 +52,7 @@ use crate::dispatch_buffers::{
 use crate::math::multigrid::jacobi_smooth_step;
 #[cfg(test)]
 use vyre_foundation::pass_substrate::multigrid_matroid_solver as foundation_multigrid;
-use vyre_megakernel::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned dispatch scratch for fixed-point multigrid Jacobi smoothing.
 #[derive(Debug, Default)]
@@ -228,21 +226,14 @@ pub fn matroid_solve_step_fixed_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[2], x_in_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[3], &scratch.omega);
     write_zero_bytes(&mut scratch.inputs[4], out_bytes);
-    let outputs = execute_single_program(
+    let output = crate::dispatch_buffers::run_single_first_output(
         dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: matroid_solve_step_fixed_via expected at least one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], n as usize, "matroid_solve_step_fixed_via", out)
+        "matroid_solve_step_fixed_via",
+    )?;
+    decode_u32_output_exact(&output, n as usize, "matroid_solve_step_fixed_via", out)
 }
 
 /// Iterate Jacobi smoothing until residual norm drops below `tol`

@@ -9,7 +9,9 @@ use vyre_driver::{
 use vyre_foundation::ir::Program;
 
 use super::buffer_plan::{metal_slot_map, output_layout_map, plan_buffers};
-use super::dispatch::validate_metal_dispatch_config;
+use super::dispatch::{
+    start_validated_dispatch, MetalDispatchLabels, AUTHENTICATED_DISPATCH,
+};
 use super::metrics::elapsed_ns;
 use super::resident::ns_uint_to_u32_saturating;
 use super::MetalBackend;
@@ -32,25 +34,7 @@ pub(super) fn metal_pipeline_cache_key(
     config: &DispatchConfig,
     device: &Device,
 ) -> Result<PipelineCacheIdentity, BackendError> {
-    if config.float_lowering.blocks_contraction() {
-        let ops = vyre_foundation::fp_parity::approximable_operations(program);
-        let name = if ops.is_empty() {
-            format!(
-                "float lowering mode `{}`",
-                config.float_lowering.cache_label()
-            )
-        } else {
-            format!(
-                "float lowering mode `{}` for operation(s) {}",
-                config.float_lowering.cache_label(),
-                ops.join(", ")
-            )
-        };
-        return Err(BackendError::UnsupportedFeature {
-            name,
-            backend: METAL_BACKEND_ID.to_string(),
-        });
-    }
+    BackendError::reject_blocked_contraction(program, config.float_lowering, METAL_BACKEND_ID)?;
     let device_name = device.name();
     let revision_extra = format!(
         "artifact_schema={}:msl={}.{}:driver={}:device={}",
@@ -226,37 +210,52 @@ impl MetalBackend {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<TimedDispatchResult, BackendError> {
-        let started = Instant::now();
-        validate_metal_dispatch_config(
+        let started =
+            start_validated_dispatch(program, config, &AUTHENTICATED_DISPATCH)?;
+        self.dispatch_compiled(
+            &module.artifact,
+            &module.pipeline,
             program,
+            inputs,
             config,
-            "Metal authenticated cooperative grid dispatch",
-            "Metal authenticated repeated dispatch",
-            "Metal authenticated dispatch",
-        )?;
+            started,
+            &AUTHENTICATED_DISPATCH,
+        )
+    }
+
+    /// Bind, dispatch, and time an already validated program against a
+    /// compiled pipeline.
+    ///
+    /// Both the borrowed-input path and the authenticated target-module path
+    /// reach the device through this one body; they differ in where the
+    /// pipeline comes from and in the labels their rejections carry.
+    pub(super) fn dispatch_compiled(
+        &self,
+        artifact: &vyre_emit_metal::MetalArtifact,
+        pipeline: &metal::ComputePipelineState,
+        program: &Program,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+        started: Instant,
+        labels: &MetalDispatchLabels,
+    ) -> Result<TimedDispatchResult, BackendError> {
         let binding_plan = BindingPlan::from_borrowed_inputs(program, inputs)?;
         let output_layouts = output_binding_layouts(program)?;
         let output_by_binding = output_layout_map(output_layouts)?;
-        let metal_slots = metal_slot_map(&module.artifact)?;
+        let metal_slots = metal_slot_map(artifact)?;
         let buffers = plan_buffers(
             &self.device,
             &binding_plan,
             inputs,
             &output_by_binding,
             &metal_slots,
-            &module.artifact.bindings,
+            &artifact.bindings,
         )?;
-        let result = self.dispatch_planned_buffers(
-            program,
-            &binding_plan,
-            config,
-            &module.artifact,
-            &module.pipeline,
-            buffers,
-        )?;
+        let result =
+            self.dispatch_planned_buffers(program, &binding_plan, config, artifact, pipeline, buffers)?;
         Ok(TimedDispatchResult::split_timed(
             result.outputs,
-            elapsed_ns(started, "Metal authenticated timed dispatch")?,
+            elapsed_ns(started, labels.timing_context)?,
             None,
             result.enqueue_ns,
             result.wait_ns,

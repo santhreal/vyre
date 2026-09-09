@@ -18,6 +18,7 @@ use crate::bounded_compile_policy;
 use vyre_libs::solvers::quantized_dispatch::{
     i4x8_batched_matmul_f32_scaled_via, i4x8_batched_matmul_top1_f32_scaled_via,
     i4x8_batched_matvec_f32_scaled_via, i4x8_dot_f32_scaled_via, i4x8_matvec_f32_scaled_via,
+    PackedI4BatchedMatmul,
 };
 use vyre_reference::composition_witness::{
     i4x8_batched_matmul_f32_scaled_witness as i4x8_batched_matmul_f32_scaled_cpu,
@@ -172,13 +173,15 @@ fn batched_matmul_via_matches_cpu_over_generated_systems() {
         let got = i4x8_batched_matmul_f32_scaled_via(
             &dispatcher,
             &bounded_compile_policy::policy(),
-            &weights,
-            &activations,
-            &row_scales,
-            &batch_scales,
-            batch as u32,
-            rows as u32,
-            cols as u32,
+            &PackedI4BatchedMatmul {
+                weights_packed: &weights,
+                activation_batches_packed: &activations,
+                row_scales: &row_scales,
+                batch_scales: &batch_scales,
+                batch: batch as u32,
+                rows: rows as u32,
+                cols: cols as u32,
+            },
         )
         .expect("batched_matmul_via must dispatch the INT4 batched matmul kernel");
         let want = i4x8_batched_matmul_f32_scaled_cpu(
@@ -213,13 +216,15 @@ fn top1_via_matches_cpu_scores_and_indices_over_generated_systems() {
         let (scores, indices) = i4x8_batched_matmul_top1_f32_scaled_via(
             &dispatcher,
             &bounded_compile_policy::policy(),
-            &weights,
-            &activations,
-            &row_scales,
-            &batch_scales,
-            batch as u32,
-            rows as u32,
-            cols as u32,
+            &PackedI4BatchedMatmul {
+                weights_packed: &weights,
+                activation_batches_packed: &activations,
+                row_scales: &row_scales,
+                batch_scales: &batch_scales,
+                batch: batch as u32,
+                rows: rows as u32,
+                cols: cols as u32,
+            },
         )
         .expect("top1_via must dispatch the INT4 top-1 kernel and de-interleave its output");
         let (want_scores, want_indices) = i4x8_batched_matmul_top1_f32_scaled_cpu(

@@ -85,12 +85,22 @@ fn platform_adapters_provide_typed_behavior_and_safe_cleanup() {
     assert_eq!(handle.join().unwrap(), 42);
 }
 
+/// A payload one version behind the current schema is rejected, and the
+/// rejection names both versions.
+///
+/// The expectation reads the constant, so a schema bump that forgets the
+/// reader turns this red instead of pinning a version nothing writes.
 #[test]
 fn stale_platform_matrix_schema_fails_closed() {
+    let stale = PLATFORM_SUPPORT_MATRIX_SCHEMA_VERSION - 1;
     let mut matrix = PlatformSupportMatrix::canonical();
-    matrix.schema_version = 0; // Stale version
+    matrix.schema_version = stale;
 
     let toml = toml::to_string(&matrix).unwrap();
     let err = PlatformSupportMatrix::from_toml(&toml).unwrap_err();
-    assert!(matches!(err, UnsupportedPlatformError::StaleSchemaVersion { expected: 1, found: 0 }));
+    assert!(matches!(
+        err,
+        UnsupportedPlatformError::StaleSchemaVersion { expected, found }
+            if expected == PLATFORM_SUPPORT_MATRIX_SCHEMA_VERSION && found == stale
+    ));
 }

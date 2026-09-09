@@ -4,10 +4,8 @@ mod program_dispatch;
 
 pub use program_dispatch::{target_profile, ReferenceSemanticExecutor};
 
-use std::sync::Arc;
-
 use vyre_driver::{BackendError, DispatchConfig};
-use vyre_foundation::ir::{BufferAccess, Program};
+use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
 
 /// Stable backend id for the pure-Rust reference interpreter.
@@ -95,45 +93,28 @@ fn strict_expanded(
     }
     vyre_foundation::fp_expansion::expand_strict_transcendentals(program).map_err(|error| {
         BackendError::new(format!(
-            "cpu-ref cannot lower the strict IEEE float mode: {error}. Fix: give the operation an \
-             exact f32 expansion in vyre_foundation::fp_expansion, so the oracle evaluates the \
-             program a strict device kernel executes."
+            "cpu-ref cannot lower float mode `{}`: {error}. Fix: give the operation an exact f32 \
+             expansion in vyre_foundation::fp_expansion, so the oracle evaluates the program a \
+             strict device kernel executes.",
+            config.float_lowering.cache_label()
         ))
     })
 }
 
 fn reference_values(program: &Program, inputs: &[&[u8]]) -> Result<Vec<Value>, BackendError> {
-    // `is_reference_input` is the interpreter's own ABI predicate, and its
-    // complement `is_backend_allocated_output` is the SINGLE cross-backend
-    // contract in vyre-foundation. Do NOT re-inline either (drift would make
-    // this backend disagree with the interpreter on outputs). A backend-allocated
-    // output is allocated by the callee, so it consumes neither a caller input
-    // nor a `Value`: handing the interpreter a zeroed stand-in for one is the
-    // legacy shape a device artifact rejects.
-    let mut next_input = 0usize;
-    let mut values = Vec::new();
-    for buffer in program.buffers() {
-        if buffer.access() == BufferAccess::Workgroup {
-            continue;
-        }
-        if buffer.is_backend_allocated_output() {
-            continue;
-        }
-        let input = inputs.get(next_input).ok_or_else(|| {
-            BackendError::new(format!(
-                "cpu-ref is missing an input buffer for `{}`. Fix: pass one buffer per reference input in Program::buffers order; a synthesized zero buffer would answer an ABI failure with fabricated data.",
-                buffer.name()
-            ))
-        })?;
-        next_input += 1;
-        values.push(Value::Bytes(Arc::from(*input)));
-    }
-    if next_input != inputs.len() {
-        return Err(BackendError::new(format!(
-            "cpu-ref received {} extra input buffer(s). Fix: pass inputs in Program::buffers order without trailing buffers.",
-            inputs.len() - next_input
-        )));
-    }
-    Ok(values)
+    // `vyre_reference::reference_input_values` is the interpreter's own input
+    // ABI. This backend walked the buffers itself and selected them as
+    // `access() != Workgroup && !is_backend_allocated_output()`, which admits a
+    // `Shared` buffer, a `Persistent` buffer, and a non-read-write
+    // `pipeline_live_out` that no backend stages from the host, so the oracle
+    // asked for one value more than a device dispatch and every later buffer
+    // read the one before it.
+    vyre_reference::reference_input_values(program, inputs).map_err(|mismatch| {
+        BackendError::new(format!(
+            "cpu-ref input buffers do not match the program: {mismatch}. Fix: pass one buffer per \
+             reference input in Program::buffers order; a synthesized zero buffer would answer an \
+             ABI failure with fabricated data."
+        ))
+    })
 }
 

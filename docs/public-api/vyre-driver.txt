@@ -12,7 +12,9 @@
 #[non_exhaustive] pub struct vyre_driver::DispatchConfig
 #[non_exhaustive] pub struct vyre_driver::PipelineCacheKey
 #[repr(C)] pub struct vyre_driver::persistent::PersistentWorkItem
+impl core::convert::From<&vyre_driver::BackendError> for vyre_foundation::diagnostics::Diagnostic
 impl core::convert::From<alloc::vec::Vec<u8>> for vyre_driver::Resource
+impl core::convert::From<vyre_driver::BackendError> for vyre_foundation::diagnostics::Diagnostic
 impl core::convert::From<vyre_driver::DeviceProfile> for vyre_foundation::optimizer::ctx::AdapterCaps
 impl core::convert::From<vyre_driver::DeviceProfile> for vyre_foundation::validate::options::BackendCapabilities
 impl core::convert::From<vyre_driver::ResidentHandle> for vyre_driver::Resource
@@ -181,6 +183,7 @@ impl vyre_driver::trap_record::TrapRecord
 impl vyre_driver::validation::LaunchGeometryLimits
 impl vyre_driver::validation::ProgramValidationCaps
 impl vyre_driver::validation::ValidationCache
+impl vyre_foundation::diagnostics::ToDiagnostic for vyre_driver::BackendError
 impl<'a> vyre_driver::ExtractionDevice<'a>
 impl<'a> vyre_driver::PeerTransferPlanner<'a>
 impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::Target
@@ -373,6 +376,7 @@ pub enum vyre_driver::graph_capture::GraphCaptureEditAction
 pub enum vyre_driver::graph_capture::GraphCaptureEditStability
 pub enum vyre_driver::graph_capture::ScanGraphCaptureEditKind
 pub enum vyre_driver::launch_fusion::LaunchFusionError
+pub enum vyre_driver::lock_policy::FailureDomain
 pub enum vyre_driver::megakernel_barrier::MegakernelBarrierPlanError
 pub enum vyre_driver::megakernel_execution::MegakernelMemoryError
 pub enum vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError
@@ -437,10 +441,13 @@ pub fn vyre_driver::Backend::id(&self) -> &'static str
 pub fn vyre_driver::Backend::supported_ops(&self) -> &std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub fn vyre_driver::Backend::version(&self) -> &'static str
 pub fn vyre_driver::BackendError::code(&self) -> vyre_driver::ErrorCode
+pub fn vyre_driver::BackendError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_driver::BackendError::into_message(self) -> alloc::string::String
 pub fn vyre_driver::BackendError::message(&self) -> alloc::string::String
 pub fn vyre_driver::BackendError::new(message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_driver::BackendError::poisoned_lock<T>(error: std::sync::poison::PoisonError<T>) -> Self
+pub fn vyre_driver::BackendError::reject_blocked_contraction(program: &vyre_foundation::ir_inner::model::program::definition::Program, mode: vyre_foundation::fp_parity::FloatLoweringMode, backend: &str) -> core::result::Result<(), Self>
+pub fn vyre_driver::BackendError::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_driver::BackendError::unsupported_extension(backend: impl core::convert::Into<alloc::string::String>, extension_kind: &str, debug_identity: &str) -> Self
 pub fn vyre_driver::BackendLayoutFingerprint::new(slots: alloc::vec::Vec<vyre_driver::BackendLayoutSlot>) -> Self
 pub fn vyre_driver::BackendRegistration::acquire(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError>
@@ -867,6 +874,11 @@ pub fn vyre_driver::launch_fusion::LaunchFusionScratch::try_with_capacity(stage_
 pub fn vyre_driver::launch_fusion::plan_launch_fusion(stages: &[vyre_driver::launch_fusion::LaunchFusionStage], max_group_bytes: u64) -> core::result::Result<vyre_driver::launch_fusion::LaunchFusionPlan, vyre_driver::launch_fusion::LaunchFusionError>
 pub fn vyre_driver::launch_fusion::plan_launch_fusion_with_scratch(stages: &[vyre_driver::launch_fusion::LaunchFusionStage], max_group_bytes: u64, scratch: &mut vyre_driver::launch_fusion::LaunchFusionScratch) -> core::result::Result<vyre_driver::launch_fusion::LaunchFusionPlan, vyre_driver::launch_fusion::LaunchFusionError>
 pub fn vyre_driver::launch_width_measurements(program: &vyre_foundation::ir_inner::model::program::definition::Program, limits: vyre_driver::validation::LaunchGeometryLimits, element_count: u32) -> alloc::collections::btree::map::BTreeMap<[u32; 3], u64>
+pub fn vyre_driver::lock_policy::govern_mutex<'a, T>(mutex: &'a std::sync::poison::mutex::Mutex<T>, owner: &'static str, state: &'static str, domain: vyre_driver::lock_policy::FailureDomain) -> core::result::Result<std::sync::poison::mutex::MutexGuard<'a, T>, vyre_driver::BackendError>
+pub fn vyre_driver::lock_policy::govern_mutex_with_reset<'a, T, F>(mutex: &'a std::sync::poison::mutex::Mutex<T>, owner: &'static str, state: &'static str, domain: vyre_driver::lock_policy::FailureDomain, reset_on_restart: F) -> core::result::Result<std::sync::poison::mutex::MutexGuard<'a, T>, vyre_driver::BackendError> where F: core::ops::function::FnOnce(&mut T)
+pub fn vyre_driver::lock_policy::govern_rwlock_read<'a, T>(rwlock: &'a std::sync::poison::rwlock::RwLock<T>, owner: &'static str, state: &'static str, domain: vyre_driver::lock_policy::FailureDomain) -> core::result::Result<std::sync::poison::rwlock::RwLockReadGuard<'a, T>, vyre_driver::BackendError>
+pub fn vyre_driver::lock_policy::govern_rwlock_write<'a, T>(rwlock: &'a std::sync::poison::rwlock::RwLock<T>, owner: &'static str, state: &'static str, domain: vyre_driver::lock_policy::FailureDomain) -> core::result::Result<std::sync::poison::rwlock::RwLockWriteGuard<'a, T>, vyre_driver::BackendError>
+pub fn vyre_driver::lock_policy::govern_rwlock_write_with_reset<'a, T, F>(rwlock: &'a std::sync::poison::rwlock::RwLock<T>, owner: &'static str, state: &'static str, domain: vyre_driver::lock_policy::FailureDomain, reset_on_restart: F) -> core::result::Result<std::sync::poison::rwlock::RwLockWriteGuard<'a, T>, vyre_driver::BackendError> where F: core::ops::function::FnOnce(&mut T)
 pub fn vyre_driver::lock_policy::process_fatal_poison(owner: &str, state: &str) -> never
 pub fn vyre_driver::lock_policy::recoverable_poison<T>(result: core::result::Result<T, std::sync::poison::PoisonError<T>>) -> core::result::Result<T, vyre_driver::BackendError>
 pub fn vyre_driver::lowering::LowerableOp::lower_binary(&self, ctx: &mut (), program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<(), alloc::string::String>
@@ -1213,6 +1225,8 @@ pub fn vyre_driver::validation::validate_program_contract(program: &vyre_foundat
 pub fn vyre_driver::validation::validate_program_for_backend(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::definition::Program, config: &vyre_driver::DispatchConfig) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::versioned_specialization_artifact_key(cache_version: u32, spec_hash: &str, backend_fingerprint: &str) -> alloc::string::String
 pub fn vyre_driver::vsa_specialization_key(program: &vyre_foundation::ir_inner::model::program::definition::Program, spec_hash: u64) -> u128
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_driver::BackendError) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_driver::BackendError) -> Self
 pub fn vyre_foundation::optimizer::ctx::AdapterCaps::from(profile: vyre_driver::DeviceProfile) -> Self
 pub fn vyre_foundation::validate::options::BackendCapabilities::from(profile: vyre_driver::DeviceProfile) -> Self
 pub macro vyre_driver::artifact_instance_identity!
@@ -2315,6 +2329,11 @@ pub vyre_driver::launch_fusion::LaunchFusionStage::layout_hash: u64
 pub vyre_driver::launch_fusion::LaunchFusionStage::output_bytes: u64
 pub vyre_driver::launch_fusion::LaunchFusionStage::requires_host_materialization: bool
 pub vyre_driver::launch_fusion::LaunchFusionStage::scratch_bytes: u64
+pub vyre_driver::lock_policy::FailureDomain::DeviceContextFatal
+pub vyre_driver::lock_policy::FailureDomain::InvariantViolation
+pub vyre_driver::lock_policy::FailureDomain::ProcessFatal
+pub vyre_driver::lock_policy::FailureDomain::RestartableFromCanonical
+pub vyre_driver::lock_policy::FailureDomain::Transactional
 pub vyre_driver::materialize::AdmittedModule::config: vyre_driver::DispatchConfig
 pub vyre_driver::materialize::AdmittedModule::image: vyre_megakernel::target::TargetModuleImage
 pub vyre_driver::materialize::AdmittedModule::program: alloc::sync::Arc<vyre_foundation::ir_inner::model::program::definition::Program>

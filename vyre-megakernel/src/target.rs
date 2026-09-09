@@ -8,7 +8,6 @@ use thiserror::Error;
 use vyre_foundation::{
     diagnostics::{
         CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, RetryClass, Severity,
-        ToDiagnostic,
     },
     execution_plan::fusion::merge_programs_shared,
     fp_parity::approximable_operations,
@@ -441,23 +440,6 @@ impl TargetCompileError {
     }
 }
 
-impl ToDiagnostic for TargetCompileError {
-    fn to_diagnostic(&self) -> Diagnostic {
-        self.diagnostic()
-    }
-}
-
-impl From<&TargetCompileError> for Diagnostic {
-    fn from(error: &TargetCompileError) -> Self {
-        error.diagnostic()
-    }
-}
-
-impl From<TargetCompileError> for Diagnostic {
-    fn from(error: TargetCompileError) -> Self {
-        error.diagnostic()
-    }
-}
 /// Pure compiler facet from a selected neutral artifact to immutable target bytes.
 pub trait TargetCompiler: Send + Sync {
     /// Exact target payload format produced by this facet.
@@ -827,6 +809,8 @@ fn decode_group(
     })
 }
 
+vyre_foundation::diagnostic_conversions!(TargetCompileError, diagnostic);
+
 #[cfg(test)]
 mod tests {
     //! WHY: the allocation plan states where every value lives and which stages
@@ -1029,3 +1013,4 @@ mod tests {
         );
     }
 }
+

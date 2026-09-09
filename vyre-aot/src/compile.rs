@@ -5,7 +5,6 @@ use std::collections::BTreeMap;
 use thiserror::Error;
 use vyre_foundation::diagnostics::{
     CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, RetryClass, Severity,
-    ToDiagnostic,
 };
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_foundation::transform::inline::inline_calls_with_resolver;
@@ -129,24 +128,6 @@ impl CompileError {
     }
 }
 
-impl ToDiagnostic for CompileError {
-    fn to_diagnostic(&self) -> Diagnostic {
-        self.diagnostic()
-    }
-}
-
-impl From<&CompileError> for Diagnostic {
-    fn from(error: &CompileError) -> Self {
-        error.diagnostic()
-    }
-}
-
-impl From<CompileError> for Diagnostic {
-    fn from(error: CompileError) -> Self {
-        error.diagnostic()
-    }
-}
-
 /// Compile a `Program` through the canonical graph compiler and a registered target facet.
 pub fn compile(program: &Program, target: TargetId) -> Result<ArtifactEnvelope, CompileError> {
     compile_with_resolver(program, target, None)
@@ -164,7 +145,6 @@ pub fn compile_request(
     vyre_megakernel::attach_target(artifact, compiler.as_ref())
         .map_err(CompileError::TargetCompilation)
 }
-
 
 /// Compile with a caller-supplied resolver to inline `Expr::Call` nodes.
 pub fn compile_with_resolver(
@@ -213,3 +193,5 @@ fn compile_neutral_artifact(program: &Program) -> Result<Artifact, CompileError>
         source,
     })
 }
+
+vyre_foundation::diagnostic_conversions!(CompileError, diagnostic);

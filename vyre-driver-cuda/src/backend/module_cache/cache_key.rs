@@ -45,25 +45,7 @@ pub(super) fn ptx_source_cache_key_from_program_identity(
     subgroup_size: u32,
     feature_flags: vyre_driver::PipelineFeatureFlags,
 ) -> Result<PtxSourceCacheKey, BackendError> {
-    if config.float_lowering.blocks_contraction() {
-        let ops = vyre_foundation::fp_parity::approximable_operations(program);
-        let name = if ops.is_empty() {
-            format!(
-                "float lowering mode `{}`",
-                config.float_lowering.cache_label()
-            )
-        } else {
-            format!(
-                "float lowering mode `{}` for operation(s) {}",
-                config.float_lowering.cache_label(),
-                ops.join(", ")
-            )
-        };
-        return Err(BackendError::UnsupportedFeature {
-            name,
-            backend: crate::CUDA_BACKEND_ID.to_string(),
-        });
-    }
+    BackendError::reject_blocked_contraction(program, config.float_lowering, crate::CUDA_BACKEND_ID)?;
     let normalized_digest = probe::measure_nested(probe::Nested::PtxDigest, || {
         vyre_driver::try_normalized_program_cache_digest(program)
     })

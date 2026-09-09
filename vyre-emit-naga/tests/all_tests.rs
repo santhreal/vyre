@@ -25,6 +25,10 @@ pub mod emitted_artifact_byte_stability;
 #[path = "lowering_digest.rs"]
 pub mod lowering_digest;
 
+/// Integration tests from `tests/retargeted_diagnostic.rs`.
+#[path = "retargeted_diagnostic.rs"]
+pub mod retargeted_diagnostic;
+
 /// Integration tests from `tests/target_capabilities.rs`.
 #[path = "target_capabilities.rs"]
 pub mod target_capabilities;

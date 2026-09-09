@@ -505,46 +505,83 @@ mod layout_config_contracts {
 mod host_input_classification_contracts {
     use rustc_hash::FxHashSet;
     use vyre_foundation::ir::BufferAccess;
-    use vyre_lower::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, GridIndexSpace, KernelBody,
-        KernelDescriptor, MemoryClass,
-    };
+    use vyre_lower::{BindingVisibility, MemoryClass};
 
     use super::*;
+    use crate::pipeline::descriptor_fixture::{descriptor_of, slot};
     use crate::pipeline::descriptor_metadata::descriptor_buffer_bindings;
     use crate::pipeline::host_input_slots;
 
-    fn slot(
-        index: u32,
-        name: &str,
-        memory_class: MemoryClass,
-        visibility: BindingVisibility,
-    ) -> BindingSlot {
-        BindingSlot {
-            slot: index,
-            element_type: DataType::U32,
-            element_count: Some(4),
-            memory_class,
-            visibility,
-            name: name.to_owned(),
+    /// WHY: a `Persistent` buffer is refused before wgpu lowering, so the only
+    /// way its binding metadata is reached is a descriptor handed straight to
+    /// the derivation. A re-derivation that reads the flattened access and
+    /// memory class alone answers true for it and for a non-read-write
+    /// `pipeline_live_out`, where both declarations answer false.
+    #[test]
+    fn recorded_bindings_match_declarations_for_persistent_and_live_out() {
+        let buffers = vec![
+            BufferDecl::storage("persist", 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_kind(MemoryKind::Persistent)
+                .with_count(4),
+            BufferDecl::storage("carried", 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_pipeline_live_out(true)
+                .with_count(4),
+            BufferDecl::read("fed", 2, DataType::U32).with_count(4),
+            BufferDecl::output("out", 3, DataType::U32).with_count(4),
+            BufferDecl::storage("rw", 4, BufferAccess::ReadWrite, DataType::U32).with_count(4),
+        ];
+        let slots = vec![
+            slot(
+                0,
+                "persist",
+                MemoryClass::Global,
+                BindingVisibility::ReadOnly,
+            ),
+            slot(
+                1,
+                "carried",
+                MemoryClass::Global,
+                BindingVisibility::ReadOnly,
+            ),
+            slot(2, "fed", MemoryClass::Global, BindingVisibility::ReadOnly),
+            slot(3, "out", MemoryClass::Global, BindingVisibility::WriteOnly),
+            slot(4, "rw", MemoryClass::Global, BindingVisibility::ReadWrite),
+        ];
+        let descriptor = descriptor_of(slots);
+        let host_inputs = host_input_slots(&descriptor, &buffers, None)
+            .expect("Fix: five buffers must not exhaust the host input set.");
+        let outputs: FxHashSet<u32> = buffers
+            .iter()
+            .filter(|buffer| buffer.is_output())
+            .map(BufferDecl::binding)
+            .collect();
+        let bindings = descriptor_buffer_bindings(&descriptor, &outputs, &host_inputs)
+            .expect("Fix: binding metadata must derive for a well-formed descriptor.");
+
+        let mut checked = 0usize;
+        for info in &bindings {
+            let decl = buffers
+                .iter()
+                .find(|buffer| buffer.binding() == info.binding)
+                .expect("every binding of this descriptor has a declaration");
+            checked += 1;
+            assert_eq!(
+                info.consumes_host_input,
+                decl.consumes_host_input(),
+                "binding {} (`{}`) recorded {} where its declaration states {}",
+                info.binding,
+                decl.name(),
+                info.consumes_host_input,
+                decl.consumes_host_input()
+            );
         }
+        assert_eq!(
+            checked,
+            buffers.len(),
+            "every declared buffer must be checked"
+        );
     }
 
-    fn descriptor_of(slots: Vec<BindingSlot>) -> KernelDescriptor {
-        KernelDescriptor {
-            id: String::from("host-input-test"),
-            bindings: BindingLayout { slots },
-            dispatch: Dispatch {
-                workgroup_size: [1, 1, 1],
-                grid_index: GridIndexSpace::default(),
-            },
-            body: KernelBody {
-                ops: Vec::new(),
-                child_bodies: Vec::new(),
-                literals: Vec::new(),
-            },
-        }
-    }
     /// WHY: `BufferDecl::consumes_host_input` is the single definition of the
     /// host input ABI, and `inputs` carries one value per buffer it returns
     /// true for. This backend spelled the rule out again and disagreed with

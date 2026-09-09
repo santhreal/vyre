@@ -108,7 +108,7 @@ impl AtomicOrdering {
 pub enum MemoryScope {
     /// Single thread / invocation visibility only.
     Thread,
-    /// Subgroup / warp / wavefront coherent visibility.
+    /// Subgroup-coherent visibility.
     Subgroup,
     /// Workgroup / threadblock coherent visibility.
     Workgroup,
@@ -204,7 +204,7 @@ impl MemoryScope {
 pub enum ExecutionScope {
     /// Single thread execution.
     Thread,
-    /// Subgroup / warp execution rendezvous.
+    /// Subgroup execution rendezvous.
     Subgroup,
     /// Workgroup / threadblock execution rendezvous.
     Workgroup,
@@ -609,7 +609,7 @@ impl AsyncTransactionLifecycle {
 /// Closed collective communication group and topology.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, serde::Deserialize, serde::Serialize)]
 pub enum CollectiveGroup {
-    /// Subgroup collective (warp shuffle / vote).
+    /// Subgroup collective: shuffle or vote.
     Subgroup,
     /// Workgroup collective (shared memory reduction / scan).
     Workgroup,

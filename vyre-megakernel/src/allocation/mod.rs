@@ -262,8 +262,8 @@ impl AllocationPlan {
     /// buffers, and on a host-input launch those bytes are staged rather than
     /// held in any allocator the backend can count. Reconciling a device figure
     /// against the aggregate therefore compares two different quantities, and
-    /// on a CUDA sweep it refused 278 of 349 operations for the caller's share
-    /// of a plan the artifact was running correctly.
+    /// on one backend's sweep it refused 278 of 349 operations for the caller's
+    /// share of a plan the artifact was running correctly.
     ///
     /// # Errors
     ///

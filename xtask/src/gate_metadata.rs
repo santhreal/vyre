@@ -1261,7 +1261,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         artifacts: &[],
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::layering::tests::every_backend_word_is_reported_from_the_list_rather_than_a_sample",
+        proof: "crate::gates::layering::tests::every_backend_word_is_reported_from_the_contract_rather_than_a_sample",
     },
     GateDescriptor {
         name: "op-matrix",

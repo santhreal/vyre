@@ -1020,8 +1020,8 @@ The `findings` column is the count with the injection applied, given the pin in
 | `layering` | Add `vyre-lints.workspace = true` to `[dependencies]` in `vyre-spec/Cargo.toml`. | 0 to 29, one per member that reaches it, each naming the chain |
 | `layering` | Add `wgpu.workspace = true` to `[dependencies]` in `vyre-spec/Cargo.toml`. | 0 to 48, every neutral member that reaches vyre-spec |
 | `layering` | Delete the `[[crate]]` entry for `vyre-spec` from `docs/CRATE_OWNERSHIP.toml`. | gate errors: an unregistered member has an empty closure, so the roster is unreviewed rather than clean |
-| `layering` | Change `layer` on the `vyre-spec` entry to a name NEUTRAL_LAYERS does not hold. | gate errors: a layer with no neutrality decision would be skipped |
-| `layering` | Add `("invented", true)` to `NEUTRAL_LAYERS`. | gate errors: a decision no member uses is an allowance nothing needs |
+| `layering` | Change `layer` on the `vyre-spec` entry to a name no `[[layer]]` row in `structure-gate/backend-vocabulary.toml` holds. | gate errors: a layer with no neutrality decision would be skipped |
+| `layering` | Add a `[[layer]]` row for `invented` to `structure-gate/backend-vocabulary.toml`. | gate errors: a decision no member uses is an allowance nothing needs |
 | `layering` | Add `"not-a-crate"` to `BACKEND_APIS`. | gate errors: a boundary named after a crate the workspace never resolves cannot be crossed |
 | `neutral-crates` | Add `naga.workspace = true` to `[dependencies]` in `vyre-primitives/Cargo.toml`. | 1 to 2, and the dotted form is what the shell rule could not see |
 | `neutral-crates` | Add `vyre-ir = "0.1"` to `vyre-foundation/fuzz/Cargo.toml`, which the workspace excludes and cargo never loads with the graph. | 1 to 2 |

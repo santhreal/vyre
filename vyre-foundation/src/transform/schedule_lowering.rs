@@ -62,7 +62,7 @@ pub fn lower_logical_schedule(program: Program) -> (Program, bool) {
 /// Execution hierarchy levels to which logical regions can be distributed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DistributionTarget {
-    /// SIMD / subgroup / warp lane distribution.
+    /// Subgroup lane distribution.
     Lane,
     /// Cooperative workgroup / threadblock distribution with shared memory.
     Workgroup,

@@ -34,9 +34,23 @@ impl FixtureInstance {
         device: &DeviceIdentity,
         submit: impl Fn(Digest, BindingSet) -> Result<Completion, BackendError> + Send + Sync + 'static,
     ) -> Box<dyn ArtifactInstance> {
+        Self::with_digests(artifact.digest(), payload.digest(), device, submit)
+    }
+
+    /// An instance reporting `artifact` and `payload` as given.
+    ///
+    /// A suite that never materializes an artifact still needs an instance to
+    /// report stable identity, and building one by hand restates every
+    /// accessor of the trait.
+    pub fn with_digests(
+        artifact: Digest,
+        payload: Digest,
+        device: &DeviceIdentity,
+        submit: impl Fn(Digest, BindingSet) -> Result<Completion, BackendError> + Send + Sync + 'static,
+    ) -> Box<dyn ArtifactInstance> {
         Box::new(Self {
-            artifact: artifact.digest(),
-            payload: payload.digest(),
+            artifact,
+            payload,
             device: device.clone(),
             submit: Box::new(submit),
         })

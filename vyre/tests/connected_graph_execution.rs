@@ -12,16 +12,11 @@ use vyre::compiler::{
 };
 use vyre::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
-    ShapeDim, ValueContract, ValueLifetime,
+    ValueContract, ValueLifetime,
 };
 
 fn contract(access: BufferAccess, lifetime: ValueLifetime, count: u64) -> ValueContract {
-    ValueContract {
-        dtype: DataType::U32,
-        shape: vec![ShapeDim::Known(count)],
-        access,
-        lifetime,
-    }
+    ValueContract::dense_1d(DataType::U32, count, access, lifetime)
 }
 
 #[test]

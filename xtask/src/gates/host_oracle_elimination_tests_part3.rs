@@ -1450,3 +1450,29 @@ fn mutation_catches_output_slot_loop_that_compares_slot_bytes() {
         "a slot loop that branches on the slot's own bytes must be convicted: {findings:?}"
     );
 }
+
+/// WHY: a whole-graph composition returns `ProgramGraph` and builds nothing but
+/// IR, so it is a production root. The canonical list named `Program` and not
+/// `ProgramGraph`, which convicted every `vyre-libs` graph composition as a
+/// host semantic twin. Dropping `ProgramGraph` from the list turns this red.
+#[test]
+fn a_whole_graph_composition_is_a_production_root() {
+    let code = r#"
+use vyre_foundation::ir::{DataType, ProgramGraph, ProgramGraphBuilder, ProgramGraphError, ShapeDim};
+
+pub fn build_pipeline(node_count: u64, steps: u64) -> Result<ProgramGraph, ProgramGraphError> {
+    let mut builder = ProgramGraphBuilder::new();
+    let input = builder.input("nodes", DataType::U32, vec![ShapeDim::Known(node_count)])?;
+    let mut carried = input;
+    for step in 0..steps {
+        carried = builder.stage(carried, step)?;
+    }
+    builder.build()
+}
+"#;
+    let findings = analyze_files(&[("vyre-libs/src/graph_compositions/pipeline.rs", code)]);
+    assert!(
+        findings.is_empty(),
+        "a composition returning ProgramGraph owns IR and must not be convicted: {findings:?}"
+    );
+}

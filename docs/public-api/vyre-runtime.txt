@@ -20,8 +20,10 @@ impl bytemuck::zeroable::Zeroable for vyre_runtime::resident_work_queue::task::T
 impl core::clone::Clone for vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers
 impl core::cmp::Eq for vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers
 impl core::cmp::PartialEq for vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers
+impl core::convert::From<&vyre_runtime::PipelineError> for vyre_foundation::diagnostics::Diagnostic
 impl core::convert::From<vyre_driver::backend::error::BackendError> for vyre_runtime::PipelineError
 impl core::convert::From<vyre_megakernel::error::CompileError> for vyre_runtime::artifact_admission::ArtifactAdmissionError
+impl core::convert::From<vyre_runtime::PipelineError> for vyre_foundation::diagnostics::Diagnostic
 impl core::convert::From<vyre_runtime::replay::ReplayLogError> for vyre_runtime::PipelineError
 impl core::default::Default for vyre_runtime::UringCompletionPump<'_>
 impl core::default::Default for vyre_runtime::artifact_admission::InteractiveSessionStateMachine
@@ -60,6 +62,7 @@ impl core::marker::Sync for vyre_runtime::uring::IoUringState
 impl core::ops::drop::Drop for vyre_runtime::resource_residency::ResourceResidency
 impl core::ops::drop::Drop for vyre_runtime::uring::IoUringState
 impl core::ops::drop::Drop for vyre_runtime::uring::ResidentIoLoop
+impl vyre_foundation::diagnostics::ToDiagnostic for vyre_runtime::PipelineError
 impl vyre_megakernel::execution::SemanticExecutor for vyre_runtime::RegisteredSemanticExecutor
 impl vyre_runtime::CounterArithmetic
 impl vyre_runtime::PipelineError
@@ -71,7 +74,6 @@ impl vyre_runtime::artifact_admission::AdmittedPortfolio
 impl vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl vyre_runtime::artifact_admission::ArtifactSession
 impl vyre_runtime::artifact_admission::ArtifactWorkspace
-impl vyre_runtime::artifact_admission::DeadlineClass
 impl vyre_runtime::artifact_admission::InteractiveSessionStateMachine
 impl vyre_runtime::artifact_admission::MeshSession
 impl vyre_runtime::artifact_admission::MeshSubmission
@@ -189,6 +191,7 @@ impl<'a> vyre_runtime::uring::AsyncUringStream<'a>
 impl<'a> vyre_runtime::uring::GpuMappedBuffer<'a>
 impl<'a> vyre_runtime::uring::NvmeGpuIngestDriver<'a>
 impl<'a> vyre_runtime::uring::UringResidentQueuePump<'a>
+impl<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone> core::default::Default for vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>
 impl<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone> vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>
 impl<R: core::marker::Copy> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>
 impl<R> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec<R>
@@ -200,7 +203,6 @@ pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::neutral(&self) 
 pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::contract(&self) -> &vyre_megakernel::specialization::SpecializationContract
 pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::remainder(&self) -> core::option::Option<&vyre_runtime::artifact_admission::AdmittedArtifact>
 pub const fn vyre_runtime::artifact_admission::ArtifactAdmissionError::diagnostic(&self) -> &vyre_foundation::diagnostics::Diagnostic
-pub const fn vyre_runtime::artifact_admission::DeadlineClass::budget_ns(&self) -> u64
 pub const fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::new(max_restarts: u32) -> Self
 pub const fn vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange::accounting(&self) -> &vyre_driver::peer_transfer::PeerTransferAccounting
 pub const fn vyre_runtime::generation_namespace::GenerationScopedNamespace::new(domain: vyre_spec::compatibility::ProtocolDomain, version: vyre_spec::compatibility::ProtocolVersion, generation_id: u64) -> Self
@@ -411,7 +413,6 @@ pub enum vyre_runtime::UpgradePhase
 pub enum vyre_runtime::UringPollState
 pub enum vyre_runtime::artifact_admission::ArtifactSessionError
 pub enum vyre_runtime::artifact_admission::CancellationOutcome
-pub enum vyre_runtime::artifact_admission::DeadlineClass
 pub enum vyre_runtime::artifact_admission::GeneratedDataSource
 pub enum vyre_runtime::artifact_admission::InteractiveAdmissionError
 pub enum vyre_runtime::artifact_admission::InteractiveCancellationError
@@ -459,11 +460,15 @@ pub enum vyre_runtime::safetensors_transfer::TransferError
 pub enum vyre_runtime::safetensors_transfer::TransferState
 pub enum vyre_runtime::uring::GpuDirectCapability
 pub enum vyre_runtime::uring::NativeReadPath
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_runtime::PipelineError) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_runtime::PipelineError) -> Self
 pub fn vyre_runtime::CounterArithmetic::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_runtime::CounterScope::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_runtime::PipelineError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_runtime::PipelineError::from(err: vyre_driver::backend::error::BackendError) -> Self
 pub fn vyre_runtime::PipelineError::from(err: vyre_runtime::replay::ReplayLogError) -> Self
 pub fn vyre_runtime::PipelineError::is_drain_incomplete(&self) -> bool
+pub fn vyre_runtime::PipelineError::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_runtime::RegisteredSemanticExecutor::execute(&self, request: &vyre_megakernel::execution::SemanticExecutionRequest<'_>) -> core::result::Result<vyre_megakernel::execution::SemanticExecutionOutput, vyre_megakernel::execution::SemanticExecutionError>
 pub fn vyre_runtime::RequestFault::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_runtime::RingEncodingFault::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -587,11 +592,13 @@ pub fn vyre_runtime::artifact_admission::admit_artifact(envelope_bytes: &[u8], r
 pub fn vyre_runtime::artifact_admission::admit_cached_artifact(store: &dyn vyre_runtime::pipeline_cache::PipelineCacheStore, fingerprint: &vyre_runtime::pipeline_cache::PipelineFingerprint, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<core::option::Option<vyre_runtime::artifact_admission::AdmittedArtifact>, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_envelope(envelope: vyre_megakernel::envelope::ArtifactEnvelope, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_portfolio(portfolio_bytes: &[u8], required_format: &vyre_megakernel::envelope::TargetPayloadFormat, target_identity: vyre_megakernel::identity::Digest) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedPortfolio, vyre_runtime::artifact_admission::ArtifactAdmissionError>
+pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::current_state(&self) -> vyre_runtime::atomic_recovery::GuardedState<T> where T: core::clone::Clone
 pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::new(initial: T, domain: vyre_foundation::failure_domain::FailureDomain, recovery_class: vyre_foundation::failure_domain::RecoveryClass) -> Self
 pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::recover(&self, fresh_state: T)
 pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::with_state<R>(&self, op: impl core::ops::function::FnOnce(&mut T) -> core::result::Result<R, alloc::string::String>) -> core::result::Result<R, vyre_foundation::failure_domain::TypedRecoveryError>
 pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::abort(&self, key: &K, ticket: vyre_runtime::atomic_recovery::PrepareTicket)
 pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::commit(&self, key: K, ticket: vyre_runtime::atomic_recovery::PrepareTicket) -> core::result::Result<V, alloc::string::String>
+pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::default() -> Self
 pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::is_committed(&self, key: &K) -> bool
 pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::new() -> Self
 pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::prepare(&self, key: K, value: V) -> core::result::Result<core::option::Option<vyre_runtime::atomic_recovery::PrepareTicket>, alloc::string::String>
@@ -1513,14 +1520,6 @@ pub vyre_runtime::artifact_admission::ArtifactSessionError::Target(vyre_megakern
 pub vyre_runtime::artifact_admission::CancellationOutcome::AlreadyCompleted
 pub vyre_runtime::artifact_admission::CancellationOutcome::AlreadySuperseded
 pub vyre_runtime::artifact_admission::CancellationOutcome::Cancelled
-pub vyre_runtime::artifact_admission::DeadlineClass::Background
-pub vyre_runtime::artifact_admission::DeadlineClass::Background::max_latency_ns: u64
-pub vyre_runtime::artifact_admission::DeadlineClass::HardRealTime
-pub vyre_runtime::artifact_admission::DeadlineClass::HardRealTime::deadline_ns: u64
-pub vyre_runtime::artifact_admission::DeadlineClass::HardRealTime::max_jitter_ns: u64
-pub vyre_runtime::artifact_admission::DeadlineClass::InteractiveFrame
-pub vyre_runtime::artifact_admission::DeadlineClass::InteractiveFrame::frame_target_ns: u64
-pub vyre_runtime::artifact_admission::DeadlineClass::InteractiveFrame::target_fps: u32
 pub vyre_runtime::artifact_admission::GeneratedDataSource::Custom
 pub vyre_runtime::artifact_admission::GeneratedDataSource::Custom::bytes: alloc::vec::Vec<u8>
 pub vyre_runtime::artifact_admission::GeneratedDataSource::Custom::length: usize
@@ -1566,7 +1565,7 @@ pub vyre_runtime::artifact_admission::InteractiveSessionState::Submitted
 pub vyre_runtime::artifact_admission::InteractiveSessionState::Superseded
 pub vyre_runtime::artifact_admission::InteractiveSubmissionRequest::artifact: vyre_megakernel::identity::Digest
 pub vyre_runtime::artifact_admission::InteractiveSubmissionRequest::channel_id: vyre_runtime::artifact_admission::InteractiveChannelId
-pub vyre_runtime::artifact_admission::InteractiveSubmissionRequest::deadline: vyre_runtime::artifact_admission::DeadlineClass
+pub vyre_runtime::artifact_admission::InteractiveSubmissionRequest::deadline: vyre_megakernel::objective::real_time::RealTimeDeadline
 pub vyre_runtime::artifact_admission::InteractiveSubmissionRequest::estimated_duration_ns: u64
 pub vyre_runtime::artifact_admission::InteractiveSubmissionRequest::frame_generation: u64
 pub vyre_runtime::artifact_admission::InteractiveSubmissionRequest::priority: vyre_runtime::artifact_admission::PriorityClass

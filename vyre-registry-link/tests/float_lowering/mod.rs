@@ -12,6 +12,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
+use vyre_driver::BackendError;
+use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_registry_link::backend::{linked_backend_sources, live_backend_registry};
 
 /// What a row claims a backend does with one mode.
@@ -167,4 +169,62 @@ pub fn first_divergence(expected: &[Vec<u8>], actual: &[Vec<u8>]) -> String {
         }
     }
     String::from(" no differing lane, so the buffers differ in trailing bytes")
+}
+
+/// What one dispatch under `mode` proved about a backend, as a finding line or
+/// nothing.
+///
+/// Two suites ask this question. The closure suite asks it for the strict mode
+/// in every lane, and the device suite asks it for every mode where a device
+/// admits a backend. Each one classified the four outcomes itself, and a
+/// classifier written twice is free to hold one suite to naming the backend and
+/// the other to naming only the mode, which is how a refusal that names neither
+/// passes on the lane that happens to run it.
+///
+/// `named_operation` is the operation the program is built around when the mode
+/// blocks it, and `None` when the mode admits every operation.
+pub fn honored_or_refused_by_name(
+    backend_id: &str,
+    honors: bool,
+    mode: FloatLoweringMode,
+    named_operation: Option<&str>,
+    outcome: &Result<Vec<Vec<u8>>, BackendError>,
+) -> Option<String> {
+    let label = mode.cache_label();
+    match outcome {
+        Ok(_) if honors => None,
+        Ok(_) => Some(format!(
+            "  backend `{backend_id}` returned Ok for mode `{label}` but honors_float_lowering \
+             returned false"
+        )),
+        Err(error) if honors => Some(format!(
+            "  backend `{backend_id}` failed dispatch for honored mode `{label}`: {error}"
+        )),
+        Err(error) => {
+            let message = error.to_string();
+            let mut absent = Vec::new();
+            if !message.contains(label) {
+                absent.push("the mode");
+            }
+            if !message.contains(backend_id) {
+                absent.push("the backend");
+            }
+            if let Some(operation) = named_operation {
+                if !message.contains(operation) {
+                    absent.push("the operation");
+                }
+            }
+            if !message.contains("Fix:") {
+                absent.push("a Fix:");
+            }
+            if absent.is_empty() {
+                return None;
+            }
+            Some(format!(
+                "  backend `{backend_id}` refused unhonored mode `{label}` without naming {}: \
+                 {message}",
+                absent.join(", ")
+            ))
+        }
+    }
 }

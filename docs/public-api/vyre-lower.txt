@@ -3,6 +3,8 @@ impl core::cmp::Eq for vyre_lower::KernelDescriptor
 impl core::cmp::Eq for vyre_lower::KernelOp
 impl core::cmp::Eq for vyre_lower::KernelOpKind
 impl core::cmp::Eq for vyre_lower::LiteralValue
+impl core::convert::From<&vyre_lower::LowerError> for vyre_foundation::diagnostics::Diagnostic
+impl core::convert::From<vyre_lower::LowerError> for vyre_foundation::diagnostics::Diagnostic
 impl core::convert::From<vyre_lower::descriptor_builder::KernelBodyBuilder> for vyre_lower::KernelBody
 impl core::convert::From<vyre_lower::descriptor_builder::KernelDescriptorBuilder> for vyre_lower::KernelDescriptor
 impl core::default::Default for vyre_lower::analyses::ConsumerAbiRequirement
@@ -34,6 +36,7 @@ impl core::hash::Hash for vyre_lower::KernelDescriptor
 impl core::hash::Hash for vyre_lower::KernelOp
 impl core::hash::Hash for vyre_lower::KernelOpKind
 impl core::hash::Hash for vyre_lower::LiteralValue
+impl vyre_foundation::diagnostics::ToDiagnostic for vyre_lower::LowerError
 impl vyre_lower::AsyncTransaction
 impl vyre_lower::AsyncWaitSpec
 impl vyre_lower::BarrierPhase
@@ -50,6 +53,7 @@ impl vyre_lower::IntentAnnotatedDescriptor
 impl vyre_lower::KernelDescriptor
 impl vyre_lower::KernelOp
 impl vyre_lower::KernelOpKind
+impl vyre_lower::LowerError
 impl vyre_lower::MatrixMmaElement
 impl vyre_lower::MatrixMmaSpec
 impl vyre_lower::MatrixTileShape
@@ -214,6 +218,8 @@ pub enum vyre_lower::emit_adversarial_corpus::EmitOutcome
 pub enum vyre_lower::operand_class::OperandClass
 pub enum vyre_lower::rewrites::LoweringRewriteRule
 pub enum vyre_lower::rewrites::RewriteOwnership
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_lower::LowerError) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_lower::LowerError) -> Self
 pub fn vyre_lower::AsyncTransaction::matches(&self, other: &Self) -> bool
 pub fn vyre_lower::AsyncTransaction::staged(tag: vyre_lower::Name, visibility: vyre_lower::TransactionScope, stage: vyre_lower::StageSlot) -> Self
 pub fn vyre_lower::AsyncTransaction::tag(&self) -> &vyre_lower::Name
@@ -272,6 +278,8 @@ pub fn vyre_lower::KernelOpKind::async_wait(tag: vyre_lower::Name) -> Self
 pub fn vyre_lower::KernelOpKind::hash<H: core::hash::Hasher>(&self, state: &mut H)
 pub fn vyre_lower::KernelOpsIter<'a>::next(&mut self) -> core::option::Option<Self::Item>
 pub fn vyre_lower::LiteralValue::hash<H: core::hash::Hasher>(&self, state: &mut H)
+pub fn vyre_lower::LowerError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
+pub fn vyre_lower::LowerError::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_lower::MatrixMmaSpec::operand_count(&self) -> core::result::Result<u32, vyre_lower::MatrixSpecError>
 pub fn vyre_lower::MatrixMmaSpec::operand_words(&self) -> core::result::Result<[u32; 3], vyre_lower::MatrixSpecError>
 pub fn vyre_lower::MatrixMmaSpec::result_count(&self) -> core::result::Result<u32, vyre_lower::MatrixSpecError>
@@ -444,6 +452,7 @@ pub fn vyre_lower::descriptor_builder::permissive_workgroup_limits() -> vyre_low
 pub fn vyre_lower::descriptor_builder::shared_rw(index: u32, element_type: vyre_spec::data_type::DataType, count: u32, name: &str) -> vyre_lower::BindingSlot
 pub fn vyre_lower::descriptor_builder::slot(index: u32, element_type: vyre_spec::data_type::DataType, memory_class: vyre_lower::MemoryClass, visibility: vyre_lower::BindingVisibility, name: &str) -> vyre_lower::BindingSlot
 pub fn vyre_lower::descriptor_builder::store_global(slot: u32, index: u32, value: u32) -> vyre_lower::KernelOp
+pub fn vyre_lower::descriptor_builder::store_literal_kernel(id: &str, out: vyre_lower::BindingSlot, workgroup: [u32; 3]) -> vyre_lower::KernelDescriptor
 pub fn vyre_lower::descriptor_builder::strided_tile_program() -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_lower::descriptor_builder::target_without_subgroups() -> vyre_lower::EmissionTargetCapabilities
 pub fn vyre_lower::descriptor_builder::vector_load_global(slot: u32, index: u32, width: u8, result: u32) -> vyre_lower::KernelOp

@@ -18,9 +18,9 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_megakernel::Digest;
+use vyre_megakernel::{Digest, RealTimeDeadline};
 use vyre_runtime::artifact_admission::{
-    CancellationOutcome, DeadlineClass, InteractiveAdmissionError, InteractiveCancellationError,
+    CancellationOutcome, InteractiveAdmissionError, InteractiveCancellationError,
     InteractiveChannelId, InteractiveCompletion, InteractiveSessionState,
     InteractiveSessionStateMachine, InteractiveSubmissionRequest, PriorityClass,
     INTERACTIVE_DISPATCH_HEADROOM, MAX_INTERACTIVE_STEP_BUDGET_MICROS,
@@ -41,7 +41,7 @@ fn make_request(
     InteractiveSubmissionRequest {
         channel_id: InteractiveChannelId(channel),
         frame_generation: gen,
-        deadline: DeadlineClass::InteractiveFrame {
+        deadline: RealTimeDeadline::InteractiveFrame {
             frame_target_ns: deadline_ns,
             target_fps: 60,
         },

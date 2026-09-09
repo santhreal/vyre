@@ -4,6 +4,7 @@
 #[non_exhaustive] pub enum vyre_foundation::IrError
 #[non_exhaustive] pub enum vyre_foundation::RecoveryClass
 #[non_exhaustive] pub enum vyre_foundation::config_schema::ConfigPartition
+#[non_exhaustive] pub enum vyre_foundation::diagnostics::CompilerLevel
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::DiagnosticStage
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::RetryClass
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::Severity
@@ -109,6 +110,7 @@ impl core::default::Default for vyre_foundation::execution_plan::SchedulingPolic
 impl core::default::Default for vyre_foundation::ir::GraphDelta
 impl core::default::Default for vyre_foundation::ir::MemoryHints
 impl core::default::Default for vyre_foundation::ir::Program
+impl core::default::Default for vyre_foundation::ir::SamplerDescriptor
 impl core::default::Default for vyre_foundation::ir::certificate::ResourceBounds
 impl core::default::Default for vyre_foundation::optimizer::AdapterCaps
 impl core::default::Default for vyre_foundation::optimizer::PassScheduler
@@ -193,6 +195,7 @@ impl core::fmt::Display for vyre_foundation::region_ssa::RegionId
 impl core::fmt::Display for vyre_foundation::region_ssa::ValueId
 impl core::fmt::Display for vyre_foundation::security::label::TenantId
 impl core::fmt::Display for vyre_foundation::serial::EnvelopeError
+impl core::fmt::Display for vyre_foundation::serial::schema_authority::CanonicalSchemaVersion
 impl core::fmt::Display for vyre_foundation::serial::text::TextParseError
 impl core::fmt::Display for vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError
 impl core::fmt::Display for vyre_foundation::serial::wire::encode::WireEncodeErr
@@ -219,7 +222,10 @@ impl inventory::Collect for vyre_foundation::extension::ExtensionDataTypeRegistr
 impl inventory::Collect for vyre_foundation::extension::ExtensionUnOpRegistration
 impl inventory::Collect for vyre_foundation::extension::OpaqueExprResolver
 impl inventory::Collect for vyre_foundation::extension::OpaqueNodeResolver
+impl inventory::Collect for vyre_foundation::operation::ConformanceProvider
+impl inventory::Collect for vyre_foundation::operation::LoweringProvider
 impl inventory::Collect for vyre_foundation::operation::OperationRegistration
+impl inventory::Collect for vyre_foundation::operation::SemanticDescriptor
 impl inventory::Collect for vyre_foundation::optimizer::ProgramPassRegistration
 impl inventory::Collect for vyre_foundation::optimizer::level_contract::LevelStageRegistration
 impl inventory::Collect for vyre_foundation::optimizer::rewrite_contract::RewriteContractRegistration
@@ -242,10 +248,13 @@ impl vyre_foundation::causal::tracer::CausalTracer
 impl vyre_foundation::config_schema::ConfigPartition
 impl vyre_foundation::config_schema::ConfigValue
 impl vyre_foundation::config_schema::ResolvedConfiguration
+impl vyre_foundation::diagnostics::CompilerLevel
 impl vyre_foundation::diagnostics::Diagnostic
 impl vyre_foundation::diagnostics::DiagnosticCode
 impl vyre_foundation::diagnostics::OpLocation
 impl vyre_foundation::diagnostics::Severity
+impl vyre_foundation::diagnostics::ToDiagnostic for vyre_foundation::IrError
+impl vyre_foundation::diagnostics::ToDiagnostic for vyre_foundation::validate::ValidationError
 impl vyre_foundation::dialect::DialectDescriptor
 impl vyre_foundation::dialect::DialectRegistry
 impl vyre_foundation::dialect::ExternalLayoutDeclaration
@@ -267,25 +276,33 @@ impl vyre_foundation::fp_parity::FloatLoweringMode
 impl vyre_foundation::graph_view::DataEdge
 impl vyre_foundation::graph_view::GraphNode
 impl vyre_foundation::graph_view::NodeGraph
+impl vyre_foundation::ir::AdmittedResourceRecord
 impl vyre_foundation::ir::BufferDecl
 impl vyre_foundation::ir::EvalError
 impl vyre_foundation::ir::Expr
+impl vyre_foundation::ir::ExternalResourceCapability
 impl vyre_foundation::ir::GraphDelta
 impl vyre_foundation::ir::Ident
+impl vyre_foundation::ir::ImageExtent
+impl vyre_foundation::ir::ImageFormat
 impl vyre_foundation::ir::InterpCtx
 impl vyre_foundation::ir::Layout
 impl vyre_foundation::ir::LinearType
 impl vyre_foundation::ir::MemoryKind
 impl vyre_foundation::ir::Node
 impl vyre_foundation::ir::NodeStorage
+impl vyre_foundation::ir::PlaneDescriptor
 impl vyre_foundation::ir::Program
 impl vyre_foundation::ir::ProgramGraph
 impl vyre_foundation::ir::ProgramGraphBuilder
 impl vyre_foundation::ir::ProgramGraphTemplate
 impl vyre_foundation::ir::ProgramStats
+impl vyre_foundation::ir::ResourceUsageFlags
 impl vyre_foundation::ir::SemanticType
 impl vyre_foundation::ir::ShapePredicate
+impl vyre_foundation::ir::SubresourceRange
 impl vyre_foundation::ir::Tile
+impl vyre_foundation::ir::ValueContract
 impl vyre_foundation::ir::capability::ResourceCapability
 impl vyre_foundation::ir::certificate::VerificationCertificate
 impl vyre_foundation::ir::compiler_gate::SemanticCompiler
@@ -330,6 +347,7 @@ impl vyre_foundation::numeric::RegionNumericFacts
 impl vyre_foundation::numeric::ScalarFormat
 impl vyre_foundation::opaque_payload::endian::LeBytesWriter
 impl vyre_foundation::operation::CallGraphClosure
+impl vyre_foundation::operation::CatalogBundle
 impl vyre_foundation::operation::OperationEffects
 impl vyre_foundation::operation::OperationRegistration
 impl vyre_foundation::operation::OperationRegistry
@@ -522,6 +540,11 @@ impl vyre_foundation::security::sanitize::SanitizedBuffer
 impl vyre_foundation::security::sanitize::TenantCacheNamespace
 impl vyre_foundation::serial::WireWriter
 impl vyre_foundation::serial::output_set::OutputSet
+impl vyre_foundation::serial::schema_authority::BoundedDecoder
+impl vyre_foundation::serial::schema_authority::CanonicalDigest
+impl vyre_foundation::serial::schema_authority::CanonicalSchemaVersion
+impl vyre_foundation::serial::schema_authority::SchemaAuthority
+impl vyre_foundation::serial::schema_authority::SchemaId
 impl vyre_foundation::serial::text::TextParseError
 impl vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence
 impl vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence
@@ -582,6 +605,8 @@ pub const fn vyre_foundation::causal::phase::CausalPhase::level_tier(self) -> u8
 pub const fn vyre_foundation::causal::phase::CausalPhase::name(self) -> &'static str
 pub const fn vyre_foundation::causal::tracer::CausalTracer::mode(&self) -> vyre_foundation::causal::mode::CausalTraceMode
 pub const fn vyre_foundation::config_schema::ConfigPartition::as_str(self) -> &'static str
+pub const fn vyre_foundation::diagnostics::CompilerLevel::label(self) -> &'static str
+pub const fn vyre_foundation::diagnostics::Diagnostic::with_compiler_level(self, level: vyre_foundation::diagnostics::CompilerLevel) -> Self
 pub const fn vyre_foundation::diagnostics::Diagnostic::with_retry(self, retry: vyre_foundation::diagnostics::RetryClass) -> Self
 pub const fn vyre_foundation::diagnostics::Diagnostic::with_stage(self, stage: vyre_foundation::diagnostics::DiagnosticStage) -> Self
 pub const fn vyre_foundation::diagnostics::DiagnosticCode::new(code: &'static str) -> Self
@@ -612,18 +637,28 @@ pub const fn vyre_foundation::fp_parity::FloatLoweringMode::roster_index(self) -
 pub const fn vyre_foundation::ir::Expr::logical_index(axis: u8) -> Self
 pub const fn vyre_foundation::ir::Expr::logical_tile_index(axis: u8) -> Self
 pub const fn vyre_foundation::ir::Expr::logical_within_tile_index(axis: u8) -> Self
+pub const fn vyre_foundation::ir::ExternalResourceCapability::desktop_gpu_standard() -> Self
 pub const fn vyre_foundation::ir::GraphDelta::version(&self) -> u16
+pub const fn vyre_foundation::ir::ImageExtent::d2(width: u32, height: u32) -> Self
+pub const fn vyre_foundation::ir::ImageExtent::d3(width: u32, height: u32, depth: u32) -> Self
+pub const fn vyre_foundation::ir::ImageExtent::total_texels(&self) -> u64
+pub const fn vyre_foundation::ir::ImageFormat::bytes_per_pixel(self) -> u32
+pub const fn vyre_foundation::ir::ImageFormat::is_depth_or_stencil(self) -> bool
 pub const fn vyre_foundation::ir::LinearType::forbids_drop(self) -> bool
 pub const fn vyre_foundation::ir::LinearType::forbids_reuse(self) -> bool
 pub const fn vyre_foundation::ir::Node::barrier() -> Self
 pub const fn vyre_foundation::ir::Node::barrier_with_ordering(ordering: vyre_foundation::memory_model::MemoryOrdering) -> Self
 pub const fn vyre_foundation::ir::Node::logical_barrier(ordering: vyre_foundation::memory_model::MemoryOrdering) -> Self
 pub const fn vyre_foundation::ir::Node::return_() -> Self
+pub const fn vyre_foundation::ir::ResourceUsageFlags::compute_sampled() -> Self
+pub const fn vyre_foundation::ir::ResourceUsageFlags::compute_storage() -> Self
+pub const fn vyre_foundation::ir::ResourceUsageFlags::presentable_storage() -> Self
 pub const fn vyre_foundation::ir::SemanticType::is_resource(&self) -> bool
 pub const fn vyre_foundation::ir::SemanticType::is_scalar(&self) -> bool
 pub const fn vyre_foundation::ir::SemanticType::is_tensor(&self) -> bool
 pub const fn vyre_foundation::ir::SemanticType::scalar(scalar: vyre_foundation::ir::scalar::ScalarType) -> Self
 pub const fn vyre_foundation::ir::SemanticType::vector(element: vyre_foundation::ir::scalar::ScalarType, lanes: u32) -> Self
+pub const fn vyre_foundation::ir::SubresourceRange::color_all() -> Self
 pub const fn vyre_foundation::ir::capability::ResourceCapability::can_atomic(&self) -> bool
 pub const fn vyre_foundation::ir::capability::ResourceCapability::can_read(&self) -> bool
 pub const fn vyre_foundation::ir::capability::ResourceCapability::can_write(&self) -> bool
@@ -752,6 +787,7 @@ pub const fn vyre_foundation::numeric::QuantizedConversion::is_free(&self) -> bo
 pub const fn vyre_foundation::numeric::QuantizedConversion::steps(&self) -> u32
 pub const fn vyre_foundation::numeric::RegionNumericFacts::opaque() -> Self
 pub const fn vyre_foundation::numeric::ScalarFormat::bit_width(self) -> u32
+pub const fn vyre_foundation::operation::CatalogBundle::digest(&self) -> &[u8; 32]
 pub const fn vyre_foundation::operation::OperationEffects::union(self, other: Self) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::category(&self) -> core::option::Option<&'static str>
 pub const fn vyre_foundation::operation::OperationRegistration::declared_schedule_constraints(&self) -> vyre_foundation::GeometryRequirements
@@ -853,6 +889,9 @@ pub const fn vyre_foundation::security::capability::UnforgeableCapability::tenan
 pub const fn vyre_foundation::security::label::TenantId::as_u128(self) -> u128
 pub const fn vyre_foundation::security::label::TenantId::is_system(self) -> bool
 pub const fn vyre_foundation::security::label::TenantId::new(id: u128) -> Self
+pub const fn vyre_foundation::serial::schema_authority::CanonicalSchemaVersion::is_compatible_with(&self, encoded_version: &Self) -> bool
+pub const fn vyre_foundation::serial::schema_authority::CanonicalSchemaVersion::new(major: u32, minor: u32, patch: u32) -> Self
+pub const fn vyre_foundation::serial::schema_authority::SchemaId::as_str(self) -> &'static str
 pub const fn vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::within_budget(&self) -> bool
 pub const fn vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::within_budget(&self) -> bool
 pub const fn vyre_foundation::serial::wire::encode::WireEncodeErr::static_msg(msg: &'static str) -> Self
@@ -1063,13 +1102,19 @@ pub enum vyre_foundation::ir::AsyncTransactionLifecycle
 pub enum vyre_foundation::ir::AtomicOrdering
 pub enum vyre_foundation::ir::BarrierParticipation
 pub enum vyre_foundation::ir::CollectiveGroup
+pub enum vyre_foundation::ir::ColorSpace
 pub enum vyre_foundation::ir::CompileError
 pub enum vyre_foundation::ir::ExecutionScope
 pub enum vyre_foundation::ir::ExternalEffect
+pub enum vyre_foundation::ir::ExternalMemoryKind
+pub enum vyre_foundation::ir::ExternalSyncProtocol
 pub enum vyre_foundation::ir::FailureCancellationBehavior
 pub enum vyre_foundation::ir::FenceSemantics
 pub enum vyre_foundation::ir::GraphDeltaError
 pub enum vyre_foundation::ir::GraphDeltaOp
+pub enum vyre_foundation::ir::ImageAspect
+pub enum vyre_foundation::ir::ImageDimension
+pub enum vyre_foundation::ir::ImageFormat
 pub enum vyre_foundation::ir::InvariantCategory
 pub enum vyre_foundation::ir::Layout
 pub enum vyre_foundation::ir::MemoryScope
@@ -1079,8 +1124,11 @@ pub enum vyre_foundation::ir::ProgramGraphError
 pub enum vyre_foundation::ir::ProgramGraphIdentityError
 pub enum vyre_foundation::ir::QuantizationMeaning
 pub enum vyre_foundation::ir::Residency
+pub enum vyre_foundation::ir::ResourceAbiError
 pub enum vyre_foundation::ir::ResourceCapability
 pub enum vyre_foundation::ir::RoundingMode
+pub enum vyre_foundation::ir::SamplerAddressMode
+pub enum vyre_foundation::ir::SamplerFilter
 pub enum vyre_foundation::ir::SaturationMode
 pub enum vyre_foundation::ir::ScalarType
 pub enum vyre_foundation::ir::SemanticType
@@ -1176,7 +1224,6 @@ pub enum vyre_foundation::optimizer::rewrite_proof::ProofDomain
 pub enum vyre_foundation::optimizer::rewrite_proof::ProofSort
 pub enum vyre_foundation::optimizer::rewrite_proof::ProofStatus
 pub enum vyre_foundation::platform::ConversionError
-pub enum vyre_foundation::platform::DriverApiFamily
 pub enum vyre_foundation::platform::Endianness
 pub enum vyre_foundation::platform::HostArch
 pub enum vyre_foundation::platform::HostOs
@@ -1184,7 +1231,6 @@ pub enum vyre_foundation::platform::PlatformAdapterError
 pub enum vyre_foundation::platform::PointerWidth
 pub enum vyre_foundation::platform::UnsupportedPlatformError
 pub enum vyre_foundation::platform::adapters::PlatformAdapterError
-pub enum vyre_foundation::platform::matrix::DriverApiFamily
 pub enum vyre_foundation::platform::matrix::Endianness
 pub enum vyre_foundation::platform::matrix::HostArch
 pub enum vyre_foundation::platform::matrix::HostOs
@@ -1222,6 +1268,12 @@ pub enum vyre_foundation::security::label::ConfidentialityLevel
 pub enum vyre_foundation::security::label::Permission
 pub enum vyre_foundation::security::label::RetentionPolicy
 pub enum vyre_foundation::security::label::SecurityRole
+pub enum vyre_foundation::serial::DigestAlgorithm
+pub enum vyre_foundation::serial::SchemaAuthorityError
+pub enum vyre_foundation::serial::SchemaId
+pub enum vyre_foundation::serial::schema_authority::DigestAlgorithm
+pub enum vyre_foundation::serial::schema_authority::SchemaAuthorityError
+pub enum vyre_foundation::serial::schema_authority::SchemaId
 pub enum vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError
 pub enum vyre_foundation::serial::wire::encode::ScanDatabaseMode
 pub enum vyre_foundation::serial::wire::encode::ScanDatabaseReaderCompatibility
@@ -1281,6 +1333,7 @@ pub fn vyre_foundation::GeometryRequirements::compose(self, other: Self) -> core
 pub fn vyre_foundation::GeometryRequirements::from_program(program: &vyre_foundation::ir::Program) -> core::result::Result<Self, vyre_foundation::GeometryConstraintConflict>
 pub fn vyre_foundation::IrError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_foundation::IrError::lowering(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_foundation::IrError::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_foundation::LaunchGeometry::default() -> Self
 pub fn vyre_foundation::Uniformity::default() -> Self
 pub fn vyre_foundation::admitted_logical_span(program: &vyre_foundation::ir::Program, resource_span: u32) -> u32
@@ -1349,29 +1402,38 @@ pub fn vyre_foundation::config_schema::ResolvedConfiguration::new_with_defaults(
 pub fn vyre_foundation::config_schema::ResolvedConfiguration::redacted_view(&self) -> alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
 pub fn vyre_foundation::cpu_op::CategoryAOp::program() -> vyre_foundation::ir::Program
 pub fn vyre_foundation::cpu_op::CpuOp::cpu(input: &[u8], output: &mut alloc::vec::Vec<u8>)
+pub fn vyre_foundation::diagnostics::Diagnostic::emission_error(target: impl core::convert::Into<alloc::string::String>, code: &'static str, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::error(code: &'static str, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::fmt(&self, output: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_foundation::IrError) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_foundation::validate::ValidationError) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_foundation::IrError) -> Self
-pub fn vyre_foundation::diagnostics::Diagnostic::from(issue: &vyre_foundation::validate::ValidationError) -> Self
-pub fn vyre_foundation::diagnostics::Diagnostic::from(issue: vyre_foundation::validate::ValidationError) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_foundation::validate::ValidationError) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::note(code: &'static str, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::render_human(&self) -> alloc::string::String
 pub fn vyre_foundation::diagnostics::Diagnostic::to_json(&self) -> alloc::string::String
 pub fn vyre_foundation::diagnostics::Diagnostic::warning(code: &'static str, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::with_artifact_id(self, artifact_id: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_cause(self, kind: impl core::convert::Into<alloc::string::String>, detail: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::with_cause_chain(self, chain: impl core::iter::traits::collect::IntoIterator<Item = vyre_foundation::diagnostics::DiagnosticCause>) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::with_context_value(self, key: impl core::convert::Into<alloc::string::String>, value: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::with_context_values(self, values: impl core::iter::traits::collect::IntoIterator<Item = (impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>)>) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::with_device(self, device: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_doc_url(self, url: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_fix(self, fix: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_location(self, location: vyre_foundation::diagnostics::OpLocation) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_note(self, note: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_notes(self, notes: impl core::iter::traits::collect::IntoIterator<Item = impl core::convert::Into<alloc::borrow::Cow<'static, str>>>) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::with_target(self, target: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::diagnostics::DiagnosticCode::as_str(&self) -> &str
 pub fn vyre_foundation::diagnostics::DiagnosticCode::fmt(&self, output: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::diagnostics::DiagnosticCode::from_owned(code: alloc::string::String) -> Self
 pub fn vyre_foundation::diagnostics::OpLocation::op(op_id: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::OpLocation::with_attr(self, name: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
+pub fn vyre_foundation::diagnostics::OpLocation::with_field_path(self, path: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::OpLocation::with_operand(self, index: u32) -> Self
 pub fn vyre_foundation::diagnostics::OpLocation::with_path(self, path: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_foundation::diagnostics::ToDiagnostic::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_foundation::dialect::Dialect::descriptor() -> &'static vyre_foundation::dialect::DialectDescriptor
 pub fn vyre_foundation::dialect::Dialect::id() -> &'static str
 pub fn vyre_foundation::dialect::Dialect::match_op_id(op_id: &str) -> core::option::Option<Self::Op>
@@ -1470,6 +1532,7 @@ pub fn vyre_foundation::fp_expansion::strict_expansion(op: &vyre_spec::un_op::Un
 pub fn vyre_foundation::fp_expansion::strict_unexpandable_unary_ops() -> alloc::vec::Vec<vyre_spec::un_op::UnOp>
 pub fn vyre_foundation::fp_parity::approximable_operations(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<alloc::string::String>
 pub fn vyre_foundation::fp_parity::approximable_unary_ops() -> alloc::vec::Vec<vyre_spec::un_op::UnOp>
+pub fn vyre_foundation::fp_parity::blocked_contraction_feature(program: &vyre_foundation::ir::Program, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> core::option::Option<alloc::string::String>
 pub fn vyre_foundation::fp_parity::canonical_f32(value: f32) -> f32
 pub fn vyre_foundation::fp_parity::compare_operation_outputs(op_id: &str, program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> vyre_foundation::fp_parity::BufferParity
 pub fn vyre_foundation::fp_parity::compare_output_buffers(program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> vyre_foundation::fp_parity::BufferParity
@@ -1490,6 +1553,7 @@ pub fn vyre_foundation::graph_view::from_graph(graph: vyre_foundation::graph_vie
 pub fn vyre_foundation::graph_view::to_graph(program: &vyre_foundation::ir::Program) -> vyre_foundation::graph_view::NodeGraph
 pub fn vyre_foundation::guarded_logical_span(program: &vyre_foundation::ir::Program) -> core::option::Option<u32>
 pub fn vyre_foundation::hashing::update_length_delimited_field(hasher: &mut blake3::Hasher, label: &[u8], value: &[u8])
+pub fn vyre_foundation::ir::AdmittedResourceRecord::validate(&self, caps: &vyre_foundation::ir::ExternalResourceCapability) -> core::result::Result<(), vyre_foundation::ir::ResourceAbiError>
 pub fn vyre_foundation::ir::BufferDecl::access(&self) -> vyre_spec::buffer_access::BufferAccess
 pub fn vyre_foundation::ir::BufferDecl::binding(&self) -> u32
 pub fn vyre_foundation::ir::BufferDecl::consumes_host_input(&self) -> bool
@@ -1730,6 +1794,7 @@ pub fn vyre_foundation::ir::NodeExtension::validate_extension(&self) -> core::re
 pub fn vyre_foundation::ir::NodeExtension::wire_payload(&self) -> alloc::vec::Vec<u8>
 pub fn vyre_foundation::ir::NodeStorage::input_ids(&self) -> alloc::vec::Vec<vyre_foundation::ir::NodeId>
 pub fn vyre_foundation::ir::NodeStorage::interpret(&self, ctx: &mut vyre_foundation::ir::InterpCtx) -> core::result::Result<vyre_foundation::ir::Value, vyre_foundation::ir::EvalError>
+pub fn vyre_foundation::ir::PlaneDescriptor::plane_byte_len(&self) -> u64
 pub fn vyre_foundation::ir::Program::buffer(&self, name: &str) -> core::option::Option<&vyre_foundation::ir::BufferDecl>
 pub fn vyre_foundation::ir::Program::buffer_count(&self) -> usize
 pub fn vyre_foundation::ir::Program::buffers(&self) -> &[vyre_foundation::ir::BufferDecl]
@@ -1848,6 +1913,7 @@ pub fn vyre_foundation::ir::ProgramStats::subgroup_ops(&self) -> bool
 pub fn vyre_foundation::ir::ProgramStats::tensor_ops(&self) -> bool
 pub fn vyre_foundation::ir::ProgramStats::trap(&self) -> bool
 pub fn vyre_foundation::ir::ProgramStats::workgroup_geometry(&self) -> bool
+pub fn vyre_foundation::ir::SamplerDescriptor::default() -> Self
 pub fn vyre_foundation::ir::Scope<K, V>::child(&self) -> Self
 pub fn vyre_foundation::ir::Scope<K, V>::contains_key<Q>(&self, key: &Q) -> bool where K: core::borrow::Borrow<Q>, Q: core::cmp::Eq + core::hash::Hash + ?core::marker::Sized
 pub fn vyre_foundation::ir::Scope<K, V>::default() -> Self
@@ -1867,6 +1933,7 @@ pub fn vyre_foundation::ir::ShapePredicate::to_interned_constraints(&self, inter
 pub fn vyre_foundation::ir::Tile::byte_size(&self) -> u64
 pub fn vyre_foundation::ir::Tile::element_count(&self) -> usize
 pub fn vyre_foundation::ir::Tile::new(element: vyre_spec::data_type::DataType, extents: impl core::convert::Into<alloc::vec::Vec<u32>>, layout: vyre_foundation::ir::Layout, residency: vyre_foundation::ir::Residency) -> Self
+pub fn vyre_foundation::ir::ValueContract::dense_1d(dtype: vyre_spec::data_type::DataType, count: u64, access: vyre_spec::buffer_access::BufferAccess, lifetime: vyre_foundation::ir::ValueLifetime) -> Self
 pub fn vyre_foundation::ir::certificate::ResourceBounds::default() -> Self
 pub fn vyre_foundation::ir::certificate::VerificationCertificate::has_category(&self, category: vyre_foundation::ir::certificate::InvariantCategory) -> bool
 pub fn vyre_foundation::ir::certificate::VerificationCertificate::invariant_count(&self) -> usize
@@ -2083,10 +2150,19 @@ pub fn vyre_foundation::operation::CallGraphClosure::is_unclosed_or_cyclic(&self
 pub fn vyre_foundation::operation::CallGraphClosure::solve_from_registrations<'a, I>(registrations: I) -> Self where I: core::iter::traits::collect::IntoIterator<Item = &'a vyre_foundation::operation::OperationRegistration>
 pub fn vyre_foundation::operation::CallGraphClosure::transitive_capabilities(&self, id: &str) -> core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub fn vyre_foundation::operation::CallGraphClosure::transitive_effects(&self, id: &str) -> core::option::Option<vyre_foundation::operation::OperationEffects>
+pub fn vyre_foundation::operation::CatalogBundle::contains(&self, id: &str) -> bool
+pub fn vyre_foundation::operation::CatalogBundle::descriptor(&self, id: &str) -> core::option::Option<&vyre_foundation::operation::SemanticDescriptor>
+pub fn vyre_foundation::operation::CatalogBundle::from_registry() -> Self
+pub fn vyre_foundation::operation::CatalogBundle::is_empty(&self) -> bool
+pub fn vyre_foundation::operation::CatalogBundle::len(&self) -> usize
+pub fn vyre_foundation::operation::CatalogBundle::lowering(&self, id: &str) -> core::option::Option<&vyre_foundation::operation::LoweringProvider>
 pub fn vyre_foundation::operation::OperationEffects::from_program(program: &vyre_foundation::ir::Program) -> Self
+pub fn vyre_foundation::operation::OperationRegistration::conformance_provider(&self) -> vyre_foundation::operation::ConformanceProvider
+pub fn vyre_foundation::operation::OperationRegistration::descriptor(&'static self) -> vyre_foundation::operation::SemanticDescriptor
 pub fn vyre_foundation::operation::OperationRegistration::direct_effects(&self) -> core::option::Option<vyre_foundation::operation::OperationEffects>
 pub fn vyre_foundation::operation::OperationRegistration::direct_required_capabilities(&self) -> core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub fn vyre_foundation::operation::OperationRegistration::effects(&self) -> core::option::Option<vyre_foundation::operation::OperationEffects>
+pub fn vyre_foundation::operation::OperationRegistration::lowering_provider(&self) -> vyre_foundation::operation::LoweringProvider
 pub fn vyre_foundation::operation::OperationRegistration::program(&self) -> core::option::Option<vyre_foundation::ir::Program>
 pub fn vyre_foundation::operation::OperationRegistration::required_capabilities(&self) -> core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub fn vyre_foundation::operation::OperationRegistration::schedule_constraints(&self) -> core::result::Result<vyre_foundation::GeometryRequirements, vyre_foundation::GeometryConstraintConflict>
@@ -2094,6 +2170,7 @@ pub fn vyre_foundation::operation::OperationRegistration::ulp_budget(&self) -> c
 pub fn vyre_foundation::operation::OperationRegistry::call_graph_closure(&self) -> &vyre_foundation::operation::CallGraphClosure
 pub fn vyre_foundation::operation::OperationRegistry::call_graph_closure_identity(&self) -> u64
 pub fn vyre_foundation::operation::OperationRegistry::callees(&self, id: &str) -> core::option::Option<&[&'static str]>
+pub fn vyre_foundation::operation::OperationRegistry::catalog_bundle(&self) -> &vyre_foundation::operation::CatalogBundle
 pub fn vyre_foundation::operation::OperationRegistry::composite_version(&self, id: &str) -> core::option::Option<u64>
 pub fn vyre_foundation::operation::OperationRegistry::get(&self, id: &str) -> core::option::Option<vyre_foundation::operation::SemanticOperation>
 pub fn vyre_foundation::operation::OperationRegistry::global() -> &'static Self
@@ -2102,11 +2179,14 @@ pub fn vyre_foundation::operation::OperationRegistry::transitive_capabilities(&s
 pub fn vyre_foundation::operation::OperationRegistry::transitive_effects(&self, id: &str) -> core::option::Option<vyre_foundation::operation::OperationEffects>
 pub fn vyre_foundation::operation::SemanticOperation::callees(self) -> core::option::Option<&'static [&'static str]>
 pub fn vyre_foundation::operation::SemanticOperation::composite_version(self) -> u64
+pub fn vyre_foundation::operation::SemanticOperation::conformance_provider(self) -> vyre_foundation::operation::ConformanceProvider
+pub fn vyre_foundation::operation::SemanticOperation::descriptor(self) -> vyre_foundation::operation::SemanticDescriptor
 pub fn vyre_foundation::operation::SemanticOperation::direct_effects(self) -> core::option::Option<vyre_foundation::operation::OperationEffects>
 pub fn vyre_foundation::operation::SemanticOperation::direct_required_capabilities(self) -> core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub fn vyre_foundation::operation::SemanticOperation::effects(self) -> core::option::Option<vyre_foundation::operation::OperationEffects>
 pub fn vyre_foundation::operation::SemanticOperation::from(registration: &'static vyre_foundation::operation::OperationRegistration) -> Self
 pub fn vyre_foundation::operation::SemanticOperation::has_transform_decision(self) -> bool
+pub fn vyre_foundation::operation::SemanticOperation::lowering_provider(self) -> vyre_foundation::operation::LoweringProvider
 pub fn vyre_foundation::operation::SemanticOperation::program(self) -> core::option::Option<vyre_foundation::ir::Program>
 pub fn vyre_foundation::operation::SemanticOperation::required_capabilities(self) -> core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub fn vyre_foundation::operation::SemanticOperation::schedule_constraints(self) -> core::result::Result<vyre_foundation::GeometryRequirements, vyre_foundation::GeometryConstraintConflict>
@@ -3278,7 +3358,7 @@ pub fn vyre_foundation::region_ssa::opt::ValueRemap::resolve(&self, val: vyre_fo
 pub fn vyre_foundation::region_ssa::verify_dominance(func: &vyre_foundation::region_ssa::RegionFunction) -> core::result::Result<(), vyre_foundation::region_ssa::builder::DominanceError>
 pub fn vyre_foundation::schedule::DependencyPreservationCertificate::new(theorem_id: impl core::convert::Into<alloc::string::String>, distance_bounds: alloc::vec::Vec<i64>, direction_preserved: bool) -> Self
 pub fn vyre_foundation::schedule::ScheduleCostModel::evaluate(&self, plan: &vyre_foundation::schedule::SchedulePlan) -> vyre_foundation::schedule::ScheduleCostRecord
-pub fn vyre_foundation::schedule::ScheduleCostModel::new(warp_size: u32, max_shared_memory: u64, max_registers_per_thread: u32) -> Self
+pub fn vyre_foundation::schedule::ScheduleCostModel::new(subgroup_size: u32, max_shared_memory: u64, max_registers_per_thread: u32) -> Self
 pub fn vyre_foundation::schedule::ScheduleCostRecord::pareto_dominates(&self, other: &Self) -> bool
 pub fn vyre_foundation::schedule::ScheduleDiff::diff_plans(before: &vyre_foundation::schedule::SchedulePlan, after: &vyre_foundation::schedule::SchedulePlan) -> Self
 pub fn vyre_foundation::schedule::ScheduleDiff::is_empty(&self) -> bool
@@ -3333,6 +3413,7 @@ pub fn vyre_foundation::serial::WireWriter::new(magic: &[u8; 4], version: u32) -
 pub fn vyre_foundation::serial::WireWriter::write_section(&mut self, bytes: &[u8]) -> core::result::Result<(), vyre_foundation::serial::EnvelopeError>
 pub fn vyre_foundation::serial::WireWriter::write_u32(&mut self, value: u32)
 pub fn vyre_foundation::serial::WireWriter::write_words(&mut self, words: &[u32]) -> core::result::Result<(), vyre_foundation::serial::EnvelopeError>
+pub fn vyre_foundation::serial::export_schema_json(schema_id: vyre_foundation::serial::schema_authority::SchemaId) -> alloc::string::String
 pub fn vyre_foundation::serial::output_set::OutputSet::as_ref(&self) -> &[u32]
 pub fn vyre_foundation::serial::output_set::OutputSet::encode_from_buffers_into(buffers: &[vyre_foundation::ir::BufferDecl], dst: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::serial::output_set::OutputSet::encode_into(&self, dst: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), alloc::string::String>
@@ -3342,6 +3423,12 @@ pub fn vyre_foundation::serial::output_set::OutputSet::indices(&self) -> &[u32]
 pub fn vyre_foundation::serial::output_set::OutputSet::into_vec(self) -> alloc::vec::Vec<u32>
 pub fn vyre_foundation::serial::output_set::OutputSet::is_empty(&self) -> bool
 pub fn vyre_foundation::serial::output_set::OutputSet::len(&self) -> usize
+pub fn vyre_foundation::serial::schema_authority::BoundedDecoder::decode_json<T: serde_core::de::DeserializeOwned>(schema_id: vyre_foundation::serial::schema_authority::SchemaId, bytes: &[u8]) -> core::result::Result<T, vyre_foundation::serial::schema_authority::SchemaAuthorityError>
+pub fn vyre_foundation::serial::schema_authority::CanonicalDigest::blake3_hex(data: &[u8]) -> alloc::string::String
+pub fn vyre_foundation::serial::schema_authority::CanonicalDigest::blake3_structured<I, B>(chunks: I) -> alloc::string::String where I: core::iter::traits::collect::IntoIterator<Item = B>, B: core::convert::AsRef<[u8]>
+pub fn vyre_foundation::serial::schema_authority::CanonicalSchemaVersion::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::serial::schema_authority::SchemaAuthority::descriptor_for(schema_id: vyre_foundation::serial::schema_authority::SchemaId) -> vyre_foundation::serial::schema_authority::SchemaDescriptor
+pub fn vyre_foundation::serial::schema_authority::export_schema_json(schema_id: vyre_foundation::serial::schema_authority::SchemaId) -> alloc::string::String
 pub fn vyre_foundation::serial::text::TextParseError::fix_hint(&self) -> &'static str
 pub fn vyre_foundation::serial::text::TextParseError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::serial::text::TextParseError::message(&self) -> alloc::string::String
@@ -3478,6 +3565,7 @@ pub fn vyre_foundation::validate::ValidationError::deserialize<D>(deserializer: 
 pub fn vyre_foundation::validate::ValidationError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_foundation::validate::ValidationError::fmt(&self, output: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::validate::ValidationError::message(&self) -> alloc::borrow::Cow<'_, str>
+pub fn vyre_foundation::validate::ValidationError::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_foundation::validate::ValidationError::trace_event(&self) -> vyre_foundation::validate::ValidationTraceEvent
 pub fn vyre_foundation::validate::ValidationError::unsupported_op(backend: &'static str, op_id: &alloc::sync::Arc<str>, node_index: usize) -> Self
 pub fn vyre_foundation::validate::ValidationOptions<'a>::backend_capabilities(&self) -> core::option::Option<vyre_foundation::validate::BackendCapabilities>
@@ -3610,6 +3698,7 @@ pub fn vyre_foundation::visit::walk_nodes(program: &vyre_foundation::ir::Program
 pub fn vyre_foundation::visit::walk_nodes_and_exprs<V: vyre_foundation::visit::NodeSink + vyre_foundation::visit::ExprSink>(program: &vyre_foundation::ir::Program, sink: &mut V)
 pub fn vyre_foundation::visit::walk_nodes_mut(program: &mut vyre_foundation::ir::Program, f: impl core::ops::function::FnMut(&mut vyre_foundation::ir::Node))
 pub macro vyre_foundation::define_dialect!
+pub macro vyre_foundation::diagnostic_conversions!
 pub macro vyre_foundation::rewrite_rules!
 pub mod vyre_foundation
 pub mod vyre_foundation::algebraic_law_registry
@@ -3784,6 +3873,7 @@ pub mod vyre_foundation::security::quota
 pub mod vyre_foundation::security::sanitize
 pub mod vyre_foundation::serial
 pub mod vyre_foundation::serial::output_set
+pub mod vyre_foundation::serial::schema_authority
 pub mod vyre_foundation::serial::text
 pub mod vyre_foundation::serial::wire
 pub mod vyre_foundation::serial::wire::decode
@@ -3906,6 +3996,7 @@ pub struct vyre_foundation::extension::OpaqueExprResolver
 pub struct vyre_foundation::extension::OpaqueNodeResolver
 pub struct vyre_foundation::failure_domain::TypedRecoveryError
 pub struct vyre_foundation::fp_expansion::StrictExpansionError
+pub struct vyre_foundation::ir::AdmittedResourceRecord
 pub struct vyre_foundation::ir::AffectedGraphClosure
 pub struct vyre_foundation::ir::BufferDecl
 pub struct vyre_foundation::ir::CheckedInvariant
@@ -3913,18 +4004,22 @@ pub struct vyre_foundation::ir::CompiledSemanticArtifact
 pub struct vyre_foundation::ir::ControlBounds
 pub struct vyre_foundation::ir::DeclarativeVerifier
 pub struct vyre_foundation::ir::EvalError
+pub struct vyre_foundation::ir::ExternalMemoryDescriptor
+pub struct vyre_foundation::ir::ExternalResourceCapability
 pub struct vyre_foundation::ir::GraphDelta
 pub struct vyre_foundation::ir::GraphInput
 pub struct vyre_foundation::ir::GraphNodeId(pub u32)
 pub struct vyre_foundation::ir::GraphOutput
 pub struct vyre_foundation::ir::GraphValueId(pub u32)
 pub struct vyre_foundation::ir::Ident
+pub struct vyre_foundation::ir::ImageExtent
 pub struct vyre_foundation::ir::InterpCtx
 pub struct vyre_foundation::ir::LifetimeEpoch
 pub struct vyre_foundation::ir::LivenessInterval
 pub struct vyre_foundation::ir::MemoryHints
 pub struct vyre_foundation::ir::NodeId(pub u32)
 pub struct vyre_foundation::ir::NumericalContract
+pub struct vyre_foundation::ir::PlaneDescriptor
 pub struct vyre_foundation::ir::Program
 pub struct vyre_foundation::ir::ProgramGraph
 pub struct vyre_foundation::ir::ProgramGraphBuilder
@@ -3938,6 +4033,8 @@ pub struct vyre_foundation::ir::RecordField
 pub struct vyre_foundation::ir::RecordType
 pub struct vyre_foundation::ir::RegionId(pub u32)
 pub struct vyre_foundation::ir::ResourceBounds
+pub struct vyre_foundation::ir::ResourceUsageFlags
+pub struct vyre_foundation::ir::SamplerDescriptor
 pub struct vyre_foundation::ir::Scope<K, V>
 pub struct vyre_foundation::ir::SemanticCompiler
 pub struct vyre_foundation::ir::SemanticModule
@@ -3946,6 +4043,7 @@ pub struct vyre_foundation::ir::ShapeId(pub u32)
 pub struct vyre_foundation::ir::ShapeInterner
 pub struct vyre_foundation::ir::ShapeProofCertificate
 pub struct vyre_foundation::ir::ShapeSolver
+pub struct vyre_foundation::ir::SubresourceRange
 pub struct vyre_foundation::ir::TensorType
 pub struct vyre_foundation::ir::Tile
 pub struct vyre_foundation::ir::ValueContract
@@ -3955,6 +4053,7 @@ pub struct vyre_foundation::ir::VariantType
 pub struct vyre_foundation::ir::VectorType
 pub struct vyre_foundation::ir::VerificationCertificate
 pub struct vyre_foundation::ir::Verified<T>
+pub struct vyre_foundation::ir::ViewDescriptor
 pub struct vyre_foundation::ir::certificate::CheckedInvariant
 pub struct vyre_foundation::ir::certificate::ResourceBounds
 pub struct vyre_foundation::ir::certificate::VerificationCertificate
@@ -4035,9 +4134,13 @@ pub struct vyre_foundation::numeric::RegionNumericFacts
 pub struct vyre_foundation::opaque_payload::endian::LeBytesWriter
 pub struct vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated
 pub struct vyre_foundation::operation::CallGraphClosure
+pub struct vyre_foundation::operation::CatalogBundle
+pub struct vyre_foundation::operation::ConformanceProvider
+pub struct vyre_foundation::operation::LoweringProvider
 pub struct vyre_foundation::operation::OperationEffects
 pub struct vyre_foundation::operation::OperationRegistration
 pub struct vyre_foundation::operation::OperationRegistry
+pub struct vyre_foundation::operation::SemanticDescriptor
 pub struct vyre_foundation::operation::SemanticOperation
 pub struct vyre_foundation::operation::TargetId(_)
 pub struct vyre_foundation::operation::TargetOperationFacet
@@ -4261,9 +4364,19 @@ pub struct vyre_foundation::security::quota::CompilationQuota
 pub struct vyre_foundation::security::quota::RedactedDiagnostic
 pub struct vyre_foundation::security::sanitize::SanitizedBuffer
 pub struct vyre_foundation::security::sanitize::TenantCacheNamespace
+pub struct vyre_foundation::serial::BoundedDecoder
+pub struct vyre_foundation::serial::CanonicalDigest
+pub struct vyre_foundation::serial::CanonicalSchemaVersion
+pub struct vyre_foundation::serial::SchemaAuthority
+pub struct vyre_foundation::serial::SchemaDescriptor
 pub struct vyre_foundation::serial::WireReader<'a>
 pub struct vyre_foundation::serial::WireWriter
 pub struct vyre_foundation::serial::output_set::OutputSet(_)
+pub struct vyre_foundation::serial::schema_authority::BoundedDecoder
+pub struct vyre_foundation::serial::schema_authority::CanonicalDigest
+pub struct vyre_foundation::serial::schema_authority::CanonicalSchemaVersion
+pub struct vyre_foundation::serial::schema_authority::SchemaAuthority
+pub struct vyre_foundation::serial::schema_authority::SchemaDescriptor
 pub struct vyre_foundation::serial::wire::decode::ScanConstructDecodeBudget
 pub struct vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence
 pub struct vyre_foundation::serial::wire::decode::ScanConstructDecodeShape
@@ -4346,6 +4459,7 @@ pub struct vyre_foundation::visit::NodeScalars<'a>
 pub struct vyre_foundation::visit::NodeShape
 pub trait vyre_foundation::cpu_op::CategoryAOp
 pub trait vyre_foundation::cpu_op::CpuOp
+pub trait vyre_foundation::diagnostics::ToDiagnostic
 pub trait vyre_foundation::dialect::Dialect: core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_foundation::dialect::DialectCodec<D: vyre_foundation::dialect::Dialect>
 pub trait vyre_foundation::dialect::DialectMatcher<D: vyre_foundation::dialect::Dialect>
@@ -4836,8 +4950,21 @@ pub vyre_foundation::config_schema::ConfigValue::U64(u64)
 pub vyre_foundation::config_schema::IdentityImpact::AffectsCacheIdentity
 pub vyre_foundation::config_schema::IdentityImpact::AffectsCompileIdentity
 pub vyre_foundation::config_schema::IdentityImpact::OperationalOnly
+pub vyre_foundation::diagnostics::CompilerLevel::DriverRuntime
+pub vyre_foundation::diagnostics::CompilerLevel::Emission
+pub vyre_foundation::diagnostics::CompilerLevel::FoundationIr
+pub vyre_foundation::diagnostics::CompilerLevel::Lowering
+pub vyre_foundation::diagnostics::CompilerLevel::Optimizer
+pub vyre_foundation::diagnostics::CompilerLevel::PrimitivesDialects
+pub vyre_foundation::diagnostics::CompilerLevel::Spec
+pub vyre_foundation::diagnostics::CompilerLevel::ToolingEvidence
+pub vyre_foundation::diagnostics::Diagnostic::artifact_id: core::option::Option<alloc::string::String>
 pub vyre_foundation::diagnostics::Diagnostic::cause: core::option::Option<vyre_foundation::diagnostics::DiagnosticCause>
+pub vyre_foundation::diagnostics::Diagnostic::cause_chain: alloc::vec::Vec<vyre_foundation::diagnostics::DiagnosticCause>
 pub vyre_foundation::diagnostics::Diagnostic::code: vyre_foundation::diagnostics::DiagnosticCode
+pub vyre_foundation::diagnostics::Diagnostic::compiler_level: core::option::Option<vyre_foundation::diagnostics::CompilerLevel>
+pub vyre_foundation::diagnostics::Diagnostic::context_values: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
+pub vyre_foundation::diagnostics::Diagnostic::device: core::option::Option<alloc::string::String>
 pub vyre_foundation::diagnostics::Diagnostic::doc_url: core::option::Option<alloc::borrow::Cow<'static, str>>
 pub vyre_foundation::diagnostics::Diagnostic::location: core::option::Option<vyre_foundation::diagnostics::OpLocation>
 pub vyre_foundation::diagnostics::Diagnostic::message: alloc::borrow::Cow<'static, str>
@@ -4846,6 +4973,7 @@ pub vyre_foundation::diagnostics::Diagnostic::retry: vyre_foundation::diagnostic
 pub vyre_foundation::diagnostics::Diagnostic::severity: vyre_foundation::diagnostics::Severity
 pub vyre_foundation::diagnostics::Diagnostic::stage: vyre_foundation::diagnostics::DiagnosticStage
 pub vyre_foundation::diagnostics::Diagnostic::suggested_fix: core::option::Option<alloc::borrow::Cow<'static, str>>
+pub vyre_foundation::diagnostics::Diagnostic::target: core::option::Option<alloc::string::String>
 pub vyre_foundation::diagnostics::DiagnosticCause::detail: alloc::string::String
 pub vyre_foundation::diagnostics::DiagnosticCause::kind: alloc::string::String
 pub vyre_foundation::diagnostics::DiagnosticStage::Admit
@@ -4858,6 +4986,7 @@ pub vyre_foundation::diagnostics::DiagnosticStage::Plan
 pub vyre_foundation::diagnostics::DiagnosticStage::Submit
 pub vyre_foundation::diagnostics::DiagnosticStage::Validate
 pub vyre_foundation::diagnostics::OpLocation::attr_name: core::option::Option<alloc::borrow::Cow<'static, str>>
+pub vyre_foundation::diagnostics::OpLocation::field_path: core::option::Option<alloc::borrow::Cow<'static, str>>
 pub vyre_foundation::diagnostics::OpLocation::graph_node: core::option::Option<u32>
 pub vyre_foundation::diagnostics::OpLocation::graph_value: core::option::Option<u32>
 pub vyre_foundation::diagnostics::OpLocation::op_id: alloc::borrow::Cow<'static, str>
@@ -5199,6 +5328,18 @@ pub vyre_foundation::graph_view::NodeGraph::buffers: alloc::vec::Vec<vyre_founda
 pub vyre_foundation::graph_view::NodeGraph::edges: alloc::vec::Vec<vyre_foundation::graph_view::DataEdge>
 pub vyre_foundation::graph_view::NodeGraph::nodes: alloc::vec::Vec<vyre_foundation::graph_view::GraphNode>
 pub vyre_foundation::graph_view::NodeGraph::workgroup_size: [u32; 3]
+pub vyre_foundation::ir::AdmittedResourceRecord::alias_group: core::option::Option<u32>
+pub vyre_foundation::ir::AdmittedResourceRecord::device_id: alloc::string::String
+pub vyre_foundation::ir::AdmittedResourceRecord::dimension: vyre_foundation::ir::ImageDimension
+pub vyre_foundation::ir::AdmittedResourceRecord::extent: vyre_foundation::ir::ImageExtent
+pub vyre_foundation::ir::AdmittedResourceRecord::format: vyre_foundation::ir::ImageFormat
+pub vyre_foundation::ir::AdmittedResourceRecord::generation: u64
+pub vyre_foundation::ir::AdmittedResourceRecord::lifetime: vyre_foundation::ir::ValueLifetime
+pub vyre_foundation::ir::AdmittedResourceRecord::name: alloc::string::String
+pub vyre_foundation::ir::AdmittedResourceRecord::planes: alloc::vec::Vec<vyre_foundation::ir::PlaneDescriptor>
+pub vyre_foundation::ir::AdmittedResourceRecord::sync_protocol: core::option::Option<vyre_foundation::ir::ExternalSyncProtocol>
+pub vyre_foundation::ir::AdmittedResourceRecord::usages: vyre_foundation::ir::ResourceUsageFlags
+pub vyre_foundation::ir::AdmittedResourceRecord::views: alloc::vec::Vec<vyre_foundation::ir::ViewDescriptor>
 pub vyre_foundation::ir::AffectedGraphClosure::affected_resource_names: alloc::collections::btree::set::BTreeSet<alloc::string::String>
 pub vyre_foundation::ir::AffectedGraphClosure::dirty_nodes: alloc::collections::btree::set::BTreeSet<vyre_foundation::ir::GraphNodeId>
 pub vyre_foundation::ir::AffectedGraphClosure::dirty_values: alloc::collections::btree::set::BTreeSet<vyre_foundation::ir::GraphValueId>
@@ -5249,6 +5390,12 @@ pub vyre_foundation::ir::CollectiveGroup::CustomTopology
 pub vyre_foundation::ir::CollectiveGroup::DeviceMesh
 pub vyre_foundation::ir::CollectiveGroup::Subgroup
 pub vyre_foundation::ir::CollectiveGroup::Workgroup
+pub vyre_foundation::ir::ColorSpace::Bt2020
+pub vyre_foundation::ir::ColorSpace::Bt709
+pub vyre_foundation::ir::ColorSpace::DisplayP3
+pub vyre_foundation::ir::ColorSpace::LinearSrgb
+pub vyre_foundation::ir::ColorSpace::Raw
+pub vyre_foundation::ir::ColorSpace::Srgb
 pub vyre_foundation::ir::CompileError::EmptyModule(alloc::string::String)
 pub vyre_foundation::ir::CompileError::LoweringError(alloc::string::String)
 pub vyre_foundation::ir::CompileError::UnverifiedSyntaxRejected(alloc::string::String)
@@ -5331,6 +5478,27 @@ pub vyre_foundation::ir::ExternalEffect::DeviceEvent
 pub vyre_foundation::ir::ExternalEffect::Io
 pub vyre_foundation::ir::ExternalEffect::StorageBarrier
 pub vyre_foundation::ir::ExternalEffect::TraceMarker
+pub vyre_foundation::ir::ExternalMemoryDescriptor::dedicated_allocation: bool
+pub vyre_foundation::ir::ExternalMemoryDescriptor::device_id: alloc::string::String
+pub vyre_foundation::ir::ExternalMemoryDescriptor::kind: vyre_foundation::ir::ExternalMemoryKind
+pub vyre_foundation::ir::ExternalMemoryDescriptor::memory_type_index: core::option::Option<u32>
+pub vyre_foundation::ir::ExternalMemoryDescriptor::size_bytes: u64
+pub vyre_foundation::ir::ExternalMemoryKind::D3D11Texture
+pub vyre_foundation::ir::ExternalMemoryKind::DmaBuf
+pub vyre_foundation::ir::ExternalMemoryKind::HostPtr
+pub vyre_foundation::ir::ExternalMemoryKind::MetalSharedSurface
+pub vyre_foundation::ir::ExternalMemoryKind::OpaqueFd
+pub vyre_foundation::ir::ExternalMemoryKind::OpaqueWin32
+pub vyre_foundation::ir::ExternalResourceCapability::cross_queue_sharing: bool
+pub vyre_foundation::ir::ExternalResourceCapability::direct_presentation: bool
+pub vyre_foundation::ir::ExternalResourceCapability::pitch_alignment_bytes: u32
+pub vyre_foundation::ir::ExternalResourceCapability::timeline_sync: bool
+pub vyre_foundation::ir::ExternalResourceCapability::zero_copy_export: bool
+pub vyre_foundation::ir::ExternalResourceCapability::zero_copy_import: bool
+pub vyre_foundation::ir::ExternalSyncProtocol::BinaryFence
+pub vyre_foundation::ir::ExternalSyncProtocol::MetalSharedEvent
+pub vyre_foundation::ir::ExternalSyncProtocol::TimelineSemaphore
+pub vyre_foundation::ir::ExternalSyncProtocol::Win32Event
 pub vyre_foundation::ir::FailureCancellationBehavior::AbortKernel
 pub vyre_foundation::ir::FailureCancellationBehavior::Ignore
 pub vyre_foundation::ir::FailureCancellationBehavior::Poison
@@ -5398,6 +5566,54 @@ pub vyre_foundation::ir::GraphOutput::buffer: alloc::string::String
 pub vyre_foundation::ir::GraphOutput::contract: vyre_foundation::ir::ValueContract
 pub vyre_foundation::ir::GraphOutput::name: alloc::string::String
 pub vyre_foundation::ir::GraphOutput::retained_successor_of: core::option::Option<vyre_foundation::ir::GraphValueId>
+pub vyre_foundation::ir::ImageAspect::Color
+pub vyre_foundation::ir::ImageAspect::Depth
+pub vyre_foundation::ir::ImageAspect::DepthStencil
+pub vyre_foundation::ir::ImageAspect::Stencil
+pub vyre_foundation::ir::ImageDimension::Cube
+pub vyre_foundation::ir::ImageDimension::CubeArray
+pub vyre_foundation::ir::ImageDimension::D1
+pub vyre_foundation::ir::ImageDimension::D2
+pub vyre_foundation::ir::ImageDimension::D2Array
+pub vyre_foundation::ir::ImageDimension::D3
+pub vyre_foundation::ir::ImageExtent::depth_or_array_layers: u32
+pub vyre_foundation::ir::ImageExtent::height: u32
+pub vyre_foundation::ir::ImageExtent::width: u32
+pub vyre_foundation::ir::ImageFormat::Bgra8Unorm
+pub vyre_foundation::ir::ImageFormat::Bgra8UnormSrgb
+pub vyre_foundation::ir::ImageFormat::Depth24PlusStencil8
+pub vyre_foundation::ir::ImageFormat::Depth32Float
+pub vyre_foundation::ir::ImageFormat::R16Float
+pub vyre_foundation::ir::ImageFormat::R16Sint
+pub vyre_foundation::ir::ImageFormat::R16Uint
+pub vyre_foundation::ir::ImageFormat::R32Float
+pub vyre_foundation::ir::ImageFormat::R32Sint
+pub vyre_foundation::ir::ImageFormat::R32Uint
+pub vyre_foundation::ir::ImageFormat::R8Sint
+pub vyre_foundation::ir::ImageFormat::R8Snorm
+pub vyre_foundation::ir::ImageFormat::R8Uint
+pub vyre_foundation::ir::ImageFormat::R8Unorm
+pub vyre_foundation::ir::ImageFormat::Rg16Float
+pub vyre_foundation::ir::ImageFormat::Rg16Sint
+pub vyre_foundation::ir::ImageFormat::Rg16Uint
+pub vyre_foundation::ir::ImageFormat::Rg32Float
+pub vyre_foundation::ir::ImageFormat::Rg32Sint
+pub vyre_foundation::ir::ImageFormat::Rg32Uint
+pub vyre_foundation::ir::ImageFormat::Rg8Sint
+pub vyre_foundation::ir::ImageFormat::Rg8Snorm
+pub vyre_foundation::ir::ImageFormat::Rg8Uint
+pub vyre_foundation::ir::ImageFormat::Rg8Unorm
+pub vyre_foundation::ir::ImageFormat::Rgba16Float
+pub vyre_foundation::ir::ImageFormat::Rgba16Sint
+pub vyre_foundation::ir::ImageFormat::Rgba16Uint
+pub vyre_foundation::ir::ImageFormat::Rgba32Float
+pub vyre_foundation::ir::ImageFormat::Rgba32Sint
+pub vyre_foundation::ir::ImageFormat::Rgba32Uint
+pub vyre_foundation::ir::ImageFormat::Rgba8Sint
+pub vyre_foundation::ir::ImageFormat::Rgba8Snorm
+pub vyre_foundation::ir::ImageFormat::Rgba8Uint
+pub vyre_foundation::ir::ImageFormat::Rgba8Unorm
+pub vyre_foundation::ir::ImageFormat::Rgba8UnormSrgb
 pub vyre_foundation::ir::InvariantCategory::AliasOwnership
 pub vyre_foundation::ir::InvariantCategory::BoundsTermination
 pub vyre_foundation::ir::InvariantCategory::CollectiveGroups
@@ -5565,6 +5781,11 @@ pub vyre_foundation::ir::OwnershipMutability::ExclusiveOwned
 pub vyre_foundation::ir::OwnershipMutability::Immutable
 pub vyre_foundation::ir::OwnershipMutability::LinearConsumed
 pub vyre_foundation::ir::OwnershipMutability::SharedBorrowed
+pub vyre_foundation::ir::PlaneDescriptor::format: vyre_foundation::ir::ImageFormat
+pub vyre_foundation::ir::PlaneDescriptor::offset_bytes: u64
+pub vyre_foundation::ir::PlaneDescriptor::plane_height: u32
+pub vyre_foundation::ir::PlaneDescriptor::plane_index: u32
+pub vyre_foundation::ir::PlaneDescriptor::row_pitch_bytes: u32
 pub vyre_foundation::ir::Program::buffers: alloc::sync::Arc<[vyre_foundation::ir::BufferDecl]>
 pub vyre_foundation::ir::Program::entry: alloc::sync::Arc<alloc::vec::Vec<vyre_foundation::ir::Node>>
 pub vyre_foundation::ir::Program::entry_op_id: core::option::Option<alloc::string::String>
@@ -5685,6 +5906,20 @@ pub vyre_foundation::ir::Residency::Global
 pub vyre_foundation::ir::Residency::Register
 pub vyre_foundation::ir::Residency::Subgroup
 pub vyre_foundation::ir::Residency::Workgroup
+pub vyre_foundation::ir::ResourceAbiError::IncompatibleViewFormat
+pub vyre_foundation::ir::ResourceAbiError::IncompatibleViewFormat::base_format: vyre_foundation::ir::ImageFormat
+pub vyre_foundation::ir::ResourceAbiError::IncompatibleViewFormat::view_format: vyre_foundation::ir::ImageFormat
+pub vyre_foundation::ir::ResourceAbiError::InsufficientRowPitch
+pub vyre_foundation::ir::ResourceAbiError::InsufficientRowPitch::bytes_per_pixel: u32
+pub vyre_foundation::ir::ResourceAbiError::InsufficientRowPitch::row_pitch: u32
+pub vyre_foundation::ir::ResourceAbiError::InsufficientRowPitch::width: u32
+pub vyre_foundation::ir::ResourceAbiError::UnalignedRowPitch
+pub vyre_foundation::ir::ResourceAbiError::UnalignedRowPitch::alignment: u32
+pub vyre_foundation::ir::ResourceAbiError::UnalignedRowPitch::row_pitch: u32
+pub vyre_foundation::ir::ResourceAbiError::ZeroExtent
+pub vyre_foundation::ir::ResourceAbiError::ZeroExtent::height: u32
+pub vyre_foundation::ir::ResourceAbiError::ZeroExtent::name: alloc::string::String
+pub vyre_foundation::ir::ResourceAbiError::ZeroExtent::width: u32
 pub vyre_foundation::ir::ResourceBounds::buffer_count: usize
 pub vyre_foundation::ir::ResourceBounds::grid_dimensions: [u32; 3]
 pub vyre_foundation::ir::ResourceBounds::max_registers_per_thread: u32
@@ -5696,10 +5931,35 @@ pub vyre_foundation::ir::ResourceCapability::Exclusive
 pub vyre_foundation::ir::ResourceCapability::ReadOnly
 pub vyre_foundation::ir::ResourceCapability::ReadWrite
 pub vyre_foundation::ir::ResourceCapability::WriteOnly
+pub vyre_foundation::ir::ResourceUsageFlags::color_attachment: bool
+pub vyre_foundation::ir::ResourceUsageFlags::depth_stencil_attachment: bool
+pub vyre_foundation::ir::ResourceUsageFlags::external_shared: bool
+pub vyre_foundation::ir::ResourceUsageFlags::present: bool
+pub vyre_foundation::ir::ResourceUsageFlags::sampled: bool
+pub vyre_foundation::ir::ResourceUsageFlags::storage_read: bool
+pub vyre_foundation::ir::ResourceUsageFlags::storage_write: bool
+pub vyre_foundation::ir::ResourceUsageFlags::transfer_dst: bool
+pub vyre_foundation::ir::ResourceUsageFlags::transfer_src: bool
 pub vyre_foundation::ir::RoundingMode::NearestEven
 pub vyre_foundation::ir::RoundingMode::TowardNegativeInfinity
 pub vyre_foundation::ir::RoundingMode::TowardPositiveInfinity
 pub vyre_foundation::ir::RoundingMode::TowardZero
+pub vyre_foundation::ir::SamplerAddressMode::ClampToBorder
+pub vyre_foundation::ir::SamplerAddressMode::ClampToEdge
+pub vyre_foundation::ir::SamplerAddressMode::MirrorRepeat
+pub vyre_foundation::ir::SamplerAddressMode::Repeat
+pub vyre_foundation::ir::SamplerDescriptor::address_mode_u: vyre_foundation::ir::SamplerAddressMode
+pub vyre_foundation::ir::SamplerDescriptor::address_mode_v: vyre_foundation::ir::SamplerAddressMode
+pub vyre_foundation::ir::SamplerDescriptor::address_mode_w: vyre_foundation::ir::SamplerAddressMode
+pub vyre_foundation::ir::SamplerDescriptor::compare_enable: bool
+pub vyre_foundation::ir::SamplerDescriptor::lod_max_clamp_bits: u32
+pub vyre_foundation::ir::SamplerDescriptor::lod_min_clamp_bits: u32
+pub vyre_foundation::ir::SamplerDescriptor::mag_filter: vyre_foundation::ir::SamplerFilter
+pub vyre_foundation::ir::SamplerDescriptor::max_anisotropy: u16
+pub vyre_foundation::ir::SamplerDescriptor::min_filter: vyre_foundation::ir::SamplerFilter
+pub vyre_foundation::ir::SamplerDescriptor::mipmap_filter: vyre_foundation::ir::SamplerFilter
+pub vyre_foundation::ir::SamplerFilter::Linear
+pub vyre_foundation::ir::SamplerFilter::Nearest
 pub vyre_foundation::ir::SaturationMode::Saturate
 pub vyre_foundation::ir::SaturationMode::TrapOnOverflow
 pub vyre_foundation::ir::SaturationMode::Wrap
@@ -5791,6 +6051,11 @@ pub vyre_foundation::ir::StorageDomain::Register
 pub vyre_foundation::ir::StorageDomain::Scratchpad
 pub vyre_foundation::ir::StorageDomain::Texture
 pub vyre_foundation::ir::StorageDomain::WorkgroupLocal
+pub vyre_foundation::ir::SubresourceRange::array_layer_count: u32
+pub vyre_foundation::ir::SubresourceRange::aspect: vyre_foundation::ir::ImageAspect
+pub vyre_foundation::ir::SubresourceRange::base_array_layer: u32
+pub vyre_foundation::ir::SubresourceRange::base_mip_level: u32
+pub vyre_foundation::ir::SubresourceRange::mip_level_count: u32
 pub vyre_foundation::ir::SymbolicDim::Add(vyre_foundation::ir::shape::ShapeExprId, vyre_foundation::ir::shape::ShapeExprId)
 pub vyre_foundation::ir::SymbolicDim::AlignTo
 pub vyre_foundation::ir::SymbolicDim::AlignTo::alignment: u64
@@ -5855,6 +6120,11 @@ pub vyre_foundation::ir::VerificationError::InvariantViolation::category: vyre_f
 pub vyre_foundation::ir::VerificationError::InvariantViolation::code: &'static str
 pub vyre_foundation::ir::VerificationError::InvariantViolation::message: alloc::string::String
 pub vyre_foundation::ir::VerificationError::ShapeProofFailure(alloc::string::String)
+pub vyre_foundation::ir::ViewDescriptor::color_space: vyre_foundation::ir::ColorSpace
+pub vyre_foundation::ir::ViewDescriptor::dimension: vyre_foundation::ir::ImageDimension
+pub vyre_foundation::ir::ViewDescriptor::format: vyre_foundation::ir::ImageFormat
+pub vyre_foundation::ir::ViewDescriptor::name: alloc::sync::Arc<str>
+pub vyre_foundation::ir::ViewDescriptor::subresource_range: vyre_foundation::ir::SubresourceRange
 pub vyre_foundation::ir::capability::ResourceCapability::AppendOnly
 pub vyre_foundation::ir::capability::ResourceCapability::Atomic
 pub vyre_foundation::ir::capability::ResourceCapability::Exclusive
@@ -6559,9 +6829,18 @@ pub vyre_foundation::operation::CallGraphClosure::direct_effects: alloc::collect
 pub vyre_foundation::operation::CallGraphClosure::transitive_capabilities: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::program_caps::RequiredCapabilities>
 pub vyre_foundation::operation::CallGraphClosure::transitive_effects: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::OperationEffects>
 pub vyre_foundation::operation::CallGraphClosure::unclosed_or_cyclic: alloc::collections::btree::set::BTreeSet<&'static str>
+pub vyre_foundation::operation::CatalogBundle::descriptors: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::SemanticDescriptor>
+pub vyre_foundation::operation::CatalogBundle::digest: [u8; 32]
+pub vyre_foundation::operation::CatalogBundle::lowering_providers: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::LoweringProvider>
+pub vyre_foundation::operation::CatalogBundle::version: u32
+pub vyre_foundation::operation::ConformanceProvider::expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>
+pub vyre_foundation::operation::ConformanceProvider::id: &'static str
+pub vyre_foundation::operation::ConformanceProvider::test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>
 pub vyre_foundation::operation::IdNamespace::External(&'a str)
 pub vyre_foundation::operation::IdNamespace::Unknown
 pub vyre_foundation::operation::IdNamespace::Workspace(&'a str)
+pub vyre_foundation::operation::LoweringProvider::build: core::option::Option<fn() -> vyre_foundation::ir::Program>
+pub vyre_foundation::operation::LoweringProvider::id: &'static str
 pub vyre_foundation::operation::OperationEffects::atomics: bool
 pub vyre_foundation::operation::OperationEffects::reads: bool
 pub vyre_foundation::operation::OperationEffects::synchronizes: bool
@@ -6598,6 +6877,16 @@ pub vyre_foundation::operation::OperationTier::Foundation
 pub vyre_foundation::operation::OperationTier::Intrinsic
 pub vyre_foundation::operation::OperationTier::Library
 pub vyre_foundation::operation::OperationTier::Unknown
+pub vyre_foundation::operation::SemanticDescriptor::category: core::option::Option<&'static str>
+pub vyre_foundation::operation::SemanticDescriptor::explicit_capabilities: core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
+pub vyre_foundation::operation::SemanticDescriptor::explicit_effects: core::option::Option<vyre_foundation::operation::OperationEffects>
+pub vyre_foundation::operation::SemanticDescriptor::geometry_requirements: vyre_foundation::GeometryRequirements
+pub vyre_foundation::operation::SemanticDescriptor::id: &'static str
+pub vyre_foundation::operation::SemanticDescriptor::laws: &'static [&'static str]
+pub vyre_foundation::operation::SemanticDescriptor::numeric: vyre_foundation::numeric::NumericContract
+pub vyre_foundation::operation::SemanticDescriptor::semantic_version: u32
+pub vyre_foundation::operation::SemanticDescriptor::signature: core::option::Option<&'static vyre_foundation::dialect_lookup::Signature>
+pub vyre_foundation::operation::SemanticDescriptor::tier: vyre_foundation::operation::OperationTier
 pub vyre_foundation::operation::SemanticOperation::build: core::option::Option<fn() -> vyre_foundation::ir::Program>
 pub vyre_foundation::operation::SemanticOperation::category: core::option::Option<&'static str>
 pub vyre_foundation::operation::SemanticOperation::expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>
@@ -7373,13 +7662,8 @@ pub vyre_foundation::platform::DeviceCapabilityProfile::bf16_support: bool
 pub vyre_foundation::platform::DeviceCapabilityProfile::fp16_support: bool
 pub vyre_foundation::platform::DeviceCapabilityProfile::max_invocations: u32
 pub vyre_foundation::platform::DeviceCapabilityProfile::shared_memory_kb: u32
+pub vyre_foundation::platform::DeviceCapabilityProfile::subgroup_size: u32
 pub vyre_foundation::platform::DeviceCapabilityProfile::tensor_cores: bool
-pub vyre_foundation::platform::DeviceCapabilityProfile::warp_size: u32
-pub vyre_foundation::platform::DriverApiFamily::Cuda
-pub vyre_foundation::platform::DriverApiFamily::Metal
-pub vyre_foundation::platform::DriverApiFamily::Reference
-pub vyre_foundation::platform::DriverApiFamily::VulkanSpirv
-pub vyre_foundation::platform::DriverApiFamily::Wgpu
 pub vyre_foundation::platform::Endianness::BigEndian
 pub vyre_foundation::platform::Endianness::LittleEndian
 pub vyre_foundation::platform::HostArch::AArch64
@@ -7411,7 +7695,6 @@ pub vyre_foundation::platform::PlatformAdapterError::ThreadSpawn::name: alloc::s
 pub vyre_foundation::platform::PlatformAdapterError::ThreadSpawn::source: core::io::error::Error
 pub vyre_foundation::platform::PlatformSupportMatrix::canonical_endianness: vyre_foundation::platform::matrix::Endianness
 pub vyre_foundation::platform::PlatformSupportMatrix::schema_version: u32
-pub vyre_foundation::platform::PlatformSupportMatrix::supported_apis: alloc::vec::Vec<vyre_foundation::platform::matrix::DriverApiFamily>
 pub vyre_foundation::platform::PlatformSupportMatrix::supported_hosts: alloc::vec::Vec<vyre_foundation::platform::matrix::HostCell>
 pub vyre_foundation::platform::PointerWidth::Bits32
 pub vyre_foundation::platform::PointerWidth::Bits64
@@ -7437,13 +7720,8 @@ pub vyre_foundation::platform::matrix::DeviceCapabilityProfile::bf16_support: bo
 pub vyre_foundation::platform::matrix::DeviceCapabilityProfile::fp16_support: bool
 pub vyre_foundation::platform::matrix::DeviceCapabilityProfile::max_invocations: u32
 pub vyre_foundation::platform::matrix::DeviceCapabilityProfile::shared_memory_kb: u32
+pub vyre_foundation::platform::matrix::DeviceCapabilityProfile::subgroup_size: u32
 pub vyre_foundation::platform::matrix::DeviceCapabilityProfile::tensor_cores: bool
-pub vyre_foundation::platform::matrix::DeviceCapabilityProfile::warp_size: u32
-pub vyre_foundation::platform::matrix::DriverApiFamily::Cuda
-pub vyre_foundation::platform::matrix::DriverApiFamily::Metal
-pub vyre_foundation::platform::matrix::DriverApiFamily::Reference
-pub vyre_foundation::platform::matrix::DriverApiFamily::VulkanSpirv
-pub vyre_foundation::platform::matrix::DriverApiFamily::Wgpu
 pub vyre_foundation::platform::matrix::Endianness::BigEndian
 pub vyre_foundation::platform::matrix::Endianness::LittleEndian
 pub vyre_foundation::platform::matrix::HostArch::AArch64
@@ -7466,7 +7744,6 @@ pub vyre_foundation::platform::matrix::HostOs::Other(alloc::string::String)
 pub vyre_foundation::platform::matrix::HostOs::Windows
 pub vyre_foundation::platform::matrix::PlatformSupportMatrix::canonical_endianness: vyre_foundation::platform::matrix::Endianness
 pub vyre_foundation::platform::matrix::PlatformSupportMatrix::schema_version: u32
-pub vyre_foundation::platform::matrix::PlatformSupportMatrix::supported_apis: alloc::vec::Vec<vyre_foundation::platform::matrix::DriverApiFamily>
 pub vyre_foundation::platform::matrix::PlatformSupportMatrix::supported_hosts: alloc::vec::Vec<vyre_foundation::platform::matrix::HostCell>
 pub vyre_foundation::platform::matrix::PointerWidth::Bits32
 pub vyre_foundation::platform::matrix::PointerWidth::Bits64
@@ -7718,7 +7995,7 @@ pub vyre_foundation::schedule::ScheduleBoundKind::PrefetchDistance
 pub vyre_foundation::schedule::ScheduleBoundKind::QueueCapacity
 pub vyre_foundation::schedule::ScheduleCostModel::max_registers_per_thread: u32
 pub vyre_foundation::schedule::ScheduleCostModel::max_shared_memory: u64
-pub vyre_foundation::schedule::ScheduleCostModel::warp_size: u32
+pub vyre_foundation::schedule::ScheduleCostModel::subgroup_size: u32
 pub vyre_foundation::schedule::ScheduleCostRecord::arithmetic_intensity: f64
 pub vyre_foundation::schedule::ScheduleCostRecord::estimated_cycles: u64
 pub vyre_foundation::schedule::ScheduleCostRecord::memory_traffic_bytes: u64
@@ -7801,6 +8078,8 @@ pub vyre_foundation::schedule::ScheduleOp::Skew
 pub vyre_foundation::schedule::ScheduleOp::Skew::factor: i64
 pub vyre_foundation::schedule::ScheduleOp::Skew::inner_axis: u32
 pub vyre_foundation::schedule::ScheduleOp::Skew::outer_axis: u32
+pub vyre_foundation::schedule::ScheduleOp::SubgroupSpecialization
+pub vyre_foundation::schedule::ScheduleOp::SubgroupSpecialization::roles: alloc::vec::Vec<vyre_foundation::schedule::PipelineRoleGroup>
 pub vyre_foundation::schedule::ScheduleOp::Synchronize
 pub vyre_foundation::schedule::ScheduleOp::Synchronize::scope: vyre_foundation::schedule::SynchronizationScope
 pub vyre_foundation::schedule::ScheduleOp::Tile
@@ -7813,8 +8092,6 @@ pub vyre_foundation::schedule::ScheduleOp::Unroll::factor: u32
 pub vyre_foundation::schedule::ScheduleOp::Vectorize
 pub vyre_foundation::schedule::ScheduleOp::Vectorize::axis: u32
 pub vyre_foundation::schedule::ScheduleOp::Vectorize::vector_width: u32
-pub vyre_foundation::schedule::ScheduleOp::WarpSpecialization
-pub vyre_foundation::schedule::ScheduleOp::WarpSpecialization::roles: alloc::vec::Vec<vyre_foundation::schedule::PipelineRoleGroup>
 pub vyre_foundation::schedule::SchedulePhase::axes: alloc::vec::Vec<vyre_foundation::schedule::ScheduleAxis>
 pub vyre_foundation::schedule::SchedulePhase::grid: [u64; 3]
 pub vyre_foundation::schedule::SchedulePhase::id: vyre_foundation::schedule::SchedulePhaseId
@@ -8038,6 +8315,10 @@ pub vyre_foundation::security::quota::CompilationQuota::max_compile_time_ns: u64
 pub vyre_foundation::security::quota::CompilationQuota::max_depth: usize
 pub vyre_foundation::security::quota::CompilationQuota::max_memory_bytes: usize
 pub vyre_foundation::security::quota::CompilationQuota::max_nodes: usize
+pub vyre_foundation::serial::CanonicalSchemaVersion::major: u32
+pub vyre_foundation::serial::CanonicalSchemaVersion::minor: u32
+pub vyre_foundation::serial::CanonicalSchemaVersion::patch: u32
+pub vyre_foundation::serial::DigestAlgorithm::Blake3_256
 pub vyre_foundation::serial::EnvelopeError::BadMagic
 pub vyre_foundation::serial::EnvelopeError::BadMagic::expected: [u8; 4]
 pub vyre_foundation::serial::EnvelopeError::BadMagic::found: [u8; 4]
@@ -8050,6 +8331,74 @@ pub vyre_foundation::serial::EnvelopeError::Truncated::needed: usize
 pub vyre_foundation::serial::EnvelopeError::VersionMismatch
 pub vyre_foundation::serial::EnvelopeError::VersionMismatch::expected: u32
 pub vyre_foundation::serial::EnvelopeError::VersionMismatch::found: u32
+pub vyre_foundation::serial::SchemaAuthorityError::DecodeFailure
+pub vyre_foundation::serial::SchemaAuthorityError::DecodeFailure::details: alloc::string::String
+pub vyre_foundation::serial::SchemaAuthorityError::DecodeFailure::schema_name: &'static str
+pub vyre_foundation::serial::SchemaAuthorityError::DigestMismatch
+pub vyre_foundation::serial::SchemaAuthorityError::DigestMismatch::computed: alloc::string::String
+pub vyre_foundation::serial::SchemaAuthorityError::DigestMismatch::expected: alloc::string::String
+pub vyre_foundation::serial::SchemaAuthorityError::DigestMismatch::schema_name: &'static str
+pub vyre_foundation::serial::SchemaAuthorityError::IncompatibleVersion
+pub vyre_foundation::serial::SchemaAuthorityError::IncompatibleVersion::found: vyre_foundation::serial::schema_authority::CanonicalSchemaVersion
+pub vyre_foundation::serial::SchemaAuthorityError::IncompatibleVersion::min_required: vyre_foundation::serial::schema_authority::CanonicalSchemaVersion
+pub vyre_foundation::serial::SchemaAuthorityError::IncompatibleVersion::schema_name: &'static str
+pub vyre_foundation::serial::SchemaAuthorityError::InvalidUtf8
+pub vyre_foundation::serial::SchemaAuthorityError::InvalidUtf8::details: alloc::string::String
+pub vyre_foundation::serial::SchemaAuthorityError::InvalidUtf8::schema_name: &'static str
+pub vyre_foundation::serial::SchemaAuthorityError::PayloadTooLarge
+pub vyre_foundation::serial::SchemaAuthorityError::PayloadTooLarge::got_bytes: usize
+pub vyre_foundation::serial::SchemaAuthorityError::PayloadTooLarge::max_bytes: usize
+pub vyre_foundation::serial::SchemaAuthorityError::PayloadTooLarge::schema_name: &'static str
+pub vyre_foundation::serial::SchemaDescriptor::canonical_name: &'static str
+pub vyre_foundation::serial::SchemaDescriptor::current_version: vyre_foundation::serial::schema_authority::CanonicalSchemaVersion
+pub vyre_foundation::serial::SchemaDescriptor::digest_algorithm: vyre_foundation::serial::schema_authority::DigestAlgorithm
+pub vyre_foundation::serial::SchemaDescriptor::max_payload_bytes: usize
+pub vyre_foundation::serial::SchemaDescriptor::min_compatible_version: vyre_foundation::serial::schema_authority::CanonicalSchemaVersion
+pub vyre_foundation::serial::SchemaDescriptor::schema_id: vyre_foundation::serial::schema_authority::SchemaId
+pub vyre_foundation::serial::SchemaId::CompilationArtifact
+pub vyre_foundation::serial::SchemaId::ConformanceCertificate
+pub vyre_foundation::serial::SchemaId::OptimizationProof
+pub vyre_foundation::serial::SchemaId::PersistentCacheEntry
+pub vyre_foundation::serial::SchemaId::ReplayCapsule
+pub vyre_foundation::serial::SchemaId::TargetFacetMatrix
+pub vyre_foundation::serial::SchemaId::TelemetryEvent
+pub vyre_foundation::serial::SchemaId::WirePayload
+pub vyre_foundation::serial::schema_authority::CanonicalSchemaVersion::major: u32
+pub vyre_foundation::serial::schema_authority::CanonicalSchemaVersion::minor: u32
+pub vyre_foundation::serial::schema_authority::CanonicalSchemaVersion::patch: u32
+pub vyre_foundation::serial::schema_authority::DigestAlgorithm::Blake3_256
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::DecodeFailure
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::DecodeFailure::details: alloc::string::String
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::DecodeFailure::schema_name: &'static str
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::DigestMismatch
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::DigestMismatch::computed: alloc::string::String
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::DigestMismatch::expected: alloc::string::String
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::DigestMismatch::schema_name: &'static str
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::IncompatibleVersion
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::IncompatibleVersion::found: vyre_foundation::serial::schema_authority::CanonicalSchemaVersion
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::IncompatibleVersion::min_required: vyre_foundation::serial::schema_authority::CanonicalSchemaVersion
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::IncompatibleVersion::schema_name: &'static str
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::InvalidUtf8
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::InvalidUtf8::details: alloc::string::String
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::InvalidUtf8::schema_name: &'static str
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::PayloadTooLarge
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::PayloadTooLarge::got_bytes: usize
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::PayloadTooLarge::max_bytes: usize
+pub vyre_foundation::serial::schema_authority::SchemaAuthorityError::PayloadTooLarge::schema_name: &'static str
+pub vyre_foundation::serial::schema_authority::SchemaDescriptor::canonical_name: &'static str
+pub vyre_foundation::serial::schema_authority::SchemaDescriptor::current_version: vyre_foundation::serial::schema_authority::CanonicalSchemaVersion
+pub vyre_foundation::serial::schema_authority::SchemaDescriptor::digest_algorithm: vyre_foundation::serial::schema_authority::DigestAlgorithm
+pub vyre_foundation::serial::schema_authority::SchemaDescriptor::max_payload_bytes: usize
+pub vyre_foundation::serial::schema_authority::SchemaDescriptor::min_compatible_version: vyre_foundation::serial::schema_authority::CanonicalSchemaVersion
+pub vyre_foundation::serial::schema_authority::SchemaDescriptor::schema_id: vyre_foundation::serial::schema_authority::SchemaId
+pub vyre_foundation::serial::schema_authority::SchemaId::CompilationArtifact
+pub vyre_foundation::serial::schema_authority::SchemaId::ConformanceCertificate
+pub vyre_foundation::serial::schema_authority::SchemaId::OptimizationProof
+pub vyre_foundation::serial::schema_authority::SchemaId::PersistentCacheEntry
+pub vyre_foundation::serial::schema_authority::SchemaId::ReplayCapsule
+pub vyre_foundation::serial::schema_authority::SchemaId::TargetFacetMatrix
+pub vyre_foundation::serial::schema_authority::SchemaId::TelemetryEvent
+pub vyre_foundation::serial::schema_authority::SchemaId::WirePayload
 pub vyre_foundation::serial::text::TextParseError::DeclaredLengthMismatch
 pub vyre_foundation::serial::text::TextParseError::DeclaredLengthMismatch::actual: usize
 pub vyre_foundation::serial::text::TextParseError::DeclaredLengthMismatch::declared: usize

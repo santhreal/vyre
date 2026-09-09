@@ -31,7 +31,7 @@ use vyre_foundation::ir::GraphValueId;
 use vyre_libs::solvers::quantized_dispatch::{
     i4x8_batched_matmul_f32_scaled_via, i4x8_batched_matmul_top1_f32_scaled_via,
     i4x8_batched_matvec_f32_scaled_via, i4x8_dot_f32_scaled_via, i4x8_matvec_f32_scaled_via,
-    unpack_i4x8_via,
+    unpack_i4x8_via, PackedI4BatchedMatmul,
 };
 use vyre_megakernel::{
     writable_graph_values, Digest, SemanticExecutionError, SemanticExecutionOutput,
@@ -227,13 +227,15 @@ fn entry_points() -> Vec<EntryPoint> {
                 i4x8_batched_matmul_f32_scaled_via(
                     dispatcher,
                     &bounded_compile_policy::policy(),
-                    &[0],
-                    &[0, 0],
-                    &[0.5],
-                    &[0.25, 0.375],
-                    2,
-                    1,
-                    8,
+                    &PackedI4BatchedMatmul {
+                        weights_packed: &[0],
+                        activation_batches_packed: &[0, 0],
+                        row_scales: &[0.5],
+                        batch_scales: &[0.25, 0.375],
+                        batch: 2,
+                        rows: 1,
+                        cols: 8,
+                    },
                 )
                 .map(drop)
             }),
@@ -246,13 +248,15 @@ fn entry_points() -> Vec<EntryPoint> {
                 i4x8_batched_matmul_top1_f32_scaled_via(
                     dispatcher,
                     &bounded_compile_policy::policy(),
-                    &[0],
-                    &[0, 0],
-                    &[0.5],
-                    &[0.25, 0.375],
-                    2,
-                    1,
-                    8,
+                    &PackedI4BatchedMatmul {
+                        weights_packed: &[0],
+                        activation_batches_packed: &[0, 0],
+                        row_scales: &[0.5],
+                        batch_scales: &[0.25, 0.375],
+                        batch: 2,
+                        rows: 1,
+                        cols: 8,
+                    },
                 )
                 .map(drop)
             }),

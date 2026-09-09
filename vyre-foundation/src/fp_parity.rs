@@ -186,6 +186,31 @@ pub fn approximable_operations(program: &Program) -> Vec<String> {
     named.into_iter().collect()
 }
 
+/// Name the unsupported feature a strict-lowering request asks a target for,
+/// or `None` when the mode permits contraction.
+///
+/// A target that cannot separate the roundings rejects the dispatch, and the
+/// rejection names the mode plus the operations whose native instruction the
+/// mode also denies. Every backend answered this with its own copy of the same
+/// two-branch `format!`, so a mode label or a phrasing change reached some
+/// backends and not others.
+#[must_use]
+pub fn blocked_contraction_feature(program: &Program, mode: FloatLoweringMode) -> Option<String> {
+    if !mode.blocks_contraction() {
+        return None;
+    }
+    let ops = approximable_operations(program);
+    let label = mode.cache_label();
+    Some(if ops.is_empty() {
+        format!("float lowering mode `{label}`")
+    } else {
+        format!(
+            "float lowering mode `{label}` for operation(s) {}",
+            ops.join(", ")
+        )
+    })
+}
+
 /// True when any expression in `program` reaches an approximable f32 op.
 ///
 /// Two hand-written enumerations used to stand here, one over `Node` and one

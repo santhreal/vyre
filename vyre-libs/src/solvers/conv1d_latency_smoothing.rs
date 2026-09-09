@@ -11,9 +11,7 @@ use crate::dispatch_buffers::{
 };
 use crate::math::conv1d::{conv1d_node, conv1d_program, gaussian_weights, pack_params};
 use vyre_foundation::ir::Node;
-use vyre_megakernel::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 #[cfg(test)]
 use vyre_reference::composition_witness::conv1d_witness as reference_conv1d;
 
@@ -137,22 +135,15 @@ pub fn smooth_latency_trace_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[3], &scratch.params);
 
     let program = conv1d_program(count, radius);
-    let outputs = execute_single_program(
+    let output = crate::dispatch_buffers::run_single_first_output(
         dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: smooth_latency_trace_via expected at least one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
+        "smooth_latency_trace_via",
+    )?;
     decode_u32_output_exact(
-        &outputs[0],
+        &output,
         latency_fixed.len(),
         "smooth_latency_trace_via",
         out,

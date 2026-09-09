@@ -178,7 +178,7 @@ pub const CANONICAL_CONFIG_FIELDS: &[ConfigFieldDef] = &[
         field_type: ConfigType::String,
         owner: "vyre-foundation",
         default_raw: "auto",
-        bounds_desc: "auto|cuda|wgpu|spirv|metal|reference",
+        bounds_desc: "auto|<registered backend id>",
         identity_impact: IdentityImpact::AffectsCompileIdentity,
         secrecy: ConfigSecrecy::Public,
         mutability: ConfigMutability::ImmutableAtRuntime,

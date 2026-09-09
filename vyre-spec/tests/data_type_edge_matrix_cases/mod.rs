@@ -3,6 +3,10 @@
 use vyre_spec::extension::ExtensionDataTypeId;
 use vyre_spec::{DataType, QuantizationScale, QuantizationZeroPoint, TypeId};
 
+use vyre_test_support::data_type_variants::{
+    assert_covers_every_data_type_variant, data_type_variant_samples,
+};
+
 use crate::spec_variants::{QUANTIZED_STORAGE_TYPES, SCALAR_LEAF_TYPES};
 
 /// Assert a wire tag falls within the frozen builtin range 0x01..=0x1F.
@@ -250,39 +254,21 @@ pub(crate) fn quantization_zero_points() -> Vec<QuantizationZeroPoint> {
 }
 
 /// One representative type per builtin wire tag, to exercise tag coverage.
+///
+/// The set is [`vyre_test_support::data_type_variants::data_type_variant_samples`],
+/// which is held to the `pub enum DataType` declaration at run time. This
+/// builder listed the variants itself, so a variant added to the spec was left
+/// out of the tag matrix in silence, which is the one place a variant with no
+/// tag reads as a variant that has one.
+///
+/// `Opaque` is dropped after the coverage check rather than before it: an
+/// extension type is named by its registered id and has no builtin tag, so it
+/// belongs to the extension matrix, and dropping it earlier would let a variant
+/// go missing without the check seeing it.
 pub(crate) fn builtin_wire_tag_representatives() -> Vec<DataType> {
-    let mut representatives = SCALAR_LEAF_TYPES.to_vec();
-    representatives.extend([
-        DataType::Array { element_size: 4 },
-        DataType::Handle(TypeId(7)),
-        DataType::Vec {
-            element: Box::new(DataType::U32),
-            count: 4,
-        },
-        DataType::TensorShaped {
-            element: Box::new(DataType::F32),
-            shape: [2, 3].as_slice().into(),
-        },
-        DataType::SparseCsr {
-            element: Box::new(DataType::F32),
-        },
-        DataType::SparseCoo {
-            element: Box::new(DataType::F32),
-        },
-        DataType::SparseBsr {
-            element: Box::new(DataType::F32),
-            block_rows: 2,
-            block_cols: 4,
-        },
-        DataType::DeviceMesh {
-            axes: [2, 4].as_slice().into(),
-        },
-        DataType::Quantized {
-            storage: Box::new(DataType::I4),
-            scale: QuantizationScale::PerTensor,
-            zero_point: QuantizationZeroPoint::Absent,
-        },
-    ]);
+    let mut representatives = data_type_variant_samples();
+    assert_covers_every_data_type_variant(&representatives);
+    representatives.retain(|ty| !matches!(ty, DataType::Opaque(_)));
     representatives
 }
 

@@ -193,6 +193,31 @@ pub fn wait_only(id: &str, wait: AsyncWaitSpec) -> KernelDescriptor {
         .build()
 }
 
+/// One literal `7` stored into element 0 of `out`, dispatched over
+/// `workgroup`.
+///
+/// The smallest descriptor that still declares a binding, a literal pool and
+/// an effect, which is why every emitter opens its contract suite with it.
+/// Access class, element count and dispatch extent are the backend's to
+/// choose; the stored value and its slot index are not, so a per-backend copy
+/// would compare three different programs under one name.
+#[must_use]
+pub fn store_literal_kernel(id: &str, out: BindingSlot, workgroup: [u32; 3]) -> KernelDescriptor {
+    descriptor(id)
+        .slot(out)
+        .dispatch(workgroup[0], workgroup[1], workgroup[2])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
+        )
+        .build()
+}
+
 /// A binding slot with every field named.
 #[must_use]
 pub fn slot(

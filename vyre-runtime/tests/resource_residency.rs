@@ -8,9 +8,10 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 use vyre_driver::{
-    ArtifactInstance, BackendError, BindingSet, DeviceIdentity, ResidentOwner, Resource, Submission,
+    ArtifactInstance, BackendError, DeviceIdentity, ResidentOwner, Resource,
 };
-use vyre_megakernel::{Digest, EmittedResources};
+use vyre_megakernel::Digest;
+use vyre_test_support::fixture_instance::FixtureInstance;
 use vyre_runtime::resource_residency::{
     ArtifactInstanceBinding, ImmutableResourceUpload, MutableStateSpec, ResidentResourceDevice,
     ResourceAdmissionStatus, ResourceResidency, ResourceResidencyError, ResourceSetAdmission,
@@ -185,47 +186,23 @@ fn immutable_resource<'a>(name: &'a str, bytes: &'a [u8]) -> ImmutableResourceUp
     }
 }
 
-struct FixtureInstance {
-    device: DeviceIdentity,
-}
-
-impl ArtifactInstance for FixtureInstance {
-    fn artifact(&self) -> Digest {
-        Digest([2; 32])
-    }
-
-    fn payload(&self) -> Digest {
-        Digest([3; 32])
-    }
-
-    fn device(&self) -> &DeviceIdentity {
-        &self.device
-    }
-
-    fn submit(&self, _bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-        Err(BackendError::UnsupportedFeature {
-            name: "resource residency fixture submission".to_string(),
-            backend: "fixture".to_string(),
-        })
-    }
-
-    fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError> {
-        Ok(vec![EmittedResources::default()])
-    }
-
-    fn resident_device_bytes(&self) -> Result<Option<u64>, BackendError> {
-        Ok(None)
-    }
-}
-
 fn artifact_fixture(generation: u64) -> Arc<dyn ArtifactInstance> {
-    Arc::new(FixtureInstance {
-        device: DeviceIdentity {
+    FixtureInstance::with_digests(
+        Digest([2; 32]),
+        Digest([3; 32]),
+        &DeviceIdentity {
             backend: "fixture",
             device: "fixture-device".to_string(),
             generation,
         },
-    })
+        |_, _| {
+            Err(BackendError::UnsupportedFeature {
+                name: "resource residency fixture submission".to_string(),
+                backend: "fixture".to_string(),
+            })
+        },
+    )
+    .into()
 }
 
 /// Proves cold admission uploads once and an exact warm key reuses immutable resources and artifacts.

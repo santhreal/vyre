@@ -34,9 +34,7 @@ use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::matroid_intersection_full::matroid_intersection_full;
-use vyre_megakernel::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned dispatch scratch for exact megakernel matroid certification.
 #[derive(Debug, Default)]
@@ -328,21 +326,14 @@ pub fn select_optimal_subset_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[10], one_word_bytes);
     write_zero_bytes(&mut scratch.inputs[11], one_word_bytes);
 
-    let outputs = execute_single_program(
+    let output = crate::dispatch_buffers::run_single_first_output(
         dispatcher,
-        crate::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: select_optimal_subset_via expected at least one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], n, "select_optimal_subset_via", out)
+        "select_optimal_subset_via",
+    )?;
+    decode_u32_output_exact(&output, n, "select_optimal_subset_via", out)
 }
 
 #[cfg(test)]

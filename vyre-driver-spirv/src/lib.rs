@@ -93,25 +93,7 @@ impl VyreBackend for SpirvBackendRegistration {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
-        if config.float_lowering.blocks_contraction() {
-            let ops = vyre_foundation::fp_parity::approximable_operations(program);
-            let name = if ops.is_empty() {
-                format!(
-                    "float lowering mode `{}`",
-                    config.float_lowering.cache_label()
-                )
-            } else {
-                format!(
-                    "float lowering mode `{}` for operation(s) {}",
-                    config.float_lowering.cache_label(),
-                    ops.join(", ")
-                )
-            };
-            return Err(BackendError::UnsupportedFeature {
-                name,
-                backend: SPIRV_BACKEND_ID.to_string(),
-            });
-        }
+        BackendError::reject_blocked_contraction(program, config.float_lowering, SPIRV_BACKEND_ID)?;
         let spv_words = SpirvBackend::program_to_spv(program).map_err(|e| {
             BackendError::KernelCompileFailed {
                 backend: SPIRV_BACKEND_ID.to_string(),

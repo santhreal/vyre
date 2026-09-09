@@ -359,9 +359,9 @@ pub mod memory_ordering_adversarial;
 #[path = "memory_model_contracts.rs"]
 pub mod memory_model_contracts;
 
-/// Integration tests from `tests/orthogonal_types.rs`.
-#[path = "orthogonal_types.rs"]
-pub mod orthogonal_types;
+/// Integration tests from `tests/type_system_composition_contracts.rs`.
+#[path = "type_system_composition_contracts.rs"]
+pub mod type_system_composition_contracts;
 
 /// Integration tests from `tests/symbolic_shape_interner.rs`.
 #[path = "symbolic_shape_interner.rs"]

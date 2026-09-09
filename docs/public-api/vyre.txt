@@ -34,6 +34,7 @@ pub use vyre::ValidatedCompileRequest
 pub use vyre::admit_artifact
 pub use vyre::admit_envelope
 pub use vyre::compiler
+pub use vyre::diagnostics
 pub use vyre::dialect
 pub use vyre::ir
 pub use vyre::match_result

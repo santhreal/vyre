@@ -4,6 +4,7 @@ use rustc_hash::FxHashMap;
 use vyre_spec::{BinOp, DataType};
 
 use crate::ir::{BufferAccess, BufferDecl, Expr, Node, Program};
+use crate::visit::child_bodies;
 use super::builder::{DominanceError, RegionBuilder};
 use super::{
     GlobalDecl, RegionKind, RegionModule, RegionOp, RegionOpKind, ScalarLiteral, ValueId,
@@ -135,7 +136,17 @@ fn lower_node_to_ssa(
         Node::Return => {
             builder.terminate_return(Vec::new())?;
         }
-        _ => {}
+        other => {
+            // A variant with no SSA of its own still nests statements that
+            // have one. Taking the children from `child_bodies` means a
+            // nesting variant added to `Node` is lowered here instead of
+            // dropped by a catch-all that descends into nothing.
+            for body in child_bodies(other) {
+                for child in body {
+                    lower_node_to_ssa(child, builder, var_map)?;
+                }
+            }
+        }
     }
     Ok(())
 }

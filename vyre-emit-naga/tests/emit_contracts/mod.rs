@@ -6,7 +6,9 @@ use naga::{Binding, BuiltIn, Statement, TypeInner};
 use vyre_emit_naga::*;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BinOp, DataType, UnOp};
-use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, SlotCount};
+use vyre_lower::descriptor_builder::{
+    body, descriptor, effect, global_rw, lit, store_literal_kernel, SlotCount,
+};
 use vyre_lower::{
     AsyncTransaction, AsyncWaitSpec, BindingSlot, BindingVisibility, KernelDescriptor,
     KernelOpKind, LiteralValue, MemoryClass, MemoryProxyFence, TransactionScope,
@@ -81,19 +83,7 @@ pub(crate) fn single_store_desc_of(
     if let Some(count) = count {
         slot = slot.with_count(count);
     }
-    descriptor(id)
-        .slots([slot])
-        .dispatch(64, 1, 1)
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    lit(1, 1),
-                    effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
-                ])
-                .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
-        )
-        .build()
+    store_literal_kernel(id, slot, [64, 1, 1])
 }
 
 pub(crate) fn single_store_desc(id: &str) -> KernelDescriptor {

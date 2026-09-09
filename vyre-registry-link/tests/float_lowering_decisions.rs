@@ -29,7 +29,9 @@ use vyre_registry_link::backend::{linked_backend_sources, live_backend_registry,
 use vyre_foundation::ir::UnOp;
 use vyre_test_support::strict_float_programs::f32_multiply_add_program;
 
-use crate::float_lowering::{backends_needing_a_decision, f32_bytes, ledger_path, read_ledger};
+use crate::float_lowering::{
+    backends_needing_a_decision, f32_bytes, honored_or_refused_by_name, ledger_path, read_ledger,
+};
 /// Every backend states a decision for every mode.
 #[test]
 fn every_backend_records_a_decision_for_every_float_lowering_mode() {
@@ -129,68 +131,30 @@ fn every_registered_backend_strict_ieee_lowering_honored_or_refused_naming_opera
     let mut findings = Vec::new();
 
     for registration in registry {
-        let backend = match registration.acquire() {
-            Ok(backend) => backend,
-            Err(_) => continue,
+        let Ok(backend) = registration.acquire() else {
+            continue;
         };
 
-        // Case 1: Program with expandable operation (Sin)
+        // Sin has an exact f32 expansion, so a backend that honors the strict
+        // mode answers it and one that does not refuses by name.
         let honors_strict = backend.honors_float_lowering(FloatLoweringMode::StrictIeee);
-        match backend.dispatch(&program_with_sin, &inputs, &config) {
-            Ok(_) => {
-                if !honors_strict {
-                    findings.push(format!(
-                        "  backend `{}` returned Ok for strict-ieee with Sin, but honors_float_lowering returned false",
-                        registration.id
-                    ));
-                }
-            }
-            Err(error) => {
-                if honors_strict {
-                    findings.push(format!(
-                        "  backend `{}` failed strict-ieee dispatch with expandable Sin: {error}",
-                        registration.id
-                    ));
-                } else {
-                    let message = error.to_string();
-                    let names_mode = message.contains(FloatLoweringMode::StrictIeee.cache_label())
-                        || message.contains("strict IEEE");
-                    let names_op = message.contains("Sin");
-                    let names_backend = message.contains(registration.id);
-                    let has_fix = message.contains("Fix:");
-                    if !names_mode || !names_op || !names_backend || !has_fix {
-                        findings.push(format!(
-                            "  backend `{}` refused unhonored strict-ieee without naming mode, operation Sin, backend, and Fix: in error: {message}",
-                            registration.id
-                        ));
-                    }
-                }
-            }
-        }
+        findings.extend(honored_or_refused_by_name(
+            registration.id,
+            honors_strict,
+            FloatLoweringMode::StrictIeee,
+            Some("Sin"),
+            &backend.dispatch(&program_with_sin, &inputs, &config),
+        ));
 
-        // Case 2: Program with unexpandable approximable operation (Exp2)
-        // Every backend must refuse this under StrictIeee with a diagnostic naming "Exp2".
-        match backend.dispatch(&program_with_exp2, &inputs, &config) {
-            Ok(_) => {
-                findings.push(format!(
-                    "  backend `{}` silently accepted unexpandable operation Exp2 under strict-ieee mode",
-                    registration.id
-                ));
-            }
-            Err(error) => {
-                let message = error.to_string();
-                let names_mode = message.contains(FloatLoweringMode::StrictIeee.cache_label())
-                    || message.contains("strict IEEE");
-                let names_op = message.contains("Exp2");
-                let has_fix = message.contains("Fix:");
-                if !names_mode || !names_op || !has_fix {
-                    findings.push(format!(
-                        "  backend `{}` refused unexpandable Exp2 under strict-ieee without naming mode, Exp2, and Fix: in error: {message}",
-                        registration.id
-                    ));
-                }
-            }
-        }
+        // Exp2 has no exact f32 expansion, so no backend may accept it under
+        // the strict mode whatever it claims about the mode itself.
+        findings.extend(honored_or_refused_by_name(
+            registration.id,
+            false,
+            FloatLoweringMode::StrictIeee,
+            Some("Exp2"),
+            &backend.dispatch(&program_with_exp2, &inputs, &config),
+        ));
     }
 
     assert!(

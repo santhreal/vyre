@@ -1,4 +1,11 @@
-//! Tests for closed orthogonal semantic type system (Row 102).
+//! How the semantic type system composes, and what each layer states about a
+//! value.
+//!
+//! Scalars carry a width, vectors carry a lane count over a scalar, tensors
+//! carry a shape and a quantization, and records and variants carry named
+//! members. Each case pins the arithmetic one layer performs over the layer
+//! below it, so a width, lane count, or member offset that stops composing
+//! fails here rather than at a lowering boundary.
 
 use vyre_foundation::memory_model::ExecutionScope;
 use vyre_foundation::types::*;

@@ -33,8 +33,8 @@
 
 [[crate]]
 name = "conform"
-duplicate_lines = 58
-total_lines = 12418
+duplicate_lines = 50
+total_lines = 16002
 
 [[crate]]
 name = "examples"
@@ -63,8 +63,8 @@ total_lines = 1599
 
 [[crate]]
 name = "vyre-bench"
-duplicate_lines = 912
-total_lines = 38605
+duplicate_lines = 872
+total_lines = 39545
 
 [[crate]]
 name = "vyre-debug"
@@ -73,13 +73,13 @@ total_lines = 2227
 
 [[crate]]
 name = "vyre-driver"
-duplicate_lines = 413
-total_lines = 40073
+duplicate_lines = 407
+total_lines = 41005
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 1238
-total_lines = 63038
+duplicate_lines = 1230
+total_lines = 63091
 
 [[crate]]
 name = "vyre-driver-metal"
@@ -103,33 +103,33 @@ total_lines = 34503
 
 [[crate]]
 name = "vyre-emit-metal"
-duplicate_lines = 21
-total_lines = 770
+duplicate_lines = 9
+total_lines = 866
 
 [[crate]]
 name = "vyre-emit-naga"
-duplicate_lines = 108
-total_lines = 9540
+duplicate_lines = 96
+total_lines = 10342
 
 [[crate]]
 name = "vyre-emit-ptx"
-duplicate_lines = 32
-total_lines = 13107
+duplicate_lines = 21
+total_lines = 13149
 
 [[crate]]
 name = "vyre-emit-spirv"
-duplicate_lines = 16
-total_lines = 1127
+duplicate_lines = 8
+total_lines = 1171
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 2061
-total_lines = 122483
+duplicate_lines = 1714
+total_lines = 136076
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 5218
-total_lines = 210008
+duplicate_lines = 4782
+total_lines = 211053
 
 [[crate]]
 name = "vyre-lints"
@@ -163,13 +163,13 @@ total_lines = 30891
 
 [[crate]]
 name = "vyre-runtime"
-duplicate_lines = 123
-total_lines = 33773
+duplicate_lines = 103
+total_lines = 39616
 
 [[crate]]
 name = "vyre-pass-engine"
-duplicate_lines = 154
-total_lines = 6630
+duplicate_lines = 117
+total_lines = 6965
 
 [[crate]]
 name = "vyre-test-support"
@@ -178,8 +178,8 @@ total_lines = 3006
 
 [[crate]]
 name = "vyre-spec"
-duplicate_lines = 18
-total_lines = 10674
+duplicate_lines = 17
+total_lines = 12083
 
 [[crate]]
 name = "xtask"
@@ -188,8 +188,8 @@ total_lines = 29798
 
 [[crate]]
 name = "xtask-evidence"
-duplicate_lines = 34
-total_lines = 27563
+duplicate_lines = 18
+total_lines = 28736
 
 [[crate]]
 name = "xtask-registry"

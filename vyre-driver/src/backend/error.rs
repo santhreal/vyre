@@ -1,8 +1,7 @@
 //! Actionable backend error taxonomy.
 
 use vyre_foundation::diagnostics::{
-    CompilerLevel, Diagnostic, DiagnosticStage, RetryClass, ToDiagnostic,
-};
+    CompilerLevel, Diagnostic, DiagnosticStage, RetryClass, };
 
 /// Machine-readable classification of a backend failure kind.
 ///
@@ -332,6 +331,22 @@ impl BackendError {
         Err(Self::unsupported_feature(backend, feature))
     }
 
+    /// Reject a dispatch whose float lowering mode the target cannot honor.
+    ///
+    /// `Ok(())` when the mode permits contraction. Each backend built the same
+    /// two-branch feature name inline, so the text a strict-mode rejection
+    /// carries drifted per backend.
+    pub fn reject_blocked_contraction(
+        program: &vyre_foundation::ir::Program,
+        mode: vyre_foundation::fp_parity::FloatLoweringMode,
+        backend: &str,
+    ) -> Result<(), Self> {
+        match vyre_foundation::fp_parity::blocked_contraction_feature(program, mode) {
+            None => Ok(()),
+            Some(feature) => Err(Self::unsupported_feature(backend, &feature)),
+        }
+    }
+
     /// Build a structured lock-poisoning error.
     ///
     /// This constructor accepts any `PoisonError` from `RwLock` operations
@@ -515,20 +530,4 @@ impl BackendError {
     }
 }
 
-impl ToDiagnostic for BackendError {
-    fn to_diagnostic(&self) -> Diagnostic {
-        self.diagnostic()
-    }
-}
-
-impl From<&BackendError> for Diagnostic {
-    fn from(error: &BackendError) -> Self {
-        error.diagnostic()
-    }
-}
-
-impl From<BackendError> for Diagnostic {
-    fn from(error: BackendError) -> Self {
-        error.diagnostic()
-    }
-}
+vyre_foundation::diagnostic_conversions!(BackendError, diagnostic);
