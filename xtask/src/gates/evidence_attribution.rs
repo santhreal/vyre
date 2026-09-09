@@ -486,7 +486,18 @@ mod tests {
                 "`{relative}` came out of the walk and is not a file"
             );
         }
+        assert!(
+            found.len() > 50,
+            "the walk yielded {} artifacts; a loop over an empty corpus proves nothing",
+            found.len()
+        );
         let declared: BTreeSet<&str> = evidence_owners().keys().copied().collect();
+        assert!(
+            declared.len() > 50,
+            "gate metadata declares {} evidence artifacts; an empty owner table would make this \
+             assertion vacuous",
+            declared.len()
+        );
         for artifact in declared {
             assert!(
                 found.iter().any(|path| path == artifact),

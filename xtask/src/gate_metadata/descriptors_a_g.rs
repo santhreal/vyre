@@ -72,7 +72,7 @@ pub const GATES_A_G: [GateDescriptor; 56] = [
         inputs: &[],
         artifacts: &["release/evidence/backends/backend-matrix.json"],
         prerequisites: &[],
-        resource_class: ResourceClass::Process,
+        resource_class: ResourceClass::Device,
         proof: "xtask_evidence::release::backend_matrix::feature_marker_tests::no_feature_marker_names_a_test_file",
     },
     GateDescriptor {

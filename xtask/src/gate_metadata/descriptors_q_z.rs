@@ -53,7 +53,7 @@ pub const GATES_Q_Z: [GateDescriptor; 38] = [
             "release/evidence/conformance/wgpu-conformance.json",
         ],
         prerequisites: &[],
-        resource_class: ResourceClass::Io,
+        resource_class: ResourceClass::Device,
         proof: "crate::release::release_conformance::tests::diff_summary_validation_rejects_missing_and_wrong_backend_fields",
     },
     GateDescriptor {
