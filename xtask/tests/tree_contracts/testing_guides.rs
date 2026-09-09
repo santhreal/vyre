@@ -43,7 +43,7 @@ fn write_fixture(root: &Path, include_profile: bool) {
     .expect("Fix: fixture integration test must be writable");
     fs::write(
         root.join("docs/CRATE_OWNERSHIP.toml"),
-        format!("schema_version = {REGISTRY_SCHEMA_VERSION}\n\n[[crate]]\npackage = \"a\"\npath = \"a\"\nowner = \"fixture\"\nlayer = \"foundation\"\nresponsibility = \"Return the exact fixture answer.\"\n"),
+        format!("schema_version = {REGISTRY_SCHEMA_VERSION}\n\n[[crate]]\npackage = \"a\"\npublication_class = \"internal-engine\"\npath = \"a\"\nowner = \"fixture\"\nlayer = \"foundation\"\nresponsibility = \"Return the exact fixture answer.\"\n"),
     )
     .expect("Fix: fixture ownership registry must be writable");
     let profile = if include_profile {

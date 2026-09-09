@@ -16,7 +16,7 @@
 #![allow(dead_code)]
 
 use proptest::prelude::*;
-use vyre_spec::extension::ExtensionDataTypeId;
+use vyre_spec::ExtensionDataTypeId;
 use vyre_spec::{CollectiveOp, DataType, QuantizationScale, QuantizationZeroPoint, TypeId};
 
 /// Storage element types a quantized `DataType` may wrap.

@@ -17,7 +17,7 @@ use proptest::collection::vec as prop_vec;
 use proptest::prelude::*;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_spec::extension::ExtensionDataTypeId;
+use vyre_spec::ExtensionDataTypeId;
 use vyre_spec::TypeId;
 pub(crate) use vyre_test_support::data_type_elements::flat_buffer_element_types;
 use vyre_test_support::spec_op_strategies::{arb_atomic_op, arb_bin_op, arb_un_op};

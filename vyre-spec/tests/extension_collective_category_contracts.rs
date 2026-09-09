@@ -4,7 +4,7 @@
 //! conformance certificates and downstream extension crates can depend on
 //! `vyre-spec` without linking the full `vyre` workspace.
 
-use vyre_spec::extension::{
+use vyre_spec::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionRuleConditionId,
     ExtensionTernaryOpId, ExtensionUnOpId,
 };

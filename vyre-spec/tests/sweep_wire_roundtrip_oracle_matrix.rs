@@ -9,7 +9,7 @@
 
 use smallvec::smallvec;
 use vyre_foundation::ir::{BufferDecl, Expr, Node, Program};
-use vyre_spec::extension::{
+use vyre_spec::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionUnOpId,
 };
 use vyre_spec::{

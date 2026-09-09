@@ -144,7 +144,7 @@ pub fn per_word_popcount_via_with_scratch_into(
     ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
 
-    let out_buf = crate::dispatch_buffers::run_single_first_output(
+    let out_buf = crate::dispatch_buffers::execute_program_first_output(
         dispatcher,
         program,
         &scratch.inputs,
@@ -187,7 +187,7 @@ pub fn total_set_bits_via_with_scratch_into(
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
     write_zero_bytes(&mut scratch.inputs[1], std::mem::size_of::<u32>());
-    let out_buf = crate::dispatch_buffers::run_single_first_output(
+    let out_buf = crate::dispatch_buffers::execute_program_first_output(
         dispatcher,
         program,
         &scratch.inputs,
@@ -230,7 +230,7 @@ pub fn saturation_ratio_via_with_scratch_into(
     let program = bitset_saturation_ratio("input", "out", word_count);
     ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
-    let out_buf = crate::dispatch_buffers::run_single_first_output(
+    let out_buf = crate::dispatch_buffers::execute_program_first_output(
         dispatcher,
         program,
         &scratch.inputs,

@@ -327,19 +327,25 @@ pub fn anchored_window_extract_program(
             Expr::add(Expr::var("step"), Expr::u32(1)),
         )],
     ));
-
     // For one candidate: bound the forward window at
     // min(origin + max_pattern_len, haystack_len) and replay.
+    // `haystack_len` is a live load, not an extent. The step body reads
+    // `haystack` through `load_packed_byte`, four bytes per word, so the real
+    // ceiling is four times its extent.
+    let scan_limit = Expr::min(
+        Expr::load(haystack_len, Expr::u32(0)),
+        Expr::mul(Expr::buf_len(haystack), Expr::u32(4)),
+    );
     let uncapped_end = Expr::add(Expr::var("origin"), Expr::u32(max_pattern_len));
     let window_end = Expr::select(
-        Expr::lt(uncapped_end.clone(), Expr::load(haystack_len, Expr::u32(0))),
+        Expr::lt(uncapped_end.clone(), scan_limit.clone()),
         uncapped_end,
-        Expr::load(haystack_len, Expr::u32(0)),
+        scan_limit.clone(),
     );
     let per_candidate = vec![
         Node::let_bind("origin", Expr::load(candidates, Expr::var("i"))),
         Node::if_then(
-            Expr::lt(Expr::var("origin"), Expr::load(haystack_len, Expr::u32(0))),
+            Expr::lt(Expr::var("origin"), scan_limit),
             vec![
                 Node::let_bind("state", Expr::u32(0)),
                 Node::let_bind("win_end", window_end),
@@ -347,7 +353,6 @@ pub fn anchored_window_extract_program(
             ],
         ),
     ];
-
     let walk_body = vec![
         Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(

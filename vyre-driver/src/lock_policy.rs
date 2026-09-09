@@ -5,19 +5,19 @@
 //!
 //! Subsystems must not make ad-hoc local decisions (such as unconditionally recovering
 //! with `into_inner`, panicking in place, or ignoring poison). Instead, every lock
-//! belongs to an explicitly declared [`FailureDomain`]:
+//! belongs to an explicitly declared [`FailureDomain`](crate::lock_policy::FailureDomain):
 //!
-//! 1. [`FailureDomain::Transactional`]: In-flight mutation was aborted. The guarded
+//! 1. [`FailureDomain::Transactional`](crate::lock_policy::FailureDomain::Transactional): In-flight mutation was aborted. The guarded
 //!    state is discarded and a typed [`BackendError`] is reported to the caller.
-//! 2. [`FailureDomain::RestartableFromCanonical`]: Caches, staging pools, or memoized
+//! 2. [`FailureDomain::RestartableFromCanonical`](crate::lock_policy::FailureDomain::RestartableFromCanonical): Caches, staging pools, or memoized
 //!    entries that can be cleanly discarded/reset to an empty valid state and restarted.
-//! 3. [`FailureDomain::DeviceContextFatal`]: Device-bound queues, command encoders,
+//! 3. [`FailureDomain::DeviceContextFatal`](crate::lock_policy::FailureDomain::DeviceContextFatal): Device-bound queues, command encoders,
 //!    or device handles where poison indicates corrupted GPU submission state. The
 //!    device is marked lost and [`BackendError::DeviceLost`] is reported.
-//! 4. [`FailureDomain::ProcessFatal`]: Foreign ICD dynamic loader dispatch tables,
+//! 4. [`FailureDomain::ProcessFatal`](crate::lock_policy::FailureDomain::ProcessFatal): Foreign ICD dynamic loader dispatch tables,
 //!    global driver runtime init, or external C-ABI boundaries where corrupt state
 //!    causes silent memory corruption or SIGSEGV in foreign frames. Process is aborted.
-//! 5. [`FailureDomain::InvariantViolation`]: Critical internal data structure
+//! 5. [`FailureDomain::InvariantViolation`](crate::lock_policy::FailureDomain::InvariantViolation): Critical internal data structure
 //!    corruption violating compiler invariants. Process is aborted with diagnostic details.
 
 use std::sync::{Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};

@@ -109,7 +109,7 @@ pub use identity::{
 };
 pub use level_stage::{registered_level_stage, PayloadAttachment};
 pub use objective::{
-    real_time, BoundViolation, CompileObjective, CoveragePolicy, EnergyPolicy,
+    BoundViolation, CompileObjective, CoveragePolicy, EnergyPolicy,
     InputToVisibleMeasurement, InterferenceAssumptions, LatencyPercentile, MetricFigures,
     MetricSequence, ObjectiveBounds, ObjectiveMetric, PortfolioPolicy, RealTimeDeadline,
     RealTimeObjective, RealTimeViolation, RequiredFact, RiskStatistic, WarmColdState,

@@ -184,7 +184,7 @@ pub fn precondition_autotune_gradient_fixed_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[0], m_inv_sqrt_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], grad_fixed);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
-    let output = crate::dispatch_buffers::run_single_first_output(
+    let output = crate::dispatch_buffers::execute_program_first_output(
         dispatcher,
         program,
         &scratch.inputs,

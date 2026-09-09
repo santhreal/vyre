@@ -7,11 +7,11 @@
 //! - Identity digests use domain separators and include only declared identity fields.
 //! - Adding or modifying a field turns verification red.
 
-use vyre_foundation::canonical_codec::{
+use vyre_foundation::{
     CanonicalDecoder, CanonicalEncoder, CanonicalRecord, CanonicalSigner, CanonicalValue,
     CodecError,
 };
-use vyre_spec::schema_registry::{SchemaId, SchemaRegistry};
+use vyre_spec::{SchemaId, SchemaRegistry};
 
 #[test]
 fn canonical_codec_round_trip_conformance_certificate() {

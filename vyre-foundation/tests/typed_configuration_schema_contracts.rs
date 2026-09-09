@@ -6,7 +6,7 @@
 //! - Behavior-affecting fields alter `behavior_hash`, while operational/diagnostic fields do not.
 //! - Unknown keys and type mismatches fail with actionable corrective diagnostics.
 
-use vyre_foundation::config_schema::{
+use vyre_foundation::{
     ConfigLayer, ConfigPartition, ConfigSecrecy, ConfigType, ConfigValue, ResolvedConfiguration,
     CANONICAL_CONFIG_FIELDS,
 };

@@ -225,3 +225,64 @@ fn a_kernel_that_observes_the_grid_shape_emits_under_a_per_axis_index() {
     let module = emit(&desc).expect("Fix: a workgroup-id read must emit under a per-axis index.");
     assert_valid_wgsl(&module, "per-axis workgroup id read");
 }
+
+/// WHY: closes the class "a multi-axis launch reads only the x component of invocation id
+/// or a single-axis launch acquires unwanted grid arithmetic". A multi-axis launch must
+/// read its global invocation index as the linearized coordinate across all grid axes,
+/// while a single-axis launch must remain unchanged, reading `_vyre_global_id.x` directly
+/// without taking the `num_workgroups` builtin argument.
+#[test]
+fn multi_axis_launch_reads_linearized_index_and_single_axis_launch_is_unchanged() {
+    use naga::back::wgsl::{write_string, WriterFlags};
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+
+    let single_axis_module = emit(&store_at_global_axis(
+        "single-axis",
+        0,
+        GridIndexSpace::PerAxis,
+    ))
+    .expect("Fix: single-axis descriptor must emit.");
+    assert_valid_wgsl(&single_axis_module, "single-axis global index");
+
+    let multi_axis_module = emit(&store_at_global_axis(
+        "multi-axis",
+        0,
+        GridIndexSpace::GridLinearized,
+    ))
+    .expect("Fix: multi-axis descriptor must emit.");
+    assert_valid_wgsl(&multi_axis_module, "multi-axis linearized global index");
+
+    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
+    let single_info = validator
+        .validate(&single_axis_module)
+        .expect("single-axis module must validate");
+    let single_wgsl = write_string(&single_axis_module, &single_info, WriterFlags::empty())
+        .expect("single-axis WGSL must serialize");
+
+    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
+    let multi_info = validator
+        .validate(&multi_axis_module)
+        .expect("multi-axis module must validate");
+    let multi_wgsl = write_string(&multi_axis_module, &multi_info, WriterFlags::empty())
+        .expect("multi-axis WGSL must serialize");
+
+    // Single-axis launch is unchanged: takes only global_invocation_id, no num_workgroups.
+    assert!(
+        !single_wgsl.contains("num_workgroups"),
+        "Fix: single-axis launch must not declare or take num_workgroups builtin."
+    );
+    assert!(
+        single_wgsl.contains("_vyre_global_id.x"),
+        "Fix: single-axis launch must read _vyre_global_id.x directly."
+    );
+
+    // Multi-axis launch reads linearized index using num_workgroups.
+    assert!(
+        multi_wgsl.contains("num_workgroups"),
+        "Fix: multi-axis launch must declare num_workgroups builtin to linearize across grid axes."
+    );
+    assert!(
+        multi_wgsl.contains("_vyre_num_workgroups.x"),
+        "Fix: multi-axis launch must scale by _vyre_num_workgroups.x for linearization."
+    );
+}

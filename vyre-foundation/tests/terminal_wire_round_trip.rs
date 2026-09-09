@@ -10,7 +10,7 @@
 use smallvec::smallvec;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_spec::extension::{
+use vyre_spec::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionUnOpId,
 };
 use vyre_spec::TypeId;

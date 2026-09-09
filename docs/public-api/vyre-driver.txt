@@ -74,6 +74,7 @@ impl inventory::Collect for vyre_driver::Deprecation
 impl inventory::Collect for vyre_driver::Migration
 impl serde_core::ser::Serialize for vyre_driver::Target
 impl vyre_driver::AdaptiveSpeculator
+impl vyre_driver::AdmittedResourceRecord
 impl vyre_driver::AotLauncherFiles
 impl vyre_driver::AttrMap
 impl vyre_driver::BackendError
@@ -95,6 +96,8 @@ impl vyre_driver::DispatchConfig
 impl vyre_driver::Distribution
 impl vyre_driver::ErrorCode
 impl vyre_driver::HostShimBuffer
+impl vyre_driver::ImageDimensions
+impl vyre_driver::ImageFormat
 impl vyre_driver::LaunchDirective
 impl vyre_driver::LaunchGeometry
 impl vyre_driver::LaunchPlan
@@ -119,6 +122,8 @@ impl vyre_driver::RegexAcceleratorStreamMode
 impl vyre_driver::ResidentGraphReuseTelemetry
 impl vyre_driver::ResidentHandle
 impl vyre_driver::ResidentOwner
+impl vyre_driver::ResourcePermittedUsages
+impl vyre_driver::ResourceUsageTransition
 impl vyre_driver::RoutingTable
 impl vyre_driver::Semver
 impl vyre_driver::SpecCacheKey
@@ -128,6 +133,7 @@ impl vyre_driver::SpeculationReport
 impl vyre_driver::SpeculativeVariantRace
 impl vyre_driver::SubgroupCaps
 impl vyre_driver::SubgroupOp
+impl vyre_driver::SubresourceRange
 impl vyre_driver::TailMaskPolicy
 impl vyre_driver::Target
 impl vyre_driver::TimedDispatchResult
@@ -170,12 +176,6 @@ impl vyre_driver::pgo::PgoTable
 impl vyre_driver::reservation_policy::ReservationPolicy
 impl vyre_driver::resident_transfer_fusion::ResidentUploadBytes<'_>
 impl vyre_driver::result_compaction::ResultCompactionScratch
-impl vyre_driver::semantic_resource_abi::AdmittedResourceRecord
-impl vyre_driver::semantic_resource_abi::ImageDimensions
-impl vyre_driver::semantic_resource_abi::ImageFormat
-impl vyre_driver::semantic_resource_abi::ResourcePermittedUsages
-impl vyre_driver::semantic_resource_abi::ResourceUsageTransition
-impl vyre_driver::semantic_resource_abi::SubresourceRange
 impl vyre_driver::shape_prediction::ShapeHistory
 impl vyre_driver::target_dialect::TargetDialect
 impl vyre_driver::transfer_accounting::TransferAccountingPolicy
@@ -211,6 +211,11 @@ pub const fn vyre_driver::ErrorCode::summary(self) -> &'static str
 pub const fn vyre_driver::ExtractionDevice<'a>::new(profile: &'a vyre_driver::DeviceProfile, hot_path: bool) -> Self
 pub const fn vyre_driver::ExtractionDevice<'a>::with_autotune_record(self, record: &'a vyre_driver::autotune_store::AutotuneRecord) -> Self
 pub const fn vyre_driver::ExtractionDevice<'a>::with_trace_jit(self, counters: vyre_driver::trace_jit_policy::TraceJitInputs) -> Self
+pub const fn vyre_driver::ImageDimensions::d2(width: u32, height: u32) -> Self
+pub const fn vyre_driver::ImageDimensions::unpadded_layer_bytes(&self, format: vyre_driver::ImageFormat) -> u64
+pub const fn vyre_driver::ImageFormat::bytes_per_pixel(&self) -> u32
+pub const fn vyre_driver::ImageFormat::is_depth_stencil(&self) -> bool
+pub const fn vyre_driver::ImageFormat::is_planar_video(&self) -> bool
 pub const fn vyre_driver::LaunchDirective::dynamic_shared_bytes(&self) -> u32
 pub const fn vyre_driver::LaunchDirective::grid(&self) -> [u32; 3]
 pub const fn vyre_driver::LaunchDirective::logical_coverage(&self) -> [u64; 3]
@@ -237,11 +242,16 @@ pub const fn vyre_driver::ResidentGraphReuseTelemetry::cold_upload(upload_bytes:
 pub const fn vyre_driver::ResidentGraphReuseTelemetry::from_counters(cold_uploads: u64, warm_reuses: u64, upload_bytes: u64, avoided_upload_bytes: u64) -> Self
 pub const fn vyre_driver::ResidentGraphReuseTelemetry::is_empty(self) -> bool
 pub const fn vyre_driver::ResidentGraphReuseTelemetry::warm_reuse(avoided_upload_bytes: u64) -> Self
+pub const fn vyre_driver::ResourcePermittedUsages::contains(&self, other: Self) -> bool
+pub const fn vyre_driver::ResourcePermittedUsages::union(self, other: Self) -> Self
+pub const fn vyre_driver::ResourceUsageTransition::to_present(from: vyre_driver::ResourceLayoutState) -> Self
+pub const fn vyre_driver::ResourceUsageTransition::to_sampled(from: vyre_driver::ResourceLayoutState) -> Self
 pub const fn vyre_driver::Semver::new(major: u32, minor: u32, patch: u32) -> Self
 pub const fn vyre_driver::SubgroupCaps::from_feature_range(supports_feature: bool, supports_vertex_stage: bool, min_size: u32, max_size: u32) -> Self
 pub const fn vyre_driver::SubgroupCaps::is_usable(self) -> bool
 pub const fn vyre_driver::SubgroupCaps::native(subgroup_size: u32) -> Self
 pub const fn vyre_driver::SubgroupOp::all() -> &'static [vyre_driver::SubgroupOp]
+pub const fn vyre_driver::SubresourceRange::full(dimensions: &vyre_driver::ImageDimensions) -> Self
 pub const fn vyre_driver::fusion::FusionCaps::high_end() -> Self
 pub const fn vyre_driver::graph_capture::GraphCaptureEditAction::as_str(self) -> &'static str
 pub const fn vyre_driver::graph_capture::GraphCaptureEditStability::as_str(self) -> &'static str
@@ -256,16 +266,6 @@ pub const fn vyre_driver::param_inlining::ParamInliningPolicy::disabled() -> Sel
 pub const fn vyre_driver::param_inlining::ParamInliningPolicy::large_inline_default() -> Self
 pub const fn vyre_driver::param_inlining::ParamInliningPolicy::small_inline_default() -> Self
 pub const fn vyre_driver::reservation_policy::ReservationPolicy::new(context: &'static str, fix: &'static str) -> Self
-pub const fn vyre_driver::semantic_resource_abi::ImageDimensions::d2(width: u32, height: u32) -> Self
-pub const fn vyre_driver::semantic_resource_abi::ImageDimensions::unpadded_layer_bytes(&self, format: vyre_driver::semantic_resource_abi::ImageFormat) -> u64
-pub const fn vyre_driver::semantic_resource_abi::ImageFormat::bytes_per_pixel(&self) -> u32
-pub const fn vyre_driver::semantic_resource_abi::ImageFormat::is_depth_stencil(&self) -> bool
-pub const fn vyre_driver::semantic_resource_abi::ImageFormat::is_planar_video(&self) -> bool
-pub const fn vyre_driver::semantic_resource_abi::ResourcePermittedUsages::contains(&self, other: Self) -> bool
-pub const fn vyre_driver::semantic_resource_abi::ResourcePermittedUsages::union(self, other: Self) -> Self
-pub const fn vyre_driver::semantic_resource_abi::ResourceUsageTransition::to_present(from: vyre_driver::semantic_resource_abi::ResourceLayoutState) -> Self
-pub const fn vyre_driver::semantic_resource_abi::ResourceUsageTransition::to_sampled(from: vyre_driver::semantic_resource_abi::ResourceLayoutState) -> Self
-pub const fn vyre_driver::semantic_resource_abi::SubresourceRange::full(dimensions: &vyre_driver::semantic_resource_abi::ImageDimensions) -> Self
 pub const fn vyre_driver::target_dialect::TargetDialect::admissible_invocations_per_workgroup(&self, adapter: u32) -> u32
 pub const fn vyre_driver::transfer_accounting::TransferAccountingPolicy::new(domain: &'static str, fix_action: &'static str) -> Self
 pub const vyre_driver::COUNTER_TAIL_BYTES: usize
@@ -288,6 +288,15 @@ pub const vyre_driver::PipelineFeatureFlags::SPECULATIVE: Self
 pub const vyre_driver::PipelineFeatureFlags::SUBGROUP_OPS: Self
 pub const vyre_driver::PipelineFeatureFlags::TENSOR_CORES: Self
 pub const vyre_driver::REGEX_ACCELERATOR_EVIDENCE_SCHEMA_VERSION: u32
+pub const vyre_driver::ResourcePermittedUsages::COLOR_ATTACHMENT: Self
+pub const vyre_driver::ResourcePermittedUsages::DEPTH_STENCIL_ATTACHMENT: Self
+pub const vyre_driver::ResourcePermittedUsages::EXTERNAL_EXPORT: Self
+pub const vyre_driver::ResourcePermittedUsages::EXTERNAL_IMPORT: Self
+pub const vyre_driver::ResourcePermittedUsages::PRESENTATION: Self
+pub const vyre_driver::ResourcePermittedUsages::SAMPLED: Self
+pub const vyre_driver::ResourcePermittedUsages::STORAGE: Self
+pub const vyre_driver::ResourcePermittedUsages::TRANSFER_DST: Self
+pub const vyre_driver::ResourcePermittedUsages::TRANSFER_SRC: Self
 pub const vyre_driver::bindless_policy::BINDLESS_RESOURCE_COUNT_THRESHOLD: u32
 pub const vyre_driver::cache_eviction_heat::DECAY_HALF_LIFE_S: f64
 pub const vyre_driver::extraction_cost::COLD_PATH_COST_SCALE: f32
@@ -314,15 +323,6 @@ pub const vyre_driver::megakernel_fixtures::THREE_SMALL_WAVES: &[vyre_driver::me
 pub const vyre_driver::numeric::BASIS_POINTS_DENOMINATOR: u32
 pub const vyre_driver::self_optimizer_bench::SCALING_FIXTURES: &[vyre_driver::self_optimizer_bench::ScalingFixture]
 pub const vyre_driver::self_optimizer_bench::SCALING_FIXTURE_SIZES: &[usize]
-pub const vyre_driver::semantic_resource_abi::ResourcePermittedUsages::COLOR_ATTACHMENT: Self
-pub const vyre_driver::semantic_resource_abi::ResourcePermittedUsages::DEPTH_STENCIL_ATTACHMENT: Self
-pub const vyre_driver::semantic_resource_abi::ResourcePermittedUsages::EXTERNAL_EXPORT: Self
-pub const vyre_driver::semantic_resource_abi::ResourcePermittedUsages::EXTERNAL_IMPORT: Self
-pub const vyre_driver::semantic_resource_abi::ResourcePermittedUsages::PRESENTATION: Self
-pub const vyre_driver::semantic_resource_abi::ResourcePermittedUsages::SAMPLED: Self
-pub const vyre_driver::semantic_resource_abi::ResourcePermittedUsages::STORAGE: Self
-pub const vyre_driver::semantic_resource_abi::ResourcePermittedUsages::TRANSFER_DST: Self
-pub const vyre_driver::semantic_resource_abi::ResourcePermittedUsages::TRANSFER_SRC: Self
 pub const vyre_driver::shape_prediction::MAX_HISTORY: usize
 pub const vyre_driver::speculation_verdict::MIN_ADOPT_SAVINGS_BPS: u64
 pub const vyre_driver::speculation_verdict::MIN_DISPATCHES_FOR_VERDICT: u32
@@ -389,13 +389,6 @@ pub enum vyre_driver::pipeline_fusion::CrossPipelineConflict
 pub enum vyre_driver::pipeline_fusion::CrossPipelineFusionDecision
 pub enum vyre_driver::resident_transfer_fusion::ResidentUploadBytes<'a>
 pub enum vyre_driver::result_compaction::ResultCompactionError
-pub enum vyre_driver::semantic_resource_abi::ColorInterpretation
-pub enum vyre_driver::semantic_resource_abi::ExternalMemoryCapability
-pub enum vyre_driver::semantic_resource_abi::ImageFormat
-pub enum vyre_driver::semantic_resource_abi::ResourceAbiError
-pub enum vyre_driver::semantic_resource_abi::ResourceLayoutState
-pub enum vyre_driver::semantic_resource_abi::ResourceOwnershipState
-pub enum vyre_driver::semantic_resource_abi::TimelineSyncProtocol
 pub enum vyre_driver::speculation_verdict::SpeculationVerdict
 pub enum vyre_driver::strategy::LoweredExpr
 pub enum vyre_driver::strategy::PrecisionLoweringPlan
@@ -415,6 +408,10 @@ pub fn vyre_driver::AdaptiveSpeculator::record(&self, report: vyre_driver::Specu
 pub fn vyre_driver::AdaptiveSpeculator::samples(&self) -> u32
 pub fn vyre_driver::AdaptiveSpeculator::should_speculate(&self) -> bool
 pub fn vyre_driver::AdaptiveSpeculator::threshold_ppm(&self) -> u64
+pub fn vyre_driver::AdmittedResourceRecord::advance_generation(&mut self, expected_gen: u64) -> core::result::Result<u64, vyre_driver::ResourceAbiError>
+pub fn vyre_driver::AdmittedResourceRecord::invalidate_on_device_loss(&mut self)
+pub fn vyre_driver::AdmittedResourceRecord::negotiate_zero_copy_import(&mut self, capability: vyre_driver::ExternalMemoryCapability) -> core::result::Result<(), vyre_driver::ResourceAbiError>
+pub fn vyre_driver::AdmittedResourceRecord::new_2d(resource_id: u64, device_id: u64, format: vyre_driver::ImageFormat, color: vyre_driver::ColorInterpretation, width: u32, height: u32, permitted_usages: vyre_driver::ResourcePermittedUsages, owner: vyre_driver::ResidentOwner) -> Self
 pub fn vyre_driver::AotLauncherFiles::from_entries(dependencies: alloc::vec::Vec<vyre_driver::LauncherDependency>, entries: impl core::iter::traits::collect::IntoIterator<Item = (std::path::PathBuf, alloc::string::String)>) -> Self
 pub fn vyre_driver::ArtifactInstance::artifact(&self) -> vyre_megakernel::identity::Digest
 pub fn vyre_driver::ArtifactInstance::device(&self) -> &vyre_driver::DeviceIdentity
@@ -1160,10 +1157,6 @@ pub fn vyre_driver::self_optimizer_bench::cpu_pipeline_on_oracle_stack(program: 
 pub fn vyre_driver::self_optimizer_bench::report_scaling(backend: &str, executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, gpu_pipeline: fn(vyre_foundation::ir_inner::model::program::definition::Program, &dyn vyre_megakernel::execution::SemanticExecutor, &vyre_megakernel::execution::SemanticExecutionPolicy) -> vyre_foundation::ir_inner::model::program::definition::Program)
 pub fn vyre_driver::self_optimizer_bench::timed_cpu_pipeline_on_oracle_stack(program: vyre_foundation::ir_inner::model::program::definition::Program) -> u128
 pub fn vyre_driver::self_optimizer_bench::wide_program(count: usize) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_driver::semantic_resource_abi::AdmittedResourceRecord::advance_generation(&mut self, expected_gen: u64) -> core::result::Result<u64, vyre_driver::semantic_resource_abi::ResourceAbiError>
-pub fn vyre_driver::semantic_resource_abi::AdmittedResourceRecord::invalidate_on_device_loss(&mut self)
-pub fn vyre_driver::semantic_resource_abi::AdmittedResourceRecord::negotiate_zero_copy_import(&mut self, capability: vyre_driver::semantic_resource_abi::ExternalMemoryCapability) -> core::result::Result<(), vyre_driver::semantic_resource_abi::ResourceAbiError>
-pub fn vyre_driver::semantic_resource_abi::AdmittedResourceRecord::new_2d(resource_id: u64, device_id: u64, format: vyre_driver::semantic_resource_abi::ImageFormat, color: vyre_driver::semantic_resource_abi::ColorInterpretation, width: u32, height: u32, permitted_usages: vyre_driver::semantic_resource_abi::ResourcePermittedUsages, owner: vyre_driver::ResidentOwner) -> Self
 pub fn vyre_driver::shape_prediction::ShapeHistory::contains(&self, fingerprint: &vyre_driver::shape_prediction::ShapeFingerprint) -> bool
 pub fn vyre_driver::shape_prediction::ShapeHistory::default() -> Self
 pub fn vyre_driver::shape_prediction::ShapeHistory::is_empty(&self) -> bool
@@ -1283,7 +1276,6 @@ pub mod vyre_driver::resident_transfer_fixtures
 pub mod vyre_driver::resident_transfer_fusion
 pub mod vyre_driver::result_compaction
 pub mod vyre_driver::self_optimizer_bench
-pub mod vyre_driver::semantic_resource_abi
 pub mod vyre_driver::shape_prediction
 pub mod vyre_driver::speculation_verdict
 pub mod vyre_driver::strategy
@@ -1458,11 +1450,6 @@ pub struct vyre_driver::result_compaction::ResultCompactionPlan
 pub struct vyre_driver::result_compaction::ResultCompactionScratch
 pub struct vyre_driver::result_compaction::ResultSlot
 pub struct vyre_driver::self_optimizer_bench::ScalingFixture
-pub struct vyre_driver::semantic_resource_abi::AdmittedResourceRecord
-pub struct vyre_driver::semantic_resource_abi::ImageDimensions
-pub struct vyre_driver::semantic_resource_abi::ResourcePermittedUsages(pub u32)
-pub struct vyre_driver::semantic_resource_abi::ResourceUsageTransition
-pub struct vyre_driver::semantic_resource_abi::SubresourceRange
 pub struct vyre_driver::shape_prediction::ShapeHistory
 pub struct vyre_driver::speculation_verdict::SpeculationObservation
 pub struct vyre_driver::target_dialect::EmittedDialectModule
@@ -1522,20 +1509,20 @@ pub use vyre_driver::megakernel_execution::select_frontier_topology
 pub use vyre_driver::megakernel_execution::select_frontier_topology_stable
 pub use vyre_driver::node_op_id
 pub vyre_driver::AdmittedResourceRecord::alias_set_id: core::option::Option<u64>
-pub vyre_driver::AdmittedResourceRecord::color: vyre_driver::semantic_resource_abi::ColorInterpretation
+pub vyre_driver::AdmittedResourceRecord::color: vyre_driver::ColorInterpretation
 pub vyre_driver::AdmittedResourceRecord::device_id: u64
-pub vyre_driver::AdmittedResourceRecord::dimensions: vyre_driver::semantic_resource_abi::ImageDimensions
-pub vyre_driver::AdmittedResourceRecord::external_memory: core::option::Option<vyre_driver::semantic_resource_abi::ExternalMemoryCapability>
-pub vyre_driver::AdmittedResourceRecord::format: vyre_driver::semantic_resource_abi::ImageFormat
+pub vyre_driver::AdmittedResourceRecord::dimensions: vyre_driver::ImageDimensions
+pub vyre_driver::AdmittedResourceRecord::external_memory: core::option::Option<vyre_driver::ExternalMemoryCapability>
+pub vyre_driver::AdmittedResourceRecord::format: vyre_driver::ImageFormat
 pub vyre_driver::AdmittedResourceRecord::generation: u64
 pub vyre_driver::AdmittedResourceRecord::is_valid: bool
 pub vyre_driver::AdmittedResourceRecord::is_zero_copy: bool
-pub vyre_driver::AdmittedResourceRecord::ownership: vyre_driver::semantic_resource_abi::ResourceOwnershipState
-pub vyre_driver::AdmittedResourceRecord::permitted_usages: vyre_driver::semantic_resource_abi::ResourcePermittedUsages
+pub vyre_driver::AdmittedResourceRecord::ownership: vyre_driver::ResourceOwnershipState
+pub vyre_driver::AdmittedResourceRecord::permitted_usages: vyre_driver::ResourcePermittedUsages
 pub vyre_driver::AdmittedResourceRecord::resource_id: u64
 pub vyre_driver::AdmittedResourceRecord::row_pitch_bytes: u32
-pub vyre_driver::AdmittedResourceRecord::subresource: vyre_driver::semantic_resource_abi::SubresourceRange
-pub vyre_driver::AdmittedResourceRecord::sync_protocol: vyre_driver::semantic_resource_abi::TimelineSyncProtocol
+pub vyre_driver::AdmittedResourceRecord::subresource: vyre_driver::SubresourceRange
+pub vyre_driver::AdmittedResourceRecord::sync_protocol: vyre_driver::TimelineSyncProtocol
 pub vyre_driver::AotLauncherEmitter::emit: fn(&vyre_driver::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::AotLauncherFiles, alloc::string::String>
 pub vyre_driver::AotLauncherEmitter::target: vyre_foundation::operation::target_facet::TargetId
 pub vyre_driver::AotLauncherFiles::dependencies: alloc::vec::Vec<vyre_driver::LauncherDependency>
@@ -1959,7 +1946,7 @@ pub vyre_driver::ResourceAbiError::ResourceInvalidated::resource_id: u64
 pub vyre_driver::ResourceAbiError::UnsupportedZeroCopyNegotiation
 pub vyre_driver::ResourceAbiError::UnsupportedZeroCopyNegotiation::resource_id: u64
 pub vyre_driver::ResourceAbiError::UsageNotPermitted
-pub vyre_driver::ResourceAbiError::UsageNotPermitted::requested_usage: vyre_driver::semantic_resource_abi::ResourcePermittedUsages
+pub vyre_driver::ResourceAbiError::UsageNotPermitted::requested_usage: vyre_driver::ResourcePermittedUsages
 pub vyre_driver::ResourceAbiError::UsageNotPermitted::resource_id: u64
 pub vyre_driver::ResourceLayoutState::ColorAttachmentOptimal
 pub vyre_driver::ResourceLayoutState::DepthStencilOptimal
@@ -1975,11 +1962,11 @@ pub vyre_driver::ResourceOwnershipState::QueueFamilyTransfer
 pub vyre_driver::ResourceOwnershipState::QueueFamilyTransfer::source_queue: u32
 pub vyre_driver::ResourceOwnershipState::QueueFamilyTransfer::target_queue: u32
 pub vyre_driver::ResourceOwnershipState::SharedConcurrent(alloc::vec::Vec<vyre_driver::ResidentOwner>)
-pub vyre_driver::ResourceUsageTransition::from_layout: vyre_driver::semantic_resource_abi::ResourceLayoutState
+pub vyre_driver::ResourceUsageTransition::from_layout: vyre_driver::ResourceLayoutState
 pub vyre_driver::ResourceUsageTransition::requires_barrier: bool
-pub vyre_driver::ResourceUsageTransition::source_usage: vyre_driver::semantic_resource_abi::ResourcePermittedUsages
-pub vyre_driver::ResourceUsageTransition::target_usage: vyre_driver::semantic_resource_abi::ResourcePermittedUsages
-pub vyre_driver::ResourceUsageTransition::to_layout: vyre_driver::semantic_resource_abi::ResourceLayoutState
+pub vyre_driver::ResourceUsageTransition::source_usage: vyre_driver::ResourcePermittedUsages
+pub vyre_driver::ResourceUsageTransition::target_usage: vyre_driver::ResourcePermittedUsages
+pub vyre_driver::ResourceUsageTransition::to_layout: vyre_driver::ResourceLayoutState
 pub vyre_driver::Semver::major: u32
 pub vyre_driver::Semver::minor: u32
 pub vyre_driver::Semver::patch: u32
@@ -2631,105 +2618,6 @@ pub vyre_driver::result_compaction::ResultSlot::meaningful_bytes: u64
 pub vyre_driver::result_compaction::ResultSlot::slot: u32
 pub vyre_driver::self_optimizer_bench::ScalingFixture::build: fn(usize) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub vyre_driver::self_optimizer_bench::ScalingFixture::label: &'static str
-pub vyre_driver::semantic_resource_abi::AdmittedResourceRecord::alias_set_id: core::option::Option<u64>
-pub vyre_driver::semantic_resource_abi::AdmittedResourceRecord::color: vyre_driver::semantic_resource_abi::ColorInterpretation
-pub vyre_driver::semantic_resource_abi::AdmittedResourceRecord::device_id: u64
-pub vyre_driver::semantic_resource_abi::AdmittedResourceRecord::dimensions: vyre_driver::semantic_resource_abi::ImageDimensions
-pub vyre_driver::semantic_resource_abi::AdmittedResourceRecord::external_memory: core::option::Option<vyre_driver::semantic_resource_abi::ExternalMemoryCapability>
-pub vyre_driver::semantic_resource_abi::AdmittedResourceRecord::format: vyre_driver::semantic_resource_abi::ImageFormat
-pub vyre_driver::semantic_resource_abi::AdmittedResourceRecord::generation: u64
-pub vyre_driver::semantic_resource_abi::AdmittedResourceRecord::is_valid: bool
-pub vyre_driver::semantic_resource_abi::AdmittedResourceRecord::is_zero_copy: bool
-pub vyre_driver::semantic_resource_abi::AdmittedResourceRecord::ownership: vyre_driver::semantic_resource_abi::ResourceOwnershipState
-pub vyre_driver::semantic_resource_abi::AdmittedResourceRecord::permitted_usages: vyre_driver::semantic_resource_abi::ResourcePermittedUsages
-pub vyre_driver::semantic_resource_abi::AdmittedResourceRecord::resource_id: u64
-pub vyre_driver::semantic_resource_abi::AdmittedResourceRecord::row_pitch_bytes: u32
-pub vyre_driver::semantic_resource_abi::AdmittedResourceRecord::subresource: vyre_driver::semantic_resource_abi::SubresourceRange
-pub vyre_driver::semantic_resource_abi::AdmittedResourceRecord::sync_protocol: vyre_driver::semantic_resource_abi::TimelineSyncProtocol
-pub vyre_driver::semantic_resource_abi::ColorInterpretation::Bt2020
-pub vyre_driver::semantic_resource_abi::ColorInterpretation::Bt709
-pub vyre_driver::semantic_resource_abi::ColorInterpretation::DisplayP3
-pub vyre_driver::semantic_resource_abi::ColorInterpretation::Hdr10
-pub vyre_driver::semantic_resource_abi::ColorInterpretation::LinearRgb
-pub vyre_driver::semantic_resource_abi::ColorInterpretation::Passthrough
-pub vyre_driver::semantic_resource_abi::ColorInterpretation::Srgb
-pub vyre_driver::semantic_resource_abi::ExternalMemoryCapability::DmaBuf
-pub vyre_driver::semantic_resource_abi::ExternalMemoryCapability::HostAllocation
-pub vyre_driver::semantic_resource_abi::ExternalMemoryCapability::MetalSharedResource
-pub vyre_driver::semantic_resource_abi::ExternalMemoryCapability::Win32Nt
-pub vyre_driver::semantic_resource_abi::ImageDimensions::array_layers: u32
-pub vyre_driver::semantic_resource_abi::ImageDimensions::depth: u32
-pub vyre_driver::semantic_resource_abi::ImageDimensions::height: u32
-pub vyre_driver::semantic_resource_abi::ImageDimensions::mip_levels: u32
-pub vyre_driver::semantic_resource_abi::ImageDimensions::sample_count: u32
-pub vyre_driver::semantic_resource_abi::ImageDimensions::width: u32
-pub vyre_driver::semantic_resource_abi::ImageFormat::Bgra8Srgb
-pub vyre_driver::semantic_resource_abi::ImageFormat::Bgra8Unorm
-pub vyre_driver::semantic_resource_abi::ImageFormat::Depth24Plus
-pub vyre_driver::semantic_resource_abi::ImageFormat::Depth24PlusStencil8
-pub vyre_driver::semantic_resource_abi::ImageFormat::Depth32Float
-pub vyre_driver::semantic_resource_abi::ImageFormat::R16Float
-pub vyre_driver::semantic_resource_abi::ImageFormat::R32Float
-pub vyre_driver::semantic_resource_abi::ImageFormat::R32Sint
-pub vyre_driver::semantic_resource_abi::ImageFormat::R32Uint
-pub vyre_driver::semantic_resource_abi::ImageFormat::R8Unorm
-pub vyre_driver::semantic_resource_abi::ImageFormat::Rg16Float
-pub vyre_driver::semantic_resource_abi::ImageFormat::Rg32Float
-pub vyre_driver::semantic_resource_abi::ImageFormat::Rg8Unorm
-pub vyre_driver::semantic_resource_abi::ImageFormat::Rgba16Float
-pub vyre_driver::semantic_resource_abi::ImageFormat::Rgba32Float
-pub vyre_driver::semantic_resource_abi::ImageFormat::Rgba8Srgb
-pub vyre_driver::semantic_resource_abi::ImageFormat::Rgba8Unorm
-pub vyre_driver::semantic_resource_abi::ImageFormat::Yuv420Planar
-pub vyre_driver::semantic_resource_abi::ImageFormat::Yuv420SemiPlanar
-pub vyre_driver::semantic_resource_abi::ResourceAbiError::GenerationMismatch
-pub vyre_driver::semantic_resource_abi::ResourceAbiError::GenerationMismatch::actual: u64
-pub vyre_driver::semantic_resource_abi::ResourceAbiError::GenerationMismatch::expected: u64
-pub vyre_driver::semantic_resource_abi::ResourceAbiError::GenerationMismatch::resource_id: u64
-pub vyre_driver::semantic_resource_abi::ResourceAbiError::ResourceInvalidated
-pub vyre_driver::semantic_resource_abi::ResourceAbiError::ResourceInvalidated::resource_id: u64
-pub vyre_driver::semantic_resource_abi::ResourceAbiError::UnsupportedZeroCopyNegotiation
-pub vyre_driver::semantic_resource_abi::ResourceAbiError::UnsupportedZeroCopyNegotiation::resource_id: u64
-pub vyre_driver::semantic_resource_abi::ResourceAbiError::UsageNotPermitted
-pub vyre_driver::semantic_resource_abi::ResourceAbiError::UsageNotPermitted::requested_usage: vyre_driver::semantic_resource_abi::ResourcePermittedUsages
-pub vyre_driver::semantic_resource_abi::ResourceAbiError::UsageNotPermitted::resource_id: u64
-pub vyre_driver::semantic_resource_abi::ResourceLayoutState::ColorAttachmentOptimal
-pub vyre_driver::semantic_resource_abi::ResourceLayoutState::DepthStencilOptimal
-pub vyre_driver::semantic_resource_abi::ResourceLayoutState::General
-pub vyre_driver::semantic_resource_abi::ResourceLayoutState::PresentSrc
-pub vyre_driver::semantic_resource_abi::ResourceLayoutState::ShaderReadOnly
-pub vyre_driver::semantic_resource_abi::ResourceLayoutState::TransferDstOptimal
-pub vyre_driver::semantic_resource_abi::ResourceLayoutState::TransferSrcOptimal
-pub vyre_driver::semantic_resource_abi::ResourceLayoutState::Undefined
-pub vyre_driver::semantic_resource_abi::ResourceOwnershipState::Exclusive(vyre_driver::ResidentOwner)
-pub vyre_driver::semantic_resource_abi::ResourceOwnershipState::ExternalHost
-pub vyre_driver::semantic_resource_abi::ResourceOwnershipState::QueueFamilyTransfer
-pub vyre_driver::semantic_resource_abi::ResourceOwnershipState::QueueFamilyTransfer::source_queue: u32
-pub vyre_driver::semantic_resource_abi::ResourceOwnershipState::QueueFamilyTransfer::target_queue: u32
-pub vyre_driver::semantic_resource_abi::ResourceOwnershipState::SharedConcurrent(alloc::vec::Vec<vyre_driver::ResidentOwner>)
-pub vyre_driver::semantic_resource_abi::ResourceUsageTransition::from_layout: vyre_driver::semantic_resource_abi::ResourceLayoutState
-pub vyre_driver::semantic_resource_abi::ResourceUsageTransition::requires_barrier: bool
-pub vyre_driver::semantic_resource_abi::ResourceUsageTransition::source_usage: vyre_driver::semantic_resource_abi::ResourcePermittedUsages
-pub vyre_driver::semantic_resource_abi::ResourceUsageTransition::target_usage: vyre_driver::semantic_resource_abi::ResourcePermittedUsages
-pub vyre_driver::semantic_resource_abi::ResourceUsageTransition::to_layout: vyre_driver::semantic_resource_abi::ResourceLayoutState
-pub vyre_driver::semantic_resource_abi::SubresourceRange::array_layer_count: u32
-pub vyre_driver::semantic_resource_abi::SubresourceRange::aspect_mask: u32
-pub vyre_driver::semantic_resource_abi::SubresourceRange::base_array_layer: u32
-pub vyre_driver::semantic_resource_abi::SubresourceRange::base_mip_level: u32
-pub vyre_driver::semantic_resource_abi::SubresourceRange::mip_level_count: u32
-pub vyre_driver::semantic_resource_abi::TimelineSyncProtocol::Fence
-pub vyre_driver::semantic_resource_abi::TimelineSyncProtocol::Fence::fence_id: u64
-pub vyre_driver::semantic_resource_abi::TimelineSyncProtocol::Fence::is_signaled: bool
-pub vyre_driver::semantic_resource_abi::TimelineSyncProtocol::ImplicitQueue
-pub vyre_driver::semantic_resource_abi::TimelineSyncProtocol::MetalSharedEvent
-pub vyre_driver::semantic_resource_abi::TimelineSyncProtocol::MetalSharedEvent::event_id: u64
-pub vyre_driver::semantic_resource_abi::TimelineSyncProtocol::MetalSharedEvent::signal_value: u64
-pub vyre_driver::semantic_resource_abi::TimelineSyncProtocol::SyncFileFd
-pub vyre_driver::semantic_resource_abi::TimelineSyncProtocol::SyncFileFd::fd: i32
-pub vyre_driver::semantic_resource_abi::TimelineSyncProtocol::TimelineSemaphore
-pub vyre_driver::semantic_resource_abi::TimelineSyncProtocol::TimelineSemaphore::signal_value: u64
-pub vyre_driver::semantic_resource_abi::TimelineSyncProtocol::TimelineSemaphore::timeline_id: u64
-pub vyre_driver::semantic_resource_abi::TimelineSyncProtocol::TimelineSemaphore::wait_value: u64
 pub vyre_driver::speculation_verdict::SpeculationObservation::baseline_dispatches: u32
 pub vyre_driver::speculation_verdict::SpeculationObservation::baseline_mean_ns: u64
 pub vyre_driver::speculation_verdict::SpeculationObservation::side_compile_cost_ns: u64

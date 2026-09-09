@@ -14,7 +14,7 @@ use vyre_foundation::ir::{
     ProgramGraphTemplate, ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_foundation::logical::LogicalProgramGraph;
-use vyre_foundation::optimizer::compile_budget::CompileBudget;
+use vyre_foundation::optimizer::CompileBudget;
 use vyre_foundation::optimizer::{
     registered_passes_for_profile, OptimizerError, OptimizerProfile, PassScheduler,
 };

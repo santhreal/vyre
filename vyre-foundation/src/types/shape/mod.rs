@@ -5,7 +5,7 @@
 //! Structurally equal expressions and shapes canonicalize to identical [`ShapeExprId`]
 //! and [`ShapeId`] instances.
 
-pub mod solver;
+pub(crate) mod solver;
 
 use std::sync::RwLock;
 use rustc_hash::FxHashMap;

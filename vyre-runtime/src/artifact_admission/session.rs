@@ -512,7 +512,7 @@ impl ArtifactSession {
                     let bytes = prepared_payloads
                         .get(val_id)
                         .and_then(|b| b.as_ref())
-                        .expect("payload must be prepared in phase 1");
+                        .expect("Fix: prepare a payload in phase 1 for every non-resident dataset entry before resolving resources");
 
                     let resource = state
                         .materializer

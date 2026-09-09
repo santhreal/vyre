@@ -26,8 +26,6 @@ Out of this crate, into:
   always.
 - `vyre-driver-cuda` over the `cuda-driver` seam, private: native accelerator
   backend execution. Built when: cfg(not(target_os = "macos")).
-- `vyre-driver-reference` over the `reference-driver` seam, private: reference
-  backend adaptation. Built when: always.
 - `vyre-driver-wgpu` over the `portable-driver` seam, private: portable backend
   execution. Built when: always.
 - `vyre-emit-ptx` over the `primary-binary-emitter` seam, private: primary
@@ -59,7 +57,7 @@ Into this crate, from:
 
 ## Direction that may not reverse
 
-`vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`,
+`vyre`, `vyre-driver`, `vyre-driver-cuda`,
 `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`,
 `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec`,
 `vyre-registry-link`, `xtask` must never depend on `vyre-bench`. The edge is

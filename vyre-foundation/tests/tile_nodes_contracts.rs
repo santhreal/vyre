@@ -254,3 +254,121 @@ fn tile_encoder_rejects_over_limit_extents() {
     let err = to_wire(&prog).expect_err("should reject over-limit extents");
     assert!(err.contains("Fix:"));
 }
+#[test]
+fn tile_node_variants_report_tile_operands_as_uses_and_survive_dce() {
+    use vyre_foundation::ir::{node_variant_name, NODE_VARIANT_NAMES};
+    use vyre_foundation::optimizer::fact_cache::FactCache;
+    use vyre_foundation::optimizer::passes::fusion_cse::dce::dce;
+    let tile_2x2 = Tile::new(
+        DataType::F32,
+        vec![2, 2],
+        Layout::RowMajor,
+        Residency::Register,
+    );
+
+    let tile_nodes: Vec<(Node, Vec<Ident>)> = vec![
+        (
+            Node::tile_decl("decl_t", tile_2x2.clone()),
+            vec![],
+        ),
+        (
+            Node::tile_load("load_t", tile_2x2.clone(), "buf", vec![Expr::u32(0)], Layout::RowMajor),
+            vec![],
+        ),
+        (
+            Node::tile_store("buf", vec![Expr::u32(0)], "store_t"),
+            vec![Ident::from("store_t")],
+        ),
+        (
+            Node::tile_matmul("mat_acc", "mat_a", "mat_b"),
+            vec![Ident::from("mat_acc"), Ident::from("mat_a"), Ident::from("mat_b")],
+        ),
+        (
+            Node::tile_reduce("red_out", "red_in", SubgroupReduceOp::Max, 1),
+            vec![Ident::from("red_in")],
+        ),
+        (
+            Node::tile_elementwise(
+                "elem_out",
+                vec![Ident::from("elem_in_a"), Ident::from("elem_in_b")],
+                vec![Node::let_bind(
+                    "elem_out",
+                    Expr::add(Expr::var("elem_in_a"), Expr::var("elem_in_b")),
+                )],
+            ),
+            vec![Ident::from("elem_in_a"), Ident::from("elem_in_b")],
+        ),
+    ];
+
+    let tile_variant_names: Vec<&str> = NODE_VARIANT_NAMES
+        .iter()
+        .copied()
+        .filter(|name| name.starts_with("Tile"))
+        .collect();
+    assert_eq!(
+        tile_variant_names.len(),
+        tile_nodes.len(),
+        "Fix: every tile node variant in NODE_VARIANT_NAMES must be represented in tile_nodes test suite"
+    );
+
+    for (node, expected_uses) in &tile_nodes {
+        let variant_name = node_variant_name(node);
+        assert!(
+            tile_variant_names.contains(&variant_name),
+            "node variant `{variant_name}` must be in tile_variant_names"
+        );
+        let prog = Program::wrapped(
+            vec![
+                BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::F32).with_count(16),
+                BufferDecl::output("out", 1, DataType::F32).with_count(16),
+            ],
+            [1, 1, 1],
+            vec![node.clone()],
+        );
+
+        let cache = FactCache::derive_use_only(&prog);
+        for expected in expected_uses {
+            let count = cache.use_count_of(expected);
+            assert!(
+                count >= 1,
+                "tile node {:?} must record use of operand `{expected}`, got use count {count}",
+                node
+            );
+        }
+    }
+
+    let fused_prog = Program::wrapped(
+        vec![
+            BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::F32).with_count(16),
+            BufferDecl::output("out", 1, DataType::F32).with_count(16),
+        ],
+        [1, 1, 1],
+        vec![
+            Node::tile_decl("scores", tile_2x2),
+            Node::tile_elementwise(
+                "exp_scores",
+                vec![Ident::from("scores")],
+                vec![Node::let_bind(
+                    "exp_scores",
+                    Expr::f32(1.0),
+                )],
+            ),
+            Node::tile_store("buf", vec![Expr::u32(0)], "exp_scores"),
+        ],
+    );
+    let opt_result = dce(fused_prog);
+    let opt_entry = opt_result.entry();
+    let elementwise_node = opt_entry.iter().find_map(|node| match node {
+        Node::TileElementwise { body, .. } => Some(body),
+        Node::Region { body, .. } => body.iter().find_map(|n| match n {
+            Node::TileElementwise { body, .. } => Some(body),
+            _ => None,
+        }),
+        _ => None,
+    }).expect("TileElementwise must be preserved");
+    assert_eq!(
+        elementwise_node.len(),
+        1,
+        "TileElementwise inner Let binding must not be eliminated by DCE"
+    );
+}

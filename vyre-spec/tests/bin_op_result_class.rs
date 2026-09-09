@@ -16,7 +16,7 @@
 //! operator got the RIGHT class, so the one case where the two answers differ
 //! is pinned by name.
 
-use vyre_spec::extension::ExtensionBinOpId;
+use vyre_spec::ExtensionBinOpId;
 use vyre_spec::{BinOp, BinOpResult};
 use vyre_test_support::spec_variant_tables::builtin_bin_ops;
 

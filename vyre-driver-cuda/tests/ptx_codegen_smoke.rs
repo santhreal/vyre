@@ -112,9 +112,11 @@ fn column_walk_tile_program() -> Program {
 ///
 /// One element of padding per 32-element row is the cheapest accepted candidate
 /// for this geometry, so the tile is declared at 32 rows of 33 four-byte
-/// elements and every access scales its row by the padded length. A rewrite
-/// applied at one of the two sites would read back a different element than it
-/// wrote, so both are counted.
+/// elements and every access is displaced by one element per row it crosses.
+/// The emitter reaches the padded address as `i + (i >> 5) * 1` rather than
+/// rebuilding `q * 33 + r`, which is the same address in two instructions
+/// instead of four. A rewrite applied at one of the two sites would read back
+/// a different element than it wrote, so both are counted.
 #[test]
 fn a_column_walk_over_workgroup_memory_is_padded_in_emitted_ptx() {
     let secondary_text = program_to_ptx(&column_walk_tile_program(), &default_config())
@@ -125,10 +127,18 @@ fn a_column_walk_over_workgroup_memory_is_padded_in_emitted_ptx() {
         "Fix: a padded tile is declared at its grown extent, 32 rows of 33 \
          four-byte elements; got:\n{secondary_text}"
     );
+    let row_counts = secondary_text
+        .lines()
+        .filter(|line| line.trim_start().starts_with("shr.u32") && line.trim_end().ends_with(", 5;"))
+        .count();
+    let row_displacements = secondary_text
+        .lines()
+        .filter(|line| line.trim_start().starts_with("mad.lo.u32") && line.contains(", 1, "))
+        .count();
     assert_eq!(
-        secondary_text.matches(", 33;").count(),
-        2,
-        "Fix: both the store and the load scale their row by the padded row \
-         length; got:\n{secondary_text}"
+        (row_counts, row_displacements),
+        (2, 2),
+        "Fix: both the store and the load count the rows they cross and displace \
+         the index by one element per row; got:\n{secondary_text}"
     );
 }

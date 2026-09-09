@@ -354,7 +354,7 @@ mod tests {
                 },
                 // Extension ids must have the high bit set per
                 // reject_reserved_extension_id (low half is reserved for core IR).
-                DataType::Opaque(vyre_spec::extension::ExtensionDataTypeId(0x8000_0001)),
+                DataType::Opaque(vyre_spec::ExtensionDataTypeId(0x8000_0001)),
             ])
             .collect();
 

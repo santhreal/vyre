@@ -86,7 +86,6 @@ graph TD
   C4 --> C2
   C4 --> C8
   C4 --> C9
-  C4 --> C11
   C4 --> C13
   C4 --> C16
   C4 --> C18
@@ -104,6 +103,7 @@ graph TD
   C5 --> C6
   C5 --> C8
   C5 --> C9
+  C5 --> C12
   C5 --> C13
   C5 --> C18
   C5 --> C19
@@ -160,6 +160,7 @@ graph TD
   C16 --> C18
   C16 --> C21
   C17 --> C15
+  C17 --> C18
   C17 --> C21
   C18 --> C22
   C18 --> C30
@@ -183,7 +184,6 @@ graph TD
   C27 --> C8
   C27 --> C9
   C27 --> C10
-  C27 --> C11
   C27 --> C12
   C27 --> C13
   C27 --> C18
@@ -239,7 +239,6 @@ graph TD
 | `vyre-bench` | `vyre-alloc-probe` | per-thread heap counters the runner installs as the global allocator | None | `always` | `normal` | `false` | `true` | `private` | `benchmarks` |
 | `vyre-bench` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `test-fixtures` | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
 | `vyre-bench` | `vyre-driver-cuda` | native accelerator backend execution | None | `cfg(not(target_os = "macos"))` | `normal` | `false` | `true` | `private` | `cuda-driver` |
-| `vyre-bench` | `vyre-driver-reference` | reference backend adaptation | None | `always` | `normal` | `false` | `true` | `private` | `reference-driver` |
 | `vyre-bench` | `vyre-driver-wgpu` | portable backend execution | None | `always` | `normal` | `false` | `true` | `private` | `portable-driver` |
 | `vyre-bench` | `vyre-emit-ptx` | primary binary backend text emission | None | `always` | `normal` | `false` | `true` | `private` | `primary-binary-emitter` |
 | `vyre-bench` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
@@ -249,7 +248,7 @@ graph TD
 | `vyre-bench` | `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | None | `always` | `normal` | `false` | `true` | `private` | `pass-engine` |
 | `vyre-bench` | `vyre-primitives` | reusable semantic Program builders | `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `vyre-bench` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
-| `vyre-bench` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `metal`, `reference`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
+| `vyre-bench` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `metal`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
 | `vyre-bench` | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | None | `always` | `normal` | `false` | `true` | `private` | `runtime` |
 | `vyre-bench` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
 | `vyre-bench` | `xtask` | the one producer of the source fingerprint a recorded artifact names its tree with | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
@@ -257,13 +256,14 @@ graph TD
 | `vyre-conform` | `vyre-conform-spec` | versioned conformance schemas | None | `always` | `normal` | `false` | `true` | `private` | `conformance` |
 | `vyre-conform` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
 | `vyre-conform` | `vyre-driver-cuda` | native accelerator backend execution | None | `always` | `normal` | `true` | `true` | `private` | `cuda-driver` |
+| `vyre-conform` | `vyre-driver-spirv` | SPIR-V backend execution | None | `always` | `normal` | `true` | `true` | `private` | `spirv-driver` |
 | `vyre-conform` | `vyre-driver-wgpu` | portable backend execution | None | `always` | `normal` | `true` | `true` | `private` | `portable-driver` |
 | `vyre-conform` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
 | `vyre-conform` | `vyre-libs` | product operation builders | `full` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `vyre-conform` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
 | `vyre-conform` | `vyre-primitives` | reusable semantic Program builders | `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `vyre-conform` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
-| `vyre-conform` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `operations`, `reference` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
+| `vyre-conform` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `operations` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
 | `vyre-conform` | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | None | `always` | `normal` | `false` | `true` | `private` | `runtime` |
 | `vyre-conform` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
 | `vyre-conform-spec` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
@@ -313,6 +313,7 @@ graph TD
 | `vyre-emit-ptx` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts, and the source digest the build script stamps | None | `always` | `build`, `normal` | `false` | `true` | `private` | `foundation-ir` |
 | `vyre-emit-ptx` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
 | `vyre-emit-spirv` | `vyre-emit-naga` | primary text and related binary emission | None | `always` | `normal` | `false` | `true` | `public` | `primary-text-emitter` |
+| `vyre-emit-spirv` | `vyre-foundation` | diagnostic projection for emitter errors | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-emit-spirv` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
 | `vyre-foundation` | `vyre-macros` | compile-time registration generation | None | `always` | `normal` | `false` | `true` | `private` | `registration-macros` |
 | `vyre-foundation` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
@@ -336,7 +337,6 @@ graph TD
 | `vyre-registry-link` | `vyre-driver` | backend registry contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
 | `vyre-registry-link` | `vyre-driver-cuda` | native accelerator backend registration | None | `always` | `normal` | `true` | `true` | `private` | `cuda-driver` |
 | `vyre-registry-link` | `vyre-driver-metal` | native Apple backend registration | None | `always` | `normal` | `true` | `true` | `private` | `metal-driver` |
-| `vyre-registry-link` | `vyre-driver-reference` | reference backend registration | None | `always` | `normal` | `true` | `true` | `private` | `reference-driver` |
 | `vyre-registry-link` | `vyre-driver-spirv` | SPIR-V backend registration | None | `always` | `normal` | `true` | `true` | `private` | `spirv-driver` |
 | `vyre-registry-link` | `vyre-driver-wgpu` | portable backend registration | None | `always` | `normal` | `true` | `true` | `private` | `portable-driver` |
 | `vyre-registry-link` | `vyre-foundation` | operation registry contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
@@ -359,7 +359,7 @@ graph TD
 | `xtask-evidence` | `vyre-bench` | benchmark workloads and evidence | None | `always` | `normal` | `false` | `true` | `private` | `benchmarks` |
 | `xtask-evidence` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
 | `xtask-evidence` | `vyre-foundation` | the release optimization family list the pass-family manifest is checked against | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `xtask-evidence` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `metal`, `reference`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
+| `xtask-evidence` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `metal`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
 | `xtask-evidence` | `xtask` | subcommand registry, bounded readers, and release manifests | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
 | `xtask-registry` | `structure-gate` | read whether a directory carries Rust source, and which directory owns a domain | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
 | `xtask-registry` | `vyre` | public lifecycle facade | None | `always` | `normal` | `false` | `false` | `private` | `public-facade` |
@@ -369,7 +369,7 @@ graph TD
 | `xtask-registry` | `vyre-megakernel` | neutral artifact compilation and target payload contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
 | `xtask-registry` | `vyre-primitives` | reusable semantic Program builders | `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `xtask-registry` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
-| `xtask-registry` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `operations`, `reference`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
+| `xtask-registry` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `operations`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
 | `xtask-registry` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
 | `xtask-registry` | `xtask` | subcommand registry, bounded readers, and release manifests | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
 

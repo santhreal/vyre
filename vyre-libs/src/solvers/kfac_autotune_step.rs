@@ -136,7 +136,7 @@ pub fn kfac_autotune_step_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[0], byte_len);
     write_f32_slice_le_bytes(&mut scratch.inputs[1], blocks_in);
     write_zero_bytes(&mut scratch.inputs[2], byte_len);
-    let output = crate::dispatch_buffers::run_single_first_output(
+    let output = crate::dispatch_buffers::execute_program_first_output(
         dispatcher,
         program,
         &scratch.inputs,

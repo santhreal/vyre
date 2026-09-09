@@ -1,6 +1,6 @@
 //! Case builders for the generated data-type edge matrix.
 
-use vyre_spec::extension::ExtensionDataTypeId;
+use vyre_spec::ExtensionDataTypeId;
 use vyre_spec::{DataType, QuantizationScale, QuantizationZeroPoint, TypeId};
 
 use vyre_test_support::data_type_variants::{

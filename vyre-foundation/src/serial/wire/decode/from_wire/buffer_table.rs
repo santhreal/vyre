@@ -171,7 +171,7 @@ pub(super) fn read_memory_regions(
                 format!("TruncatedPayload: opaque DataType id cannot fit u32 ({err}). Fix: reject this payload.")
             })?;
             let id_value = reject_reserved_extension_id(id_value, "DataType")?;
-            DataType::Opaque(vyre_spec::extension::ExtensionDataTypeId(id_value))
+            DataType::Opaque(vyre_spec::ExtensionDataTypeId(id_value))
         } else if element_tag == 0x1F {
             let storage_tag = u8::try_from(shape_reader.leb_u64()?).map_err(|err| {
                 format!("TruncatedPayload: quantized storage DataType tag cannot fit u8 ({err}). Fix: reject this payload.")

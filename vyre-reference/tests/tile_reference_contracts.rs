@@ -165,3 +165,117 @@ fn reference_eval_tile_column_major_layout() {
     let out_f32 = decode_f32(&outputs[0].to_bytes());
     assert_eq!(out_f32, vec![1.0, 3.0, 2.0, 4.0]);
 }
+#[test]
+fn reference_eval_tile_elementwise_broadcast_per_row_and_rejection() {
+    // 1. A 4-element tile combined with a 2-element per-row reduction produces
+    // the per-row value on both elements of each row.
+    // t_a = [[10.0, 20.0], [30.0, 40.0]] (row 0: max 20.0, row 1: max 40.0)
+    // max_per_row = [20.0, 40.0]
+    // diff = t_a - max_per_row:
+    // row 0: [10.0 - 20.0, 20.0 - 20.0] = [-10.0, 0.0]
+    // row 1: [30.0 - 40.0, 40.0 - 40.0] = [-10.0, 0.0]
+    let a_data = vec![10.0f32, 20.0, 30.0, 40.0];
+    let tile_a = Tile::new(
+        DataType::F32,
+        vec![2, 2],
+        Layout::RowMajor,
+        Residency::Register,
+    );
+
+    let prog = Program::wrapped(
+        vec![
+            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
+            BufferDecl::output("out", 1, DataType::F32).with_count(4),
+        ],
+        [1, 1, 1],
+        vec![
+            Node::tile_load(
+                "t_a",
+                tile_a.clone(),
+                "a",
+                vec![Expr::u32(0), Expr::u32(0)],
+                Layout::RowMajor,
+            ),
+            Node::tile_reduce("max_per_row", "t_a", SubgroupReduceOp::Max, 1),
+            Node::tile_elementwise(
+                "diff",
+                vec![
+                    vyre_foundation::ir::Ident::from("t_a"),
+                    vyre_foundation::ir::Ident::from("max_per_row"),
+                ],
+                vec![Node::let_bind(
+                    "diff",
+                    Expr::sub(Expr::var("t_a"), Expr::var("max_per_row")),
+                )],
+            ),
+            Node::tile_store("out", vec![Expr::u32(0)], "diff"),
+        ],
+    );
+
+    let outputs =
+        reference_eval(&prog, &[Value::from(encode_f32(&a_data))]).expect("reference_eval failed");
+
+    let out_f32 = decode_f32(&outputs[0].to_bytes());
+    assert_eq!(out_f32, vec![-10.0, 0.0, -10.0, 0.0]);
+
+    // 2. A 3-element input against a 4-element output is rejected with stated error.
+    let b_data = vec![1.0f32, 2.0, 3.0];
+    let tile_b = Tile::new(
+        DataType::F32,
+        vec![3],
+        Layout::RowMajor,
+        Residency::Register,
+    );
+
+    let prog_invalid = Program::wrapped(
+        vec![
+            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
+            BufferDecl::storage("b", 1, BufferAccess::ReadOnly, DataType::F32).with_count(3),
+            BufferDecl::output("out", 2, DataType::F32).with_count(4),
+        ],
+        [1, 1, 1],
+        vec![
+            Node::tile_load(
+                "t_a",
+                tile_a,
+                "a",
+                vec![Expr::u32(0), Expr::u32(0)],
+                Layout::RowMajor,
+            ),
+            Node::tile_load(
+                "t_b",
+                tile_b,
+                "b",
+                vec![Expr::u32(0)],
+                Layout::RowMajor,
+            ),
+            Node::tile_elementwise(
+                "sum",
+                vec![
+                    vyre_foundation::ir::Ident::from("t_a"),
+                    vyre_foundation::ir::Ident::from("t_b"),
+                ],
+                vec![Node::let_bind(
+                    "sum",
+                    Expr::add(Expr::var("t_a"), Expr::var("t_b")),
+                )],
+            ),
+            Node::tile_store("out", vec![Expr::u32(0)], "sum"),
+        ],
+    );
+
+    let err = reference_eval(
+        &prog_invalid,
+        &[
+            Value::from(encode_f32(&a_data)),
+            Value::from(encode_f32(&b_data)),
+        ],
+    )
+    .expect_err("reference_eval must reject 3-element input against 4-element output");
+
+    let err_msg = err.to_string();
+    assert!(
+        err_msg.contains("does not divide output length 4"),
+        "expected divisibility error, got: {err_msg}"
+    );
+}

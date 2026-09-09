@@ -10,10 +10,10 @@ use std::panic;
 use std::sync::Arc;
 use std::thread;
 
-use vyre_foundation::failure_domain::{
+use vyre_foundation::{
     FailureDomain, RecoveryClass, RecoveryDisposition,
 };
-use vyre_runtime::atomic_recovery::{
+use vyre_runtime::{
     AtomicGuardedState, GuardedState, PrepareCommitJournal, SupervisedRestartBudget,
 };
 

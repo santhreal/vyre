@@ -326,7 +326,7 @@ pub fn select_optimal_subset_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[10], one_word_bytes);
     write_zero_bytes(&mut scratch.inputs[11], one_word_bytes);
 
-    let output = crate::dispatch_buffers::run_single_first_output(
+    let output = crate::dispatch_buffers::execute_program_first_output(
         dispatcher,
         program,
         &scratch.inputs,

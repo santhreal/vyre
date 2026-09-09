@@ -7,7 +7,7 @@
 //! - Rollback atomically evicts new generation resources and restores the prior generation.
 //! - Incompatible version transitions fail before expensive state mutation.
 
-use vyre_runtime::generation_namespace::{
+use vyre_runtime::{
     GenerationScopedNamespace, RollingUpgradeCoordinator, UpgradePhase,
 };
 use vyre_foundation::{ProtocolDomain, ProtocolVersion};

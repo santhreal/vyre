@@ -120,7 +120,7 @@ Consume verified lowering products and emit SPIR-V artifacts through the shared 
 ### Boundaries
 
 The `spirv-emitter` owner maintains this `emitter` crate at `vyre-emit-spirv`.
-Its allowed internal production dependencies are: `vyre-emit-naga`, `vyre-lower`.
+Its allowed internal production dependencies are: `vyre-emit-naga`, `vyre-foundation`, `vyre-lower`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

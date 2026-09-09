@@ -6,7 +6,7 @@
 
 use std::collections::BTreeSet;
 
-use vyre_spec::extension::{
+use vyre_spec::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionRuleConditionId,
     ExtensionTernaryOpId, ExtensionUnOpId,
 };

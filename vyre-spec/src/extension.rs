@@ -271,9 +271,9 @@ impl ExtensionSchemaDigest {
 
     /// Format the digest as lowercase hex string.
     #[must_use]
-    pub fn to_hex(&self) -> String {
+    pub fn to_hex(self) -> String {
         let mut s = String::with_capacity(64);
-        for b in &self.0 {
+        for b in self.0 {
             use core::fmt::Write as _;
             let _ = write!(s, "{:02x}", b);
         }

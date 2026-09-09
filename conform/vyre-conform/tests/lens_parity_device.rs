@@ -125,6 +125,7 @@ fn cpu_vs_backend_accepts_transcendental_ulp_divergence() {
         source_file: file!(),
         explicit_effects: None,
         explicit_capabilities: None,
+        opaque_reason: Some("a synthetic ULP probe carries no algebraic law"),
     };
 
     let backend = build_registered_backend();

@@ -25,8 +25,6 @@ Out of this crate, into:
   backend registration. Built when: always.
 - `vyre-driver-metal` over the `metal-driver` seam, private: native Apple
   backend registration. Built when: always.
-- `vyre-driver-reference` over the `reference-driver` seam, private: reference
-  backend registration. Built when: always.
 - `vyre-driver-spirv` over the `spirv-driver` seam, private: SPIR-V backend
   registration. Built when: always.
 - `vyre-driver-wgpu` over the `portable-driver` seam, private: portable backend
@@ -46,7 +44,7 @@ Into this crate, from:
 ## Direction that may not reverse
 
 `vyre-driver`, `vyre-foundation`, `vyre-driver-cuda`, `vyre-driver-metal`,
-`vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-libs`,
+`vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-libs`,
 `vyre-primitives` must never depend on `vyre-registry-link`. The edge is one
 way: a cycle back into this crate makes the two crates one crate that cannot be
 built, reviewed or published apart.

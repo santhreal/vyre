@@ -23,13 +23,13 @@ use std::hash::Hash;
 use std::sync::LazyLock;
 
 use rustc_hash::FxHashMap;
-use vyre_spec::extension::{
+use vyre_spec::{
     ExtensionAtomicOp, ExtensionAtomicOpId, ExtensionBinOp, ExtensionBinOpId, ExtensionDataType,
     ExtensionDataTypeId, ExtensionIdentity, ExtensionRuleConditionId, ExtensionSchema,
     ExtensionSchemaDigest, ExtensionUnOp, ExtensionUnOpId,
 };
 
-pub use vyre_spec::extension::{
+pub use vyre_spec::{
     ExtensionField as DeclExtensionField, ExtensionFieldType as DeclExtensionFieldType,
     ExtensionIdentity as DeclExtensionIdentity, ExtensionNamespace as DeclExtensionNamespace,
     ExtensionNumericalContract as DeclExtensionNumericalContract,
@@ -490,7 +490,7 @@ pub fn try_resolve_atomic_op(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_spec::extension::*;
+    use vyre_spec::*;
 
     #[test]
     fn per_kind_resolvers_are_empty_by_default() {

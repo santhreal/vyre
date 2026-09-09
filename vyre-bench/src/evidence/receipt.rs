@@ -287,7 +287,8 @@ impl BenchmarkReceipt {
     pub fn content_address(&self) -> String {
         let mut hasher = blake3::Hasher::new();
         hasher.update(b"vyre-benchmark-receipt-v1:");
-        let canonical_bytes = serde_json::to_vec(self).expect("benchmark receipt serialization");
+        let canonical_bytes = serde_json::to_vec(self)
+            .expect("Fix: keep every BenchmarkReceipt field serializable; a map key that is not a string breaks the content address");
         hasher.update(&canonical_bytes);
         hasher.finalize().to_hex().to_string()
     }

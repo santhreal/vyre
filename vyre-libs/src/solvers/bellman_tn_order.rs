@@ -225,7 +225,7 @@ pub fn bellman_tn_order_via_with_scratch_into(
     // program. Sizing the grid off `n_edges` alone leaves every node past the
     // launch width with no lane to publish it whenever `n_nodes` exceeds
     // `n_edges`, silently freezing those distances at their seed values.
-    let output = crate::dispatch_buffers::run_single_first_output(
+    let output = crate::dispatch_buffers::execute_program_first_output(
         dispatcher,
         program,
         &scratch.inputs,

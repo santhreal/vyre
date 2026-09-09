@@ -40,7 +40,7 @@ pub use envelope::{EnvelopeError, WireReader, WireWriter};
 pub mod wire_round_trip;
 
 /// Authoritative typed schema registry, bounded decoders, and canonical digests.
-pub mod schema_authority;
+pub(crate) mod schema_authority;
 pub use schema_authority::{
     export_schema_json, BoundedDecoder, CanonicalDigest, CanonicalSchemaVersion, DigestAlgorithm,
     SchemaAuthority, SchemaAuthorityError, SchemaDescriptor, SchemaId,

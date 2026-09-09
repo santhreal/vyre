@@ -65,10 +65,13 @@ impl core::ops::drop::Drop for vyre_runtime::uring::ResidentIoLoop
 impl vyre_foundation::diagnostics::ToDiagnostic for vyre_runtime::PipelineError
 impl vyre_megakernel::execution::SemanticExecutor for vyre_runtime::RegisteredSemanticExecutor
 impl vyre_runtime::CounterArithmetic
+impl vyre_runtime::GenerationScopedNamespace
 impl vyre_runtime::PipelineError
 impl vyre_runtime::RegisteredSemanticExecutor
 impl vyre_runtime::RequestFault
 impl vyre_runtime::RingEncodingFault
+impl vyre_runtime::RollingUpgradeCoordinator
+impl vyre_runtime::SupervisedRestartBudget
 impl vyre_runtime::artifact_admission::AdmittedArtifact
 impl vyre_runtime::artifact_admission::AdmittedPortfolio
 impl vyre_runtime::artifact_admission::ArtifactAdmissionError
@@ -82,11 +85,8 @@ impl vyre_runtime::artifact_admission::ResourceManifest
 impl vyre_runtime::artifact_admission::RetainedArtifactSession
 impl vyre_runtime::artifact_admission::TypedResource
 impl vyre_runtime::artifact_admission::TypedResourceDataset
-impl vyre_runtime::atomic_recovery::SupervisedRestartBudget
 impl vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange
 impl vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler
-impl vyre_runtime::generation_namespace::GenerationScopedNamespace
-impl vyre_runtime::generation_namespace::RollingUpgradeCoordinator
 impl vyre_runtime::mtp::MtpCoordinator
 impl vyre_runtime::paged_residency::BlockTableSpec
 impl vyre_runtime::paged_residency::PagedKVSlabSpec
@@ -191,22 +191,22 @@ impl<'a> vyre_runtime::uring::AsyncUringStream<'a>
 impl<'a> vyre_runtime::uring::GpuMappedBuffer<'a>
 impl<'a> vyre_runtime::uring::NvmeGpuIngestDriver<'a>
 impl<'a> vyre_runtime::uring::UringResidentQueuePump<'a>
-impl<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone> core::default::Default for vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>
-impl<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone> vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>
+impl<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone> core::default::Default for vyre_runtime::PrepareCommitJournal<K, V>
+impl<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone> vyre_runtime::PrepareCommitJournal<K, V>
 impl<R: core::marker::Copy> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>
 impl<R> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec<R>
-impl<T> vyre_runtime::atomic_recovery::AtomicGuardedState<T>
+impl<T> vyre_runtime::AtomicGuardedState<T>
+pub const fn vyre_runtime::GenerationScopedNamespace::new(domain: vyre_spec::compatibility::ProtocolDomain, version: vyre_spec::compatibility::ProtocolVersion, generation_id: u64) -> Self
 pub const fn vyre_runtime::RegisteredSemanticExecutor::new(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration) -> Self
 pub const fn vyre_runtime::RegisteredSemanticExecutor::registration(&self) -> &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration
+pub const fn vyre_runtime::RollingUpgradeCoordinator::phase(&self) -> vyre_runtime::UpgradePhase
+pub const fn vyre_runtime::SupervisedRestartBudget::new(max_restarts: u32) -> Self
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::envelope(&self) -> &vyre_megakernel::envelope::ArtifactEnvelope
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::neutral(&self) -> &vyre_megakernel::schema::Artifact
 pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::contract(&self) -> &vyre_megakernel::specialization::SpecializationContract
 pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::remainder(&self) -> core::option::Option<&vyre_runtime::artifact_admission::AdmittedArtifact>
 pub const fn vyre_runtime::artifact_admission::ArtifactAdmissionError::diagnostic(&self) -> &vyre_foundation::diagnostics::Diagnostic
-pub const fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::new(max_restarts: u32) -> Self
 pub const fn vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange::accounting(&self) -> &vyre_driver::peer_transfer::PeerTransferAccounting
-pub const fn vyre_runtime::generation_namespace::GenerationScopedNamespace::new(domain: vyre_spec::compatibility::ProtocolDomain, version: vyre_spec::compatibility::ProtocolVersion, generation_id: u64) -> Self
-pub const fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::phase(&self) -> vyre_runtime::generation_namespace::UpgradePhase
 pub const fn vyre_runtime::mtp::MtpCoordinator::config(&self) -> &vyre_runtime::mtp::MtpConfig
 pub const fn vyre_runtime::pipeline_cache::PipelineCacheMetricError::field(&self) -> &'static str
 pub const fn vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex::new(state_id: u32, byte_index: u32) -> Self
@@ -425,9 +425,7 @@ pub enum vyre_runtime::artifact_admission::ResourceIngestionError
 pub enum vyre_runtime::artifact_admission::ResourceManifestSource
 pub enum vyre_runtime::artifact_admission::RetainedSessionPhase
 pub enum vyre_runtime::artifact_admission::RetainedSessionTransition
-pub enum vyre_runtime::atomic_recovery::GuardedState<T>
 pub enum vyre_runtime::expert_scheduling::ExpertSchedulingError
-pub enum vyre_runtime::generation_namespace::UpgradePhase
 pub enum vyre_runtime::mtp::MtpError
 pub enum vyre_runtime::mtp::MtpStorageCandidate
 pub enum vyre_runtime::paged_residency::PagedResidencyError
@@ -462,16 +460,36 @@ pub enum vyre_runtime::uring::GpuDirectCapability
 pub enum vyre_runtime::uring::NativeReadPath
 pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_runtime::PipelineError) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_runtime::PipelineError) -> Self
+pub fn vyre_runtime::AtomicGuardedState<T>::current_state(&self) -> vyre_runtime::GuardedState<T> where T: core::clone::Clone
+pub fn vyre_runtime::AtomicGuardedState<T>::new(initial: T, domain: vyre_foundation::failure_domain::FailureDomain, recovery_class: vyre_foundation::failure_domain::RecoveryClass) -> Self
+pub fn vyre_runtime::AtomicGuardedState<T>::recover(&self, fresh_state: T)
+pub fn vyre_runtime::AtomicGuardedState<T>::with_state<R>(&self, op: impl core::ops::function::FnOnce(&mut T) -> core::result::Result<R, alloc::string::String>) -> core::result::Result<R, vyre_foundation::failure_domain::TypedRecoveryError>
 pub fn vyre_runtime::CounterArithmetic::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_runtime::CounterScope::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_runtime::GenerationScopedNamespace::scoped_key(&self, raw_key: &str) -> alloc::string::String
 pub fn vyre_runtime::PipelineError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_runtime::PipelineError::from(err: vyre_driver::backend::error::BackendError) -> Self
 pub fn vyre_runtime::PipelineError::from(err: vyre_runtime::replay::ReplayLogError) -> Self
 pub fn vyre_runtime::PipelineError::is_drain_incomplete(&self) -> bool
 pub fn vyre_runtime::PipelineError::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
+pub fn vyre_runtime::PrepareCommitJournal<K, V>::abort(&self, key: &K, ticket: vyre_runtime::PrepareTicket)
+pub fn vyre_runtime::PrepareCommitJournal<K, V>::commit(&self, key: K, ticket: vyre_runtime::PrepareTicket) -> core::result::Result<V, alloc::string::String>
+pub fn vyre_runtime::PrepareCommitJournal<K, V>::default() -> Self
+pub fn vyre_runtime::PrepareCommitJournal<K, V>::is_committed(&self, key: &K) -> bool
+pub fn vyre_runtime::PrepareCommitJournal<K, V>::new() -> Self
+pub fn vyre_runtime::PrepareCommitJournal<K, V>::prepare(&self, key: K, value: V) -> core::result::Result<core::option::Option<vyre_runtime::PrepareTicket>, alloc::string::String>
 pub fn vyre_runtime::RegisteredSemanticExecutor::execute(&self, request: &vyre_megakernel::execution::SemanticExecutionRequest<'_>) -> core::result::Result<vyre_megakernel::execution::SemanticExecutionOutput, vyre_megakernel::execution::SemanticExecutionError>
 pub fn vyre_runtime::RequestFault::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_runtime::RingEncodingFault::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_runtime::RollingUpgradeCoordinator::active_resource_count(&self) -> usize
+pub fn vyre_runtime::RollingUpgradeCoordinator::begin_upgrade(&mut self, target_version: vyre_spec::compatibility::ProtocolVersion) -> core::result::Result<vyre_runtime::GenerationScopedNamespace, alloc::string::String>
+pub fn vyre_runtime::RollingUpgradeCoordinator::commit_upgrade(&mut self) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_runtime::RollingUpgradeCoordinator::current_namespace(&self) -> vyre_runtime::GenerationScopedNamespace
+pub fn vyre_runtime::RollingUpgradeCoordinator::new(domain: vyre_spec::compatibility::ProtocolDomain, initial_version: vyre_spec::compatibility::ProtocolVersion) -> Self
+pub fn vyre_runtime::RollingUpgradeCoordinator::register_resource(&mut self, resource_id: impl core::convert::Into<alloc::string::String>)
+pub fn vyre_runtime::RollingUpgradeCoordinator::rollback(&mut self, previous_version: vyre_spec::compatibility::ProtocolVersion, reason: &'static str) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_runtime::SupervisedRestartBudget::record_restart(&self, domain: vyre_foundation::failure_domain::FailureDomain) -> core::result::Result<u32, vyre_foundation::failure_domain::TypedRecoveryError>
+pub fn vyre_runtime::SupervisedRestartBudget::reset(&self)
 pub fn vyre_runtime::UringCompletionPump<'_>::default() -> Self
 pub fn vyre_runtime::UringCompletionPump<'a>::is_shutdown_requested(&self) -> bool
 pub fn vyre_runtime::UringCompletionPump<'a>::new() -> Self
@@ -592,18 +610,6 @@ pub fn vyre_runtime::artifact_admission::admit_artifact(envelope_bytes: &[u8], r
 pub fn vyre_runtime::artifact_admission::admit_cached_artifact(store: &dyn vyre_runtime::pipeline_cache::PipelineCacheStore, fingerprint: &vyre_runtime::pipeline_cache::PipelineFingerprint, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<core::option::Option<vyre_runtime::artifact_admission::AdmittedArtifact>, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_envelope(envelope: vyre_megakernel::envelope::ArtifactEnvelope, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_portfolio(portfolio_bytes: &[u8], required_format: &vyre_megakernel::envelope::TargetPayloadFormat, target_identity: vyre_megakernel::identity::Digest) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedPortfolio, vyre_runtime::artifact_admission::ArtifactAdmissionError>
-pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::current_state(&self) -> vyre_runtime::atomic_recovery::GuardedState<T> where T: core::clone::Clone
-pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::new(initial: T, domain: vyre_foundation::failure_domain::FailureDomain, recovery_class: vyre_foundation::failure_domain::RecoveryClass) -> Self
-pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::recover(&self, fresh_state: T)
-pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::with_state<R>(&self, op: impl core::ops::function::FnOnce(&mut T) -> core::result::Result<R, alloc::string::String>) -> core::result::Result<R, vyre_foundation::failure_domain::TypedRecoveryError>
-pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::abort(&self, key: &K, ticket: vyre_runtime::atomic_recovery::PrepareTicket)
-pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::commit(&self, key: K, ticket: vyre_runtime::atomic_recovery::PrepareTicket) -> core::result::Result<V, alloc::string::String>
-pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::default() -> Self
-pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::is_committed(&self, key: &K) -> bool
-pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::new() -> Self
-pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::prepare(&self, key: K, value: V) -> core::result::Result<core::option::Option<vyre_runtime::atomic_recovery::PrepareTicket>, alloc::string::String>
-pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::record_restart(&self, domain: vyre_foundation::failure_domain::FailureDomain) -> core::result::Result<u32, vyre_foundation::failure_domain::TypedRecoveryError>
-pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::reset(&self)
 pub fn vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange::new(topology: vyre_driver::peer_transfer::PeerTopology) -> Self
 pub fn vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange::route_all_to_all(&mut self, tokens: alloc::vec::Vec<vyre_runtime::expert_scheduling::InterDeviceToken>) -> core::result::Result<alloc::collections::btree::map::BTreeMap<u32, alloc::vec::Vec<vyre_runtime::expert_scheduling::InterDeviceToken>>, vyre_runtime::expert_scheduling::ExpertSchedulingError>
 pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits::default() -> Self
@@ -612,14 +618,6 @@ pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler::dequeue_expe
 pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler::enqueue(&mut self, item: vyre_runtime::expert_scheduling::ExpertWorkItem) -> core::result::Result<(), vyre_runtime::expert_scheduling::ExpertSchedulingError>
 pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler::new(limits: vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits) -> Self
-pub fn vyre_runtime::generation_namespace::GenerationScopedNamespace::scoped_key(&self, raw_key: &str) -> alloc::string::String
-pub fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::active_resource_count(&self) -> usize
-pub fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::begin_upgrade(&mut self, target_version: vyre_spec::compatibility::ProtocolVersion) -> core::result::Result<vyre_runtime::generation_namespace::GenerationScopedNamespace, alloc::string::String>
-pub fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::commit_upgrade(&mut self) -> core::result::Result<(), alloc::string::String>
-pub fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::current_namespace(&self) -> vyre_runtime::generation_namespace::GenerationScopedNamespace
-pub fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::new(domain: vyre_spec::compatibility::ProtocolDomain, initial_version: vyre_spec::compatibility::ProtocolVersion) -> Self
-pub fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::register_resource(&mut self, resource_id: impl core::convert::Into<alloc::string::String>)
-pub fn vyre_runtime::generation_namespace::RollingUpgradeCoordinator::rollback(&mut self, previous_version: vyre_spec::compatibility::ProtocolVersion, reason: &'static str) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_runtime::mtp::MtpConfig::default() -> Self
 pub fn vyre_runtime::mtp::MtpCoordinator::new(config: vyre_runtime::mtp::MtpConfig, prefix_cache: vyre_runtime::prefix_cache::PrefixCache) -> Self
 pub fn vyre_runtime::mtp::MtpCoordinator::rollback_all(&self, provisional: vyre_runtime::mtp::MtpProvisionalState) -> core::result::Result<(), vyre_runtime::mtp::MtpError>
@@ -1160,9 +1158,7 @@ pub fn vyre_runtime::uring::UringResidentQueuePump<'a>::observe_epoch(&self, con
 pub fn vyre_runtime::uring::encode_nvme_read_sqe(namespace_id: u32, starting_lba: u64, blocks: u32, dest_bar1_ptr: u64) -> [u8; 64]
 pub mod vyre_runtime
 pub mod vyre_runtime::artifact_admission
-pub mod vyre_runtime::atomic_recovery
 pub mod vyre_runtime::expert_scheduling
-pub mod vyre_runtime::generation_namespace
 pub mod vyre_runtime::mtp
 pub mod vyre_runtime::paged_residency
 pub mod vyre_runtime::persistent_executor
@@ -1233,17 +1229,11 @@ pub struct vyre_runtime::artifact_admission::ResourceManifestEntry
 pub struct vyre_runtime::artifact_admission::RetainedArtifactSession
 pub struct vyre_runtime::artifact_admission::TypedResource
 pub struct vyre_runtime::artifact_admission::TypedResourceDataset
-pub struct vyre_runtime::atomic_recovery::AtomicGuardedState<T>
-pub struct vyre_runtime::atomic_recovery::PrepareCommitJournal<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone>
-pub struct vyre_runtime::atomic_recovery::PrepareTicket
-pub struct vyre_runtime::atomic_recovery::SupervisedRestartBudget
 pub struct vyre_runtime::expert_scheduling::ExpertWorkItem
 pub struct vyre_runtime::expert_scheduling::InterDeviceAllToAllExchange
 pub struct vyre_runtime::expert_scheduling::InterDeviceToken
 pub struct vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits
 pub struct vyre_runtime::expert_scheduling::IntraDeviceExpertScheduler
-pub struct vyre_runtime::generation_namespace::GenerationScopedNamespace
-pub struct vyre_runtime::generation_namespace::RollingUpgradeCoordinator
 pub struct vyre_runtime::mtp::MtpConfig
 pub struct vyre_runtime::mtp::MtpCoordinator
 pub struct vyre_runtime::mtp::MtpDraftToken
@@ -1696,13 +1686,6 @@ pub vyre_runtime::artifact_admission::TypedResource::identity: core::option::Opt
 pub vyre_runtime::artifact_admission::TypedResource::lifetime: core::option::Option<vyre_megakernel::schema::records::ResourceLifetime>
 pub vyre_runtime::artifact_admission::TypedResource::source: vyre_runtime::artifact_admission::ResourceDataSource
 pub vyre_runtime::artifact_admission::TypedResource::value: vyre_megakernel::identity::ArtifactValueId
-pub vyre_runtime::atomic_recovery::GuardedState::PoisonedTerminal
-pub vyre_runtime::atomic_recovery::GuardedState::PoisonedTerminal::domain: vyre_foundation::failure_domain::FailureDomain
-pub vyre_runtime::atomic_recovery::GuardedState::PoisonedTerminal::reason: alloc::string::String
-pub vyre_runtime::atomic_recovery::GuardedState::PoisonedTerminal::recovery_class: vyre_foundation::failure_domain::RecoveryClass
-pub vyre_runtime::atomic_recovery::GuardedState::Ready(T)
-pub vyre_runtime::atomic_recovery::GuardedState::Rebuilding
-pub vyre_runtime::atomic_recovery::PrepareTicket::ticket_id: u64
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExchangeError(alloc::string::String)
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds::expert_id: u32
@@ -1731,17 +1714,6 @@ pub vyre_runtime::expert_scheduling::InterDeviceToken::token_id: u64
 pub vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits::max_queued_per_expert: usize
 pub vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits::max_starvation_ticks: u64
 pub vyre_runtime::expert_scheduling::IntraDeviceExpertQueueLimits::num_experts: u32
-pub vyre_runtime::generation_namespace::GenerationScopedNamespace::domain: vyre_spec::compatibility::ProtocolDomain
-pub vyre_runtime::generation_namespace::GenerationScopedNamespace::generation_id: u64
-pub vyre_runtime::generation_namespace::GenerationScopedNamespace::version: vyre_spec::compatibility::ProtocolVersion
-pub vyre_runtime::generation_namespace::UpgradePhase::Active
-pub vyre_runtime::generation_namespace::UpgradePhase::Completed
-pub vyre_runtime::generation_namespace::UpgradePhase::RolledBack
-pub vyre_runtime::generation_namespace::UpgradePhase::RolledBack::reason: &'static str
-pub vyre_runtime::generation_namespace::UpgradePhase::RolledBack::restored_generation: u64
-pub vyre_runtime::generation_namespace::UpgradePhase::RollingUpgrade
-pub vyre_runtime::generation_namespace::UpgradePhase::RollingUpgrade::draining_generation: u64
-pub vyre_runtime::generation_namespace::UpgradePhase::RollingUpgrade::target_generation: u64
 pub vyre_runtime::mtp::MtpConfig::hidden_dim: usize
 pub vyre_runtime::mtp::MtpConfig::max_depth: usize
 pub vyre_runtime::mtp::MtpConfig::storage_candidate: vyre_runtime::mtp::MtpStorageCandidate

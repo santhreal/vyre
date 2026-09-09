@@ -275,3 +275,82 @@ fn an_inferred_grid_at_the_device_ceiling_dispatches() {
         .expect("Fix: an inferred single-axis launch must dispatch.");
     assert_eq!(outputs[0], 7_u32.to_le_bytes().repeat(4));
 }
+
+/// WHY: closes the class "a 1D program whose element count exceeds the device's
+/// single-axis ceiling is refused instead of folded in grid inference". The element
+/// count is derived at run time from the adapter's reported per-axis ceiling and
+/// the program's workgroup size, and the fixture proves that the folded lane in
+/// the second row is executed, addresses with its linearized index, and produces
+/// the exact same buffer on wgpu and on the reference interpreter.
+#[test]
+fn an_inferred_launch_past_the_device_single_axis_ceiling_folds_and_matches_reference() {
+    let backend = live_backend();
+    let ceiling = backend.max_compute_workgroups_per_dimension();
+    let workgroup_size = 256_u32;
+    let single_axis_ceiling = ceiling
+        .checked_mul(workgroup_size)
+        .expect("Fix: single-axis ceiling multiplication must not overflow u32.");
+    let words = single_axis_ceiling
+        .checked_add(1)
+        .expect("Fix: adding one element past the single-axis ceiling must not overflow u32.");
+
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32)
+            .with_count(words)
+            .with_output_byte_range(0..8)],
+        [workgroup_size, 1, 1],
+        vec![
+            Node::if_then(
+                Expr::eq(Expr::gid_x(), Expr::u32(0)),
+                vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
+            ),
+            Node::if_then(
+                Expr::eq(Expr::gid_x(), Expr::u32(single_axis_ceiling)),
+                vec![Node::store("out", Expr::u32(1), Expr::u32(9))],
+            ),
+        ],
+    );
+
+    let outputs = backend
+        .dispatch(&program, &[], &DispatchConfig::default())
+        .expect("Fix: an inferred 1D launch past the device single-axis ceiling must fold across axes, not be refused.");
+
+    let expected = [7_u32, 9_u32]
+        .into_iter()
+        .flat_map(u32::to_le_bytes)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        outputs[0], expected,
+        "Fix: lane 0 and the first folded lane must write their marker values at their linearized indices."
+    );
+
+    let reference = vyre_reference::reference_eval(&program, &[])
+        .expect("Fix: reference interpreter must evaluate the folded launch program.")
+        .into_iter()
+        .map(|value| value.to_bytes())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        outputs[0], reference[0],
+        "Fix: a folded launch above the single-axis ceiling must produce what the reference interpreter produces."
+    );
+}
+
+/// WHY: a launch whose element count exceeds the product of every grid axis limit
+/// must be refused rather than silently under-dispatched or overflowing.
+#[test]
+fn an_inferred_launch_past_the_product_of_every_axis_limit_is_refused_naming_the_limit() {
+    let backend = live_backend();
+    let mut config = DispatchConfig::default();
+    config.max_workgroups_per_axis = Some([2, 2, 1]);
+    // 2 * 2 * 1 * 256 = 1024 lanes max capacity. Asking for 1025 elements must fail.
+    let words = 1025_u32;
+    let program = identity_program(words);
+    let error = backend
+        .dispatch(&program, &[], &config)
+        .expect_err("Fix: a launch past the product of every axis limit must be refused.");
+    let message = error.to_string();
+    assert!(
+        message.contains("1025") && message.contains("1024") && message.contains("Fix:"),
+        "Fix: the refusal must name the element count asked for and the capacity limit: {message}"
+    );
+}

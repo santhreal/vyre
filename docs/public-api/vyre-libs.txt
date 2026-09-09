@@ -1722,9 +1722,6 @@ pub fn vyre_libs::graph::vast_tree_walk::vast_descend_leftmost_leaf_program(node
 pub fn vyre_libs::graph_compositions::build_csr_graph_traversal_pipeline(node_count: u64, edge_count: u64, steps: u64) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::ProgramGraphError>
 pub fn vyre_libs::graph_compositions::build_dense_neural_pipeline(batch_size: u64, in_dim: u64, hidden_dim: u64, out_dim: u64) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::ProgramGraphError>
 pub fn vyre_libs::graph_compositions::build_streaming_parser_pipeline(chunk_size: u64) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::ProgramGraphError>
-pub fn vyre_libs::graph_compositions::csr_graph_traversal::build_csr_graph_traversal_pipeline(node_count: u64, edge_count: u64, steps: u64) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::ProgramGraphError>
-pub fn vyre_libs::graph_compositions::dense_neural_pipeline::build_dense_neural_pipeline(batch_size: u64, in_dim: u64, hidden_dim: u64, out_dim: u64) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::ProgramGraphError>
-pub fn vyre_libs::graph_compositions::streaming_parser_pipeline::build_streaming_parser_pipeline(chunk_size: u64) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::ProgramGraphError>
 pub fn vyre_libs::hash::adler32::adler32_finalize_expr(a: vyre_foundation::ir_inner::model::generated::Expr, b: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::hash::adler32::adler32_initial_a_expr() -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::hash::adler32::adler32_initial_b_expr() -> vyre_foundation::ir_inner::model::generated::Expr
@@ -2815,9 +2812,6 @@ pub mod vyre_libs::graph::toposort
 pub mod vyre_libs::graph::union_find
 pub mod vyre_libs::graph::vast_tree_walk
 pub mod vyre_libs::graph_compositions
-pub mod vyre_libs::graph_compositions::csr_graph_traversal
-pub mod vyre_libs::graph_compositions::dense_neural_pipeline
-pub mod vyre_libs::graph_compositions::streaming_parser_pipeline
 pub mod vyre_libs::hash
 pub mod vyre_libs::hash::adler32
 pub mod vyre_libs::hash::blake3

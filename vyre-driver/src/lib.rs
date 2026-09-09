@@ -226,7 +226,7 @@ pub mod numeric;
 /// many small scan jobs.
 pub mod persistent;
 /// Domain-neutral semantic resource ABI, logical image/view types, and zero-copy timeline synchronization (Row 111).
-pub mod semantic_resource_abi;
+mod semantic_resource_abi;
 
 /// The `inventory` crate `register_backend!` submits through. A concrete
 /// driver expands the macro and needs no `inventory` dependency of its own.

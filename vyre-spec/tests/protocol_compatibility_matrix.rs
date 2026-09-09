@@ -6,10 +6,10 @@
 //! - Unsupported version pairs fail with explicit actionable upgrade instructions.
 //! - Declarative schema registry derives canonical fields, types, and bounds from live source at run time.
 
-use vyre_spec::compatibility::{
+use vyre_spec::{
     CompatibilityDisposition, CompatibilityMatrix, ProtocolDomain, ProtocolVersion,
 };
-use vyre_spec::schema_registry::{DefaultsPolicy, FieldType, SchemaId, SchemaRegistry};
+use vyre_spec::{DefaultsPolicy, FieldType, SchemaId, SchemaRegistry};
 
 #[test]
 fn all_protocol_domains_are_covered_in_canonical_matrix() {

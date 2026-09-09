@@ -148,25 +148,90 @@ fn derive_nodes_uses(nodes: &[Node], facts: &mut UseFactBuilder, control_deps: &
             Node::Opaque(_) => {
                 facts.has_opaque = true;
             }
-            Node::TileLoad { buffer, origin, .. } => {
+            Node::TileLoad {
+                tile,
+                buffer,
+                origin,
+                ..
+            } => {
                 *facts.buffer_reads.entry(buffer.clone()).or_insert(0) += 1;
+                let mut deps = FxHashSet::default();
+                deps.insert(buffer.clone());
                 for off in origin {
-                    let mut deps = record_expr_uses_and_buffer_deps(off, facts);
-                    deps.extend(control_deps.iter().cloned());
+                    let expr_deps = record_expr_uses_and_buffer_deps(off, facts);
+                    deps.extend(expr_deps);
                 }
+                deps.extend(control_deps.iter().cloned());
+                facts
+                    .var_buffer_deps
+                    .entry(tile.clone())
+                    .or_default()
+                    .extend(deps);
             }
-            Node::TileStore { buffer, origin, .. } => {
+            Node::TileStore {
+                buffer,
+                origin,
+                tile,
+            } => {
                 *facts.buffer_writes.entry(buffer.clone()).or_insert(0) += 1;
+                *facts.var_counts.entry(tile.clone()).or_insert(0) += 1;
+                let mut deps = FxHashSet::default();
+                deps.insert(tile.clone());
                 for off in origin {
-                    let mut deps = record_expr_uses_and_buffer_deps(off, facts);
-                    deps.extend(control_deps.iter().cloned());
-                    add_buffer_write_deps(facts, buffer, deps);
+                    record_expr_uses_and_buffer_deps_into(&mut deps, off, facts);
                 }
+                deps.extend(control_deps.iter().cloned());
+                if let Some(tile_deps) = facts.var_buffer_deps.get(tile) {
+                    deps.extend(tile_deps.iter().cloned());
+                }
+                add_buffer_write_deps(facts, buffer, deps);
             }
-            Node::TileElementwise { body, .. } => {
+            Node::TileElementwise { out, inputs, body } => {
+                for inp in inputs {
+                    *facts.var_counts.entry(inp.clone()).or_insert(0) += 1;
+                }
                 derive_nodes_uses(body, facts, control_deps);
+                let mut deps = FxHashSet::default();
+                for inp in inputs {
+                    deps.insert(inp.clone());
+                    if let Some(inp_deps) = facts.var_buffer_deps.get(inp) {
+                        deps.extend(inp_deps.iter().cloned());
+                    }
+                }
+                deps.extend(control_deps.iter().cloned());
+                facts
+                    .var_buffer_deps
+                    .entry(out.clone())
+                    .or_default()
+                    .extend(deps);
             }
-            Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {}
+            Node::TileMatmul { acc, a, b } => {
+                *facts.var_counts.entry(acc.clone()).or_insert(0) += 1;
+                *facts.var_counts.entry(a.clone()).or_insert(0) += 1;
+                *facts.var_counts.entry(b.clone()).or_insert(0) += 1;
+                let mut deps = FxHashSet::default();
+                deps.insert(acc.clone());
+                deps.insert(a.clone());
+                deps.insert(b.clone());
+                deps.extend(control_deps.iter().cloned());
+                facts
+                    .var_buffer_deps
+                    .entry(acc.clone())
+                    .or_default()
+                    .extend(deps);
+            }
+            Node::TileReduce { out, tile, .. } => {
+                *facts.var_counts.entry(tile.clone()).or_insert(0) += 1;
+                let mut deps = FxHashSet::default();
+                deps.insert(tile.clone());
+                deps.extend(control_deps.iter().cloned());
+                facts
+                    .var_buffer_deps
+                    .entry(out.clone())
+                    .or_default()
+                    .extend(deps);
+            }
+            Node::TileDecl { .. } => {}
             Node::Return
             | Node::Barrier { .. }
             | Node::LogicalBarrier { .. }

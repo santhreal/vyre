@@ -75,7 +75,7 @@ Own reproducible workload benchmarks against the best available native baseline 
 - Owner: `benchmarks`
 - Layer: `tooling`
 - Publication class: `conformance-tooling`
-- Internal production dependencies: `vyre`, `vyre-alloc-probe`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`, `xtask`
+- Internal production dependencies: `vyre`, `vyre-alloc-probe`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`, `xtask`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -83,7 +83,6 @@ Own reproducible workload benchmarks against the best available native baseline 
 | `vyre-alloc-probe` | per-thread heap counters the runner installs as the global allocator | `private` | `benchmarks` |
 | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `private` | `backend-contract` |
 | `vyre-driver-cuda` | native accelerator backend execution | `private` | `cuda-driver` |
-| `vyre-driver-reference` | reference backend adaptation | `private` | `reference-driver` |
 | `vyre-driver-wgpu` | portable backend execution | `private` | `portable-driver` |
 | `vyre-emit-ptx` | primary binary backend text emission | `private` | `primary-binary-emitter` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
@@ -106,7 +105,7 @@ Execute production artifacts against independent reference semantics, minimize c
 - Owner: `conformance`
 - Layer: `conformance`
 - Publication class: `conformance-tooling`
-- Internal production dependencies: `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`
+- Internal production dependencies: `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -114,6 +113,7 @@ Execute production artifacts against independent reference semantics, minimize c
 | `vyre-conform-spec` | versioned conformance schemas | `private` | `conformance` |
 | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `private` | `backend-contract` |
 | `vyre-driver-cuda` | native accelerator backend execution | `private` | `cuda-driver` |
+| `vyre-driver-spirv` | SPIR-V backend execution | `private` | `spirv-driver` |
 | `vyre-driver-wgpu` | portable backend execution | `private` | `portable-driver` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
 | `vyre-libs` | product operation builders | `private` | `product-libraries` |
@@ -321,11 +321,12 @@ Consume verified lowering products and emit SPIR-V artifacts through the shared 
 - Owner: `spirv-emitter`
 - Layer: `emitter`
 - Publication class: `internal-engine`
-- Internal production dependencies: `vyre-emit-naga`, `vyre-lower`
+- Internal production dependencies: `vyre-emit-naga`, `vyre-foundation`, `vyre-lower`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-emit-naga` | primary text and related binary emission | `public` | `primary-text-emitter` |
+| `vyre-foundation` | diagnostic projection for emitter errors | `public` | `foundation-ir` |
 | `vyre-lower` | verified backend-neutral representation lowering | `public` | `lowering` |
 
 ### `vyre-foundation`
@@ -466,14 +467,13 @@ Own every inventory registry link anchor, report which sources a build links, an
 - Owner: `registry-link`
 - Layer: `registry-link`
 - Publication class: `internal-engine`
-- Internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+- Internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-driver` | backend registry contracts | `private` | `backend-contract` |
 | `vyre-driver-cuda` | native accelerator backend registration | `private` | `cuda-driver` |
 | `vyre-driver-metal` | native Apple backend registration | `private` | `metal-driver` |
-| `vyre-driver-reference` | reference backend registration | `private` | `reference-driver` |
 | `vyre-driver-spirv` | SPIR-V backend registration | `private` | `spirv-driver` |
 | `vyre-driver-wgpu` | portable backend registration | `private` | `portable-driver` |
 | `vyre-foundation` | operation registry contracts | `private` | `foundation-ir` |

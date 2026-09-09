@@ -97,7 +97,7 @@ pub fn bin_op_variant_samples() -> Vec<BinOp> {
         BinOp::Ballot,
         BinOp::WaveReduce,
         BinOp::WaveBroadcast,
-        BinOp::Opaque(vyre_spec::extension::ExtensionBinOpId::from_name(
+        BinOp::Opaque(vyre_spec::ExtensionBinOpId::from_name(
             "vyre.test_support.fixture_bin_op",
         )),
     ]

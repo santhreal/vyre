@@ -135,7 +135,7 @@ pub fn smooth_latency_trace_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[3], &scratch.params);
 
     let program = conv1d_program(count, radius);
-    let output = crate::dispatch_buffers::run_single_first_output(
+    let output = crate::dispatch_buffers::execute_program_first_output(
         dispatcher,
         program,
         &scratch.inputs,

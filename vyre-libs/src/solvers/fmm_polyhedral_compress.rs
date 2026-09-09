@@ -262,7 +262,7 @@ pub fn aggregate_to_cells_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
 
     let outputs =
-        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
+        crate::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
     let output = require_exactly_one_output(&outputs, "aggregate_to_cells_via")?;
     decode_f32_output_exact(output, n_cells as usize, "aggregate_to_cells_via", out)
 }
@@ -325,7 +325,7 @@ pub fn translate_to_targets_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
 
     let outputs =
-        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
+        crate::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
     let output = require_exactly_one_output(&outputs, "translate_to_targets_via")?;
     decode_f32_output_exact(output, n_cells as usize, "translate_to_targets_via", out)
 }
@@ -401,7 +401,7 @@ pub fn evaluate_at_regions_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
 
     let outputs =
-        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
+        crate::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
     let output = require_exactly_one_output(&outputs, "evaluate_at_regions_via")?;
     decode_f32_output_exact(output, out_len, "evaluate_at_regions_via", out)
 }

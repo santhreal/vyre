@@ -4,7 +4,7 @@
 //! documented FNV-1a derivation, high-bit reservation rule, raw-id constructor
 //! behavior, and serde scalar shape across every extension family.
 
-use vyre_spec::extension::{
+use vyre_spec::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionRuleConditionId,
     ExtensionTernaryOpId, ExtensionUnOpId,
 };

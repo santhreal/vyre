@@ -184,7 +184,7 @@ pub fn write_f32_slice_le_bytes(out: &mut Vec<u8>, values: &[f32]) {
 /// wrapper node identity and the same projection off the execution record.
 /// Twenty-five of them stated that call by hand, so the node identity and the
 /// projection were free to drift apart per module.
-pub fn run_single(
+pub fn execute_program(
     dispatcher: &dyn vyre_megakernel::SemanticExecutor,
     program: vyre_foundation::ir::Program,
     inputs: &[Vec<u8>],
@@ -198,14 +198,14 @@ pub fn run_single(
 ///
 /// A wrapper that decodes one result rejects an empty output set with the same
 /// refusal, named for the caller.
-pub fn run_single_first_output(
+pub fn execute_program_first_output(
     dispatcher: &dyn vyre_megakernel::SemanticExecutor,
     program: vyre_foundation::ir::Program,
     inputs: &[Vec<u8>],
     policy: &vyre_megakernel::SemanticExecutionPolicy,
     context: &str,
 ) -> Result<Vec<u8>, SemanticExecutionError> {
-    run_single(dispatcher, program, inputs, policy)?
+    execute_program(dispatcher, program, inputs, policy)?
         .into_iter()
         .next()
         .ok_or_else(|| {

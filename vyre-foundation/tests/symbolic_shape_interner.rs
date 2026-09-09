@@ -6,8 +6,8 @@
 //! 3. Proves that a shape check reads the interner rather than re-deriving.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program, ShapePredicate};
-use vyre_foundation::types::shape::solver::{ShapeProofKind, ShapeSolver};
-use vyre_foundation::types::shape::{ShapeInterner, SymbolicDim};
+use vyre_foundation::types::{ShapeProofKind, ShapeSolver};
+use vyre_foundation::types::{ShapeInterner, SymbolicDim};
 use vyre_foundation::validate::shape_predicate::{
     check_shape_predicates, check_shape_predicates_with_interner,
 };

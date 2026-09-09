@@ -604,6 +604,11 @@ pub mod semantic_execution;
 #[path = "semiring_gemm_gpu_parity.rs"]
 pub mod semiring_gemm_gpu_parity;
 
+/// Integration tests from `tests/shared_permutation_parity.rs`.
+#[cfg(all(test, feature = "device-tests"))]
+#[path = "shared_permutation_parity.rs"]
+pub mod shared_permutation_parity;
+
 /// Integration tests from `tests/sketch_sparse_fft_gpu_parity.rs`.
 #[cfg(all(test, feature = "device-tests"))]
 #[path = "sketch_sparse_fft_gpu_parity.rs"]

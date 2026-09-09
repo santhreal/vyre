@@ -22,11 +22,12 @@
 //! body that indexes a buffer the clamp does not name. Both are per-site
 //! review, not a property the IR carries.
 
-use vyre_foundation::ir::{Expr, Node};
+use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::loop_bounds::data_derived_loop_bounds_in;
 use vyre_foundation::operation::OperationRegistration;
 use vyre_libs::state_machine::TableStateMachineComposer;
-
+use vyre_reference::value::Value;
 /// Every unclamped loop in `nodes`, rendered one finding per line.
 fn findings(nodes: &[Node]) -> Vec<String> {
     data_derived_loop_bounds_in(nodes)
@@ -156,6 +157,165 @@ fn range_ordering_scan_body_bounds_its_trip_counts() {
         "match_order: {:?}",
         findings(&nodes)
     );
+}
+
+/// The CSR traversal composer bounds edge loops against targets and mask buffers.
+#[cfg(feature = "graph")]
+#[test]
+fn csr_traversal_scan_body_bounds_its_trip_counts() {
+    let composer = vyre_libs::csr::CsrTraversalComposer::forward("test", 10, 20, 0xFF);
+    let row_loop = composer.emit_row_bounds_and_loop(
+        Expr::u32(0),
+        "edge",
+        vec![Node::store("out", Expr::var("edge"), Expr::u32(1))],
+    );
+    assert!(
+        findings(&row_loop).is_empty(),
+        "emit_row_bounds_and_loop: {:?}",
+        findings(&row_loop)
+    );
+
+    let expand = composer.emit_edge_expand(
+        "front_out",
+        Expr::u32(0),
+        |idx| idx,
+        Vec::new,
+    );
+    assert!(
+        findings(&expand).is_empty(),
+        "emit_edge_expand: {:?}",
+        findings(&expand)
+    );
+
+    let backward = composer.emit_backward_scan_full(
+        Expr::u32(0),
+        "front_in",
+        "front_out",
+        Vec::new,
+        Vec::new,
+    );
+    assert!(
+        findings(&backward).is_empty(),
+        "emit_backward_scan_full: {:?}",
+        findings(&backward)
+    );
+}
+
+#[test]
+fn hostile_state_machine_linear_scan_returns_in_bounded_steps() {
+    let composer = TableStateMachineComposer::new("transitions");
+    let body = composer.linear_scan_body(
+        "input",
+        "accept",
+        "matches",
+        Expr::load("lengths", Expr::u32(0)),
+    );
+
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(4),
+            BufferDecl::storage("transitions", 1, BufferAccess::ReadOnly, DataType::U32).with_count(256),
+            BufferDecl::storage("lengths", 2, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+            BufferDecl::storage("accept", 3, BufferAccess::ReadOnly, DataType::U32).with_count(16),
+            BufferDecl::storage("matches", 4, BufferAccess::ReadWrite, DataType::U32).with_count(4),
+        ],
+        [128, 1, 1],
+        vec![wrap_anonymous_region("test_state_machine", body)],
+    );
+
+    let hostile_len: u32 = u32::MAX;
+    let inputs = vec![
+        Value::from(vec![1u32, 2, 3, 4].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
+        Value::from(vec![0u32; 256].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
+        Value::from(hostile_len.to_le_bytes().to_vec()),
+        Value::from(vec![0u32; 16].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
+        Value::from(vec![0u32; 4].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
+    ];
+
+    let (outputs, steps) = vyre_reference::reference_eval_step_count(&program, &inputs)
+        .expect("hostile state machine run must succeed");
+
+    assert!(
+        steps < 5_000,
+        "hostile trip count must terminate in bounded steps; took {steps} steps"
+    );
+    assert!(!outputs.is_empty());
+}
+
+#[cfg(feature = "decode")]
+#[test]
+fn hostile_ziftsieve_literal_copy_returns_in_bounded_steps() {
+    use vyre_libs::decode::ziftsieve::{ziftsieve_literal_copy, ZiftsieveBuffers, ZiftsieveExtents};
+
+    let buffers = ZiftsieveBuffers {
+        input: "input",
+        output: "output",
+        seq_literal_start: "seq_start",
+        seq_literal_len: "seq_len",
+        seq_literal_offset: "seq_offset",
+    };
+    let extents = ZiftsieveExtents {
+        input_len: 4,
+        seq_count: 1,
+        max_output: 4,
+    };
+    let program = ziftsieve_literal_copy(buffers, extents);
+
+    let hostile_len: u32 = u32::MAX;
+    let inputs = vec![
+        Value::from(vec![10u32, 20, 30, 40].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
+        Value::from(0u32.to_le_bytes().to_vec()),
+        Value::from(hostile_len.to_le_bytes().to_vec()),
+        Value::from(0u32.to_le_bytes().to_vec()),
+        Value::from(vec![0u32; 4].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
+    ];
+
+    let (outputs, steps) = vyre_reference::reference_eval_step_count(&program, &inputs)
+        .expect("hostile ziftsieve run must succeed");
+
+    assert!(
+        steps < 5_000,
+        "hostile trip count must terminate in bounded steps; took {steps} steps"
+    );
+    assert!(!outputs.is_empty());
+}
+
+#[cfg(feature = "decode")]
+#[test]
+fn in_contract_ziftsieve_literal_copy_produces_identical_bytes() {
+    use vyre_libs::decode::ziftsieve::{ziftsieve_literal_copy, ZiftsieveBuffers, ZiftsieveExtents};
+
+    let buffers = ZiftsieveBuffers {
+        input: "input",
+        output: "output",
+        seq_literal_start: "seq_start",
+        seq_literal_len: "seq_len",
+        seq_literal_offset: "seq_offset",
+    };
+    let extents = ZiftsieveExtents {
+        input_len: 4,
+        seq_count: 1,
+        max_output: 4,
+    };
+    let program = ziftsieve_literal_copy(buffers, extents);
+
+    let inputs = vec![
+        Value::from(vec![10u32, 20, 30, 40].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
+        Value::from(0u32.to_le_bytes().to_vec()),
+        Value::from(3u32.to_le_bytes().to_vec()),
+        Value::from(0u32.to_le_bytes().to_vec()),
+        Value::from(vec![0u32; 4].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>()),
+    ];
+
+    let outputs = vyre_reference::reference_eval(&program, &inputs)
+        .expect("in-contract ziftsieve run must succeed");
+    let out_bytes = outputs[0].to_bytes();
+    let words: Vec<u32> = out_bytes
+        .chunks_exact(4)
+        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+        .collect();
+    assert_eq!(words[0..3], [10, 20, 30]);
+    assert_eq!(words[3], 0);
 }
 /// Every registered program bounds its data-derived loops, and every
 /// registration that exposes no program says why it is exempt.

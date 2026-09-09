@@ -1,8 +1,6 @@
 #[non_exhaustive] #[repr(u32)] pub enum vyre_spec::PgNodeKind
 #[non_exhaustive] #[repr(u32)] pub enum vyre_spec::ProtocolDomain
 #[non_exhaustive] #[repr(u32)] pub enum vyre_spec::SchemaId
-#[non_exhaustive] #[repr(u32)] pub enum vyre_spec::compatibility::ProtocolDomain
-#[non_exhaustive] #[repr(u32)] pub enum vyre_spec::schema_registry::SchemaId
 #[non_exhaustive] pub enum vyre_spec::AlgebraicLaw
 #[non_exhaustive] pub enum vyre_spec::AtomicOp
 #[non_exhaustive] pub enum vyre_spec::BinOp
@@ -29,41 +27,38 @@
 #[non_exhaustive] pub enum vyre_spec::TernaryOp
 #[non_exhaustive] pub enum vyre_spec::UnOp
 #[non_exhaustive] pub enum vyre_spec::Verification
-#[non_exhaustive] pub enum vyre_spec::algebraic_law::AlgebraicLaw
-#[non_exhaustive] pub enum vyre_spec::algebraic_law::LawGuard
-#[non_exhaustive] pub enum vyre_spec::compatibility::CompatibilityDisposition
-#[non_exhaustive] pub enum vyre_spec::schema_registry::FieldType
 #[non_exhaustive] pub struct vyre_spec::IntrinsicDescriptor
 impl core::cmp::Eq for vyre_spec::BackendId
 impl core::cmp::Eq for vyre_spec::Category
+impl core::cmp::PartialEq for vyre_spec::AlgebraicLaw
 impl core::cmp::PartialEq for vyre_spec::BackendId
 impl core::cmp::PartialEq for vyre_spec::Category
-impl core::cmp::PartialEq for vyre_spec::algebraic_law::AlgebraicLaw
 impl core::convert::From<&str> for vyre_spec::Backend
 impl core::convert::From<&str> for vyre_spec::BackendId
 impl core::convert::From<&vyre_spec::Backend> for vyre_spec::BackendId
 impl core::convert::From<alloc::string::String> for vyre_spec::BackendId
 impl core::convert::From<vyre_spec::BackendId> for vyre_spec::Backend
+impl core::default::Default for vyre_spec::ExtensionNumericalContract
+impl core::default::Default for vyre_spec::LawGuard
 impl core::default::Default for vyre_spec::OperationContract
-impl core::default::Default for vyre_spec::algebraic_law::LawGuard
-impl core::default::Default for vyre_spec::extension::ExtensionNumericalContract
 impl core::error::Error for vyre_spec::analysis::AnalysisFactCodecError
 impl core::fmt::Debug for vyre_spec::BackendAvailabilityPredicate
 impl core::fmt::Debug for vyre_spec::Invariant
 impl core::fmt::Display for vyre_spec::BackendId
 impl core::fmt::Display for vyre_spec::DataType
 impl core::fmt::Display for vyre_spec::EngineInvariant
+impl core::fmt::Display for vyre_spec::ExtensionIdentity
+impl core::fmt::Display for vyre_spec::ExtensionNamespace
+impl core::fmt::Display for vyre_spec::ExtensionSemVer
+impl core::fmt::Display for vyre_spec::NegotiationError
+impl core::fmt::Display for vyre_spec::ProtocolDomain
+impl core::fmt::Display for vyre_spec::ProtocolVersion
 impl core::fmt::Display for vyre_spec::QuantizationScale
 impl core::fmt::Display for vyre_spec::QuantizationZeroPoint
+impl core::fmt::Display for vyre_spec::SchemaId
 impl core::fmt::Display for vyre_spec::analysis::AnalysisFactCodecError
-impl core::fmt::Display for vyre_spec::compatibility::NegotiationError
-impl core::fmt::Display for vyre_spec::compatibility::ProtocolDomain
-impl core::fmt::Display for vyre_spec::compatibility::ProtocolVersion
-impl core::fmt::Display for vyre_spec::extension::ExtensionIdentity
-impl core::fmt::Display for vyre_spec::extension::ExtensionNamespace
-impl core::fmt::Display for vyre_spec::extension::ExtensionSemVer
-impl core::fmt::Display for vyre_spec::schema_registry::SchemaId
 impl core::hash::Hash for vyre_spec::BackendId
+impl vyre_spec::AlgebraicLaw
 impl vyre_spec::AtomicOp
 impl vyre_spec::Backend
 impl vyre_spec::BackendAvailability for vyre_spec::BackendAvailabilityPredicate
@@ -76,45 +71,44 @@ impl vyre_spec::Category
 impl vyre_spec::CollectiveOp
 impl vyre_spec::CombineKind
 impl vyre_spec::CommGroup
+impl vyre_spec::CompatibilityDisposition
+impl vyre_spec::CompatibilityMatrix
 impl vyre_spec::DataType
 impl vyre_spec::EngineInvariant
+impl vyre_spec::ExtensionAtomicOpId
+impl vyre_spec::ExtensionBinOpId
+impl vyre_spec::ExtensionDataTypeId
+impl vyre_spec::ExtensionIdentity
+impl vyre_spec::ExtensionNamespace
+impl vyre_spec::ExtensionRuleConditionId
+impl vyre_spec::ExtensionSchema
+impl vyre_spec::ExtensionSchemaDigest
+impl vyre_spec::ExtensionSemVer
+impl vyre_spec::ExtensionTernaryOpId
+impl vyre_spec::ExtensionUnOpId
 impl vyre_spec::IntrinsicDescriptor
 impl vyre_spec::IntrinsicLowering
 impl vyre_spec::IntrinsicTable
 impl vyre_spec::IrLevel
+impl vyre_spec::LawGuard
 impl vyre_spec::Layer
 impl vyre_spec::MetadataCategory
 impl vyre_spec::OpSignature
 impl vyre_spec::OperationContract
 impl vyre_spec::PgNodeKind
+impl vyre_spec::ProtocolDomain
+impl vyre_spec::ProtocolVersion
 impl vyre_spec::RegionLawFamily
+impl vyre_spec::SchemaDefinition
+impl vyre_spec::SchemaId
+impl vyre_spec::SchemaRegistry
 impl vyre_spec::Semiring
 impl vyre_spec::SubgroupReduceOp
 impl vyre_spec::TernaryOp
 impl vyre_spec::TypeId
 impl vyre_spec::UnOp
 impl vyre_spec::Verification
-impl vyre_spec::algebraic_law::AlgebraicLaw
-impl vyre_spec::algebraic_law::LawGuard
 impl vyre_spec::analysis::AnalysisFactRecord
-impl vyre_spec::compatibility::CompatibilityDisposition
-impl vyre_spec::compatibility::CompatibilityMatrix
-impl vyre_spec::compatibility::ProtocolDomain
-impl vyre_spec::compatibility::ProtocolVersion
-impl vyre_spec::extension::ExtensionAtomicOpId
-impl vyre_spec::extension::ExtensionBinOpId
-impl vyre_spec::extension::ExtensionDataTypeId
-impl vyre_spec::extension::ExtensionIdentity
-impl vyre_spec::extension::ExtensionNamespace
-impl vyre_spec::extension::ExtensionRuleConditionId
-impl vyre_spec::extension::ExtensionSchema
-impl vyre_spec::extension::ExtensionSchemaDigest
-impl vyre_spec::extension::ExtensionSemVer
-impl vyre_spec::extension::ExtensionTernaryOpId
-impl vyre_spec::extension::ExtensionUnOpId
-impl vyre_spec::schema_registry::SchemaDefinition
-impl vyre_spec::schema_registry::SchemaId
-impl vyre_spec::schema_registry::SchemaRegistry
 impl vyre_spec::soundness::DynamicPrimitiveSoundness
 impl vyre_spec::soundness::PrimitiveSoundness
 impl vyre_spec::soundness::Soundness
@@ -134,6 +128,8 @@ pub const fn vyre_spec::CombineKind::is_bitwise(self) -> bool
 pub const fn vyre_spec::CombineKind::law_id(self, exact: bool) -> &'static str
 pub const fn vyre_spec::CombineKind::scalar_binop(self) -> vyre_spec::BinOp
 pub const fn vyre_spec::CommGroup::as_u32(self) -> u32
+pub const fn vyre_spec::CompatibilityDisposition::is_compatible(self) -> bool
+pub const fn vyre_spec::CompatibilityMatrix::canonical() -> Self
 pub const fn vyre_spec::DataType::arithmetic_is_exact(&self) -> bool
 pub const fn vyre_spec::DataType::bit_width(&self) -> core::option::Option<usize>
 pub const fn vyre_spec::DataType::builtin_wire_tag(&self) -> core::option::Option<u8>
@@ -145,6 +141,26 @@ pub const fn vyre_spec::DataType::max_bytes(&self) -> core::option::Option<usize
 pub const fn vyre_spec::DataType::min_bytes(&self) -> usize
 pub const fn vyre_spec::DataType::size_bytes(&self) -> core::option::Option<usize>
 pub const fn vyre_spec::EngineInvariant::ordinal(&self) -> u8
+pub const fn vyre_spec::ExtensionAtomicOpId::as_u32(self) -> u32
+pub const fn vyre_spec::ExtensionAtomicOpId::from_name(name: &str) -> Self
+pub const fn vyre_spec::ExtensionAtomicOpId::is_extension(self) -> bool
+pub const fn vyre_spec::ExtensionBinOpId::as_u32(self) -> u32
+pub const fn vyre_spec::ExtensionBinOpId::from_name(name: &str) -> Self
+pub const fn vyre_spec::ExtensionBinOpId::is_extension(self) -> bool
+pub const fn vyre_spec::ExtensionDataTypeId::as_u32(self) -> u32
+pub const fn vyre_spec::ExtensionDataTypeId::from_name(name: &str) -> Self
+pub const fn vyre_spec::ExtensionDataTypeId::is_extension(self) -> bool
+pub const fn vyre_spec::ExtensionRuleConditionId::as_u32(self) -> u32
+pub const fn vyre_spec::ExtensionRuleConditionId::from_name(name: &str) -> Self
+pub const fn vyre_spec::ExtensionRuleConditionId::is_extension(self) -> bool
+pub const fn vyre_spec::ExtensionSchemaDigest::new(bytes: [u8; 32]) -> Self
+pub const fn vyre_spec::ExtensionSemVer::new(major: u32, minor: u32, patch: u32) -> Self
+pub const fn vyre_spec::ExtensionTernaryOpId::as_u32(self) -> u32
+pub const fn vyre_spec::ExtensionTernaryOpId::from_name(name: &str) -> Self
+pub const fn vyre_spec::ExtensionTernaryOpId::is_extension(self) -> bool
+pub const fn vyre_spec::ExtensionUnOpId::as_u32(self) -> u32
+pub const fn vyre_spec::ExtensionUnOpId::from_name(name: &str) -> Self
+pub const fn vyre_spec::ExtensionUnOpId::is_extension(self) -> bool
 pub const fn vyre_spec::IntrinsicDescriptor::contract(&self) -> core::option::Option<&vyre_spec::OperationContract>
 pub const fn vyre_spec::IntrinsicDescriptor::cpu_fn(&self) -> vyre_spec::CpuFn
 pub const fn vyre_spec::IntrinsicDescriptor::hardware(&self) -> &'static str
@@ -154,14 +170,20 @@ pub const fn vyre_spec::IntrinsicDescriptor::with_contract(name: &'static str, h
 pub const fn vyre_spec::IrLevel::admits_physical_policy(self) -> bool
 pub const fn vyre_spec::IrLevel::all() -> &'static [Self]
 pub const fn vyre_spec::IrLevel::name(self) -> &'static str
+pub const fn vyre_spec::LawGuard::is_unconditional(&self) -> bool
+pub const fn vyre_spec::LawGuard::name(&self) -> &'static str
 pub const fn vyre_spec::Layer::id(&self) -> &'static str
 pub const fn vyre_spec::Layer::layer_description(&self) -> &'static str
 pub const fn vyre_spec::MetadataCategory::category_id(&self) -> &'static str
 pub const fn vyre_spec::OperationContract::none() -> Self
 pub const fn vyre_spec::PgNodeKind::from_u32(value: u32) -> core::option::Option<Self>
+pub const fn vyre_spec::ProtocolDomain::as_str(self) -> &'static str
+pub const fn vyre_spec::ProtocolVersion::new(major: u32, minor: u32, patch: u32) -> Self
 pub const fn vyre_spec::RegionLawFamily::admits_value_difference(self) -> bool
 pub const fn vyre_spec::RegionLawFamily::all() -> &'static [Self]
 pub const fn vyre_spec::RegionLawFamily::name(self) -> &'static str
+pub const fn vyre_spec::SchemaId::as_str(self) -> &'static str
+pub const fn vyre_spec::SchemaRegistry::all() -> &'static [vyre_spec::SchemaDefinition]
 pub const fn vyre_spec::Semiring::identity(self) -> u32
 pub const fn vyre_spec::SubgroupReduceOp::as_str(self) -> &'static str
 pub const fn vyre_spec::SubgroupReduceOp::builtin_wire_tag(self) -> u8
@@ -170,52 +192,35 @@ pub const fn vyre_spec::SubgroupReduceOp::is_bitwise(self) -> bool
 pub const fn vyre_spec::TernaryOp::builtin_wire_tag(&self) -> core::option::Option<u8>
 pub const fn vyre_spec::TypeId::as_u32(self) -> u32
 pub const fn vyre_spec::UnOp::builtin_wire_tag(&self) -> core::option::Option<u8>
-pub const fn vyre_spec::algebraic_law::LawGuard::is_unconditional(&self) -> bool
-pub const fn vyre_spec::algebraic_law::LawGuard::name(&self) -> &'static str
 pub const fn vyre_spec::analysis::AnalysisFactRecord::validate_schema_version(&self) -> core::result::Result<(), vyre_spec::analysis::AnalysisFactCodecError>
 pub const fn vyre_spec::analysis::AnalysisFactRecord::with_aux(self, aux: u64) -> Self
 pub const fn vyre_spec::analysis::AnalysisFactRecord::with_object(self, object: u64) -> Self
 pub const fn vyre_spec::analysis::AnalysisFactRecord::with_span(self, file_id: u32, start_byte: u32, end_byte: u32) -> Self
-pub const fn vyre_spec::compatibility::CompatibilityDisposition::is_compatible(self) -> bool
-pub const fn vyre_spec::compatibility::CompatibilityMatrix::canonical() -> Self
-pub const fn vyre_spec::compatibility::ProtocolDomain::as_str(self) -> &'static str
-pub const fn vyre_spec::compatibility::ProtocolVersion::new(major: u32, minor: u32, patch: u32) -> Self
-pub const fn vyre_spec::extension::ExtensionAtomicOpId::as_u32(self) -> u32
-pub const fn vyre_spec::extension::ExtensionAtomicOpId::from_name(name: &str) -> Self
-pub const fn vyre_spec::extension::ExtensionAtomicOpId::is_extension(self) -> bool
-pub const fn vyre_spec::extension::ExtensionBinOpId::as_u32(self) -> u32
-pub const fn vyre_spec::extension::ExtensionBinOpId::from_name(name: &str) -> Self
-pub const fn vyre_spec::extension::ExtensionBinOpId::is_extension(self) -> bool
-pub const fn vyre_spec::extension::ExtensionDataTypeId::as_u32(self) -> u32
-pub const fn vyre_spec::extension::ExtensionDataTypeId::from_name(name: &str) -> Self
-pub const fn vyre_spec::extension::ExtensionDataTypeId::is_extension(self) -> bool
-pub const fn vyre_spec::extension::ExtensionRuleConditionId::as_u32(self) -> u32
-pub const fn vyre_spec::extension::ExtensionRuleConditionId::from_name(name: &str) -> Self
-pub const fn vyre_spec::extension::ExtensionRuleConditionId::is_extension(self) -> bool
-pub const fn vyre_spec::extension::ExtensionSchemaDigest::new(bytes: [u8; 32]) -> Self
-pub const fn vyre_spec::extension::ExtensionSemVer::new(major: u32, minor: u32, patch: u32) -> Self
-pub const fn vyre_spec::extension::ExtensionTernaryOpId::as_u32(self) -> u32
-pub const fn vyre_spec::extension::ExtensionTernaryOpId::from_name(name: &str) -> Self
-pub const fn vyre_spec::extension::ExtensionTernaryOpId::is_extension(self) -> bool
-pub const fn vyre_spec::extension::ExtensionUnOpId::as_u32(self) -> u32
-pub const fn vyre_spec::extension::ExtensionUnOpId::from_name(name: &str) -> Self
-pub const fn vyre_spec::extension::ExtensionUnOpId::is_extension(self) -> bool
-pub const fn vyre_spec::schema_registry::SchemaId::as_str(self) -> &'static str
-pub const fn vyre_spec::schema_registry::SchemaRegistry::all() -> &'static [vyre_spec::schema_registry::SchemaDefinition]
 pub const fn vyre_spec::soundness::PrimitiveSoundness::new(op_id: &'static str, soundness: vyre_spec::soundness::Soundness) -> Self
 pub const fn vyre_spec::soundness::PrimitiveSoundness::with_sanitizer_filter(self) -> Self
 pub const fn vyre_spec::soundness::Soundness::join(self, other: vyre_spec::soundness::Soundness) -> vyre_spec::soundness::Soundness
 pub const vyre_spec::BufferAccess::ALL: [Self; 5]
-pub const vyre_spec::CANONICAL_COMPATIBILITY_CELLS: &[vyre_spec::compatibility::CompatibilityCell]
-pub const vyre_spec::CANONICAL_SCHEMA_REGISTRY: &[vyre_spec::schema_registry::SchemaDefinition]
+pub const vyre_spec::CANONICAL_COMPATIBILITY_CELLS: &[vyre_spec::CompatibilityCell]
+pub const vyre_spec::CANONICAL_SCHEMA_REGISTRY: &[vyre_spec::SchemaDefinition]
 pub const vyre_spec::CombineKind::ALL: [Self; 7]
 pub const vyre_spec::CommGroup::WORLD: Self
 pub const vyre_spec::DataType::QUANTIZED_STORAGE: [Self; 9]
 pub const vyre_spec::DataType::SCALAR_LEAVES: [Self; 22]
+pub const vyre_spec::ExtensionAtomicOpId::EXTENSION_RANGE_MASK: u32
+pub const vyre_spec::ExtensionBinOpId::EXTENSION_RANGE_MASK: u32
+pub const vyre_spec::ExtensionDataTypeId::EXTENSION_RANGE_MASK: u32
+pub const vyre_spec::ExtensionRuleConditionId::EXTENSION_RANGE_MASK: u32
+pub const vyre_spec::ExtensionTernaryOpId::EXTENSION_RANGE_MASK: u32
+pub const vyre_spec::ExtensionUnOpId::EXTENSION_RANGE_MASK: u32
 pub const vyre_spec::FP4_DECODE_TABLE: [f32; 16]
 pub const vyre_spec::I4_DECODE_TABLE: [i32; 16]
 pub const vyre_spec::NF4_QUANTILE_TABLE: [f32; 16]
 pub const vyre_spec::NUMERIC_SEMANTICS_SCHEMA_VERSION: u32
+pub const vyre_spec::ProtocolDomain::ALL: &'static [Self]
+pub const vyre_spec::ProtocolVersion::V1_0_0: Self
+pub const vyre_spec::ProtocolVersion::V1_1_0: Self
+pub const vyre_spec::ProtocolVersion::V2_0_0: Self
+pub const vyre_spec::SchemaId::ALL: &'static [Self]
 pub const vyre_spec::SubgroupReduceOp::ALL: [Self; 7]
 pub const vyre_spec::analysis::ANALYSIS_FACT_SCHEMA_VERSION: u16
 pub const vyre_spec::c11_expr_token::TOK_EOF: u32
@@ -395,17 +400,6 @@ pub const vyre_spec::c11_token::TOK_VOID: u32
 pub const vyre_spec::c11_token::TOK_VOLATILE: u32
 pub const vyre_spec::c11_token::TOK_WHILE: u32
 pub const vyre_spec::c11_token::TOK_WHITESPACE: u32
-pub const vyre_spec::compatibility::CANONICAL_COMPATIBILITY_CELLS: &[vyre_spec::compatibility::CompatibilityCell]
-pub const vyre_spec::compatibility::ProtocolDomain::ALL: &'static [Self]
-pub const vyre_spec::compatibility::ProtocolVersion::V1_0_0: Self
-pub const vyre_spec::compatibility::ProtocolVersion::V1_1_0: Self
-pub const vyre_spec::compatibility::ProtocolVersion::V2_0_0: Self
-pub const vyre_spec::extension::ExtensionAtomicOpId::EXTENSION_RANGE_MASK: u32
-pub const vyre_spec::extension::ExtensionBinOpId::EXTENSION_RANGE_MASK: u32
-pub const vyre_spec::extension::ExtensionDataTypeId::EXTENSION_RANGE_MASK: u32
-pub const vyre_spec::extension::ExtensionRuleConditionId::EXTENSION_RANGE_MASK: u32
-pub const vyre_spec::extension::ExtensionTernaryOpId::EXTENSION_RANGE_MASK: u32
-pub const vyre_spec::extension::ExtensionUnOpId::EXTENSION_RANGE_MASK: u32
 pub const vyre_spec::go_token::TOK_ARROW: u32
 pub const vyre_spec::go_token::TOK_ASSIGN: u32
 pub const vyre_spec::go_token::TOK_COLON: u32
@@ -452,8 +446,6 @@ pub const vyre_spec::python_token::TOK_RPAREN: u32
 pub const vyre_spec::python_token::TOK_STAR: u32
 pub const vyre_spec::python_token::TOK_STRING: u32
 pub const vyre_spec::python_token::TOK_WITH: u32
-pub const vyre_spec::schema_registry::CANONICAL_SCHEMA_REGISTRY: &[vyre_spec::schema_registry::SchemaDefinition]
-pub const vyre_spec::schema_registry::SchemaId::ALL: &'static [Self]
 pub enum vyre_spec::BinOpResult
 pub enum vyre_spec::CombineKind
 pub enum vyre_spec::DefaultsPolicy
@@ -475,13 +467,13 @@ pub enum vyre_spec::SignedZeroBehavior
 pub enum vyre_spec::SubnormalBehavior
 pub enum vyre_spec::analysis::AnalysisFactCodecError
 pub enum vyre_spec::analysis::AnalysisFactKind
-pub enum vyre_spec::extension::ExtensionFieldType
-pub enum vyre_spec::extension::ExtensionOperandKind
-pub enum vyre_spec::extension::ExtensionShapeRule
-pub enum vyre_spec::schema_registry::DefaultsPolicy
 pub enum vyre_spec::soundness::PrecisionContract
 pub enum vyre_spec::soundness::Soundness
 pub fn F::available(&self, op: &str) -> bool
+pub fn vyre_spec::AlgebraicLaw::eq(&self, other: &Self) -> bool
+pub fn vyre_spec::AlgebraicLaw::is_binary(&self) -> bool
+pub fn vyre_spec::AlgebraicLaw::is_unary(&self) -> bool
+pub fn vyre_spec::AlgebraicLaw::name(&self) -> &str
 pub fn vyre_spec::Backend::from(id: &str) -> Self
 pub fn vyre_spec::Backend::from(id: vyre_spec::BackendId) -> Self
 pub fn vyre_spec::Backend::id(&self) -> &str
@@ -506,34 +498,65 @@ pub fn vyre_spec::Category::eq(&self, other: &Self) -> bool
 pub fn vyre_spec::Category::is_unclassified(&self) -> bool
 pub fn vyre_spec::Category::unclassified() -> Self
 pub fn vyre_spec::CollectiveOp::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_spec::CompatibilityMatrix::check(&self, domain: vyre_spec::ProtocolDomain, producer: vyre_spec::ProtocolVersion, consumer: vyre_spec::ProtocolVersion) -> vyre_spec::CompatibilityDisposition
+pub fn vyre_spec::CompatibilityMatrix::negotiate(&self, domain: vyre_spec::ProtocolDomain, offered: &[vyre_spec::ProtocolVersion], supported: &[vyre_spec::ProtocolVersion]) -> core::result::Result<vyre_spec::NegotiatedContract, vyre_spec::NegotiationError>
 pub fn vyre_spec::DataType::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_spec::DataType::packed_size_bytes(&self, element_count: usize) -> core::result::Result<core::option::Option<usize>, alloc::string::String>
 pub fn vyre_spec::DataType::validate_layout(&self) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_spec::EngineInvariant::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_spec::EngineInvariant::iter() -> impl core::iter::traits::iterator::Iterator<Item = Self>
+pub fn vyre_spec::ExtensionAtomicOp::display_name(&self) -> &'static str
+pub fn vyre_spec::ExtensionAtomicOp::id(&self) -> vyre_spec::ExtensionAtomicOpId
+pub fn vyre_spec::ExtensionBinOp::display_name(&self) -> &'static str
+pub fn vyre_spec::ExtensionBinOp::eval_u32(&self, _a: u32, _b: u32) -> core::option::Option<u32>
+pub fn vyre_spec::ExtensionBinOp::id(&self) -> vyre_spec::ExtensionBinOpId
+pub fn vyre_spec::ExtensionDataType::display_name(&self) -> &'static str
+pub fn vyre_spec::ExtensionDataType::id(&self) -> vyre_spec::ExtensionDataTypeId
+pub fn vyre_spec::ExtensionDataType::is_float_family(&self) -> bool
+pub fn vyre_spec::ExtensionDataType::is_host_shareable(&self) -> bool
+pub fn vyre_spec::ExtensionDataType::max_bytes(&self) -> core::option::Option<usize>
+pub fn vyre_spec::ExtensionDataType::min_bytes(&self) -> usize
+pub fn vyre_spec::ExtensionDataType::size_bytes(&self) -> core::option::Option<usize>
+pub fn vyre_spec::ExtensionIdentity::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_spec::ExtensionIdentity::legacy_fnv1a_hash(&self) -> u32
+pub fn vyre_spec::ExtensionIdentity::new(namespace: vyre_spec::ExtensionNamespace, version: vyre_spec::ExtensionSemVer, schema_digest: vyre_spec::ExtensionSchemaDigest) -> Self
+pub fn vyre_spec::ExtensionIdentity::to_canonical_string(&self) -> alloc::string::String
+pub fn vyre_spec::ExtensionNamespace::as_str(&self) -> &str
+pub fn vyre_spec::ExtensionNamespace::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_spec::ExtensionNamespace::new(namespace: impl core::convert::Into<alloc::string::String>) -> core::result::Result<Self, &'static str>
+pub fn vyre_spec::ExtensionNumericalContract::default() -> Self
+pub fn vyre_spec::ExtensionSchema::compute_digest(namespace: &str, version: &vyre_spec::ExtensionSemVer, fields: &[vyre_spec::ExtensionField], operands: &[vyre_spec::ExtensionOperand], result_types: &[vyre_spec::DataType]) -> vyre_spec::ExtensionSchemaDigest
+pub fn vyre_spec::ExtensionSchemaDigest::from_bytes(bytes: &[u8]) -> Self
+pub fn vyre_spec::ExtensionSchemaDigest::to_hex(&self) -> alloc::string::String
+pub fn vyre_spec::ExtensionSemVer::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_spec::ExtensionTernaryOp::display_name(&self) -> &'static str
+pub fn vyre_spec::ExtensionTernaryOp::id(&self) -> vyre_spec::ExtensionTernaryOpId
 pub fn vyre_spec::ExtensionUnOp::display_name(&self) -> &'static str
 pub fn vyre_spec::ExtensionUnOp::eval_u32(&self, _a: u32) -> core::option::Option<u32>
-pub fn vyre_spec::ExtensionUnOp::id(&self) -> vyre_spec::extension::ExtensionUnOpId
+pub fn vyre_spec::ExtensionUnOp::id(&self) -> vyre_spec::ExtensionUnOpId
 pub fn vyre_spec::IntrinsicLowering::new(backend: impl core::convert::Into<vyre_spec::BackendId>, name: &'static str) -> Self
 pub fn vyre_spec::IntrinsicTable::has_backend(&self, backend: &vyre_spec::BackendId) -> bool
 pub fn vyre_spec::IntrinsicTable::missing_backends<'a>(&'a self, required: &'a [vyre_spec::BackendId]) -> impl core::iter::traits::iterator::Iterator<Item = &'a str> + 'a
 pub fn vyre_spec::Invariant::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_spec::LawGuard::default() -> Self
+pub fn vyre_spec::NegotiationError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_spec::OpSignature::min_input_bytes(&self) -> usize
 pub fn vyre_spec::OperationContract::default() -> Self
+pub fn vyre_spec::ProtocolDomain::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_spec::ProtocolVersion::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_spec::ProtocolVersion::parse(s: &str) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_spec::QuantizationScale::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_spec::QuantizationZeroPoint::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_spec::RegionLawFamily::from_name(name: &str) -> core::option::Option<Self>
+pub fn vyre_spec::SchemaDefinition::validate_invariants(&self) -> bool
+pub fn vyre_spec::SchemaId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_spec::SchemaRegistry::lookup(id: vyre_spec::SchemaId) -> core::option::Option<&'static vyre_spec::SchemaDefinition>
 pub fn vyre_spec::SubgroupReduceOp::combine_f32(self, acc: f32, lane: f32) -> core::option::Option<f32>
 pub fn vyre_spec::SubgroupReduceOp::f32_identity(self) -> core::option::Option<f32>
 pub fn vyre_spec::SubgroupReduceOp::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_spec::SubgroupReduceOp::reduce_u32(self, lanes: impl core::iter::traits::collect::IntoIterator<Item = u32>) -> u32
 pub fn vyre_spec::Verification::witness_count(&self) -> core::option::Option<u64>
-pub fn vyre_spec::algebraic_law::AlgebraicLaw::eq(&self, other: &Self) -> bool
-pub fn vyre_spec::algebraic_law::AlgebraicLaw::is_binary(&self) -> bool
-pub fn vyre_spec::algebraic_law::AlgebraicLaw::is_unary(&self) -> bool
-pub fn vyre_spec::algebraic_law::AlgebraicLaw::name(&self) -> &str
-pub fn vyre_spec::algebraic_law::LawGuard::default() -> Self
-pub fn vyre_spec::all_algebraic_laws() -> &'static [vyre_spec::algebraic_law::AlgebraicLaw]
+pub fn vyre_spec::all_algebraic_laws() -> &'static [vyre_spec::AlgebraicLaw]
 pub fn vyre_spec::analysis::AnalysisFactCodecError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_spec::analysis::AnalysisFactRecord::decode_json(bytes: &[u8]) -> core::result::Result<Self, vyre_spec::analysis::AnalysisFactCodecError>
 pub fn vyre_spec::analysis::AnalysisFactRecord::encode_json(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_spec::analysis::AnalysisFactCodecError>
@@ -542,44 +565,9 @@ pub fn vyre_spec::by_category(category: vyre_spec::InvariantCategory) -> impl co
 pub fn vyre_spec::by_id(id: vyre_spec::InvariantId) -> core::option::Option<&'static vyre_spec::Invariant>
 pub fn vyre_spec::c11_token::is_c_lexer_error_token(token: u32) -> bool
 pub fn vyre_spec::catalog_is_complete() -> bool
-pub fn vyre_spec::compatibility::CompatibilityMatrix::check(&self, domain: vyre_spec::compatibility::ProtocolDomain, producer: vyre_spec::compatibility::ProtocolVersion, consumer: vyre_spec::compatibility::ProtocolVersion) -> vyre_spec::compatibility::CompatibilityDisposition
-pub fn vyre_spec::compatibility::CompatibilityMatrix::negotiate(&self, domain: vyre_spec::compatibility::ProtocolDomain, offered: &[vyre_spec::compatibility::ProtocolVersion], supported: &[vyre_spec::compatibility::ProtocolVersion]) -> core::result::Result<vyre_spec::compatibility::NegotiatedContract, vyre_spec::compatibility::NegotiationError>
-pub fn vyre_spec::compatibility::NegotiationError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_spec::compatibility::ProtocolDomain::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_spec::compatibility::ProtocolVersion::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_spec::compatibility::ProtocolVersion::parse(s: &str) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_spec::dequantize_grouped_f32(storage_bytes: &[u8], storage_type: &vyre_spec::DataType, scales: &[f32], zero_points: core::option::Option<&[f32]>, group_size: usize, element_count: usize) -> core::result::Result<alloc::vec::Vec<f32>, alloc::string::String>
 pub fn vyre_spec::empty_test_family() -> &'static [vyre_spec::TestDescriptor]
 pub fn vyre_spec::expr_variants() -> &'static [&'static str]
-pub fn vyre_spec::extension::ExtensionAtomicOp::display_name(&self) -> &'static str
-pub fn vyre_spec::extension::ExtensionAtomicOp::id(&self) -> vyre_spec::extension::ExtensionAtomicOpId
-pub fn vyre_spec::extension::ExtensionBinOp::display_name(&self) -> &'static str
-pub fn vyre_spec::extension::ExtensionBinOp::eval_u32(&self, _a: u32, _b: u32) -> core::option::Option<u32>
-pub fn vyre_spec::extension::ExtensionBinOp::id(&self) -> vyre_spec::extension::ExtensionBinOpId
-pub fn vyre_spec::extension::ExtensionDataType::display_name(&self) -> &'static str
-pub fn vyre_spec::extension::ExtensionDataType::id(&self) -> vyre_spec::extension::ExtensionDataTypeId
-pub fn vyre_spec::extension::ExtensionDataType::is_float_family(&self) -> bool
-pub fn vyre_spec::extension::ExtensionDataType::is_host_shareable(&self) -> bool
-pub fn vyre_spec::extension::ExtensionDataType::max_bytes(&self) -> core::option::Option<usize>
-pub fn vyre_spec::extension::ExtensionDataType::min_bytes(&self) -> usize
-pub fn vyre_spec::extension::ExtensionDataType::size_bytes(&self) -> core::option::Option<usize>
-pub fn vyre_spec::extension::ExtensionIdentity::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_spec::extension::ExtensionIdentity::legacy_fnv1a_hash(&self) -> u32
-pub fn vyre_spec::extension::ExtensionIdentity::new(namespace: vyre_spec::extension::ExtensionNamespace, version: vyre_spec::extension::ExtensionSemVer, schema_digest: vyre_spec::extension::ExtensionSchemaDigest) -> Self
-pub fn vyre_spec::extension::ExtensionIdentity::to_canonical_string(&self) -> alloc::string::String
-pub fn vyre_spec::extension::ExtensionNamespace::as_str(&self) -> &str
-pub fn vyre_spec::extension::ExtensionNamespace::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_spec::extension::ExtensionNamespace::new(namespace: impl core::convert::Into<alloc::string::String>) -> core::result::Result<Self, &'static str>
-pub fn vyre_spec::extension::ExtensionNumericalContract::default() -> Self
-pub fn vyre_spec::extension::ExtensionSchema::compute_digest(namespace: &str, version: &vyre_spec::extension::ExtensionSemVer, fields: &[vyre_spec::extension::ExtensionField], operands: &[vyre_spec::extension::ExtensionOperand], result_types: &[vyre_spec::DataType]) -> vyre_spec::extension::ExtensionSchemaDigest
-pub fn vyre_spec::extension::ExtensionSchemaDigest::from_bytes(bytes: &[u8]) -> Self
-pub fn vyre_spec::extension::ExtensionSchemaDigest::to_hex(&self) -> alloc::string::String
-pub fn vyre_spec::extension::ExtensionSemVer::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_spec::extension::ExtensionTernaryOp::display_name(&self) -> &'static str
-pub fn vyre_spec::extension::ExtensionTernaryOp::id(&self) -> vyre_spec::extension::ExtensionTernaryOpId
-pub fn vyre_spec::extension::ExtensionUnOp::display_name(&self) -> &'static str
-pub fn vyre_spec::extension::ExtensionUnOp::eval_u32(&self, _a: u32) -> core::option::Option<u32>
-pub fn vyre_spec::extension::ExtensionUnOp::id(&self) -> vyre_spec::extension::ExtensionUnOpId
 pub fn vyre_spec::f32_to_f8e4m3(val: f32) -> u8
 pub fn vyre_spec::f32_to_f8e5m2(val: f32) -> u8
 pub fn vyre_spec::f32_to_fp4(val: f32) -> u8
@@ -595,9 +583,6 @@ pub fn vyre_spec::invariants() -> &'static [vyre_spec::Invariant]
 pub fn vyre_spec::law_catalog() -> &'static [&'static str]
 pub fn vyre_spec::nf4_to_f32(nibble: u8) -> f32
 pub fn vyre_spec::numeric_semantics_for(dtype: &vyre_spec::DataType) -> vyre_spec::NumericSemantics
-pub fn vyre_spec::schema_registry::SchemaDefinition::validate_invariants(&self) -> bool
-pub fn vyre_spec::schema_registry::SchemaId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_spec::schema_registry::SchemaRegistry::lookup(id: vyre_spec::schema_registry::SchemaId) -> core::option::Option<&'static vyre_spec::schema_registry::SchemaDefinition>
 pub fn vyre_spec::soundness::DynamicPrimitiveSoundness::new(op_id: impl core::convert::Into<alloc::string::String>, soundness: vyre_spec::soundness::Soundness) -> Self
 pub fn vyre_spec::soundness::DynamicPrimitiveSoundness::with_sanitizer_filter(self) -> Self
 pub fn vyre_spec::soundness::SoundnessTagged::soundness(&self) -> vyre_spec::soundness::Soundness
@@ -606,15 +591,11 @@ pub fn vyre_spec::soundness::validate_dynamic_primitive(contract: vyre_spec::sou
 pub fn vyre_spec::soundness::validate_pipeline(contract: vyre_spec::soundness::PrecisionContract, primitives: &[vyre_spec::soundness::PrimitiveSoundness]) -> core::result::Result<vyre_spec::soundness::Soundness, vyre_spec::soundness::SoundnessViolation>
 pub fn vyre_spec::soundness::validate_primitive(contract: vyre_spec::soundness::PrecisionContract, primitive: vyre_spec::soundness::PrimitiveSoundness) -> core::result::Result<(), vyre_spec::soundness::SoundnessViolation>
 pub mod vyre_spec
-pub mod vyre_spec::algebraic_law
 pub mod vyre_spec::analysis
 pub mod vyre_spec::c11_expr_token
 pub mod vyre_spec::c11_token
-pub mod vyre_spec::compatibility
-pub mod vyre_spec::extension
 pub mod vyre_spec::go_token
 pub mod vyre_spec::python_token
-pub mod vyre_spec::schema_registry
 pub mod vyre_spec::soundness
 pub struct vyre_spec::AdversarialInput
 pub struct vyre_spec::Backend
@@ -625,6 +606,8 @@ pub struct vyre_spec::CapabilityId(pub alloc::string::String)
 pub struct vyre_spec::CommGroup(pub u32)
 pub struct vyre_spec::CompatibilityCell
 pub struct vyre_spec::CompatibilityMatrix
+pub struct vyre_spec::ExtensionAtomicOpId(pub u32)
+pub struct vyre_spec::ExtensionBinOpId(pub u32)
 pub struct vyre_spec::ExtensionDataTypeId(pub u32)
 pub struct vyre_spec::ExtensionField
 pub struct vyre_spec::ExtensionIdentity
@@ -636,6 +619,7 @@ pub struct vyre_spec::ExtensionRuleConditionId(pub u32)
 pub struct vyre_spec::ExtensionSchema
 pub struct vyre_spec::ExtensionSchemaDigest(pub [u8; 32])
 pub struct vyre_spec::ExtensionSemVer
+pub struct vyre_spec::ExtensionTernaryOpId(pub u32)
 pub struct vyre_spec::ExtensionUnOpId(pub u32)
 pub struct vyre_spec::GoldenSample
 pub struct vyre_spec::IntrinsicLowering
@@ -656,46 +640,20 @@ pub struct vyre_spec::SignatureParam
 pub struct vyre_spec::TestDescriptor
 pub struct vyre_spec::TypeId(pub u32)
 pub struct vyre_spec::analysis::AnalysisFactRecord
-pub struct vyre_spec::compatibility::CompatibilityCell
-pub struct vyre_spec::compatibility::CompatibilityMatrix
-pub struct vyre_spec::compatibility::NegotiatedContract
-pub struct vyre_spec::compatibility::NegotiationError
-pub struct vyre_spec::compatibility::ProtocolVersion
-pub struct vyre_spec::extension::ExtensionAtomicOpId(pub u32)
-pub struct vyre_spec::extension::ExtensionBinOpId(pub u32)
-pub struct vyre_spec::extension::ExtensionDataTypeId(pub u32)
-pub struct vyre_spec::extension::ExtensionField
-pub struct vyre_spec::extension::ExtensionIdentity
-pub struct vyre_spec::extension::ExtensionNamespace(pub alloc::string::String)
-pub struct vyre_spec::extension::ExtensionNumericalContract
-pub struct vyre_spec::extension::ExtensionOperand
-pub struct vyre_spec::extension::ExtensionResourceBounds
-pub struct vyre_spec::extension::ExtensionRuleConditionId(pub u32)
-pub struct vyre_spec::extension::ExtensionSchema
-pub struct vyre_spec::extension::ExtensionSchemaDigest(pub [u8; 32])
-pub struct vyre_spec::extension::ExtensionSemVer
-pub struct vyre_spec::extension::ExtensionTernaryOpId(pub u32)
-pub struct vyre_spec::extension::ExtensionUnOpId(pub u32)
-pub struct vyre_spec::schema_registry::CanonicalField
-pub struct vyre_spec::schema_registry::SchemaBounds
-pub struct vyre_spec::schema_registry::SchemaDefinition
-pub struct vyre_spec::schema_registry::SchemaRegistry
 pub struct vyre_spec::soundness::DynamicPrimitiveSoundness
 pub struct vyre_spec::soundness::DynamicSoundnessViolation
 pub struct vyre_spec::soundness::PrimitiveSoundness
 pub struct vyre_spec::soundness::SoundnessViolation
 pub trait vyre_spec::BackendAvailability: core::marker::Send + core::marker::Sync
+pub trait vyre_spec::ExtensionAtomicOp: core::marker::Send + core::marker::Sync + core::fmt::Debug + 'static
+pub trait vyre_spec::ExtensionBinOp: core::marker::Send + core::marker::Sync + core::fmt::Debug + 'static
+pub trait vyre_spec::ExtensionDataType: core::marker::Send + core::marker::Sync + core::fmt::Debug + 'static
+pub trait vyre_spec::ExtensionTernaryOp: core::marker::Send + core::marker::Sync + core::fmt::Debug + 'static
 pub trait vyre_spec::ExtensionUnOp: core::marker::Send + core::marker::Sync + core::fmt::Debug + 'static
-pub trait vyre_spec::extension::ExtensionAtomicOp: core::marker::Send + core::marker::Sync + core::fmt::Debug + 'static
-pub trait vyre_spec::extension::ExtensionBinOp: core::marker::Send + core::marker::Sync + core::fmt::Debug + 'static
-pub trait vyre_spec::extension::ExtensionDataType: core::marker::Send + core::marker::Sync + core::fmt::Debug + 'static
-pub trait vyre_spec::extension::ExtensionTernaryOp: core::marker::Send + core::marker::Sync + core::fmt::Debug + 'static
-pub trait vyre_spec::extension::ExtensionUnOp: core::marker::Send + core::marker::Sync + core::fmt::Debug + 'static
 pub trait vyre_spec::soundness::SoundnessTagged
 pub type vyre_spec::CpuFn = fn(input: &[u8], output: &mut alloc::vec::Vec<u8>)
 pub type vyre_spec::InvariantId = vyre_spec::EngineInvariant
 pub type vyre_spec::LawCheckFn = fn(fn(&[u8]) -> alloc::vec::Vec<u8>, &[u32]) -> bool
-pub type vyre_spec::algebraic_law::LawCheckFn = fn(fn(&[u8]) -> alloc::vec::Vec<u8>, &[u32]) -> bool
 pub vyre_spec::AdversarialInput::input: &'static [u8]
 pub vyre_spec::AdversarialInput::reason: &'static str
 pub vyre_spec::AlgebraicLaw::Absorbing
@@ -712,7 +670,7 @@ pub vyre_spec::AlgebraicLaw::Complement::complement_op: &'static str
 pub vyre_spec::AlgebraicLaw::Complement::universe: u32
 pub vyre_spec::AlgebraicLaw::Custom
 pub vyre_spec::AlgebraicLaw::Custom::arity: usize
-pub vyre_spec::AlgebraicLaw::Custom::check: vyre_spec::algebraic_law::LawCheckFn
+pub vyre_spec::AlgebraicLaw::Custom::check: vyre_spec::LawCheckFn
 pub vyre_spec::AlgebraicLaw::Custom::description: &'static str
 pub vyre_spec::AlgebraicLaw::Custom::name: &'static str
 pub vyre_spec::AlgebraicLaw::DeMorgan
@@ -756,7 +714,7 @@ pub vyre_spec::AtomicOp::FetchNand
 pub vyre_spec::AtomicOp::LruUpdate
 pub vyre_spec::AtomicOp::Max
 pub vyre_spec::AtomicOp::Min
-pub vyre_spec::AtomicOp::Opaque(vyre_spec::extension::ExtensionAtomicOpId)
+pub vyre_spec::AtomicOp::Opaque(vyre_spec::ExtensionAtomicOpId)
 pub vyre_spec::AtomicOp::Or
 pub vyre_spec::AtomicOp::Xor
 pub vyre_spec::BinOp::AbsDiff
@@ -778,7 +736,7 @@ pub vyre_spec::BinOp::Mod
 pub vyre_spec::BinOp::Mul
 pub vyre_spec::BinOp::MulHigh
 pub vyre_spec::BinOp::Ne
-pub vyre_spec::BinOp::Opaque(vyre_spec::extension::ExtensionBinOpId)
+pub vyre_spec::BinOp::Opaque(vyre_spec::ExtensionBinOpId)
 pub vyre_spec::BinOp::Or
 pub vyre_spec::BinOp::RotateLeft
 pub vyre_spec::BinOp::RotateRight
@@ -802,7 +760,7 @@ pub vyre_spec::BufferAccess::ReadWrite
 pub vyre_spec::BufferAccess::Uniform
 pub vyre_spec::BufferAccess::Workgroup
 pub vyre_spec::BufferAccess::WriteOnly
-pub vyre_spec::CanonicalField::field_type: vyre_spec::schema_registry::FieldType
+pub vyre_spec::CanonicalField::field_type: vyre_spec::FieldType
 pub vyre_spec::CanonicalField::is_identity: bool
 pub vyre_spec::CanonicalField::name: &'static str
 pub vyre_spec::CanonicalField::number: u32
@@ -825,16 +783,16 @@ pub vyre_spec::CombineKind::Min
 pub vyre_spec::CombineKind::Mul
 pub vyre_spec::CombineKind::Or
 pub vyre_spec::CombineKind::Xor
-pub vyre_spec::CompatibilityCell::consumer: vyre_spec::compatibility::ProtocolVersion
-pub vyre_spec::CompatibilityCell::disposition: vyre_spec::compatibility::CompatibilityDisposition
-pub vyre_spec::CompatibilityCell::domain: vyre_spec::compatibility::ProtocolDomain
-pub vyre_spec::CompatibilityCell::producer: vyre_spec::compatibility::ProtocolVersion
+pub vyre_spec::CompatibilityCell::consumer: vyre_spec::ProtocolVersion
+pub vyre_spec::CompatibilityCell::disposition: vyre_spec::CompatibilityDisposition
+pub vyre_spec::CompatibilityCell::domain: vyre_spec::ProtocolDomain
+pub vyre_spec::CompatibilityCell::producer: vyre_spec::ProtocolVersion
 pub vyre_spec::CompatibilityCell::support_window: &'static str
 pub vyre_spec::CompatibilityDisposition::Deprecated
 pub vyre_spec::CompatibilityDisposition::Deprecated::upgrade_action: &'static str
 pub vyre_spec::CompatibilityDisposition::Supported
 pub vyre_spec::CompatibilityDisposition::Unsupported
-pub vyre_spec::CompatibilityDisposition::Unsupported::minimum_compatible: vyre_spec::compatibility::ProtocolVersion
+pub vyre_spec::CompatibilityDisposition::Unsupported::minimum_compatible: vyre_spec::ProtocolVersion
 pub vyre_spec::CompatibilityDisposition::Unsupported::upgrade_action: &'static str
 pub vyre_spec::Convention::V1
 pub vyre_spec::Convention::V2
@@ -863,7 +821,7 @@ pub vyre_spec::DataType::I4
 pub vyre_spec::DataType::I64
 pub vyre_spec::DataType::I8
 pub vyre_spec::DataType::NF4
-pub vyre_spec::DataType::Opaque(vyre_spec::extension::ExtensionDataTypeId)
+pub vyre_spec::DataType::Opaque(vyre_spec::ExtensionDataTypeId)
 pub vyre_spec::DataType::Quantized
 pub vyre_spec::DataType::Quantized::scale: vyre_spec::QuantizationScale
 pub vyre_spec::DataType::Quantized::storage: alloc::boxed::Box<Self>
@@ -910,7 +868,7 @@ pub vyre_spec::EngineInvariant::I7 = 7
 pub vyre_spec::EngineInvariant::I8 = 8
 pub vyre_spec::EngineInvariant::I9 = 9
 pub vyre_spec::ExtensionField::default_value: core::option::Option<alloc::string::String>
-pub vyre_spec::ExtensionField::field_type: vyre_spec::extension::ExtensionFieldType
+pub vyre_spec::ExtensionField::field_type: vyre_spec::ExtensionFieldType
 pub vyre_spec::ExtensionField::name: alloc::string::String
 pub vyre_spec::ExtensionField::required: bool
 pub vyre_spec::ExtensionFieldType::Bool
@@ -920,15 +878,15 @@ pub vyre_spec::ExtensionFieldType::I64
 pub vyre_spec::ExtensionFieldType::ShapeDims
 pub vyre_spec::ExtensionFieldType::String
 pub vyre_spec::ExtensionFieldType::U64
-pub vyre_spec::ExtensionIdentity::namespace: vyre_spec::extension::ExtensionNamespace
-pub vyre_spec::ExtensionIdentity::schema_digest: vyre_spec::extension::ExtensionSchemaDigest
-pub vyre_spec::ExtensionIdentity::version: vyre_spec::extension::ExtensionSemVer
+pub vyre_spec::ExtensionIdentity::namespace: vyre_spec::ExtensionNamespace
+pub vyre_spec::ExtensionIdentity::schema_digest: vyre_spec::ExtensionSchemaDigest
+pub vyre_spec::ExtensionIdentity::version: vyre_spec::ExtensionSemVer
 pub vyre_spec::ExtensionNumericalContract::float_family: bool
 pub vyre_spec::ExtensionNumericalContract::max_ulp_error: core::option::Option<u32>
 pub vyre_spec::ExtensionNumericalContract::preserves_monotonicity: bool
 pub vyre_spec::ExtensionNumericalContract::requires_strict_fp: bool
 pub vyre_spec::ExtensionOperand::data_type: core::option::Option<vyre_spec::DataType>
-pub vyre_spec::ExtensionOperand::kind: vyre_spec::extension::ExtensionOperandKind
+pub vyre_spec::ExtensionOperand::kind: vyre_spec::ExtensionOperandKind
 pub vyre_spec::ExtensionOperand::name: alloc::string::String
 pub vyre_spec::ExtensionOperand::optional: bool
 pub vyre_spec::ExtensionOperandKind::Buffer
@@ -939,17 +897,17 @@ pub vyre_spec::ExtensionResourceBounds::max_shared_bytes: u64
 pub vyre_spec::ExtensionResourceBounds::registers_per_invocation: u32
 pub vyre_spec::ExtensionSchema::description: alloc::string::String
 pub vyre_spec::ExtensionSchema::display_name: alloc::string::String
-pub vyre_spec::ExtensionSchema::fields: alloc::vec::Vec<vyre_spec::extension::ExtensionField>
+pub vyre_spec::ExtensionSchema::fields: alloc::vec::Vec<vyre_spec::ExtensionField>
 pub vyre_spec::ExtensionSchema::host_shareable: bool
-pub vyre_spec::ExtensionSchema::identity: vyre_spec::extension::ExtensionIdentity
+pub vyre_spec::ExtensionSchema::identity: vyre_spec::ExtensionIdentity
 pub vyre_spec::ExtensionSchema::is_divergent: bool
 pub vyre_spec::ExtensionSchema::is_pure: bool
 pub vyre_spec::ExtensionSchema::laws: alloc::vec::Vec<vyre_spec::RegionLawFamily>
-pub vyre_spec::ExtensionSchema::numerical_contract: vyre_spec::extension::ExtensionNumericalContract
-pub vyre_spec::ExtensionSchema::operands: alloc::vec::Vec<vyre_spec::extension::ExtensionOperand>
-pub vyre_spec::ExtensionSchema::resource_bounds: vyre_spec::extension::ExtensionResourceBounds
+pub vyre_spec::ExtensionSchema::numerical_contract: vyre_spec::ExtensionNumericalContract
+pub vyre_spec::ExtensionSchema::operands: alloc::vec::Vec<vyre_spec::ExtensionOperand>
+pub vyre_spec::ExtensionSchema::resource_bounds: vyre_spec::ExtensionResourceBounds
 pub vyre_spec::ExtensionSchema::result_types: alloc::vec::Vec<vyre_spec::DataType>
-pub vyre_spec::ExtensionSchema::shape_rules: alloc::vec::Vec<vyre_spec::extension::ExtensionShapeRule>
+pub vyre_spec::ExtensionSchema::shape_rules: alloc::vec::Vec<vyre_spec::ExtensionShapeRule>
 pub vyre_spec::ExtensionSchema::side_effects: vyre_spec::SideEffectClass
 pub vyre_spec::ExtensionSchema::terminates: bool
 pub vyre_spec::ExtensionSemVer::major: u32
@@ -973,7 +931,7 @@ pub vyre_spec::FieldType::F64
 pub vyre_spec::FieldType::FixedBytes(usize)
 pub vyre_spec::FieldType::I32
 pub vyre_spec::FieldType::I64
-pub vyre_spec::FieldType::List(&'static vyre_spec::schema_registry::FieldType)
+pub vyre_spec::FieldType::List(&'static vyre_spec::FieldType)
 pub vyre_spec::FieldType::U16
 pub vyre_spec::FieldType::U32
 pub vyre_spec::FieldType::U64
@@ -1034,14 +992,14 @@ pub vyre_spec::NanBehavior::CanonicalQuietNan
 pub vyre_spec::NanBehavior::DedicatedNanBitPattern
 pub vyre_spec::NanBehavior::NotApplicable
 pub vyre_spec::NanBehavior::UnsupportedOrZero
-pub vyre_spec::NegotiatedContract::client_version: vyre_spec::compatibility::ProtocolVersion
+pub vyre_spec::NegotiatedContract::client_version: vyre_spec::ProtocolVersion
 pub vyre_spec::NegotiatedContract::contract_digest: [u8; 32]
-pub vyre_spec::NegotiatedContract::disposition: vyre_spec::compatibility::CompatibilityDisposition
-pub vyre_spec::NegotiatedContract::domain: vyre_spec::compatibility::ProtocolDomain
-pub vyre_spec::NegotiatedContract::host_version: vyre_spec::compatibility::ProtocolVersion
-pub vyre_spec::NegotiationError::domain: vyre_spec::compatibility::ProtocolDomain
-pub vyre_spec::NegotiationError::offered: alloc::vec::Vec<vyre_spec::compatibility::ProtocolVersion>
-pub vyre_spec::NegotiationError::supported: alloc::vec::Vec<vyre_spec::compatibility::ProtocolVersion>
+pub vyre_spec::NegotiatedContract::disposition: vyre_spec::CompatibilityDisposition
+pub vyre_spec::NegotiatedContract::domain: vyre_spec::ProtocolDomain
+pub vyre_spec::NegotiatedContract::host_version: vyre_spec::ProtocolVersion
+pub vyre_spec::NegotiationError::domain: vyre_spec::ProtocolDomain
+pub vyre_spec::NegotiationError::offered: alloc::vec::Vec<vyre_spec::ProtocolVersion>
+pub vyre_spec::NegotiationError::supported: alloc::vec::Vec<vyre_spec::ProtocolVersion>
 pub vyre_spec::NegotiationError::upgrade_action: alloc::string::String
 pub vyre_spec::NumericFormat::Boolean
 pub vyre_spec::NumericFormat::IeeeFloat
@@ -1152,13 +1110,13 @@ pub vyre_spec::SaturationBehavior::None
 pub vyre_spec::SchemaBounds::max_bytes: usize
 pub vyre_spec::SchemaBounds::max_depth: usize
 pub vyre_spec::SchemaBounds::max_elements: usize
-pub vyre_spec::SchemaDefinition::bounds: vyre_spec::schema_registry::SchemaBounds
-pub vyre_spec::SchemaDefinition::defaults_policy: vyre_spec::schema_registry::DefaultsPolicy
+pub vyre_spec::SchemaDefinition::bounds: vyre_spec::SchemaBounds
+pub vyre_spec::SchemaDefinition::defaults_policy: vyre_spec::DefaultsPolicy
 pub vyre_spec::SchemaDefinition::domain_separator: &'static str
-pub vyre_spec::SchemaDefinition::fields: &'static [vyre_spec::schema_registry::CanonicalField]
-pub vyre_spec::SchemaDefinition::id: vyre_spec::schema_registry::SchemaId
+pub vyre_spec::SchemaDefinition::fields: &'static [vyre_spec::CanonicalField]
+pub vyre_spec::SchemaDefinition::id: vyre_spec::SchemaId
 pub vyre_spec::SchemaDefinition::owning_package: &'static str
-pub vyre_spec::SchemaDefinition::semver: vyre_spec::compatibility::ProtocolVersion
+pub vyre_spec::SchemaDefinition::semver: vyre_spec::ProtocolVersion
 pub vyre_spec::SchemaId::AnalysisFact = 11
 pub vyre_spec::SchemaId::ArtifactPayload = 2
 pub vyre_spec::SchemaId::CacheEntry = 7
@@ -1202,7 +1160,7 @@ pub vyre_spec::SubnormalBehavior::FlushedToSignedZero
 pub vyre_spec::SubnormalBehavior::PreservedIEEE
 pub vyre_spec::SubnormalBehavior::Unsupported
 pub vyre_spec::TernaryOp::Fma
-pub vyre_spec::TernaryOp::Opaque(vyre_spec::extension::ExtensionTernaryOpId)
+pub vyre_spec::TernaryOp::Opaque(vyre_spec::ExtensionTernaryOpId)
 pub vyre_spec::TernaryOp::Select
 pub vyre_spec::TestDescriptor::invariant: vyre_spec::InvariantId
 pub vyre_spec::TestDescriptor::name: &'static str
@@ -1230,7 +1188,7 @@ pub vyre_spec::UnOp::Log
 pub vyre_spec::UnOp::Log2
 pub vyre_spec::UnOp::LogicalNot
 pub vyre_spec::UnOp::Negate
-pub vyre_spec::UnOp::Opaque(vyre_spec::extension::ExtensionUnOpId)
+pub vyre_spec::UnOp::Opaque(vyre_spec::ExtensionUnOpId)
 pub vyre_spec::UnOp::Popcount
 pub vyre_spec::UnOp::Reciprocal
 pub vyre_spec::UnOp::ReverseBits
@@ -1253,63 +1211,6 @@ pub vyre_spec::Verification::ExhaustiveU8
 pub vyre_spec::Verification::WitnessedU32
 pub vyre_spec::Verification::WitnessedU32::count: u64
 pub vyre_spec::Verification::WitnessedU32::seed: u64
-pub vyre_spec::algebraic_law::AlgebraicLaw::Absorbing
-pub vyre_spec::algebraic_law::AlgebraicLaw::Absorbing::element: u32
-pub vyre_spec::algebraic_law::AlgebraicLaw::Associative
-pub vyre_spec::algebraic_law::AlgebraicLaw::Bounded
-pub vyre_spec::algebraic_law::AlgebraicLaw::Bounded::hi: u32
-pub vyre_spec::algebraic_law::AlgebraicLaw::Bounded::lo: u32
-pub vyre_spec::algebraic_law::AlgebraicLaw::CategoricalAssociative
-pub vyre_spec::algebraic_law::AlgebraicLaw::CategoricalIdentity
-pub vyre_spec::algebraic_law::AlgebraicLaw::Commutative
-pub vyre_spec::algebraic_law::AlgebraicLaw::Complement
-pub vyre_spec::algebraic_law::AlgebraicLaw::Complement::complement_op: &'static str
-pub vyre_spec::algebraic_law::AlgebraicLaw::Complement::universe: u32
-pub vyre_spec::algebraic_law::AlgebraicLaw::Custom
-pub vyre_spec::algebraic_law::AlgebraicLaw::Custom::arity: usize
-pub vyre_spec::algebraic_law::AlgebraicLaw::Custom::check: vyre_spec::algebraic_law::LawCheckFn
-pub vyre_spec::algebraic_law::AlgebraicLaw::Custom::description: &'static str
-pub vyre_spec::algebraic_law::AlgebraicLaw::Custom::name: &'static str
-pub vyre_spec::algebraic_law::AlgebraicLaw::DeMorgan
-pub vyre_spec::algebraic_law::AlgebraicLaw::DeMorgan::dual_op: &'static str
-pub vyre_spec::algebraic_law::AlgebraicLaw::DeMorgan::inner_op: &'static str
-pub vyre_spec::algebraic_law::AlgebraicLaw::DistributiveOver
-pub vyre_spec::algebraic_law::AlgebraicLaw::DistributiveOver::over_op: &'static str
-pub vyre_spec::algebraic_law::AlgebraicLaw::Idempotent
-pub vyre_spec::algebraic_law::AlgebraicLaw::Identity
-pub vyre_spec::algebraic_law::AlgebraicLaw::Identity::element: u32
-pub vyre_spec::algebraic_law::AlgebraicLaw::InverseOf
-pub vyre_spec::algebraic_law::AlgebraicLaw::InverseOf::op: &'static str
-pub vyre_spec::algebraic_law::AlgebraicLaw::Involution
-pub vyre_spec::algebraic_law::AlgebraicLaw::LatticeAbsorption
-pub vyre_spec::algebraic_law::AlgebraicLaw::LatticeAbsorption::dual_op: &'static str
-pub vyre_spec::algebraic_law::AlgebraicLaw::LeftAbsorbing
-pub vyre_spec::algebraic_law::AlgebraicLaw::LeftAbsorbing::element: u32
-pub vyre_spec::algebraic_law::AlgebraicLaw::LeftIdentity
-pub vyre_spec::algebraic_law::AlgebraicLaw::LeftIdentity::element: u32
-pub vyre_spec::algebraic_law::AlgebraicLaw::Monotone
-pub vyre_spec::algebraic_law::AlgebraicLaw::Monotonic
-pub vyre_spec::algebraic_law::AlgebraicLaw::Monotonic::direction: vyre_spec::MonotonicDirection
-pub vyre_spec::algebraic_law::AlgebraicLaw::RightAbsorbing
-pub vyre_spec::algebraic_law::AlgebraicLaw::RightAbsorbing::element: u32
-pub vyre_spec::algebraic_law::AlgebraicLaw::RightIdentity
-pub vyre_spec::algebraic_law::AlgebraicLaw::RightIdentity::element: u32
-pub vyre_spec::algebraic_law::AlgebraicLaw::SelfInverse
-pub vyre_spec::algebraic_law::AlgebraicLaw::SelfInverse::result: u32
-pub vyre_spec::algebraic_law::AlgebraicLaw::Trichotomy
-pub vyre_spec::algebraic_law::AlgebraicLaw::Trichotomy::equal_op: &'static str
-pub vyre_spec::algebraic_law::AlgebraicLaw::Trichotomy::greater_op: &'static str
-pub vyre_spec::algebraic_law::AlgebraicLaw::Trichotomy::less_op: &'static str
-pub vyre_spec::algebraic_law::AlgebraicLaw::ZeroProduct
-pub vyre_spec::algebraic_law::AlgebraicLaw::ZeroProduct::holds: bool
-pub vyre_spec::algebraic_law::LawGuard::ExactOnly
-pub vyre_spec::algebraic_law::LawGuard::FiniteOnly
-pub vyre_spec::algebraic_law::LawGuard::NonZero
-pub vyre_spec::algebraic_law::LawGuard::PureOnly
-pub vyre_spec::algebraic_law::LawGuard::Range
-pub vyre_spec::algebraic_law::LawGuard::Range::hi: i64
-pub vyre_spec::algebraic_law::LawGuard::Range::lo: i64
-pub vyre_spec::algebraic_law::LawGuard::Unconditional
 pub vyre_spec::analysis::AnalysisFactCodecError::Malformed
 pub vyre_spec::analysis::AnalysisFactCodecError::Malformed::message: alloc::string::String
 pub vyre_spec::analysis::AnalysisFactCodecError::UnsupportedVersion
@@ -1337,137 +1238,6 @@ pub vyre_spec::analysis::AnalysisFactRecord::schema_version: u16
 pub vyre_spec::analysis::AnalysisFactRecord::soundness: vyre_spec::soundness::Soundness
 pub vyre_spec::analysis::AnalysisFactRecord::start_byte: u32
 pub vyre_spec::analysis::AnalysisFactRecord::subject: u64
-pub vyre_spec::compatibility::CompatibilityCell::consumer: vyre_spec::compatibility::ProtocolVersion
-pub vyre_spec::compatibility::CompatibilityCell::disposition: vyre_spec::compatibility::CompatibilityDisposition
-pub vyre_spec::compatibility::CompatibilityCell::domain: vyre_spec::compatibility::ProtocolDomain
-pub vyre_spec::compatibility::CompatibilityCell::producer: vyre_spec::compatibility::ProtocolVersion
-pub vyre_spec::compatibility::CompatibilityCell::support_window: &'static str
-pub vyre_spec::compatibility::CompatibilityDisposition::Deprecated
-pub vyre_spec::compatibility::CompatibilityDisposition::Deprecated::upgrade_action: &'static str
-pub vyre_spec::compatibility::CompatibilityDisposition::Supported
-pub vyre_spec::compatibility::CompatibilityDisposition::Unsupported
-pub vyre_spec::compatibility::CompatibilityDisposition::Unsupported::minimum_compatible: vyre_spec::compatibility::ProtocolVersion
-pub vyre_spec::compatibility::CompatibilityDisposition::Unsupported::upgrade_action: &'static str
-pub vyre_spec::compatibility::NegotiatedContract::client_version: vyre_spec::compatibility::ProtocolVersion
-pub vyre_spec::compatibility::NegotiatedContract::contract_digest: [u8; 32]
-pub vyre_spec::compatibility::NegotiatedContract::disposition: vyre_spec::compatibility::CompatibilityDisposition
-pub vyre_spec::compatibility::NegotiatedContract::domain: vyre_spec::compatibility::ProtocolDomain
-pub vyre_spec::compatibility::NegotiatedContract::host_version: vyre_spec::compatibility::ProtocolVersion
-pub vyre_spec::compatibility::NegotiationError::domain: vyre_spec::compatibility::ProtocolDomain
-pub vyre_spec::compatibility::NegotiationError::offered: alloc::vec::Vec<vyre_spec::compatibility::ProtocolVersion>
-pub vyre_spec::compatibility::NegotiationError::supported: alloc::vec::Vec<vyre_spec::compatibility::ProtocolVersion>
-pub vyre_spec::compatibility::NegotiationError::upgrade_action: alloc::string::String
-pub vyre_spec::compatibility::ProtocolDomain::Artifact = 4
-pub vyre_spec::compatibility::ProtocolDomain::Catalog = 1
-pub vyre_spec::compatibility::ProtocolDomain::Measurement = 5
-pub vyre_spec::compatibility::ProtocolDomain::Proof = 2
-pub vyre_spec::compatibility::ProtocolDomain::PublicWire = 0
-pub vyre_spec::compatibility::ProtocolDomain::Resource = 6
-pub vyre_spec::compatibility::ProtocolDomain::RuntimeProtocol = 7
-pub vyre_spec::compatibility::ProtocolDomain::Schedule = 3
-pub vyre_spec::compatibility::ProtocolVersion::major: u32
-pub vyre_spec::compatibility::ProtocolVersion::minor: u32
-pub vyre_spec::compatibility::ProtocolVersion::patch: u32
-pub vyre_spec::extension::ExtensionField::default_value: core::option::Option<alloc::string::String>
-pub vyre_spec::extension::ExtensionField::field_type: vyre_spec::extension::ExtensionFieldType
-pub vyre_spec::extension::ExtensionField::name: alloc::string::String
-pub vyre_spec::extension::ExtensionField::required: bool
-pub vyre_spec::extension::ExtensionFieldType::Bool
-pub vyre_spec::extension::ExtensionFieldType::DataType
-pub vyre_spec::extension::ExtensionFieldType::F64
-pub vyre_spec::extension::ExtensionFieldType::I64
-pub vyre_spec::extension::ExtensionFieldType::ShapeDims
-pub vyre_spec::extension::ExtensionFieldType::String
-pub vyre_spec::extension::ExtensionFieldType::U64
-pub vyre_spec::extension::ExtensionIdentity::namespace: vyre_spec::extension::ExtensionNamespace
-pub vyre_spec::extension::ExtensionIdentity::schema_digest: vyre_spec::extension::ExtensionSchemaDigest
-pub vyre_spec::extension::ExtensionIdentity::version: vyre_spec::extension::ExtensionSemVer
-pub vyre_spec::extension::ExtensionNumericalContract::float_family: bool
-pub vyre_spec::extension::ExtensionNumericalContract::max_ulp_error: core::option::Option<u32>
-pub vyre_spec::extension::ExtensionNumericalContract::preserves_monotonicity: bool
-pub vyre_spec::extension::ExtensionNumericalContract::requires_strict_fp: bool
-pub vyre_spec::extension::ExtensionOperand::data_type: core::option::Option<vyre_spec::DataType>
-pub vyre_spec::extension::ExtensionOperand::kind: vyre_spec::extension::ExtensionOperandKind
-pub vyre_spec::extension::ExtensionOperand::name: alloc::string::String
-pub vyre_spec::extension::ExtensionOperand::optional: bool
-pub vyre_spec::extension::ExtensionOperandKind::Buffer
-pub vyre_spec::extension::ExtensionOperandKind::Region
-pub vyre_spec::extension::ExtensionOperandKind::Value
-pub vyre_spec::extension::ExtensionResourceBounds::max_private_bytes: u64
-pub vyre_spec::extension::ExtensionResourceBounds::max_shared_bytes: u64
-pub vyre_spec::extension::ExtensionResourceBounds::registers_per_invocation: u32
-pub vyre_spec::extension::ExtensionSchema::description: alloc::string::String
-pub vyre_spec::extension::ExtensionSchema::display_name: alloc::string::String
-pub vyre_spec::extension::ExtensionSchema::fields: alloc::vec::Vec<vyre_spec::extension::ExtensionField>
-pub vyre_spec::extension::ExtensionSchema::host_shareable: bool
-pub vyre_spec::extension::ExtensionSchema::identity: vyre_spec::extension::ExtensionIdentity
-pub vyre_spec::extension::ExtensionSchema::is_divergent: bool
-pub vyre_spec::extension::ExtensionSchema::is_pure: bool
-pub vyre_spec::extension::ExtensionSchema::laws: alloc::vec::Vec<vyre_spec::RegionLawFamily>
-pub vyre_spec::extension::ExtensionSchema::numerical_contract: vyre_spec::extension::ExtensionNumericalContract
-pub vyre_spec::extension::ExtensionSchema::operands: alloc::vec::Vec<vyre_spec::extension::ExtensionOperand>
-pub vyre_spec::extension::ExtensionSchema::resource_bounds: vyre_spec::extension::ExtensionResourceBounds
-pub vyre_spec::extension::ExtensionSchema::result_types: alloc::vec::Vec<vyre_spec::DataType>
-pub vyre_spec::extension::ExtensionSchema::shape_rules: alloc::vec::Vec<vyre_spec::extension::ExtensionShapeRule>
-pub vyre_spec::extension::ExtensionSchema::side_effects: vyre_spec::SideEffectClass
-pub vyre_spec::extension::ExtensionSchema::terminates: bool
-pub vyre_spec::extension::ExtensionSemVer::major: u32
-pub vyre_spec::extension::ExtensionSemVer::minor: u32
-pub vyre_spec::extension::ExtensionSemVer::patch: u32
-pub vyre_spec::extension::ExtensionShapeRule::AffineMap
-pub vyre_spec::extension::ExtensionShapeRule::AffineMap::expression: alloc::string::String
-pub vyre_spec::extension::ExtensionShapeRule::BroadcastLeading
-pub vyre_spec::extension::ExtensionShapeRule::Custom
-pub vyre_spec::extension::ExtensionShapeRule::Custom::rule: alloc::string::String
-pub vyre_spec::extension::ExtensionShapeRule::MatrixProduct
-pub vyre_spec::extension::ExtensionShapeRule::MatrixProduct::k: usize
-pub vyre_spec::extension::ExtensionShapeRule::MatrixProduct::m: usize
-pub vyre_spec::extension::ExtensionShapeRule::MatrixProduct::n: usize
-pub vyre_spec::extension::ExtensionShapeRule::PreservesShape
-pub vyre_spec::extension::ExtensionShapeRule::Reduction
-pub vyre_spec::extension::ExtensionShapeRule::Reduction::axis: usize
-pub vyre_spec::schema_registry::CanonicalField::field_type: vyre_spec::schema_registry::FieldType
-pub vyre_spec::schema_registry::CanonicalField::is_identity: bool
-pub vyre_spec::schema_registry::CanonicalField::name: &'static str
-pub vyre_spec::schema_registry::CanonicalField::number: u32
-pub vyre_spec::schema_registry::CanonicalField::required: bool
-pub vyre_spec::schema_registry::DefaultsPolicy::ExplicitDefaultOnly
-pub vyre_spec::schema_registry::DefaultsPolicy::NoDefaults
-pub vyre_spec::schema_registry::FieldType::Bool
-pub vyre_spec::schema_registry::FieldType::F32
-pub vyre_spec::schema_registry::FieldType::F64
-pub vyre_spec::schema_registry::FieldType::FixedBytes(usize)
-pub vyre_spec::schema_registry::FieldType::I32
-pub vyre_spec::schema_registry::FieldType::I64
-pub vyre_spec::schema_registry::FieldType::List(&'static vyre_spec::schema_registry::FieldType)
-pub vyre_spec::schema_registry::FieldType::U16
-pub vyre_spec::schema_registry::FieldType::U32
-pub vyre_spec::schema_registry::FieldType::U64
-pub vyre_spec::schema_registry::FieldType::U8
-pub vyre_spec::schema_registry::FieldType::Utf8String
-pub vyre_spec::schema_registry::FieldType::VarBytes
-pub vyre_spec::schema_registry::SchemaBounds::max_bytes: usize
-pub vyre_spec::schema_registry::SchemaBounds::max_depth: usize
-pub vyre_spec::schema_registry::SchemaBounds::max_elements: usize
-pub vyre_spec::schema_registry::SchemaDefinition::bounds: vyre_spec::schema_registry::SchemaBounds
-pub vyre_spec::schema_registry::SchemaDefinition::defaults_policy: vyre_spec::schema_registry::DefaultsPolicy
-pub vyre_spec::schema_registry::SchemaDefinition::domain_separator: &'static str
-pub vyre_spec::schema_registry::SchemaDefinition::fields: &'static [vyre_spec::schema_registry::CanonicalField]
-pub vyre_spec::schema_registry::SchemaDefinition::id: vyre_spec::schema_registry::SchemaId
-pub vyre_spec::schema_registry::SchemaDefinition::owning_package: &'static str
-pub vyre_spec::schema_registry::SchemaDefinition::semver: vyre_spec::compatibility::ProtocolVersion
-pub vyre_spec::schema_registry::SchemaId::AnalysisFact = 11
-pub vyre_spec::schema_registry::SchemaId::ArtifactPayload = 2
-pub vyre_spec::schema_registry::SchemaId::CacheEntry = 7
-pub vyre_spec::schema_registry::SchemaId::ConfigReceipt = 8
-pub vyre_spec::schema_registry::SchemaId::ConformanceCertificate = 1
-pub vyre_spec::schema_registry::SchemaId::ExtensionSchema = 12
-pub vyre_spec::schema_registry::SchemaId::InvariantDigest = 10
-pub vyre_spec::schema_registry::SchemaId::MeasurementRecord = 5
-pub vyre_spec::schema_registry::SchemaId::ProofReceipt = 4
-pub vyre_spec::schema_registry::SchemaId::ScheduleRecord = 3
-pub vyre_spec::schema_registry::SchemaId::TraceEvent = 6
-pub vyre_spec::schema_registry::SchemaId::WireOpMetadata = 9
 pub vyre_spec::soundness::DynamicPrimitiveSoundness::op_id: alloc::string::String
 pub vyre_spec::soundness::DynamicPrimitiveSoundness::sanitizer_filter: bool
 pub vyre_spec::soundness::DynamicPrimitiveSoundness::soundness: vyre_spec::soundness::Soundness

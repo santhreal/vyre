@@ -105,7 +105,7 @@ pub fn mask_binary_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[0], lhs);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], rhs);
     let outputs =
-        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
+        crate::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
     decode_first_output(&outputs, lhs.len(), "mask_binary_via", out)
 }
 
@@ -192,7 +192,7 @@ pub fn mask_not_via_with_scratch_into(
     ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
     let outputs =
-        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
+        crate::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
     decode_first_output(&outputs, input.len(), "mask_not_via", out)
 }
 
@@ -254,7 +254,7 @@ pub fn mask_contains_via(
     write_u32_slice_le_bytes(&mut scratch.inputs[1], &[bit_idx]);
     write_zero_bytes(&mut scratch.inputs[2], std::mem::size_of::<u32>());
     let outputs =
-        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
+        crate::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
     decode_scalar_bool(&outputs, "mask_contains_via")
 }
 
@@ -281,7 +281,7 @@ pub fn mask_test_bit_via(
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
     write_zero_bytes(&mut scratch.inputs[1], std::mem::size_of::<u32>());
     let outputs =
-        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
+        crate::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
     decode_scalar_bool(&outputs, "mask_test_bit_via")
 }
 
@@ -355,7 +355,7 @@ fn scalar_binary_predicate_via(
     write_u32_slice_le_bytes(&mut scratch.inputs[1], rhs);
     write_zero_bytes(&mut scratch.inputs[2], std::mem::size_of::<u32>());
     let outputs =
-        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
+        crate::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
     decode_scalar_bool(&outputs, context)
 }
 
@@ -379,7 +379,7 @@ fn scalar_mutate_bit_via(
     ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], target);
     let outputs =
-        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
+        crate::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
     let mut out = Vec::new();
     decode_first_output(&outputs, target.len(), context, &mut out)?;
     Ok(out)

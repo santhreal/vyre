@@ -10,7 +10,7 @@ use std::string::String;
 use core::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, RwLock};
 
-use vyre_foundation::failure_domain::{
+use vyre_foundation::{
     FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError,
 };
 

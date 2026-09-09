@@ -1,23 +1,23 @@
 //! Closed, orthogonal semantic type system (Row 102).
 //!
 //! Separates value representation (`ScalarType`, `VectorType`, `TensorType`, `RecordType`, `VariantType`),
-//! shape semantics ([`ShapeInterner`], [`ShapeId`], [`ShapeExprId`]),
-//! sparsity ([`Sparsity`]), quantization ([`QuantizationMeaning`]),
-//! resource capabilities ([`ResourceCapability`]), mutability/ownership ([`OwnershipMutability`]),
-//! lifetime/epoch ([`LifetimeEpoch`]), and numerical contracts ([`NumericalContract`])
+//! shape semantics ([`ShapeInterner`](crate::types::ShapeInterner), [`ShapeId`](crate::types::ShapeId), [`ShapeExprId`](crate::types::ShapeExprId)),
+//! sparsity ([`Sparsity`](crate::types::Sparsity)), quantization ([`QuantizationMeaning`](crate::types::QuantizationMeaning)),
+//! resource capabilities ([`ResourceCapability`](crate::types::ResourceCapability)), mutability/ownership ([`OwnershipMutability`](crate::types::OwnershipMutability)),
+//! lifetime/epoch ([`LifetimeEpoch`](crate::types::LifetimeEpoch)), and numerical contracts ([`NumericalContract`](crate::types::NumericalContract))
 //! into independent, orthogonal components.
 
-pub mod capability;
-pub mod composite;
-pub mod contract;
-pub mod lifetime;
-pub mod ownership;
-pub mod quantization;
-pub mod scalar;
-pub mod shape;
-pub mod sparsity;
-pub mod tensor;
-pub mod vector;
+pub(crate) mod capability;
+pub(crate) mod composite;
+pub(crate) mod contract;
+pub(crate) mod lifetime;
+pub(crate) mod ownership;
+pub(crate) mod quantization;
+pub(crate) mod scalar;
+pub(crate) mod shape;
+pub(crate) mod sparsity;
+pub(crate) mod tensor;
+pub(crate) mod vector;
 
 pub use capability::ResourceCapability;
 pub use composite::{RecordField, RecordType, VariantCase, VariantType};

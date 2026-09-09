@@ -15,7 +15,7 @@ Own every inventory registry link anchor, report which sources a build links, an
 ### Boundaries
 
 The `registry-link` owner maintains this `registry-link` crate at `vyre-registry-link`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
@@ -28,8 +28,8 @@ Run the checked-in behavior from `vyre-registry-link/tests/all_tests.rs`:
 
 ### Features
 
-- Manifest features: `cuda`, `default`, `device-tests`, `metal`, `operations`, `reference`, `spirv`, `wgpu`
-- Default feature members: `operations`, `cuda`, `metal`, `reference`, `spirv`, `wgpu`
+- Manifest features: `cuda`, `default`, `device-tests`, `metal`, `operations`, `spirv`, `wgpu`
+- Default feature members: `operations`, `cuda`, `metal`, `spirv`, `wgpu`
 
 ### Errors and unsupported behavior
 

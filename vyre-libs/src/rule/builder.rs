@@ -324,7 +324,7 @@ mod tests {
     use std::any::Any;
     use std::sync::Arc;
     use vyre_foundation::extension::RuleConditionExt;
-    use vyre_spec::extension::ExtensionRuleConditionId;
+    use vyre_spec::ExtensionRuleConditionId;
 
     #[derive(Debug)]
     struct TestOpaqueCondition;

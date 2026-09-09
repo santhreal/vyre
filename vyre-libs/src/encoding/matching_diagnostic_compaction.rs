@@ -163,7 +163,7 @@ pub fn sort_regions_via_with_scratch_into(
         );
     }
     let outputs =
-        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
+        crate::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
     decode_region_outputs_into(&outputs, regions.len(), "sort_regions_via", scratch, out)
 }
 

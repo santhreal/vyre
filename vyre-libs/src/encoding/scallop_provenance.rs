@@ -243,7 +243,7 @@ pub fn provenance_closure_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[2], std::mem::size_of::<u32>());
     write_u32_slice_le_bytes(&mut scratch.inputs[3], join_rules);
 
-    let output = crate::dispatch_buffers::run_single_first_output(
+    let output = crate::dispatch_buffers::execute_program_first_output(
         dispatcher,
         program,
         &scratch.inputs,

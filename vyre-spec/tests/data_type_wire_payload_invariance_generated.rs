@@ -9,7 +9,7 @@ use crate::spec_variants;
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre_spec::extension::ExtensionDataTypeId;
+use vyre_spec::ExtensionDataTypeId;
 use vyre_spec::{DataType, QuantizationScale, QuantizationZeroPoint, TypeId};
 
 use spec_variants::{QUANTIZED_STORAGE_TYPES, SCALAR_LEAF_TYPES};

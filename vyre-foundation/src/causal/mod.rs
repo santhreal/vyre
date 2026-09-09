@@ -4,12 +4,12 @@
 //! physical instructions, payload entries, resources, measurements, and diagnostics.
 //! Supports compile-time-off, sampled, and full modes with zero allocation when disabled.
 
-pub mod event;
-pub mod id;
-pub mod mode;
-pub mod phase;
-pub mod receipt;
-pub mod tracer;
+pub(crate) mod event;
+pub(crate) mod id;
+pub(crate) mod mode;
+pub(crate) mod phase;
+pub(crate) mod receipt;
+pub(crate) mod tracer;
 
 pub use event::{AlternativeSchedule, CacheHitRecord, CausalEvent, CounterfactualDecision, PruneReason};
 pub use id::{CausalSpanId, SourceSpanRef, TraceId};

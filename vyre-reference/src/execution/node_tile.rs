@@ -130,6 +130,14 @@ pub(crate) fn eval_tile_elementwise<'a>(
         input_arrays.push(elems);
         saved_inputs.push(val);
     }
+    for (input, elems) in inputs.iter().zip(&input_arrays) {
+        let n = elems.len();
+        if n == 0 || (max_len > 0 && max_len % n != 0) {
+            return Err(ReferenceError::new(format!(
+                "tile elementwise input `{input}` length {n} does not divide output length {max_len}"
+            )));
+        }
+    }
     for input in inputs {
         invocation.unbind(input.as_str());
     }
@@ -137,8 +145,10 @@ pub(crate) fn eval_tile_elementwise<'a>(
     for idx in 0..max_len {
         invocation.push_scope();
         for (i, input) in inputs.iter().enumerate() {
+            let n = input_arrays[i].len();
+            let elem_idx = if n > 0 { idx / (max_len / n) } else { 0 };
             let elem = input_arrays[i]
-                .get(idx)
+                .get(elem_idx)
                 .cloned()
                 .unwrap_or(Value::Float(0.0));
             invocation.bind(input.as_str(), elem)?;

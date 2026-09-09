@@ -226,7 +226,7 @@ pub fn matroid_solve_step_fixed_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[2], x_in_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[3], &scratch.omega);
     write_zero_bytes(&mut scratch.inputs[4], out_bytes);
-    let output = crate::dispatch_buffers::run_single_first_output(
+    let output = crate::dispatch_buffers::execute_program_first_output(
         dispatcher,
         program,
         &scratch.inputs,

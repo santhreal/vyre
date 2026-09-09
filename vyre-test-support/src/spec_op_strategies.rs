@@ -17,7 +17,7 @@ use proptest::prelude::*;
 use crate::spec_variant_tables::{
     builtin_atomic_ops, builtin_bin_ops, builtin_ternary_ops, builtin_un_ops,
 };
-use vyre_spec::extension::{
+use vyre_spec::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionTernaryOpId, ExtensionUnOpId,
 };
 use vyre_spec::{AtomicOp, BinOp, TernaryOp, UnOp};

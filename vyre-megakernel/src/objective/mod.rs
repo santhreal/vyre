@@ -19,7 +19,7 @@ mod metric;
 mod portfolio;
 mod sequence;
 mod workload;
-pub mod real_time;
+mod real_time;
 
 use serde::{Deserialize, Serialize};
 

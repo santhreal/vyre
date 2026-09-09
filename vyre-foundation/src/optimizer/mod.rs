@@ -34,7 +34,7 @@ fn is_invocation_id_expr(expr: &crate::ir::Expr) -> bool {
 /// Deterministic semantic optimizer corpus used by release evidence.
 pub mod corpus;
 /// Deterministic compilation budget bounds and accounting.
-pub mod compile_budget;
+pub(crate) mod compile_budget;
 pub use compile_budget::CompileBudget;
 /// Cost certificates for cost-monotone-down pass enforcement.
 /// `CostCertificate::for_program` reads cached `ProgramStats`; the optimizer

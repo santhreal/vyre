@@ -381,12 +381,22 @@ pub(crate) fn step_nodes_frame<'a>(
                 input_arrays.push(elems);
                 invocation.locals.remove(input.as_str());
             }
+            for (input, elems) in inputs.iter().zip(&input_arrays) {
+                let n = elems.len();
+                if n == 0 || (max_len > 0 && max_len % n != 0) {
+                    return Err(ReferenceError::new(format!(
+                        "tile elementwise input `{input}` length {n} does not divide output length {max_len}"
+                    )));
+                }
+            }
             let mut out_elems = Vec::with_capacity(max_len);
             for idx in 0..max_len {
                 invocation.locals.push_scope();
                 for (i, input) in inputs.iter().enumerate() {
+                    let n = input_arrays[i].len();
+                    let elem_idx = if n > 0 { idx / (max_len / n) } else { 0 };
                     let elem = input_arrays[i]
-                        .get(idx)
+                        .get(elem_idx)
                         .cloned()
                         .unwrap_or(Value::Float(0.0));
                     invocation.locals.bind(input.as_str(), elem)?;

@@ -34,11 +34,11 @@ pub use geometry::{
 /// Typed region-based SSA intermediate representation (Row 103).
 pub mod region_ssa;
 /// Canonical binary codec and verification for schema registry records (Row 121).
-pub mod canonical_codec;
+mod canonical_codec;
 /// Explicit failure domains and recovery classes (Row 122).
-pub mod failure_domain;
+mod failure_domain;
 /// Typed configuration schema and resolution (Row 123).
-pub mod config_schema;
+mod config_schema;
 
 pub mod ir {
     //! The vyre intermediate representation.
@@ -113,9 +113,6 @@ pub mod ir {
         BarrierParticipation, CollectiveGroup, ExecutionScope, FailureCancellationBehavior,
         FenceSemantics, MemoryOrdering, MemoryScope, StorageDomain,
     };
-    pub use crate::region_ssa;
-    pub use crate::types::*;
-    pub use crate::verifier::*;
 }
 
 /// CPU reference registration contract.
@@ -127,7 +124,7 @@ pub mod loop_bounds;
 /// Domain-neutral byte-range result types.
 pub mod match_result;
 /// Substrate-neutral memory ordering.
-pub mod memory_model;
+mod memory_model;
 /// Closed orthogonal semantic type system (Row 102).
 pub mod types;
 /// Single declarative verifier and certified compilation gate (Row 104).

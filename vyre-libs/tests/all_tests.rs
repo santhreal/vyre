@@ -367,6 +367,11 @@ pub mod functor_apply_ir_parity_proptest;
 #[path = "fuse_decode_scan_error.rs"]
 pub mod fuse_decode_scan_error;
 
+/// Integration tests from `tests/fused_tile_attention_lowering.rs`.
+#[cfg(feature = "nn-attention")]
+#[path = "fused_tile_attention_lowering.rs"]
+pub mod fused_tile_attention_lowering;
+
 /// Integration tests from `tests/fuzz_target_inventory.rs`.
 #[path = "fuzz_target_inventory.rs"]
 pub mod fuzz_target_inventory;

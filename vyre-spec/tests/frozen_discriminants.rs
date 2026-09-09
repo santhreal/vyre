@@ -4,7 +4,7 @@
 //! must reject invalid discriminants, preserve high-bit invariants for
 //! extension ids, and return conservative sentinels for unbounded types.
 
-use vyre_spec::extension::{
+use vyre_spec::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionTernaryOpId,
     ExtensionUnOpId,
 };

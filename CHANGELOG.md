@@ -2028,6 +2028,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   stay behind cpu-parity rather than behind text, so a default build that
   reaches text through decode carries no CPU classifier, and the integration
   targets that compare against them name the feature they need.
+- Every published item is reachable at exactly one path. A submodule that
+  exists because a file was split is crate-private and its owning module
+  re-exports what it holds, so `vyre_foundation::types::shape::ShapeInterner`,
+  `vyre_spec::extension::ExtensionSchema`,
+  `vyre_driver::semantic_resource_abi::ImageFormat`,
+  `vyre_megakernel::real_time::RealTimeObjective` and the rest are now written
+  one way. `vyre_spec` also publishes the four extension traits and their id
+  types at the crate root, and `vyre_foundation::region_ssa` publishes
+  `DominanceVerifier`.
 - Thirty-two structural gates that read the checkout are declared in the
   structural-gate registry with the property each asserts and why no running
   program witnesses it, covering the transform classification table, the
@@ -6610,6 +6619,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   (256 invocations), validates explicit block lane powers of two, and
   propagates lowering widths uniformly across flag and scan passes so fusion
   never fails with workgroup geometry mismatches.
+- Data-derived loop bounds across vyre-libs compositions are clamped by the
+  extents of the indexed buffers so out-of-contract trip counts terminate in
+  bounded time while preserving in-contract outputs.
 - The dead_buffer_elim pass deleted every store into a plain WriteOnly storage
   buffer. It rooted liveness in is_output(), the declaration flag, while
   BufferDecl::is_backend_allocated_output is the single cross-backend
@@ -8446,6 +8458,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   dispatches and the recorded wgpu conformance run observes all seven passing.
   `BackendSupport::grid_sync` is the disjunction of the two routes for exactly
   this reason. The generator no longer predicts a device answer it cannot see.
+- The crate ownership registry records the reference backend edge nowhere,
+  matching the manifests that dropped it when the cpu-ref registration was
+  removed, and records the `vyre-conform` to `vyre-driver-spirv` and
+  `vyre-emit-spirv` to `vyre-foundation` edges the manifests declare.
 - The crate ownership registry records the feature selection each dependency
   edge is built with. The `xtask-registry` to `vyre-libs` row named no features
   while the edge enables `full` and `matching-regex`, so the derived crate
@@ -8553,6 +8569,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   needed a solver on PATH and discharges all ten shipped rewrite obligations as
   unsatisfiable. A gate that cannot run records no finding, and a baseline that
   stores its zero is a baseline that reports a defect as an achievement.
+- Tile IR lowering decomposes tile operations into neutral register SSA values
+  matching the reference oracle, taking MatrixMma only for supported fragment
+  shapes and supporting broadcast elementwise.
 - The gate crates resolve the checkout they report on from the working
   directory at run time, through `structure_gate::workspace_root`, and no
   checkout-identifying variable is declared in the cargo config. A

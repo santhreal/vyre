@@ -126,7 +126,7 @@ pub fn semiring_gemm_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[1], b);
 
     let outputs =
-        crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
+        crate::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
     let [c_out] = match outputs.as_slice() {
         [c_out] => [c_out],
         _ => {
@@ -588,7 +588,7 @@ pub fn scc_components_via_substrate_with_scratch_into(
         write_u32_slice_le_bytes(&mut scratch.inputs[1], &scratch.backward);
         write_u32_slice_le_bytes(&mut scratch.inputs[2], components);
         let outputs =
-            crate::dispatch_buffers::run_single(dispatcher, program, &scratch.inputs, policy)?;
+            crate::dispatch_buffers::execute_program(dispatcher, program, &scratch.inputs, policy)?;
         let [comp_out] = match outputs.as_slice() {
             [comp_out] => [comp_out],
             _ => {

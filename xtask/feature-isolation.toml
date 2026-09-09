@@ -693,11 +693,11 @@ feature = "(default)"
 
 [[pair]]
 member = "vyre-registry-link"
-feature = "(default),cuda,metal,reference,spirv,wgpu"
+feature = "(default),cuda,metal,spirv,wgpu"
 
 [[pair]]
 member = "vyre-registry-link"
-feature = "(default),cuda,operations,reference,spirv,wgpu"
+feature = "(default),cuda,operations,spirv,wgpu"
 
 [[pair]]
 member = "vyre-registry-link"
@@ -718,14 +718,6 @@ feature = "metal"
 [[pair]]
 member = "vyre-registry-link"
 feature = "operations"
-
-[[pair]]
-member = "vyre-registry-link"
-feature = "operations,reference"
-
-[[pair]]
-member = "vyre-registry-link"
-feature = "reference"
 
 [[pair]]
 member = "vyre-registry-link"

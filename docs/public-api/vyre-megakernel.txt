@@ -348,7 +348,6 @@ pub const vyre_megakernel::mesh::CollectiveSupport::ALL: Self
 pub const vyre_megakernel::mesh::CollectiveSupport::NONE: Self
 pub const vyre_megakernel::mesh::MESH_FACTS_VERSION: u16
 pub const vyre_megakernel::mesh::MESH_TOPOLOGY_VERSION: u16
-pub const vyre_megakernel::real_time::REAL_TIME_OBJECTIVE_SCHEMA_VERSION: u16
 pub const vyre_megakernel::specialization::MAX_COVERAGE_CELLS: usize
 pub const vyre_megakernel::specialization::MAX_PROPOSED_VARIANTS: usize
 pub const vyre_megakernel::specialization::PORTFOLIO_ENVELOPE_SCHEMA_VERSION: u16
@@ -389,13 +388,6 @@ pub enum vyre_megakernel::measure::ReplacementVerdict
 pub enum vyre_megakernel::measure::ThrottleState
 pub enum vyre_megakernel::mesh::PartitionKind
 pub enum vyre_megakernel::mesh::TransferOrigin
-pub enum vyre_megakernel::real_time::EnergyPolicy
-pub enum vyre_megakernel::real_time::InterferenceAssumptions
-pub enum vyre_megakernel::real_time::LatencyPercentile
-pub enum vyre_megakernel::real_time::RealTimeDeadline
-pub enum vyre_megakernel::real_time::RealTimeViolation
-pub enum vyre_megakernel::real_time::WarmColdState
-pub enum vyre_megakernel::real_time::WorkloadArrivalTrace
 pub enum vyre_megakernel::specialization::AxisDomain
 pub enum vyre_megakernel::specialization::AxisValue
 pub enum vyre_megakernel::specialization::GuardTerm
@@ -608,7 +600,6 @@ pub mod vyre_megakernel::grid_sync
 pub mod vyre_megakernel::legality
 pub mod vyre_megakernel::measure
 pub mod vyre_megakernel::mesh
-pub mod vyre_megakernel::real_time
 pub mod vyre_megakernel::specialization
 pub struct vyre_megakernel::Artifact
 pub struct vyre_megakernel::ArtifactAbi
@@ -708,8 +699,6 @@ pub struct vyre_megakernel::mesh::MeshTopologyPlan
 pub struct vyre_megakernel::mesh::RegionPartition
 pub struct vyre_megakernel::mesh::ShardAssignment
 pub struct vyre_megakernel::mesh::TransferAssignment
-pub struct vyre_megakernel::real_time::InputToVisibleMeasurement
-pub struct vyre_megakernel::real_time::RealTimeObjective
 pub struct vyre_megakernel::specialization::CoverageProof
 pub struct vyre_megakernel::specialization::PortfolioEnvelope
 pub struct vyre_megakernel::specialization::PortfolioVariant
@@ -1273,67 +1262,6 @@ pub vyre_megakernel::mesh::TransferOrigin::Handoff::consumer: vyre_megakernel::A
 pub vyre_megakernel::mesh::TransferOrigin::Handoff::producer: vyre_megakernel::ArtifactNodeId
 pub vyre_megakernel::mesh::TransferOrigin::Routing
 pub vyre_megakernel::mesh::TransferOrigin::Routing::node: vyre_megakernel::ArtifactNodeId
-pub vyre_megakernel::real_time::EnergyPolicy::Balanced
-pub vyre_megakernel::real_time::EnergyPolicy::PeakPerformance
-pub vyre_megakernel::real_time::EnergyPolicy::PowerSave
-pub vyre_megakernel::real_time::EnergyPolicy::ThermalThrottled
-pub vyre_megakernel::real_time::EnergyPolicy::Unconstrained
-pub vyre_megakernel::real_time::InputToVisibleMeasurement::admitted_timestamp_ns: u64
-pub vyre_megakernel::real_time::InputToVisibleMeasurement::command_encoding_ns: u64
-pub vyre_megakernel::real_time::InputToVisibleMeasurement::device_kernel_ns: u64
-pub vyre_megakernel::real_time::InputToVisibleMeasurement::missed_deadlines_count: u32
-pub vyre_megakernel::real_time::InputToVisibleMeasurement::pipeline_creation_ns: u64
-pub vyre_megakernel::real_time::InputToVisibleMeasurement::presentation_handoff_ns: u64
-pub vyre_megakernel::real_time::InputToVisibleMeasurement::queue_depth_at_admission: usize
-pub vyre_megakernel::real_time::InputToVisibleMeasurement::queue_wait_ns: u64
-pub vyre_megakernel::real_time::InputToVisibleMeasurement::raw_samples_ns: alloc::vec::Vec<u64>
-pub vyre_megakernel::real_time::InputToVisibleMeasurement::synchronization_ns: u64
-pub vyre_megakernel::real_time::InputToVisibleMeasurement::total_latency_ns: u64
-pub vyre_megakernel::real_time::InputToVisibleMeasurement::uncertainty_ns: u64
-pub vyre_megakernel::real_time::InterferenceAssumptions::ConcurrentPresentation
-pub vyre_megakernel::real_time::InterferenceAssumptions::HeavyBackgroundWork
-pub vyre_megakernel::real_time::InterferenceAssumptions::Isolated
-pub vyre_megakernel::real_time::InterferenceAssumptions::SharedQueue
-pub vyre_megakernel::real_time::LatencyPercentile::P50
-pub vyre_megakernel::real_time::LatencyPercentile::P90
-pub vyre_megakernel::real_time::LatencyPercentile::P95
-pub vyre_megakernel::real_time::LatencyPercentile::P99
-pub vyre_megakernel::real_time::LatencyPercentile::P999
-pub vyre_megakernel::real_time::LatencyPercentile::WorstCase
-pub vyre_megakernel::real_time::RealTimeDeadline::Background
-pub vyre_megakernel::real_time::RealTimeDeadline::Background::max_latency_ns: u64
-pub vyre_megakernel::real_time::RealTimeDeadline::HardRealTime
-pub vyre_megakernel::real_time::RealTimeDeadline::HardRealTime::deadline_ns: u64
-pub vyre_megakernel::real_time::RealTimeDeadline::HardRealTime::max_jitter_ns: u64
-pub vyre_megakernel::real_time::RealTimeDeadline::InteractiveFrame
-pub vyre_megakernel::real_time::RealTimeDeadline::InteractiveFrame::frame_target_ns: u64
-pub vyre_megakernel::real_time::RealTimeDeadline::InteractiveFrame::target_fps: u32
-pub vyre_megakernel::real_time::RealTimeViolation::DeadlineExceeded
-pub vyre_megakernel::real_time::RealTimeViolation::DeadlineExceeded::achieved_ns: u64
-pub vyre_megakernel::real_time::RealTimeViolation::DeadlineExceeded::limit_ns: u64
-pub vyre_megakernel::real_time::RealTimeViolation::JitterExceeded
-pub vyre_megakernel::real_time::RealTimeViolation::JitterExceeded::achieved_ns: u64
-pub vyre_megakernel::real_time::RealTimeViolation::JitterExceeded::limit_ns: u64
-pub vyre_megakernel::real_time::RealTimeViolation::MemoryCeilingExceeded
-pub vyre_megakernel::real_time::RealTimeViolation::MemoryCeilingExceeded::achieved_bytes: u64
-pub vyre_megakernel::real_time::RealTimeViolation::MemoryCeilingExceeded::limit_bytes: u64
-pub vyre_megakernel::real_time::RealTimeViolation::QueueingExceeded
-pub vyre_megakernel::real_time::RealTimeViolation::QueueingExceeded::achieved_ns: u64
-pub vyre_megakernel::real_time::RealTimeViolation::QueueingExceeded::limit_ns: u64
-pub vyre_megakernel::real_time::WarmColdState::ColdIncluded
-pub vyre_megakernel::real_time::WarmColdState::Transitional
-pub vyre_megakernel::real_time::WarmColdState::WarmOnly
-pub vyre_megakernel::real_time::WorkloadArrivalTrace::Burst
-pub vyre_megakernel::real_time::WorkloadArrivalTrace::Burst::burst_size: u32
-pub vyre_megakernel::real_time::WorkloadArrivalTrace::Burst::interval_ns: u64
-pub vyre_megakernel::real_time::WorkloadArrivalTrace::Periodic
-pub vyre_megakernel::real_time::WorkloadArrivalTrace::Periodic::jitter_ns: u64
-pub vyre_megakernel::real_time::WorkloadArrivalTrace::Periodic::period_ns: u64
-pub vyre_megakernel::real_time::WorkloadArrivalTrace::Poisson
-pub vyre_megakernel::real_time::WorkloadArrivalTrace::Poisson::mean_interval_ns: u64
-pub vyre_megakernel::real_time::WorkloadArrivalTrace::UniformRandom
-pub vyre_megakernel::real_time::WorkloadArrivalTrace::UniformRandom::max_interval_ns: u64
-pub vyre_megakernel::real_time::WorkloadArrivalTrace::UniformRandom::min_interval_ns: u64
 pub vyre_megakernel::specialization::AxisDomain::Boolean
 pub vyre_megakernel::specialization::AxisDomain::Identities
 pub vyre_megakernel::specialization::AxisDomain::Identities::identities: alloc::collections::btree::set::BTreeSet<vyre_megakernel::Digest>

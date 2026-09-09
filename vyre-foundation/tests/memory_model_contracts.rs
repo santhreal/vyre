@@ -3,7 +3,7 @@
 //! Verifies that all 9 closed types have total, unique wire tags, fail closed on unknown tags,
 //! maintain exhaustive variant coverage with zero wildcards, and have no Default implementation.
 
-use vyre_foundation::memory_model::*;
+use vyre_foundation::ir::*;
 
 #[test]
 fn atomic_ordering_contracts() {

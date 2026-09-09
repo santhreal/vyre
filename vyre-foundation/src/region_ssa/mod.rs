@@ -9,19 +9,19 @@
 //! - Structured regions for parallel map, reduction, scan, recurrence, and bounded control
 //! - Non-materializing semantic views (slice, permute, broadcast, reshape, pad)
 
-pub mod builder;
-pub mod dominance;
-pub mod lower;
-pub mod opt;
+pub(crate) mod builder;
+pub(crate) mod dominance;
+pub(crate) mod lower;
+pub(crate) mod opt;
 
 pub use builder::{DominanceError, RegionBuilder, ScopeContext};
-pub use dominance::verify_dominance;
+pub use dominance::{verify_dominance, DominanceVerifier};
 pub use lower::{lower_program_to_region_ssa, lower_region_ssa_to_program, RegionSsaError};
 pub use opt::{RegionSsaConstProp, RegionSsaDce, RegionSsaOptimizer, ValueRemap};
 
 use std::fmt;
 use serde::{Deserialize, Serialize};
-use vyre_spec::extension::ExtensionIdentity;
+use vyre_spec::ExtensionIdentity;
 use vyre_spec::{BinOp, CombineKind, DataType, SideEffectClass, TernaryOp, UnOp};
 use crate::extension::CatalogBundle;
 

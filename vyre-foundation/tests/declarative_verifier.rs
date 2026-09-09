@@ -9,12 +9,12 @@ use std::sync::Arc;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Node, Program,
 };
-use vyre_foundation::memory_model::{AtomicOrdering, CollectiveGroup};
-use vyre_foundation::types::contract::NumericalContract;
-use vyre_foundation::types::scalar::ScalarType;
-use vyre_foundation::types::shape::{ShapeConstraint, ShapeInterner};
+use vyre_foundation::ir::{AtomicOrdering, CollectiveGroup};
+use vyre_foundation::types::NumericalContract;
+use vyre_foundation::types::ScalarType;
+use vyre_foundation::types::{ShapeConstraint, ShapeInterner};
 use vyre_foundation::types::SemanticType;
-use vyre_foundation::verifier::certificate::InvariantCategory;
+use vyre_foundation::verifier::InvariantCategory;
 use vyre_foundation::verifier::{
     CompileError, DeclarativeVerifier, SemanticCompiler, SemanticModule,
 };

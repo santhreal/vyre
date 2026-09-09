@@ -439,7 +439,7 @@ impl Reader<'_> {
         if tag == 0x80 {
             // Opaque: u32 extension id follows.
             let id = reject_reserved_extension_id(self.u32()?, "DataType")?;
-            return Ok(DataType::Opaque(vyre_spec::extension::ExtensionDataTypeId(
+            return Ok(DataType::Opaque(vyre_spec::ExtensionDataTypeId(
                 id,
             )));
         }
@@ -538,7 +538,7 @@ impl Reader<'_> {
                 let op = if tag == 0x80 {
                     // Opaque BinOp: u32 extension id follows.
                     let id = reject_reserved_extension_id(self.u32()?, "BinOp")?;
-                    crate::ir::BinOp::Opaque(vyre_spec::extension::ExtensionBinOpId(id))
+                    crate::ir::BinOp::Opaque(vyre_spec::ExtensionBinOpId(id))
                 } else {
                     bin_op_from_tag(tag)?
                 };
@@ -553,7 +553,7 @@ impl Reader<'_> {
                 let tag = self.u8()?;
                 let op = if tag == 0x80 {
                     let id = reject_reserved_extension_id(self.u32()?, "UnOp")?;
-                    crate::ir::UnOp::Opaque(vyre_spec::extension::ExtensionUnOpId(id))
+                    crate::ir::UnOp::Opaque(vyre_spec::ExtensionUnOpId(id))
                 } else {
                     un_op_from_tag(tag)?
                 };
@@ -585,7 +585,7 @@ impl Reader<'_> {
                 let tag = self.u8()?;
                 let op = if tag == 0x80 {
                     let id = reject_reserved_extension_id(self.u32()?, "AtomicOp")?;
-                    crate::ir::AtomicOp::Opaque(vyre_spec::extension::ExtensionAtomicOpId(id))
+                    crate::ir::AtomicOp::Opaque(vyre_spec::ExtensionAtomicOpId(id))
                 } else {
                     atomic_op_from_tag(tag)?
                 };

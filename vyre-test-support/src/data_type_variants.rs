@@ -100,7 +100,7 @@ pub fn data_type_variant_samples() -> Vec<DataType> {
             scale: vyre_spec::QuantizationScale::PerTensor,
             zero_point: vyre_spec::QuantizationZeroPoint::Absent,
         },
-        DataType::Opaque(vyre_spec::extension::ExtensionDataTypeId::from_name(
+        DataType::Opaque(vyre_spec::ExtensionDataTypeId::from_name(
             "vyre.test_support.fixture_data_type",
         )),
     ]);

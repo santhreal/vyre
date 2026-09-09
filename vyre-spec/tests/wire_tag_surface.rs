@@ -9,7 +9,7 @@ use vyre_test_support::spec_variant_tables;
 
 use std::collections::BTreeSet;
 
-use vyre_spec::extension::{
+use vyre_spec::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionTernaryOpId,
     ExtensionUnOpId,
 };

@@ -12,7 +12,7 @@ use smallvec::smallvec;
 use std::sync::Arc;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_spec::extension::ExtensionDataTypeId;
+use vyre_spec::ExtensionDataTypeId;
 use vyre_spec::TypeId;
 
 pub(crate) use crate::opaque_echo_extension::{EchoExpr, EchoNode};

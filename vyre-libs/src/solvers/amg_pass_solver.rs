@@ -241,7 +241,7 @@ pub fn smooth_matroid_flow_fixed_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[8], coarse_bytes);
     write_zero_bytes(&mut scratch.inputs[9], coarse_bytes);
     write_zero_bytes(&mut scratch.inputs[10], coarse_bytes);
-    let out_buf = crate::dispatch_buffers::run_single_first_output(
+    let out_buf = crate::dispatch_buffers::execute_program_first_output(
         dispatcher,
         program,
         &scratch.inputs,

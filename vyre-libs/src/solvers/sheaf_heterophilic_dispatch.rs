@@ -195,7 +195,7 @@ pub fn diffuse_dispatch_stalks_fixed_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[1], restriction_diag_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[2], &scratch.damping);
     write_zero_bytes(&mut scratch.inputs[3], out_bytes);
-    let output = crate::dispatch_buffers::run_single_first_output(
+    let output = crate::dispatch_buffers::execute_program_first_output(
         dispatcher,
         program,
         &scratch.inputs,

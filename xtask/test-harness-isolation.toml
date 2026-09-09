@@ -256,6 +256,11 @@ grouping = "grouped"
 reason = "the crate links one concrete backend, so enumeration in this binary can only answer with it"
 
 [[test]]
+path = "vyre-driver-reference/tests/backend_registration.rs"
+grouping = "grouped"
+reason = "the crate links one concrete backend, so enumeration in this binary can only answer with it"
+
+[[test]]
 path = "vyre-driver-metal/tests/target_compiler.rs"
 grouping = "grouped"
 reason = "the crate links one concrete backend, so enumeration in this binary can only answer with it"

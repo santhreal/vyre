@@ -42,39 +42,39 @@ const BATCHED_MATMUL_TOP1_SCALED_OP_ID: &str =
 
 /// Stable extension id for packed INT4 dot products.
 #[must_use]
-pub fn int4_dot_extension_id() -> vyre_spec::extension::ExtensionBinOpId {
-    vyre_spec::extension::ExtensionBinOpId::from_name(INT4_DOT_EXTENSION_NAME)
+pub fn int4_dot_extension_id() -> vyre_spec::ExtensionBinOpId {
+    vyre_spec::ExtensionBinOpId::from_name(INT4_DOT_EXTENSION_NAME)
 }
 
 /// Stable extension id for fused scaled packed INT4 dot products.
 #[must_use]
-pub fn int4_dot_scaled_extension_id() -> vyre_spec::extension::ExtensionBinOpId {
-    vyre_spec::extension::ExtensionBinOpId::from_name(INT4_DOT_SCALED_EXTENSION_NAME)
+pub fn int4_dot_scaled_extension_id() -> vyre_spec::ExtensionBinOpId {
+    vyre_spec::ExtensionBinOpId::from_name(INT4_DOT_SCALED_EXTENSION_NAME)
 }
 
 /// Stable extension id for fused scaled packed INT4 matvec.
 #[must_use]
-pub fn int4_matvec_scaled_extension_id() -> vyre_spec::extension::ExtensionTernaryOpId {
-    vyre_spec::extension::ExtensionTernaryOpId::from_name(INT4_MATVEC_SCALED_EXTENSION_NAME)
+pub fn int4_matvec_scaled_extension_id() -> vyre_spec::ExtensionTernaryOpId {
+    vyre_spec::ExtensionTernaryOpId::from_name(INT4_MATVEC_SCALED_EXTENSION_NAME)
 }
 
 /// Stable extension id for batched fused scaled packed INT4 matvec.
 #[must_use]
-pub fn int4_batched_matvec_scaled_extension_id() -> vyre_spec::extension::ExtensionTernaryOpId {
-    vyre_spec::extension::ExtensionTernaryOpId::from_name(INT4_BATCHED_MATVEC_SCALED_EXTENSION_NAME)
+pub fn int4_batched_matvec_scaled_extension_id() -> vyre_spec::ExtensionTernaryOpId {
+    vyre_spec::ExtensionTernaryOpId::from_name(INT4_BATCHED_MATVEC_SCALED_EXTENSION_NAME)
 }
 
 /// Stable extension id for packed-activation batched INT4 matmul.
 #[must_use]
-pub fn int4_batched_matmul_scaled_extension_id() -> vyre_spec::extension::ExtensionTernaryOpId {
-    vyre_spec::extension::ExtensionTernaryOpId::from_name(INT4_BATCHED_MATMUL_SCALED_EXTENSION_NAME)
+pub fn int4_batched_matmul_scaled_extension_id() -> vyre_spec::ExtensionTernaryOpId {
+    vyre_spec::ExtensionTernaryOpId::from_name(INT4_BATCHED_MATMUL_SCALED_EXTENSION_NAME)
 }
 
 /// Stable extension id for fused packed INT4 matmul top-1 routing.
 #[must_use]
-pub fn int4_batched_matmul_top1_scaled_extension_id() -> vyre_spec::extension::ExtensionTernaryOpId
+pub fn int4_batched_matmul_top1_scaled_extension_id() -> vyre_spec::ExtensionTernaryOpId
 {
-    vyre_spec::extension::ExtensionTernaryOpId::from_name(
+    vyre_spec::ExtensionTernaryOpId::from_name(
         INT4_BATCHED_MATMUL_TOP1_SCALED_EXTENSION_NAME,
     )
 }
@@ -700,7 +700,7 @@ mod tests {
     fn batched_matmul_extension_id_matches_spec_name_contract() {
         assert_eq!(
             int4_batched_matmul_scaled_extension_id(),
-            vyre_spec::extension::ExtensionTernaryOpId::from_name(
+            vyre_spec::ExtensionTernaryOpId::from_name(
                 INT4_BATCHED_MATMUL_SCALED_EXTENSION_NAME
             )
         );
@@ -710,7 +710,7 @@ mod tests {
     fn batched_matmul_top1_extension_id_matches_spec_name_contract() {
         assert_eq!(
             int4_batched_matmul_top1_scaled_extension_id(),
-            vyre_spec::extension::ExtensionTernaryOpId::from_name(
+            vyre_spec::ExtensionTernaryOpId::from_name(
                 INT4_BATCHED_MATMUL_TOP1_SCALED_EXTENSION_NAME
             )
         );
@@ -721,7 +721,7 @@ mod tests {
         assert_eq!(INT4_DOT_EXTENSION_NAME, "quant.int4.dot");
         assert_eq!(
             int4_dot_extension_id(),
-            vyre_spec::extension::ExtensionBinOpId::from_name("quant.int4.dot")
+            vyre_spec::ExtensionBinOpId::from_name("quant.int4.dot")
         );
         assert!(int4_dot_extension_id().is_extension());
     }
@@ -731,7 +731,7 @@ mod tests {
         assert_eq!(INT4_DOT_SCALED_EXTENSION_NAME, "quant.int4.dot.scaled");
         assert_eq!(
             int4_dot_scaled_extension_id(),
-            vyre_spec::extension::ExtensionBinOpId::from_name("quant.int4.dot.scaled")
+            vyre_spec::ExtensionBinOpId::from_name("quant.int4.dot.scaled")
         );
         assert!(int4_dot_scaled_extension_id().is_extension());
         assert_ne!(int4_dot_extension_id(), int4_dot_scaled_extension_id());
@@ -745,7 +745,7 @@ mod tests {
         );
         assert_eq!(
             int4_matvec_scaled_extension_id(),
-            vyre_spec::extension::ExtensionTernaryOpId::from_name("quant.int4.matvec.scaled")
+            vyre_spec::ExtensionTernaryOpId::from_name("quant.int4.matvec.scaled")
         );
         assert!(int4_matvec_scaled_extension_id().is_extension());
     }
@@ -758,7 +758,7 @@ mod tests {
         );
         assert_eq!(
             int4_batched_matvec_scaled_extension_id(),
-            vyre_spec::extension::ExtensionTernaryOpId::from_name(
+            vyre_spec::ExtensionTernaryOpId::from_name(
                 "quant.int4.batched_matvec.scaled"
             )
         );

@@ -765,17 +765,6 @@ boundary = "private"
 seam = "metal-driver"
 
 [[crate.dependency]]
-package = "vyre-driver-reference"
-purpose = "reference backend registration"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = true
-default_features = true
-boundary = "private"
-seam = "reference-driver"
-
-[[crate.dependency]]
 package = "vyre-driver-spirv"
 purpose = "SPIR-V backend registration"
 features = []
@@ -1089,6 +1078,17 @@ boundary = "private"
 seam = "cuda-driver"
 
 [[crate.dependency]]
+package = "vyre-driver-spirv"
+purpose = "SPIR-V backend execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "spirv-driver"
+
+[[crate.dependency]]
 package = "vyre-driver-wgpu"
 purpose = "portable backend execution"
 features = []
@@ -1179,7 +1179,7 @@ seam = "specification"
 [[crate.dependency]]
 package = "vyre-registry-link"
 purpose = "linked inventory registry sources and the per-source floor"
-features = ["operations", "reference"]
+features = ["operations"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
@@ -1327,7 +1327,7 @@ seam = "specification"
 [[crate.dependency]]
 package = "vyre-registry-link"
 purpose = "linked inventory registry sources and the per-source floor"
-features = ["cuda", "operations", "reference", "spirv", "wgpu"]
+features = ["cuda", "operations", "spirv", "wgpu"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
@@ -1390,7 +1390,7 @@ seam = "backend-contract"
 [[crate.dependency]]
 package = "vyre-registry-link"
 purpose = "linked inventory registry sources and the per-source floor"
-features = ["cuda", "metal", "reference", "spirv", "wgpu"]
+features = ["cuda", "metal", "spirv", "wgpu"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
@@ -1612,17 +1612,6 @@ boundary = "private"
 seam = "cuda-driver"
 
 [[crate.dependency]]
-package = "vyre-driver-reference"
-purpose = "reference backend adaptation"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "reference-driver"
-
-[[crate.dependency]]
 package = "vyre-driver-wgpu"
 purpose = "portable backend execution"
 features = []
@@ -1746,7 +1735,7 @@ seam = "specification"
 [[crate.dependency]]
 package = "vyre-registry-link"
 purpose = "linked inventory registry sources and the per-source floor"
-features = ["cuda", "metal", "reference", "spirv", "wgpu"]
+features = ["cuda", "metal", "spirv", "wgpu"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
@@ -1881,6 +1870,17 @@ optional = false
 default_features = true
 boundary = "public"
 seam = "primary-text-emitter"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "diagnostic projection for emitter errors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
 
 [[crate.dependency]]
 package = "vyre-lower"

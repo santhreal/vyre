@@ -3,11 +3,11 @@
 //! Provides explicit tenant and confidentiality labels, unforgeable generation-bound
 //! capability tokens, automatic zeroization on drop, and bounded hostile compilation quotas.
 
-pub mod capability;
-pub mod error;
-pub mod label;
-pub mod quota;
-pub mod sanitize;
+pub(crate) mod capability;
+pub(crate) mod error;
+pub(crate) mod label;
+pub(crate) mod quota;
+pub(crate) mod sanitize;
 
 pub use capability::{CapabilityAuthenticator, GenerationId, UnforgeableCapability};
 pub use error::SecurityError;

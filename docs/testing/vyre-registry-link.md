@@ -23,8 +23,8 @@ The crate lives at `vyre-registry-link`. The `registry-link` owner maintains its
 
 ## Feature sets
 
-- Default feature members: `operations`, `cuda`, `metal`, `reference`, `spirv`, `wgpu`
-- Available manifest features: `cuda`, `default`, `device-tests`, `metal`, `operations`, `reference`, `spirv`, `wgpu`
+- Default feature members: `operations`, `cuda`, `metal`, `spirv`, `wgpu`
+- Available manifest features: `cuda`, `default`, `device-tests`, `metal`, `operations`, `spirv`, `wgpu`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets

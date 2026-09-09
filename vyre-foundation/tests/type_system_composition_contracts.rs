@@ -7,7 +7,7 @@
 //! below it, so a width, lane count, or member offset that stops composing
 //! fails here rather than at a lowering boundary.
 
-use vyre_foundation::memory_model::ExecutionScope;
+use vyre_foundation::ir::ExecutionScope;
 use vyre_foundation::types::*;
 
 #[test]

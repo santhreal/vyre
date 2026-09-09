@@ -14,7 +14,7 @@ extern crate alloc;
 mod adversarial_input;
 /// Algebraic law primitives  -  associativity, identity, commutativity declarations.
 /// Specification element.
-pub mod algebraic_law;
+mod algebraic_law;
 /// Canonical catalog of every algebraic law tagged to operations.
 /// Specification element.
 mod all_algebraic_laws;
@@ -49,7 +49,7 @@ mod catalog_is_complete;
 mod catalog_slices;
 /// Category enum (A/B/C) + backend-availability predicates.
 /// Compatibility and rollout matrix contracts.
-pub mod compatibility;
+mod compatibility;
 /// Specification element.
 mod category;
 /// Collective communication operators and communicator handles.
@@ -72,7 +72,7 @@ mod engine_invariant;
 mod expr_variant;
 /// Dialect extension descriptor  -  marks non-core ops carried by extensions.
 /// Specification element.
-pub mod extension;
+mod extension;
 /// Floating-point type subset (F16/F32/F64) with associated properties.
 /// Specification element.
 mod float_type;
@@ -93,7 +93,7 @@ mod invariant;
 mod invariant_category;
 /// Catalog of invariants every registered op is checked against.
 /// Declarative schema registry for all persisted and wire formats.
-pub mod schema_registry;
+mod schema_registry;
 /// Specification element.
 mod invariants;
 /// Compiler level a declaration owns.
@@ -204,14 +204,15 @@ pub use data_type::{DataType, QuantizationScale, QuantizationZeroPoint, TypeId};
 /// See [`engine_invariant::EngineInvariant`].
 /// Specification element.
 pub use engine_invariant::{EngineInvariant, InvariantId};
-/// See [`extension`] types.
+/// See [`ExtensionSchema`].
 /// Specification element.
 pub use extension::{
+    ExtensionAtomicOp, ExtensionAtomicOpId, ExtensionBinOp, ExtensionBinOpId, ExtensionDataType,
     ExtensionDataTypeId, ExtensionField, ExtensionFieldType, ExtensionIdentity,
     ExtensionNamespace, ExtensionNumericalContract, ExtensionOperand,
     ExtensionOperandKind, ExtensionResourceBounds, ExtensionRuleConditionId,
     ExtensionSchema, ExtensionSchemaDigest, ExtensionSemVer, ExtensionShapeRule,
-    ExtensionUnOp, ExtensionUnOpId,
+    ExtensionTernaryOp, ExtensionTernaryOpId, ExtensionUnOp, ExtensionUnOpId,
 };
 /// See [`expr_variant::expr_variants`].
 /// Specification element.

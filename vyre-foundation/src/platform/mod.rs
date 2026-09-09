@@ -4,9 +4,9 @@
 //! and neutral device capability records; checked numeric conversions; and
 //! small typed platform adapters.
 
-pub mod adapters;
-pub mod matrix;
-pub mod wire;
+pub(crate) mod adapters;
+pub(crate) mod matrix;
+pub(crate) mod wire;
 
 pub use adapters::{ClockAdapter, FileSystemAdapter, PlatformAdapterError, ScratchDir, ThreadAdapter};
 pub use matrix::{

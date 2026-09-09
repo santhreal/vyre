@@ -611,7 +611,7 @@ impl GateDescriptor {
                         hasher.update(input.as_bytes());
                         hasher.update(&bytes);
                     }
-                } else if p.is_dir() {
+                } else {
                     for entry in walkdir::WalkDir::new(&p)
                         .sort_by_file_name()
                         .into_iter()
