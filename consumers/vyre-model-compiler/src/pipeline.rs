@@ -102,7 +102,12 @@ impl ModelCompiler {
                         .iter()
                         .filter_map(|d| match d {
                             vyre::ir::ShapeDim::Known(k) => Some(*k as usize),
-                            vyre::ir::ShapeDim::Symbol(_) => None,
+                            // A constant's content identity is derived from the
+                            // statically known extents. The other forms resolve
+                            // at run time and contribute no digest input.
+                            vyre::ir::ShapeDim::Unresolved
+                            | vyre::ir::ShapeDim::Symbol(_)
+                            | vyre::ir::ShapeDim::Expr(_) => None,
                         })
                         .collect();
                     let desc = crate::manifest::TensorDescriptor::new(

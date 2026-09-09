@@ -8727,6 +8727,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   submodule when that file was split, and the gate then reported an empty
   subject universe instead of comparing the seventeen counters the driver
   publishes.
+- The model compiler derives a constant's content identity from statically
+  known extents and covers the unresolved, symbol, and interned-expression
+  dimension forms explicitly.
 - The feature-msrv sweep compiles each selection through the workspace cargo
   with a leading toolchain argument, so the sweep builds into the target
   directory the checkout owns.

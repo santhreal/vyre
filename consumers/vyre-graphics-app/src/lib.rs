@@ -282,6 +282,7 @@ impl GraphicsRenderer {
                 let pixel_count = (self.scene.width * self.scene.height) as usize;
                 self.retained_framebuffer = vec![0; pixel_count];
             }
+        }
         Ok(())
     }
 
