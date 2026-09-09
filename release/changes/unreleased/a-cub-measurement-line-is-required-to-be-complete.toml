@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The CUB scan measurement parser rejects a line that omits `device`, `compute_capability` or `cub_version`. Typed record decoding marked those three fields `serde(default)`, so a truncated line parsed into an empty device identity, and `architecture()` keyed the compiled-baseline cache directory on that empty string, which let two different devices share one cached binary."

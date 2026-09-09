@@ -82,9 +82,9 @@ pub struct DispatchConfig {
     /// that field is OVERLOADED: for an element-grid dispatch it is the workgroup
     /// count derived from the input size, but for a MEGAKERNEL it is a work-queue
     /// length managed through storage buffers, the two cannot be told apart from
-    /// the `[u32; 3]` alone. Backends that infer their dispatch coverage from
-    /// buffer SHAPES rather than from a real GPU grid (the CPU reference
-    /// interpreter, [`CpuRefBackend`](../../../vyre_driver_reference/index.html))
+    /// the `[u32; 3]` alone. A consumer that infers dispatch coverage from
+    /// buffer SHAPES rather than from a real GPU grid (the reference
+    /// interpreter behind [`vyre_driver_reference::CpuRefEvaluator`](../../../vyre_driver_reference/struct.CpuRefEvaluator.html))
     /// cannot see the runtime scan length, so a byte-scan program would be
     /// under-dispatched to `haystack_len / 4` invocations and SILENTLY skip high
     /// positions (a Law-10 recall regression). An element-grid caller sets this to
@@ -96,10 +96,9 @@ pub struct DispatchConfig {
     /// element dispatch.
     ///
     /// This is the N-dimensional counterpart of
-    /// [`dispatch_elements`](Self::dispatch_elements) (a 1-D floor). A backend that
-    /// infers its coverage from buffer SHAPES rather than a real GPU grid (the CPU
-    /// reference interpreter,
-    /// [`CpuRefBackend`](../../../vyre_driver_reference/index.html)) distributes the
+    /// [`dispatch_elements`](Self::dispatch_elements) (a 1-D floor). A consumer that
+    /// infers its coverage from buffer SHAPES rather than a real GPU grid (the
+    /// reference interpreter behind [`vyre_driver_reference::CpuRefEvaluator`](../../../vyre_driver_reference/struct.CpuRefEvaluator.html)) distributes the
     /// dispatch only across workgroup axes whose size is greater than one, so a
     /// program that fans a `[256, 1, 1]` workgroup across `grid.y` (batched
     /// persistent-BFS runs one query per `grid.y` block) would collapse to
