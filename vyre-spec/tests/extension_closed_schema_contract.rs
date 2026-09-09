@@ -1,12 +1,11 @@
 //! Proof tests for closed declarative extension schemas, collision-resistant IDs,
 //! runtime-derived proof fields, and canonical round-trip verification.
 
-use vyre_spec::extension::{
+use vyre_spec::{
     ExtensionDataTypeId, ExtensionIdentity, ExtensionNamespace, ExtensionNumericalContract,
     ExtensionProofFieldKind, ExtensionProofFields, ExtensionResourceBounds, ExtensionSchema,
-    ExtensionSchemaDigest, ExtensionSemVer,
+    ExtensionSemVer, SideEffectClass,
 };
-use vyre_spec::op_contract::SideEffectClass;
 
 #[test]
 fn distinct_extension_names_produce_distinct_ids_without_fnv1a_collision() {
