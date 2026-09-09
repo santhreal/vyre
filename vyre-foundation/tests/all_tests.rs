@@ -805,7 +805,7 @@ pub mod security_contracts;
 #[path = "declarative_schema_registry_contracts.rs"]
 pub mod declarative_schema_registry_contracts;
 
-/// Integration tests from `tests/typed_configuration_schema_contracts.rs`.
+/// Integration tests from `tests/typed_configuration_schema_contracts.rs` (Row 123).
 #[path = "typed_configuration_schema_contracts.rs"]
 pub mod typed_configuration_schema_contracts;
 
