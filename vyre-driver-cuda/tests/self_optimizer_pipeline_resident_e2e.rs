@@ -316,3 +316,51 @@ fn cuda_persistent_pipeline_scaling_bench_body() {
     }
     println!();
 }
+
+/// A resident optimizer run reports the kernels it executed.
+///
+/// The resident pipeline dispatches through captured CUDA graphs, so every
+/// kernel reaches the device through `cuGraphLaunch` rather than
+/// `cuLaunchKernel`. Counting only the non-graph launch path left
+/// `cuda_kernel_launches` at zero while the device ran seven graph replays per
+/// run, which certified zero device work for a pipeline that was executing.
+/// The counters are read through the registered backend facet, which is the
+/// device the pipeline runs on, and as deltas, so a run that launches nothing
+/// cannot satisfy the assertion by inheriting an earlier run's total.
+///
+/// This does not prove per-kernel occupancy: the graph path records no launch
+/// geometry, so `logical_thread_utilization_bps` stays zero.
+#[test]
+fn cuda_resident_pipeline_reports_graph_dispatched_kernel_launches() {
+    let (_backend, executor, policy) = acquire_cuda_resident_execution();
+    let registration =
+        vyre_driver::backend_registration(CUDA_BACKEND_ID).expect("registered CUDA backend");
+    let registered = registration
+        .acquire()
+        .expect("registered CUDA device facet");
+    let counter = |name: &str| -> u64 {
+        let metrics: BTreeMap<&str, u64> =
+            registered.backend_metric_snapshot().into_iter().collect();
+        *metrics
+            .get(name)
+            .unwrap_or_else(|| panic!("Fix: registered CUDA facet must report `{name}`."))
+    };
+
+    let program = synthetic_chain_program(10);
+    let _ = gpu_optimize(program.clone(), &executor, &policy).expect("warm resident pipeline");
+
+    let launches_before = counter("cuda_kernel_launches");
+    let graphs_before = counter("cuda_graph_launches");
+    let _ = gpu_optimize(program, &executor, &policy).expect("measured resident pipeline");
+    let launch_delta = counter("cuda_kernel_launches") - launches_before;
+    let graph_delta = counter("cuda_graph_launches") - graphs_before;
+
+    assert!(
+        graph_delta > 0,
+        "Fix: the resident optimizer pipeline must dispatch through captured CUDA graphs; observed {graph_delta} graph launches."
+    );
+    assert!(
+        launch_delta >= graph_delta,
+        "Fix: every CUDA graph replay executes at least one captured kernel, so `cuda_kernel_launches` must not fall below `cuda_graph_launches`; observed {launch_delta} kernel launches for {graph_delta} graph launches."
+    );
+}

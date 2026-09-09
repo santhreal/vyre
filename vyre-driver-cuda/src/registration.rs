@@ -860,13 +860,57 @@ impl VyreBackend for CudaBackendRegistration {
     }
 }
 
+/// The one CUDA device generation every registered facet of this backend uses.
+///
+/// `CudaBackend` holds its module cache, PTX source cache, allocation pools,
+/// launch-resource pool, resident namespace and telemetry counters behind
+/// `Arc`, so a clone is the same device handle rather than a second one. The
+/// registered path acquired a fresh instance per facet, and
+/// `BackendRegistration::materializer` is called once per `ArtifactSession`, so
+/// each artifact submission ran against a private cold module cache and a
+/// private telemetry counter set. One resident optimizer run acquired seven
+/// device generations, re-lowered and re-loaded every stage kernel on every
+/// run, and left every launch counted on an object the caller had no handle
+/// to: a launch count read as zero while seven artifacts had executed.
+static REGISTERED_DEVICE: std::sync::Mutex<Option<CudaBackend>> = std::sync::Mutex::new(None);
+
+/// Acquire the registered CUDA device generation, acquiring it on first use.
+///
+/// The handle is bound to the calling thread before it is returned. Acquiring a
+/// fresh device bound its context as a side effect of creating it, so a shared
+/// handle reused from another thread would load its first module under no
+/// current context and fail with `CUDA_ERROR_INVALID_CONTEXT`.
+///
+/// # Errors
+///
+/// Returns the concrete acquisition error when the CUDA driver cannot provide
+/// the device, a bind error when the context cannot be made current on this
+/// thread, and a lock error when a previous acquisition panicked.
+pub(crate) fn registered_device() -> Result<CudaBackend, BackendError> {
+    let mut slot = REGISTERED_DEVICE.lock().map_err(|_| BackendError::DispatchFailed {
+        code: None,
+        message: "CUDA registered device acquisition panicked and left the device slot poisoned. Fix: restart the process; a half-acquired CUDA context cannot be reused."
+            .to_string(),
+    })?;
+    let device = match slot.as_ref() {
+        Some(device) => device.clone(),
+        None => {
+            let device = CudaBackend::acquire().map_err(|e| BackendError::DispatchFailed {
+                code: None,
+                message: format!("CUDA backend acquisition failed: {e}"),
+            })?;
+            slot.insert(device).clone()
+        }
+    };
+    device.warmup()?;
+    Ok(device)
+}
+
 /// Factory function for inventory registration.
 pub fn cuda_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
-    let backend = CudaBackend::acquire().map_err(|e| BackendError::DispatchFailed {
-        code: None,
-        message: format!("CUDA backend acquisition failed: {e}"),
-    })?;
-    Ok(Box::new(CudaBackendRegistration { inner: backend }))
+    Ok(Box::new(CudaBackendRegistration {
+        inner: registered_device()?,
+    }))
 }
 
 /// Op-support set  -  CUDA supports every op the foundation IR defines

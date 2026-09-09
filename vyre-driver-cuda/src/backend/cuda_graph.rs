@@ -644,6 +644,7 @@ impl CudaBackend {
             replay_output_bytes,
             replay_host_upload_operations,
             replay_device_readback_operations,
+            replay_kernel_launches: u64::from(prepared.fixpoint_iterations),
             expected_input_lens,
             cached_input_key,
             resident_input_replay_safe,
