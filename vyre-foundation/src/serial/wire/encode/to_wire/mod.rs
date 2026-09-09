@@ -360,22 +360,8 @@ fn put_metadata_payload(
         match buffer.output_byte_range() {
             Some(range) => {
                 put_u8(out, 1);
-                put_leb_u64(
-                    out,
-                    u64::try_from(range.start).map_err(|_| {
-                        WireEncodeErr::static_msg(
-                            "Fix: output range start cannot fit u64; split the output buffer.",
-                        )
-                    })?,
-                );
-                put_leb_u64(
-                    out,
-                    u64::try_from(range.end).map_err(|_| {
-                        WireEncodeErr::static_msg(
-                            "Fix: output range end cannot fit u64; split the output buffer.",
-                        )
-                    })?,
-                );
+                put_leb_u64(out, range.start);
+                put_leb_u64(out, range.end);
             }
             None => put_u8(out, 0),
         }

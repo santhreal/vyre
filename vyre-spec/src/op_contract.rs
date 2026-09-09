@@ -141,7 +141,6 @@ impl Default for AliasingContract {
 
 /// Structural relationship between input and output tensor/buffer shapes and index spaces.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
-#[non_exhaustive]
 pub enum ShapeIndexRelation {
     /// Output shape identical to input shape; 1:1 index map.
     Elementwise,
@@ -149,7 +148,7 @@ pub enum ShapeIndexRelation {
     Contracting,
     /// Output dimension larger than input (broadcast, padding, upsampling).
     Expanding,
-    /// Multidimensional broadcasting according to numpy/wgsl rules.
+    /// Multidimensional broadcasting according to standard multidimensional broadcast rules.
     Broadcast,
     /// Permutation or transposition of coordinate axes with invariant volume.
     Permutation,

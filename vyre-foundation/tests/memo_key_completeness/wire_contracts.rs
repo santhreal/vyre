@@ -119,7 +119,7 @@ fn wire_round_trip_preserves_all_three_formerly_dropped_bufferdecl_fields() {
     assert_eq!(after.count(), 4);
     assert!(!after.is_output());
     assert!(!after.is_pipeline_live_out());
-    assert_eq!(after.output_byte_range(), None::<Range<usize>>);
+    assert_eq!(after.output_byte_range(), None::<Range<u64>>);
     assert_eq!(after.hints().coalesce_axis, None);
     assert_eq!(after.hints().preferred_alignment, 0);
     assert_eq!(after.hints().cache_locality, CacheLocality::Temporal);
@@ -214,8 +214,8 @@ fn rev_six_decoder_accepts_older_payloads_and_gates_the_new_reads_on_version() {
     };
 
     assert_eq!(
-        WIRE_FORMAT_VERSION, 8,
-        "Fix: this test encodes the rev-8 compatibility contract. If the version moved, decide \
+        WIRE_FORMAT_VERSION, 9,
+        "Fix: this test encodes the rev-9 compatibility contract. If the version moved, decide \
          what the new revision does to the logical execution tags and the three buffer fields."
     );
     assert!(
@@ -241,10 +241,14 @@ fn rev_six_decoder_accepts_older_payloads_and_gates_the_new_reads_on_version() {
     );
     assert!(
         wire_format_version_is_supported(8),
+        "Fix: rev-8 payloads must keep decoding."
+    );
+    assert!(
+        wire_format_version_is_supported(9),
         "Fix: the current revision must be readable by its own decoder."
     );
     assert!(
-        !wire_format_version_is_supported(9),
+        !wire_format_version_is_supported(10),
         "Fix: an unknown future revision must be refused with a version diagnostic, never parsed \
          on a guess."
     );
@@ -254,8 +258,8 @@ fn rev_six_decoder_accepts_older_payloads_and_gates_the_new_reads_on_version() {
     let mut relabelled = program.to_wire().expect("fixture must encode");
     assert_eq!(
         u16::from_le_bytes([relabelled[4], relabelled[5]]),
-        8,
-        "fixture must be stamped rev 8 before relabelling"
+        9,
+        "fixture must be stamped rev 9 before relabelling"
     );
     relabelled[4] = 5;
     relabelled[5] = 0;

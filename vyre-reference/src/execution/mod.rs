@@ -346,7 +346,7 @@ pub fn reference_eval_with_step_ceiling(
     ceiling: u64,
 ) -> Result<(Vec<Value>, u64), crate::ReferenceError> {
     let runnable = program_for_interpreter(program)?;
-    let budget = step_budget::arm_with(&runnable, ceiling);
+    let budget = step_budget::arm_with_mode(&runnable, ceiling, false);
     let outputs =
         hashmap::run_hashmap_reference(&runnable, inputs, 0, hashmap::LaneOrder::Forward, None)?;
     let steps = step_budget::charged();

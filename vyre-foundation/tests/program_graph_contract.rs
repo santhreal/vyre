@@ -887,12 +887,11 @@ fn malformed_graph_wire_frames_fail_closed() {
         .contains("magic mismatch"));
 
     let mut bad_version = bytes.clone();
-    bad_version[4..6].copy_from_slice(&3_u16.to_le_bytes());
+    bad_version[4..6].copy_from_slice(&99_u16.to_le_bytes());
     assert!(ProgramGraph::from_wire(&bad_version)
         .expect_err("Fix: unknown version must fail")
         .to_string()
-        .contains("unsupported graph wire version 3"));
-
+        .contains("unsupported graph wire version 99"));
     assert!(ProgramGraph::from_wire(&bytes[..bytes.len() - 1])
         .expect_err("Fix: truncated retained identity must fail")
         .to_string()
@@ -911,7 +910,7 @@ fn malformed_graph_wire_frames_fail_closed() {
 fn oversized_graph_wire_counts_fail_before_allocation() {
     let mut bytes = Vec::new();
     bytes.extend_from_slice(b"VGR0");
-    bytes.extend_from_slice(&2_u16.to_le_bytes());
+    bytes.extend_from_slice(&3_u16.to_le_bytes());
     bytes.extend_from_slice(&u32::MAX.to_le_bytes());
     let error = ProgramGraph::from_wire(&bytes)
         .expect_err("Fix: hostile external count must fail before allocation");
@@ -925,7 +924,7 @@ fn oversized_graph_wire_counts_fail_before_allocation() {
 fn oversized_graph_wire_node_count_fails_before_allocation() {
     let mut bytes = Vec::new();
     bytes.extend_from_slice(b"VGR0");
-    bytes.extend_from_slice(&2_u16.to_le_bytes());
+    bytes.extend_from_slice(&3_u16.to_le_bytes());
     bytes.extend_from_slice(&0_u32.to_le_bytes()); // 0 external values
     bytes.extend_from_slice(&u32::MAX.to_le_bytes()); // node count exceeds MAX_GRAPH_ITEMS
     let error = ProgramGraph::from_wire(&bytes)
@@ -940,7 +939,7 @@ fn oversized_graph_wire_node_count_fails_before_allocation() {
 fn oversized_graph_wire_tensor_rank_fails_before_allocation() {
     let mut bytes = Vec::new();
     bytes.extend_from_slice(b"VGR0");
-    bytes.extend_from_slice(&2_u16.to_le_bytes());
+    bytes.extend_from_slice(&3_u16.to_le_bytes());
     bytes.extend_from_slice(&1_u32.to_le_bytes()); // 1 external value
     bytes.extend_from_slice(&4_u32.to_le_bytes()); // name len
     bytes.extend_from_slice(b"val0");

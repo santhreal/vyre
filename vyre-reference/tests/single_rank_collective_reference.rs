@@ -142,7 +142,7 @@ proptest! {
 
         let error = reference_eval(&program, &[Value::from(u32_bytes(&[1, 2, 3, 4]))])
             .expect_err("Fix: reference oracle must not silently emulate multi-rank collectives.");
-        prop_assert!(error.to_string().contains("Multi-rank collective transport"));
+        prop_assert!(error.to_string().contains("single-rank reference interpreter"));
     }
 
     #[test]
@@ -158,6 +158,6 @@ proptest! {
 
         let error = reference_eval(&program, &[Value::from(u32_bytes(&[1, 2, 3, 4]))])
             .expect_err("Fix: reference oracle must not silently emulate single-rank broadcast from a nonzero root.");
-        prop_assert!(error.to_string().contains("Broadcast can only use root 0"));
+        prop_assert!(error.to_string().contains("single-rank reference interpreter requires Broadcast root 0"));
     }
 }

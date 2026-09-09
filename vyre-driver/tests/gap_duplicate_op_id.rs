@@ -21,6 +21,7 @@ inventory::submit! {
         None,
         None,
     )
+    .with_opaque("test fixture")
 }
 
 inventory::submit! {
@@ -31,6 +32,7 @@ inventory::submit! {
         None,
         None,
     )
+    .with_opaque("test fixture")
 }
 
 /// WHY: one semantic identity must never depend on linked-inventory order.

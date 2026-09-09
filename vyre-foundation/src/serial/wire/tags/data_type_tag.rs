@@ -72,7 +72,6 @@ pub fn data_type_tag(value: &DataType) -> Result<u8, WireEncodeErr> {
         DataType::DeviceMesh { .. } => Ok(0x1E),
         DataType::Quantized { .. } => Ok(0x1F),
         DataType::Opaque(_) => Ok(DATA_TYPE_TAG_OPAQUE),
-        _ => Err(WireEncodeErr::static_msg("unknown DataType variant")),
     }
 }
 
@@ -98,14 +97,7 @@ pub(crate) fn put_data_type(out: &mut Vec<u8>, value: &DataType) -> Result<(), W
     put_u8(out, data_type_tag(value)?);
     match value {
         DataType::Array { element_size } => {
-            let encoded = u32::try_from(*element_size).map_err(|_| {
-                WireEncodeErr::fmt_usize(
-                    "Fix: array element_size ",
-                    *element_size,
-                    " cannot fit the VIR0 u32 payload; cap the element size or extend the wire format.",
-                )
-            })?;
-            put_u32(out, encoded);
+            put_u32(out, *element_size);
         }
         DataType::Opaque(id) => {
             // Opaque payload = u32 extension id (little-endian).
@@ -218,15 +210,6 @@ pub(crate) fn put_data_type(out: &mut Vec<u8>, value: &DataType) -> Result<(), W
         | DataType::I4
         | DataType::FP4
         | DataType::NF4 => {}
-        // `DataType` is `#[non_exhaustive]` in vyre-spec; extension
-        // variants added there must not break the existing encoder. Any
-        // new variant must also add a payload-emission arm above before
-        // being released, or encoding will fail fast here.
-        _ => {
-            return Err(WireEncodeErr::static_msg(
-                "Fix: unknown DataType variant has no wire-format payload emitter. Add a match arm in put_data_type when the variant is introduced in vyre-spec.",
-            ));
-        }
     }
     Ok(())
 }

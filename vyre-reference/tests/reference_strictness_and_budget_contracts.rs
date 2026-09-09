@@ -29,10 +29,9 @@ fn oracle_path_invokes_no_production_transforms() {
     // Verify catalog contains known optimization passes.
     let pass_names: Vec<&str> = catalog.iter().map(|entry| entry.name).collect();
     assert!(
-        pass_names.contains(&"eliminate_dead_lets"),
-        "catalog must include dead let elimination"
+        pass_names.contains(&"const_fold.unary.logical_not_involution"),
+        "catalog must include registered rules"
     );
-
     // 2. Build a program with dead lets, constants, and loops that production passes would transform.
     let program = Program::wrapped(
         vec![

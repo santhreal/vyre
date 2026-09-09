@@ -38,7 +38,7 @@ fn leaf_strategy() -> impl Strategy<Value = DataType> {
     prop_oneof![
         SCALAR_LEAF_TYPES.len() as u32 => prop::sample::select(SCALAR_LEAF_TYPES.to_vec()),
         1 => any::<u32>().prop_map(|raw| DataType::Handle(TypeId(raw))),
-        1 => (1usize..=64usize).prop_map(|element_size| DataType::Array { element_size }),
+        1 => (1u32..=64u32).prop_map(|element_size| DataType::Array { element_size }),
         1 => "[a-z][a-z0-9_.-]{0,48}"
             .prop_map(|name| DataType::Opaque(ExtensionDataTypeId::from_name(&name))),
         1 => prop::collection::vec(1u32..=16, 1..=3).prop_map(|axes| DataType::DeviceMesh {

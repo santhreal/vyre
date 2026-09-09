@@ -108,7 +108,7 @@ pub(super) fn static_element_count(shape: &[ShapeDim]) -> Result<Option<u64>, St
                         .to_string()
                 })?;
             }
-            ShapeDim::Symbol(_) => return Ok(None),
+            ShapeDim::Unresolved | ShapeDim::Symbol(_) | ShapeDim::Expr(_) => return Ok(None),
         }
     }
     Ok(Some(elements))

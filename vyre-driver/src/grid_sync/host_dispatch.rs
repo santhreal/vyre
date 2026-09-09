@@ -109,7 +109,11 @@ fn seed_segment_inputs_the_host_does_not_stage<'a>(
                     fix: format!("Fix: cannot seed grid-sync buffer `{name}`: {error}"),
                 })?;
         let byte_len = static_len
-            .or_else(|| buffer.output_byte_range().map(|range| range.end))
+            .or_else(|| {
+                buffer
+                    .output_byte_range()
+                    .and_then(|range| usize::try_from(range.end).ok())
+            })
             .ok_or_else(|| BackendError::InvalidProgram {
                 fix: format!(
                     "Fix: grid-sync buffer `{name}` is read before any segment writes it and no caller stages it, but it has no static byte size. Declare a count or output byte range."

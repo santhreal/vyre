@@ -418,9 +418,6 @@ pub fn buffer_mut<'a>(
         BufferAccess::ReadOnly | BufferAccess::Uniform => Err(ReferenceError::new(format!(
             "store target `{name}` is not writable. Fix: declare it ReadWrite, WriteOnly, or Workgroup."
         ))),
-        _ => Err(ReferenceError::new(format!(
-            "store target `{name}` uses an unsupported access mode. Fix: use a supported BufferAccess."
-        ))),
     }
 }
 

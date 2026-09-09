@@ -88,10 +88,6 @@ impl From<&DataType> for TypeKey {
                 Self(acc)
             }
             DataType::Opaque(id) => Self(0x80 | (u64::from(id.as_u32()) << 8)),
-            // Any future variant must extend this table  -  keep the
-            // sentinel as a hard-fail beacon (0xFFFF_FFFF distinguishes
-            // "unknown" from any real assigned tag).
-            _ => Self(0xFFFF_FFFF),
         }
     }
 }

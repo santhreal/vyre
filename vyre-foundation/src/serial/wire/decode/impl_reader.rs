@@ -365,11 +365,7 @@ impl Reader<'_> {
     fn data_type_inner(&mut self) -> Result<DataType, String> {
         let tag = self.u8()?;
         if tag == 0x08 {
-            let element_size = usize::try_from(self.u32()?).map_err(|err| {
-                format!(
-                    "Fix: array element_size cannot fit usize on this target ({err}); decode this VIR0 blob on a supported target or reject it."
-                )
-            })?;
+            let element_size = self.u32()?;
             return Ok(DataType::Array { element_size });
         }
         if tag == 0x13 {

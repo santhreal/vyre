@@ -187,7 +187,7 @@ pub(crate) struct DecodedBuffer {
     pub(crate) count: u32,
     pub(crate) is_output: bool,
     pub(crate) pipeline_live_out: bool,
-    pub(crate) output_byte_range: Option<Range<usize>>,
+    pub(crate) output_byte_range: Option<Range<u64>>,
     pub(crate) hints: MemoryHints,
     pub(crate) bytes_extraction: bool,
     pub(crate) linear_type: LinearType,
@@ -335,12 +335,8 @@ fn read_metadata(
         let output_byte_range = match reader.u8()? {
             0 => None,
             1 => {
-                let start = usize::try_from(reader.leb_u64()?).map_err(|err| {
-                    format!("TruncatedPayload: output range start cannot fit usize ({err}). Fix: reject this payload on this target.")
-                })?;
-                let end = usize::try_from(reader.leb_u64()?).map_err(|err| {
-                    format!("TruncatedPayload: output range end cannot fit usize ({err}). Fix: reject this payload on this target.")
-                })?;
+                let start = reader.leb_u64()?;
+                let end = reader.leb_u64()?;
                 super::invariants::validate_output_range_order(start, end)?;
                 Some(start..end)
             }

@@ -6,7 +6,7 @@ use thiserror::Error;
 use super::graph::ProgramGraph;
 use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
 use crate::ir_inner::model::program::Program;
-
+pub use crate::types::ShapeExprId;
 /// Canonical graph-local identity for one connected semantic value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct GraphValueId(pub u32);
@@ -15,13 +15,70 @@ pub struct GraphValueId(pub u32);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct GraphNodeId(pub u32);
 
-/// One value dimension, either statically known or bound by graph configuration.
+/// One value dimension, either statically known, unresolved, bound by symbol, or a symbolic expression.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum ShapeDim {
-    /// Exact element extent.
+    /// Exact element extent. Zero (0) is a valid extent and not an unknown sentinel!
     Known(u64),
+    /// Explicit unresolved / dynamic runtime extent.
+    Unresolved,
     /// Configuration symbol such as `batch`, `sequence`, or `hidden`.
     Symbol(String),
+    /// Interned symbolic expression.
+    Expr(ShapeExprId),
+}
+
+impl ShapeDim {
+    /// Whether this dimension is statically known.
+    #[must_use]
+    pub const fn is_known(&self) -> bool {
+        matches!(self, Self::Known(_))
+    }
+
+    /// Whether this dimension is an explicit unresolved extent.
+    #[must_use]
+    pub const fn is_unresolved(&self) -> bool {
+        matches!(self, Self::Unresolved)
+    }
+
+    /// Whether this dimension is a symbol.
+    #[must_use]
+    pub const fn is_symbol(&self) -> bool {
+        matches!(self, Self::Symbol(_))
+    }
+
+    /// Whether this dimension is an interned symbolic expression.
+    #[must_use]
+    pub const fn is_expr(&self) -> bool {
+        matches!(self, Self::Expr(_))
+    }
+
+    /// Extract the known extent value if known.
+    #[must_use]
+    pub const fn known_extent(&self) -> Option<u64> {
+        match self {
+            Self::Known(extent) => Some(*extent),
+            _ => None,
+        }
+    }
+
+    /// Extract the symbol name if symbolic.
+    #[must_use]
+    pub fn symbol(&self) -> Option<&str> {
+        match self {
+            Self::Symbol(s) => Some(s.as_str()),
+            _ => None,
+        }
+    }
+
+    /// Extract the interned expression ID if expression.
+    #[must_use]
+    pub const fn expr_id(&self) -> Option<ShapeExprId> {
+        match self {
+            Self::Expr(id) => Some(*id),
+            _ => None,
+        }
+    }
 }
 
 /// Semantic lifetime class used by compilation and runtime binding.

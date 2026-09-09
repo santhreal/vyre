@@ -350,7 +350,7 @@ fn fixed_scalar_storage_width(ty: &vyre_foundation::ir::DataType) -> Option<usiz
         vyre_foundation::ir::DataType::Handle(_)
         | vyre_foundation::ir::DataType::DeviceMesh { .. } => Some(4),
         vyre_foundation::ir::DataType::I64 => Some(8),
-        vyre_foundation::ir::DataType::Array { element_size } => Some(*element_size),
+        vyre_foundation::ir::DataType::Array { element_size } => Some(*element_size as usize),
         vyre_foundation::ir::DataType::Vec { element, count } => {
             fixed_scalar_storage_width(element)
                 .and_then(|width| width.checked_mul(usize::from(*count)))

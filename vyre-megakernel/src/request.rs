@@ -622,7 +622,7 @@ fn validate_bindings(
         .iter()
         .flat_map(|value| &value.contract.shape)
         .filter_map(|dim| match dim {
-            ShapeDim::Known(_) => None,
+            ShapeDim::Known(_) | ShapeDim::Unresolved | ShapeDim::Expr(_) => None,
             ShapeDim::Symbol(symbol) => Some(symbol.as_str()),
         })
         .collect();

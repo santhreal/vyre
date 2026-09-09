@@ -456,14 +456,6 @@ fn role_for_buffer(buffer: &BufferDecl) -> Result<BindingRole, BackendError> {
         BufferAccess::Uniform => BindingRole::Uniform,
         BufferAccess::WriteOnly => BindingRole::Output,
         BufferAccess::Workgroup => BindingRole::Shared,
-        other => {
-            return Err(BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: binding `{}` uses BufferAccess::{other:?}, which the binding role mapping does not bind; update vyre-driver role_for_buffer alongside BufferDecl::consumes_host_input.",
-                    buffer.name()
-                ),
-            })
-        }
     };
     if buffer.consumes_host_input() {
         Ok(slot_role)
