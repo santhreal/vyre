@@ -45,6 +45,7 @@ vyre-driver.workspace = true
 vyre-libs = { workspace = true, optional = true }
 vyre-foundation.workspace = true
 vyre-megakernel.workspace = true
+vyre-spec.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 blake3.workspace = true

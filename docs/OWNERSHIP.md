@@ -956,7 +956,7 @@ Execute the artifact's selected persistence: sessions, recovery, residency, sche
 - Owner: `runtime`
 - Layer: `runtime`
 - Publication class: `internal-engine`
-- Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`
+- Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -964,6 +964,7 @@ Execute the artifact's selected persistence: sessions, recovery, residency, sche
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
 | `vyre-libs` | composition trees the megakernel planner plans against | `private` | `product-libraries` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `public` | `megakernel-compiler` |
+| `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
 
 ### `vyre-safetensors`
 

@@ -23,9 +23,27 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use structure_gate::workspace_manifest::string_list;
 use toml::{Table, Value};
 use vyre_test_support::monorepo::vyre_workspace_root;
+
+/// The string entries of a manifest array, or none when the value is absent or
+/// is not an array.
+///
+/// This file walks manifest tables directly, because what it asserts is which
+/// feature activates which dependency, and that lives in the table shape rather
+/// than in any typed record the workspace reader publishes.
+fn string_list(value: Option<&Value>) -> Vec<String> {
+    value
+        .and_then(Value::as_array)
+        .map(|entries| {
+            entries
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
+}
 
 /// Empty compatibility feature that must never activate host execution.
 const ORACLE_FEATURE: &str = "cpu-parity";

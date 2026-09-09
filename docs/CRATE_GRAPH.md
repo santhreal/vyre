@@ -397,6 +397,7 @@ graph TD
   C50 --> C18
   C50 --> C19
   C50 --> C45
+  C50 --> C52
   C53 --> C0
   C53 --> C8
   C53 --> C18
@@ -730,6 +731,7 @@ graph TD
 | `vyre-runtime` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-runtime` | `vyre-libs` | composition trees the megakernel planner plans against | None | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
 | `vyre-runtime` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
+| `vyre-runtime` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-test-support` | `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
 | `vyre-test-support` | `vyre-driver` | the backend-neutral driver registry contract every backend fixture is stated against, behind the driver-contracts feature | None | `always` | `normal` | `true` | `true` | `private` | `backend-contract` |
 | `vyre-test-support` | `vyre-foundation` | IR statement fixtures for the run-time variant enumeration, behind the ir-fixtures feature | None | `always` | `normal` | `true` | `true` | `private` | `foundation-ir` |

@@ -1418,6 +1418,17 @@ boundary = "public"
 seam = "foundation-ir"
 
 [[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate.dependency]]
 package = "vyre-megakernel"
 purpose = "whole-graph compilation and immutable artifact contracts"
 features = []
