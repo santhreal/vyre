@@ -1,7 +1,7 @@
 //! Cross-file duplication budget for the two operation families that were
-//! de-duplicated together: the neural-network dialect under `src/nn` (attention,
-//! norm, linear, activation) and the classic Aho-Corasick dialect under
-//! `src/pattern/classic_ac`.
+//! de-duplicated together: the neural-network dialect under `vyre-libs-nn/src/nn`
+//! (attention, norm, linear, activation) and the classic Aho-Corasick dialect under
+//! `vyre-libs-pattern/src/pattern/classic_ac`.
 //!
 //! # What this gate owns
 //!
@@ -34,10 +34,12 @@ use std::path::{Path, PathBuf};
 /// normalized lines are the smallest run this treats as a copy.
 const SHINGLE: usize = 8;
 
-/// Directory roots, relative to the crate manifest, whose files are compared
+/// Directory roots, relative to the workspace root, whose files are compared
 /// against each other.
-const ROOTS: [&str; 2] = ["src/nn", "src/pattern/classic_ac"];
-
+const ROOTS: [&str; 2] = [
+    "vyre-libs-nn/src/nn",
+    "vyre-libs-pattern/src/pattern/classic_ac",
+];
 /// Anti-vacuity floor on files discovered by the walk. Well below the current
 /// count so ordinary growth or a merged deletion does not trip it, and far
 /// enough above zero that a broken root path fails instead of passing.
@@ -98,7 +100,7 @@ fn normalize(path: PathBuf) -> Normalized {
 }
 
 fn families() -> Vec<Normalized> {
-    let root = vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME"));
+    let root = vyre_test_support::monorepo::vyre_workspace_root();
     let mut paths = Vec::new();
     for relative in ROOTS {
         collect_rs(&root.join(relative), &mut paths);

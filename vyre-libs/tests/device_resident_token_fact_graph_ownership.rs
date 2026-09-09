@@ -9,15 +9,14 @@
 //!
 //! Two contracts are pinned here.
 //!
-//! 1. **Neutrality.** No file under `vyre-libs/src/device/` may name a concrete
-//!    backend. The banned vocabulary is derived from the workspace roster at run
+//! 1. **Neutrality.** No file under `vyre-libs-device/src/device/` may name a concrete
 //!    time, so adding `vyre-driver-<target>` or `vyre-emit-<dialect>` extends it
 //!    without anyone remembering to. A new backend whose name leaks into the
 //!    device module turns this red on the commit that adds it.
 //!
 //! 2. **Ownership.** The resident layout, the degree-profile ranks and the
 //!    profile bucket count are declared exactly once in the workspace, in the
-//!    `vyre-libs` device module. Every other crate may read them; none may
+//!    `vyre-libs-device` device module. Every other crate may read them; none may
 //!    declare them. The crate list is the workspace roster, so a new driver
 //!    crate that reintroduces the restatement is caught without being named
 //!    here. The owner is the directory rather than one file in it: splitting an
@@ -38,7 +37,7 @@ use vyre_test_support::monorepo::{vyre_crate_directory, vyre_workspace_root};
 const DEVICE_MODULE: &str = "src/device";
 
 /// The crate that owns the layout. Everything else may only read it.
-const OWNER_CRATE: &str = "vyre-libs";
+const OWNER_CRATE: &str = "vyre-libs-device";
 
 /// Declarations that constitute owning the resident layout. A second crate that
 /// declares any of these has restated the layout rather than consumed it.

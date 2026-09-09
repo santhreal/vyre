@@ -42,18 +42,29 @@ use crate::read_source_file_bounded;
 /// Panics (i.e. fails the test) on any guard violation, or if a source/test file is unreadable.
 
 pub fn assert_registry_closure(crate_dir: impl AsRef<Path>, waiver: &[&str], floor: usize) {
-    let crate_dir = crate_dir.as_ref();
-    let crate_name = crate_dir
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("<crate>");
-    let src = crate_dir.join("src");
-    let tests = crate_dir.join("tests");
+    assert_registry_closure_crates(&[crate_dir.as_ref().to_path_buf()], waiver, floor);
+}
+
+/// Assert the registry-closure contract across a set of crate directories.
+pub fn assert_registry_closure_crates(crate_dirs: &[PathBuf], waiver: &[&str], floor: usize) {
+    let crate_name = if crate_dirs.len() == 1 {
+        crate_dirs[0]
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("<crate>")
+            .to_string()
+    } else {
+        "vyre-libs".to_string()
+    };
 
     let mut src_files = Vec::new();
-    collect_rust_files(&src, &mut src_files);
     let mut test_files = Vec::new();
-    collect_rust_files(&tests, &mut test_files);
+    for dir in crate_dirs {
+        let src = dir.join("src");
+        let tests = dir.join("tests");
+        collect_rust_files(&src, &mut src_files);
+        collect_rust_files(&tests, &mut test_files);
+    }
 
     let mut src_texts: Vec<(&Path, String)> = Vec::with_capacity(src_files.len());
     for path in &src_files {
@@ -106,7 +117,9 @@ pub fn assert_registry_closure(crate_dir: impl AsRef<Path>, waiver: &[&str], flo
         // only exclude one spelling of the file; excluding every file that
         // calls the enumerator keeps a waiver entry from covering itself
         // whatever the caller is named.
-        if text.contains("assert_registry_closure(") {
+        if text.contains("assert_registry_closure(")
+            || text.contains("assert_registry_closure_crates(")
+        {
             continue;
         }
         corpus.push_str(&text);
@@ -168,7 +181,7 @@ pub fn assert_registry_closure(crate_dir: impl AsRef<Path>, waiver: &[&str], flo
         .count();
     assert!(
         production_files > 0,
-        "[{crate_name}] the source walk found no production `.rs` file under {src:?}, so the \
+        "[{crate_name}] the source walk found no production `.rs` file under the crate source roots, so the \
          enumeration proves nothing. Fix: the walk or the crate layout, not this gate. A crate \
          whose only builders are test-gated fixtures reports zero builders and still scans files."
     );

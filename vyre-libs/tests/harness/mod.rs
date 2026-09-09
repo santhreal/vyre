@@ -28,9 +28,35 @@ pub(crate) fn crate_dir() -> PathBuf {
     vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs")
 }
 
+/// Resolve a source path across the workspace domain crates.
+pub(crate) fn resolve_source_path(path: &str) -> PathBuf {
+    let workspace = vyre_test_support::monorepo::vyre_workspace_root();
+    if workspace.join(path).exists() {
+        return workspace.join(path);
+    }
+    if let Some(rest) = path.strip_prefix("src/") {
+        if let Some((domain, _)) = rest.split_once('/') {
+            let candidate = workspace.join(format!("vyre-libs-{domain}")).join(path);
+            if candidate.exists() {
+                return candidate;
+            }
+        } else {
+            let candidate = workspace.join(format!("vyre-libs-{rest}")).join(path);
+            if candidate.exists() {
+                return candidate;
+            }
+        }
+    }
+    crate_dir().join(path)
+}
+
 pub(crate) fn crate_file(path: &str) -> String {
-    fs::read_to_string(crate_dir().join(path)).unwrap_or_else(|error| {
-        panic!("failed to read {path}: {error}");
+    let resolved = resolve_source_path(path);
+    fs::read_to_string(&resolved).unwrap_or_else(|error| {
+        panic!(
+            "failed to read {path} (resolved at {}): {error}",
+            resolved.display()
+        );
     })
 }
 
@@ -97,7 +123,7 @@ pub(crate) fn assert_no_cpu_named_api_exports(
     extra_trait_markers: &[&str],
     failure_message: &str,
 ) {
-    let root = crate_dir().join(relative_root);
+    let root = resolve_source_path(relative_root);
     let mut files = Vec::new();
     collect_rs_files(&root, read_context, &mut files);
 

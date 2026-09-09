@@ -221,3 +221,46 @@ pub(super) fn sinkhorn_wrap(
         ],
     )
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sinkhorn_iterate_obeys_the_persistent_fixpoint_routing_contract() {
+        vyre_libs_fixpoint::fixpoint::routing_contract::assert_routes_on_dispatch_span(
+            &vyre_libs_fixpoint::fixpoint::routing_contract::RoutedFixpointOp {
+                name: "sinkhorn_iterate",
+                changed: SinkhornBuffers::CANONICAL.changed,
+                at_one_workgroup: &|max_iterations| {
+                    sinkhorn_iterate(
+                        SinkhornBuffers::CANONICAL,
+                        SinkhornExtents {
+                            m: 2,
+                            n: 2,
+                            max_iterations,
+                        },
+                    )
+                },
+                past_one_workgroup: &|max_iterations| {
+                    sinkhorn_iterate(
+                        SinkhornBuffers::CANONICAL,
+                        SinkhornExtents {
+                            m: 16,
+                            n: 17,
+                            max_iterations,
+                        },
+                    )
+                },
+                grid_harness: &|max_iterations| {
+                    vyre_libs_fixpoint::fixpoint::routing_contract::bare_grid_harness(
+                        SinkhornBuffers::CANONICAL.u_curr,
+                        SinkhornBuffers::CANONICAL.u_next,
+                        SinkhornBuffers::CANONICAL.changed,
+                        16,
+                        max_iterations,
+                    )
+                },
+            },
+        );
+    }
+}

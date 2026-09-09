@@ -37,19 +37,35 @@ const SUBJECT_CRATE: &str = "vyre-libs";
 /// The name stays because the meta gate resolves both crate directories.
 const OWNER_CRATE: &str = "vyre-primitives";
 
-/// Every `.rs` file under this crate's `src/`, as (crate-relative path, text).
-///
-/// Resolved at run time rather than from a compile-time manifest constant: every
-/// checkout here shares one target directory, so a binary baked with one tree's
-/// path reads another tree's files.
+fn domain_crates() -> Vec<String> {
+    let root = vyre_workspace_root();
+    structure_gate::workspace_members(&root)
+        .into_iter()
+        .filter(|member| {
+            let name = member.rsplit('/').next().unwrap_or(member.as_str());
+            name == "vyre-libs" || name.starts_with("vyre-libs-")
+        })
+        .collect()
+}
+
+/// Every `.rs` file under the domain crates' `src/`, as (workspace-relative path, text).
 fn source_files() -> Vec<(String, String)> {
-    let root = vyre_crate_directory(SUBJECT_CRATE);
-    let src = root.join("src");
-    let mut paths = Vec::new();
-    collect_rs_paths(&src, &mut paths);
-    let mut out = read_all(&paths, &root);
+    let root = vyre_workspace_root();
+    let mut out = Vec::new();
+    for member in domain_crates() {
+        let crate_dir = root.join(&member);
+        let src = crate_dir.join("src");
+        if !src.is_dir() {
+            continue;
+        }
+        let mut paths = Vec::new();
+        collect_rs_paths(&src, &mut paths);
+        let mut crate_files = read_all(&paths, &root);
+        crate_files.sort_by(|a, b| a.0.cmp(&b.0));
+        assert_walk_is_closed_under_the_module_tree(&crate_files, &src, &member);
+        out.extend(crate_files);
+    }
     out.sort_by(|a, b| a.0.cmp(&b.0));
-    assert_walk_is_closed_under_the_module_tree(&out, &src);
     out
 }
 
@@ -70,11 +86,16 @@ fn source_files() -> Vec<(String, String)> {
 /// Inline `mod name { ... }` blocks are not file-backed and are skipped. A
 /// `#[path]` attribute would point a declaration somewhere else; this crate has
 /// none, and one would surface here as a missing file rather than pass silently.
-fn assert_walk_is_closed_under_the_module_tree(files: &[(String, String)], src: &Path) {
+fn assert_walk_is_closed_under_the_module_tree(
+    files: &[(String, String)],
+    src: &Path,
+    member: &str,
+) {
     let present: BTreeSet<&str> = files.iter().map(|(path, _)| path.as_str()).collect();
+    let lib_rs = format!("{member}/src/lib.rs");
     assert!(
-        present.contains("src/lib.rs"),
-        "Fix: the walk under {} did not read src/lib.rs, so it is not reading this crate; every gate below would pass by finding no members.",
+        present.contains(lib_rs.as_str()),
+        "Fix: the walk under {} did not read {lib_rs}, so it is not reading this crate; every gate below would pass by finding no members.",
         src.display()
     );
     let mut missing = Vec::new();
@@ -622,7 +643,7 @@ fn every_routed_convergence_op_registers_with_the_routing_contract() {
     let files = source_files();
     let mut members = Vec::new();
     for (path, text) in &files {
-        if ROUTING_OWNERS.contains(&path.as_str()) {
+        if ROUTING_OWNERS.iter().any(|owner| path.ends_with(owner)) {
             continue;
         }
         if text.contains("routed_persistent_fixpoint(") {
@@ -655,23 +676,19 @@ fn every_routed_convergence_op_registers_with_the_routing_contract() {
         } else {
             stem
         };
-        let dir_without_src = directory.strip_prefix("src/").unwrap_or(directory);
         let beside = format!("{directory}/tests/mod.rs");
-        let internal_dir = format!("tests/internal/{dir_without_src}/mod.rs");
-        let internal_op = format!("tests/internal/{op}/mod.rs");
+        let mod_rs = format!("{directory}/mod.rs");
         let candidates = [
             path.as_str(),
             named_directory.as_str(),
             beside.as_str(),
-            internal_dir.as_str(),
-            internal_op.as_str(),
+            mod_rs.as_str(),
         ];
         let registered = candidates.iter().any(|candidate| {
             if let Some(text) = by_path.get(*candidate) {
                 text.contains("assert_routes_on_dispatch_span")
                     && (*candidate == path.as_str() || text.contains(op))
-            } else if let Ok(text) =
-                std::fs::read_to_string(vyre_crate_directory(SUBJECT_CRATE).join(candidate))
+            } else if let Ok(text) = std::fs::read_to_string(vyre_workspace_root().join(candidate))
             {
                 text.contains("assert_routes_on_dispatch_span")
                     && (*candidate == path.as_str() || text.contains(op))
@@ -705,7 +722,7 @@ fn no_op_re_asserts_the_routing_obligations_privately() {
     // re-deriving the routing rule instead of registering with it.
     let mut offenders = Vec::new();
     for (path, text) in &files {
-        if ROUTING_OWNERS.contains(&path.as_str()) {
+        if ROUTING_OWNERS.iter().any(|owner| path.ends_with(owner)) {
             continue;
         }
         if text.contains("count_grid_sync(") && text.contains("declared_words(") {
@@ -738,7 +755,7 @@ fn no_production_op_calls_unrouted_persistent_fixpoint() {
     let files = source_files();
     let mut offenders = Vec::new();
     for (path, text) in &files {
-        if ROUTING_OWNERS.contains(&path.as_str()) {
+        if ROUTING_OWNERS.iter().any(|owner| path.ends_with(owner)) {
             continue;
         }
         let prod = non_test_source_text(text);
@@ -857,7 +874,7 @@ const DISPATCH_TREE: &str = "src/graph/dispatch/";
 fn positional_dispatch_readbacks(files: &[(String, String)]) -> Vec<(String, String)> {
     let mut offenders = Vec::new();
     for (path, text) in files {
-        if !path.starts_with(DISPATCH_TREE) {
+        if !path.contains(DISPATCH_TREE) {
             continue;
         }
         let production = non_test_source_text(text);

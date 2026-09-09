@@ -39,7 +39,12 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 /// Crate directories permitted to execute a Program on the host.
-const ORACLE_CRATES: &[&str] = &["vyre-reference", "vyre-driver-reference"];
+// vyre-test-support is dev-only across the workspace, so its test parity oracles cannot reach shipped builds.
+const ORACLE_CRATES: &[&str] = &[
+    "vyre-reference",
+    "vyre-driver-reference",
+    "vyre-test-support",
+];
 
 /// The execution seam a Program crosses.
 const SEAM_TRAITS: &[&str] = &["SemanticExecutor"];
