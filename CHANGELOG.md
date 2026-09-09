@@ -4771,6 +4771,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   C-frontend test files or parser release artifacts. Diagnostic and
   preprocessing conformance now belongs to the live frontend and conformance
   paths.
+- The `vyre` crate root no longer re-exports the compile surface. `Artifact`,
+  `ArtifactEnvelope`, `ArtifactPortfolio`, `CompileObjective`,
+  `CompileRequest`, `DeviceFacts`, `Digest`, `ExternalFacts`,
+  `ObjectiveMetric`, `SearchBudget`, `TargetPayload`, `TargetPayloadFormat`,
+  `TargetProfile`, `ValidatedCompileRequest` and `WorkloadProfile` publish at
+  `vyre::compiler` only.
 - `vyre_libs::prelude` is gone. It re-exported forty items that each already
   had a path, so `TensorRef`, `BuildOptions` and every built-in builder were
   reachable at two paths and some at three. It was declared as the one seam a
