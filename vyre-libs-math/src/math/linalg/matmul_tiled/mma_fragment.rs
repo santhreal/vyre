@@ -43,6 +43,21 @@ impl MmaCapabilityRecord {
             tf32_m16n8k4: true,
         }
     }
+
+    /// What the shipped emitters lower today.
+    ///
+    /// This mirrors [`MatmulKernelCapabilities::current_codegen`], which the
+    /// shape selector already consults. The two records answer the same
+    /// question from different sides, so a disagreement between them would
+    /// select a tensor-core shape and then refuse to emit it.
+    pub(crate) const fn current_codegen() -> Self {
+        Self {
+            descriptor_mma: true,
+            f16_m16n8k16: true,
+            bf16_m16n8k16: false,
+            tf32_m16n8k4: false,
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

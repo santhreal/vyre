@@ -7,10 +7,22 @@ use vyre_libs_builder::builder::gemm::ContractionComposer;
 use vyre_libs_builder::builder::BuildOptions;
 use vyre_libs_builder::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
+use super::mma_fragment::{gate_mma_path, MmaCapabilityRecord};
+use super::program::{build_matmul_tiled_program, MatmulTiledProgramSpec};
 use super::shape::MatrixShape;
 use super::tensor_core_policy::{
-    plan_matmul_kernel, F32MatmulMode, MatmulKernelCapabilities, MatmulKernelPath,
+    plan_matmul_kernel, select_matmul_kernel, F32MatmulMode, MatmulKernelCapabilities,
+    MatmulKernelPath,
 };
+
+/// Workgroup buffer names the cooperative composer stages tiles through. The
+/// tensor-core body reads A and B from global memory and declares no workgroup
+/// buffers, so on that path these name the overflow diagnostics only.
+const TILE_A_NAME: &str = "matmul_a_tile";
+const TILE_B_NAME: &str = "matmul_b_tile";
+
+/// Workgroup the cooperative path uses when a caller sets none.
+const DEFAULT_TILED_WORKGROUP: [u32; 3] = [16, 16, 1];
 
 const OP_ID: &str = "vyre-libs::math::matmul_tiled";
 const OP_ID_BIAS: &str = "vyre-libs::math::matmul_bias_tiled";
@@ -78,10 +90,47 @@ impl MatmulTiledCore {
 
     fn build(self) -> Result<Program, TensorRefError> {
         let (m, k, n) = super::super::matmul_2d_dims(&self.a, &self.b);
+        if self.selects_tensor_core_path(MatrixShape { m, k, n }) {
+            return self.build_tensor_core(m, k, n);
+        }
         let composer = ContractionComposer::tiled_2d(
             self.op_id, self.a, self.b, self.bias, self.out, m, k, n, self.tile,
         );
         super::super::apply_contraction_options(composer, &self.options).build()
+    }
+
+    /// The tensor-core body is a distinct program shape rather than an option
+    /// on the cooperative one, so the selector runs before a composer exists.
+    fn selects_tensor_core_path(&self, shape: MatrixShape) -> bool {
+        gate_mma_path(
+            select_matmul_kernel(&self.a.dtype, shape, self.tile),
+            MmaCapabilityRecord::current_codegen(),
+        )
+        .selected_path
+            == MatmulKernelPath::TensorCoreF16M16N8K16
+    }
+
+    fn build_tensor_core(&self, m: u32, k: u32, n: u32) -> Result<Program, TensorRefError> {
+        build_matmul_tiled_program(MatmulTiledProgramSpec {
+            op_id: self.op_id,
+            a: self.a.name_str(),
+            b: self.b.name_str(),
+            bias: self.bias.as_ref().map(TensorRef::name_str),
+            out: self.out.name_str(),
+            m,
+            k,
+            n,
+            tile: self.tile,
+            workgroup: self
+                .options
+                .workgroup_size
+                .unwrap_or(DEFAULT_TILED_WORKGROUP),
+            generator: self.options.region_generator.unwrap_or(self.op_id),
+            dtype: self.a.dtype.clone(),
+            a_tile_name: TILE_A_NAME,
+            b_tile_name: TILE_B_NAME,
+            mma_capabilities: MmaCapabilityRecord::current_codegen(),
+        })
     }
 }
 
