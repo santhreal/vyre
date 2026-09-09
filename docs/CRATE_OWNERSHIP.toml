@@ -1489,6 +1489,1920 @@ boundary = "public"
 seam = "specification"
 
 [[crate]]
+package = "vyre-libs-builder"
+publication_class = "extension-sdk"
+path = "vyre-libs-builder"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own shared IR composition infrastructure, child region skeletons, operand wrappers, and registration link anchors for library builders. Does not own concrete domain operations, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-bitset"
+publication_class = "extension-sdk"
+path = "vyre-libs-bitset"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own packed u32 bitset operations, word utilities, and logical bitwise IR compositions. Does not own reduction tree implementations, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-reduce"
+purpose = "workgroup reduction trees, atomic scalar reductions, and prefix scans"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-reduce"
+publication_class = "extension-sdk"
+path = "vyre-libs-reduce"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own workgroup reduction trees, atomic scalar reductions, and prefix scan IR compositions. Does not own domain-specific algorithms, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-fixpoint"
+publication_class = "extension-sdk"
+path = "vyre-libs-fixpoint"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own deterministic fixpoint iteration kernels, routing contracts, and grid synchronization barriers. Does not own domain dataflow analysis, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-bitset"
+purpose = "packed u32 bitset operations, word utilities, and logical bitwise compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-math"
+publication_class = "extension-sdk"
+path = "vyre-libs-math"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own linear algebra, matrix operations, broadcasting, scans, optimization builders, and geometric algebra IR compositions. Does not own neural network layers, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-fixpoint"
+purpose = "deterministic fixpoint iteration kernels and grid synchronization barriers"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-reduce"
+purpose = "workgroup reduction trees, atomic scalar reductions, and prefix scans"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-nn"
+publication_class = "extension-sdk"
+path = "vyre-libs-nn"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own neural network activations, linear transformations, normalization, attention, mixture-of-experts, and language model inference IR compositions. Does not own general matrix kernels, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-math"
+purpose = "linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-reduce"
+purpose = "workgroup reduction trees, atomic scalar reductions, and prefix scans"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-graph"
+publication_class = "extension-sdk"
+path = "vyre-libs-graph"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own graph algorithms, CSR traversal, AST walks, dominator trees, and topological sorting IR compositions. Does not own pattern matching engines, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-bitset"
+purpose = "packed u32 bitset operations, word utilities, and logical bitwise compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-fixpoint"
+purpose = "deterministic fixpoint iteration kernels and grid synchronization barriers"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-hash"
+purpose = "hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-math"
+purpose = "linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-reduce"
+purpose = "workgroup reduction trees, atomic scalar reductions, and prefix scans"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-pattern"
+publication_class = "extension-sdk"
+path = "vyre-libs-pattern"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own substring matching, DFA, NFA, bracket matching, and regular expression scanning pipeline IR compositions. Does not own token lexing or parser tables, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-bitset"
+purpose = "packed u32 bitset operations, word utilities, and logical bitwise compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-math"
+purpose = "linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-hash"
+publication_class = "extension-sdk"
+path = "vyre-libs-hash"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3 IR builders. Does not own security taint logic, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-text"
+publication_class = "extension-sdk"
+path = "vyre-libs-text"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own text processing, byte classification, UTF-8 validation, and line indexing IR compositions. Does not own decoding decompression algorithms, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-reduce"
+purpose = "workgroup reduction trees, atomic scalar reductions, and prefix scans"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-decode"
+publication_class = "extension-sdk"
+path = "vyre-libs-decode"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own Base64, hex, DEFLATE, and encodex data decoding and decompression IR compositions. Does not own parsing drivers, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-pattern"
+purpose = "substring matching, DFA, NFA, regex scanning pipelines, and bracket matching"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-text"
+purpose = "text processing, byte classification, UTF-8 validation, and line indexing"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-parsing"
+publication_class = "extension-sdk"
+path = "vyre-libs-parsing"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own lexer drivers, LR(1) table walkers, and language-specific AST construction IR compositions. Does not own semantic analysis passes, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-hash"
+purpose = "hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-pattern"
+purpose = "substring matching, DFA, NFA, regex scanning pipelines, and bracket matching"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-reduce"
+purpose = "workgroup reduction trees, atomic scalar reductions, and prefix scans"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-text"
+purpose = "text processing, byte classification, UTF-8 validation, and line indexing"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-security"
+publication_class = "extension-sdk"
+path = "vyre-libs-security"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own security taint analysis compositions, predicate evaluators, and label resolver IR builders. Does not own rule engine AST evaluation, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-bitset"
+purpose = "packed u32 bitset operations, word utilities, and logical bitwise compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-graph"
+purpose = "graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-reduce"
+purpose = "workgroup reduction trees, atomic scalar reductions, and prefix scans"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-visual"
+publication_class = "extension-sdk"
+path = "vyre-libs-visual"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own visual rendering and compositing effects including blur, shadow, blend modes, gradients, and color conversions. Does not own display presentation, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-math"
+purpose = "linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-rule"
+publication_class = "extension-sdk"
+path = "vyre-libs-rule"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own detection rule engine condition operators, formulas, and program evaluation builders. Does not own security predicate solvers, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-vfs"
+publication_class = "extension-sdk"
+path = "vyre-libs-vfs"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own virtual filesystem DMA asynchronous block load and asset resolution compositions. Does not own host file IO or runtime storage drivers."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-device"
+publication_class = "internal-engine"
+path = "vyre-libs-device"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own compiler-internal device boundary contracts, memory ownership models, and resident graph layout compositions. Does not own concrete backend implementations or driver dispatch."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-solvers"
+publication_class = "internal-engine"
+path = "vyre-libs-solvers"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own compiler-internal numerical solvers, autotuning routines, and spectral schedule analysis compositions. Does not own schedule search ranking, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-bitset"
+purpose = "packed u32 bitset operations, word utilities, and logical bitwise compositions"
+features = ["bitset"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-device"
+purpose = "compiler-internal device boundary contracts, memory ownership, and resident graph layout"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-fixpoint"
+purpose = "deterministic fixpoint iteration kernels and grid synchronization barriers"
+features = ["fixpoint"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-graph"
+purpose = "graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-math"
+purpose = "linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures"
+features = ["math-kernels"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-encoding"
+publication_class = "internal-engine"
+path = "vyre-libs-encoding"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own compiler-internal bitset, provenance, matroid, and fingerprint encoding compositions. Does not own consumer decoding algorithms, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-bitset"
+purpose = "packed u32 bitset operations, word utilities, and logical bitwise compositions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-device"
+purpose = "compiler-internal device boundary contracts, memory ownership, and resident graph layout"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-fixpoint"
+purpose = "deterministic fixpoint iteration kernels and grid synchronization barriers"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-graph"
+purpose = "graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort"
+features = ["graph"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-hash"
+purpose = "hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-math"
+purpose = "linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures"
+features = ["math-kernels"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-nn"
+purpose = "neural network activations, linear, normalization, attention, MoE, and LLM inference"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-parsing"
+purpose = "lexer drivers, LR(1) table walkers, and language-specific AST construction kernels"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-pattern"
+purpose = "substring matching, DFA, NFA, regex scanning pipelines, and bracket matching"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-reduce"
+purpose = "workgroup reduction trees, atomic scalar reductions, and prefix scans"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-analysis"
+publication_class = "internal-engine"
+path = "vyre-libs-analysis"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own compiler-internal static analysis, cost models, dataflow fixpoint routines, and diagnostic aggregation. Does not own pass engine scheduling, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-device"
+purpose = "compiler-internal device boundary contracts, memory ownership, and resident graph layout"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-fixpoint"
+purpose = "deterministic fixpoint iteration kernels and grid synchronization barriers"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-graph"
+purpose = "graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-math"
+purpose = "linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-reasoning"
+publication_class = "internal-engine"
+path = "vyre-libs-reasoning"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own compiler-internal logic, causal reasoning, categorical rewrites, and knowledge compilation compositions. Does not own cost model evaluation, backend lowering, or runtime execution."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-analysis"
+purpose = "compiler-internal static analysis, cost models, dataflow fixpoint, and diagnostics"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-graph"
+purpose = "graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
+package = "vyre-libs-scheduling"
+publication_class = "internal-engine"
+path = "vyre-libs-scheduling"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own compiler-internal scheduling, fusion, batching, and dispatch strategy compositions. Does not own physical lowering, device execution, or runtime lifecycle policy."
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs-builder"
+purpose = "shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-device"
+purpose = "compiler-internal device boundary contracts, memory ownership, and resident graph layout"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-graph"
+purpose = "graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-math"
+purpose = "linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-libs-parsing"
+purpose = "lexer drivers, LR(1) table walkers, and language-specific AST construction kernels"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "the compiler-owned semantic compile-and-execute seam every composition reaches a device through"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations"
+features = ["inventory-registry"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
+
+[[crate]]
 package = "vyre-aot"
 publication_class = "internal-engine"
 path = "vyre-aot"
