@@ -77,7 +77,7 @@ pub(crate) fn emit_plan(args: impl IntoIterator<Item = String>) -> Result<(), St
         &options,
     );
     let artifact = ProofPlanArtifact {
-        wire_format_version: 1,
+        wire_format_version: vyre_spec::schema_registry::SchemaId::ProofPlanArtifact.version_u32(),
         backends: backends
             .iter()
             .map(|backend| backend.id.to_string())

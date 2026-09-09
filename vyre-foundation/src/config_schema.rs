@@ -524,7 +524,10 @@ impl ResolvedConfiguration {
     pub fn apply_toml_table(&mut self, table: &toml::Table) -> Result<(), String> {
         let version = table
             .get("schema_version")
-            .and_then(toml::Value::as_integer)
+            .and_then(|v| match v {
+                toml::Value::Integer(i) => Some(*i),
+                _ => None,
+            })
             .ok_or_else(|| {
                 String::from("Fix: TOML configuration must declare integer `schema_version = 1`.")
             })?;

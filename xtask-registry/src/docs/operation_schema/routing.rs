@@ -49,7 +49,12 @@ pub(super) fn read_manifest_features(
                 continue;
             }
         };
-        let value = match toml::from_str::<toml::Value>(&text) {
+        #[derive(serde::Deserialize)]
+        struct ManifestFeatures {
+            #[serde(default)]
+            features: BTreeMap<String, toml::Value>,
+        }
+        let manifest: ManifestFeatures = match toml::from_str(&text) {
             Ok(value) => value,
             Err(error) => {
                 errors.push(format!(
@@ -59,11 +64,7 @@ pub(super) fn read_manifest_features(
                 continue;
             }
         };
-        let features = value
-            .get("features")
-            .and_then(toml::Value::as_table)
-            .map(|table| table.keys().cloned().collect())
-            .unwrap_or_default();
+        let features = manifest.features.into_keys().collect();
         catalog.insert(crate_name.clone(), features);
     }
     catalog

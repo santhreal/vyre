@@ -217,8 +217,9 @@ pub fn build_release_matrix(registry: &BenchRegistry) -> ReleaseWorkloadMatrix {
     }
 
     ReleaseWorkloadMatrix {
-        schema_version: 1,
-        benchmark_evidence_schema_version: 1,
+        schema_version: vyre_spec::schema_registry::SchemaId::MeasurementRecord.version_u32(),
+        benchmark_evidence_schema_version: vyre_spec::schema_registry::SchemaId::MeasurementRecord
+            .version_u32(),
         required_benchmark_case_fields: REQUIRED_BENCHMARK_CASE_FIELDS.to_vec(),
         required_benchmark_metric_fields: REQUIRED_BENCHMARK_METRIC_FIELDS.to_vec(),
         required_closed_families,

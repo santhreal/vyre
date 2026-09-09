@@ -233,7 +233,7 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
     rand_core::OsRng.fill_bytes(&mut seed);
     let key = SigningKey::from_bytes(&seed);
     let signable = ProveSignableBody {
-        wire_format_version: 2,
+        wire_format_version: vyre_spec::schema_registry::SchemaId::ProveArtifact.version_u32(),
         program_hash: &program_hash,
         backend_id: "all",
         plan: &plan,
@@ -246,7 +246,7 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
     let signature = key.sign(&signable_bytes);
     let emitted_pair_count = pairs.len();
     let artifact = ProveArtifact {
-        wire_format_version: 2,
+        wire_format_version: vyre_spec::schema_registry::SchemaId::ProveArtifact.version_u32(),
         program_hash,
         backend_id: "all".to_string(),
         plan,

@@ -623,8 +623,8 @@ pub struct WorkerReceipt {
 
 impl WorkerReceipt {
     /// Receipt schema version.
-    pub const SCHEMA_VERSION: u32 = 1;
-
+    pub const SCHEMA_VERSION: u32 =
+        vyre_spec::schema_registry::SchemaId::ProofReceipt.version_u32();
     /// Compute the authentication tag over the canonical receipt fields.
     #[must_use]
     pub fn compute_auth_tag(&self, secret: &[u8]) -> String {

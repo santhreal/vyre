@@ -633,6 +633,11 @@ subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "schema-authority"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "script-ledger"
 subsets = ["contract-rules"]
 workflows = ["gates.yml"]

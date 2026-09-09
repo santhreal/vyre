@@ -106,27 +106,7 @@ pub fn verify_cert_signature_hex(
     // does: every field except signature_ed25519 itself, in struct-
     // declaration order. A stable JSON encoder keeps this
     // deterministic across runs.
-    #[derive(serde::Serialize)]
-    struct BundleCertSignableBody<'a> {
-        version: &'a str,
-        bundle_blake3: &'a str,
-        corpus_blake3: &'a str,
-        reference_output_blake3: &'a str,
-        witness_count: u64,
-        timestamp: &'a str,
-        pubkey: &'a str,
-    }
-
-    let signable = BundleCertSignableBody {
-        version: &cert.version,
-        bundle_blake3: &cert.bundle_blake3,
-        corpus_blake3: &cert.corpus_blake3,
-        reference_output_blake3: &cert.reference_output_blake3,
-        witness_count: cert.witness_count,
-        timestamp: &cert.timestamp,
-        pubkey: &cert.pubkey,
-    };
-    let signable_bytes = serde_json::to_vec(&signable).map_err(|_| {
+    let signable_bytes = cert.to_signable_bytes().map_err(|_| {
         BundleCertError::UnsetField(
             "failed to serialise cert body for signature verification  -  impossible on well-formed cert.",
         )

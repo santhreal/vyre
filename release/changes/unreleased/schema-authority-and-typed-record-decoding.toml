@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Conformance, benchmark, and manifest records derive schema and wire format versions from the central schema registry, and dynamic value indexing in production decode paths is replaced with typed record deserialization."

@@ -142,6 +142,62 @@ impl SchemaId {
             Self::TraceEvent | Self::CausalReceipt => ProtocolDomain::RuntimeProtocol,
         }
     }
+
+    /// Retrieve the authoritative schema definition from the canonical registry.
+    #[must_use]
+    pub const fn definition(self) -> &'static SchemaDefinition {
+        let all = CANONICAL_SCHEMA_REGISTRY;
+        let mut i = 0;
+        while i < all.len() {
+            if all[i].id as u32 == self as u32 {
+                return &all[i];
+            }
+            i += 1;
+        }
+        panic!("unregistered schema id")
+    }
+
+    /// Semantic version of this schema format.
+    #[must_use]
+    pub const fn semver(self) -> ProtocolVersion {
+        self.definition().semver
+    }
+
+    /// Major semantic version as u32.
+    #[must_use]
+    pub const fn version_u32(self) -> u32 {
+        self.definition().semver.major
+    }
+
+    /// Major semantic version as u16.
+    #[must_use]
+    pub const fn version_u16(self) -> u16 {
+        self.definition().semver.major as u16
+    }
+
+    /// Major semantic version as u64.
+    #[must_use]
+    pub const fn version_u64(self) -> u64 {
+        self.definition().semver.major as u64
+    }
+
+    /// Signature domain separator / canonical schema version identifier.
+    #[must_use]
+    pub const fn domain_separator(self) -> &'static str {
+        self.definition().domain_separator
+    }
+
+    /// Owning package in the workspace.
+    #[must_use]
+    pub const fn owning_package(self) -> &'static str {
+        self.definition().owning_package
+    }
+
+    /// Canonical fields defined for this schema.
+    #[must_use]
+    pub const fn fields(self) -> &'static [CanonicalField] {
+        self.definition().fields
+    }
 }
 
 impl fmt::Display for SchemaId {
@@ -249,6 +305,11 @@ impl SchemaDefinition {
         self.id.domain()
     }
 
+    /// Returns an iterator over the fields that form the cryptographic identity of records for this schema.
+    pub fn identity_fields(&self) -> impl Iterator<Item = &'static CanonicalField> + '_ {
+        self.fields.iter().filter(|f| f.is_identity)
+    }
+
     /// Validate structural invariants of this schema definition.
     #[must_use]
     pub fn validate_invariants(&self) -> bool {
@@ -335,44 +396,79 @@ impl SchemaDefinition {
 static CONFORMANCE_CERT_FIELDS: &[CanonicalField] = &[
     CanonicalField {
         number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
+        name: "version",
+        field_type: FieldType::Utf8String,
         is_identity: true,
         required: true,
     },
     CanonicalField {
         number: 2,
-        name: "certificate_id",
-        field_type: FieldType::FixedBytes(32),
+        name: "op_id",
+        field_type: FieldType::Utf8String,
         is_identity: true,
         required: true,
     },
     CanonicalField {
         number: 3,
+        name: "wire_format_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "program_blake3",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 5,
+        name: "witness_set_blake3",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 6,
         name: "backend_id",
         field_type: FieldType::Utf8String,
         is_identity: true,
         required: true,
     },
     CanonicalField {
-        number: 4,
-        name: "pass_count",
-        field_type: FieldType::U64,
+        number: 7,
+        name: "backend_version",
+        field_type: FieldType::Utf8String,
         is_identity: true,
         required: true,
     },
     CanonicalField {
-        number: 5,
-        name: "fail_count",
-        field_type: FieldType::U64,
+        number: 8,
+        name: "laws_verified",
+        field_type: FieldType::List(&FieldType::Utf8String),
         is_identity: true,
         required: true,
     },
     CanonicalField {
-        number: 6,
-        name: "timestamp_utc",
-        field_type: FieldType::U64,
+        number: 9,
+        name: "timestamp",
+        field_type: FieldType::Utf8String,
         is_identity: false,
+        required: true,
+    },
+    CanonicalField {
+        number: 10,
+        name: "signature_ed25519",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: true,
+    },
+    CanonicalField {
+        number: 11,
+        name: "pubkey",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
         required: true,
     },
 ];
@@ -801,29 +897,29 @@ static REPLAY_CAPSULE_FIELDS: &[CanonicalField] = &[
 static BUNDLE_CERT_FIELDS: &[CanonicalField] = &[
     CanonicalField {
         number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
+        name: "version",
+        field_type: FieldType::Utf8String,
         is_identity: true,
         required: true,
     },
     CanonicalField {
         number: 2,
         name: "bundle_blake3",
-        field_type: FieldType::FixedBytes(32),
+        field_type: FieldType::Utf8String,
         is_identity: true,
         required: true,
     },
     CanonicalField {
         number: 3,
         name: "corpus_blake3",
-        field_type: FieldType::FixedBytes(32),
+        field_type: FieldType::Utf8String,
         is_identity: true,
         required: true,
     },
     CanonicalField {
         number: 4,
         name: "reference_output_blake3",
-        field_type: FieldType::FixedBytes(32),
+        field_type: FieldType::Utf8String,
         is_identity: true,
         required: true,
     },
@@ -843,8 +939,15 @@ static BUNDLE_CERT_FIELDS: &[CanonicalField] = &[
     },
     CanonicalField {
         number: 7,
+        name: "signature_ed25519",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: true,
+    },
+    CanonicalField {
+        number: 8,
         name: "pubkey",
-        field_type: FieldType::FixedBytes(32),
+        field_type: FieldType::Utf8String,
         is_identity: true,
         required: true,
     },
@@ -1216,7 +1319,7 @@ static STALE_CAUSAL_FIXTURES: &[&str] = &["vyre-causal-receipt-v0"];
 pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
     SchemaDefinition {
         id: SchemaId::ConformanceCertificate,
-        semver: ProtocolVersion::V1_0_0,
+        semver: ProtocolVersion::new(2, 0, 0),
         fields: CONFORMANCE_CERT_FIELDS,
         defaults_policy: DefaultsPolicy::NoDefaults,
         bounds: SchemaBounds {
@@ -1224,10 +1327,10 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
             max_depth: 4,
             max_elements: 1024,
         },
-        domain_separator: "VYRE_CONFORMANCE_CERT_V1",
+        domain_separator: "vyre-conformance-certificate-v2",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_CERT_FIXTURES,
-        owning_package: "conform/vyre-conform",
+        owning_package: "conform/vyre-conform-spec",
     },
     SchemaDefinition {
         id: SchemaId::ArtifactPayload,
@@ -1269,10 +1372,10 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
             max_depth: 4,
             max_elements: 1024,
         },
-        domain_separator: "VYRE_PROOF_RECEIPT_V1",
+        domain_separator: "vyre-conformance-proof-receipt-v1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_PROOF_FIXTURES,
-        owning_package: "vyre-spec",
+        owning_package: "conform/vyre-conform-spec",
     },
     SchemaDefinition {
         id: SchemaId::MeasurementRecord,
@@ -1404,7 +1507,7 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
             max_depth: 4,
             max_elements: 65536,
         },
-        domain_separator: "VYRE_REPLAY_CAPSULE_V2",
+        domain_separator: "vyre-conformance-replay-capsule-v2",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_REPLAY_FIXTURES,
         owning_package: "conform/vyre-conform-spec",
@@ -1419,7 +1522,7 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
             max_depth: 4,
             max_elements: 4096,
         },
-        domain_separator: "VYRE_BUNDLE_CERT_V2",
+        domain_separator: "vyre-conformance-bundle-certificate-v2",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_BUNDLE_FIXTURES,
         owning_package: "conform/vyre-conform-spec",
@@ -1434,7 +1537,7 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
             max_depth: 4,
             max_elements: 32768,
         },
-        domain_separator: "VYRE_PROVE_ARTIFACT_V2",
+        domain_separator: "vyre-conformance-prove-artifact-v2",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_PROVE_FIXTURES,
         owning_package: "conform/vyre-conform",
@@ -1449,7 +1552,7 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
             max_depth: 4,
             max_elements: 4096,
         },
-        domain_separator: "VYRE_PROOF_PLAN_V1",
+        domain_separator: "vyre-conformance-proof-plan-artifact-v1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_PROOF_PLAN_FIXTURES,
         owning_package: "conform/vyre-conform",

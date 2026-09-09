@@ -303,32 +303,25 @@ fn workspace_manifest_root(start: &Path) -> Result<PathBuf> {
 /// never reading either of them.
 fn production_source_roots(workspace: &Path) -> Result<Vec<PathBuf>> {
     let workspace = workspace_manifest_root(workspace)?;
-    let manifest = read_source_bounded(&workspace.join("Cargo.toml"))?;
-    // `toml::Table` rather than `toml::Value`: with the pinned toml, a whole
-    // document does not deserialize into `Value`, which is why the rest of the
-    // workspace parses a table and reads fields off it.
-    let manifest: toml::Table =
-        toml::from_str(&manifest).context("parsing the workspace manifest")?;
-    let members = manifest
-        .get("workspace")
-        .and_then(toml::Value::as_table)
-        .and_then(|workspace| workspace.get("members"))
-        .and_then(toml::Value::as_array)
-        .context(
-            "Fix: the workspace manifest declares no `workspace.members`, so the CPU fallback \
-             guard cannot derive what to scan and will not fall back to a stale list",
-        )?;
+    let manifest_text = read_source_bounded(&workspace.join("Cargo.toml"))?;
+    #[derive(serde::Deserialize)]
+    struct WorkspaceManifest {
+        workspace: WorkspaceSection,
+    }
+    #[derive(serde::Deserialize)]
+    struct WorkspaceSection {
+        members: Vec<String>,
+    }
+    let manifest: WorkspaceManifest =
+        toml::from_str(&manifest_text).context("parsing the workspace manifest")?;
 
     let exempt: Vec<&str> = CPU_GUARD_EXEMPT_CRATES
         .iter()
         .map(|(name, _)| *name)
         .collect();
-    let mut roots = Vec::with_capacity(members.len());
-    for member in members {
-        let Some(member) = member.as_str() else {
-            anyhow::bail!("Fix: a `workspace.members` entry is not a string");
-        };
-        if exempt.contains(&member) {
+    let mut roots = Vec::with_capacity(manifest.workspace.members.len());
+    for member in manifest.workspace.members {
+        if exempt.contains(&member.as_str()) {
             continue;
         }
         let source = workspace.join(member).join("src");

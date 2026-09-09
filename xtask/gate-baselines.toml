@@ -500,6 +500,10 @@ name = "repo-hygiene"
 findings = 0
 
 [[gate]]
+name = "schema-authority"
+findings = 0
+
+[[gate]]
 name = "schedule-ownership"
 findings = 0
 

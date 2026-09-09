@@ -101,7 +101,8 @@ pub fn manifest_for(cases: &[OptimizationCorpusCase]) -> OptimizationCorpusManif
         Ok(passes) => passes,
         Err(error) => {
             return OptimizationCorpusManifest {
-                schema_version: 2,
+                schema_version: vyre_spec::schema_registry::SchemaId::ConformanceCertificate
+                    .version_u32(),
                 required_min_cases: RELEASE_MIN_OPTIMIZATION_CASES,
                 generated_cases: cases.len(),
                 verified_cases: 0,
@@ -126,7 +127,8 @@ pub fn manifest_for(cases: &[OptimizationCorpusCase]) -> OptimizationCorpusManif
             .with_shape_predicate_enforcement(true),
         Err(error) => {
             return OptimizationCorpusManifest {
-                schema_version: 2,
+                schema_version: vyre_spec::schema_registry::SchemaId::ConformanceCertificate
+                    .version_u32(),
                 required_min_cases: RELEASE_MIN_OPTIMIZATION_CASES,
                 generated_cases: cases.len(),
                 verified_cases: 0,
@@ -183,7 +185,7 @@ pub fn manifest_for(cases: &[OptimizationCorpusCase]) -> OptimizationCorpusManif
     }
 
     OptimizationCorpusManifest {
-        schema_version: 2,
+        schema_version: vyre_spec::schema_registry::SchemaId::ConformanceCertificate.version_u32(),
         required_min_cases: RELEASE_MIN_OPTIMIZATION_CASES,
         generated_cases: cases.len(),
         verified_cases,

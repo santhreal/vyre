@@ -9,7 +9,7 @@
 
 use std::path::Path;
 
-use toml::Value;
+use serde::Deserialize;
 
 use crate::read_source_bounded;
 
@@ -58,25 +58,45 @@ impl Registry {
     /// When the text is not TOML, declares no member, or carries a row without a
     /// `package`, `path`, `owner` or `layer`.
     pub fn parse(text: &str) -> Result<Self, String> {
-        let table: toml::Table = toml::from_str(text)
+        #[derive(Deserialize)]
+        struct OwnershipFile {
+            #[serde(default, rename = "crate")]
+            crates: Option<Vec<RawCrateEntry>>,
+        }
+
+        #[derive(Deserialize)]
+        struct RawCrateEntry {
+            package: Option<String>,
+            path: Option<String>,
+            owner: Option<String>,
+            layer: Option<String>,
+        }
+
+        let file: OwnershipFile = toml::from_str(text)
             .map_err(|error| format!("{REGISTRY} is not readable as TOML: {error}"))?;
-        let document = Value::Table(table);
-        let entries = document
-            .get("crate")
-            .and_then(Value::as_array)
+        let entries = file
+            .crates
             .ok_or_else(|| format!("{REGISTRY} declares no [[crate]] entries"))?;
         let mut rows = Vec::with_capacity(entries.len());
         for entry in entries {
-            let Some(package) = entry.get("package").and_then(Value::as_str) else {
-                return Err(format!(
-                    "{REGISTRY} has a [[crate]] entry with no `package`"
-                ));
-            };
+            let package = entry
+                .package
+                .ok_or_else(|| format!("{REGISTRY} has a [[crate]] entry with no `package`"))?;
+            let path = entry
+                .path
+                .ok_or_else(|| format!("{REGISTRY} entry for `{package}` declares no `path`"))?
+                .replace('\\', "/");
+            let owner = entry
+                .owner
+                .ok_or_else(|| format!("{REGISTRY} entry for `{package}` declares no `owner`"))?;
+            let layer = entry
+                .layer
+                .ok_or_else(|| format!("{REGISTRY} entry for `{package}` declares no `layer`"))?;
             rows.push(CrateRow {
-                package: package.to_string(),
-                path: field(entry, "path", package)?.replace('\\', "/"),
-                owner: field(entry, "owner", package)?,
-                layer: field(entry, "layer", package)?,
+                package,
+                path,
+                owner,
+                layer,
             });
         }
         if rows.is_empty() {
@@ -110,13 +130,4 @@ impl Registry {
             .filter(|row| path == row.path || path.starts_with(&format!("{}/", row.path)))
             .max_by_key(|row| row.path.len())
     }
-}
-
-/// One required string field of a `[[crate]]` row.
-fn field(entry: &Value, name: &str, package: &str) -> Result<String, String> {
-    entry
-        .get(name)
-        .and_then(Value::as_str)
-        .map(str::to_string)
-        .ok_or_else(|| format!("{REGISTRY} entry for `{package}` declares no `{name}`"))
 }

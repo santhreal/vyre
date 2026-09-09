@@ -249,7 +249,7 @@ mod tests {
                 units_per_page: 16,
             },
             device_generation: 1,
-            cache_schema_version: 1,
+            cache_schema_version: vyre_spec::schema_registry::SchemaId::CacheEntry.version_u32(),
             isolation_domain: "tenant_spec".to_string(),
             trust_domain: None,
         }
