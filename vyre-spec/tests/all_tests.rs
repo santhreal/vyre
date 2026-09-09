@@ -195,3 +195,6 @@ pub mod wire_tag_surface;
 /// Integration tests from `tests/protocol_compatibility_matrix.rs`.
 #[path = "protocol_compatibility_matrix.rs"]
 pub mod protocol_compatibility_matrix;
+/// Integration tests from `tests/resource_capability_contracts.rs`.
+#[path = "resource_capability_contracts.rs"]
+pub mod resource_capability_contracts;

@@ -8,7 +8,7 @@
 
 use core::fmt;
 
-use crate::compatibility::ProtocolVersion;
+use crate::compatibility::{CompatibilityDisposition, ProtocolVersion};
 
 /// Globally unique schema identifier for every persisted, signed, cached, and transmitted record.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -39,6 +39,26 @@ pub enum SchemaId {
     AnalysisFact = 11,
     /// Dialect extension schema declaration.
     ExtensionSchema = 12,
+    /// Conformance mismatch reproduction replay capsule.
+    ReplayCapsule = 13,
+    /// Conformance certificate for a compiled bundle.
+    BundleCertificate = 14,
+    /// Signed prove command artifact.
+    ProveArtifact = 15,
+    /// Proof execution plan summary artifact.
+    ProofPlanArtifact = 16,
+    /// Safetensors checkpoint index metadata.
+    SafetensorIndex = 17,
+    /// AOT package manifest.
+    AotManifest = 18,
+    /// Diagnostic compiler artifact report.
+    ArtifactReport = 19,
+    /// Serialized program binary wire framing envelope.
+    WireFraming = 20,
+    /// Target facet compatibility matrix.
+    TargetFacetMatrix = 21,
+    /// Execution causal receipt.
+    CausalReceipt = 22,
 }
 
 impl SchemaId {
@@ -56,6 +76,16 @@ impl SchemaId {
         Self::InvariantDigest,
         Self::AnalysisFact,
         Self::ExtensionSchema,
+        Self::ReplayCapsule,
+        Self::BundleCertificate,
+        Self::ProveArtifact,
+        Self::ProofPlanArtifact,
+        Self::SafetensorIndex,
+        Self::AotManifest,
+        Self::ArtifactReport,
+        Self::WireFraming,
+        Self::TargetFacetMatrix,
+        Self::CausalReceipt,
     ];
 
     /// Canonical string identifier for this schema.
@@ -74,6 +104,16 @@ impl SchemaId {
             Self::InvariantDigest => "invariant_digest",
             Self::AnalysisFact => "analysis_fact",
             Self::ExtensionSchema => "extension_schema",
+            Self::ReplayCapsule => "replay_capsule",
+            Self::BundleCertificate => "bundle_certificate",
+            Self::ProveArtifact => "prove_artifact",
+            Self::ProofPlanArtifact => "proof_plan_artifact",
+            Self::SafetensorIndex => "safetensor_index",
+            Self::AotManifest => "aot_manifest",
+            Self::ArtifactReport => "artifact_report",
+            Self::WireFraming => "wire_framing",
+            Self::TargetFacetMatrix => "target_facet_matrix",
+            Self::CausalReceipt => "causal_receipt",
         }
     }
 }
@@ -138,6 +178,8 @@ pub enum DefaultsPolicy {
     NoDefaults,
     /// Strict explicit default only; missing optional fields must encode an explicit None tag.
     ExplicitDefaultOnly,
+    /// Unknown fields are preserved only where the entry says that is safe.
+    PreserveUnknownSafe,
 }
 
 /// Resource and depth bounds enforced during decoding and validation.
@@ -166,6 +208,10 @@ pub struct SchemaDefinition {
     pub bounds: SchemaBounds,
     /// Signature domain separator preventing cross-schema cryptographic confusion.
     pub domain_separator: &'static str,
+    /// Compatibility disposition for this schema version.
+    pub compatibility: CompatibilityDisposition,
+    /// Known stale fixture encodings from earlier versions for rejection testing.
+    pub stale_fixtures: &'static [&'static str],
     /// Crate owning this schema definition.
     pub owning_package: &'static str,
 }
@@ -175,6 +221,7 @@ impl SchemaDefinition {
     #[must_use]
     pub fn validate_invariants(&self) -> bool {
         let mut last_num = 0;
+        let mut has_identity = false;
         for field in self.fields {
             if field.number <= last_num {
                 return false; // Field numbers must be strictly increasing
@@ -183,12 +230,66 @@ impl SchemaDefinition {
             if field.name.is_empty() {
                 return false;
             }
+            if field.is_identity {
+                has_identity = true;
+            }
         }
-        !self.domain_separator.is_empty() && self.bounds.max_bytes > 0
+        has_identity
+            && !self.domain_separator.is_empty()
+            && self.bounds.max_bytes > 0
+            && self.bounds.max_depth > 0
+            && self.bounds.max_elements > 0
+            && !self.owning_package.is_empty()
+    }
+
+    /// Generate structured markdown documentation for this schema.
+    #[must_use]
+    pub fn generate_documentation(&self) -> String {
+        use core::fmt::Write as _;
+        let mut doc = String::new();
+        let _ = writeln!(doc, "# Schema: `{}` (ID: {})", self.id.as_str(), self.id as u32);
+        let _ = writeln!(doc, "- **Version**: `{}`", self.semver);
+        let _ = writeln!(doc, "- **Owning Package**: `{}`", self.owning_package);
+        let _ = writeln!(doc, "- **Domain Separator**: `{}`", self.domain_separator);
+        let _ = writeln!(
+            doc,
+            "- **Bounds**: max_bytes={}, max_depth={}, max_elements={}",
+            self.bounds.max_bytes, self.bounds.max_depth, self.bounds.max_elements
+        );
+        let _ = writeln!(doc, "\n| Field # | Name | Type | Identity | Required |");
+        let _ = writeln!(doc, "|---|---|---|---|---|");
+        for field in self.fields {
+            let _ = writeln!(
+                doc,
+                "| {} | `{}` | `{:?}` | {} | {} |",
+                field.number, field.name, field.field_type, field.is_identity, field.required
+            );
+        }
+        doc
+    }
+
+    /// Generate deterministic fuzz grammar rule in BNF format.
+    #[must_use]
+    pub fn fuzz_grammar(&self) -> String {
+        use core::fmt::Write as _;
+        let mut grammar = String::new();
+        let name = self.id.as_str();
+        let _ = writeln!(grammar, "<{name}_record> ::= \"VYRE\" <u32_id_{}> <semver_{}> <fields_{name}>", self.id as u32, self.semver);
+        let mut fields_str = String::new();
+        for field in self.fields {
+            let _ = write!(fields_str, " <field_{}_{}>", name, field.number);
+        }
+        let _ = writeln!(grammar, "<fields_{name}> ::={fields_str}");
+        for field in self.fields {
+            let _ = writeln!(
+                grammar,
+                "<field_{}_{}> ::= <u32_field_num_{}> <type_{:?}>",
+                name, field.number, field.number, field.field_type
+            );
+        }
+        grammar
     }
 }
-
-// Canonical field definitions for the 12 schema records
 
 static CONFORMANCE_CERT_FIELDS: &[CanonicalField] = &[
     CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
@@ -278,6 +379,119 @@ static EXTENSION_SCHEMA_FIELDS: &[CanonicalField] = &[
     CanonicalField { number: 5, name: "proof_digest", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
 ];
 
+static REPLAY_CAPSULE_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "op_id", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 3, name: "backend_id", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 4, name: "case_index", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField { number: 5, name: "replay_command", field_type: FieldType::Utf8String, is_identity: false, required: true },
+    CanonicalField { number: 6, name: "program_blake3", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 7, name: "witness_input_blake3", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 8, name: "reference_output_blake3", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 9, name: "backend_output_blake3", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+];
+
+static BUNDLE_CERT_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "bundle_blake3", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 3, name: "corpus_blake3", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 4, name: "reference_output_blake3", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 5, name: "witness_count", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField { number: 6, name: "timestamp", field_type: FieldType::Utf8String, is_identity: false, required: true },
+    CanonicalField { number: 7, name: "pubkey", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+];
+
+static PROVE_ARTIFACT_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "wire_format_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "program_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 3, name: "backend_id", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 4, name: "plan_digest", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 5, name: "pair_count", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField { number: 6, name: "law_count", field_type: FieldType::U64, is_identity: true, required: true },
+];
+
+static PROOF_PLAN_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "wire_format_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "catalog_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 3, name: "execution_hash", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 4, name: "backend_count", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField { number: 5, name: "op_count", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField { number: 6, name: "pair_count", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField { number: 7, name: "witness_case_count", field_type: FieldType::U64, is_identity: true, required: true },
+];
+
+static SAFETENSOR_INDEX_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "framing_version", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 3, name: "total_tensor_count", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField { number: 4, name: "shard_count", field_type: FieldType::U64, is_identity: true, required: true },
+    CanonicalField { number: 5, name: "total_bytes", field_type: FieldType::U64, is_identity: true, required: true },
+];
+
+static AOT_MANIFEST_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "schema_name", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 3, name: "aot_version", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 4, name: "artifact_name", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 5, name: "envelope_sha256_hex", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 6, name: "neutral_artifact_digest_hex", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 7, name: "target_payload_digest_hex", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 8, name: "weights_sha256_hex", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+];
+
+static ARTIFACT_REPORT_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "format_version", field_type: FieldType::U16, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "artifact_digest", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 3, name: "source_graph", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 4, name: "semantic_graph", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 5, name: "compiler_version", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 6, name: "target_count", field_type: FieldType::U32, is_identity: true, required: true },
+];
+
+static WIRE_FRAMING_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "wire_format_version", field_type: FieldType::U16, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "magic", field_type: FieldType::FixedBytes(4), is_identity: true, required: true },
+    CanonicalField { number: 3, name: "dialect_manifest_len", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 4, name: "body_len", field_type: FieldType::U64, is_identity: true, required: true },
+];
+
+static TARGET_FACET_MATRIX_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "platform_name", field_type: FieldType::Utf8String, is_identity: true, required: true },
+    CanonicalField { number: 3, name: "facet_count", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 4, name: "matrix_digest", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+];
+
+static CAUSAL_RECEIPT_FIELDS: &[CanonicalField] = &[
+    CanonicalField { number: 1, name: "schema_version", field_type: FieldType::U32, is_identity: true, required: true },
+    CanonicalField { number: 2, name: "session_id", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 3, name: "receipt_id", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+    CanonicalField { number: 4, name: "causality_digest", field_type: FieldType::FixedBytes(32), is_identity: true, required: true },
+];
+
+static STALE_CERT_FIXTURES: &[&str] = &["vyre-conformance-certificate-v0", "vyre-conformance-certificate-v1"];
+static STALE_ARTIFACT_FIXTURES: &[&str] = &["vyre-artifact-v0"];
+static STALE_SCHEDULE_FIXTURES: &[&str] = &["vyre-schedule-v0"];
+static STALE_PROOF_FIXTURES: &[&str] = &["vyre-proof-receipt-v0"];
+static STALE_MEASUREMENT_FIXTURES: &[&str] = &["vyre-measurement-v0"];
+static STALE_TRACE_FIXTURES: &[&str] = &["vyre-trace-v0"];
+static STALE_CACHE_FIXTURES: &[&str] = &["vyre-cache-v0"];
+static STALE_CONFIG_FIXTURES: &[&str] = &["vyre-config-v0"];
+static STALE_WIRE_OP_FIXTURES: &[&str] = &["vyre-wire-op-v0"];
+static STALE_INVARIANT_FIXTURES: &[&str] = &["vyre-invariant-v0"];
+static STALE_ANALYSIS_FIXTURES: &[&str] = &["vyre-fact-v0"];
+static STALE_EXTENSION_FIXTURES: &[&str] = &["vyre-ext-schema-v0"];
+static STALE_REPLAY_FIXTURES: &[&str] = &["vyre-replay-capsule-v1"];
+static STALE_BUNDLE_FIXTURES: &[&str] = &["vyre-conformance-certificate-v1"];
+static STALE_PROVE_FIXTURES: &[&str] = &["vyre-prove-artifact-v1"];
+static STALE_PROOF_PLAN_FIXTURES: &[&str] = &["vyre-proof-plan-v0"];
+static STALE_SAFETENSOR_FIXTURES: &[&str] = &["vyre-safetensors-v0"];
+static STALE_AOT_FIXTURES: &[&str] = &["vyre-aot-manifest-v3", "vyre-aot-manifest-v2", "vyre-aot-manifest-v1"];
+static STALE_REPORT_FIXTURES: &[&str] = &["vyre-artifact-report-v0"];
+static STALE_WIRE_FRAMING_FIXTURES: &[&str] = &["vyre-wire-v3", "vyre-wire-v2", "vyre-wire-v1"];
+static STALE_TARGET_FACET_FIXTURES: &[&str] = &["vyre-target-facet-v0"];
+static STALE_CAUSAL_FIXTURES: &[&str] = &["vyre-causal-receipt-v0"];
+
 /// The complete declarative schema registry.
 pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
     SchemaDefinition {
@@ -287,6 +501,8 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         defaults_policy: DefaultsPolicy::NoDefaults,
         bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
         domain_separator: "VYRE_CONFORMANCE_CERT_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_CERT_FIXTURES,
         owning_package: "conform/vyre-conform",
     },
     SchemaDefinition {
@@ -296,6 +512,8 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         defaults_policy: DefaultsPolicy::NoDefaults,
         bounds: SchemaBounds { max_bytes: 67108864, max_depth: 4, max_elements: 65536 },
         domain_separator: "VYRE_ARTIFACT_PAYLOAD_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_ARTIFACT_FIXTURES,
         owning_package: "vyre-megakernel",
     },
     SchemaDefinition {
@@ -305,6 +523,8 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         defaults_policy: DefaultsPolicy::NoDefaults,
         bounds: SchemaBounds { max_bytes: 1048576, max_depth: 4, max_elements: 4096 },
         domain_separator: "VYRE_SCHEDULE_RECORD_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_SCHEDULE_FIXTURES,
         owning_package: "vyre-foundation",
     },
     SchemaDefinition {
@@ -314,6 +534,8 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         defaults_policy: DefaultsPolicy::NoDefaults,
         bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
         domain_separator: "VYRE_PROOF_RECEIPT_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_PROOF_FIXTURES,
         owning_package: "vyre-spec",
     },
     SchemaDefinition {
@@ -323,6 +545,8 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         defaults_policy: DefaultsPolicy::NoDefaults,
         bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
         domain_separator: "VYRE_MEASUREMENT_RECORD_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_MEASUREMENT_FIXTURES,
         owning_package: "vyre-bench",
     },
     SchemaDefinition {
@@ -332,6 +556,8 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         defaults_policy: DefaultsPolicy::NoDefaults,
         bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
         domain_separator: "VYRE_TRACE_EVENT_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_TRACE_FIXTURES,
         owning_package: "vyre-runtime",
     },
     SchemaDefinition {
@@ -341,6 +567,8 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         defaults_policy: DefaultsPolicy::NoDefaults,
         bounds: SchemaBounds { max_bytes: 67108864, max_depth: 4, max_elements: 65536 },
         domain_separator: "VYRE_CACHE_ENTRY_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_CACHE_FIXTURES,
         owning_package: "vyre-runtime",
     },
     SchemaDefinition {
@@ -350,6 +578,8 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         defaults_policy: DefaultsPolicy::NoDefaults,
         bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
         domain_separator: "VYRE_CONFIG_RECEIPT_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_CONFIG_FIXTURES,
         owning_package: "vyre-foundation",
     },
     SchemaDefinition {
@@ -359,6 +589,8 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         defaults_policy: DefaultsPolicy::NoDefaults,
         bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
         domain_separator: "VYRE_WIRE_OP_METADATA_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_WIRE_OP_FIXTURES,
         owning_package: "vyre-spec",
     },
     SchemaDefinition {
@@ -368,6 +600,8 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         defaults_policy: DefaultsPolicy::NoDefaults,
         bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
         domain_separator: "VYRE_INVARIANT_DIGEST_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_INVARIANT_FIXTURES,
         owning_package: "vyre-spec",
     },
     SchemaDefinition {
@@ -377,6 +611,8 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         defaults_policy: DefaultsPolicy::NoDefaults,
         bounds: SchemaBounds { max_bytes: 65536, max_depth: 4, max_elements: 1024 },
         domain_separator: "VYRE_ANALYSIS_FACT_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_ANALYSIS_FIXTURES,
         owning_package: "vyre-spec",
     },
     SchemaDefinition {
@@ -386,7 +622,119 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         defaults_policy: DefaultsPolicy::NoDefaults,
         bounds: SchemaBounds { max_bytes: 1048576, max_depth: 4, max_elements: 4096 },
         domain_separator: "VYRE_EXTENSION_SCHEMA_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_EXTENSION_FIXTURES,
         owning_package: "vyre-spec",
+    },
+    SchemaDefinition {
+        id: SchemaId::ReplayCapsule,
+        semver: ProtocolVersion::new(2, 0, 0),
+        fields: REPLAY_CAPSULE_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 67108864, max_depth: 4, max_elements: 65536 },
+        domain_separator: "VYRE_REPLAY_CAPSULE_V2",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_REPLAY_FIXTURES,
+        owning_package: "conform/vyre-conform-spec",
+    },
+    SchemaDefinition {
+        id: SchemaId::BundleCertificate,
+        semver: ProtocolVersion::new(2, 0, 0),
+        fields: BUNDLE_CERT_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 1048576, max_depth: 4, max_elements: 4096 },
+        domain_separator: "VYRE_BUNDLE_CERT_V2",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_BUNDLE_FIXTURES,
+        owning_package: "conform/vyre-conform-spec",
+    },
+    SchemaDefinition {
+        id: SchemaId::ProveArtifact,
+        semver: ProtocolVersion::new(2, 0, 0),
+        fields: PROVE_ARTIFACT_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 33554432, max_depth: 4, max_elements: 32768 },
+        domain_separator: "VYRE_PROVE_ARTIFACT_V2",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_PROVE_FIXTURES,
+        owning_package: "conform/vyre-conform",
+    },
+    SchemaDefinition {
+        id: SchemaId::ProofPlanArtifact,
+        semver: ProtocolVersion::new(1, 0, 0),
+        fields: PROOF_PLAN_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 1048576, max_depth: 4, max_elements: 4096 },
+        domain_separator: "VYRE_PROOF_PLAN_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_PROOF_PLAN_FIXTURES,
+        owning_package: "conform/vyre-conform",
+    },
+    SchemaDefinition {
+        id: SchemaId::SafetensorIndex,
+        semver: ProtocolVersion::new(1, 0, 0),
+        fields: SAFETENSOR_INDEX_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 67108864, max_depth: 4, max_elements: 1000000 },
+        domain_separator: "VYRE_SAFETENSOR_INDEX_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_SAFETENSOR_FIXTURES,
+        owning_package: "vyre-safetensors",
+    },
+    SchemaDefinition {
+        id: SchemaId::AotManifest,
+        semver: ProtocolVersion::new(4, 0, 0),
+        fields: AOT_MANIFEST_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 1048576, max_depth: 4, max_elements: 4096 },
+        domain_separator: "VYRE_AOT_MANIFEST_V4",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_AOT_FIXTURES,
+        owning_package: "vyre-aot",
+    },
+    SchemaDefinition {
+        id: SchemaId::ArtifactReport,
+        semver: ProtocolVersion::new(1, 0, 0),
+        fields: ARTIFACT_REPORT_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 16777216, max_depth: 4, max_elements: 8192 },
+        domain_separator: "VYRE_ARTIFACT_REPORT_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_REPORT_FIXTURES,
+        owning_package: "vyre-debug",
+    },
+    SchemaDefinition {
+        id: SchemaId::WireFraming,
+        semver: ProtocolVersion::new(8, 0, 0),
+        fields: WIRE_FRAMING_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 536870912, max_depth: 32, max_elements: 1048576 },
+        domain_separator: "VYRE_WIRE_FRAMING_V8",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_WIRE_FRAMING_FIXTURES,
+        owning_package: "vyre-foundation",
+    },
+    SchemaDefinition {
+        id: SchemaId::TargetFacetMatrix,
+        semver: ProtocolVersion::new(1, 0, 0),
+        fields: TARGET_FACET_MATRIX_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 8388608, max_depth: 4, max_elements: 4096 },
+        domain_separator: "VYRE_TARGET_FACET_MATRIX_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_TARGET_FACET_FIXTURES,
+        owning_package: "vyre-foundation",
+    },
+    SchemaDefinition {
+        id: SchemaId::CausalReceipt,
+        semver: ProtocolVersion::new(1, 0, 0),
+        fields: CAUSAL_RECEIPT_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds { max_bytes: 4194304, max_depth: 4, max_elements: 2048 },
+        domain_separator: "VYRE_CAUSAL_RECEIPT_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_CAUSAL_FIXTURES,
+        owning_package: "vyre-foundation",
     },
 ];
 

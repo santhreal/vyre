@@ -1,14 +1,14 @@
 //! Proof plan summary, its catalog and execution hashes, and the `plan` subcommand.
 
 use crate::artifact_json::write_json_artifact;
-use crate::backend_selection::{select_backends, semantic_execution_backends};
+use vyre_conform::backend_selection::{select_backends, semantic_execution_backends};
 use crate::operation_selection::{
     prepare_entry, select_entries, unified_entries, PreparedEntry, UnifiedEntry,
 };
 use crate::proof_options::{parse_proof_options, ProofOptions};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub(crate) struct ProofPlanSummary {
     pub(crate) backend_count: usize,
     pub(crate) op_count: usize,
@@ -19,7 +19,7 @@ pub(crate) struct ProofPlanSummary {
     pub(crate) selection: ProofSelectionSummary,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub(crate) struct ProofSelectionSummary {
     pub(crate) backend_filter: String,
     pub(crate) ops_filter: String,
@@ -31,7 +31,7 @@ pub(crate) struct ProofSelectionSummary {
     pub(crate) selected_op_count: usize,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 struct ProofPlanArtifact {
     pub(crate) wire_format_version: u32,
     pub(crate) plan: ProofPlanSummary,
@@ -124,11 +124,11 @@ pub(crate) fn proof_plan_summary(
     let mut witness_case_count = 0usize;
     for entry in entries {
         execution_hasher.update(entry.id.as_bytes());
-        execution_hasher.update(&entry.cases.len().to_le_bytes());
-        execution_hasher.update(&entry.program.buffers().len().to_le_bytes());
-        execution_hasher.update(&entry.input_plan.source_count().to_le_bytes());
-        execution_hasher.update(&entry.input_plan.zeroed_input_count().to_le_bytes());
-        execution_hasher.update(&entry.reference_cases.len().to_le_bytes());
+        execution_hasher.update(&(entry.cases.len() as u64).to_le_bytes());
+        execution_hasher.update(&(entry.program.buffers().len() as u64).to_le_bytes());
+        execution_hasher.update(&(entry.input_plan.source_count() as u64).to_le_bytes());
+        execution_hasher.update(&(entry.input_plan.zeroed_input_count() as u64).to_le_bytes());
+        execution_hasher.update(&(entry.reference_cases.len() as u64).to_le_bytes());
         witness_case_count += entry.cases.len().saturating_mul(backends.len());
     }
     let selection = ProofSelectionSummary {
@@ -155,25 +155,25 @@ pub(crate) fn proof_plan_summary(
 pub(crate) fn hash_proof_plan(hasher: &mut blake3::Hasher, plan: &ProofPlanSummary) {
     hasher.update(plan.catalog_hash.as_bytes());
     hasher.update(plan.execution_hash.as_bytes());
-    hasher.update(&plan.backend_count.to_le_bytes());
-    hasher.update(&plan.op_count.to_le_bytes());
-    hasher.update(&plan.pair_count.to_le_bytes());
-    hasher.update(&plan.witness_case_count.to_le_bytes());
+    hasher.update(&(plan.backend_count as u64).to_le_bytes());
+    hasher.update(&(plan.op_count as u64).to_le_bytes());
+    hasher.update(&(plan.pair_count as u64).to_le_bytes());
+    hasher.update(&(plan.witness_case_count as u64).to_le_bytes());
     hasher.update(plan.selection.backend_filter.as_bytes());
     hasher.update(plan.selection.ops_filter.as_bytes());
     hash_optional_usize(hasher, plan.selection.shard_index);
     hash_optional_usize(hasher, plan.selection.shard_count);
-    hasher.update(&plan.selection.universe_backend_count.to_le_bytes());
-    hasher.update(&plan.selection.universe_op_count.to_le_bytes());
-    hasher.update(&plan.selection.selected_backend_count.to_le_bytes());
-    hasher.update(&plan.selection.selected_op_count.to_le_bytes());
+    hasher.update(&(plan.selection.universe_backend_count as u64).to_le_bytes());
+    hasher.update(&(plan.selection.universe_op_count as u64).to_le_bytes());
+    hasher.update(&(plan.selection.selected_backend_count as u64).to_le_bytes());
+    hasher.update(&(plan.selection.selected_op_count as u64).to_le_bytes());
 }
 
 fn hash_optional_usize(hasher: &mut blake3::Hasher, value: Option<usize>) {
     match value {
         Some(value) => {
             hasher.update(&[1]);
-            hasher.update(&value.to_le_bytes());
+            hasher.update(&(value as u64).to_le_bytes());
         }
         None => {
             hasher.update(&[0]);

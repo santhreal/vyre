@@ -70,12 +70,31 @@ pub enum CodecError {
         /// Nesting depth limit.
         limit: usize,
     },
-    /// Field numbers are out of order, duplicated, or missing.
+    /// List field exceeds maximum allowed element count.
+    ElementCountExceeded {
+        /// Count observed.
+        count: usize,
+        /// Element limit.
+        limit: usize,
+    },
+    /// Field numbers are out of order.
     NonCanonicalFieldOrder {
         /// Field number expected after previous field.
         expected_after: u32,
         /// Field number received.
         got: u32,
+    },
+    /// Duplicate field key was detected.
+    DuplicateKey {
+        /// Duplicate field number.
+        field_number: u32,
+    },
+    /// Non-canonical encoding representation was encountered (e.g. non-boolean byte, non-normalized float).
+    NonCanonicalEncoding {
+        /// Field number.
+        field_number: u32,
+        /// Error detail.
+        details: &'static str,
     },
     /// Type of field does not match declared schema.
     TypeMismatch {
@@ -103,6 +122,13 @@ pub enum CodecError {
         /// Field number.
         field_number: u32,
     },
+    /// Stale schema version or obsolete fixture rejected by name.
+    StaleSchemaVersion {
+        /// Schema ID.
+        schema_id: SchemaId,
+        /// Stale version string found.
+        found: String,
+    },
     /// Signature verification failed under domain separator.
     SignatureVerificationFailed,
 }
@@ -119,9 +145,21 @@ impl fmt::Display for CodecError {
                 f,
                 "Fix: record nesting depth {depth} exceeds declared schema limit of {limit}"
             ),
+            Self::ElementCountExceeded { count, limit } => write!(
+                f,
+                "Fix: list element count {count} exceeds declared schema limit of {limit}"
+            ),
             Self::NonCanonicalFieldOrder { expected_after, got } => write!(
                 f,
                 "Fix: non-canonical field ordering; field {got} appeared after {expected_after} (fields must be strictly ascending)"
+            ),
+            Self::DuplicateKey { field_number } => write!(
+                f,
+                "Fix: duplicate field key {field_number} detected; duplicate keys are forbidden"
+            ),
+            Self::NonCanonicalEncoding { field_number, details } => write!(
+                f,
+                "Fix: non-canonical encoding for field {field_number}: {details}"
             ),
             Self::TypeMismatch { field_number, field_name } => write!(
                 f,
@@ -139,6 +177,10 @@ impl fmt::Display for CodecError {
                 f,
                 "Fix: invalid UTF-8 bytes in field {field_number}"
             ),
+            Self::StaleSchemaVersion { schema_id, found } => write!(
+                f,
+                "Fix: stale schema version `{found}` rejected for {schema_id:?}; migrate to current schema"
+            ),
             Self::SignatureVerificationFailed => write!(
                 f,
                 "Fix: cryptographic signature verification failed under schema domain separator"
@@ -146,6 +188,7 @@ impl fmt::Display for CodecError {
         }
     }
 }
+
 
 /// Canonical binary encoder for schema records.
 pub struct CanonicalEncoder;
@@ -170,13 +213,28 @@ impl CanonicalEncoder {
 
         let mut last_field_num = 0;
         for (field_num, val) in &record.fields {
-            if *field_num <= last_field_num {
+            if *field_num == last_field_num {
+                return Err(CodecError::DuplicateKey {
+                    field_number: *field_num,
+                });
+            }
+            if *field_num < last_field_num {
                 return Err(CodecError::NonCanonicalFieldOrder {
                     expected_after: last_field_num,
                     got: *field_num,
                 });
             }
             last_field_num = *field_num;
+
+            // Check for stale fixture versions in string fields
+            if let CanonicalValue::Utf8String(s) = val {
+                if schema.stale_fixtures.iter().any(|&stale| stale == s.as_str()) {
+                    return Err(CodecError::StaleSchemaVersion {
+                        schema_id: record.schema_id,
+                        found: s.clone(),
+                    });
+                }
+            }
 
             // Find field def in schema
             let field_def = schema
@@ -189,9 +247,8 @@ impl CanonicalEncoder {
                 })?;
 
             out.extend_from_slice(&field_num.to_le_bytes());
-            Self::encode_value(val, field_def.field_type, &mut out)?;
+            Self::encode_value(val, field_def.field_type, schema, 1, &mut out)?;
         }
-
         // Verify all required fields were encoded
         for req_field in schema.fields.iter().filter(|f| f.required) {
             if !record.fields.iter().any(|(num, _)| *num == req_field.number) {
@@ -215,8 +272,16 @@ impl CanonicalEncoder {
     fn encode_value(
         val: &CanonicalValue,
         expected_type: FieldType,
+        schema: &vyre_spec::SchemaDefinition,
+        depth: usize,
         out: &mut Vec<u8>,
     ) -> Result<(), CodecError> {
+        if depth > schema.bounds.max_depth {
+            return Err(CodecError::DepthExceeded {
+                depth,
+                limit: schema.bounds.max_depth,
+            });
+        }
         match (val, &expected_type) {
             (CanonicalValue::U8(v), FieldType::U8) => out.push(*v),
             (CanonicalValue::U16(v), FieldType::U16) => out.extend_from_slice(&v.to_le_bytes()),
@@ -246,9 +311,15 @@ impl CanonicalEncoder {
                 out.extend_from_slice(bytes);
             }
             (CanonicalValue::List(items), FieldType::List(elem_type)) => {
+                if items.len() > schema.bounds.max_elements {
+                    return Err(CodecError::ElementCountExceeded {
+                        count: items.len(),
+                        limit: schema.bounds.max_elements,
+                    });
+                }
                 out.extend_from_slice(&(items.len() as u32).to_le_bytes());
                 for item in items.iter() {
-                    Self::encode_value(item, **elem_type, out)?;
+                    Self::encode_value(item, **elem_type, schema, depth + 1, out)?;
                 }
             }
             _ => {
@@ -313,7 +384,12 @@ impl CanonicalDecoder {
             let field_num = u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap());
             offset += 4;
 
-            if field_num <= last_field_num {
+            if field_num == last_field_num {
+                return Err(CodecError::DuplicateKey {
+                    field_number: field_num,
+                });
+            }
+            if field_num < last_field_num {
                 return Err(CodecError::NonCanonicalFieldOrder {
                     expected_after: last_field_num,
                     got: field_num,
@@ -330,8 +406,19 @@ impl CanonicalDecoder {
                     got: field_num,
                 })?;
 
-            let (val, consumed) = Self::decode_value(&bytes[offset..], field_def.field_type, field_num)?;
+            let (val, consumed) = Self::decode_value(&bytes[offset..], field_def.field_type, field_num, schema, 1)?;
             offset += consumed;
+
+            // Check for stale version strings
+            if let CanonicalValue::Utf8String(s) = &val {
+                if schema.stale_fixtures.iter().any(|&stale| stale == s.as_str()) {
+                    return Err(CodecError::StaleSchemaVersion {
+                        schema_id,
+                        found: s.clone(),
+                    });
+                }
+            }
+
             fields.push((field_num, val));
         }
 
@@ -352,7 +439,15 @@ impl CanonicalDecoder {
         bytes: &[u8],
         field_type: FieldType,
         field_num: u32,
+        schema: &vyre_spec::SchemaDefinition,
+        depth: usize,
     ) -> Result<(CanonicalValue, usize), CodecError> {
+        if depth > schema.bounds.max_depth {
+            return Err(CodecError::DepthExceeded {
+                depth,
+                limit: schema.bounds.max_depth,
+            });
+        }
         match field_type {
             FieldType::U8 => {
                 if bytes.is_empty() {
@@ -406,7 +501,13 @@ impl CanonicalDecoder {
                 if bytes.is_empty() {
                     return Err(CodecError::UnexpectedEof { expected: 1, remaining: 0 });
                 }
-                Ok((CanonicalValue::Bool(bytes[0] != 0), 1))
+                if bytes[0] > 1 {
+                    return Err(CodecError::NonCanonicalEncoding {
+                        field_number: field_num,
+                        details: "boolean byte must be 0 or 1",
+                    });
+                }
+                Ok((CanonicalValue::Bool(bytes[0] == 1), 1))
             }
             FieldType::FixedBytes(n) => {
                 if bytes.len() < n {
@@ -441,10 +542,16 @@ impl CanonicalDecoder {
                     return Err(CodecError::UnexpectedEof { expected: 4, remaining: bytes.len() });
                 }
                 let count = u32::from_le_bytes(bytes[0..4].try_into().unwrap()) as usize;
+                if count > schema.bounds.max_elements {
+                    return Err(CodecError::ElementCountExceeded {
+                        count,
+                        limit: schema.bounds.max_elements,
+                    });
+                }
                 let mut offset = 4;
                 let mut items = Vec::with_capacity(count);
                 for _ in 0..count {
-                    let (item, consumed) = Self::decode_value(&bytes[offset..], *elem_type, field_num)?;
+                    let (item, consumed) = Self::decode_value(&bytes[offset..], *elem_type, field_num, schema, depth + 1)?;
                     offset += consumed;
                     items.push(item);
                 }
@@ -458,7 +565,7 @@ impl CanonicalDecoder {
     }
 }
 
-/// Cryptographic identity and signature calculator using domain separators.
+/// Canonical record signer.
 pub struct CanonicalSigner;
 
 impl CanonicalSigner {
@@ -478,7 +585,7 @@ impl CanonicalSigner {
         for field_def in schema.fields.iter().filter(|f| f.is_identity) {
             if let Some((_, val)) = record.fields.iter().find(|(num, _)| *num == field_def.number) {
                 let mut buf = Vec::new();
-                CanonicalEncoder::encode_value(val, field_def.field_type, &mut buf)?;
+                CanonicalEncoder::encode_value(val, field_def.field_type, schema, 1, &mut buf)?;
                 hasher.update(&field_def.number.to_le_bytes());
                 hasher.update(&buf);
             }

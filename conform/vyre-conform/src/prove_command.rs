@@ -4,7 +4,7 @@
 use std::collections::BTreeSet;
 
 use crate::artifact_json::write_json_artifact;
-use crate::backend_selection::{select_backends, semantic_execution_backends};
+use vyre_conform::backend_selection::{select_backends, semantic_execution_backends};
 use crate::operation_selection::{select_entries, unified_entries};
 use crate::proof_options::parse_proof_options;
 use crate::proof_plan::{hash_proof_plan, proof_plan_summary, ProofPlanSummary};
@@ -13,7 +13,7 @@ use crate::proof_scheduler::{
 };
 use crate::proof_timing::{emit_proof_timing, ProofTimingReport};
 use ed25519_dalek::{Signer, SigningKey};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use vyre_conform::law_proof::{prove_declared_laws, LawVerdict};
 use vyre_conform_spec::ConformanceResult;
 
@@ -21,8 +21,8 @@ pub(crate) const DEFAULT_CERTIFICATE_DIR: &str = ".internals/certs/";
 
 pub(crate) const DEFAULT_CERTIFICATE_FILE: &str = "prove.json";
 
-#[derive(Debug, Serialize)]
-struct ProveArtifact {
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub(crate) struct ProveArtifact {
     pub(crate) wire_format_version: u32,
     pub(crate) program_hash: String,
     pub(crate) backend_id: String,
@@ -34,12 +34,23 @@ struct ProveArtifact {
 }
 
 /// One declared law and the witness that proved it on the reference oracle.
-#[derive(Debug, Serialize)]
-struct LawRecord {
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub(crate) struct LawRecord {
     pub(crate) op_id: String,
     pub(crate) law: String,
     pub(crate) witness: String,
     pub(crate) cases: usize,
+}
+
+/// Typed signable body for prove artifacts ensuring identical field order without ad-hoc JSON indexing.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub(crate) struct ProveSignableBody<'a> {
+    pub(crate) wire_format_version: u32,
+    pub(crate) program_hash: &'a str,
+    pub(crate) backend_id: &'a str,
+    pub(crate) plan: &'a ProofPlanSummary,
+    pub(crate) pairs: &'a [ConformanceResult],
+    pub(crate) laws: &'a [LawRecord],
 }
 
 /// Prove every declared law of every selected operation, refusing the
@@ -198,7 +209,7 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
         hasher.update(law.op_id.as_bytes());
         hasher.update(law.law.as_bytes());
         hasher.update(law.witness.as_bytes());
-        hasher.update(&law.cases.to_le_bytes());
+        hasher.update(&(law.cases as u64).to_le_bytes());
     }
     let program_hash = hasher.finalize().to_hex().to_string();
 
@@ -220,14 +231,14 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
     let mut seed = [0u8; 32];
     rand_core::OsRng.fill_bytes(&mut seed);
     let key = SigningKey::from_bytes(&seed);
-    let signable = serde_json::json!({
-        "wire_format_version": 2u32,
-        "program_hash": program_hash,
-        "backend_id": "all",
-        "plan": &plan,
-        "pairs": &pairs,
-        "laws": &laws,
-    });
+    let signable = ProveSignableBody {
+        wire_format_version: 2,
+        program_hash: &program_hash,
+        backend_id: "all",
+        plan: &plan,
+        pairs: &pairs,
+        laws: &laws,
+    };
     let signable_bytes = serde_json::to_vec(&signable).map_err(|error| {
         format!("failed to serialize prove artifact body: {error}. Fix: keep certificate fields JSON-serializable.")
     })?;
