@@ -114,11 +114,29 @@ impl MicroCase {
         }
     }
 
-    /// The program fingerprint, as the benchmark report prints it.
+    /// Domain separator for [`MicroCase::program_structure_hex`].
     #[cfg(test)]
-    fn program_fingerprint_hex(&self) -> String {
-        (self.program)()
-            .fingerprint()
+    const PROGRAM_STRUCTURE_DOMAIN: &[u8] = b"vyre-bench/micro-case-structural-ir/v1";
+
+    /// Structural identity of the program this case builds.
+    ///
+    /// BLAKE3 over the canonicalized buffer roster and entry node tree, which
+    /// is a function of the IR model alone. `Program::fingerprint` is not used
+    /// here: it is BLAKE3 over `canonical_wire_bytes`, whose first framed field
+    /// is `WIRE_FORMAT_VERSION`, so a serialization revision moves it for every
+    /// program in the workspace while no program's meaning moves. A pin that
+    /// cannot fail on the thing its name claims is answered by copying the new
+    /// numbers back in, which is how a real workload change rides in unnoticed
+    /// behind a version bump.
+    #[cfg(test)]
+    fn program_structure_hex(&self) -> String {
+        let canonical = (self.program)().canonicalized();
+        let rendered = format!(
+            "buffers:\n{:#?}\n\nentry:\n{:#?}\n",
+            canonical.buffers(),
+            canonical.entry()
+        );
+        vyre_foundation::hashing::domain_digest(Self::PROGRAM_STRUCTURE_DOMAIN, rendered.as_bytes())
             .iter()
             .map(|byte| format!("{byte:02x}"))
             .collect()
@@ -273,11 +291,19 @@ mod tests {
 
     /// Workload identity of every micro case.
     ///
-    /// `program` is the blake3 fingerprint of the canonical wire program.
-    /// A deliberate IR-schema or program migration updates this pin only after
-    /// the case's semantic contract is proved against the same fixture. The
-    /// current values follow the schedule-free IR migration, which changed the
-    /// wire encoding of every program without changing what one computes;
+    /// `structure` is blake3 over the canonicalized buffer roster and entry
+    /// node tree of the program the case builds. It carries node kinds, operand
+    /// expressions, literal values and nesting, and it is a function of the IR
+    /// model alone, so a changed operand, a dropped node or a changed ABI moves
+    /// it and a serialization revision does not. The column it replaces was
+    /// `Program::fingerprint`, blake3 over `canonical_wire_bytes`, whose first
+    /// framed field is `WIRE_FORMAT_VERSION`: the 8 to 9 bump in `818171cc5c`
+    /// moved all seven at once with no semantic change, which is a pin that
+    /// cannot fail on the thing its name claims and whose only answer is to
+    /// copy the new numbers in.
+    ///
+    /// A migration updates this pin only after the case's semantic contract is
+    /// proved against the same fixture, and
     /// `every_micro_case_still_computes_its_cpu_reference` is that proof.
     ///
     /// `fixture` is blake3 over every fixture buffer, length-prefixed. No
@@ -287,44 +313,44 @@ mod tests {
     const PINNED_WORKLOADS: &[PinnedWorkload] = &[
         PinnedWorkload {
             id: "foundation.attention.64",
-            program: "e74b62c7df6e0c106c288cdbdd7a115b4d4352347c031e19973ac15d64c6f60a",
+            structure: "111338caca3b2bccc0fd43df36adafaf73cd7926672eb7f274d620ca5246e9df",
             fixture: "ede5e815a089bbdd231d17a57bbe1cdf59c097be49479838f9a0a64f8f81f183",
         },
         PinnedWorkload {
             id: "foundation.dfa_match.256k",
-            program: "1f150d6e1babe9f2ec20ae6c82e73faac334b49c5c2d7946964adb805d446743",
+            structure: "fef5e85cb73f4258b28c6565ad2a2542457a1246c67a875de5ea9cec442da18f",
             fixture: "0a747a3ac1a8d7831a36f7120a33ece13c9d34dfecda5493bc98ef825c05a435",
         },
         PinnedWorkload {
             id: "foundation.gather.u32.1m",
-            program: "c1b2842543071d6da85efcb3c2befadd4abe43e281c0cda747d32352a9857139",
+            structure: "6b8d71aaff0f46e2c73e2c6a0c1ce3618666ef333e4cbce08a9547102782e2d9",
             fixture: "556f2bccabd62d6d434e97f155a78b1a5dbca9a4e1a8ab9993dc7a19d2aa1217",
         },
         PinnedWorkload {
             id: "foundation.histogram.u32_256.1m",
-            program: "ce3c54e711b3e15e9c78baf6bbf5c76cb31414d6785a17be7b55545e9354a739",
+            structure: "0b88138dabe0c4bbf91467d76f67645ee9e311cf47beeab881d014484d01b1f7",
             fixture: "b09c20e4f186708fcb827e0949aac9c60a49340870ee3eb25f8404d56cec641b",
         },
         PinnedWorkload {
             id: "foundation.matmul.256",
-            program: "4eb86c14c9c66b99f96520b33316017e44e27c1f0bf4ee3c005a5cd6b2031b85",
+            structure: "45ba27bb3a2921b299d8131acda8d30f6bc8d3fae5d12b2c3f314a0bc7875fd5",
             fixture: "9d8d7b3b1340fb8ebe3f170166045fa644674ffea70713121e35c58af9453831",
         },
         PinnedWorkload {
             id: "foundation.stencil3.u32.1m",
-            program: "d90ff3c85a6a925b7ec99239563a0e3e2dfce5afc14dfaaf0a138719a332f4e0",
+            structure: "b74a7e15a496b4604387543a0f0e4e7b57c68f1153eb1a83dafcb685b0e5a320",
             fixture: "183866c61def7900b8ad927a5fb4d5b9847ac4274951dacb9334afb64fddb29e",
         },
         PinnedWorkload {
             id: "foundation.transpose.512",
-            program: "45c155fdccdfea94b2188b7db9c9d42484eff25e0c73f4093f47f505b798a11f",
+            structure: "eddfd4390b1df33ff2278c3092b3c6102d917f60c026c3ba4b5f8e03eb555149",
             fixture: "a9d0dfc6e815cbbae4077e4d2d200c67452c8db5d0e3f950bfc786dc1c459e0c",
         },
     ];
 
     struct PinnedWorkload {
         id: &'static str,
-        program: &'static str,
+        structure: &'static str,
         fixture: &'static str,
     }
 
@@ -342,16 +368,15 @@ mod tests {
                 .find(|pinned| pinned.id == case.id)
                 .unwrap_or_else(|| {
                     panic!(
-                        "Fix: micro case `{}` has no pinned workload. Record its program fingerprint and fixture digest in PINNED_WORKLOADS with the decision that justifies them.",
+                        "Fix: micro case `{}` has no pinned workload. Record its structural digest and fixture digest in PINNED_WORKLOADS with the decision that justifies them.",
                         case.id
                     )
                 });
-
-            let program = case.program_fingerprint_hex();
-            if program != pinned.program {
+            let structure = case.program_structure_hex();
+            if structure != pinned.structure {
                 drifted.push(format!(
-                    "{}: program pinned {} but builds {program}",
-                    case.id, pinned.program
+                    "{}: structure pinned {} but builds {structure}",
+                    case.id, pinned.structure
                 ));
             }
             let fixture = case.fixture_digest_hex();
