@@ -17,13 +17,13 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::thread;
 
-use vyre_foundation::{FailureDomain, RecoveryClass, RecoveryDisposition};
+use vyre_foundation::failure_domain::{FailureDomain, RecoveryClass, RecoveryDisposition};
 use vyre_megakernel::{Digest, RealTimeDeadline};
 use vyre_runtime::artifact_admission::{
     InteractiveAdmissionError, InteractiveChannelId, InteractiveCompletion,
     InteractiveSessionStateMachine, InteractiveSubmissionRequest, PriorityClass,
 };
-use vyre_runtime::{
+use vyre_runtime::atomic_recovery::{
     authoritative_runtime_state_owner_registry, AtomicGuardedState, GuardedState,
     PrepareCommitJournal, SupervisedRestartBudget,
 };

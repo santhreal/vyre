@@ -8,8 +8,9 @@
 
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
-    ProgramGraphError, ShapeDim, ShapeExprId, ValueContract, ValueLifetime,
+    ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
 };
+use vyre_foundation::types::ShapeExprId;
 
 fn contract(
     dtype: DataType,

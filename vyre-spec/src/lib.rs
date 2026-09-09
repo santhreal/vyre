@@ -139,7 +139,6 @@ pub mod python_token;
 mod region_law;
 /// Domain-neutral resource, image, view, plane, sampler, external memory, and timeline sync capabilities.
 mod resource_capability;
-/// Catalog of invariants every registered op is checked against.
 /// Declarative schema registry for all persisted and wire formats.
 pub mod schema_registry;
 /// Canonical semiring selector for dataflow and algebraic kernels.
@@ -328,11 +327,6 @@ pub use compatibility::{
 };
 /// See [`intrinsic_descriptor::IntrinsicDescriptor`] and its identifying types.
 pub use intrinsic_descriptor::{Backend, BackendId, CpuFn, IntrinsicDescriptor};
-pub use schema_registry::{
-    CanonicalField, DefaultsPolicy, FieldType, SchemaBounds, SchemaDefinition, SchemaId,
-    SchemaRegistry, CANONICAL_SCHEMA_REGISTRY,
-};
-
 pub use resource_capability::{
     all_address_modes, all_alias_set_kinds, all_border_colors, all_color_interpretations,
     all_compare_functions, all_external_event_kinds, all_external_memory_kinds, all_filter_modes,

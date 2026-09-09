@@ -249,7 +249,7 @@ impl<T> ParsedSourceLru<T> {
     /// dropped `InFlight` observes its panic flag and reparses, which is the
     /// same path a panicking parse already takes.
     fn lock_inner(&self) -> MutexGuard<'_, LruInner<T>> {
-        vyre_foundation::govern_mutex_restartable(
+        vyre_foundation::failure_domain::govern_mutex_restartable(
             &self.inner,
             "the parsed-source cache",
             "the parsed-source LRU entries, recency, and in-flight parses",

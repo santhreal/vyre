@@ -12,7 +12,7 @@ mod legality;
 mod normalize;
 mod preconditions;
 mod tree;
-pub mod typed;
+mod typed;
 
 pub use cost::{ScheduleCostModel, ScheduleCostRecord};
 pub use diff::{ScheduleDiff, ScheduleDiffItem};

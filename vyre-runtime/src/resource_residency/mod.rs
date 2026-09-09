@@ -503,7 +503,7 @@ impl ResourceResidency {
 
 impl Drop for ResourceResidency {
     fn drop(&mut self) {
-        let state = vyre_foundation::reclaim_poisoned_for_teardown(
+        let state = vyre_foundation::failure_domain::reclaim_poisoned_for_teardown(
             self.state.get_mut(),
             "the resource residency table",
             "resident device resources awaiting release",
@@ -529,7 +529,7 @@ impl Drop for ResourceResidency {
     }
 }
 
-impl crate::StateOwnerRecovery for ResourceResidency {
+impl crate::atomic_recovery::StateOwnerRecovery for ResourceResidency {
     fn failure_domain(&self) -> crate::FailureDomain {
         crate::FailureDomain::DeviceContext
     }
