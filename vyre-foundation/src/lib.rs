@@ -72,7 +72,7 @@ pub mod ir {
     pub use crate::ir_inner::model::program_graph::{
         ControlBounds, ExternalEffect, GraphInput, GraphNodeId, GraphOutput, GraphValueId,
         LivenessInterval, ProgramGraph, ProgramGraphBuilder, ProgramGraphError, ProgramGraphNode,
-        ProgramGraphSharingMetrics, ProgramGraphTemplate, ProgramGraphValue, ShapeDim, ShapeExprId,
+        ProgramGraphSharingMetrics, ProgramGraphTemplate, ProgramGraphValue, ShapeDim,
         ValueContract, ValueLifetime,
     };
     pub use crate::ir_inner::model::program_graph_delta::{
@@ -224,15 +224,6 @@ pub(crate) mod test_ir_inspect;
 pub use canonical_codec::{
     CanonicalDecoder, CanonicalEncoder, CanonicalRecord, CanonicalSigner, CanonicalValue,
     CodecError,
-};
-pub use config_schema::{
-    render_cli_help, render_configuration_reference_markdown, ConfigFieldDef, ConfigLayer,
-    ConfigMutability, ConfigPartition, ConfigSecrecy, ConfigType, ConfigValue, IdentityImpact,
-    ResolvedConfiguration, CANONICAL_CONFIG_FIELDS,
-};
-pub use failure_domain::{
-    govern_mutex_restartable, reclaim_poisoned_for_teardown, FailureDomain, RecoveryClass,
-    RecoveryDisposition, TypedRecoveryError,
 };
 pub use vyre_spec::{
     CanonicalField, CompatibilityCell, CompatibilityDisposition, CompatibilityMatrix,

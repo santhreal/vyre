@@ -25,15 +25,15 @@
 //!   copy of the same `entry_op_id`.
 
 mod alpha_rename;
-pub mod candidate;
+mod candidate;
 mod collectors;
-pub mod dependence;
+mod dependence;
 mod divergence;
 mod fuse;
-pub mod legality;
-pub mod lowering;
-pub mod region;
-pub mod tile;
+mod legality;
+mod lowering;
+mod region;
+mod tile;
 
 #[cfg(test)]
 #[path = "../../../tests/internal/execution_plan/fusion/mod.rs"]

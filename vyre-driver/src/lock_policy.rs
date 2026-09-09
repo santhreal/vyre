@@ -5,24 +5,24 @@
 //!
 //! Subsystems must not make ad-hoc local decisions (such as unconditionally recovering
 //! with `into_inner`, panicking in place, or ignoring poison). Instead, every lock
-//! belongs to an explicitly declared [`RecoveryClass`](vyre_foundation::RecoveryClass):
+//! belongs to an explicitly declared [`RecoveryClass`](vyre_foundation::failure_domain::RecoveryClass):
 //!
-//! 1. [`RecoveryClass::TransactionallyRecoverable`](vyre_foundation::RecoveryClass::TransactionallyRecoverable): In-flight mutation was aborted. The guarded
+//! 1. [`RecoveryClass::TransactionallyRecoverable`](vyre_foundation::failure_domain::RecoveryClass::TransactionallyRecoverable): In-flight mutation was aborted. The guarded
 //!    state is discarded and a typed [`BackendError`] is reported to the caller.
-//! 2. [`RecoveryClass::RestartableFromCanonicalInput`](vyre_foundation::RecoveryClass::RestartableFromCanonicalInput): Caches, staging pools, or memoized
+//! 2. [`RecoveryClass::RestartableFromCanonicalInput`](vyre_foundation::failure_domain::RecoveryClass::RestartableFromCanonicalInput): Caches, staging pools, or memoized
 //!    entries that can be cleanly discarded/reset to an empty valid state and restarted.
-//! 3. [`RecoveryClass::DeviceContextFatal`](vyre_foundation::RecoveryClass::DeviceContextFatal): Device-bound queues, command encoders,
+//! 3. [`RecoveryClass::DeviceContextFatal`](vyre_foundation::failure_domain::RecoveryClass::DeviceContextFatal): Device-bound queues, command encoders,
 //!    or device handles where poison indicates corrupted GPU submission state. The
 //!    device is marked lost and [`BackendError::DeviceLost`] is reported.
-//! 4. [`RecoveryClass::ProcessFatal`](vyre_foundation::RecoveryClass::ProcessFatal): Foreign ICD dynamic loader dispatch tables,
+//! 4. [`RecoveryClass::ProcessFatal`](vyre_foundation::failure_domain::RecoveryClass::ProcessFatal): Foreign ICD dynamic loader dispatch tables,
 //!    global driver runtime init, or external C-ABI boundaries where corrupt state
 //!    causes silent memory corruption or SIGSEGV in foreign frames. Process is aborted.
-//! 5. [`RecoveryClass::InvariantViolation`](vyre_foundation::RecoveryClass::InvariantViolation): Critical internal data structure
+//! 5. [`RecoveryClass::InvariantViolation`](vyre_foundation::failure_domain::RecoveryClass::InvariantViolation): Critical internal data structure
 //!    corruption violating compiler invariants. Process is aborted with diagnostic details.
 
 use std::sync::{Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-pub use vyre_foundation::{
+pub use vyre_foundation::failure_domain::{
     reclaim_poisoned_for_teardown, FailureDomain, RecoveryClass, RecoveryDisposition,
     TypedRecoveryError,
 };
@@ -97,7 +97,7 @@ where
     }
 }
 
-pub use vyre_foundation::govern_mutex_restartable;
+pub use vyre_foundation::failure_domain::govern_mutex_restartable;
 
 /// Take a read lock governed by an explicit failure domain contract.
 pub fn govern_rwlock_read<'a, T>(

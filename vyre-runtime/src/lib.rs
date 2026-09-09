@@ -87,7 +87,9 @@ pub mod uring_completion_pump;
 pub use uring_completion_pump::{UringCompletionPump, UringPollState};
 
 /// Mandatory finite session quotas and typed session identity.
-pub use vyre_foundation::{FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError};
+pub use vyre_foundation::failure_domain::{
+    FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError,
+};
 
 mod session_quota;
 pub use session_quota::*;
