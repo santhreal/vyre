@@ -33,6 +33,7 @@ mod fuse;
 mod legality;
 mod lowering;
 mod region;
+mod rename;
 mod tile;
 
 #[cfg(test)]
@@ -53,6 +54,7 @@ pub use legality::{
 };
 pub use lowering::lower_fusion_candidate;
 pub use region::{IterationSpace, RegionFusionPlanner, RegionRelation};
+pub use rename::rename_buffer;
 pub use tile::{ScheduleTile, TilePipeliningPlan, TileResidency};
 
 /// Error returned when a fusion batch cannot be combined safely.
@@ -72,6 +74,8 @@ pub enum FusionError {
     /// An arm whose correctness depends on its own workgroup geometry was
     /// asked to run under the widened fused geometry.
     WorkgroupGeometry(FusionWorkgroupGeometryError),
+    /// A buffer rename asked for by fusion could not be applied completely.
+    BufferRename(FusionBufferRenameError),
 }
 
 impl std::fmt::Display for FusionError {
@@ -81,6 +85,7 @@ impl std::fmt::Display for FusionError {
             FusionError::Aliasing(e) => write!(f, "{e}"),
             FusionError::OverDispatch(e) => write!(f, "{e}"),
             FusionError::WorkgroupGeometry(e) => write!(f, "{e}"),
+            FusionError::BufferRename(e) => write!(f, "{e}"),
         }
     }
 }
@@ -183,6 +188,27 @@ impl std::fmt::Display for FusionAliasingError {
             f,
             "fusion aliasing on buffer `{}`: arm {} reads and arm {} writes without a barrier. Fix: {}",
             self.buffer_name, self.read_arm, self.write_arm, self.fix_hint
+        )
+    }
+}
+
+/// A buffer rename fusion asked for could not be applied completely.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FusionBufferRenameError {
+    /// Buffer name the rename was asked to retire.
+    pub from: String,
+    /// Buffer name the rename was asked to install.
+    pub to: String,
+    /// Actionable fix hint.
+    pub fix: &'static str,
+}
+
+impl std::fmt::Display for FusionBufferRenameError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "buffer rename `{}` to `{}` cannot be applied completely. Fix: {}",
+            self.from, self.to, self.fix
         )
     }
 }

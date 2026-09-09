@@ -64,6 +64,129 @@ pub fn expr_buffer_ref(expr: &Expr) -> ExprBufferRef<'_> {
     }
 }
 
+/// The buffer-name position an expression holds, as a rewrite can replace it.
+#[derive(Debug)]
+pub enum ExprBufferName<'a> {
+    /// Names no buffer.
+    None,
+    /// Holds this buffer name.
+    Named(&'a mut Ident),
+    /// An out-of-tree extension, whose buffer references core cannot
+    /// enumerate. A rewrite that has to be complete refuses rather than
+    /// leaving a reference it could not inspect.
+    Unknown,
+}
+
+/// The buffer name `expr` holds, borrowed for replacement.
+///
+/// The write direction of [`expr_buffer_ref`], and exhaustive for the same
+/// reason: a variant that names a buffer and answers [`ExprBufferName::None`]
+/// here keeps a reference to a name a rename has already retired, which lowers
+/// as a load from a buffer the program does not declare.
+pub fn expr_buffer_name_mut(expr: &mut Expr) -> ExprBufferName<'_> {
+    match expr {
+        Expr::Atomic { buffer, .. }
+        | Expr::Load { buffer, .. }
+        | Expr::BufLen { buffer }
+        | Expr::BufferRef { buffer } => ExprBufferName::Named(buffer),
+        Expr::LitU32(_)
+        | Expr::LitI32(_)
+        | Expr::LitF32(_)
+        | Expr::LitBool(_)
+        | Expr::Var(_)
+        | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
+        | Expr::WorkgroupId { .. }
+        | Expr::LocalId { .. }
+        | Expr::BinOp { .. }
+        | Expr::UnOp { .. }
+        | Expr::Call { .. }
+        | Expr::Select { .. }
+        | Expr::Cast { .. }
+        | Expr::Fma { .. }
+        | Expr::SubgroupBallot { .. }
+        | Expr::SubgroupShuffle { .. }
+        | Expr::SubgroupReduce { .. }
+        | Expr::SubgroupLocalId
+        | Expr::SubgroupSize => ExprBufferName::None,
+        Expr::Opaque(_) => ExprBufferName::Unknown,
+    }
+}
+
+/// The worklist an in-place expression rewrite drives.
+///
+/// Sized like the borrowing [`push_expr_children`] stack, so an expression of
+/// ordinary depth is rewritten without touching the heap.
+pub type ExprStackMut<'a> = SmallVec<[&'a mut Expr; 16]>;
+
+/// Push every operand of `expr` onto a rewriting worklist, in source order.
+///
+/// The write direction of [`expr_children`], exhaustive for the same reason: a
+/// variant whose operands are not offered here is a subtree no in-place
+/// rewrite reaches.
+pub fn push_expr_children_mut<'a>(expr: &'a mut Expr, sink: &mut ExprStackMut<'a>) {
+    match expr {
+        Expr::LitU32(_)
+        | Expr::LitI32(_)
+        | Expr::LitF32(_)
+        | Expr::LitBool(_)
+        | Expr::Var(_)
+        | Expr::BufferRef { .. }
+        | Expr::BufLen { .. }
+        | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
+        | Expr::WorkgroupId { .. }
+        | Expr::LocalId { .. }
+        | Expr::SubgroupLocalId
+        | Expr::SubgroupSize
+        | Expr::Opaque(_) => {}
+        Expr::Load { index, .. }
+        | Expr::UnOp { operand: index, .. }
+        | Expr::Cast { value: index, .. }
+        | Expr::SubgroupBallot { cond: index }
+        | Expr::SubgroupReduce { value: index, .. } => sink.push(index),
+        Expr::BinOp { left, right, .. } => {
+            sink.push(left);
+            sink.push(right);
+        }
+        Expr::SubgroupShuffle { value, lane } => {
+            sink.push(value);
+            sink.push(lane);
+        }
+        Expr::Select {
+            cond,
+            true_val,
+            false_val,
+        } => {
+            sink.push(cond);
+            sink.push(true_val);
+            sink.push(false_val);
+        }
+        Expr::Fma { a, b, c } => {
+            sink.push(a);
+            sink.push(b);
+            sink.push(c);
+        }
+        Expr::Atomic {
+            index,
+            expected,
+            value,
+            ..
+        } => {
+            sink.push(index);
+            if let Some(expected) = expected.as_deref_mut() {
+                sink.push(expected);
+            }
+            sink.push(value);
+        }
+        Expr::Call { args, .. } => sink.extend(args.iter_mut()),
+    }
+}
+
 /// The cross-invocation combine an expression applies.
 #[derive(Debug, Clone, Copy)]
 pub enum ExprCombine<'a> {

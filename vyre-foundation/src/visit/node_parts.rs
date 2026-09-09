@@ -7,6 +7,7 @@
 //! adding a `Node` variant is a compile error in this file rather than a silent
 //! leaf classification somewhere downstream.
 
+use super::expr_parts::ExprStackMut;
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::node::Node;
@@ -462,5 +463,151 @@ pub fn node_buffer_refs(node: &Node) -> BufferRefs<'_> {
             complete: false,
             ..BufferRefs::NONE
         },
+    }
+}
+
+/// The buffer names a node holds directly, borrowed for replacement.
+///
+/// Direction is dropped on purpose. A rename replaces a name wherever it
+/// appears, and a node that reads and writes one buffer holds that name in a
+/// single field, so splitting the answer by direction would hand out two
+/// mutable borrows of the same field.
+#[derive(Debug)]
+pub struct BufferNamesMut<'a> {
+    names: [Option<&'a mut Ident>; 2],
+    complete: bool,
+}
+
+impl<'a> BufferNamesMut<'a> {
+    const fn none() -> Self {
+        Self {
+            names: [None, None],
+            complete: true,
+        }
+    }
+
+    const fn one(buffer: &'a mut Ident) -> Self {
+        Self {
+            names: [Some(buffer), None],
+            complete: true,
+        }
+    }
+
+    const fn two(first: &'a mut Ident, second: &'a mut Ident) -> Self {
+        Self {
+            names: [Some(first), Some(second)],
+            complete: true,
+        }
+    }
+
+    /// Every buffer-name position the node holds, in source order.
+    pub fn into_names(self) -> impl Iterator<Item = &'a mut Ident> {
+        self.names.into_iter().flatten()
+    }
+
+    /// False when the node carries an opaque payload whose buffer references
+    /// core cannot enumerate, which makes the positions a LOWER BOUND.
+    #[must_use]
+    pub const fn is_complete(&self) -> bool {
+        self.complete
+    }
+}
+
+/// The buffer names `node` holds, borrowed for replacement.
+///
+/// The write direction of [`node_buffer_refs`], exhaustive for the same
+/// reason: a variant that names a buffer and reports none here keeps a
+/// reference to a name a rename has already retired.
+#[must_use]
+pub fn node_buffer_names_mut(node: &mut Node) -> BufferNamesMut<'_> {
+    match node {
+        Node::Store { buffer, .. }
+        | Node::TileStore { buffer, .. }
+        | Node::TileLoad { buffer, .. }
+        | Node::IndirectDispatch {
+            count_buffer: buffer,
+            ..
+        }
+        | Node::AllReduce { buffer, .. }
+        | Node::Broadcast { buffer, .. } => BufferNamesMut::one(buffer),
+        Node::AsyncLoad {
+            source,
+            destination,
+            ..
+        }
+        | Node::AsyncStore {
+            source,
+            destination,
+            ..
+        } => BufferNamesMut::two(source, destination),
+        Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
+            BufferNamesMut::two(input, output)
+        }
+        Node::Let { .. }
+        | Node::Assign { .. }
+        | Node::If { .. }
+        | Node::Loop { .. }
+        | Node::Trap { .. }
+        | Node::AsyncWait { .. }
+        | Node::Resume { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
+        | Node::Block(_)
+        | Node::Region { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileElementwise { .. }
+        | Node::TileDecl { .. } => BufferNamesMut::none(),
+        Node::Opaque(_) => BufferNamesMut {
+            complete: false,
+            ..BufferNamesMut::none()
+        },
+    }
+}
+
+/// Push every operand expression `node` holds directly onto a rewriting
+/// worklist, in source order.
+///
+/// The write direction of [`node_scalars`] and [`node_variadic_operands`]
+/// together, exhaustive for the same reason: a variant whose operands are not
+/// offered here is a subtree no in-place rewrite reaches.
+pub fn push_node_operands_mut<'a>(node: &'a mut Node, sink: &mut ExprStackMut<'a>) {
+    match node {
+        Node::Let { value, .. } | Node::Assign { value, .. } => sink.push(value),
+        Node::Loop { from, to, .. } => {
+            sink.push(from);
+            sink.push(to);
+        }
+        Node::Store { index, value, .. } => {
+            sink.push(index);
+            sink.push(value);
+        }
+        Node::If { cond, .. } => sink.push(cond),
+        Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
+            sink.push(offset);
+            sink.push(size);
+        }
+        Node::Trap { address, .. } => sink.push(address),
+        Node::TileLoad { origin, .. } | Node::TileStore { origin, .. } => {
+            sink.extend(origin.iter_mut());
+        }
+        Node::Block(_)
+        | Node::Region { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. }
+        | Node::AsyncWait { .. }
+        | Node::Resume { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileElementwise { .. }
+        | Node::TileDecl { .. }
+        | Node::Opaque(_) => {}
     }
 }
