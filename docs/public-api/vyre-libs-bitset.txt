@@ -84,7 +84,7 @@ pub fn vyre_libs_bitset::bitset::test_bit::bitset_test_bit(buf: &str, bit_idx: u
 pub fn vyre_libs_bitset::bitset::xor::bitset_xor(lhs: &str, rhs: &str, out: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_bitset::bitset::xor_into::bitset_xor_into(target: &str, operand: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_bitset::bitset::zero::bitset_zero(target: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs_bitset::link_anchor() -> usize
+pub fn vyre_libs_bitset::link_anchor()
 pub fn vyre_libs_bitset::logical::dialect::DialectMarker::descriptor() -> &'static vyre_foundation::dialect::descriptor::DialectDescriptor
 pub fn vyre_libs_bitset::logical::dialect::DialectMarker::match_op_id(op_id: &str) -> core::option::Option<Self::Op>
 pub fn vyre_libs_bitset::logical::dialect::LogicalVisitor::Nand(&mut self, args: &[vyre_foundation::ir_inner::model::generated::Expr]) -> Self::Output

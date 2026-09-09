@@ -18,7 +18,7 @@ pub fn vyre_libs_fixpoint::fixpoint::persistent_fixpoint::required_workgroups(pr
 pub fn vyre_libs_fixpoint::fixpoint::persistent_fixpoint::routed_persistent_fixpoint(transfer_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, state: vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointState<'_>, dispatch_span: u32) -> (vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointRoute)
 pub fn vyre_libs_fixpoint::fixpoint::routing_contract::assert_routes_on_dispatch_span(op: &vyre_libs_fixpoint::fixpoint::routing_contract::RoutedFixpointOp<'_>)
 pub fn vyre_libs_fixpoint::fixpoint::routing_contract::bare_grid_harness(current: &str, next: &str, changed: &str, words: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs_fixpoint::link_anchor() -> usize
+pub fn vyre_libs_fixpoint::link_anchor()
 pub mod vyre_libs_fixpoint
 pub mod vyre_libs_fixpoint::fixpoint
 pub mod vyre_libs_fixpoint::fixpoint::bitset_fixpoint

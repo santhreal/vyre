@@ -37,7 +37,7 @@ pub fn kfac_autotune_step_program(
     num_blocks: u32,
     n: u32,
 ) -> Program {
-    use vyre_libs_builder::telemetry::{bump, kfac_autotune_step_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, kfac_autotune_step_calls};
     bump(&kfac_autotune_step_calls);
     kfac_block_inverse(blocks_out, blocks_in, scratch, num_blocks, n)
 }

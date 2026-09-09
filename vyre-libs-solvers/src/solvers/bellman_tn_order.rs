@@ -42,7 +42,7 @@ pub struct BellmanTnOrderGpuScratch {
 /// primitive's, over the caller's binding record and extents unchanged.
 #[must_use]
 pub fn bellman_tn_order_program(buffers: BellmanBuffers<'_>, extents: BellmanExtents) -> Program {
-    use vyre_libs_builder::telemetry::{bellman_tn_order_calls, bump};
+    use vyre_libs_builder::plumbing::host::telemetry::{bellman_tn_order_calls, bump};
     bump(&bellman_tn_order_calls);
     bellman_shortest_path(buffers, extents)
 }

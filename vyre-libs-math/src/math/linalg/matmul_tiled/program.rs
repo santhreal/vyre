@@ -9,7 +9,7 @@ use vyre_foundation::composition::{wrap_child_region, wrap_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
-use vyre_libs_builder::element_zero;
+use vyre_libs_builder::plumbing::operand::element_zero::element_zero;
 use vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError;
 
 use super::body::cooperative_matmul_body;

@@ -1,7 +1,7 @@
 //! Adjoint functor pairs between finite categories.
 
 #[cfg(test)]
-use vyre_libs_builder::telemetry::{bump, dataflow_fixpoint_calls};
+use vyre_libs_builder::plumbing::host::telemetry::{bump, dataflow_fixpoint_calls};
 #[cfg(test)]
 pub(crate) use vyre_reference::composition_witness::{AdjointPair, FiniteCategory, FiniteFunctor};
 

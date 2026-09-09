@@ -277,7 +277,7 @@ impl Attention {
     }
 }
 
-vyre_libs_builder::builder::impl_cat_a_builder_options!(Attention);
+vyre_libs_builder::impl_cat_a_builder_options!(Attention);
 
 /// Build a Program that computes scaled dot-product attention. Back-
 /// compat wrapper around [`Attention`]; invalid inputs lower to a trap.

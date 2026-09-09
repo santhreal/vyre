@@ -73,7 +73,7 @@ pub fn topo_order_csr_via_with_scratch_into(
     scratch: &mut ToposortGpuScratch,
     order: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, toposort_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, toposort_calls};
     bump(&toposort_calls);
 
     let plan =

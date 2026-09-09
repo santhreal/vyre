@@ -96,6 +96,7 @@ impl vyre_driver::DispatchConfig
 impl vyre_driver::Distribution
 impl vyre_driver::ErrorCode
 impl vyre_driver::ExternalResourceRegistry
+impl vyre_driver::FactStatus
 impl vyre_driver::HostShimBuffer
 impl vyre_driver::LaunchDirective
 impl vyre_driver::LaunchGeometry
@@ -113,6 +114,7 @@ impl vyre_driver::PipelineCacheMissEvidence
 impl vyre_driver::PipelineCacheMissReason
 impl vyre_driver::PipelineDeviceFingerprint
 impl vyre_driver::PipelineFeatureFlags
+impl vyre_driver::ProductionPathStage
 impl vyre_driver::RegexAcceleratorCapability
 impl vyre_driver::RegexAcceleratorClass
 impl vyre_driver::RegexAcceleratorEvidence
@@ -131,6 +133,9 @@ impl vyre_driver::SpeculationReport
 impl vyre_driver::SpeculativeVariantRace
 impl vyre_driver::SubgroupCaps
 impl vyre_driver::SubgroupOp
+impl vyre_driver::SupportCertificate
+impl vyre_driver::SupportCertificateRegistry
+impl vyre_driver::SupportStatus
 impl vyre_driver::TailMaskPolicy
 impl vyre_driver::Target
 impl vyre_driver::TimedDispatchResult
@@ -175,11 +180,6 @@ impl vyre_driver::reservation_policy::ReservationPolicy
 impl vyre_driver::resident_transfer_fusion::ResidentUploadBytes<'_>
 impl vyre_driver::result_compaction::ResultCompactionScratch
 impl vyre_driver::shape_prediction::ShapeHistory
-impl vyre_driver::support_certificate::FactStatus
-impl vyre_driver::support_certificate::ProductionPathStage
-impl vyre_driver::support_certificate::SupportCertificate
-impl vyre_driver::support_certificate::SupportCertificateRegistry
-impl vyre_driver::support_certificate::SupportStatus
 impl vyre_driver::target_dialect::TargetDialect
 impl vyre_driver::transfer_accounting::TransferAccountingPolicy
 impl vyre_driver::trap_record::TrapRecord
@@ -230,6 +230,7 @@ pub const fn vyre_driver::PipelineFeatureFlags::bits(self) -> u32
 pub const fn vyre_driver::PipelineFeatureFlags::contains(self, other: Self) -> bool
 pub const fn vyre_driver::PipelineFeatureFlags::empty() -> Self
 pub const fn vyre_driver::PipelineFeatureFlags::union(self, other: Self) -> Self
+pub const fn vyre_driver::ProductionPathStage::name(self) -> &'static str
 pub const fn vyre_driver::RegexAcceleratorCapability::evidence(self, transfer_bytes: u64) -> vyre_driver::RegexAcceleratorEvidence
 pub const fn vyre_driver::RegexAcceleratorCapability::supported(backend: &'static str, accelerator_class: vyre_driver::RegexAcceleratorClass, device_signature: &'static str, rule_capacity: u32, stream_mode: vyre_driver::RegexAcceleratorStreamMode, match_schema: vyre_driver::RegexAcceleratorMatchSchema) -> Self
 pub const fn vyre_driver::RegexAcceleratorCapability::unsupported(backend: &'static str, accelerator_class: vyre_driver::RegexAcceleratorClass, unsupported_reason: &'static str) -> Self
@@ -259,7 +260,6 @@ pub const fn vyre_driver::param_inlining::ParamInliningPolicy::disabled() -> Sel
 pub const fn vyre_driver::param_inlining::ParamInliningPolicy::large_inline_default() -> Self
 pub const fn vyre_driver::param_inlining::ParamInliningPolicy::small_inline_default() -> Self
 pub const fn vyre_driver::reservation_policy::ReservationPolicy::new(context: &'static str, fix: &'static str) -> Self
-pub const fn vyre_driver::support_certificate::ProductionPathStage::name(self) -> &'static str
 pub const fn vyre_driver::target_dialect::TargetDialect::admissible_invocations_per_workgroup(&self, adapter: u32) -> u32
 pub const fn vyre_driver::transfer_accounting::TransferAccountingPolicy::new(domain: &'static str, fix_action: &'static str) -> Self
 pub const vyre_driver::COUNTER_TAIL_BYTES: usize
@@ -281,6 +281,7 @@ pub const vyre_driver::PipelineFeatureFlags::PUSH_CONSTANTS: Self
 pub const vyre_driver::PipelineFeatureFlags::SPECULATIVE: Self
 pub const vyre_driver::PipelineFeatureFlags::SUBGROUP_OPS: Self
 pub const vyre_driver::PipelineFeatureFlags::TENSOR_CORES: Self
+pub const vyre_driver::ProductionPathStage::ALL: [vyre_driver::ProductionPathStage; 7]
 pub const vyre_driver::REGEX_ACCELERATOR_EVIDENCE_SCHEMA_VERSION: u32
 pub const vyre_driver::SUPPORT_CERTIFICATE_SCHEMA: u32
 pub const vyre_driver::bindless_policy::BINDLESS_RESOURCE_COUNT_THRESHOLD: u32
@@ -312,8 +313,6 @@ pub const vyre_driver::self_optimizer_bench::SCALING_FIXTURE_SIZES: &[usize]
 pub const vyre_driver::shape_prediction::MAX_HISTORY: usize
 pub const vyre_driver::speculation_verdict::MIN_ADOPT_SAVINGS_BPS: u64
 pub const vyre_driver::speculation_verdict::MIN_DISPATCHES_FOR_VERDICT: u32
-pub const vyre_driver::support_certificate::ProductionPathStage::ALL: [vyre_driver::support_certificate::ProductionPathStage; 7]
-pub const vyre_driver::support_certificate::SUPPORT_CERTIFICATE_SCHEMA: u32
 pub const vyre_driver::trace_jit_policy::TRACE_JIT_HOT_SHAPE_THRESHOLD: u32
 pub const vyre_driver::trace_jit_policy::TRACE_JIT_MIN_CONFIDENCE_BPS: u32
 pub const vyre_driver::trap_record::TRAP_RECORD_BYTES: usize
@@ -375,9 +374,6 @@ pub enum vyre_driver::result_compaction::ResultCompactionError
 pub enum vyre_driver::speculation_verdict::SpeculationVerdict
 pub enum vyre_driver::strategy::LoweredExpr
 pub enum vyre_driver::strategy::PrecisionLoweringPlan
-pub enum vyre_driver::support_certificate::FactStatus
-pub enum vyre_driver::support_certificate::ProductionPathStage
-pub enum vyre_driver::support_certificate::SupportStatus
 pub enum vyre_driver::trace_jit_policy::TraceJitDecision
 pub fn T::dispatch_bytes(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
 pub fn T::dispatch_f32(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[f32]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<f32>>, vyre_driver::BackendError>
@@ -516,6 +512,7 @@ pub fn vyre_driver::ExternalResourceRegistry::invalidate_on_device_loss(&self, d
 pub fn vyre_driver::ExternalResourceRegistry::new() -> Self
 pub fn vyre_driver::ExternalResourceRegistry::register_dependent_artifact(&self, resource_id: u64, artifact_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
 pub fn vyre_driver::ExternalResourceRegistry::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
+pub fn vyre_driver::FactStatus::is_proven(&self) -> bool
 pub fn vyre_driver::HostShimBuffer::allocate(backend_id: &'static str, byte_len: usize) -> alloc::boxed::Box<dyn vyre_driver::DeviceBuffer>
 pub fn vyre_driver::HostShimBuffer::as_any(&self) -> &dyn core::any::Any
 pub fn vyre_driver::HostShimBuffer::as_any_mut(&mut self) -> &mut dyn core::any::Any
@@ -609,6 +606,16 @@ pub fn vyre_driver::SpeculativeVariantRace::speculative_total_ns(&self) -> u128
 pub fn vyre_driver::SpeculativeVariantRace::winner(&self) -> vyre_driver::SpeculativeVariantKind
 pub fn vyre_driver::Submission::is_ready(&self) -> bool
 pub fn vyre_driver::Submission::wait(self: alloc::boxed::Box<Self>) -> core::result::Result<vyre_driver::Completion, vyre_driver::BackendError>
+pub fn vyre_driver::SupportCertificate::compute_digest(&self) -> alloc::string::String
+pub fn vyre_driver::SupportCertificate::evaluate(&self) -> vyre_driver::SupportStatus
+pub fn vyre_driver::SupportCertificate::new(backend_id: impl core::convert::Into<alloc::string::String>, target_id: impl core::convert::Into<alloc::string::String>, op_id: vyre_foundation::ir_inner::model::node_kind::OpId) -> Self
+pub fn vyre_driver::SupportCertificate::with_failed_stage(self, stage: vyre_driver::ProductionPathStage, reason: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_driver::SupportCertificate::with_proven_stage(self, stage: vyre_driver::ProductionPathStage, proof_digest: impl core::convert::Into<alloc::string::String>, details: core::option::Option<alloc::string::String>) -> Self
+pub fn vyre_driver::SupportCertificateRegistry::evaluate_support(&self, backend_id: &str, op_id: &vyre_foundation::ir_inner::model::node_kind::OpId) -> vyre_driver::SupportStatus
+pub fn vyre_driver::SupportCertificateRegistry::global() -> &'static Self
+pub fn vyre_driver::SupportCertificateRegistry::register_certificate(&self, cert: vyre_driver::SupportCertificate)
+pub fn vyre_driver::SupportCertificateRegistry::supported_ops_for_backend(&self, backend_id: &str) -> std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
+pub fn vyre_driver::SupportStatus::is_supported(&self) -> bool
 pub fn vyre_driver::TailMaskPolicy::is_aligned(&self) -> bool
 pub fn vyre_driver::Target::aot_target_id(self) -> &'static str
 pub fn vyre_driver::Target::deserialize<D>(deserializer: D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error> where D: serde_core::de::Deserializer<'de>
@@ -1167,17 +1174,6 @@ pub fn vyre_driver::strategy::LoweringStrategy::name(&self) -> &str
 pub fn vyre_driver::strategy::LoweringStrategy::priority(&self) -> u32
 pub fn vyre_driver::strategy::select_precision_lowering(caps: &vyre_foundation::validate::options::BackendCapabilities, hint: &vyre_foundation::optimizer::passes::algebraic::precision_hint::PrecisionHint) -> vyre_driver::strategy::PrecisionLoweringPlan
 pub fn vyre_driver::strategy::select_strategy<'a>(strategies: &'a [alloc::boxed::Box<dyn vyre_driver::strategy::LoweringStrategy>], caps: &vyre_foundation::validate::options::BackendCapabilities, op: &vyre_spec::bin_op::BinOp) -> core::option::Option<&'a dyn vyre_driver::strategy::LoweringStrategy>
-pub fn vyre_driver::support_certificate::FactStatus::is_proven(&self) -> bool
-pub fn vyre_driver::support_certificate::SupportCertificate::compute_digest(&self) -> alloc::string::String
-pub fn vyre_driver::support_certificate::SupportCertificate::evaluate(&self) -> vyre_driver::support_certificate::SupportStatus
-pub fn vyre_driver::support_certificate::SupportCertificate::new(backend_id: impl core::convert::Into<alloc::string::String>, target_id: impl core::convert::Into<alloc::string::String>, op_id: vyre_foundation::ir_inner::model::node_kind::OpId) -> Self
-pub fn vyre_driver::support_certificate::SupportCertificate::with_failed_stage(self, stage: vyre_driver::support_certificate::ProductionPathStage, reason: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_driver::support_certificate::SupportCertificate::with_proven_stage(self, stage: vyre_driver::support_certificate::ProductionPathStage, proof_digest: impl core::convert::Into<alloc::string::String>, details: core::option::Option<alloc::string::String>) -> Self
-pub fn vyre_driver::support_certificate::SupportCertificateRegistry::evaluate_support(&self, backend_id: &str, op_id: &vyre_foundation::ir_inner::model::node_kind::OpId) -> vyre_driver::support_certificate::SupportStatus
-pub fn vyre_driver::support_certificate::SupportCertificateRegistry::global() -> &'static Self
-pub fn vyre_driver::support_certificate::SupportCertificateRegistry::register_certificate(&self, cert: vyre_driver::support_certificate::SupportCertificate)
-pub fn vyre_driver::support_certificate::SupportCertificateRegistry::supported_ops_for_backend(&self, backend_id: &str) -> std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
-pub fn vyre_driver::support_certificate::SupportStatus::is_supported(&self) -> bool
 pub fn vyre_driver::target_dialect::TargetDialect::admissible_workgroup_size(&self, adapter: [u32; 3]) -> [u32; 3]
 pub fn vyre_driver::target_dialect::TargetDialect::compiler(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_megakernel::target::compile::TargetCompiler>, vyre_driver::BackendError>
 pub fn vyre_driver::target_dialect::TargetDialect::profile(&self) -> core::result::Result<vyre_megakernel::envelope::TargetProfile, vyre_driver::BackendError>
@@ -1286,7 +1282,6 @@ pub mod vyre_driver::self_optimizer_bench
 pub mod vyre_driver::shape_prediction
 pub mod vyre_driver::speculation_verdict
 pub mod vyre_driver::strategy
-pub mod vyre_driver::support_certificate
 pub mod vyre_driver::target_dialect
 pub mod vyre_driver::trace_jit_policy
 pub mod vyre_driver::transfer_accounting
@@ -1462,9 +1457,6 @@ pub struct vyre_driver::result_compaction::ResultSlot
 pub struct vyre_driver::self_optimizer_bench::ScalingFixture
 pub struct vyre_driver::shape_prediction::ShapeHistory
 pub struct vyre_driver::speculation_verdict::SpeculationObservation
-pub struct vyre_driver::support_certificate::ProductionPathFact
-pub struct vyre_driver::support_certificate::SupportCertificate
-pub struct vyre_driver::support_certificate::SupportCertificateRegistry
 pub struct vyre_driver::target_dialect::EmittedDialectModule
 pub struct vyre_driver::target_dialect::TargetDialect
 pub struct vyre_driver::trace_jit_policy::TraceJitInputs
@@ -1569,6 +1561,8 @@ pub use vyre_driver::lock_policy::FailureDomain
 pub use vyre_driver::lock_policy::RecoveryClass
 pub use vyre_driver::lock_policy::RecoveryDisposition
 pub use vyre_driver::lock_policy::TypedRecoveryError
+pub use vyre_driver::lock_policy::govern_mutex_restartable
+pub use vyre_driver::lock_policy::reclaim_poisoned_for_teardown
 pub use vyre_driver::megakernel_execution::FrontierExecutionSample
 pub use vyre_driver::megakernel_execution::FrontierGraphShape
 pub use vyre_driver::megakernel_execution::FrontierMemoryBudget
@@ -1910,8 +1904,8 @@ pub vyre_driver::PipelineCacheSnapshot::misses: u64
 pub vyre_driver::PipelineDeviceFingerprint::device: u32
 pub vyre_driver::PipelineDeviceFingerprint::driver_digest: [u8; 32]
 pub vyre_driver::PipelineDeviceFingerprint::vendor: u32
-pub vyre_driver::ProductionPathFact::stage: vyre_driver::support_certificate::ProductionPathStage
-pub vyre_driver::ProductionPathFact::status: vyre_driver::support_certificate::FactStatus
+pub vyre_driver::ProductionPathFact::stage: vyre_driver::ProductionPathStage
+pub vyre_driver::ProductionPathFact::status: vyre_driver::FactStatus
 pub vyre_driver::ProductionPathStage::DeviceExecution
 pub vyre_driver::ProductionPathStage::Emission
 pub vyre_driver::ProductionPathStage::HostileBindings
@@ -2029,14 +2023,14 @@ pub vyre_driver::SubgroupOp::Max
 pub vyre_driver::SubgroupOp::Min
 pub vyre_driver::SubgroupOp::ShuffleXor
 pub vyre_driver::SupportCertificate::backend_id: alloc::string::String
-pub vyre_driver::SupportCertificate::facts: alloc::collections::btree::map::BTreeMap<vyre_driver::support_certificate::ProductionPathStage, vyre_driver::support_certificate::ProductionPathFact>
+pub vyre_driver::SupportCertificate::facts: alloc::collections::btree::map::BTreeMap<vyre_driver::ProductionPathStage, vyre_driver::ProductionPathFact>
 pub vyre_driver::SupportCertificate::op_id: vyre_foundation::ir_inner::model::node_kind::OpId
 pub vyre_driver::SupportCertificate::schema: u32
 pub vyre_driver::SupportCertificate::target_id: alloc::string::String
 pub vyre_driver::SupportStatus::Supported
 pub vyre_driver::SupportStatus::Supported::certificate_digest: alloc::string::String
 pub vyre_driver::SupportStatus::Unsupported
-pub vyre_driver::SupportStatus::Unsupported::missing_stage: vyre_driver::support_certificate::ProductionPathStage
+pub vyre_driver::SupportStatus::Unsupported::missing_stage: vyre_driver::ProductionPathStage
 pub vyre_driver::SupportStatus::Unsupported::reason: alloc::string::String
 pub vyre_driver::TailMaskPolicy::original_count: u32
 pub vyre_driver::TailMaskPolicy::rounded_count: u32
@@ -2638,31 +2632,6 @@ pub vyre_driver::strategy::PrecisionLoweringPlan::PolynomialTranscendental
 pub vyre_driver::strategy::PrecisionLoweringPlan::PolynomialTranscendental::argument_bound: f32
 pub vyre_driver::strategy::PrecisionLoweringPlan::PolynomialTranscendental::degree: u8
 pub vyre_driver::strategy::PrecisionLoweringPlan::PolynomialTranscendental::op: vyre_foundation::optimizer::passes::algebraic::precision_hint::TranscendentalOp
-pub vyre_driver::support_certificate::FactStatus::Failed
-pub vyre_driver::support_certificate::FactStatus::Failed::reason: alloc::string::String
-pub vyre_driver::support_certificate::FactStatus::Proven
-pub vyre_driver::support_certificate::FactStatus::Proven::details: core::option::Option<alloc::string::String>
-pub vyre_driver::support_certificate::FactStatus::Proven::proof_digest: alloc::string::String
-pub vyre_driver::support_certificate::FactStatus::Unproven
-pub vyre_driver::support_certificate::ProductionPathFact::stage: vyre_driver::support_certificate::ProductionPathStage
-pub vyre_driver::support_certificate::ProductionPathFact::status: vyre_driver::support_certificate::FactStatus
-pub vyre_driver::support_certificate::ProductionPathStage::DeviceExecution
-pub vyre_driver::support_certificate::ProductionPathStage::Emission
-pub vyre_driver::support_certificate::ProductionPathStage::HostileBindings
-pub vyre_driver::support_certificate::ProductionPathStage::Materialization
-pub vyre_driver::support_certificate::ProductionPathStage::NativeCompilation
-pub vyre_driver::support_certificate::ProductionPathStage::OracleAgreement
-pub vyre_driver::support_certificate::ProductionPathStage::Validation
-pub vyre_driver::support_certificate::SupportCertificate::backend_id: alloc::string::String
-pub vyre_driver::support_certificate::SupportCertificate::facts: alloc::collections::btree::map::BTreeMap<vyre_driver::support_certificate::ProductionPathStage, vyre_driver::support_certificate::ProductionPathFact>
-pub vyre_driver::support_certificate::SupportCertificate::op_id: vyre_foundation::ir_inner::model::node_kind::OpId
-pub vyre_driver::support_certificate::SupportCertificate::schema: u32
-pub vyre_driver::support_certificate::SupportCertificate::target_id: alloc::string::String
-pub vyre_driver::support_certificate::SupportStatus::Supported
-pub vyre_driver::support_certificate::SupportStatus::Supported::certificate_digest: alloc::string::String
-pub vyre_driver::support_certificate::SupportStatus::Unsupported
-pub vyre_driver::support_certificate::SupportStatus::Unsupported::missing_stage: vyre_driver::support_certificate::ProductionPathStage
-pub vyre_driver::support_certificate::SupportStatus::Unsupported::reason: alloc::string::String
 pub vyre_driver::target_dialect::EmittedDialectModule::bytes: alloc::vec::Vec<u8>
 pub vyre_driver::target_dialect::EmittedDialectModule::entry_point: alloc::string::String
 pub vyre_driver::target_dialect::TargetDialect::backend_id: &'static str

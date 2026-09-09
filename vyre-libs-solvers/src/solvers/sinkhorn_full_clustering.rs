@@ -23,7 +23,7 @@ pub fn sinkhorn_full_clustering_program(
     buffers: SinkhornBuffers<'_>,
     extents: SinkhornExtents,
 ) -> Program {
-    use vyre_libs_builder::telemetry::{bump, sinkhorn_full_clustering_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, sinkhorn_full_clustering_calls};
     bump(&sinkhorn_full_clustering_calls);
     sinkhorn_iterate(buffers, extents)
 }

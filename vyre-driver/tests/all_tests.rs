@@ -158,6 +158,10 @@ pub mod error_code_catalog;
 #[path = "error_code_frozen.rs"]
 pub mod error_code_frozen;
 
+/// Integration tests from `tests/external_resource_path_agreement.rs`.
+#[path = "external_resource_path_agreement.rs"]
+pub mod external_resource_path_agreement;
+
 /// Integration tests from `tests/extraction_memory_verifier_cost_model.rs`.
 #[path = "extraction_memory_verifier_cost_model.rs"]
 pub mod extraction_memory_verifier_cost_model;

@@ -120,7 +120,7 @@ pub fn compress_cost_tensor_f32_via_with_scratch_into(
     scratch: &mut TensorTrainCompressionGpuScratch,
     cores_out: &mut Vec<Vec<f32>>,
 ) -> Result<(), SemanticExecutionError> {
-    use vyre_libs_builder::telemetry::{bump, tensor_train_compression_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, tensor_train_compression_calls};
     bump(&tensor_train_compression_calls);
 
     validate_tt_shape(tensor_f32, dims, target_ranks)?;

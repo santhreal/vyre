@@ -180,7 +180,7 @@ pub(crate) fn max_fusion_subset_into(
     next: &mut Vec<u32>,
     flow: &mut Vec<f64>,
 ) -> Result<(), MatroidScheduleError> {
-    use vyre_libs_builder::telemetry::{bump, matroid_megakernel_scheduler_calls};
+    use vyre_libs_builder::plumbing::host::telemetry::{bump, matroid_megakernel_scheduler_calls};
     bump(&matroid_megakernel_scheduler_calls);
 
     let _expected_adj = validate_inputs(seed, exchange_adj, n)?;

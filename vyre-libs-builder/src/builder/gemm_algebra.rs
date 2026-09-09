@@ -1,6 +1,6 @@
 //! Algebraic structure and semiring operators for tensor contractions.
 
-use crate::element_zero;
+use crate::plumbing::operand::element_zero::element_zero;
 use std::sync::Arc;
 use vyre_foundation::ir::{DataType, Expr};
 use vyre_spec::Semiring;
