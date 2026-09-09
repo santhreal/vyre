@@ -12,13 +12,16 @@ use vyre_bench::evidence::{
     average_compatible_cells, execute_campaign, receipt_from_case_report, record_measured_floor,
     record_suite_evidence, validate_floor_has_recorded_measurement, BenchmarkBudgets,
     BenchmarkCampaignSpec, BenchmarkObjective, BenchmarkReceipt, BinaryIdentityReceipt,
-    CandidateFunnelReceipt, EmittedResourcesReceipt, EnvironmentReceipt, EvidenceStore,
-    EvidenceStoreError, MeasurementCellSpec, NativeBaselineReceipt, ParityReceipt,
-    PowerAndEnergyReceipt, RecordedFloorProof, ResourceIdentityReceipt, SelectedPortfolioReceipt,
-    SemanticGraphIdentity, StateReceipt, TargetFactsReceipt, UncertaintyModelReceipt,
-    WorkloadAndInputIdentity, BENCHMARK_RECEIPT_SCHEMA_VERSION,
+    CalibrationError, CandidateFunnelReceipt, ClockCalibrationRecord, CompatibleCellCohort,
+    DeviceFleetCoordinator, DeviceLease, EmittedResourcesReceipt, EnvironmentReceipt,
+    EvidenceStore, EvidenceStoreError, FleetDevice, FleetLeaseError, InterferenceCalibrationRecord,
+    MeasurementCellSpec, NativeBaselineReceipt, ParityReceipt, PowerAndEnergyReceipt,
+    RecordedFloorProof, ResourceIdentityReceipt, SelectedPortfolioReceipt, SemanticGraphIdentity,
+    StateReceipt, TargetFactsReceipt, UncertaintyModelReceipt, WorkloadAndInputIdentity,
+    BENCHMARK_RECEIPT_SCHEMA_VERSION,
 };
 use vyre_bench::registry::collect_all;
+use vyre_bench::workloads::{all_whole_application_workloads, WorkloadSpecification};
 use vyre_bench::runner::{execute_suite, RunConfig};
 /// Create a fully populated baseline benchmark receipt.
 fn sample_benchmark_receipt() -> BenchmarkReceipt {
@@ -711,4 +714,427 @@ fn content_addressed_store_invalidates_only_changed_input_cells() {
         .unwrap()
         .expect("cell b cached");
     assert_eq!(cached_b.content_address(), addr_b);
+}
+
+#[test]
+fn compatible_cell_cohort_enforces_homogeneous_identity_and_safe_averaging() {
+    let base_receipt = sample_benchmark_receipt();
+
+    // 1. Initializing cohort with primary receipt
+    let mut cohort = CompatibleCellCohort::new(base_receipt.clone());
+    assert_eq!(cohort.len(), 1);
+    assert!(!cohort.is_empty());
+    assert_eq!(cohort.primary(), &base_receipt);
+
+    // 2. Pushing a compatible receipt succeeds
+    let mut compatible_trial2 = base_receipt.clone();
+    compatible_trial2.raw_samples = vec![830_000, 835_000, 825_000];
+    cohort
+        .try_push(compatible_trial2.clone())
+        .expect("Pushing compatible receipt into cohort must succeed");
+    assert_eq!(cohort.len(), 2);
+
+    // 3. Pushing an incompatible receipt is refused by name
+    let mut incompatible_commit = base_receipt.clone();
+    incompatible_commit
+        .compiler_and_backend_binaries
+        .compiler_git_commit = "ffffffffffffffff".to_string();
+    let refusal = cohort
+        .try_push(incompatible_commit)
+        .expect_err("Pushing incompatible receipt into cohort must be refused");
+    assert_eq!(
+        refusal.dimension,
+        "compiler_and_backend_binaries.compiler_git_commit"
+    );
+    assert_eq!(cohort.len(), 2);
+
+    // 4. Constructing from slice of compatible receipts
+    let cohort2 = CompatibleCellCohort::try_from_receipts(&[base_receipt.clone(), compatible_trial2])
+        .expect("Constructing cohort from compatible receipts must succeed");
+    assert_eq!(cohort2.len(), 2);
+
+    // 5. Constructing from empty slice is refused
+    let err_empty = CompatibleCellCohort::try_from_receipts(&[])
+        .expect_err("Constructing cohort from empty slice must be refused");
+    assert_eq!(err_empty.dimension, "count");
+
+    // 6. Constructing with incompatible device is refused
+    let mut incompatible_device = base_receipt.clone();
+    incompatible_device.target_facts.device_name = "NVIDIA A100".to_string();
+    let err_device =
+        CompatibleCellCohort::try_from_receipts(&[base_receipt.clone(), incompatible_device])
+            .expect_err("Constructing cohort with incompatible device must be refused");
+    assert_eq!(err_device.dimension, "target_facts.device_name");
+
+    // 7. Averaging on CompatibleCellCohort succeeds unconditionally with typed guarantee
+    let averaged = cohort.average();
+    assert_eq!(averaged.raw_samples.len(), 7);
+    assert!(averaged.uncertainty_model.mean_ns > 820_000.0);
+    assert!(averaged.uncertainty_model.stddev_ns >= 0.0);
+    assert_eq!(
+        averaged.compiler_and_backend_binaries.compiler_git_commit,
+        base_receipt
+            .compiler_and_backend_binaries
+            .compiler_git_commit
+    );
+}
+
+#[test]
+fn device_fleet_leasing_clock_and_interference_calibration_contracts() {
+    let coordinator = DeviceFleetCoordinator::new();
+    let base_receipt = sample_benchmark_receipt();
+
+    let token = "secret_fleet_token_99";
+    let token_hash = DeviceFleetCoordinator::hash_token(token);
+
+    let device = FleetDevice {
+        device_id: "gpu_node_01".to_string(),
+        device_name: "NVIDIA RTX 4090".to_string(),
+        backend_name: "cuda".to_string(),
+        target_facts: base_receipt.target_facts.clone(),
+        auth_token_hash: token_hash,
+        is_idle: true,
+        active_lease: None,
+        clock_calibration: None,
+        interference_calibration: None,
+    };
+
+    coordinator
+        .register_device(device)
+        .expect("Registering device into fleet must succeed");
+
+    // 1. Authentication check
+    assert!(coordinator
+        .authenticate_device("gpu_node_01", token)
+        .expect("auth check"));
+    assert!(!coordinator
+        .authenticate_device("gpu_node_01", "wrong_token")
+        .expect("auth check"));
+
+    // 2. Lease attempt before calibration must fail
+    let now_ns = 1_700_000_000_000_000_000;
+    let duration_ns = 60_000_000_000; // 60s
+    let err_uncal = coordinator
+        .lease_idle_device("gpu_node_01", "campaign_alpha", duration_ns, now_ns)
+        .expect_err("Leasing uncalibrated device must fail");
+    assert!(matches!(
+        err_uncal,
+        FleetLeaseError::DeviceUncalibrated { .. }
+    ));
+
+    // 3. Calibration validation tests
+    // 3a. Thermal throttling failure
+    let bad_clock_throttling = ClockCalibrationRecord {
+        base_clock_mhz: 2235,
+        boost_clock_mhz: 2520,
+        clock_drift_ppm: 5.0,
+        timer_resolution_ns: 100,
+        clock_locked: true,
+        thermal_throttling: true,
+    };
+    assert_eq!(
+        bad_clock_throttling.validate(),
+        Err(CalibrationError::ThermalThrottlingDetected)
+    );
+
+    // 3b. Excessive clock drift failure
+    let bad_clock_drift = ClockCalibrationRecord {
+        base_clock_mhz: 2235,
+        boost_clock_mhz: 2520,
+        clock_drift_ppm: 75.0,
+        timer_resolution_ns: 100,
+        clock_locked: true,
+        thermal_throttling: false,
+    };
+    assert!(matches!(
+        bad_clock_drift.validate(),
+        Err(CalibrationError::ClockDriftExcessive { .. })
+    ));
+
+    // 3c. Foreign compute interference failure
+    let bad_interf_foreign = InterferenceCalibrationRecord {
+        memory_bandwidth_contention_pct: 1.0,
+        pcie_jitter_ns: 50,
+        foreign_compute_processes: 2,
+        numa_cross_traffic_detected: false,
+    };
+    assert_eq!(
+        bad_interf_foreign.validate(),
+        Err(CalibrationError::ForeignComputeContention { count: 2 })
+    );
+
+    // 3d. Excessive memory bandwidth contention failure
+    let bad_interf_bw = InterferenceCalibrationRecord {
+        memory_bandwidth_contention_pct: 12.5,
+        pcie_jitter_ns: 50,
+        foreign_compute_processes: 0,
+        numa_cross_traffic_detected: false,
+    };
+    assert!(matches!(
+        bad_interf_bw.validate(),
+        Err(CalibrationError::BandwidthContentionExcessive { .. })
+    ));
+
+    // 4. Valid calibration
+    let valid_clock = ClockCalibrationRecord {
+        base_clock_mhz: 2235,
+        boost_clock_mhz: 2520,
+        clock_drift_ppm: 4.2,
+        timer_resolution_ns: 20,
+        clock_locked: true,
+        thermal_throttling: false,
+    };
+    let valid_interf = InterferenceCalibrationRecord {
+        memory_bandwidth_contention_pct: 0.8,
+        pcie_jitter_ns: 15,
+        foreign_compute_processes: 0,
+        numa_cross_traffic_detected: false,
+    };
+    coordinator
+        .calibrate_device("gpu_node_01", valid_clock, valid_interf)
+        .expect("Valid calibration must succeed");
+
+    // 5. Leasing calibrated idle device
+    let lease = coordinator
+        .lease_idle_device("gpu_node_01", "campaign_alpha", duration_ns, now_ns)
+        .expect("Leasing calibrated idle device must succeed");
+
+    assert_eq!(lease.device_id, "gpu_node_01");
+    assert_eq!(lease.holder, "campaign_alpha");
+    assert!(lease.is_valid(now_ns));
+    assert!(lease.is_valid(now_ns + 10_000_000));
+    assert!(!lease.is_valid(now_ns + duration_ns + 1));
+    assert!(!lease.auth_signature.is_empty());
+
+    // 6. Second concurrent lease must fail with DeviceBusy
+    let err_busy = coordinator
+        .lease_idle_device("gpu_node_01", "campaign_beta", duration_ns, now_ns + 1000)
+        .expect_err("Concurrent lease on busy device must fail");
+    assert!(matches!(err_busy, FleetLeaseError::DeviceBusy { .. }));
+
+    // 7. Release lease returns device to idle
+    coordinator
+        .release_lease(&lease, now_ns + 5_000_000)
+        .expect("Releasing active lease must succeed");
+
+    // 8. Device can now be leased by campaign_beta
+    let lease_beta = coordinator
+        .lease_idle_device("gpu_node_01", "campaign_beta", duration_ns, now_ns + 6_000_000)
+        .expect("Leasing released device must succeed");
+    assert_eq!(lease_beta.holder, "campaign_beta");
+
+    coordinator
+        .release_lease(&lease_beta, now_ns + 7_000_000)
+        .expect("release lease beta");
+
+    // 9. Execute campaign through fleet coordinator
+    let store = EvidenceStore::in_memory();
+    let campaign_spec = BenchmarkCampaignSpec {
+        campaign_id: "fleet_campaign_gamma".to_string(),
+        seed: 777,
+        cells: vec![MeasurementCellSpec {
+            cell_id: "cell_fleet_0".to_string(),
+            case_id: "case_fleet_0".to_string(),
+            workload_and_input: base_receipt.workload_and_input.clone(),
+            semantic_graph: base_receipt.semantic_graph.clone(),
+            resource_identity: base_receipt.resource_identity.clone(),
+            compiler_and_backend_binaries: base_receipt.compiler_and_backend_binaries.clone(),
+            objective: base_receipt.objective.clone(),
+            budgets: base_receipt.budgets.clone(),
+            target_facts: base_receipt.target_facts.clone(),
+            environment: base_receipt.environment.clone(),
+            repeat_count: 1,
+        }],
+    };
+
+    let report = coordinator
+        .execute_fleet_campaign(&campaign_spec, &store, now_ns, |cell_spec| {
+            let mut r = sample_benchmark_receipt();
+            r.workload_and_input = cell_spec.workload_and_input.clone();
+            Ok(r)
+        })
+        .expect("execute fleet campaign");
+
+    assert_eq!(report.executed_cells, 1);
+    assert_eq!(report.cached_cells, 0);
+
+    // Resumption through coordinator loads cached cell with 0 executions
+    let report_resumed = coordinator
+        .execute_fleet_campaign(&campaign_spec, &store, now_ns + 10_000, |_| {
+            panic!("Resumed cell must not be re-measured");
+        })
+        .expect("resumed fleet campaign");
+
+    assert_eq!(report_resumed.executed_cells, 0);
+    assert_eq!(report_resumed.cached_cells, 1);
+}
+
+#[test]
+fn compiler_source_crates_name_zero_workload_or_expert_baselines() {
+    // 1. Derive the complete list of neutral workload and expert baseline identifiers at runtime
+    let mut corpus_identifiers = Vec::new();
+
+    // Representative workload definitions
+    corpus_identifiers.push(WorkloadSpecification::complete_graph_pipeline().id);
+    corpus_identifiers.push(WorkloadSpecification::adversarial_ragged_reduction().id);
+    corpus_identifiers.push(WorkloadSpecification::dense_contraction_gemm().id);
+
+    // Pinned native baseline IDs
+    corpus_identifiers.push("native.graph_pipeline.v1_0_0".to_string());
+    corpus_identifiers.push("native.cub.segmented_reduce_v2_1_0".to_string());
+    corpus_identifiers.push("native.cutlass.gemm_v3_5_0".to_string());
+    corpus_identifiers.push("native.flash_attention.v2_5_8".to_string());
+    corpus_identifiers.push("native.mkl.gemm_f32_v2024_1".to_string());
+    corpus_identifiers.push("native.scipy.sparse_csr_v1_13".to_string());
+    corpus_identifiers.push("native.numpy.fft_1d_v1_26".to_string());
+
+    // Whole-application workload identifiers
+    for app in all_whole_application_workloads() {
+        corpus_identifiers.push(app.id.clone());
+    }
+
+    assert!(
+        corpus_identifiers.len() >= 6,
+        "Must derive a non-empty neutral corpus identifier set from runtime registry (found {})",
+        corpus_identifiers.len()
+    );
+
+    // 2. Compiler crates that must never name a workload or expert baseline
+    let compiler_crate_dirs = [
+        "vyre-foundation/src",
+        "vyre-megakernel/src",
+        "vyre-lower/src",
+        "vyre-runtime/src",
+        "vyre-driver/src",
+        "vyre-primitives/src",
+        "vyre-spec/src",
+        "vyre-aot/src",
+        "vyre-debug/src",
+        "vyre-safetensors/src",
+        "vyre/src",
+    ];
+
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent().expect("workspace root");
+
+    let mut violations = Vec::new();
+
+    for crate_subpath in &compiler_crate_dirs {
+        let crate_dir = root.join(crate_subpath);
+        if !crate_dir.exists() {
+            continue;
+        }
+
+        for entry in walkdir(crate_dir) {
+            if let Ok(content) = std::fs::read_to_string(&entry) {
+                for corpus_id in &corpus_identifiers {
+                    if content.contains(corpus_id) {
+                        violations.push(format!(
+                            "File {:?} illegally names neutral corpus identifier `{}`",
+                            entry, corpus_id
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    assert!(
+        violations.is_empty(),
+        "Compiler source must name zero workload or expert baseline identifiers. Found violations:\n{}",
+        violations.join("\n")
+    );
+}
+
+/// Helper to recursively collect all .rs files in a directory.
+fn walkdir(dir: std::path::PathBuf) -> Vec<std::path::PathBuf> {
+    let mut files = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                files.extend(walkdir(path));
+            } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
+                files.push(path);
+            }
+        }
+    }
+    files
+}
+
+#[test]
+fn protocol_field_closure_and_cell_key_invalidation_derived_at_runtime() {
+    let base_receipt = sample_benchmark_receipt();
+    let original_address = base_receipt.content_address();
+    let original_cell_key = base_receipt.cell_identity_key();
+
+    let json_value = serde_json::to_value(&base_receipt).expect("serialize receipt to json");
+    let mut field_paths = Vec::new();
+    collect_field_paths(&json_value, Vec::new(), &mut field_paths);
+
+    assert!(
+        field_paths.len() >= 30,
+        "Derived schema must expose >= 30 fields at runtime"
+    );
+
+    // List of top-level input categories that define the measurement cell
+    let input_categories = [
+        "workload_and_input",
+        "semantic_graph",
+        "resource_identity",
+        "compiler_and_backend_binaries",
+        "objective",
+        "budgets",
+        "target_facts",
+        "environment",
+    ];
+
+    let store = EvidenceStore::in_memory();
+    store
+        .put(&base_receipt)
+        .expect("put base receipt into store");
+
+    for path in &field_paths {
+        let mut mutated_json = json_value.clone();
+        mutate_json_path(&mut mutated_json, path);
+
+        let mutated_receipt: BenchmarkReceipt = serde_json::from_value(mutated_json)
+            .unwrap_or_else(|err| {
+                panic!("Failed to deserialize mutated receipt for field path {path:?}: {err}")
+            });
+
+        // 1. Every field in the schema MUST affect content address
+        assert_ne!(
+            mutated_receipt.content_address(),
+            original_address,
+            "Mutating field path {:?} did not change receipt content address!",
+            path
+        );
+
+        // 2. Input dimension fields MUST affect cell_identity_key and cause cache invalidation
+        let top_category = &path[0];
+        if input_categories.contains(&top_category.as_str()) {
+            assert_ne!(
+                mutated_receipt.cell_identity_key(),
+                original_cell_key,
+                "Mutating input field path {:?} must change cell identity key!",
+                path
+            );
+
+            // The mutated cell is a cache miss in store
+            assert!(
+                store
+                    .find_by_cell_key(&mutated_receipt.cell_identity_key())
+                    .unwrap()
+                    .is_none(),
+                "Mutating input field {:?} must invalidate cell cache in store",
+                path
+            );
+        }
+    }
+
+    // Base receipt remains intact in store
+    assert!(store
+        .find_by_cell_key(&original_cell_key)
+        .unwrap()
+        .is_some());
 }
