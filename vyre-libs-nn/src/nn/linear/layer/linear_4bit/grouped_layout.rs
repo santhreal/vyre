@@ -19,17 +19,17 @@ pub(super) const AFFINE_GROUPED_WEIGHT_TILE: &str = "linear_4bit_weight_tile";
 pub(super) fn affine_grouped_output_extent(
     output_workgroups: u32,
     logical_output_count: u32,
-) -> Result<(u32, usize), String> {
+) -> Result<(u32, u64), String> {
     let padded_output_count = output_workgroups
         .checked_mul(AFFINE_GROUPED_WORKGROUP_SIZE[0])
         .ok_or_else(|| {
             "Fix: linear_4bit_affine_grouped output workgroups overflow u32; reduce dimensions."
                 .to_string()
         })?;
-    let output_byte_len = (logical_output_count as usize)
-        .checked_mul(core::mem::size_of::<f32>())
+    let output_byte_len = u64::from(logical_output_count)
+        .checked_mul(core::mem::size_of::<f32>() as u64)
         .ok_or_else(|| {
-            "Fix: linear_4bit_affine_grouped output byte length overflows usize; reduce dimensions."
+            "Fix: linear_4bit_affine_grouped output byte length overflows u64; reduce dimensions."
                 .to_string()
         })?;
     Ok((padded_output_count, output_byte_len))

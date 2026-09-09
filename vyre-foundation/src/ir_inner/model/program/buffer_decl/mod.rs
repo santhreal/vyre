@@ -599,6 +599,11 @@ impl BufferDecl {
 }
 
 /// Conversion helper allowing `with_output_byte_range` to accept integer ranges.
+///
+/// Only unsigned ranges convert. A signed range has no meaning as a byte
+/// extent, and casting one would turn a negative bound into a value near
+/// `u64::MAX` rather than rejecting it, so a caller holding a signed value
+/// converts it where the sign can still be checked.
 pub trait IntoOutputByteRange {
     /// Convert into `Range<u64>`.
     fn into_output_byte_range(self) -> Range<u64>;
@@ -622,26 +627,5 @@ impl IntoOutputByteRange for Range<u32> {
     #[inline]
     fn into_output_byte_range(self) -> Range<u64> {
         u64::from(self.start)..u64::from(self.end)
-    }
-}
-
-impl IntoOutputByteRange for Range<i32> {
-    #[inline]
-    fn into_output_byte_range(self) -> Range<u64> {
-        (self.start as u64)..(self.end as u64)
-    }
-}
-
-impl IntoOutputByteRange for Range<i64> {
-    #[inline]
-    fn into_output_byte_range(self) -> Range<u64> {
-        (self.start as u64)..(self.end as u64)
-    }
-}
-
-impl IntoOutputByteRange for Range<isize> {
-    #[inline]
-    fn into_output_byte_range(self) -> Range<u64> {
-        (self.start as u64)..(self.end as u64)
     }
 }

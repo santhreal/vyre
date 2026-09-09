@@ -38,7 +38,7 @@ pub(super) fn checked_frontier_u32_product(
 pub(super) fn try_u32_byte_range(
     words: u32,
     context: &str,
-) -> Result<usize, FrontierQueueSizingError> {
+) -> Result<u64, FrontierQueueSizingError> {
     try_u32_byte_range_with_word_size(words, std::mem::size_of::<u32>(), context)
 }
 
@@ -46,17 +46,14 @@ pub(super) fn try_u32_byte_range_with_word_size(
     words: u32,
     word_size: usize,
     context: &str,
-) -> Result<usize, FrontierQueueSizingError> {
-    let count = usize::try_from(words).map_err(|_| {
-        FrontierQueueSizingError::new(format!(
-            "Fix: {context} words={words} cannot fit usize on this target. Shard the frontier queue before GPU dispatch."
-        ))
-    })?;
-    count.checked_mul(word_size).ok_or_else(|| {
-        FrontierQueueSizingError::new(format!(
-            "Fix: {context} words={words} word_size={word_size} overflows output byte range. Shard the frontier queue before GPU dispatch."
-        ))
-    })
+) -> Result<u64, FrontierQueueSizingError> {
+    u64::from(words)
+        .checked_mul(word_size as u64)
+        .ok_or_else(|| {
+            FrontierQueueSizingError::new(format!(
+                "Fix: {context} words={words} word_size={word_size} overflows output byte range. Shard the frontier queue before GPU dispatch."
+            ))
+        })
 }
 
 pub(super) fn invalid_frontier_queue_sizing_program(
@@ -87,7 +84,7 @@ mod tests {
         );
         assert!(
             err.contains("Shard the frontier queue"),
-            "Fix: byte sizing overflow must tell the operator how to recover, got: {err}"
+            "Fix: byte sizing overflow must tell the caller how to recover, got: {err}"
         );
 
         let product_result = std::panic::catch_unwind(|| {

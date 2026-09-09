@@ -91,3 +91,45 @@ fn shape_predicate_is_constructible() {
         .with_shape_predicate(ShapePredicate::Exactly(64));
     assert!(buf.shape_predicate().is_some());
 }
+
+/// WHY: closes the class "a signed range converts into an output byte extent".
+///
+/// `IntoOutputByteRange` is the only way a byte extent enters a `BufferDecl`,
+/// and a signed implementation would convert with `as`, turning `-1` into a
+/// value one below `u64::MAX` instead of refusing it. The admitted set is read
+/// out of the source on every run, so adding an implementation for a signed
+/// range turns this red rather than shipping a silently colossal extent.
+///
+/// # What it does not catch
+///
+/// An implementation written for a type alias of a signed integer, or one added
+/// in another crate, is not named here.
+#[test]
+fn output_byte_range_converts_from_no_signed_range() {
+    const SOURCE: &str = include_str!("../src/ir_inner/model/program/buffer_decl/mod.rs");
+    const MARKER: &str = "impl IntoOutputByteRange for Range<";
+
+    let admitted: Vec<&str> = SOURCE
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix(MARKER))
+        .filter_map(|rest| rest.split('>').next())
+        .collect();
+
+    assert!(
+        !admitted.is_empty(),
+        "Fix: no `{MARKER}` implementation was found; this test reads the \
+         admitted set from source and cannot prove anything against none."
+    );
+
+    let signed: Vec<&&str> = admitted
+        .iter()
+        .filter(|ty| ty.starts_with('i'))
+        .collect();
+    assert!(
+        signed.is_empty(),
+        "Fix: `IntoOutputByteRange` admits signed range(s) {signed:?}. A byte \
+         extent is unsigned; a signed bound casts to a value near `u64::MAX` \
+         instead of being refused. Convert at the call site where the sign can \
+         still be checked, or record why this range is admitted."
+    );
+}

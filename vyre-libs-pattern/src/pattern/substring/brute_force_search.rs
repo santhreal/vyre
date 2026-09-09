@@ -43,7 +43,7 @@ fn build_substring_program(
         }
     };
     let output_count = haystack_len.max(1);
-    let visible_output_bytes = (haystack_len as usize).saturating_mul(4);
+    let visible_output_bytes = u64::from(haystack_len) * 4;
     let output = BufferDecl::output(matches, 2, DataType::U32)
         .with_count(output_count)
         .with_output_byte_range(0..visible_output_bytes);
