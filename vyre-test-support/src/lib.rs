@@ -246,6 +246,8 @@ pub mod strict_float_programs;
 pub mod sweep_rng;
 #[cfg(feature = "driver-artifact-contracts")]
 pub mod target_compiler_contract;
+#[cfg(feature = "semantic-requests")]
+pub mod test_parity_oracles;
 #[cfg(feature = "ir-fixtures")]
 pub mod tile_programs;
 #[cfg(feature = "ir-fixtures")]

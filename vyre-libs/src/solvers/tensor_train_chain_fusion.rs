@@ -232,7 +232,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 let [acc_bytes, core_bytes, out_bytes] = inputs.as_slice() else {
                     return Err(SemanticExecutionError::InvalidRequest(format!(
@@ -272,7 +272,7 @@ mod tests {
             if ordered.len() < output_count {
                 ordered.resize(output_count, Vec::new());
             }
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -319,7 +319,7 @@ mod tests {
         let dispatcher = ReferenceDispatcher;
         let ranks = vec![2, 3, 5];
         let pressure =
-            fusion_pressure_via(&dispatcher, &crate::test_parity_oracles::policy(), &ranks)
+            fusion_pressure_via(&dispatcher, &vyre_test_support::test_parity_oracles::policy(), &ranks)
                 .expect("Fix: TT dispatch succeeds");
         assert!(approx_eq(pressure, reference_fusion_pressure(&ranks)));
     }
@@ -332,7 +332,7 @@ mod tests {
 
         let pressure = fusion_pressure_via_with_scratch(
             &dispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &ranks,
             &mut scratch,
         )
@@ -345,7 +345,7 @@ mod tests {
 
         let pressure = fusion_pressure_via_with_scratch(
             &dispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &ranks,
             &mut scratch,
         )
@@ -368,7 +368,7 @@ mod tests {
         let dispatcher = ReferenceDispatcher;
         let error = fusion_pressure_via(
             &dispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[u32::MAX],
         )
         .expect_err("oversized TT core must be rejected before allocation or dispatch");

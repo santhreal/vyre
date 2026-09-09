@@ -11,12 +11,48 @@ use structure_gate::workspace_root;
 /// A module gated in its parent is reported, whichever spelling it uses.
 #[test]
 fn a_module_gated_in_its_parent_is_reported() {
-    let gated = test_gated_module_files(&workspace_root());
+    let root = workspace_root();
+    let gated = test_gated_module_files(&root);
     assert!(
-        gated.contains("vyre-libs/src/test_parity_oracles.rs"),
-        "Fix: `#[cfg(test)] mod test_parity_oracles;` in vyre-libs/src/lib.rs makes that file \
-         test-only, and it is not in the set"
+        !gated.is_empty(),
+        "Fix: workspace must contain parent-gated test modules."
     );
+    for file in &gated {
+        let full = root.join(file);
+        assert!(
+            full.is_file(),
+            "Fix: reported path {file} must exist as a file on disk."
+        );
+    }
+}
+
+/// Test tooling is not declared in a library crate's published surface.
+///
+/// Shared parity oracles and dispatcher doubles belong in `vyre-test-support`.
+/// An ungated `pub mod` of test tooling in a library crate exposes test doubles
+/// in that crate's published API.
+#[test]
+fn test_tooling_is_not_in_a_published_library_surface() {
+    let root = workspace_root();
+    for source in structure_gate::source_scan::rust_sources_with_text(&root) {
+        let structure_gate::source_scan::SourceText::Read { path, text } = source else {
+            continue;
+        };
+        if !path.contains("/src/") || path.starts_with("vyre-test-support/") {
+            continue;
+        }
+        let production = structure_gate::cfg_test::strip_cfg_test_items(&text);
+        for line in production.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("pub mod test_parity_oracles;") {
+                panic!(
+                    "Fix: {path} declares ungated `pub mod test_parity_oracles;`. \
+                     Test tooling must be owned by `vyre-test-support` and not exposed in \
+                     a library crate's published surface."
+                );
+            }
+        }
+    }
 }
 
 /// A production module is not reported, so the set is not everything.

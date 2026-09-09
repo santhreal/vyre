@@ -477,7 +477,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = vyre_libs_builder::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 11);
                 let b = vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(&inputs[1]);
@@ -493,7 +493,7 @@ mod tests {
                     .collect();
                 Ok(vec![u32_slice_to_le_bytes(&out)])
             };
-            vyre_libs_builder::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -502,7 +502,7 @@ mod tests {
         let one = 1u32 << 16;
         let out = smooth_matroid_flow_fixed_via(
             &AmgDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[one, 0, 0, one],
             &[3 * one, 4 * one],
             &[0, 0],
@@ -520,7 +520,7 @@ mod tests {
     fn fixed_via_rejects_invalid_level_shape() {
         let err = smooth_matroid_flow_fixed_via(
             &AmgDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1, 0, 0, 1],
             &[1, 1],
             &[0, 0],
@@ -542,7 +542,7 @@ mod tests {
 
         smooth_matroid_flow_fixed_via_with_scratch_into(
             &AmgDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[one, 0, 0, one],
             &[3 * one, 4 * one],
             &[0, 0],
@@ -558,7 +558,7 @@ mod tests {
         let input_ptrs: Vec<*const u8> = scratch.inputs.iter().map(Vec::as_ptr).collect();
         smooth_matroid_flow_fixed_via_with_scratch_into(
             &AmgDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[one, 0, 0, one],
             &[2 * one, 5 * one],
             &[0, 0],

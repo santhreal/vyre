@@ -522,7 +522,7 @@ fn attention_program(
             BufferDecl::workgroup("attention_scratch", scratch_count, DataType::F32),
             BufferDecl::output(out, 3, DataType::F32)
                 .with_count(padded_output_count)
-                .with_output_byte_range(0..(elements as usize * core::mem::size_of::<f32>())),
+                .with_output_byte_range(0..(elements as u64 * 4)),
         ],
         workgroup,
         vec![wrap_region(generator, body, None)],

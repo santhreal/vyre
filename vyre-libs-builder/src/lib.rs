@@ -4,8 +4,6 @@ pub mod builder;
 pub mod plumbing;
 pub mod prelude;
 pub mod fixture_bytes;
-#[cfg(test)]
-pub mod test_parity_oracles;
 
 pub use builder::*;
 pub use plumbing::host::dispatch_buffers::*;

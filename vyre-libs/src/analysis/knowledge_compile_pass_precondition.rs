@@ -480,7 +480,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 7);
                 let node_kinds = crate::dispatch_buffers::read_u32s(&inputs[0]);
@@ -510,7 +510,7 @@ mod tests {
                 Ok(vec![u32_slice_to_le_bytes(&out)])
             };
             let ordered = compute_ordered()?;
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -527,7 +527,7 @@ mod tests {
         let waves = vec![vec![0u32, 1u32], vec![2u32]];
         let applies = pass_applies_via(
             &DdnnfDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &nodes,
             &node_var,
             &children,
@@ -564,7 +564,7 @@ mod tests {
         let mut evals = Vec::with_capacity(8);
         pass_applies_via_with_scratch_into(
             &DdnnfDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &nodes,
             &node_var,
             &children,
@@ -578,7 +578,7 @@ mod tests {
         let evals_cap = evals.capacity();
         pass_applies_via_with_scratch_into(
             &DdnnfDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &nodes,
             &node_var,
             &children,
@@ -608,7 +608,7 @@ mod tests {
         let waves = vec![vec![0u32, 1u32], vec![2u32]];
         let conflicts = pass_conflicts_via(
             &DdnnfDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &nodes,
             &node_var,
             &children,
@@ -628,7 +628,7 @@ mod tests {
         ];
         let err = pass_applies_via(
             &DdnnfDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &nodes,
             &[0, 1, 0],
             &[0, 1],

@@ -55,10 +55,9 @@ pub const fn multi_block_prefix_scan_requirements() -> vyre_foundation::Geometry
 /// bottoms out at the guarded single-workgroup scan once the block count fits
 /// the portable workgroup width.
 pub const SOFT_MAX_N: u32 = PORTABLE_WORKGROUP_INVOCATIONS * PORTABLE_WORKGROUP_INVOCATIONS;
-fn output_byte_range(words: u32, context: &str) -> Result<usize, String> {
-    usize::try_from(words)
-        .ok()
-        .and_then(|count| count.checked_mul(4))
+fn output_byte_range(words: u32, context: &str) -> Result<u64, String> {
+    u64::from(words)
+        .checked_mul(4)
         .ok_or_else(|| {
             format!(
                 "{context} words={words} overflows output byte range. Fix: shard the scan before GPU dispatch."

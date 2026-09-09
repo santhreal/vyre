@@ -26,7 +26,7 @@ pub fn skip_gate(gate: &str, branch: &str, skip: &str, output: &str, n: u32) -> 
         BufferDecl::storage(skip, 2, BufferAccess::ReadOnly, DataType::F32).with_count(n),
         BufferDecl::output(output, 3, DataType::F32)
             .with_count(n.max(1))
-            .with_output_byte_range(0..(n as usize).saturating_mul(4)),
+            .with_output_byte_range(0..u64::from(n).saturating_mul(4)),
     ];
 
     build_indexed_map(OP_ID, buffers, output, n, [64, 1, 1], |i| {

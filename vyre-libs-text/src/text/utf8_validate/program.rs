@@ -82,7 +82,7 @@ fn utf8_validate_with_source_type(
             source_decl,
             BufferDecl::output(classes, 1, DataType::U32)
                 .with_count(n.max(1))
-                .with_output_byte_range(0..(n as usize).saturating_mul(4)),
+                .with_output_byte_range(0..u64::from(n).saturating_mul(4)),
         ],
         UTF8_VALIDATE_WORKGROUP_SIZE,
         body,

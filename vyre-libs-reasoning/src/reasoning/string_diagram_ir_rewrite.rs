@@ -274,7 +274,7 @@ mod tests {
         let mut gh = Vec::new();
         compose_ir_arrows_fixed_via_with_scratch_into(
             &ComposeDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &g,
             &h,
             2,
@@ -287,7 +287,7 @@ mod tests {
         let mut left = Vec::new();
         compose_ir_arrows_fixed_via_with_scratch_into(
             &ComposeDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &f,
             &gh,
             2,
@@ -301,7 +301,7 @@ mod tests {
         let mut fg = Vec::new();
         compose_ir_arrows_fixed_via_with_scratch_into(
             &ComposeDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &f,
             &g,
             2,
@@ -314,7 +314,7 @@ mod tests {
         let mut right = Vec::new();
         compose_ir_arrows_fixed_via_with_scratch_into(
             &ComposeDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &fg,
             &h,
             2,
@@ -335,7 +335,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = vyre_libs_builder::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             if inputs.len() != 2 {
                 return Err(SemanticExecutionError::InvalidRequest(
                     "compose semantic input shape mismatch".into(),
@@ -357,7 +357,7 @@ mod tests {
                     out[i * 2 + j] = acc;
                 }
             }
-            vyre_libs_builder::test_parity_oracles::semantic_output(request, vec![u32_slice_to_le_bytes(&out)])
+            vyre_test_support::test_parity_oracles::semantic_output(request, vec![u32_slice_to_le_bytes(&out)])
         }
     }
 
@@ -367,7 +367,7 @@ mod tests {
         let two = 2u32 << 16;
         let out = compose_ir_arrows_fixed_via(
             &ComposeDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[one, two, 0, one],
             &[one, 0, two, one],
             2,
@@ -390,7 +390,7 @@ mod tests {
         let out_ptr = out.as_ptr();
         compose_ir_arrows_fixed_via_with_scratch_into(
             &ComposeDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[one, 0, 0, one],
             &[one, 0, 0, one],
             2,
@@ -410,7 +410,7 @@ mod tests {
     fn fixed_via_rejects_shape_mismatch() {
         let err = compose_ir_arrows_fixed_via(
             &ComposeDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1, 2, 3],
             &[1, 2, 3, 4],
             2,

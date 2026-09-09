@@ -160,7 +160,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = vyre_libs_builder::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 3);
                 assert_eq!(inputs[0].len(), inputs[1].len());
@@ -169,7 +169,7 @@ mod tests {
                 let out = reference_kfac_block_inverse(&blocks_in, 1, 2);
                 Ok(vec![f32_slice_to_le_bytes(&out)])
             };
-            vyre_libs_builder::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -219,7 +219,7 @@ mod tests {
         let p3 = kfac_autotune_step_program("bo3", "bi3", "s3", 1, 4);
 
         let final_p =
-            vyre_libs_builder::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
+            vyre_test_support::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
         crate::solvers::test_helpers::assert_min_region_count(&final_p, 3);
     }
 
@@ -251,7 +251,7 @@ mod tests {
 
         let out = kfac_autotune_step_via(
             &KfacDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &blocks_in,
             1,
             2,
@@ -269,7 +269,7 @@ mod tests {
 
         kfac_autotune_step_via_into(
             &KfacDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &blocks_in,
             1,
             2,
@@ -289,7 +289,7 @@ mod tests {
 
         kfac_autotune_step_via_with_scratch_into(
             &KfacDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &blocks_in,
             1,
             2,
@@ -303,7 +303,7 @@ mod tests {
 
         kfac_autotune_step_via_with_scratch_into(
             &KfacDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &blocks_in,
             1,
             2,
@@ -324,7 +324,7 @@ mod tests {
     fn kfac_autotune_step_via_rejects_bad_shape() {
         let err = kfac_autotune_step_via(
             &KfacDispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1.0, 0.0],
             1,
             2,

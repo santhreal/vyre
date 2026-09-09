@@ -281,9 +281,9 @@ mod tests {
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
             let program = &request.logical().graph().nodes()[0].program;
-            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
-                let op_id = crate::test_parity_oracles::region_operation_id(program)?;
+                let op_id = vyre_test_support::test_parity_oracles::region_operation_id(program)?;
                 if op_id == crate::reduce::count::OP_ID {
                     assert_eq!(inputs.len(), 2);
                     let input = crate::dispatch_buffers::read_u32s(&inputs[0]);
@@ -303,7 +303,7 @@ mod tests {
                 let out: Vec<u32> = input.iter().map(|word| word.count_ones()).collect();
                 Ok(vec![u32_slice_to_le_bytes(&out)])
             })()?;
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -384,7 +384,7 @@ mod tests {
         let input = vec![0u32, 1, 0xFFFF_FFFF, 0xAAAA_AAAA];
         let out = per_word_popcount_via(
             &PopcountDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &input,
         )
         .unwrap();
@@ -397,7 +397,7 @@ mod tests {
         let ptr = out.as_ptr();
         per_word_popcount_via_into(
             &PopcountDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0b1011],
             &mut out,
         )
@@ -413,7 +413,7 @@ mod tests {
 
         per_word_popcount_via_with_scratch_into(
             &PopcountDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0b1011, 0xFFFF_FFFF],
             &mut scratch,
             &mut out,
@@ -425,7 +425,7 @@ mod tests {
 
         per_word_popcount_via_with_scratch_into(
             &PopcountDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0b0101, 0xAAAA_AAAA],
             &mut scratch,
             &mut out,
@@ -445,7 +445,7 @@ mod tests {
         let mut scratch = BitsetSummaryGpuScratch::default();
         let res1 = total_set_bits_via_with_scratch_into(
             &PopcountDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0b1011, 0xFFFF_FFFF],
             &mut scratch,
         )
@@ -455,7 +455,7 @@ mod tests {
         let input_capacities = scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>();
         let res2 = total_set_bits_via_with_scratch_into(
             &PopcountDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0b0101, 0xAAAA_AAAA],
             &mut scratch,
         )
@@ -485,7 +485,7 @@ mod tests {
         assert_eq!(
             total_set_bits_via(
                 &PopcountDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &input,
             )
             .unwrap(),
@@ -494,7 +494,7 @@ mod tests {
         assert!(
             (saturation_ratio_via(
                 &PopcountDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &input,
             )
             .unwrap()

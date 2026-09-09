@@ -15,7 +15,7 @@ fn i4x8_matvec_f32_scaled_via_dispatches_signed_boundary_rows() {
     let row_scales = [0.125, 0.25, 0.5];
 
     let out = i4x8_matvec_f32_scaled_via(
-        &QuantizedMatvecDispatcher, &crate::test_parity_oracles::policy(),
+        &QuantizedMatvecDispatcher, &vyre_test_support::test_parity_oracles::policy(),
         &weights,
         &x,
         &row_scales,
@@ -53,7 +53,7 @@ fn i4x8_matvec_f32_scaled_via_reuses_cached_program_for_same_shape() {
             };
             i4x8_matvec_f32_scaled_via_with_scratch_into(
                 &QuantizedMatvecDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 weights,
                 x,
                 &row_scales,
@@ -75,7 +75,7 @@ fn i4x8_matvec_f32_scaled_via_rejects_shape_errors_before_dispatch() {
 
     let err = i4x8_matvec_f32_scaled_via(
         &QuantizedMatvecDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &weights,
         &x,
         &row_scales,
@@ -87,7 +87,7 @@ fn i4x8_matvec_f32_scaled_via_rejects_shape_errors_before_dispatch() {
 
     let err = i4x8_matvec_f32_scaled_via(
         &QuantizedMatvecDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &[],
         &x,
         &row_scales,
@@ -99,7 +99,7 @@ fn i4x8_matvec_f32_scaled_via_rejects_shape_errors_before_dispatch() {
 
     let err = i4x8_matvec_f32_scaled_via(
         &QuantizedMatvecDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &weights,
         &x[..7],
         &row_scales,
@@ -111,7 +111,7 @@ fn i4x8_matvec_f32_scaled_via_rejects_shape_errors_before_dispatch() {
 
     let err = i4x8_matvec_f32_scaled_via(
         &QuantizedMatvecDispatcher,
-        &crate::test_parity_oracles::policy(),
+        &vyre_test_support::test_parity_oracles::policy(),
         &weights,
         &x,
         &[],

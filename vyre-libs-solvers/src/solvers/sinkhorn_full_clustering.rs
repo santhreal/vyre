@@ -145,7 +145,7 @@ mod tests {
         );
 
         let borrowed = programs.iter().collect::<Vec<_>>();
-        let final_p = vyre_libs_builder::test_parity_oracles::wrap_program_sequence(&borrowed, [256, 1, 1]);
+        let final_p = vyre_test_support::test_parity_oracles::wrap_program_sequence(&borrowed, [256, 1, 1]);
         crate::solvers::test_helpers::assert_min_region_count(&final_p, 3);
     }
 

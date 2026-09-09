@@ -219,10 +219,9 @@ fn empty_line_index_program(source: &str, lines: &str, source_type: DataType) ->
     )
 }
 
-fn output_byte_range(words: u32, context: &str) -> Result<usize, String> {
-    usize::try_from(words)
-        .ok()
-        .and_then(|count| count.checked_mul(4))
+fn output_byte_range(words: u32, context: &str) -> Result<u64, String> {
+    u64::from(words)
+        .checked_mul(4)
         .ok_or_else(|| {
             format!(
                 "{context} words={words} overflows output byte range. Fix: shard the source before GPU line indexing."

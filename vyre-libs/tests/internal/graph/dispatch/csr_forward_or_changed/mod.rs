@@ -1,7 +1,7 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
-use crate::test_parity_oracles::{policy, NeverDispatches, StaticOutputs};
+use vyre_test_support::test_parity_oracles::{policy, NeverDispatches, StaticOutputs};
 use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
 #[path = "../csr_fixtures.rs"]

@@ -287,7 +287,7 @@ mod tests {
     use super::*;
     use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_libs_math::math::spectral_shape::mp_upper_edge;
-    use vyre_libs_builder::test_parity_oracles::{policy, StaticOutputs};
+    use vyre_test_support::test_parity_oracles::{policy, StaticOutputs};
     use vyre_reference::composition_witness::{
         mp_edge_clip_witness as reference_mp_edge_clip,
         try_chebyshev_filter_witness as reference_chebyshev_filter,

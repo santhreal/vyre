@@ -618,7 +618,7 @@ mod tests {
         semiring_gemm_via, semiring_gemm_via_into,
     };
     use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_libs_builder::test_parity_oracles::StaticOutputs;
+    use vyre_test_support::test_parity_oracles::StaticOutputs;
     use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
 
     struct SequenceDispatcher {
@@ -632,7 +632,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = vyre_libs_builder::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 let idx = self.cursor.load(Ordering::Relaxed);
                 let expected_inputs =
@@ -657,7 +657,7 @@ mod tests {
                     )
                 })
             })()?;
-            vyre_libs_builder::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -670,7 +670,7 @@ mod tests {
         let ptr = c.as_ptr();
         semiring_gemm_via_into(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[2],
             &[3],
             1,
@@ -693,7 +693,7 @@ mod tests {
         .expecting_inputs(&[2]);
         let err = semiring_gemm_via(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[2],
             &[3],
             1,
@@ -714,7 +714,7 @@ mod tests {
             .expecting_inputs(&[2]);
         let err = semiring_gemm_via(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[2],
             &[3],
             1,
@@ -756,7 +756,7 @@ mod tests {
 
         scc_components_via_substrate_with_scratch_into(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &adj,
             2,
             &mut scratch,
@@ -768,7 +768,7 @@ mod tests {
 
         scc_components_via_substrate_with_scratch_into(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &adj,
             2,
             &mut scratch,
@@ -790,7 +790,7 @@ mod tests {
         let mut components = vec![9, 8];
         let err = scc_components_via_substrate_with_scratch_into(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1],
             0,
             &mut scratch,
@@ -820,7 +820,7 @@ mod tests {
         };
         let (fwd, bwd) = forward_backward_bitsets_for_pivot_via(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &adj,
             0,
             2,
@@ -853,7 +853,7 @@ mod tests {
         };
         let err = forward_backward_bitsets_for_pivot_via(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &adj,
             0,
             2,
@@ -871,7 +871,7 @@ mod tests {
         };
         let err = forward_backward_bitsets_for_pivot_via(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0, 0, 0, 0],
             2,
             2,
@@ -890,13 +890,13 @@ mod tests {
                 request: &vyre_megakernel::SemanticExecutionRequest<'_>,
             ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError>
             {
-                let inputs = vyre_libs_builder::test_parity_oracles::canonical_inputs(request)?;
+                let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
                 let ordered = if inputs.len() == 3 && inputs[2].len() == 8 {
                     vec![u32_slice_to_le_bytes(&[0, 0])]
                 } else {
                     vec![u32_slice_to_le_bytes(&[1, 1, 1, 1])]
                 };
-                vyre_libs_builder::test_parity_oracles::semantic_output(request, ordered)
+                vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
             }
         }
 
@@ -905,7 +905,7 @@ mod tests {
         let mut components = Vec::new();
         scc_components_via_substrate_with_scratch_into(
             &LogicalExecutor,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &adj,
             2,
             &mut scratch,

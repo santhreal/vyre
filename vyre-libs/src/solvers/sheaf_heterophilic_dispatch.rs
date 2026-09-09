@@ -374,7 +374,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 4);
                 let stalks = crate::dispatch_buffers::read_u32s(&inputs[0]);
@@ -392,7 +392,7 @@ mod tests {
                     .collect();
                 Ok(vec![u32_slice_to_le_bytes(&out)])
             };
-            crate::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -402,7 +402,7 @@ mod tests {
         let half = 1u32 << 15;
         let out = diffuse_dispatch_stalks_fixed_via(
             &SheafDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[10 * one, 20 * one],
             &[one, one],
             half,
@@ -417,7 +417,7 @@ mod tests {
     fn fixed_via_rejects_shape_mismatch() {
         let err = diffuse_dispatch_stalks_fixed_via(
             &SheafDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1, 2, 3],
             &[1, 2],
             1,
@@ -437,7 +437,7 @@ mod tests {
 
         diffuse_dispatch_stalks_fixed_via_with_scratch_into(
             &SheafDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[10 * one, 20 * one],
             &[one, one],
             half,
@@ -450,7 +450,7 @@ mod tests {
         let input_ptrs: Vec<*const u8> = scratch.inputs.iter().map(Vec::as_ptr).collect();
         diffuse_dispatch_stalks_fixed_via_with_scratch_into(
             &SheafDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[8 * one, 12 * one],
             &[one, one],
             half,

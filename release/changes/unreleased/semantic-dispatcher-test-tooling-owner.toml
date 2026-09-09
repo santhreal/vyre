@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-test-support` owns the semantic-dispatcher test tooling as a public module for test consumers, replacing duplicated internal copies across `vyre-libs` and `vyre-libs-builder`."

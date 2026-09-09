@@ -379,7 +379,7 @@ fn decode_scalar(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use crate::test_parity_oracles::{
+    use vyre_test_support::test_parity_oracles::{
         canonical_inputs, policy, semantic_output, NeverDispatches, StaticOutputs,
     };
     use vyre_megakernel::{SemanticExecutionOutput, SemanticExecutionRequest};
@@ -419,7 +419,7 @@ mod tests {
                 })?
                 .program;
             let inputs = canonical_inputs(request)?;
-            let op_id = crate::test_parity_oracles::region_operation_id(program)?;
+            let op_id = vyre_test_support::test_parity_oracles::region_operation_id(program)?;
             let values = crate::dispatch_buffers::read_u32s(required_input(&inputs, 0, op_id)?);
             let ordered = match op_id {
                 crate::reduce::sum::OP_ID => {

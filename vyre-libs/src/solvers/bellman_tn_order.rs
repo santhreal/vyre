@@ -239,7 +239,7 @@ pub fn bellman_tn_order_via_with_scratch_into(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use crate::test_parity_oracles::NeverDispatches;
+    use vyre_test_support::test_parity_oracles::NeverDispatches;
     use vyre_reference::composition_witness::bellman_shortest_path_witness as reference_bellman_shortest_path;
 
     /// Terse binding names, for the tests that only care about the program.
@@ -301,7 +301,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 6);
                 let dist = crate::dispatch_buffers::read_u32s(&inputs[0]);
@@ -328,7 +328,7 @@ mod tests {
                 );
                 Ok(vec![u32_slice_to_le_bytes(&out)])
             };
-            crate::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -382,7 +382,7 @@ mod tests {
                 request: &vyre_megakernel::SemanticExecutionRequest<'_>,
             ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError>
             {
-                let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+                let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
                 let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                     self.changed_words.store(
                         crate::dispatch_buffers::read_u32s(&inputs[2]).len(),
@@ -396,7 +396,7 @@ mod tests {
                 if ordered.len() < output_count {
                     ordered.resize(output_count, Vec::new());
                 }
-                crate::test_parity_oracles::semantic_output(request, ordered)
+                vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
             }
         }
 
@@ -424,7 +424,7 @@ mod tests {
         };
         bellman_tn_order_via(
             &dispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &src,
             &dst,
             &weight,
@@ -449,7 +449,7 @@ mod tests {
         let p3 = bellman_tn_order_program(stage("dist3", "nd3", "c3"), extents(4, 4, 5));
 
         let final_p =
-            crate::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
+            vyre_test_support::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
         crate::solvers::test_helpers::assert_min_region_count(&final_p, 3);
     }
 
@@ -462,7 +462,7 @@ mod tests {
 
         let out = bellman_tn_order_via(
             &BellmanDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &src,
             &dst,
             &weight,
@@ -486,7 +486,7 @@ mod tests {
 
         bellman_tn_order_via_into(
             &BellmanDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &src,
             &dst,
             &weight,
@@ -512,7 +512,7 @@ mod tests {
 
         bellman_tn_order_via_with_scratch_into(
             &BellmanDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &src,
             &dst,
             &weight,
@@ -529,7 +529,7 @@ mod tests {
 
         bellman_tn_order_via_with_scratch_into(
             &BellmanDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &src,
             &dst,
             &weight,
@@ -553,7 +553,7 @@ mod tests {
     fn bellman_tn_order_via_rejects_bad_edge_shape() {
         let err = bellman_tn_order_via(
             &BellmanDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[0],
             &[],
             &[1],
@@ -573,7 +573,7 @@ mod tests {
             &NeverDispatches(
                 "Fix: empty Bellman edge set must not submit a zero-work GPU dispatch",
             ),
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[],
             &[],
             &[],

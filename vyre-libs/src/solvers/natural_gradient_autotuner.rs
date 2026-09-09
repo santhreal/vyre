@@ -262,7 +262,7 @@ mod tests {
             &self,
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
-            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 3);
                 let matrix = crate::dispatch_buffers::read_u32s(&inputs[0]);
@@ -281,7 +281,7 @@ mod tests {
                 }
                 Ok(vec![u32_slice_to_le_bytes(&out)])
             };
-            crate::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
+            vyre_test_support::test_parity_oracles::semantic_output_padded(request, compute_ordered()?)
         }
     }
 
@@ -349,7 +349,7 @@ mod tests {
 
         let out = precondition_autotune_gradient_fixed_via(
             &NaturalGradientDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &matrix,
             &grad,
             2,
@@ -363,7 +363,7 @@ mod tests {
     fn fixed_via_rejects_invalid_shapes() {
         let err = precondition_autotune_gradient_fixed_via(
             &NaturalGradientDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[1],
             &[1, 2],
             2,
@@ -383,7 +383,7 @@ mod tests {
 
         precondition_autotune_gradient_fixed_via_with_scratch_into(
             &NaturalGradientDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &matrix,
             &grad,
             2,
@@ -394,7 +394,7 @@ mod tests {
         let input_ptrs: Vec<*const u8> = scratch.inputs.iter().map(Vec::as_ptr).collect();
         precondition_autotune_gradient_fixed_via_with_scratch_into(
             &NaturalGradientDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &matrix,
             &grad,
             2,

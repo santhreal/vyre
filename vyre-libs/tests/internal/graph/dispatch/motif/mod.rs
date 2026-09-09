@@ -2,7 +2,7 @@ use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::graph::dispatch::motif::{motif_matches_via, motif_participation_count_via};
 use crate::graph::motif::{plan_motif_launch, validate_motif_inputs, MotifEdge};
-use crate::test_parity_oracles::{policy, SequentialOutputs, StaticOutputs};
+use vyre_test_support::test_parity_oracles::{policy, SequentialOutputs, StaticOutputs};
 use vyre_megakernel::SemanticExecutionError;
 
 const MOTIF_CONTRACT: &str = "motif match dispatch";

@@ -173,7 +173,7 @@ pub fn schedule_disjoint_rewrites_via_with_scratch_into(
 mod tests {
     use super::*;
     use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_libs_builder::test_parity_oracles::{policy, StaticOutputs};
+    use vyre_test_support::test_parity_oracles::{policy, StaticOutputs};
     use vyre_reference::composition_witness::{
         planar_rewrite_schedule_witness as reference_planar_rewrite_schedule,
         reduce_count_non_zero_witness as count_scheduled,

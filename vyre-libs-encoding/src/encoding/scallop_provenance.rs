@@ -314,7 +314,7 @@ mod tests {
             &mut scratch.join_scratch,
         )
     }
-    use vyre_libs_builder::test_parity_oracles::StaticOutputs;
+    use vyre_test_support::test_parity_oracles::StaticOutputs;
 
     #[test]
     fn build_program_declares_four_buffers() {
@@ -397,7 +397,7 @@ mod tests {
         let ptr = closure.as_ptr();
         provenance_closure_via_into(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &state,
             &join_rules,
             2,
@@ -425,7 +425,7 @@ mod tests {
 
         provenance_closure_via_with_scratch_into(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &state,
             &join_rules,
             2,
@@ -440,7 +440,7 @@ mod tests {
 
         provenance_closure_via_with_scratch_into(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &state,
             &join_rules,
             2,
@@ -473,7 +473,7 @@ mod tests {
         let join_rules = vec![0u32; 4];
         let closure = provenance_closure_via(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &state,
             &join_rules,
             2,
@@ -492,7 +492,7 @@ mod tests {
         let join_rules = vec![0u32; 1];
         let err = provenance_closure_via(
             &dispatcher,
-            &vyre_libs_builder::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &state,
             &join_rules,
             1,

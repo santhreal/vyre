@@ -405,9 +405,9 @@ mod tests {
             request: &vyre_megakernel::SemanticExecutionRequest<'_>,
         ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
             let program = &request.logical().graph().nodes()[0].program;
-            let inputs = crate::test_parity_oracles::canonical_inputs(request)?;
+            let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
-                let op_id = crate::test_parity_oracles::region_operation_id(program)?;
+                let op_id = vyre_test_support::test_parity_oracles::region_operation_id(program)?;
                 match op_id {
                     crate::pattern::BRACKET_MATCH_OP_ID => {
                         // Two input-consuming buffers: kinds ReadOnly(0), stack plain-ReadWrite(1).
@@ -474,7 +474,7 @@ mod tests {
                 }
             };
             let ordered = compute_ordered()?;
-            crate::test_parity_oracles::semantic_output(request, ordered)
+            vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
     }
 
@@ -512,7 +512,7 @@ mod tests {
         assert_eq!(
             bracket_pairs_via(
                 &MatchingDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &fixture,
                 8,
             )
@@ -532,7 +532,7 @@ mod tests {
         assert_eq!(
             bracket_pairs_via(
                 &MatchingDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &kinds,
                 kinds.len() as u32,
             )
@@ -551,7 +551,7 @@ mod tests {
         assert_eq!(
             bracket_pairs_via(
                 &MatchingDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &kinds,
                 64,
             )
@@ -586,7 +586,7 @@ mod tests {
             assert_eq!(
                 bracket_pairs_via(
                     &MatchingDispatcher,
-                    &crate::test_parity_oracles::policy(),
+                    &vyre_test_support::test_parity_oracles::policy(),
                     &kinds,
                     max_depth,
                 )
@@ -609,7 +609,7 @@ mod tests {
         assert_eq!(
             dedup_region_survivor_flags_via(
                 &MatchingDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &sorted,
             )
             .unwrap(),
@@ -626,7 +626,7 @@ mod tests {
         assert_eq!(
             dedup_region_survivor_flags_via(
                 &MatchingDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &sorted,
             )
             .unwrap(),
@@ -656,7 +656,7 @@ mod tests {
             sort_regions_witness_in_place(&mut sorted);
             let flags = dedup_region_survivor_flags_via(
                 &MatchingDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &sorted,
             )
             .unwrap();
@@ -699,7 +699,7 @@ mod tests {
         assert_eq!(
             sort_regions_via(
                 &MatchingDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &regions,
             )
             .unwrap(),
@@ -718,7 +718,7 @@ mod tests {
 
         sort_regions_via_with_scratch_into(
             &MatchingDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &large,
             &mut scratch,
             &mut out,
@@ -729,7 +729,7 @@ mod tests {
 
         sort_regions_via_with_scratch_into(
             &MatchingDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &small,
             &mut scratch,
             &mut out,
@@ -751,7 +751,7 @@ mod tests {
         assert_eq!(
             dedup_region_survivor_flags_via(
                 &MatchingDispatcher,
-                &crate::test_parity_oracles::policy(),
+                &vyre_test_support::test_parity_oracles::policy(),
                 &sorted,
             )
             .unwrap(),
@@ -774,7 +774,7 @@ mod tests {
 
         dedup_region_survivor_flags_via_with_scratch_into(
             &MatchingDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &large,
             &mut scratch,
             &mut flags,
@@ -784,7 +784,7 @@ mod tests {
 
         dedup_region_survivor_flags_via_with_scratch_into(
             &MatchingDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &small,
             &mut scratch,
             &mut flags,
@@ -799,7 +799,7 @@ mod tests {
     fn empty_region_sort_error_is_actionable() {
         let err = sort_regions_via(
             &MatchingDispatcher,
-            &crate::test_parity_oracles::policy(),
+            &vyre_test_support::test_parity_oracles::policy(),
             &[],
         )
         .unwrap_err();

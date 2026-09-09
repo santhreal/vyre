@@ -24,7 +24,7 @@ pub fn embedding(embed_table: &str, tokens: &str, output: &str, n: u32, embed_di
             BufferDecl::storage(tokens, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
             BufferDecl::output(output, 2, DataType::F32)
                 .with_count(total_out.max(1))
-                .with_output_byte_range(0..(total_out as usize).saturating_mul(4)),
+                .with_output_byte_range(0..u64::from(total_out).saturating_mul(4)),
         ],
         output,
         total_out,
