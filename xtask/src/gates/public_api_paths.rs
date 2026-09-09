@@ -105,7 +105,8 @@ pub struct Published {
 impl Published {
     /// The first tail segment, which is the name a declaration plants. The rest
     /// of the tail is a member of it, so `Type::field` is decided by `Type`.
-    fn head(&self) -> &str {
+    #[must_use]
+    pub fn head(&self) -> &str {
         self.tail.split("::").next().unwrap_or(self.tail.as_str())
     }
 }
