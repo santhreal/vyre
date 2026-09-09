@@ -85,6 +85,34 @@ impl VisionEncoderConfig {
         }
     }
 
+    /// Validate that input image dimensions match the encoder expectations.
+    pub fn validate_image_shape(
+        &self,
+        height: u32,
+        width: u32,
+        channels: u32,
+    ) -> Result<(), MultimodalError> {
+        if channels != self.num_channels {
+            return Err(MultimodalError::ChannelMismatch {
+                expected: self.num_channels,
+                actual: channels,
+            });
+        }
+        if height % self.patch_size != 0 {
+            return Err(MultimodalError::IndivisiblePatchSize {
+                image_size: height,
+                patch_size: self.patch_size,
+            });
+        }
+        if width % self.patch_size != 0 {
+            return Err(MultimodalError::IndivisiblePatchSize {
+                image_size: width,
+                patch_size: self.patch_size,
+            });
+        }
+        Ok(())
+    }
+
     /// CLIP ViT-Large/14 (224x224, patch 14, 1024 hidden dim, 24 layers).
     #[must_use]
     pub fn clip_vit_large_14() -> Self {

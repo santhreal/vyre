@@ -29,6 +29,9 @@ static PORTABLE_PROVIDER_LINK: fn() -> Option<&'static str> =
 /// Public API re-export.
 pub use vyre_foundation::ir;
 
+/// Deterministic framing and content-addressed hashing helpers.
+pub use vyre_foundation::hashing;
+
 /// Domain-neutral schema and dialect translation contracts.
 pub use vyre_foundation::dialect;
 

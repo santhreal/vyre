@@ -16,8 +16,8 @@ pub mod translator;
 pub mod workload;
 
 pub use config::{
-    all_named_configs, ActivationKind, MlaConfig, ModelConfig, ModelFamily, MoeConfig,
-    NamedModelConfig, NormKind,
+    all_model_families, all_named_configs, ActivationKind, MlaConfig, ModelConfig, ModelFamily,
+    MoeConfig, NamedModelConfig, NormKind,
 };
 pub use manifest::{CheckpointManifest, ManifestError, StateEdgeDescriptor, TensorDescriptor};
 pub use multimodal::{

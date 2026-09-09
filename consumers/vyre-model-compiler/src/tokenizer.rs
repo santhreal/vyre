@@ -3,8 +3,8 @@
 //! Owns tokenizer definitions, special token identifiers, vocabulary boundaries,
 //! and encoding schemes for frontier model architectures.
 
-use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use thiserror::Error;
 
 /// Tokenizer algorithm classification.

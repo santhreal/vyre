@@ -4,7 +4,7 @@ mod program_dispatch;
 
 pub use program_dispatch::{target_profile, ReferenceSemanticExecutor};
 
-use vyre_driver::{BackendError, DispatchConfig};
+pub use vyre_driver::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
 
@@ -36,6 +36,15 @@ impl CpuRefEvaluator {
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         interpret(program, inputs, config)
+    }
+
+    /// Execute a program on input byte buffers using default reference dispatch configuration.
+    pub fn evaluate_default(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+    ) -> Result<Vec<Vec<u8>>, BackendError> {
+        self.evaluate(program, inputs, &DispatchConfig::default())
     }
 }
 
