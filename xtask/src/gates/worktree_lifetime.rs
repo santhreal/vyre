@@ -15,8 +15,12 @@
 //! source tree alive with a live claim on the shared artifacts, and every grep,
 //! gate and duplication scan walked it for nothing.
 //!
-//! A worktree whose branch has merged has no unmerged work left to protect, so
-//! it is reported. One on an unmerged branch is the supported lane and is not.
+//! A worktree whose branch has merged and whose tree is clean has no unmerged
+//! work left to protect, so it is reported. One on an unmerged branch is the
+//! supported lane and is not. Neither is one whose branch has merged while its
+//! tree still carries modified, staged, or untracked files: that work exists
+//! only there, and `git worktree remove` refuses to delete it for the same
+//! reason this gate must not ask for it.
 
 use std::path::Path;
 use std::process::Command;
@@ -40,7 +44,7 @@ pub(crate) struct Worktree {
     pub(crate) branch: Option<String>,
 }
 
-/// Worktrees whose branch has already merged.
+/// Worktrees whose branch has already merged and whose tree is clean.
 pub(crate) fn findings(root: &Path) -> Result<Vec<Finding>, GateError> {
     let listing = git(root, &["worktree", "list", "--porcelain"])?;
     let worktrees = parse_worktrees(&listing);
@@ -49,6 +53,9 @@ pub(crate) fn findings(root: &Path) -> Result<Vec<Finding>, GateError> {
         let Some(branch) = worktree.branch.as_deref() else {
             continue;
         };
+        if !is_clean(Path::new(&worktree.path))? {
+            continue;
+        }
         if let Some(target) = merged_into(root, branch)? {
             merged.push((worktree, target));
         }
@@ -66,6 +73,17 @@ pub(crate) fn findings(root: &Path) -> Result<Vec<Finding>, GateError> {
             )
         })
         .collect())
+}
+
+/// Whether `worktree` has no modified, staged, or untracked file.
+///
+/// `--porcelain` prints one line per such path and nothing at all for a clean
+/// tree, so emptiness is the answer. `--untracked-files=all` is not needed and
+/// is not asked for: one line per directory is enough to know work is present,
+/// and descending into an ignored build directory would cost more than the
+/// whole gate.
+fn is_clean(worktree: &Path) -> Result<bool, GateError> {
+    Ok(git(worktree, &["status", "--porcelain"])?.trim().is_empty())
 }
 
 /// The first ref in [`MERGE_TARGETS`] that already contains `branch`.
@@ -231,13 +249,28 @@ mod tests {
         run(&["config", "user.name", "gate"]);
         run(&["config", "user.email", "gate@example.invalid"]);
         run(&["config", "commit.gpgsign", "false"]);
-        run(&["commit", "--quiet", "--allow-empty", "-m", "base"]);
+        std::fs::write(root.join("tracked.txt"), "base\n").expect("a tracked file");
+        run(&["add", "tracked.txt"]);
+        run(&["commit", "--quiet", "-m", "base"]);
         run(&["branch", "merged"]);
         run(&["checkout", "--quiet", "-b", "unmerged"]);
         run(&["commit", "--quiet", "--allow-empty", "-m", "ahead"]);
         run(&["checkout", "--quiet", "main"]);
         run(&["commit", "--quiet", "--allow-empty", "-m", "later"]);
         directory
+    }
+
+    /// Check `branch` out at `checkout` as a linked worktree.
+    fn add_worktree(root: &Path, checkout: &Path, branch: &str) {
+        let status = Command::new("git")
+            .arg("-C")
+            .arg(root)
+            .args(["worktree", "add", "--quiet"])
+            .arg(checkout)
+            .arg(branch)
+            .status()
+            .expect("git runs");
+        assert!(status.success(), "worktree add {branch}");
     }
 
     /// WHY: the clean-tree assertion above passes just as well against a gate
@@ -247,18 +280,7 @@ mod tests {
     fn a_worktree_on_a_merged_branch_is_reported() {
         let repository = scratch_repository();
         let root = repository.path();
-        let checkout = root.join("spent");
-        let status = Command::new("git")
-            .arg("-C")
-            .arg(root)
-            .arg("worktree")
-            .arg("add")
-            .arg("--quiet")
-            .arg(&checkout)
-            .arg("merged")
-            .status()
-            .expect("git runs");
-        assert!(status.success());
+        add_worktree(root, &root.join("spent"), "merged");
 
         let found = findings(root).expect("git is available");
         assert_eq!(found.len(), 1, "{found:?}");
@@ -273,17 +295,7 @@ mod tests {
     fn a_worktree_on_an_unmerged_branch_is_left_alone() {
         let repository = scratch_repository();
         let root = repository.path();
-        let status = Command::new("git")
-            .arg("-C")
-            .arg(root)
-            .arg("worktree")
-            .arg("add")
-            .arg("--quiet")
-            .arg(root.join("live"))
-            .arg("unmerged")
-            .status()
-            .expect("git runs");
-        assert!(status.success());
+        add_worktree(root, &root.join("live"), "unmerged");
 
         let found = findings(root).expect("git is available");
         assert!(found.is_empty(), "{found:?}");
@@ -305,5 +317,58 @@ mod tests {
             merged_into(root, "unmerged").expect("git is available"),
             None
         );
+    }
+    /// WHY: the fix this closes asked for `git worktree remove` on a merged
+    /// worktree that still held 496 uncommitted changes implementing an open
+    /// backlog row. Merge status describes the branch, and the branch does not
+    /// contain a file that was never committed to it, so a merged worktree with
+    /// a dirty tree is the one case where the advice destroys the only copy of
+    /// the work. Every form git reports separately is covered here rather than
+    /// the modified one alone: a new file is untracked, a staged file is in the
+    /// index and not the branch, and each reaches `status --porcelain` by its
+    /// own path.
+    #[test]
+    fn a_merged_worktree_that_still_carries_work_is_left_alone() {
+        for (case, prepare) in [
+            (
+                "a modified tracked file",
+                &(|checkout: &Path| {
+                    std::fs::write(checkout.join("tracked.txt"), "changed\n")
+                        .expect("a modified file");
+                }) as &dyn Fn(&Path),
+            ),
+            (
+                "an untracked file",
+                &(|checkout: &Path| {
+                    std::fs::write(checkout.join("new.txt"), "new\n").expect("an untracked file");
+                }),
+            ),
+            (
+                "a staged file",
+                &(|checkout: &Path| {
+                    std::fs::write(checkout.join("staged.txt"), "staged\n").expect("a staged file");
+                    let status = Command::new("git")
+                        .arg("-C")
+                        .arg(checkout)
+                        .args(["add", "staged.txt"])
+                        .status()
+                        .expect("git runs");
+                    assert!(status.success());
+                }),
+            ),
+        ] {
+            let repository = scratch_repository();
+            let root = repository.path();
+            let checkout = root.join("spent");
+            add_worktree(root, &checkout, "merged");
+
+            let before = findings(root).expect("git is available");
+            assert_eq!(before.len(), 1, "{case}: a clean merged worktree is spent");
+
+            prepare(&checkout);
+
+            let after = findings(root).expect("git is available");
+            assert!(after.is_empty(), "{case}: {after:?}");
+        }
     }
 }

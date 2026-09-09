@@ -75,6 +75,10 @@ tempfile.workspace = true
 name = "all_tests"
 path = "tests/all_tests.rs"
 
+# Isolated: each submits a deliberate duplicate into the link-time operation
+# and backend registries, which are process-global and populated before `main`.
+# The duplicate is the subject of the assertion, so a binary carrying either
+# one starts with a registry every other test in it would read as corrupt.
 [[test]]
 name = "backend_registry_duplicate_provider"
 path = "tests/backend_registry_duplicate_provider.rs"
@@ -83,6 +87,11 @@ path = "tests/backend_registry_duplicate_provider.rs"
 name = "gap_duplicate_op_id"
 path = "tests/gap_duplicate_op_id.rs"
 
+# Isolated: each asserts what the registry reports when this binary links no
+# concrete driver. `backend_registry` reads it as empty and
+# `reference_oracle_is_never_implicit` requires that no implicit choice returns
+# a host oracle. One test registering a backend to exercise its own contract
+# would make both observations describe a different registry.
 [[test]]
 name = "backend_registry"
 path = "tests/backend_registry.rs"

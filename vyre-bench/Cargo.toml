@@ -116,6 +116,11 @@ workspace = true
 name = "all_tests"
 path = "tests/all_tests.rs"
 
+# Isolated: both mutate the process environment, which no two tests in one
+# binary can do independently. `determinism_gate` sets the variable that forces
+# a repeatable seed and `min_samples_gate` removes `VYRE_ALLOW_FEW_SAMPLES` to
+# observe the refusal, so sharing a binary makes each result depend on the
+# order the harness threads happen to run in.
 [[test]]
 name = "determinism_gate"
 path = "tests/determinism_gate.rs"

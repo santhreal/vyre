@@ -21,10 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Reclaim runner disk
-        if: matrix.os == 'ubuntu-latest'
-        uses: ./.github/actions/reclaim-runner-disk
-
       - name: Install Rust
         shell: bash
         run: |

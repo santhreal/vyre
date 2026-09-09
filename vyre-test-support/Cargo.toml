@@ -95,6 +95,11 @@ name = "all_tests_ir_fixtures"
 path = "tests/all_tests_ir_fixtures.rs"
 required-features = ["ir-fixtures"]
 
+# Isolated: the body calls `set_current_dir`, and a process has one working
+# directory. The contract is that `vyre_workspace_root` answers for the
+# checkout the command ran in, which can only be observed by changing that
+# directory, so any test sharing the binary would resolve its own paths
+# against whichever directory this one had set at that moment.
 [[test]]
 name = "workspace_root_follows_the_working_directory"
 path = "tests/workspace_root_follows_the_working_directory.rs"
