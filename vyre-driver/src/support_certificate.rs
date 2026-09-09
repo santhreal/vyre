@@ -6,8 +6,8 @@
 //! certificate joined from seven required production-path facts:
 //!
 //! 1. **Validation**: The program and its schedule pass structural and typed IR validation.
-//! 2. **Emission**: Lowering and dialect emission (PTX, WGSL/Naga, MSL, SPIR-V) succeed without error.
-//! 3. **Native Toolchain Compilation**: The native backend compiler/assembler (nvrtc, ptxas, Metal MSL compiler, spirv-val) validates and compiles the artifact.
+//! 2. **Emission**: Lowering and target dialect emission succeed without error.
+//! 3. **Native Toolchain Compilation**: The backend native toolchain validates and compiles the emitted text into a native module.
 //! 4. **Materialization**: Device module and pipeline creation succeed on the target device/runtime.
 //! 5. **Hostile Binding Verification**: Adversarial binding tests (OOB, invalid buffers, mismatched permissions) fail closed without device corruption.
 //! 6. **Device Execution**: The kernel executes on an authenticated device with verified launch geometry.
@@ -31,7 +31,7 @@ pub enum ProductionPathStage {
     Validation,
     /// Step 2: Target-specific physical IR lowering and dialect emission.
     Emission,
-    /// Step 3: Native toolchain (ptxas/nvrtc, metal compiler, spirv-val) compilation.
+    /// Step 3: Native toolchain compilation of emitted text into a native module.
     NativeCompilation,
     /// Step 4: Device module creation and pipeline materialization.
     Materialization,

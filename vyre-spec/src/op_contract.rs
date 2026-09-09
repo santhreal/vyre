@@ -149,7 +149,7 @@ pub enum ShapeIndexRelation {
     Contracting,
     /// Output dimension larger than input (broadcast, padding, upsampling).
     Expanding,
-    /// Multidimensional broadcasting according to numpy/wgsl rules.
+    /// Multidimensional broadcasting: trailing dimensions align and extent-1 dimensions stretch.
     Broadcast,
     /// Permutation or transposition of coordinate axes with invariant volume.
     Permutation,

@@ -151,6 +151,11 @@ grouping = "grouped"
 reason = "registers test::binop::* algebraic laws for its own refutation cases, and registers test::duplicate::commutative twice on purpose; the law registry folds a repeat name instead of rejecting it, so the duplicate leaves nothing behind for a sibling to trip over"
 
 [[test]]
+path = "vyre-foundation/tests/extension_closed_schema_contract.rs"
+grouping = "grouped"
+reason = "submits the test.canonical.expr and test.canonical.node opaque resolvers its round-trip cases decode; resolution is by kind tag, not enumeration"
+
+[[test]]
 path = "vyre-foundation/tests/internal/ir_inner/model/program/cache_digest_contracts.rs"
 grouping = "grouped"
 reason = "the OnceLock holds this module's own digest fixture; no case observes when it was filled"

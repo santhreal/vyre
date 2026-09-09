@@ -311,9 +311,8 @@ fn layer_reversal_dependency_fails_closed() {
         "[dependencies]\nhigh = { version = \"0.1.0\", path = \"../high\" }\n",
     );
     write_member(temp.path(), "high", "high", "");
-    let registry = format!(
-        "schema_version = 3\n\n[[layer]]\nname = \"layer-low\"\nrank = 0\npurpose = \"low\"\n\n[[layer]]\nname = \"layer-high\"\nrank = 5\npurpose = \"high\"\n\n[[crate]]\npackage = \"low\"\npath = \"low\"\nowner = \"fixture-owner\"\nlayer = \"layer-low\"\nresponsibility = \"low\"\n\n[[crate.dependency]]\npackage = \"high\"\npurpose = \"Use high\"\nfeatures = []\nconditions = [\"always\"]\nkinds = [\"normal\"]\noptional = false\ndefault_features = true\nboundary = \"private\"\nseam = \"fixture-owner\"\n\n[[crate]]\npackage = \"high\"\npath = \"high\"\nowner = \"fixture-owner\"\nlayer = \"layer-high\"\nresponsibility = \"high\"\n"
-    );
+    let registry = "schema_version = 3\n\n[[layer]]\nname = \"layer-low\"\nrank = 0\npurpose = \"low\"\n\n[[layer]]\nname = \"layer-high\"\nrank = 5\npurpose = \"high\"\n\n[[crate]]\npackage = \"low\"\npath = \"low\"\nowner = \"fixture-owner\"\nlayer = \"layer-low\"\nresponsibility = \"low\"\n\n[[crate.dependency]]\npackage = \"high\"\npurpose = \"Use high\"\nfeatures = []\nconditions = [\"always\"]\nkinds = [\"normal\"]\noptional = false\ndefault_features = true\nboundary = \"private\"\nseam = \"fixture-owner\"\n\n[[crate]]\npackage = \"high\"\npath = \"high\"\nowner = \"fixture-owner\"\nlayer = \"layer-high\"\nresponsibility = \"high\"\n"
+        .to_string();
     seal(temp.path(), registry);
 
     let report = run(temp.path());

@@ -328,6 +328,16 @@ name = "metal"
 reason = "the Apple platform sharing mechanism an imported handle is, named beside its `Win32Nt` and `DmaBuf` siblings; a neutral word would describe a mechanism that does not exist"
 
 [[interface]]
+prefix = "vyre-spec/src/resource_capability.rs"
+name = "metal"
+reason = "the Apple platform sharing mechanism an imported allocation and its shared event are, named beside their `DmaBuf`, `Win32Nt`, `Win32Kmt` and `OpaqueFd` siblings; a neutral word would describe a mechanism that does not exist"
+
+[[interface]]
+prefix = "vyre-runtime/src/external_resource_admission.rs"
+name = "metal"
+reason = "the `ExternalMemoryKind` variant matched when admitting an allocation imported through the Apple platform sharing mechanism, spelled as the capability enum in `vyre-spec` spells it"
+
+[[interface]]
 prefix = "vyre-driver/src/lock_policy.rs"
 name = "wgpu"
 reason = "the concrete wgpu driver backend identifier matched for backend lock policy arbitration"

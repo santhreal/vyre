@@ -15,7 +15,7 @@ use vyre_foundation::ir::{
     ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
-    attach_target, compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
+    attach_target, compile, CompileObjective, CompileRequest, Digest, ExternalFacts,
     ObjectiveMetric, SearchBudget,
 };
 use vyre_runtime::artifact_admission::ArtifactSession;
@@ -40,8 +40,8 @@ fn wgpu_executes_pure_dataflow_connected_graph() {
     let device = registration
         .acquire()
         .expect("WGPU device acquisition must succeed");
-    assert!(device.is_healthy(), "WGPU device must be healthy");
-    let facts = device.device_profile().compile_facts();
+    assert!(!device.device_lost(), "WGPU device must not be lost");
+    let device_facts = device.device_profile().compile_facts();
 
     // Pure Dataflow: 3-stage connected pipeline
     // Node 0: Y = 3 * X + 5
@@ -177,7 +177,7 @@ fn wgpu_executes_pure_dataflow_connected_graph() {
     let request = CompileRequest::new(
         graph,
         facts(),
-        facts,
+        device_facts,
         budget(),
         CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
     )
@@ -190,7 +190,9 @@ fn wgpu_executes_pure_dataflow_connected_graph() {
     assert_ne!(artifact.digest(), Digest([0; 32]));
 
     let envelope = attach_target(artifact, compiler.as_ref()).expect("attach target");
-    assert_ne!(envelope.target_payload().digest(), Digest([0; 32]));
+    let payloads = envelope.target_payloads();
+    assert_eq!(payloads.len(), 1, "attach_target must attach one payload");
+    assert_ne!(payloads[0].digest(), Digest([0; 32]));
 
     let session = ArtifactSession::from_envelope(registration, envelope).expect("materialization");
     let mut bindings = session.bindings().expect("binding set");
@@ -213,9 +215,8 @@ fn wgpu_executes_pure_dataflow_connected_graph() {
         .expect("execution must complete");
 
     assert_ne!(completion.artifact, Digest([0; 32]));
-    assert_ne!(completion.payload, Digest([0; 32]));
     assert_eq!(completion.artifact, session.artifact().unwrap());
-    assert_eq!(completion.payload, session.payload().unwrap());
+    assert_ne!(session.payload().unwrap(), Digest([0; 32]));
 
     let expected_z = [58_u32, 61, 64, 67]
         .into_iter()

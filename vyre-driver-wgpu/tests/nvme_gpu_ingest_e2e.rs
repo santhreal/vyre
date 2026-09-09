@@ -45,7 +45,7 @@ fn write_test_file() -> std::path::PathBuf {
 fn make_driver() -> Result<NvmeGpuIngestDriver<'static>, PipelineError> {
     let ring = IoUringState::new(8)?;
     let target = Box::leak(vec![0u8; FILE_BYTES].into_boxed_slice());
-    let gpu_buffer = unsafe { GpuMappedBuffer::from_host_visible_slice(target) };
+    let gpu_buffer = GpuMappedBuffer::from_host_visible_slice(target);
     let tail = Box::leak(Box::new(AtomicU32::new(0)));
     let stream = AsyncUringStream::new(ring, gpu_buffer, tail);
     NvmeGpuIngestDriver::new(stream, 1, ResidentIoQueue::new(64)?)
@@ -54,10 +54,10 @@ fn make_driver() -> Result<NvmeGpuIngestDriver<'static>, PipelineError> {
 fn make_gpudirect_driver() -> Result<NvmeGpuIngestDriver<'static>, PipelineError> {
     let ring = IoUringState::new(8)?;
     let target = Box::leak(vec![0u8; FILE_BYTES].into_boxed_slice());
-    // SAFETY: The test buffer is leaked for process lifetime and stands in for
+    // The test buffer is leaked for the process lifetime and stands in for
     // BAR1-backed memory when the constructor is expected to reject missing
     // GPUDirect configuration before any native NVMe submission.
-    let gpu_buffer = unsafe { GpuMappedBuffer::from_host_visible_slice(target) };
+    let gpu_buffer = GpuMappedBuffer::from_host_visible_slice(target);
     let tail = Box::leak(Box::new(AtomicU32::new(0)));
     let stream = AsyncUringStream::new(ring, gpu_buffer, tail);
     NvmeGpuIngestDriver::new_gpudirect(stream, 1, ResidentIoQueue::new(64)?)

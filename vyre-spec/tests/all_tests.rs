@@ -77,6 +77,10 @@ pub mod data_type_surface;
 #[path = "data_type_wire_payload_invariance_generated.rs"]
 pub mod data_type_wire_payload_invariance_generated;
 
+/// Integration tests from `tests/extension_closed_schema_contract.rs`.
+#[path = "extension_closed_schema_contract.rs"]
+pub mod extension_closed_schema_contract;
+
 /// Integration tests from `tests/extension_collective_category_contracts.rs`.
 #[path = "extension_collective_category_contracts.rs"]
 pub mod extension_collective_category_contracts;

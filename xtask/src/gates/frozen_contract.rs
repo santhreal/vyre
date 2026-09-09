@@ -167,13 +167,6 @@ impl crate::gate::GateBehavior for BackendExtension {
                     "depend on vyre-driver instead of editing core registry code",
                 ));
             }
-            if !has_dep("inventory") {
-                report.find(Finding::in_file(
-                    manifest.clone(),
-                    "backend crate does not depend on inventory",
-                    "depend on inventory so the backend registers itself at link time",
-                ));
-            }
 
             let sources = tree.rust(&[&format!("{backend}/src")])?;
             let mut implements_backend = false;
@@ -207,24 +200,23 @@ impl crate::gate::GateBehavior for BackendExtension {
                     "keep a backend one crate that implements the backend trait",
                 ));
             }
-            if tree.exists("vyre-driver-reference/src") {
-                if let Ok(ref_sources) = tree.rust(&["vyre-driver-reference/src"]) {
-                    for file in &ref_sources {
-                        if let Ok(content) = tree.read(file) {
-                            if content.contains("impl ") && content.contains("VyreBackend for") {
-                                report.find(Finding::in_file(
-                                "vyre-driver-reference/src",
-                                "vyre-driver-reference must not implement VyreBackend",
-                                "keep reference execution decoupled from production VyreBackend drivers",
-                            ));
-                            }
-                        }
-                    }
-                }
-            }
             // A crate that expands the shared macro submits exactly what the
             // macro submits, and the macro body is checked above. A crate that
-            // writes its own submissions is checked record by record here.
+            // writes its own submissions is checked record by record here, and
+            // only that crate needs `inventory` in its own manifest: the macro
+            // expands to `$crate::inventory::submit!` and reaches the copy
+            // `vyre-driver` re-exports, so requiring the dependency of a crate
+            // that only calls the macro fails correct registration.
+            let submits_raw = !tree
+                .hits(&sources, |line| line.contains("inventory::submit!"))?
+                .is_empty();
+            if submits_raw && !has_dep("inventory") {
+                report.find(Finding::in_file(
+                    manifest.clone(),
+                    "backend crate submits its own inventory records without depending on inventory",
+                    "depend on inventory, or register through `vyre_driver::register_backend!`",
+                ));
+            }
             if tree
                 .hits(&sources, |line| line.contains(REGISTER_MACRO))?
                 .is_empty()
@@ -240,6 +232,22 @@ impl crate::gate::GateBehavior for BackendExtension {
                             ),
                         ));
                     }
+                }
+            }
+        }
+
+        // The reference oracle is not a production backend, so it is absent
+        // from the roster above and checked once here rather than once per
+        // backend.
+        if tree.exists("vyre-driver-reference/src") {
+            for file in &tree.rust(&["vyre-driver-reference/src"])? {
+                let content = tree.read(file)?;
+                if content.contains("impl ") && content.contains("VyreBackend for") {
+                    report.find(Finding::in_file(
+                        file.clone(),
+                        "vyre-driver-reference must not implement VyreBackend",
+                        "keep reference execution decoupled from production VyreBackend drivers",
+                    ));
                 }
             }
         }

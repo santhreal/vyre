@@ -188,6 +188,10 @@ pub mod expr_variant_traversal_closure;
 #[path = "extension_adversarial.rs"]
 pub mod extension_adversarial;
 
+/// Integration tests from `tests/extension_closed_schema_contract.rs`.
+#[path = "extension_closed_schema_contract.rs"]
+pub mod extension_closed_schema_contract;
+
 /// Integration tests from `tests/fingerprint_perf_contracts.rs`.
 #[path = "fingerprint_perf_contracts.rs"]
 pub mod fingerprint_perf_contracts;
