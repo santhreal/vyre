@@ -137,9 +137,8 @@ pub mod python_token;
 /// Declarative law families a rewrite may cite.
 /// Specification element.
 mod region_law;
-/// Monotonicity direction (increasing / decreasing / none) for op outputs.
 /// Domain-neutral resource, image, view, plane, sampler, external memory, and timeline sync capabilities.
-pub mod resource_capability;
+mod resource_capability;
 /// Catalog of invariants every registered op is checked against.
 /// Declarative schema registry for all persisted and wire formats.
 mod schema_registry;
@@ -343,8 +342,9 @@ pub use resource_capability::{
     AdmittedResourceRecord, BorderColor, ColorInterpretation, CompareFunction, ComponentSwizzle,
     ExternalEventCapability, ExternalEventKind, ExternalMemoryCapability, ExternalMemoryKind,
     FilterMode, FormatClass, ImageDimensions, ImageFormat, ImagePlane, ImageViewDescriptor,
-    ImageViewKind, MipmapFilterMode, PlaneKind, ResourceAliasSet, ResourceLayoutState,
-    ResourceLifetimeState, ResourceOwnershipState, ResourcePermittedUsages, ResourceProvenance,
+    ImageViewKind, MipmapFilterMode, PlaneKind, ResourceAbiError, ResourceAliasSet,
+    ResourceLayoutState, ResourceLifetimeState, ResourceOwnershipState,
+    ResourcePermittedUsages, ResourceProvenance,
     ResourceUsageTransition, SamplerCapability, SamplerDescriptor, SubresourceRange,
     SwizzleComponent, TimelineSyncProtocol,
 };

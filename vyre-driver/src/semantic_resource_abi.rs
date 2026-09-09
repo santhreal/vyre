@@ -10,7 +10,6 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 
-pub use vyre_spec::resource_capability::*;
 pub use vyre_spec::{
     all_address_modes, all_alias_set_kinds, all_border_colors, all_color_interpretations,
     all_compare_functions, all_external_event_kinds, all_external_memory_kinds, all_filter_modes,
@@ -20,7 +19,8 @@ pub use vyre_spec::{
     AdmittedResourceRecord, BorderColor, ColorInterpretation, CompareFunction, ComponentSwizzle,
     ExternalEventCapability, ExternalEventKind, ExternalMemoryCapability, ExternalMemoryKind,
     FilterMode, FormatClass, ImageDimensions, ImageFormat, ImagePlane, ImageViewDescriptor,
-    ImageViewKind, MipmapFilterMode, PlaneKind, ResourceAliasSet, ResourceLayoutState,
+    ImageViewKind, MipmapFilterMode, PlaneKind, ResourceAbiError, ResourceAliasSet,
+    ResourceLayoutState,
     ResourceLifetimeState, ResourceOwnershipState, ResourcePermittedUsages, ResourceProvenance,
     ResourceUsageTransition, SamplerCapability, SamplerDescriptor, SubresourceRange,
     SwizzleComponent, TimelineSyncProtocol,
