@@ -16,6 +16,7 @@ pub mod measurement;
 pub mod native_baseline;
 pub mod provenance;
 pub mod verdict;
+pub mod whole_app;
 
 pub use definitions::{WorkloadDomain, WorkloadSpecification};
 pub use equality::{
@@ -32,4 +33,13 @@ pub use provenance::{validate_payload_provenance, PayloadProvenance, ProvenanceR
 pub use verdict::{
     evaluate_cell_comparison, generate_floor_comparison_report, AggregateVerdict, CellEvaluation,
     CellVerdict, FloorComparisonReport, MeasurementCell,
+};
+pub use whole_app::{
+    all_whole_application_workloads, dense_numerical_pipeline,
+    generate_whole_application_evidence_suite, interactive_event_pipeline,
+    irregular_stateful_traversal, write_whole_application_evidence_artifacts,
+    ApplicationDomain, MissingRequiredWholeAppFieldsError, RequiredWholeApplicationField,
+    WholeAppNativeComparisonRecord, WholeAppParityRecord, WholeAppStateMetrics,
+    WholeAppThroughputRecord, WholeApplicationDomainMatrixRecord, WholeApplicationRecord,
+    WholeApplicationRefusal, WholeApplicationWorkload, WHOLE_APPLICATION_RECORD_SCHEMA_V1,
 };

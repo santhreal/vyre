@@ -1,0 +1,2 @@
+category = "Added"
+text = "Vyre-bench now establishes a typed whole-application workload class and records release evidence across dense numerical, irregular stateful, and latency-sensitive interactive application domains. Each case compiles a connected multi-node ProgramGraph through a validated CompileRequest, verifies reference parity, measures compile and load time, p50 and p99 latency, throughput, peak and resident bytes, cold-versus-warm state, and evaluates against pinned native baselines on identical inputs."

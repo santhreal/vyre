@@ -973,6 +973,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   floor or a member of the aggregate percentile field list. A minimum added to
   the record that no reader checks now fails the suite by name instead of
   reaching the artifacts unexamined.
+- Vyre-bench now establishes a typed whole-application workload class and
+  records release evidence across dense numerical, irregular stateful, and
+  latency-sensitive interactive application domains. Each case compiles a
+  connected multi-node ProgramGraph through a validated CompileRequest,
+  verifies reference parity, measures compile and load time, p50 and p99
+  latency, throughput, peak and resident bytes, cold-versus-warm state, and
+  evaluates against pinned native baselines on identical inputs.
 - ProgramGraph now validates complete compositions and derives canonical
   topological schedules, inclusive value liveness, and deterministic
   interval-colored allocation plans. Invocation-local values reuse only

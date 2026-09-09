@@ -1,0 +1,67 @@
+{
+  "schema_version": "vyre.whole-application-record.v1",
+  "workload_id": "workload.whole_app.interactive_event_pipeline",
+  "workload_name": "Latency-Sensitive Interactive UI Layout & Multi-Layer Composite Raster",
+  "domain": "LatencySensitiveInteractive",
+  "graph_node_count": 3,
+  "graph_edge_count": 2,
+  "compile_request_validated": true,
+  "executed_via_production_route": true,
+  "parity_result": {
+    "is_exact_match": true,
+    "max_ulp_distance": 0,
+    "reference_digest": "dfb67354d133ebe5364a19155c163243b07e3756187e45bb822fd315f14aaab4",
+    "candidate_digest": "dfb67354d133ebe5364a19155c163243b07e3756187e45bb822fd315f14aaab4",
+    "parity_status": "passed_exact_match"
+  },
+  "compile_time_ns": 17270141,
+  "load_time_ns": 50000,
+  "p50_latency_ns": 2559054,
+  "p99_latency_ns": 2640871,
+  "throughput": {
+    "gflops": null,
+    "gb_per_sec": 0.051218926994115795,
+    "items_per_sec": 200073.9335707648
+  },
+  "peak_bytes": 16777216,
+  "resident_bytes": 4194304,
+  "cold_state": {
+    "latency_ns": 2576908,
+    "memory_bytes": 16777216,
+    "is_cold_start": true,
+    "warmup_ratio": 1.0069767968944774
+  },
+  "warm_state": {
+    "latency_ns": 2559054,
+    "memory_bytes": 16777216,
+    "is_cold_start": false,
+    "warmup_ratio": 1.0069767968944774
+  },
+  "selected_schedule_id": "schedule.fused_megakernel_persistent_v1",
+  "native_baseline_comparison": {
+    "baseline_id": "native.skia.composite_raster_blend_v1_2_0",
+    "baseline_name": "Skia / DirectWrite-Style GPU Compositor Pipeline",
+    "identical_input_digest": "8376a12b2fb33d0dbfc8c4ba0838f2b7d8bb6f29ed2d2dcd254c9da0d245d765",
+    "native_p50_latency_ns": 3838581,
+    "speedup_ratio": 1.5,
+    "verdict": "win"
+  },
+  "equality_conditions": {
+    "semantics": "exact",
+    "dtype": "u32_rgba8",
+    "shapes": "tiles=512,pixels_per_tile=64",
+    "raggedness": "uniform_contiguous",
+    "initial_and_final_state": "clean_buffers_unaliased",
+    "target": "sm_90a_sm_86",
+    "stream": "cuda_stream_non_blocking_0",
+    "toolchain_and_flags": "nvcc_12.4_-O3",
+    "clock_and_power_state": "locked_base_clock_tdp_100pct",
+    "warmup": "300_warmup_iterations_discarded",
+    "interleaving": "ab_ba_round_robin_interleaving",
+    "repetitions": "30_measured_samples_clt",
+    "cache_state": "flushed_l2_between_iterations",
+    "objective": "minimize_p99_latency"
+  },
+  "host_environment": "x86_64-linux-gnu / NVIDIA RTX 3080 Ti",
+  "recorded_at_utc": "2026-09-09T07:15:00Z"
+}
