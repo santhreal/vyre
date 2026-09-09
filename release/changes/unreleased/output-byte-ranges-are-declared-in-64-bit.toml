@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Elementwise builder output byte ranges are declared in 64-bit. `add_output_with_byte_range` takes a `Range<u64>`, matching `BufferDecl::with_output_byte_range`, and `add_output` computes its range in `u64` so a buffer larger than a 32-bit host address space states its extent without truncation."

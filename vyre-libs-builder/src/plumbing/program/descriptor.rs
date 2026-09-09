@@ -117,24 +117,28 @@ impl ProgramDescriptor {
 
 #[cfg(test)]
 mod tests {
-    // Both cases below are feature-gated, so the import is declared on the
-    // same pair rather than suppressed in the builds that select neither.
+    use super::*;
+    use vyre_foundation::ir::BufferDecl;
+
     #[test]
     fn descriptor_summarizes_program() {
-        use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
-        let mut program = Program::new("test_prog");
-        program.add_buffer(BufferDecl::input("in", DataType::F32, &[64]));
-        program.add_buffer(BufferDecl::output("out", DataType::F32, &[64]));
-        let node = Node::Region {
-            name: "test_region".into(),
-            generator: "test_gen".into(),
-            children: vec![],
-            options: None,
-        };
-        program.add_node(node);
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("in", 0, BufferAccess::ReadWrite, DataType::F32).with_count(64),
+                BufferDecl::output("out", 1, DataType::F32).with_count(64),
+            ],
+            [64, 1, 1],
+            Vec::new(),
+        );
+
         let desc = ProgramDescriptor::from_program(&program);
+
         assert_eq!(desc.buffer_count, 2);
+        assert_eq!(desc.workgroup_size, [64, 1, 1]);
+        assert_eq!(desc.entry_node_count, 0);
         assert_eq!(desc.buffers[0].name, "in");
         assert_eq!(desc.buffers[1].name, "out");
+        // Only the ReadWrite buffer counts: 64 F32 elements at 4 bytes each.
+        assert_eq!(desc.rw_bytes_lower_bound, 256);
     }
 }

@@ -108,8 +108,8 @@ impl ElementwiseComposer {
     /// Add a standard WriteOnly output buffer with `count` elements.
     pub fn add_output(self, name: &str, dtype: DataType, count: u32) -> Self {
         let idx = self.buffers.len() as u32;
-        let elem_size = dtype.size_bytes().unwrap_or(4);
-        let range = 0..(count as usize).saturating_mul(elem_size);
+        let elem_size = dtype.size_bytes().unwrap_or(4) as u64;
+        let range = 0..u64::from(count).saturating_mul(elem_size);
         self.add_buffer(
             BufferDecl::output(name, idx, dtype)
                 .with_count(count)
@@ -124,7 +124,7 @@ impl ElementwiseComposer {
         name: &str,
         dtype: DataType,
         count: u32,
-        range: Range<usize>,
+        range: Range<u64>,
     ) -> Self {
         let idx = self.buffers.len() as u32;
         self.add_buffer(

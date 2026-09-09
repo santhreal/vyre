@@ -10,11 +10,11 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node, NodeExtension, Program,
 };
 use vyre_foundation::optimizer::expr_arena::ExprArena;
-use vyre_spec::extension::{
-    ExtensionDataTypeId, ExtensionIdentity, ExtensionNamespace, ExtensionNumericalContract,
+use vyre_spec::{
+    ExtensionIdentity, ExtensionNamespace, ExtensionNumericalContract,
     ExtensionProofFields, ExtensionResourceBounds, ExtensionSchema, ExtensionSemVer,
+    SideEffectClass,
 };
-use vyre_spec::op_contract::SideEffectClass;
 
 #[derive(Debug)]
 struct CanonicalTestExpr {
@@ -327,8 +327,8 @@ fn program_hashing_records_full_opaque_identity() {
     );
 
     assert_ne!(
-        prog1.hash(),
-        prog2.hash(),
+        prog1.canonical_wire_hash().expect("first program hashes"),
+        prog2.canonical_wire_hash().expect("second program hashes"),
         "Program hash must differ when opaque payload/fingerprint differs"
     );
 }
@@ -370,5 +370,10 @@ fn wire_decode_rejects_payloads_that_do_not_round_trip_canonically() {
     let invalid_wire = invalid_prog.to_wire().expect("encodes wire bytes");
     let decode_err = Program::from_wire(&invalid_wire)
         .expect_err("Decoder must reject extension whose deserialization fails byte equality round-trip");
-    assert!(decode_err.contains("Canonical decode/re-encode mismatch"));
+    assert!(
+        decode_err
+            .to_string()
+            .contains("Canonical decode/re-encode mismatch"),
+        "decode failure must name the canonical round-trip mismatch, got: {decode_err}"
+    );
 }
