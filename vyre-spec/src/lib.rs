@@ -108,10 +108,18 @@ mod law_catalog;
 /// Layer enum (IR / backend / runtime)  -  coarse module placement.
 /// Specification element.
 mod layer;
+/// Closed linear types and resource consumption states.
+/// Specification element.
+mod linear_type;
+/// Closed memory effect classifications and semantics.
+/// Specification element.
+mod memory_effect;
 /// Metadata classification for `OpMetadata` entries.
 /// Specification element.
 mod metadata_category;
 /// Monotonicity direction (increasing / decreasing / none) for op outputs.
+/// Domain-neutral resource, image, view, plane, sampler, external memory, and timeline sync capabilities.
+pub mod resource_capability;
 /// Specification element.
 mod monotonic_direction;
 /// Versioned numeric semantics table and datatype conversion helpers.
@@ -248,6 +256,12 @@ pub use law_catalog::law_catalog;
 /// See [`layer::Layer`].
 /// Specification element.
 pub use layer::Layer;
+/// See [`linear_type::{LinearResourceKind, LinearState}`].
+/// Specification element.
+pub use linear_type::{LinearResourceKind, LinearState};
+/// See [`memory_effect::MemoryEffect`].
+/// Specification element.
+pub use memory_effect::MemoryEffect;
 /// See [`metadata_category::MetadataCategory`].
 /// Specification element.
 pub use metadata_category::MetadataCategory;
@@ -305,10 +319,27 @@ mod intrinsic_descriptor;
 /// See [`intrinsic_descriptor::IntrinsicDescriptor`] and its identifying types.
 pub use intrinsic_descriptor::{Backend, BackendId, CpuFn, IntrinsicDescriptor};
 pub use compatibility::{
-    CompatibilityCell, CompatibilityDisposition, CompatibilityMatrix, NegotiatedContract,
-    NegotiationError, ProtocolDomain, ProtocolVersion, CANONICAL_COMPATIBILITY_CELLS,
+    derive_artifact_identity, CacheNamespace, CompatibilityCell, CompatibilityDisposition,
+    CompatibilityMatrix, GenerationId, NegotiatedContract, NegotiationError, ProtocolDomain,
+    ProtocolVersion, RetainedSessionScope, RolloutManager, SessionScopeError, SessionStatus,
+    StaleGenerationError, CANONICAL_COMPATIBILITY_CELLS,
 };
 pub use schema_registry::{
     CanonicalField, DefaultsPolicy, FieldType, SchemaBounds, SchemaDefinition, SchemaId,
     SchemaRegistry, CANONICAL_SCHEMA_REGISTRY,
+};
+
+pub use resource_capability::{
+    all_address_modes, all_alias_set_kinds, all_border_colors, all_color_interpretations,
+    all_compare_functions, all_external_event_kinds, all_external_memory_kinds, all_filter_modes,
+    all_format_classes, all_image_formats, all_image_view_kinds, all_layout_states,
+    all_lifetime_state_kinds, all_mipmap_filter_modes, all_plane_kinds, all_provenance_kinds,
+    all_swizzle_components, all_sync_protocols, all_usage_flags, AddressMode,
+    AdmittedResourceRecord, BorderColor, ColorInterpretation, CompareFunction, ComponentSwizzle,
+    ExternalEventCapability, ExternalEventKind, ExternalMemoryCapability, ExternalMemoryKind,
+    FilterMode, FormatClass, ImageDimensions, ImageFormat, ImagePlane, ImageViewDescriptor,
+    ImageViewKind, MipmapFilterMode, PlaneKind, ResourceAliasSet, ResourceLayoutState,
+    ResourceLifetimeState, ResourceOwnershipState, ResourcePermittedUsages, ResourceProvenance,
+    ResourceUsageTransition, SamplerCapability, SamplerDescriptor, SubresourceRange,
+    SwizzleComponent, TimelineSyncProtocol,
 };

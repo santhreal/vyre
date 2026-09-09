@@ -3,7 +3,7 @@
 //! Enforces the semantic assurance invariant: unverified syntax cannot reach compilation.
 
 use thiserror::Error;
-use super::certificate::VerificationCertificate;
+use super::certificate::{ReplayError, VerificationCertificate};
 use super::module::SemanticModule;
 use super::verified::Verified;
 
@@ -16,6 +16,17 @@ pub enum CompileError {
     /// Module contains no executable program or entry points.
     #[error("EmptyModule: module `{0}` contains no executable program or entry points")]
     EmptyModule(String),
+    /// The certificate's recorded input identity does not match the module's computed identity.
+    #[error("MismatchedInputIdentity: certificate expected identity `{expected}` but module computed `{actual}`. Refusing tampered certificate by name.")]
+    MismatchedInputIdentity {
+        /// Expected identity digest recorded in the certificate.
+        expected: String,
+        /// Actual identity digest computed from the semantic module.
+        actual: String,
+    },
+    /// Proof replay failure before compilation.
+    #[error("CertificateReplayFailed: {0}")]
+    CertificateReplayFailed(String),
     /// Backend emission or lowering failure.
     #[error("LoweringError: {0}")]
     LoweringError(String),
@@ -70,5 +81,33 @@ impl SemanticCompiler {
         module: &SemanticModule,
     ) -> Result<CompiledSemanticArtifact, CompileError> {
         Err(CompileError::UnverifiedSyntaxRejected(module.name.clone()))
+    }
+
+    /// Compile a semantic module by replaying an existing certificate without rerunning the full verifier.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CompileError::MismatchedInputIdentity`] or [`CompileError::CertificateReplayFailed`]
+    /// if the certificate fails replay against the module.
+    pub fn replay_and_compile(
+        module: &SemanticModule,
+        certificate: &VerificationCertificate,
+    ) -> Result<CompiledSemanticArtifact, CompileError> {
+        certificate.replay_proof(module).map_err(|e| match e {
+            ReplayError::MismatchedInputIdentity { expected, actual } => {
+                CompileError::MismatchedInputIdentity { expected, actual }
+            }
+            other => CompileError::CertificateReplayFailed(other.to_string()),
+        })?;
+
+        if module.program.is_none() && module.types.is_empty() && module.shape_constraints.is_empty() {
+            return Err(CompileError::EmptyModule(module.name.clone()));
+        }
+
+        Ok(CompiledSemanticArtifact {
+            name: module.name.clone(),
+            certificate: certificate.clone(),
+            certified_invariant_count: certificate.invariant_count(),
+        })
     }
 }

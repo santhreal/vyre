@@ -9,7 +9,6 @@ use std::string::String;
 
 /// Explicit failure domain identifying which subsystem boundary failed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[non_exhaustive]
 pub enum FailureDomain {
     /// In-memory state (caches, registries, heaps, transient buffers).
     MemoryState,
@@ -27,14 +26,29 @@ pub enum FailureDomain {
 
 impl FailureDomain {
     /// All failure domains.
-    pub const ALL: &'static [Self] = &[
-        Self::MemoryState,
-        Self::DeviceContext,
-        Self::DiskJournal,
-        Self::WorkerProcess,
-        Self::SessionLifecycle,
-        Self::NetworkTransport,
-    ];
+    pub const ALL: &'static [Self] = {
+        const ALL: &[FailureDomain] = &[
+            FailureDomain::MemoryState,
+            FailureDomain::DeviceContext,
+            FailureDomain::DiskJournal,
+            FailureDomain::WorkerProcess,
+            FailureDomain::SessionLifecycle,
+            FailureDomain::NetworkTransport,
+        ];
+        let mut i = 0;
+        while i < ALL.len() {
+            match ALL[i] {
+                FailureDomain::MemoryState
+                | FailureDomain::DeviceContext
+                | FailureDomain::DiskJournal
+                | FailureDomain::WorkerProcess
+                | FailureDomain::SessionLifecycle
+                | FailureDomain::NetworkTransport => {}
+            }
+            i += 1;
+        }
+        ALL
+    };
 
     /// Stable string identifier.
     #[must_use]
@@ -58,7 +72,6 @@ impl fmt::Display for FailureDomain {
 
 /// Recovery class defining how a failure can be safely remediated.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[non_exhaustive]
 pub enum RecoveryClass {
     /// Side effect is rolled back via prepare/commit journal and idempotency key.
     TransactionallyRecoverable,
@@ -74,13 +87,27 @@ pub enum RecoveryClass {
 
 impl RecoveryClass {
     /// All recovery classes.
-    pub const ALL: &'static [Self] = &[
-        Self::TransactionallyRecoverable,
-        Self::RestartableFromCanonicalInput,
-        Self::DeviceContextFatal,
-        Self::ProcessFatal,
-        Self::InvariantViolation,
-    ];
+    pub const ALL: &'static [Self] = {
+        const ALL: &[RecoveryClass] = &[
+            RecoveryClass::TransactionallyRecoverable,
+            RecoveryClass::RestartableFromCanonicalInput,
+            RecoveryClass::DeviceContextFatal,
+            RecoveryClass::ProcessFatal,
+            RecoveryClass::InvariantViolation,
+        ];
+        let mut i = 0;
+        while i < ALL.len() {
+            match ALL[i] {
+                RecoveryClass::TransactionallyRecoverable
+                | RecoveryClass::RestartableFromCanonicalInput
+                | RecoveryClass::DeviceContextFatal
+                | RecoveryClass::ProcessFatal
+                | RecoveryClass::InvariantViolation => {}
+            }
+            i += 1;
+        }
+        ALL
+    };
 
     /// Stable string identifier.
     #[must_use]
@@ -97,10 +124,10 @@ impl RecoveryClass {
     /// Whether this recovery class allows retry without process/device restart.
     #[must_use]
     pub const fn allows_inline_recovery(self) -> bool {
-        matches!(
-            self,
-            Self::TransactionallyRecoverable | Self::RestartableFromCanonicalInput
-        )
+        match self {
+            Self::TransactionallyRecoverable | Self::RestartableFromCanonicalInput => true,
+            Self::DeviceContextFatal | Self::ProcessFatal | Self::InvariantViolation => false,
+        }
     }
 }
 
@@ -171,3 +198,37 @@ impl TypedRecoveryError {
         }
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn failure_domain_all_contains_every_variant() {
+        for domain in FailureDomain::ALL {
+            match domain {
+                FailureDomain::MemoryState
+                | FailureDomain::DeviceContext
+                | FailureDomain::DiskJournal
+                | FailureDomain::WorkerProcess
+                | FailureDomain::SessionLifecycle
+                | FailureDomain::NetworkTransport => {}
+            }
+        }
+        assert_eq!(FailureDomain::ALL.len(), 6);
+    }
+
+    #[test]
+    fn recovery_class_all_contains_every_variant() {
+        for class in RecoveryClass::ALL {
+            match class {
+                RecoveryClass::TransactionallyRecoverable
+                | RecoveryClass::RestartableFromCanonicalInput
+                | RecoveryClass::DeviceContextFatal
+                | RecoveryClass::ProcessFatal
+                | RecoveryClass::InvariantViolation => {}
+            }
+        }
+        assert_eq!(RecoveryClass::ALL.len(), 5);
+    }
+}
+

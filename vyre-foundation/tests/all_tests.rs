@@ -358,6 +358,9 @@ pub mod memory_ordering_adversarial;
 /// Integration tests from `tests/memory_model_contracts.rs`.
 #[path = "memory_model_contracts.rs"]
 pub mod memory_model_contracts;
+/// Integration tests from `tests/memory_model_closed_types_contracts.rs`.
+#[path = "memory_model_closed_types_contracts.rs"]
+pub mod memory_model_closed_types_contracts;
 
 /// Integration tests from `tests/type_system_composition_contracts.rs`.
 #[path = "type_system_composition_contracts.rs"]

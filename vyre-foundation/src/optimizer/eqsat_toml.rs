@@ -242,6 +242,35 @@ where
         )
     }
 
+    fn fact_identity(&self) -> super::eqsat::RuleFactIdentity {
+        super::eqsat::RuleFactIdentity::AlgebraicLaw {
+            law_name: self.name,
+            family: vyre_spec::RegionLawFamily::Algebraic,
+        }
+    }
+
+    fn proof_term(&self) -> super::eqsat::ProofTerm {
+        super::eqsat::ProofTerm::from_name_and_justification(
+            self.name,
+            "each equivalence pair cites a registered region law, resolved when the file is loaded",
+        )
+    }
+
+    fn cache_key(&self) -> super::eqsat::RuleCacheKey {
+        let fact = super::eqsat::RuleFactIdentity::AlgebraicLaw {
+            law_name: self.name,
+            family: vyre_spec::RegionLawFamily::Algebraic,
+        };
+        let proof = super::eqsat::ProofTerm::from_name_and_justification(
+            self.name,
+            "each equivalence pair cites a registered region law, resolved when the file is loaded",
+        );
+        super::eqsat::RuleCacheKey::from_components(
+            self.name,
+            &fact,
+            &proof.obligation_digest,
+        )
+    }
     fn matches(&self, egraph: &EGraph<L>) -> Vec<(EClassId, EClassId)> {
         if self.rules.is_empty() {
             return Vec::new();

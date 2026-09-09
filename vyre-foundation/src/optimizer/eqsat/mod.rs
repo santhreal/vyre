@@ -58,6 +58,7 @@ mod hardware_rule;
 mod saturation;
 
 pub use hardware_rule::{CostModelFact, HardwarePropertyRule, TargetFact};
+pub use hardware_rule::{ProofTerm, RuleCacheKey, RuleFactIdentity};
 #[cfg(test)]
 mod arith_fixture;
 
@@ -214,6 +215,16 @@ pub trait Rule<L: ENodeLang> {
     /// would let a new rule inherit an answer nobody stated.
     fn witness(&self) -> RewriteWitness;
 
+    /// Typed fact identity for this rule, ensuring every rule has a deterministic
+    /// fact identity and cannot be an anonymous closure.
+    fn fact_identity(&self) -> RuleFactIdentity;
+
+    /// Proof term certifying the rule transformation.
+    fn proof_term(&self) -> ProofTerm;
+
+    /// Deterministic cache key for memoization and invalidation.
+    fn cache_key(&self) -> RuleCacheKey;
+
     /// Find every match of this rule's LHS pattern in `egraph` and return
     /// the (a, b) pairs that should be equated.
     fn matches(&self, egraph: &EGraph<L>) -> Vec<(EClassId, EClassId)>;
@@ -268,29 +279,6 @@ pub struct SaturationReport {
     pub rebuild_unions: usize,
 }
 
-/// Adapter that gates a base [`Rule`] on a device-fact predicate.
-///
-/// The "should this rule fire on this hardware?" check
-/// recurs across every device-aware Rule (FP16 only on `supports_f16`,
-/// tensor-core fusion only on `supports_tensor_cores`, subgroup
-/// shuffle only on `has_subgroup_shuffle`). Without a shared adapter,
-/// every Rule re-implements the same `if !facts.feature { return
-/// vec![] }` preamble. This wrapper centralises it.
-///
-/// `DeviceFacts` is a free-form caller-owned object so the foundation
-/// crate does not pull `DeviceProfile` (which lives in `vyre-driver`)
-/// into its dependency graph. Callers either pass a borrowed
-/// `&DeviceProfile` directly via the `predicate` closure capture, or
-/// thread a snapshot through their own type.
-///
-/// When `predicate` returns `false` the wrapped rule's [`matches`]
-/// short-circuits to an empty vector  -  the saturation loop sees no
-/// equivalences and the rule contributes nothing. When `true`, the
-/// wrapped rule fires unchanged.
-pub struct DeviceAwareRule<L: ENodeLang, F: Fn() -> bool> {
-    inner: Box<dyn Rule<L>>,
-    predicate: F,
-}
 
 /// One family's saturation result: how many iterations were spent in
 /// that family's [`saturate`] call.

@@ -9,6 +9,7 @@
 
 mod arg_parsers;
 mod ast_registry;
+mod operation;
 mod pass;
 
 use proc_macro::TokenStream;
@@ -22,4 +23,11 @@ pub fn vyre_ast_registry(item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn vyre_pass(args: TokenStream, item: TokenStream) -> TokenStream {
     pass::vyre_pass_impl(args, item)
+}
+
+/// Declarative operation definition generating three identity-joined records:
+/// `SemanticDescriptor`, `LoweringProvider`, and `ConformanceProvider`.
+#[proc_macro]
+pub fn vyre_operation(item: TokenStream) -> TokenStream {
+    operation::vyre_operation_impl(item)
 }

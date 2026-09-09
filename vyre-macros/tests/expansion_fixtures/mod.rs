@@ -16,6 +16,73 @@ pub mod ir {
     }
 }
 
+/// The `::vyre_foundation::numeric` paths an expansion names.
+pub mod numeric {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct NumericContract;
+    impl NumericContract {
+        pub const EXACT: Self = Self;
+    }
+}
+
+/// The `::vyre_foundation::geometry` paths an expansion names.
+pub mod geometry {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct GeometryRequirements;
+    impl GeometryRequirements {
+        pub const fn agnostic() -> Self {
+            Self
+        }
+    }
+}
+
+/// The `::vyre_foundation::operation` paths an expansion names.
+pub mod operation {
+    use super::ir::Program;
+
+    pub type OperationFixtures = fn() -> Vec<Vec<Vec<u8>>>;
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub enum OperationTier {
+        Foundation,
+        Intrinsic,
+        Library,
+        External,
+        Unknown,
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct SemanticDescriptor {
+        pub id: &'static str,
+        pub semantic_version: u32,
+        pub signature: Option<&'static ()>,
+        pub tier: OperationTier,
+        pub category: Option<&'static str>,
+        pub laws: &'static [&'static str],
+        pub numeric: super::numeric::NumericContract,
+        pub geometry_requirements: super::geometry::GeometryRequirements,
+        pub explicit_effects: Option<()>,
+        pub explicit_capabilities: Option<()>,
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    pub struct LoweringProvider {
+        pub id: &'static str,
+        pub build: Option<fn() -> Program>,
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    pub struct ConformanceProvider {
+        pub id: &'static str,
+        pub test_inputs: Option<OperationFixtures>,
+        pub expected_output: Option<OperationFixtures>,
+    }
+
+    inventory::collect!(SemanticDescriptor);
+    inventory::collect!(LoweringProvider);
+    inventory::collect!(ConformanceProvider);
+}
+
 /// The `::vyre::optimizer` paths an expansion names.
 pub mod optimizer {
     use super::ir::Program;

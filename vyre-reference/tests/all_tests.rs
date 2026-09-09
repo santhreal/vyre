@@ -121,6 +121,9 @@ pub mod gap_transcendentals_parity;
 /// Integration tests from `tests/grid_fence_oracle_contracts.rs`.
 #[path = "grid_fence_oracle_contracts.rs"]
 pub mod grid_fence_oracle_contracts;
+/// Integration tests from `tests/interleaving_race_freedom_contracts.rs`.
+#[path = "interleaving_race_freedom_contracts.rs"]
+pub mod interleaving_race_freedom_contracts;
 
 /// Integration tests from `tests/hashmap_async_and_indirect_contracts.rs`.
 #[path = "hashmap_async_and_indirect_contracts.rs"]

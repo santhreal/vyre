@@ -6,6 +6,7 @@
 //! target and states why in `xtask/test-harness-isolation.toml`.
 
 extern crate self as vyre;
+extern crate self as vyre_foundation;
 
 /// Shared fixture module from `tests/expansion_fixtures/mod.rs`.
 #[macro_use]
@@ -13,7 +14,7 @@ extern crate self as vyre;
 #[path = "expansion_fixtures/mod.rs"]
 pub mod expansion_fixtures;
 
-pub use expansion_fixtures::{ir, optimizer};
+pub use expansion_fixtures::{geometry, ir, numeric, operation, optimizer};
 
 /// Integration tests from `tests/adversarial.rs`.
 #[allow(missing_docs)]

@@ -109,9 +109,12 @@ pub mod ir {
         exhaustiveness_check_execution_scope,
         exhaustiveness_check_failure_cancellation_behavior,
         exhaustiveness_check_fence_semantics, exhaustiveness_check_memory_scope,
-        exhaustiveness_check_storage_domain, AsyncTransactionLifecycle, AtomicOrdering,
-        BarrierParticipation, CollectiveGroup, ExecutionScope, FailureCancellationBehavior,
-        FenceSemantics, MemoryOrdering, MemoryScope, StorageDomain,
+        exhaustiveness_check_storage_domain, verify_program_obligations, AliasDiscipline,
+        AliasToken, AsyncTransactionLifecycle, AtomicOrdering, BarrierParticipation, BorrowKind,
+        BorrowToken, CapabilityToken, CollectiveGroup, EffectKind, EffectToken, ExecutionScope,
+        FailureCancellationBehavior, FenceSemantics, MemoryCapability, MemoryOrdering,
+        MemoryScope, Obligation, ObligationError, ObligationKind, ObligationTracker,
+        OwnershipKind, OwnershipToken, StateEpoch, StorageDomain,
     };
 }
 
@@ -124,7 +127,7 @@ pub mod loop_bounds;
 /// Domain-neutral byte-range result types.
 pub mod match_result;
 /// Substrate-neutral memory ordering.
-mod memory_model;
+pub mod memory_model;
 /// Closed orthogonal semantic type system (Row 102).
 pub mod types;
 /// Single declarative verifier and certified compilation gate (Row 104).

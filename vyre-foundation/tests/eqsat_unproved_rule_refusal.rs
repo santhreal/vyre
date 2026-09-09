@@ -13,7 +13,7 @@
 use vyre_foundation::optimizer::eqsat::{
     saturate, saturate_per_family, saturate_with_report, try_saturate, try_saturate_named,
     try_saturate_per_family, try_saturate_with_report, EChildren, EClassId, EGraph, EGraphError,
-    ENodeLang, Family, Rule,
+    ENodeLang, Family, ProofTerm, Rule, RuleCacheKey, RuleFactIdentity,
 };
 use vyre_foundation::optimizer::rewrite_contract::RewriteWitness;
 
@@ -52,6 +52,25 @@ impl Rule<Toy> for ProvedRule {
         RewriteWitness::Structural("a class is equal to itself")
     }
 
+    fn fact_identity(&self) -> RuleFactIdentity {
+        RuleFactIdentity::AlgebraicLaw {
+            law_name: "toy_reflexive",
+            family: vyre_spec::RegionLawFamily::Algebraic,
+        }
+    }
+
+    fn proof_term(&self) -> ProofTerm {
+        ProofTerm::from_name_and_justification("toy_reflexive", "a class is equal to itself")
+    }
+
+    fn cache_key(&self) -> RuleCacheKey {
+        RuleCacheKey::from_components(
+            self.name(),
+            &self.fact_identity(),
+            &self.proof_term().obligation_digest,
+        )
+    }
+
     fn matches(&self, egraph: &EGraph<Toy>) -> Vec<(EClassId, EClassId)> {
         egraph
             .iter_nodes()
@@ -71,6 +90,25 @@ impl Rule<Toy> for UnprovedRule {
 
     fn witness(&self) -> RewriteWitness {
         RewriteWitness::Opaque("no equality argument is recorded for this fixture")
+    }
+
+    fn fact_identity(&self) -> RuleFactIdentity {
+        RuleFactIdentity::TypedFact("toy_unproved")
+    }
+
+    fn proof_term(&self) -> ProofTerm {
+        ProofTerm::from_name_and_justification(
+            "toy_unproved",
+            "no equality argument is recorded for this fixture",
+        )
+    }
+
+    fn cache_key(&self) -> RuleCacheKey {
+        RuleCacheKey::from_components(
+            self.name(),
+            &self.fact_identity(),
+            &self.proof_term().obligation_digest,
+        )
     }
 
     fn matches(&self, egraph: &EGraph<Toy>) -> Vec<(EClassId, EClassId)> {

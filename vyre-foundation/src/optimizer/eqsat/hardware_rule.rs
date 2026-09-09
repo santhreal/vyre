@@ -1,12 +1,115 @@
-//! Typed target property predicates and hardware property rules.
+//! Typed target property predicates, proof terms, and hardware property rules.
 //!
 //! Replaces opaque closure predicates with typed, serializable, deterministic
-//! target and cost model facts.
+//! target and cost model facts, proof terms, and cache keys.
 
 use serde::{Deserialize, Serialize};
 use super::{EClassId, EGraph, ENodeLang, Rule};
 use crate::optimizer::rewrite_contract::RewriteWitness;
 
+/// Typed identity of the fact or law authorizing a rewrite rule.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RuleFactIdentity {
+    /// Pure semantic algebraic law from the declared region law registry.
+    AlgebraicLaw {
+        /// Law name.
+        law_name: &'static str,
+        /// Law family.
+        family: vyre_spec::RegionLawFamily,
+    },
+    /// Typed hardware capability requirement for schedule space.
+    HardwareProperty {
+        /// Required target facts.
+        required: Vec<TargetFact>,
+    },
+    /// Custom named typed fact identity.
+    TypedFact(&'static str),
+}
+
+/// Machine-checkable proof term certifying a rewrite rule.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ProofTerm {
+    /// Rule identifier.
+    pub rule_name: &'static str,
+    /// Theorem or formal justification text.
+    pub justification: &'static str,
+    /// Cryptographic digest of the formal proof obligation.
+    pub obligation_digest: [u8; 32],
+}
+
+impl ProofTerm {
+    /// Create a proof term with an explicit obligation digest.
+    #[must_use]
+    pub const fn new(
+        rule_name: &'static str,
+        justification: &'static str,
+        obligation_digest: [u8; 32],
+    ) -> Self {
+        Self {
+            rule_name,
+            justification,
+            obligation_digest,
+        }
+    }
+
+    /// Construct a proof term by hashing the rule name and justification.
+    #[must_use]
+    pub fn from_name_and_justification(rule_name: &'static str, justification: &'static str) -> Self {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(b"ProofTerm:v1:");
+        hasher.update(rule_name.as_bytes());
+        hasher.update(b":");
+        hasher.update(justification.as_bytes());
+        let obligation_digest = *hasher.finalize().as_bytes();
+        Self {
+            rule_name,
+            justification,
+            obligation_digest,
+        }
+    }
+}
+
+/// Deterministic cache key for rule memoization and dependency invalidation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct RuleCacheKey(pub [u8; 32]);
+
+impl RuleCacheKey {
+    /// Derive a cache key from rule identity components.
+    #[must_use]
+    pub fn from_components(
+        name: &str,
+        fact: &RuleFactIdentity,
+        obligation_digest: &[u8; 32],
+    ) -> Self {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(b"RuleCacheKey:v1:");
+        hasher.update(name.as_bytes());
+        hasher.update(b":");
+        match fact {
+            RuleFactIdentity::AlgebraicLaw { law_name, family } => {
+                hasher.update(b"AlgebraicLaw:");
+                hasher.update(law_name.as_bytes());
+                hasher.update(b":");
+                hasher.update(family.name().as_bytes());
+            }
+            RuleFactIdentity::HardwareProperty { required } => {
+                hasher.update(b"HardwareProperty:");
+                for req in required {
+                    let debug_str = format!("{req:?}");
+                    hasher.update(debug_str.as_bytes());
+                }
+            }
+            RuleFactIdentity::TypedFact(s) => {
+                hasher.update(b"TypedFact:");
+                hasher.update(s.as_bytes());
+            }
+        }
+        hasher.update(b":");
+        hasher.update(obligation_digest);
+        Self(*hasher.finalize().as_bytes())
+    }
+}
 /// Typed, serializable target hardware fact.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -100,6 +203,24 @@ impl<L: ENodeLang> Rule<L> for HardwarePropertyRule<L> {
 
     fn witness(&self) -> RewriteWitness {
         self.inner.witness()
+    }
+
+    fn fact_identity(&self) -> RuleFactIdentity {
+        RuleFactIdentity::HardwareProperty {
+            required: self.required_facts.clone(),
+        }
+    }
+
+    fn proof_term(&self) -> ProofTerm {
+        self.inner.proof_term()
+    }
+
+    fn cache_key(&self) -> RuleCacheKey {
+        RuleCacheKey::from_components(
+            self.name(),
+            &self.fact_identity(),
+            &self.proof_term().obligation_digest,
+        )
     }
 
     fn matches(&self, egraph: &EGraph<L>) -> Vec<(EClassId, EClassId)> {

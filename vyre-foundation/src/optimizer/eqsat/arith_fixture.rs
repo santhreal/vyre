@@ -54,6 +54,27 @@ impl Rule<Arith> for UnionEqualConstsRule {
         RewriteWitness::Structural("two Const nodes holding the same value denote the same value")
     }
 
+    fn fact_identity(&self) -> super::RuleFactIdentity {
+        super::RuleFactIdentity::AlgebraicLaw {
+            law_name: "union_equal_consts",
+            family: vyre_spec::RegionLawFamily::Algebraic,
+        }
+    }
+
+    fn proof_term(&self) -> super::ProofTerm {
+        super::ProofTerm::from_name_and_justification(
+            "union_equal_consts",
+            "two Const nodes holding the same value denote the same value",
+        )
+    }
+
+    fn cache_key(&self) -> super::RuleCacheKey {
+        super::RuleCacheKey::from_components(
+            self.name(),
+            &self.fact_identity(),
+            &self.proof_term().obligation_digest,
+        )
+    }
     fn matches(&self, egraph: &EGraph<Arith>) -> Vec<(EClassId, EClassId)> {
         let mut by_value: FxHashMap<u32, Vec<EClassId>> = FxHashMap::default();
         for (cid, node) in egraph.iter_nodes() {
@@ -85,6 +106,27 @@ impl Rule<Arith> for PairConstSelfRule {
         RewriteWitness::Structural("a class is equal to itself")
     }
 
+    fn fact_identity(&self) -> super::RuleFactIdentity {
+        super::RuleFactIdentity::AlgebraicLaw {
+            law_name: "pair_const_self",
+            family: vyre_spec::RegionLawFamily::Algebraic,
+        }
+    }
+
+    fn proof_term(&self) -> super::ProofTerm {
+        super::ProofTerm::from_name_and_justification(
+            "pair_const_self",
+            "a class is equal to itself",
+        )
+    }
+
+    fn cache_key(&self) -> super::RuleCacheKey {
+        super::RuleCacheKey::from_components(
+            self.name(),
+            &self.fact_identity(),
+            &self.proof_term().obligation_digest,
+        )
+    }
     fn matches(&self, egraph: &EGraph<Arith>) -> Vec<(EClassId, EClassId)> {
         let mut out = Vec::new();
         for (cid, node) in egraph.iter_nodes() {
@@ -109,6 +151,24 @@ impl Rule<Arith> for ForeignClassRule {
         )
     }
 
+    fn fact_identity(&self) -> super::RuleFactIdentity {
+        super::RuleFactIdentity::TypedFact("foreign_class_out_of_bounds_check")
+    }
+
+    fn proof_term(&self) -> super::ProofTerm {
+        super::ProofTerm::from_name_and_justification(
+            "foreign_class",
+            "out of bounds index check fixture",
+        )
+    }
+
+    fn cache_key(&self) -> super::RuleCacheKey {
+        super::RuleCacheKey::from_components(
+            self.name(),
+            &self.fact_identity(),
+            &self.proof_term().obligation_digest,
+        )
+    }
     fn matches(&self, _egraph: &EGraph<Arith>) -> Vec<(EClassId, EClassId)> {
         vec![(EClassId(999), EClassId(999))]
     }

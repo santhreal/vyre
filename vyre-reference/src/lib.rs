@@ -48,6 +48,12 @@ pub mod subgroup;
 /// Workgroup simulation: invocation IDs, shared memory.
 pub mod workgroup;
 
+/// Bounded legal interleaving and race freedom verification oracle.
+pub mod interleaving;
+pub use interleaving::{
+    explore_bounded_interleavings, InterleavingConfig, InterleavingReport, MemoryAccessKind,
+    ShadowMemory,
+};
 mod float16;
 mod oob;
 mod ops;

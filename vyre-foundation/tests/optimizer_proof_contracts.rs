@@ -1,15 +1,21 @@
 //! Contract tests for Row 108: Proof-producing multi-level optimization framework.
 
 use smallvec::SmallVec;
+use std::sync::Arc;
+use vyre_foundation::ir::{DataType, Expr, ExprNode};
 use vyre_foundation::optimizer::eqsat::{
-    EChildren, EClassId, EGraph, ENodeLang, HardwarePropertyRule, Rule, TargetFact,
+    EChildren, EClassId, EGraph, ENodeLang, HardwarePropertyRule, ProofTerm, Rule,
+    RuleCacheKey, RuleFactIdentity, TargetFact,
 };
+use vyre_foundation::optimizer::expr_arena::ExprArena;
 use vyre_foundation::optimizer::multi_level_eqsat::{
-    MultiObjectiveCost, ParetoCandidate, ParetoFront, PassEngine,
+    MultiObjectiveCost, OptimizationProofChecker, ParetoCandidate, ParetoFront, PassEngine,
+    ProofReplayError, ReplayArtifact, SemanticEqualitySaturation, StepProof,
 };
+use vyre_foundation::optimizer::region_law::{laws_for_family, REGION_LAWS};
 use vyre_foundation::optimizer::rewrite_contract::RewriteWitness;
 use vyre_foundation::schedule::{ScheduleOp, SchedulePlan, ScheduleResourceBounds, ScheduleTree};
-
+use vyre_spec::RegionLawFamily;
 #[allow(dead_code)]
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 enum TestLang {
@@ -33,6 +39,19 @@ impl Rule<TestLang> for DummyRule {
     }
     fn witness(&self) -> RewriteWitness {
         RewriteWitness::Structural("dummy_structural_proof")
+    }
+    fn fact_identity(&self) -> RuleFactIdentity {
+        RuleFactIdentity::TypedFact("dummy_rule_fact")
+    }
+    fn proof_term(&self) -> ProofTerm {
+        ProofTerm::from_name_and_justification("dummy_rule", "dummy_structural_proof")
+    }
+    fn cache_key(&self) -> RuleCacheKey {
+        RuleCacheKey::from_components(
+            self.name(),
+            &self.fact_identity(),
+            &self.proof_term().obligation_digest,
+        )
     }
     fn matches(&self, _egraph: &EGraph<TestLang>) -> Vec<(EClassId, EClassId)> {
         vec![(EClassId(0), EClassId(1))]
@@ -163,4 +182,240 @@ fn optimization_pass_engine_fixpoint_and_proof_generation() {
     assert_eq!(replay.proof_log.len(), 1);
     assert_eq!(replay.proof_log[0].rule_name, "tile_expansion");
     assert!(replay.proof_log[0].preserves_semantics);
+
+    // Replay verification
+    let final_digest = OptimizationProofChecker::verify_replay_artifact(&replay)
+        .expect("valid replay artifact must verify cleanly");
+    assert_eq!(final_digest, replay.final_digest);
+}
+
+#[test]
+fn runtime_enumeration_of_laws_and_rules_verifies_typed_identity_proof_and_cache_key() {
+    // 1. Enumerate all declarative region laws across all families
+    let families = [
+        RegionLawFamily::Algebraic,
+        RegionLawFamily::Recurrence,
+        RegionLawFamily::Reduction,
+        RegionLawFamily::Layout,
+        RegionLawFamily::Numerical,
+    ];
+
+    for family in families {
+        let laws = laws_for_family(family);
+        assert!(
+            !laws.is_empty(),
+            "family {:?} must declare at least one law",
+            family
+        );
+        for law in laws {
+            assert!(!law.name.is_empty(), "law name must not be empty");
+            assert!(!law.statement.is_empty(), "law statement must not be empty");
+            assert!(!law.realized_by.is_empty(), "realized_by must not be empty");
+
+            let fact_identity = RuleFactIdentity::AlgebraicLaw {
+                law_name: law.name,
+                family: law.family,
+            };
+            let proof_term = ProofTerm::from_name_and_justification(law.name, law.statement);
+            let cache_key = RuleCacheKey::from_components(law.name, &fact_identity, &proof_term.obligation_digest);
+
+            assert_eq!(proof_term.rule_name, law.name);
+            assert_ne!(proof_term.obligation_digest, [0u8; 32]);
+            assert_ne!(cache_key.0, [0u8; 32]);
+        }
+    }
+
+    assert_eq!(REGION_LAWS.len(), 13);
+
+    // 2. Test concrete Rule instances
+    let rule1: Box<dyn Rule<TestLang>> = Box::new(DummyRule);
+    assert_eq!(rule1.name(), "dummy_rule");
+    assert_eq!(rule1.witness(), RewriteWitness::Structural("dummy_structural_proof"));
+    assert_eq!(rule1.fact_identity(), RuleFactIdentity::TypedFact("dummy_rule_fact"));
+    assert_eq!(rule1.proof_term().rule_name, "dummy_rule");
+    assert_ne!(rule1.cache_key().0, [0u8; 32]);
+
+    let hw_rule = HardwarePropertyRule::new(
+        rule1,
+        vec![TargetFact::TensorCoreAvailable],
+        vec![TargetFact::TensorCoreAvailable],
+    );
+    assert_eq!(
+        hw_rule.fact_identity(),
+        RuleFactIdentity::HardwareProperty {
+            required: vec![TargetFact::TensorCoreAvailable],
+        }
+    );
+    assert_ne!(hw_rule.cache_key().0, [0u8; 32]);
+}
+
+#[test]
+fn proof_replay_detects_and_refuses_tampered_proofs_by_name() {
+    let initial_digest = [1u8; 32];
+    let intermediate_digest = [2u8; 32];
+    let final_digest = [3u8; 32];
+
+    let step0 = StepProof::new(
+        0,
+        "assoc_add",
+        initial_digest,
+        intermediate_digest,
+        "associativity of addition",
+        true,
+    );
+    let step1 = StepProof::new(
+        1,
+        "comm_mul",
+        intermediate_digest,
+        final_digest,
+        "commutativity of multiplication",
+        true,
+    );
+
+    let valid_artifact = ReplayArtifact {
+        initial_digest,
+        final_digest,
+        proof_log: vec![step0.clone(), step1.clone()],
+        telemetry: Default::default(),
+    };
+
+    // Valid replay succeeds
+    let verified = OptimizationProofChecker::verify_replay_artifact(&valid_artifact)
+        .expect("valid proof log must verify");
+    assert_eq!(verified, final_digest);
+
+    // 1. Tamper semantics preservation
+    let mut bad_semantics = valid_artifact.clone();
+    bad_semantics.proof_log[1].preserves_semantics = false;
+    match OptimizationProofChecker::verify_replay_artifact(&bad_semantics) {
+        Err(ProofReplayError::SemanticsViolation { rule_name, step_index }) => {
+            assert_eq!(rule_name, "comm_mul");
+            assert_eq!(step_index, 1);
+        }
+        other => panic!("expected SemanticsViolation, got {other:?}"),
+    }
+
+    // 2. Tamper digest continuity
+    let mut bad_continuity = valid_artifact.clone();
+    bad_continuity.proof_log[1].before_digest = [99u8; 32];
+    match OptimizationProofChecker::verify_replay_artifact(&bad_continuity) {
+        Err(ProofReplayError::ContinuityBroken { rule_name, step_index, expected_digest, actual_digest }) => {
+            assert_eq!(rule_name, "comm_mul");
+            assert_eq!(step_index, 1);
+            assert_eq!(expected_digest, intermediate_digest);
+            assert_eq!(actual_digest, [99u8; 32]);
+        }
+        other => panic!("expected ContinuityBroken, got {other:?}"),
+    }
+
+    // 3. Tamper step index
+    let mut bad_step = valid_artifact.clone();
+    bad_step.proof_log[1].step_index = 5;
+    match OptimizationProofChecker::verify_replay_artifact(&bad_step) {
+        Err(ProofReplayError::TamperedProof { rule_name, step_index, .. }) => {
+            assert_eq!(rule_name, "comm_mul");
+            assert_eq!(step_index, 1);
+        }
+        other => panic!("expected TamperedProof, got {other:?}"),
+    }
+
+    // 4. Tamper empty justification
+    let mut bad_justification = valid_artifact.clone();
+    bad_justification.proof_log[0].law_justification = String::new();
+    match OptimizationProofChecker::verify_replay_artifact(&bad_justification) {
+        Err(ProofReplayError::TamperedProof { rule_name, step_index, reason }) => {
+            assert_eq!(rule_name, "assoc_add");
+            assert_eq!(step_index, 0);
+            assert!(reason.contains("empty law justification"));
+        }
+        other => panic!("expected TamperedProof, got {other:?}"),
+    }
+}
+
+#[derive(Debug)]
+struct DummyExt {
+    kind: &'static str,
+    fingerprint: [u8; 32],
+}
+
+impl ExprNode for DummyExt {
+    fn extension_kind(&self) -> &'static str {
+        self.kind
+    }
+    fn debug_identity(&self) -> &str {
+        self.kind
+    }
+    fn result_type(&self) -> Option<DataType> {
+        Some(DataType::U32)
+    }
+    fn cse_safe(&self) -> bool {
+        true
+    }
+    fn stable_fingerprint(&self) -> [u8; 32] {
+        self.fingerprint
+    }
+    fn validate_extension(&self) -> Result<(), String> {
+        Ok(())
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+#[test]
+fn structurally_equal_opaque_expressions_intern_to_one_identity_and_distinct_differ() {
+    let mut arena = ExprArena::default();
+
+    let fp1 = [0x11; 32];
+    let fp2 = [0x22; 32];
+
+    // Two distinct Arc allocations wrapping structurally equal contents (same kind + same fingerprint)
+    let ext_a1 = Arc::new(DummyExt { kind: "vendor.op.custom", fingerprint: fp1 });
+    let ext_a2 = Arc::new(DummyExt { kind: "vendor.op.custom", fingerprint: fp1 });
+    assert!(!Arc::ptr_eq(&ext_a1, &ext_a2), "must be two distinct Arc pointers");
+
+    let expr_a1 = Expr::Opaque(ext_a1);
+    let expr_a2 = Expr::Opaque(ext_a2);
+
+    let id_a1 = arena.intern(&expr_a1);
+    let id_a2 = arena.intern(&expr_a2);
+
+    // Must produce the exact same ExprId
+    assert_eq!(
+        id_a1, id_a2,
+        "structurally equal opaque expressions must intern to identical ExprId"
+    );
+
+    // A third expression with a different fingerprint
+    let ext_b = Arc::new(DummyExt { kind: "vendor.op.custom", fingerprint: fp2 });
+    let expr_b = Expr::Opaque(ext_b);
+    let id_b = arena.intern(&expr_b);
+
+    // Must produce a different ExprId
+    assert_ne!(
+        id_a1, id_b,
+        "opaque expressions with distinct fingerprints must intern to distinct ExprIds"
+    );
+
+    // A fourth expression with a different extension kind
+    let ext_c = Arc::new(DummyExt { kind: "vendor.other.op", fingerprint: fp1 });
+    let expr_c = Expr::Opaque(ext_c);
+    let id_c = arena.intern(&expr_c);
+
+    assert_ne!(
+        id_a1, id_c,
+        "opaque expressions with distinct extension kinds must intern to distinct ExprIds"
+    );
+
+    // Rebuild roundtrip
+    let rebuilt_a1 = arena.rebuild(id_a1);
+    assert_eq!(expr_a1, rebuilt_a1);
+}
+
+#[test]
+fn semantic_equality_saturation_consumes_no_device_facts() {
+    let sat = SemanticEqualitySaturation::default();
+    assert_eq!(sat.class_growth_limit, 4096);
+    assert_eq!(sat.max_iterations, 16);
+    assert!(sat.admits_contract(vyre_foundation::optimizer::rewrite_contract::NumericalContract::BitExact));
 }

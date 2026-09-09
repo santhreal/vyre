@@ -407,6 +407,9 @@ fn reject_workgroup_geometry_change(
         if arm_workgroup == fused_workgroup {
             continue;
         }
+        if prog.workgroup_size_is_schedule_only() {
+            continue;
+        }
         let uses_workgroup_memory = prog
             .buffers()
             .iter()

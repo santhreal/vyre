@@ -5,8 +5,8 @@
 //! to ensure unverified syntax can never reach compilation.
 
 use std::ops::Deref;
-use super::certificate::VerificationCertificate;
-
+use super::certificate::{ReplayError, VerificationCertificate};
+use super::module::SemanticModule;
 /// Type-safe proof wrapper witnessing that `T` has passed semantic verification.
 ///
 /// Cannot be constructed directly: must be obtained via
@@ -41,6 +41,17 @@ impl<T> Verified<T> {
         self.inner
     }
 }
+impl Verified<SemanticModule> {
+    /// Independent lightweight proof replay of this verified module's certificate.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ReplayError`] if the certificate is invalid or has been tampered with.
+    pub fn replay_proof(&self) -> Result<(), ReplayError> {
+        self.certificate.replay_proof(&self.inner)
+    }
+}
+
 
 impl<T> Deref for Verified<T> {
     type Target = T;

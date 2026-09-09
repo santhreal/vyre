@@ -25,17 +25,35 @@
 //!   copy of the same `entry_op_id`.
 
 mod alpha_rename;
+pub mod candidate;
 mod collectors;
+pub mod dependence;
 mod divergence;
 mod fuse;
+pub mod legality;
+pub mod lowering;
+pub mod region;
+pub mod tile;
 
 #[cfg(test)]
 #[path = "../../../tests/internal/execution_plan/fusion/mod.rs"]
 mod tests;
 
+pub use candidate::{FusionCandidate, FusionCandidateKind, FusionCandidateSet};
+pub use dependence::{
+    classify_program_handoff, earliest_region_handoff, HandoffLocation, RegionDependence,
+    RegionDependenceGraph,
+};
 pub use fuse::{
     fuse_programs, fuse_programs_vec, merge_programs_shared, relies_on_single_invocation_workgroup,
 };
+pub use legality::{
+    analyze_program_fusion_legality, analyze_region_fusion_legality, FusionLegalityVerdict,
+    FusionRejectionReason,
+};
+pub use lowering::lower_fusion_candidate;
+pub use region::{IterationSpace, RegionFusionPlanner, RegionRelation};
+pub use tile::{ScheduleTile, TilePipeliningPlan, TileResidency};
 
 /// Error returned when a fusion batch cannot be combined safely.
 #[derive(Debug, Clone, PartialEq, Eq)]

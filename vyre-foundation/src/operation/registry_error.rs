@@ -43,7 +43,7 @@ pub enum OperationRegistryError {
     },
 }
 
-pub(super) fn validate_identity(
+pub(crate) fn validate_identity(
     entry: &OperationRegistration,
 ) -> Result<(), OperationRegistryError> {
     match operation_id_namespace(entry.id) {

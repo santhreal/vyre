@@ -5,9 +5,9 @@ use crate::expansion_fixtures;
 #[path = "expansion_fixtures/default_metadata.rs"]
 mod default_metadata;
 
-pub use expansion_fixtures::{ir, optimizer};
+pub use expansion_fixtures::{geometry, ir, numeric, operation, optimizer};
 
-use vyre_macros::{vyre_ast_registry, vyre_pass};
+use vyre_macros::{vyre_ast_registry, vyre_operation, vyre_pass};
 
 #[vyre_pass(
     name = "macro_compile_backed_pass",
@@ -42,6 +42,19 @@ vyre_ast_registry! {
 }
 
 vyre_ast_registry! {}
+
+vyre_operation! {
+    id: "macro_test::operation::custom_op",
+    semantic_version: 1,
+    tier: operation::OperationTier::Library,
+    category: Some("macro_test"),
+    laws: &["commutativity"],
+    numeric: numeric::NumericContract::EXACT,
+    geometry: geometry::GeometryRequirements::agnostic(),
+    build: None,
+    test_inputs: None,
+    expected_output: None,
+}
 
 #[test]
 fn vyre_pass_expands_to_metadata_analysis_transform_and_inventory_entry() {
@@ -124,4 +137,30 @@ fn ast_registry_accepts_empty_manifest_as_noop() {
         optimizer::ProgramPass::metadata(&pass).name,
         "macro_defaulted_pass"
     );
+}
+#[test]
+fn vyre_operation_submits_three_identity_joined_records() {
+    let desc = inventory::iter::<operation::SemanticDescriptor>
+        .into_iter()
+        .find(|d| d.id == "macro_test::operation::custom_op")
+        .expect("SemanticDescriptor should be submitted");
+    assert_eq!(desc.id, "macro_test::operation::custom_op");
+    assert_eq!(desc.semantic_version, 1);
+    assert_eq!(desc.tier, operation::OperationTier::Library);
+    assert_eq!(desc.category, Some("macro_test"));
+    assert_eq!(desc.laws, &["commutativity"]);
+
+    let lowering = inventory::iter::<operation::LoweringProvider>
+        .into_iter()
+        .find(|l| l.id == "macro_test::operation::custom_op")
+        .expect("LoweringProvider should be submitted");
+    assert_eq!(lowering.id, "macro_test::operation::custom_op");
+    assert!(lowering.build.is_none());
+
+    let conformance = inventory::iter::<operation::ConformanceProvider>
+        .into_iter()
+        .find(|c| c.id == "macro_test::operation::custom_op")
+        .expect("ConformanceProvider should be submitted");
+    assert_eq!(conformance.id, "macro_test::operation::custom_op");
+    assert!(conformance.test_inputs.is_none());
 }

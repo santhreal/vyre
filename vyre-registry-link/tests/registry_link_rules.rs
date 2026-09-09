@@ -356,3 +356,48 @@ fn the_precedence_view_carries_the_same_backends() {
         "Fix: the precedence view and the flat registry disagree about which backends are linked"
     );
 }
+/// Every operation in the live registry carries an identity-joined descriptor,
+/// lowering provider, and conformance provider.
+#[test]
+fn every_live_operation_has_descriptor_lowering_and_conformance_provider() {
+    let registry = live_operation_registry();
+    let bundle = registry.catalog_bundle();
+    let conformance = vyre_foundation::operation::ConformanceRegistry::from_registry();
+
+    let all_registered_ids: BTreeSet<&'static str> =
+        registry.iter().map(|op| op.id).collect();
+
+    assert!(
+        !all_registered_ids.is_empty(),
+        "Fix: live registry must contain registered operations"
+    );
+
+    let mut missing_descriptors = Vec::new();
+    let mut missing_lowering = Vec::new();
+    let mut missing_conformance = Vec::new();
+
+    for &id in &all_registered_ids {
+        if bundle.descriptor(id).is_none() {
+            missing_descriptors.push(id);
+        }
+        if bundle.lowering(id).is_none() {
+            missing_lowering.push(id);
+        }
+        if conformance.provider(id).is_none() {
+            missing_conformance.push(id);
+        }
+    }
+
+    assert!(
+        missing_descriptors.is_empty(),
+        "Fix: every registered operation must have a SemanticDescriptor, missing: {missing_descriptors:?}"
+    );
+    assert!(
+        missing_lowering.is_empty(),
+        "Fix: every registered operation must have a LoweringProvider, missing: {missing_lowering:?}"
+    );
+    assert!(
+        missing_conformance.is_empty(),
+        "Fix: every registered operation must have a ConformanceProvider, missing: {missing_conformance:?}"
+    );
+}

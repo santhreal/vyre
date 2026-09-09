@@ -43,7 +43,7 @@ pub(crate) struct LawRecord {
 }
 
 /// Typed signable body for prove artifacts ensuring identical field order without ad-hoc JSON indexing.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub(crate) struct ProveSignableBody<'a> {
     pub(crate) wire_format_version: u32,
     pub(crate) program_hash: &'a str,
