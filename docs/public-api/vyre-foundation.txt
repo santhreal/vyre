@@ -307,10 +307,12 @@ impl vyre_foundation::graph_view::DataEdge
 impl vyre_foundation::graph_view::GraphNode
 impl vyre_foundation::graph_view::NodeGraph
 impl vyre_foundation::ir::AdmittedResourceRecord
+impl vyre_foundation::ir::AffectedGraphClosure
 impl vyre_foundation::ir::BufferDecl
 impl vyre_foundation::ir::EvalError
 impl vyre_foundation::ir::Expr
 impl vyre_foundation::ir::ExternalResourceCapability
+impl vyre_foundation::ir::GenerationTracker
 impl vyre_foundation::ir::GraphDelta
 impl vyre_foundation::ir::Ident
 impl vyre_foundation::ir::ImageExtent
@@ -1730,6 +1732,7 @@ pub fn vyre_foundation::graph_view::to_graph(program: &vyre_foundation::ir::Prog
 pub fn vyre_foundation::guarded_logical_span(program: &vyre_foundation::ir::Program) -> core::option::Option<u32>
 pub fn vyre_foundation::hashing::update_length_delimited_field(hasher: &mut blake3::Hasher, label: &[u8], value: &[u8])
 pub fn vyre_foundation::ir::AdmittedResourceRecord::validate(&self, caps: &vyre_foundation::ir::ExternalResourceCapability) -> core::result::Result<(), vyre_foundation::ir::ResourceAbiError>
+pub fn vyre_foundation::ir::AffectedGraphClosure::invalidated_query_keys(&self) -> alloc::vec::Vec<vyre_foundation::substrate::query::QueryKey>
 pub fn vyre_foundation::ir::BufferDecl::access(&self) -> vyre_spec::buffer_access::BufferAccess
 pub fn vyre_foundation::ir::BufferDecl::binding(&self) -> u32
 pub fn vyre_foundation::ir::BufferDecl::consumes_host_input(&self) -> bool
@@ -1758,7 +1761,7 @@ pub fn vyre_foundation::ir::BufferDecl::with_full_output_byte_range(self) -> Sel
 pub fn vyre_foundation::ir::BufferDecl::with_hints(self, hints: vyre_foundation::ir::MemoryHints) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_kind(self, kind: vyre_foundation::ir::MemoryKind) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_linear_type(self, linear_type: vyre_foundation::ir::LinearType) -> Self
-pub fn vyre_foundation::ir::BufferDecl::with_output_byte_range(self, range: core::ops::range::Range<u64>) -> Self
+pub fn vyre_foundation::ir::BufferDecl::with_output_byte_range(self, range: impl vyre_foundation::ir_inner::model::program::buffer_decl::IntoOutputByteRange) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_pipeline_live_out(self, flag: bool) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_shape_predicate(self, predicate: vyre_foundation::ir::ShapePredicate) -> Self
 pub fn vyre_foundation::ir::BufferDecl::workgroup(name: &str, count: u32, element: vyre_spec::data_type::DataType) -> Self
@@ -1897,6 +1900,9 @@ pub fn vyre_foundation::ir::ExprNode::result_type(&self) -> core::option::Option
 pub fn vyre_foundation::ir::ExprNode::stable_fingerprint(&self) -> [u8; 32]
 pub fn vyre_foundation::ir::ExprNode::validate_extension(&self) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::ir::ExprNode::wire_payload(&self) -> alloc::vec::Vec<u8>
+pub fn vyre_foundation::ir::GenerationTracker::current_generation(&self, resource_name: &str) -> u64
+pub fn vyre_foundation::ir::GenerationTracker::new() -> Self
+pub fn vyre_foundation::ir::GenerationTracker::publish_generation(&self, resource_name: &str, generation: u64) -> core::result::Result<(), vyre_foundation::ir::GraphDeltaError>
 pub fn vyre_foundation::ir::GraphDelta::apply_transactional(&self, graph: &vyre_foundation::ir::ProgramGraph) -> core::result::Result<(vyre_foundation::ir::ProgramGraph, vyre_foundation::ir::AffectedGraphClosure), vyre_foundation::ir::GraphDeltaError>
 pub fn vyre_foundation::ir::GraphDelta::default() -> Self
 pub fn vyre_foundation::ir::GraphDelta::from_wire(bytes: &[u8]) -> core::result::Result<Self, vyre_foundation::ir::GraphDeltaError>
@@ -1906,7 +1912,9 @@ pub fn vyre_foundation::ir::GraphDelta::new() -> Self
 pub fn vyre_foundation::ir::GraphDelta::operations(&self) -> &[vyre_foundation::ir::GraphDeltaOp]
 pub fn vyre_foundation::ir::GraphDelta::push(&mut self, op: vyre_foundation::ir::GraphDeltaOp)
 pub fn vyre_foundation::ir::GraphDelta::to_wire(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::ir::GraphDeltaError>
+pub fn vyre_foundation::ir::GraphDelta::try_push(&mut self, op: vyre_foundation::ir::GraphDeltaOp) -> core::result::Result<(), vyre_foundation::ir::GraphDeltaError>
 pub fn vyre_foundation::ir::GraphDelta::validate(&self, graph: &vyre_foundation::ir::ProgramGraph) -> core::result::Result<(), vyre_foundation::ir::GraphDeltaError>
+pub fn vyre_foundation::ir::GraphDelta::validate_op_bounds(op: &vyre_foundation::ir::GraphDeltaOp) -> core::result::Result<(), vyre_foundation::ir::GraphDeltaError>
 pub fn vyre_foundation::ir::GraphDelta::with_op(self, op: vyre_foundation::ir::GraphDeltaOp) -> Self
 pub fn vyre_foundation::ir::Ident::as_ref(&self) -> &str
 pub fn vyre_foundation::ir::Ident::as_str(&self) -> &str
@@ -2055,6 +2063,7 @@ pub fn vyre_foundation::ir::ProgramGraph::identity(&self, context: &vyre_foundat
 pub fn vyre_foundation::ir::ProgramGraph::inline_subgraph(&mut self, name_prefix: &str, subgraph: &vyre_foundation::ir::ProgramGraph, input_mapping: &alloc::collections::btree::map::BTreeMap<vyre_foundation::ir::GraphValueId, vyre_foundation::ir::GraphValueId>) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir::GraphValueId>, vyre_foundation::ir::ProgramGraphError>
 pub fn vyre_foundation::ir::ProgramGraph::liveness_intervals(&self) -> alloc::vec::Vec<vyre_foundation::ir::LivenessInterval>
 pub fn vyre_foundation::ir::ProgramGraph::new() -> Self
+pub fn vyre_foundation::ir::ProgramGraph::node(&self, id: vyre_foundation::ir::GraphNodeId) -> core::option::Option<&vyre_foundation::ir::ProgramGraphNode>
 pub fn vyre_foundation::ir::ProgramGraph::nodes(&self) -> &[vyre_foundation::ir::ProgramGraphNode]
 pub fn vyre_foundation::ir::ProgramGraph::replace_node(&mut self, node_id: vyre_foundation::ir::GraphNodeId, program: vyre_foundation::ir::Program, inputs: alloc::vec::Vec<vyre_foundation::ir::GraphInput>, outputs: alloc::vec::Vec<vyre_foundation::ir::GraphOutput>) -> core::result::Result<(), vyre_foundation::ir::ProgramGraphError>
 pub fn vyre_foundation::ir::ProgramGraph::schedule(&self) -> alloc::vec::Vec<vyre_foundation::ir::GraphNodeId>
@@ -4367,6 +4376,7 @@ pub struct vyre_foundation::ir::EffectToken
 pub struct vyre_foundation::ir::EvalError
 pub struct vyre_foundation::ir::ExternalMemoryDescriptor
 pub struct vyre_foundation::ir::ExternalResourceCapability
+pub struct vyre_foundation::ir::GenerationTracker
 pub struct vyre_foundation::ir::GraphDelta
 pub struct vyre_foundation::ir::GraphInput
 pub struct vyre_foundation::ir::GraphNodeId(pub u32)
@@ -5903,10 +5913,22 @@ pub vyre_foundation::ir::GraphDeltaError::InvalidStateTransition::output_name: a
 pub vyre_foundation::ir::GraphDeltaError::InvalidStateTransition::reason: alloc::string::String
 pub vyre_foundation::ir::GraphDeltaError::MissingNode(vyre_foundation::ir::GraphNodeId)
 pub vyre_foundation::ir::GraphDeltaError::MissingValue(vyre_foundation::ir::GraphValueId)
+pub vyre_foundation::ir::GraphDeltaError::NameLengthExceeded
+pub vyre_foundation::ir::GraphDeltaError::NameLengthExceeded::limit: usize
+pub vyre_foundation::ir::GraphDeltaError::NameLengthExceeded::name: alloc::string::String
+pub vyre_foundation::ir::GraphDeltaError::OperationLimitExceeded
+pub vyre_foundation::ir::GraphDeltaError::OperationLimitExceeded::limit: usize
+pub vyre_foundation::ir::GraphDeltaError::RankExceeded
+pub vyre_foundation::ir::GraphDeltaError::RankExceeded::limit: usize
+pub vyre_foundation::ir::GraphDeltaError::RankExceeded::rank: usize
 pub vyre_foundation::ir::GraphDeltaError::ResourceGenerationMismatch
 pub vyre_foundation::ir::GraphDeltaError::ResourceGenerationMismatch::expected: u64
 pub vyre_foundation::ir::GraphDeltaError::ResourceGenerationMismatch::found: u64
 pub vyre_foundation::ir::GraphDeltaError::ResourceGenerationMismatch::resource_name: alloc::string::String
+pub vyre_foundation::ir::GraphDeltaError::SupersededGeneration
+pub vyre_foundation::ir::GraphDeltaError::SupersededGeneration::attempted_generation: u64
+pub vyre_foundation::ir::GraphDeltaError::SupersededGeneration::current_generation: u64
+pub vyre_foundation::ir::GraphDeltaError::SupersededGeneration::resource_name: alloc::string::String
 pub vyre_foundation::ir::GraphDeltaError::UnknownShapeSymbol
 pub vyre_foundation::ir::GraphDeltaError::UnknownShapeSymbol::symbol: alloc::string::String
 pub vyre_foundation::ir::GraphDeltaError::VersionMismatch

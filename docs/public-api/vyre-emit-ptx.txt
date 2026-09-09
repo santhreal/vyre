@@ -20,6 +20,7 @@ impl vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile
 impl vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan
 impl vyre_foundation::diagnostics::ToDiagnostic for vyre_emit_ptx::EmitError
 impl vyre_lower::pattern_audit::PatternAudit for vyre_emit_ptx::patterns::PtxAuditReport
+pub const fn vyre_emit_ptx::ComputeCapability::bank_geometry(&self) -> vyre_lower::analyses::bank_conflict::strategy::TargetBankGeometry
 pub const fn vyre_emit_ptx::ComputeCapability::supports_async_copy(&self) -> bool
 pub const fn vyre_emit_ptx::ComputeCapability::supports_ldmatrix(&self) -> bool
 pub const fn vyre_emit_ptx::ComputeCapability::supports_wmma_bf16(&self) -> bool
@@ -46,6 +47,7 @@ pub enum vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionKind
 pub fn vyre_emit_ptx::ComputeCapability::default() -> Self
 pub fn vyre_emit_ptx::EmitError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_emit_ptx::EmitError::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
+pub fn vyre_emit_ptx::PtxEmitOptions::bank_geometry(&self) -> vyre_lower::analyses::bank_conflict::strategy::TargetBankGeometry
 pub fn vyre_emit_ptx::PtxEmitOptions::default() -> Self
 pub fn vyre_emit_ptx::PtxEmitOptions::for_target(target: vyre_emit_ptx::ComputeCapability) -> Self
 pub fn vyre_emit_ptx::emit(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<alloc::string::String, vyre_emit_ptx::EmitError>

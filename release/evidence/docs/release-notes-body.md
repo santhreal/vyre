@@ -186,6 +186,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - An artifact records the identity of its graph before any symbolic binding
   resolved it, so a guarded set compiled over several extents of one graph
   proves it is one product.
+- vyre-libs-encoding declares an nn-paging feature that selects the attention
+  paging composition. The module was gated on four feature names the crate does
+  not declare, so no configuration compiled it.
 - `vyre_foundation::visit::ExprChildren::is_empty` and
   `vyre_foundation::visit::expr_is_leaf` state whether an expression has
   operands, and `LogicalExchangeKind::ALL` is the whole variant set as a
@@ -889,6 +892,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   workspace does not ship, and the worked example names the primitive that
   survived it. `gate1` states the countable half and points at the policy for
   the rest, instead of recording that the policy was deleted.
+- The fixpoint package publishes its routing contract and program width queries
+  behind a test-fixtures feature, so dependent packages assert grid sync counts
+  and dispatch spans against the owning crate.
 - The `ci-matrix` gate reports a hosted CI matrix that has lost a platform or a
   toolchain, and a device escape hatch inside it. The rule it replaces asked
   whether the workflow file contained the word `stable` anywhere, which a step
@@ -1157,6 +1163,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A `vyre-lints` missing-root diagnostic names the `--check-...` flag that
   selected the lint, and reported violations are refused when their kind is
   outside the kind list the lint registers.
+- The full matroid intersection operation is owned by the graph dialect under
+  the id vyre-libs::graph::matroid_intersection_full. It composes the
+  exchange-graph BFS step and path reconstruction, which vyre-libs-graph
+  defines, and vyre-libs-math cannot declare that edge because vyre-libs-graph
+  already depends on vyre-libs-math.
 - Neutral kernel analyses take shared-memory bank count, per-workgroup shared
   capacity, and constant capacity as stated device facts, and a capacity the
   caller leaves unstated yields no report section and no promotion instead of
@@ -1222,6 +1233,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Backend selection for conformance proving names which admission rule rejected
   an id, distinguishing a reference oracle, a registered backend with no
   semantic-execution facets, and an unknown id.
+- Operation registrations pack their fixture bytes with the vyre-primitives
+  wire encoder. Registrations in vyre-libs-math, vyre-libs-nn and
+  vyre-libs-pattern reached a vyre-test-support encoder from product code,
+  which a published build does not link, and the test-material-placement gate
+  reports a production line that names the test support crate.
 - The gate proof-identity rejection tests built their inputs from the live
   checkout, so a missing symbol, a non-test symbol, and a wrong-package symbol
   were all asserted against whatever the workspace happened to contain that
@@ -1306,6 +1322,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - TypedDispatchExt no longer declares dispatch_u32 and dispatch_u32_into; both
   forwarded to dispatch_pod and dispatch_pod_into, which infer the element type
   from the input slices, so a caller writes the same call without them.
+- A whole-buffer output byte range is read from the buffer declaration through
+  BufferDecl::with_full_output_byte_range, and a byte extent travels as u64
+  from the helper that computes it. vyre-libs-text, vyre-libs-graph,
+  vyre-libs-nn and the wgpu demo no longer restate a buffer's byte length
+  beside its element count.
 - The Aho-Corasick emit paths in `vyre-libs/src/scan/` read the flat
   output-record span through one owner. Six builders each wrote their own loop
   over `out_begin..out_end` binding `pattern_id` from `output_records`, and
@@ -4890,6 +4911,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   only under cfg(not(target_os = "macos")). The macOS lane failed to resolve
   the crate and the whole benchmark harness stopped compiling there. Each test
   now carries the same target condition its dependency does.
+- vyre-libs-solvers resolves the dataflow compaction wrappers. The bitset,
+  fixpoint and math kernels they call are defined in vyre-libs-bitset,
+  vyre-libs-fixpoint and vyre-libs-math, and the imports name those crates.
 - A registration is rejected when the tier it declares is one the crate that
   minted its id cannot carry, and when the id names no crate at all.
 - A default build of vyre-libs emitted programs whose child regions named
@@ -4901,6 +4925,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   names builder-ops, and a test walks every catalog entry under the selection
   it is compiled with and fails on any region naming an operation the running
   registry does not hold.
+- vyre-libs-nn compiles under its default features. The llm module was declared
+  unconditionally while the paged cache index map and the top-k sampler it
+  calls sit behind the llm and nn-moe features, so a default build failed to
+  resolve them.
 - Thirty-two tests that acquire a real GPU were compiled and run by the
   default-feature matrix, which has no device. The wgpu and CUDA in-crate cases
   now carry the device-tests admission, vyre-driver-spirv gained the admission
@@ -4908,6 +4936,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   device-tests instead of gpu, which was on by default and so admitted every
   one of them. gpu-parity.yml runs the wgpu lib suite and the SPIR-V dispatch
   suite, so no newly admitted test stops running.
+- vyre-libs-analysis resolves graph::scc_decompose::dense_reachability_bitsets.
+  The builder is public under the analysis feature that gates it, so a crate
+  that enables the feature can call it.
 - The depth-leveled sum-product evaluator assumed its depth array described the
   circuit it was evaluating. Given an array that does not, an internal node
   reads a child the same wave is still writing, and the two arms disagree
@@ -5467,6 +5498,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   partial store is guarded on the block index so a launch wider than the built
   grid discards the extra blocks instead of writing past the partial buffer,
   and the release reduction case pins the grid its program was built for.
+- A one-dimensional launch exceeding the device single-axis workgroup ceiling
+  folds across grid axes with linearized global indexing instead of being
+  refused.
 - The Metal parity gate resolves vyre-conform and the driver crate to their
   workspace member directories instead of joining the package name onto the
   checkout root.
@@ -5979,6 +6013,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   false and are corrected: `math::atomic` is not a Category B exception because
   `Expr::Atomic` is an existing IR variant, `hash` did not replace the
   still-live `crypto` feature, and `default` includes `hash`.
+- A tiled matrix multiply on an F16 M16N8K16-eligible shape emits the
+  tensor-core body, which no public builder could reach before.
 - A timed cudaGraph replay whose inputs already match the materialized host
   outputs returns those outputs with `device_ns = Some(0)` instead of launching
   the graph again to produce a timing. The untimed path already short-circuited
@@ -6360,6 +6396,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   access phase profiles from kernel descriptors, and the PTX emitter applies
   the selected padding or XOR-swizzle mitigation strategy to shared memory
   declarations and address computations.
+- The PTX emitter applies the selected bank-conflict mitigation strategy to
+  permutable shared-memory bindings and scales the shared-memory declaration
+  for padded row layouts.
 - Runtime barrier elision now takes child descent from the foundation rewrite
   walk and buffer-effect descent from visit::child_bodies instead of two
   hand-written matches ending in a catch-all, so a Node variant added with a
@@ -7804,6 +7843,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   are gone; `vyre_debug::source_walker` is now
   `vyre_debug::source_assignments`, and the value-range report types are
   reachable from `vyre_lower::analyses`.
+- Operation registrations across the divided vyre-libs domain crates are gated
+  behind their domain features, generic builder registrations declare local
+  constants, and linear_tiled uses block-tiled contraction.
 - Operation documentation now has one generated JSON authority covering every
   linked library, primitive, intrinsic, and runtime dialect operation.
   Schema-derived inventories and subsystem catalogs expose exact tiers,
@@ -8485,6 +8527,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   left windows-msvc on the system probe rather than the vendored feature, and
   that probe has no answer there: the harness failed to build before taking a
   measurement.
+- The analysis package enables the graph analysis feature its reachability and
+  dominance queries compile against, so it builds standalone instead of failing
+  on unresolved graph items.
 - The criterion regression gate reported its threshold check as a median change
   while reading the upper bound of the confidence interval. It now prints both
   and names the bound it gates on. The threshold is unchanged.
@@ -8496,6 +8541,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - `xtask lego-trend --write-baseline` regenerates `audits/lego-composition.tsv`
   from the live registry, and refuses to record a baseline while the trend
   check reports a regression.
+- The consumer facade re-exports TensorRef, TensorRefError, and the
+  buffer_names module, so a caller can name the operand types every Cat-A
+  builder takes without depending on the builder package directly.
 - The consumer-neutrality gate no longer carries a roll call of seventeen
   documents, fifteen of which the documentation collapse deleted, each reported
   as a finding on every tree. The scanned set is enumerated from the tree,
@@ -8726,6 +8774,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   registered gate that carries its assertions and the injection that proved
   that gate red, and a row whose script is still tracked must record it as an
   operator action.
+- The security package ships the predicate rules file its catalog reads, so a
+  packaged build resolves it instead of pointing outside the crate.
 - The self-hosted DCE pass declares the portable 256-invocation workgroup every
   sibling pass uses, so it is dispatchable on a dialect that caps a workgroup
   at 256, and its frontier seed strides instead of assuming one lane per word.

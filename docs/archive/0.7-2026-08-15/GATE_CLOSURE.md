@@ -42,7 +42,7 @@ If G4 cannot close by the release deadline:
    > New installs should wait on the next evidence-closed patch release (ETA <date>).
    ```
 
-3. **Do not tag** until every gate is green or the user has explicitly waived the affected cell in writing. Signed-off waivers record which cells are known-degraded; the certification artifact lists them.
+3. **Do not tag** until every gate is green or a signed-off waiver covers the affected cell in writing. Signed-off waivers record which cells are known-degraded; the certification artifact lists them.
 
 4. **Keep writing code.** The yank does not pause development; it only gates the *release*. Agents continue closing audit findings, landing optimisations, and growing the Tier-3 surface. The tag cuts when the gates go green.
 

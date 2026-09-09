@@ -53,11 +53,9 @@ pub vyre_aot::BundleError::Io(core::io::error::Error)
 pub vyre_aot::BundleError::Json(serde_json::error::Error)
 pub vyre_aot::BundleError::Launcher(vyre_aot::LauncherError)
 pub vyre_aot::BundleError::Lzma(alloc::string::String)
-pub vyre_aot::CompileError::ArtifactLayout(alloc::string::String)
 pub vyre_aot::CompileError::CanonicalArtifact
 pub vyre_aot::CompileError::CanonicalArtifact::source: vyre_megakernel::error::CompileError
 pub vyre_aot::CompileError::CanonicalArtifact::stage: &'static str
-pub vyre_aot::CompileError::ProgramPreparation(vyre_foundation::error::IrError)
 pub vyre_aot::CompileError::TargetCompilation(vyre_megakernel::target::error::TargetCompileError)
 pub vyre_aot::CompileError::TargetNotEnabled(vyre_foundation::operation::target_facet::TargetId)
 pub vyre_aot::DeploymentBundle::files: alloc::vec::Vec<std::path::PathBuf>

@@ -182,6 +182,7 @@ pub fn vyre_driver_cuda::CudaBackend::hardware_supports_f16(&self) -> bool
 pub fn vyre_driver_cuda::CudaBackend::hardware_supports_grid_sync(&self) -> bool
 pub fn vyre_driver_cuda::CudaBackend::hardware_supports_subgroup_ops(&self) -> bool
 pub fn vyre_driver_cuda::CudaBackend::hardware_supports_tensor_cores(&self) -> bool
+pub fn vyre_driver_cuda::CudaBackend::honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool
 pub fn vyre_driver_cuda::CudaBackend::kernel_device_envelope(&self) -> vyre_driver_cuda::CudaKernelDeviceEnvelope
 pub fn vyre_driver_cuda::CudaBackend::lowers_grid_sync(&self) -> bool
 pub fn vyre_driver_cuda::CudaBackend::lowers_tensor_core_ops(&self) -> bool
@@ -250,6 +251,7 @@ pub fn vyre_driver_cuda::CudaBackendRegistration::download_resident_range_into(&
 pub fn vyre_driver_cuda::CudaBackendRegistration::download_resident_ranges_into(&self, ranges: &[(&vyre_driver::backend::resource::Resource, usize, usize)], outputs: &mut [&mut alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_cuda::CudaBackendRegistration::free_device_buffer(&self, buffer: alloc::boxed::Box<dyn vyre_driver::backend::device_buffer::DeviceBuffer>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_cuda::CudaBackendRegistration::free_resident(&self, resource: vyre_driver::backend::resource::Resource) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_cuda::CudaBackendRegistration::honors_float_lowering(&self, mode: vyre_foundation::fp_parity::FloatLoweringMode) -> bool
 pub fn vyre_driver_cuda::CudaBackendRegistration::id(&self) -> &'static str
 pub fn vyre_driver_cuda::CudaBackendRegistration::inner(&self) -> &vyre_driver_cuda::CudaBackend
 pub fn vyre_driver_cuda::CudaBackendRegistration::max_compute_invocations_per_workgroup(&self) -> u32
