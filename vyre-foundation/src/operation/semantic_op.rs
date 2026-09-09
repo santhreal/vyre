@@ -380,13 +380,17 @@ pub(crate) fn build_contract_record(
         }
         vyre_spec::TransformDecision::GuardedLaws(guarded)
     } else if let Some(reason) = opaque_reason {
-        vyre_spec::TransformDecision::Opaque {
-            reason: reason.to_string(),
+        if reason.starts_with("no-transform:") || reason.starts_with("notransform:") {
+            vyre_spec::TransformDecision::NoTransform {
+                reason: reason.to_string(),
+            }
+        } else {
+            vyre_spec::TransformDecision::Opaque {
+                reason: reason.to_string(),
+            }
         }
     } else {
-        vyre_spec::TransformDecision::Opaque {
-            reason: String::new(),
-        }
+        vyre_spec::TransformDecision::NotRecorded
     };
 
     vyre_spec::SemanticContractRecord {

@@ -5,13 +5,11 @@
 #[non_exhaustive] pub enum vyre_spec::AliasingContract
 #[non_exhaustive] pub enum vyre_spec::AtomicOp
 #[non_exhaustive] pub enum vyre_spec::BinOp
-#[non_exhaustive] pub enum vyre_spec::BufferAccess
 #[non_exhaustive] pub enum vyre_spec::Category
 #[non_exhaustive] pub enum vyre_spec::CollectiveOp
 #[non_exhaustive] pub enum vyre_spec::CompatibilityDisposition
 #[non_exhaustive] pub enum vyre_spec::Convention
 #[non_exhaustive] pub enum vyre_spec::CostHint
-#[non_exhaustive] pub enum vyre_spec::DataType
 #[non_exhaustive] pub enum vyre_spec::DeterminismClass
 #[non_exhaustive] pub enum vyre_spec::EngineInvariant
 #[non_exhaustive] pub enum vyre_spec::FieldType
@@ -28,11 +26,9 @@
 #[non_exhaustive] pub enum vyre_spec::RangePrecondition
 #[non_exhaustive] pub enum vyre_spec::RegionLawFamily
 #[non_exhaustive] pub enum vyre_spec::ResourceBoundsContract
-#[non_exhaustive] pub enum vyre_spec::ShapeIndexRelation
 #[non_exhaustive] pub enum vyre_spec::SideEffectClass
 #[non_exhaustive] pub enum vyre_spec::SubgroupReduceOp
 #[non_exhaustive] pub enum vyre_spec::TernaryOp
-#[non_exhaustive] pub enum vyre_spec::TransformDecision
 #[non_exhaustive] pub enum vyre_spec::UnOp
 #[non_exhaustive] pub enum vyre_spec::Verification
 #[non_exhaustive] pub struct vyre_spec::IntrinsicDescriptor
@@ -260,6 +256,7 @@ pub const fn vyre_spec::SchemaDefinition::protocol_domain(&self) -> vyre_spec::P
 pub const fn vyre_spec::SchemaId::as_str(self) -> &'static str
 pub const fn vyre_spec::SchemaId::domain(self) -> vyre_spec::ProtocolDomain
 pub const fn vyre_spec::SchemaRegistry::all() -> &'static [vyre_spec::SchemaDefinition]
+pub const fn vyre_spec::SemanticContractRecord::state_name(&self) -> &'static str
 pub const fn vyre_spec::Semiring::identity(self) -> u32
 pub const fn vyre_spec::ShapeIndexContract::agnostic() -> Self
 pub const fn vyre_spec::ShapeIndexContract::elementwise() -> Self
@@ -268,7 +265,11 @@ pub const fn vyre_spec::SubgroupReduceOp::builtin_wire_tag(self) -> u8
 pub const fn vyre_spec::SubgroupReduceOp::combine(self) -> vyre_spec::CombineKind
 pub const fn vyre_spec::SubgroupReduceOp::is_bitwise(self) -> bool
 pub const fn vyre_spec::TernaryOp::builtin_wire_tag(&self) -> core::option::Option<u8>
+pub const fn vyre_spec::TransformDecision::is_guarded_laws(&self) -> bool
+pub const fn vyre_spec::TransformDecision::is_no_transform(&self) -> bool
+pub const fn vyre_spec::TransformDecision::is_not_recorded(&self) -> bool
 pub const fn vyre_spec::TransformDecision::is_opaque(&self) -> bool
+pub const fn vyre_spec::TransformDecision::state_name(&self) -> &'static str
 pub const fn vyre_spec::TypeId::as_u32(self) -> u32
 pub const fn vyre_spec::UnOp::builtin_wire_tag(&self) -> core::option::Option<u8>
 pub const fn vyre_spec::all_address_modes() -> &'static [vyre_spec::resource_capability::AddressMode]
@@ -605,10 +606,12 @@ pub const vyre_spec::resource_capability::SubresourceRange::ASPECT_STENCIL: u32
 pub enum vyre_spec::AddressMode
 pub enum vyre_spec::BinOpResult
 pub enum vyre_spec::BorderColor
+pub enum vyre_spec::BufferAccess
 pub enum vyre_spec::ColorInterpretation
 pub enum vyre_spec::CombineKind
 pub enum vyre_spec::CompareFunction
 pub enum vyre_spec::ContractValidationError
+pub enum vyre_spec::DataType
 pub enum vyre_spec::DefaultsPolicy
 pub enum vyre_spec::ExtensionFieldType
 pub enum vyre_spec::ExtensionOperandKind
@@ -644,10 +647,12 @@ pub enum vyre_spec::SaturationBehavior
 pub enum vyre_spec::Semiring
 pub enum vyre_spec::SessionScopeError
 pub enum vyre_spec::SessionStatus
+pub enum vyre_spec::ShapeIndexRelation
 pub enum vyre_spec::SignedZeroBehavior
 pub enum vyre_spec::SubnormalBehavior
 pub enum vyre_spec::SwizzleComponent
 pub enum vyre_spec::TimelineSyncProtocol
+pub enum vyre_spec::TransformDecision
 pub enum vyre_spec::analysis::AnalysisFactCodecError
 pub enum vyre_spec::analysis::AnalysisFactKind
 pub enum vyre_spec::resource_capability::AddressMode
@@ -796,7 +801,9 @@ pub fn vyre_spec::SchemaDefinition::generate_documentation(&self) -> alloc::stri
 pub fn vyre_spec::SchemaDefinition::validate_invariants(&self) -> bool
 pub fn vyre_spec::SchemaId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_spec::SchemaRegistry::lookup(id: vyre_spec::SchemaId) -> core::option::Option<&'static vyre_spec::SchemaDefinition>
+pub fn vyre_spec::SemanticContractRecord::no_transform(id: impl core::convert::Into<alloc::string::String>, reason: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_spec::SemanticContractRecord::opaque(id: impl core::convert::Into<alloc::string::String>, reason: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_spec::SemanticContractRecord::unrecorded(id: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_spec::SemanticContractRecord::validate(&self) -> core::result::Result<(), vyre_spec::ContractValidationError>
 pub fn vyre_spec::SemanticContractRecord::with_laws(id: impl core::convert::Into<alloc::string::String>, laws: alloc::vec::Vec<vyre_spec::GuardedLaw>) -> Self
 pub fn vyre_spec::SessionScopeError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1152,6 +1159,7 @@ pub vyre_spec::ContractValidationError::InvalidOpaqueReason(alloc::string::Strin
 pub vyre_spec::ContractValidationError::InvalidSignature(alloc::string::String)
 pub vyre_spec::ContractValidationError::LawError(vyre_spec::LawValidationError)
 pub vyre_spec::ContractValidationError::MissingId
+pub vyre_spec::ContractValidationError::NotRecorded
 pub vyre_spec::Convention::V1
 pub vyre_spec::Convention::V2
 pub vyre_spec::Convention::V2::lookup_binding: u32
@@ -1163,7 +1171,7 @@ pub vyre_spec::CounterexampleGenerator::max_attempts: usize
 pub vyre_spec::CounterexampleGenerator::name: alloc::string::String
 pub vyre_spec::CounterexampleGenerator::seed: u64
 pub vyre_spec::DataType::Array
-pub vyre_spec::DataType::Array::element_size: usize
+pub vyre_spec::DataType::Array::element_size: u32
 pub vyre_spec::DataType::BF16
 pub vyre_spec::DataType::Bool
 pub vyre_spec::DataType::Bytes
@@ -1852,6 +1860,7 @@ pub vyre_spec::TimelineSyncProtocol::TimelineSemaphore::wait_value: u64
 pub vyre_spec::TransformDecision::GuardedLaws(alloc::vec::Vec<vyre_spec::GuardedLaw>)
 pub vyre_spec::TransformDecision::NoTransform
 pub vyre_spec::TransformDecision::NoTransform::reason: alloc::string::String
+pub vyre_spec::TransformDecision::NotRecorded
 pub vyre_spec::TransformDecision::Opaque
 pub vyre_spec::TransformDecision::Opaque::reason: alloc::string::String
 pub vyre_spec::UnOp::Abs

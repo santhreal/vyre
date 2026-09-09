@@ -162,13 +162,20 @@ impl OperationRegistration {
         self
     }
 
+    /// Attach an explicit no-transform decision with a one-line reason.
+    #[must_use]
+    pub const fn with_no_transform(mut self, reason: &'static str) -> Self {
+        self.opaque_reason = Some(reason);
+        self
+    }
+
     /// Return the recorded opaque / no-transform decision reason, if any.
     #[must_use]
     pub const fn opaque_reason(&self) -> Option<&'static str> {
         self.opaque_reason
     }
 
-    /// Whether this operation has a recorded transform decision (either laws or an explicit opaque decision).
+    /// Whether this operation has a recorded transform decision (either laws or an explicit opaque/no-transform decision).
     #[must_use]
     pub const fn has_transform_decision(&self) -> bool {
         !self.laws.is_empty() || self.opaque_reason.is_some()

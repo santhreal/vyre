@@ -151,3 +151,110 @@ fn contract_record_serde_roundtrip() {
         serde_json::from_str(&serialized).expect("deserialization succeeds");
     assert_eq!(record, deserialized);
 }
+
+#[test]
+fn contract_record_with_no_transform_decision_validates() {
+    let record = SemanticContractRecord::no_transform(
+        "vyre-libs::monolith::op",
+        "non-composable monolithic domain algorithm with no algebraic decomposition",
+    );
+    assert_eq!(record.validate(), Ok(()));
+    assert!(record.decision.is_no_transform());
+    assert!(record.decision.is_opaque());
+    assert_eq!(record.state_name(), "no-transform");
+    assert_eq!(
+        record.decision.opaque_reason(),
+        Some("non-composable monolithic domain algorithm with no algebraic decomposition")
+    );
+}
+
+#[test]
+fn contract_record_with_unrecorded_decision_fails_validation() {
+    let record = SemanticContractRecord::unrecorded("vyre-libs::unrecorded::op");
+    assert!(record.decision.is_not_recorded());
+    assert!(!record.decision.has_decision());
+    assert_eq!(record.state_name(), "not-recorded");
+    let result = record.validate();
+    assert_eq!(result, Err(ContractValidationError::NotRecorded));
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "operation contract transform decision is not recorded"
+    );
+}
+
+#[test]
+fn four_states_are_mutually_exclusive_and_exhaustive() {
+    let law = GuardedLaw::unconditional(AlgebraicLaw::Commutative);
+    let s1 = TransformDecision::GuardedLaws(vec![law]);
+    let s2 = TransformDecision::NoTransform {
+        reason: "non-composable architecture".to_string(),
+    };
+    let s3 = TransformDecision::Opaque {
+        reason: "opaque hardware primitive".to_string(),
+    };
+    let s4 = TransformDecision::NotRecorded;
+
+    assert_eq!(s1.state_name(), "guarded-laws");
+    assert_eq!(s2.state_name(), "no-transform");
+    assert_eq!(s3.state_name(), "opaque");
+    assert_eq!(s4.state_name(), "not-recorded");
+
+    assert!(s1.is_guarded_laws());
+    assert!(!s1.is_opaque());
+    assert!(!s1.is_no_transform());
+    assert!(!s1.is_not_recorded());
+
+    assert!(!s2.is_guarded_laws());
+    assert!(s2.is_opaque());
+    assert!(s2.is_no_transform());
+    assert!(!s2.is_not_recorded());
+
+    assert!(!s3.is_guarded_laws());
+    assert!(s3.is_opaque());
+    assert!(!s3.is_no_transform());
+    assert!(!s3.is_not_recorded());
+
+    assert!(!s4.is_guarded_laws());
+    assert!(!s4.is_opaque());
+    assert!(!s4.is_no_transform());
+    assert!(s4.is_not_recorded());
+}
+
+#[test]
+fn law_with_zero_witness_count_is_rejected_as_no_executable_proof() {
+    let law = GuardedLaw::unconditional(AlgebraicLaw::Associative).with_proof_method(
+        ProofMethod::WitnessedU32 {
+            seed: 0x1234,
+            count: 0,
+        },
+    );
+    let result = law.validate();
+    assert_eq!(
+        result,
+        Err(LawValidationError::NoExecutableProofEvidence {
+            law: "associative".to_string()
+        })
+    );
+}
+
+#[test]
+fn law_with_inverted_guard_range_is_rejected() {
+    let law = GuardedLaw::unconditional(AlgebraicLaw::Bounded { lo: 0, hi: 100 })
+        .with_guard(LawGuard::Range { lo: 100, hi: 10 });
+    let result = law.validate();
+    assert!(matches!(
+        result,
+        Err(LawValidationError::InvalidGuard { ref reason, .. }) if reason.contains("exceeds")
+    ));
+}
+
+#[test]
+fn law_with_empty_compiler_levels_is_rejected() {
+    let mut law = GuardedLaw::unconditional(AlgebraicLaw::Idempotent);
+    law.affected_compiler_levels.clear();
+    let result = law.validate();
+    assert!(matches!(
+        result,
+        Err(LawValidationError::InvalidGuard { ref reason, .. }) if reason.contains("affected compiler levels")
+    ));
+}

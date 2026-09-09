@@ -1,6 +1,7 @@
 #[non_exhaustive] #[repr(C)] pub struct vyre_foundation::match_result::ByteRange
 #[non_exhaustive] pub enum vyre_foundation::ConfigPartition
 #[non_exhaustive] pub enum vyre_foundation::IrError
+#[non_exhaustive] pub enum vyre_foundation::config_schema::ConfigPartition
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::CompilerLevel
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::DiagnosticStage
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::RetryClass
@@ -16,11 +17,9 @@
 #[non_exhaustive] pub enum vyre_foundation::graph_view::GraphValidateError
 #[non_exhaustive] pub enum vyre_foundation::ir::CacheLocality
 #[non_exhaustive] pub enum vyre_foundation::ir::Expr
-#[non_exhaustive] pub enum vyre_foundation::ir::LinearType
 #[non_exhaustive] pub enum vyre_foundation::ir::MemoryKind
 #[non_exhaustive] pub enum vyre_foundation::ir::MemoryOrdering
 #[non_exhaustive] pub enum vyre_foundation::ir::Node
-#[non_exhaustive] pub enum vyre_foundation::ir::ShapePredicate
 #[non_exhaustive] pub enum vyre_foundation::ir::Value
 #[non_exhaustive] pub enum vyre_foundation::memory_model::MemoryOrdering
 #[non_exhaustive] pub enum vyre_foundation::memory_model::legacy::MemoryOrdering
@@ -149,7 +148,6 @@ impl core::fmt::Debug for vyre_foundation::ir::Ident
 impl core::fmt::Debug for vyre_foundation::optimizer::AnalysisCache
 impl core::fmt::Debug for vyre_foundation::optimizer::hot_path_hints::HotPathHints
 impl core::fmt::Display for vyre_foundation::CodecError
-impl core::fmt::Display for vyre_foundation::ConfigPartition
 impl core::fmt::Display for vyre_foundation::FailureDomain
 impl core::fmt::Display for vyre_foundation::GeometryConstraintConflict
 impl core::fmt::Display for vyre_foundation::RecoveryClass
@@ -158,6 +156,7 @@ impl core::fmt::Display for vyre_foundation::causal::CausalPhase
 impl core::fmt::Display for vyre_foundation::causal::CausalSpanId
 impl core::fmt::Display for vyre_foundation::causal::SourceSpanRef
 impl core::fmt::Display for vyre_foundation::causal::TraceId
+impl core::fmt::Display for vyre_foundation::config_schema::ConfigPartition
 impl core::fmt::Display for vyre_foundation::diagnostics::Diagnostic
 impl core::fmt::Display for vyre_foundation::diagnostics::DiagnosticCode
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionAliasingError
@@ -235,14 +234,11 @@ impl serde_core::ser::Serialize for vyre_foundation::operation::TargetId
 impl vyre_foundation::CanonicalDecoder
 impl vyre_foundation::CanonicalEncoder
 impl vyre_foundation::CanonicalSigner
-impl vyre_foundation::ConfigPartition
-impl vyre_foundation::ConfigValue
 impl vyre_foundation::FailureDomain
 impl vyre_foundation::GeometryRequirements
 impl vyre_foundation::IrError
 impl vyre_foundation::LaunchGeometry
 impl vyre_foundation::RecoveryClass
-impl vyre_foundation::ResolvedConfiguration
 impl vyre_foundation::TypedRecoveryError
 impl vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration
 impl vyre_foundation::algebraic_reordering::ReorderingClass
@@ -253,6 +249,10 @@ impl vyre_foundation::causal::CausalSpanId
 impl vyre_foundation::causal::CausalTraceMode
 impl vyre_foundation::causal::CausalTracer
 impl vyre_foundation::causal::TraceId
+impl vyre_foundation::config_schema::ConfigFieldDef
+impl vyre_foundation::config_schema::ConfigPartition
+impl vyre_foundation::config_schema::ConfigValue
+impl vyre_foundation::config_schema::ResolvedConfiguration
 impl vyre_foundation::diagnostics::CompilerLevel
 impl vyre_foundation::diagnostics::Diagnostic
 impl vyre_foundation::diagnostics::DiagnosticCode
@@ -311,6 +311,7 @@ impl vyre_foundation::ir::ProgramGraphBuilder
 impl vyre_foundation::ir::ProgramGraphTemplate
 impl vyre_foundation::ir::ProgramStats
 impl vyre_foundation::ir::ResourceUsageFlags
+impl vyre_foundation::ir::ShapeDim
 impl vyre_foundation::ir::ShapePredicate
 impl vyre_foundation::ir::SubresourceRange
 impl vyre_foundation::ir::Tile
@@ -521,13 +522,25 @@ impl vyre_foundation::region_ssa::ScalarLiteral
 impl vyre_foundation::region_ssa::ScopeContext
 impl vyre_foundation::region_ssa::ValueRemap
 impl vyre_foundation::schedule::DependencyPreservationCertificate
+impl vyre_foundation::schedule::PartialSchedule
 impl vyre_foundation::schedule::ScheduleCostModel
 impl vyre_foundation::schedule::ScheduleCostRecord
 impl vyre_foundation::schedule::ScheduleDiff
+impl vyre_foundation::schedule::ScheduleOp
 impl vyre_foundation::schedule::SchedulePlan
 impl vyre_foundation::schedule::ScheduleTransform
 impl vyre_foundation::schedule::ScheduleTree
 impl vyre_foundation::schedule::SelectedSchedule
+impl vyre_foundation::schedule::typed::ScheduleScope for vyre_foundation::schedule::typed::DeviceScope
+impl vyre_foundation::schedule::typed::ScheduleScope for vyre_foundation::schedule::typed::InnermostLoopScope
+impl vyre_foundation::schedule::typed::ScheduleScope for vyre_foundation::schedule::typed::SubgroupScope
+impl vyre_foundation::schedule::typed::ScheduleScope for vyre_foundation::schedule::typed::ThreadScope
+impl vyre_foundation::schedule::typed::ScheduleScope for vyre_foundation::schedule::typed::WorkgroupScope
+impl vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::DeviceScope>
+impl vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::InnermostLoopScope>
+impl vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::SubgroupScope>
+impl vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::ThreadScope>
+impl vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::WorkgroupScope>
 impl vyre_foundation::security::AuthorityLabel
 impl vyre_foundation::security::CapabilityAuthenticator
 impl vyre_foundation::security::CompilationBudgetEnforcer
@@ -602,7 +615,6 @@ impl<L> vyre_foundation::optimizer::eqsat::Rule<L> for vyre_foundation::optimize
 impl<S: vyre_foundation::verifier::StageKind, T> vyre_foundation::verifier::VerifiedStageWrapper<S, T>
 impl<T> core::ops::deref::Deref for vyre_foundation::verifier::Verified<T>
 impl<T> vyre_foundation::verifier::Verified<T>
-pub const fn vyre_foundation::ConfigPartition::as_str(self) -> &'static str
 pub const fn vyre_foundation::FailureDomain::as_str(self) -> &'static str
 pub const fn vyre_foundation::GeometryRequirements::agnostic() -> Self
 pub const fn vyre_foundation::GeometryRequirements::cooperative(width: vyre_foundation::CooperativeWidth) -> Self
@@ -631,6 +643,7 @@ pub const fn vyre_foundation::causal::CausalTraceMode::is_off(self) -> bool
 pub const fn vyre_foundation::causal::CausalTracer::mode(&self) -> vyre_foundation::causal::CausalTraceMode
 pub const fn vyre_foundation::causal::TraceId::as_u128(self) -> u128
 pub const fn vyre_foundation::causal::TraceId::new(id: u128) -> Self
+pub const fn vyre_foundation::config_schema::ConfigPartition::as_str(self) -> &'static str
 pub const fn vyre_foundation::diagnostics::CompilerLevel::label(self) -> &'static str
 pub const fn vyre_foundation::diagnostics::Diagnostic::with_compiler_level(self, level: vyre_foundation::diagnostics::CompilerLevel) -> Self
 pub const fn vyre_foundation::diagnostics::Diagnostic::with_retry(self, retry: vyre_foundation::diagnostics::RetryClass) -> Self
@@ -684,6 +697,12 @@ pub const fn vyre_foundation::ir::Node::return_() -> Self
 pub const fn vyre_foundation::ir::ResourceUsageFlags::compute_sampled() -> Self
 pub const fn vyre_foundation::ir::ResourceUsageFlags::compute_storage() -> Self
 pub const fn vyre_foundation::ir::ResourceUsageFlags::presentable_storage() -> Self
+pub const fn vyre_foundation::ir::ShapeDim::expr_id(&self) -> core::option::Option<vyre_foundation::ir::ShapeExprId>
+pub const fn vyre_foundation::ir::ShapeDim::is_expr(&self) -> bool
+pub const fn vyre_foundation::ir::ShapeDim::is_known(&self) -> bool
+pub const fn vyre_foundation::ir::ShapeDim::is_symbol(&self) -> bool
+pub const fn vyre_foundation::ir::ShapeDim::is_unresolved(&self) -> bool
+pub const fn vyre_foundation::ir::ShapeDim::known_extent(&self) -> core::option::Option<u64>
 pub const fn vyre_foundation::ir::SubresourceRange::color_all() -> Self
 pub const fn vyre_foundation::ir::exhaustiveness_check_async_transaction_lifecycle(val: vyre_foundation::memory_model::async_tx::AsyncTransactionLifecycle) -> &'static str
 pub const fn vyre_foundation::ir::exhaustiveness_check_atomic_ordering(val: vyre_foundation::memory_model::atomic::AtomicOrdering) -> &'static str
@@ -818,6 +837,7 @@ pub const fn vyre_foundation::operation::OperationRegistration::with_explicit_ca
 pub const fn vyre_foundation::operation::OperationRegistration::with_explicit_effects(self, effects: vyre_foundation::operation::OperationEffects) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_geometry_requirements(self, requirements: vyre_foundation::GeometryRequirements) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_laws(self, laws: &'static [&'static str]) -> Self
+pub const fn vyre_foundation::operation::OperationRegistration::with_no_transform(self, reason: &'static str) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_numeric(self, numeric: vyre_foundation::numeric::NumericContract) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_opaque(self, reason: &'static str) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_signature(self, signature: vyre_foundation::dialect_lookup::Signature) -> Self
@@ -960,8 +980,7 @@ pub const fn vyre_foundation::validate::ValidationPhase::as_str(self) -> &'stati
 pub const fn vyre_foundation::verifier::InvariantCategory::all() -> &'static [vyre_foundation::verifier::InvariantCategory]
 pub const fn vyre_foundation::verifier::InvariantCategory::code_prefix(&self) -> &'static str
 pub const fn vyre_foundation::visit::ExprChildren<'a>::is_empty(self) -> bool
-pub const vyre_foundation::CANONICAL_CONFIG_FIELDS: &[vyre_foundation::ConfigFieldDef]
-pub const vyre_foundation::ConfigPartition::ALL: &'static [Self]
+pub const vyre_foundation::CANONICAL_CONFIG_FIELDS: &[vyre_foundation::config_schema::ConfigFieldDef]
 pub const vyre_foundation::FailureDomain::ALL: &'static [Self]
 pub const vyre_foundation::RecoveryClass::ALL: &'static [Self]
 pub const vyre_foundation::algebraic_reordering::ReorderingClass::ALL: &'static [Self]
@@ -969,6 +988,8 @@ pub const vyre_foundation::causal::CAUSAL_RECEIPT_SCHEMA_VERSION: u32
 pub const vyre_foundation::causal::CausalPhase::ALL: [Self; 6]
 pub const vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES: [&str; 2]
 pub const vyre_foundation::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str
+pub const vyre_foundation::config_schema::CANONICAL_CONFIG_FIELDS: &[vyre_foundation::config_schema::ConfigFieldDef]
+pub const vyre_foundation::config_schema::ConfigPartition::ALL: &'static [Self]
 pub const vyre_foundation::dialect::ResourceAbi::EMPTY: Self
 pub const vyre_foundation::execution_plan::fusion::candidate::FusionCandidateKind::ALL: &'static [Self]
 pub const vyre_foundation::fp_expansion::EXP_OVERFLOW_ABOVE_BITS: u32
@@ -1143,6 +1164,12 @@ pub enum vyre_foundation::causal::CausalError
 pub enum vyre_foundation::causal::CausalPhase
 pub enum vyre_foundation::causal::CausalTraceMode
 pub enum vyre_foundation::causal::PruneReason
+pub enum vyre_foundation::config_schema::ConfigLayer
+pub enum vyre_foundation::config_schema::ConfigMutability
+pub enum vyre_foundation::config_schema::ConfigSecrecy
+pub enum vyre_foundation::config_schema::ConfigType
+pub enum vyre_foundation::config_schema::ConfigValue
+pub enum vyre_foundation::config_schema::IdentityImpact
 pub enum vyre_foundation::dialect::DialectVersionError
 pub enum vyre_foundation::dialect::FieldType
 pub enum vyre_foundation::dialect::SchemaTranslationError
@@ -1187,6 +1214,7 @@ pub enum vyre_foundation::ir::ImageAspect
 pub enum vyre_foundation::ir::ImageDimension
 pub enum vyre_foundation::ir::ImageFormat
 pub enum vyre_foundation::ir::Layout
+pub enum vyre_foundation::ir::LinearType
 pub enum vyre_foundation::ir::MemoryCapability
 pub enum vyre_foundation::ir::MemoryScope
 pub enum vyre_foundation::ir::NodeStorage
@@ -1200,6 +1228,7 @@ pub enum vyre_foundation::ir::ResourceAbiError
 pub enum vyre_foundation::ir::SamplerAddressMode
 pub enum vyre_foundation::ir::SamplerFilter
 pub enum vyre_foundation::ir::ShapeDim
+pub enum vyre_foundation::ir::ShapePredicate
 pub enum vyre_foundation::ir::StorageDomain
 pub enum vyre_foundation::ir::TileLayout
 pub enum vyre_foundation::ir::ValueLifetime
@@ -1307,7 +1336,9 @@ pub enum vyre_foundation::schedule::MemoryPlacement
 pub enum vyre_foundation::schedule::PipelineRole
 pub enum vyre_foundation::schedule::ScheduleBoundKind
 pub enum vyre_foundation::schedule::ScheduleDiffItem
+pub enum vyre_foundation::schedule::ScheduleInverseOp
 pub enum vyre_foundation::schedule::ScheduleLegalityError
+pub enum vyre_foundation::schedule::ScheduleNumericalEffect
 pub enum vyre_foundation::schedule::ScheduleOp
 pub enum vyre_foundation::schedule::SchedulePrecondition
 pub enum vyre_foundation::schedule::ScheduleTransform
@@ -1364,8 +1395,6 @@ pub fn vyre_foundation::CanonicalDecoder::decode(bytes: &[u8]) -> core::result::
 pub fn vyre_foundation::CanonicalEncoder::encode(record: &vyre_foundation::CanonicalRecord) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::CodecError>
 pub fn vyre_foundation::CanonicalSigner::compute_identity_digest(record: &vyre_foundation::CanonicalRecord) -> core::result::Result<[u8; 32], vyre_foundation::CodecError>
 pub fn vyre_foundation::CodecError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_foundation::ConfigPartition::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_foundation::ConfigValue::display_redacted(&self, secrecy: vyre_foundation::ConfigSecrecy) -> alloc::string::String
 pub fn vyre_foundation::CooperativeWidth::default() -> Self
 pub fn vyre_foundation::ElementPolicy::default() -> Self
 pub fn vyre_foundation::FailureDomain::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1377,11 +1406,6 @@ pub fn vyre_foundation::IrError::lowering(message: impl core::convert::Into<allo
 pub fn vyre_foundation::IrError::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_foundation::LaunchGeometry::default() -> Self
 pub fn vyre_foundation::RecoveryClass::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_foundation::ResolvedConfiguration::apply_override(&mut self, key: &str, value: vyre_foundation::ConfigValue, layer: vyre_foundation::ConfigLayer) -> core::result::Result<(), alloc::string::String>
-pub fn vyre_foundation::ResolvedConfiguration::behavior_hash(&self) -> [u8; 32]
-pub fn vyre_foundation::ResolvedConfiguration::get(&self, key: &str) -> core::option::Option<&vyre_foundation::ConfigValue>
-pub fn vyre_foundation::ResolvedConfiguration::new_with_defaults() -> Self
-pub fn vyre_foundation::ResolvedConfiguration::redacted_view(&self) -> alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
 pub fn vyre_foundation::TypedRecoveryError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::TypedRecoveryError::new(domain: vyre_foundation::FailureDomain, recovery_class: vyre_foundation::RecoveryClass, disposition: vyre_foundation::RecoveryDisposition, reason: impl core::convert::Into<alloc::string::String>, fix: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::Uniformity::default() -> Self
@@ -1436,6 +1460,24 @@ pub fn vyre_foundation::composition::trap_program(op_id: &str, output: core::opt
 pub fn vyre_foundation::composition::wrap_anonymous_region(generator: &str, body: alloc::vec::Vec<vyre_foundation::ir::Node>) -> vyre_foundation::ir::Node
 pub fn vyre_foundation::composition::wrap_child_region(generator: &str, parent: vyre_foundation::ir::Ident, body: alloc::vec::Vec<vyre_foundation::ir::Node>) -> vyre_foundation::ir::Node
 pub fn vyre_foundation::composition::wrap_region(generator: &str, body: alloc::vec::Vec<vyre_foundation::ir::Node>, source_region: core::option::Option<vyre_foundation::ir::Ident>) -> vyre_foundation::ir::Node
+pub fn vyre_foundation::config_schema::ConfigFieldDef::validate_value(&self, value: &vyre_foundation::config_schema::ConfigValue) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_foundation::config_schema::ConfigPartition::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::config_schema::ConfigValue::display_raw(&self) -> alloc::string::String
+pub fn vyre_foundation::config_schema::ConfigValue::display_redacted(&self, secrecy: vyre_foundation::config_schema::ConfigSecrecy) -> alloc::string::String
+pub fn vyre_foundation::config_schema::ResolvedConfiguration::apply_cli_arg(&mut self, key: &str, raw_value: &str) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_foundation::config_schema::ResolvedConfiguration::apply_explicit(&mut self, key: &str, value: vyre_foundation::config_schema::ConfigValue) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_foundation::config_schema::ResolvedConfiguration::apply_named_env_var(&mut self, env_name: &str, raw_val: &str) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_foundation::config_schema::ResolvedConfiguration::apply_override(&mut self, key: &str, value: vyre_foundation::config_schema::ConfigValue, layer: vyre_foundation::config_schema::ConfigLayer) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_foundation::config_schema::ResolvedConfiguration::apply_toml_str(&mut self, toml_str: &str) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_foundation::config_schema::ResolvedConfiguration::apply_toml_table(&mut self, table: &toml::table::Table) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_foundation::config_schema::ResolvedConfiguration::behavior_hash(&self) -> [u8; 32]
+pub fn vyre_foundation::config_schema::ResolvedConfiguration::compile_artifact_identity(&self, base_ir_identity: &[u8]) -> [u8; 32]
+pub fn vyre_foundation::config_schema::ResolvedConfiguration::format_diagnostic(&self) -> alloc::string::String
+pub fn vyre_foundation::config_schema::ResolvedConfiguration::get(&self, key: &str) -> core::option::Option<&vyre_foundation::config_schema::ConfigValue>
+pub fn vyre_foundation::config_schema::ResolvedConfiguration::new_with_defaults() -> Self
+pub fn vyre_foundation::config_schema::ResolvedConfiguration::redacted_view(&self) -> alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub fn vyre_foundation::config_schema::render_cli_help() -> alloc::string::String
+pub fn vyre_foundation::config_schema::render_configuration_reference_markdown() -> alloc::string::String
 pub fn vyre_foundation::cpu_op::CategoryAOp::program() -> vyre_foundation::ir::Program
 pub fn vyre_foundation::cpu_op::CpuOp::cpu(input: &[u8], output: &mut alloc::vec::Vec<u8>)
 pub fn vyre_foundation::diagnostics::Diagnostic::emission_error(target: impl core::convert::Into<alloc::string::String>, code: &'static str, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
@@ -1634,7 +1676,7 @@ pub fn vyre_foundation::ir::BufferDecl::kind(&self) -> vyre_foundation::ir::Memo
 pub fn vyre_foundation::ir::BufferDecl::linear_type(&self) -> vyre_foundation::ir::LinearType
 pub fn vyre_foundation::ir::BufferDecl::name(&self) -> &str
 pub fn vyre_foundation::ir::BufferDecl::output(name: &str, binding: u32, element: vyre_spec::data_type::DataType) -> Self
-pub fn vyre_foundation::ir::BufferDecl::output_byte_range(&self) -> core::option::Option<core::ops::range::Range<usize>>
+pub fn vyre_foundation::ir::BufferDecl::output_byte_range(&self) -> core::option::Option<core::ops::range::Range<u64>>
 pub fn vyre_foundation::ir::BufferDecl::read(name: &str, binding: u32, element: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_foundation::ir::BufferDecl::read_write(name: &str, binding: u32, element: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_foundation::ir::BufferDecl::require_static_readback_size(&self) -> core::result::Result<(), alloc::string::String>
@@ -1648,7 +1690,7 @@ pub fn vyre_foundation::ir::BufferDecl::with_full_output_byte_range(self) -> Sel
 pub fn vyre_foundation::ir::BufferDecl::with_hints(self, hints: vyre_foundation::ir::MemoryHints) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_kind(self, kind: vyre_foundation::ir::MemoryKind) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_linear_type(self, linear_type: vyre_foundation::ir::LinearType) -> Self
-pub fn vyre_foundation::ir::BufferDecl::with_output_byte_range(self, range: core::ops::range::Range<usize>) -> Self
+pub fn vyre_foundation::ir::BufferDecl::with_output_byte_range(self, range: core::ops::range::Range<u64>) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_pipeline_live_out(self, flag: bool) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_shape_predicate(self, predicate: vyre_foundation::ir::ShapePredicate) -> Self
 pub fn vyre_foundation::ir::BufferDecl::workgroup(name: &str, count: u32, element: vyre_spec::data_type::DataType) -> Self
@@ -1825,6 +1867,7 @@ pub fn vyre_foundation::ir::InterpCtx::region_mut(&mut self, id: vyre_foundation
 pub fn vyre_foundation::ir::InterpCtx::set(&mut self, id: vyre_foundation::ir::NodeId, value: vyre_foundation::ir::Value)
 pub fn vyre_foundation::ir::InterpCtx::set_operands<I>(&mut self, operands: I) where I: core::iter::traits::collect::IntoIterator<Item = vyre_foundation::ir::NodeId>
 pub fn vyre_foundation::ir::InterpCtx::set_region(&mut self, id: vyre_foundation::ir::RegionId, bytes: alloc::vec::Vec<u8>)
+pub fn vyre_foundation::ir::Layout::checked_linear_index(&self, coords: &[u32], extents: &[u32]) -> core::result::Result<u64, vyre_foundation::ir_inner::model::tile::TileError>
 pub fn vyre_foundation::ir::Layout::linear_index(&self, coords: &[u32], extents: &[u32]) -> usize
 pub fn vyre_foundation::ir::MemoryHints::default() -> Self
 pub fn vyre_foundation::ir::Node::assign(name: impl core::convert::Into<vyre_foundation::ir::Ident>, value: vyre_foundation::ir::Expr) -> Self
@@ -1994,13 +2037,16 @@ pub fn vyre_foundation::ir::Scope<K, V>::insert(&mut self, key: K, value: V) -> 
 pub fn vyre_foundation::ir::Scope<K, V>::is_empty(&self) -> bool
 pub fn vyre_foundation::ir::Scope<K, V>::len(&self) -> usize
 pub fn vyre_foundation::ir::Scope<K, V>::new() -> Self
+pub fn vyre_foundation::ir::ShapeDim::symbol(&self) -> core::option::Option<&str>
 pub fn vyre_foundation::ir::ShapePredicate::describe(&self) -> alloc::string::String
 pub fn vyre_foundation::ir::ShapePredicate::evaluate(&self, count: u32) -> bool
 pub fn vyre_foundation::ir::ShapePredicate::evaluate_with_interner(&self, interner: &vyre_foundation::types::ShapeInterner, count: u32) -> bool
 pub fn vyre_foundation::ir::ShapePredicate::holds(&self, count: u32) -> bool
 pub fn vyre_foundation::ir::ShapePredicate::proves_non_empty(&self) -> bool
-pub fn vyre_foundation::ir::ShapePredicate::to_interned_constraints(&self, interner: &vyre_foundation::types::ShapeInterner, count_expr: vyre_foundation::types::ShapeExprId) -> alloc::vec::Vec<vyre_foundation::types::ShapeConstraint>
+pub fn vyre_foundation::ir::ShapePredicate::to_interned_constraints(&self, interner: &vyre_foundation::types::ShapeInterner, count_expr: vyre_foundation::ir::ShapeExprId) -> alloc::vec::Vec<vyre_foundation::types::ShapeConstraint>
 pub fn vyre_foundation::ir::Tile::byte_size(&self) -> u64
+pub fn vyre_foundation::ir::Tile::checked_byte_size(&self) -> core::result::Result<u64, vyre_foundation::ir_inner::model::tile::TileError>
+pub fn vyre_foundation::ir::Tile::checked_element_count(&self) -> core::result::Result<u64, vyre_foundation::ir_inner::model::tile::TileError>
 pub fn vyre_foundation::ir::Tile::element_count(&self) -> usize
 pub fn vyre_foundation::ir::Tile::new(element: vyre_spec::data_type::DataType, extents: impl core::convert::Into<alloc::vec::Vec<u32>>, layout: vyre_foundation::ir::Layout, residency: vyre_foundation::ir::Residency) -> Self
 pub fn vyre_foundation::ir::ValueContract::dense_1d(dtype: vyre_spec::data_type::DataType, count: u64, access: vyre_spec::buffer_access::BufferAccess, lifetime: vyre_foundation::ir::ValueLifetime) -> Self
@@ -3411,16 +3457,33 @@ pub fn vyre_foundation::region_ssa::ValueRemap::resolve(&self, val: vyre_foundat
 pub fn vyre_foundation::region_ssa::lower_program_to_region_ssa(program: &vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::region_ssa::RegionModule, vyre_foundation::region_ssa::RegionSsaError>
 pub fn vyre_foundation::region_ssa::lower_region_ssa_to_program(module: &vyre_foundation::region_ssa::RegionModule) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::region_ssa::RegionSsaError>
 pub fn vyre_foundation::region_ssa::verify_dominance(func: &vyre_foundation::region_ssa::RegionFunction) -> core::result::Result<(), vyre_foundation::region_ssa::DominanceError>
+pub fn vyre_foundation::render_cli_help() -> alloc::string::String
+pub fn vyre_foundation::render_configuration_reference_markdown() -> alloc::string::String
 pub fn vyre_foundation::schedule::DependencyPreservationCertificate::new(theorem_id: impl core::convert::Into<alloc::string::String>, distance_bounds: alloc::vec::Vec<i64>, direction_preserved: bool) -> Self
+pub fn vyre_foundation::schedule::PartialSchedule::instantiate(&self, bindings: &std::collections::hash::map::HashMap<alloc::string::String, u64>) -> core::result::Result<vyre_foundation::schedule::SchedulePlan, vyre_foundation::schedule::ScheduleLegalityError>
+pub fn vyre_foundation::schedule::PartialSchedule::is_complete(&self) -> bool
+pub fn vyre_foundation::schedule::PartialSchedule::new(root: vyre_foundation::schedule::ScheduleTree, unassigned_regions: alloc::vec::Vec<u32>, symbolic_parameters: alloc::vec::Vec<vyre_foundation::schedule::SymbolicParameter>) -> Self
 pub fn vyre_foundation::schedule::ScheduleCostModel::evaluate(&self, plan: &vyre_foundation::schedule::SchedulePlan) -> vyre_foundation::schedule::ScheduleCostRecord
 pub fn vyre_foundation::schedule::ScheduleCostModel::new(subgroup_size: u32, max_shared_memory: u64, max_registers_per_thread: u32) -> Self
 pub fn vyre_foundation::schedule::ScheduleCostRecord::pareto_dominates(&self, other: &Self) -> bool
 pub fn vyre_foundation::schedule::ScheduleDiff::diff_plans(before: &vyre_foundation::schedule::SchedulePlan, after: &vyre_foundation::schedule::SchedulePlan) -> Self
 pub fn vyre_foundation::schedule::ScheduleDiff::is_empty(&self) -> bool
+pub fn vyre_foundation::schedule::ScheduleOp::debug_mapping(&self) -> alloc::string::String
+pub fn vyre_foundation::schedule::ScheduleOp::inverse_mapping(&self) -> vyre_foundation::schedule::ScheduleInverseOp
+pub fn vyre_foundation::schedule::ScheduleOp::numerical_effects(&self) -> vyre_foundation::schedule::ScheduleNumericalEffect
+pub fn vyre_foundation::schedule::ScheduleOp::preconditions(&self) -> alloc::vec::Vec<vyre_foundation::schedule::SchedulePrecondition>
+pub fn vyre_foundation::schedule::ScheduleOp::proof_constructor(&self) -> vyre_foundation::schedule::DependencyPreservationCertificate
+pub fn vyre_foundation::schedule::ScheduleOp::resource_equations(&self, current: &vyre_foundation::schedule::ScheduleResourceBounds) -> vyre_foundation::schedule::ScheduleResourceBounds
+pub fn vyre_foundation::schedule::ScheduleOp::transformed_dependencies(&self) -> alloc::vec::Vec<(u32, u32)>
+pub fn vyre_foundation::schedule::ScheduleOp::transformed_domains(&self) -> alloc::vec::Vec<u32>
 pub fn vyre_foundation::schedule::SchedulePlan::new(root: vyre_foundation::schedule::ScheduleTree, resource_bounds: vyre_foundation::schedule::ScheduleResourceBounds) -> Self
 pub fn vyre_foundation::schedule::SchedulePlan::record_transform(&mut self, record: vyre_foundation::schedule::ScheduleTransformRecord)
 pub fn vyre_foundation::schedule::SchedulePlan::validate(&self) -> core::result::Result<(), vyre_foundation::schedule::ScheduleLegalityError>
 pub fn vyre_foundation::schedule::ScheduleTransform::combine_order(&self) -> vyre_foundation::schedule::CombineOrder
+pub fn vyre_foundation::schedule::ScheduleTree::canonical_hash(&self) -> u64
+pub fn vyre_foundation::schedule::ScheduleTree::canonicalize(&self) -> Self
+pub fn vyre_foundation::schedule::ScheduleTree::depth(&self) -> usize
+pub fn vyre_foundation::schedule::ScheduleTree::is_isomorphic(&self, other: &Self) -> bool
 pub fn vyre_foundation::schedule::ScheduleTree::leaf(op: vyre_foundation::schedule::ScheduleOp) -> Self
 pub fn vyre_foundation::schedule::ScheduleTree::node(op: vyre_foundation::schedule::ScheduleOp, child: vyre_foundation::schedule::ScheduleTree, certificate: core::option::Option<vyre_foundation::schedule::DependencyPreservationCertificate>) -> Self
 pub fn vyre_foundation::schedule::ScheduleTree::node_count(&self) -> usize
@@ -3432,6 +3495,22 @@ pub fn vyre_foundation::schedule::SelectedSchedule::canonical_wire(&self) -> cor
 pub fn vyre_foundation::schedule::SelectedSchedule::identity(&self) -> core::result::Result<[u8; 32], vyre_foundation::schedule::ScheduleLegalityError>
 pub fn vyre_foundation::schedule::SelectedSchedule::phase_for_region(&self, region: u32) -> core::option::Option<&vyre_foundation::schedule::SchedulePhase>
 pub fn vyre_foundation::schedule::SelectedSchedule::validate(&self) -> core::result::Result<(), vyre_foundation::schedule::ScheduleLegalityError>
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::DeviceScope>::map_to_workgroup(self, axis: u32, dimension: u32) -> vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::WorkgroupScope>
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::DeviceScope>::new(region: u32) -> Self
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::DeviceScope>::region_partition(self, partitions: core::num::nonzero::NonZeroU32) -> Self
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::DeviceScope>::synchronize_device(self) -> Self
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::InnermostLoopScope>::build(self) -> vyre_foundation::schedule::ScheduleTree
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::InnermostLoopScope>::instruction_select(self, intrinsic: impl core::convert::Into<alloc::string::String>, mma_shape: core::option::Option<[u32; 3]>) -> Self
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::InnermostLoopScope>::unroll(self, axis: u32, factor: core::num::nonzero::NonZeroU32) -> Self
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::InnermostLoopScope>::vectorize(self, axis: u32, width: core::num::nonzero::NonZeroU32) -> Self
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::SubgroupScope>::map_to_thread(self, axis: u32, dimension: u32) -> vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::ThreadScope>
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::SubgroupScope>::specialize_roles(self, roles: alloc::vec::Vec<vyre_foundation::schedule::PipelineRoleGroup>) -> Self
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::ThreadScope>::enter_innermost_loop(self) -> vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::InnermostLoopScope>
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::ThreadScope>::register_tile(self, m: u32, n: u32, k: u32) -> Self
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::WorkgroupScope>::map_to_subgroup(self, axis: u32, dimension: u32) -> vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::SubgroupScope>
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::WorkgroupScope>::stage_shared_memory(self, buffer: impl core::convert::Into<alloc::string::String>, staging_bytes: u64) -> Self
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::WorkgroupScope>::synchronize_workgroup(self) -> Self
+pub fn vyre_foundation::schedule::typed::TypedScheduleStage<vyre_foundation::schedule::typed::WorkgroupScope>::tile(self, axis: u32, tile_size: core::num::nonzero::NonZeroU64, inner_axis: u32) -> Self
 pub fn vyre_foundation::security::AuthorityLabel::for_tenant(tenant_id: vyre_foundation::security::TenantId, principal: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::security::AuthorityLabel::has_permission(&self, permission: &vyre_foundation::security::Permission) -> bool
 pub fn vyre_foundation::security::AuthorityLabel::system() -> Self
@@ -3601,24 +3680,24 @@ pub fn vyre_foundation::types::RecordType::is_empty(&self) -> bool
 pub fn vyre_foundation::types::RecordType::len(&self) -> usize
 pub fn vyre_foundation::types::RecordType::new(fields: alloc::vec::Vec<vyre_foundation::types::RecordField>) -> Self
 pub fn vyre_foundation::types::SemanticType::dense_tensor(element: vyre_foundation::types::ScalarType, shape: vyre_foundation::types::ShapeId) -> Self
-pub fn vyre_foundation::types::ShapeInterner::add(&self, lhs: vyre_foundation::types::ShapeExprId, rhs: vyre_foundation::types::ShapeExprId) -> vyre_foundation::types::ShapeExprId
-pub fn vyre_foundation::types::ShapeInterner::align_to(&self, expr: vyre_foundation::types::ShapeExprId, alignment: u64) -> vyre_foundation::types::ShapeExprId
-pub fn vyre_foundation::types::ShapeInterner::constant(&self, value: i128) -> vyre_foundation::types::ShapeExprId
-pub fn vyre_foundation::types::ShapeInterner::div_ceil(&self, lhs: vyre_foundation::types::ShapeExprId, rhs: vyre_foundation::types::ShapeExprId) -> vyre_foundation::types::ShapeExprId
-pub fn vyre_foundation::types::ShapeInterner::div_floor(&self, lhs: vyre_foundation::types::ShapeExprId, rhs: vyre_foundation::types::ShapeExprId) -> vyre_foundation::types::ShapeExprId
-pub fn vyre_foundation::types::ShapeInterner::get_expr(&self, id: vyre_foundation::types::ShapeExprId) -> core::option::Option<vyre_foundation::types::SymbolicDim>
-pub fn vyre_foundation::types::ShapeInterner::get_shape(&self, id: vyre_foundation::types::ShapeId) -> core::option::Option<alloc::vec::Vec<vyre_foundation::types::ShapeExprId>>
-pub fn vyre_foundation::types::ShapeInterner::intern_shape(&self, dims: &[vyre_foundation::types::ShapeExprId]) -> vyre_foundation::types::ShapeId
-pub fn vyre_foundation::types::ShapeInterner::max(&self, lhs: vyre_foundation::types::ShapeExprId, rhs: vyre_foundation::types::ShapeExprId) -> vyre_foundation::types::ShapeExprId
-pub fn vyre_foundation::types::ShapeInterner::min(&self, lhs: vyre_foundation::types::ShapeExprId, rhs: vyre_foundation::types::ShapeExprId) -> vyre_foundation::types::ShapeExprId
-pub fn vyre_foundation::types::ShapeInterner::modulo(&self, lhs: vyre_foundation::types::ShapeExprId, rhs: vyre_foundation::types::ShapeExprId) -> vyre_foundation::types::ShapeExprId
-pub fn vyre_foundation::types::ShapeInterner::mul(&self, lhs: vyre_foundation::types::ShapeExprId, rhs: vyre_foundation::types::ShapeExprId) -> vyre_foundation::types::ShapeExprId
+pub fn vyre_foundation::types::ShapeInterner::add(&self, lhs: vyre_foundation::ir::ShapeExprId, rhs: vyre_foundation::ir::ShapeExprId) -> vyre_foundation::ir::ShapeExprId
+pub fn vyre_foundation::types::ShapeInterner::align_to(&self, expr: vyre_foundation::ir::ShapeExprId, alignment: u64) -> vyre_foundation::ir::ShapeExprId
+pub fn vyre_foundation::types::ShapeInterner::constant(&self, value: i128) -> vyre_foundation::ir::ShapeExprId
+pub fn vyre_foundation::types::ShapeInterner::div_ceil(&self, lhs: vyre_foundation::ir::ShapeExprId, rhs: vyre_foundation::ir::ShapeExprId) -> vyre_foundation::ir::ShapeExprId
+pub fn vyre_foundation::types::ShapeInterner::div_floor(&self, lhs: vyre_foundation::ir::ShapeExprId, rhs: vyre_foundation::ir::ShapeExprId) -> vyre_foundation::ir::ShapeExprId
+pub fn vyre_foundation::types::ShapeInterner::get_expr(&self, id: vyre_foundation::ir::ShapeExprId) -> core::option::Option<vyre_foundation::types::SymbolicDim>
+pub fn vyre_foundation::types::ShapeInterner::get_shape(&self, id: vyre_foundation::types::ShapeId) -> core::option::Option<alloc::vec::Vec<vyre_foundation::ir::ShapeExprId>>
+pub fn vyre_foundation::types::ShapeInterner::intern_shape(&self, dims: &[vyre_foundation::ir::ShapeExprId]) -> vyre_foundation::types::ShapeId
+pub fn vyre_foundation::types::ShapeInterner::max(&self, lhs: vyre_foundation::ir::ShapeExprId, rhs: vyre_foundation::ir::ShapeExprId) -> vyre_foundation::ir::ShapeExprId
+pub fn vyre_foundation::types::ShapeInterner::min(&self, lhs: vyre_foundation::ir::ShapeExprId, rhs: vyre_foundation::ir::ShapeExprId) -> vyre_foundation::ir::ShapeExprId
+pub fn vyre_foundation::types::ShapeInterner::modulo(&self, lhs: vyre_foundation::ir::ShapeExprId, rhs: vyre_foundation::ir::ShapeExprId) -> vyre_foundation::ir::ShapeExprId
+pub fn vyre_foundation::types::ShapeInterner::mul(&self, lhs: vyre_foundation::ir::ShapeExprId, rhs: vyre_foundation::ir::ShapeExprId) -> vyre_foundation::ir::ShapeExprId
 pub fn vyre_foundation::types::ShapeInterner::new() -> Self
-pub fn vyre_foundation::types::ShapeInterner::param(&self, index: u32, name: impl core::convert::Into<alloc::string::String>) -> vyre_foundation::types::ShapeExprId
-pub fn vyre_foundation::types::ShapeInterner::sub(&self, lhs: vyre_foundation::types::ShapeExprId, rhs: vyre_foundation::types::ShapeExprId) -> vyre_foundation::types::ShapeExprId
-pub fn vyre_foundation::types::ShapeInterner::symbol(&self, name: impl core::convert::Into<alloc::string::String>) -> vyre_foundation::types::ShapeExprId
+pub fn vyre_foundation::types::ShapeInterner::param(&self, index: u32, name: impl core::convert::Into<alloc::string::String>) -> vyre_foundation::ir::ShapeExprId
+pub fn vyre_foundation::types::ShapeInterner::sub(&self, lhs: vyre_foundation::ir::ShapeExprId, rhs: vyre_foundation::ir::ShapeExprId) -> vyre_foundation::ir::ShapeExprId
+pub fn vyre_foundation::types::ShapeInterner::symbol(&self, name: impl core::convert::Into<alloc::string::String>) -> vyre_foundation::ir::ShapeExprId
 pub fn vyre_foundation::types::ShapeProofCertificate::replay(&self, interner: &vyre_foundation::types::ShapeInterner) -> bool
-pub fn vyre_foundation::types::ShapeSolver::evaluate_expr(interner: &vyre_foundation::types::ShapeInterner, expr_id: vyre_foundation::types::ShapeExprId, env: &rustc_hash::FxHashMap<alloc::string::String, i128>) -> core::option::Option<i128>
+pub fn vyre_foundation::types::ShapeSolver::evaluate_expr(interner: &vyre_foundation::types::ShapeInterner, expr_id: vyre_foundation::ir::ShapeExprId, env: &rustc_hash::FxHashMap<alloc::string::String, i128>) -> core::option::Option<i128>
 pub fn vyre_foundation::types::ShapeSolver::prove_constraint(interner: &vyre_foundation::types::ShapeInterner, constraint: &vyre_foundation::types::ShapeConstraint, env: core::option::Option<&rustc_hash::FxHashMap<alloc::string::String, i128>>) -> (bool, vyre_foundation::types::ShapeProofCertificate)
 pub fn vyre_foundation::types::ShapeSolver::solve_equality(interner: &vyre_foundation::types::ShapeInterner, lhs: vyre_foundation::types::ShapeId, rhs: vyre_foundation::types::ShapeId) -> (bool, vyre_foundation::types::ShapeProofCertificate)
 pub fn vyre_foundation::types::ShapeSolver::solve_layout_compatible(interner: &vyre_foundation::types::ShapeInterner, src: vyre_foundation::types::ShapeId, dst: vyre_foundation::types::ShapeId) -> (bool, vyre_foundation::types::ShapeProofCertificate)
@@ -3834,6 +3913,7 @@ pub mod vyre_foundation::algebraic_reordering
 pub mod vyre_foundation::allocation
 pub mod vyre_foundation::causal
 pub mod vyre_foundation::composition
+pub mod vyre_foundation::config_schema
 pub mod vyre_foundation::cpu_op
 pub mod vyre_foundation::diagnostics
 pub mod vyre_foundation::dialect
@@ -3969,6 +4049,7 @@ pub mod vyre_foundation::platform
 pub mod vyre_foundation::program_caps
 pub mod vyre_foundation::region_ssa
 pub mod vyre_foundation::schedule
+pub mod vyre_foundation::schedule::typed
 pub mod vyre_foundation::security
 pub mod vyre_foundation::serial
 pub mod vyre_foundation::serial::output_set
@@ -4018,6 +4099,8 @@ pub struct vyre_foundation::causal::CausalTracer
 pub struct vyre_foundation::causal::CounterfactualDecision
 pub struct vyre_foundation::causal::SourceSpanRef
 pub struct vyre_foundation::causal::TraceId(pub u128)
+pub struct vyre_foundation::config_schema::ConfigFieldDef
+pub struct vyre_foundation::config_schema::ResolvedConfiguration
 pub struct vyre_foundation::diagnostics::Diagnostic
 pub struct vyre_foundation::diagnostics::DiagnosticCause
 pub struct vyre_foundation::diagnostics::DiagnosticCode(pub alloc::borrow::Cow<'static, str>)
@@ -4117,6 +4200,7 @@ pub struct vyre_foundation::ir::RegionId(pub u32)
 pub struct vyre_foundation::ir::ResourceUsageFlags
 pub struct vyre_foundation::ir::SamplerDescriptor
 pub struct vyre_foundation::ir::Scope<K, V>
+pub struct vyre_foundation::ir::ShapeExprId(pub u32)
 pub struct vyre_foundation::ir::StateEpoch(pub u64)
 pub struct vyre_foundation::ir::SubresourceRange
 pub struct vyre_foundation::ir::Tile
@@ -4362,6 +4446,9 @@ pub struct vyre_foundation::region_ssa::ValueId(pub u32)
 pub struct vyre_foundation::region_ssa::ValueRemap
 pub struct vyre_foundation::schedule::AxisMapping
 pub struct vyre_foundation::schedule::DependencyPreservationCertificate
+pub struct vyre_foundation::schedule::DeviceScope
+pub struct vyre_foundation::schedule::InnermostLoopScope
+pub struct vyre_foundation::schedule::PartialSchedule
 pub struct vyre_foundation::schedule::PipelineRoleGroup
 pub struct vyre_foundation::schedule::ScheduleAxis
 pub struct vyre_foundation::schedule::ScheduleCostModel
@@ -4375,6 +4462,17 @@ pub struct vyre_foundation::schedule::ScheduleResourceBounds
 pub struct vyre_foundation::schedule::ScheduleTransformProvenance
 pub struct vyre_foundation::schedule::ScheduleTransformRecord
 pub struct vyre_foundation::schedule::SelectedSchedule
+pub struct vyre_foundation::schedule::SubgroupScope
+pub struct vyre_foundation::schedule::SymbolicParameter
+pub struct vyre_foundation::schedule::ThreadScope
+pub struct vyre_foundation::schedule::TypedScheduleStage<S: vyre_foundation::schedule::typed::ScheduleScope>
+pub struct vyre_foundation::schedule::WorkgroupScope
+pub struct vyre_foundation::schedule::typed::DeviceScope
+pub struct vyre_foundation::schedule::typed::InnermostLoopScope
+pub struct vyre_foundation::schedule::typed::SubgroupScope
+pub struct vyre_foundation::schedule::typed::ThreadScope
+pub struct vyre_foundation::schedule::typed::TypedScheduleStage<S: vyre_foundation::schedule::typed::ScheduleScope>
+pub struct vyre_foundation::schedule::typed::WorkgroupScope
 pub struct vyre_foundation::security::AuthorityLabel
 pub struct vyre_foundation::security::CapabilityAuthenticator
 pub struct vyre_foundation::security::CompilationBudgetEnforcer
@@ -4476,6 +4574,8 @@ pub trait vyre_foundation::optimizer::eqsat::Family<L: vyre_foundation::optimize
 pub trait vyre_foundation::optimizer::eqsat::Rule<L: vyre_foundation::optimizer::eqsat::ENodeLang>
 pub trait vyre_foundation::optimizer::eqsat_toml::OpIdNode
 pub trait vyre_foundation::optimizer::level_contract::LevelStage: core::marker::Send + core::marker::Sync
+pub trait vyre_foundation::schedule::ScheduleScope: core::clone::Clone + core::marker::Copy + core::fmt::Debug + core::cmp::PartialEq + core::cmp::Eq + core::hash::Hash
+pub trait vyre_foundation::schedule::typed::ScheduleScope: core::clone::Clone + core::marker::Copy + core::fmt::Debug + core::cmp::PartialEq + core::cmp::Eq + core::hash::Hash
 pub trait vyre_foundation::serial::wire_round_trip::WireRoundTrip: core::marker::Sized
 pub trait vyre_foundation::transform::rewrite_walk::NodeRewrite
 pub trait vyre_foundation::validate::BackendValidationCapabilities
@@ -4605,15 +4705,15 @@ pub vyre_foundation::CodecError::UnexpectedEof::remaining: usize
 pub vyre_foundation::CodecError::UnknownSchema(vyre_spec::schema_registry::SchemaId)
 pub vyre_foundation::ConfigFieldDef::bounds_desc: &'static str
 pub vyre_foundation::ConfigFieldDef::default_raw: &'static str
-pub vyre_foundation::ConfigFieldDef::field_type: vyre_foundation::ConfigType
+pub vyre_foundation::ConfigFieldDef::field_type: vyre_foundation::config_schema::ConfigType
 pub vyre_foundation::ConfigFieldDef::help_text: &'static str
-pub vyre_foundation::ConfigFieldDef::identity_impact: vyre_foundation::IdentityImpact
+pub vyre_foundation::ConfigFieldDef::identity_impact: vyre_foundation::config_schema::IdentityImpact
 pub vyre_foundation::ConfigFieldDef::key: &'static str
-pub vyre_foundation::ConfigFieldDef::mutability: vyre_foundation::ConfigMutability
+pub vyre_foundation::ConfigFieldDef::mutability: vyre_foundation::config_schema::ConfigMutability
 pub vyre_foundation::ConfigFieldDef::owner: &'static str
-pub vyre_foundation::ConfigFieldDef::partition: vyre_foundation::ConfigPartition
+pub vyre_foundation::ConfigFieldDef::partition: vyre_foundation::config_schema::ConfigPartition
 pub vyre_foundation::ConfigFieldDef::requires_restart: bool
-pub vyre_foundation::ConfigFieldDef::secrecy: vyre_foundation::ConfigSecrecy
+pub vyre_foundation::ConfigFieldDef::secrecy: vyre_foundation::config_schema::ConfigSecrecy
 pub vyre_foundation::ConfigLayer::CliOverride = 1
 pub vyre_foundation::ConfigLayer::DefaultFallback = 4
 pub vyre_foundation::ConfigLayer::EnvironmentInjection = 3
@@ -4812,6 +4912,44 @@ pub vyre_foundation::causal::SourceSpanRef::col_start: u32
 pub vyre_foundation::causal::SourceSpanRef::file_or_module: alloc::string::String
 pub vyre_foundation::causal::SourceSpanRef::line_end: u32
 pub vyre_foundation::causal::SourceSpanRef::line_start: u32
+pub vyre_foundation::config_schema::ConfigFieldDef::bounds_desc: &'static str
+pub vyre_foundation::config_schema::ConfigFieldDef::default_raw: &'static str
+pub vyre_foundation::config_schema::ConfigFieldDef::field_type: vyre_foundation::config_schema::ConfigType
+pub vyre_foundation::config_schema::ConfigFieldDef::help_text: &'static str
+pub vyre_foundation::config_schema::ConfigFieldDef::identity_impact: vyre_foundation::config_schema::IdentityImpact
+pub vyre_foundation::config_schema::ConfigFieldDef::key: &'static str
+pub vyre_foundation::config_schema::ConfigFieldDef::mutability: vyre_foundation::config_schema::ConfigMutability
+pub vyre_foundation::config_schema::ConfigFieldDef::owner: &'static str
+pub vyre_foundation::config_schema::ConfigFieldDef::partition: vyre_foundation::config_schema::ConfigPartition
+pub vyre_foundation::config_schema::ConfigFieldDef::requires_restart: bool
+pub vyre_foundation::config_schema::ConfigFieldDef::secrecy: vyre_foundation::config_schema::ConfigSecrecy
+pub vyre_foundation::config_schema::ConfigLayer::CliOverride = 1
+pub vyre_foundation::config_schema::ConfigLayer::DefaultFallback = 4
+pub vyre_foundation::config_schema::ConfigLayer::EnvironmentInjection = 3
+pub vyre_foundation::config_schema::ConfigLayer::ExplicitLibrary = 0
+pub vyre_foundation::config_schema::ConfigLayer::TomlFile = 2
+pub vyre_foundation::config_schema::ConfigMutability::ImmutableAtRuntime
+pub vyre_foundation::config_schema::ConfigMutability::MutableBetweenRequests
+pub vyre_foundation::config_schema::ConfigPartition::Credentials
+pub vyre_foundation::config_schema::ConfigPartition::DiagnosticControls
+pub vyre_foundation::config_schema::ConfigPartition::OperationalPolicy
+pub vyre_foundation::config_schema::ConfigPartition::SemanticCompileInput
+pub vyre_foundation::config_schema::ConfigSecrecy::Public
+pub vyre_foundation::config_schema::ConfigSecrecy::Secret
+pub vyre_foundation::config_schema::ConfigType::Bool
+pub vyre_foundation::config_schema::ConfigType::F64
+pub vyre_foundation::config_schema::ConfigType::Path
+pub vyre_foundation::config_schema::ConfigType::String
+pub vyre_foundation::config_schema::ConfigType::U32
+pub vyre_foundation::config_schema::ConfigType::U64
+pub vyre_foundation::config_schema::ConfigValue::Bool(bool)
+pub vyre_foundation::config_schema::ConfigValue::F64(f64)
+pub vyre_foundation::config_schema::ConfigValue::String(alloc::string::String)
+pub vyre_foundation::config_schema::ConfigValue::U32(u32)
+pub vyre_foundation::config_schema::ConfigValue::U64(u64)
+pub vyre_foundation::config_schema::IdentityImpact::AffectsCacheIdentity
+pub vyre_foundation::config_schema::IdentityImpact::AffectsCompileIdentity
+pub vyre_foundation::config_schema::IdentityImpact::OperationalOnly
 pub vyre_foundation::diagnostics::CompilerLevel::DriverRuntime
 pub vyre_foundation::diagnostics::CompilerLevel::Emission
 pub vyre_foundation::diagnostics::CompilerLevel::FoundationIr
@@ -5017,7 +5155,7 @@ pub vyre_foundation::execution_plan::BufferPlan::count: u32
 pub vyre_foundation::execution_plan::BufferPlan::element: vyre_spec::data_type::DataType
 pub vyre_foundation::execution_plan::BufferPlan::kind: vyre_foundation::ir::MemoryKind
 pub vyre_foundation::execution_plan::BufferPlan::name: alloc::string::String
-pub vyre_foundation::execution_plan::BufferPlan::output_range: core::option::Option<core::ops::range::Range<usize>>
+pub vyre_foundation::execution_plan::BufferPlan::output_range: core::option::Option<core::ops::range::Range<u64>>
 pub vyre_foundation::execution_plan::BufferPlan::static_size_bytes: core::option::Option<u64>
 pub vyre_foundation::execution_plan::ConformanceStrength::Exhaustive
 pub vyre_foundation::execution_plan::ConformanceStrength::Standard
@@ -5073,10 +5211,10 @@ pub vyre_foundation::execution_plan::PlanError::DeclaredBudgetExceeded::backend:
 pub vyre_foundation::execution_plan::PlanError::DeclaredBudgetExceeded::budget_bytes: u64
 pub vyre_foundation::execution_plan::PlanError::DeclaredBudgetExceeded::declared_bytes: u64
 pub vyre_foundation::execution_plan::PlanError::InvalidOutputRange
-pub vyre_foundation::execution_plan::PlanError::InvalidOutputRange::end: usize
+pub vyre_foundation::execution_plan::PlanError::InvalidOutputRange::end: u64
 pub vyre_foundation::execution_plan::PlanError::InvalidOutputRange::full_size: u64
 pub vyre_foundation::execution_plan::PlanError::InvalidOutputRange::name: alloc::string::String
-pub vyre_foundation::execution_plan::PlanError::InvalidOutputRange::start: usize
+pub vyre_foundation::execution_plan::PlanError::InvalidOutputRange::start: u64
 pub vyre_foundation::execution_plan::PlanError::NonCanonicalProgram
 pub vyre_foundation::execution_plan::PlanError::NonCanonicalProgram::source: vyre_foundation::IrError
 pub vyre_foundation::execution_plan::PlanError::RuntimeSizedBuffer
@@ -5350,7 +5488,7 @@ pub vyre_foundation::ir::BufferDecl::is_output: bool
 pub vyre_foundation::ir::BufferDecl::kind: vyre_foundation::ir::MemoryKind
 pub vyre_foundation::ir::BufferDecl::linear_type: vyre_foundation::ir::LinearType
 pub vyre_foundation::ir::BufferDecl::name: alloc::sync::Arc<str>
-pub vyre_foundation::ir::BufferDecl::output_byte_range: core::option::Option<core::ops::range::Range<usize>>
+pub vyre_foundation::ir::BufferDecl::output_byte_range: core::option::Option<core::ops::range::Range<u64>>
 pub vyre_foundation::ir::BufferDecl::pipeline_live_out: bool
 pub vyre_foundation::ir::BufferDecl::shape_predicate: core::option::Option<vyre_foundation::ir::ShapePredicate>
 pub vyre_foundation::ir::CacheLocality::Random
@@ -5944,8 +6082,10 @@ pub vyre_foundation::ir::SamplerDescriptor::min_filter: vyre_foundation::ir::Sam
 pub vyre_foundation::ir::SamplerDescriptor::mipmap_filter: vyre_foundation::ir::SamplerFilter
 pub vyre_foundation::ir::SamplerFilter::Linear
 pub vyre_foundation::ir::SamplerFilter::Nearest
+pub vyre_foundation::ir::ShapeDim::Expr(vyre_foundation::ir::ShapeExprId)
 pub vyre_foundation::ir::ShapeDim::Known(u64)
 pub vyre_foundation::ir::ShapeDim::Symbol(alloc::string::String)
+pub vyre_foundation::ir::ShapeDim::Unresolved
 pub vyre_foundation::ir::ShapePredicate::AffineRange
 pub vyre_foundation::ir::ShapePredicate::AffineRange::max: i64
 pub vyre_foundation::ir::ShapePredicate::AffineRange::min: i64
@@ -7727,6 +7867,9 @@ pub vyre_foundation::schedule::MemoryPlacement::Device
 pub vyre_foundation::schedule::MemoryPlacement::Invocation
 pub vyre_foundation::schedule::MemoryPlacement::Retained
 pub vyre_foundation::schedule::MemoryPlacement::Workgroup
+pub vyre_foundation::schedule::PartialSchedule::root: vyre_foundation::schedule::ScheduleTree
+pub vyre_foundation::schedule::PartialSchedule::symbolic_parameters: alloc::vec::Vec<vyre_foundation::schedule::SymbolicParameter>
+pub vyre_foundation::schedule::PartialSchedule::unassigned_regions: alloc::vec::Vec<u32>
 pub vyre_foundation::schedule::PipelineRole::Consumer
 pub vyre_foundation::schedule::PipelineRole::Producer
 pub vyre_foundation::schedule::PipelineRoleGroup::role: vyre_foundation::schedule::PipelineRole
@@ -7764,6 +7907,11 @@ pub vyre_foundation::schedule::ScheduleDiffItem::SubtreeRemoved
 pub vyre_foundation::schedule::ScheduleDiffItem::SubtreeRemoved::nodes: usize
 pub vyre_foundation::schedule::ScheduleDiffItem::SubtreeRemoved::path: alloc::vec::Vec<usize>
 pub vyre_foundation::schedule::ScheduleInverse::previous_identity: [u8; 32]
+pub vyre_foundation::schedule::ScheduleInverseOp::Irreversible
+pub vyre_foundation::schedule::ScheduleInverseOp::Irreversible::reason: alloc::string::String
+pub vyre_foundation::schedule::ScheduleInverseOp::RestoreState
+pub vyre_foundation::schedule::ScheduleInverseOp::RestoreState::state_digest: [u8; 32]
+pub vyre_foundation::schedule::ScheduleInverseOp::Reversible(alloc::boxed::Box<vyre_foundation::schedule::ScheduleOp>)
 pub vyre_foundation::schedule::ScheduleLegalityError::AxisIndexOverflow(vyre_foundation::schedule::SchedulePhaseId)
 pub vyre_foundation::schedule::ScheduleLegalityError::DependencyCycle
 pub vyre_foundation::schedule::ScheduleLegalityError::DependencyCycle::from: vyre_foundation::schedule::SchedulePhaseId
@@ -7794,29 +7942,77 @@ pub vyre_foundation::schedule::ScheduleLegalityError::UnsupportedVersion
 pub vyre_foundation::schedule::ScheduleLegalityError::UnsupportedVersion::expected: u16
 pub vyre_foundation::schedule::ScheduleLegalityError::UnsupportedVersion::found: u16
 pub vyre_foundation::schedule::ScheduleLegalityError::Zero(&'static str)
+pub vyre_foundation::schedule::ScheduleNumericalEffect::Approximated
+pub vyre_foundation::schedule::ScheduleNumericalEffect::Approximated::tolerance_ulp: u32
+pub vyre_foundation::schedule::ScheduleNumericalEffect::Exact
+pub vyre_foundation::schedule::ScheduleNumericalEffect::PrecisionConverted
+pub vyre_foundation::schedule::ScheduleNumericalEffect::ReorderedAccumulation
+pub vyre_foundation::schedule::ScheduleOp::AlgorithmChoice
+pub vyre_foundation::schedule::ScheduleOp::AlgorithmChoice::algorithm_id: alloc::string::String
+pub vyre_foundation::schedule::ScheduleOp::AlgorithmChoice::parameter_pack: alloc::vec::Vec<u64>
+pub vyre_foundation::schedule::ScheduleOp::AlgorithmChoice::region: u32
+pub vyre_foundation::schedule::ScheduleOp::AllocationReuse
+pub vyre_foundation::schedule::ScheduleOp::AllocationReuse::byte_offset: u64
+pub vyre_foundation::schedule::ScheduleOp::AllocationReuse::source_buffer: alloc::string::String
+pub vyre_foundation::schedule::ScheduleOp::AllocationReuse::target_buffer: alloc::string::String
+pub vyre_foundation::schedule::ScheduleOp::AsyncCopyComputeOverlap
+pub vyre_foundation::schedule::ScheduleOp::AsyncCopyComputeOverlap::compute_stage: u32
+pub vyre_foundation::schedule::ScheduleOp::AsyncCopyComputeOverlap::copy_stage: u32
+pub vyre_foundation::schedule::ScheduleOp::AsyncCopyComputeOverlap::overlap_factor: u32
 pub vyre_foundation::schedule::ScheduleOp::AsyncPipeline
 pub vyre_foundation::schedule::ScheduleOp::AsyncPipeline::ring_size: u32
 pub vyre_foundation::schedule::ScheduleOp::AsyncPipeline::role_groups: alloc::vec::Vec<vyre_foundation::schedule::PipelineRoleGroup>
 pub vyre_foundation::schedule::ScheduleOp::AsyncPipeline::stages: u32
+pub vyre_foundation::schedule::ScheduleOp::Communication
+pub vyre_foundation::schedule::ScheduleOp::Communication::comm_group: u32
+pub vyre_foundation::schedule::ScheduleOp::Communication::exchange_kind: alloc::string::String
+pub vyre_foundation::schedule::ScheduleOp::Communication::payload_bytes: u64
 pub vyre_foundation::schedule::ScheduleOp::Domain
 pub vyre_foundation::schedule::ScheduleOp::Domain::extents: alloc::vec::Vec<u64>
 pub vyre_foundation::schedule::ScheduleOp::Domain::region: u32
 pub vyre_foundation::schedule::ScheduleOp::DoubleBuffer
 pub vyre_foundation::schedule::ScheduleOp::DoubleBuffer::buffer: alloc::string::String
 pub vyre_foundation::schedule::ScheduleOp::DoubleBuffer::slots: u32
+pub vyre_foundation::schedule::ScheduleOp::EntryPointDag
+pub vyre_foundation::schedule::ScheduleOp::EntryPointDag::dependencies: alloc::vec::Vec<(u32, u32)>
+pub vyre_foundation::schedule::ScheduleOp::EntryPointDag::entry_points: alloc::vec::Vec<u32>
+pub vyre_foundation::schedule::ScheduleOp::Fission
+pub vyre_foundation::schedule::ScheduleOp::Fission::region: u32
+pub vyre_foundation::schedule::ScheduleOp::Fission::split_point: u32
+pub vyre_foundation::schedule::ScheduleOp::Fuse
+pub vyre_foundation::schedule::ScheduleOp::Fuse::regions: alloc::vec::Vec<u32>
 pub vyre_foundation::schedule::ScheduleOp::InstructionSelect
 pub vyre_foundation::schedule::ScheduleOp::InstructionSelect::mma_shape: core::option::Option<[u32; 3]>
 pub vyre_foundation::schedule::ScheduleOp::InstructionSelect::target_intrinsic: alloc::string::String
+pub vyre_foundation::schedule::ScheduleOp::Interchange
+pub vyre_foundation::schedule::ScheduleOp::Interchange::axis1: u32
+pub vyre_foundation::schedule::ScheduleOp::Interchange::axis2: u32
 pub vyre_foundation::schedule::ScheduleOp::MapToHierarchy
 pub vyre_foundation::schedule::ScheduleOp::MapToHierarchy::axis: u32
 pub vyre_foundation::schedule::ScheduleOp::MapToHierarchy::dimension: u32
 pub vyre_foundation::schedule::ScheduleOp::MapToHierarchy::level: vyre_foundation::schedule::MappingLevel
+pub vyre_foundation::schedule::ScheduleOp::MemoryPlacement
+pub vyre_foundation::schedule::ScheduleOp::MemoryPlacement::buffer: alloc::string::String
+pub vyre_foundation::schedule::ScheduleOp::MemoryPlacement::bytes: u64
+pub vyre_foundation::schedule::ScheduleOp::MemoryPlacement::packing: core::option::Option<alloc::string::String>
+pub vyre_foundation::schedule::ScheduleOp::MemoryPlacement::placement: vyre_foundation::schedule::MemoryPlacement
+pub vyre_foundation::schedule::ScheduleOp::Persistence
+pub vyre_foundation::schedule::ScheduleOp::Persistence::capacity: u32
+pub vyre_foundation::schedule::ScheduleOp::Persistence::phase: u32
+pub vyre_foundation::schedule::ScheduleOp::Recompute
+pub vyre_foundation::schedule::ScheduleOp::Recompute::values: alloc::vec::Vec<u32>
+pub vyre_foundation::schedule::ScheduleOp::RegionPartition
+pub vyre_foundation::schedule::ScheduleOp::RegionPartition::level: vyre_foundation::schedule::MappingLevel
+pub vyre_foundation::schedule::ScheduleOp::RegionPartition::partitions: u32
+pub vyre_foundation::schedule::ScheduleOp::RegionPartition::region: u32
 pub vyre_foundation::schedule::ScheduleOp::RegisterTile
 pub vyre_foundation::schedule::ScheduleOp::RegisterTile::register_dim_k: u32
 pub vyre_foundation::schedule::ScheduleOp::RegisterTile::register_dim_m: u32
 pub vyre_foundation::schedule::ScheduleOp::RegisterTile::register_dim_n: u32
 pub vyre_foundation::schedule::ScheduleOp::Reorder
 pub vyre_foundation::schedule::ScheduleOp::Reorder::permutation: alloc::vec::Vec<usize>
+pub vyre_foundation::schedule::ScheduleOp::RoleSpecialization
+pub vyre_foundation::schedule::ScheduleOp::RoleSpecialization::roles: alloc::vec::Vec<vyre_foundation::schedule::PipelineRoleGroup>
 pub vyre_foundation::schedule::ScheduleOp::SharedMemoryStage
 pub vyre_foundation::schedule::ScheduleOp::SharedMemoryStage::buffer: alloc::string::String
 pub vyre_foundation::schedule::ScheduleOp::SharedMemoryStage::placement: vyre_foundation::schedule::MemoryPlacement
@@ -7825,6 +8021,17 @@ pub vyre_foundation::schedule::ScheduleOp::Skew
 pub vyre_foundation::schedule::ScheduleOp::Skew::factor: i64
 pub vyre_foundation::schedule::ScheduleOp::Skew::inner_axis: u32
 pub vyre_foundation::schedule::ScheduleOp::Skew::outer_axis: u32
+pub vyre_foundation::schedule::ScheduleOp::SoftwarePipeline
+pub vyre_foundation::schedule::ScheduleOp::SoftwarePipeline::initiation_interval: u32
+pub vyre_foundation::schedule::ScheduleOp::SoftwarePipeline::stages: u32
+pub vyre_foundation::schedule::ScheduleOp::Spill
+pub vyre_foundation::schedule::ScheduleOp::Spill::buffer: alloc::string::String
+pub vyre_foundation::schedule::ScheduleOp::Spill::spill_bytes: u64
+pub vyre_foundation::schedule::ScheduleOp::Spill::spill_location: vyre_foundation::schedule::MemoryPlacement
+pub vyre_foundation::schedule::ScheduleOp::StripMine
+pub vyre_foundation::schedule::ScheduleOp::StripMine::axis: u32
+pub vyre_foundation::schedule::ScheduleOp::StripMine::factor: u64
+pub vyre_foundation::schedule::ScheduleOp::StripMine::inner_axis: u32
 pub vyre_foundation::schedule::ScheduleOp::SubgroupSpecialization
 pub vyre_foundation::schedule::ScheduleOp::SubgroupSpecialization::roles: alloc::vec::Vec<vyre_foundation::schedule::PipelineRoleGroup>
 pub vyre_foundation::schedule::ScheduleOp::Synchronize
@@ -7949,9 +8156,21 @@ pub vyre_foundation::schedule::SelectedSchedule::source_phases: alloc::vec::Vec<
 pub vyre_foundation::schedule::SelectedSchedule::source_resources: vyre_foundation::schedule::ScheduleResourceBounds
 pub vyre_foundation::schedule::SelectedSchedule::transforms: alloc::vec::Vec<vyre_foundation::schedule::ScheduleTransformRecord>
 pub vyre_foundation::schedule::SelectedSchedule::version: u16
+pub vyre_foundation::schedule::SymbolicParameter::default_value: core::option::Option<u64>
+pub vyre_foundation::schedule::SymbolicParameter::max_value: u64
+pub vyre_foundation::schedule::SymbolicParameter::min_value: u64
+pub vyre_foundation::schedule::SymbolicParameter::name: alloc::string::String
 pub vyre_foundation::schedule::SynchronizationScope::Device
 pub vyre_foundation::schedule::SynchronizationScope::Subgroup
 pub vyre_foundation::schedule::SynchronizationScope::Workgroup
+pub vyre_foundation::schedule::TypedScheduleStage::certificate: core::option::Option<vyre_foundation::schedule::DependencyPreservationCertificate>
+pub vyre_foundation::schedule::TypedScheduleStage::ops: alloc::vec::Vec<vyre_foundation::schedule::ScheduleOp>
+pub vyre_foundation::schedule::TypedScheduleStage::region: u32
+pub vyre_foundation::schedule::TypedScheduleStage::scope: S
+pub vyre_foundation::schedule::typed::TypedScheduleStage::certificate: core::option::Option<vyre_foundation::schedule::DependencyPreservationCertificate>
+pub vyre_foundation::schedule::typed::TypedScheduleStage::ops: alloc::vec::Vec<vyre_foundation::schedule::ScheduleOp>
+pub vyre_foundation::schedule::typed::TypedScheduleStage::region: u32
+pub vyre_foundation::schedule::typed::TypedScheduleStage::scope: S
 pub vyre_foundation::security::AuthorityLabel::permissions: alloc::collections::btree::set::BTreeSet<vyre_foundation::security::Permission>
 pub vyre_foundation::security::AuthorityLabel::principal: alloc::string::String
 pub vyre_foundation::security::AuthorityLabel::roles: alloc::collections::btree::set::BTreeSet<vyre_foundation::security::SecurityRole>
@@ -8304,15 +8523,15 @@ pub vyre_foundation::types::SemanticType::Variant(vyre_foundation::types::Varian
 pub vyre_foundation::types::SemanticType::Vector(vyre_foundation::types::VectorType)
 pub vyre_foundation::types::ShapeConstraint::DivisibleBy
 pub vyre_foundation::types::ShapeConstraint::DivisibleBy::divisor: u64
-pub vyre_foundation::types::ShapeConstraint::DivisibleBy::expr: vyre_foundation::types::ShapeExprId
-pub vyre_foundation::types::ShapeConstraint::Equal(vyre_foundation::types::ShapeExprId, vyre_foundation::types::ShapeExprId)
-pub vyre_foundation::types::ShapeConstraint::LessEqual(vyre_foundation::types::ShapeExprId, vyre_foundation::types::ShapeExprId)
+pub vyre_foundation::types::ShapeConstraint::DivisibleBy::expr: vyre_foundation::ir::ShapeExprId
+pub vyre_foundation::types::ShapeConstraint::Equal(vyre_foundation::ir::ShapeExprId, vyre_foundation::ir::ShapeExprId)
+pub vyre_foundation::types::ShapeConstraint::LessEqual(vyre_foundation::ir::ShapeExprId, vyre_foundation::ir::ShapeExprId)
 pub vyre_foundation::types::ShapeConstraint::ModuloEqual
-pub vyre_foundation::types::ShapeConstraint::ModuloEqual::expr: vyre_foundation::types::ShapeExprId
+pub vyre_foundation::types::ShapeConstraint::ModuloEqual::expr: vyre_foundation::ir::ShapeExprId
 pub vyre_foundation::types::ShapeConstraint::ModuloEqual::modulus: u64
 pub vyre_foundation::types::ShapeConstraint::ModuloEqual::remainder: u64
 pub vyre_foundation::types::ShapeConstraint::Range
-pub vyre_foundation::types::ShapeConstraint::Range::expr: vyre_foundation::types::ShapeExprId
+pub vyre_foundation::types::ShapeConstraint::Range::expr: vyre_foundation::ir::ShapeExprId
 pub vyre_foundation::types::ShapeConstraint::Range::max: i128
 pub vyre_foundation::types::ShapeConstraint::Range::min: i128
 pub vyre_foundation::types::ShapeProofCertificate::constraints_applied: alloc::vec::Vec<vyre_foundation::types::ShapeConstraint>
@@ -8337,26 +8556,26 @@ pub vyre_foundation::types::Sparsity::Ellpack
 pub vyre_foundation::types::Sparsity::Ragged
 pub vyre_foundation::types::Sparsity::Ragged::segment_offsets_symbol: alloc::string::String
 pub vyre_foundation::types::Sparsity::Structured2to4
-pub vyre_foundation::types::SymbolicDim::Add(vyre_foundation::types::ShapeExprId, vyre_foundation::types::ShapeExprId)
+pub vyre_foundation::types::SymbolicDim::Add(vyre_foundation::ir::ShapeExprId, vyre_foundation::ir::ShapeExprId)
 pub vyre_foundation::types::SymbolicDim::AlignTo
 pub vyre_foundation::types::SymbolicDim::AlignTo::alignment: u64
-pub vyre_foundation::types::SymbolicDim::AlignTo::expr: vyre_foundation::types::ShapeExprId
+pub vyre_foundation::types::SymbolicDim::AlignTo::expr: vyre_foundation::ir::ShapeExprId
 pub vyre_foundation::types::SymbolicDim::Constant(i128)
-pub vyre_foundation::types::SymbolicDim::DivCeil(vyre_foundation::types::ShapeExprId, vyre_foundation::types::ShapeExprId)
-pub vyre_foundation::types::SymbolicDim::DivFloor(vyre_foundation::types::ShapeExprId, vyre_foundation::types::ShapeExprId)
-pub vyre_foundation::types::SymbolicDim::Max(vyre_foundation::types::ShapeExprId, vyre_foundation::types::ShapeExprId)
-pub vyre_foundation::types::SymbolicDim::Min(vyre_foundation::types::ShapeExprId, vyre_foundation::types::ShapeExprId)
-pub vyre_foundation::types::SymbolicDim::Mod(vyre_foundation::types::ShapeExprId, vyre_foundation::types::ShapeExprId)
-pub vyre_foundation::types::SymbolicDim::Mul(vyre_foundation::types::ShapeExprId, vyre_foundation::types::ShapeExprId)
+pub vyre_foundation::types::SymbolicDim::DivCeil(vyre_foundation::ir::ShapeExprId, vyre_foundation::ir::ShapeExprId)
+pub vyre_foundation::types::SymbolicDim::DivFloor(vyre_foundation::ir::ShapeExprId, vyre_foundation::ir::ShapeExprId)
+pub vyre_foundation::types::SymbolicDim::Max(vyre_foundation::ir::ShapeExprId, vyre_foundation::ir::ShapeExprId)
+pub vyre_foundation::types::SymbolicDim::Min(vyre_foundation::ir::ShapeExprId, vyre_foundation::ir::ShapeExprId)
+pub vyre_foundation::types::SymbolicDim::Mod(vyre_foundation::ir::ShapeExprId, vyre_foundation::ir::ShapeExprId)
+pub vyre_foundation::types::SymbolicDim::Mul(vyre_foundation::ir::ShapeExprId, vyre_foundation::ir::ShapeExprId)
 pub vyre_foundation::types::SymbolicDim::Param
 pub vyre_foundation::types::SymbolicDim::Param::index: u32
 pub vyre_foundation::types::SymbolicDim::Param::name: alloc::string::String
-pub vyre_foundation::types::SymbolicDim::Sub(vyre_foundation::types::ShapeExprId, vyre_foundation::types::ShapeExprId)
+pub vyre_foundation::types::SymbolicDim::Sub(vyre_foundation::ir::ShapeExprId, vyre_foundation::ir::ShapeExprId)
 pub vyre_foundation::types::SymbolicDim::Symbol(alloc::string::String)
 pub vyre_foundation::types::TensorLayout::ContiguousColumnMajor
 pub vyre_foundation::types::TensorLayout::ContiguousRowMajor
 pub vyre_foundation::types::TensorLayout::Strided
-pub vyre_foundation::types::TensorLayout::Strided::strides: alloc::vec::Vec<vyre_foundation::types::ShapeExprId>
+pub vyre_foundation::types::TensorLayout::Strided::strides: alloc::vec::Vec<vyre_foundation::ir::ShapeExprId>
 pub vyre_foundation::types::TensorLayout::Tiled
 pub vyre_foundation::types::TensorLayout::Tiled::tile_shape: alloc::vec::Vec<u32>
 pub vyre_foundation::types::TensorType::element: vyre_foundation::types::ScalarType

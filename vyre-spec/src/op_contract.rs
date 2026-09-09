@@ -342,9 +342,9 @@ impl Default for ResourceBoundsContract {
     }
 }
 
-/// Exhaustive transformation decision: either proof-producing guarded laws or an explicit opaque decision.
+/// Exhaustive transformation decision: either proof-producing guarded laws, an explicit
+/// opaque/no-transform decision, or unrecorded.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[non_exhaustive]
 pub enum TransformDecision {
     /// Operation exposes one or more verified guarded algebraic laws.
     GuardedLaws(Vec<GuardedLaw>),
@@ -358,6 +358,8 @@ pub enum TransformDecision {
         /// Non-empty, concrete explanatory reason.
         reason: String,
     },
+    /// Transform decision has not been characterized or recorded yet.
+    NotRecorded,
 }
 
 impl TransformDecision {
@@ -369,6 +371,7 @@ impl TransformDecision {
             Self::Opaque { reason } | Self::NoTransform { reason } => {
                 !reason.trim().is_empty() && !is_placeholder_reason(reason)
             }
+            Self::NotRecorded => false,
         }
     }
 
@@ -378,12 +381,41 @@ impl TransformDecision {
         matches!(self, Self::Opaque { .. } | Self::NoTransform { .. })
     }
 
+    /// Whether this is explicitly a no-transform decision.
+    #[must_use]
+    pub const fn is_no_transform(&self) -> bool {
+        matches!(self, Self::NoTransform { .. })
+    }
+
+    /// Whether this decision is in the unrecorded state.
+    #[must_use]
+    pub const fn is_not_recorded(&self) -> bool {
+        matches!(self, Self::NotRecorded)
+    }
+
+    /// Whether this decision carries guarded algebraic laws.
+    #[must_use]
+    pub const fn is_guarded_laws(&self) -> bool {
+        matches!(self, Self::GuardedLaws(..))
+    }
+
+    /// Return the canonical state name of this decision.
+    #[must_use]
+    pub const fn state_name(&self) -> &'static str {
+        match self {
+            Self::GuardedLaws(_) => "guarded-laws",
+            Self::NoTransform { .. } => "no-transform",
+            Self::Opaque { .. } => "opaque",
+            Self::NotRecorded => "not-recorded",
+        }
+    }
+
     /// Return the opaque or no-transform reason string, if any.
     #[must_use]
     pub fn opaque_reason(&self) -> Option<&str> {
         match self {
             Self::Opaque { reason } | Self::NoTransform { reason } => Some(reason.as_str()),
-            Self::GuardedLaws(_) => None,
+            Self::GuardedLaws(_) | Self::NotRecorded => None,
         }
     }
 
@@ -392,14 +424,14 @@ impl TransformDecision {
     pub fn laws(&self) -> &[GuardedLaw] {
         match self {
             Self::GuardedLaws(laws) => laws.as_slice(),
-            Self::Opaque { .. } | Self::NoTransform { .. } => &[],
+            Self::Opaque { .. } | Self::NoTransform { .. } | Self::NotRecorded => &[],
         }
     }
 
     /// Validate the decision: ensures laws have proof evidence and reasons are non-placeholder.
     ///
     /// # Errors
-    /// Returns [`ContractValidationError`] if the decision is invalid.
+    /// Returns [`ContractValidationError`] if the decision is invalid or unrecorded.
     pub fn validate(&self) -> Result<(), ContractValidationError> {
         match self {
             Self::GuardedLaws(laws) => {
@@ -418,6 +450,7 @@ impl TransformDecision {
                 }
                 Ok(())
             }
+            Self::NotRecorded => Err(ContractValidationError::NotRecorded),
         }
     }
 }
@@ -446,6 +479,8 @@ fn is_placeholder_reason(reason: &str) -> bool {
 pub enum ContractValidationError {
     /// Operation id is missing or empty.
     MissingId,
+    /// Transform decision was not recorded.
+    NotRecorded,
     /// Guarded laws decision contained zero laws.
     EmptyLaws,
     /// Opaque reason was too short or contained a placeholder string.
@@ -460,6 +495,7 @@ impl core::fmt::Display for ContractValidationError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::MissingId => write!(f, "operation contract record has empty id"),
+            Self::NotRecorded => write!(f, "operation contract transform decision is not recorded"),
             Self::EmptyLaws => write!(f, "guarded laws decision contains zero laws"),
             Self::InvalidOpaqueReason(reason) => {
                 write!(f, "invalid or placeholder opaque reason: `{reason}`")
@@ -498,7 +534,24 @@ pub struct SemanticContractRecord {
 }
 
 impl SemanticContractRecord {
-    /// Construct a contract record with an explicit opaque / no-transform decision.
+    /// Construct a contract record with an unrecorded decision.
+    #[must_use]
+    pub fn unrecorded(id: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            signature: None,
+            effects: MemoryEffect::Pure,
+            aliasing: AliasingContract::Disjoint,
+            shape_index: ShapeIndexContract::elementwise(),
+            numerical: NumericBehavior::Exact,
+            determinism: DeterminismClass::Deterministic,
+            range_preconditions: RangeContract::unbounded(),
+            resource_bounds: ResourceBoundsContract::Unbounded,
+            decision: TransformDecision::NotRecorded,
+        }
+    }
+
+    /// Construct a contract record with an explicit opaque decision.
     #[must_use]
     pub fn opaque(id: impl Into<String>, reason: impl Into<String>) -> Self {
         Self {
@@ -512,6 +565,25 @@ impl SemanticContractRecord {
             range_preconditions: RangeContract::unbounded(),
             resource_bounds: ResourceBoundsContract::Unbounded,
             decision: TransformDecision::Opaque {
+                reason: reason.into(),
+            },
+        }
+    }
+
+    /// Construct a contract record with an explicit no-transform decision.
+    #[must_use]
+    pub fn no_transform(id: impl Into<String>, reason: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            signature: None,
+            effects: MemoryEffect::Pure,
+            aliasing: AliasingContract::Disjoint,
+            shape_index: ShapeIndexContract::elementwise(),
+            numerical: NumericBehavior::Exact,
+            determinism: DeterminismClass::Deterministic,
+            range_preconditions: RangeContract::unbounded(),
+            resource_bounds: ResourceBoundsContract::Unbounded,
+            decision: TransformDecision::NoTransform {
                 reason: reason.into(),
             },
         }
@@ -532,6 +604,12 @@ impl SemanticContractRecord {
             resource_bounds: ResourceBoundsContract::Unbounded,
             decision: TransformDecision::GuardedLaws(laws),
         }
+    }
+
+    /// Return the canonical transform decision state name.
+    #[must_use]
+    pub const fn state_name(&self) -> &'static str {
+        self.decision.state_name()
     }
 
     /// Validate the contract record: ensures identity, decision, and laws are fully valid.
