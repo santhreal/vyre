@@ -29,6 +29,11 @@ static PORTABLE_PROVIDER_LINK: fn() -> Option<&'static str> =
 /// Public API re-export.
 pub use vyre_foundation::ir;
 
+/// IR traversal. `Expr` and `Node` are `#[non_exhaustive]`, so a caller outside
+/// this crate cannot match them exhaustively. This module carries the descent
+/// and visitor entry points that make a complete walk possible.
+pub use vyre_foundation::visit;
+
 /// Deterministic framing and content-addressed hashing helpers.
 pub use vyre_foundation::hashing;
 

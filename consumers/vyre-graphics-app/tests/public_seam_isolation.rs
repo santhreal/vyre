@@ -13,6 +13,7 @@ use vyre::compiler::{
     SearchBudget,
 };
 use vyre::ir::{Expr, GraphValueId, Node, ValueLifetime};
+use vyre::visit::child_bodies;
 use vyre_libs::graph_compositions::{
     build_interactive_graphics_pipeline, InteractiveGraphicsPipelineParams,
 };
@@ -194,6 +195,11 @@ fn test_reference_driver_is_registered_in_dev_dependencies() {
     assert_eq!(profile.identity(), "reference-graph");
 }
 
+/// Record the kind of `node` and of every node nested under it.
+///
+/// Children come from `child_bodies`, the single exhaustive owner of which
+/// `Node` variants nest, so a new nesting variant is reached here without an
+/// arm of its own.
 fn record_node_kinds(
     node: &Node,
     node_kinds: &mut BTreeSet<String>,
@@ -209,39 +215,24 @@ fn record_node_kinds(
             record_expr_kinds(index, expr_kinds);
             record_expr_kinds(value, expr_kinds);
         }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
+        Node::If { cond, .. } => {
             node_kinds.insert("If".into());
             record_expr_kinds(cond, expr_kinds);
-            for n in then {
-                record_node_kinds(n, node_kinds, expr_kinds);
-            }
-            for n in otherwise {
-                record_node_kinds(n, node_kinds, expr_kinds);
-            }
         }
-        Node::Loop { from, to, body, .. } => {
+        Node::Loop { from, to, .. } => {
             node_kinds.insert("Loop".into());
             record_expr_kinds(from, expr_kinds);
             record_expr_kinds(to, expr_kinds);
-            for n in body {
-                record_node_kinds(n, node_kinds, expr_kinds);
-            }
         }
-        Node::Region {
-            generator, body, ..
-        } => {
+        Node::Region { generator, .. } => {
             node_kinds.insert(format!("Region:{generator}"));
-            for n in body.iter() {
-                record_node_kinds(n, node_kinds, expr_kinds);
-            }
         }
         _ => {
             node_kinds.insert("Other".into());
         }
+    }
+    for child in child_bodies(node).into_iter().flatten() {
+        record_node_kinds(child, node_kinds, expr_kinds);
     }
 }
 
