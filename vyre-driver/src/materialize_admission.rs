@@ -104,10 +104,12 @@ pub fn admit(
         }
     }
 
-    // The selected plan's order is the recorded dependency order: the artifact
-    // refuses a plan whose groups precede a group they depend on. Walking it,
-    // rather than the bundle's own module order, is what makes the recorded DAG
-    // the submission order for every backend.
+    // The recorded plan order is not the submission order: a graph with two
+    // independent arms that join records the joining group first, at a later
+    // stage than the arms it consumes. Walking the record order submitted that
+    // module before the arm producing its input and rejected the submission for
+    // an unbound value. `submission_order` is the dependency stage, and it is
+    // the order every array a module index addresses is built in.
     let mut images = BTreeMap::new();
     for image in bundle.modules {
         if images.insert(image.group, image).is_some() {
@@ -115,7 +117,7 @@ pub fn admit(
         }
     }
     let mut admitted = Vec::with_capacity(selected.len());
-    for record in selected {
+    for record in crate::materialize::submission_order(artifact) {
         let image = images.remove(&record.id).ok_or_else(|| {
             invalid_module("target module names a fusion group the selected plan does not list")
         })?;

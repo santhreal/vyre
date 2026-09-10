@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A descriptor slot the kernel both loads from and stores to is projected as read-write whichever graph direction names it, so a node that lists an accumulator only as an output keeps its input identity and the dispatch no longer fails with `absent from this module's requested directional resource projection`."

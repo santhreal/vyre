@@ -952,6 +952,7 @@ pub fn vyre_driver::materialize::omitted_output(module_label: &str, output_index
 pub fn vyre_driver::materialize::partition_bindings(bindings: &vyre_driver::BindingSet) -> vyre_driver::materialize::BoundState
 pub fn vyre_driver::materialize::project_resources(artifact: &vyre_megakernel::schema::Artifact) -> vyre_driver::materialize::ResourceProjection
 pub fn vyre_driver::materialize::resident_buffer_names<'plan>(plan: &'plan vyre_driver::BindingPlan, program: &'plan vyre_foundation::ir_inner::model::program::definition::Program) -> impl core::iter::traits::iterator::Iterator<Item = &'plan str>
+pub fn vyre_driver::materialize::submission_order(artifact: &vyre_megakernel::schema::Artifact) -> alloc::vec::Vec<&vyre_megakernel::schema::records::FusionRecord>
 pub fn vyre_driver::materialize::unbound_input(value: vyre_megakernel::identity::ArtifactValueId, name: &str) -> vyre_driver::BackendError
 pub fn vyre_driver::materialize::unbound_resident_buffer(value: vyre_megakernel::identity::ArtifactValueId, name: &str) -> vyre_driver::BackendError
 pub fn vyre_driver::megakernel_barrier::MegakernelBarrierPlan::from_groups(groups: alloc::vec::Vec<vyre_driver::megakernel_barrier::MegakernelBarrierGroup>) -> Self

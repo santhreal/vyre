@@ -1223,7 +1223,7 @@ seam = "backend-contract"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 2689
+exported_item_count = 2690
 
   [[package.item]]
   path = "T::dispatch_bytes(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>"
@@ -14757,6 +14757,13 @@ exported_item_count = 2689
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_driver::materialize::submission_order(artifact: &vyre_megakernel::schema::Artifact) -> alloc::vec::Vec<&vyre_megakernel::schema::records::FusionRecord>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_driver::materialize::unbound_input(value: vyre_megakernel::identity::ArtifactValueId, name: &str) -> vyre_driver::BackendError"
   kind = "fn"
   stability = "extension"
@@ -20055,7 +20062,7 @@ seam = "cuda-driver"
 publication_class = "concrete-backend"
 publication_contract = "target-support:cuda"
 stability = "backend"
-exported_item_count = 1029
+exported_item_count = 1030
 
   [[package.item]]
   path = "impl core::convert::From<&vyre_driver_cuda::CudaDeviceCaps> for vyre_driver_cuda::CudaMegakernelDeviceKey"
@@ -27192,6 +27199,13 @@ exported_item_count = 1029
 
   [[package.item]]
   path = "vyre_driver_cuda::registered_backend_id() -> core::option::Option<&'static str>"
+  kind = "fn"
+  stability = "backend"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver_cuda::registered_device() -> core::result::Result<vyre_driver_cuda::CudaBackend, vyre_driver::backend::error::BackendError>"
   kind = "fn"
   stability = "backend"
   feature = "unconditional"

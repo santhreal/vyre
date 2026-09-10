@@ -626,6 +626,7 @@ impl CudaBackend {
 
         let (input_host_bufs, output_host_bufs) = host_buffers.into_raw();
 
+        let replay_kernel_launches = u64::from(prepared.fixpoint_iterations);
         Ok(CachedCudaGraph {
             graph_exec,
             graph,
@@ -644,7 +645,13 @@ impl CudaBackend {
             replay_output_bytes,
             replay_host_upload_operations,
             replay_device_readback_operations,
-            replay_kernel_launches: u64::from(prepared.fixpoint_iterations),
+            replay_kernel_launches,
+            replay_scheduled_thread_slots: super::telemetry::scheduled_thread_slots(
+                &prepared.launch,
+            )
+            .and_then(|slots| slots.checked_mul(replay_kernel_launches)),
+            replay_launched_elements: u64::from(prepared.launch.element_count)
+                * replay_kernel_launches,
             expected_input_lens,
             cached_input_key,
             resident_input_replay_safe,

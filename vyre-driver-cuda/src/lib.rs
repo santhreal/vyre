@@ -174,8 +174,8 @@ pub use warp_word_automata::{
 };
 
 pub use registration::{
-    cuda_factory, cuda_supported_ops, registered_backend_id, CudaBackendRegistration,
-    CudaDeviceBuffer,
+    cuda_factory, cuda_supported_ops, registered_backend_id, registered_device,
+    CudaBackendRegistration, CudaDeviceBuffer,
 };
 use vyre_foundation::operation::TargetId;
 

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A CUDA graph replay records the thread slots it schedules and the logical elements it covers, so a graph-dispatched pipeline reports its real occupancy instead of leaving `logical_thread_utilization_bps` at zero for a device that was fully scheduled."
