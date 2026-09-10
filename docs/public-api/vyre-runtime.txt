@@ -1853,6 +1853,8 @@ pub vyre_runtime::artifact_admission::ResourceIngestionError::LifetimeMismatch::
 pub vyre_runtime::artifact_admission::ResourceIngestionError::MissingResource
 pub vyre_runtime::artifact_admission::ResourceIngestionError::MissingResource::entry_name: alloc::string::String
 pub vyre_runtime::artifact_admission::ResourceIngestionError::MissingResource::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceIngestionError::PayloadNotPrepared
+pub vyre_runtime::artifact_admission::ResourceIngestionError::PayloadNotPrepared::value: vyre_megakernel::identity::ArtifactValueId
 pub vyre_runtime::artifact_admission::ResourceIngestionError::UnknownValue
 pub vyre_runtime::artifact_admission::ResourceIngestionError::UnknownValue::value: vyre_megakernel::identity::ArtifactValueId
 pub vyre_runtime::artifact_admission::ResourceIngestionError::UploadFailed

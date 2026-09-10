@@ -110,6 +110,7 @@ path = "tests/all_tests.rs"
 
 [[test]]
 name = "all_tests_ir_fixtures"
+path = "tests/all_tests_ir_fixtures.rs"
 # The differential matrix and the registry nets in this binary evaluate on the
 # parity oracle, so the target declares that feature alongside the fixtures.
 required-features = ["ir-fixtures", "parity-oracles"]

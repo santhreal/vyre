@@ -47,4 +47,4 @@ collision path.
 ## Overflow contract
 
 `m * k`, `k * n`, `m * n` products that exceed `u32::MAX` must fail at
-builder time with an overflow message. See `vyre-libs/tests/overflow_guards.rs`.
+builder time with an overflow message. See `vyre-libs-nn/tests/overflow_guards.rs`.

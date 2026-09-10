@@ -42,8 +42,8 @@ or published apart.
   `Cargo.toml` that the registry does not carry, and a registry row no manifest
   declares, both fail.
 - The crate declares 1 feature beyond `default`: `ptx`. It builds alone.
-- The public surface is recorded in `docs/public-api/vyre-aot.txt`. An item
-  added, removed or moved changes that file in the same change.
+- The crate sets `publish = false`, so no public surface snapshot is
+  recorded for it and no snapshot gate reads it.
 
 ## Enforcing gates
 

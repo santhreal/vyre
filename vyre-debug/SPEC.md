@@ -46,8 +46,8 @@ reviewed or published apart.
   declares, both fail.
 - The crate declares no feature beyond `default`, so every build of it is the
   same build.
-- The public surface is recorded in `docs/public-api/vyre-debug.txt`. An item
-  added, removed or moved changes that file in the same change.
+- The crate sets `publish = false`, so no public surface snapshot is
+  recorded for it and no snapshot gate reads it.
 
 ## Enforcing gates
 
