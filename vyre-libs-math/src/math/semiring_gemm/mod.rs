@@ -138,11 +138,7 @@ inventory::submit! {
             vyre_primitives::wire::pack_u32_slice(&[1, 2, 3, 4]),
             vyre_primitives::wire::pack_u32_slice(&[5, 6, 7, 8]),
         ]]),
-        Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(
-                &crate::MATMUL_2X2_EXPECTED_WORDS,
-            )]]
-        }),
+        Some(|| vec![vec![crate::MATMUL_2X2_EXPECTED_BYTES.to_vec()]]),
     )
     .with_laws(&["distributive"])
     .with_no_legal_rewrite()

@@ -71,6 +71,34 @@ pub(crate) fn findings(tree: &Tree, report: &mut Report) -> Result<Vec<Finding>,
     Ok(evaluate(&records, &state, &ranks))
 }
 
+/// The `src` directory of every crate that ships, sorted.
+///
+/// The AST half of this gate reads these. It used to read three literal paths,
+/// and when the library and driver crates were split apart the scan silently
+/// narrowed to a fraction of the workspace while still reporting a clean
+/// verdict over the whole of it. Deriving the set from the same registry the
+/// dependency half already reads means a crate is scanned the moment it has a
+/// row, and a crate whose sources move with it stays scanned.
+pub fn shipped_source_roots(tree: &Tree, report: &mut Report) -> Result<Vec<String>, GateError> {
+    let records = crate_registry::load_registry(tree, report)?;
+    let ranks = crate_registry::declared_layer_ranks(tree)?;
+    let declared: BTreeSet<&str> = ranks.keys().map(String::as_str).collect();
+    let mut roots = BTreeSet::new();
+    for record in &records {
+        if !ships(&record.layer, &declared) {
+            continue;
+        }
+        if HOST_EVALUATORS.contains(&record.package.as_str()) {
+            continue;
+        }
+        let root = format!("{}/src", record.path.trim_end_matches('/'));
+        if tree.exists(&root) {
+            roots.insert(root);
+        }
+    }
+    Ok(roots.into_iter().collect())
+}
+
 /// Judge a workspace that has already been read.
 ///
 /// Split from [`findings`] so the rule is testable against a constructed

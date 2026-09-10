@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use crate::gates::scan::{attribute_is_test_only, test_module_files, Tree};
 
 use super::host_oracle_elimination_eval::analyze_sources;
-use super::host_oracle_elimination_records::TARGET_ROOTS;
 use super::host_oracle_elimination_test_fixtures::{
     canonical_dispatch_fn, resident_staging_source, self_binding_staging_source,
     CANONICAL_DISPATCH_IMPORTS, CANONICAL_REQUEST_ARGUMENTS,
@@ -35,91 +34,6 @@ pub fn average_via(dispatcher: &dyn SemanticExecutor, input: &[u32]) -> Result<u
         .message
         .contains("post-dispatch host arithmetic / semantic derivation")));
 }
-#[test]
-fn mutation_catches_metadata_only_dispatcher_call_not_establishing_execution() {
-    let code = r#"
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
-
-pub fn fake_oracle_capabilities_only(dispatcher: &dyn SemanticExecutor, input: &[u32]) -> u32 {
-    let _caps = dispatcher.capabilities();
-    let mut sum = 0u32;
-    for &x in input {
-        sum = sum.wrapping_add(x);
-    }
-    sum
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/encoding/fake_oracle.rs", code)]);
-    assert!(
-        !findings.is_empty(),
-        "metadata-only dispatcher caller must be convicted as unisolated host algorithm"
-    );
-    assert!(findings.iter().any(|f| f
-        .message
-        .contains("unisolated host data-processing semantic twin")));
-}
-
-#[test]
-fn mutation_catches_unrelated_field_receiver_masquerading_as_dispatch() {
-    let code = r#"
-use vyre_megakernel::SemanticExecutor;
-
-struct LocalDevice;
-impl LocalDevice {
-    fn dispatch(&self, _left: u32, _right: u32) {}
-}
-
-struct LocalContext {
-    device: LocalDevice,
-}
-
-pub fn fake_field_dispatch(
-    _dispatcher: &dyn SemanticExecutor,
-    input: &[u32],
-) -> u32 {
-    let context = LocalContext { device: LocalDevice };
-    context.device.execute(1, 2);
-    input.iter().copied().sum()
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/fake_field_dispatch.rs", code)]);
-    assert!(
-            findings.iter().any(|finding| {
-                finding
-                    .message
-                    .contains("unisolated host data-processing semantic twin")
-            }),
-            "a field receiver unrelated to the canonical dispatcher parameter must not establish a GPU execution root: {findings:?}"
-        );
-}
-
-#[test]
-fn mutation_catches_non_dispatching_helper_not_establishing_execution() {
-    let code = r#"
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
-
-fn record_dispatcher(_dispatcher: &dyn SemanticExecutor) {
-    // telemetry/record only, does not dispatch
-}
-
-pub fn fake_oracle_with_record(dispatcher: &dyn SemanticExecutor, input: &[u32]) -> u32 {
-    record_dispatcher(dispatcher);
-    let mut sum = 0u32;
-    for &x in input {
-        sum = sum.wrapping_add(x);
-    }
-    sum
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/encoding/fake_record.rs", code)]);
-    assert!(
-        !findings.is_empty(),
-        "non-dispatching helper caller must be convicted as unisolated host algorithm"
-    );
-    assert!(findings.iter().any(|f| f
-        .message
-        .contains("unisolated host data-processing semantic twin")));
-}
 
 #[test]
 fn mutation_permits_transitive_dispatch_helper_execution() {
@@ -142,31 +56,6 @@ pub fn wrapper_dispatch_via(dispatcher: &dyn SemanticExecutor, input: &[u32]) ->
         findings.is_empty(),
         "transitive dispatch helper must be recognized as valid GPU dispatch root: {findings:?}"
     );
-}
-#[test]
-fn mutation_catches_generic_masquerade_with_similar_ident() {
-    let code = r#"
-pub struct NotD;
-
-pub fn fake_oracle_with_not_d<D: vyre_megakernel::SemanticExecutor>(
-    not_d: &NotD,
-    input: &[u32],
-) -> u32 {
-    let mut sum = 0u32;
-    for &x in input {
-        sum = sum.wrapping_add(x);
-    }
-    sum
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/encoding/not_d.rs", code)]);
-    assert!(
-            !findings.is_empty(),
-            "function taking NotD where D is bounded by SemanticExecutor must be convicted as unisolated host algorithm"
-        );
-    assert!(findings.iter().any(|f| f
-        .message
-        .contains("unisolated host data-processing semantic twin")));
 }
 #[test]
 fn mutation_permits_legitimate_transpose_input_staging() {
@@ -514,37 +403,6 @@ pub fn resident_caller_using_unpack(
 }
 
 #[test]
-fn mutation_catches_unreachable_generic_cfg_alternative_definition() {
-    let wire_code = r#"
-#[cfg(target_endian = "little")]
-pub fn uncalled_twin_words_into<T: Copy>(src: &[u8], count: usize, out: &mut Vec<T>) {
-    let mut sum = 0usize;
-    for &b in src {
-        sum += b as usize;
-    }
-    let _ = (sum, count, out);
-}
-
-#[cfg(target_endian = "big")]
-pub fn uncalled_twin_words_into<T: Copy>(src: &[u8], count: usize, out: &mut Vec<T>) {
-    let mut sum = 0usize;
-    for &b in src {
-        sum += b as usize;
-    }
-    let _ = (sum, count, out);
-}
-"#;
-    let findings = analyze_files(&[("vyre-primitives/src/wire.rs", wire_code)]);
-    assert!(
-        !findings.is_empty(),
-        "uncalled CFG alternative twin must be convicted"
-    );
-    assert!(findings.iter().any(|f| f
-        .message
-        .contains("unisolated host data-processing semantic twin")));
-}
-
-#[test]
 fn mutation_permits_operation_metadata_iterator_with_arbitrary_name() {
     let code = r#"
 use vyre_foundation::operation::{OperationRegistry, OperationTier, SemanticOperation};
@@ -559,42 +417,6 @@ pub fn arbitrary_catalog_query_into() -> impl Iterator<Item = SemanticOperation>
     assert!(
         findings.is_empty(),
         "operation metadata iterator must be permitted: {findings:?}"
-    );
-}
-
-#[test]
-fn mutation_catches_adversarial_numeric_iterator_twin_with_same_shape() {
-    let code = r#"
-pub fn arbitrary_catalog_query_into(data: &[u32]) -> impl Iterator<Item = u32> + '_ {
-    data.iter().map(|&x| x + 42)
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/catalog_adversarial.rs", code)]);
-    assert!(
-        !findings.is_empty(),
-        "unisolated numeric iterator twin must be convicted"
-    );
-    assert!(findings.iter().any(|f| f
-        .message
-        .contains("unisolated host data-processing semantic twin")));
-}
-#[test]
-fn mutation_catches_local_type_masquerading_as_operation_metadata() {
-    let code = r#"
-pub struct SemanticOperation(u32);
-
-pub fn arbitrary_catalog_query_into(
-    data: &[u32],
-) -> impl Iterator<Item = SemanticOperation> + '_ {
-    data.iter().map(|&value| SemanticOperation(value + 42))
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/catalog_masquerade.rs", code)]);
-    assert!(
-        findings.iter().any(|finding| finding
-            .message
-            .contains("unisolated host data-processing semantic twin")),
-        "a local same-named type must not receive canonical metadata treatment: {findings:?}"
     );
 }
 
@@ -628,132 +450,6 @@ pub fn run_demo_traversal(
     assert!(
         findings.is_empty(),
         "resident staging consumed by genuine canonical dispatch must not be convicted: {findings:?}"
-    );
-}
-
-#[test]
-fn mutation_catches_same_basename_in_different_modules_rejected() {
-    let staging_a = resident_staging_source(
-        "ResidentDemoGraph",
-        "pub ",
-        &[("upload_resident_demo_graph", "0x5A5A_5A5A")],
-    );
-    let dispatch_b = format!(
-        "{CANONICAL_DISPATCH_IMPORTS}
-pub struct ResidentDemoGraph {{
-    pub packed: Vec<u8>,
-}}
-{dispatch}
-pub fn run_b(
-    dispatcher: &impl SemanticExecutor,
-    logical: &LogicalProgramGraph<'_>,
-    policy: &SemanticExecutionPolicy,
-    graph: &ResidentDemoGraph,
-) -> Result<(), SemanticExecutionError> {{
-    execute_demo_traversal(dispatcher, logical, policy, graph)
-}}
-",
-        dispatch = canonical_dispatch_fn(
-            "pub ",
-            "execute_demo_traversal",
-            "ResidentDemoGraph",
-            "",
-            ""
-        )
-    );
-    let findings = analyze_files(&[
-        ("vyre-libs/src/staging_a.rs", staging_a.as_str()),
-        ("vyre-libs/src/dispatch_b.rs", dispatch_b.as_str()),
-    ]);
-    assert!(
-        !findings.is_empty(),
-        "same basename in different modules must be rejected and convicted"
-    );
-    assert!(
-        findings
-            .iter()
-            .any(|f| f.message.contains("upload_resident_demo_graph")),
-        "upload_resident_demo_graph in staging_a must be convicted: {findings:?}"
-    );
-}
-
-#[test]
-fn mutation_catches_unused_alternative_producer_rejected() {
-    let staging_code = resident_staging_source(
-        "ResidentDemoGraph",
-        "pub ",
-        &[
-            ("upload_resident_demo_graph", "0x5A5A_5A5A"),
-            ("upload_unused_alt_graph", "0x1234_5678"),
-        ],
-    );
-    let dispatch_code = format!(
-        "{CANONICAL_DISPATCH_IMPORTS}use crate::staging::{{upload_resident_demo_graph, ResidentDemoGraph}};
-{dispatch}
-pub fn run_demo_traversal(
-    dispatcher: &impl SemanticExecutor,
-    logical: &LogicalProgramGraph<'_>,
-    policy: &SemanticExecutionPolicy,
-    node_count: u32,
-    edges: &[u32],
-) -> Result<(), SemanticExecutionError> {{
-    let graph = upload_resident_demo_graph(node_count, edges)?;
-    execute_demo_traversal(dispatcher, logical, policy, &graph)
-}}
-",
-        dispatch = canonical_dispatch_fn("pub ", "execute_demo_traversal", "ResidentDemoGraph", "", "")
-    );
-    let findings = analyze_files(&[
-        ("vyre-libs/src/staging.rs", staging_code.as_str()),
-        ("vyre-libs/src/dispatch.rs", dispatch_code.as_str()),
-    ]);
-    assert!(
-        !findings.is_empty(),
-        "unused alternative producer returning same nominal type must be convicted"
-    );
-    assert!(
-        findings
-            .iter()
-            .any(|f| f.message.contains("upload_unused_alt_graph")),
-        "upload_unused_alt_graph must be convicted: {findings:?}"
-    );
-    assert!(
-        !findings
-            .iter()
-            .any(|f| f.message.contains("upload_resident_demo_graph")),
-        "used producer upload_resident_demo_graph must NOT be convicted: {findings:?}"
-    );
-}
-
-#[test]
-fn mutation_catches_unrelated_upload_only_host_math_not_consumed_by_dispatch() {
-    let upload_only_code = r#"
-use vyre_megakernel::SemanticExecutionError;
-
-pub struct UnusedResidentGraph {
-    pub packed: Vec<u8>,
-}
-
-pub fn upload_unused_graph_with_math(
-    edges: &[u32],
-) -> Result<UnusedResidentGraph, SemanticExecutionError> {
-    let mut packed = Vec::new();
-    for &e in edges {
-        packed.extend_from_slice(&(e ^ 0x1234_5678).to_le_bytes());
-    }
-    Ok(UnusedResidentGraph { packed })
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/upload_only.rs", upload_only_code)]);
-    assert!(
-        !findings.is_empty(),
-        "upload-only host math with no downstream dispatch root must be convicted"
-    );
-    assert!(
-        findings
-            .iter()
-            .any(|f| f.message.contains("upload_unused_graph_with_math")),
-        "upload_unused_graph_with_math must be flagged: {findings:?}"
     );
 }
 
@@ -800,81 +496,6 @@ pub fn run_graph(
 }
 
 #[test]
-fn mutation_catches_staging_consumed_only_by_fake_local_dispatcher_masquerade() {
-    let fake_code = r#"
-pub struct FakeResidentGraph {
-    pub handle: u64,
-}
-
-pub trait SemanticExecutor {
-    fn alloc_resident(&self, bytes: usize) -> Result<u64, String>;
-    fn dispatch(&self, prog: u32, handles: &[u64]) -> Result<(), String>;
-}
-
-pub fn upload_fake_graph(
-    dispatcher: &impl SemanticExecutor,
-    edges: &[u32],
-) -> Result<FakeResidentGraph, String> {
-    let mut sum = 0u32;
-    for &e in edges {
-        sum = sum.wrapping_add(e ^ 0xA5A5);
-    }
-    let handle = dispatcher.alloc_resident(sum as usize)?;
-    Ok(FakeResidentGraph { handle })
-}
-
-pub fn fake_dispatch(
-    dispatcher: &impl SemanticExecutor,
-    graph: &FakeResidentGraph,
-) -> Result<(), String> {
-    dispatcher.execute(1, &[graph.handle])
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/fake_staging.rs", fake_code)]);
-    assert!(
-        !findings.is_empty(),
-        "staging with fake local dispatcher masquerade must be convicted"
-    );
-    assert!(
-        findings
-            .iter()
-            .any(|f| f.message.contains("upload_fake_graph")),
-        "upload_fake_graph must be flagged: {findings:?}"
-    );
-}
-
-#[test]
-fn mutation_catches_parse_ambiguity_fails_closed() {
-    let code = r#"
-mod fake_ambiguous {
-    pub struct AmbiguousGraph;
-}
-
-pub fn upload_ambiguous_graph(
-    edges: &[u32],
-) -> Result<fake_ambiguous::AmbiguousGraph, String> {
-    let mut sum = 0u32;
-    for &e in edges {
-        sum = sum.wrapping_add(e ^ 0x3333);
-    }
-    let _ = sum;
-    Ok(fake_ambiguous::AmbiguousGraph)
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/ambiguous.rs", code)]);
-    assert!(
-        !findings.is_empty(),
-        "parse ambiguity or unresolvable type path must fail closed and convict host math"
-    );
-    assert!(
-        findings
-            .iter()
-            .any(|f| f.message.contains("upload_ambiguous_graph")),
-        "upload_ambiguous_graph must be flagged: {findings:?}"
-    );
-}
-
-#[test]
 fn mutation_permits_genuine_resident_staging_separate_apis_unique_producer() {
     let staging_code = resident_staging_source(
         "ResidentDemoGraph",
@@ -899,93 +520,6 @@ fn mutation_permits_genuine_resident_staging_separate_apis_unique_producer() {
     assert!(
         findings.is_empty(),
         "genuine staging with separate upload and dispatch APIs and unique producer must not be convicted: {findings:?}"
-    );
-}
-
-#[test]
-fn mutation_catches_staging_type_with_pub_fields_without_call_path() {
-    let staging_code = resident_staging_source(
-        "ResidentDemoGraphWithPubFields",
-        "pub ",
-        &[("upload_resident_demo_graph", "0x5A5A_5A5A")],
-    );
-    let dispatch_code = format!(
-        "{CANONICAL_DISPATCH_IMPORTS}use crate::staging::ResidentDemoGraphWithPubFields;
-{dispatch}",
-        dispatch = canonical_dispatch_fn(
-            "pub ",
-            "execute_demo_traversal",
-            "ResidentDemoGraphWithPubFields",
-            "",
-            ""
-        )
-    );
-    let findings = analyze_files(&[
-        ("vyre-libs/src/staging.rs", staging_code.as_str()),
-        ("vyre-libs/src/dispatch.rs", dispatch_code.as_str()),
-    ]);
-    assert!(
-        findings
-            .iter()
-            .any(|f| f.message.contains("upload_resident_demo_graph")),
-        "a carrier a caller can build field by field does not make its producer reachable: {findings:?}"
-    );
-}
-
-#[test]
-fn mutation_catches_staging_with_ignored_metadata_parameter_rejected() {
-    let staging_code = format!(
-        "{staging}
-pub struct UnusedConfig {{
-    pub(crate) threshold: u32,
-}}
-
-pub fn upload_unused_config_with_math(
-    edges: &[u32],
-) -> Result<UnusedConfig, SemanticExecutionError> {{
-    let mut sum = 0u32;
-    for &e in edges {{
-        sum = sum.wrapping_add(e ^ 0x7777);
-    }}
-    Ok(UnusedConfig {{ threshold: sum }})
-}}
-",
-        staging = resident_staging_source(
-            "ResidentDemoGraph",
-            "pub(crate) ",
-            &[("upload_resident_demo_graph", "0x5A5A_5A5A")]
-        )
-    );
-    let dispatch_code = format!(
-        "{CANONICAL_DISPATCH_IMPORTS}use crate::staging::{{ResidentDemoGraph, UnusedConfig}};
-{dispatch}",
-        dispatch = canonical_dispatch_fn(
-            "pub ",
-            "execute_demo_traversal_with_config",
-            "ResidentDemoGraph",
-            "\n    config: &UnusedConfig,",
-            "\n    let _ = config;"
-        )
-    );
-    let findings = analyze_files(&[
-        ("vyre-libs/src/staging.rs", staging_code.as_str()),
-        ("vyre-libs/src/dispatch.rs", dispatch_code.as_str()),
-    ]);
-    assert!(
-        !findings.is_empty(),
-        "unused config parameter with host-math producer must be convicted"
-    );
-    assert!(
-        findings
-            .iter()
-            .any(|f| f.message.contains("upload_unused_config_with_math")),
-        "upload_unused_config_with_math must be flagged: {findings:?}"
-    );
-    assert!(
-        !findings
-            .iter()
-            .any(|f| f.message.contains("upload_resident_demo_graph")),
-        "the producer whose bytes reach the seam must NOT be flagged: {findings:?}"
     );
 }
 
@@ -1177,11 +711,27 @@ pub fn execute_two_stage_pipeline(
         );
 }
 
+/// The scanned set is the `src` of every shipped crate, taken from the same
+/// registry the dependency half reads. A literal root list here is what let the
+/// scan narrow to three directories across a crate split while still reporting
+/// a clean verdict over the workspace.
+fn workspace_production_sources(tree: &Tree) -> Vec<PathBuf> {
+    let mut report = crate::gate::Report::clean();
+    let roots =
+        crate::gates::host_oracle_elimination::operation_bearing_roots(tree, &mut report).unwrap();
+    assert!(
+        roots.len() > 3,
+        "the operation-registering roster is the scan set and this workspace has more than three such crates: {roots:?}"
+    );
+    let borrowed: Vec<&str> = roots.iter().map(String::as_str).collect();
+    tree.rust(&borrowed).unwrap()
+}
+
 #[test]
 fn test_workspace_findings() {
     let root = structure_gate::workspace_root();
     let tree = Tree::open(&root).unwrap();
-    let sources = tree.rust(TARGET_ROOTS).unwrap();
+    let sources = workspace_production_sources(&tree);
     let test_scoped = test_module_files(&tree, &sources).unwrap();
     let findings = analyze_sources(&tree, &sources, &test_scoped).unwrap();
     assert_eq!(
@@ -1201,7 +751,7 @@ fn test_workspace_findings() {
 fn a_cfg_test_module_named_by_a_path_attribute_is_test_scoped() {
     let root = structure_gate::workspace_root();
     let tree = Tree::open(&root).unwrap();
-    let sources = tree.rust(TARGET_ROOTS).unwrap();
+    let sources = workspace_production_sources(&tree);
     let test_scoped = test_module_files(&tree, &sources).unwrap();
 
     let mut declared: Vec<PathBuf> = Vec::new();

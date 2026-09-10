@@ -43,20 +43,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     }
 
     fn visit_item_struct(&mut self, item: &'ast syn::ItemStruct) {
-        let ident = item.ident.to_string();
-        let mut qualified_parts = vec!["crate".to_string()];
-        qualified_parts.extend(self.current_module.clone());
-        qualified_parts.push(ident.clone());
-        let qualified_path = qualified_parts.join("::");
-
-        let has_pub_field = item
-            .fields
-            .iter()
-            .any(|f| matches!(f.vis, syn::Visibility::Public(_)));
-        if has_pub_field {
-            self.types_with_public_fields.insert(qualified_path);
-        }
-
         if self.struct_contains_canonical_dispatcher(item) {
             self.struct_types_with_dispatcher
                 .insert(self.qualified_local_type_name(&item.ident));
@@ -66,21 +52,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     }
 
     fn visit_item_union(&mut self, item: &'ast syn::ItemUnion) {
-        let ident = item.ident.to_string();
-        let mut qualified_parts = vec!["crate".to_string()];
-        qualified_parts.extend(self.current_module.clone());
-        qualified_parts.push(ident);
-        let qualified_path = qualified_parts.join("::");
-
-        let has_pub_field = item
-            .fields
-            .named
-            .iter()
-            .any(|f| matches!(f.vis, syn::Visibility::Public(_)));
-        if has_pub_field {
-            self.types_with_public_fields.insert(qualified_path);
-        }
-
         syn::visit::visit_item_union(self, item);
     }
 
@@ -351,7 +322,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             || fn_name.starts_with("cpu_ref_")
             || fn_name.ends_with("_cpu_ref");
 
-        let is_public = matches!(item.vis, syn::Visibility::Public(_));
         let is_fmt_method =
             self.fmt_impl_depth > 0 || (fn_name == "fmt" && is_fmt_signature(&item.sig));
         let is_pure_telemetry =
@@ -413,7 +383,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             file: self.file.clone(),
             module_path: self.current_module.clone(),
             line,
-            is_public,
             is_test_scoped,
             is_ir_builder: is_ir,
             is_gpu_dispatch_root: is_gpu,
@@ -475,7 +444,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             has_data_output_ast(&item.sig) || has_mutable_data_output_param(&item.sig);
         let is_explicit = fn_name == "cpu_ref" || fn_name == "cpu_reference";
 
-        let is_public = matches!(item.vis, syn::Visibility::Public(_));
         let is_fmt_method =
             self.fmt_impl_depth > 0 || (fn_name == "fmt" && is_fmt_signature(&item.sig));
         let is_pure_telemetry =
@@ -539,7 +507,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             file: self.file.clone(),
             module_path: self.current_module.clone(),
             line,
-            is_public,
             is_test_scoped,
             is_ir_builder: is_ir,
             is_gpu_dispatch_root: is_gpu,
@@ -605,7 +572,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             has_data_output_ast(&item.sig) || has_mutable_data_output_param(&item.sig);
         let is_explicit = fn_name == "cpu_ref" || fn_name == "cpu_reference";
 
-        let is_public = true;
         let is_fmt_method =
             self.fmt_impl_depth > 0 || (fn_name == "fmt" && is_fmt_signature(&item.sig));
         let is_pure_telemetry =
@@ -677,7 +643,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             file: self.file.clone(),
             module_path: self.current_module.clone(),
             line,
-            is_public,
             is_test_scoped,
             is_ir_builder: is_ir,
             is_gpu_dispatch_root: is_gpu,
@@ -811,7 +776,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     file: self.file.clone(),
                     module_path: self.current_module.clone(),
                     line,
-                    is_public: false,
                     is_test_scoped: false,
                     is_ir_builder: false,
                     is_gpu_dispatch_root: false,
@@ -843,7 +807,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     file: self.file.clone(),
                     module_path: self.current_module.clone(),
                     line,
-                    is_public: false,
                     is_test_scoped: false,
                     is_ir_builder: false,
                     is_gpu_dispatch_root: false,
@@ -898,7 +861,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     file: self.file.clone(),
                     module_path: self.current_module.clone(),
                     line,
-                    is_public: false,
                     is_test_scoped: false,
                     is_ir_builder: false,
                     is_gpu_dispatch_root: false,
@@ -931,7 +893,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     file: self.file.clone(),
                     module_path: self.current_module.clone(),
                     line,
-                    is_public: false,
                     is_test_scoped: false,
                     is_ir_builder: false,
                     is_gpu_dispatch_root: false,

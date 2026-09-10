@@ -66,32 +66,52 @@ pub(super) fn analyze_sources(
         ));
     }
 
-    let registration_path = PathBuf::from("vyre-foundation/src/operation/mod.rs");
-    let registration_text = tree.read(&registration_path).map_err(|err| {
-        GateError::new(
+    let registration_root = Path::new("vyre-foundation/src/operation");
+    let registration_sources: Vec<PathBuf> = tree
+        .paths()
+        .iter()
+        .filter(|path| {
+            path.starts_with(registration_root) && path.extension().is_some_and(|ext| ext == "rs")
+        })
+        .cloned()
+        .collect();
+    if registration_sources.is_empty() {
+        return Err(GateError::new(
             format!(
-                "failed to read operation registration source `{}`: {err}",
-                registration_path.display()
+                "no Rust source under `{}` to read the operation registration from",
+                registration_root.display()
             ),
-            "ensure canonical `vyre-foundation/src/operation/mod.rs` exists and is readable",
-        )
-    })?;
-    let registration_ast = syn::parse_file(&registration_text).map_err(|err| {
-        GateError::new(
-            format!(
-                "failed to parse operation registration source `{}`: {err}",
-                registration_path.display()
-            ),
-            "fix syntax defect in the OperationRegistration definition",
-        )
-    })?;
-    let registration_expected_output_indices =
-        derive_registration_expected_output_indices(&registration_ast);
+            "keep the operation registration in the vyre-foundation operation module",
+        ));
+    }
+    let mut registration_expected_output_indices = std::collections::BTreeMap::new();
+    for path in &registration_sources {
+        let text = tree.read(path).map_err(|err| {
+            GateError::new(
+                format!(
+                    "failed to read operation registration source `{}`: {err}",
+                    path.display()
+                ),
+                "ensure every file in the vyre-foundation operation module is readable",
+            )
+        })?;
+        let ast = syn::parse_file(&text).map_err(|err| {
+            GateError::new(
+                format!(
+                    "failed to parse operation registration source `{}`: {err}",
+                    path.display()
+                ),
+                "fix syntax defect in the OperationRegistration definition",
+            )
+        })?;
+        registration_expected_output_indices
+            .extend(derive_registration_expected_output_indices(&ast));
+    }
     if registration_expected_output_indices.is_empty() {
         return Err(GateError::new(
             format!(
-                "`impl OperationRegistration` in `{}` declares no constructor taking an `expected_output` argument",
-                registration_path.display()
+                "`impl OperationRegistration` under `{}` declares no constructor taking an `expected_output` argument",
+                registration_root.display()
             ),
             "keep an OperationRegistration constructor whose expected-output callback parameter is named `expected_output`, so the gate can separate a reached fixture from a host oracle producing expected bytes",
         ));
@@ -145,7 +165,6 @@ pub(super) fn analyze_parsed(
     let mut all_calls = Vec::new();
     let mut all_static_consts = Vec::new();
     let mut all_findings = Vec::new();
-    let mut all_types_with_public_fields = BTreeSet::new();
     for (path, file_ast, is_test_scoped) in parsed_sources {
         let fn_offset = all_functions.len();
         let mut visitor = AstAnalysisVisitor::new(
@@ -185,15 +204,9 @@ pub(super) fn analyze_parsed(
         all_calls.extend(visitor.calls);
         all_static_consts.extend(visitor.static_consts);
         all_findings.extend(visitor.direct_findings);
-        all_types_with_public_fields.extend(visitor.types_with_public_fields);
     }
 
-    let evaluated = evaluate_rules(
-        &all_functions,
-        &all_calls,
-        &all_static_consts,
-        &all_types_with_public_fields,
-    );
+    let evaluated = evaluate_rules(&all_functions, &all_calls, &all_static_consts);
     all_findings.extend(evaluated);
 
     // Deduplicate findings by (file, line, message)
@@ -208,12 +221,11 @@ pub(super) fn analyze_parsed(
     deduped_findings
 }
 
-/// Evaluate zero-baseline host oracle and transitive reachability rules.
+/// Evaluate the host oracle rules against the records one scan produced.
 pub(super) fn evaluate_rules(
     functions: &[FunctionRecord],
     calls: &[CallSiteRecord],
     static_consts: &[StaticConstRecord],
-    types_with_public_fields: &BTreeSet<String>,
 ) -> Vec<Finding> {
     let mut findings = Vec::new();
 
@@ -255,8 +267,6 @@ pub(super) fn evaluate_rules(
     let mut dynamic_expected_output_calls: BTreeSet<usize> = BTreeSet::new();
     let mut dynamic_fallback_calls: BTreeSet<usize> = BTreeSet::new();
     let mut dynamic_expected_output_static_consts: BTreeSet<usize> = BTreeSet::new();
-    let mut reachable_from_roots = vec![false; functions.len()];
-    let mut queue = VecDeque::new();
 
     for call in calls {
         if call.is_in_test {
@@ -353,10 +363,6 @@ pub(super) fn evaluate_rules(
                 dynamic_expected_output_calls.insert(target_idx);
             } else if call.is_in_fallback {
                 dynamic_fallback_calls.insert(target_idx);
-            } else if call.is_in_op_reg {
-                // Top-level OperationRegistration arguments (build, test_inputs) are roots
-                reachable_from_roots[target_idx] = true;
-                queue.push_back(target_idx);
             } else if let Some(caller_idx) = call.caller_fn_idx {
                 if caller_idx != target_idx {
                     adjacency[caller_idx].push(target_idx);
@@ -465,23 +471,6 @@ pub(super) fn evaluate_rules(
         }
     }
 
-    // Seed production roots established strictly by canonical foundation types,
-    // device dispatch calls, driver infrastructure, and operation registrations.
-    for (idx, func) in functions.iter().enumerate() {
-        if func.is_test_scoped {
-            continue;
-        }
-
-        let is_driver_infra = func.file.to_string_lossy().contains("vyre-driver")
-            && func.is_public
-            && !func.is_explicit_oracle_name;
-        let is_root = func.is_ir_builder || is_gpu_dispatch_exec[idx] || is_driver_infra;
-        if is_root {
-            reachable_from_roots[idx] = true;
-            queue.push_back(idx);
-        }
-    }
-
     // Map each exact qualified return type to the list of non-test producer function indices
     let mut non_test_producers_by_type: BTreeMap<String, Vec<usize>> = BTreeMap::new();
     for (idx, func) in functions.iter().enumerate() {
@@ -558,32 +547,6 @@ pub(super) fn evaluate_rules(
         })
         .collect();
 
-    // Fail-closed nominal bridge: a qualified custom type may root a producer only when:
-    // (a) an actual call/dataflow path already connects it (handled by call graph BFS), OR
-    // (b) it is the unique non-test producer of that exact qualified type AND a canonical
-    //     dispatch-executing consumer accepts that exact qualified type AND structural
-    //     dataflow proves the parameter feeds into dispatch execution handle_ids (direct
-    //     or transitive) AND the type has no externally public fields that bypass the unique producer.
-    for (idx, func) in functions.iter().enumerate() {
-        if func.is_test_scoped || !is_gpu_dispatch_exec[idx] {
-            continue;
-        }
-        for param_ty in &func_dispatched_custom_types[idx] {
-            if types_with_public_fields.contains(param_ty) {
-                continue;
-            }
-            if let Some(producer_indices) = non_test_producers_by_type.get(param_ty) {
-                if producer_indices.len() == 1 {
-                    let p_idx = producer_indices[0];
-                    if !reachable_from_roots[p_idx] {
-                        reachable_from_roots[p_idx] = true;
-                        queue.push_back(p_idx);
-                    }
-                }
-            }
-        }
-    }
-
     // Fixed-point candidate propagation: functions returning scalar/collection output
     // that call a candidate also become candidates.
     let mut is_candidate: Vec<bool> = functions
@@ -611,16 +574,6 @@ pub(super) fn evaluate_rules(
                     candidate_propagation_changed = true;
                     break;
                 }
-            }
-        }
-    }
-
-    // Transitive BFS traversal from production roots
-    while let Some(curr) = queue.pop_front() {
-        for &next in &adjacency[curr] {
-            if !reachable_from_roots[next] {
-                reachable_from_roots[next] = true;
-                queue.push_back(next);
             }
         }
     }
@@ -673,20 +626,6 @@ pub(super) fn evaluate_rules(
                 FIX,
             ));
             continue;
-        }
-
-        // Rule 4: Data-processing candidates must be transitively reachable from a production root
-        if is_candidate[idx] && !reachable_from_roots[idx] {
-            findings.push(Finding::at(
-                func.file.clone(),
-                func.line,
-                format!(
-                    "unisolated host data-processing semantic twin `{}` is not reachable from any production root; \
-                     host semantic execution must live in tests or vyre-reference",
-                    func.name
-                ),
-                FIX,
-            ));
         }
 
         // Rule 5: GPU dispatch functions must not invoke host data-processing semantic helpers

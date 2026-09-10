@@ -300,11 +300,7 @@ inventory::submit! {
                 vyre_primitives::wire::pack_u32_slice(&[5, 6, 7, 8]),
             ]]
         }),
-        Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(
-                &crate::MATMUL_2X2_EXPECTED_WORDS,
-            )]]
-        }),
+        Some(|| vec![vec![crate::MATMUL_2X2_EXPECTED_BYTES.to_vec()]]),
     )
     .with_category("math")
     .with_no_legal_rewrite()

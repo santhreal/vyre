@@ -1,59 +1,58 @@
-//! `cargo xtask host-oracle-elimination`  -  zero production CPU oracles in shipping crates.
+//! `cargo xtask host-oracle-elimination` - zero production CPU oracles in
+//! shipping crates.
 //!
-//! A shipping library (`vyre-libs`, `vyre-primitives`) must not compile or execute
-//! host mathematical oracles, reference simulations, or unisolated data-processing semantic
-//! twins in production code. CPU reference implementations (`cpu_ref`, `cpu_reference`,
-//! `vyre_reference` simulators, and generic-named host algorithms that only serve tests)
-//! exist exclusively to provide independent semantic witnesses for test verification; they
-//! must never be linked into production binaries or invoked at registration time for dynamic
-//! expected-output evaluation.
+//! A crate that registers semantic operations must not carry a host routine
+//! that computes what one of its operations declares a device produces. Such a
+//! routine is a witness for a test, and a reader who finds one beside the
+//! operation cannot tell which side an answer came from.
 //!
-//! The classification is 100% source-derived and structural:
-//! - Candidate detection is role-independent: body AST visitor (`BodyFeatureVisitor`) inspects
-//!   `ExprBinary` arithmetic/bitwise/shifts, `ExprUnary` numeric/not, numeric methods (min/max/clamp/abs/sqrt/etc.),
-//!   branch-on-data classifiers (ExprIf/ExprMatch), loops, iterators, and search/sort algorithms.
-//! - Roles establish reachability through structural types, effects, and call graphs, never by
-//!   erasing candidate status.
-//! - Trusted roots require exact canonical qualified type provenance derived from actual workspace
-//!   declarations and imports (`vyre_foundation::ir::*`, `vyre_foundation::operation::OperationRegistration`,
-//!   `vyre_megakernel::SemanticExecutor`); bare names, glob imports, `crate::bogus::*`,
-//!   sibling-module imports, and local dummy traits/structs fail closed.
-//! - IR builder roots strictly require returning AST/IR owner types (`Program`, `Node`, `Expr`,
-//!   `OperationRegistration`), optionally wrapped in `Result<T, _>`, `Option<T>`,
-//!   `Arc<T>`, `Box<T>`, `Vec<T>`, or homogenous AST owner tuples; metadata types (`DataType`, etc.) and
-//!   mixed data-output tuples (`(Vec<u32>, DataType)`) or data results (`Result<Vec<u32>, FusionError>`)
-//!   do NOT establish builder roots.
-//! - Dispatch roots strictly require an exact canonical dispatcher capability parameter
-//!   (`SemanticExecutor`) AND device execution in the body, derived dynamically from grounded
-//!   trait signatures taking `Program` or `SemanticExecutionRequest` plan types and producing execution/readback
-//!   effects (capability, metadata, allocation, upload-only, and free methods do not establish execution).
-//!   Passing dispatcher to non-dispatching helpers does not root; helpers that execute dispatch establish execution
-//!   transitively.
-//! - Dispatch error / fallback paths (`Err(_)`, `unwrap_or_else`, `or_else`, `*.is_err()`, etc.) are
-//!   forbidden from executing host candidates or inline semantic operations; fallback calls do NOT
-//!   receive reachability edges and are convicted.
-//! - Post-dispatch host reductions / aggregations (`.any()`, `.all()`, `.sum()`, `.count()`, `.fold()`,
-//!   `.reduce()`, loops over output) are forbidden; reductions must be dispatched on GPU.
-//!   Post-dispatch phase is expression-granular: nested match expressions (`match dispatcher.dispatch(..) { Ok(out) => ... }`),
-//!   chained method calls (`dispatcher.dispatch(..).map(|out| ...)`), and conditional expressions flip into post-dispatch
-//!   phase for their success continuations.
-//! - OperationRegistration expected-output fixture producer contexts require exact byte literal constants
-//!   (or allocations from constant byte arrays via `.to_vec()` / `vec![]`). Any dynamic helper function call,
-//!   wire codec invocation (`pack_u32_slice`), local helper closure alias, loop, or arithmetic in `expected_output`
-//!   convicts the registration; `test_inputs` generators and codecs remain permitted.
-//! - Caller identity is tracked by exact definition index to prevent collapsing same-named methods
-//!   across different impl blocks or traits.
-//! - Macro contents (`ItemMacro`, `ExprMacro`, `StmtMacro`) such as `inventory::submit!` and `vec![]`
-//!   are recursively parsed into AST nodes without double-counting traversals.
-//! - Test scoping covers parent module graphs, `#[cfg(test)] impl`, and `#[cfg(test)] trait` items.
-//! - Dynamic `expected_output` evaluations and computed static/const fixture initializers (resolved via
-//!   path references regardless of token naming) are strictly forbidden from executing semantic candidates.
+//! Every rule here names a syntactic shape:
+//!
+//! - A function whose name declares it a reference implementation
+//!   (`cpu_ref`, `cpu_reference`, a `vyre_reference` simulator) in production
+//!   scope.
+//! - A direct call to `vyre_reference` outside test scope.
+//! - An `OperationRegistration` expected-output producer that is anything
+//!   other than exact byte constants, including a helper call, a wire codec
+//!   such as `pack_u32_slice`, a loop, or arithmetic. A `test_inputs`
+//!   generator may still use a codec: an input is not the answer.
+//! - A dispatch error or fallback path (`Err(_)`, `unwrap_or_else`,
+//!   `or_else`, `is_err()`) that runs a host candidate, which is the silent
+//!   fallback shape.
+//! - A post-dispatch host reduction over device output (`any`, `all`, `sum`,
+//!   `count`, `fold`, `reduce`, a loop), which must be dispatched instead.
+//!
+//! Classification is source-derived. Caller identity is an exact definition
+//! index, so two same-named methods in different impl blocks do not collapse.
+//! Macro bodies (`inventory::submit!`, `vec![]`) are parsed as AST rather than
+//! text. Test scope covers parent module graphs, `#[cfg(test)] impl`, and
+//! `#[cfg(test)] trait`.
+//!
+//! # What this no longer proves
+//!
+//! A sixth rule convicted any host data-processing function that the call
+//! graph could not reach from a production root. Its premise was that a host
+//! routine nothing production reaches is a test witness left in shipped code.
+//! Measured against the crates it names rather than the three directories it
+//! was tuned on, it reported 615 findings, 473 of them in the IR crate and 129
+//! in drivers: tiling arithmetic, workgroup selection, rank validation, a
+//! linker anchor. Every one is a host-side compile-time computation, which
+//! this compiler is made of, and the rule had no way to separate that from
+//! evaluating a user program. It reported zero only because its scan had
+//! narrowed to three paths that no longer described the workspace.
+//!
+//! So a host semantic twin that no production path reaches, and that is not
+//! named as a reference, is no longer detected here. What still catches it is
+//! the registration rule when the twin produces an expected output, the
+//! fallback rule when a dispatch failure calls it, and the dependency closure
+//! below when it lives behind `vyre-reference`. A twin reached by none of
+//! those is unproven, and closing that needs a rule that reads what a function
+//! computes rather than who calls it.
 
 use crate::gate::{GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 use super::host_oracle_elimination_eval::analyze_sources;
-use super::host_oracle_elimination_records::TARGET_ROOTS;
 use crate::gates::scan::test_module_files;
 
 /// Zero-baseline gate that eliminates host CPU oracles and semantic twins from production library code.
@@ -63,7 +62,15 @@ impl crate::gate::GateBehavior for HostOracleElimination {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
-        let sources = tree.rust(TARGET_ROOTS)?;
+        let roots = operation_bearing_roots(&tree, &mut report)?;
+        if roots.is_empty() {
+            return Err(GateError::new(
+                "no shipped crate registers a semantic operation, so there is nothing this rule describes".to_string(),
+                "give every operation-registering crate a `[[crate]]` row in docs/CRATE_OWNERSHIP.toml",
+            ));
+        }
+        let borrowed: Vec<&str> = roots.iter().map(String::as_str).collect();
+        let sources = tree.rust(&borrowed)?;
         report.cover_complete("production library sources", sources.len());
 
         let test_scoped_files = test_module_files(&tree, &sources)?;
@@ -81,11 +88,55 @@ impl crate::gate::GateBehavior for HostOracleElimination {
         }
 
         report.note(format!(
-            "{} production library source file(s) analyzed, and every shipped crate's production dependency closure checked for a host evaluator",
-            sources.len()
+            "{} production library source file(s) across {} shipped crate(s) analyzed, and every shipped crate's production dependency closure checked for a host evaluator",
+            sources.len(),
+            roots.len()
         ));
         Ok(report)
     }
+}
+
+/// Calling a registration constructor puts a crate in scope.
+const REGISTRATION_CALL: &str = "OperationRegistration::";
+
+/// Defining the type does not.
+const REGISTRATION_DEFINITION: &str = "impl OperationRegistration";
+
+/// The `src` directory of every shipped crate that registers an operation.
+///
+/// This is the shape a host semantic twin hides in: an op whose declared
+/// meaning is a device program, sitting beside a host routine that computes
+/// the same answer, so a reader cannot tell which one the result came from. A
+/// crate that registers no operation has no such pairing, and the reachability
+/// model behind the twin rule does not describe it: an IR crate builds no
+/// program roots and a driver's entry points are trait implementations the
+/// runtime calls, so scanning either convicts hundreds of ordinary helpers for
+/// being unreachable inside a set that never contained their callers.
+///
+/// The set is read from the tree. Three literal paths stood here, and when the
+/// library and driver crates were split apart the scan narrowed to a fraction
+/// of what it claimed while still reporting a clean verdict over the whole
+/// workspace. A crate that starts registering operations now enrols itself,
+/// and one whose sources move with it stays scanned.
+///
+/// The crate that declares `OperationRegistration` is excluded by the shape of
+/// its own source rather than by name, so moving the type does not silently
+/// drop its new home out of scope or pull the old one back in.
+pub fn operation_bearing_roots(tree: &Tree, report: &mut Report) -> Result<Vec<String>, GateError> {
+    let mut roots = Vec::new();
+    for root in super::host_oracle_closure::shipped_source_roots(tree, report)? {
+        let mut calls = false;
+        let mut defines = false;
+        for path in &tree.rust(&[root.as_str()])? {
+            let text = tree.read(path)?;
+            calls |= text.contains(REGISTRATION_CALL);
+            defines |= text.contains(REGISTRATION_DEFINITION);
+        }
+        if calls && !defines {
+            roots.push(root);
+        }
+    }
+    Ok(roots)
 }
 
 #[cfg(test)]

@@ -33,6 +33,7 @@ mod feature_isolation;
 mod fixture_gate;
 mod gate_artifact_rosters;
 mod gate_dag_contracts;
+mod host_oracle_scan_set;
 mod manifest_dependency_tables;
 mod msrv_toolchain;
 mod nested_byte_rows;

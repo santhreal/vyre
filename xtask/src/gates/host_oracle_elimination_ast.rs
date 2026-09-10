@@ -53,7 +53,6 @@ struct CallSiteContext {
     is_in_test: bool,
     is_in_expected_output: bool,
     is_in_fallback: bool,
-    is_in_op_reg: bool,
 }
 
 pub(super) struct AstAnalysisVisitor {
@@ -93,7 +92,6 @@ pub(super) struct AstAnalysisVisitor {
     pub(super) calls: Vec<CallSiteRecord>,
     pub(super) static_consts: Vec<StaticConstRecord>,
     pub(super) direct_findings: Vec<Finding>,
-    pub(super) types_with_public_fields: BTreeSet<String>,
     pub(super) trait_impl_depth: usize,
 }
 
@@ -139,7 +137,6 @@ impl AstAnalysisVisitor {
             calls: Vec::new(),
             static_consts: Vec::new(),
             direct_findings: Vec::new(),
-            types_with_public_fields: BTreeSet::new(),
         }
     }
 
@@ -259,7 +256,6 @@ impl AstAnalysisVisitor {
             is_in_test: context.is_in_test,
             is_in_expected_output: context.is_in_expected_output,
             is_in_fallback: context.is_in_fallback,
-            is_in_op_reg: context.is_in_op_reg,
         });
     }
 
@@ -270,7 +266,6 @@ impl AstAnalysisVisitor {
             is_in_test: self.in_test(),
             is_in_expected_output: self.in_expected_output_depth > 0,
             is_in_fallback: self.in_fallback_depth > 0,
-            is_in_op_reg: self.in_op_reg_depth > 0,
         };
         match context {
             CallContext::Walk => walk,
@@ -297,7 +292,6 @@ impl AstAnalysisVisitor {
                 is_in_test: false,
                 is_in_expected_output: false,
                 is_in_fallback: false,
-                is_in_op_reg: true,
                 ..walk
             },
         }

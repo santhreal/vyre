@@ -3,9 +3,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-pub(super) const TARGET_ROOTS: &[&str] =
-    &["vyre-libs/src", "vyre-primitives/src", "vyre-driver/src"];
-
 /// Exact canonical qualified IR builder and operation types representing AST/IR owners.
 ///
 /// A function returning one of these owns IR, so it is a production root and
@@ -118,7 +115,6 @@ pub(super) struct FunctionRecord {
     pub(super) file: PathBuf,
     pub(super) module_path: Vec<String>,
     pub(super) line: u32,
-    pub(super) is_public: bool,
     pub(super) is_test_scoped: bool,
     pub(super) is_ir_builder: bool,
     pub(super) is_gpu_dispatch_root: bool,
@@ -148,7 +144,6 @@ pub(super) struct CallSiteRecord {
     pub(super) is_in_test: bool,
     pub(super) is_in_expected_output: bool,
     pub(super) is_in_fallback: bool,
-    pub(super) is_in_op_reg: bool,
 }
 
 /// Structural record of a static or const definition in source code.

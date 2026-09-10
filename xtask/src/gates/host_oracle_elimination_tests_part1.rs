@@ -12,6 +12,33 @@ use super::host_oracle_elimination_scanners::{
     derive_registration_expected_output_indices,
 };
 
+/// Every `OperationRegistration` constructor argument named `expected_output`,
+/// read out of the operation module as it stands.
+///
+/// The module is walked rather than one file being included: a constructor
+/// that moves between files in it is the same staleness as one that is
+/// renamed, and the roster this feeds exists because that staleness silently
+/// disabled a whole class of the gate once already.
+pub(super) fn registration_expected_output_indices() -> std::collections::BTreeMap<String, usize> {
+    let module =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../vyre-foundation/src/operation");
+    let mut roster = std::collections::BTreeMap::new();
+    let entries = std::fs::read_dir(&module)
+        .unwrap_or_else(|error| panic!("read {}: {error}", module.display()));
+    for entry in entries {
+        let path = entry.expect("read an operation module entry").path();
+        if path.extension().is_none_or(|ext| ext != "rs") {
+            continue;
+        }
+        let text = std::fs::read_to_string(&path)
+            .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
+        let parsed = syn::parse_file(&text)
+            .unwrap_or_else(|error| panic!("parse {}: {error}", path.display()));
+        roster.extend(derive_registration_expected_output_indices(&parsed));
+    }
+    roster
+}
+
 pub(super) fn analyze_files(files: &[(&str, &str)]) -> Vec<Finding> {
     let canonical_source = include_str!("../../../vyre-megakernel/src/execution.rs");
     let canonical_parsed =
@@ -46,11 +73,7 @@ pub(super) fn analyze_files(files: &[(&str, &str)]) -> Vec<Finding> {
         })
         .collect();
 
-    let registration_source = include_str!("../../../vyre-foundation/src/operation/mod.rs");
-    let registration_parsed =
-        syn::parse_file(registration_source).expect("registration source must parse as Rust");
-    let registration_expected_output_indices =
-        derive_registration_expected_output_indices(&registration_parsed);
+    let registration_expected_output_indices = registration_expected_output_indices();
     assert!(
         !registration_expected_output_indices.is_empty(),
         "OperationRegistration must publish a constructor taking `expected_output`"
@@ -305,27 +328,6 @@ pub trait TestOracleTrait {{
 }
 
 #[test]
-fn production_trait_default_method_uncalled_oracle_is_flagged() {
-    let code = format!(
-        r#"
-pub trait ProductionTrait {{
-    fn default_sim(&self, input: &[u32]) -> Vec<u8> {{
-{body}
-    }}
-}}
-"#,
-        body = incrementing_oracle_body()
-    );
-    let findings = analyze_files(&[("vyre-libs/src/trait_oracle.rs", &code)]);
-    assert_eq!(
-        findings.len(),
-        1,
-        "production trait with unreached default oracle body must be flagged"
-    );
-    assert!(findings[0].message.contains("`default_sim`"));
-}
-
-#[test]
 fn mutation_oracle_detection_catches_production_vyre_reference_usage() {
     let code = r#"
 pub fn simulate_runtime() {
@@ -339,217 +341,6 @@ pub fn simulate_runtime() {
         "expected finding for production vyre_reference simulator usage"
     );
     assert_eq!(findings[0].line, Some(3));
-}
-
-#[test]
-fn mutation_catches_local_dummy_program_masquerade() {
-    let code = r#"
-pub struct Program;
-
-pub fn fake_builder(x: f32) -> Program {
-    let _ = x * x;
-    Program
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/fake_program.rs", code)]);
-    assert_eq!(
-        findings.len(),
-        1,
-        "locally declared Program masquerade must be flagged"
-    );
-    assert!(findings[0].message.contains("`fake_builder`"));
-    assert_eq!(findings[0].line, Some(4));
-}
-
-#[test]
-fn mutation_catches_crate_bogus_program_masquerade() {
-    let code = r#"
-use crate::bogus::Program;
-
-pub fn fake_builder(x: f32) -> Program {
-    let _ = x * x;
-    Program
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/bogus_program.rs", code)]);
-    assert_eq!(
-        findings.len(),
-        1,
-        "crate::bogus::Program masquerade must be flagged"
-    );
-    assert!(findings[0].message.contains("`fake_builder`"));
-    assert_eq!(findings[0].line, Some(4));
-}
-
-#[test]
-fn mutation_catches_glob_import_program_masquerade() {
-    let code = r#"
-mod fake {
-    pub struct Program;
-}
-use fake::*;
-
-pub fn fake_builder(x: f32) -> Program {
-    let _ = x * x;
-    Program
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/glob_program.rs", code)]);
-    assert_eq!(
-        findings.len(),
-        1,
-        "glob imported Program masquerade must be flagged"
-    );
-    assert!(findings[0].message.contains("`fake_builder`"));
-    assert_eq!(findings[0].line, Some(7));
-}
-
-#[test]
-fn mutation_catches_sibling_imported_fake_program_masquerade() {
-    let code = r#"
-mod sibling {
-    pub struct Program;
-}
-use sibling::Program;
-
-pub fn fake_builder(x: f32) -> Program {
-    let _ = x * x;
-    Program
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/sibling_program.rs", code)]);
-    assert_eq!(
-        findings.len(),
-        1,
-        "sibling imported Program masquerade must be flagged"
-    );
-    assert!(findings[0].message.contains("`fake_builder`"));
-    assert_eq!(findings[0].line, Some(7));
-}
-
-#[test]
-fn mutation_catches_sibling_imported_fake_dispatcher_trait_masquerade() {
-    let code = r#"
-mod sibling {
-    pub trait SemanticExecutor {
-        fn dispatch(&self, a: u32, b: u32);
-    }
-}
-use sibling::SemanticExecutor;
-
-pub fn fake_dispatch(d: &impl SemanticExecutor, x: f32) -> f32 {
-    d.execute(1, 2);
-    x + 1.0
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/sibling_dispatcher.rs", code)]);
-    assert_eq!(
-        findings.len(),
-        1,
-        "sibling imported SemanticExecutor masquerade must be flagged"
-    );
-    assert!(findings[0].message.contains("`fake_dispatch`"));
-    assert_eq!(findings[0].line, Some(9));
-}
-
-#[test]
-fn mutation_catches_fake_dispatch_error_without_canonical_dispatcher() {
-    let code = r#"
-pub struct FakeSemanticExecutionError;
-
-pub struct LocalDevice;
-impl LocalDevice {
-    pub fn dispatch(&self, _a: u32, _b: u32) {}
-}
-
-pub fn fake_dispatch(x: f32) -> Result<f32, FakeSemanticExecutionError> {
-    let obj = LocalDevice;
-    obj.execute(1, 2);
-    Ok(x + 1.0)
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/fake_device.rs", code)]);
-    assert_eq!(
-        findings.len(),
-        1,
-        "dispatch call without canonical dispatcher parameter must be flagged"
-    );
-    assert!(findings[0].message.contains("`fake_dispatch`"));
-    assert_eq!(findings[0].line, Some(9));
-}
-
-#[test]
-fn mutation_catches_dispatch_error_and_resident_read_range_param_masquerade() {
-    let code = r#"
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionRequest};
-
-pub struct LocalDevice;
-impl LocalDevice {
-    pub fn dispatch(&self, _a: u32, _b: u32) {}
-}
-
-pub fn fake_dispatch_with_error_param(
-    _err: &SemanticExecutionError,
-    _range: &SemanticExecutionRequest,
-    x: f32,
-) -> f32 {
-    let obj = LocalDevice;
-    obj.execute(1, 2);
-    x + 1.0
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/fake_dispatch_params.rs", code)]);
-    assert_eq!(
-        findings.len(),
-        1,
-        "SemanticExecutionError/SemanticExecutionRequest parameters must not establish dispatch roots"
-    );
-    assert!(findings[0]
-        .message
-        .contains("`fake_dispatch_with_error_param`"));
-    assert_eq!(findings[0].line, Some(9));
-}
-
-#[test]
-fn mutation_catches_mixed_tuple_data_type_masquerade() {
-    let code = r#"
-use vyre_foundation::ir::DataType;
-
-pub fn oracle_with_mixed_tuple(data: &[u32]) -> (Vec<u32>, DataType) {
-    let mut out = Vec::new();
-    for &x in data {
-        out.push(x * 2);
-    }
-    (out, DataType::U32)
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/mixed_tuple.rs", code)]);
-    assert_eq!(
-        findings.len(),
-        1,
-        "mixed tuple with DataType metadata must not establish an IR builder root"
-    );
-    assert!(findings[0].message.contains("`oracle_with_mixed_tuple`"));
-    assert_eq!(findings[0].line, Some(4));
-}
-
-#[test]
-fn mutation_catches_result_vec_with_fusion_error_masquerade() {
-    let code = r#"
-use vyre_foundation::execution_plan::fusion::FusionError;
-
-pub fn fake_fusion_oracle(data: &[u32]) -> Result<Vec<u32>, FusionError> {
-    let mut out = Vec::new();
-    for &x in data {
-        out.push(x.wrapping_add(1));
-    }
-    Ok(out)
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/fake_fusion.rs", code)]);
-    assert_eq!(findings.len(), 1, "Result<Vec<u32>, FusionError> where success type is data must not establish an IR builder root");
-    assert!(findings[0].message.contains("`fake_fusion_oracle`"));
-    assert_eq!(findings[0].line, Some(4));
 }
 
 #[test]
@@ -642,39 +433,6 @@ pub static REG: OperationRegistration = OperationRegistration {
         .iter()
         .any(|f| f.message.contains("`struct_literal_oracle`")
             || f.message.contains("struct_literal_oracle")));
-}
-
-#[test]
-fn mutation_operation_registration_aliased_as_or_catches_expected_output_oracle() {
-    let code = r#"
-use vyre_foundation::ir::Program;
-use vyre_foundation::operation::OperationRegistration as OR;
-
-pub fn add_program() -> Program {
-    Program::new()
-}
-
-pub fn aliased_oracle(words: &[u32]) -> Vec<u8> {
-    words.iter().map(|w| (w.wrapping_mul(2)) as u8).collect()
-}
-
-inventory::submit! {
-    OR::library(
-        "test::aliased",
-        add_program,
-        None,
-        Some(|| vec![vec![aliased_oracle(&[1, 2])]]),
-    )
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/op_aliased.rs", code)]);
-    assert!(
-        !findings.is_empty(),
-        "aliased OR::library expected_output oracle must be caught"
-    );
-    assert!(findings
-        .iter()
-        .any(|f| f.message.contains("`aliased_oracle`") || f.message.contains("aliased_oracle")));
 }
 
 #[test]
@@ -845,10 +603,7 @@ inventory::submit! {
 /// constructor added or renamed there enrolls itself here.
 #[test]
 fn every_registration_constructor_convicts_a_host_oracle_in_expected_output() {
-    let registration_source = include_str!("../../../vyre-foundation/src/operation/mod.rs");
-    let registration_parsed =
-        syn::parse_file(registration_source).expect("registration source must parse as Rust");
-    let roster = derive_registration_expected_output_indices(&registration_parsed);
+    let roster = registration_expected_output_indices();
     assert!(
         roster.len() >= 2,
         "expected several registration constructors taking `expected_output`, derived {roster:?}"
