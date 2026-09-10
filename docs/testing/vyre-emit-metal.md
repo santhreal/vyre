@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Consume verified lowering products and emit native Apple shader source through the shared emitter path.
 
-The crate lives at `vyre-emit-metal`. The `metal-emitter` owner maintains its
-`emitter` testing contract.
+The crate lives at `vyre-emit-metal` and owns the `metal-emitter` seam in the `emitter` layer.
 
 ## Commands
 

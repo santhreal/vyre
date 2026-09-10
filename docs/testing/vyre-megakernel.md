@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Construct foundation-owned selected schedules through bounded whole-ProgramGraph search, and own immutable Artifact identity and authenticated TargetPayload construction. Does not own logical semantics, schedule schemas, physical-kernel lowering, admission, execution, or lifecycle policy.
 
-The crate lives at `vyre-megakernel`. The `megakernel-compiler` owner maintains its
-`compiler-boundary` testing contract.
+The crate lives at `vyre-megakernel` and owns the `megakernel-compiler` seam in the `compiler-boundary` layer.
 
 ## Commands
 

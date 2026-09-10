@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own substring matching, DFA, NFA, bracket matching, and regular expression scanning pipeline IR compositions. Does not own token lexing or parser tables, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-pattern`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-pattern` and owns the `libs-pattern` seam in the `libraries` layer.
 
 ## Commands
 

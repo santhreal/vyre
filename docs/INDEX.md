@@ -25,7 +25,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 ## Lifecycle counts
 
 - current: 20.
-- generated: 38.
+- generated: 60.
 - superseded: 0.
 - archived: 33.
 
@@ -107,6 +107,28 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-ptx.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-spirv.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-foundation.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-analysis.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-bitset.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-builder.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-decode.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-device.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-encoding.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-fixpoint.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-graph.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-hash.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-math.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-nn.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-parsing.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-pattern.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-reasoning.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-reduce.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-rule.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-scheduling.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-security.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-solvers.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-text.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-vfs.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs-visual.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-lints.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-lower.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../xtask/src/gates/testing_guides.rs](../xtask/src/gates/testing_guides.rs) |

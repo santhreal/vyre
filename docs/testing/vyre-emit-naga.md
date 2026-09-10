@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Consume verified lowering products and emit the primary text representation and related binary targets.
 
-The crate lives at `vyre-emit-naga`. The `primary-text-emitter` owner maintains its
-`emitter` testing contract.
+The crate lives at `vyre-emit-naga` and owns the `primary-text-emitter` seam in the `emitter` layer.
 
 ## Commands
 

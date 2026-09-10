@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own linear algebra, matrix operations, broadcasting, scans, optimization builders, and geometric algebra IR compositions. Does not own neural network layers, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-math`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-math` and owns the `libs-math` seam in the `libraries` layer.
 
 ## Commands
 

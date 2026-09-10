@@ -90,6 +90,7 @@ pub const fn vyre_reference::DualReferenceFacet::new(operation_id: &'static str,
 pub const fn vyre_reference::ReferenceBudget::bounded(steps: u64) -> Self
 pub const fn vyre_reference::ReferenceBudget::new(work_ceiling: u64, max_memory_bytes: usize, max_recursion_depth: usize) -> Self
 pub const fn vyre_reference::ReferenceBudget::standard() -> Self
+pub const fn vyre_reference::ReferenceErrorClass::cause_kind(self) -> vyre_foundation::diagnostics::cause::CauseKind
 pub const fn vyre_reference::ReferenceErrorClass::name(self) -> &'static str
 pub const fn vyre_reference::ReferenceErrorKind::error_class(&self) -> vyre_reference::ReferenceErrorClass
 pub const fn vyre_reference::ReferenceFacet::new(operation_id: &'static str, execute: vyre_spec::intrinsic_descriptor::CpuFn) -> Self

@@ -104,9 +104,11 @@ Public facade. Re-export IR, driver, runtime, and the artifact compiler. Own no 
 
 ### Boundaries
 
-The `public-facade` owner maintains this `facade` crate at `vyre`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-megakernel`, `vyre-runtime`, `vyre-spec`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `facade` layer's `public-facade` seam, at `vyre`.
+Every production dependency on it crosses The curated public surface: IR, driver, runtime and the artifact compiler, re-exported.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -138,7 +140,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

@@ -91,16 +91,18 @@ Execute production artifacts against independent reference semantics, minimize c
 
 ### Boundaries
 
-The `conformance` owner maintains this `conformance` crate at `conform/vyre-conform`.
-Its allowed internal production dependencies are: `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `conformance` layer's `parity-harness` seam, at `conform/vyre-conform`.
+Every production dependency on it crosses Parity execution, counterexample minimization, law checks and versioned certificates.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `conform/vyre-conform/examples/vyre_conform_runner_release_surface.rs`:
+Run the checked-in behavior from `conform/vyre-conform/examples/disposition_census.rs`:
 
 ```console
-./cargo_full run -p vyre-conform --example vyre_conform_runner_release_surface
+./cargo_full run -p vyre-conform --example disposition_census
 ```
 
 ### Features
@@ -125,7 +127,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

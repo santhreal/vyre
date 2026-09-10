@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own visual rendering and compositing effects including blur, shadow, blend modes, gradients, and color conversions. Does not own display presentation, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-visual`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-visual` and owns the `libs-visual` seam in the `libraries` layer.
 
 ## Commands
 

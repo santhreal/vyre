@@ -109,9 +109,11 @@ Define backend-neutral device, target compiler registration, artifact materializ
 
 ### Boundaries
 
-The `backend-contract` owner maintains this `backend-neutral` crate at `vyre-driver`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-spec`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `backend-neutral` layer's `backend-contract` seam, at `vyre-driver`.
+Every production dependency on it crosses The backend-neutral target, materialization, submission and completion contracts, and the driver registry every backend registers into.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -143,7 +145,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

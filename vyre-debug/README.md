@@ -82,9 +82,11 @@ Inspect, explain, and diagnose typed programs, lowering, and product-library com
 
 ### Boundaries
 
-The `debugging` owner maintains this `tooling` crate at `vyre-debug`.
-Its allowed internal production dependencies are: `vyre`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `tooling` layer's `debugging` seam, at `vyre-debug`.
+Every production dependency on it crosses Program and artifact inspection for a caller holding a compiled artifact.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -111,12 +113,12 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
-`vyre-debug@0.8.0` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
+`vyre-debug@0.8.0` is workspace-internal on the current Vyre release train and is not published as a standalone crate.
 
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

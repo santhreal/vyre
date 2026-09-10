@@ -41,9 +41,11 @@ Own pure MSL target compilation, native Apple device acquisition, materializatio
 
 ### Boundaries
 
-The `metal-driver` owner maintains this `concrete-backend` crate at `vyre-driver-metal`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-emit-metal`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `concrete-backend` layer's `metal-driver` seam, at `vyre-driver-metal`.
+Every production dependency on it crosses Native Apple backend registration, capability probing and dispatch.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -75,7 +77,7 @@ This crate is active on supported Apple targets in the 0.8.0 train. Non-Apple ta
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

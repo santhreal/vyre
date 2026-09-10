@@ -126,9 +126,11 @@ Own every composition in the workspace: consumer dialects and compiler-internal 
 
 ### Boundaries
 
-The `product-libraries` owner maintains this `libraries` crate at `vyre-libs`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-libs-analysis`, `vyre-libs-bitset`, `vyre-libs-builder`, `vyre-libs-decode`, `vyre-libs-device`, `vyre-libs-encoding`, `vyre-libs-fixpoint`, `vyre-libs-graph`, `vyre-libs-hash`, `vyre-libs-math`, `vyre-libs-nn`, `vyre-libs-parsing`, `vyre-libs-pattern`, `vyre-libs-reasoning`, `vyre-libs-reduce`, `vyre-libs-rule`, `vyre-libs-scheduling`, `vyre-libs-security`, `vyre-libs-solvers`, `vyre-libs-text`, `vyre-libs-vfs`, `vyre-libs-visual`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `libraries` layer's `semantic-library` seam, at `vyre-libs`.
+Every production dependency on it crosses Every composition in the workspace, re-exported from the domain crates behind one feature set. Returns Programs.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -140,7 +142,7 @@ Run the checked-in behavior from `vyre-libs/examples/select1_optimizer_parity.rs
 
 ### Features
 
-- Manifest features: `analysis`, `bitset`, `builder`, `builder-ops`, `cat-a-builder-options`, `crypto`, `crypto-blake3`, `decode`, `default`, `device`, `encoding`, `fixpoint`, `full`, `geom`, `go-parser`, `graph`, `graph-dispatch`, `hash`, `label`, `llm`, `logical`, `math`, `math-algebra`, `math-broadcast`, `math-dialect`, `math-kernels`, `math-linalg`, `math-scan`, `math-succinct`, `nfa`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-kernels`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `opt`, `parsing`, `parsing-kernels`, `pattern`, `pattern-dfa`, `pattern-kernels`, `pattern-nfa`, `pattern-regex`, `pattern-substring`, `predicate`, `python-parser`, `reasoning`, `reduce`, `representation`, `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `test-fixtures`, `text`, `topology`, `vfs`, `visual`
+- Manifest features: `analysis`, `bitset`, `builder`, `builder-ops`, `cat-a-builder-options`, `crypto`, `crypto-blake3`, `decode`, `default`, `device`, `encoding`, `fixpoint`, `full`, `geom`, `go-parser`, `graph`, `graph-dispatch`, `hash`, `interactive-graphics`, `label`, `llm`, `logical`, `math`, `math-algebra`, `math-broadcast`, `math-dialect`, `math-kernels`, `math-linalg`, `math-scan`, `math-succinct`, `nfa`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-kernels`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `opt`, `parsing`, `parsing-kernels`, `pattern`, `pattern-dfa`, `pattern-kernels`, `pattern-nfa`, `pattern-regex`, `pattern-substring`, `predicate`, `python-parser`, `reasoning`, `reduce`, `representation`, `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `test-fixtures`, `text`, `topology`, `vfs`, `visual`
 - Default feature members: `math-linalg`, `math-scan`, `math-broadcast`, `nn-activation`, `nn-linear`, `nn-norm`, `pattern-substring`, `pattern-dfa`, `hash`, `decode`
 
 ### Errors and unsupported behavior
@@ -160,7 +162,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

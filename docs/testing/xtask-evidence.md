@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own the xtask subcommands that decide whether a recorded benchmark or release measurement still describes this tree.
 
-The crate lives at `xtask-evidence`. The `release-tooling` owner maintains its
-`tooling` testing contract.
+The crate lives at `xtask-evidence` and owns the `evidence-gates` seam in the `tooling` layer.
 
 ## Commands
 

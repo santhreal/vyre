@@ -5,7 +5,7 @@ feature_ownership_findings = []
 forward_findings = []
 facade_findings = []
 unreachable_cfg_findings = []
-scheduled_cells = 297
+scheduled_cells = 299
 
 [[crates]]
 name = "structure-gate"
@@ -99,7 +99,7 @@ has_build_script = false
 [[crates]]
 name = "vyre-debug"
 manifest_path = "vyre-debug/Cargo.toml"
-publication_class = "internal-engine"
+publication_class = "conformance-tooling"
 features = []
 default_features = []
 optional_deps = []
@@ -146,7 +146,7 @@ has_build_script = false
 [[crates]]
 name = "vyre-driver-reference"
 manifest_path = "vyre-driver-reference/Cargo.toml"
-publication_class = "concrete-backend"
+publication_class = "conformance-tooling"
 features = []
 default_features = []
 optional_deps = []
@@ -313,7 +313,6 @@ default_features = [
     "decode",
 ]
 optional_deps = [
-    "regex-syntax",
     "vyre-libs-analysis",
     "vyre-libs-bitset",
     "vyre-libs-decode",
@@ -421,7 +420,7 @@ features = [
     "nn-paging",
 ]
 default_features = ["encoding"]
-optional_deps = []
+optional_deps = ["vyre-libs-nn"]
 has_build_script = false
 
 [[crates]]
@@ -736,7 +735,7 @@ has_build_script = false
 [[crates]]
 name = "vyre-reference"
 manifest_path = "vyre-reference/Cargo.toml"
-publication_class = "internal-engine"
+publication_class = "extension-sdk"
 features = [
     "default",
     "subgroup-ops",
@@ -771,7 +770,6 @@ optional_deps = [
     "vyre-driver-spirv",
     "vyre-driver-wgpu",
     "vyre-libs",
-    "vyre-libs-builder",
     "vyre-primitives",
 ]
 has_build_script = false
@@ -822,6 +820,8 @@ features = [
     "driver-artifact-contracts",
     "driver-contracts",
     "ir-fixtures",
+    "parity-oracles",
+    "semantic-parity",
     "semantic-requests",
     "spec-strategies",
 ]
@@ -2593,6 +2593,8 @@ enabled_features = [
     "driver-artifact-contracts",
     "driver-contracts",
     "ir-fixtures",
+    "parity-oracles",
+    "semantic-parity",
     "semantic-requests",
     "spec-strategies",
 ]
@@ -2616,6 +2618,18 @@ package = "vyre-test-support"
 enabled_features = ["ir-fixtures"]
 target_cell = "isolated_ir-fixtures"
 isolated_build_command = "./cargo_full check -p vyre-test-support --no-default-features --features ir-fixtures"
+
+[[covering_sets]]
+package = "vyre-test-support"
+enabled_features = ["parity-oracles"]
+target_cell = "isolated_parity-oracles"
+isolated_build_command = "./cargo_full check -p vyre-test-support --no-default-features --features parity-oracles"
+
+[[covering_sets]]
+package = "vyre-test-support"
+enabled_features = ["semantic-parity"]
+target_cell = "isolated_semantic-parity"
+isolated_build_command = "./cargo_full check -p vyre-test-support --no-default-features --features semantic-parity"
 
 [[covering_sets]]
 package = "vyre-test-support"
@@ -2866,6 +2880,7 @@ activated = [
     "vyre-megakernel",
     "vyre-primitives",
     "vyre-reference",
+    "vyre-registry-link",
     "vyre-runtime",
     "vyre-spec",
     "vyre-test-support",

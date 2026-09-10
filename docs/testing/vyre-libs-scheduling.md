@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own compiler-internal scheduling, fusion, batching, and dispatch strategy compositions. Does not own physical lowering, device execution, or runtime lifecycle policy.
 
-The crate lives at `vyre-libs-scheduling`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-scheduling` and owns the `libs-scheduling` seam in the `libraries` layer.
 
 ## Commands
 

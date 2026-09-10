@@ -14,9 +14,11 @@ Own compiler-internal logic, causal reasoning, categorical rewrites, and knowled
 
 ### Boundaries
 
-The `product-libraries` owner maintains this `libraries` crate at `vyre-libs-reasoning`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-libs-analysis`, `vyre-libs-builder`, `vyre-libs-graph`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `libraries` layer's `libs-reasoning` seam, at `vyre-libs-reasoning`.
+Every production dependency on it crosses Logic, causal reasoning and knowledge compilation compositions.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -48,7 +50,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

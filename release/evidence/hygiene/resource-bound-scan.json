@@ -1,8 +1,122 @@
 {
-  "source_fingerprint": "git:a08d4b239de91dd83947eee6147624ce72a1aa3c:dirty=true:worktree=ed0c560d94f35bcf6677613b447b664c341a8379071622217aeba1468d231d97",
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=ab2e2b4ba58b45dc748e13ab540a57116d15ff8ff539182ce68210e5bfc7273a"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "scan": "resource-bound",
   "findings": [
+    {
+      "path": "conform/vyre-conform/src/coordinator.rs",
+      "line": 409,
+      "pattern": "truncating_duration_cast",
+      "text": "elapsed_ms: started.elapsed().as_millis() as u64,"
+    },
+    {
+      "path": "conform/vyre-conform/src/coordinator.rs",
+      "line": 425,
+      "pattern": "truncating_duration_cast",
+      "text": "let elapsed_ms = started.elapsed().as_millis() as u64;"
+    },
+    {
+      "path": "conform/vyre-conform/src/coordinator.rs",
+      "line": 484,
+      "pattern": "truncating_duration_cast",
+      "text": "elapsed_ms: started.elapsed().as_millis() as u64,"
+    },
+    {
+      "path": "conform/vyre-conform/src/coordinator.rs",
+      "line": 532,
+      "pattern": "truncating_duration_cast",
+      "text": "elapsed_ms: started.elapsed().as_millis() as u64,"
+    },
+    {
+      "path": "conform/vyre-conform/src/coordinator.rs",
+      "line": 563,
+      "pattern": "truncating_duration_cast",
+      "text": "elapsed_ms: started.elapsed().as_millis() as u64,"
+    },
+    {
+      "path": "conform/vyre-conform/src/coordinator.rs",
+      "line": 387,
+      "pattern": "std_thread_sleep",
+      "text": "std::thread::sleep(Duration::from_millis(5));"
+    },
+    {
+      "path": "conform/vyre-conform/src/coordinator.rs",
+      "line": 387,
+      "pattern": "thread_sleep",
+      "text": "std::thread::sleep(Duration::from_millis(5));"
+    },
+    {
+      "path": "conform/vyre-conform/src/worker.rs",
+      "line": 95,
+      "pattern": "truncating_duration_cast",
+      "text": "let elapsed_ms = started.elapsed().as_millis() as u64;"
+    },
+    {
+      "path": "conform/vyre-conform/src/worker.rs",
+      "line": 22,
+      "pattern": "unbounded_read",
+      "text": "if let Err(e) = std::io::stdin().read_to_end(&mut stdin_bytes) {"
+    },
+    {
+      "path": "conform/vyre-conform/src/worker.rs",
+      "line": 268,
+      "pattern": "unbounded_read",
+      "text": "if let Ok(bytes) = std::fs::read(&exe_path) {"
+    },
+    {
+      "path": "conform/vyre-conform/src/worker.rs",
+      "line": 291,
+      "pattern": "unbounded_read",
+      "text": "if let Ok(statm) = std::fs::read_to_string(\"/proc/self/statm\") {"
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 587,
+      "pattern": "truncating_duration_cast",
+      "text": "cpu_sub_times.push(sub_time.as_nanos() as u64);"
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 594,
+      "pattern": "truncating_duration_cast",
+      "text": "latencies.push(total_latency.as_nanos() as u64);"
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 595,
+      "pattern": "truncating_duration_cast",
+      "text": "frame_times.push(frame_time.as_nanos() as u64);"
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 640,
+      "pattern": "truncating_duration_cast",
+      "text": "compile_pipeline_time_ns: compile_pipeline_time.as_nanos() as u64,"
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 645,
+      "pattern": "truncating_duration_cast",
+      "text": "empty_work_latency_ns: empty_work_latency.as_nanos() as u64,"
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 646,
+      "pattern": "truncating_duration_cast",
+      "text": "device_loss_recovery_latency_ns: dev_loss_recovery_latency.as_nanos() as u64,"
+    },
+    {
+      "path": "vyre-aot/src/bundle.rs",
+      "line": 262,
+      "pattern": "unbounded_read",
+      "text": "let compressed = fs::read(bundle_dir.join(&manifest.weights_file))?;"
+    },
+    {
+      "path": "vyre-aot/src/bundle.rs",
+      "line": 600,
+      "pattern": "unbounded_read",
+      "text": ".read_to_end(&mut out)"
+    },
     {
       "path": "vyre-driver-cuda/src/stream.rs",
       "line": 158,
@@ -16,8 +130,20 @@
       "text": "std::thread::sleep(sleep.min(deadline - waited));"
     },
     {
+      "path": "vyre-runtime/src/structured_concurrency.rs",
+      "line": 280,
+      "pattern": "truncating_duration_cast",
+      "text": "let elapsed = start.elapsed().as_micros() as u64;"
+    },
+    {
+      "path": "vyre-runtime/src/structured_concurrency.rs",
+      "line": 276,
+      "pattern": "thread_sleep",
+      "text": "thread::sleep(poll_step);"
+    },
+    {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 412,
+      "line": 430,
       "pattern": "unbounded_read",
       "text": "let source = std::fs::read_to_string(&path)"
     },
@@ -64,6 +190,189 @@
       "text": "text: \"tokio::time::sleep(\","
     }
   ],
-  "release_blocking_findings": [],
-  "blockers": []
+  "release_blocking_findings": [
+    {
+      "path": "conform/vyre-conform/src/coordinator.rs",
+      "line": 409,
+      "pattern": "truncating_duration_cast",
+      "owner_lane": "testing_evidence",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "conform/vyre-conform/src/coordinator.rs",
+      "line": 425,
+      "pattern": "truncating_duration_cast",
+      "owner_lane": "testing_evidence",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "conform/vyre-conform/src/coordinator.rs",
+      "line": 484,
+      "pattern": "truncating_duration_cast",
+      "owner_lane": "testing_evidence",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "conform/vyre-conform/src/coordinator.rs",
+      "line": 532,
+      "pattern": "truncating_duration_cast",
+      "owner_lane": "testing_evidence",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "conform/vyre-conform/src/coordinator.rs",
+      "line": 563,
+      "pattern": "truncating_duration_cast",
+      "owner_lane": "testing_evidence",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "conform/vyre-conform/src/worker.rs",
+      "line": 95,
+      "pattern": "truncating_duration_cast",
+      "owner_lane": "testing_evidence",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "conform/vyre-conform/src/worker.rs",
+      "line": 22,
+      "pattern": "unbounded_read",
+      "owner_lane": "testing_evidence",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "conform/vyre-conform/src/worker.rs",
+      "line": 268,
+      "pattern": "unbounded_read",
+      "owner_lane": "testing_evidence",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "conform/vyre-conform/src/worker.rs",
+      "line": 291,
+      "pattern": "unbounded_read",
+      "owner_lane": "testing_evidence",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 587,
+      "pattern": "truncating_duration_cast",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 594,
+      "pattern": "truncating_duration_cast",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 595,
+      "pattern": "truncating_duration_cast",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 640,
+      "pattern": "truncating_duration_cast",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 645,
+      "pattern": "truncating_duration_cast",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 646,
+      "pattern": "truncating_duration_cast",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "vyre-aot/src/bundle.rs",
+      "line": 262,
+      "pattern": "unbounded_read",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "vyre-aot/src/bundle.rs",
+      "line": 600,
+      "pattern": "unbounded_read",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "vyre-runtime/src/structured_concurrency.rs",
+      "line": 280,
+      "pattern": "truncating_duration_cast",
+      "owner_lane": "runtime_resident_work_queue",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    }
+  ],
+  "blockers": [
+    "18 release-blocking `resource-bound` finding(s) remain"
+  ]
 }

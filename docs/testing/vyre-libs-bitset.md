@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own packed u32 bitset operations, word utilities, and logical bitwise IR compositions. Does not own reduction tree implementations, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-bitset`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-bitset` and owns the `libs-bitset` seam in the `libraries` layer.
 
 ## Commands
 

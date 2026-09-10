@@ -2,6 +2,7 @@
 #[non_exhaustive] pub enum vyre_foundation::IrError
 #[non_exhaustive] pub enum vyre_foundation::config_schema::ConfigPartition
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::CompilerLevel
+#[non_exhaustive] pub enum vyre_foundation::diagnostics::DiagnosticDecodeError
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::DiagnosticStage
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::RetryClass
 #[non_exhaustive] pub enum vyre_foundation::diagnostics::Severity
@@ -28,13 +29,12 @@
 #[non_exhaustive] pub enum vyre_foundation::optimizer::PassSchedulingError
 #[non_exhaustive] pub enum vyre_foundation::optimizer::RefusalReason
 #[non_exhaustive] pub enum vyre_foundation::optimizer::diff_compile::Diff
-#[non_exhaustive] pub enum vyre_foundation::optimizer::effect_lattice::AtomicOrdering
 #[non_exhaustive] pub enum vyre_foundation::optimizer::effect_lattice::EffectLevel
 #[non_exhaustive] pub enum vyre_foundation::optimizer::pass_invariants::PassInvariantFinding
 #[non_exhaustive] pub enum vyre_foundation::optimizer::rewrite_contract::BoundedExpansion
-#[non_exhaustive] pub enum vyre_foundation::optimizer::rewrite_contract::NumericalContract
 #[non_exhaustive] pub enum vyre_foundation::optimizer::rewrite_contract::ProfitabilityFact
 #[non_exhaustive] pub enum vyre_foundation::optimizer::rewrite_contract::RewriteEffect
+#[non_exhaustive] pub enum vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract
 #[non_exhaustive] pub enum vyre_foundation::optimizer::rewrite_contract::RewritePrecondition
 #[non_exhaustive] pub enum vyre_foundation::optimizer::rewrite_contract::RewriteWitness
 #[non_exhaustive] pub enum vyre_foundation::serial::EnvelopeError
@@ -45,6 +45,7 @@
 #[non_exhaustive] pub enum vyre_foundation::validate::ValidationLocation
 #[non_exhaustive] pub enum vyre_foundation::validate::ValidationPhase
 #[non_exhaustive] pub struct vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration
+#[non_exhaustive] pub struct vyre_foundation::diagnostics::Diagnostic
 #[non_exhaustive] pub struct vyre_foundation::graph_view::DataEdge
 #[non_exhaustive] pub struct vyre_foundation::graph_view::GraphNode
 #[non_exhaustive] pub struct vyre_foundation::graph_view::NodeGraph
@@ -155,6 +156,7 @@ impl core::fmt::Display for vyre_foundation::config_schema::ConfigPartition
 impl core::fmt::Display for vyre_foundation::diagnostics::Diagnostic
 impl core::fmt::Display for vyre_foundation::diagnostics::DiagnosticCode
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionAliasingError
+impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionBufferRenameError
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionError
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionOverDispatchError
 impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionRejectionReason
@@ -187,7 +189,9 @@ impl core::fmt::Display for vyre_foundation::platform::CanonicalU32
 impl core::fmt::Display for vyre_foundation::platform::CanonicalU64
 impl core::fmt::Display for vyre_foundation::platform::Endianness
 impl core::fmt::Display for vyre_foundation::platform::HostArch
+impl core::fmt::Display for vyre_foundation::platform::HostCell
 impl core::fmt::Display for vyre_foundation::platform::HostOs
+impl core::fmt::Display for vyre_foundation::platform::HostSupportTier
 impl core::fmt::Display for vyre_foundation::platform::PointerWidth
 impl core::fmt::Display for vyre_foundation::program_caps::MissingCapability
 impl core::fmt::Display for vyre_foundation::region_ssa::BlockId
@@ -201,16 +205,15 @@ impl core::fmt::Display for vyre_foundation::serial::wire::decode::ScanDatabaseD
 impl core::fmt::Display for vyre_foundation::serial::wire::encode::WireEncodeErr
 impl core::fmt::Display for vyre_foundation::substrate::ArtifactId
 impl core::fmt::Display for vyre_foundation::substrate::CompilerLevelStage
-impl core::fmt::Display for vyre_foundation::substrate::ExprId
 impl core::fmt::Display for vyre_foundation::substrate::InternedConstId
 impl core::fmt::Display for vyre_foundation::substrate::InternedLayoutId
+impl core::fmt::Display for vyre_foundation::substrate::InternedNodeId
+impl core::fmt::Display for vyre_foundation::substrate::InternedRegionId
 impl core::fmt::Display for vyre_foundation::substrate::InternedStringId
 impl core::fmt::Display for vyre_foundation::substrate::InternedTypeId
-impl core::fmt::Display for vyre_foundation::substrate::NodeId
 impl core::fmt::Display for vyre_foundation::substrate::PassDescriptor
 impl core::fmt::Display for vyre_foundation::substrate::PhysicalKernelId
 impl core::fmt::Display for vyre_foundation::substrate::QueryKey
-impl core::fmt::Display for vyre_foundation::substrate::RegionId
 impl core::fmt::Display for vyre_foundation::substrate::Revision
 impl core::fmt::Display for vyre_foundation::substrate::ScheduleNodeId
 impl core::fmt::Display for vyre_foundation::substrate::VersionedCacheKey
@@ -268,10 +271,14 @@ impl vyre_foundation::config_schema::ResolvedConfiguration
 impl vyre_foundation::diagnostics::CompilerLevel
 impl vyre_foundation::diagnostics::Diagnostic
 impl vyre_foundation::diagnostics::DiagnosticCode
+impl vyre_foundation::diagnostics::DiagnosticStage
 impl vyre_foundation::diagnostics::OpLocation
+impl vyre_foundation::diagnostics::RetryClass
 impl vyre_foundation::diagnostics::Severity
 impl vyre_foundation::diagnostics::ToDiagnostic for vyre_foundation::IrError
 impl vyre_foundation::diagnostics::ToDiagnostic for vyre_foundation::validate::ValidationError
+impl vyre_foundation::diagnostics::cause::CauseKind
+impl vyre_foundation::diagnostics::cause::DiagnosticCause
 impl vyre_foundation::dialect::DialectDescriptor
 impl vyre_foundation::dialect::DialectRegistry
 impl vyre_foundation::dialect::ExternalLayoutDeclaration
@@ -295,7 +302,7 @@ impl vyre_foundation::execution_plan::fusion::RegionDependenceGraph
 impl vyre_foundation::execution_plan::fusion::RegionFusionPlanner
 impl vyre_foundation::execution_plan::fusion::ScheduleTile
 impl vyre_foundation::execution_plan::fusion::TilePipeliningPlan
-impl vyre_foundation::extension::CatalogBundle
+impl vyre_foundation::extension::ExtensionCatalogBundle
 impl vyre_foundation::failure_domain::FailureDomain
 impl vyre_foundation::failure_domain::RecoveryClass
 impl vyre_foundation::failure_domain::TypedRecoveryError
@@ -360,9 +367,10 @@ impl vyre_foundation::numeric::QuantizedConversion
 impl vyre_foundation::numeric::RegionNumericFacts
 impl vyre_foundation::numeric::ScalarFormat
 impl vyre_foundation::opaque_payload::endian::LeBytesWriter
+impl vyre_foundation::operation::AbsenceDecision
 impl vyre_foundation::operation::CallGraphClosure
-impl vyre_foundation::operation::CatalogBundle
 impl vyre_foundation::operation::ConformanceRegistry
+impl vyre_foundation::operation::OperationCatalogBundle
 impl vyre_foundation::operation::OperationEffects
 impl vyre_foundation::operation::OperationRegistration
 impl vyre_foundation::operation::OperationRegistry
@@ -426,10 +434,8 @@ impl vyre_foundation::optimizer::RewriteBatch
 impl vyre_foundation::optimizer::RewriteBatchCandidates
 impl vyre_foundation::optimizer::RewriteBatchPlan
 impl vyre_foundation::optimizer::RewriteCandidate
-impl vyre_foundation::optimizer::algebraic_rules::ScalarLiteral
 impl vyre_foundation::optimizer::construct_law::ConstructLaws
 impl vyre_foundation::optimizer::cost::CostCertificate
-impl vyre_foundation::optimizer::effect_lattice::AtomicOrdering
 impl vyre_foundation::optimizer::effect_lattice::EffectLevel
 impl vyre_foundation::optimizer::effect_lattice::SyncScope
 impl vyre_foundation::optimizer::eqsat::ENodeLang for vyre_foundation::optimizer::law_saturation::ExprLang
@@ -522,6 +528,7 @@ impl vyre_foundation::platform::FileSystemAdapter
 impl vyre_foundation::platform::HostArch
 impl vyre_foundation::platform::HostCell
 impl vyre_foundation::platform::HostOs
+impl vyre_foundation::platform::HostSupportTier
 impl vyre_foundation::platform::PlatformSupportMatrix
 impl vyre_foundation::platform::PointerWidth
 impl vyre_foundation::platform::ScratchDir
@@ -583,7 +590,6 @@ impl vyre_foundation::serial::wire::encode::WireEncodeErr
 impl vyre_foundation::substrate::CancellationToken
 impl vyre_foundation::substrate::CompilerLevelStage
 impl vyre_foundation::substrate::ConstInterner
-impl vyre_foundation::substrate::ExprArena
 impl vyre_foundation::substrate::LayoutInterner
 impl vyre_foundation::substrate::MemoryAccounting
 impl vyre_foundation::substrate::NodeArena
@@ -639,6 +645,7 @@ impl<'a> vyre_foundation::substrate::SelectedScheduleView<'a>
 impl<'a> vyre_foundation::substrate::TargetPayloadView<'a>
 impl<'a> vyre_foundation::substrate::WholeProgramGraphView<'a>
 impl<'a> vyre_foundation::validate::ValidationOptions<'a>
+impl<'a> vyre_foundation::visit::BufferNamesMut<'a>
 impl<'a> vyre_foundation::visit::ExprChildren<'a>
 impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::operation::TargetId
 impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::validate::ValidationCode
@@ -684,13 +691,18 @@ pub const fn vyre_foundation::config_schema::ConfigPartition::as_str(self) -> &'
 pub const fn vyre_foundation::diagnostics::CompilerLevel::label(self) -> &'static str
 pub const fn vyre_foundation::diagnostics::Diagnostic::with_compiler_level(self, level: vyre_foundation::diagnostics::CompilerLevel) -> Self
 pub const fn vyre_foundation::diagnostics::Diagnostic::with_retry(self, retry: vyre_foundation::diagnostics::RetryClass) -> Self
+pub const fn vyre_foundation::diagnostics::Diagnostic::with_severity(self, severity: vyre_foundation::diagnostics::Severity) -> Self
 pub const fn vyre_foundation::diagnostics::Diagnostic::with_stage(self, stage: vyre_foundation::diagnostics::DiagnosticStage) -> Self
 pub const fn vyre_foundation::diagnostics::DiagnosticCode::new(code: &'static str) -> Self
+pub const fn vyre_foundation::diagnostics::DiagnosticStage::label(self) -> &'static str
 pub const fn vyre_foundation::diagnostics::OpLocation::with_graph_node(self, node: u32) -> Self
 pub const fn vyre_foundation::diagnostics::OpLocation::with_graph_value(self, value: u32) -> Self
 pub const fn vyre_foundation::diagnostics::OpLocation::with_source_span(self, start: u32, end: u32) -> Self
 pub const fn vyre_foundation::diagnostics::OpLocation::with_span(self, span: [u32; 2]) -> Self
+pub const fn vyre_foundation::diagnostics::RetryClass::label(self) -> &'static str
 pub const fn vyre_foundation::diagnostics::Severity::label(self) -> &'static str
+pub const fn vyre_foundation::diagnostics::cause::CauseKind::index(self) -> usize
+pub const fn vyre_foundation::diagnostics::cause::CauseKind::label(self) -> &'static str
 pub const fn vyre_foundation::dialect::ResourceAbi::with_resources(resources: &'static [vyre_foundation::dialect::ResourceBinding]) -> Self
 pub const fn vyre_foundation::dialect::ResourceAbi::with_resources_and_layouts(resources: &'static [vyre_foundation::dialect::ResourceBinding], layouts: &'static [vyre_foundation::dialect::LayoutBinding]) -> Self
 pub const fn vyre_foundation::dialect_lookup::Signature::bytes_extractor(inputs: &'static [vyre_foundation::dialect_lookup::TypedParam], outputs: &'static [vyre_foundation::dialect_lookup::TypedParam], attrs: &'static [vyre_foundation::dialect_lookup::AttrSchema]) -> Self
@@ -844,29 +856,30 @@ pub const fn vyre_foundation::numeric::QuantizedConversion::is_free(&self) -> bo
 pub const fn vyre_foundation::numeric::QuantizedConversion::steps(&self) -> u32
 pub const fn vyre_foundation::numeric::RegionNumericFacts::opaque() -> Self
 pub const fn vyre_foundation::numeric::ScalarFormat::bit_width(self) -> u32
-pub const fn vyre_foundation::operation::CatalogBundle::digest(&self) -> &[u8; 32]
+pub const fn vyre_foundation::operation::AbsenceDecision::name(self) -> &'static str
+pub const fn vyre_foundation::operation::OperationCatalogBundle::digest(&self) -> &[u8; 32]
 pub const fn vyre_foundation::operation::OperationEffects::union(self, other: Self) -> Self
+pub const fn vyre_foundation::operation::OperationRegistration::absence(&self) -> core::option::Option<vyre_foundation::operation::AbsenceDecision>
 pub const fn vyre_foundation::operation::OperationRegistration::category(&self) -> core::option::Option<&'static str>
 pub const fn vyre_foundation::operation::OperationRegistration::declared_schedule_constraints(&self) -> vyre_foundation::GeometryRequirements
 pub const fn vyre_foundation::operation::OperationRegistration::has_transform_decision(&self) -> bool
 pub const fn vyre_foundation::operation::OperationRegistration::intrinsic_unconstrained(id: &'static str, signature: vyre_foundation::dialect_lookup::Signature, build: core::option::Option<fn() -> vyre_foundation::ir::Program>, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::library_unconstrained(id: &'static str, build: fn() -> vyre_foundation::ir::Program, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::new_unconstrained(id: &'static str, tier: vyre_foundation::operation::OperationTier, build: core::option::Option<fn() -> vyre_foundation::ir::Program>, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
-pub const fn vyre_foundation::operation::OperationRegistration::opaque_reason(&self) -> core::option::Option<&'static str>
 pub const fn vyre_foundation::operation::OperationRegistration::primitive_unconstrained(id: &'static str, build: fn() -> vyre_foundation::ir::Program, test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>, expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_category(self, category: &'static str) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_explicit_capabilities(self, capabilities: vyre_foundation::program_caps::RequiredCapabilities) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_explicit_effects(self, effects: vyre_foundation::operation::OperationEffects) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_geometry_requirements(self, requirements: vyre_foundation::GeometryRequirements) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_laws(self, laws: &'static [&'static str]) -> Self
-pub const fn vyre_foundation::operation::OperationRegistration::with_no_transform(self, reason: &'static str) -> Self
+pub const fn vyre_foundation::operation::OperationRegistration::with_no_legal_rewrite(self) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_numeric(self, numeric: vyre_foundation::numeric::NumericContract) -> Self
-pub const fn vyre_foundation::operation::OperationRegistration::with_opaque(self, reason: &'static str) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_signature(self, signature: vyre_foundation::dialect_lookup::Signature) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_source_file(self, source_file: &'static str) -> Self
+pub const fn vyre_foundation::operation::OperationRegistration::with_uncharacterized(self) -> Self
 pub const fn vyre_foundation::operation::OperationTier::matrix_value(self) -> &'static str
+pub const fn vyre_foundation::operation::SemanticOperation::absence(self) -> core::option::Option<vyre_foundation::operation::AbsenceDecision>
 pub const fn vyre_foundation::operation::SemanticOperation::category(self) -> core::option::Option<&'static str>
-pub const fn vyre_foundation::operation::SemanticOperation::opaque_reason(self) -> core::option::Option<&'static str>
 pub const fn vyre_foundation::operation::TargetId::expect_valid(id: &'static str) -> Self
 pub const fn vyre_foundation::operation::TargetId::new(id: &'static str) -> core::result::Result<Self, &'static str>
 pub const fn vyre_foundation::optimizer::AdapterCaps::conservative() -> Self
@@ -928,11 +941,19 @@ pub const fn vyre_foundation::platform::CanonicalU64::get(self) -> u64
 pub const fn vyre_foundation::platform::CanonicalU64::new(val: u64) -> Self
 pub const fn vyre_foundation::platform::CanonicalU64::to_le_bytes(self) -> [u8; 8]
 pub const fn vyre_foundation::platform::Endianness::current() -> Self
+pub const fn vyre_foundation::platform::Endianness::id(self) -> &'static str
 pub const fn vyre_foundation::platform::HostArch::current() -> Self
+pub const fn vyre_foundation::platform::HostArch::endianness(self) -> vyre_foundation::platform::Endianness
+pub const fn vyre_foundation::platform::HostArch::id(self) -> &'static str
+pub const fn vyre_foundation::platform::HostArch::pointer_width(self) -> vyre_foundation::platform::PointerWidth
+pub const fn vyre_foundation::platform::HostCell::current() -> Self
+pub const fn vyre_foundation::platform::HostCell::new(os: vyre_foundation::platform::HostOs, arch: vyre_foundation::platform::HostArch) -> Self
 pub const fn vyre_foundation::platform::HostOs::current() -> Self
+pub const fn vyre_foundation::platform::HostOs::id(self) -> &'static str
+pub const fn vyre_foundation::platform::HostSupportTier::id(self) -> &'static str
+pub const fn vyre_foundation::platform::PlatformSupportMatrix::tier(os: vyre_foundation::platform::HostOs, arch: vyre_foundation::platform::HostArch) -> vyre_foundation::platform::HostSupportTier
 pub const fn vyre_foundation::platform::PointerWidth::current() -> Self
-pub const fn vyre_foundation::platform::checked_isize_to_i64(val: isize) -> i64
-pub const fn vyre_foundation::platform::checked_usize_to_u64(val: usize) -> u64
+pub const fn vyre_foundation::platform::PointerWidth::id(self) -> &'static str
 pub const fn vyre_foundation::program_caps::RequiredCapabilities::none() -> Self
 pub const fn vyre_foundation::program_caps::RequiredCapabilities::with_subgroup_ops(self) -> Self
 pub const fn vyre_foundation::region_ssa::ScalarLiteral::data_type(&self) -> vyre_spec::data_type::DataType
@@ -1009,8 +1030,10 @@ pub const fn vyre_foundation::validate::ValidationError::location(&self) -> &vyr
 pub const fn vyre_foundation::validate::ValidationError::phase(&self) -> vyre_foundation::validate::ValidationPhase
 pub const fn vyre_foundation::validate::ValidationError::retry(&self) -> vyre_foundation::diagnostics::RetryClass
 pub const fn vyre_foundation::validate::ValidationPhase::as_str(self) -> &'static str
+pub const fn vyre_foundation::validate::ValidationPhase::cause_kind(self) -> vyre_foundation::diagnostics::cause::CauseKind
 pub const fn vyre_foundation::verifier::InvariantCategory::all() -> &'static [vyre_foundation::verifier::InvariantCategory]
 pub const fn vyre_foundation::verifier::InvariantCategory::code_prefix(&self) -> &'static str
+pub const fn vyre_foundation::visit::BufferNamesMut<'a>::is_complete(&self) -> bool
 pub const fn vyre_foundation::visit::ExprChildren<'a>::is_empty(self) -> bool
 pub const vyre_foundation::algebraic_reordering::ReorderingClass::ALL: &'static [Self]
 pub const vyre_foundation::causal::CAUSAL_RECEIPT_SCHEMA_VERSION: u32
@@ -1019,6 +1042,23 @@ pub const vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES: [&str; 2]
 pub const vyre_foundation::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str
 pub const vyre_foundation::config_schema::CANONICAL_CONFIG_FIELDS: &[vyre_foundation::config_schema::ConfigFieldDef]
 pub const vyre_foundation::config_schema::ConfigPartition::ALL: &'static [Self]
+pub const vyre_foundation::diagnostics::CAUSE_CHAIN_MAX_LINKS: usize
+pub const vyre_foundation::diagnostics::CAUSE_DETAIL_MAX_BYTES: usize
+pub const vyre_foundation::diagnostics::CONTEXT_KEY_MAX_BYTES: usize
+pub const vyre_foundation::diagnostics::CONTEXT_MAX_PAIRS: usize
+pub const vyre_foundation::diagnostics::CONTEXT_VALUE_MAX_BYTES: usize
+pub const vyre_foundation::diagnostics::DIAGNOSTIC_DOMAIN_SEPARATOR: &str
+pub const vyre_foundation::diagnostics::DIAGNOSTIC_SCHEMA_ID: vyre_spec::schema_registry::SchemaId
+pub const vyre_foundation::diagnostics::DIAGNOSTIC_SCHEMA_VERSION: u32
+pub const vyre_foundation::diagnostics::FIX_MAX_BYTES: usize
+pub const vyre_foundation::diagnostics::MESSAGE_MAX_BYTES: usize
+pub const vyre_foundation::diagnostics::NOTES_MAX: usize
+pub const vyre_foundation::diagnostics::NOTE_MAX_BYTES: usize
+pub const vyre_foundation::diagnostics::RECORD_MAX_BYTES: usize
+pub const vyre_foundation::diagnostics::REDACTED_CONTEXT_KEYS: &[&str]
+pub const vyre_foundation::diagnostics::REDACTION_PLACEHOLDER: &str
+pub const vyre_foundation::diagnostics::TRUNCATION_MARKER: &str
+pub const vyre_foundation::diagnostics::cause::CauseKind::ALL: &'static [Self]
 pub const vyre_foundation::dialect::ResourceAbi::EMPTY: Self
 pub const vyre_foundation::execution_plan::fusion::FusionCandidateKind::ALL: &'static [Self]
 pub const vyre_foundation::failure_domain::FailureDomain::ALL: &'static [Self]
@@ -1095,6 +1135,7 @@ pub const vyre_foundation::numeric::NUMERIC_CONTRACT_VERSION: u32
 pub const vyre_foundation::numeric::NumericContract::EXACT: Self
 pub const vyre_foundation::numeric::QUANTIZED_CONTRACT_VERSION: u32
 pub const vyre_foundation::numeric::ScalarFormat::ALL: [Self; 17]
+pub const vyre_foundation::operation::AbsenceDecision::ALL: [Self; 2]
 pub const vyre_foundation::operation::OperationEffects::ALL: Self
 pub const vyre_foundation::operation::OperationEffects::NONE: Self
 pub const vyre_foundation::operation::OperationEffects::READ_ONLY: Self
@@ -1124,6 +1165,9 @@ pub const vyre_foundation::optimizer::passes::cleanup::region_inline_engine::DEF
 pub const vyre_foundation::optimizer::passes::loops::loop_strip_mine::DEFAULT_STRIP_MINE_TILE: u32
 pub const vyre_foundation::optimizer::program_shape_facts::ANALYSIS_KEY: &str
 pub const vyre_foundation::optimizer::region_law::REGION_LAWS: &[vyre_foundation::optimizer::region_law::RegionLaw]
+pub const vyre_foundation::platform::CANONICAL_RUST_VERSION: &str
+pub const vyre_foundation::platform::HostArch::ALL: &'static [Self]
+pub const vyre_foundation::platform::HostOs::ALL: &'static [Self]
 pub const vyre_foundation::platform::PLATFORM_SUPPORT_MATRIX_SCHEMA_VERSION: u32
 pub const vyre_foundation::program_caps::RequiredCapabilities::NONE: Self
 pub const vyre_foundation::schedule::SCHEDULE_IR_VERSION: u16
@@ -1193,6 +1237,8 @@ pub enum vyre_foundation::config_schema::ConfigSecrecy
 pub enum vyre_foundation::config_schema::ConfigType
 pub enum vyre_foundation::config_schema::ConfigValue
 pub enum vyre_foundation::config_schema::IdentityImpact
+pub enum vyre_foundation::diagnostics::CauseKind
+pub enum vyre_foundation::diagnostics::cause::CauseKind
 pub enum vyre_foundation::dialect::DialectVersionError
 pub enum vyre_foundation::dialect::FieldType
 pub enum vyre_foundation::dialect::SchemaTranslationError
@@ -1211,6 +1257,7 @@ pub enum vyre_foundation::execution_plan::fusion::RegionRelation
 pub enum vyre_foundation::execution_plan::fusion::TileResidency
 pub enum vyre_foundation::extension::ExtensionCatalogError
 pub enum vyre_foundation::failure_domain::FailureDomain
+pub enum vyre_foundation::failure_domain::Reclaimed
 pub enum vyre_foundation::failure_domain::RecoveryClass
 pub enum vyre_foundation::failure_domain::RecoveryDisposition
 pub enum vyre_foundation::fp_parity::BufferParity
@@ -1274,6 +1321,7 @@ pub enum vyre_foundation::numeric::QuantizedRefusal
 pub enum vyre_foundation::numeric::Reassociation
 pub enum vyre_foundation::numeric::RegionArithmetic
 pub enum vyre_foundation::numeric::ScalarFormat
+pub enum vyre_foundation::operation::AbsenceDecision
 pub enum vyre_foundation::operation::IdNamespace<'a>
 pub enum vyre_foundation::operation::OperationRegistryError
 pub enum vyre_foundation::optimizer::CatalogLookupStatus
@@ -1281,7 +1329,6 @@ pub enum vyre_foundation::optimizer::DerivedPassEdgeKind
 pub enum vyre_foundation::optimizer::PassRunDecision
 pub enum vyre_foundation::optimizer::PassSelectionReason
 pub enum vyre_foundation::optimizer::algebraic_rules::IdentityReplacement
-pub enum vyre_foundation::optimizer::algebraic_rules::ScalarLiteral
 pub enum vyre_foundation::optimizer::effect_lattice::SyncScope
 pub enum vyre_foundation::optimizer::eqsat::EGraphError
 pub enum vyre_foundation::optimizer::eqsat::ExtractionStopReason
@@ -1309,6 +1356,7 @@ pub enum vyre_foundation::platform::ConversionError
 pub enum vyre_foundation::platform::Endianness
 pub enum vyre_foundation::platform::HostArch
 pub enum vyre_foundation::platform::HostOs
+pub enum vyre_foundation::platform::HostSupportTier
 pub enum vyre_foundation::platform::PlatformAdapterError
 pub enum vyre_foundation::platform::PointerWidth
 pub enum vyre_foundation::platform::UnsupportedPlatformError
@@ -1380,6 +1428,7 @@ pub enum vyre_foundation::verifier::InvariantCategory
 pub enum vyre_foundation::verifier::ReplayError
 pub enum vyre_foundation::verifier::VerificationError
 pub enum vyre_foundation::visit::ExprBufferAccess
+pub enum vyre_foundation::visit::ExprBufferName<'a>
 pub enum vyre_foundation::visit::ExprBufferRef<'a>
 pub enum vyre_foundation::visit::ExprCombine<'a>
 pub enum vyre_foundation::visit::ExprMagnitude<'a>
@@ -1473,20 +1522,31 @@ pub fn vyre_foundation::config_schema::render_cli_help() -> alloc::string::Strin
 pub fn vyre_foundation::config_schema::render_configuration_reference_markdown() -> alloc::string::String
 pub fn vyre_foundation::cpu_op::CategoryAOp::program() -> vyre_foundation::ir::Program
 pub fn vyre_foundation::cpu_op::CpuOp::cpu(input: &[u8], output: &mut alloc::vec::Vec<u8>)
+pub fn vyre_foundation::diagnostics::Diagnostic::canonical_bytes(&self) -> alloc::vec::Vec<u8>
+pub fn vyre_foundation::diagnostics::Diagnostic::cause(&self) -> core::option::Option<&vyre_foundation::diagnostics::cause::DiagnosticCause>
+pub fn vyre_foundation::diagnostics::Diagnostic::caused_by(self, source: &Self) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::caused_by_kind(&self, kind: vyre_foundation::diagnostics::cause::CauseKind) -> bool
 pub fn vyre_foundation::diagnostics::Diagnostic::emission_error(target: impl core::convert::Into<alloc::string::String>, code: &'static str, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::error(code: &'static str, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::error_with_code(code: vyre_foundation::diagnostics::DiagnosticCode, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::fmt(&self, output: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_foundation::IrError) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_foundation::validate::ValidationError) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_foundation::IrError) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_foundation::validate::ValidationError) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::from_json(encoded: &str) -> core::result::Result<Self, vyre_foundation::diagnostics::DiagnosticDecodeError>
 pub fn vyre_foundation::diagnostics::Diagnostic::note(code: &'static str, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::record_digest(&self) -> [u8; 32]
+pub fn vyre_foundation::diagnostics::Diagnostic::record_digest_hex(&self) -> alloc::string::String
+pub fn vyre_foundation::diagnostics::Diagnostic::redacted(&self) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::render_human(&self) -> alloc::string::String
+pub fn vyre_foundation::diagnostics::Diagnostic::root_cause(&self) -> core::option::Option<&vyre_foundation::diagnostics::cause::DiagnosticCause>
 pub fn vyre_foundation::diagnostics::Diagnostic::to_json(&self) -> alloc::string::String
 pub fn vyre_foundation::diagnostics::Diagnostic::warning(code: &'static str, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_artifact_id(self, artifact_id: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_foundation::diagnostics::Diagnostic::with_cause(self, kind: impl core::convert::Into<alloc::string::String>, detail: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_foundation::diagnostics::Diagnostic::with_cause_chain(self, chain: impl core::iter::traits::collect::IntoIterator<Item = vyre_foundation::diagnostics::DiagnosticCause>) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::with_cause(self, kind: vyre_foundation::diagnostics::cause::CauseKind, subject: impl core::convert::Into<alloc::borrow::Cow<'static, str>>, detail: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::with_cause_chain(self, chain: impl core::iter::traits::collect::IntoIterator<Item = vyre_foundation::diagnostics::cause::DiagnosticCause>) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::with_cause_link(self, cause: vyre_foundation::diagnostics::cause::DiagnosticCause) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_context_value(self, key: impl core::convert::Into<alloc::string::String>, value: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_context_values(self, values: impl core::iter::traits::collect::IntoIterator<Item = (impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>)>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_device(self, device: impl core::convert::Into<alloc::string::String>) -> Self
@@ -1505,6 +1565,8 @@ pub fn vyre_foundation::diagnostics::OpLocation::with_field_path(self, path: imp
 pub fn vyre_foundation::diagnostics::OpLocation::with_operand(self, index: u32) -> Self
 pub fn vyre_foundation::diagnostics::OpLocation::with_path(self, path: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::diagnostics::ToDiagnostic::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
+pub fn vyre_foundation::diagnostics::bound_value(value: alloc::string::String, max_bytes: usize) -> alloc::string::String
+pub fn vyre_foundation::diagnostics::cause::DiagnosticCause::new(kind: vyre_foundation::diagnostics::cause::CauseKind, subject: impl core::convert::Into<alloc::borrow::Cow<'static, str>>, detail: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::dialect::Dialect::descriptor() -> &'static vyre_foundation::dialect::DialectDescriptor
 pub fn vyre_foundation::dialect::Dialect::id() -> &'static str
 pub fn vyre_foundation::dialect::Dialect::match_op_id(op_id: &str) -> core::option::Option<Self::Op>
@@ -1555,6 +1617,7 @@ pub fn vyre_foundation::execution_plan::ExecutionPlan::track_active(&self, track
 pub fn vyre_foundation::execution_plan::ReadbackStrategy::visible_bytes(&self) -> u64
 pub fn vyre_foundation::execution_plan::SchedulingPolicy::default() -> Self
 pub fn vyre_foundation::execution_plan::fusion::FusionAliasingError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::execution_plan::fusion::FusionBufferRenameError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::execution_plan::fusion::FusionCandidate::baseline(regions: alloc::vec::Vec<usize>) -> Self
 pub fn vyre_foundation::execution_plan::fusion::FusionCandidate::register_forwarding(producer: usize, consumer: usize) -> Self
 pub fn vyre_foundation::execution_plan::fusion::FusionCandidate::shared_forwarding(producer: usize, consumer: usize, tile: vyre_foundation::execution_plan::fusion::ScheduleTile) -> Self
@@ -1591,20 +1654,21 @@ pub fn vyre_foundation::execution_plan::fusion::fuse_programs_vec(programs: allo
 pub fn vyre_foundation::execution_plan::fusion::lower_fusion_candidate(candidate: &vyre_foundation::execution_plan::fusion::FusionCandidate, programs: &[vyre_foundation::ir::Program]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_foundation::execution_plan::fusion::merge_programs_shared(programs: &[vyre_foundation::ir::Program]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_foundation::execution_plan::fusion::relies_on_single_invocation_workgroup(prog: &vyre_foundation::ir::Program) -> bool
+pub fn vyre_foundation::execution_plan::fusion::rename_buffer(program: &vyre_foundation::ir::Program, from: &str, to: &str) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_foundation::execution_plan::plan(program: &vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::execution_plan::ExecutionPlan, vyre_foundation::execution_plan::PlanError>
 pub fn vyre_foundation::execution_plan::plan_for_adapter(program: &vyre_foundation::ir::Program, adapter_caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::execution_plan::ExecutionPlan, vyre_foundation::execution_plan::PlanError>
 pub fn vyre_foundation::execution_plan::plan_with_options(program: &vyre_foundation::ir::Program, options: vyre_foundation::validate::ValidationOptions<'_>) -> core::result::Result<vyre_foundation::execution_plan::ExecutionPlan, vyre_foundation::execution_plan::PlanError>
 pub fn vyre_foundation::execution_plan::plan_with_options_for_adapter(program: &vyre_foundation::ir::Program, options: vyre_foundation::validate::ValidationOptions<'_>, adapter_caps: &vyre_foundation::optimizer::AdapterCaps) -> core::result::Result<vyre_foundation::execution_plan::ExecutionPlan, vyre_foundation::execution_plan::PlanError>
-pub fn vyre_foundation::extension::CatalogBundle::canonical_fingerprint(&self) -> [u8; 32]
-pub fn vyre_foundation::extension::CatalogBundle::get(&self, identity: &vyre_spec::extension::ExtensionIdentity) -> core::option::Option<&vyre_spec::extension::ExtensionSchema>
-pub fn vyre_foundation::extension::CatalogBundle::get_by_namespace(&self, namespace: &str) -> alloc::vec::Vec<&vyre_spec::extension::ExtensionSchema>
-pub fn vyre_foundation::extension::CatalogBundle::get_latest(&self, namespace: &str) -> core::option::Option<&vyre_spec::extension::ExtensionSchema>
-pub fn vyre_foundation::extension::CatalogBundle::is_empty(&self) -> bool
-pub fn vyre_foundation::extension::CatalogBundle::len(&self) -> usize
-pub fn vyre_foundation::extension::CatalogBundle::merge(&mut self, other: vyre_foundation::extension::CatalogBundle) -> core::result::Result<(), vyre_foundation::extension::ExtensionCatalogError>
-pub fn vyre_foundation::extension::CatalogBundle::new(bundle_id: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_foundation::extension::CatalogBundle::register(&mut self, schema: vyre_spec::extension::ExtensionSchema) -> core::result::Result<(), vyre_foundation::extension::ExtensionCatalogError>
-pub fn vyre_foundation::extension::CatalogBundle::validate(&self) -> core::result::Result<(), vyre_foundation::extension::ExtensionCatalogError>
+pub fn vyre_foundation::extension::ExtensionCatalogBundle::canonical_fingerprint(&self) -> [u8; 32]
+pub fn vyre_foundation::extension::ExtensionCatalogBundle::get(&self, identity: &vyre_spec::extension::ExtensionIdentity) -> core::option::Option<&vyre_spec::extension::ExtensionSchema>
+pub fn vyre_foundation::extension::ExtensionCatalogBundle::get_by_namespace(&self, namespace: &str) -> alloc::vec::Vec<&vyre_spec::extension::ExtensionSchema>
+pub fn vyre_foundation::extension::ExtensionCatalogBundle::get_latest(&self, namespace: &str) -> core::option::Option<&vyre_spec::extension::ExtensionSchema>
+pub fn vyre_foundation::extension::ExtensionCatalogBundle::is_empty(&self) -> bool
+pub fn vyre_foundation::extension::ExtensionCatalogBundle::len(&self) -> usize
+pub fn vyre_foundation::extension::ExtensionCatalogBundle::merge(&mut self, other: vyre_foundation::extension::ExtensionCatalogBundle) -> core::result::Result<(), vyre_foundation::extension::ExtensionCatalogError>
+pub fn vyre_foundation::extension::ExtensionCatalogBundle::new(bundle_id: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_foundation::extension::ExtensionCatalogBundle::register(&mut self, schema: vyre_spec::extension::ExtensionSchema) -> core::result::Result<(), vyre_foundation::extension::ExtensionCatalogError>
+pub fn vyre_foundation::extension::ExtensionCatalogBundle::validate(&self) -> core::result::Result<(), vyre_foundation::extension::ExtensionCatalogError>
 pub fn vyre_foundation::extension::RuleConditionExt::evaluate_opaque(&self, _ctx: &dyn core::any::Any) -> bool
 pub fn vyre_foundation::extension::RuleConditionExt::extension_id(&self) -> vyre_spec::extension::ExtensionRuleConditionId
 pub fn vyre_foundation::extension::RuleConditionExt::required_buffers(&self) -> alloc::vec::Vec<vyre_foundation::ir::BufferDecl>
@@ -1622,6 +1686,8 @@ pub fn vyre_foundation::extension::try_resolve_data_type(id: vyre_spec::extensio
 pub fn vyre_foundation::extension::try_resolve_un_op(id: vyre_spec::extension::ExtensionUnOpId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionUnOp>, alloc::string::String>
 pub fn vyre_foundation::failure_domain::FailureDomain::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::failure_domain::RecoveryClass::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::failure_domain::StateOwnerRecovery::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain
+pub fn vyre_foundation::failure_domain::StateOwnerRecovery::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
 pub fn vyre_foundation::failure_domain::TypedRecoveryError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::failure_domain::TypedRecoveryError::new(domain: vyre_foundation::failure_domain::FailureDomain, recovery_class: vyre_foundation::failure_domain::RecoveryClass, disposition: vyre_foundation::failure_domain::RecoveryDisposition, reason: impl core::convert::Into<alloc::string::String>, fix: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::failure_domain::govern_mutex<'a, T>(mutex: &'a std::sync::poison::mutex::Mutex<T>, owner: &'static str, state: &'static str, class: vyre_foundation::failure_domain::RecoveryClass) -> core::result::Result<std::sync::poison::mutex::MutexGuard<'a, T>, vyre_foundation::failure_domain::TypedRecoveryError>
@@ -1629,9 +1695,17 @@ pub fn vyre_foundation::failure_domain::govern_mutex_restartable<'a, T, F>(mutex
 pub fn vyre_foundation::failure_domain::govern_mutex_with_reset<'a, T, F>(mutex: &'a std::sync::poison::mutex::Mutex<T>, owner: &'static str, state: &'static str, class: vyre_foundation::failure_domain::RecoveryClass, reset_on_restart: F) -> core::result::Result<std::sync::poison::mutex::MutexGuard<'a, T>, vyre_foundation::failure_domain::TypedRecoveryError> where F: core::ops::function::FnOnce(&mut T)
 pub fn vyre_foundation::failure_domain::govern_rwlock_read<'a, T>(rwlock: &'a std::sync::poison::rwlock::RwLock<T>, owner: &'static str, state: &'static str, class: vyre_foundation::failure_domain::RecoveryClass) -> core::result::Result<std::sync::poison::rwlock::RwLockReadGuard<'a, T>, vyre_foundation::failure_domain::TypedRecoveryError>
 pub fn vyre_foundation::failure_domain::govern_rwlock_write<'a, T>(rwlock: &'a std::sync::poison::rwlock::RwLock<T>, owner: &'static str, state: &'static str, class: vyre_foundation::failure_domain::RecoveryClass) -> core::result::Result<std::sync::poison::rwlock::RwLockWriteGuard<'a, T>, vyre_foundation::failure_domain::TypedRecoveryError>
+pub fn vyre_foundation::failure_domain::govern_rwlock_write_restartable<'a, T, F>(rwlock: &'a std::sync::poison::rwlock::RwLock<T>, owner: &'static str, state: &'static str, reset_on_restart: F) -> std::sync::poison::rwlock::RwLockWriteGuard<'a, T> where F: core::ops::function::FnOnce(&mut T)
 pub fn vyre_foundation::failure_domain::govern_rwlock_write_with_reset<'a, T, F>(rwlock: &'a std::sync::poison::rwlock::RwLock<T>, owner: &'static str, state: &'static str, class: vyre_foundation::failure_domain::RecoveryClass, reset_on_restart: F) -> core::result::Result<std::sync::poison::rwlock::RwLockWriteGuard<'a, T>, vyre_foundation::failure_domain::TypedRecoveryError> where F: core::ops::function::FnOnce(&mut T)
+pub fn vyre_foundation::failure_domain::invariant_violation_poison(owner: &str, state: &str) -> never
 pub fn vyre_foundation::failure_domain::process_fatal_poison(owner: &str, state: &str) -> never
+pub fn vyre_foundation::failure_domain::reclaim_poisoned_condvar_wait<'a, T>(condvar: &std::sync::poison::condvar::Condvar, mutex: &'a std::sync::poison::mutex::Mutex<T>, guard: std::sync::poison::mutex::MutexGuard<'a, T>, owner: &str, state: &str) -> std::sync::poison::mutex::MutexGuard<'a, T>
+pub fn vyre_foundation::failure_domain::reclaim_poisoned_condvar_wait_timeout<'a, T>(condvar: &std::sync::poison::condvar::Condvar, mutex: &'a std::sync::poison::mutex::Mutex<T>, guard: std::sync::poison::mutex::MutexGuard<'a, T>, timeout: core::time::Duration, owner: &str, state: &str) -> (std::sync::poison::mutex::MutexGuard<'a, T>, bool)
 pub fn vyre_foundation::failure_domain::reclaim_poisoned_for_teardown<T>(state: core::result::Result<T, std::sync::poison::PoisonError<T>>, owner: &str, guarded: &str) -> T
+pub fn vyre_foundation::failure_domain::reclaim_poisoned_mutex<'a, T>(mutex: &'a std::sync::poison::mutex::Mutex<T>, owner: &str, state: &str) -> std::sync::poison::mutex::MutexGuard<'a, T>
+pub fn vyre_foundation::failure_domain::reclaim_poisoned_mutex_observed<'a, T>(mutex: &'a std::sync::poison::mutex::Mutex<T>, owner: &str, state: &str) -> (std::sync::poison::mutex::MutexGuard<'a, T>, vyre_foundation::failure_domain::Reclaimed)
+pub fn vyre_foundation::failure_domain::reclaim_poisoned_read<'a, T>(rwlock: &'a std::sync::poison::rwlock::RwLock<T>, owner: &str, state: &str) -> std::sync::poison::rwlock::RwLockReadGuard<'a, T>
+pub fn vyre_foundation::failure_domain::reclaim_poisoned_write<'a, T>(rwlock: &'a std::sync::poison::rwlock::RwLock<T>, owner: &str, state: &str) -> std::sync::poison::rwlock::RwLockWriteGuard<'a, T>
 pub fn vyre_foundation::fp_expansion::StrictExpansionError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::fp_expansion::StrictExpansionError::operation(&self) -> &str
 pub fn vyre_foundation::fp_expansion::expand_strict_transcendentals(program: &vyre_foundation::ir::Program) -> core::result::Result<core::option::Option<vyre_foundation::ir::Program>, vyre_foundation::fp_expansion::StrictExpansionError>
@@ -1849,12 +1923,10 @@ pub fn vyre_foundation::ir::GraphDelta::is_empty(&self) -> bool
 pub fn vyre_foundation::ir::GraphDelta::len(&self) -> usize
 pub fn vyre_foundation::ir::GraphDelta::new() -> Self
 pub fn vyre_foundation::ir::GraphDelta::operations(&self) -> &[vyre_foundation::ir::GraphDeltaOp]
-pub fn vyre_foundation::ir::GraphDelta::push(&mut self, op: vyre_foundation::ir::GraphDeltaOp)
 pub fn vyre_foundation::ir::GraphDelta::to_wire(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::ir::GraphDeltaError>
 pub fn vyre_foundation::ir::GraphDelta::try_push(&mut self, op: vyre_foundation::ir::GraphDeltaOp) -> core::result::Result<(), vyre_foundation::ir::GraphDeltaError>
 pub fn vyre_foundation::ir::GraphDelta::validate(&self, graph: &vyre_foundation::ir::ProgramGraph) -> core::result::Result<(), vyre_foundation::ir::GraphDeltaError>
 pub fn vyre_foundation::ir::GraphDelta::validate_op_bounds(op: &vyre_foundation::ir::GraphDeltaOp) -> core::result::Result<(), vyre_foundation::ir::GraphDeltaError>
-pub fn vyre_foundation::ir::GraphDelta::with_op(self, op: vyre_foundation::ir::GraphDeltaOp) -> Self
 pub fn vyre_foundation::ir::Ident::as_ref(&self) -> &str
 pub fn vyre_foundation::ir::Ident::as_str(&self) -> &str
 pub fn vyre_foundation::ir::Ident::borrow(&self) -> &str
@@ -1877,11 +1949,11 @@ pub fn vyre_foundation::ir::Ident::shared_text(&self) -> alloc::sync::Arc<str>
 pub fn vyre_foundation::ir::InterpCtx::get(&self, id: vyre_foundation::ir::NodeId) -> core::result::Result<vyre_foundation::ir::Value, vyre_foundation::ir::EvalError>
 pub fn vyre_foundation::ir::InterpCtx::operand(&self, index: usize) -> core::result::Result<vyre_foundation::ir::Value, vyre_foundation::ir::EvalError>
 pub fn vyre_foundation::ir::InterpCtx::operands(&self) -> &[vyre_foundation::ir::NodeId]
-pub fn vyre_foundation::ir::InterpCtx::region(&self, id: vyre_foundation::ir::RegionId) -> core::result::Result<&[u8], vyre_foundation::ir::EvalError>
-pub fn vyre_foundation::ir::InterpCtx::region_mut(&mut self, id: vyre_foundation::ir::RegionId) -> core::result::Result<&mut alloc::vec::Vec<u8>, vyre_foundation::ir::EvalError>
+pub fn vyre_foundation::ir::InterpCtx::region(&self, id: vyre_foundation::ir::ByteRegionId) -> core::result::Result<&[u8], vyre_foundation::ir::EvalError>
+pub fn vyre_foundation::ir::InterpCtx::region_mut(&mut self, id: vyre_foundation::ir::ByteRegionId) -> core::result::Result<&mut alloc::vec::Vec<u8>, vyre_foundation::ir::EvalError>
 pub fn vyre_foundation::ir::InterpCtx::set(&mut self, id: vyre_foundation::ir::NodeId, value: vyre_foundation::ir::Value)
 pub fn vyre_foundation::ir::InterpCtx::set_operands<I>(&mut self, operands: I) where I: core::iter::traits::collect::IntoIterator<Item = vyre_foundation::ir::NodeId>
-pub fn vyre_foundation::ir::InterpCtx::set_region(&mut self, id: vyre_foundation::ir::RegionId, bytes: alloc::vec::Vec<u8>)
+pub fn vyre_foundation::ir::InterpCtx::set_region(&mut self, id: vyre_foundation::ir::ByteRegionId, bytes: alloc::vec::Vec<u8>)
 pub fn vyre_foundation::ir::Layout::checked_linear_index(&self, coords: &[u32], extents: &[u32]) -> core::result::Result<u64, vyre_foundation::ir_inner::model::tile::TileError>
 pub fn vyre_foundation::ir::Layout::linear_index(&self, coords: &[u32], extents: &[u32]) -> usize
 pub fn vyre_foundation::ir::MemoryHints::default() -> Self
@@ -2217,6 +2289,7 @@ pub fn vyre_foundation::opaque_payload::endian::read_i64(bytes: &[u8]) -> core::
 pub fn vyre_foundation::opaque_payload::endian::read_u16(bytes: &[u8]) -> core::result::Result<(u16, &[u8]), vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated>
 pub fn vyre_foundation::opaque_payload::endian::read_u32(bytes: &[u8]) -> core::result::Result<(u32, &[u8]), vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated>
 pub fn vyre_foundation::opaque_payload::endian::read_u64(bytes: &[u8]) -> core::result::Result<(u64, &[u8]), vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated>
+pub fn vyre_foundation::operation::AbsenceDecision::parse(name: &str) -> core::option::Option<Self>
 pub fn vyre_foundation::operation::CallGraphClosure::callees(&self, id: &str) -> core::option::Option<&[&'static str]>
 pub fn vyre_foundation::operation::CallGraphClosure::closure_identity(&self) -> u64
 pub fn vyre_foundation::operation::CallGraphClosure::composite_version(&self, id: &str, base_version: u32) -> core::option::Option<u64>
@@ -2224,22 +2297,6 @@ pub fn vyre_foundation::operation::CallGraphClosure::is_unclosed_or_cyclic(&self
 pub fn vyre_foundation::operation::CallGraphClosure::solve_from_registrations<'a, I>(registrations: I) -> Self where I: core::iter::traits::collect::IntoIterator<Item = &'a vyre_foundation::operation::OperationRegistration>
 pub fn vyre_foundation::operation::CallGraphClosure::transitive_capabilities(&self, id: &str) -> core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub fn vyre_foundation::operation::CallGraphClosure::transitive_effects(&self, id: &str) -> core::option::Option<vyre_foundation::operation::OperationEffects>
-pub fn vyre_foundation::operation::CatalogBundle::artifact_identity(&self, request_or_program_digest: &[u8; 32]) -> [u8; 32]
-pub fn vyre_foundation::operation::CatalogBundle::compute_digest(version: u32, descriptors: &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::SemanticDescriptor>, lowering_providers: &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::LoweringProvider>, extensions: &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>) -> [u8; 32]
-pub fn vyre_foundation::operation::CatalogBundle::contains(&self, id: &str) -> bool
-pub fn vyre_foundation::operation::CatalogBundle::descriptor(&self, id: &str) -> core::option::Option<&vyre_foundation::operation::SemanticDescriptor>
-pub fn vyre_foundation::operation::CatalogBundle::empty() -> Self
-pub fn vyre_foundation::operation::CatalogBundle::extension(&self, name: &str) -> core::option::Option<&vyre_foundation::operation::ExtensionProvenance>
-pub fn vyre_foundation::operation::CatalogBundle::extensions(&self) -> &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>
-pub fn vyre_foundation::operation::CatalogBundle::from_parts(descriptors: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::SemanticDescriptor>, lowering_providers: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::LoweringProvider>, extensions: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>) -> Self
-pub fn vyre_foundation::operation::CatalogBundle::from_registry() -> Self
-pub fn vyre_foundation::operation::CatalogBundle::is_empty(&self) -> bool
-pub fn vyre_foundation::operation::CatalogBundle::len(&self) -> usize
-pub fn vyre_foundation::operation::CatalogBundle::lowering(&self, id: &str) -> core::option::Option<&vyre_foundation::operation::LoweringProvider>
-pub fn vyre_foundation::operation::CatalogBundle::with_descriptor(self, descriptor: vyre_foundation::operation::SemanticDescriptor) -> Self
-pub fn vyre_foundation::operation::CatalogBundle::with_extension(self, name: &'static str, version: u32, descriptors: impl core::iter::traits::collect::IntoIterator<Item = vyre_foundation::operation::SemanticDescriptor>, lowerings: impl core::iter::traits::collect::IntoIterator<Item = vyre_foundation::operation::LoweringProvider>) -> Self
-pub fn vyre_foundation::operation::CatalogBundle::with_lowering(self, lowering: vyre_foundation::operation::LoweringProvider) -> Self
-pub fn vyre_foundation::operation::CatalogBundle::with_operation(self, descriptor: vyre_foundation::operation::SemanticDescriptor, lowering: core::option::Option<vyre_foundation::operation::LoweringProvider>) -> Self
 pub fn vyre_foundation::operation::ConformanceRegistry::contains(&self, id: &str) -> bool
 pub fn vyre_foundation::operation::ConformanceRegistry::from_registry() -> Self
 pub fn vyre_foundation::operation::ConformanceRegistry::is_empty(&self) -> bool
@@ -2253,6 +2310,22 @@ pub fn vyre_foundation::operation::DialectOperationSpec::generate_property_input
 pub fn vyre_foundation::operation::DialectOperationSpec::id(&self) -> &'static str
 pub fn vyre_foundation::operation::DialectOperationSpec::metamorphic_test(&self, inputs: &[alloc::vec::Vec<u8>]) -> bool
 pub fn vyre_foundation::operation::DialectOperationSpec::reference_obligation(&self) -> &'static str
+pub fn vyre_foundation::operation::OperationCatalogBundle::artifact_identity(&self, request_or_program_digest: &[u8; 32]) -> [u8; 32]
+pub fn vyre_foundation::operation::OperationCatalogBundle::compute_digest(version: u32, descriptors: &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::SemanticDescriptor>, lowering_providers: &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::LoweringProvider>, extensions: &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>) -> [u8; 32]
+pub fn vyre_foundation::operation::OperationCatalogBundle::contains(&self, id: &str) -> bool
+pub fn vyre_foundation::operation::OperationCatalogBundle::descriptor(&self, id: &str) -> core::option::Option<&vyre_foundation::operation::SemanticDescriptor>
+pub fn vyre_foundation::operation::OperationCatalogBundle::empty() -> Self
+pub fn vyre_foundation::operation::OperationCatalogBundle::extension(&self, name: &str) -> core::option::Option<&vyre_foundation::operation::ExtensionProvenance>
+pub fn vyre_foundation::operation::OperationCatalogBundle::extensions(&self) -> &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>
+pub fn vyre_foundation::operation::OperationCatalogBundle::from_parts(descriptors: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::SemanticDescriptor>, lowering_providers: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::LoweringProvider>, extensions: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>) -> Self
+pub fn vyre_foundation::operation::OperationCatalogBundle::from_registry() -> Self
+pub fn vyre_foundation::operation::OperationCatalogBundle::is_empty(&self) -> bool
+pub fn vyre_foundation::operation::OperationCatalogBundle::len(&self) -> usize
+pub fn vyre_foundation::operation::OperationCatalogBundle::lowering(&self, id: &str) -> core::option::Option<&vyre_foundation::operation::LoweringProvider>
+pub fn vyre_foundation::operation::OperationCatalogBundle::with_descriptor(self, descriptor: vyre_foundation::operation::SemanticDescriptor) -> Self
+pub fn vyre_foundation::operation::OperationCatalogBundle::with_extension(self, name: &'static str, version: u32, descriptors: impl core::iter::traits::collect::IntoIterator<Item = vyre_foundation::operation::SemanticDescriptor>, lowerings: impl core::iter::traits::collect::IntoIterator<Item = vyre_foundation::operation::LoweringProvider>) -> Self
+pub fn vyre_foundation::operation::OperationCatalogBundle::with_lowering(self, lowering: vyre_foundation::operation::LoweringProvider) -> Self
+pub fn vyre_foundation::operation::OperationCatalogBundle::with_operation(self, descriptor: vyre_foundation::operation::SemanticDescriptor, lowering: core::option::Option<vyre_foundation::operation::LoweringProvider>) -> Self
 pub fn vyre_foundation::operation::OperationEffects::from_program(program: &vyre_foundation::ir::Program) -> Self
 pub fn vyre_foundation::operation::OperationRegistration::conformance_provider(&self) -> vyre_foundation::operation::ConformanceProvider
 pub fn vyre_foundation::operation::OperationRegistration::contract_provider(&'static self) -> vyre_foundation::operation::ContractProvider
@@ -2269,7 +2342,7 @@ pub fn vyre_foundation::operation::OperationRegistration::ulp_budget(&self) -> c
 pub fn vyre_foundation::operation::OperationRegistry::call_graph_closure(&self) -> &vyre_foundation::operation::CallGraphClosure
 pub fn vyre_foundation::operation::OperationRegistry::call_graph_closure_identity(&self) -> u64
 pub fn vyre_foundation::operation::OperationRegistry::callees(&self, id: &str) -> core::option::Option<&[&'static str]>
-pub fn vyre_foundation::operation::OperationRegistry::catalog_bundle(&self) -> &vyre_foundation::operation::CatalogBundle
+pub fn vyre_foundation::operation::OperationRegistry::catalog_bundle(&self) -> &vyre_foundation::operation::OperationCatalogBundle
 pub fn vyre_foundation::operation::OperationRegistry::composite_version(&self, id: &str) -> core::option::Option<u64>
 pub fn vyre_foundation::operation::OperationRegistry::get(&self, id: &str) -> core::option::Option<vyre_foundation::operation::SemanticOperation>
 pub fn vyre_foundation::operation::OperationRegistry::global() -> &'static Self
@@ -2405,14 +2478,7 @@ pub fn vyre_foundation::optimizer::RewriteBatchPlan::batches(&self) -> &[vyre_fo
 pub fn vyre_foundation::optimizer::RewriteBatchPlan::candidate_count(&self) -> usize
 pub fn vyre_foundation::optimizer::RewriteBatchPlan::has_batches(&self) -> bool
 pub fn vyre_foundation::optimizer::RewriteBatchPlan::threshold(&self) -> usize
-pub fn vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::is_bit_all_ones(self) -> bool
-pub fn vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::is_false(self) -> bool
-pub fn vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::is_finite_numeric(self) -> bool
-pub fn vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::is_integer_zero(self) -> bool
-pub fn vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::is_numeric_one(self) -> bool
-pub fn vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::is_numeric_zero(self) -> bool
-pub fn vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::is_true(self) -> bool
-pub fn vyre_foundation::optimizer::algebraic_rules::binop_identity_replacement(op: vyre_spec::bin_op::BinOp, lhs_same_as_rhs: bool, lhs_lit: core::option::Option<vyre_foundation::optimizer::algebraic_rules::ScalarLiteral>, rhs_lit: core::option::Option<vyre_foundation::optimizer::algebraic_rules::ScalarLiteral>) -> core::option::Option<vyre_foundation::optimizer::algebraic_rules::IdentityReplacement>
+pub fn vyre_foundation::optimizer::algebraic_rules::binop_identity_replacement(op: vyre_spec::bin_op::BinOp, lhs_same_as_rhs: bool, lhs_lit: core::option::Option<vyre_foundation::region_ssa::ScalarLiteral>, rhs_lit: core::option::Option<vyre_foundation::region_ssa::ScalarLiteral>) -> core::option::Option<vyre_foundation::optimizer::algebraic_rules::IdentityReplacement>
 pub fn vyre_foundation::optimizer::algebraic_rules::strength_reduce_power_of_two_shift(value: u32) -> core::option::Option<u32>
 pub fn vyre_foundation::optimizer::construct_law::ConstructLaws::admits(&self, family: vyre_spec::region_law::RegionLawFamily) -> bool
 pub fn vyre_foundation::optimizer::construct_law::expr_construct_laws(construct: &str) -> core::option::Option<&'static vyre_foundation::optimizer::construct_law::ConstructLaws>
@@ -2434,7 +2500,6 @@ pub fn vyre_foundation::optimizer::diff_compile::node_subtree_hash(node: &vyre_f
 pub fn vyre_foundation::optimizer::diff_compile::nodes_subtree_hash(body: &[vyre_foundation::ir::Node]) -> core::result::Result<[u8; 32], alloc::string::String>
 pub fn vyre_foundation::optimizer::diff_compile::program_diff(before: &vyre_foundation::ir::Program, after: &vyre_foundation::ir::Program) -> core::result::Result<alloc::vec::Vec<vyre_foundation::optimizer::diff_compile::Diff>, alloc::string::String>
 pub fn vyre_foundation::optimizer::diff_compile::program_subtree_hashes(program: &vyre_foundation::ir::Program) -> core::result::Result<alloc::vec::Vec<(usize, [u8; 32])>, alloc::string::String>
-pub fn vyre_foundation::optimizer::effect_lattice::AtomicOrdering::join(self, other: Self) -> Self
 pub fn vyre_foundation::optimizer::effect_lattice::EffectLevel::from_class(class: vyre_spec::op_contract::SideEffectClass) -> Self
 pub fn vyre_foundation::optimizer::effect_lattice::EffectLevel::kind(&self) -> &'static str
 pub fn vyre_foundation::optimizer::effect_lattice::SyncScope::join(self, other: Self) -> Self
@@ -2548,6 +2613,7 @@ pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::proof_term(
 pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::witness(&self) -> vyre_foundation::optimizer::rewrite_contract::RewriteWitness
 pub fn vyre_foundation::optimizer::explain_optimizer_report(report: &vyre_foundation::optimizer::OptimizerRunReport) -> core::result::Result<alloc::vec::Vec<vyre_foundation::optimizer::PassExplanation>, vyre_foundation::optimizer::OptimizerError>
 pub fn vyre_foundation::optimizer::explain_optimizer_report_with_catalog(report: &vyre_foundation::optimizer::OptimizerRunReport, catalog: &[vyre_foundation::optimizer::pass_catalog::OptimizationCatalogEntry]) -> alloc::vec::Vec<vyre_foundation::optimizer::PassExplanation>
+pub fn vyre_foundation::optimizer::expr_arena::ExprArena::allocated_bytes(&self) -> usize
 pub fn vyre_foundation::optimizer::expr_arena::ExprArena::get(&self, id: vyre_foundation::optimizer::expr_arena::ExprId) -> &vyre_foundation::optimizer::expr_arena::FlatExpr
 pub fn vyre_foundation::optimizer::expr_arena::ExprArena::intern(&mut self, expr: &vyre_foundation::ir::Expr) -> vyre_foundation::optimizer::expr_arena::ExprId
 pub fn vyre_foundation::optimizer::expr_arena::ExprArena::is_empty(&self) -> bool
@@ -2641,7 +2707,7 @@ pub fn vyre_foundation::optimizer::multi_level_eqsat::ParetoFront::select_weight
 pub fn vyre_foundation::optimizer::multi_level_eqsat::PassEngine::default() -> Self
 pub fn vyre_foundation::optimizer::multi_level_eqsat::PassEngine::run_to_fixpoint<F>(&mut self, plan: vyre_foundation::schedule::SchedulePlan, pass: F) -> core::result::Result<(vyre_foundation::schedule::SchedulePlan, vyre_foundation::optimizer::multi_level_eqsat::PassTelemetry), vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError> where F: core::ops::function::FnMut(&vyre_foundation::schedule::SchedulePlan) -> core::option::Option<(vyre_foundation::schedule::SchedulePlan, &'static str, &'static str)>
 pub fn vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation::admits_contract(&self, contract: vyre_foundation::optimizer::rewrite_contract::NumericalContract) -> bool
+pub fn vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation::admits_contract(&self, contract: vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract) -> bool
 pub fn vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation::default() -> Self
 pub fn vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation::synthesize(&self, program: &vyre_foundation::ir::Program) -> core::result::Result<(vyre_foundation::ir::Program, alloc::vec::Vec<vyre_foundation::optimizer::multi_level_eqsat::StepProof>), vyre_foundation::optimizer::multi_level_eqsat::ProofReplayError>
 pub fn vyre_foundation::optimizer::multi_level_eqsat::StepProof::new(step_index: usize, rule_name: impl core::convert::Into<alloc::string::String>, before_digest: [u8; 32], after_digest: [u8; 32], law_justification: impl core::convert::Into<alloc::string::String>, preserves_semantics: bool) -> Self
@@ -3309,8 +3375,8 @@ pub fn vyre_foundation::optimizer::program_soa::ProgramFacts::var_reads(&self) -
 pub fn vyre_foundation::optimizer::region_law::RegionDerivation::cited_laws(&self) -> alloc::vec::Vec<&'static str>
 pub fn vyre_foundation::optimizer::region_law::RegionDerivation::composed(&self) -> alloc::vec::Vec<&vyre_foundation::optimizer::region_law::DerivedRegion>
 pub fn vyre_foundation::optimizer::region_law::RegionDerivationBudget::default() -> Self
-pub fn vyre_foundation::optimizer::region_law::derive_region_alternatives(program: &vyre_foundation::ir::Program, grants: &[vyre_foundation::optimizer::rewrite_contract::NumericalContract], budget: vyre_foundation::optimizer::region_law::RegionDerivationBudget) -> core::result::Result<vyre_foundation::optimizer::region_law::RegionDerivation, vyre_foundation::optimizer::OptimizerError>
-pub fn vyre_foundation::optimizer::region_law::law_numerical_contract(law: &vyre_foundation::optimizer::region_law::RegionLaw) -> core::option::Option<vyre_foundation::optimizer::rewrite_contract::NumericalContract>
+pub fn vyre_foundation::optimizer::region_law::derive_region_alternatives(program: &vyre_foundation::ir::Program, grants: &[vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract], budget: vyre_foundation::optimizer::region_law::RegionDerivationBudget) -> core::result::Result<vyre_foundation::optimizer::region_law::RegionDerivation, vyre_foundation::optimizer::OptimizerError>
+pub fn vyre_foundation::optimizer::region_law::law_numerical_contract(law: &vyre_foundation::optimizer::region_law::RegionLaw) -> core::option::Option<vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract>
 pub fn vyre_foundation::optimizer::region_law::laws_for_family(family: vyre_spec::region_law::RegionLawFamily) -> alloc::vec::Vec<&'static vyre_foundation::optimizer::region_law::RegionLaw>
 pub fn vyre_foundation::optimizer::region_law::region_law(name: &str) -> core::option::Option<&'static vyre_foundation::optimizer::region_law::RegionLaw>
 pub fn vyre_foundation::optimizer::registered_pass_metadata_for_profile(profile: vyre_foundation::optimizer::OptimizerProfile) -> core::result::Result<alloc::vec::Vec<vyre_foundation::optimizer::PassMetadata>, vyre_foundation::optimizer::OptimizerError>
@@ -3352,33 +3418,33 @@ pub fn vyre_foundation::optimizer::shape_facts::min_count(predicate: &vyre_found
 pub fn vyre_foundation::optimizer::shape_facts::proves_non_empty(predicate: &vyre_foundation::ir::ShapePredicate) -> bool
 pub fn vyre_foundation::optimizer::validate_registered_pass_order() -> core::result::Result<vyre_foundation::optimizer::PassOrderValidation, vyre_foundation::optimizer::OptimizerError>
 pub fn vyre_foundation::optimizer::validate_scheduled_pass_order(metadata: &[vyre_foundation::optimizer::PassMetadata]) -> core::result::Result<vyre_foundation::optimizer::PassOrderValidation, vyre_foundation::optimizer::PassSchedulingError>
-pub fn vyre_foundation::pass_substrate::adjustment_set_pass_dependency::ordering_is_safe(adj: &[u32], treatment: u32, outcome: u32, n: u32) -> bool
-pub fn vyre_foundation::pass_substrate::adjustment_set_pass_dependency::pass_descendants(adj: &[u32], n: u32) -> alloc::vec::Vec<alloc::vec::Vec<u32>>
-pub fn vyre_foundation::pass_substrate::functorial_pass_composition::apply_pass_functor(values: &[u32], mapping: &[u32], target_size: u32) -> alloc::vec::Vec<u32>
-pub fn vyre_foundation::pass_substrate::functorial_pass_composition::compose_passes(values: &[u32], first_mapping: &[u32], first_size: u32, second_mapping: &[u32], output_size: u32) -> alloc::vec::Vec<u32>
-pub fn vyre_foundation::pass_substrate::functorial_pass_composition::identity_functor(n: u32) -> alloc::vec::Vec<u32>
-pub fn vyre_foundation::pass_substrate::functorial_pass_composition::passes_commute_on(values: &[u32], left_first: &[u32], left_mid_size: u32, left_second: &[u32], right_first: &[u32], right_mid_size: u32, right_second: &[u32], output_size: u32) -> bool
-pub fn vyre_foundation::pass_substrate::multigrid_matroid_solver::matroid_solve_step(a: &[f64], b: &[f64], x: &[f64], weight: f64, n: u32) -> alloc::vec::Vec<f64>
-pub fn vyre_foundation::pass_substrate::multigrid_matroid_solver::matroid_solve_step_into(a: &[f64], b: &[f64], x: &[f64], weight: f64, n: u32, out: &mut alloc::vec::Vec<f64>)
-pub fn vyre_foundation::pass_substrate::polyhedral_fusion::fusable_pairs(adj: &[u32], n: u32, max_iters: u32) -> alloc::vec::Vec<u32>
-pub fn vyre_foundation::pass_substrate::polyhedral_fusion::fusable_pairs_into(adj: &[u32], n: u32, max_iters: u32, out: &mut alloc::vec::Vec<u32>)
-pub fn vyre_foundation::pass_substrate::polyhedral_fusion::fusable_pairs_with_scratch_into(adj: &[u32], n: u32, max_iters: u32, closure: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>, out: &mut alloc::vec::Vec<u32>)
-pub fn vyre_foundation::pass_substrate::polyhedral_fusion::fusion_score(adj: &[u32], n: u32, max_iters: u32) -> u32
-pub fn vyre_foundation::pass_substrate::semiring_closure::lineage_closure(adj: &[u32], n: u32, max_iters: u32) -> alloc::vec::Vec<u32>
-pub fn vyre_foundation::pass_substrate::semiring_closure::lineage_closure_into(adj: &[u32], n: u32, max_iters: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>)
-pub fn vyre_foundation::pass_substrate::semiring_closure::merge_min_changed(current: &mut [u32], next: &[u32]) -> bool
-pub fn vyre_foundation::pass_substrate::semiring_closure::merge_or_changed(current: &mut [u32], next: &[u32]) -> bool
-pub fn vyre_foundation::pass_substrate::semiring_closure::reachability_closure(adj: &[u32], n: u32, max_iters: u32) -> alloc::vec::Vec<u32>
-pub fn vyre_foundation::pass_substrate::semiring_closure::reachability_closure_into(adj: &[u32], n: u32, max_iters: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>)
-pub fn vyre_foundation::pass_substrate::semiring_closure::semiring_gemm_cpu_into(left: &[u32], right: &[u32], rows: u32, cols: u32, inner: u32, semiring: vyre_spec::semiring::Semiring, output: &mut alloc::vec::Vec<u32>)
-pub fn vyre_foundation::pass_substrate::semiring_closure::shortest_path_closure(adj: &[u32], n: u32, max_iters: u32) -> alloc::vec::Vec<u32>
-pub fn vyre_foundation::pass_substrate::semiring_closure::shortest_path_closure_into(adj: &[u32], n: u32, max_iters: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>)
-pub fn vyre_foundation::pass_substrate::string_diagram_ir_rewrite::compose_ir_arrows(first: &[f64], second: &[f64], source_dim: u32, middle_dim: u32, target_dim: u32) -> alloc::vec::Vec<f64>
-pub fn vyre_foundation::pass_substrate::string_diagram_ir_rewrite::composition_associates(first: &[f64], second: &[f64], third: &[f64], source_dim: u32, first_target_dim: u32, second_target_dim: u32, final_target_dim: u32) -> bool
-pub fn vyre_foundation::pass_substrate::string_diagram_ir_rewrite::identity_arrow(n: u32) -> alloc::vec::Vec<f64>
-pub fn vyre_foundation::pass_substrate::tensor_network_fusion_order::fusion_order_cost(dimensions: &[u32], order: &[usize]) -> u64
-pub fn vyre_foundation::pass_substrate::tensor_network_fusion_order::optimal_fusion_order(dimensions: &[u32]) -> alloc::vec::Vec<usize>
-pub fn vyre_foundation::pass_substrate::tensor_network_fusion_order::optimal_fusion_order_into(dimensions: &[u32], order: &mut alloc::vec::Vec<usize>)
+pub fn vyre_foundation::pass_math::adjustment_set_pass_dependency::ordering_is_safe(adj: &[u32], treatment: u32, outcome: u32, n: u32) -> bool
+pub fn vyre_foundation::pass_math::adjustment_set_pass_dependency::pass_descendants(adj: &[u32], n: u32) -> alloc::vec::Vec<alloc::vec::Vec<u32>>
+pub fn vyre_foundation::pass_math::functorial_pass_composition::apply_pass_functor(values: &[u32], mapping: &[u32], target_size: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_foundation::pass_math::functorial_pass_composition::compose_passes(values: &[u32], first_mapping: &[u32], first_size: u32, second_mapping: &[u32], output_size: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_foundation::pass_math::functorial_pass_composition::identity_functor(n: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_foundation::pass_math::functorial_pass_composition::passes_commute_on(values: &[u32], left_first: &[u32], left_mid_size: u32, left_second: &[u32], right_first: &[u32], right_mid_size: u32, right_second: &[u32], output_size: u32) -> bool
+pub fn vyre_foundation::pass_math::multigrid_matroid_solver::matroid_solve_step(a: &[f64], b: &[f64], x: &[f64], weight: f64, n: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_foundation::pass_math::multigrid_matroid_solver::matroid_solve_step_into(a: &[f64], b: &[f64], x: &[f64], weight: f64, n: u32, out: &mut alloc::vec::Vec<f64>)
+pub fn vyre_foundation::pass_math::polyhedral_fusion::fusable_pairs(adj: &[u32], n: u32, max_iters: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_foundation::pass_math::polyhedral_fusion::fusable_pairs_into(adj: &[u32], n: u32, max_iters: u32, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_foundation::pass_math::polyhedral_fusion::fusable_pairs_with_scratch_into(adj: &[u32], n: u32, max_iters: u32, closure: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>, out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_foundation::pass_math::polyhedral_fusion::fusion_score(adj: &[u32], n: u32, max_iters: u32) -> u32
+pub fn vyre_foundation::pass_math::semiring_closure::lineage_closure(adj: &[u32], n: u32, max_iters: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_foundation::pass_math::semiring_closure::lineage_closure_into(adj: &[u32], n: u32, max_iters: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>)
+pub fn vyre_foundation::pass_math::semiring_closure::merge_min_changed(current: &mut [u32], next: &[u32]) -> bool
+pub fn vyre_foundation::pass_math::semiring_closure::merge_or_changed(current: &mut [u32], next: &[u32]) -> bool
+pub fn vyre_foundation::pass_math::semiring_closure::reachability_closure(adj: &[u32], n: u32, max_iters: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_foundation::pass_math::semiring_closure::reachability_closure_into(adj: &[u32], n: u32, max_iters: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>)
+pub fn vyre_foundation::pass_math::semiring_closure::semiring_gemm_cpu_into(left: &[u32], right: &[u32], rows: u32, cols: u32, inner: u32, semiring: vyre_spec::semiring::Semiring, output: &mut alloc::vec::Vec<u32>)
+pub fn vyre_foundation::pass_math::semiring_closure::shortest_path_closure(adj: &[u32], n: u32, max_iters: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_foundation::pass_math::semiring_closure::shortest_path_closure_into(adj: &[u32], n: u32, max_iters: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>)
+pub fn vyre_foundation::pass_math::string_diagram_ir_rewrite::compose_ir_arrows(first: &[f64], second: &[f64], source_dim: u32, middle_dim: u32, target_dim: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_foundation::pass_math::string_diagram_ir_rewrite::composition_associates(first: &[f64], second: &[f64], third: &[f64], source_dim: u32, first_target_dim: u32, second_target_dim: u32, final_target_dim: u32) -> bool
+pub fn vyre_foundation::pass_math::string_diagram_ir_rewrite::identity_arrow(n: u32) -> alloc::vec::Vec<f64>
+pub fn vyre_foundation::pass_math::tensor_network_fusion_order::fusion_order_cost(dimensions: &[u32], order: &[usize]) -> u64
+pub fn vyre_foundation::pass_math::tensor_network_fusion_order::optimal_fusion_order(dimensions: &[u32]) -> alloc::vec::Vec<usize>
+pub fn vyre_foundation::pass_math::tensor_network_fusion_order::optimal_fusion_order_into(dimensions: &[u32], order: &mut alloc::vec::Vec<usize>)
 pub fn vyre_foundation::perf::PerfScope::finish(self) -> vyre_foundation::perf::PerfMeasurement
 pub fn vyre_foundation::perf::PerfScope::start(_crate_name: &'static str, name: &'static str) -> Self
 pub fn vyre_foundation::perf::SpanGuard::drop(&mut self)
@@ -3394,11 +3460,15 @@ pub fn vyre_foundation::platform::FileSystemAdapter::atomic_write(target: &std::
 pub fn vyre_foundation::platform::FileSystemAdapter::create_scratch_dir(prefix: &str) -> core::result::Result<vyre_foundation::platform::ScratchDir, vyre_foundation::platform::PlatformAdapterError>
 pub fn vyre_foundation::platform::FileSystemAdapter::read_bounded(path: &std::path::Path, max_bytes: usize) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::platform::PlatformAdapterError>
 pub fn vyre_foundation::platform::HostArch::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_foundation::platform::HostCell::current() -> Self
+pub fn vyre_foundation::platform::HostCell::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::platform::HostCell::label(&self) -> alloc::string::String
 pub fn vyre_foundation::platform::HostOs::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::platform::HostSupportTier::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::platform::PlatformSupportMatrix::canonical() -> Self
-pub fn vyre_foundation::platform::PlatformSupportMatrix::from_toml(toml_str: &str) -> core::result::Result<Self, vyre_foundation::platform::UnsupportedPlatformError>
-pub fn vyre_foundation::platform::PlatformSupportMatrix::is_supported(&self, host: &vyre_foundation::platform::HostCell) -> core::result::Result<(), vyre_foundation::platform::UnsupportedPlatformError>
+pub fn vyre_foundation::platform::PlatformSupportMatrix::encoding_cells(&self) -> alloc::vec::Vec<vyre_foundation::platform::HostCell>
+pub fn vyre_foundation::platform::PlatformSupportMatrix::from_toml(payload: &str) -> core::result::Result<Self, vyre_foundation::platform::UnsupportedPlatformError>
+pub fn vyre_foundation::platform::PlatformSupportMatrix::require_runtime(&self, cell: &vyre_foundation::platform::HostCell) -> core::result::Result<(), vyre_foundation::platform::UnsupportedPlatformError>
+pub fn vyre_foundation::platform::PlatformSupportMatrix::runtime_cells(&self) -> alloc::vec::Vec<vyre_foundation::platform::HostCell>
 pub fn vyre_foundation::platform::PlatformSupportMatrix::to_toml(&self) -> core::result::Result<alloc::string::String, vyre_foundation::platform::UnsupportedPlatformError>
 pub fn vyre_foundation::platform::PlatformSupportMatrix::validate_active_environment(&self) -> core::result::Result<vyre_foundation::platform::HostCell, vyre_foundation::platform::UnsupportedPlatformError>
 pub fn vyre_foundation::platform::PointerWidth::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -3408,8 +3478,10 @@ pub fn vyre_foundation::platform::ThreadAdapter::spawn_named<F, T>(name: impl co
 pub fn vyre_foundation::platform::ThreadAdapter::yield_now()
 pub fn vyre_foundation::platform::checked_i64_to_isize(val: i64) -> core::result::Result<isize, vyre_foundation::platform::ConversionError>
 pub fn vyre_foundation::platform::checked_isize_to_i32(val: isize) -> core::result::Result<i32, vyre_foundation::platform::ConversionError>
+pub fn vyre_foundation::platform::checked_isize_to_i64(val: isize) -> core::result::Result<i64, vyre_foundation::platform::ConversionError>
 pub fn vyre_foundation::platform::checked_u64_to_usize(val: u64) -> core::result::Result<usize, vyre_foundation::platform::ConversionError>
 pub fn vyre_foundation::platform::checked_usize_to_u32(val: usize) -> core::result::Result<u32, vyre_foundation::platform::ConversionError>
+pub fn vyre_foundation::platform::checked_usize_to_u64(val: usize) -> core::result::Result<u64, vyre_foundation::platform::ConversionError>
 pub fn vyre_foundation::program_caps::MissingCapability::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::program_caps::RequiredCapabilities::all() -> Self
 pub fn vyre_foundation::program_caps::RequiredCapabilities::join(self, other: vyre_foundation::program_caps::RequiredCapabilities) -> Self
@@ -3429,8 +3501,8 @@ pub fn vyre_foundation::region_ssa::RegionBuilder::build_recurrence_region<F>(&m
 pub fn vyre_foundation::region_ssa::RegionBuilder::build_reduce_region<F>(&mut self, input: vyre_foundation::region_ssa::ValueId, axis: usize, neutral: vyre_foundation::region_ssa::ValueId, combine: vyre_spec::combine::CombineKind, elem_type: vyre_spec::data_type::DataType, body: F) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::DominanceError> where F: core::ops::function::FnOnce(&mut Self, vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::ValueId) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::DominanceError>
 pub fn vyre_foundation::region_ssa::RegionBuilder::create_block(&mut self, arg_types: alloc::vec::Vec<(vyre_spec::data_type::DataType, core::option::Option<alloc::string::String>)>) -> vyre_foundation::region_ssa::BlockId
 pub fn vyre_foundation::region_ssa::RegionBuilder::emit_binary(&mut self, op: vyre_spec::bin_op::BinOp, left: vyre_foundation::region_ssa::ValueId, right: vyre_foundation::region_ssa::ValueId, result_type: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::DominanceError>
-pub fn vyre_foundation::region_ssa::RegionBuilder::emit_buffer_load(&mut self, buffer: impl core::convert::Into<alloc::string::String>, index: vyre_foundation::region_ssa::ValueId, element_type: vyre_spec::data_type::DataType, effect_in: core::option::Option<vyre_foundation::region_ssa::EffectToken>) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::DominanceError>
-pub fn vyre_foundation::region_ssa::RegionBuilder::emit_buffer_store(&mut self, buffer: impl core::convert::Into<alloc::string::String>, index: vyre_foundation::region_ssa::ValueId, value: vyre_foundation::region_ssa::ValueId, effect_in: core::option::Option<vyre_foundation::region_ssa::EffectToken>) -> core::result::Result<(), vyre_foundation::region_ssa::DominanceError>
+pub fn vyre_foundation::region_ssa::RegionBuilder::emit_buffer_load(&mut self, buffer: impl core::convert::Into<alloc::string::String>, index: vyre_foundation::region_ssa::ValueId, element_type: vyre_spec::data_type::DataType, effect_in: core::option::Option<vyre_foundation::region_ssa::EffectTokenId>) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::DominanceError>
+pub fn vyre_foundation::region_ssa::RegionBuilder::emit_buffer_store(&mut self, buffer: impl core::convert::Into<alloc::string::String>, index: vyre_foundation::region_ssa::ValueId, value: vyre_foundation::region_ssa::ValueId, effect_in: core::option::Option<vyre_foundation::region_ssa::EffectTokenId>) -> core::result::Result<(), vyre_foundation::region_ssa::DominanceError>
 pub fn vyre_foundation::region_ssa::RegionBuilder::emit_cast(&mut self, input: vyre_foundation::region_ssa::ValueId, target_type: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::DominanceError>
 pub fn vyre_foundation::region_ssa::RegionBuilder::emit_constant(&mut self, lit: vyre_foundation::region_ssa::ScalarLiteral) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::DominanceError>
 pub fn vyre_foundation::region_ssa::RegionBuilder::emit_coordinate_query(&mut self, name: impl core::convert::Into<alloc::string::String>, result_type: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::region_ssa::ValueId, vyre_foundation::region_ssa::DominanceError>
@@ -3453,6 +3525,14 @@ pub fn vyre_foundation::region_ssa::RegionSsaConstProp::run_function(func: &vyre
 pub fn vyre_foundation::region_ssa::RegionSsaDce::run_function(func: &vyre_foundation::region_ssa::RegionFunction) -> vyre_foundation::region_ssa::RegionFunction
 pub fn vyre_foundation::region_ssa::RegionSsaOptimizer::optimize_module(module: &vyre_foundation::region_ssa::RegionModule) -> (vyre_foundation::region_ssa::RegionModule, vyre_foundation::region_ssa::ValueRemap)
 pub fn vyre_foundation::region_ssa::ScalarLiteral::hash<H: core::hash::Hasher>(&self, state: &mut H)
+pub fn vyre_foundation::region_ssa::ScalarLiteral::is_bit_all_ones(self) -> bool
+pub fn vyre_foundation::region_ssa::ScalarLiteral::is_false(self) -> bool
+pub fn vyre_foundation::region_ssa::ScalarLiteral::is_finite_numeric(self) -> bool
+pub fn vyre_foundation::region_ssa::ScalarLiteral::is_integer_zero(self) -> bool
+pub fn vyre_foundation::region_ssa::ScalarLiteral::is_numeric_one(self) -> bool
+pub fn vyre_foundation::region_ssa::ScalarLiteral::is_numeric_zero(self) -> bool
+pub fn vyre_foundation::region_ssa::ScalarLiteral::is_true(self) -> bool
+pub fn vyre_foundation::region_ssa::ScalarLiteral::to_expr(self) -> core::result::Result<vyre_foundation::ir::Expr, vyre_foundation::region_ssa::RegionSsaError>
 pub fn vyre_foundation::region_ssa::ScopeContext::define(&mut self, val: vyre_foundation::region_ssa::ValueId)
 pub fn vyre_foundation::region_ssa::ScopeContext::is_visible(&self, val: vyre_foundation::region_ssa::ValueId) -> bool
 pub fn vyre_foundation::region_ssa::ScopeContext::new() -> Self
@@ -3569,6 +3649,7 @@ pub fn vyre_foundation::serial::output_set::OutputSet::indices(&self) -> &[u32]
 pub fn vyre_foundation::serial::output_set::OutputSet::into_vec(self) -> alloc::vec::Vec<u32>
 pub fn vyre_foundation::serial::output_set::OutputSet::is_empty(&self) -> bool
 pub fn vyre_foundation::serial::output_set::OutputSet::len(&self) -> usize
+pub fn vyre_foundation::serial::section_len(len: usize) -> core::result::Result<u32, vyre_foundation::serial::EnvelopeError>
 pub fn vyre_foundation::serial::text::TextParseError::fix_hint(&self) -> &'static str
 pub fn vyre_foundation::serial::text::TextParseError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::serial::text::TextParseError::message(&self) -> alloc::string::String
@@ -3629,15 +3710,10 @@ pub fn vyre_foundation::substrate::ConstInterner::is_empty(&self) -> bool
 pub fn vyre_foundation::substrate::ConstInterner::len(&self) -> usize
 pub fn vyre_foundation::substrate::ConstInterner::lookup(&self, id: vyre_foundation::substrate::InternedConstId) -> core::option::Option<vyre_foundation::substrate::CanonicalConst>
 pub fn vyre_foundation::substrate::ConstInterner::new() -> Self
-pub fn vyre_foundation::substrate::ExprArena::allocated_bytes(&self) -> usize
-pub fn vyre_foundation::substrate::ExprArena::intern(&self, expr: vyre_foundation::ir::Expr) -> vyre_foundation::substrate::ExprId
-pub fn vyre_foundation::substrate::ExprArena::is_empty(&self) -> bool
-pub fn vyre_foundation::substrate::ExprArena::len(&self) -> usize
-pub fn vyre_foundation::substrate::ExprArena::lookup(&self, id: vyre_foundation::substrate::ExprId) -> core::option::Option<alloc::sync::Arc<vyre_foundation::ir::Expr>>
-pub fn vyre_foundation::substrate::ExprArena::new() -> Self
-pub fn vyre_foundation::substrate::ExprId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::substrate::InternedConstId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::substrate::InternedLayoutId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::InternedNodeId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::substrate::InternedRegionId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::substrate::InternedStringId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::substrate::InternedTypeId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::substrate::LayoutInterner::allocated_bytes(&self) -> usize
@@ -3657,12 +3733,11 @@ pub fn vyre_foundation::substrate::MemoryAccounting::record_alloc(&self, bytes: 
 pub fn vyre_foundation::substrate::MemoryAccounting::record_dealloc(&self, bytes: usize)
 pub fn vyre_foundation::substrate::MemoryAccounting::with_budget(budget_bytes: usize) -> Self
 pub fn vyre_foundation::substrate::NodeArena::allocated_bytes(&self) -> usize
-pub fn vyre_foundation::substrate::NodeArena::intern(&self, node: vyre_foundation::ir::Node) -> vyre_foundation::substrate::NodeId
+pub fn vyre_foundation::substrate::NodeArena::intern(&self, node: vyre_foundation::ir::Node) -> vyre_foundation::substrate::InternedNodeId
 pub fn vyre_foundation::substrate::NodeArena::is_empty(&self) -> bool
 pub fn vyre_foundation::substrate::NodeArena::len(&self) -> usize
-pub fn vyre_foundation::substrate::NodeArena::lookup(&self, id: vyre_foundation::substrate::NodeId) -> core::option::Option<alloc::sync::Arc<vyre_foundation::ir::Node>>
+pub fn vyre_foundation::substrate::NodeArena::lookup(&self, id: vyre_foundation::substrate::InternedNodeId) -> core::option::Option<alloc::sync::Arc<vyre_foundation::ir::Node>>
 pub fn vyre_foundation::substrate::NodeArena::new() -> Self
-pub fn vyre_foundation::substrate::NodeId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::substrate::PassDescriptor::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::substrate::PhysicalKernelId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::substrate::PhysicalKernelView<'a>::new(entry_point: impl core::convert::Into<alloc::string::String>, workgroup_size: [u32; 3], registers_required: u32, binding_indices: alloc::vec::Vec<u32>) -> Self
@@ -3689,12 +3764,11 @@ pub fn vyre_foundation::substrate::QueryKey::compiler_level(&self) -> vyre_found
 pub fn vyre_foundation::substrate::QueryKey::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::substrate::QueryOutput::new(cache_key: vyre_foundation::substrate::VersionedCacheKey, output_bytes: alloc::vec::Vec<u8>, diagnostics: alloc::vec::Vec<alloc::string::String>) -> Self
 pub fn vyre_foundation::substrate::RegionArena::allocated_bytes(&self) -> usize
-pub fn vyre_foundation::substrate::RegionArena::intern(&self, region: vyre_foundation::logical::LogicalRegion) -> vyre_foundation::substrate::RegionId
+pub fn vyre_foundation::substrate::RegionArena::intern(&self, region: vyre_foundation::logical::LogicalRegion) -> vyre_foundation::substrate::InternedRegionId
 pub fn vyre_foundation::substrate::RegionArena::is_empty(&self) -> bool
 pub fn vyre_foundation::substrate::RegionArena::len(&self) -> usize
-pub fn vyre_foundation::substrate::RegionArena::lookup(&self, id: vyre_foundation::substrate::RegionId) -> core::option::Option<alloc::sync::Arc<vyre_foundation::logical::LogicalRegion>>
+pub fn vyre_foundation::substrate::RegionArena::lookup(&self, id: vyre_foundation::substrate::InternedRegionId) -> core::option::Option<alloc::sync::Arc<vyre_foundation::logical::LogicalRegion>>
 pub fn vyre_foundation::substrate::RegionArena::new() -> Self
-pub fn vyre_foundation::substrate::RegionId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::substrate::Revision::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::substrate::ScheduleNodeId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::substrate::SelectedScheduleView<'a>::new(schedule_digest: [u8; 32], fusion_groups: usize, barrier_count: usize, workgroup_shape: [u32; 3]) -> Self
@@ -3704,6 +3778,9 @@ pub fn vyre_foundation::substrate::StringInterner::is_empty(&self) -> bool
 pub fn vyre_foundation::substrate::StringInterner::len(&self) -> usize
 pub fn vyre_foundation::substrate::StringInterner::lookup(&self, id: vyre_foundation::substrate::InternedStringId) -> core::option::Option<alloc::sync::Arc<str>>
 pub fn vyre_foundation::substrate::StringInterner::new() -> Self
+pub fn vyre_foundation::substrate::SubstrateArena::expr(&self, id: vyre_foundation::optimizer::expr_arena::ExprId) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::substrate::SubstrateArena::expr_count(&self) -> usize
+pub fn vyre_foundation::substrate::SubstrateArena::intern_expr(&self, expr: &vyre_foundation::ir::Expr) -> vyre_foundation::optimizer::expr_arena::ExprId
 pub fn vyre_foundation::substrate::SubstrateArena::new() -> Self
 pub fn vyre_foundation::substrate::SubstrateArena::total_allocated_bytes(&self) -> usize
 pub fn vyre_foundation::substrate::TargetPayloadView<'a>::new(format_name: impl core::convert::Into<alloc::string::String>, format_version: u16, payload_bytes: &'a [u8], entry_points: alloc::vec::Vec<alloc::string::String>) -> Self
@@ -3927,6 +4004,7 @@ pub fn vyre_foundation::verifier::VerifiedStageWrapper<S, T>::into_inner(self) -
 pub fn vyre_foundation::verifier::VerifiedStageWrapper<S, T>::new(inner: T, certificate: vyre_foundation::verifier::VerificationCertificate) -> Self
 pub fn vyre_foundation::verifier::VerifiedStageWrapper<S, T>::transition_to<Next: vyre_foundation::verifier::StageKind, U>(self, transform: impl core::ops::function::FnOnce(T) -> U) -> vyre_foundation::verifier::VerifiedStageWrapper<Next, U>
 pub fn vyre_foundation::verifier::VerifiedStageWrapper<vyre_foundation::verifier::VerifiedIrStage, vyre_foundation::verifier::SemanticModule>::from(verified: vyre_foundation::verifier::Verified<vyre_foundation::verifier::SemanticModule>) -> Self
+pub fn vyre_foundation::visit::BufferNamesMut<'a>::into_names(self) -> impl core::iter::traits::iterator::Iterator<Item = &'a mut vyre_foundation::ir::Ident>
 pub fn vyre_foundation::visit::Evaluatable::evaluate(&self, env: &mut Env) -> vyre_foundation::IrResult<Self::Value>
 pub fn vyre_foundation::visit::ExprChildren<'a>::iter(self) -> impl core::iter::traits::double_ended::DoubleEndedIterator<Item = &'a vyre_foundation::ir::Expr> + core::clone::Clone
 pub fn vyre_foundation::visit::ExprSink::accept_expr(&mut self, expr: &vyre_foundation::ir::Expr)
@@ -3987,6 +4065,7 @@ pub fn vyre_foundation::visit::bin_op_magnitude(op: &vyre_spec::bin_op::BinOp) -
 pub fn vyre_foundation::visit::child_bodies(node: &vyre_foundation::ir::Node) -> [&[vyre_foundation::ir::Node]; 2]
 pub fn vyre_foundation::visit::child_bodies_mut(node: &mut vyre_foundation::ir::Node) -> smallvec::SmallVec<[&mut alloc::vec::Vec<vyre_foundation::ir::Node>; 2]>
 pub fn vyre_foundation::visit::collect_call_op_ids(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<alloc::sync::Arc<str>>
+pub fn vyre_foundation::visit::expr_buffer_name_mut(expr: &mut vyre_foundation::ir::Expr) -> vyre_foundation::visit::ExprBufferName<'_>
 pub fn vyre_foundation::visit::expr_buffer_ref(expr: &vyre_foundation::ir::Expr) -> vyre_foundation::visit::ExprBufferRef<'_>
 pub fn vyre_foundation::visit::expr_children(expr: &vyre_foundation::ir::Expr) -> vyre_foundation::visit::ExprChildren<'_>
 pub fn vyre_foundation::visit::expr_combine(expr: &vyre_foundation::ir::Expr) -> core::option::Option<vyre_foundation::visit::ExprCombine<'_>>
@@ -3996,6 +4075,7 @@ pub fn vyre_foundation::visit::for_each_expr<'a>(nodes: &'a [vyre_foundation::ir
 pub fn vyre_foundation::visit::for_each_node<'a>(nodes: &'a [vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&'a vyre_foundation::ir::Node))
 pub fn vyre_foundation::visit::for_each_subexpr<'a>(expr: &'a vyre_foundation::ir::Expr, visit: &mut impl core::ops::function::FnMut(&'a vyre_foundation::ir::Expr))
 pub fn vyre_foundation::visit::node_bound_name(node: &vyre_foundation::ir::Node) -> core::option::Option<&vyre_foundation::ir::Ident>
+pub fn vyre_foundation::visit::node_buffer_names_mut(node: &mut vyre_foundation::ir::Node) -> vyre_foundation::visit::BufferNamesMut<'_>
 pub fn vyre_foundation::visit::node_buffer_refs(node: &vyre_foundation::ir::Node) -> vyre_foundation::visit::BufferRefs<'_>
 pub fn vyre_foundation::visit::node_combine(node: &vyre_foundation::ir::Node) -> core::option::Option<vyre_foundation::visit::NodeCombine<'_>>
 pub fn vyre_foundation::visit::node_map::map_body<F>(node: vyre_foundation::ir::Node, f: &mut F) -> vyre_foundation::ir::Node where F: core::ops::function::FnMut(alloc::vec::Vec<vyre_foundation::ir::Node>) -> alloc::vec::Vec<vyre_foundation::ir::Node>
@@ -4006,6 +4086,8 @@ pub fn vyre_foundation::visit::node_shape(node: &vyre_foundation::ir::Node) -> v
 pub fn vyre_foundation::visit::node_tag(node: &vyre_foundation::ir::Node) -> core::option::Option<&vyre_foundation::ir::Ident>
 pub fn vyre_foundation::visit::node_variadic_operands(node: &vyre_foundation::ir::Node) -> &[vyre_foundation::ir::Expr]
 pub fn vyre_foundation::visit::push_expr_children<'a>(expr: &'a vyre_foundation::ir::Expr, stack: &mut smallvec::SmallVec<[&'a vyre_foundation::ir::Expr; 16]>)
+pub fn vyre_foundation::visit::push_expr_children_mut<'a>(expr: &'a mut vyre_foundation::ir::Expr, sink: &mut vyre_foundation::visit::ExprStackMut<'a>)
+pub fn vyre_foundation::visit::push_node_operands_mut<'a>(node: &'a mut vyre_foundation::ir::Node, sink: &mut vyre_foundation::visit::ExprStackMut<'a>)
 pub fn vyre_foundation::visit::referenced_buffers(program: &vyre_foundation::ir::Program) -> std::collections::hash::set::HashSet<vyre_foundation::ir::Ident>
 pub fn vyre_foundation::visit::try_for_each_expr<B>(nodes: &[vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<B>) -> core::ops::control_flow::ControlFlow<B>
 pub fn vyre_foundation::visit::try_for_each_node<'a, B>(nodes: &'a [vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&'a vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<B>) -> core::ops::control_flow::ControlFlow<B>
@@ -4037,6 +4119,7 @@ pub mod vyre_foundation::composition
 pub mod vyre_foundation::config_schema
 pub mod vyre_foundation::cpu_op
 pub mod vyre_foundation::diagnostics
+pub mod vyre_foundation::diagnostics::cause
 pub mod vyre_foundation::dialect
 pub mod vyre_foundation::dialect_lookup
 pub mod vyre_foundation::execution_plan
@@ -4142,14 +4225,14 @@ pub mod vyre_foundation::optimizer::rewrite_contract
 pub mod vyre_foundation::optimizer::rewrite_proof
 pub mod vyre_foundation::optimizer::rewrite_proof_registry
 pub mod vyre_foundation::optimizer::shape_facts
-pub mod vyre_foundation::pass_substrate
-pub mod vyre_foundation::pass_substrate::adjustment_set_pass_dependency
-pub mod vyre_foundation::pass_substrate::functorial_pass_composition
-pub mod vyre_foundation::pass_substrate::multigrid_matroid_solver
-pub mod vyre_foundation::pass_substrate::polyhedral_fusion
-pub mod vyre_foundation::pass_substrate::semiring_closure
-pub mod vyre_foundation::pass_substrate::string_diagram_ir_rewrite
-pub mod vyre_foundation::pass_substrate::tensor_network_fusion_order
+pub mod vyre_foundation::pass_math
+pub mod vyre_foundation::pass_math::adjustment_set_pass_dependency
+pub mod vyre_foundation::pass_math::functorial_pass_composition
+pub mod vyre_foundation::pass_math::multigrid_matroid_solver
+pub mod vyre_foundation::pass_math::polyhedral_fusion
+pub mod vyre_foundation::pass_math::semiring_closure
+pub mod vyre_foundation::pass_math::string_diagram_ir_rewrite
+pub mod vyre_foundation::pass_math::tensor_network_fusion_order
 pub mod vyre_foundation::perf
 pub mod vyre_foundation::platform
 pub mod vyre_foundation::program_caps
@@ -4204,10 +4287,10 @@ pub struct vyre_foundation::causal::SourceSpanRef
 pub struct vyre_foundation::causal::TraceId(pub u128)
 pub struct vyre_foundation::config_schema::ConfigFieldDef
 pub struct vyre_foundation::config_schema::ResolvedConfiguration
-pub struct vyre_foundation::diagnostics::Diagnostic
 pub struct vyre_foundation::diagnostics::DiagnosticCause
 pub struct vyre_foundation::diagnostics::DiagnosticCode(pub alloc::borrow::Cow<'static, str>)
 pub struct vyre_foundation::diagnostics::OpLocation
+pub struct vyre_foundation::diagnostics::cause::DiagnosticCause
 pub struct vyre_foundation::dialect::DialectDescriptor
 pub struct vyre_foundation::dialect::DialectDescriptorRegistration
 pub struct vyre_foundation::dialect::DialectOpDescriptor
@@ -4237,6 +4320,7 @@ pub struct vyre_foundation::execution_plan::SchedulingPolicy
 pub struct vyre_foundation::execution_plan::StrategyPlan
 pub struct vyre_foundation::execution_plan::TrackDecision
 pub struct vyre_foundation::execution_plan::fusion::FusionAliasingError
+pub struct vyre_foundation::execution_plan::fusion::FusionBufferRenameError
 pub struct vyre_foundation::execution_plan::fusion::FusionCandidate
 pub struct vyre_foundation::execution_plan::fusion::FusionCandidateSet
 pub struct vyre_foundation::execution_plan::fusion::FusionOverDispatchError
@@ -4248,9 +4332,9 @@ pub struct vyre_foundation::execution_plan::fusion::RegionDependenceGraph
 pub struct vyre_foundation::execution_plan::fusion::RegionFusionPlanner
 pub struct vyre_foundation::execution_plan::fusion::ScheduleTile
 pub struct vyre_foundation::execution_plan::fusion::TilePipeliningPlan
-pub struct vyre_foundation::extension::CatalogBundle
 pub struct vyre_foundation::extension::ExtensionAtomicOpRegistration
 pub struct vyre_foundation::extension::ExtensionBinOpRegistration
+pub struct vyre_foundation::extension::ExtensionCatalogBundle
 pub struct vyre_foundation::extension::ExtensionDataTypeRegistration
 pub struct vyre_foundation::extension::ExtensionUnOpRegistration
 pub struct vyre_foundation::extension::OpaqueExprResolver
@@ -4262,6 +4346,7 @@ pub struct vyre_foundation::ir::AffectedGraphClosure
 pub struct vyre_foundation::ir::AliasToken
 pub struct vyre_foundation::ir::BorrowToken
 pub struct vyre_foundation::ir::BufferDecl
+pub struct vyre_foundation::ir::ByteRegionId(pub u32)
 pub struct vyre_foundation::ir::CapabilityToken
 pub struct vyre_foundation::ir::ControlBounds
 pub struct vyre_foundation::ir::EffectToken
@@ -4293,7 +4378,6 @@ pub struct vyre_foundation::ir::ProgramGraphSharingMetrics
 pub struct vyre_foundation::ir::ProgramGraphTemplate
 pub struct vyre_foundation::ir::ProgramGraphValue
 pub struct vyre_foundation::ir::ProgramStats
-pub struct vyre_foundation::ir::RegionId(pub u32)
 pub struct vyre_foundation::ir::ResourceUsageFlags
 pub struct vyre_foundation::ir::SamplerDescriptor
 pub struct vyre_foundation::ir::Scope<K, V>
@@ -4336,12 +4420,12 @@ pub struct vyre_foundation::numeric::RegionNumericFacts
 pub struct vyre_foundation::opaque_payload::endian::LeBytesWriter
 pub struct vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated
 pub struct vyre_foundation::operation::CallGraphClosure
-pub struct vyre_foundation::operation::CatalogBundle
 pub struct vyre_foundation::operation::ConformanceProvider
 pub struct vyre_foundation::operation::ConformanceRegistry
 pub struct vyre_foundation::operation::ContractProvider
 pub struct vyre_foundation::operation::ExtensionProvenance
 pub struct vyre_foundation::operation::LoweringProvider
+pub struct vyre_foundation::operation::OperationCatalogBundle
 pub struct vyre_foundation::operation::OperationEffects
 pub struct vyre_foundation::operation::OperationRegistration
 pub struct vyre_foundation::operation::OperationRegistry
@@ -4495,7 +4579,6 @@ pub struct vyre_foundation::perf::PerfMeasurement
 pub struct vyre_foundation::perf::PerfScope
 pub struct vyre_foundation::perf::SpanGuard
 pub struct vyre_foundation::platform::ClockAdapter
-pub struct vyre_foundation::platform::DeviceCapabilityProfile
 pub struct vyre_foundation::platform::FileSystemAdapter
 pub struct vyre_foundation::platform::HostCell
 pub struct vyre_foundation::platform::PlatformSupportMatrix
@@ -4508,7 +4591,7 @@ pub struct vyre_foundation::region_ssa::BlockArg
 pub struct vyre_foundation::region_ssa::BlockId(pub u32)
 pub struct vyre_foundation::region_ssa::DominanceVerifier
 pub struct vyre_foundation::region_ssa::EffectParam
-pub struct vyre_foundation::region_ssa::EffectToken(pub u32)
+pub struct vyre_foundation::region_ssa::EffectTokenId(pub u32)
 pub struct vyre_foundation::region_ssa::GlobalDecl
 pub struct vyre_foundation::region_ssa::RegionBuilder
 pub struct vyre_foundation::region_ssa::RegionFunction
@@ -4578,24 +4661,22 @@ pub struct vyre_foundation::substrate::ArtifactId(pub u32)
 pub struct vyre_foundation::substrate::CancellationToken
 pub struct vyre_foundation::substrate::CanonicalLayout
 pub struct vyre_foundation::substrate::ConstInterner
-pub struct vyre_foundation::substrate::ExprArena
-pub struct vyre_foundation::substrate::ExprId(pub u32)
 pub struct vyre_foundation::substrate::InternedConstId(pub u32)
 pub struct vyre_foundation::substrate::InternedLayoutId(pub u32)
+pub struct vyre_foundation::substrate::InternedNodeId(pub u32)
+pub struct vyre_foundation::substrate::InternedRegionId(pub u32)
 pub struct vyre_foundation::substrate::InternedStringId(pub u32)
 pub struct vyre_foundation::substrate::InternedTypeId(pub u32)
 pub struct vyre_foundation::substrate::LayoutInterner
 pub struct vyre_foundation::substrate::LogicalRegionView<'a>
 pub struct vyre_foundation::substrate::MemoryAccounting
 pub struct vyre_foundation::substrate::NodeArena
-pub struct vyre_foundation::substrate::NodeId(pub u32)
 pub struct vyre_foundation::substrate::PassDescriptor
 pub struct vyre_foundation::substrate::PhysicalKernelId(pub u32)
 pub struct vyre_foundation::substrate::PhysicalKernelView<'a>
 pub struct vyre_foundation::substrate::QueryEngine
 pub struct vyre_foundation::substrate::QueryOutput
 pub struct vyre_foundation::substrate::RegionArena
-pub struct vyre_foundation::substrate::RegionId(pub u32)
 pub struct vyre_foundation::substrate::Revision(pub u64)
 pub struct vyre_foundation::substrate::ScheduleNodeId(pub u32)
 pub struct vyre_foundation::substrate::SelectedScheduleView<'a>
@@ -4655,6 +4736,7 @@ pub struct vyre_foundation::verifier::VerificationCertificate
 pub struct vyre_foundation::verifier::Verified<T>
 pub struct vyre_foundation::verifier::VerifiedIrStage
 pub struct vyre_foundation::verifier::VerifiedStageWrapper<S: vyre_foundation::verifier::StageKind, T>
+pub struct vyre_foundation::visit::BufferNamesMut<'a>
 pub struct vyre_foundation::visit::BufferRefs<'a>
 pub struct vyre_foundation::visit::ExprChildren<'a>
 pub struct vyre_foundation::visit::NodeScalars<'a>
@@ -4670,6 +4752,7 @@ pub trait vyre_foundation::dialect::DialectValidator<D: vyre_foundation::dialect
 pub trait vyre_foundation::dialect::DialectVisitor<D: vyre_foundation::dialect::Dialect>
 pub trait vyre_foundation::dialect::ExternalSchemaVisitor
 pub trait vyre_foundation::extension::RuleConditionExt: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
+pub trait vyre_foundation::failure_domain::StateOwnerRecovery
 pub trait vyre_foundation::ir::ExprNode: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_foundation::ir::NodeExtension: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_foundation::operation::DialectOperationSpec: core::marker::Send + core::marker::Sync + 'static
@@ -4715,6 +4798,7 @@ pub type vyre_foundation::validate::ValidationWarning = vyre_foundation::diagnos
 pub type vyre_foundation::vast::VastEditDigest = [u8; 32]
 pub type vyre_foundation::verifier::Verified<T>::Target = T
 pub type vyre_foundation::visit::Evaluatable::Value
+pub type vyre_foundation::visit::ExprStackMut<'a> = smallvec::SmallVec<[&'a mut vyre_foundation::ir::Expr; 16]>
 pub type vyre_foundation::visit::ExprVisitor::Break
 pub type vyre_foundation::visit::NodeVisitor::Break
 pub use vyre_foundation::CANONICAL_COMPATIBILITY_CELLS
@@ -4761,7 +4845,7 @@ pub use vyre_foundation::ir::OpSignature
 pub use vyre_foundation::ir::SubgroupReduceOp
 pub use vyre_foundation::ir::UnOp
 pub use vyre_foundation::optimizer::vyre_pass
-pub use vyre_foundation::pass_substrate::semiring_closure::Semiring
+pub use vyre_foundation::pass_math::semiring_closure::Semiring
 pub vyre_foundation::CanonicalRecord::fields: alloc::vec::Vec<(u32, vyre_foundation::CanonicalValue)>
 pub vyre_foundation::CanonicalRecord::schema_id: vyre_spec::schema_registry::SchemaId
 pub vyre_foundation::CanonicalValue::Bool(bool)
@@ -5001,6 +5085,20 @@ pub vyre_foundation::config_schema::ConfigValue::U64(u64)
 pub vyre_foundation::config_schema::IdentityImpact::AffectsCacheIdentity
 pub vyre_foundation::config_schema::IdentityImpact::AffectsCompileIdentity
 pub vyre_foundation::config_schema::IdentityImpact::OperationalOnly
+pub vyre_foundation::diagnostics::CauseKind::Cancelled
+pub vyre_foundation::diagnostics::CauseKind::Configuration
+pub vyre_foundation::diagnostics::CauseKind::DeviceLost
+pub vyre_foundation::diagnostics::CauseKind::Emission
+pub vyre_foundation::diagnostics::CauseKind::Encoding
+pub vyre_foundation::diagnostics::CauseKind::ExternalToolchain
+pub vyre_foundation::diagnostics::CauseKind::InternalInvariant
+pub vyre_foundation::diagnostics::CauseKind::InvalidInput
+pub vyre_foundation::diagnostics::CauseKind::Lowering
+pub vyre_foundation::diagnostics::CauseKind::NumericOverflow
+pub vyre_foundation::diagnostics::CauseKind::ResourceExhausted
+pub vyre_foundation::diagnostics::CauseKind::Timeout
+pub vyre_foundation::diagnostics::CauseKind::UnsupportedCapability
+pub vyre_foundation::diagnostics::CauseKind::VersionSkew
 pub vyre_foundation::diagnostics::CompilerLevel::DriverRuntime
 pub vyre_foundation::diagnostics::CompilerLevel::Emission
 pub vyre_foundation::diagnostics::CompilerLevel::FoundationIr
@@ -5010,8 +5108,7 @@ pub vyre_foundation::diagnostics::CompilerLevel::PrimitivesDialects
 pub vyre_foundation::diagnostics::CompilerLevel::Spec
 pub vyre_foundation::diagnostics::CompilerLevel::ToolingEvidence
 pub vyre_foundation::diagnostics::Diagnostic::artifact_id: core::option::Option<alloc::string::String>
-pub vyre_foundation::diagnostics::Diagnostic::cause: core::option::Option<vyre_foundation::diagnostics::DiagnosticCause>
-pub vyre_foundation::diagnostics::Diagnostic::cause_chain: alloc::vec::Vec<vyre_foundation::diagnostics::DiagnosticCause>
+pub vyre_foundation::diagnostics::Diagnostic::cause_chain: alloc::vec::Vec<vyre_foundation::diagnostics::cause::DiagnosticCause>
 pub vyre_foundation::diagnostics::Diagnostic::code: vyre_foundation::diagnostics::DiagnosticCode
 pub vyre_foundation::diagnostics::Diagnostic::compiler_level: core::option::Option<vyre_foundation::diagnostics::CompilerLevel>
 pub vyre_foundation::diagnostics::Diagnostic::context_values: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
@@ -5021,12 +5118,22 @@ pub vyre_foundation::diagnostics::Diagnostic::location: core::option::Option<vyr
 pub vyre_foundation::diagnostics::Diagnostic::message: alloc::borrow::Cow<'static, str>
 pub vyre_foundation::diagnostics::Diagnostic::notes: alloc::vec::Vec<alloc::borrow::Cow<'static, str>>
 pub vyre_foundation::diagnostics::Diagnostic::retry: vyre_foundation::diagnostics::RetryClass
+pub vyre_foundation::diagnostics::Diagnostic::schema_version: u32
 pub vyre_foundation::diagnostics::Diagnostic::severity: vyre_foundation::diagnostics::Severity
 pub vyre_foundation::diagnostics::Diagnostic::stage: vyre_foundation::diagnostics::DiagnosticStage
 pub vyre_foundation::diagnostics::Diagnostic::suggested_fix: core::option::Option<alloc::borrow::Cow<'static, str>>
 pub vyre_foundation::diagnostics::Diagnostic::target: core::option::Option<alloc::string::String>
 pub vyre_foundation::diagnostics::DiagnosticCause::detail: alloc::string::String
-pub vyre_foundation::diagnostics::DiagnosticCause::kind: alloc::string::String
+pub vyre_foundation::diagnostics::DiagnosticCause::kind: vyre_foundation::diagnostics::cause::CauseKind
+pub vyre_foundation::diagnostics::DiagnosticCause::subject: alloc::borrow::Cow<'static, str>
+pub vyre_foundation::diagnostics::DiagnosticDecodeError::Malformed
+pub vyre_foundation::diagnostics::DiagnosticDecodeError::Malformed::detail: alloc::string::String
+pub vyre_foundation::diagnostics::DiagnosticDecodeError::TooLarge
+pub vyre_foundation::diagnostics::DiagnosticDecodeError::TooLarge::got: usize
+pub vyre_foundation::diagnostics::DiagnosticDecodeError::TooLarge::limit: usize
+pub vyre_foundation::diagnostics::DiagnosticDecodeError::VersionSkew
+pub vyre_foundation::diagnostics::DiagnosticDecodeError::VersionSkew::expected: u32
+pub vyre_foundation::diagnostics::DiagnosticDecodeError::VersionSkew::got: u32
 pub vyre_foundation::diagnostics::DiagnosticStage::Admit
 pub vyre_foundation::diagnostics::DiagnosticStage::Complete
 pub vyre_foundation::diagnostics::DiagnosticStage::Emit
@@ -5051,6 +5158,23 @@ pub vyre_foundation::diagnostics::RetryClass::SameDevice
 pub vyre_foundation::diagnostics::Severity::Error
 pub vyre_foundation::diagnostics::Severity::Note
 pub vyre_foundation::diagnostics::Severity::Warning
+pub vyre_foundation::diagnostics::cause::CauseKind::Cancelled
+pub vyre_foundation::diagnostics::cause::CauseKind::Configuration
+pub vyre_foundation::diagnostics::cause::CauseKind::DeviceLost
+pub vyre_foundation::diagnostics::cause::CauseKind::Emission
+pub vyre_foundation::diagnostics::cause::CauseKind::Encoding
+pub vyre_foundation::diagnostics::cause::CauseKind::ExternalToolchain
+pub vyre_foundation::diagnostics::cause::CauseKind::InternalInvariant
+pub vyre_foundation::diagnostics::cause::CauseKind::InvalidInput
+pub vyre_foundation::diagnostics::cause::CauseKind::Lowering
+pub vyre_foundation::diagnostics::cause::CauseKind::NumericOverflow
+pub vyre_foundation::diagnostics::cause::CauseKind::ResourceExhausted
+pub vyre_foundation::diagnostics::cause::CauseKind::Timeout
+pub vyre_foundation::diagnostics::cause::CauseKind::UnsupportedCapability
+pub vyre_foundation::diagnostics::cause::CauseKind::VersionSkew
+pub vyre_foundation::diagnostics::cause::DiagnosticCause::detail: alloc::string::String
+pub vyre_foundation::diagnostics::cause::DiagnosticCause::kind: vyre_foundation::diagnostics::cause::CauseKind
+pub vyre_foundation::diagnostics::cause::DiagnosticCause::subject: alloc::borrow::Cow<'static, str>
 pub vyre_foundation::dialect::DialectDescriptor::category: &'static str
 pub vyre_foundation::dialect::DialectDescriptor::id: &'static str
 pub vyre_foundation::dialect::DialectDescriptor::min_supported_version: u32
@@ -5297,6 +5421,9 @@ pub vyre_foundation::execution_plan::fusion::FusionAliasingError::buffer_name: a
 pub vyre_foundation::execution_plan::fusion::FusionAliasingError::fix_hint: &'static str
 pub vyre_foundation::execution_plan::fusion::FusionAliasingError::read_arm: usize
 pub vyre_foundation::execution_plan::fusion::FusionAliasingError::write_arm: usize
+pub vyre_foundation::execution_plan::fusion::FusionBufferRenameError::fix: &'static str
+pub vyre_foundation::execution_plan::fusion::FusionBufferRenameError::from: alloc::string::String
+pub vyre_foundation::execution_plan::fusion::FusionBufferRenameError::to: alloc::string::String
 pub vyre_foundation::execution_plan::fusion::FusionCandidate::handoff: vyre_foundation::execution_plan::fusion::HandoffLocation
 pub vyre_foundation::execution_plan::fusion::FusionCandidate::kind: vyre_foundation::execution_plan::fusion::FusionCandidateKind
 pub vyre_foundation::execution_plan::fusion::FusionCandidate::regions: alloc::vec::Vec<usize>
@@ -5311,6 +5438,7 @@ pub vyre_foundation::execution_plan::fusion::FusionCandidateKind::SharedMemoryFo
 pub vyre_foundation::execution_plan::fusion::FusionCandidateKind::UnfusedBaseline
 pub vyre_foundation::execution_plan::fusion::FusionCandidateSet::candidates: alloc::vec::Vec<vyre_foundation::execution_plan::fusion::FusionCandidate>
 pub vyre_foundation::execution_plan::fusion::FusionError::Aliasing(vyre_foundation::execution_plan::fusion::FusionAliasingError)
+pub vyre_foundation::execution_plan::fusion::FusionError::BufferRename(vyre_foundation::execution_plan::fusion::FusionBufferRenameError)
 pub vyre_foundation::execution_plan::fusion::FusionError::OverDispatch(vyre_foundation::execution_plan::fusion::FusionOverDispatchError)
 pub vyre_foundation::execution_plan::fusion::FusionError::SelfAliasing(vyre_foundation::execution_plan::fusion::FusionSelfAliasingError)
 pub vyre_foundation::execution_plan::fusion::FusionError::WorkgroupGeometry(vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError)
@@ -5369,12 +5497,12 @@ pub vyre_foundation::execution_plan::fusion::TileResidency::Global
 pub vyre_foundation::execution_plan::fusion::TileResidency::Register
 pub vyre_foundation::execution_plan::fusion::TileResidency::Subgroup
 pub vyre_foundation::execution_plan::fusion::TileResidency::WorkgroupShared
-pub vyre_foundation::extension::CatalogBundle::bundle_id: alloc::string::String
-pub vyre_foundation::extension::CatalogBundle::schemas: rustc_hash::FxHashMap<vyre_spec::extension::ExtensionIdentity, vyre_spec::extension::ExtensionSchema>
 pub vyre_foundation::extension::ExtensionAtomicOpRegistration::id: vyre_spec::extension::ExtensionAtomicOpId
 pub vyre_foundation::extension::ExtensionAtomicOpRegistration::vtable: &'static dyn vyre_spec::extension::ExtensionAtomicOp
 pub vyre_foundation::extension::ExtensionBinOpRegistration::id: vyre_spec::extension::ExtensionBinOpId
 pub vyre_foundation::extension::ExtensionBinOpRegistration::vtable: &'static dyn vyre_spec::extension::ExtensionBinOp
+pub vyre_foundation::extension::ExtensionCatalogBundle::bundle_id: alloc::string::String
+pub vyre_foundation::extension::ExtensionCatalogBundle::schemas: rustc_hash::FxHashMap<vyre_spec::extension::ExtensionIdentity, vyre_spec::extension::ExtensionSchema>
 pub vyre_foundation::extension::ExtensionCatalogError::DigestMismatch
 pub vyre_foundation::extension::ExtensionCatalogError::DigestMismatch::actual: vyre_spec::extension::ExtensionSchemaDigest
 pub vyre_foundation::extension::ExtensionCatalogError::DigestMismatch::expected: vyre_spec::extension::ExtensionSchemaDigest
@@ -5401,6 +5529,8 @@ pub vyre_foundation::failure_domain::FailureDomain::MemoryState
 pub vyre_foundation::failure_domain::FailureDomain::NetworkTransport
 pub vyre_foundation::failure_domain::FailureDomain::SessionLifecycle
 pub vyre_foundation::failure_domain::FailureDomain::WorkerProcess
+pub vyre_foundation::failure_domain::Reclaimed::No
+pub vyre_foundation::failure_domain::Reclaimed::Once
 pub vyre_foundation::failure_domain::RecoveryClass::DeviceContextFatal
 pub vyre_foundation::failure_domain::RecoveryClass::InvariantViolation
 pub vyre_foundation::failure_domain::RecoveryClass::ProcessFatal
@@ -6472,6 +6602,8 @@ pub vyre_foundation::numeric::ScalarFormat::U8
 pub vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated::available: usize
 pub vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated::expected: usize
 pub vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated::field: &'static str
+pub vyre_foundation::operation::AbsenceDecision::NoLegalRewrite
+pub vyre_foundation::operation::AbsenceDecision::Uncharacterized
 pub vyre_foundation::operation::CallGraphClosure::closure_identity: u64
 pub vyre_foundation::operation::CallGraphClosure::direct_callees: alloc::collections::btree::map::BTreeMap<&'static str, alloc::vec::Vec<&'static str>>
 pub vyre_foundation::operation::CallGraphClosure::direct_capabilities: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::program_caps::RequiredCapabilities>
@@ -6479,11 +6611,6 @@ pub vyre_foundation::operation::CallGraphClosure::direct_effects: alloc::collect
 pub vyre_foundation::operation::CallGraphClosure::transitive_capabilities: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::program_caps::RequiredCapabilities>
 pub vyre_foundation::operation::CallGraphClosure::transitive_effects: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::OperationEffects>
 pub vyre_foundation::operation::CallGraphClosure::unclosed_or_cyclic: alloc::collections::btree::set::BTreeSet<&'static str>
-pub vyre_foundation::operation::CatalogBundle::descriptors: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::SemanticDescriptor>
-pub vyre_foundation::operation::CatalogBundle::digest: [u8; 32]
-pub vyre_foundation::operation::CatalogBundle::extensions: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>
-pub vyre_foundation::operation::CatalogBundle::lowering_providers: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::LoweringProvider>
-pub vyre_foundation::operation::CatalogBundle::version: u32
 pub vyre_foundation::operation::ConformanceProvider::expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>
 pub vyre_foundation::operation::ConformanceProvider::id: &'static str
 pub vyre_foundation::operation::ConformanceProvider::test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>
@@ -6496,10 +6623,16 @@ pub vyre_foundation::operation::IdNamespace::Unknown
 pub vyre_foundation::operation::IdNamespace::Workspace(&'a str)
 pub vyre_foundation::operation::LoweringProvider::build: core::option::Option<fn() -> vyre_foundation::ir::Program>
 pub vyre_foundation::operation::LoweringProvider::id: &'static str
+pub vyre_foundation::operation::OperationCatalogBundle::descriptors: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::SemanticDescriptor>
+pub vyre_foundation::operation::OperationCatalogBundle::digest: [u8; 32]
+pub vyre_foundation::operation::OperationCatalogBundle::extensions: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>
+pub vyre_foundation::operation::OperationCatalogBundle::lowering_providers: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::LoweringProvider>
+pub vyre_foundation::operation::OperationCatalogBundle::version: u32
 pub vyre_foundation::operation::OperationEffects::atomics: bool
 pub vyre_foundation::operation::OperationEffects::reads: bool
 pub vyre_foundation::operation::OperationEffects::synchronizes: bool
 pub vyre_foundation::operation::OperationEffects::writes: bool
+pub vyre_foundation::operation::OperationRegistration::absence: core::option::Option<vyre_foundation::operation::AbsenceDecision>
 pub vyre_foundation::operation::OperationRegistration::build: core::option::Option<fn() -> vyre_foundation::ir::Program>
 pub vyre_foundation::operation::OperationRegistration::category: core::option::Option<&'static str>
 pub vyre_foundation::operation::OperationRegistration::expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>
@@ -6509,7 +6642,6 @@ pub vyre_foundation::operation::OperationRegistration::geometry_requirements: vy
 pub vyre_foundation::operation::OperationRegistration::id: &'static str
 pub vyre_foundation::operation::OperationRegistration::laws: &'static [&'static str]
 pub vyre_foundation::operation::OperationRegistration::numeric: vyre_foundation::numeric::NumericContract
-pub vyre_foundation::operation::OperationRegistration::opaque_reason: core::option::Option<&'static str>
 pub vyre_foundation::operation::OperationRegistration::semantic_version: u32
 pub vyre_foundation::operation::OperationRegistration::signature: core::option::Option<vyre_foundation::dialect_lookup::Signature>
 pub vyre_foundation::operation::OperationRegistration::source_file: &'static str
@@ -6520,9 +6652,6 @@ pub vyre_foundation::operation::OperationRegistryError::ContractValidationFailed
 pub vyre_foundation::operation::OperationRegistryError::ContractValidationFailed::message: alloc::string::String
 pub vyre_foundation::operation::OperationRegistryError::DuplicateId
 pub vyre_foundation::operation::OperationRegistryError::DuplicateId::id: &'static str
-pub vyre_foundation::operation::OperationRegistryError::InvalidOpaqueReason
-pub vyre_foundation::operation::OperationRegistryError::InvalidOpaqueReason::id: &'static str
-pub vyre_foundation::operation::OperationRegistryError::InvalidOpaqueReason::reason: &'static str
 pub vyre_foundation::operation::OperationRegistryError::InvalidTier
 pub vyre_foundation::operation::OperationRegistryError::InvalidTier::declared: vyre_foundation::operation::OperationTier
 pub vyre_foundation::operation::OperationRegistryError::InvalidTier::id: &'static str
@@ -6546,6 +6675,7 @@ pub vyre_foundation::operation::OperationTier::Foundation
 pub vyre_foundation::operation::OperationTier::Intrinsic
 pub vyre_foundation::operation::OperationTier::Library
 pub vyre_foundation::operation::OperationTier::Unknown
+pub vyre_foundation::operation::SemanticDescriptor::absence: core::option::Option<vyre_foundation::operation::AbsenceDecision>
 pub vyre_foundation::operation::SemanticDescriptor::category: core::option::Option<&'static str>
 pub vyre_foundation::operation::SemanticDescriptor::explicit_capabilities: core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub vyre_foundation::operation::SemanticDescriptor::explicit_effects: core::option::Option<vyre_foundation::operation::OperationEffects>
@@ -6553,10 +6683,10 @@ pub vyre_foundation::operation::SemanticDescriptor::geometry_requirements: vyre_
 pub vyre_foundation::operation::SemanticDescriptor::id: &'static str
 pub vyre_foundation::operation::SemanticDescriptor::laws: &'static [&'static str]
 pub vyre_foundation::operation::SemanticDescriptor::numeric: vyre_foundation::numeric::NumericContract
-pub vyre_foundation::operation::SemanticDescriptor::opaque_reason: core::option::Option<&'static str>
 pub vyre_foundation::operation::SemanticDescriptor::semantic_version: u32
 pub vyre_foundation::operation::SemanticDescriptor::signature: core::option::Option<&'static vyre_foundation::dialect_lookup::Signature>
 pub vyre_foundation::operation::SemanticDescriptor::tier: vyre_foundation::operation::OperationTier
+pub vyre_foundation::operation::SemanticOperation::absence: core::option::Option<vyre_foundation::operation::AbsenceDecision>
 pub vyre_foundation::operation::SemanticOperation::build: core::option::Option<fn() -> vyre_foundation::ir::Program>
 pub vyre_foundation::operation::SemanticOperation::category: core::option::Option<&'static str>
 pub vyre_foundation::operation::SemanticOperation::expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>
@@ -6566,7 +6696,6 @@ pub vyre_foundation::operation::SemanticOperation::geometry_requirements: vyre_f
 pub vyre_foundation::operation::SemanticOperation::id: &'static str
 pub vyre_foundation::operation::SemanticOperation::laws: &'static [&'static str]
 pub vyre_foundation::operation::SemanticOperation::numeric: vyre_foundation::numeric::NumericContract
-pub vyre_foundation::operation::SemanticOperation::opaque_reason: core::option::Option<&'static str>
 pub vyre_foundation::operation::SemanticOperation::semantic_version: u32
 pub vyre_foundation::operation::SemanticOperation::signature: core::option::Option<&'static vyre_foundation::dialect_lookup::Signature>
 pub vyre_foundation::operation::SemanticOperation::source_file: &'static str
@@ -6806,10 +6935,6 @@ pub vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract:
 pub vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::rewrite_id: &'static str
 pub vyre_foundation::optimizer::algebraic_rules::IdentityReplacement::Left
 pub vyre_foundation::optimizer::algebraic_rules::IdentityReplacement::Right
-pub vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::Bool(bool)
-pub vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::F32(f32)
-pub vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::I32(i32)
-pub vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::U32(u32)
 pub vyre_foundation::optimizer::construct_law::ConstructLaws::construct: &'static str
 pub vyre_foundation::optimizer::construct_law::ConstructLaws::families: &'static [vyre_spec::region_law::RegionLawFamily]
 pub vyre_foundation::optimizer::construct_law::ConstructLaws::opacity: core::option::Option<&'static str>
@@ -6856,14 +6981,10 @@ pub vyre_foundation::optimizer::diff_compile::Diff::Removed::index: usize
 pub vyre_foundation::optimizer::diff_compile::Diff::Unchanged
 pub vyre_foundation::optimizer::diff_compile::Diff::Unchanged::hash: [u8; 32]
 pub vyre_foundation::optimizer::diff_compile::Diff::Unchanged::index: usize
-pub vyre_foundation::optimizer::effect_lattice::AtomicOrdering::AcqRel
-pub vyre_foundation::optimizer::effect_lattice::AtomicOrdering::Acquire
-pub vyre_foundation::optimizer::effect_lattice::AtomicOrdering::Release
-pub vyre_foundation::optimizer::effect_lattice::AtomicOrdering::SeqCst
 pub vyre_foundation::optimizer::effect_lattice::EffectLevel::Diverging
 pub vyre_foundation::optimizer::effect_lattice::EffectLevel::Pure
 pub vyre_foundation::optimizer::effect_lattice::EffectLevel::ReadAtomic
-pub vyre_foundation::optimizer::effect_lattice::EffectLevel::ReadWriteAtomic(vyre_foundation::optimizer::effect_lattice::AtomicOrdering)
+pub vyre_foundation::optimizer::effect_lattice::EffectLevel::ReadWriteAtomic(vyre_foundation::ir::AtomicOrdering)
 pub vyre_foundation::optimizer::effect_lattice::EffectLevel::Synchronized(vyre_foundation::optimizer::effect_lattice::SyncScope)
 pub vyre_foundation::optimizer::effect_lattice::SyncScope::Grid
 pub vyre_foundation::optimizer::effect_lattice::SyncScope::Subgroup
@@ -7160,7 +7281,7 @@ pub vyre_foundation::optimizer::multi_level_eqsat::ReplayArtifact::final_digest:
 pub vyre_foundation::optimizer::multi_level_eqsat::ReplayArtifact::initial_digest: [u8; 32]
 pub vyre_foundation::optimizer::multi_level_eqsat::ReplayArtifact::proof_log: alloc::vec::Vec<vyre_foundation::optimizer::multi_level_eqsat::StepProof>
 pub vyre_foundation::optimizer::multi_level_eqsat::ReplayArtifact::telemetry: vyre_foundation::optimizer::multi_level_eqsat::PassTelemetry
-pub vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation::admitted_numerical_contracts: alloc::vec::Vec<vyre_foundation::optimizer::rewrite_contract::NumericalContract>
+pub vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation::admitted_numerical_contracts: alloc::vec::Vec<vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract>
 pub vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation::class_growth_limit: usize
 pub vyre_foundation::optimizer::multi_level_eqsat::SemanticEqualitySaturation::max_iterations: usize
 pub vyre_foundation::optimizer::multi_level_eqsat::StepProof::after_digest: [u8; 32]
@@ -7280,11 +7401,6 @@ pub vyre_foundation::optimizer::region_law::RegionLaw::statement: &'static str
 pub vyre_foundation::optimizer::rewrite_contract::BoundedExpansion::NodeBudget(u32)
 pub vyre_foundation::optimizer::rewrite_contract::BoundedExpansion::NodeFactor(u32)
 pub vyre_foundation::optimizer::rewrite_contract::BoundedExpansion::NonGrowing
-pub vyre_foundation::optimizer::rewrite_contract::NumericalContract::BitExact
-pub vyre_foundation::optimizer::rewrite_contract::NumericalContract::FloatContraction
-pub vyre_foundation::optimizer::rewrite_contract::NumericalContract::FloatReassociation
-pub vyre_foundation::optimizer::rewrite_contract::NumericalContract::IntegerWrapping
-pub vyre_foundation::optimizer::rewrite_contract::NumericalContract::ReducedPrecision
 pub vyre_foundation::optimizer::rewrite_contract::ProfitabilityFact::Canonicalizes
 pub vyre_foundation::optimizer::rewrite_contract::ProfitabilityFact::EnablesFusion
 pub vyre_foundation::optimizer::rewrite_contract::ProfitabilityFact::RaisesOccupancy
@@ -7297,7 +7413,7 @@ pub vyre_foundation::optimizer::rewrite_contract::ProfitabilityFact::WidensVecto
 pub vyre_foundation::optimizer::rewrite_contract::RewriteContract::effects: &'static [vyre_foundation::optimizer::rewrite_contract::RewriteEffect]
 pub vyre_foundation::optimizer::rewrite_contract::RewriteContract::expansion: vyre_foundation::optimizer::rewrite_contract::BoundedExpansion
 pub vyre_foundation::optimizer::rewrite_contract::RewriteContract::level: vyre_spec::ir_level::IrLevel
-pub vyre_foundation::optimizer::rewrite_contract::RewriteContract::numerical: vyre_foundation::optimizer::rewrite_contract::NumericalContract
+pub vyre_foundation::optimizer::rewrite_contract::RewriteContract::numerical: vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract
 pub vyre_foundation::optimizer::rewrite_contract::RewriteContract::pass: &'static str
 pub vyre_foundation::optimizer::rewrite_contract::RewriteContract::preconditions: &'static [vyre_foundation::optimizer::rewrite_contract::RewritePrecondition]
 pub vyre_foundation::optimizer::rewrite_contract::RewriteContract::profitability: &'static [vyre_foundation::optimizer::rewrite_contract::ProfitabilityFact]
@@ -7310,6 +7426,11 @@ pub vyre_foundation::optimizer::rewrite_contract::RewriteEffect::ControlFlow
 pub vyre_foundation::optimizer::rewrite_contract::RewriteEffect::Reads
 pub vyre_foundation::optimizer::rewrite_contract::RewriteEffect::Synchronization
 pub vyre_foundation::optimizer::rewrite_contract::RewriteEffect::Writes
+pub vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract::BitExact
+pub vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract::FloatContraction
+pub vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract::FloatReassociation
+pub vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract::IntegerWrapping
+pub vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract::ReducedPrecision
 pub vyre_foundation::optimizer::rewrite_contract::RewritePrecondition::AbiPreserved
 pub vyre_foundation::optimizer::rewrite_contract::RewritePrecondition::BoundedIndices
 pub vyre_foundation::optimizer::rewrite_contract::RewritePrecondition::ConstantLoopBounds
@@ -7347,38 +7468,36 @@ pub vyre_foundation::optimizer::rewrite_proof::RewriteProofObligation::domain: v
 pub vyre_foundation::optimizer::rewrite_proof::RewriteProofObligation::preconditions: alloc::vec::Vec<vyre_foundation::optimizer::rewrite_proof::ProofExpr>
 pub vyre_foundation::optimizer::rewrite_proof::RewriteProofObligation::rewrite: alloc::sync::Arc<str>
 pub vyre_foundation::perf::PerfMeasurement::elapsed_ns: u64
-pub vyre_foundation::platform::ConversionError::NegativeToUnsigned
-pub vyre_foundation::platform::ConversionError::NegativeToUnsigned::val: i128
 pub vyre_foundation::platform::ConversionError::Overflow32
-pub vyre_foundation::platform::ConversionError::Overflow32::val: u128
+pub vyre_foundation::platform::ConversionError::Overflow32::val: i128
+pub vyre_foundation::platform::ConversionError::Overflow64
+pub vyre_foundation::platform::ConversionError::Overflow64::val: i128
 pub vyre_foundation::platform::ConversionError::OverflowHostPointer
+pub vyre_foundation::platform::ConversionError::OverflowHostPointer::host_pointer_bits: u32
 pub vyre_foundation::platform::ConversionError::OverflowHostPointer::val: u64
-pub vyre_foundation::platform::DeviceCapabilityProfile::bf16_support: bool
-pub vyre_foundation::platform::DeviceCapabilityProfile::fp16_support: bool
-pub vyre_foundation::platform::DeviceCapabilityProfile::max_invocations: u32
-pub vyre_foundation::platform::DeviceCapabilityProfile::shared_memory_kb: u32
-pub vyre_foundation::platform::DeviceCapabilityProfile::subgroup_size: u32
-pub vyre_foundation::platform::DeviceCapabilityProfile::tensor_cores: bool
 pub vyre_foundation::platform::Endianness::BigEndian
 pub vyre_foundation::platform::Endianness::LittleEndian
 pub vyre_foundation::platform::HostArch::AArch64
 pub vyre_foundation::platform::HostArch::Armv7
-pub vyre_foundation::platform::HostArch::Other(alloc::string::String)
+pub vyre_foundation::platform::HostArch::PowerPc
 pub vyre_foundation::platform::HostArch::RiscV64
+pub vyre_foundation::platform::HostArch::S390x
 pub vyre_foundation::platform::HostArch::Wasm32
+pub vyre_foundation::platform::HostArch::X86
 pub vyre_foundation::platform::HostArch::X86_64
 pub vyre_foundation::platform::HostCell::arch: vyre_foundation::platform::HostArch
 pub vyre_foundation::platform::HostCell::endianness: vyre_foundation::platform::Endianness
 pub vyre_foundation::platform::HostCell::os: vyre_foundation::platform::HostOs
 pub vyre_foundation::platform::HostCell::pointer_width: vyre_foundation::platform::PointerWidth
-pub vyre_foundation::platform::HostCell::rust_version: alloc::string::String
 pub vyre_foundation::platform::HostOs::Android
 pub vyre_foundation::platform::HostOs::FreeBsd
 pub vyre_foundation::platform::HostOs::IOs
 pub vyre_foundation::platform::HostOs::Linux
 pub vyre_foundation::platform::HostOs::MacOS
-pub vyre_foundation::platform::HostOs::Other(alloc::string::String)
 pub vyre_foundation::platform::HostOs::Windows
+pub vyre_foundation::platform::HostSupportTier::Encoding
+pub vyre_foundation::platform::HostSupportTier::Excluded
+pub vyre_foundation::platform::HostSupportTier::Runtime
 pub vyre_foundation::platform::PlatformAdapterError::Io
 pub vyre_foundation::platform::PlatformAdapterError::Io::path: std::path::PathBuf
 pub vyre_foundation::platform::PlatformAdapterError::Io::source: core::io::error::Error
@@ -7389,19 +7508,20 @@ pub vyre_foundation::platform::PlatformAdapterError::ThreadSpawn
 pub vyre_foundation::platform::PlatformAdapterError::ThreadSpawn::name: alloc::string::String
 pub vyre_foundation::platform::PlatformAdapterError::ThreadSpawn::source: core::io::error::Error
 pub vyre_foundation::platform::PlatformSupportMatrix::canonical_endianness: vyre_foundation::platform::Endianness
+pub vyre_foundation::platform::PlatformSupportMatrix::cells: alloc::vec::Vec<(vyre_foundation::platform::HostCell, vyre_foundation::platform::HostSupportTier)>
+pub vyre_foundation::platform::PlatformSupportMatrix::rust_version: alloc::string::String
 pub vyre_foundation::platform::PlatformSupportMatrix::schema_version: u32
-pub vyre_foundation::platform::PlatformSupportMatrix::supported_hosts: alloc::vec::Vec<vyre_foundation::platform::HostCell>
 pub vyre_foundation::platform::PointerWidth::Bits32
 pub vyre_foundation::platform::PointerWidth::Bits64
+pub vyre_foundation::platform::UnsupportedPlatformError::EncodingOnlyHost
+pub vyre_foundation::platform::UnsupportedPlatformError::EncodingOnlyHost::cell: vyre_foundation::platform::HostCell
+pub vyre_foundation::platform::UnsupportedPlatformError::EncodingOnlyHost::tier: vyre_foundation::platform::HostSupportTier
+pub vyre_foundation::platform::UnsupportedPlatformError::ExcludedHost
+pub vyre_foundation::platform::UnsupportedPlatformError::ExcludedHost::cell: vyre_foundation::platform::HostCell
 pub vyre_foundation::platform::UnsupportedPlatformError::Serialization(alloc::string::String)
 pub vyre_foundation::platform::UnsupportedPlatformError::StaleSchemaVersion
 pub vyre_foundation::platform::UnsupportedPlatformError::StaleSchemaVersion::expected: u32
 pub vyre_foundation::platform::UnsupportedPlatformError::StaleSchemaVersion::found: u32
-pub vyre_foundation::platform::UnsupportedPlatformError::UnsupportedHost
-pub vyre_foundation::platform::UnsupportedPlatformError::UnsupportedHost::arch: vyre_foundation::platform::HostArch
-pub vyre_foundation::platform::UnsupportedPlatformError::UnsupportedHost::endianness: vyre_foundation::platform::Endianness
-pub vyre_foundation::platform::UnsupportedPlatformError::UnsupportedHost::os: vyre_foundation::platform::HostOs
-pub vyre_foundation::platform::UnsupportedPlatformError::UnsupportedHost::pointer_width: vyre_foundation::platform::PointerWidth
 pub vyre_foundation::program_caps::BackendSupport::brain_float: bool
 pub vyre_foundation::program_caps::BackendSupport::distributed_collectives: bool
 pub vyre_foundation::program_caps::BackendSupport::grid_sync: bool
@@ -7494,7 +7614,7 @@ pub vyre_foundation::region_ssa::RegionKind::Stencil
 pub vyre_foundation::region_ssa::RegionKind::Stencil::input: vyre_foundation::region_ssa::ValueId
 pub vyre_foundation::region_ssa::RegionKind::Stencil::strides: alloc::vec::Vec<u64>
 pub vyre_foundation::region_ssa::RegionKind::Stencil::window_shape: alloc::vec::Vec<u64>
-pub vyre_foundation::region_ssa::RegionModule::catalog: core::option::Option<vyre_foundation::extension::CatalogBundle>
+pub vyre_foundation::region_ssa::RegionModule::catalog: core::option::Option<vyre_foundation::extension::ExtensionCatalogBundle>
 pub vyre_foundation::region_ssa::RegionModule::functions: alloc::vec::Vec<vyre_foundation::region_ssa::RegionFunction>
 pub vyre_foundation::region_ssa::RegionModule::globals: alloc::vec::Vec<vyre_foundation::region_ssa::GlobalDecl>
 pub vyre_foundation::region_ssa::RegionModule::name: alloc::string::String
@@ -7512,11 +7632,11 @@ pub vyre_foundation::region_ssa::RegionOpKind::BufferAlloc::name: alloc::string:
 pub vyre_foundation::region_ssa::RegionOpKind::BufferAlloc::size_bytes: u64
 pub vyre_foundation::region_ssa::RegionOpKind::BufferLoad
 pub vyre_foundation::region_ssa::RegionOpKind::BufferLoad::buffer: alloc::string::String
-pub vyre_foundation::region_ssa::RegionOpKind::BufferLoad::effect_in: core::option::Option<vyre_foundation::region_ssa::EffectToken>
+pub vyre_foundation::region_ssa::RegionOpKind::BufferLoad::effect_in: core::option::Option<vyre_foundation::region_ssa::EffectTokenId>
 pub vyre_foundation::region_ssa::RegionOpKind::BufferLoad::index: vyre_foundation::region_ssa::ValueId
 pub vyre_foundation::region_ssa::RegionOpKind::BufferStore
 pub vyre_foundation::region_ssa::RegionOpKind::BufferStore::buffer: alloc::string::String
-pub vyre_foundation::region_ssa::RegionOpKind::BufferStore::effect_in: core::option::Option<vyre_foundation::region_ssa::EffectToken>
+pub vyre_foundation::region_ssa::RegionOpKind::BufferStore::effect_in: core::option::Option<vyre_foundation::region_ssa::EffectTokenId>
 pub vyre_foundation::region_ssa::RegionOpKind::BufferStore::index: vyre_foundation::region_ssa::ValueId
 pub vyre_foundation::region_ssa::RegionOpKind::BufferStore::value: vyre_foundation::region_ssa::ValueId
 pub vyre_foundation::region_ssa::RegionOpKind::Call
@@ -7545,6 +7665,8 @@ pub vyre_foundation::region_ssa::RegionOpKind::View::input: vyre_foundation::reg
 pub vyre_foundation::region_ssa::RegionOpKind::View::view: vyre_foundation::region_ssa::ViewOp
 pub vyre_foundation::region_ssa::RegionSsaError::Dominance(vyre_foundation::region_ssa::DominanceError)
 pub vyre_foundation::region_ssa::RegionSsaError::UnboundVariable(alloc::string::String)
+pub vyre_foundation::region_ssa::RegionSsaError::UnrepresentableLiteral
+pub vyre_foundation::region_ssa::RegionSsaError::UnrepresentableLiteral::literal: vyre_foundation::region_ssa::ScalarLiteral
 pub vyre_foundation::region_ssa::RegionSsaError::Unsupported(alloc::string::String)
 pub vyre_foundation::region_ssa::ScalarLiteral::Bool(bool)
 pub vyre_foundation::region_ssa::ScalarLiteral::F32(f32)
@@ -8247,7 +8369,6 @@ pub vyre_foundation::substrate::StaleCacheError::VersionMismatch
 pub vyre_foundation::substrate::StaleCacheError::VersionMismatch::expected: u16
 pub vyre_foundation::substrate::StaleCacheError::VersionMismatch::found: u16
 pub vyre_foundation::substrate::SubstrateArena::constants: vyre_foundation::substrate::ConstInterner
-pub vyre_foundation::substrate::SubstrateArena::exprs: vyre_foundation::substrate::ExprArena
 pub vyre_foundation::substrate::SubstrateArena::layouts: vyre_foundation::substrate::LayoutInterner
 pub vyre_foundation::substrate::SubstrateArena::nodes: vyre_foundation::substrate::NodeArena
 pub vyre_foundation::substrate::SubstrateArena::regions: vyre_foundation::substrate::RegionArena
@@ -8685,6 +8806,9 @@ pub vyre_foundation::visit::BufferRefs::reads: [core::option::Option<&'a vyre_fo
 pub vyre_foundation::visit::BufferRefs::writes: [core::option::Option<&'a vyre_foundation::ir::Ident>; 2]
 pub vyre_foundation::visit::ExprBufferAccess::Atomic
 pub vyre_foundation::visit::ExprBufferAccess::Load
+pub vyre_foundation::visit::ExprBufferName::Named(&'a mut vyre_foundation::ir::Ident)
+pub vyre_foundation::visit::ExprBufferName::None
+pub vyre_foundation::visit::ExprBufferName::Unknown
 pub vyre_foundation::visit::ExprBufferRef::None
 pub vyre_foundation::visit::ExprBufferRef::Read(&'a vyre_foundation::ir::Ident)
 pub vyre_foundation::visit::ExprBufferRef::ReadWrite(&'a vyre_foundation::ir::Ident)

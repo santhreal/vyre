@@ -37,6 +37,11 @@ duplicate_lines = 50
 total_lines = 16002
 
 [[crate]]
+name = "consumers"
+duplicate_lines = 112
+total_lines = 4472
+
+[[crate]]
 name = "examples"
 duplicate_lines = 18
 total_lines = 438
@@ -132,6 +137,111 @@ duplicate_lines = 4782
 total_lines = 211053
 
 [[crate]]
+name = "vyre-libs-analysis"
+duplicate_lines = 94
+total_lines = 3977
+
+[[crate]]
+name = "vyre-libs-bitset"
+duplicate_lines = 327
+total_lines = 5494
+
+[[crate]]
+name = "vyre-libs-builder"
+duplicate_lines = 185
+total_lines = 8201
+
+[[crate]]
+name = "vyre-libs-decode"
+duplicate_lines = 62
+total_lines = 3392
+
+[[crate]]
+name = "vyre-libs-device"
+duplicate_lines = 9
+total_lines = 1271
+
+[[crate]]
+name = "vyre-libs-encoding"
+duplicate_lines = 386
+total_lines = 5529
+
+[[crate]]
+name = "vyre-libs-fixpoint"
+duplicate_lines = 18
+total_lines = 1572
+
+[[crate]]
+name = "vyre-libs-graph"
+duplicate_lines = 1125
+total_lines = 32527
+
+[[crate]]
+name = "vyre-libs-hash"
+duplicate_lines = 67
+total_lines = 4308
+
+[[crate]]
+name = "vyre-libs-math"
+duplicate_lines = 691
+total_lines = 21367
+
+[[crate]]
+name = "vyre-libs-nn"
+duplicate_lines = 779
+total_lines = 23371
+
+[[crate]]
+name = "vyre-libs-parsing"
+duplicate_lines = 128
+total_lines = 8167
+
+[[crate]]
+name = "vyre-libs-pattern"
+duplicate_lines = 742
+total_lines = 12753
+
+[[crate]]
+name = "vyre-libs-reasoning"
+duplicate_lines = 43
+total_lines = 3300
+
+[[crate]]
+name = "vyre-libs-reduce"
+duplicate_lines = 112
+total_lines = 5956
+
+[[crate]]
+name = "vyre-libs-rule"
+duplicate_lines = 59
+total_lines = 1424
+
+[[crate]]
+name = "vyre-libs-scheduling"
+duplicate_lines = 85
+total_lines = 2301
+
+[[crate]]
+name = "vyre-libs-security"
+duplicate_lines = 162
+total_lines = 7033
+
+[[crate]]
+name = "vyre-libs-solvers"
+duplicate_lines = 493
+total_lines = 11811
+
+[[crate]]
+name = "vyre-libs-text"
+duplicate_lines = 182
+total_lines = 3304
+
+[[crate]]
+name = "vyre-libs-visual"
+duplicate_lines = 941
+total_lines = 4373
+
+[[crate]]
 name = "vyre-lints"
 duplicate_lines = 0
 total_lines = 3438
@@ -160,6 +270,11 @@ total_lines = 3838
 name = "vyre-reference"
 duplicate_lines = 393
 total_lines = 30891
+
+[[crate]]
+name = "vyre-registry-link"
+duplicate_lines = 29
+total_lines = 1142
 
 [[crate]]
 name = "vyre-runtime"

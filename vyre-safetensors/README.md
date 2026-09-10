@@ -26,9 +26,11 @@ Validate safetensors metadata, shard indexes, compiler requirements, trusted sha
 
 ### Boundaries
 
-The `safetensors-adapter` owner maintains this `runtime` crate at `vyre-safetensors`.
-Its allowed internal production dependencies are: None.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `runtime` layer's `safetensors-adapter` seam, at `vyre-safetensors`.
+Every production dependency on it crosses Container-format mapping into typed transfer descriptors.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -60,7 +62,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

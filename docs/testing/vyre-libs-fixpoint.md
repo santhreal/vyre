@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own deterministic fixpoint iteration kernels, routing contracts, and grid synchronization barriers. Does not own domain dataflow analysis, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-fixpoint`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-fixpoint` and owns the `libs-fixpoint` seam in the `libraries` layer.
 
 ## Commands
 

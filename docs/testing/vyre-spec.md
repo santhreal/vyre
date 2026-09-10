@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own stable schemas, operation definitions, and compatibility contracts without runtime dependencies.
 
-The crate lives at `vyre-spec`. The `specification` owner maintains its
-`foundation` testing contract.
+The crate lives at `vyre-spec` and owns the `specification` seam in the `foundation` layer.
 
 ## Commands
 

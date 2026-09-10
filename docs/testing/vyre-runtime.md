@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Execute the artifact's selected persistence: sessions, recovery, residency, scheduling, caches, telemetry, readback, and IO. Does not decide whether to be persistent.
 
-The crate lives at `vyre-runtime`. The `runtime` owner maintains its
-`runtime` testing contract.
+The crate lives at `vyre-runtime` and owns the `runtime` seam in the `runtime` layer.
 
 ## Commands
 

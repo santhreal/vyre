@@ -31,9 +31,11 @@ Construct foundation-owned selected schedules through bounded whole-ProgramGraph
 
 ### Boundaries
 
-The `megakernel-compiler` owner maintains this `compiler-boundary` crate at `vyre-megakernel`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-lower`, `vyre-spec`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `compiler-boundary` layer's `megakernel-compiler` seam, at `vyre-megakernel`.
+Every production dependency on it crosses Schedule search, immutable artifact identity and authenticated target-payload construction.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -65,7 +67,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

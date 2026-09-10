@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:a08d4b239de91dd83947eee6147624ce72a1aa3c:dirty=true:worktree=ed0c560d94f35bcf6677613b447b664c341a8379071622217aeba1468d231d97",
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=ab2e2b4ba58b45dc748e13ab540a57116d15ff8ff539182ce68210e5bfc7273a"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -52,14 +52,14 @@
       "text": "/// placeholder; V045 assignment-type checking must be skipped."
     },
     {
-      "path": "vyre-libs/src/graph/program_graph.rs",
+      "path": "vyre-libs-graph/src/graph/program_graph.rs",
       "line": 363,
       "pattern": "placeholder_text",
       "text": "// `max(edge_count, 1)`. A zero-edge graph still carries a single placeholder"
     },
     {
-      "path": "vyre-libs/src/reduce/grid_stride_tree.rs",
-      "line": 115,
+      "path": "vyre-libs-reduce/src/reduce/grid_stride_tree.rs",
+      "line": 117,
       "pattern": "placeholder_text",
       "text": "// single-block form cannot drift into demanding a placeholder for its own"
     },
@@ -71,27 +71,57 @@
     },
     {
       "path": "vyre-primitives/src/hardware/mod.rs",
-      "line": 469,
+      "line": 474,
       "pattern": "placeholder_text",
       "text": "/// zeroed placeholder for one described a call the artifact ABI rejects."
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 234,
+      "line": 175,
       "pattern": "placeholder_text",
       "text": "// op whose fixture carried a placeholder for a backend-allocated output"
     },
     {
-      "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 247,
+      "path": "vyre-spec/src/all_algebraic_laws.rs",
+      "line": 15,
       "pattern": "placeholder_text",
-      "text": "backend-allocated output; a placeholder for one is what the artifact ABI rejects on \\"
+      "text": "/// Parameterized variants carry stable placeholder payloads that exercise the"
     },
     {
-      "path": "vyre-reference/src/execution/mod.rs",
-      "line": 76,
+      "path": "vyre-spec/src/law_family.rs",
+      "line": 234,
       "pattern": "placeholder_text",
-      "text": "// lowering table's placeholder, which cleared the output buffer instead"
+      "text": "/// The payload is a stable placeholder, not a claim about any operation:"
+    },
+    {
+      "path": "vyre-spec/src/op_contract.rs",
+      "line": 533,
+      "pattern": "placeholder_text",
+      "text": "/// placeholder."
+    },
+    {
+      "path": "vyre-spec/src/op_contract.rs",
+      "line": 565,
+      "pattern": "placeholder_text",
+      "text": "| \"placeholder\""
+    },
+    {
+      "path": "vyre-spec/src/op_contract.rs",
+      "line": 574,
+      "pattern": "placeholder_text",
+      "text": "|| lower.starts_with(\"placeholder:\")"
+    },
+    {
+      "path": "vyre-spec/src/op_contract.rs",
+      "line": 586,
+      "pattern": "placeholder_text",
+      "text": "/// Opaque reason was too short or contained a placeholder string."
+    },
+    {
+      "path": "vyre-spec/src/op_contract.rs",
+      "line": 601,
+      "pattern": "placeholder_text",
+      "text": "write!(f, \"invalid or placeholder opaque reason: `{reason}`\")"
     },
     {
       "path": "vyre-test-support/src/ir_variants.rs",
@@ -100,8 +130,8 @@
       "text": "/// variants with placeholder operands, so this set is the one to use when the"
     },
     {
-      "path": "xtask/src/gate_metadata.rs",
-      "line": 156,
+      "path": "xtask/src/gate_metadata/descriptors_a_g.rs",
+      "line": 104,
       "pattern": "placeholder_text",
       "text": "help: \"Cross-validate every speedup cell across the three measured backend comparison  matrices. Proves every measured cell records positive speedup, is strictly reproducible  from its source probe, cites no placeholder, and is traceable back to its host, commit,  GPU model, driver version, and measurement timestamp. Proves nothing about benchmark  methodology: this gate reads the produced matrices and their source artifacts, never  starts a benchmark run. Run with --write to re-derive the markdown summary table.\","
     },
@@ -227,13 +257,13 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 253,
+      "line": 286,
       "pattern": "placeholder_text",
       "text": "/// platform is prose and compiles nothing. That also drops the placeholder"
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 256,
+      "line": 289,
       "pattern": "placeholder_text",
       "text": "/// accepts only `[a-z0-9_]` there, so anything else is a placeholder rather than"
     }

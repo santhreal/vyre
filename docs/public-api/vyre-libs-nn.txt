@@ -97,7 +97,6 @@ pub fn vyre_libs_nn::nn::attention::chunked_gated_delta(spec: &vyre_libs_nn::nn:
 pub fn vyre_libs_nn::nn::attention::flash_attention(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs_nn::nn::attention::flash_attention_2(q: &str, k: &str, v: &str, out: &str, seq_len: u32, head_dim: u32, tile_size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_nn::nn::attention::fused_tile_attention(q: &str, k: &str, v: &str, out: &str, seq_len: u32, head_dim: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs_nn::nn::attention::fused_tile_attention::fused_tile_attention(q: &str, k: &str, v: &str, out: &str, seq_len: u32, head_dim: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_nn::nn::attention::gqa_attention(q: &str, k: &str, v_buf: &str, output: &str, n_q_heads: u32, n_kv_heads: u32, seq_len: u32, head_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs_nn::nn::attention::gqa_attention_causal(q: &str, k: &str, v_buf: &str, output: &str, batch: u32, n_q_heads: u32, n_kv_heads: u32, query_len: u32, kv_len: u32, head_dim: u32, cache_offset: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs_nn::nn::attention::gqa_attention_causal_typed(q: &str, k: &str, v_buf: &str, output: &str, batch: u32, n_q_heads: u32, n_kv_heads: u32, query_len: u32, kv_len: u32, head_dim: u32, cache_offset: u32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
@@ -232,7 +231,6 @@ pub mod vyre_libs_nn::llm::sampling
 pub mod vyre_libs_nn::nn
 pub mod vyre_libs_nn::nn::activation
 pub mod vyre_libs_nn::nn::attention
-pub mod vyre_libs_nn::nn::attention::fused_tile_attention
 pub mod vyre_libs_nn::nn::attention::tiled_online_softmax
 pub mod vyre_libs_nn::nn::attention_passes
 pub mod vyre_libs_nn::nn::attention_stability
@@ -471,7 +469,7 @@ pub vyre_libs_nn::nn::linear::QuantizedLinear4BitPlannerEvidence::tensor_core_el
 pub vyre_libs_nn::nn::linear::QuantizedLinear4BitSpec::in_dim: u32
 pub vyre_libs_nn::nn::linear::QuantizedLinear4BitSpec::out_dim: u32
 pub vyre_libs_nn::nn::linear::QuantizedLinear4BitSpec::weight_type: vyre_spec::data_type::DataType
-pub vyre_libs_nn::nn::model::DenseGatedMlpError::Graph(vyre_foundation::ir_inner::model::program_graph::types::ProgramGraphError)
+pub vyre_libs_nn::nn::model::DenseGatedMlpError::Graph(vyre_foundation::ir_inner::model::program_graph::contracts::ProgramGraphError)
 pub vyre_libs_nn::nn::model::DenseGatedMlpError::Primitive(alloc::string::String)
 pub vyre_libs_nn::nn::model::DenseGatedMlpSpec::batch: u32
 pub vyre_libs_nn::nn::model::DenseGatedMlpSpec::dtype: vyre_spec::data_type::DataType

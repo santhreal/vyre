@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3 IR builders. Does not own security taint logic, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-hash`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-hash` and owns the `libs-hash` seam in the `libraries` layer.
 
 ## Commands
 

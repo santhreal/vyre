@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own graph algorithms, CSR traversal, AST walks, dominator trees, and topological sorting IR compositions. Does not own pattern matching engines, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-graph`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-graph` and owns the `libs-graph` seam in the `libraries` layer.
 
 ## Commands
 
@@ -24,7 +23,7 @@ The crate lives at `vyre-libs-graph`. The `product-libraries` owner maintains it
 ## Feature sets
 
 - Default feature members: `graph`
-- Available manifest features: `analysis`, `default`, `graph`, `graph-dispatch`, `reasoning`, `topology`, `visual`
+- Available manifest features: `default`, `dense-reachability`, `graph`, `graph-dispatch`, `impact-mask`, `interactive-graphics`, `topology`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets

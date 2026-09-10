@@ -125,10 +125,6 @@ feature = "(default)"
 
 [[pair]]
 member = "vyre-driver"
-feature = "(default),libs-compositions"
-
-[[pair]]
-member = "vyre-driver"
 feature = "(default),test-fixtures"
 
 [[pair]]
@@ -209,31 +205,7 @@ feature = "device-tests"
 
 [[pair]]
 member = "vyre-driver-wgpu"
-feature = "math-linalg"
-
-[[pair]]
-member = "vyre-driver-wgpu"
-feature = "math-scan"
-
-[[pair]]
-member = "vyre-driver-wgpu"
-feature = "nn-attention"
-
-[[pair]]
-member = "vyre-driver-wgpu"
 feature = "parity-testing"
-
-[[pair]]
-member = "vyre-driver-wgpu"
-feature = "pattern-dfa"
-
-[[pair]]
-member = "vyre-driver-wgpu"
-feature = "pattern-nfa"
-
-[[pair]]
-member = "vyre-driver-wgpu"
-feature = "pattern-substring"
 
 [[pair]]
 member = "vyre-driver-wgpu"
@@ -297,19 +269,11 @@ feature = "(default)"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),analysis,encoding,full,solvers"
-
-[[pair]]
-member = "vyre-libs"
 feature = "(default),bitset,graph,math-scan,nn-linear-4bit,predicate"
 
 [[pair]]
 member = "vyre-libs"
 feature = "(default),crypto-blake3,hash,nn-attention,parsing,pattern"
-
-[[pair]]
-member = "vyre-libs"
-feature = "(default),device,graph-dispatch,scheduling"
 
 [[pair]]
 member = "vyre-libs"
@@ -326,10 +290,6 @@ feature = "(default),graph-dispatch"
 [[pair]]
 member = "vyre-libs"
 feature = "(default),python-parser"
-
-[[pair]]
-member = "vyre-libs"
-feature = "(default),reasoning"
 
 [[pair]]
 member = "vyre-libs"
@@ -402,6 +362,10 @@ feature = "graph-dispatch"
 [[pair]]
 member = "vyre-libs"
 feature = "hash"
+
+[[pair]]
+member = "vyre-libs"
+feature = "interactive-graphics"
 
 [[pair]]
 member = "vyre-libs"
@@ -581,6 +545,474 @@ feature = "vfs"
 
 [[pair]]
 member = "vyre-libs"
+feature = "visual"
+
+[[pair]]
+member = "vyre-libs-analysis"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-analysis"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-analysis"
+feature = "analysis"
+
+[[pair]]
+member = "vyre-libs-bitset"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-bitset"
+feature = "(default),bitset"
+
+[[pair]]
+member = "vyre-libs-bitset"
+feature = "(default),test-fixtures"
+
+[[pair]]
+member = "vyre-libs-bitset"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-bitset"
+feature = "bitset"
+
+[[pair]]
+member = "vyre-libs-bitset"
+feature = "logical"
+
+[[pair]]
+member = "vyre-libs-bitset"
+feature = "test-fixtures"
+
+[[pair]]
+member = "vyre-libs-builder"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-builder"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-builder"
+feature = "builder"
+
+[[pair]]
+member = "vyre-libs-builder"
+feature = "builder-ops"
+
+[[pair]]
+member = "vyre-libs-builder"
+feature = "cat-a-builder-options"
+
+[[pair]]
+member = "vyre-libs-builder"
+feature = "telemetry"
+
+[[pair]]
+member = "vyre-libs-decode"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-decode"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-decode"
+feature = "decode"
+
+[[pair]]
+member = "vyre-libs-device"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-device"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-device"
+feature = "device"
+
+[[pair]]
+member = "vyre-libs-encoding"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-encoding"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-encoding"
+feature = "encoding"
+
+[[pair]]
+member = "vyre-libs-encoding"
+feature = "nn-paging"
+
+[[pair]]
+member = "vyre-libs-fixpoint"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-fixpoint"
+feature = "(default),fixpoint"
+
+[[pair]]
+member = "vyre-libs-fixpoint"
+feature = "(default),test-fixtures"
+
+[[pair]]
+member = "vyre-libs-fixpoint"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-fixpoint"
+feature = "fixpoint"
+
+[[pair]]
+member = "vyre-libs-fixpoint"
+feature = "test-fixtures"
+
+[[pair]]
+member = "vyre-libs-graph"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-graph"
+feature = "(default),dense-reachability"
+
+[[pair]]
+member = "vyre-libs-graph"
+feature = "(default),graph"
+
+[[pair]]
+member = "vyre-libs-graph"
+feature = "(default),impact-mask"
+
+[[pair]]
+member = "vyre-libs-graph"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-graph"
+feature = "dense-reachability"
+
+[[pair]]
+member = "vyre-libs-graph"
+feature = "graph"
+
+[[pair]]
+member = "vyre-libs-graph"
+feature = "graph-dispatch"
+
+[[pair]]
+member = "vyre-libs-graph"
+feature = "impact-mask"
+
+[[pair]]
+member = "vyre-libs-graph"
+feature = "interactive-graphics"
+
+[[pair]]
+member = "vyre-libs-graph"
+feature = "topology"
+
+[[pair]]
+member = "vyre-libs-hash"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-hash"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-hash"
+feature = "crypto-blake3"
+
+[[pair]]
+member = "vyre-libs-hash"
+feature = "hash"
+
+[[pair]]
+member = "vyre-libs-math"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-math"
+feature = "(default),math-kernels"
+
+[[pair]]
+member = "vyre-libs-math"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-math"
+feature = "geom"
+
+[[pair]]
+member = "vyre-libs-math"
+feature = "math"
+
+[[pair]]
+member = "vyre-libs-math"
+feature = "math-algebra"
+
+[[pair]]
+member = "vyre-libs-math"
+feature = "math-broadcast"
+
+[[pair]]
+member = "vyre-libs-math"
+feature = "math-dialect"
+
+[[pair]]
+member = "vyre-libs-math"
+feature = "math-kernels"
+
+[[pair]]
+member = "vyre-libs-math"
+feature = "math-linalg"
+
+[[pair]]
+member = "vyre-libs-math"
+feature = "math-scan"
+
+[[pair]]
+member = "vyre-libs-math"
+feature = "math-succinct"
+
+[[pair]]
+member = "vyre-libs-math"
+feature = "opt"
+
+[[pair]]
+member = "vyre-libs-math"
+feature = "representation"
+
+[[pair]]
+member = "vyre-libs-nn"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-nn"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-nn"
+feature = "llm"
+
+[[pair]]
+member = "vyre-libs-nn"
+feature = "nn"
+
+[[pair]]
+member = "vyre-libs-nn"
+feature = "nn-activation"
+
+[[pair]]
+member = "vyre-libs-nn"
+feature = "nn-attention"
+
+[[pair]]
+member = "vyre-libs-nn"
+feature = "nn-inference"
+
+[[pair]]
+member = "vyre-libs-nn"
+feature = "nn-kernels"
+
+[[pair]]
+member = "vyre-libs-nn"
+feature = "nn-linear"
+
+[[pair]]
+member = "vyre-libs-nn"
+feature = "nn-linear-4bit"
+
+[[pair]]
+member = "vyre-libs-nn"
+feature = "nn-moe"
+
+[[pair]]
+member = "vyre-libs-nn"
+feature = "nn-norm"
+
+[[pair]]
+member = "vyre-libs-parsing"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-parsing"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-parsing"
+feature = "go-parser"
+
+[[pair]]
+member = "vyre-libs-parsing"
+feature = "parsing"
+
+[[pair]]
+member = "vyre-libs-parsing"
+feature = "parsing-kernels"
+
+[[pair]]
+member = "vyre-libs-parsing"
+feature = "python-parser"
+
+[[pair]]
+member = "vyre-libs-pattern"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-pattern"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-pattern"
+feature = "nfa"
+
+[[pair]]
+member = "vyre-libs-pattern"
+feature = "pattern"
+
+[[pair]]
+member = "vyre-libs-pattern"
+feature = "pattern-dfa"
+
+[[pair]]
+member = "vyre-libs-pattern"
+feature = "pattern-kernels"
+
+[[pair]]
+member = "vyre-libs-pattern"
+feature = "pattern-nfa"
+
+[[pair]]
+member = "vyre-libs-pattern"
+feature = "pattern-regex"
+
+[[pair]]
+member = "vyre-libs-pattern"
+feature = "pattern-substring"
+
+[[pair]]
+member = "vyre-libs-reasoning"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-reasoning"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-reasoning"
+feature = "reasoning"
+
+[[pair]]
+member = "vyre-libs-reduce"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-reduce"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-reduce"
+feature = "reduce"
+
+[[pair]]
+member = "vyre-libs-rule"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-rule"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-rule"
+feature = "rule"
+
+[[pair]]
+member = "vyre-libs-scheduling"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-scheduling"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-scheduling"
+feature = "scheduling"
+
+[[pair]]
+member = "vyre-libs-security"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-security"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-security"
+feature = "label"
+
+[[pair]]
+member = "vyre-libs-security"
+feature = "predicate"
+
+[[pair]]
+member = "vyre-libs-security"
+feature = "security"
+
+[[pair]]
+member = "vyre-libs-solvers"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-solvers"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-solvers"
+feature = "solvers"
+
+[[pair]]
+member = "vyre-libs-text"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-text"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-text"
+feature = "text"
+
+[[pair]]
+member = "vyre-libs-vfs"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-vfs"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-vfs"
+feature = "vfs"
+
+[[pair]]
+member = "vyre-libs-visual"
+feature = "(default)"
+
+[[pair]]
+member = "vyre-libs-visual"
+feature = "(none)"
+
+[[pair]]
+member = "vyre-libs-visual"
 feature = "visual"
 
 [[pair]]
@@ -781,7 +1213,15 @@ feature = "(default),driver-artifact-contracts,ir-fixtures"
 
 [[pair]]
 member = "vyre-test-support"
+feature = "(default),driver-artifact-contracts,ir-fixtures,parity-oracles,semantic-requests"
+
+[[pair]]
+member = "vyre-test-support"
 feature = "(default),driver-artifact-contracts,ir-fixtures,semantic-requests"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default),driver-artifact-contracts,parity-oracles,semantic-requests"
 
 [[pair]]
 member = "vyre-test-support"
@@ -794,6 +1234,18 @@ feature = "(default),ir-fixtures,semantic-requests"
 [[pair]]
 member = "vyre-test-support"
 feature = "(default),ir-fixtures,spec-strategies"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default),parity-oracles"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default),parity-oracles,semantic-requests"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default),semantic-parity"
 
 [[pair]]
 member = "vyre-test-support"
@@ -814,6 +1266,14 @@ feature = "driver-contracts"
 [[pair]]
 member = "vyre-test-support"
 feature = "ir-fixtures"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "parity-oracles"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "semantic-parity"
 
 [[pair]]
 member = "vyre-test-support"

@@ -14,9 +14,11 @@ Own graph algorithms, CSR traversal, AST walks, dominator trees, and topological
 
 ### Boundaries
 
-The `product-libraries` owner maintains this `libraries` crate at `vyre-libs-graph`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-libs-bitset`, `vyre-libs-builder`, `vyre-libs-fixpoint`, `vyre-libs-hash`, `vyre-libs-math`, `vyre-libs-reduce`, `vyre-libs-visual`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `libraries` layer's `libs-graph` seam, at `vyre-libs-graph`.
+Every production dependency on it crosses Graph algorithm compositions: CSR traversal, AST walks, dominator trees and topological sort.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -28,7 +30,7 @@ Run the checked-in behavior from `vyre-libs-graph/tests/adaptive_four_russians_d
 
 ### Features
 
-- Manifest features: `analysis`, `default`, `graph`, `graph-dispatch`, `reasoning`, `topology`, `visual`
+- Manifest features: `default`, `dense-reachability`, `graph`, `graph-dispatch`, `impact-mask`, `interactive-graphics`, `topology`
 - Default feature members: `graph`
 
 ### Errors and unsupported behavior
@@ -48,7 +50,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

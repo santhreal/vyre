@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Adapt the reference interpreter to the backend contract for deterministic conformance execution.
 
-The crate lives at `vyre-driver-reference`. The `reference-driver` owner maintains its
-`concrete-backend` testing contract.
+The crate lives at `vyre-driver-reference` and owns the `reference-driver` seam in the `concrete-backend` layer.
 
 ## Commands
 

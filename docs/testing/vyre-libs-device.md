@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own compiler-internal device boundary contracts, memory ownership models, and resident graph layout compositions. Does not own concrete backend implementations or driver dispatch.
 
-The crate lives at `vyre-libs-device`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-device` and owns the `libs-device` seam in the `libraries` layer.
 
 ## Commands
 

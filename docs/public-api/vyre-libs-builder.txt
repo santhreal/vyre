@@ -12,6 +12,7 @@ impl vyre_libs_builder::builder::BuildOptions
 impl vyre_libs_builder::builder::csr::CsrBuffers<'static>
 impl vyre_libs_builder::builder::elementwise::ElementwiseComposer
 impl vyre_libs_builder::builder::gemm::ContractionComposer
+impl vyre_libs_builder::builder::gemm::ContractionOutputTile
 impl vyre_libs_builder::builder::gemm::ContractionSemiring
 impl vyre_libs_builder::builder::reduction::ReductionComposer
 impl vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'_>
@@ -37,6 +38,7 @@ pub const fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::with_edg
 pub const fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::with_prefix(self, prefix: &'a str) -> Self
 pub const fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::with_workgroup_size(self, workgroup_size: [u32; 3]) -> Self
 pub const fn vyre_libs_builder::builder::csr::bitset_words(bit_count: u32) -> u32
+pub const fn vyre_libs_builder::builder::gemm::ContractionOutputTile::register_footprint(rows: u32, columns: u32) -> u32
 pub const fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'_>::flat_byte_index(state: u32, byte: u8) -> usize
 pub const fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::alphabet_size(self, alphabet_size: u32) -> Self
 pub const fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::new(transitions: &'a str) -> Self
@@ -185,6 +187,7 @@ pub fn vyre_libs_builder::builder::gemm::ContractionComposer::matmul_bias_2d(op_
 pub fn vyre_libs_builder::builder::gemm::ContractionComposer::semiring_2d(op_id: &'static str, a: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, b: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, m: u32, k: u32, n: u32, semiring: vyre_spec::semiring::Semiring) -> Self
 pub fn vyre_libs_builder::builder::gemm::ContractionComposer::tiled_2d(op_id: &'static str, a: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, b: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, bias: core::option::Option<vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef>, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, m: u32, k: u32, n: u32, tile: u32) -> Self
 pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_acc_dtype(self, acc_dtype: vyre_spec::data_type::DataType) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_device_facts(self, facts: vyre_megakernel::device_facts::DeviceFacts) -> Self
 pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_epilogue(self, epilogue: vyre_libs_builder::builder::gemm::ContractionEpilogue) -> Self
 pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_region_generator(self, name: &'static str) -> Self
 pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_semiring(self, semiring: vyre_libs_builder::builder::gemm::ContractionSemiring) -> Self
@@ -192,6 +195,7 @@ pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_tenant_id(sel
 pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_tiling(self, tiling: vyre_libs_builder::builder::gemm::ContractionTiling) -> Self
 pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_workgroup_size(self, size: [u32; 3]) -> Self
 pub fn vyre_libs_builder::builder::gemm::ContractionEpilogue::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_builder::builder::gemm::ContractionOutputTile::derive(rows: u32, columns: u32, facts: &vyre_megakernel::device_facts::DeviceFacts) -> core::option::Option<Self>
 pub fn vyre_libs_builder::builder::gemm::ContractionSemiring::accumulate_expr(&self, acc: vyre_foundation::ir_inner::model::generated::Expr, val: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs_builder::builder::gemm::ContractionSemiring::combine_expr(&self, a: vyre_foundation::ir_inner::model::generated::Expr, b: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs_builder::builder::gemm::ContractionSemiring::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -315,9 +319,9 @@ pub fn vyre_libs_builder::plumbing::program::descriptor::BufferDescriptor::new(n
 pub fn vyre_libs_builder::plumbing::program::descriptor::ProgramDescriptor::from_program(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> Self
 pub fn vyre_libs_builder::plumbing::program::descriptor::ProgramDescriptor::new(buffer_count: usize, workgroup_size: [u32; 3], buffers: alloc::vec::Vec<vyre_libs_builder::plumbing::program::descriptor::BufferDescriptor>, rw_bytes_lower_bound: usize, entry_node_count: usize) -> Self
 pub fn vyre_libs_builder::plumbing::program::outputs::demote_intermediate_outputs(program: vyre_foundation::ir_inner::model::program::definition::Program, final_output: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs_builder::plumbing::registration::operation_catalog::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::semantic_op::SemanticOperation>
 pub fn vyre_libs_builder::plumbing::registration::operation_catalog::convergence_contract(op_id: &str) -> core::option::Option<&'static vyre_libs_builder::plumbing::registration::operation_catalog::ConvergenceContract>
 pub fn vyre_libs_builder::plumbing::registration::operation_catalog::fixture_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::semantic_op::SemanticOperation>
+pub fn vyre_libs_builder::plumbing::registration::operation_catalog::library_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::semantic_op::SemanticOperation>
 pub fn vyre_libs_builder::plumbing::registration::operation_catalog::link_anchor() -> usize
 pub fn vyre_libs_builder::prelude::check_same_shape(op: &'static str, input: &vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, output: &vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef) -> core::result::Result<(), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
 pub fn vyre_libs_builder::prelude::check_tensors(op: &'static str, tensors: &[(&vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, vyre_spec::data_type::DataType)]) -> core::result::Result<(), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
@@ -399,6 +403,7 @@ pub struct vyre_libs_builder::builder::csr::CsrBuffers<'a>
 pub struct vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>
 pub struct vyre_libs_builder::builder::elementwise::ElementwiseComposer
 pub struct vyre_libs_builder::builder::gemm::ContractionComposer
+pub struct vyre_libs_builder::builder::gemm::ContractionOutputTile
 pub struct vyre_libs_builder::builder::reduction::ReductionComposer
 pub struct vyre_libs_builder::builder::reduction::ReductionPhase
 pub struct vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>
@@ -456,6 +461,7 @@ pub vyre_libs_builder::builder::gemm::ContractionComposer::a: vyre_libs_builder:
 pub vyre_libs_builder::builder::gemm::ContractionComposer::acc_dtype: vyre_spec::data_type::DataType
 pub vyre_libs_builder::builder::gemm::ContractionComposer::b: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef
 pub vyre_libs_builder::builder::gemm::ContractionComposer::bias: core::option::Option<vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef>
+pub vyre_libs_builder::builder::gemm::ContractionComposer::device: vyre_megakernel::device_facts::DeviceFacts
 pub vyre_libs_builder::builder::gemm::ContractionComposer::dtype: vyre_spec::data_type::DataType
 pub vyre_libs_builder::builder::gemm::ContractionComposer::epilogue: vyre_libs_builder::builder::gemm::ContractionEpilogue
 pub vyre_libs_builder::builder::gemm::ContractionComposer::generator: core::option::Option<&'static str>
@@ -496,6 +502,8 @@ pub vyre_libs_builder::builder::gemm::ContractionGeometry::Matvec::n: u32
 pub vyre_libs_builder::builder::gemm::ContractionGeometry::Strassen2x2
 pub vyre_libs_builder::builder::gemm::ContractionGeometry::StrassenOneLevel
 pub vyre_libs_builder::builder::gemm::ContractionGeometry::StrassenOneLevel::n: u32
+pub vyre_libs_builder::builder::gemm::ContractionOutputTile::columns: u32
+pub vyre_libs_builder::builder::gemm::ContractionOutputTile::rows: u32
 pub vyre_libs_builder::builder::gemm::ContractionSemiring::Closed(vyre_spec::semiring::Semiring)
 pub vyre_libs_builder::builder::gemm::ContractionSemiring::Custom
 pub vyre_libs_builder::builder::gemm::ContractionSemiring::Custom::accumulate: alloc::sync::Arc<(dyn core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr + core::marker::Send + core::marker::Sync)>
@@ -511,6 +519,10 @@ pub vyre_libs_builder::builder::gemm::ContractionTiling::CooperativeShared::b_ti
 pub vyre_libs_builder::builder::gemm::ContractionTiling::CooperativeShared::tile: u32
 pub vyre_libs_builder::builder::gemm::ContractionTiling::Linear
 pub vyre_libs_builder::builder::gemm::ContractionTiling::Linear::workgroup_size: [u32; 3]
+pub vyre_libs_builder::builder::gemm::ContractionTiling::RegisterTiled
+pub vyre_libs_builder::builder::gemm::ContractionTiling::RegisterTiled::columns: u32
+pub vyre_libs_builder::builder::gemm::ContractionTiling::RegisterTiled::rows: u32
+pub vyre_libs_builder::builder::gemm::ContractionTiling::RegisterTiled::workgroup_size: [u32; 3]
 pub vyre_libs_builder::builder::reduction::ReductionPhase::accumulate: vyre_foundation::ir_inner::model::generated::Node
 pub vyre_libs_builder::builder::reduction::ReductionPhase::publish: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub vyre_libs_builder::builder::reduction::ReductionPhase::reductions: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
@@ -546,6 +558,9 @@ pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::ShapeMisma
 pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch::found: alloc::vec::Vec<u32>
 pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch::name: alloc::string::String
 pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch::op: &'static str
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::UnsupportedTiling
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::UnsupportedTiling::op: &'static str
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::UnsupportedTiling::tiling: &'static str
 pub vyre_libs_builder::plumbing::program::descriptor::BufferDescriptor::access: vyre_spec::buffer_access::BufferAccess
 pub vyre_libs_builder::plumbing::program::descriptor::BufferDescriptor::count: u32
 pub vyre_libs_builder::plumbing::program::descriptor::BufferDescriptor::dtype: vyre_spec::data_type::DataType

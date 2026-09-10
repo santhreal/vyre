@@ -48,9 +48,11 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 
 ### Boundaries
 
-The `test-support` owner maintains this `test-tooling` crate at `vyre-test-support`.
-Its allowed internal production dependencies are: `structure-gate`, `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-spec`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `test-tooling` layer's `test-support` seam, at `vyre-test-support`.
+Every production dependency on it crosses Shared verification fixtures and harness support.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -62,7 +64,7 @@ Run the checked-in behavior from `vyre-test-support/tests/adversarial_and_mutati
 
 ### Features
 
-- Manifest features: `default`, `driver-artifact-contracts`, `driver-contracts`, `ir-fixtures`, `semantic-requests`, `spec-strategies`
+- Manifest features: `default`, `driver-artifact-contracts`, `driver-contracts`, `ir-fixtures`, `parity-oracles`, `semantic-parity`, `semantic-requests`, `spec-strategies`
 - Default feature members: None
 
 ### Errors and unsupported behavior
@@ -82,7 +84,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

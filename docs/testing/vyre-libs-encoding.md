@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own compiler-internal bitset, provenance, matroid, and fingerprint encoding compositions. Does not own consumer decoding algorithms, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-encoding`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-encoding` and owns the `libs-encoding` seam in the `libraries` layer.
 
 ## Commands
 

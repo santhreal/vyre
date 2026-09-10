@@ -55,9 +55,11 @@ Enforce source-level project policies without depending on runtime crates.
 
 ### Boundaries
 
-The `lint-policy` owner maintains this `tooling` crate at `vyre-lints`.
-Its allowed internal production dependencies are: None.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `tooling` layer's `lint-policy` seam, at `vyre-lints`.
+Every production dependency on it crosses Workspace lint policy as a checkable declaration.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -84,12 +86,12 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
-`vyre-lints@0.8.0` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
+`vyre-lints@0.8.0` is workspace-internal on the current Vyre release train and is not published as a standalone crate.
 
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

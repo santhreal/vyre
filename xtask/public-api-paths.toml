@@ -95,7 +95,7 @@ duplicate_paths = 0
 
 [[crate]]
 name = "vyre-libs-math"
-duplicate_paths = 41
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-libs-nn"

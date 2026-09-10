@@ -43,9 +43,11 @@ Enforce the crate roster, one operation identity per semantic operation, one hom
 
 ### Boundaries
 
-The `release-tooling` owner maintains this `standalone-tooling` crate at `structure-gate`.
-Its allowed internal production dependencies are: None.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `standalone-tooling` layer's `source-structure` seam, at `structure-gate`.
+Every production dependency on it crosses Whether a directory carries Rust source, which directory owns a domain, and the checkout root a gate reports on.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -77,7 +79,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

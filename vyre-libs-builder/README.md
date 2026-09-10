@@ -14,9 +14,11 @@ Own shared IR composition infrastructure, child region skeletons, operand wrappe
 
 ### Boundaries
 
-The `product-libraries` owner maintains this `libraries` crate at `vyre-libs-builder`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `libraries` layer's `libs-builder` seam, at `vyre-libs-builder`.
+Every production dependency on it crosses Shared IR composition infrastructure, child region skeletons, operands and registration link anchors.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -48,7 +50,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

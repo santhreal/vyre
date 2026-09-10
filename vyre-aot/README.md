@@ -84,9 +84,11 @@ Package the same megakernel artifact class ahead of time. Not a second compile p
 
 ### Boundaries
 
-The `aot-artifacts` owner maintains this `packaging` crate at `vyre-aot`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-foundation`, `vyre-megakernel`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `packaging` layer's `aot-artifacts` seam, at `vyre-aot`.
+Every production dependency on it crosses Ahead-of-time artifact packaging and load.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -113,12 +115,12 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
-`vyre-aot@0.8.0` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
+`vyre-aot@0.8.0` is workspace-internal on the current Vyre release train and is not published as a standalone crate.
 
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own pure WGSL target compilation, portable GPU acquisition, materialization, dispatch, graph execution, and backend evidence.
 
-The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
-`concrete-backend` testing contract.
+The crate lives at `vyre-driver-wgpu` and owns the `portable-driver` seam in the `concrete-backend` layer.
 
 ## Commands
 

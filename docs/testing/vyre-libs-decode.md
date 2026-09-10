@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own Base64, hex, DEFLATE, and encodex data decoding and decompression IR compositions. Does not own parsing drivers, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-decode`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-decode` and owns the `libs-decode` seam in the `libraries` layer.
 
 ## Commands
 

@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Consume verified lowering products and emit the primary binary backend text artifact.
 
-The crate lives at `vyre-emit-ptx`. The `primary-binary-emitter` owner maintains its
-`emitter` testing contract.
+The crate lives at `vyre-emit-ptx` and owns the `primary-binary-emitter` seam in the `emitter` layer.
 
 ## Commands
 

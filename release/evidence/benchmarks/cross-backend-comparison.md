@@ -37,6 +37,7 @@ fastest backend measured for that case.
 | `release.megakernel_queue.1m` | wgpu | 0.084 | 2.642 | 24b6787218f5 | source-tree-v1:c23ec3b17257 | device-profile-v1:7e14ee791134 | `release/evidence/benchmarks/wgpu-workload-10-megakernel-queued-batches.json` |
 | `release.offset_count_aggregation.1m` | cuda | 0.032 | 1.000 | 24b6787218f5 | source-tree-v1:c23ec3b17257 | device-profile-v1:9311a5c6da66 | `release/evidence/benchmarks/workload-03-offset-count-aggregation.json` |
 | `release.offset_count_aggregation.1m` | wgpu | 0.094 | 2.950 | 24b6787218f5 | source-tree-v1:c23ec3b17257 | device-profile-v1:7e14ee791134 | `release/evidence/benchmarks/wgpu-workload-03-offset-count-aggregation.json` |
+| `release.optimizer.resident_pipeline` | cuda | 526.014 | 1.000 | a08d4b239de9 | source-tree-v1:1e1880d56007 | device-profile-v1:f04bd6c0b35f | `release/evidence/benchmarks/resident-optimizer-pipeline.json` |
 | `release.quantified_condition_loops.1m` | cuda | 0.032 | 1.000 | 24b6787218f5 | source-tree-v1:c23ec3b17257 | device-profile-v1:9311a5c6da66 | `release/evidence/benchmarks/workload-06-quantified-condition-loops.json` |
 | `release.quantified_condition_loops.1m` | wgpu | 0.086 | 2.676 | 24b6787218f5 | source-tree-v1:c23ec3b17257 | device-profile-v1:7e14ee791134 | `release/evidence/benchmarks/wgpu-workload-06-quantified-condition-loops.json` |
 | `release.string_bitmap_scatter.1m` | cuda | 0.075 | 1.000 | 24b6787218f5 | source-tree-v1:c23ec3b17257 | device-profile-v1:9311a5c6da66 | `release/evidence/benchmarks/workload-02-string-bitmap-scatter.json` |
@@ -46,4 +47,6 @@ fastest backend measured for that case.
 
 ## declared without a measurement
 
-Every backend a case contract declares carries a measurement.
+| case | backend | declared by |
+|------|---------|-------------|
+| `release.optimizer.resident_pipeline` | wgpu | `release/evidence/benchmarks/resident-optimizer-pipeline.json` |

@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Execute production artifacts against independent reference semantics, minimize counterexamples, check algebraic laws, and issue versioned certificates and replay records through one library and thin CLI.
 
-The crate lives at `conform/vyre-conform`. The `conformance` owner maintains its
-`conformance` testing contract.
+The crate lives at `conform/vyre-conform` and owns the `parity-harness` seam in the `conformance` layer.
 
 ## Commands
 
@@ -36,11 +35,13 @@ The crate lives at `conform/vyre-conform`. The `conformance` owner maintains its
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
 | `bin` | `vyre-conform` | `conform/vyre-conform/src/main.rs` | None | `./cargo_full test -p vyre-conform --bin vyre-conform` |
+| `example` | `disposition_census` | `conform/vyre-conform/examples/disposition_census.rs` | None | `./cargo_full test -p vyre-conform --example disposition_census` |
 | `example` | `vyre_conform_runner_release_surface` | `conform/vyre-conform/examples/vyre_conform_runner_release_surface.rs` | None | `./cargo_full test -p vyre-conform --example vyre_conform_runner_release_surface` |
 | `lib` | `vyre_conform` | `conform/vyre-conform/src/lib.rs` | None | `./cargo_full test -p vyre-conform` |
 | `test` | `all_tests` | `conform/vyre-conform/tests/all_tests.rs` | None | `./cargo_full test -p vyre-conform --test all_tests` |
 | `test` | `all_tests_device_tests` | `conform/vyre-conform/tests/all_tests_device_tests.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test all_tests_device_tests` |
 | `test` | `cert_regression_pin` | `conform/vyre-conform/tests/cert_regression_pin/main.rs` | None | `./cargo_full test -p vyre-conform --test cert_regression_pin` |
+| `test` | `operation_disposition_closure` | `conform/vyre-conform/tests/operation_disposition_closure.rs` | None | `./cargo_full test -p vyre-conform --test operation_disposition_closure` |
 
 ## Test classes
 

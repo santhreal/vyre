@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Define backend-neutral device, target compiler registration, artifact materialization, binding, submission, completion, capability, dispatch, and evidence contracts.
 
-The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
-`backend-neutral` testing contract.
+The crate lives at `vyre-driver` and owns the `backend-contract` seam in the `backend-neutral` layer.
 
 ## Commands
 

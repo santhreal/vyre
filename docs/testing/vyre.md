@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Public facade. Re-export IR, driver, runtime, and the artifact compiler. Own no logic.
 
-The crate lives at `vyre`. The `public-facade` owner maintains its
-`facade` testing contract.
+The crate lives at `vyre` and owns the `public-facade` seam in the `facade` layer.
 
 ## Commands
 

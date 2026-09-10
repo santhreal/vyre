@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Enforce source-level project policies without depending on runtime crates.
 
-The crate lives at `vyre-lints`. The `lint-policy` owner maintains its
-`tooling` testing contract.
+The crate lives at `vyre-lints` and owns the `lint-policy` seam in the `tooling` layer.
 
 ## Commands
 

@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own validated ProgramGraph, versioned schedule-free LogicalProgramGraph domains, versioned backend-neutral schedule IR and transform legality, semantic identity, neutral schedule-constraint composition, diagnostics, serialization, semantic operation registration, and backend-neutral optimization.
 
-The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
-`foundation` testing contract.
+The crate lives at `vyre-foundation` and owns the `foundation-ir` seam in the `foundation` layer.
 
 ## Commands
 

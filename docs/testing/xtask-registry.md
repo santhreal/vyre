@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own the xtask subcommands that must observe the live operation registry, the primitive catalog behind it, or a linked backend driver.
 
-The crate lives at `xtask-registry`. The `release-tooling` owner maintains its
-`tooling` testing contract.
+The crate lives at `xtask-registry` and owns the `live-registry-gates` seam in the `tooling` layer.
 
 ## Commands
 

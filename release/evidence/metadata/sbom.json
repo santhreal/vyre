@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:faf4de1d8c3b3d96474b601e3edc252aa3f6f515:dirty=true:worktree=d5e0e355d1262eba30cbdacef0130d3f9db8a10f46bf782db6ee58499c3c97c7",
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=ab2e2b4ba58b45dc748e13ab540a57116d15ff8ff539182ce68210e5bfc7273a"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
   "bomFormat": "CycloneDX",
   "components": [
     {
@@ -7141,6 +7141,424 @@
           }
         }
       ],
+      "name": "vyre-libs-analysis",
+      "purl": "pkg:cargo/vyre-libs-analysis@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-bitset",
+      "purl": "pkg:cargo/vyre-libs-bitset@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-builder",
+      "purl": "pkg:cargo/vyre-libs-builder@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-decode",
+      "purl": "pkg:cargo/vyre-libs-decode@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-device",
+      "purl": "pkg:cargo/vyre-libs-device@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-encoding",
+      "purl": "pkg:cargo/vyre-libs-encoding@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-fixpoint",
+      "purl": "pkg:cargo/vyre-libs-fixpoint@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-graph",
+      "purl": "pkg:cargo/vyre-libs-graph@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-hash",
+      "purl": "pkg:cargo/vyre-libs-hash@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-math",
+      "purl": "pkg:cargo/vyre-libs-math@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-nn",
+      "purl": "pkg:cargo/vyre-libs-nn@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-parsing",
+      "purl": "pkg:cargo/vyre-libs-parsing@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-pattern",
+      "purl": "pkg:cargo/vyre-libs-pattern@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-reasoning",
+      "purl": "pkg:cargo/vyre-libs-reasoning@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-reduce",
+      "purl": "pkg:cargo/vyre-libs-reduce@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-rule",
+      "purl": "pkg:cargo/vyre-libs-rule@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-scheduling",
+      "purl": "pkg:cargo/vyre-libs-scheduling@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-security",
+      "purl": "pkg:cargo/vyre-libs-security@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-solvers",
+      "purl": "pkg:cargo/vyre-libs-solvers@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-text",
+      "purl": "pkg:cargo/vyre-libs-text@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-vfs",
+      "purl": "pkg:cargo/vyre-libs-vfs@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
+      "name": "vyre-libs-visual",
+      "purl": "pkg:cargo/vyre-libs-visual@0.8.0",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "local_workspace"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0 OR MIT"
+          }
+        }
+      ],
       "name": "vyre-lints",
       "purl": "pkg:cargo/vyre-lints@0.8.0",
       "type": "library",
@@ -8707,7 +9125,7 @@
       }
     ]
   },
-  "serialNumber": "urn:uuid:vyre-sbom-56969b7cdeb1a68456692c0f00d46f644f3e3a5783044b7f33f6ddd6690a998e",
+  "serialNumber": "urn:uuid:vyre-sbom-522c3a52ba1e5396dd4cd442d1635a2519946bf6b6655a7fb5bc962622e90fc9",
   "specVersion": "1.5",
   "version": 1
 }

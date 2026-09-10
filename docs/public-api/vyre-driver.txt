@@ -187,6 +187,10 @@ impl vyre_driver::validation::LaunchGeometryLimits
 impl vyre_driver::validation::ProgramValidationCaps
 impl vyre_driver::validation::ValidationCache
 impl vyre_foundation::diagnostics::ToDiagnostic for vyre_driver::BackendError
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_driver::DiskPipelineCache
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_driver::ExternalResourceRegistry
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_driver::RoutingTable
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_driver::SupportCertificateRegistry
 impl<'a> vyre_driver::ExtractionDevice<'a>
 impl<'a> vyre_driver::PeerTransferPlanner<'a>
 impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::Target
@@ -490,11 +494,13 @@ pub fn vyre_driver::DeviceSignatureTable::get(&self, id: &str) -> core::option::
 pub fn vyre_driver::DeviceSignatureTable::load_dir(dir: impl core::convert::AsRef<std::path::Path>) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_driver::DeviceSignatureTable::signatures(&self) -> &[vyre_driver::DeviceSignature]
 pub fn vyre_driver::DiskPipelineCache::default_root() -> std::path::PathBuf
+pub fn vyre_driver::DiskPipelineCache::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain
 pub fn vyre_driver::DiskPipelineCache::flush(&self) -> core::io::error::Result<()>
 pub fn vyre_driver::DiskPipelineCache::invalidate_impacted(&self, impact_mask: &[u32], program_digests: &[[u8; 32]], fingerprint: vyre_driver::PipelineDeviceFingerprint) -> core::io::error::Result<()>
 pub fn vyre_driver::DiskPipelineCache::open(root: impl core::convert::Into<std::path::PathBuf>) -> core::io::error::Result<Self>
 pub fn vyre_driver::DiskPipelineCache::path_for(&self, program_digest: [u8; 32], fingerprint: vyre_driver::PipelineDeviceFingerprint) -> std::path::PathBuf
 pub fn vyre_driver::DiskPipelineCache::read(&self, program_digest: [u8; 32], fingerprint: vyre_driver::PipelineDeviceFingerprint) -> core::io::error::Result<core::option::Option<alloc::vec::Vec<u8>>>
+pub fn vyre_driver::DiskPipelineCache::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
 pub fn vyre_driver::DiskPipelineCache::root(&self) -> &std::path::Path
 pub fn vyre_driver::DiskPipelineCache::write(&self, program_digest: [u8; 32], fingerprint: vyre_driver::PipelineDeviceFingerprint, bytes: &[u8]) -> core::io::error::Result<()>
 pub fn vyre_driver::DispatchConfig::coverage_grid(&self) -> core::option::Option<[u32; 3]>
@@ -507,9 +513,11 @@ pub fn vyre_driver::Distribution::observe(values: &[u32]) -> Self
 pub fn vyre_driver::EnforceGate::evaluate(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_driver::EnforceVerdict
 pub fn vyre_driver::EnforceGate::name(&self) -> &'static str
 pub fn vyre_driver::ExternalResourceRegistry::admit_resource(&self, record: vyre_spec::resource_capability::AdmittedResourceRecord) -> core::result::Result<u64, vyre_spec::resource_capability::ResourceAbiError>
+pub fn vyre_driver::ExternalResourceRegistry::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain
 pub fn vyre_driver::ExternalResourceRegistry::get_resource(&self, resource_id: u64) -> core::option::Option<vyre_spec::resource_capability::AdmittedResourceRecord>
 pub fn vyre_driver::ExternalResourceRegistry::invalidate_on_device_loss(&self, device_id: u64) -> vyre_driver::DeviceLossInvalidationReport
 pub fn vyre_driver::ExternalResourceRegistry::new() -> Self
+pub fn vyre_driver::ExternalResourceRegistry::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
 pub fn vyre_driver::ExternalResourceRegistry::register_dependent_artifact(&self, resource_id: u64, artifact_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
 pub fn vyre_driver::ExternalResourceRegistry::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
 pub fn vyre_driver::FactStatus::is_proven(&self) -> bool
@@ -583,7 +591,9 @@ pub fn vyre_driver::ResourceTransitionSchedule::add_transition(&mut self, resour
 pub fn vyre_driver::ResourceTransitionSchedule::add_wait(&mut self, wait: vyre_spec::resource_capability::TimelineSyncProtocol)
 pub fn vyre_driver::ResourceTransitionSchedule::new() -> Self
 pub fn vyre_driver::RoutingTable::distribution(&self, call_site: &str) -> core::option::Option<vyre_driver::Distribution>
+pub fn vyre_driver::RoutingTable::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain
 pub fn vyre_driver::RoutingTable::observe_sort_u32(&self, call_site: alloc::borrow::Cow<'_, str>, values: &[u32]) -> core::result::Result<vyre_driver::SortBackend, alloc::string::String>
+pub fn vyre_driver::RoutingTable::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
 pub fn vyre_driver::Semver::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver::SpecCacheKey::new(shader_hash: u64, binding_sig: u64, workgroup_size: [u32; 3], specs: &vyre_driver::SpecMap) -> Self
 pub fn vyre_driver::SpecMap::cache_hash(&self) -> u64
@@ -612,7 +622,9 @@ pub fn vyre_driver::SupportCertificate::new(backend_id: impl core::convert::Into
 pub fn vyre_driver::SupportCertificate::with_failed_stage(self, stage: vyre_driver::ProductionPathStage, reason: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_driver::SupportCertificate::with_proven_stage(self, stage: vyre_driver::ProductionPathStage, proof_digest: impl core::convert::Into<alloc::string::String>, details: core::option::Option<alloc::string::String>) -> Self
 pub fn vyre_driver::SupportCertificateRegistry::evaluate_support(&self, backend_id: &str, op_id: &vyre_foundation::ir_inner::model::node_kind::OpId) -> vyre_driver::SupportStatus
+pub fn vyre_driver::SupportCertificateRegistry::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain
 pub fn vyre_driver::SupportCertificateRegistry::global() -> &'static Self
+pub fn vyre_driver::SupportCertificateRegistry::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
 pub fn vyre_driver::SupportCertificateRegistry::register_certificate(&self, cert: vyre_driver::SupportCertificate)
 pub fn vyre_driver::SupportCertificateRegistry::supported_ops_for_backend(&self, backend_id: &str) -> std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub fn vyre_driver::SupportStatus::is_supported(&self) -> bool
@@ -1560,6 +1572,7 @@ pub use vyre_driver::inventory
 pub use vyre_driver::lock_policy::FailureDomain
 pub use vyre_driver::lock_policy::RecoveryClass
 pub use vyre_driver::lock_policy::RecoveryDisposition
+pub use vyre_driver::lock_policy::StateOwnerRecovery
 pub use vyre_driver::lock_policy::TypedRecoveryError
 pub use vyre_driver::lock_policy::govern_mutex_restartable
 pub use vyre_driver::lock_policy::reclaim_poisoned_for_teardown

@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own marker types and uncomposable hardware intrinsics. A composition belongs in vyre-libs, not here.
 
-The crate lives at `vyre-primitives`. The `primitive-library` owner maintains its
-`primitives` testing contract.
+The crate lives at `vyre-primitives` and owns the `primitive-library` seam in the `primitives` layer.
 
 ## Commands
 

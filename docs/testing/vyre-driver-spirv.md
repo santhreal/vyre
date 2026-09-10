@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own SPIR-V target compilation, immutable module-bundle emission, Vulkan materialization and dispatch integration, and backend evidence.
 
-The crate lives at `vyre-driver-spirv`. The `spirv-driver` owner maintains its
-`concrete-backend` testing contract.
+The crate lives at `vyre-driver-spirv` and owns the `spirv-driver` seam in the `concrete-backend` layer.
 
 ## Commands
 

@@ -21,9 +21,11 @@ Adapt the reference interpreter to the backend contract for deterministic confor
 
 ### Boundaries
 
-The `reference-driver` owner maintains this `concrete-backend` crate at `vyre-driver-reference`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-reference`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `concrete-backend` layer's `reference-driver` seam, at `vyre-driver-reference`.
+Every production dependency on it crosses Registration of the reference oracle as a backend.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -55,7 +57,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

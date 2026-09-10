@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own neural network activations, linear transformations, normalization, attention, mixture-of-experts, and language model inference IR compositions. Does not own general matrix kernels, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-nn`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-nn` and owns the `libs-nn` seam in the `libraries` layer.
 
 ## Commands
 

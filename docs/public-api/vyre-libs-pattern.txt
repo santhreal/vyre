@@ -107,9 +107,8 @@ pub fn vyre_libs_pattern::pattern::RegexReplayPolicy::default() -> Self
 pub fn vyre_libs_pattern::pattern::RegionTriple::cmp(&self, other: &Self) -> core::cmp::Ordering
 pub fn vyre_libs_pattern::pattern::RegionTriple::partial_cmp(&self, other: &Self) -> core::option::Option<core::cmp::Ordering>
 pub fn vyre_libs_pattern::pattern::aho_corasick(haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs_pattern::pattern::aho_corasick::aho_corasick(haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs_pattern::pattern::aho_corasick::aho_corasick_bounded(haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32, state_count: u32, max_pattern_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs_pattern::pattern::aho_corasick::aho_corasick_program_from_dfa_wire(wire_bytes: &[u8], haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_pattern::pattern::DfaWireError>
+pub fn vyre_libs_pattern::pattern::aho_corasick_bounded(haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32, state_count: u32, max_pattern_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_pattern::pattern::aho_corasick_program_from_dfa_wire(wire_bytes: &[u8], haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_pattern::pattern::DfaWireError>
 pub fn vyre_libs_pattern::pattern::anchored_window_extract_program(haystack: &str, transitions: &str, output_offsets: &str, output_records: &str, candidates: &str, candidate_count: &str, haystack_len: &str, match_count: &str, matches: &str, state_count: u32, output_records_len: u32, max_candidates: u32, max_matches: u32, max_pattern_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_pattern::pattern::bracket_match(kinds: &str, stack: &str, match_pairs: &str, n: u32, max_depth: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_pattern::pattern::build_anchor_dfa_plan(anchors: &[vyre_libs_pattern::pattern::AnchorDfaCandidate<'_>], dfa_state_budget: u32, verifier_fragment_id: &str) -> core::result::Result<vyre_libs_pattern::pattern::AnchorDfaPlan, vyre_libs_pattern::pattern::AnchorDfaPlanError>
@@ -196,7 +195,6 @@ pub mod vyre_libs_pattern
 pub mod vyre_libs_pattern::nfa
 pub mod vyre_libs_pattern::nfa::subgroup_nfa
 pub mod vyre_libs_pattern::pattern
-pub mod vyre_libs_pattern::pattern::aho_corasick
 pub mod vyre_libs_pattern::pattern::builders
 pub mod vyre_libs_pattern::pattern::classic_ac
 pub mod vyre_libs_pattern::pattern::nfa

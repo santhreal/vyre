@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own pure MSL target compilation, native Apple device acquisition, materialization, dispatch, and backend evidence.
 
-The crate lives at `vyre-driver-metal`. The `metal-driver` owner maintains its
-`concrete-backend` testing contract.
+The crate lives at `vyre-driver-metal` and owns the `metal-driver` seam in the `concrete-backend` layer.
 
 ## Commands
 

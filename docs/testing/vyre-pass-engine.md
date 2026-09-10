@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Execute optimizer passes as Vyre Programs through compiler-owned semantic compilation and admitted artifact submission.
 
-The crate lives at `vyre-pass-engine`. The `pass-engine` owner maintains its
-`pass-engine` testing contract.
+The crate lives at `vyre-pass-engine` and owns the `pass-engine` seam in the `pass-engine` layer.
 
 ## Commands
 

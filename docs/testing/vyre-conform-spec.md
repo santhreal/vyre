@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Define conformance case, result, and certificate schemas against the public facade.
 
-The crate lives at `conform/vyre-conform-spec`. The `conformance` owner maintains its
-`conformance` testing contract.
+The crate lives at `conform/vyre-conform-spec` and owns the `conformance-schema` seam in the `conformance` layer.
 
 ## Commands
 

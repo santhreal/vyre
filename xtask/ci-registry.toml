@@ -473,6 +473,11 @@ subsets = ["prepublish"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
+name = "lock-poison-policy"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "lockfile-clean"
 subsets = ["contract-rules"]
 workflows = ["gates.yml"]
@@ -569,6 +574,11 @@ workflows = ["gates.yml"]
 
 [[gate]]
 name = "platform-support-matrix"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
+name = "portability-evidence"
 subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 

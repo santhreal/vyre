@@ -169,3 +169,4 @@ pub use vyre::render_cli_help
 pub use vyre::render_configuration_reference_markdown
 pub use vyre::soundness
 pub use vyre::validate
+pub use vyre::visit

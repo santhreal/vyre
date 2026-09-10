@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:faf4de1d8c3b3d96474b601e3edc252aa3f6f515:dirty=true:worktree=d5e0e355d1262eba30cbdacef0130d3f9db8a10f46bf782db6ee58499c3c97c7",
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=ab2e2b4ba58b45dc748e13ab540a57116d15ff8ff539182ce68210e5bfc7273a"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
   "_type": "https://in-toto.io/Statement/v1",
   "predicate": {
     "buildDefinition": {
@@ -2271,6 +2271,138 @@
           "digest": {
             "sha256": "local_workspace"
           },
+          "uri": "pkg:cargo/vyre-libs-analysis@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-bitset@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-builder@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-decode@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-device@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-encoding@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-fixpoint@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-graph@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-hash@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-math@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-nn@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-parsing@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-pattern@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-reasoning@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-reduce@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-rule@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-scheduling@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-security@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-solvers@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-text@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-vfs@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
+          "uri": "pkg:cargo/vyre-libs-visual@0.8.0"
+        },
+        {
+          "digest": {
+            "sha256": "local_workspace"
+          },
           "uri": "pkg:cargo/vyre-lints@0.8.0"
         },
         {
@@ -2769,21 +2901,27 @@
       "byproducts": [
         {
           "digest": {
-            "sha256": "d6e3d162e442f31bbf504ed5a73df6d0971071396eb9a314de5c331b6024263b"
+            "sha256": "34c7a6633384ae2c5d988cc4dc95c84a56ddc08ad7a08d8941e2525bb909257e"
           },
           "name": "docs/generated/OP_SCHEMA.json"
         },
         {
           "digest": {
-            "sha256": "fe9abd3c8bb23269faa3518774d3278440ade80762452413075e4eb3f116c05d"
+            "sha256": "ab7433710f7119519c205c4179d6a766f0b8361ee6ec65665c9cc513151641bb"
           },
           "name": "docs/generated/catalog.toml"
         },
         {
           "digest": {
-            "sha256": "624a2deb63d7038ad7202351a8f728d7722d7b2315e53cb55d31a3f5c4e221f6"
+            "sha256": "f20c43db272e7bf7154411251bc97a1d131eafd94035f3b18dd3ecc89a169e4b"
           },
           "name": "docs/generated/change-closure.toml"
+        },
+        {
+          "digest": {
+            "sha256": "0be56f1d631ed0658b95b2c8505854228c97181a799a8a94e471124c2bf1964e"
+          },
+          "name": "docs/generated/configuration-space.toml"
         },
         {
           "digest": {
@@ -2793,7 +2931,7 @@
         },
         {
           "digest": {
-            "sha256": "a85d25e76cefd83b0b7ea5a995d51c3340fb9036d1472feced24ac6b35eb43b6"
+            "sha256": "af70be1ffbacd206289fc10a1eafb7e6e94bfe65283102f3c2ce166a46274bde"
           },
           "name": "docs/generated/engineering-scorecard.toml"
         },
@@ -2805,7 +2943,7 @@
         },
         {
           "digest": {
-            "sha256": "aa02e29a845b535f10ae0720fee7ec00b8c04505c6c14e4f2f890c457b0c669c"
+            "sha256": "77895071baaad17edc7775f12aeeb205b4e4b43a09c5cf81d148fb5997630054"
           },
           "name": "docs/generated/op-inventory.toml"
         },
@@ -2814,6 +2952,12 @@
             "sha256": "c4b44b5404a056ce1f3b516fb569c9937dc53353cf37bc9518faacd729ca83e7"
           },
           "name": "docs/generated/optimizer-passes.toml"
+        },
+        {
+          "digest": {
+            "sha256": "2359922fa8c305a7d950928c3f5c4a0358624a79f23473ba86e512c90704c35c"
+          },
+          "name": "docs/generated/platform-support-matrix.toml"
         }
       ],
       "metadata": {
@@ -2822,7 +2966,7 @@
           "materials": true,
           "parameters": true
         },
-        "invocationId": "inv-56969b7cdeb1a68456692c0f00d46f644f3e3a5783044b7f33f6ddd6690a998e",
+        "invocationId": "inv-522c3a52ba1e5396dd4cd442d1635a2519946bf6b6655a7fb5bc962622e90fc9",
         "reproducible": true
       }
     }
@@ -2831,7 +2975,7 @@
   "subject": [
     {
       "digest": {
-        "blake3": "ca15485ed37c844162292be4d4d994b461e1ee5ede4d892a4b4d8e3fbf0e01f5"
+        "blake3": "982a5848dcec853b3f2592b7af6f6aebeedfaa09123c50acf2728c4de8ecc470"
       },
       "name": "vyre-release-archive"
     }

@@ -109,9 +109,11 @@ Consume verified lowering products and emit the primary binary backend text arti
 
 ### Boundaries
 
-The `primary-binary-emitter` owner maintains this `emitter` crate at `vyre-emit-ptx`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-lower`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `emitter` layer's `primary-binary-emitter` seam, at `vyre-emit-ptx`.
+Every production dependency on it crosses Primary binary text emission for one selected module.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -143,7 +145,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

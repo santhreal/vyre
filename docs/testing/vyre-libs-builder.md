@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own shared IR composition infrastructure, child region skeletons, operand wrappers, and registration link anchors for library builders. Does not own concrete domain operations, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-builder`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-builder` and owns the `libs-builder` seam in the `libraries` layer.
 
 ## Commands
 

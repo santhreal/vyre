@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own compiler-internal static analysis, cost models, dataflow fixpoint routines, and diagnostic aggregation. Does not own pass engine scheduling, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-analysis`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-analysis` and owns the `libs-analysis` seam in the `libraries` layer.
 
 ## Commands
 

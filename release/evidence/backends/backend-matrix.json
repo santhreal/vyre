@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:68756fb0107183f69fd9cef6c9f3357d00894e0c:dirty=true:worktree=cc6628b7126e4556096b593cc3edc940686b3c5025578941c68974224138e36c",
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=1126e1723a6f77262dd50a975f2ab975ec8cdd433428daecb95fc6f6ba6ed23f"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 5090","driver_version":"580.178.04"}]}},
   "schema_version": 3,
   "cuda_first": true,
   "wgpu_fallback_present": true,
@@ -214,7 +214,7 @@
       "path": "vyre-driver-cuda/src/backend/cuda_graph.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 28425,
+      "source_bytes": 28502,
       "implementation_tokens": [
         "record_cuda_graph",
         "cugraph"
@@ -307,7 +307,7 @@
       "path": "vyre-runtime/src/artifact_admission/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 124482,
+      "source_bytes": 127072,
       "implementation_tokens": [
         "ArtifactSession",
         "materialize"
@@ -335,7 +335,7 @@
       "path": "vyre-driver-wgpu/src/async_dispatch.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 14523,
+      "source_bytes": 14500,
       "implementation_tokens": [
         "dispatch_borrowed_async",
         "PipelinePrefetch"
@@ -363,7 +363,7 @@
       "path": "vyre-driver-wgpu/src/pipeline/disk_cache/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 24373,
+      "source_bytes": 24820,
       "implementation_tokens": [
         "cache",
         "pipeline",
@@ -378,7 +378,7 @@
       "path": "vyre-driver-wgpu/src/pipeline/persistent.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 29541,
+      "source_bytes": 29913,
       "implementation_tokens": [
         "dispatch_persistent_batched",
         "dispatch_borrowed_persistent_batched",
@@ -502,6 +502,13 @@
       "dispatches": true,
       "acquire_ok": true,
       "acquire_error": null
+    },
+    {
+      "id": "metal",
+      "precedence": 25,
+      "dispatches": true,
+      "acquire_ok": false,
+      "acquire_error": "unsupported feature `Apple Metal.framework native runtime` on backend `metal`.          Fix: check backend capability before using this feature, or select a backend that supports it."
     },
     {
       "id": "spirv",

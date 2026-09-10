@@ -1,10 +1,10 @@
 {
   "schema_version": 5,
   "authority": "canonical OperationRegistration records and effective neutral schedule constraints joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows",
-  "operation_count": 349,
+  "operation_count": 358,
   "tier_counts": {
     "intrinsic": 9,
-    "libs": 340
+    "libs": 349
   },
   "category_counts": {
     "bitset": 23,
@@ -30,7 +30,7 @@
     "security": 22,
     "text": 6,
     "vfs": 1,
-    "visual": 11
+    "visual": 20
   },
   "operations": [
     {
@@ -116,7 +116,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -208,7 +207,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -307,7 +305,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -395,7 +392,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -492,7 +488,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -576,7 +571,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -673,7 +667,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -761,7 +754,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -860,7 +852,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -968,7 +959,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1065,7 +1055,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1153,12 +1142,13 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "involution"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -1250,7 +1240,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1342,7 +1331,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1432,12 +1420,13 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "bounded"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -1529,9 +1518,7 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
-        "spirv",
         "wgpu"
       ],
       "laws": [],
@@ -1608,7 +1595,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1705,7 +1691,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1805,7 +1790,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1893,7 +1877,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -1990,7 +1973,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2082,7 +2064,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2163,12 +2144,13 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -2209,7 +2191,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "builder"
+        "builder-ops"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -2251,7 +2233,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2311,7 +2292,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "builder"
+        "builder-ops"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:4",
@@ -2353,7 +2334,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2464,7 +2444,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2561,7 +2540,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2678,7 +2656,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2775,9 +2752,7 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
-        "spirv",
         "wgpu"
       ],
       "laws": [],
@@ -2872,7 +2847,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -2987,7 +2961,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3084,7 +3057,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3181,7 +3153,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3278,7 +3249,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3375,7 +3345,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3463,7 +3432,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3566,7 +3534,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3704,7 +3671,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3837,7 +3803,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -3972,7 +3937,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4105,7 +4069,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4249,7 +4212,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4384,7 +4346,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4510,7 +4471,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4634,7 +4594,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4754,7 +4713,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4878,7 +4836,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -4986,7 +4943,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5101,7 +5057,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5203,7 +5158,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5300,7 +5254,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5388,7 +5341,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5485,7 +5437,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5621,7 +5572,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5727,7 +5677,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -5896,7 +5845,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6098,7 +6046,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6205,7 +6152,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6311,7 +6257,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6444,7 +6389,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6586,9 +6530,7 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
-        "spirv",
         "wgpu"
       ],
       "laws": [],
@@ -6719,7 +6661,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6832,7 +6773,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -6929,9 +6869,7 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
-        "spirv",
         "wgpu"
       ],
       "laws": [],
@@ -7017,7 +6955,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -7105,7 +7042,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -7203,7 +7139,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -7293,7 +7228,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -7399,7 +7333,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -7811,7 +7744,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -7908,7 +7840,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8036,7 +7967,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8124,7 +8054,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8212,7 +8141,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8300,7 +8228,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8388,7 +8315,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8476,7 +8402,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8565,7 +8490,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8655,7 +8579,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8759,7 +8682,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8870,7 +8792,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -8967,7 +8888,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9064,7 +8984,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9215,7 +9134,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9337,7 +9255,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9434,7 +9351,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9489,11 +9405,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-algebra"
       ],
       "schedule_constraints": {
@@ -9536,7 +9447,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9591,11 +9501,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-algebra"
       ],
       "schedule_constraints": {
@@ -9638,7 +9543,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9693,11 +9597,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-algebra"
       ],
       "schedule_constraints": {
@@ -9740,7 +9639,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9795,11 +9693,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-algebra"
       ],
       "schedule_constraints": {
@@ -9842,7 +9735,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -9888,11 +9780,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-algebra"
       ],
       "schedule_constraints": {
@@ -9935,7 +9822,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10008,11 +9894,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -10054,7 +9936,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10181,11 +10062,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -10227,7 +10104,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10278,11 +10154,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -10324,7 +10196,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10379,11 +10250,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -10425,7 +10292,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10484,11 +10350,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -10530,7 +10392,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10598,11 +10459,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -10644,7 +10501,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10699,11 +10555,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -10745,7 +10597,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10802,11 +10653,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -10848,7 +10695,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -10909,11 +10755,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -10955,7 +10797,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11016,11 +10857,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -11062,7 +10899,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11122,11 +10958,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -11168,7 +11000,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11209,11 +11040,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -11255,7 +11082,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11310,11 +11136,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -11356,7 +11178,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11438,12 +11259,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
-        "fixpoint"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:256",
@@ -11485,7 +11301,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11545,11 +11360,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -11591,7 +11402,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11655,11 +11465,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -11701,7 +11507,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11747,11 +11552,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-broadcast"
       ],
       "schedule_constraints": {
@@ -11794,7 +11594,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11858,11 +11657,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -11904,7 +11699,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -11950,11 +11744,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -11996,7 +11786,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12060,11 +11849,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -12106,7 +11891,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12161,11 +11945,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -12207,7 +11987,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12253,11 +12032,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -12299,7 +12074,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12363,11 +12137,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-linalg"
       ],
       "schedule_constraints": {
@@ -12410,7 +12179,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12475,11 +12243,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -12521,7 +12285,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12558,11 +12321,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -12604,7 +12363,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12650,11 +12408,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -12696,7 +12450,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12783,11 +12536,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:1",
@@ -12829,7 +12578,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -12915,11 +12663,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -12961,7 +12705,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13016,11 +12759,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -13062,7 +12801,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13108,11 +12846,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -13154,7 +12888,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13209,11 +12942,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -13255,9 +12984,7 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
-        "spirv",
         "wgpu"
       ],
       "laws": [],
@@ -13301,11 +13028,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -13347,7 +13070,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13411,11 +13133,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -13457,7 +13175,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13512,11 +13229,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -13558,7 +13271,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13640,11 +13352,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -13686,7 +13394,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13732,11 +13439,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -13778,7 +13481,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13848,11 +13550,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-linalg"
       ],
       "schedule_constraints": {
@@ -13895,7 +13592,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -13941,11 +13637,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -13987,7 +13679,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14042,11 +13733,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-linalg"
       ],
       "schedule_constraints": {
@@ -14089,7 +13775,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14153,11 +13838,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-linalg"
       ],
       "schedule_constraints": {
@@ -14200,7 +13880,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14264,11 +13943,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-linalg"
       ],
       "schedule_constraints": {
@@ -14311,7 +13985,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14365,7 +14038,7 @@
             "access": "Workgroup",
             "memory": "Shared",
             "element": "U32",
-            "count": 32,
+            "count": 4,
             "pipeline_live_out": false
           },
           {
@@ -14374,7 +14047,7 @@
             "access": "Workgroup",
             "memory": "Shared",
             "element": "U32",
-            "count": 32,
+            "count": 4,
             "pipeline_live_out": false
           },
           {
@@ -14383,7 +14056,7 @@
             "access": "ReadWrite",
             "memory": "Global",
             "element": "U32",
-            "count": 256,
+            "count": 4,
             "pipeline_live_out": true
           }
         ],
@@ -14393,17 +14066,12 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-linalg"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:256",
+        "workgroup_width": "exactly:4",
         "subgroup_width": "agnostic",
-        "min_shared_bytes": 256,
+        "min_shared_bytes": 32,
         "element_policy": "any",
         "uniformity": "workgroup",
         "cooperative_launch": false,
@@ -14440,7 +14108,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14450,11 +14117,6 @@
         {
           "depth": 0,
           "operation": "vyre-libs::math::matmul_bias_tiled",
-          "registered": true
-        },
-        {
-          "depth": 1,
-          "operation": "vyre-libs::math::semiring_gemm",
           "registered": true
         }
       ]
@@ -14490,7 +14152,7 @@
             "access": "Workgroup",
             "memory": "Shared",
             "element": "U32",
-            "count": 32,
+            "count": 4,
             "pipeline_live_out": false
           },
           {
@@ -14499,7 +14161,7 @@
             "access": "Workgroup",
             "memory": "Shared",
             "element": "U32",
-            "count": 32,
+            "count": 4,
             "pipeline_live_out": false
           },
           {
@@ -14508,7 +14170,7 @@
             "access": "ReadWrite",
             "memory": "Global",
             "element": "U32",
-            "count": 256,
+            "count": 4,
             "pipeline_live_out": true
           }
         ],
@@ -14518,17 +14180,12 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-linalg"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:256",
+        "workgroup_width": "exactly:4",
         "subgroup_width": "agnostic",
-        "min_shared_bytes": 256,
+        "min_shared_bytes": 32,
         "element_policy": "any",
         "uniformity": "workgroup",
         "cooperative_launch": false,
@@ -14565,7 +14222,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14575,11 +14231,6 @@
         {
           "depth": 0,
           "operation": "vyre-libs::math::matmul_tiled",
-          "registered": true
-        },
-        {
-          "depth": 1,
-          "operation": "vyre-libs::math::semiring_gemm",
           "registered": true
         }
       ]
@@ -14616,11 +14267,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -14662,7 +14309,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14699,11 +14345,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -14745,7 +14387,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14800,11 +14441,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -14846,7 +14483,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14901,11 +14537,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -14947,7 +14579,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -14993,11 +14624,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -15039,7 +14666,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15094,11 +14720,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -15140,7 +14762,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15213,11 +14834,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -15259,7 +14876,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15332,11 +14948,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -15378,7 +14990,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15442,11 +15053,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -15488,7 +15095,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15561,11 +15167,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -15607,7 +15209,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15662,11 +15263,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -15708,7 +15305,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15772,11 +15368,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -15818,7 +15410,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15864,11 +15455,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -15910,7 +15497,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -15965,11 +15551,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -16011,7 +15593,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16066,11 +15647,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:256",
@@ -16112,7 +15689,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16195,11 +15771,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:256",
@@ -16241,7 +15813,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16305,12 +15876,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
-        "fixpoint"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:256",
@@ -16352,7 +15918,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16416,11 +15981,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-scan"
       ],
       "schedule_constraints": {
@@ -16463,7 +16023,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16523,11 +16082,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -16569,7 +16124,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16653,11 +16207,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:64",
@@ -16699,7 +16249,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16760,11 +16309,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -16806,7 +16351,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -16924,12 +16468,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
-        "fixpoint"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:256",
@@ -16971,7 +16510,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17022,11 +16560,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -17068,7 +16602,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17114,11 +16647,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -17160,7 +16689,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17229,11 +16757,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-succinct"
       ],
       "schedule_constraints": {
@@ -17276,9 +16799,7 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
-        "spirv",
         "wgpu"
       ],
       "laws": [],
@@ -17349,11 +16870,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt",
         "math-succinct"
       ],
       "schedule_constraints": {
@@ -17396,7 +16912,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17474,11 +16989,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:64",
@@ -17520,7 +17031,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17620,11 +17130,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -17666,7 +17172,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17768,11 +17273,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:64",
@@ -17814,7 +17315,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -17915,11 +17415,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -17961,7 +17457,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18016,11 +17511,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -18062,7 +17553,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18108,11 +17598,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "math-dialect",
-        "math-kernels",
-        "graph",
-        "geom",
-        "opt"
+        "math-dialect"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -18154,7 +17640,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18218,11 +17703,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -18264,7 +17745,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18328,11 +17808,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:1",
@@ -18374,7 +17850,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18465,11 +17940,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:64",
@@ -18511,7 +17982,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18585,11 +18055,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:256",
@@ -18631,7 +18097,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18710,11 +18175,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:1",
@@ -18756,7 +18217,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18820,11 +18280,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -18866,7 +18322,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -18921,11 +18376,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -18967,7 +18418,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19031,11 +18481,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -19077,7 +18523,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19171,11 +18616,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -19217,7 +18658,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19299,11 +18739,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -19345,7 +18781,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19427,11 +18862,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:256",
@@ -19473,7 +18904,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19538,11 +18968,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -19584,7 +19010,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19680,11 +19105,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:128",
@@ -19726,7 +19147,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19787,11 +19207,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -19833,7 +19249,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -19897,11 +19312,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -19943,7 +19354,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20046,11 +19456,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-norm"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:4",
@@ -20092,7 +19498,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20167,11 +19572,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-norm"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -20213,7 +19614,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20264,11 +19664,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -20310,7 +19706,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20365,11 +19760,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -20411,7 +19802,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20475,11 +19865,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-linear"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -20521,7 +19907,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20590,11 +19975,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
         "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels",
         "nn-linear-4bit"
       ],
       "schedule_constraints": {
@@ -20637,7 +20018,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20719,11 +20099,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
         "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels",
         "nn-linear-4bit"
       ],
       "schedule_constraints": {
@@ -20766,7 +20142,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20830,11 +20205,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-linear"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -20876,7 +20247,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -20940,11 +20310,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-linear"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -20986,7 +20352,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21035,30 +20400,12 @@
             "pipeline_live_out": false
           },
           {
-            "binding": 0,
-            "name": "matmul_a_tile",
-            "access": "Workgroup",
-            "memory": "Shared",
-            "element": "U32",
-            "count": 32,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 0,
-            "name": "matmul_b_tile",
-            "access": "Workgroup",
-            "memory": "Shared",
-            "element": "U32",
-            "count": 32,
-            "pipeline_live_out": false
-          },
-          {
             "binding": 3,
             "name": "out",
             "access": "ReadWrite",
             "memory": "Global",
             "element": "U32",
-            "count": 256,
+            "count": 4,
             "pipeline_live_out": true
           }
         ],
@@ -21068,20 +20415,16 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-linear"
       ],
       "schedule_constraints": {
-        "workgroup_width": "exactly:256",
+        "workgroup_width": "agnostic",
         "subgroup_width": "agnostic",
-        "min_shared_bytes": 256,
+        "min_shared_bytes": 0,
         "element_policy": "any",
-        "uniformity": "workgroup",
+        "uniformity": "none",
         "cooperative_launch": false,
-        "memory_ordering": "wire:4"
+        "memory_ordering": null
       },
       "oracle": {
         "reference_eval": true,
@@ -21114,7 +20457,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21129,11 +20471,6 @@
         {
           "depth": 1,
           "operation": "vyre-libs::nn::linear_tiled",
-          "registered": true
-        },
-        {
-          "depth": 2,
-          "operation": "vyre-libs::math::semiring_gemm",
           "registered": true
         }
       ]
@@ -21197,11 +20534,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -21243,7 +20576,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21289,11 +20621,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -21335,7 +20663,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21390,11 +20717,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -21436,7 +20759,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21527,11 +20849,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:256",
@@ -21573,7 +20891,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21647,11 +20964,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -21693,7 +21006,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21757,11 +21069,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -21803,7 +21111,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -21885,11 +21192,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -21931,7 +21234,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22013,11 +21315,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels",
         "nn-moe"
       ],
       "schedule_constraints": {
@@ -22060,7 +21357,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22150,11 +21446,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels",
         "nn-moe"
       ],
       "schedule_constraints": {
@@ -22197,7 +21488,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22281,11 +21571,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels",
         "nn-moe"
       ],
       "schedule_constraints": {
@@ -22328,7 +21613,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22397,11 +21681,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -22443,7 +21723,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22512,11 +21791,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -22558,7 +21833,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22622,11 +21896,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -22668,7 +21938,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22723,11 +21992,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -22769,7 +22034,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22824,11 +22088,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -22870,7 +22130,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -22925,11 +22184,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -22971,7 +22226,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23017,11 +22271,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -23063,7 +22313,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23100,11 +22349,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -23146,7 +22391,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23192,11 +22436,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -23238,7 +22478,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23293,11 +22532,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -23339,7 +22574,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23403,11 +22637,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -23449,7 +22679,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23513,11 +22742,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-norm"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:4",
@@ -23559,7 +22784,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23647,11 +22871,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-linear"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:64",
@@ -23693,7 +22913,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23748,11 +22967,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -23794,7 +23009,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23840,11 +23054,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -23886,7 +23096,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -23950,11 +23159,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -23996,7 +23201,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24074,11 +23278,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -24120,7 +23320,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24184,11 +23383,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-attention"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:256",
@@ -24230,7 +23425,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24328,11 +23522,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels",
         "nn-moe"
       ],
       "schedule_constraints": {
@@ -24375,7 +23564,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24430,11 +23618,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -24476,7 +23660,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24540,11 +23723,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels",
         "nn-moe"
       ],
       "schedule_constraints": {
@@ -24587,7 +23765,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24693,7 +23870,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24757,11 +23933,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -24803,7 +23975,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24849,11 +24020,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -24895,7 +24062,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -24964,11 +24130,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -25010,7 +24172,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25074,11 +24235,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -25120,7 +24277,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25166,11 +24322,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -25212,7 +24364,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25272,10 +24423,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
-        "python-parser"
+        "parsing"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:256",
@@ -25317,7 +24465,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25372,10 +24519,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
-        "python-parser"
+        "parsing"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:256",
@@ -25417,7 +24561,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25481,10 +24624,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
-        "python-parser"
+        "parsing-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -25526,7 +24666,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25608,10 +24747,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
-        "python-parser"
+        "parsing-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:8",
@@ -25653,7 +24789,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25749,10 +24884,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
-        "python-parser"
+        "parsing"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:256",
@@ -25794,7 +24926,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25878,10 +25009,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
-        "python-parser"
+        "parsing"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -25923,7 +25051,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -25974,10 +25101,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
-        "python-parser"
+        "parsing-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:256",
@@ -26019,7 +25143,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26065,10 +25188,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
-        "python-parser"
+        "parsing-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -26110,7 +25230,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26156,10 +25275,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
-        "python-parser"
+        "parsing-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -26201,7 +25317,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26247,10 +25362,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
-        "python-parser"
+        "parsing-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -26292,7 +25404,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26388,9 +25499,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
         "python-parser"
       ],
       "schedule_constraints": {
@@ -26433,7 +25541,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26511,9 +25618,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
         "python-parser"
       ],
       "schedule_constraints": {
@@ -26556,7 +25660,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26634,9 +25737,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
         "python-parser"
       ],
       "schedule_constraints": {
@@ -26679,7 +25779,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26757,9 +25856,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
         "python-parser"
       ],
       "schedule_constraints": {
@@ -26802,7 +25898,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -26880,9 +25975,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
         "python-parser"
       ],
       "schedule_constraints": {
@@ -26925,7 +26017,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27003,9 +26094,6 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
         "python-parser"
       ],
       "schedule_constraints": {
@@ -27048,7 +26136,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27135,10 +26222,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
-        "python-parser"
+        "parsing-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -27180,7 +26264,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27226,10 +26309,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "parsing",
-        "parsing-kernels",
-        "go-parser",
-        "python-parser"
+        "parsing-kernels"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -27271,7 +26351,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27335,11 +26414,8 @@
         "bytes_extraction": false
       },
       "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
-        "pattern-regex",
-        "pattern-kernels"
+        "pattern",
+        "pattern-dfa"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -27381,7 +26457,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27436,11 +26511,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
-        "pattern-regex",
-        "pattern-kernels"
+        "pattern"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -27482,7 +26553,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27537,11 +26607,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
-        "pattern-regex",
-        "pattern-kernels"
+        "pattern"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -27583,7 +26649,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27647,11 +26712,8 @@
         "bytes_extraction": false
       },
       "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
-        "pattern-regex",
-        "pattern-kernels"
+        "pattern",
+        "pattern-dfa"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:4",
@@ -27693,7 +26755,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27784,11 +26845,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
-        "pattern-regex",
-        "pattern-kernels"
+        "pattern"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -27830,7 +26887,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -27930,11 +26986,9 @@
         "bytes_extraction": false
       },
       "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
+        "pattern",
         "pattern-regex",
-        "pattern-kernels"
+        "pattern-dfa"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:128",
@@ -27976,7 +27030,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28063,11 +27116,8 @@
         "bytes_extraction": false
       },
       "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
-        "pattern-regex",
-        "pattern-kernels"
+        "pattern",
+        "pattern-nfa"
       ],
       "schedule_constraints": {
         "workgroup_width": "exactly:32",
@@ -28109,7 +27159,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28169,11 +27218,8 @@
         "bytes_extraction": false
       },
       "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
-        "pattern-regex",
-        "pattern-kernels"
+        "pattern",
+        "pattern-substring"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -28215,7 +27261,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28348,7 +27393,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28488,7 +27532,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28633,7 +27676,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28728,7 +27770,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28828,7 +27869,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -28928,7 +27968,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29028,7 +28067,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29128,7 +28166,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29268,7 +28305,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29413,7 +28449,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29471,11 +28506,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -29517,7 +28548,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29577,11 +28607,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -29623,7 +28649,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29669,11 +28694,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -29715,7 +28736,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29788,11 +28808,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -29834,7 +28850,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -29912,11 +28927,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -29958,7 +28969,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30027,11 +29037,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -30073,7 +29079,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30151,11 +29156,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -30197,7 +29198,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30257,11 +29257,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -30303,7 +29299,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30372,11 +29367,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -30418,7 +29409,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30469,11 +29459,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -30515,7 +29501,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30584,11 +29569,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -30630,7 +29611,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30681,11 +29661,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -30727,7 +29703,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30782,11 +29757,7 @@
         "bytes_extraction": false
       },
       "features": [
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "nn-attention",
-        "nn-kernels"
+        "nn-activation"
       ],
       "schedule_constraints": {
         "workgroup_width": "agnostic",
@@ -30828,7 +29799,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -30916,7 +29886,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31010,7 +29979,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31104,7 +30072,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31195,7 +30162,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31295,7 +30261,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31394,7 +30359,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31491,7 +30455,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31579,7 +30542,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31673,7 +30635,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31784,7 +30745,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31877,7 +30837,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -31965,7 +30924,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32062,7 +31020,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32161,7 +31118,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32249,7 +31205,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32341,7 +31296,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32438,7 +31392,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32541,7 +31494,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32644,7 +31596,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32746,7 +31697,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32848,7 +31798,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -32949,7 +31898,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -33041,7 +31989,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -33237,7 +32184,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -33409,7 +32355,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -33547,7 +32492,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -33649,7 +32593,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -33787,7 +32730,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -33925,7 +32867,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34099,7 +33040,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34325,7 +33265,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34462,7 +33401,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34582,7 +33520,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34685,7 +33622,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34792,7 +33728,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -34894,7 +33829,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35041,7 +33975,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35143,7 +34076,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35254,7 +34186,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35366,7 +34297,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35504,7 +34434,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35606,7 +34535,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35780,7 +34708,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -35907,7 +34834,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36009,7 +34935,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36102,7 +35027,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36199,7 +35123,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36287,7 +35210,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36412,7 +35334,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36520,7 +35441,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36608,7 +35528,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36705,7 +35624,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36715,6 +35633,98 @@
         {
           "depth": 0,
           "operation": "vyre-libs::vfs::resolve",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::visual::apply_scissor_rect",
+      "tier": "libs",
+      "category": "visual",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "in",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "out",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "visual"
+      ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::visual::apply_scissor_rect",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::visual::apply_scissor_rect",
           "registered": true
         }
       ]
@@ -36793,7 +35803,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36877,7 +35886,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -36965,7 +35973,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37067,7 +36074,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37082,6 +36088,300 @@
         {
           "depth": 1,
           "operation": "vyre-libs::visual::packed_rgba_map",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::visual::composite_blend",
+      "tier": "libs",
+      "category": "visual",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "fg",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 2,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "bg",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 2,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "out",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 2,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "visual"
+      ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::visual::composite_blend",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::visual::packed_rgba_map",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::visual::cull_boxes_2d",
+      "tier": "libs",
+      "category": "visual",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "boxes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "I32",
+            "count": 8,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "mask",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 2,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "visual"
+      ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::visual::cull_boxes_2d",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::visual::cull_boxes_2d",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::visual::dirty_region_patch",
+      "tier": "libs",
+      "category": "visual",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "atlas",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "patch",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "out",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "visual"
+      ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::visual::dirty_region_patch",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::visual::dirty_region_patch",
           "registered": true
         }
       ]
@@ -37160,7 +36460,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37239,7 +36538,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37332,7 +36630,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37457,7 +36754,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37541,7 +36837,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37556,6 +36851,98 @@
         {
           "depth": 1,
           "operation": "vyre-libs::visual::packed_rgba_map",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::visual::layout_prefix_scan",
+      "tier": "libs",
+      "category": "visual",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "sizes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "offsets",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "visual"
+      ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::visual::layout_prefix_scan",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::visual::layout_prefix_scan",
           "registered": true
         }
       ]
@@ -37634,7 +37021,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37644,6 +37030,401 @@
         {
           "depth": 0,
           "operation": "vyre-libs::visual::packed_rgba_map",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::visual::path_raster",
+      "tier": "libs",
+      "category": "visual",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "segments",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "bg",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "out",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "visual"
+      ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::visual::path_raster",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::visual::path_raster",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::visual::resample",
+      "tier": "libs",
+      "category": "visual",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "in",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "out",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "visual"
+      ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::visual::resample",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::visual::resample",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::visual::rgba_to_grayscale",
+      "tier": "libs",
+      "category": "visual",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "in",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 2,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "out",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 2,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "visual"
+      ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::visual::rgba_to_grayscale",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::visual::packed_rgba_map",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::visual::text_run",
+      "tier": "libs",
+      "category": "visual",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "glyphs",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 7,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "atlas",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "bg",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "out",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "visual"
+      ],
+      "schedule_constraints": {
+        "workgroup_width": "agnostic",
+        "subgroup_width": "agnostic",
+        "min_shared_bytes": 0,
+        "element_policy": "any",
+        "uniformity": "none",
+        "cooperative_launch": false,
+        "memory_ordering": null
+      },
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::visual::text_run",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::visual::text_run",
           "registered": true
         }
       ]
@@ -37722,7 +37503,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37810,7 +37590,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -37916,7 +37695,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -38004,7 +37782,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -38092,7 +37869,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -38180,7 +37956,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -38268,7 +38043,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -38356,7 +38130,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -38453,7 +38226,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"
@@ -38541,7 +38313,6 @@
         }
       },
       "target_facets": [
-        "cpu-ref",
         "cuda",
         "spirv",
         "wgpu"

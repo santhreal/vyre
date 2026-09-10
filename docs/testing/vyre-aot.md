@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Package the same megakernel artifact class ahead of time. Not a second compile path. No workspace crate currently depends on this one.
 
-The crate lives at `vyre-aot`. The `aot-artifacts` owner maintains its
-`packaging` testing contract.
+The crate lives at `vyre-aot` and owns the `aot-artifacts` seam in the `packaging` layer.
 
 ## Commands
 

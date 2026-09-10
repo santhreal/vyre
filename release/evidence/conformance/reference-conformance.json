@@ -1,16 +1,16 @@
 {
-  "source_fingerprint": "git:585fbeae622524cd57d1c874cfcc1afcd8cfd148:dirty=false",
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=ab2e2b4ba58b45dc748e13ab540a57116d15ff8ff539182ce68210e5bfc7273a"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 4,
   "backend_id": "cpu-ref",
   "command": "cargo_full run -p vyre-conform --release --bin vyre-conform -- dispatch --backend cpu-ref --ops all",
   "stdout_diagnostics": [],
-  "total_pairs": 349,
-  "distinct_op_count": 349,
-  "catalog_required_op_count": 349,
-  "catalog_covered_op_count": 349,
+  "total_pairs": 358,
+  "distinct_op_count": 358,
+  "catalog_required_op_count": 358,
+  "catalog_covered_op_count": 358,
   "missing_catalog_ops": [],
-  "release_backend_row_count": 1047,
-  "supported_release_backend_row_count": 1047,
+  "release_backend_row_count": 1074,
+  "supported_release_backend_row_count": 1074,
   "release_backend_rows": [
     "vyre-primitives::hardware::bit_reverse_u32:reference:supported",
     "vyre-primitives::hardware::bit_reverse_u32:cuda:supported",
@@ -1026,6 +1026,9 @@
     "vyre-libs::vfs::resolve:reference:supported",
     "vyre-libs::vfs::resolve:cuda:supported",
     "vyre-libs::vfs::resolve:wgpu:supported",
+    "vyre-libs::visual::apply_scissor_rect:reference:supported",
+    "vyre-libs::visual::apply_scissor_rect:cuda:supported",
+    "vyre-libs::visual::apply_scissor_rect:wgpu:supported",
     "vyre-libs::visual::blur:reference:supported",
     "vyre-libs::visual::blur:cuda:supported",
     "vyre-libs::visual::blur:wgpu:supported",
@@ -1038,6 +1041,15 @@
     "vyre-libs::visual::composite:reference:supported",
     "vyre-libs::visual::composite:cuda:supported",
     "vyre-libs::visual::composite:wgpu:supported",
+    "vyre-libs::visual::composite_blend:reference:supported",
+    "vyre-libs::visual::composite_blend:cuda:supported",
+    "vyre-libs::visual::composite_blend:wgpu:supported",
+    "vyre-libs::visual::cull_boxes_2d:reference:supported",
+    "vyre-libs::visual::cull_boxes_2d:cuda:supported",
+    "vyre-libs::visual::cull_boxes_2d:wgpu:supported",
+    "vyre-libs::visual::dirty_region_patch:reference:supported",
+    "vyre-libs::visual::dirty_region_patch:cuda:supported",
+    "vyre-libs::visual::dirty_region_patch:wgpu:supported",
     "vyre-libs::visual::downsample:reference:supported",
     "vyre-libs::visual::downsample:cuda:supported",
     "vyre-libs::visual::downsample:wgpu:supported",
@@ -1053,9 +1065,24 @@
     "vyre-libs::visual::gradient:reference:supported",
     "vyre-libs::visual::gradient:cuda:supported",
     "vyre-libs::visual::gradient:wgpu:supported",
+    "vyre-libs::visual::layout_prefix_scan:reference:supported",
+    "vyre-libs::visual::layout_prefix_scan:cuda:supported",
+    "vyre-libs::visual::layout_prefix_scan:wgpu:supported",
     "vyre-libs::visual::packed_rgba_map:reference:supported",
     "vyre-libs::visual::packed_rgba_map:cuda:supported",
     "vyre-libs::visual::packed_rgba_map:wgpu:supported",
+    "vyre-libs::visual::path_raster:reference:supported",
+    "vyre-libs::visual::path_raster:cuda:supported",
+    "vyre-libs::visual::path_raster:wgpu:supported",
+    "vyre-libs::visual::resample:reference:supported",
+    "vyre-libs::visual::resample:cuda:supported",
+    "vyre-libs::visual::resample:wgpu:supported",
+    "vyre-libs::visual::rgba_to_grayscale:reference:supported",
+    "vyre-libs::visual::rgba_to_grayscale:cuda:supported",
+    "vyre-libs::visual::rgba_to_grayscale:wgpu:supported",
+    "vyre-libs::visual::text_run:reference:supported",
+    "vyre-libs::visual::text_run:cuda:supported",
+    "vyre-libs::visual::text_run:wgpu:supported",
     "vyre-libs::visual::upsample:reference:supported",
     "vyre-libs::visual::upsample:cuda:supported",
     "vyre-libs::visual::upsample:wgpu:supported"
@@ -1064,11 +1091,11 @@
   "op_matrix_blocked_release_count": 0,
   "op_matrix_blocked_release_rows": [],
   "op_matrix_errors": [],
-  "passed_pairs": 349,
+  "passed_pairs": 358,
   "failed_pairs": 0,
   "duplicate_op_ids": [],
   "diff_schema_version": 1,
-  "diff_summary_count": 349,
+  "diff_summary_count": 358,
   "diff_summary_errors": [],
   "diff_summaries": [
     {
@@ -4362,6 +4389,16 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
+      "op_id": "vyre-libs::visual::apply_scissor_rect",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:f435acc0032f581c2a92e041065893abcdb125154f968b15972860ce988247fd",
+      "output_digest": "vyre-conform-output-envelope-v1:3f49dd4747257e8982c2d76520397e11d38227388ecda8ebe80426bb496a632c",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
       "op_id": "vyre-libs::visual::blur",
       "backend_id": "cpu-ref",
       "input_digest": "vyre-conform-input-envelope-v1:38d15fb6ac360a5d9838d6fbb11d8685781b843537b9297bd048793619eec781",
@@ -4396,6 +4433,36 @@
       "backend_id": "cpu-ref",
       "input_digest": "vyre-conform-input-envelope-v1:a66817c182b7b62a0560d50070ccee05ced0231ab074a360c157eca9c4adcfbd",
       "output_digest": "vyre-conform-output-envelope-v1:6627e63e465d27d7191a63ed13bba7cb9dc6445d14ea38de57bc8b0ea87d2ef1",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::visual::composite_blend",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:4e8e783111ea41882213414f982792f5185451a01965dbe799c8711a9314daa6",
+      "output_digest": "vyre-conform-output-envelope-v1:b20678f9d9e80535b0e6ed3694bfa859036cff6a5ebdc31ce94d72652d674a3e",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::visual::cull_boxes_2d",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:bde63075a0e829018b8c13554142be28f02b3f81d336cd538f703bfb3ac799b3",
+      "output_digest": "vyre-conform-output-envelope-v1:5553527b65c328eb8aa8df848f494c78e5a64e3f25b9ca85fecb591c64ff593c",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::visual::dirty_region_patch",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:bd7e7dbe9b9aa943a7c39fa19f3d63e675c146138717fb4b766e1c7b84dcff16",
+      "output_digest": "vyre-conform-output-envelope-v1:8bd245e01127c803e55418f57b75e29f2308c7aea0cdc2748fd90d04254d572b",
       "timing_class": "not_reported",
       "failure_class": "passed",
       "passed": true,
@@ -4452,10 +4519,60 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
+      "op_id": "vyre-libs::visual::layout_prefix_scan",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:eaa0a7beb2edb388f7f547bf10d5f0b2e7dd47dd727bf5fefafc123653ea06d6",
+      "output_digest": "vyre-conform-output-envelope-v1:f88ede2aa45541eb6d07584fe4b8a1b5f9e9213716e70d0db1fd3382b7aaa973",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
       "op_id": "vyre-libs::visual::packed_rgba_map",
       "backend_id": "cpu-ref",
       "input_digest": "vyre-conform-input-envelope-v1:c31af8b63bdfa9fd9d31d2d8da663d14285edab13628d59ead48519f94d52813",
       "output_digest": "vyre-conform-output-envelope-v1:3523b434f793d77c142cf0ba107ab52dde036e7a91aafbfb687d58224918c5f0",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::visual::path_raster",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:9a8a33ccc2dd12e1ef4fe0f3c92e99755a87223dcdc218c29b2ff53f767b1135",
+      "output_digest": "vyre-conform-output-envelope-v1:315f27792eb84bf83f0846f91918d020b65c2f9691bdb3995734f80e455c8462",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::visual::resample",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:1581b21d8787a33fec0ada9f7c6ccce10a4b1f60d2ac56d23b4eb46fe216d592",
+      "output_digest": "vyre-conform-output-envelope-v1:3c857fa39ea65e3ad7356ea840c225eeb408b64291a134eb5f3a728e5311ec61",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::visual::rgba_to_grayscale",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:c4391b2d8cfdbbc01e8611a58b7ef1bef51060f34266f6dabe508209c4294a23",
+      "output_digest": "vyre-conform-output-envelope-v1:31371e9539d73bffb56b0552d6a34b614efb655b8f0ffe1f6c42b7be4660c531",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::visual::text_run",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:b04fd10d3c46df2b9c7811656af8e018d0c6c45a979f153b118849a22da98392",
+      "output_digest": "vyre-conform-output-envelope-v1:50f2401b7e5f6edb8bf28dc58344250a3fab02b0bc18146776e2193c61e9f55f",
       "timing_class": "not_reported",
       "failure_class": "passed",
       "passed": true,
@@ -4567,2095 +4684,2149 @@
       "op_id": "vyre-libs::bitset::and",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::and_into",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::and_not",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::and_not_into",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::any",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::clear_bit",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::contains",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::copy",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::equal",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::four_russians_apply_byte_lut",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::four_russians_dense_matvec_byte_lut",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::not",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::or",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::or_into",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::popcount",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::select1_query",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::set_bit",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::stochastic_and_mul",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::subset_of",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::test_bit",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::xor",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::xor_into",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::bitset::zero",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::builder::indexed_map",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::builder::strided_accumulate",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::decode::base64",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "3 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "3 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::decode::encodex",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "4 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "4 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::decode::hex",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "3 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "3 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::decode::inflate_stored_block",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::decode::rle_segment_lengths",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::decode::ziftsieve_literal_copy",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::fixpoint::bitset_fixpoint",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::fixpoint::persistent_fixpoint",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::geom::clifford2_geometric_product",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::geom::tfn_scalar_mix",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::ast_walk_postorder",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::ast_walk_preorder",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::csr_backward_or_changed",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::csr_backward_traverse",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::csr_forward_or_changed",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::csr_forward_traverse",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::csr_forward_traverse_excluding",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::csr_frontier_degree_sum",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::csr_queue_strided_forward_traverse",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::dominator_frontier",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::dominator_frontier_pred_check",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::dominator_tree",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::dominator_tree_depth",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::dominator_tree_intersect_step",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::dominator_tree_lca",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::functor_apply",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::level_wave",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "2 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "2 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::monoidal_compose",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::motif",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::path_reconstruct",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::persistent_bfs",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::persistent_bfs_step",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::scc_decompose",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::sheaf_diffusion_step",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::sum_product_evaluate",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::sum_product_evaluate_leveled",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::tensor_flow_forward",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::tensor_flow_propagate_edges",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::union_find",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::vast_descend_leftmost_leaf",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::vast_walk_postorder",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::graph::vast_walk_preorder",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::hash::adler32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::hash::blake3_compress",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::hash::blake3_g",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::hash::blake3_round",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::hash::crc32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::hash::fnv1a32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::hash::fnv1a64",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::hash::multi_hash",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::hash::ntt_butterfly_stage",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::hash::sparse_fft_bin_hash",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::label::nodeset_filter",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::label::resolve_family",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::llm::logit_adjust",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::llm::nucleus_select",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::llm::paged_kv_append",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::llm::paged_kv_gather",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::llm::sample_token",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::logical::nand",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::logical::nor",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::algebra::bool_semiring_matmul",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::algebra::join",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::algebra::meet",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::algebra::minplus_mul",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::algebra::sketch_mix",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::amg_jacobi_step",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::amg_v_cycle",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::amg_v_cycle::v_cycle_phase",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::atomic::atomic_add_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::atomic::atomic_and_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::atomic::atomic_compare_exchange_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::atomic::atomic_exchange_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::atomic::atomic_max_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::atomic::atomic_min_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::atomic::atomic_or_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::atomic::atomic_xor_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::atomic::lru_update_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::avg_floor",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::bellman_shortest_path",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::bhattacharyya_coefficient",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::bigint_add_carry",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::broadcast",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::clamp_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::conformal_threshold",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::conv1d",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::conv::conv2d_3x3_direct",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::conv::im2col_3x3",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::dot",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::dot_partial",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::eigenvector_column_sign",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::fft::fft4_complex",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::fft::fft_convolve_circular_complex",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::fft::fft_radix2",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::fft::pointwise_complex_multiply_conjugate",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::fft::scale_conjugate_inverse",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::gaussian_rdp_step",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::givens_rotate_pair",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::hensel_lift_step",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::iht_threshold",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::interval_merge",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::jacobi_apply_rotation",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::linalg::matmul_strassen_2x2",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::lzcnt_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::matmul",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::matmul_bias",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::matmul_bias::scalar",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::matmul_bias_tiled",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::matmul_tiled",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::matrix_diagonal_extract",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::matrix_identity_fill",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::mori_zwanzig_project_step",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::mp_edge_clip",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::newton_schulz_poly5_f32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::qsvt_block_encode",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::quantized::i4x8_batched_matmul_f32_scaled",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::quantized::i4x8_batched_matmul_top1_f32_scaled",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::quantized::i4x8_batched_matvec_f32_scaled",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::quantized::i4x8_dot_f32_scaled",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::quantized::i4x8_dot_i32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::quantized::i4x8_matvec_f32_scaled",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::quantized::unpack_i4x8",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::randomized_projection_step",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::reduce_mean",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::reduce_variance",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::scallop_join",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::scan_prefix_sum",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::semiring_gemm",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::sheaf_laplacian_eigenvalue",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::sheaf_laplacian_eigenvalue::power_iteration_phase",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::sinkhorn_iterate",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::softmax_step",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::square",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::succinct::rank1_query",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::succinct::rank1_superblocks",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::symmetric_eigen_jacobi",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::tensor_network_pair_contract",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::tensor_train_decompose",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::tzcnt_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::weighted_sum_fma_f32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::math::wrapping_neg",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::attention",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::attention::absorb_values",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::attention::online_softmax",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::attention::quest_paging",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::attention::tile_scores",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::attention::turboquant",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::attention_max_pass",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::attention_reference",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::attention_sum_pass",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::attention_write_pass",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::cross_entropy",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::embedding",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::flash_attention",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::gelu",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::gqa_attention",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::layer_norm",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::layerwise_ln_scale",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::leaky_relu_sq",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::leaky_relu_sq_backward",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::linear",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::linear_4bit",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::linear_4bit_affine_grouped",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::linear_relu",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::linear_silu",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::linear_tiled",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::ln_scale_backward",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::logit_softcap",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::logit_softcap_backward",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::mlp_4x_leaky_sq",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::mlp_4x_leaky_sq::hidden_projection",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::mlp_4x_leaky_sq::output_projection",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::mlp_backward",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::moe_gate",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::moe_gate::softmax_stats",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::moe_gate::weight_write",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::parallel_residual_block",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::partial_rope",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::partial_rope_backward",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::qk_gain",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::qk_gain_backward",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::quest_score_pages",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::quest_select_top_k",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::quest_zero_fill",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::relu",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::residual_add",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::residual_block_backward",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::rms_norm",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::rms_norm_linear",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::sigmoid_gate",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::silu",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::skip_gate",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::skip_gate_backward",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::softmax",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::softmax_top_k",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::swiglu",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::nn::top_k",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::opt::homotopy_euler_predictor",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::optim::adamw_step",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::optim::ema_apply",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::optim::muon_update",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::optim::muoneq_r",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::optim::newton_schulz_5step",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::ast_binding_strength",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::ast_cfg_blocks",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::ast_cse_hash_probe",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::ast_cse_structural_hash",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::ast_shunting_yard",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::ast_shunting_yard_reduce",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::core_delimiter_match",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::line_splice_classify",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::planar_rewrite_exclusion_check",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::planar_rewrite_schedule",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::python312_extract_calls",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::python312_extract_decorators",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::python312_extract_imports",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::python312_extract_structure",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::python312_extract_with_blocks",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::python312_lexer",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::ssa_dominance_scan",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::parsing::whitespace_classify_word",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::pattern::aho_corasick",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::pattern::bracket_match",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::pattern::compact_hits",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::pattern::cooperative_dfa",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::pattern::emit_hit",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::pattern::regex_dfa",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::pattern::regex_scan",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::pattern::substring_search",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "2 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "2 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::predicate::arg_of",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::predicate::call_to",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::predicate::edge",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::predicate::in_file",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::predicate::in_function",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::predicate::in_package",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::predicate::literal_of",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::predicate::node_kind_eq",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::predicate::return_value_of",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::predicate::size_argument_of",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::quant::byte_shuffle",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::quant::gptq_round",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::quant::gptq_sdclip",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::quant::int4_batched_matmul_f32_scaled",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::quant::int4_batched_matmul_top1_f32_scaled",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::quant::int4_batched_matvec_f32_scaled",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::quant::int4_dot_f32_scaled",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::quant::int4_dot_i32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::quant::int4_matvec_f32_scaled",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::quant::int6_pack",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::quant::int6_unpack",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::quant::int8_pack",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::quant::int8_unpack",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::all",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::any",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::count",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::count_non_zero",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::gather",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::grid_stride_tree_sum_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::histogram",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::max",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::min",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::radix_sort",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::range_counts_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::scatter",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::segment_reduce_sum",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::sum",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::workgroup_any_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::workgroup_max_f32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::workgroup_max_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::workgroup_min_f32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::workgroup_min_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::workgroup_sum_f32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::reduce::workgroup_sum_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::representation::unpack_4bit_f32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::aliases_dataflow",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::auth_check_dominates",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::bounded_by_comparison",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through the production fixpoint artifact route"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::buffer_size_check",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::dominance_predecessors",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through the production fixpoint artifact route"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::flows_to",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through the production fixpoint artifact route"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::flows_to_to_sink",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::flows_to_with_sanitizer",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::format_string_check",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::integer_overflow_arith",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::label_by_family",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::lock_dominates",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::path_canonical",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::sanitized_by",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through the production fixpoint artifact route"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::sanitizer_dominates",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::sink_intersection",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::sql_param_bound",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::taint_flow",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through the production fixpoint artifact route"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::taint_kill",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::taint_pollution",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::unchecked_return",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::security::xss_escape",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::text::byte_histogram_256",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::text::char_class",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::text::encoding_classify",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::text::line_index",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::text::utf8_shape_counts",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::text::utf8_validate",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::vfs::resolve",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
+    },
+    {
+      "op_id": "vyre-libs::visual::apply_scissor_rect",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::visual::blur",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::visual::box_shadow",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::visual::cell_grid",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::visual::composite",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
+    },
+    {
+      "op_id": "vyre-libs::visual::composite_blend",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) passed through reference oracle"
+    },
+    {
+      "op_id": "vyre-libs::visual::cull_boxes_2d",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) passed through reference oracle"
+    },
+    {
+      "op_id": "vyre-libs::visual::dirty_region_patch",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::visual::downsample",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::visual::filter_chain",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::visual::glass",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::visual::glyph_grid",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::visual::gradient",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
+    },
+    {
+      "op_id": "vyre-libs::visual::layout_prefix_scan",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::visual::packed_rgba_map",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
+    },
+    {
+      "op_id": "vyre-libs::visual::path_raster",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) passed through reference oracle"
+    },
+    {
+      "op_id": "vyre-libs::visual::resample",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) passed through reference oracle"
+    },
+    {
+      "op_id": "vyre-libs::visual::rgba_to_grayscale",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) passed through reference oracle"
+    },
+    {
+      "op_id": "vyre-libs::visual::text_run",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-libs::visual::upsample",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-primitives::hardware::bit_reverse_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-primitives::hardware::fma_f32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-primitives::hardware::inverse_sqrt_f32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-primitives::hardware::popcount_u32",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-primitives::hardware::storage_barrier",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-primitives::hardware::subgroup_add",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-primitives::hardware::subgroup_ballot",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-primitives::hardware::subgroup_shuffle",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     },
     {
       "op_id": "vyre-primitives::hardware::workgroup_barrier",
       "backend_id": "cpu-ref",
       "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
+      "message": "1 witness case(s) passed through reference oracle"
     }
   ],
   "blockers": []

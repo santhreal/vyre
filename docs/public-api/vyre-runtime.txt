@@ -64,9 +64,20 @@ impl core::fmt::Display for vyre_runtime::RingEncodingFault
 impl core::fmt::Display for vyre_runtime::pipeline_cache::PipelineCacheMetricError
 impl core::ops::drop::Drop for vyre_runtime::resource_residency::ResourceResidency
 impl core::ops::drop::Drop for vyre_runtime::structured_concurrency::StructuredWorkerScope
-impl core::ops::drop::Drop for vyre_runtime::uring::IoUringState
 impl core::ops::drop::Drop for vyre_runtime::uring::ResidentIoLoop
 impl vyre_foundation::diagnostics::ToDiagnostic for vyre_runtime::PipelineError
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::ExternalResourceAdmissionManager
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::artifact_admission::ArtifactSession
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::artifact_admission::InteractiveSessionStateMachine
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::artifact_admission::RetainedArtifactSession
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::atomic_recovery::SupervisedRestartBudget
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::pipeline_cache::DiskCache
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::pipeline_cache::InMemoryPipelineCache
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::resource_residency::ResourceResidency
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::retained_page_cache::RetainedPageCache
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::structured_concurrency::StructuredWorkerScope
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::structured_concurrency::WorkerQuarantine
+impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::tenant::TenantRegistry
 impl vyre_megakernel::execution::SemanticExecutor for vyre_runtime::RegisteredSemanticExecutor
 impl vyre_runtime::CacheQuota
 impl vyre_runtime::CounterArithmetic
@@ -97,14 +108,6 @@ impl vyre_runtime::artifact_admission::ResourceManifest
 impl vyre_runtime::artifact_admission::RetainedArtifactSession
 impl vyre_runtime::artifact_admission::TypedResource
 impl vyre_runtime::artifact_admission::TypedResourceDataset
-impl vyre_runtime::atomic_recovery::StateOwnerRecovery for vyre_runtime::artifact_admission::ArtifactSession
-impl vyre_runtime::atomic_recovery::StateOwnerRecovery for vyre_runtime::artifact_admission::InteractiveSessionStateMachine
-impl vyre_runtime::atomic_recovery::StateOwnerRecovery for vyre_runtime::artifact_admission::RetainedArtifactSession
-impl vyre_runtime::atomic_recovery::StateOwnerRecovery for vyre_runtime::atomic_recovery::SupervisedRestartBudget
-impl vyre_runtime::atomic_recovery::StateOwnerRecovery for vyre_runtime::pipeline_cache::DiskCache
-impl vyre_runtime::atomic_recovery::StateOwnerRecovery for vyre_runtime::pipeline_cache::InMemoryPipelineCache
-impl vyre_runtime::atomic_recovery::StateOwnerRecovery for vyre_runtime::resource_residency::ResourceResidency
-impl vyre_runtime::atomic_recovery::StateOwnerRecovery for vyre_runtime::tenant::TenantRegistry
 impl vyre_runtime::atomic_recovery::SupervisedRestartBudget
 impl vyre_runtime::paged_resource::BlockTableSpec
 impl vyre_runtime::paged_resource::PagedResidencyPlanner
@@ -216,12 +219,12 @@ impl<'a> vyre_runtime::uring::NvmeGpuIngestDriver<'a>
 impl<'a> vyre_runtime::uring::UringResidentQueuePump<'a>
 impl<'a> vyre_runtime::uring_completion_pump::UringCompletionPump<'a>
 impl<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone> core::default::Default for vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>
+impl<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone> vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>
 impl<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone> vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>
-impl<K: core::cmp::Ord + core::clone::Clone, V: core::clone::Clone> vyre_runtime::atomic_recovery::StateOwnerRecovery for vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>
 impl<R: core::marker::Copy> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>
 impl<R> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec<R>
+impl<T> vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::atomic_recovery::AtomicGuardedState<T>
 impl<T> vyre_runtime::atomic_recovery::AtomicGuardedState<T>
-impl<T> vyre_runtime::atomic_recovery::StateOwnerRecovery for vyre_runtime::atomic_recovery::AtomicGuardedState<T>
 pub const fn vyre_runtime::CacheQuota::bounded(max_entries: usize, max_bytes: u64) -> Self
 pub const fn vyre_runtime::CacheQuota::is_finite(&self) -> bool
 pub const fn vyre_runtime::CacheQuota::standard() -> Self
@@ -253,6 +256,7 @@ pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::neutral(&self) 
 pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::contract(&self) -> &vyre_megakernel::specialization::SpecializationContract
 pub const fn vyre_runtime::artifact_admission::AdmittedPortfolio::remainder(&self) -> core::option::Option<&vyre_runtime::artifact_admission::AdmittedArtifact>
 pub const fn vyre_runtime::artifact_admission::ArtifactAdmissionError::diagnostic(&self) -> &vyre_foundation::diagnostics::Diagnostic
+pub const fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::standdown(&self) -> core::time::Duration
 pub const fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::max_restarts(&self) -> u32
 pub const fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::new(max_restarts: u32) -> Self
 pub const fn vyre_runtime::pipeline_cache::PipelineCacheMetricError::field(&self) -> &'static str
@@ -344,6 +348,7 @@ pub const vyre_runtime::artifact_admission::INTERACTIVE_DISPATCH_HEADROOM: u64
 pub const vyre_runtime::artifact_admission::MAX_INTERACTIVE_STEP_BUDGET_MICROS: u64
 pub const vyre_runtime::artifact_admission::MEASURED_INTERACTIVE_DISPATCH_CEILING_MICROS: u64
 pub const vyre_runtime::artifact_admission::ResourceManifest::CURRENT_SCHEMA_VERSION: u32
+pub const vyre_runtime::atomic_recovery::DEFAULT_COMMIT_STANDDOWN: core::time::Duration
 pub const vyre_runtime::paged_resource::PAGED_RESOURCE_MIN_ALIGNMENT_BYTES: usize
 pub const vyre_runtime::replay::HEADER_BYTES: u64
 pub const vyre_runtime::replay::LOG_MAGIC: &[u8; 8]
@@ -441,8 +446,6 @@ pub const vyre_runtime::resident_work_queue::ring::SLOT_BYTES: usize
 pub const vyre_runtime::resident_work_queue::rule_catalog::ALPHABET_SIZE: u32
 pub const vyre_runtime::resident_work_queue::rule_catalog::RULE_META_WORDS: usize
 pub const vyre_runtime::resident_work_queue::scheduler::PRIORITY_LEVELS: u32
-pub const vyre_runtime::resident_work_queue::scheduler::PRIORITY_OFFSETS_BASE: u32
-pub const vyre_runtime::resident_work_queue::scheduler::PRIORITY_STARVATION_COUNTER: u32
 pub const vyre_runtime::resident_work_queue::scheduler::STARVATION_THRESHOLD: u32
 pub const vyre_runtime::resident_work_queue::scheduler::TENANT_FAIRNESS_THRESHOLD: u32
 pub const vyre_runtime::resident_work_queue::scheduler::priority::CRITICAL: u32
@@ -531,17 +534,19 @@ pub fn vyre_runtime::ExternalAdmissionError::from(err: vyre_spec::resource_capab
 pub fn vyre_runtime::ExternalResourceAdmissionManager::admit_external_resource(&self, record: vyre_spec::resource_capability::AdmittedResourceRecord) -> core::result::Result<vyre_runtime::AdmittedExternalResourceLease, vyre_runtime::ExternalAdmissionError>
 pub fn vyre_runtime::ExternalResourceAdmissionManager::device_id(&self) -> u64
 pub fn vyre_runtime::ExternalResourceAdmissionManager::execute_transition_schedule(&self, schedule: &vyre_driver::semantic_resource_abi::ResourceTransitionSchedule) -> core::result::Result<vyre_driver::semantic_resource_abi::TransitionExecutionReport, vyre_runtime::ExternalAdmissionError>
+pub fn vyre_runtime::ExternalResourceAdmissionManager::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain
 pub fn vyre_runtime::ExternalResourceAdmissionManager::invalidate_device_loss(&self) -> vyre_driver::semantic_resource_abi::DeviceLossInvalidationReport
 pub fn vyre_runtime::ExternalResourceAdmissionManager::mutate_resource(&self, resource_id: u64, expected_gen: u64) -> core::result::Result<u64, vyre_runtime::ExternalAdmissionError>
 pub fn vyre_runtime::ExternalResourceAdmissionManager::new(device_id: u64) -> Self
 pub fn vyre_runtime::ExternalResourceAdmissionManager::query_resource(&self, resource_id: u64) -> core::option::Option<vyre_spec::resource_capability::AdmittedResourceRecord>
+pub fn vyre_runtime::ExternalResourceAdmissionManager::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
 pub fn vyre_runtime::ExternalResourceAdmissionManager::register_dependent_pipeline(&self, resource_id: u64, pipeline_id: u64) -> core::result::Result<(), vyre_runtime::ExternalAdmissionError>
 pub fn vyre_runtime::ExternalResourceAdmissionManager::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_runtime::ExternalAdmissionError>
 pub fn vyre_runtime::GenerationScopedNamespace::scoped_key(&self, raw_key: &str) -> alloc::string::String
 pub fn vyre_runtime::IoQuota::default() -> Self
 pub fn vyre_runtime::PipelineError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
-pub fn vyre_runtime::PipelineError::from(err: vyre_driver::backend::error::BackendError) -> Self
 pub fn vyre_runtime::PipelineError::from(err: vyre_runtime::replay::ReplayLogError) -> Self
+pub fn vyre_runtime::PipelineError::from(error: vyre_driver::backend::error::BackendError) -> Self
 pub fn vyre_runtime::PipelineError::is_drain_incomplete(&self) -> bool
 pub fn vyre_runtime::PipelineError::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_runtime::QueueQuota::default() -> Self
@@ -690,28 +695,28 @@ pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::finish_rebuild(&sel
 pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::new(initial: T, domain: vyre_foundation::failure_domain::FailureDomain, recovery_class: vyre_foundation::failure_domain::RecoveryClass) -> Self
 pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::recover(&self, fresh_state: T)
 pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
+pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::try_with_state<R, E>(&self, op: impl core::ops::function::FnOnce(&mut T) -> core::result::Result<R, E>) -> core::result::Result<R, E> where E: core::convert::From<vyre_foundation::failure_domain::TypedRecoveryError>
 pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::with_state<R>(&self, op: impl core::ops::function::FnOnce(&mut T) -> core::result::Result<R, alloc::string::String>) -> core::result::Result<R, vyre_foundation::failure_domain::TypedRecoveryError>
 pub fn vyre_runtime::atomic_recovery::AtomicGuardedState<T>::with_state_ref<R>(&self, op: impl core::ops::function::FnOnce(&T) -> core::result::Result<R, alloc::string::String>) -> core::result::Result<R, vyre_foundation::failure_domain::TypedRecoveryError>
-pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::abort(&self, key: &K, ticket: vyre_runtime::atomic_recovery::PrepareTicket)
+pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::abort(&self, key: &K, ticket: vyre_runtime::atomic_recovery::PrepareTicket) -> bool
 pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::cleanup_stale_prepared(&self, max_stale_tickets: u64, limit: usize) -> usize
 pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::commit(&self, key: K, ticket: vyre_runtime::atomic_recovery::PrepareTicket) -> core::result::Result<V, alloc::string::String>
 pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::commit_idempotent<E>(&self, key: K, ticket: vyre_runtime::atomic_recovery::PrepareTicket, side_effect: impl core::ops::function::FnOnce() -> core::result::Result<V, E>) -> core::result::Result<V, E> where E: core::convert::From<alloc::string::String>
 pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::default() -> Self
 pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain
 pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::get_committed(&self, key: &K) -> core::option::Option<V>
+pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::in_flight_len(&self) -> usize
 pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::is_committed(&self, key: &K) -> bool
 pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::new() -> Self
 pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::prepare(&self, key: K, value: V) -> core::result::Result<core::option::Option<vyre_runtime::atomic_recovery::PrepareTicket>, alloc::string::String>
 pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
-pub fn vyre_runtime::atomic_recovery::StateOwnerRecovery::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain
-pub fn vyre_runtime::atomic_recovery::StateOwnerRecovery::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
+pub fn vyre_runtime::atomic_recovery::PrepareCommitJournal<K, V>::with_standdown(standdown: core::time::Duration) -> Self
 pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::current_restarts(&self) -> u32
 pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain
 pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::record_restart(&self, domain: vyre_foundation::failure_domain::FailureDomain) -> core::result::Result<u32, vyre_foundation::failure_domain::TypedRecoveryError>
 pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
 pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::remaining_restarts(&self) -> u32
 pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::reset(&self)
-pub fn vyre_runtime::atomic_recovery::authoritative_runtime_state_owner_registry() -> alloc::collections::btree::map::BTreeMap<&'static str, (vyre_foundation::failure_domain::FailureDomain, vyre_foundation::failure_domain::RecoveryClass)>
 pub fn vyre_runtime::paged_resource::BlockTableSpec::required_table_bytes(&self) -> usize
 pub fn vyre_runtime::paged_resource::PagedResidencyPlanner::select_strategy(device_supports_paging: bool, max_capacity_units: u32) -> vyre_runtime::paged_resource::PagingCandidateStrategy
 pub fn vyre_runtime::paged_resource::PagedResourceBinding::complete_execution(&mut self, completed_ticket: u64)
@@ -1128,7 +1133,10 @@ pub fn vyre_runtime::resource_transfer::ResourceTransferLifecycleEngine::is_disp
 pub fn vyre_runtime::resource_transfer::ResourceTransferLifecycleEngine::new(caps: vyre_runtime::resource_transfer::DeviceTransferCapabilities, device_generation: u64) -> Self
 pub fn vyre_runtime::resource_transfer::ResourceTransferLifecycleEngine::progress_transfer(&mut self, resource_name: &str, bytes: u64) -> core::result::Result<(), vyre_runtime::resource_transfer::ResourceTransferError>
 pub fn vyre_runtime::resource_transfer::select_transfer_path(caps: &vyre_runtime::resource_transfer::DeviceTransferCapabilities, file_offset: u64, fs_supports_direct: bool) -> vyre_runtime::resource_transfer::PathSelectionDecision
+pub fn vyre_runtime::retained_page_cache::RetainedPageCache::begin_generation_rebuild(&self) -> core::result::Result<(), vyre_runtime::retained_page_cache::RetainedPageCacheError>
+pub fn vyre_runtime::retained_page_cache::RetainedPageCache::complete_generation_rebuild(&self, new_generation: u64)
 pub fn vyre_runtime::retained_page_cache::RetainedPageCache::complete_in_flight(&self, page_ids: &[u32]) -> core::result::Result<(), vyre_runtime::retained_page_cache::RetainedPageCacheError>
+pub fn vyre_runtime::retained_page_cache::RetainedPageCache::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain
 pub fn vyre_runtime::retained_page_cache::RetainedPageCache::insert_or_extend(&self, key: &vyre_runtime::retained_page_cache::RetainedPageCacheKey, sequence: &[u32], existing_pages: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_runtime::retained_page_cache::RetainedPageCacheError>
 pub fn vyre_runtime::retained_page_cache::RetainedPageCache::invalidate_generation(&self, new_generation: u64) -> core::result::Result<(), vyre_runtime::retained_page_cache::RetainedPageCacheError>
 pub fn vyre_runtime::retained_page_cache::RetainedPageCache::lookup(&self, key: &vyre_runtime::retained_page_cache::RetainedPageCacheKey, sequence: &[u32]) -> core::result::Result<vyre_runtime::retained_page_cache::RetainedMatchResult, vyre_runtime::retained_page_cache::RetainedPageCacheError>
@@ -1136,6 +1144,7 @@ pub fn vyre_runtime::retained_page_cache::RetainedPageCache::mark_in_flight(&sel
 pub fn vyre_runtime::retained_page_cache::RetainedPageCache::metrics(&self) -> core::result::Result<vyre_runtime::retained_page_cache::RetainedPageMetrics, vyre_runtime::retained_page_cache::RetainedPageCacheError>
 pub fn vyre_runtime::retained_page_cache::RetainedPageCache::new(limits: vyre_runtime::retained_page_cache::RetainedPageLimits, initial_generation: u64) -> Self
 pub fn vyre_runtime::retained_page_cache::RetainedPageCache::pin(&self, page_ids: &[u32]) -> core::result::Result<(), vyre_runtime::retained_page_cache::RetainedPageCacheError>
+pub fn vyre_runtime::retained_page_cache::RetainedPageCache::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
 pub fn vyre_runtime::retained_page_cache::RetainedPageCache::release(&self, page_ids: &[u32]) -> core::result::Result<(), vyre_runtime::retained_page_cache::RetainedPageCacheError>
 pub fn vyre_runtime::retained_page_cache::RetainedPageCache::unpin(&self, page_ids: &[u32]) -> core::result::Result<(), vyre_runtime::retained_page_cache::RetainedPageCacheError>
 pub fn vyre_runtime::retained_page_cache::RetainedPageCacheKey::fingerprint(&self) -> vyre_runtime::retained_page_cache::RetainedPageCacheKeyFingerprint
@@ -1191,16 +1200,20 @@ pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::cancellation
 pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::close(&self)
 pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::drop(&mut self)
 pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::execute_bounded<T: core::marker::Send + 'static>(&self, deadline_micros: u64, operation: impl core::ops::function::FnOnce(&vyre_runtime::structured_concurrency::CancellationToken) -> core::result::Result<T, vyre_driver::backend::error::BackendError> + core::marker::Send + 'static) -> core::result::Result<T, vyre_runtime::structured_concurrency::ConcurrencyError>
+pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain
 pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::new(scope_id: u64) -> Self
 pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::quarantine(&self) -> alloc::sync::Arc<vyre_runtime::structured_concurrency::WorkerQuarantine>
+pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
 pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::scope_id(&self) -> u64
 pub fn vyre_runtime::structured_concurrency::StructuredWorkerScope::with_quarantine(scope_id: u64, quarantine: alloc::sync::Arc<vyre_runtime::structured_concurrency::WorkerQuarantine>) -> Self
 pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::active_count(&self) -> usize
+pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain
 pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::is_quarantined(&self, worker_id: u64) -> bool
 pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::mark_completed(&self, worker_id: u64)
 pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::new() -> Self
 pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::quarantine_worker(&self, worker_id: u64, reason: alloc::string::String, timestamp_ns: u64)
 pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::quarantined_count(&self) -> usize
+pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
 pub fn vyre_runtime::structured_concurrency::WorkerQuarantine::register_worker(&self, worker_id: u64)
 pub fn vyre_runtime::tenant::TenantHandle::base_opcode(&self) -> u32
 pub fn vyre_runtime::tenant::TenantHandle::drained_count(&self) -> u64
@@ -1256,18 +1269,14 @@ pub fn vyre_runtime::uring::AsyncUringStream<'a>::wait_for_completion(&mut self)
 pub fn vyre_runtime::uring::GpuDirectCapability::is_available(&self) -> bool
 pub fn vyre_runtime::uring::GpuDirectCapability::probe() -> Self
 pub fn vyre_runtime::uring::GpuMappedBuffer<'a>::as_mut_slice(&mut self) -> &mut [u8]
-pub fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_bar1_peer_with_owner<O: ?core::marker::Sized>(_owner: &'a mut O, peer_ptr: *mut u8, len: usize) -> Self
-pub fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_host_visible_owner<O: ?core::marker::Sized>(_owner: &'a mut O, ptr: *mut u8, len: usize) -> Self
 pub fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_host_visible_slice(slice: &'a mut [u8]) -> Self
 pub fn vyre_runtime::uring::GpuMappedBuffer<'a>::is_empty(&self) -> bool
 pub fn vyre_runtime::uring::GpuMappedBuffer<'a>::len(&self) -> usize
 pub fn vyre_runtime::uring::GpuMappedBuffer<'a>::sub_region(&self, offset: usize, len: usize) -> core::result::Result<Self, vyre_runtime::PipelineError>
 pub fn vyre_runtime::uring::IoUringState::advance_cq(&mut self)
 pub fn vyre_runtime::uring::IoUringState::commit_sqe(&mut self)
-pub fn vyre_runtime::uring::IoUringState::drop(&mut self)
 pub fn vyre_runtime::uring::IoUringState::enter(&self, to_submit: u32, min_complete: u32, flags: u32) -> core::result::Result<i32, vyre_runtime::PipelineError>
 pub fn vyre_runtime::uring::IoUringState::new(entries: u32) -> core::result::Result<Self, vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::IoUringState::register_buffers(&self, iovecs: &[vyre_runtime::uring::Iovec]) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::uring::IoUringState::register_files(&self, fds: &[i32]) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::uring::IoUringState::sq_needs_wakeup(&self) -> bool
 pub fn vyre_runtime::uring::IoUringState::submission_entries(&self) -> u32
@@ -1305,7 +1314,6 @@ pub fn vyre_runtime::uring_completion_pump::UringCompletionPump<'a>::is_shutdown
 pub fn vyre_runtime::uring_completion_pump::UringCompletionPump<'a>::new() -> Self
 pub fn vyre_runtime::uring_completion_pump::UringCompletionPump<'a>::poll(&mut self) -> core::result::Result<vyre_runtime::uring_completion_pump::UringPollState, vyre_runtime::PipelineError>
 pub fn vyre_runtime::uring_completion_pump::UringCompletionPump<'a>::request_shutdown(&mut self)
-pub fn vyre_runtime::uring_completion_pump::UringCompletionPump<'a>::wait_for_observable(host_visible_addr: *const u32, current: u32, timeout_ns: u64) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::uring_completion_pump::UringCompletionPump<'a>::with_uring(self, stream: vyre_runtime::uring::AsyncUringStream<'a>) -> Self
 pub mod vyre_runtime
 pub mod vyre_runtime::artifact_admission
@@ -1537,16 +1545,20 @@ pub struct vyre_runtime::uring::RegisteredIoDestination
 pub struct vyre_runtime::uring::ResidentIoLoop
 pub struct vyre_runtime::uring::UringResidentQueuePump<'a>
 pub struct vyre_runtime::uring_completion_pump::UringCompletionPump<'a>
-pub trait vyre_runtime::atomic_recovery::StateOwnerRecovery
 pub trait vyre_runtime::pipeline_cache::PipelineCacheStore: core::marker::Send + core::marker::Sync
 pub trait vyre_runtime::resident_work_queue::ring::RingConsumer
 pub trait vyre_runtime::resident_work_queue::ring::RingProducer
 pub trait vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAdapter
 pub trait vyre_runtime::resource_residency::ResidentResourceDevice: core::marker::Send + core::marker::Sync
 pub trait vyre_runtime::routing::RoutingPolicy: core::marker::Send + core::marker::Sync
+pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_bar1_peer_with_owner<O: ?core::marker::Sized>(_owner: &'a mut O, peer_ptr: *mut u8, len: usize) -> Self
+pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_host_visible_owner<O: ?core::marker::Sized>(_owner: &'a mut O, ptr: *mut u8, len: usize) -> Self
+pub unsafe fn vyre_runtime::uring::IoUringState::register_buffers(&self, iovecs: &[vyre_runtime::uring::Iovec]) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub unsafe fn vyre_runtime::uring_completion_pump::UringCompletionPump<'a>::wait_for_observable(host_visible_addr: *const u32, current: u32, timeout_ns: u64) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub use vyre_runtime::FailureDomain
 pub use vyre_runtime::RecoveryClass
 pub use vyre_runtime::RecoveryDisposition
+pub use vyre_runtime::StateOwnerRecovery
 pub use vyre_runtime::TypedRecoveryError
 pub vyre_runtime::AdmittedExternalResourceLease::dimensions: vyre_spec::resource_capability::ImageDimensions
 pub vyre_runtime::AdmittedExternalResourceLease::format: vyre_spec::resource_capability::ImageFormat
@@ -1707,6 +1719,7 @@ pub vyre_runtime::artifact_admission::ArtifactSessionError::Admission(vyre_runti
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Backend(vyre_driver::backend::error::BackendError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Compile(vyre_megakernel::error::CompileError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Ingestion(vyre_runtime::artifact_admission::ResourceIngestionError)
+pub vyre_runtime::artifact_admission::ArtifactSessionError::Recovery(vyre_foundation::failure_domain::TypedRecoveryError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::State(alloc::string::String)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Target(vyre_megakernel::target::error::TargetCompileError)
 pub vyre_runtime::artifact_admission::CancellationOutcome::AlreadyCompleted
@@ -2552,12 +2565,12 @@ pub vyre_runtime::resource_residency::ResourceResidencyError::ImmutableResourceD
 pub vyre_runtime::resource_residency::ResourceResidencyError::ImmutableResourceNotFound
 pub vyre_runtime::resource_residency::ResourceResidencyError::ImmutableResourceNotFound::key: vyre_runtime::resource_residency::ResourceSetKey
 pub vyre_runtime::resource_residency::ResourceResidencyError::ImmutableResourceNotFound::name: alloc::string::String
-pub vyre_runtime::resource_residency::ResourceResidencyError::LockPoisoned
 pub vyre_runtime::resource_residency::ResourceResidencyError::OutOfMemory
 pub vyre_runtime::resource_residency::ResourceResidencyError::OutOfMemory::budget: u64
 pub vyre_runtime::resource_residency::ResourceResidencyError::OutOfMemory::context: &'static str
 pub vyre_runtime::resource_residency::ResourceResidencyError::OutOfMemory::requested: u64
 pub vyre_runtime::resource_residency::ResourceResidencyError::OutOfMemory::used: u64
+pub vyre_runtime::resource_residency::ResourceResidencyError::Recovery(vyre_foundation::failure_domain::TypedRecoveryError)
 pub vyre_runtime::resource_residency::ResourceResidencyError::Release
 pub vyre_runtime::resource_residency::ResourceResidencyError::Release::context: &'static str
 pub vyre_runtime::resource_residency::ResourceResidencyError::Release::details: alloc::string::String
@@ -2659,9 +2672,9 @@ pub vyre_runtime::retained_page_cache::RetainedPageCacheError::EmptySequence
 pub vyre_runtime::retained_page_cache::RetainedPageCacheError::IsolationViolation
 pub vyre_runtime::retained_page_cache::RetainedPageCacheError::IsolationViolation::tenant_a: alloc::string::String
 pub vyre_runtime::retained_page_cache::RetainedPageCacheError::IsolationViolation::tenant_b: alloc::string::String
-pub vyre_runtime::retained_page_cache::RetainedPageCacheError::LockPoisoned
 pub vyre_runtime::retained_page_cache::RetainedPageCacheError::PageNotFound(u32)
 pub vyre_runtime::retained_page_cache::RetainedPageCacheError::PinnedPageEvictionRejected(u32)
+pub vyre_runtime::retained_page_cache::RetainedPageCacheError::Recovery(vyre_foundation::failure_domain::TypedRecoveryError)
 pub vyre_runtime::retained_page_cache::RetainedPageCacheError::StaleDeviceGeneration
 pub vyre_runtime::retained_page_cache::RetainedPageCacheError::StaleDeviceGeneration::actual: u64
 pub vyre_runtime::retained_page_cache::RetainedPageCacheError::StaleDeviceGeneration::expected: u64

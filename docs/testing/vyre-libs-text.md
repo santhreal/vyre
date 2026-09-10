@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own text processing, byte classification, UTF-8 validation, and line indexing IR compositions. Does not own decoding decompression algorithms, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-text`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-text` and owns the `libs-text` seam in the `libraries` layer.
 
 ## Commands
 

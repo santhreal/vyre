@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own the subcommand registry and every gate that judges the tree from source text, manifests, workflows, and recorded evidence, linking no vyre crate.
 
-The crate lives at `xtask`. The `release-tooling` owner maintains its
-`tooling` testing contract.
+The crate lives at `xtask` and owns the `gate-registry` seam in the `tooling` layer.
 
 ## Commands
 

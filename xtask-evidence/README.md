@@ -58,9 +58,11 @@ Own the xtask subcommands that decide whether a recorded benchmark or release me
 
 ### Boundaries
 
-The `release-tooling` owner maintains this `tooling` crate at `xtask-evidence`.
-Its allowed internal production dependencies are: `vyre-bench`, `vyre-driver`, `vyre-foundation`, `vyre-registry-link`, `xtask`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `tooling` layer's `evidence-gates` seam, at `xtask-evidence`.
+Every production dependency on it crosses The gates that decide whether a recorded benchmark or release measurement still describes this tree.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -92,7 +94,7 @@ This crate is internal repository and release tooling for the 0.8.0 train and is
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

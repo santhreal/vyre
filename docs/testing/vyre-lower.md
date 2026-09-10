@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Consume validated selected schedule phases and semantic programs, then own the single validated PhysicalKernel lowering boundary plus its backend-neutral pre-emission transforms.
 
-The crate lives at `vyre-lower`. The `lowering` owner maintains its
-`lowering` testing contract.
+The crate lives at `vyre-lower` and owns the `lowering` seam in the `lowering` layer.
 
 ## Commands
 

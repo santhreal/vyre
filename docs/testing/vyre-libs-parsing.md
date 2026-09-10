@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own lexer drivers, LR(1) table walkers, and language-specific AST construction IR compositions. Does not own semantic analysis passes, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-parsing`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-parsing` and owns the `libs-parsing` seam in the `libraries` layer.
 
 ## Commands
 

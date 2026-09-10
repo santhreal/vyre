@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own reproducible workload benchmarks against the best available native baseline for each class, not against vyre's own unfused output.
 
-The crate lives at `vyre-bench`. The `benchmarks` owner maintains its
-`tooling` testing contract.
+The crate lives at `vyre-bench` and owns the `workload-benchmarks` seam in the `tooling` layer.
 
 ## Commands
 

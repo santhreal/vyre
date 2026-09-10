@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Inspect, explain, and diagnose typed programs, lowering, and product-library composition.
 
-The crate lives at `vyre-debug`. The `debugging` owner maintains its
-`tooling` testing contract.
+The crate lives at `vyre-debug` and owns the `debugging` seam in the `tooling` layer.
 
 ## Commands
 

@@ -14,9 +14,11 @@ Own every inventory registry link anchor, report which sources a build links, an
 
 ### Boundaries
 
-The `registry-link` owner maintains this `registry-link` crate at `vyre-registry-link`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-libs-builder`, `vyre-lower`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `registry-link` layer's `registry-link` seam, at `vyre-registry-link`.
+Every production dependency on it crosses Linked inventory registry sources and the per-source floor.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -48,7 +50,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

@@ -435,7 +435,6 @@ Own compiler-internal static analysis, cost models, dataflow fixpoint routines, 
 | --- | --- | --- | --- |
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
-| `vyre-libs-device` | `libs-device` | Device boundary contracts, memory ownership and resident graph layout compositions. | None |
 | `vyre-libs-fixpoint` | `libs-fixpoint` | Deterministic fixpoint iteration and grid synchronization compositions. | None |
 | `vyre-libs-graph` | `libs-graph` | Graph algorithm compositions: CSR traversal, AST walks, dominator trees and topological sort. | None |
 | `vyre-libs-math` | `libs-math` | Linear algebra, matrix, scan, broadcasting, algebra and succinct structure compositions. | None |
@@ -453,16 +452,14 @@ Own packed u32 bitset operations, word utilities, and logical bitwise IR composi
 - Seam: `libs-bitset`
 - Interface: Packed bitset word operations and logical bitwise compositions.
 - Carried by the curated surface: `false`
-- Consumed by 7 production edge(s)
+- Consumed by 5 production edge(s)
 
 | Dependency | Seam crossed | Interface | Activated by |
 | --- | --- | --- | --- |
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
 | `vyre-libs-reduce` | `libs-reduce` | Workgroup reduction tree, atomic scalar reduction and prefix scan compositions. | None |
-| `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-| `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `vyre-libs-builder`
 
@@ -474,7 +471,7 @@ Own shared IR composition infrastructure, child region skeletons, operand wrappe
 - Seam: `libs-builder`
 - Interface: Shared IR composition infrastructure, child region skeletons, operands and registration link anchors.
 - Carried by the curated surface: `false`
-- Consumed by 23 production edge(s)
+- Consumed by 22 production edge(s)
 
 | Dependency | Seam crossed | Interface | Activated by |
 | --- | --- | --- | --- |
@@ -501,9 +498,7 @@ Own Base64, hex, DEFLATE, and encodex data decoding and decompression IR composi
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
 | `vyre-libs-pattern` | `libs-pattern` | Substring, DFA, NFA, regular expression and bracket matching compositions. | None |
 | `vyre-libs-text` | `libs-text` | Text classification, UTF-8 validation and line indexing compositions. | None |
-| `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-| `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `vyre-libs-device`
 
@@ -515,15 +510,12 @@ Own compiler-internal device boundary contracts, memory ownership models, and re
 - Seam: `libs-device`
 - Interface: Device boundary contracts, memory ownership and resident graph layout compositions.
 - Carried by the curated surface: `false`
-- Consumed by 5 production edge(s)
+- Consumed by 1 production edge(s)
 
 | Dependency | Seam crossed | Interface | Activated by |
 | --- | --- | --- | --- |
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
-| `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
-| `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-| `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `vyre-libs-encoding`
 
@@ -542,18 +534,15 @@ Own compiler-internal bitset, provenance, matroid, and fingerprint encoding comp
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
 | `vyre-libs-bitset` | `libs-bitset` | Packed bitset word operations and logical bitwise compositions. | None |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
-| `vyre-libs-device` | `libs-device` | Device boundary contracts, memory ownership and resident graph layout compositions. | None |
-| `vyre-libs-fixpoint` | `libs-fixpoint` | Deterministic fixpoint iteration and grid synchronization compositions. | None |
 | `vyre-libs-graph` | `libs-graph` | Graph algorithm compositions: CSR traversal, AST walks, dominator trees and topological sort. | None |
 | `vyre-libs-hash` | `libs-hash` | Hash and checksum compositions. | None |
 | `vyre-libs-math` | `libs-math` | Linear algebra, matrix, scan, broadcasting, algebra and succinct structure compositions. | None |
-| `vyre-libs-nn` | `libs-nn` | Neural network activation, linear, normalization, attention and mixture-of-experts compositions. | None |
+| `vyre-libs-nn` | `libs-nn` | Neural network activation, linear, normalization, attention and mixture-of-experts compositions. | `nn-paging` |
 | `vyre-libs-parsing` | `libs-parsing` | Lexer driver, LR(1) table walker and AST construction compositions. | None |
 | `vyre-libs-pattern` | `libs-pattern` | Substring, DFA, NFA, regular expression and bracket matching compositions. | None |
 | `vyre-libs-reduce` | `libs-reduce` | Workgroup reduction tree, atomic scalar reduction and prefix scan compositions. | None |
 | `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-| `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `vyre-libs-fixpoint`
 
@@ -565,16 +554,13 @@ Own deterministic fixpoint iteration kernels, routing contracts, and grid synchr
 - Seam: `libs-fixpoint`
 - Interface: Deterministic fixpoint iteration and grid synchronization compositions.
 - Carried by the curated surface: `false`
-- Consumed by 6 production edge(s)
+- Consumed by 5 production edge(s)
 
 | Dependency | Seam crossed | Interface | Activated by |
 | --- | --- | --- | --- |
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
-| `vyre-libs-bitset` | `libs-bitset` | Packed bitset word operations and logical bitwise compositions. | None |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
-| `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-| `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `vyre-libs-graph`
 
@@ -600,7 +586,6 @@ Own graph algorithms, CSR traversal, AST walks, dominator trees, and topological
 | `vyre-libs-visual` | `libs-visual` | Visual rendering and compositing effect compositions. | `interactive-graphics` |
 | `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-| `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `vyre-libs-hash`
 
@@ -618,9 +603,7 @@ Own hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE
 | --- | --- | --- | --- |
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
-| `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-| `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `vyre-libs-math`
 
@@ -640,7 +623,6 @@ Own linear algebra, matrix operations, broadcasting, scans, optimization builder
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
 | `vyre-libs-fixpoint` | `libs-fixpoint` | Deterministic fixpoint iteration and grid synchronization compositions. | None |
 | `vyre-libs-reduce` | `libs-reduce` | Workgroup reduction tree, atomic scalar reduction and prefix scan compositions. | None |
-| `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
 | `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
@@ -683,10 +665,8 @@ Own lexer drivers, LR(1) table walkers, and language-specific AST construction I
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
 | `vyre-libs-hash` | `libs-hash` | Hash and checksum compositions. | None |
-| `vyre-libs-pattern` | `libs-pattern` | Substring, DFA, NFA, regular expression and bracket matching compositions. | None |
 | `vyre-libs-reduce` | `libs-reduce` | Workgroup reduction tree, atomic scalar reduction and prefix scan compositions. | None |
 | `vyre-libs-text` | `libs-text` | Text classification, UTF-8 validation and line indexing compositions. | None |
-| `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
 | `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
@@ -700,18 +680,15 @@ Own substring matching, DFA, NFA, bracket matching, and regular expression scann
 - Seam: `libs-pattern`
 - Interface: Substring, DFA, NFA, regular expression and bracket matching compositions.
 - Carried by the curated surface: `false`
-- Consumed by 4 production edge(s)
+- Consumed by 3 production edge(s)
 
 | Dependency | Seam crossed | Interface | Activated by |
 | --- | --- | --- | --- |
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
-| `vyre-libs-bitset` | `libs-bitset` | Packed bitset word operations and logical bitwise compositions. | None |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
 | `vyre-libs-hash` | `libs-hash` | Hash and checksum compositions. | None |
 | `vyre-libs-math` | `libs-math` | Linear algebra, matrix, scan, broadcasting, algebra and succinct structure compositions. | None |
-| `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-| `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `vyre-libs-reasoning`
 
@@ -732,8 +709,6 @@ Own compiler-internal logic, causal reasoning, categorical rewrites, and knowled
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
 | `vyre-libs-graph` | `libs-graph` | Graph algorithm compositions: CSR traversal, AST walks, dominator trees and topological sort. | None |
 | `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
-| `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-| `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `vyre-libs-reduce`
 
@@ -753,7 +728,6 @@ Own workgroup reduction trees, atomic scalar reductions, and prefix scan IR comp
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
 | `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-| `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `vyre-libs-rule`
 
@@ -771,7 +745,6 @@ Own detection rule engine condition operators, formulas, and program evaluation 
 | --- | --- | --- | --- |
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
-| `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
 | `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
@@ -791,13 +764,11 @@ Own compiler-internal scheduling, fusion, batching, and dispatch strategy compos
 | --- | --- | --- | --- |
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
-| `vyre-libs-device` | `libs-device` | Device boundary contracts, memory ownership and resident graph layout compositions. | None |
 | `vyre-libs-graph` | `libs-graph` | Graph algorithm compositions: CSR traversal, AST walks, dominator trees and topological sort. | None |
 | `vyre-libs-math` | `libs-math` | Linear algebra, matrix, scan, broadcasting, algebra and succinct structure compositions. | None |
 | `vyre-libs-parsing` | `libs-parsing` | Lexer driver, LR(1) table walker and AST construction compositions. | None |
 | `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-| `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `vyre-libs-security`
 
@@ -818,7 +789,6 @@ Own security taint analysis compositions, predicate evaluators, and label resolv
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
 | `vyre-libs-graph` | `libs-graph` | Graph algorithm compositions: CSR traversal, AST walks, dominator trees and topological sort. | None |
 | `vyre-libs-reduce` | `libs-reduce` | Workgroup reduction tree, atomic scalar reduction and prefix scan compositions. | None |
-| `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
 | `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
@@ -839,13 +809,11 @@ Own compiler-internal numerical solvers, autotuning routines, and spectral sched
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
 | `vyre-libs-bitset` | `libs-bitset` | Packed bitset word operations and logical bitwise compositions. | None |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
-| `vyre-libs-device` | `libs-device` | Device boundary contracts, memory ownership and resident graph layout compositions. | None |
 | `vyre-libs-fixpoint` | `libs-fixpoint` | Deterministic fixpoint iteration and grid synchronization compositions. | None |
 | `vyre-libs-graph` | `libs-graph` | Graph algorithm compositions: CSR traversal, AST walks, dominator trees and topological sort. | None |
 | `vyre-libs-math` | `libs-math` | Linear algebra, matrix, scan, broadcasting, algebra and succinct structure compositions. | None |
 | `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-| `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `vyre-libs-text`
 
@@ -864,9 +832,7 @@ Own text processing, byte classification, UTF-8 validation, and line indexing IR
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
 | `vyre-libs-reduce` | `libs-reduce` | Workgroup reduction tree, atomic scalar reduction and prefix scan compositions. | None |
-| `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-| `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `vyre-libs-vfs`
 
@@ -884,9 +850,6 @@ Own virtual filesystem DMA asynchronous block load and asset resolution composit
 | --- | --- | --- | --- |
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
-| `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
-| `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-| `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `vyre-libs-visual`
 
@@ -905,9 +868,7 @@ Own visual rendering and compositing effects including blur, shadow, blend modes
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
 | `vyre-libs-math` | `libs-math` | Linear algebra, matrix, scan, broadcasting, algebra and succinct structure compositions. | None |
-| `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-| `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `vyre-lints`
 
@@ -960,7 +921,7 @@ Construct foundation-owned selected schedules through bounded whole-ProgramGraph
 - Seam: `megakernel-compiler`
 - Interface: Schedule search, immutable artifact identity and authenticated target-payload construction.
 - Carried by the curated surface: `true`
-- Consumed by 38 production edge(s)
+- Consumed by 25 production edge(s)
 
 | Dependency | Seam crossed | Interface | Activated by |
 | --- | --- | --- | --- |
@@ -997,7 +958,7 @@ Own marker types and uncomposable hardware intrinsics. A composition belongs in 
 - Seam: `primitive-library`
 - Interface: Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types.
 - Carried by the curated surface: `false`
-- Consumed by 30 production edge(s)
+- Consumed by 27 production edge(s)
 
 | Dependency | Seam crossed | Interface | Activated by |
 | --- | --- | --- | --- |
@@ -1042,7 +1003,6 @@ Own every inventory registry link anchor, report which sources a build links, an
 | `vyre-driver-wgpu` | `portable-driver` | Portable backend registration, capability probing and dispatch. | `default`, `wgpu` |
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
 | `vyre-libs` | `semantic-library` | Every composition in the workspace, re-exported from the domain crates behind one feature set. Returns Programs. | `default`, `operations` |
-| `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | `default`, `operations` |
 | `vyre-lower` | `lowering` | The single verified selected-module representation, lowered from semantic IR. | None |
 | `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | `default`, `operations` |
@@ -1090,7 +1050,7 @@ Own stable schemas, operation definitions, and compatibility contracts without r
 - Seam: `specification`
 - Interface: Stable cross-engine schemas, declared operation signatures and IR levels.
 - Carried by the curated surface: `true`
-- Consumed by 37 production edge(s)
+- Consumed by 22 production edge(s)
 
 ### `vyre-test-support`
 
@@ -1108,10 +1068,10 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 | --- | --- | --- | --- |
 | `structure-gate` | `source-structure` | Whether a directory carries Rust source, which directory owns a domain, and the checkout root a gate reports on. | None |
 | `vyre-driver` | `backend-contract` | The backend-neutral target, materialization, submission and completion contracts, and the driver registry every backend registers into. | `driver-artifact-contracts`, `driver-contracts` |
-| `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | `driver-artifact-contracts`, `ir-fixtures`, `semantic-requests` |
-| `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | `driver-artifact-contracts`, `semantic-requests` |
-| `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | `driver-artifact-contracts`, `ir-fixtures`, `semantic-requests` |
-| `vyre-reference` | `reference-semantics` | Independent semantic oracle evaluation and canonical ULP distance. | `driver-artifact-contracts`, `ir-fixtures`, `semantic-requests` |
+| `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | `driver-artifact-contracts`, `ir-fixtures`, `parity-oracles`, `semantic-parity`, `semantic-requests` |
+| `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | `driver-artifact-contracts`, `semantic-parity`, `semantic-requests` |
+| `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | `semantic-parity` |
+| `vyre-reference` | `reference-semantics` | Independent semantic oracle evaluation and canonical ULP distance. | `parity-oracles`, `semantic-parity` |
 | `vyre-spec` | `specification` | Stable cross-engine schemas, declared operation signatures and IR levels. | None |
 
 ### `xtask`

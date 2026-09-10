@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Provide shared deterministic fixtures and assertions for workspace tests.
 
-The crate lives at `vyre-test-support`. The `test-support` owner maintains its
-`test-tooling` testing contract.
+The crate lives at `vyre-test-support` and owns the `test-support` seam in the `test-tooling` layer.
 
 ## Commands
 
@@ -24,7 +23,7 @@ The crate lives at `vyre-test-support`. The `test-support` owner maintains its
 ## Feature sets
 
 - Default feature members: None
-- Available manifest features: `default`, `driver-artifact-contracts`, `driver-contracts`, `ir-fixtures`, `semantic-requests`, `spec-strategies`
+- Available manifest features: `default`, `driver-artifact-contracts`, `driver-contracts`, `ir-fixtures`, `parity-oracles`, `semantic-parity`, `semantic-requests`, `spec-strategies`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
@@ -33,7 +32,7 @@ The crate lives at `vyre-test-support`. The `test-support` owner maintains its
 | --- | --- | --- | --- | --- |
 | `lib` | `vyre_test_support` | `vyre-test-support/src/lib.rs` | None | `./cargo_full test -p vyre-test-support` |
 | `test` | `all_tests` | `vyre-test-support/tests/all_tests.rs` | None | `./cargo_full test -p vyre-test-support --test all_tests` |
-| `test` | `all_tests_ir_fixtures` | `vyre-test-support/tests/all_tests_ir_fixtures.rs` | `ir-fixtures` | `./cargo_full test -p vyre-test-support --test all_tests_ir_fixtures` |
+| `test` | `all_tests_ir_fixtures` | `vyre-test-support/tests/all_tests_ir_fixtures.rs` | `ir-fixtures`, `parity-oracles` | `./cargo_full test -p vyre-test-support --test all_tests_ir_fixtures` |
 | `test` | `workspace_root_follows_the_working_directory` | `vyre-test-support/tests/workspace_root_follows_the_working_directory.rs` | None | `./cargo_full test -p vyre-test-support --test workspace_root_follows_the_working_directory` |
 
 ## Test classes

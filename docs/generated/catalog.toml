@@ -463,15 +463,24 @@ operations = [
 [[subsystem]]
 id = "visual"
 operations = [
+  "vyre-libs::visual::apply_scissor_rect",
   "vyre-libs::visual::blur",
   "vyre-libs::visual::box_shadow",
   "vyre-libs::visual::cell_grid",
   "vyre-libs::visual::composite",
+  "vyre-libs::visual::composite_blend",
+  "vyre-libs::visual::cull_boxes_2d",
+  "vyre-libs::visual::dirty_region_patch",
   "vyre-libs::visual::downsample",
   "vyre-libs::visual::filter_chain",
   "vyre-libs::visual::glass",
   "vyre-libs::visual::glyph_grid",
   "vyre-libs::visual::gradient",
+  "vyre-libs::visual::layout_prefix_scan",
   "vyre-libs::visual::packed_rgba_map",
+  "vyre-libs::visual::path_raster",
+  "vyre-libs::visual::resample",
+  "vyre-libs::visual::rgba_to_grayscale",
+  "vyre-libs::visual::text_run",
   "vyre-libs::visual::upsample",
 ]

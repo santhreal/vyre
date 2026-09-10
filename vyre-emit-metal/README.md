@@ -22,9 +22,11 @@ Consume verified lowering products and emit native Apple shader source through t
 
 ### Boundaries
 
-The `metal-emitter` owner maintains this `emitter` crate at `vyre-emit-metal`.
-Its allowed internal production dependencies are: `vyre-emit-naga`, `vyre-foundation`, `vyre-lower`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `emitter` layer's `metal-emitter` seam, at `vyre-emit-metal`.
+Every production dependency on it crosses Native Apple source emission for one selected module.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -56,7 +58,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

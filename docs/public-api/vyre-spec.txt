@@ -80,6 +80,7 @@ impl core::fmt::Display for vyre_spec::analysis::AnalysisFactCodecError
 impl core::fmt::Display for vyre_spec::schema_registry::SchemaId
 impl core::hash::Hash for vyre_spec::BackendId
 impl serde_core::ser::Serialize for vyre_spec::AlgebraicLaw
+impl vyre_spec::AbsenceClass
 impl vyre_spec::AdmittedResourceRecord
 impl vyre_spec::AlgebraicLaw
 impl vyre_spec::AliasingContract
@@ -123,7 +124,11 @@ impl vyre_spec::IntrinsicLowering
 impl vyre_spec::IntrinsicTable
 impl vyre_spec::IrLevel
 impl vyre_spec::LawDirection
+impl vyre_spec::LawEvidence
+impl vyre_spec::LawFamily
 impl vyre_spec::LawGuard
+impl vyre_spec::LawObligation
+impl vyre_spec::LawPayload
 impl vyre_spec::Layer
 impl vyre_spec::LinearResourceKind
 impl vyre_spec::LinearState
@@ -138,6 +143,7 @@ impl vyre_spec::ProtocolDomain
 impl vyre_spec::ProtocolVersion
 impl vyre_spec::RangeContract
 impl vyre_spec::RegionLawFamily
+impl vyre_spec::RejectedLawLabel
 impl vyre_spec::ResourcePermittedUsages
 impl vyre_spec::ResourceUsageTransition
 impl vyre_spec::RetainedSessionScope
@@ -163,6 +169,8 @@ impl vyre_spec::soundness::PrimitiveSoundness
 impl vyre_spec::soundness::Soundness
 impl<'de> serde_core::de::Deserialize<'de> for vyre_spec::AlgebraicLaw
 impl<F> vyre_spec::BackendAvailability for F where F: core::ops::function::Fn(&str) -> bool + core::marker::Send + core::marker::Sync
+pub const fn vyre_spec::AbsenceClass::is_recorded(self) -> bool
+pub const fn vyre_spec::AbsenceClass::name(self) -> &'static str
 pub const fn vyre_spec::AliasingContract::allows_write_aliasing(&self) -> bool
 pub const fn vyre_spec::AliasingContract::is_disjoint(&self) -> bool
 pub const fn vyre_spec::AtomicOp::builtin_wire_tag(&self) -> core::option::Option<u8>
@@ -239,8 +247,18 @@ pub const fn vyre_spec::IrLevel::all() -> &'static [Self]
 pub const fn vyre_spec::IrLevel::name(self) -> &'static str
 pub const fn vyre_spec::LawDirection::is_bidirectional(&self) -> bool
 pub const fn vyre_spec::LawDirection::name(&self) -> &'static str
+pub const fn vyre_spec::LawEvidence::is_executable(self) -> bool
+pub const fn vyre_spec::LawEvidence::missing_payload(self) -> core::option::Option<vyre_spec::LawPayload>
+pub const fn vyre_spec::LawEvidence::witness(self) -> core::option::Option<&'static str>
+pub const fn vyre_spec::LawFamily::index(self) -> usize
+pub const fn vyre_spec::LawFamily::is_provable_from_name(self) -> bool
+pub const fn vyre_spec::LawFamily::name(self) -> &'static str
+pub const fn vyre_spec::LawFamily::obligation(self) -> vyre_spec::LawObligation
+pub const fn vyre_spec::LawFamily::of(law: &vyre_spec::AlgebraicLaw) -> Self
+pub const fn vyre_spec::LawFamily::representative(self) -> vyre_spec::AlgebraicLaw
 pub const fn vyre_spec::LawGuard::is_unconditional(&self) -> bool
 pub const fn vyre_spec::LawGuard::name(&self) -> &'static str
+pub const fn vyre_spec::LawPayload::name(self) -> &'static str
 pub const fn vyre_spec::Layer::id(&self) -> &'static str
 pub const fn vyre_spec::Layer::layer_description(&self) -> &'static str
 pub const fn vyre_spec::LinearState::is_consumed(self) -> bool
@@ -326,6 +344,7 @@ pub const fn vyre_spec::schema_registry::SchemaRegistry::all() -> &'static [vyre
 pub const fn vyre_spec::soundness::PrimitiveSoundness::new(op_id: &'static str, soundness: vyre_spec::soundness::Soundness) -> Self
 pub const fn vyre_spec::soundness::PrimitiveSoundness::with_sanitizer_filter(self) -> Self
 pub const fn vyre_spec::soundness::Soundness::join(self, other: vyre_spec::soundness::Soundness) -> vyre_spec::soundness::Soundness
+pub const vyre_spec::AbsenceClass::ALL: &'static [Self]
 pub const vyre_spec::BufferAccess::ALL: [Self; 5]
 pub const vyre_spec::CANONICAL_COMPATIBILITY_CELLS: &[vyre_spec::CompatibilityCell]
 pub const vyre_spec::CombineKind::ALL: [Self; 7]
@@ -343,6 +362,7 @@ pub const vyre_spec::ExtensionUnOpId::EXTENSION_RANGE_MASK: u32
 pub const vyre_spec::FP4_DECODE_TABLE: [f32; 16]
 pub const vyre_spec::GenerationId::INITIAL: Self
 pub const vyre_spec::I4_DECODE_TABLE: [i32; 16]
+pub const vyre_spec::LawFamily::ALL: [Self; 24]
 pub const vyre_spec::LinearResourceKind::ALL: [Self; 5]
 pub const vyre_spec::LinearState::ALL: [Self; 4]
 pub const vyre_spec::MemoryEffect::ALL: [Self; 8]
@@ -352,6 +372,7 @@ pub const vyre_spec::ProtocolDomain::ALL: &'static [Self]
 pub const vyre_spec::ProtocolVersion::V1_0_0: Self
 pub const vyre_spec::ProtocolVersion::V1_1_0: Self
 pub const vyre_spec::ProtocolVersion::V2_0_0: Self
+pub const vyre_spec::RejectedLawLabel::UNKNOWN_LAW_NAME: &'static str
 pub const vyre_spec::ResourcePermittedUsages::COLOR_ATTACHMENT: Self
 pub const vyre_spec::ResourcePermittedUsages::DEPTH_STENCIL_ATTACHMENT: Self
 pub const vyre_spec::ResourcePermittedUsages::EXTERNAL_EXPORT: Self
@@ -593,6 +614,7 @@ pub const vyre_spec::python_token::TOK_STRING: u32
 pub const vyre_spec::python_token::TOK_WITH: u32
 pub const vyre_spec::schema_registry::CANONICAL_SCHEMA_REGISTRY: &[vyre_spec::schema_registry::SchemaDefinition]
 pub const vyre_spec::schema_registry::SchemaId::ALL: &'static [Self]
+pub enum vyre_spec::AbsenceClass
 pub enum vyre_spec::AddressMode
 pub enum vyre_spec::BinOpResult
 pub enum vyre_spec::BorderColor
@@ -613,6 +635,9 @@ pub enum vyre_spec::FormatClass
 pub enum vyre_spec::ImageFormat
 pub enum vyre_spec::ImageViewKind
 pub enum vyre_spec::InfinityBehavior
+pub enum vyre_spec::LawEvidence
+pub enum vyre_spec::LawFamily
+pub enum vyre_spec::LawPayload
 pub enum vyre_spec::LawValidationError
 pub enum vyre_spec::LinearResourceKind
 pub enum vyre_spec::LinearState
@@ -649,6 +674,7 @@ pub enum vyre_spec::schema_registry::DefaultsPolicy
 pub enum vyre_spec::soundness::PrecisionContract
 pub enum vyre_spec::soundness::Soundness
 pub fn F::available(&self, op: &str) -> bool
+pub fn vyre_spec::AbsenceClass::parse(name: &str) -> core::option::Option<Self>
 pub fn vyre_spec::AdmittedResourceRecord::advance_generation(&mut self, expected_gen: u64) -> core::result::Result<u64, vyre_spec::ResourceAbiError>
 pub fn vyre_spec::AdmittedResourceRecord::invalidate_on_device_loss(&mut self)
 pub fn vyre_spec::AdmittedResourceRecord::negotiate_zero_copy_import(&mut self, memory_kind: vyre_spec::ExternalMemoryKind, handle_tag: u64) -> core::result::Result<(), vyre_spec::ResourceAbiError>
@@ -735,8 +761,9 @@ pub fn vyre_spec::ExtensionTernaryOp::id(&self) -> vyre_spec::ExtensionTernaryOp
 pub fn vyre_spec::ExtensionUnOp::display_name(&self) -> &'static str
 pub fn vyre_spec::ExtensionUnOp::id(&self) -> vyre_spec::ExtensionUnOpId
 pub fn vyre_spec::GenerationId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_spec::GuardedLaw::unconditional(law: vyre_spec::AlgebraicLaw) -> Self
+pub fn vyre_spec::GuardedLaw::declared(law: vyre_spec::AlgebraicLaw) -> Self
 pub fn vyre_spec::GuardedLaw::validate(&self) -> core::result::Result<(), vyre_spec::LawValidationError>
+pub fn vyre_spec::GuardedLaw::validate_shape(&self) -> core::result::Result<(), vyre_spec::LawValidationError>
 pub fn vyre_spec::GuardedLaw::verify_with_predicate<F>(&self, arity: usize, predicate: F) -> core::result::Result<(), vyre_spec::LawValidationError> where F: core::ops::function::FnMut(&[u64]) -> bool
 pub fn vyre_spec::GuardedLaw::with_canonical_form(self, canonical_form: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_spec::GuardedLaw::with_counterexample_generator(self, counterexample_generator: vyre_spec::CounterexampleGenerator) -> Self
@@ -748,7 +775,11 @@ pub fn vyre_spec::IntrinsicTable::has_backend(&self, backend: &vyre_spec::Backen
 pub fn vyre_spec::IntrinsicTable::missing_backends<'a>(&'a self, required: &'a [vyre_spec::BackendId]) -> impl core::iter::traits::iterator::Iterator<Item = &'a str> + 'a
 pub fn vyre_spec::Invariant::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_spec::LawDirection::default() -> Self
+pub fn vyre_spec::LawFamily::from_name(name: &str) -> core::option::Option<Self>
 pub fn vyre_spec::LawGuard::default() -> Self
+pub fn vyre_spec::LawObligation::counterexample_generator(&self) -> vyre_spec::CounterexampleGenerator
+pub fn vyre_spec::LawObligation::guarded_law(&self, law: vyre_spec::AlgebraicLaw) -> vyre_spec::GuardedLaw
+pub fn vyre_spec::LawObligation::proof_method(&self) -> vyre_spec::ProofMethod
 pub fn vyre_spec::LawValidationError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_spec::NegotiationError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_spec::NumericBehavior::default() -> Self
@@ -773,6 +804,7 @@ pub fn vyre_spec::RolloutManager::register_session(&mut self, session: vyre_spec
 pub fn vyre_spec::RolloutManager::rollback(&mut self, target_generation: vyre_spec::GenerationId)
 pub fn vyre_spec::RolloutManager::sessions(&self) -> &[vyre_spec::RetainedSessionScope]
 pub fn vyre_spec::RolloutManager::stage_upgrade(&mut self) -> vyre_spec::GenerationId
+pub fn vyre_spec::SemanticContractRecord::absence_class(&self) -> core::option::Option<vyre_spec::AbsenceClass>
 pub fn vyre_spec::SemanticContractRecord::no_transform(id: impl core::convert::Into<alloc::string::String>, reason: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_spec::SemanticContractRecord::opaque(id: impl core::convert::Into<alloc::string::String>, reason: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_spec::SemanticContractRecord::unrecorded(id: impl core::convert::Into<alloc::string::String>) -> Self
@@ -786,6 +818,7 @@ pub fn vyre_spec::SubgroupReduceOp::combine_f32(self, acc: f32, lane: f32) -> co
 pub fn vyre_spec::SubgroupReduceOp::f32_identity(self) -> core::option::Option<f32>
 pub fn vyre_spec::SubgroupReduceOp::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_spec::SubgroupReduceOp::reduce_u32(self, lanes: impl core::iter::traits::collect::IntoIterator<Item = u32>) -> u32
+pub fn vyre_spec::TransformDecision::absence_class(&self) -> core::option::Option<vyre_spec::AbsenceClass>
 pub fn vyre_spec::TransformDecision::has_decision(&self) -> bool
 pub fn vyre_spec::TransformDecision::laws(&self) -> &[vyre_spec::GuardedLaw]
 pub fn vyre_spec::TransformDecision::opaque_reason(&self) -> core::option::Option<&str>
@@ -801,6 +834,7 @@ pub fn vyre_spec::by_category(category: vyre_spec::InvariantCategory) -> impl co
 pub fn vyre_spec::by_id(id: vyre_spec::InvariantId) -> core::option::Option<&'static vyre_spec::Invariant>
 pub fn vyre_spec::c11_token::is_c_lexer_error_token(token: u32) -> bool
 pub fn vyre_spec::catalog_is_complete() -> bool
+pub fn vyre_spec::check_not_declared(_op: fn(&[u8]) -> alloc::vec::Vec<u8>, _args: &[u32]) -> bool
 pub fn vyre_spec::dequantize_grouped_f32(storage_bytes: &[u8], storage_type: &vyre_spec::DataType, scales: &[f32], zero_points: core::option::Option<&[f32]>, group_size: usize, element_count: usize) -> core::result::Result<alloc::vec::Vec<f32>, alloc::string::String>
 pub fn vyre_spec::derive_artifact_identity(base_artifact_hash: &[u8; 32], contract: &vyre_spec::NegotiatedContract) -> [u8; 32]
 pub fn vyre_spec::empty_test_family() -> &'static [vyre_spec::TestDescriptor]
@@ -818,6 +852,8 @@ pub fn vyre_spec::i32_to_i4(val: i32) -> u8
 pub fn vyre_spec::i4_to_i32(nibble: u8) -> i32
 pub fn vyre_spec::invariants() -> &'static [vyre_spec::Invariant]
 pub fn vyre_spec::law_catalog() -> &'static [&'static str]
+pub fn vyre_spec::law_family_names() -> &'static [&'static str]
+pub fn vyre_spec::law_family_representatives() -> &'static [vyre_spec::AlgebraicLaw]
 pub fn vyre_spec::nf4_to_f32(nibble: u8) -> f32
 pub fn vyre_spec::numeric_semantics_for(dtype: &vyre_spec::DataType) -> vyre_spec::NumericSemantics
 pub fn vyre_spec::schema_registry::SchemaDefinition::fuzz_grammar(&self) -> alloc::string::String
@@ -882,6 +918,7 @@ pub struct vyre_spec::IntrinsicTable
 pub struct vyre_spec::Invariant
 pub struct vyre_spec::KatVector
 pub struct vyre_spec::LawCounterexample
+pub struct vyre_spec::LawObligation
 pub struct vyre_spec::NegotiatedContract
 pub struct vyre_spec::NegotiationError
 pub struct vyre_spec::NumericSemantics
@@ -890,6 +927,7 @@ pub struct vyre_spec::OpSignature
 pub struct vyre_spec::OperationContract
 pub struct vyre_spec::ProtocolVersion
 pub struct vyre_spec::RangeContract
+pub struct vyre_spec::RejectedLawLabel
 pub struct vyre_spec::ResourcePermittedUsages(pub u32)
 pub struct vyre_spec::ResourceUsageTransition
 pub struct vyre_spec::RetainedSessionScope
@@ -922,6 +960,10 @@ pub trait vyre_spec::soundness::SoundnessTagged
 pub type vyre_spec::CpuFn = fn(input: &[u8], output: &mut alloc::vec::Vec<u8>)
 pub type vyre_spec::InvariantId = vyre_spec::EngineInvariant
 pub type vyre_spec::LawCheckFn = fn(fn(&[u8]) -> alloc::vec::Vec<u8>, &[u32]) -> bool
+pub vyre_spec::AbsenceClass::GuardedOnly
+pub vyre_spec::AbsenceClass::LawUnrecorded
+pub vyre_spec::AbsenceClass::NoLegalRewrite
+pub vyre_spec::AbsenceClass::Uncharacterized
 pub vyre_spec::AddressMode::ClampToBorder
 pub vyre_spec::AddressMode::ClampToEdge
 pub vyre_spec::AddressMode::MirrorRepeat
@@ -1393,6 +1435,34 @@ pub vyre_spec::LawDirection::Bidirectional
 pub vyre_spec::LawDirection::Canonicalize
 pub vyre_spec::LawDirection::LeftToRight
 pub vyre_spec::LawDirection::RightToLeft
+pub vyre_spec::LawEvidence::MissingPayload
+pub vyre_spec::LawEvidence::MissingPayload::payload: vyre_spec::LawPayload
+pub vyre_spec::LawEvidence::ReferenceOracleWitness
+pub vyre_spec::LawEvidence::ReferenceOracleWitness::witness: &'static str
+pub vyre_spec::LawFamily::Absorbing
+pub vyre_spec::LawFamily::Associative
+pub vyre_spec::LawFamily::Bounded
+pub vyre_spec::LawFamily::CategoricalAssociative
+pub vyre_spec::LawFamily::CategoricalIdentity
+pub vyre_spec::LawFamily::Commutative
+pub vyre_spec::LawFamily::Complement
+pub vyre_spec::LawFamily::Custom
+pub vyre_spec::LawFamily::DeMorgan
+pub vyre_spec::LawFamily::Distributive
+pub vyre_spec::LawFamily::Idempotent
+pub vyre_spec::LawFamily::Identity
+pub vyre_spec::LawFamily::InverseOf
+pub vyre_spec::LawFamily::Involution
+pub vyre_spec::LawFamily::LatticeAbsorption
+pub vyre_spec::LawFamily::LeftAbsorbing
+pub vyre_spec::LawFamily::LeftIdentity
+pub vyre_spec::LawFamily::Monotone
+pub vyre_spec::LawFamily::Monotonic
+pub vyre_spec::LawFamily::RightAbsorbing
+pub vyre_spec::LawFamily::RightIdentity
+pub vyre_spec::LawFamily::SelfInverse
+pub vyre_spec::LawFamily::Trichotomy
+pub vyre_spec::LawFamily::ZeroProduct
 pub vyre_spec::LawGuard::ExactOnly
 pub vyre_spec::LawGuard::FiniteOnly
 pub vyre_spec::LawGuard::NonZero
@@ -1401,6 +1471,17 @@ pub vyre_spec::LawGuard::Range
 pub vyre_spec::LawGuard::Range::hi: i64
 pub vyre_spec::LawGuard::Range::lo: i64
 pub vyre_spec::LawGuard::Unconditional
+pub vyre_spec::LawObligation::affected_compiler_levels: &'static [vyre_spec::IrLevel]
+pub vyre_spec::LawObligation::canonical_form: &'static str
+pub vyre_spec::LawObligation::direction: vyre_spec::LawDirection
+pub vyre_spec::LawObligation::evidence: vyre_spec::LawEvidence
+pub vyre_spec::LawObligation::family: vyre_spec::LawFamily
+pub vyre_spec::LawObligation::guard: vyre_spec::LawGuard
+pub vyre_spec::LawObligation::numerical_contract: vyre_spec::NumericBehavior
+pub vyre_spec::LawPayload::Check
+pub vyre_spec::LawPayload::Element
+pub vyre_spec::LawPayload::Order
+pub vyre_spec::LawPayload::Partner
 pub vyre_spec::LawValidationError::CounterexampleFound
 pub vyre_spec::LawValidationError::CounterexampleFound::counterexample: vyre_spec::LawCounterexample
 pub vyre_spec::LawValidationError::CounterexampleFound::law: alloc::string::String
@@ -1549,6 +1630,8 @@ pub vyre_spec::ProofMethod::ExhaustiveFloat::typ: vyre_spec::FloatType
 pub vyre_spec::ProofMethod::ExhaustiveU16
 pub vyre_spec::ProofMethod::ExhaustiveU8
 pub vyre_spec::ProofMethod::None
+pub vyre_spec::ProofMethod::ReferenceOracleWitness
+pub vyre_spec::ProofMethod::ReferenceOracleWitness::witness: alloc::string::String
 pub vyre_spec::ProofMethod::SmtQfBv
 pub vyre_spec::ProofMethod::SmtQfBv::logic: alloc::string::String
 pub vyre_spec::ProofMethod::WitnessedU32
@@ -1591,6 +1674,8 @@ pub vyre_spec::RegionLawFamily::Layout
 pub vyre_spec::RegionLawFamily::Numerical
 pub vyre_spec::RegionLawFamily::Recurrence
 pub vyre_spec::RegionLawFamily::Reduction
+pub vyre_spec::RejectedLawLabel::law: alloc::string::String
+pub vyre_spec::RejectedLawLabel::missing_payload: alloc::string::String
 pub vyre_spec::ResourceAbiError::DeviceLoss
 pub vyre_spec::ResourceAbiError::DeviceLoss::device_id: u64
 pub vyre_spec::ResourceAbiError::GenerationMismatch
@@ -1690,6 +1775,7 @@ pub vyre_spec::SemanticContractRecord::effects: vyre_spec::MemoryEffect
 pub vyre_spec::SemanticContractRecord::id: alloc::string::String
 pub vyre_spec::SemanticContractRecord::numerical: vyre_spec::NumericBehavior
 pub vyre_spec::SemanticContractRecord::range_preconditions: vyre_spec::RangeContract
+pub vyre_spec::SemanticContractRecord::rejected_labels: alloc::vec::Vec<vyre_spec::RejectedLawLabel>
 pub vyre_spec::SemanticContractRecord::resource_bounds: vyre_spec::ResourceBoundsContract
 pub vyre_spec::SemanticContractRecord::shape_index: vyre_spec::ShapeIndexContract
 pub vyre_spec::SemanticContractRecord::signature: core::option::Option<vyre_spec::OpSignature>
@@ -1901,6 +1987,7 @@ pub vyre_spec::schema_registry::SchemaId::CacheEntry = 7
 pub vyre_spec::schema_registry::SchemaId::CausalReceipt = 22
 pub vyre_spec::schema_registry::SchemaId::ConfigReceipt = 8
 pub vyre_spec::schema_registry::SchemaId::ConformanceCertificate = 1
+pub vyre_spec::schema_registry::SchemaId::DiagnosticRecord = 23
 pub vyre_spec::schema_registry::SchemaId::ExtensionSchema = 12
 pub vyre_spec::schema_registry::SchemaId::InvariantDigest = 10
 pub vyre_spec::schema_registry::SchemaId::MeasurementRecord = 5

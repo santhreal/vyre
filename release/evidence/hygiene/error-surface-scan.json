@@ -1,8 +1,74 @@
 {
-  "source_fingerprint": "git:a08d4b239de91dd83947eee6147624ce72a1aa3c:dirty=true:worktree=ed0c560d94f35bcf6677613b447b664c341a8379071622217aeba1468d231d97",
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=ab2e2b4ba58b45dc748e13ab540a57116d15ff8ff539182ce68210e5bfc7273a"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
+    {
+      "path": "conform/vyre-conform/src/law_survey.rs",
+      "line": 356,
+      "pattern": "expect_call",
+      "text": ".expect(\"an absence disposition states the decision it requires\");"
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 526,
+      "pattern": "expect_call",
+      "text": "let graph = build_interactive_graphics_pipeline(params).expect(\"graph build\");"
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 544,
+      "pattern": "expect_call",
+      "text": ".expect(\"validate\");"
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 545,
+      "pattern": "expect_call",
+      "text": "let _artifact = compile(&request).expect(\"compile\");"
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 556,
+      "pattern": "unwrap_call",
+      "text": "renderer.handle_event(InteractiveEvent::DeviceLoss).unwrap();"
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/lib.rs",
+      "line": 585,
+      "pattern": "unwrap_call",
+      "text": "renderer.handle_event(event).unwrap();"
+    },
+    {
+      "path": "consumers/vyre-graphics-app/src/main.rs",
+      "line": 13,
+      "pattern": "expect_call",
+      "text": "let json = serde_json::to_string_pretty(&report).expect(\"serialize report\");"
+    },
+    {
+      "path": "consumers/vyre-model-compiler/src/main.rs",
+      "line": 34,
+      "pattern": "panic_macro",
+      "text": ".unwrap_or_else(|e| panic!(\"Prefill compilation failed for {}: {e}\", config.name));"
+    },
+    {
+      "path": "consumers/vyre-model-compiler/src/main.rs",
+      "line": 44,
+      "pattern": "panic_macro",
+      "text": ".unwrap_or_else(|e| panic!(\"Prefill admission failed for {}: {e}\", config.name));"
+    },
+    {
+      "path": "consumers/vyre-model-compiler/src/main.rs",
+      "line": 54,
+      "pattern": "panic_macro",
+      "text": ".unwrap_or_else(|e| panic!(\"Decode compilation failed for {}: {e}\", config.name));"
+    },
+    {
+      "path": "consumers/vyre-model-compiler/src/main.rs",
+      "line": 64,
+      "pattern": "panic_macro",
+      "text": ".unwrap_or_else(|e| panic!(\"Decode admission failed for {}: {e}\", config.name));"
+    },
     {
       "path": "structure-gate/src/source_scan.rs",
       "line": 101,
@@ -11,57 +77,207 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 75,
+      "line": 79,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 121,
-      "pattern": "documented_panic_contract",
+      "line": 136,
+      "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest_path.display()));"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 123,
-      "pattern": "documented_panic_contract",
+      "line": 138,
+      "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest_path.display()));"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 267,
+      "line": 265,
       "pattern": "documented_panic_contract",
       "text": "lane.join().expect(\"a member source lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 353,
+      "line": 351,
       "pattern": "documented_panic_contract",
       "text": "lane.join().expect(\"a crate root lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 520,
+      "line": 529,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 521,
+      "line": 530,
       "pattern": "documented_panic_contract",
       "text": "if let Some(root) = ROOTS.lock().expect(POISONED).get(&start) {"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 527,
+      "line": 536,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 533,
+      "line": 542,
       "pattern": "documented_panic_contract",
       "text": "ROOTS.lock().expect(POISONED).insert(start, root.clone());"
+    },
+    {
+      "path": "vyre-bench/src/evidence/campaign.rs",
+      "line": 69,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: keep MeasurementCellSpec fields serializable\");"
+    },
+    {
+      "path": "vyre-bench/src/evidence/receipt.rs",
+      "line": 291,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: keep every BenchmarkReceipt field serializable; a map key that is not a string breaks the content address\");"
+    },
+    {
+      "path": "vyre-bench/src/evidence/receipt.rs",
+      "line": 315,
+      "pattern": "expect_call",
+      "text": "serde_json::to_vec(&canonical).expect(\"Fix: keep input identity fields serializable\");"
+    },
+    {
+      "path": "vyre-bench/src/workloads/provenance.rs",
+      "line": 227,
+      "pattern": "expect_call",
+      "text": ".expect(\"a day of month is within 1..=31\");"
+    },
+    {
+      "path": "vyre-bench/src/workloads/provenance.rs",
+      "line": 233,
+      "pattern": "expect_call",
+      "text": ".expect(\"a month is within 1..=12\");"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 1681,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 1684,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 1687,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 1690,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 1739,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 1774,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 1817,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 1866,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 1869,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 1872,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 1875,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 1924,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 1956,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 1999,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 2047,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 2050,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 2053,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 2085,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 2128,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-bench/src/workloads/whole_app.rs",
+      "line": 2171,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
     },
     {
       "path": "vyre-driver/src/hostile_input_closure.rs",
@@ -124,12 +340,6 @@
       "text": "panic!(\"vyre-driver reduction offsets generation failed: {error}\");"
     },
     {
-      "path": "vyre-driver-wgpu/src/runtime/device/acquire.rs",
-      "line": 91,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: a LoaderInstance is only empty while it is being dropped\")"
-    },
-    {
       "path": "vyre-emit-naga/build.rs",
       "line": 23,
       "pattern": "documented_panic_contract",
@@ -166,86 +376,62 @@
       "text": ".expect(\"Fix: reparsing canonical to_wire bytes must succeed; restore this invariant before continuing.\");"
     },
     {
-      "path": "vyre-foundation/src/diagnostics.rs",
-      "line": 423,
+      "path": "vyre-foundation/src/diagnostics/mod.rs",
+      "line": 910,
       "pattern": "documented_panic_contract",
-      "text": "serde_json::to_string(self).expect("
+      "text": "serde_json::to_vec(self).expect("
     },
     {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 609,
+      "path": "vyre-foundation/src/diagnostics/mod.rs",
+      "line": 925,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"serde_json emits UTF-8. Fix: none; this cannot fail\")"
+    },
+    {
+      "path": "vyre-foundation/src/failure_domain.rs",
+      "line": 257,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "vyre-foundation/src/ir_inner/model/program_graph_delta.rs",
+      "line": 285,
+      "pattern": "expect_call",
+      "text": "self.try_push(op).expect(\"Delta bounds exceeded\");"
+    },
+    {
+      "path": "vyre-foundation/src/ir_inner/model/program_graph_delta.rs",
+      "line": 291,
+      "pattern": "expect_call",
+      "text": "self.try_push(op).expect(\"Delta bounds exceeded\");"
+    },
+    {
+      "path": "vyre-foundation/src/operation/call_graph.rs",
+      "line": 158,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: registered callee must have transitive effect state\");"
     },
     {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 613,
+      "path": "vyre-foundation/src/operation/call_graph.rs",
+      "line": 162,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: registered callee must have transitive capability state\");"
     },
     {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 621,
+      "path": "vyre-foundation/src/operation/call_graph.rs",
+      "line": 170,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: caller node in direct_callees must be registered in transitive_effects\");"
     },
     {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 630,
+      "path": "vyre-foundation/src/operation/call_graph.rs",
+      "line": 179,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: caller node in direct_callees must be registered in transitive_capabilities\");"
     },
     {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 759,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan traversal node must have an adjacency entry\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 768,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan visited child node must have a lowlink entry\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 772,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 780,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan on-stack node must have an index entry\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 784,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 792,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 797,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan active node must have an index entry\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 804,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan component stack must contain its root\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation/mod.rs",
-      "line": 929,
+      "path": "vyre-foundation/src/operation/registry.rs",
+      "line": 78,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"invalid semantic operation registry: {error}\"))"
     },
@@ -269,7 +455,7 @@
     },
     {
       "path": "vyre-foundation/src/optimizer/expr_arena.rs",
-      "line": 473,
+      "line": 488,
       "pattern": "documented_panic_contract",
       "text": "_ => panic!("
     },
@@ -286,241 +472,247 @@
       "text": "Err(error) => panic!("
     },
     {
-      "path": "vyre-libs/src/bitset/four_russians.rs",
+      "path": "vyre-foundation/src/schedule/tree.rs",
+      "line": 756,
+      "pattern": "unwrap_call",
+      "text": "flat.pop().unwrap()"
+    },
+    {
+      "path": "vyre-foundation/src/schedule/tree.rs",
+      "line": 772,
+      "pattern": "unwrap_call",
+      "text": "flat.pop().unwrap()"
+    },
+    {
+      "path": "vyre-foundation/src/schedule/tree.rs",
+      "line": 788,
+      "pattern": "unwrap_call",
+      "text": "let bytes: [u8; 8] = digest.as_bytes()[0..8].try_into().unwrap();"
+    },
+    {
+      "path": "vyre-foundation/src/schedule/typed.rs",
+      "line": 256,
+      "pattern": "unwrap_call",
+      "text": "trees.pop().unwrap()"
+    },
+    {
+      "path": "vyre-foundation/src/substrate/query.rs",
+      "line": 575,
+      "pattern": "expect_call",
+      "text": "outputs.push(handle.join().expect(\"Thread panicked in query execution\")?);"
+    },
+    {
+      "path": "vyre-foundation/src/substrate/query.rs",
+      "line": 588,
+      "pattern": "expect_call",
+      "text": ".map(|opt| opt.expect(\"All outputs present\"))"
+    },
+    {
+      "path": "vyre-libs-bitset/src/bitset/four_russians.rs",
       "line": 125,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"vyre-primitives dense boolean-matvec LUT build failed: {error}\");"
     },
     {
-      "path": "vyre-libs/src/builder/stencil.rs",
+      "path": "vyre-libs-builder/src/builder/stencil.rs",
       "line": 142,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: cols * cell_width overflows u32\");"
     },
     {
-      "path": "vyre-libs/src/builder/stencil.rs",
+      "path": "vyre-libs-builder/src/builder/stencil.rs",
       "line": 146,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: rows * cell_height overflows u32\");"
     },
     {
-      "path": "vyre-libs/src/builder/stencil.rs",
+      "path": "vyre-libs-builder/src/builder/stencil.rs",
       "line": 149,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the surface pixel count overflows u32\");"
     },
     {
-      "path": "vyre-libs/src/builder/stencil.rs",
+      "path": "vyre-libs-builder/src/builder/stencil.rs",
       "line": 152,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: cols * rows overflows u32\");"
     },
     {
-      "path": "vyre-libs/src/fixture_bytes.rs",
-      "line": 179,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"Fix: {label} program must execute in the reference interpreter: {error:?}\")"
+      "path": "vyre-libs-builder/src/plumbing/host/scratch.rs",
+      "line": 74,
+      "pattern": "panic_macro",
+      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
     },
     {
-      "path": "vyre-libs/src/graph/ast_walk.rs",
+      "path": "vyre-libs-graph/src/graph/ast_walk.rs",
       "line": 45,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\")),"
     },
     {
-      "path": "vyre-libs/src/graph/csr_bidirectional_plan.rs",
+      "path": "vyre-libs-graph/src/graph/csr_bidirectional_plan.rs",
       "line": 553,
       "pattern": "documented_panic_contract",
       "text": "try_merge_frontier_or_changed(current, next).unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
-      "path": "vyre-libs/src/graph/csr_forward_or_changed/program_parallel_batch.rs",
+      "path": "vyre-libs-graph/src/graph/csr_forward_or_changed/program_parallel_batch.rs",
       "line": 41,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
-      "path": "vyre-libs/src/graph/csr_forward_or_changed/program_parallel_batch_global.rs",
+      "path": "vyre-libs-graph/src/graph/csr_forward_or_changed/program_parallel_batch_global.rs",
       "line": 69,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
-      "path": "vyre-libs/src/graph/dominator_frontier.rs",
+      "path": "vyre-libs-graph/src/graph/dominator_frontier.rs",
       "line": 71,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
-      "path": "vyre-libs/src/graph/persistent_bfs/program.rs",
+      "path": "vyre-libs-graph/src/graph/persistent_bfs/program.rs",
       "line": 502,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
-      "path": "vyre-libs/src/graph/persistent_bfs/program.rs",
+      "path": "vyre-libs-graph/src/graph/persistent_bfs/program.rs",
       "line": 574,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
-      "path": "vyre-libs/src/graph/program_graph.rs",
+      "path": "vyre-libs-graph/src/graph/program_graph.rs",
       "line": 129,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
-      "path": "vyre-libs/src/graph/vast_tree_walk.rs",
+      "path": "vyre-libs-graph/src/graph/vast_tree_walk.rs",
       "line": 137,
       "pattern": "documented_panic_contract",
       "text": "try_ast_walk_preorder(nodes, out, node_count, out_cap).unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
-      "path": "vyre-libs/src/graph/vast_tree_walk.rs",
+      "path": "vyre-libs-graph/src/graph/vast_tree_walk.rs",
       "line": 162,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
-      "path": "vyre-libs/src/math/fixed_u32_matmul.rs",
+      "path": "vyre-libs-math/src/math/fixed_u32_matmul.rs",
       "line": 33,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: fixed_u32_matvec_program failed to build contraction program\")"
     },
     {
-      "path": "vyre-libs/src/math/fixed_u32_matmul.rs",
-      "line": 117,
+      "path": "vyre-libs-math/src/math/fixed_u32_matmul.rs",
+      "line": 128,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: u32_matmul_program failed to build contraction program\")"
     },
     {
-      "path": "vyre-libs/src/math/linalg/matmul_strassen.rs",
+      "path": "vyre-libs-math/src/math/linalg/matmul_strassen.rs",
       "line": 72,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: matmul_strassen_2x2 failed to build\")"
     },
     {
-      "path": "vyre-libs/src/nn/attention/tiled_online_softmax.rs",
+      "path": "vyre-libs-nn/src/nn/attention/tiled_online_softmax.rs",
       "line": 443,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the registered online-softmax witness must plan\");"
     },
     {
-      "path": "vyre-libs/src/parsing/source_cache.rs",
-      "line": 253,
-      "pattern": "documented_panic_contract",
-      "text": "self.inner.lock().expect("
-    },
-    {
-      "path": "vyre-libs/src/pattern/classic_ac/bounded_ranges/mod.rs",
-      "line": 319,
+      "path": "vyre-libs-pattern/src/pattern/classic_ac/bounded_ranges/mod.rs",
+      "line": 320,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
     {
-      "path": "vyre-libs/src/pattern/dfa_compile/compile.rs",
+      "path": "vyre-libs-pattern/src/pattern/dfa_compile/compile.rs",
       "line": 29,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
     {
-      "path": "vyre-libs/src/pattern/dfa_compile/compile.rs",
+      "path": "vyre-libs-pattern/src/pattern/dfa_compile/compile.rs",
       "line": 74,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
     {
-      "path": "vyre-libs/src/pattern/nfa/plan.rs",
+      "path": "vyre-libs-pattern/src/pattern/nfa/plan.rs",
       "line": 114,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
-      "path": "vyre-libs/src/pattern/nfa/tables.rs",
+      "path": "vyre-libs-pattern/src/pattern/nfa/tables.rs",
       "line": 31,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
-      "path": "vyre-libs/src/pattern/nfa/tables.rs",
+      "path": "vyre-libs-pattern/src/pattern/nfa/tables.rs",
       "line": 82,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
-      "path": "vyre-libs/src/pattern/nfa_to_dfa/subset.rs",
+      "path": "vyre-libs-pattern/src/pattern/nfa_to_dfa/subset.rs",
       "line": 239,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
-      "path": "vyre-libs/src/pattern/regex_compile/mod.rs",
+      "path": "vyre-libs-pattern/src/pattern/regex_compile/mod.rs",
       "line": 396,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: canonical fixture regex scan must compile\")"
     },
     {
-      "path": "vyre-libs/src/pattern/regex_compile/mod.rs",
+      "path": "vyre-libs-pattern/src/pattern/regex_compile/mod.rs",
       "line": 406,
       "pattern": "documented_panic_contract",
       "text": "compile_regex_set(&[\"[a-z]+\"]).expect(\"Fix: canonical fixture regex scan must compile\");"
     },
     {
-      "path": "vyre-libs/src/pattern/regex_dfa.rs",
+      "path": "vyre-libs-pattern/src/pattern/regex_dfa.rs",
       "line": 417,
       "pattern": "documented_panic_contract",
       "text": "regex_dfa_program(&[\"[a-z]+\"], 64, 256).expect(\"Fix: canonical fixture regex DFA must compile\")"
     },
     {
-      "path": "vyre-libs/src/pattern/regex_dfa.rs",
+      "path": "vyre-libs-pattern/src/pattern/regex_dfa.rs",
       "line": 427,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: canonical fixture regex DFA must compile\");"
     },
     {
-      "path": "vyre-libs/src/reduce/grid_stride_tree.rs",
-      "line": 73,
+      "path": "vyre-libs-reduce/src/reduce/grid_stride_tree.rs",
+      "line": 75,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!(\"grid_stride_tree_sum_u32 fusion failed: {error}\"),"
     },
     {
-      "path": "vyre-libs/src/security/predicate_catalog.rs",
+      "path": "vyre-libs-security/src/security/predicate_catalog.rs",
       "line": 91,
       "pattern": "documented_panic_contract",
       "text": "try_security_predicate_rows().expect("
     },
     {
-      "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 97,
-      "pattern": "panic_macro",
-      "text": "panic!(\"{}\", self.0);"
-    },
-    {
-      "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 154,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
-    },
-    {
-      "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 190,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
-    },
-    {
-      "path": "vyre-libs/src/test_parity_oracles.rs",
-      "line": 228,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: sequential-output dispatcher mutex should not be poisoned\");"
-    },
-    {
-      "path": "vyre-libs/src/visual/glyph_grid/mod.rs",
+      "path": "vyre-libs-visual/src/visual/glyph_grid/mod.rs",
       "line": 74,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: cell_width * cell_height overflows u32\");"
     },
     {
-      "path": "vyre-libs/src/visual/glyph_grid/mod.rs",
+      "path": "vyre-libs-visual/src/visual/glyph_grid/mod.rs",
       "line": 77,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: glyph_count * cell area overflows u32\");"
@@ -566,6 +758,12 @@
       "line": 351,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: vector chain candidate must contain at least one operation\");"
+    },
+    {
+      "path": "vyre-megakernel/src/geometry_fixtures.rs",
+      "line": 28,
+      "pattern": "expect_call",
+      "text": "grid: GeometryRecord::covering_grid(COVERAGE, workgroup).expect(\"positive extents\"),"
     },
     {
       "path": "vyre-megakernel/src/request_identity.rs",
@@ -886,34 +1084,10 @@
       "text": ".unwrap_or_else(|error| panic!(\"invalid segment reduce witness input: {error}\"));"
     },
     {
-      "path": "vyre-reference/src/oob.rs",
-      "line": 127,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"))"
-    },
-    {
-      "path": "vyre-reference/src/oob.rs",
-      "line": 138,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"))"
-    },
-    {
-      "path": "vyre-reference/src/oob.rs",
-      "line": 228,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"))"
-    },
-    {
-      "path": "vyre-reference/src/oob.rs",
-      "line": 233,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"))"
-    },
-    {
-      "path": "vyre-runtime/src/pipeline_cache/in_memory.rs",
-      "line": 47,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|_| panic!(\"pipeline cache shard lock was poisoned\"))"
+      "path": "vyre-runtime/src/artifact_admission/session.rs",
+      "line": 533,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: prepare a payload in phase 1 for every non-resident dataset entry before resolving resources\");"
     },
     {
       "path": "vyre-runtime/src/resident_work_queue/descriptor/mod.rs",
@@ -968,6 +1142,24 @@
       "line": 94,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"vyre-runtime work-unit partition failed: {error}\");"
+    },
+    {
+      "path": "vyre-runtime/src/uring/raw_platform.rs",
+      "line": 469,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: cap the submission-queue index at the ring's entry count\");"
+    },
+    {
+      "path": "vyre-runtime/src/uring/raw_platform.rs",
+      "line": 493,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: cap the completion-queue index at the ring's entry count\");"
+    },
+    {
+      "path": "vyre-spec/src/schema_registry.rs",
+      "line": 163,
+      "pattern": "panic_macro",
+      "text": "panic!(\"unregistered schema id\")"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
@@ -1078,6 +1270,12 @@
       "text": "panic!("
     },
     {
+      "path": "vyre-test-support/src/backend_execution_domain.rs",
+      "line": 152,
+      "pattern": "documented_panic_contract",
+      "text": "Err(failure) => panic!(\"{failure}\"),"
+    },
+    {
       "path": "vyre-test-support/src/bin_op_variants.rs",
       "line": 52,
       "pattern": "documented_panic_contract",
@@ -1162,6 +1360,72 @@
       "text": "let b_bits = u32::from_le_bytes(back_bytes[i * 4..(i + 1) * 4].try_into().unwrap());"
     },
     {
+      "path": "vyre-test-support/src/graph_fixtures.rs",
+      "line": 36,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-test-support/src/graph_fixtures.rs",
+      "line": 53,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-test-support/src/graph_fixtures.rs",
+      "line": 73,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-test-support/src/graph_fixtures.rs",
+      "line": 81,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-test-support/src/graph_fixtures.rs",
+      "line": 84,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-test-support/src/graph_fixtures.rs",
+      "line": 104,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-test-support/src/graph_fixtures.rs",
+      "line": 124,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-test-support/src/graph_fixtures.rs",
+      "line": 146,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-test-support/src/graph_fixtures.rs",
+      "line": 163,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-test-support/src/graph_fixtures.rs",
+      "line": 180,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-test-support/src/graph_fixtures.rs",
+      "line": 200,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
       "path": "vyre-test-support/src/graph_shapes.rs",
       "line": 28,
       "pattern": "expect_call",
@@ -1229,13 +1493,13 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 413,
+      "line": 431,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|err| panic!(\"Fix: cannot read {path:?} to derive the level set: {err}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 415,
+      "line": 433,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|| panic!(\"Fix: {path:?} no longer declares `pub enum IrLevel`\"));"
     },
@@ -1313,7 +1577,7 @@
     },
     {
       "path": "vyre-test-support/src/preferred_dispatch_backend_contract.rs",
-      "line": 56,
+      "line": 63,
       "pattern": "documented_panic_contract",
       "text": "let backend = acquire_preferred_dispatch_backend().expect(acquisition_message);"
     },
@@ -1325,25 +1589,25 @@
     },
     {
       "path": "vyre-test-support/src/registry_closure.rs",
-      "line": 61,
-      "pattern": "documented_panic_contract",
+      "line": 72,
+      "pattern": "panic_macro",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/registry_closure.rs",
-      "line": 104,
-      "pattern": "documented_panic_contract",
+      "line": 115,
+      "pattern": "panic_macro",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/registry_closure.rs",
-      "line": 199,
+      "line": 212,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
     {
       "path": "vyre-test-support/src/registry_closure.rs",
-      "line": 207,
+      "line": 220,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -1475,9 +1739,33 @@
     },
     {
       "path": "vyre-test-support/src/spec_op_strategies.rs",
-      "line": 40,
+      "line": 38,
       "pattern": "expect_call",
       "text": "let weight = u32::try_from(builtins.len()).expect(\"Fix: variant tables stay small.\");"
+    },
+    {
+      "path": "vyre-test-support/src/structural_ir.rs",
+      "line": 94,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot create {}: {error}\", parent.display()));"
+    },
+    {
+      "path": "vyre-test-support/src/structural_ir.rs",
+      "line": 97,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot write {}: {error}\", path.display()));"
+    },
+    {
+      "path": "vyre-test-support/src/structural_ir.rs",
+      "line": 199,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "vyre-test-support/src/structural_ir.rs",
+      "line": 207,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
     },
     {
       "path": "vyre-test-support/src/sweep_rng.rs",
@@ -1606,6 +1894,54 @@
       "text": "panic!("
     },
     {
+      "path": "vyre-test-support/src/test_parity_oracles.rs",
+      "line": 94,
+      "pattern": "panic_macro",
+      "text": "panic!(\"{}\", self.0);"
+    },
+    {
+      "path": "vyre-test-support/src/test_parity_oracles.rs",
+      "line": 149,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
+    },
+    {
+      "path": "vyre-test-support/src/test_parity_oracles.rs",
+      "line": 159,
+      "pattern": "expect_call",
+      "text": "chunk.try_into().expect("
+    },
+    {
+      "path": "vyre-test-support/src/test_parity_oracles.rs",
+      "line": 198,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: static-output dispatcher recorder mutex should not be poisoned\")"
+    },
+    {
+      "path": "vyre-test-support/src/test_parity_oracles.rs",
+      "line": 234,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: sequential-output dispatcher mutex should not be poisoned\");"
+    },
+    {
+      "path": "vyre-test-support/src/test_parity_oracles.rs",
+      "line": 386,
+      "pattern": "panic_macro",
+      "text": "panic!(\"Fix: {label} program must execute in the reference interpreter: {error:?}\")"
+    },
+    {
+      "path": "vyre-test-support/src/test_parity_oracles.rs",
+      "line": 464,
+      "pattern": "panic_macro",
+      "text": "panic!(\"Fix: {label} program must execute in the reference interpreter: {error:?}\")"
+    },
+    {
+      "path": "vyre-test-support/src/test_parity_oracles.rs",
+      "line": 488,
+      "pattern": "panic_macro",
+      "text": "panic!(\"Fix: {label} program must execute in the reference interpreter: {error:?}\")"
+    },
+    {
       "path": "vyre-test-support/src/wire_hostile_inputs.rs",
       "line": 33,
       "pattern": "expect_call",
@@ -1673,7 +2009,7 @@
     },
     {
       "path": "xtask/src/artifact_gate.rs",
-      "line": 493,
+      "line": 586,
       "pattern": "documented_panic_contract",
       "text": "let (lane_entries, lane_errors) = handle.join().expect("
     },
@@ -1702,26 +2038,26 @@
       "text": ".expect(\"Fix: run git to build the fixture checkout.\");"
     },
     {
-      "path": "xtask/src/gate_metadata.rs",
-      "line": 1615,
+      "path": "xtask/src/gate_metadata/mod.rs",
+      "line": 85,
       "pattern": "documented_panic_contract",
       "text": "descriptor(gate_name).unwrap_or_else(|| panic!(\"gate `{gate_name}` is not in GATE_METADATA\"))"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 275,
+      "line": 155,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|| panic!(\"Fix: {} declares no [package] name\", manifest.display()))"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 425,
+      "line": 316,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"Fix: cannot read {}: {error}\", path.display());"
     },
     {
       "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 436,
+      "line": 327,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"Fix: parse {}: {e}\", path.display());"
     },
@@ -1750,6 +2086,12 @@
       "text": ".expect(\"git is available to initialize a fixture checkout. Fix: install git and put it on PATH; the fixture gates read a real checkout\");"
     },
     {
+      "path": "xtask/src/gates/testing_guides.rs",
+      "line": 241,
+      "pattern": "expect_call",
+      "text": "let last = testing.last().expect(\"a non-empty slice has a last element\");"
+    },
+    {
       "path": "xtask/src/release/package_readiness/archive_contracts.rs",
       "line": 499,
       "pattern": "expect_call",
@@ -1775,7 +2117,7 @@
     },
     {
       "path": "xtask/src/subcommands.rs",
-      "line": 73,
+      "line": 77,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: add help text for every gate area in AREA_HELP\"),"
     },

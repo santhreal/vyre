@@ -88,9 +88,11 @@ Own pure WGSL target compilation, portable GPU acquisition, materialization, dis
 
 ### Boundaries
 
-The `portable-driver` owner maintains this `concrete-backend` crate at `vyre-driver-wgpu`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-emit-naga`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`, `vyre-spec`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `concrete-backend` layer's `portable-driver` seam, at `vyre-driver-wgpu`.
+Every production dependency on it crosses Portable backend registration, capability probing and dispatch.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -122,7 +124,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

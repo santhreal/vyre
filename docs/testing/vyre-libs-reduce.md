@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own workgroup reduction trees, atomic scalar reductions, and prefix scan IR compositions. Does not own domain-specific algorithms, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-reduce`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-reduce` and owns the `libs-reduce` seam in the `libraries` layer.
 
 ## Commands
 

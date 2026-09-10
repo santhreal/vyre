@@ -14,9 +14,11 @@ Own substring matching, DFA, NFA, bracket matching, and regular expression scann
 
 ### Boundaries
 
-The `product-libraries` owner maintains this `libraries` crate at `vyre-libs-pattern`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-libs-bitset`, `vyre-libs-builder`, `vyre-libs-hash`, `vyre-libs-math`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `libraries` layer's `libs-pattern` seam, at `vyre-libs-pattern`.
+Every production dependency on it crosses Substring, DFA, NFA, regular expression and bracket matching compositions.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -48,7 +50,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

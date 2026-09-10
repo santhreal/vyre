@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own security taint analysis compositions, predicate evaluators, and label resolver IR builders. Does not own rule engine AST evaluation, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-security`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-security` and owns the `libs-security` seam in the `libraries` layer.
 
 ## Commands
 

@@ -3353,7 +3353,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::optim::adamw_step"
 tier = "libs"
-owners = ["vyre-libs/src/nn/optim"]
+owners = ["vyre-libs/src/optim"]
 ops = ["vyre-libs::optim::adamw_step"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -3367,7 +3367,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::optim::ema_apply"
 tier = "libs"
-owners = ["vyre-libs/src/nn/optim"]
+owners = ["vyre-libs/src/optim"]
 ops = ["vyre-libs::optim::ema_apply"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -3381,7 +3381,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::optim::muon_update"
 tier = "libs"
-owners = ["vyre-libs/src/nn/optim"]
+owners = ["vyre-libs/src/optim"]
 ops = ["vyre-libs::optim::muon_update"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -3395,7 +3395,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::optim::muoneq_r"
 tier = "libs"
-owners = ["vyre-libs/src/nn/optim"]
+owners = ["vyre-libs/src/optim"]
 ops = ["vyre-libs::optim::muoneq_r"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -3409,7 +3409,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::optim::newton_schulz_5step"
 tier = "libs"
-owners = ["vyre-libs/src/nn/optim"]
+owners = ["vyre-libs/src/optim"]
 ops = ["vyre-libs::optim::newton_schulz_5step"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -3927,7 +3927,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::quant::byte_shuffle"
 tier = "libs"
-owners = ["vyre-libs/src/nn/quant"]
+owners = ["vyre-libs/src/quant"]
 ops = ["vyre-libs::quant::byte_shuffle"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -3941,7 +3941,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::quant::gptq_round"
 tier = "libs"
-owners = ["vyre-libs/src/nn/quant"]
+owners = ["vyre-libs/src/quant"]
 ops = ["vyre-libs::quant::gptq_round"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -3955,7 +3955,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::quant::gptq_sdclip"
 tier = "libs"
-owners = ["vyre-libs/src/nn/quant"]
+owners = ["vyre-libs/src/quant"]
 ops = ["vyre-libs::quant::gptq_sdclip"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -3969,7 +3969,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::quant::int4_batched_matmul_f32_scaled"
 tier = "libs"
-owners = ["vyre-libs/src/nn/quant"]
+owners = ["vyre-libs/src/quant"]
 ops = ["vyre-libs::quant::int4_batched_matmul_f32_scaled"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -3983,7 +3983,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::quant::int4_batched_matmul_top1_f32_scaled"
 tier = "libs"
-owners = ["vyre-libs/src/nn/quant"]
+owners = ["vyre-libs/src/quant"]
 ops = ["vyre-libs::quant::int4_batched_matmul_top1_f32_scaled"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -3997,7 +3997,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::quant::int4_batched_matvec_f32_scaled"
 tier = "libs"
-owners = ["vyre-libs/src/nn/quant"]
+owners = ["vyre-libs/src/quant"]
 ops = ["vyre-libs::quant::int4_batched_matvec_f32_scaled"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -4011,7 +4011,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::quant::int4_dot_f32_scaled"
 tier = "libs"
-owners = ["vyre-libs/src/nn/quant"]
+owners = ["vyre-libs/src/quant"]
 ops = ["vyre-libs::quant::int4_dot_f32_scaled"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -4025,7 +4025,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::quant::int4_dot_i32"
 tier = "libs"
-owners = ["vyre-libs/src/nn/quant"]
+owners = ["vyre-libs/src/quant"]
 ops = ["vyre-libs::quant::int4_dot_i32"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -4039,7 +4039,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::quant::int4_matvec_f32_scaled"
 tier = "libs"
-owners = ["vyre-libs/src/nn/quant"]
+owners = ["vyre-libs/src/quant"]
 ops = ["vyre-libs::quant::int4_matvec_f32_scaled"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -4053,7 +4053,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::quant::int6_pack"
 tier = "libs"
-owners = ["vyre-libs/src/nn/quant"]
+owners = ["vyre-libs/src/quant"]
 ops = ["vyre-libs::quant::int6_pack"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -4067,7 +4067,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::quant::int6_unpack"
 tier = "libs"
-owners = ["vyre-libs/src/nn/quant"]
+owners = ["vyre-libs/src/quant"]
 ops = ["vyre-libs::quant::int6_unpack"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -4081,7 +4081,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::quant::int8_pack"
 tier = "libs"
-owners = ["vyre-libs/src/nn/quant"]
+owners = ["vyre-libs/src/quant"]
 ops = ["vyre-libs::quant::int8_pack"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -4095,7 +4095,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::quant::int8_unpack"
 tier = "libs"
-owners = ["vyre-libs/src/nn/quant"]
+owners = ["vyre-libs/src/quant"]
 ops = ["vyre-libs::quant::int8_unpack"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"

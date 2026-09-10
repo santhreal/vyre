@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Provide compile-time registration and declaration macros without depending on runtime crates.
 
-The crate lives at `vyre-macros`. The `registration-macros` owner maintains its
-`foundation` testing contract.
+The crate lives at `vyre-macros` and owns the `registration-macros` seam in the `foundation` layer.
 
 ## Commands
 

@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Consume verified lowering products and emit SPIR-V artifacts through the shared writer.
 
-The crate lives at `vyre-emit-spirv`. The `spirv-emitter` owner maintains its
-`emitter` testing contract.
+The crate lives at `vyre-emit-spirv` and owns the `spirv-emitter` seam in the `emitter` layer.
 
 ## Commands
 

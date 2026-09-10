@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own pure PTX target compilation, native device acquisition, materialization, dispatch, graphs, and release-path evidence.
 
-The crate lives at `vyre-driver-cuda`. The `cuda-driver` owner maintains its
-`concrete-backend` testing contract.
+The crate lives at `vyre-driver-cuda` and owns the `cuda-driver` seam in the `concrete-backend` layer.
 
 ## Commands
 

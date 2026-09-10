@@ -34,7 +34,7 @@ every layer the rank rule allows names none.
 
 ## Workspace dependency graph
 
-The workspace contains 57 crates and 328 internal production edges, resolved
+The workspace contains 57 crates and 288 internal production edges, resolved
 under the union of every feature. An arrow points from a crate to an internal
 normal or build dependency. Development dependencies are excluded.
 
@@ -213,7 +213,6 @@ graph TD
   C19 --> C52
   C20 --> C18
   C20 --> C22
-  C20 --> C24
   C20 --> C26
   C20 --> C27
   C20 --> C29
@@ -223,9 +222,7 @@ graph TD
   C21 --> C18
   C21 --> C22
   C21 --> C34
-  C21 --> C45
   C21 --> C47
-  C21 --> C52
   C22 --> C18
   C22 --> C45
   C22 --> C47
@@ -234,19 +231,12 @@ graph TD
   C23 --> C22
   C23 --> C32
   C23 --> C39
-  C23 --> C45
   C23 --> C47
-  C23 --> C52
   C24 --> C18
   C24 --> C22
-  C24 --> C45
-  C24 --> C47
-  C24 --> C52
   C25 --> C18
   C25 --> C21
   C25 --> C22
-  C25 --> C24
-  C25 --> C26
   C25 --> C27
   C25 --> C28
   C25 --> C29
@@ -256,13 +246,9 @@ graph TD
   C25 --> C34
   C25 --> C45
   C25 --> C47
-  C25 --> C52
   C26 --> C18
-  C26 --> C21
   C26 --> C22
-  C26 --> C45
   C26 --> C47
-  C26 --> C52
   C27 --> C18
   C27 --> C21
   C27 --> C22
@@ -273,17 +259,13 @@ graph TD
   C27 --> C41
   C27 --> C45
   C27 --> C47
-  C27 --> C52
   C28 --> C18
   C28 --> C22
-  C28 --> C45
   C28 --> C47
-  C28 --> C52
   C29 --> C18
   C29 --> C22
   C29 --> C26
   C29 --> C34
-  C29 --> C45
   C29 --> C47
   C29 --> C52
   C30 --> C18
@@ -296,81 +278,60 @@ graph TD
   C31 --> C18
   C31 --> C22
   C31 --> C28
-  C31 --> C32
   C31 --> C34
   C31 --> C39
-  C31 --> C45
   C31 --> C47
   C31 --> C52
   C32 --> C18
-  C32 --> C21
   C32 --> C22
   C32 --> C28
   C32 --> C29
-  C32 --> C45
   C32 --> C47
-  C32 --> C52
   C33 --> C18
   C33 --> C20
   C33 --> C22
   C33 --> C27
   C33 --> C45
-  C33 --> C47
-  C33 --> C52
   C34 --> C18
   C34 --> C22
   C34 --> C45
   C34 --> C47
-  C34 --> C52
   C35 --> C18
   C35 --> C22
-  C35 --> C45
   C35 --> C47
   C35 --> C52
   C36 --> C18
   C36 --> C22
-  C36 --> C24
   C36 --> C27
   C36 --> C29
   C36 --> C31
   C36 --> C45
   C36 --> C47
-  C36 --> C52
   C37 --> C18
   C37 --> C21
   C37 --> C22
   C37 --> C27
   C37 --> C34
-  C37 --> C45
   C37 --> C47
   C37 --> C52
   C38 --> C18
   C38 --> C21
   C38 --> C22
-  C38 --> C24
   C38 --> C26
   C38 --> C27
   C38 --> C29
   C38 --> C45
   C38 --> C47
-  C38 --> C52
   C39 --> C18
   C39 --> C22
   C39 --> C34
-  C39 --> C45
   C39 --> C47
-  C39 --> C52
   C40 --> C18
   C40 --> C22
-  C40 --> C45
-  C40 --> C47
-  C40 --> C52
   C41 --> C18
   C41 --> C22
   C41 --> C29
-  C41 --> C45
   C41 --> C47
-  C41 --> C52
   C43 --> C18
   C43 --> C52
   C45 --> C18
@@ -391,7 +352,6 @@ graph TD
   C49 --> C13
   C49 --> C18
   C49 --> C19
-  C49 --> C22
   C49 --> C43
   C49 --> C45
   C49 --> C47
@@ -547,7 +507,6 @@ graph TD
 | `vyre-libs` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-analysis` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-analysis` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-analysis` | `vyre-libs-device` | `libs-device` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-analysis` | `vyre-libs-fixpoint` | `libs-fixpoint` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-analysis` | `vyre-libs-graph` | `libs-graph` | `normal` | `always` | `dense-reachability` | `false` | `true` | None |
 | `vyre-libs-analysis` | `vyre-libs-math` | `libs-math` | `normal` | `always` | None | `false` | `true` | None |
@@ -557,9 +516,7 @@ graph TD
 | `vyre-libs-bitset` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-bitset` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-bitset` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-bitset` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-bitset` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-bitset` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-builder` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-builder` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-builder` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
@@ -568,35 +525,24 @@ graph TD
 | `vyre-libs-decode` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-decode` | `vyre-libs-pattern` | `libs-pattern` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-decode` | `vyre-libs-text` | `libs-text` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-decode` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-decode` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-decode` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-device` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-device` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-device` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-device` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-device` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-encoding` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-encoding` | `vyre-libs-bitset` | `libs-bitset` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-encoding` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-encoding` | `vyre-libs-device` | `libs-device` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-encoding` | `vyre-libs-fixpoint` | `libs-fixpoint` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-encoding` | `vyre-libs-graph` | `libs-graph` | `normal` | `always` | `graph` | `false` | `true` | None |
 | `vyre-libs-encoding` | `vyre-libs-hash` | `libs-hash` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-encoding` | `vyre-libs-math` | `libs-math` | `normal` | `always` | `math-kernels` | `false` | `true` | None |
-| `vyre-libs-encoding` | `vyre-libs-nn` | `libs-nn` | `normal` | `always` | `nn-attention` | `false` | `true` | None |
+| `vyre-libs-encoding` | `vyre-libs-nn` | `libs-nn` | `normal` | `always` | `nn-attention` | `true` | `true` | `nn-paging` |
 | `vyre-libs-encoding` | `vyre-libs-parsing` | `libs-parsing` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-encoding` | `vyre-libs-pattern` | `libs-pattern` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-encoding` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-encoding` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-encoding` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-encoding` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-fixpoint` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
-| `vyre-libs-fixpoint` | `vyre-libs-bitset` | `libs-bitset` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-fixpoint` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-fixpoint` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-fixpoint` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-fixpoint` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-graph` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-graph` | `vyre-libs-bitset` | `libs-bitset` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-graph` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
@@ -607,17 +553,13 @@ graph TD
 | `vyre-libs-graph` | `vyre-libs-visual` | `libs-visual` | `normal` | `always` | `visual` | `true` | `true` | `interactive-graphics` |
 | `vyre-libs-graph` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-graph` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-graph` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-hash` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-hash` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-hash` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-hash` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-hash` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-math` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-math` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-math` | `vyre-libs-fixpoint` | `libs-fixpoint` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-math` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-math` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-math` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
 | `vyre-libs-math` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-nn` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
@@ -630,81 +572,60 @@ graph TD
 | `vyre-libs-parsing` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-parsing` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-parsing` | `vyre-libs-hash` | `libs-hash` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-parsing` | `vyre-libs-pattern` | `libs-pattern` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-parsing` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-parsing` | `vyre-libs-text` | `libs-text` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-parsing` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-parsing` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
 | `vyre-libs-parsing` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-pattern` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
-| `vyre-libs-pattern` | `vyre-libs-bitset` | `libs-bitset` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-pattern` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-pattern` | `vyre-libs-hash` | `libs-hash` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-pattern` | `vyre-libs-math` | `libs-math` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-pattern` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-pattern` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-pattern` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-reasoning` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-reasoning` | `vyre-libs-analysis` | `libs-analysis` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-reasoning` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-reasoning` | `vyre-libs-graph` | `libs-graph` | `normal` | `always` | `impact-mask` | `false` | `true` | None |
 | `vyre-libs-reasoning` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-reasoning` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-reasoning` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-reduce` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-reduce` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-reduce` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-reduce` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-reduce` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-rule` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-rule` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-rule` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-rule` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
 | `vyre-libs-rule` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-scheduling` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-scheduling` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-scheduling` | `vyre-libs-device` | `libs-device` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-scheduling` | `vyre-libs-graph` | `libs-graph` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-scheduling` | `vyre-libs-math` | `libs-math` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-scheduling` | `vyre-libs-parsing` | `libs-parsing` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-scheduling` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-scheduling` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-scheduling` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-security` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-security` | `vyre-libs-bitset` | `libs-bitset` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-security` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-security` | `vyre-libs-graph` | `libs-graph` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-security` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-security` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-security` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
 | `vyre-libs-security` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-solvers` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-solvers` | `vyre-libs-bitset` | `libs-bitset` | `normal` | `always` | `bitset` | `false` | `true` | None |
 | `vyre-libs-solvers` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-solvers` | `vyre-libs-device` | `libs-device` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-solvers` | `vyre-libs-fixpoint` | `libs-fixpoint` | `normal` | `always` | `fixpoint` | `false` | `true` | None |
 | `vyre-libs-solvers` | `vyre-libs-graph` | `libs-graph` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-solvers` | `vyre-libs-math` | `libs-math` | `normal` | `always` | `math-kernels` | `false` | `true` | None |
 | `vyre-libs-solvers` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-solvers` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-solvers` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-text` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-text` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-text` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-text` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-text` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-text` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-vfs` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-vfs` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-vfs` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-vfs` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-vfs` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-visual` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-visual` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-visual` | `vyre-libs-math` | `libs-math` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-visual` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-visual` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-visual` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-lower` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-lower` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-megakernel` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
@@ -725,7 +646,6 @@ graph TD
 | `vyre-registry-link` | `vyre-driver-wgpu` | `portable-driver` | `normal` | `always` | None | `true` | `true` | `default`, `wgpu` |
 | `vyre-registry-link` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-registry-link` | `vyre-libs` | `semantic-library` | `normal` | `always` | `full` | `true` | `true` | `default`, `operations` |
-| `vyre-registry-link` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `true` | `true` | `default`, `operations` |
 | `vyre-registry-link` | `vyre-lower` | `lowering` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-registry-link` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-registry-link` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `hardware` | `true` | `false` | `default`, `operations` |
@@ -737,10 +657,10 @@ graph TD
 | `vyre-runtime` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-test-support` | `structure-gate` | `source-structure` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-test-support` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `driver-contracts` |
-| `vyre-test-support` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `ir-fixtures`, `semantic-requests` |
-| `vyre-test-support` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `semantic-requests` |
-| `vyre-test-support` | `vyre-primitives` | `primitive-library` | `normal` | `always` | None | `true` | `false` | `driver-artifact-contracts`, `ir-fixtures`, `semantic-requests` |
-| `vyre-test-support` | `vyre-reference` | `reference-semantics` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `ir-fixtures`, `semantic-requests` |
+| `vyre-test-support` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `ir-fixtures`, `parity-oracles`, `semantic-parity`, `semantic-requests` |
+| `vyre-test-support` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `semantic-parity`, `semantic-requests` |
+| `vyre-test-support` | `vyre-primitives` | `primitive-library` | `normal` | `always` | None | `true` | `false` | `semantic-parity` |
+| `vyre-test-support` | `vyre-reference` | `reference-semantics` | `normal` | `always` | None | `true` | `true` | `parity-oracles`, `semantic-parity` |
 | `vyre-test-support` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `xtask` | `structure-gate` | `source-structure` | `normal` | `always` | None | `false` | `true` | None |
 | `xtask-evidence` | `vyre-bench` | `workload-benchmarks` | `normal` | `always` | None | `false` | `true` | None |

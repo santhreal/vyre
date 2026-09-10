@@ -200,7 +200,7 @@ This section is generated from `docs/CLI.toml` and executable help output.
 ./cargo_full run -p vyre-bench --bin vyre-bench -- --help
 ```
 
-Commands: `compare`, `dashboard`, `evolve-server`, `explain`, `list`, `release-matrix`, `run`, `snapshot-diff`, `validate-benchmark-bundle`, `validate-comparison`, `validate-report`.
+Commands: `compare`, `dashboard`, `evolve-server`, `explain`, `list`, `release-matrix`, `run`, `snapshot-diff`, `validate-benchmark-bundle`, `validate-comparison`, `validate-report`, `whole-app-evidence`.
 
 Hardware: Run commands require the explicitly selected backend device. Report validation and comparison are device independent.
 
@@ -225,9 +225,11 @@ Own reproducible workload benchmarks against the best available native baseline 
 
 ### Boundaries
 
-The `benchmarks` owner maintains this `tooling` crate at `vyre-bench`.
-Its allowed internal production dependencies are: `vyre`, `vyre-alloc-probe`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`, `xtask`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `tooling` layer's `workload-benchmarks` seam, at `vyre-bench`.
+Every production dependency on it crosses Reproducible workload benchmarks and their recorded evidence.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -259,7 +261,7 @@ This crate is internal benchmark tooling for the 0.8.0 train and is not publishe
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Validate safetensors metadata, shard indexes, compiler requirements, trusted shard digests, and immutable checkpoint identities without owning runtime residency.
 
-The crate lives at `vyre-safetensors`. The `safetensors-adapter` owner maintains its
-`runtime` testing contract.
+The crate lives at `vyre-safetensors` and owns the `safetensors-adapter` seam in the `runtime` layer.
 
 ## Commands
 

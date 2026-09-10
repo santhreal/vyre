@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own compiler-internal logic, causal reasoning, categorical rewrites, and knowledge compilation compositions. Does not own cost model evaluation, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-reasoning`. The `product-libraries` owner maintains its
-`libraries` testing contract.
+The crate lives at `vyre-libs-reasoning` and owns the `libs-reasoning` seam in the `libraries` layer.
 
 ## Commands
 

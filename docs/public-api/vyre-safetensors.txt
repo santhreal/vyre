@@ -123,9 +123,6 @@ pub vyre_safetensors::SafetensorError::RequiredShape
 pub vyre_safetensors::SafetensorError::RequiredShape::actual: alloc::vec::Vec<u64>
 pub vyre_safetensors::SafetensorError::RequiredShape::expected: alloc::vec::Vec<u64>
 pub vyre_safetensors::SafetensorError::RequiredShape::name: alloc::string::String
-pub vyre_safetensors::SafetensorError::ResourceContentModified
-pub vyre_safetensors::SafetensorError::ResourceContentModified::name: alloc::string::String
-pub vyre_safetensors::SafetensorError::ResourceContentModified::shard: std::path::PathBuf
 pub vyre_safetensors::SafetensorError::ShapeOverflow
 pub vyre_safetensors::SafetensorError::ShardContentChanged
 pub vyre_safetensors::SafetensorError::ShardContentChanged::name: alloc::string::String
@@ -144,8 +141,6 @@ pub vyre_safetensors::SafetensorError::ShardLengthChanged::indexed: u64
 pub vyre_safetensors::SafetensorError::ShardLengthChanged::shard: std::path::PathBuf
 pub vyre_safetensors::SafetensorError::StaleManifest
 pub vyre_safetensors::SafetensorError::StaleManifest::detail: alloc::string::String
-pub vyre_safetensors::SafetensorError::SymlinkSwapDetected
-pub vyre_safetensors::SafetensorError::SymlinkSwapDetected::shard: std::path::PathBuf
 pub vyre_safetensors::SafetensorError::TooManyTensors
 pub vyre_safetensors::SafetensorError::TooManyTensors::actual: usize
 pub vyre_safetensors::SafetensorError::TooManyTensors::maximum: usize

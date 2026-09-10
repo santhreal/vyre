@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own every inventory registry link anchor, report which sources a build links, and assert that each linked source reached the registry it submits into.
 
-The crate lives at `vyre-registry-link`. The `registry-link` owner maintains its
-`registry-link` testing contract.
+The crate lives at `vyre-registry-link` and owns the `registry-link` seam in the `registry-link` layer.
 
 ## Commands
 

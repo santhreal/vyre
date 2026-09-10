@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 The only crate permitted to compute on the CPU: the pure-Rust IR oracle. Not a backend and not a fallback.
 
-The crate lives at `vyre-reference`. The `reference-semantics` owner maintains its
-`semantics` testing contract.
+The crate lives at `vyre-reference` and owns the `reference-semantics` seam in the `semantics` layer.
 
 ## Commands
 

@@ -8,8 +8,7 @@ Run the default crate suite from the workspace root:
 
 Count heap traffic per thread behind a GlobalAlloc wrapper, so an allocation budget measures the code under test rather than the test schedule. Depends on no vyre crate, so a harness binary links it at run time and a driver suite links it as a dev-dependency.
 
-The crate lives at `vyre-alloc-probe`. The `benchmarks` owner maintains its
-`standalone-tooling` testing contract.
+The crate lives at `vyre-alloc-probe` and owns the `allocation-probe` seam in the `standalone-tooling` layer.
 
 ## Commands
 

@@ -76,9 +76,11 @@ Own the xtask subcommands that must observe the live operation registry, the pri
 
 ### Boundaries
 
-The `release-tooling` owner maintains this `tooling` crate at `xtask-registry`.
-Its allowed internal production dependencies are: `structure-gate`, `vyre`, `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-spec`, `xtask`.
-Any other normal or build dependency requires an ownership-registry change.
+This crate is the `tooling` layer's `live-registry-gates` seam, at `xtask-registry`.
+Every production dependency on it crosses The gates that must observe the live operation registry, the primitive catalog or a linked backend driver.
+The layer ranks in the architecture manifest decide which layers may
+reach it; a dependency from a layer that does not outrank this one requires
+an architecture-manifest change.
 
 ### Minimal real example
 
@@ -110,7 +112,7 @@ This crate is internal repository and release tooling for the 0.8.0 train and is
 ### Ownership
 
 [`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
-responsibility and allowed internal edges.
+responsibility, layer, and seam.
 
 ### License
 

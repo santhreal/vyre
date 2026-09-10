@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:585fbeae622524cd57d1c874cfcc1afcd8cfd148:dirty=false",
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=ab2e2b4ba58b45dc748e13ab540a57116d15ff8ff539182ce68210e5bfc7273a"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 2,
   "command": "cargo_full run --bin xtask -- release-conformance",
   "requested_backends": [
@@ -16,26 +16,24 @@
     {
       "path": "cuda-conformance.json",
       "exists": true,
-      "bytes": 396976,
+      "bytes": 331768,
       "read_error": null
     },
     {
       "path": "wgpu-conformance.json",
       "exists": true,
-      "bytes": 525404,
+      "bytes": 331576,
       "read_error": null
     },
     {
       "path": "reference-conformance.json",
       "exists": true,
-      "bytes": 318980,
+      "bytes": 314947,
       "read_error": null
     }
   ],
   "blockers": [
-    "cuda: `cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all` exited with exit status: 1; stderr: Compiling vyre-foundation v0.8.0 (vyre-foundation)\n   Compiling vyre-lower v0.8.0 (vyre-lower)\n   Compiling vyre-primitives v0.8.0 (vyre-primitives)\n   Compiling vyre-reference v0.8.0 (vyre-reference)\n   Compiling vyre-emit-naga v0.8.0 (vyre-emit-naga)\n   Compiling vyre-emit-ptx v0.8.0 (vyre-emit-ptx)\n   Compiling vyre-megakernel v0.8.0 (vyre-megakernel)\n   Compiling vyre-libs v0.8.0 (vyre-libs)\n   Compiling vyre-driver v0.8.0 (vyre-driver)\n   Compiling vyre-pass-engine v0.8.0 (vyre-pass-engine)\n   Compiling vyre-driver-wgpu v0.8.0 (vyre-driver-wgpu)\n   Compiling vyre-driver-metal v0.8.0 (vyre-driver-metal)\n   Compiling vyre-driver-reference v0.8.0 (vyre-driver-reference)\n   Compiling vyre-runtime v0.8.0 (vyre-runtime)\n   Compiling vyre-driver-cuda v0.8.0 (vyre-driver-cuda)\n   Compiling vyre v0.8.0 (vyre)\n   Compiling vyre-registry-link v0.8.0 (vyre-registry-link)\n   Compiling vyre-conform v0.8.0 (conform/vyre-conform)\n    Finished `release` profile [optimized] target(s) in 1m 14s\n     Running `/var/santh-cargo-target/release/vyre-conform dispatch --backend cuda --ops all`",
-    "cuda: cuda conformance reported 289 failed pair(s)",
-    "wgpu: `cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all` exited with exit status: 1; stderr: Finished `release` profile [optimized] target(s) in 0.93s\n     Running `/var/santh-cargo-target/release/vyre-conform dispatch --backend wgpu --ops all`",
-    "wgpu: wgpu conformance reported 340 failed pair(s)"
+    "wgpu: `cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all` exited with exit status: 1; stderr: Finished `release` profile [optimized] target(s) in 0.20s\n     Running `/mnt/FlareTraining/santh-archive/cargo-target/release/vyre-conform dispatch --backend wgpu --ops all`",
+    "wgpu: wgpu conformance reported 1 failed pair(s)"
   ]
 }
