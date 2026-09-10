@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The release-provenance schema refusal test asserted the literal version 1, so the bump to version 2 made it fail on its own expectation rather than on the contract. It now derives both refused versions from `RELEASE_PROVENANCE_SCHEMA_VERSION` and checks the version below and the version above the current one, so a document at any other schema version is refused and a future bump keeps the test measuring the refusal."
