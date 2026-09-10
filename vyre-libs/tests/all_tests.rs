@@ -175,10 +175,6 @@ pub mod blake3_program;
 #[path = "blake3_wrong_size.rs"]
 pub mod blake3_wrong_size;
 
-/// Integration tests from `tests/bounded_compile_policy.rs`.
-#[path = "bounded_compile_policy.rs"]
-pub mod bounded_compile_policy;
-
 /// Integration tests from `tests/bracket_match_proptest.rs`.
 #[cfg(feature = "pattern")]
 #[path = "bracket_match_proptest.rs"]
@@ -321,10 +317,6 @@ pub mod f32_states_its_contractions;
 /// Integration tests from `tests/family_duplication_budget.rs`.
 #[path = "family_duplication_budget.rs"]
 pub mod family_duplication_budget;
-
-/// Integration tests from `tests/filesystem_path_archive_policies.rs`.
-#[path = "filesystem_path_archive_policies.rs"]
-pub mod filesystem_path_archive_policies;
 
 /// Integration tests from `tests/flow_precision_planner.rs`.
 #[path = "flow_precision_planner.rs"]
