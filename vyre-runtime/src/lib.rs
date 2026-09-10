@@ -96,7 +96,7 @@ pub mod uring_completion_pump;
 
 /// Mandatory finite session quotas and typed session identity.
 pub use vyre_foundation::failure_domain::{
-    FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError,
+    FailureDomain, RecoveryClass, RecoveryDisposition, StateOwnerRecovery, TypedRecoveryError,
 };
 
 mod session_quota;
