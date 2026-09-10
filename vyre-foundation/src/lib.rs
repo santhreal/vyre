@@ -204,9 +204,9 @@ pub mod validate;
 /// Visitor traits + blanket adapters routing Expr/Node variants.
 pub mod visit;
 
-/// Self-substrate primitives that the optimizer + scheduler call into.
-/// Moved in-tree from vyre-libs to break a cross-workspace dep cycle.
-pub mod pass_substrate;
+/// CPU pass math the optimizer and scheduler call into.
+/// Kept in foundation because a dependency on `vyre-libs` would cycle.
+pub mod pass_math;
 
 /// Program → substrate-neutral execution planning for fusion, readback,
 /// provenance, autotune, and accuracy guard decisions.

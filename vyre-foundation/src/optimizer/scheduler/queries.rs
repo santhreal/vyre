@@ -163,7 +163,7 @@ impl PassScheduler {
         let adj = self.invalidation_adjacency();
         let n_u32 = u32::try_from(n).unwrap_or(u32::MAX);
         let descendants =
-            crate::pass_substrate::adjustment_set_pass_dependency::pass_descendants(adj, n_u32);
+            crate::pass_math::adjustment_set_pass_dependency::pass_descendants(adj, n_u32);
         let row = &descendants[treatment_idx];
         row.iter()
             .filter_map(|&j| self.passes.get(j as usize).map(|pass| pass.metadata().name))
@@ -248,11 +248,11 @@ impl PassScheduler {
             return Some(true);
         }
         let n_u32 = u32::try_from(n_caps).unwrap_or(u32::MAX);
-        let f = crate::pass_substrate::string_diagram_ir_rewrite::identity_arrow(n_u32);
+        let f = crate::pass_math::string_diagram_ir_rewrite::identity_arrow(n_u32);
         let g = f.clone();
         let h = f.clone();
         Some(
-            crate::pass_substrate::string_diagram_ir_rewrite::composition_associates(
+            crate::pass_math::string_diagram_ir_rewrite::composition_associates(
                 &f, &g, &h, n_u32, n_u32, n_u32, n_u32,
             ),
         )
@@ -277,7 +277,7 @@ impl PassScheduler {
     /// tensor-network ordering  -  this minimizes the size of
     /// intermediate "stale capability" sets the optimizer must track.
     ///
-    /// Routes through `pass_substrate::tensor_network_fusion_order::`
+    /// Routes through `pass_math::tensor_network_fusion_order::`
     /// `optimal_fusion_order`. Returns indices into the input slice
     /// in recommended run order.
     #[must_use]
@@ -290,11 +290,11 @@ impl PassScheduler {
                 u32::try_from(n).unwrap_or(u32::MAX)
             })
             .collect();
-        crate::pass_substrate::tensor_network_fusion_order::optimal_fusion_order(&dimensions)
+        crate::pass_math::tensor_network_fusion_order::optimal_fusion_order(&dimensions)
     }
 
     /// Estimate the contraction cost of running a candidate pass
-    /// ordering. Routes through `pass_substrate::`
+    /// ordering. Routes through `pass_math::`
     /// `tensor_network_fusion_order::fusion_order_cost`. Lower is
     /// better; callers can use this to compare two orderings (e.g.
     /// the topological order from `schedule_passes` vs the
@@ -309,13 +309,13 @@ impl PassScheduler {
                 u32::try_from(n).unwrap_or(u32::MAX)
             })
             .collect();
-        crate::pass_substrate::tensor_network_fusion_order::fusion_order_cost(&dimensions, order)
+        crate::pass_math::tensor_network_fusion_order::fusion_order_cost(&dimensions, order)
     }
 
     /// Pairs of registered passes that are independent (neither
     /// reaches the other in the transitive invalidation closure)
     /// and therefore safe to fuse / parallelize. Computed via
-    /// `pass_substrate::polyhedral_fusion::fusable_pairs` over the
+    /// `pass_math::polyhedral_fusion::fusable_pairs` over the
     /// scheduler's invalidation adjacency.
     ///
     /// Returns a flat `Vec<(name_a, name_b)>` of fusable name pairs;
@@ -329,7 +329,7 @@ impl PassScheduler {
         }
         let adj = self.cached_adjacency_or_init();
         let n_u32 = u32::try_from(n).unwrap_or(u32::MAX);
-        let mask = crate::pass_substrate::polyhedral_fusion::fusable_pairs(adj, n_u32, n_u32);
+        let mask = crate::pass_math::polyhedral_fusion::fusable_pairs(adj, n_u32, n_u32);
 
         let mut out = Vec::with_capacity(n);
         for i in 0..n {
@@ -390,7 +390,7 @@ impl PassScheduler {
 
     /// Multigrid Jacobi smoothing step on the pass-influence linear
     /// system. Routes through
-    /// `pass_substrate::multigrid_matroid_solver::matroid_solve_step`.
+    /// `pass_math::multigrid_matroid_solver::matroid_solve_step`.
     /// Lets analyses (cost-prediction, scheduling-bound estimation)
     /// solve `A·x ≈ b` over the n-dimensional pass space using the
     /// substrate's relaxed solver.
@@ -403,7 +403,7 @@ impl PassScheduler {
         let adjacency_words = self.invalidation_adjacency();
         let adjacency_weights: Vec<f64> = adjacency_words.iter().map(|&v| f64::from(v)).collect();
         let n_u32 = u32::try_from(n).unwrap_or(u32::MAX);
-        crate::pass_substrate::multigrid_matroid_solver::matroid_solve_step(
+        crate::pass_math::multigrid_matroid_solver::matroid_solve_step(
             &adjacency_weights,
             b,
             x_in,

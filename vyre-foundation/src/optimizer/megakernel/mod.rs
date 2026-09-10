@@ -1,8 +1,7 @@
 //! Megakernel-related optimizer subsystem.
 //!
-//! Audit cleanup A9 (2026-04-30): hoisted from `pass_substrate/` so the
-//! megakernel-fusion scheduler concept lives in one place. Three legitimate
-//! scheduler concepts in vyre, one home each:
+//! The megakernel-fusion scheduler concept has one home. Three scheduler
+//! concepts in vyre, one home each:
 //!
 //! - **Pass-scheduler** (`super::scheduler`)  -  picks which optimizer pass
 //!   to run next inside the optimizer fixpoint loop.

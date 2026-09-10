@@ -22,12 +22,18 @@ pub(crate) const CATEGORY_C_CRATE: &str = "vyre-primitives";
 
 /// Directory that owns every module named `*substrate*`.
 ///
-/// `vyre_foundation::pass_substrate` owns the CPU pass math outright: the pass
-/// engine imports those functions and wraps them in dispatch rather than
-/// reimplementing them. Renaming the pass-engine crate retired the second and
-/// third homes for the name, so foundation is the only one left and the
-/// exemption list it used to need is gone.
-pub(crate) const SUBSTRATE_HOME: &str = "vyre-foundation/src/pass_substrate";
+/// `vyre_foundation::substrate` is the compiler data substrate: hash-consed
+/// arenas, interners, stable typed ids, stage views, a versioned cache, and
+/// the query engine over them. Every other definition of the name is a second
+/// definition of one concept.
+pub(crate) const SUBSTRATE_HOME: &str = "vyre-foundation/src/substrate";
+
+/// Integration-test surface of the crate that owns [`SUBSTRATE_HOME`].
+///
+/// A test source exercises the home from outside it and defines nothing a
+/// caller can reach, so it names the concept without becoming a second home.
+/// Production source elsewhere in the same crate is still a second home.
+pub(crate) const SUBSTRATE_HOME_TESTS: &str = "vyre-foundation/tests/";
 
 /// Closed workspace roster. A new member is a reviewable change here first.
 pub(crate) const ALLOWED_MEMBERS: &[&str] = &[
@@ -258,7 +264,9 @@ pub fn category_home_failures(registrations: &[Registration]) -> Vec<String> {
 pub fn substrate_home_failures(paths: &[String]) -> Vec<String> {
     paths
         .iter()
-        .filter(|path| !path.starts_with(SUBSTRATE_HOME))
+        .filter(|path| {
+            !path.starts_with(SUBSTRATE_HOME) && !path.starts_with(SUBSTRATE_HOME_TESTS)
+        })
         .map(|path| {
             format!(
                 "`{path}` names the substrate concept outside {SUBSTRATE_HOME}; one concept gets one home"
@@ -554,28 +562,32 @@ mod tests {
 
     #[test]
     fn a_second_substrate_home_is_rejected() {
-        // Illustrative names: the second homes this rule caught in the tree
-        // (`vyre-libs/src/substrate_catalog.rs`, `vyre-driver/src/speculation_substrate.rs`)
-        // have been renamed, so the fixture keeps the shape rather than a path.
+        // Illustrative names: the second homes this rule caught in the tree have
+        // been renamed, so the fixture keeps the shape rather than a live path.
+        // A second home inside vyre-foundation itself is still a second home.
         let failures = substrate_home_failures(&[
-            "vyre-foundation/src/pass_substrate/semiring_closure.rs".to_string(),
+            "vyre-foundation/src/substrate/arenas.rs".to_string(),
+            "vyre-foundation/src/schedule/lowering_substrate.rs".to_string(),
             "vyre-driver/src/speculation_substrate.rs".to_string(),
             "vyre-libs/src/matmul_substrate.rs".to_string(),
         ]);
 
-        assert_eq!(failures.len(), 2, "{failures:?}");
+        assert_eq!(failures.len(), 3, "{failures:?}");
+        assert!(failures.iter().any(|f| f.contains("lowering_substrate")));
         assert!(failures.iter().any(|f| f.contains("speculation_substrate")));
         assert!(failures.iter().any(|f| f.contains("matmul_substrate")));
     }
 
     #[test]
-    fn the_foundation_pass_substrate_home_is_accepted() {
-        // ARCHITECTURE.md: foundation owns the CPU pass math and the pass engine
-        // imports it, so this is the one home the name has. Every other home
-        // stays a failure.
+    fn the_foundation_data_substrate_home_is_accepted() {
+        // The data substrate is hash-consed arenas, interners, stable typed ids,
+        // stage views, a versioned cache, and the query engine over them. That
+        // directory is the one home the name has, and the owning crate's
+        // integration tests exercise it from outside without defining a second.
         let failures = substrate_home_failures(&[
-            "vyre-foundation/src/pass_substrate/semiring_closure.rs".to_string(),
-            "vyre-foundation/src/pass_substrate/mod.rs".to_string(),
+            "vyre-foundation/src/substrate/arenas.rs".to_string(),
+            "vyre-foundation/src/substrate/mod.rs".to_string(),
+            "vyre-foundation/tests/compiler_substrate_contract.rs".to_string(),
         ]);
 
         assert!(failures.is_empty(), "{failures:?}");

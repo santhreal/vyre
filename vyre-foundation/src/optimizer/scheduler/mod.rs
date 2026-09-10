@@ -13,8 +13,8 @@
 //! exposes `requires` and `invalidates` capability tags, not a full pass→pass influence graph
 //! or `produces` facts, so **extra causal pairs are not derivable** from metadata alone.
 //! When `adj` is supplied (substrate analysis, TOML rules, etc.), use
-//! [`crate::pass_substrate::adjustment_set_pass_dependency::pass_descendants`] for transitive
-//! downstream passes and [`crate::pass_substrate::adjustment_set_pass_dependency::ordering_is_safe`]
+//! [`crate::pass_math::adjustment_set_pass_dependency::pass_descendants`] for transitive
+//! downstream passes and [`crate::pass_math::adjustment_set_pass_dependency::ordering_is_safe`]
 //! to validate a proposed “run treatment before outcome” ordering.
 use crate::ir::{BufferDecl, Expr, Node};
 use crate::ir_inner::model::program::Program;

@@ -6,7 +6,7 @@
 //! wrapper, not a divergent rewrite).
 #![allow(missing_docs)]
 
-use vyre_foundation::pass_substrate::semiring_closure;
+use vyre_foundation::pass_math::semiring_closure;
 use vyre_libs_encoding::encoding::{scallop_provenance, scallop_provenance_wide};
 
 #[test]

@@ -8,7 +8,7 @@
 //!
 //! Composes reachability_closure for the transitive-closure step.
 
-use vyre_foundation::pass_substrate::polyhedral_fusion as foundation_polyhedral;
+use vyre_foundation::pass_math::polyhedral_fusion as foundation_polyhedral;
 
 /// Reusable buffers for polyhedral fusion analysis.
 #[cfg(test)]

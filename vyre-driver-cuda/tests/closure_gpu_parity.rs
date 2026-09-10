@@ -5,7 +5,7 @@
 use crate::harness;
 
 use harness::with_cuda_optimizer_dispatcher;
-use vyre_foundation::pass_substrate::semiring_closure::{
+use vyre_foundation::pass_math::semiring_closure::{
     lineage_closure, reachability_closure, shortest_path_closure,
 };
 use vyre_libs::analysis::dataflow_fixpoint::{

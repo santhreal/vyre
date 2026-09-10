@@ -34,7 +34,7 @@ expands the user-workload surface AND lets vyre self-improve.
 After commit `fd97448ea4`, `self_substrate` lives in
 `vyre-driver/`, so every backend (wgpu, cuda, spirv, megakernel) and
 the runtime/aot crates inherit substrate access via a single
-dep. `vyre-foundation` keeps a smaller `pass_substrate` for the
+dep. `vyre-foundation` keeps a smaller `pass_math` for the
 optimizer's own use (the foundation/primitives cycle would otherwise
 block direct primitive consumption).
 
@@ -65,8 +65,8 @@ block direct primitive consumption).
 - `vyre_driver::self_substrate::matroid_exact_megakernel`  -  exact
   Edmonds solver behind `select_optimal_fused_subset`.
 
-**Foundation pass_substrate (vyre-foundation has its own smaller
-substrate, all 9 modules now consumed by `PassScheduler`):**
+**Foundation `pass_math` (all 9 modules now consumed by
+`PassScheduler`):**
 
 - `adjustment_set_pass_dependency` → `PassScheduler::transitive_dependents` (P-FOUND-5)
 - `dataflow_fixpoint` → `PassScheduler::reaches`, `invalidation_closure` (P-FOUND-7)
@@ -99,7 +99,7 @@ closure found.
 ```
 vyre-primitives                  Tier-2.5 math (pure CPU + Program builders)
   └── vyre-libs                  Tier-3 dialects (security, ML, parsing)
-       └── vyre-foundation       IR + optimizer (uses pass_substrate)
+       └── vyre-foundation       IR + optimizer (uses pass_math)
             └── vyre-driver      Backend trait + self_substrate (lifted from vyre-libs)
                  └── vyre-driver-{wgpu,cuda,spirv,megakernel}
                  └── vyre-runtime, vyre-aot, vyre-frontend-c
@@ -108,7 +108,7 @@ vyre-primitives                  Tier-2.5 math (pure CPU + Program builders)
 `vyre-foundation` cannot directly consume `vyre-primitives` (the
 optional reverse dep makes a cycle). Foundation maintains its own
 `cpu_references.rs` with the small kernels it needs and a parallel
-`pass_substrate/` module  -  same Linux-style "arch-local libs" pattern
+`pass_math/` module  -  same Linux-style "arch-local libs" pattern
 documented in `cpu_references.rs` (no smell, intentional).
 
 ## Long-term direction

@@ -1,7 +1,7 @@
-//! The CPU pass math the optimizer reasons with: pass-ordering validity,
-//! region-graph closures, fusion ordering, and the composition checks a rewrite
-//! has to satisfy. Every module here answers a question about passes or region
-//! adjacency and knows nothing about a backend.
+//! CPU pass math for the optimizer: pass-ordering validity, region-graph
+//! closures over a semiring, fusion ordering, and the composition checks an IR
+//! rewrite has to satisfy. Every module here answers a question about passes or
+//! region adjacency. None reference a backend.
 
 /// Optimizer pass-ordering validity via causal adjustment-set analysis.
 pub mod adjustment_set_pass_dependency;

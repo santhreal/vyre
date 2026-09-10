@@ -26,7 +26,7 @@
 //! `math::semiring_gemm` because that is the composition it parameterizes. This
 //! module names it without republishing it, so the type has one path here.
 
-use vyre_foundation::pass_substrate::semiring_closure::Semiring;
+use vyre_foundation::pass_math::semiring_closure::Semiring;
 
 #[cfg(test)]
 mod delta_maintenance;

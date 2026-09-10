@@ -1,6 +1,6 @@
 //! Thin self-substrate wrapper for foundation-owned tensor-network fusion order.
 
-use vyre_foundation::pass_substrate::tensor_network_fusion_order as foundation_tn_order;
+use vyre_foundation::pass_math::tensor_network_fusion_order as foundation_tn_order;
 
 /// Return a stable greedy contraction order.
 #[must_use]

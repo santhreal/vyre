@@ -7,7 +7,7 @@
 //! `t`; such a path would make the proposed order cyclic under the
 //! causal intervention "run `t` before `o`".
 
-use vyre_foundation::pass_substrate::adjustment_set_pass_dependency as foundation_pass_dependency;
+use vyre_foundation::pass_math::adjustment_set_pass_dependency as foundation_pass_dependency;
 
 /// Return whether ordering pass `t` before pass `o` is acyclic.
 ///

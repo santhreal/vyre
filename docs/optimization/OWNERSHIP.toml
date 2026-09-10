@@ -280,7 +280,7 @@ layer = "Security/dataflow"
 write = [
   "vyre-libs/src/security/**",
   "vyre-libs/src/analysis/**",
-  "vyre-foundation/src/pass_substrate/**",
+  "vyre-foundation/src/pass_math/**",
 ]
 required_commands = [
   "cargo_full test -p vyre-libs security",

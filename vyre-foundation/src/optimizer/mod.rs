@@ -109,8 +109,7 @@ pub mod level_contract;
 /// contract declares.
 pub mod level_pipeline;
 /// Megakernel-fusion-scheduler subsystem (homotopy weight oracle +
-/// matroid subset selection). Hoisted from `pass_substrate/` in audit
-/// cleanup A9 (2026-04-30) so megakernel scheduling lives in one place.
+/// matroid subset selection).
 pub mod megakernel;
 /// Proof-producing multi-level equality saturation and Pareto-optimal extraction.
 pub mod multi_level_eqsat;

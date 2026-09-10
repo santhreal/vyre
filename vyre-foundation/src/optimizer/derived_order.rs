@@ -204,7 +204,7 @@ fn count_causal_safe_pairs(adjacency: &[u32], n: usize) -> usize {
     let mut checks = 0usize;
     for before in 0..n {
         for after in (before + 1)..n {
-            if crate::pass_substrate::adjustment_set_pass_dependency::ordering_is_safe(
+            if crate::pass_math::adjustment_set_pass_dependency::ordering_is_safe(
                 adjacency,
                 before as u32,
                 after as u32,

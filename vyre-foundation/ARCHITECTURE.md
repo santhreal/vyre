@@ -15,8 +15,9 @@ The IR data model. `Program`, `Node`, `Expr`, `BufferDecl`,
 Optimizer passes: cse, dce, canonicalize, region_inline,
 const_fold, autotune, fuse_cse.
 
-### `pass_substrate/`
-Pass-scheduler substrate: `PassScheduler` wiring and `transitive_dependents`.
+### `pass_math/`
+CPU pass math: pass-ordering validity, region-graph closures over a semiring,
+fusion ordering, and IR-rewrite composition checks.
 
 ### `optimizer/scheduler/`
 `PassScheduler` core: pass ordering and the dependency walk it orders from.
