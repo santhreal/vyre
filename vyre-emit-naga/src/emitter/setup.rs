@@ -567,51 +567,64 @@ pub(crate) fn emit_uncached(
     let trap_sidecar_slot = descriptor_trap_sidecar_slot(desc)?;
     let trap_tag_codes = descriptor_trap_tag_codes(&desc.body)?;
 
-    let mut function = Function::default();
-    function.name = Some("main".to_owned());
-    let builtins = Builtins::push(
-        &mut function,
-        builder.types,
-        body_uses_subgroup(&desc.body),
-        grid_index,
-    );
-    let mut body_builder = BodyBuilder {
-        function: &mut function,
-        values: FxHashMap::default(),
-        value_types: FxHashMap::default(),
-        globals: &builder.bindings,
-        binding_types: &builder.binding_types,
-        binding_counts: &builder.binding_counts,
-        binding_data_types: &builder.binding_data_types,
-        builtins,
-        grid_index,
-        workgroup_size: desc.dispatch.workgroup_size,
-        types: builder.types,
-        loop_locals: FxHashMap::default(),
-        loop_types: FxHashMap::default(),
-        loop_carrier_targets: FxHashSet::default(),
-        loop_carrier_locals: FxHashMap::default(),
-        child_body_depth: 0,
-        block_scoped_locals: FxHashMap::default(),
-        named_carrier_locals: FxHashMap::default(),
-        named_carrier_types: FxHashMap::default(),
-        named_carrier_result_ids: FxHashMap::default(),
-        vector_lanes: FxHashMap::default(),
-        trap_sidecar_slot,
-        trap_tag_codes,
-        op_dispatch_routes: Default::default(),
-        float_lowering,
-    };
-    body_builder.emit_body(&desc.body)?;
+    // A whole-grid fence is a launch boundary on every route without a
+    // cooperative launch, so the fused body emits as one compute entry point per
+    // dispatch segment, submitted in order. A fence-free descriptor yields a
+    // single segment and the same single `main` as before.
+    let segments = vyre_lower::dispatch_segments(desc)
+        .map_err(|source| EmitError::InvalidDescriptor(source.to_string()))?;
+    for (index, segment) in segments.iter().enumerate() {
+        let name = if index == 0 {
+            "main".to_owned()
+        } else {
+            format!("{}{index}", crate::GRID_SEGMENT_ENTRY_PREFIX)
+        };
+        let mut function = Function::default();
+        function.name = Some(name.clone());
+        let builtins = Builtins::push(
+            &mut function,
+            builder.types,
+            body_uses_subgroup(segment),
+            grid_index,
+        );
+        let mut body_builder = BodyBuilder {
+            function: &mut function,
+            values: FxHashMap::default(),
+            value_types: FxHashMap::default(),
+            globals: &builder.bindings,
+            binding_types: &builder.binding_types,
+            binding_counts: &builder.binding_counts,
+            binding_data_types: &builder.binding_data_types,
+            builtins,
+            grid_index,
+            workgroup_size: desc.dispatch.workgroup_size,
+            types: builder.types,
+            loop_locals: FxHashMap::default(),
+            loop_types: FxHashMap::default(),
+            loop_carrier_targets: FxHashSet::default(),
+            loop_carrier_locals: FxHashMap::default(),
+            child_body_depth: 0,
+            block_scoped_locals: FxHashMap::default(),
+            named_carrier_locals: FxHashMap::default(),
+            named_carrier_types: FxHashMap::default(),
+            named_carrier_result_ids: FxHashMap::default(),
+            vector_lanes: FxHashMap::default(),
+            trap_sidecar_slot,
+            trap_tag_codes: trap_tag_codes.clone(),
+            op_dispatch_routes: Default::default(),
+            float_lowering,
+        };
+        body_builder.emit_body(segment)?;
 
-    builder.module.entry_points.push(EntryPoint {
-        name: "main".to_owned(),
-        stage: ShaderStage::Compute,
-        early_depth_test: None,
-        workgroup_size: desc.dispatch.workgroup_size,
-        workgroup_size_overrides: None,
-        function,
-    });
+        builder.module.entry_points.push(EntryPoint {
+            name,
+            stage: ShaderStage::Compute,
+            early_depth_test: None,
+            workgroup_size: desc.dispatch.workgroup_size,
+            workgroup_size_overrides: None,
+            function,
+        });
+    }
 
     Ok(builder.module)
 }

@@ -207,9 +207,11 @@ fn barrier_body_spaces(body: &KernelBody) -> (bool, bool) {
 /// Narrowing only on a demonstrated single address space keeps every existing
 /// storage fence intact.
 ///
-/// `GridSync` is device wide. WGSL has no whole-grid barrier and no cooperative
-/// launch, so it is a planner cut (`vyre_megakernel::grid_sync`) that splits the
-/// program into sequential dispatches before emission, never an instruction.
+/// `GridSync` is device wide. No shading language this emitter targets has a
+/// whole-grid barrier, so a dispatch-level fence is cut into one entry point per
+/// segment by [`vyre_lower::dispatch_segments`] and never reaches here. A fence
+/// that does reach here sits under a branch or a loop, where no launch boundary
+/// expresses it.
 pub(super) fn barrier_flags(
     ordering: MemoryOrdering,
     body: &KernelBody,
@@ -227,7 +229,7 @@ pub(super) fn barrier_flags(
             "relaxed barrier has no synchronization semantics".to_owned(),
         )),
         MemoryOrdering::GridSync => Err(EmitError::NagaConstructionFailed(
-            "Fix: grid synchronization requires dispatch splitting before Naga emission".to_owned(),
+            "whole-grid fence remains inside a conditional or repeated body, which no launch boundary expresses. Fix: place the fence at dispatch level so it cuts the descriptor into sequential entry points.".to_owned(),
         )),
         _ => Err(EmitError::NagaConstructionFailed(
             "future memory ordering is not mapped by the Naga emitter".to_owned(),

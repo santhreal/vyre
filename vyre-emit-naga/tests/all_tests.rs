@@ -44,3 +44,7 @@ pub mod vec_pack_hazards;
 /// Integration tests from `tests/physical_ir_variant_exhaustiveness.rs`.
 #[path = "physical_ir_variant_exhaustiveness.rs"]
 pub mod physical_ir_variant_exhaustiveness;
+
+/// Integration tests from `tests/grid_sync_dispatch_segments.rs`.
+#[path = "grid_sync_dispatch_segments.rs"]
+pub mod grid_sync_dispatch_segments;

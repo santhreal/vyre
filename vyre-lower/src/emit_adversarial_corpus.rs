@@ -38,7 +38,7 @@ pub enum EmitAdversarialFamily {
     SignedBufferArithmetic,
     /// Unsupported generic call rejection.
     RejectCall,
-    /// Unsupported grid-wide barrier rejection.
+    /// Loop-nested whole-grid barrier rejection.
     RejectGridSyncBarrier,
 }
 
@@ -518,7 +518,26 @@ fn reject_call() -> EmitAdversarialCase {
     }
 }
 
+/// Whole-grid fence inside a loop body, which no emitter can lower.
+///
+/// A dispatch-level fence is a launch boundary and every descriptor emitter now
+/// cuts one. A fence inside a loop body is not: one boundary per iteration is
+/// not a boundary at all, and the iteration count is not known at submission
+/// time. Every emitter must reject this shape rather than degrade the fence to a
+/// workgroup barrier, which would leave the kernel with no cross-workgroup
+/// synchronization while still emitting.
 fn reject_grid_sync_barrier() -> EmitAdversarialCase {
+    let loop_body = KernelBody {
+        ops: vec![op(
+            KernelOpKind::Barrier {
+                ordering: MemoryOrdering::GridSync,
+            },
+            vec![],
+            None,
+        )],
+        child_bodies: vec![],
+        literals: vec![],
+    };
     EmitAdversarialCase {
         id: "adv_reject_grid_sync",
         family: EmitAdversarialFamily::RejectGridSyncBarrier,
@@ -528,15 +547,19 @@ fn reject_grid_sync_barrier() -> EmitAdversarialCase {
             bindings: BindingLayout { slots: vec![] },
             dispatch: Dispatch::new(64, 1, 1),
             body: KernelBody {
-                ops: vec![op(
-                    KernelOpKind::Barrier {
-                        ordering: MemoryOrdering::GridSync,
-                    },
-                    vec![],
-                    None,
-                )],
-                child_bodies: vec![],
-                literals: vec![],
+                ops: vec![
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(
+                        KernelOpKind::StructuredForLoop {
+                            loop_var: "i".into(),
+                        },
+                        vec![0, 1, 0],
+                        None,
+                    ),
+                ],
+                child_bodies: vec![loop_body],
+                literals: vec![LiteralValue::U32(0), LiteralValue::U32(4)],
             },
         },
     }

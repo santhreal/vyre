@@ -387,7 +387,7 @@ fn emit_from_naga_module_with_resource_indices(
     msl_options.lang_version = options.lang_version;
     msl_options.fake_missing_bindings = false;
     let resource_map =
-        metal_entry_point_resource_map(module, &options.entry_point, resource_indices)?;
+        metal_entry_point_resource_map(module, resource_indices)?;
     msl_options.per_entry_point_map = resource_map.per_entry_point;
 
     let pipeline_options = PipelineOptions::default();
@@ -434,9 +434,14 @@ fn ensure_compute_entry_point(
     Ok(index)
 }
 
+/// Resource map covering every compute entry point in the module.
+///
+/// The MSL writer runs with `fake_missing_bindings` off, so an entry point
+/// absent from this map fails the write. A grid-synchronizing descriptor emits
+/// one entry point per dispatch segment, and every segment addresses the same
+/// module-level bindings, so one resource set is recorded under each name.
 fn metal_entry_point_resource_map(
     module: &naga::Module,
-    entry_point: &str,
     resource_indices: &BTreeMap<(u32, u32), u8>,
 ) -> Result<MetalResourceMap, EmitError> {
     let mut resources = EntryPointResources::default();
@@ -484,8 +489,12 @@ fn metal_entry_point_resource_map(
         })
         .transpose()?;
     resources.sizes_buffer = sizes_buffer_index;
-    let mut map = BTreeMap::new();
-    map.insert(entry_point.to_string(), resources);
+    let map = module
+        .entry_points
+        .iter()
+        .filter(|ep| ep.stage == naga::ShaderStage::Compute)
+        .map(|ep| (ep.name.clone(), resources.clone()))
+        .collect();
     Ok(MetalResourceMap {
         per_entry_point: map,
         sizes_buffer_index,
