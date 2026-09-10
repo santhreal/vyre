@@ -45,6 +45,10 @@ pub mod neutral_vocabulary_contract;
 #[path = "node_child_descent_owner.rs"]
 pub mod node_child_descent_owner;
 
+/// Integration tests from `tests/published_module_reexports.rs`.
+#[path = "published_module_reexports.rs"]
+pub mod published_module_reexports;
+
 /// Integration tests from `tests/scan_roster_pruning.rs`.
 #[path = "scan_roster_pruning.rs"]
 pub mod scan_roster_pruning;

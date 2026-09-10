@@ -27,9 +27,9 @@ const FIX: &str = "regenerate the artifact with its owning gate's `--write` on a
                    remaining changes the next commit captures, and commit both together";
 
 /// A committed fingerprint resolves against the commit that carries it.
-pub struct EvidenceProvenance;
+pub struct CommittedEvidenceProvenance;
 
-impl crate::gate::GateBehavior for EvidenceProvenance {
+impl crate::gate::GateBehavior for CommittedEvidenceProvenance {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let tracked = git(ctx, &["ls-files", "-z", "--", EVIDENCE_DIR])?;
@@ -193,7 +193,7 @@ mod tests {
     }
 
     fn findings(root: &Path) -> String {
-        EvidenceProvenance
+        CommittedEvidenceProvenance
             .run(&GateCtx::new(root.to_path_buf(), Vec::new()))
             .expect("Fix: the fixture checkout must be judgeable.")
             .finding_messages()
@@ -279,7 +279,7 @@ mod tests {
         .expect("Fix: write an unstamped artifact.");
         fixture_checkout::commit_worktree(dir.path(), "record evidence");
 
-        let report = EvidenceProvenance
+        let report = CommittedEvidenceProvenance
             .run(&GateCtx::new(dir.path().to_path_buf(), Vec::new()))
             .expect("Fix: the fixture checkout must be judgeable.");
 
@@ -318,7 +318,7 @@ mod tests {
         );
         fixture_checkout::commit_worktree(dir.path(), "record the second artifact");
 
-        let report = EvidenceProvenance
+        let report = CommittedEvidenceProvenance
             .run(&GateCtx::new(dir.path().to_path_buf(), Vec::new()))
             .expect("Fix: the fixture checkout must be judgeable.");
 

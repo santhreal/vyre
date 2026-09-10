@@ -35,7 +35,7 @@
 //! a per-file parser cannot do. An id written inline or through a file-local
 //! `const` is read, wherever in the file the `const` sits.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
@@ -126,7 +126,7 @@ pub fn scan(root: &Path) -> Workspace {
     let registry_submitters = scan_registry_submitters(&sources);
     let discarding_imports = scan_discarding_imports(&sources);
     let crate_roots = scan_crate_roots(root);
-    let published_modules = scan_published_modules(root);
+    let published_modules = scan_published_modules(root, &crate_roots);
     let source_files = scan_source_files(root, &crate_roots);
     let module_files = scan_module_files(&crate_roots, &source_files);
     let foreign_glob_reexports =
@@ -396,10 +396,25 @@ fn scan_source_files(root: &Path, crate_roots: &[CrateRoot]) -> Vec<String> {
 /// An unreadable snapshot directory yields no exemptions rather than a blanket
 /// one: losing the record of what is published makes the layout rules louder,
 /// not quieter.
-fn scan_published_modules(root: &Path) -> Vec<String> {
-    let mut modules = Vec::new();
+///
+/// A facade publishes a domain module with `pub use`, not `pub mod`, so reading
+/// `pub mod` alone left every module `vyre` and `vyre-libs` republish out of the
+/// set, and a published module whose name the layout rules ban lost the
+/// exemption that keeps a consumer's import path stable.
+///
+/// A snapshot line for a re-export states no item kind: `pub use
+/// vyre_libs::parsing` re-exports a module and `pub use vyre::validate`
+/// re-exports a function of that name, and the two render identically. The kind
+/// comes from the crate that declares the item: the re-exporting crate's own
+/// source states which path each re-exported name binds, and the declaring
+/// crate's snapshot states whether that path is a `pub mod`. A re-export joins
+/// the set only when both agree, so a re-exported type or function never
+/// exempts a module of the same name.
+fn scan_published_modules(root: &Path, crate_roots: &[CrateRoot]) -> Vec<String> {
+    let mut declared: BTreeSet<String> = BTreeSet::new();
+    let mut reexports: Vec<String> = Vec::new();
     let Ok(entries) = fs::read_dir(root.join(PUBLIC_API_SNAPSHOT_DIR)) else {
-        return modules;
+        return Vec::new();
     };
     for entry in entries.filter_map(Result::ok) {
         let path = entry.path();
@@ -411,13 +426,200 @@ fn scan_published_modules(root: &Path) -> Vec<String> {
         };
         for line in text.lines() {
             if let Some(module) = line.strip_prefix("pub mod ") {
-                modules.push(module.trim().to_string());
+                declared.insert(module.trim().to_string());
+            } else if let Some(reexport) = line.strip_prefix("pub use ") {
+                let reexport = reexport.trim();
+                if reexport.contains("::") && !reexport.contains('<') {
+                    reexports.push(reexport.to_string());
+                }
             }
         }
     }
+    let mut modules: Vec<String> = declared.iter().cloned().collect();
+    modules.extend(reexported_modules(
+        root,
+        crate_roots,
+        &declared,
+        &reexports,
+    ));
     modules.sort();
     modules.dedup();
     modules
+}
+
+/// Every path in `reexports` that a crate in `crate_roots` publishes a module at.
+///
+/// A candidate whose final name is the final name of no declared module cannot
+/// resolve to one, so it costs no source read. What survives that is confirmed
+/// against the re-exporting crate's source, which is the only place the target
+/// path of a re-exported name is written.
+///
+/// Bindings are read once per re-exporting crate: the two facade crates carry
+/// every candidate in this checkout, and one pass over each answers all of them.
+fn reexported_modules(
+    root: &Path,
+    crate_roots: &[CrateRoot],
+    declared: &BTreeSet<String>,
+    reexports: &[String],
+) -> Vec<String> {
+    let names: BTreeSet<&str> = declared
+        .iter()
+        .filter_map(|module| module.rsplit("::").next())
+        .collect();
+    let directories: BTreeMap<&str, &str> = crate_roots
+        .iter()
+        .map(|crate_root| (crate_root.ident.as_str(), crate_root.directory.as_str()))
+        .collect();
+    let mut bindings: BTreeMap<&str, Vec<(String, String)>> = BTreeMap::new();
+    let mut found = Vec::new();
+    for path in reexports {
+        let Some(name) = path.rsplit("::").next() else {
+            continue;
+        };
+        if !names.contains(name) {
+            continue;
+        }
+        let Some((ident, _)) = path.split_once("::") else {
+            continue;
+        };
+        let Some(directory) = directories.get(ident) else {
+            continue;
+        };
+        let bound = bindings
+            .entry(ident)
+            .or_insert_with(|| crate_reexport_bindings(root, directory));
+        if bound
+            .iter()
+            .any(|(bound, target)| bound == name && declared.contains(target))
+        {
+            found.push(path.clone());
+        }
+    }
+    found
+}
+
+/// `(bound name, re-exported path)` for every `pub use` under one crate's `src`.
+///
+/// A statement is accumulated across lines because a brace group is routinely
+/// wrapped, and only a line that starts with `pub use` opens one, which keeps a
+/// doc comment quoting a re-export out of the result.
+fn crate_reexport_bindings(root: &Path, directory: &str) -> Vec<(String, String)> {
+    let tree = tree_files(root);
+    let mut found = Vec::new();
+    for path in tree.rust_sources_under(&root.join(directory).join("src")) {
+        let Ok(text) = read_source_bounded(path) else {
+            continue;
+        };
+        let mut pending = String::new();
+        let mut open = false;
+        for line in text.lines() {
+            let trimmed = line.trim();
+            if open {
+                pending.push(' ');
+                pending.push_str(trimmed);
+            } else {
+                let Some(rest) = trimmed.strip_prefix("pub use ") else {
+                    continue;
+                };
+                pending.clear();
+                pending.push_str(rest);
+                open = true;
+            }
+            if let Some(end) = pending.find(';') {
+                expand_use_tree("", &pending[..end], &mut found);
+                open = false;
+            }
+        }
+    }
+    found
+}
+
+/// Expand one `use` tree into the `(bound name, path)` pair of every leaf.
+///
+/// A glob binds no name and `_` discards the one it would bind, so neither
+/// publishes a path.
+fn expand_use_tree(prefix: &str, spec: &str, out: &mut Vec<(String, String)>) {
+    let spec = spec.trim();
+    if spec.is_empty() {
+        return;
+    }
+    if let Some(open) = spec.find('{') {
+        let inner = &spec[open + 1..];
+        let Some(close) = closing_brace(inner) else {
+            return;
+        };
+        let head = join_use_path(prefix, &spec[..open]);
+        for member in split_use_members(&inner[..close]) {
+            expand_use_tree(&head, member, out);
+        }
+        return;
+    }
+    let (target, alias) = match spec.split_once(" as ") {
+        Some((target, alias)) => (target.trim(), alias.trim()),
+        None => (spec, ""),
+    };
+    if target.ends_with('*') {
+        return;
+    }
+    let path = join_use_path(prefix, target);
+    let name = if alias.is_empty() {
+        path.rsplit("::").next().unwrap_or_default().to_string()
+    } else {
+        alias.to_string()
+    };
+    if name.is_empty() || name == "_" || path.is_empty() {
+        return;
+    }
+    out.push((name, path));
+}
+
+/// Join one `use` tree segment onto the prefix that holds it.
+///
+/// `self` names the prefix itself, which is how `a::b::{self, c}` publishes `b`.
+fn join_use_path(prefix: &str, tail: &str) -> String {
+    let tail = tail.trim().trim_start_matches(':').trim_end_matches(':');
+    let prefix = prefix.trim_end_matches(':');
+    if tail.is_empty() || tail == "self" {
+        return prefix.to_string();
+    }
+    if prefix.is_empty() {
+        return tail.to_string();
+    }
+    format!("{prefix}::{tail}")
+}
+
+/// Byte offset of the `}` closing an already-consumed `{`.
+fn closing_brace(inner: &str) -> Option<usize> {
+    let mut depth = 0_usize;
+    for (offset, byte) in inner.bytes().enumerate() {
+        match byte {
+            b'{' => depth += 1,
+            b'}' if depth == 0 => return Some(offset),
+            b'}' => depth -= 1,
+            _ => {}
+        }
+    }
+    None
+}
+
+/// Split one brace group at the commas that separate its own members.
+fn split_use_members(body: &str) -> Vec<&str> {
+    let mut members = Vec::new();
+    let mut depth = 0_usize;
+    let mut start = 0_usize;
+    for (offset, byte) in body.bytes().enumerate() {
+        match byte {
+            b'{' => depth += 1,
+            b'}' => depth = depth.saturating_sub(1),
+            b',' if depth == 0 => {
+                members.push(&body[start..offset]);
+                start = offset + 1;
+            }
+            _ => {}
+        }
+    }
+    members.push(&body[start..]);
+    members
 }
 
 /// Read every concrete backend materializer source.

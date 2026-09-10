@@ -159,7 +159,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("invariant-paths", &evidence_paths::InvariantPaths),
     (
         "evidence-provenance",
-        &evidence_provenance::EvidenceProvenance,
+        &evidence_provenance::CommittedEvidenceProvenance,
     ),
     ("example-capability", &example_capability::ExampleCapability),
     ("feature-isolation", &feature_isolation::FeatureIsolation),
