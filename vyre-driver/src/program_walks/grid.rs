@@ -56,9 +56,10 @@ pub fn auto_grid(
 
 /// Infer a launch grid for a known logical element count and workgroup shape.
 ///
-/// 1D kernels use a standard ceil-div over X lanes. 2D/3D kernels use a
-/// square/cube-ish decomposition so common matrix-style programs with
-/// `count = rows * cols` do not need driver-specific manual launch policy.
+/// The grid covers the axis decomposition
+/// [`vyre_foundation::axis_coverage`] states for the shape, so a program
+/// dispatched here launches the shape a compiled artifact of the same program
+/// records.
 ///
 /// # Errors
 ///
@@ -73,32 +74,12 @@ pub fn infer_dispatch_grid_for_count(
             "workgroup dimensions must be non-zero. Fix: set Program::workgroup_size and DispatchConfig::workgroup_override to positive values.",
         ));
     }
-    let count = u64::from(element_count.max(1));
-    if workgroup[1] == 1 && workgroup[2] == 1 {
-        return Ok([ceil_div_u64(count, u64::from(workgroup[0]))?, 1, 1]);
+    let coverage = vyre_foundation::axis_coverage(u64::from(element_count), workgroup);
+    let mut grid = [1_u32; 3];
+    for (axis, slot) in grid.iter_mut().enumerate() {
+        *slot = ceil_div_u64(coverage[axis], u64::from(workgroup[axis]))?;
     }
-    if workgroup[2] == 1 {
-        let side = ceil_sqrt_u64(count);
-        return Ok([
-            ceil_div_u64(side, u64::from(workgroup[0]))?,
-            ceil_div_u64(
-                u64::from(ceil_div_u64(count, side)?),
-                u64::from(workgroup[1]),
-            )?,
-            1,
-        ]);
-    }
-    let side = ceil_cuberoot_u64(count);
-    let xy = side.checked_mul(side).ok_or_else(|| {
-        BackendError::new(format!(
-            "3D dispatch-grid side {side} overflows u64 square during shape planning. Fix: split the Program before GPU launch planning."
-        ))
-    })?;
-    Ok([
-        ceil_div_u64(side, u64::from(workgroup[0]))?,
-        ceil_div_u64(side, u64::from(workgroup[1]))?,
-        ceil_div_u64(u64::from(ceil_div_u64(count, xy)?), u64::from(workgroup[2]))?,
-    ])
+    Ok(grid)
 }
 
 /// Refuse a launch grid that exceeds the target's per-axis workgroup ceiling.
@@ -241,42 +222,6 @@ fn ceil_div_u64(value: u64, divisor: u64) -> Result<u32, BackendError> {
             "inferred dispatch grid dimension overflowed u32. Fix: split the Program into smaller dispatches.",
         )
     })
-}
-
-fn ceil_sqrt_u64(value: u64) -> u64 {
-    if value <= 1 {
-        return 1;
-    }
-    let mut lo = 1_u64;
-    let mut hi = 1_u64 << 32;
-    while lo < hi {
-        let mid = lo + ((hi - lo) / 2);
-        match mid.checked_mul(mid) {
-            Some(square) if square < value => lo = mid + 1,
-            _ => hi = mid,
-        }
-    }
-    lo
-}
-
-fn ceil_cuberoot_u64(value: u64) -> u64 {
-    if value <= 1 {
-        return 1;
-    }
-    let mut lo = 1_u64;
-    let mut hi = 1_u64 << 22;
-    while lo < hi {
-        let mid = lo + ((hi - lo) / 2);
-        match checked_cube_u64(mid) {
-            Some(cube) if cube < value => lo = mid + 1,
-            _ => hi = mid,
-        }
-    }
-    lo
-}
-
-fn checked_cube_u64(value: u64) -> Option<u64> {
-    value.checked_mul(value)?.checked_mul(value)
 }
 
 // ---------------------------------------------------------------------------
@@ -432,10 +377,16 @@ mod n6_tests {
     }
 
     #[test]
-    fn root_helpers_are_exact_at_large_boundaries() {
-        assert_eq!(ceil_sqrt_u64((1_u64 << 32) - 1), 65_536);
-        assert_eq!(ceil_sqrt_u64(1_u64 << 32), 65_536);
-        assert_eq!(ceil_cuberoot_u64(2_642_245_u64.pow(3)), 2_642_245);
-        assert_eq!(ceil_cuberoot_u64(2_642_245_u64.pow(3) - 1), 2_642_245);
+    fn a_multi_axis_grid_is_exact_at_the_u32_element_boundary() {
+        assert_eq!(
+            infer_dispatch_grid_for_count(u32::MAX, [1, 2, 1])
+                .expect("a two-axis grid at the element boundary must plan"),
+            [65_536, 32_768, 1]
+        );
+        assert_eq!(
+            infer_dispatch_grid_for_count(u32::MAX, [2, 2, 2])
+                .expect("a three-axis grid at the element boundary must plan"),
+            [813, 813, 813]
+        );
     }
 }

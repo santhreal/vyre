@@ -8,9 +8,18 @@
 //! 1. Pinned ceiling folding (`DispatchConfig::max_workgroups_per_axis`).
 //! 2. Unfolded vs folded output byte-for-byte identity on CUDA.
 //! 3. Cross-backend output parity against the independent reference interpreter oracle.
+//! 4. A program that reads two grid axes, over every dispatch route that can
+//!    launch it.
+//!
+//! A folded launch and a two-axis launch are the same question asked from both
+//! ends: which axes carry the element index. Folding moves a one-axis index
+//! across three axes, and a two-axis program addresses two axes directly, so a
+//! route that publishes a grid for one and not the other computes a buffer no
+//! oracle agrees with.
 
 #![cfg(feature = "device-tests")]
 
+use crate::harness;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -111,5 +120,83 @@ fn an_inferred_launch_past_the_device_single_axis_ceiling_folds_and_matches_refe
         outputs,
         vec![expected],
         "Fix: inferred folded CUDA launch must match expected byte oracle"
+    );
+}
+
+/// Side of the square element space [`two_axis_program`] addresses.
+const TWO_AXIS_SIDE: u32 = 32;
+
+/// A program whose element index comes from two grid axes.
+///
+/// `row` is the x axis and `col` is the y axis, and the stored value is the
+/// element's own linear index, so a launch that covers the space writes the
+/// identity buffer and one that covers part of it leaves the rest at whatever
+/// the route staged. The workgroup is square, which is what makes the y axis
+/// load-bearing: under a grid published on x alone every lane reads
+/// `col = tid.y`, so only the first `workgroup[1]` columns are ever written.
+fn two_axis_program(side: u32) -> Program {
+    let count = side * side;
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
+                .with_count(count)
+                .with_output_byte_range(0_usize..(count as usize * 4)),
+        ],
+        [16, 16, 1],
+        vec![
+            Node::let_bind("row", Expr::gid_x()),
+            Node::let_bind("col", Expr::gid_y()),
+            Node::if_then(
+                Expr::and(
+                    Expr::lt(Expr::var("row"), Expr::u32(side)),
+                    Expr::lt(Expr::var("col"), Expr::u32(side)),
+                ),
+                vec![
+                    Node::let_bind(
+                        "index",
+                        Expr::add(
+                            Expr::mul(Expr::var("row"), Expr::u32(side)),
+                            Expr::var("col"),
+                        ),
+                    ),
+                    Node::store("out", Expr::var("index"), Expr::var("index")),
+                ],
+            ),
+        ],
+    )
+}
+
+#[test]
+fn a_two_axis_program_writes_the_same_buffer_on_every_route_that_launches_it() {
+    let backend = CudaBackend::acquire()
+        .expect("Fix: live CUDA backend is required for grid parity contracts");
+
+    let program = two_axis_program(TWO_AXIS_SIDE);
+    let count = TWO_AXIS_SIDE * TWO_AXIS_SIDE;
+    let expected: Vec<u8> = (0..count).flat_map(u32::to_le_bytes).collect();
+
+    let reference = vyre_reference::reference_eval(&program, &[])
+        .expect("Fix: reference_eval must evaluate the two-axis program");
+    assert_eq!(
+        reference[0].to_bytes(),
+        expected,
+        "Fix: reference interpreter must match the explicit byte oracle for a two-axis program"
+    );
+
+    let mut pinned = DispatchConfig::default();
+    pinned.grid_override = Some([TWO_AXIS_SIDE / 16, TWO_AXIS_SIDE / 16, 1]);
+    let pinned_outputs = backend
+        .dispatch(&program, &[], &pinned)
+        .expect("Fix: a pinned two-axis grid must dispatch on CUDA");
+    assert_eq!(
+        pinned_outputs[0], expected,
+        "Fix: a pinned two-axis CUDA grid must write every element the program addresses"
+    );
+
+    let artifact_outputs =
+        harness::compiled_cuda_outputs(&backend, &program, &[], "two-axis-identity");
+    assert_eq!(
+        artifact_outputs[0], expected,
+        "Fix: the authenticated CUDA artifact route must publish a grid covering both axes a program reads"
     );
 }

@@ -365,6 +365,153 @@ fn every_dispatch_entry_point_routes_an_over_residency_grid_the_same_way() {
     }
 }
 
+/// WHY: the over-residency route reached the borrowed entry points and stopped
+/// there. Every resident entry point asked nothing and launched cooperatively,
+/// so the same program that answered correctly through `dispatch_borrowed`
+/// returned `CooperativeResidencyExceeded` through `dispatch_resident`,
+/// `dispatch_resident_timed` and `dispatch_resident_async`. Residency is a
+/// property of the grid, not of where the bytes live, so the two halves of the
+/// dispatch surface cannot answer it differently.
+///
+/// The launch grid of a resident dispatch is derived from the byte length of
+/// the bound device buffers rather than from host slices, which is why the
+/// borrowed predicate cannot answer for it and a resident predicate exists.
+///
+/// `scratch` is re-uploaded before every dispatch. It is read-write, and a
+/// resident buffer keeps whatever the previous launch left in it, so a launch
+/// that inherited an already-accumulated `scratch[n - 1]` would pass with no
+/// barrier at all and this test would prove nothing.
+#[test]
+fn every_resident_dispatch_entry_point_routes_an_over_residency_grid_the_same_way() {
+    let backend = backend();
+    if !backend.hardware_supports_grid_sync() {
+        return;
+    }
+    let Some(lanes) = over_residency_lanes(&backend) else {
+        panic!(
+            "Fix: hardware reports grid-sync support, so an over-residency lane count must be \
+             derivable."
+        );
+    };
+    let program = cross_block_grid_sync_program(lanes);
+    let inputs = cross_block_grid_sync_inputs(lanes);
+    let config = DispatchConfig::default();
+    let expected = cross_block_grid_sync_expected(lanes);
+
+    let mut handles = Vec::new();
+    for (index, input) in inputs.iter().enumerate() {
+        let handle = backend.allocate_resident(input.len()).unwrap_or_else(|error| {
+            panic!("Fix: resident input {index} allocation must succeed: {error}")
+        });
+        handles.push(handle);
+    }
+    let out_handle = backend
+        .allocate_resident(inputs[0].len())
+        .expect("Fix: resident output allocation must succeed");
+    handles.push(out_handle);
+    let seed = |label: &str| {
+        for (handle, input) in handles.iter().zip(inputs.iter()) {
+            backend.upload_resident(*handle, input).unwrap_or_else(|error| {
+                panic!("Fix: re-seeding resident inputs before `{label}` must succeed: {error}")
+            });
+        }
+    };
+
+    seed("dispatch_resident");
+    backend
+        .dispatch_resident(&program, &handles, &config)
+        .expect(
+            "Fix: `dispatch_resident` must route an over-residency grid-sync program to the \
+             segmented route. Launching it cooperatively can only fail.",
+        );
+    let discarded_outputs = backend
+        .download_resident(out_handle)
+        .expect("Fix: the resident output buffer must read back");
+
+    seed("dispatch_resident_timed");
+    let timed = backend
+        .dispatch_resident_timed(&program, &handles, &config)
+        .expect(
+            "Fix: `dispatch_resident_timed` must route an over-residency grid-sync program to \
+             the segmented route. This is the entry point the artifact runtime submits a \
+             resident dispatch through, so it was the whole shipped path for a multi-block \
+             grid-sync reduction.",
+        );
+
+    seed("dispatch_resident_async");
+    let asynchronous = backend
+        .dispatch_resident_async(&program, &handles, &config)
+        .expect("Fix: `dispatch_resident_async` must route an over-residency grid to the split.")
+        .await_result()
+        .expect("Fix: the split result handed back by `dispatch_resident_async` must resolve.");
+
+    for (entry_point, outputs) in [
+        ("dispatch_resident", &discarded_outputs),
+        (
+            "dispatch_resident_timed",
+            timed.outputs.last().expect("the fixture declares an output"),
+        ),
+        (
+            "dispatch_resident_async",
+            asynchronous
+                .last()
+                .expect("the fixture declares an output"),
+        ),
+    ] {
+        assert_eq!(
+            bytes_u32(outputs),
+            expected,
+            "Fix: `{entry_point}` produced a different answer for the same over-residency \
+             grid-sync program. Every entry point must take the same route and honor the barrier."
+        );
+    }
+
+    for handle in handles {
+        backend
+            .free_resident(handle)
+            .expect("Fix: resident cleanup must succeed");
+    }
+}
+
+/// WHY: the compiled pipeline is what the artifact runtime launches, and its
+/// resident entry points held the same gap. A compiled pipeline is built around
+/// one native launch shape, so an over-residency grid-sync program has no
+/// pipeline route at all and must go back to the backend's segmented one. The
+/// borrowed entry points asked; the resident ones launched anyway. The artifact
+/// runtime submits resident resources whenever a caller keeps its data on the
+/// device, so this was the route every measurement of a large grid-sync
+/// reduction took.
+///
+/// This drives the real artifact route rather than the backend directly:
+/// compile, materialize, bind every buffer resident, submit. A backend-level
+/// assertion cannot see the pipeline's own routing decision.
+#[test]
+fn the_artifact_route_answers_an_over_residency_grid_with_resident_bindings() {
+    let backend = backend();
+    if !backend.hardware_supports_grid_sync() {
+        return;
+    }
+    let Some(lanes) = over_residency_lanes(&backend) else {
+        panic!(
+            "Fix: hardware reports grid-sync support, so an over-residency lane count must be \
+             derivable."
+        );
+    };
+    let program = cross_block_grid_sync_program(lanes);
+    let inputs = cross_block_grid_sync_inputs(lanes);
+    let outputs = harness::resident_compiled_cuda_outputs(
+        &program,
+        &inputs,
+        "over_residency_grid_sync_resident_artifact",
+    );
+    assert_eq!(
+        bytes_u32(outputs.last().expect("the fixture declares an output")),
+        cross_block_grid_sync_expected(lanes),
+        "Fix: the artifact route with resident bindings must take the segmented route for an \
+         over-residency grid-sync program and honor the barrier."
+    );
+}
+
 /// The same program at a FITTING grid must take the native cooperative route and
 /// produce the identical answer.
 ///

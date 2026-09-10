@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The reduce-sum crossover benchmark binds its device-resident input once and re-seeds only the caller-seeded accumulator, so a repeat dispatch of the same program moves no input bytes."

@@ -98,6 +98,20 @@ pub fn resident_output_byte_lengths(
     Ok(output_sizes)
 }
 
+/// One resident payload per non-shared binding, in program declaration order.
+///
+/// WHY: the two halves of the dispatch ABI are already defined once each.
+/// [`vyre::ir::BufferDecl::consumes_host_input`] is the host input half, the
+/// same predicate `host_input_bundle` counts, and
+/// [`vyre::ir::BufferDecl::is_backend_allocated_output`] is the allocate-and-
+/// write half every backend and the reference interpreter read. Reading
+/// `is_output` here instead named a third rule, and it disagreed with both on a
+/// demoted intermediate: a fused multi-pass program keeps its stage-to-stage
+/// buffer as a `pipeline_live_out` read-write buffer that no longer carries
+/// `is_output`, so this builder demanded host bytes for a buffer the backend
+/// allocates and the host bundle supplies nothing for, and every fused route
+/// failed closed before reaching the device. A buffer neither predicate claims
+/// is rejected rather than silently consuming the next input payload.
 pub(crate) fn program_order_resident_payloads<'a>(
     program: &Program,
     inputs: &'a [Vec<u8>],
@@ -115,11 +129,17 @@ pub(crate) fn program_order_resident_payloads<'a>(
         if decl.access == BufferAccess::Workgroup {
             continue;
         }
-        if decl.is_output() {
+        if decl.is_backend_allocated_output() {
             payloads.push(ResidentResourcePayload::Zeroed(
                 static_resident_output_byte_len(decl, context)?,
             ));
             continue;
+        }
+        if !decl.consumes_host_input() {
+            return Err(BenchError::ExecutionFailed(format!(
+                "{context} resident upload cannot place buffer `{}`: it neither consumes a host input slot nor is a backend-allocated output. Fix: declare the buffer as one or the other.",
+                decl.name
+            )));
         }
 
         let input = inputs.get(consumed_inputs).ok_or_else(|| {
@@ -685,6 +705,66 @@ mod tests {
         assert!(
             error.to_string().contains("consumed 0 input payload"),
             "error must name the input-count mismatch: {error}"
+        );
+    }
+
+    /// A fused multi-pass program allocates its stage-to-stage buffer and
+    /// supplies host bytes only for what the host bundle counts.
+    ///
+    /// WHY: `demote_intermediate_outputs` leaves the intermediate as a
+    /// `pipeline_live_out` read-write buffer with `is_output` cleared, so a
+    /// builder keyed on `is_output` classified it as a host input. It then
+    /// demanded a payload the host bundle never produces, and the whole route
+    /// failed before allocation. What this does not catch: whether the driver
+    /// accepts the resulting handles, which is a device contract.
+    #[test]
+    fn program_order_resident_payloads_allocate_a_demoted_intermediate() {
+        let mut partials =
+            BufferDecl::storage("partials", 1, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(4);
+        partials.pipeline_live_out = true;
+        let mut out =
+            BufferDecl::storage("out", 2, BufferAccess::ReadWrite, DataType::U32).with_count(1);
+        out.is_output = true;
+        out.pipeline_live_out = true;
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("values", 0, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(8),
+                BufferDecl::workgroup("scratch", 8, DataType::U32),
+                partials,
+                out,
+            ],
+            [8, 1, 1],
+            vec![],
+        );
+        let host_inputs = program
+            .buffers()
+            .iter()
+            .filter(|decl| decl.consumes_host_input())
+            .count();
+        assert_eq!(
+            host_inputs, 1,
+            "only `values` crosses the host boundary for a fused two-pass reduction"
+        );
+        let inputs = vec![vec![0u8; 32]];
+
+        let payloads =
+            program_order_resident_payloads(&program, &inputs, "demoted intermediate test")
+                .expect("Fix: a demoted intermediate is allocated, not read from host inputs.");
+
+        assert_eq!(payloads.len(), 3, "three non-shared bindings need handles");
+        assert!(
+            matches!(payloads[0], ResidentResourcePayload::Input(bytes) if bytes == inputs[0]),
+            "binding 0 carries the resident input bytes"
+        );
+        assert!(
+            matches!(payloads[1], ResidentResourcePayload::Zeroed(16)),
+            "the demoted intermediate is allocated at its declared 4 x u32 size"
+        );
+        assert!(
+            matches!(payloads[2], ResidentResourcePayload::Zeroed(4)),
+            "the final output is allocated at its declared size"
         );
     }
 

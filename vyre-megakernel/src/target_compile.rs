@@ -319,7 +319,12 @@ pub fn compile_selected_modules(
                 ))
             },
         )?;
-        let bindings = selected_resource_bindings(artifact, &module, lowered.kernel.descriptor())?;
+        let bindings = selected_resource_bindings(
+            artifact,
+            &module,
+            &lowered.program,
+            lowered.kernel.descriptor(),
+        )?;
         let abi = selected_abi(artifact, &module);
         let logical_element_count =
             selected_logical_element_count(artifact, &module, &lowered.program);

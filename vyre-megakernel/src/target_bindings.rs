@@ -2,7 +2,8 @@
 
 use std::collections::HashSet;
 
-use vyre_foundation::ir::Program;
+use vyre_foundation::ir::{Ident, Program};
+use vyre_foundation::optimizer::fact_cache::FactCache;
 use vyre_lower::{KernelDescriptor, MemoryClass};
 
 use crate::allocation::AddressSpace;
@@ -16,6 +17,7 @@ use crate::{
 pub(crate) fn selected_resource_bindings(
     artifact: &Artifact,
     module: &SelectedModule,
+    program: &Program,
     descriptor: &KernelDescriptor,
 ) -> Result<Vec<TargetResourceBinding>, TargetCompileError> {
     // Named entry-ABI records own each node's directional value identity. The
@@ -31,6 +33,8 @@ pub(crate) fn selected_resource_bindings(
         .filter(|resource| resource.lifetime == ResourceLifetime::Constant)
         .map(|resource| resource.value)
         .collect::<HashSet<_>>();
+    let facts = FactCache::derive_use_only_cached(program);
+    let use_facts = facts.use_facts();
     descriptor
         .bindings
         .slots
@@ -115,11 +119,28 @@ pub(crate) fn selected_resource_bindings(
             } else {
                 TargetResourceMemory::Global
             };
+            // The module program is the single authority for which
+            // directions the kernel exercises. A declaration carries no
+            // usage: `BufferDecl::output` is read-write storage, so its
+            // visibility cannot stand in for a read. A slot the kernel
+            // loads from needs an input identity even when the graph
+            // boundary names it only as an output, and a slot the kernel
+            // stores to needs an output identity even when the boundary
+            // names it only as an input. Without them the dispatch is
+            // rejected for an unbound direction before the kernel runs.
+            let slot_ident = Ident::from(slot.name.as_str());
+            let program_reads = use_facts
+                .and_then(|facts| facts.buffer_reads.get(&slot_ident).copied())
+                .unwrap_or(0)
+                > 0;
+            let program_writes = use_facts
+                .and_then(|facts| facts.buffer_writes.get(&slot_ident).copied())
+                .unwrap_or(0)
+                > 0;
             let access = match (first_input.is_some(), last_output.is_some()) {
                 (true, true) => TargetResourceAccess::ReadWrite,
-                (true, false) if slot.visibility == vyre_lower::BindingVisibility::ReadWrite => {
-                    TargetResourceAccess::ReadWrite
-                }
+                (true, false) if program_writes => TargetResourceAccess::ReadWrite,
+                (false, true) if program_reads => TargetResourceAccess::ReadWrite,
                 (true, false) => TargetResourceAccess::ReadOnly,
                 (false, true) => TargetResourceAccess::WriteOnly,
                 (false, false) => inactive_access,

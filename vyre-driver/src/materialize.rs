@@ -16,7 +16,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{
-    Artifact, ArtifactNodeId, ArtifactValueId, Digest, TargetModuleBundle, TargetPayload,
+    Artifact, ArtifactNodeId, ArtifactValueId, Digest, FusionRecord, TargetModuleBundle,
+    TargetPayload,
 };
 
 use crate::{
@@ -32,6 +33,25 @@ pub fn invalid_module(reason: &str) -> BackendError {
     BackendError::InvalidProgram {
         fix: format!("Fix: {reason}. Recompile the target payload from the neutral artifact."),
     }
+}
+
+/// The selected fusion groups in submission order.
+///
+/// Dependency stage, then fusion-group identity. The order the plan is recorded
+/// in is not it: a graph with two independent arms that join records the
+/// joining group first, so walking the record order submits a module before the
+/// module that produces its input. A stage is the recorded dependency depth, so
+/// sorting by it is a topological order, and `TargetModuleBundle` serializes its
+/// modules in this same order.
+///
+/// Every array a module index addresses is built from this one function.
+/// Building two of them in different orders resolved one module's Program
+/// buffers against another module's resources.
+#[must_use]
+pub fn submission_order(artifact: &Artifact) -> Vec<&FusionRecord> {
+    let mut selected = artifact.fusion().iter().collect::<Vec<_>>();
+    selected.sort_by_key(|record| (record.stage, record.id));
+    selected
 }
 
 /// Build the shared payload-decode failure for `backend`.
@@ -272,8 +292,27 @@ impl InstanceCore {
                 "target module bundle cannot project Program buffer identities: {error}"
             ))
         })?;
-        let mut module_buffer_slots = Vec::with_capacity(bundle.modules.len());
+        // `admit` walks the recorded selected plan, so the module index every
+        // caller passes is a position in `Artifact::fusion()` as recorded. It is
+        // not a position in the bundle's own module order and not one in a
+        // stage-sorted order, and the recorded plan is topological without
+        // being sorted by stage: a two-arm graph records the joining group
+        // first. Two arrays indexed by the same number and built in different
+        // orders described a different module for every artifact whose recorded
+        // plan is not stage-sorted, which resolved one module's Program buffer
+        // against another module's resources. The bundle is therefore keyed by
+        // fusion group and read in the recorded order.
+        let mut images_by_group = BTreeMap::new();
         for module in &bundle.modules {
+            if images_by_group.insert(module.group, module).is_some() {
+                return Err(invalid_module("target bundle names one fusion group twice"));
+            }
+        }
+        let mut module_buffer_slots = Vec::with_capacity(bundle.modules.len());
+        for record in submission_order(artifact) {
+            let module = images_by_group.get(&record.id).ok_or_else(|| {
+                invalid_module("target bundle states no module for a selected fusion group")
+            })?;
             let mut slots = BTreeMap::new();
             for slot in &module.descriptor.bindings.slots {
                 let Some(identity) = module.binding_slot(&slot.name) else {
@@ -336,8 +375,7 @@ impl InstanceCore {
                 ));
             }
         }
-        let mut fusion = artifact.fusion().iter().collect::<Vec<_>>();
-        fusion.sort_by_key(|record| (record.stage, record.id));
+        let fusion = submission_order(artifact);
         let mut ordered_entries = Vec::with_capacity(fusion.len());
         let mut module_named_resources = Vec::with_capacity(fusion.len());
         for record in fusion {

@@ -877,12 +877,19 @@ static REGISTERED_DEVICE: std::sync::Mutex<Option<CudaBackend>> = std::sync::Mut
 /// handle reused from another thread would load its first module under no
 /// current context and fail with `CUDA_ERROR_INVALID_CONTEXT`.
 ///
+/// Every registered facet of this backend runs on this one generation, and its
+/// caches and telemetry counters sit behind `Arc`, so the returned handle reads
+/// the counters the registered compile, materialize and dispatch path
+/// increments. [`CudaBackend::acquire`] creates a second generation with
+/// private counters instead, which reports zero launches and zero copies for
+/// work submitted through the registry.
+///
 /// # Errors
 ///
 /// Returns the concrete acquisition error when the CUDA driver cannot provide
 /// the device, a bind error when the context cannot be made current on this
 /// thread, and a lock error when a previous acquisition panicked.
-pub(crate) fn registered_device() -> Result<CudaBackend, BackendError> {
+pub fn registered_device() -> Result<CudaBackend, BackendError> {
     let mut slot = REGISTERED_DEVICE.lock().map_err(|_| BackendError::DispatchFailed {
         code: None,
         message: "CUDA registered device acquisition panicked and left the device slot poisoned. Fix: restart the process; a half-acquired CUDA context cannot be reused."

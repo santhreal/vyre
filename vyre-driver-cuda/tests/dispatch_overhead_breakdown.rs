@@ -268,31 +268,46 @@ fn a_strided_tile_kernel_records_its_conflict_count_and_time_before_and_after() 
     // kernel costs milliseconds in cache lookup, staging, launch, sync and
     // readback, and the kernel itself costs microseconds, so a wall-clock
     // comparison of a 128-thread tile reports the overhead and reports it as
-    // the mitigation's effect. The p50 is taken over the runs because a single
-    // sample carries the launch that warmed the module cache.
-    let measure = |program: &Program, what: &str| -> (u64, Vec<Vec<u8>>) {
-        let first = backend
+    // the mitigation's effect.
+    //
+    // The two programs are sampled alternately inside one loop. This crate
+    // runs its device tests in parallel, so a neighbour that saturates the GPU
+    // for tens of seconds inflates whichever measurement window it overlaps;
+    // measuring one program to completion and then the other charges that
+    // inflation to one of them and reports it as the mitigation's effect.
+    let sample = |program: &Program, what: &str| -> (u64, Vec<Vec<u8>>) {
+        let timed = backend
             .dispatch_borrowed_timed(program, &inputs, &config)
             .unwrap_or_else(|error| panic!("Fix: {what} row-tile dispatch failed: {error}"));
-        let mut samples = Vec::with_capacity(RUNS as usize);
-        for _ in 0..RUNS {
-            let timed = backend
-                .dispatch_borrowed_timed(program, &inputs, &config)
-                .unwrap_or_else(|error| panic!("Fix: {what} row-tile dispatch failed: {error}"));
-            let device_ns = timed.device_ns.unwrap_or_else(|| {
-                panic!(
-                    "Fix: this host's CUDA backend reported no device time for the {what} row-tile \
-                     dispatch, so the mitigation cannot be judged. Enable the device timer rather \
-                     than comparing host round trips."
-                )
-            });
-            samples.push(device_ns);
-        }
-        samples.sort_unstable();
-        (samples[samples.len() / 2], first.outputs)
+        let device_ns = timed.device_ns.unwrap_or_else(|| {
+            panic!(
+                "Fix: this host's CUDA backend reported no device time for the {what} row-tile \
+                 dispatch, so the mitigation cannot be judged. Enable the device timer rather \
+                 than comparing host round trips."
+            )
+        });
+        (device_ns, timed.outputs)
     };
-    let (baseline_ns, baseline_outputs) = measure(&baseline, "unmitigated");
-    let (mitigated_ns, mitigated_outputs) = measure(&mitigated, "mitigated");
+    let (_, baseline_outputs) = sample(&baseline, "unmitigated");
+    let (_, mitigated_outputs) = sample(&mitigated, "mitigated");
+    let mut baseline_samples = Vec::with_capacity(RUNS as usize);
+    let mut mitigated_samples = Vec::with_capacity(RUNS as usize);
+    for _ in 0..RUNS {
+        baseline_samples.push(sample(&baseline, "unmitigated").0);
+        mitigated_samples.push(sample(&mitigated, "mitigated").0);
+    }
+    baseline_samples.sort_unstable();
+    mitigated_samples.sort_unstable();
+    let baseline_p50 = baseline_samples[baseline_samples.len() / 2];
+    let mitigated_p50 = mitigated_samples[mitigated_samples.len() / 2];
+    // The floor, not the median. Contention inflates a 9 microsecond kernel to
+    // 27, which buries a 2 microsecond difference between two kernels under
+    // queueing that belongs to neither. The smallest sample of a few hundred is
+    // the one that waited least, so it is the closest measurement of what the
+    // kernel itself costs, and both programs are sampled alternately so
+    // neither gets a quieter stretch of the run than the other.
+    let baseline_ns = baseline_samples[0];
+    let mitigated_ns = mitigated_samples[0];
 
     assert_eq!(
         mitigated_outputs, baseline_outputs,
@@ -307,8 +322,10 @@ fn a_strided_tile_kernel_records_its_conflict_count_and_time_before_and_after() 
     println!("row_length                   {ROW_LENGTH:>12}  (elements, = bank count)");
     println!("classified_sites             {:>12}", conflicts.len());
     println!("classified_32_way_sites      {thirty_two_way:>12}");
-    println!("unmitigated_device_ns_p50    {baseline_ns:>12}  ({RUNS} runs)");
-    println!("mitigated_device_ns_p50      {mitigated_ns:>12}  ({RUNS} runs)");
+    println!("unmitigated_device_ns_min    {baseline_ns:>12}  ({RUNS} runs)");
+    println!("mitigated_device_ns_min      {mitigated_ns:>12}  ({RUNS} runs)");
+    println!("unmitigated_device_ns_p50    {baseline_p50:>12}  ({RUNS} runs)");
+    println!("mitigated_device_ns_p50      {mitigated_p50:>12}  ({RUNS} runs)");
     println!("===");
 
     // The mitigation exists to make a classified conflict cheaper. A permutation
@@ -317,8 +334,9 @@ fn a_strided_tile_kernel_records_its_conflict_count_and_time_before_and_after() 
     assert!(
         mitigated_ns <= baseline_ns,
         "Fix: the selected mitigation measured slower than the unpermuted kernel \
-         ({mitigated_ns} ns vs {baseline_ns} ns device p50 over {RUNS} runs on a \
-         {THREADS}-thread {ROW_LENGTH}-element row tile). Either the selector must \
+         ({mitigated_ns} ns vs {baseline_ns} ns least-contended device sample of \
+         {RUNS} on a {THREADS}-thread {ROW_LENGTH}-element row tile, p50 \
+         {mitigated_p50} ns vs {baseline_p50} ns). Either the selector must \
          reject this candidate or the emitted permutation must stop costing more \
          than the conflict it removes."
     );

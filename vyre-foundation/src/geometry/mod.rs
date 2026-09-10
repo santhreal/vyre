@@ -9,8 +9,10 @@
 //! This module contains no device names, no instruction names, and no concrete
 //! device limits.
 
+mod axis_coverage;
 mod logical_span;
 
+pub use axis_coverage::axis_coverage;
 pub use logical_span::{
     admitted_logical_span, guarded_logical_span, launch_covers_full_input_span,
 };

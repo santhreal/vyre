@@ -675,7 +675,7 @@ fn csr_row_reduction_graph(rows: u64, nnz: u64) -> ProgramGraph {
             vec![GraphOutput {
                 buffer: "seg".into(),
                 name: "row_sums".into(),
-                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Invocation, rows),
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output, rows),
                 retained_successor_of: None,
             }],
         )
@@ -709,7 +709,7 @@ fn csr_row_reduction_graph(rows: u64, nnz: u64) -> ProgramGraph {
             vec![GraphInput {
                 buffer: "sums".into(),
                 value: sums[0],
-                contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, rows),
+                contract: contract(BufferAccess::ReadOnly, ValueLifetime::Output, rows),
             }],
             vec![GraphOutput {
                 buffer: "widest_row".into(),

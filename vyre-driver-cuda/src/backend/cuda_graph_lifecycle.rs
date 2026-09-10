@@ -576,6 +576,11 @@ pub struct CachedCudaGraph {
     /// Kernel launches captured in this fixed-shape graph, executed by every
     /// replay.
     pub(crate) replay_kernel_launches: u64,
+    /// Thread slots every replay of this fixed-shape graph schedules, or
+    /// `None` when the captured geometry exceeds a `u64` slot count.
+    pub(crate) replay_scheduled_thread_slots: Option<u64>,
+    /// Logical elements every replay of this fixed-shape graph covers.
+    pub(crate) replay_launched_elements: u64,
     /// Expected input byte lengths. `dispatch_via_cuda_graph` validates
     /// the caller's input sizes match these  -  a mismatch means the graph
     /// is wrong-shape for the input and must be re-recorded.
