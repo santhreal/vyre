@@ -59,8 +59,18 @@ pub fn dispatch_with_grid_sync_split(
 
 /// Timed variant of [`dispatch_with_grid_sync_split`].
 ///
+/// Device, enqueue, and wait timing sum across segments exactly as
+/// [`crate::grid_sync::dispatch_resident_with_grid_sync_split_timed`] sums
+/// them, and a segment that reports none makes the whole sum absent rather
+/// than a partial total. The split is one implementation of one launch, so a
+/// caller that asks a split program for its device time gets the same kind of
+/// answer a native cooperative launch gives it. Reporting only wall time here
+/// is what left `foundation.reduce.sum.crossover` unable to compare its two
+/// reduction routes on any backend that split the fused tree.
+///
 /// # Errors
-/// Propagates any [`BackendError`] raised by a segment dispatch.
+/// Propagates any [`BackendError`] raised by a segment dispatch, and rejects a
+/// timing sum that overflows `u64` nanoseconds.
 pub fn dispatch_with_grid_sync_split_timed(
     backend: &dyn VyreBackend,
     program: &Program,
@@ -68,11 +78,94 @@ pub fn dispatch_with_grid_sync_split_timed(
     config: &DispatchConfig,
 ) -> Result<TimedDispatchResult, BackendError> {
     let started = std::time::Instant::now();
-    let outputs = dispatch_with_grid_sync_split(backend, program, inputs, config)?;
-    Ok(TimedDispatchResult::host_timed(
+    let mut outputs = Vec::new();
+    reserve_grid_sync_vec(
+        &mut outputs,
+        program.output_buffer_indices().len().max(1),
+        "grid-sync final outputs",
+    )?;
+    let mut totals = SegmentTiming::new();
+    let mut overflow = None;
+    dispatch_grid_sync_split_generic(
+        program,
+        inputs,
+        config,
+        &mut outputs,
+        |segment, segment_inputs, segment_config, segment_outputs| {
+            let timed = backend.dispatch_borrowed_timed(segment, segment_inputs, segment_config)?;
+            *segment_outputs = timed.outputs;
+            match totals.accumulate(timed.device_ns, timed.enqueue_ns, timed.wait_ns) {
+                Ok(()) => Ok(()),
+                Err(error) => {
+                    // The generic driver prefixes a segment error with the
+                    // segment index, which would read as a dispatch failure.
+                    // An overflowed accounting sum is neither the segment's
+                    // fault nor located in it, so it is carried out whole.
+                    overflow = Some(error);
+                    Err(BackendError::new("grid-sync segment timing overflowed"))
+                }
+            }
+        },
+    )
+    .map_err(|error| overflow.take().unwrap_or(error))?;
+    Ok(TimedDispatchResult {
         outputs,
-        elapsed_wall_ns(started)?,
-    ))
+        wall_ns: elapsed_wall_ns(started)?,
+        device_ns: totals.device_ns,
+        enqueue_ns: totals.enqueue_ns,
+        wait_ns: totals.wait_ns,
+    })
+}
+
+/// Running per-segment timing totals for one split dispatch.
+///
+/// Each field starts at zero and collapses to `None` the first time a segment
+/// reports nothing for it, which keeps a partial sum from being read as one
+/// launch's whole time.
+struct SegmentTiming {
+    device_ns: Option<u64>,
+    enqueue_ns: Option<u64>,
+    wait_ns: Option<u64>,
+}
+
+impl SegmentTiming {
+    fn new() -> Self {
+        Self {
+            device_ns: Some(0),
+            enqueue_ns: Some(0),
+            wait_ns: Some(0),
+        }
+    }
+
+    fn accumulate(
+        &mut self,
+        device_ns: Option<u64>,
+        enqueue_ns: Option<u64>,
+        wait_ns: Option<u64>,
+    ) -> Result<(), BackendError> {
+        self.device_ns = crate::accounting::sum_optional_timing(
+            self.device_ns,
+            device_ns,
+            "device timing",
+            "grid-sync segmented",
+            "per-segment",
+        )?;
+        self.enqueue_ns = crate::accounting::sum_optional_timing(
+            self.enqueue_ns,
+            enqueue_ns,
+            "enqueue timing",
+            "grid-sync segmented",
+            "per-segment",
+        )?;
+        self.wait_ns = crate::accounting::sum_optional_timing(
+            self.wait_ns,
+            wait_ns,
+            "wait timing",
+            "grid-sync segmented",
+            "per-segment",
+        )?;
+        Ok(())
+    }
 }
 
 /// Zero-fill every segment input no caller supplies.

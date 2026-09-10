@@ -287,18 +287,14 @@ impl CudaBackend {
         input_state: &CudaGraphReplayInputState,
         outputs: &mut Vec<Vec<u8>>,
     ) -> Result<Option<u64>, BackendError> {
-        if self.try_cuda_graph_materialized_cache_with_input_state_into(
-            cached,
-            inputs,
-            input_state,
-            outputs,
-        )? {
-            // The outputs the graph would produce are already on the host for
-            // exactly these inputs, so the launch is skipped and the device
-            // time it would have measured is zero rather than absent: the
-            // caller still gets a measurement, and it is the true one.
-            return Ok(Some(0));
-        }
+        // No materialized-output-cache probe here, unlike the untimed twin
+        // above. The cache answers "what does this graph produce for these
+        // bytes", which is the whole question for a correctness caller and
+        // half of it for a timing caller: skipping the launch and reporting
+        // zero device nanoseconds hands a benchmark a kernel that ran
+        // infinitely fast. A benchmark replays one input set every sample, so
+        // the first sample launched and every later one was answered at 0 ns.
+        // A caller that asked how long the launch takes gets a launch.
         self.warmup()?;
         let prepared = prepare_cuda_graph_replay_launch(cached, inputs, &input_state)?;
 

@@ -194,6 +194,10 @@ pub mod grid_sync_nested_fence_survives_split;
 #[path = "grid_sync_segments_declare_every_referenced_buffer.rs"]
 pub mod grid_sync_segments_declare_every_referenced_buffer;
 
+/// Integration tests from `tests/grid_sync_split_timing_contracts.rs`.
+#[path = "grid_sync_split_timing_contracts.rs"]
+pub mod grid_sync_split_timing_contracts;
+
 /// Integration tests from `tests/host_input_abi_closure.rs`.
 #[path = "host_input_abi_closure.rs"]
 pub mod host_input_abi_closure;

@@ -361,6 +361,51 @@ pub fn prepared_as_mut<'a, T: 'static>(
     })
 }
 
+/// The host input bundle `program` declares, in binding order.
+///
+/// `named` supplies bytes per Program buffer name; the set of names actually
+/// bound comes from [`vyre::ir::BufferDecl::consumes_host_input`], the single
+/// definition of the host input half of the artifact ABI. A case that builds
+/// several programs over one pool of host buffers calls this once per program
+/// instead of handing every program the same fixed array.
+///
+/// WHY: the atomic and fused-tree reduction routes of
+/// `foundation.reduce.sum.crossover` were both handed `[values, out_seed]`.
+/// The atomic route accumulates into a caller-seeded `out` and takes both; the
+/// fused tree route writes `out` from its second pass, so `out` is a
+/// backend-allocated output and the route takes one buffer. The fixed array
+/// made the case fail admission with an ABI arity rejection on every backend.
+/// Deriving the bundle from the program means a buffer that stops or starts
+/// consuming a host slot moves the bundle with it.
+///
+/// # Errors
+///
+/// Returns [`BenchError::ExecutionFailed`] when the program declares a
+/// host-input buffer `named` has no bytes for. Guessing a length would bind a
+/// buffer at the wrong size.
+pub fn host_input_bundle(
+    program: &vyre::ir::Program,
+    named: &[(&str, &[u8])],
+) -> Result<Vec<Vec<u8>>, BenchError> {
+    program
+        .buffers()
+        .iter()
+        .filter(|buffer| buffer.consumes_host_input())
+        .map(|buffer| {
+            named
+                .iter()
+                .find(|(name, _)| *name == buffer.name())
+                .map(|(_, bytes)| bytes.to_vec())
+                .ok_or_else(|| {
+                    BenchError::ExecutionFailed(format!(
+                        "Fix: program buffer `{}` consumes a host input slot but the case supplied no bytes for it.",
+                        buffer.name()
+                    ))
+                })
+        })
+        .collect()
+}
+
 fn first_output_difference(outputs: &[Vec<u8>], baseline: &[Vec<u8>]) -> String {
     if outputs.len() != baseline.len() {
         return format!(
