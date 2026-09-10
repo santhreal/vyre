@@ -124,56 +124,58 @@ fn an_output_record_naming_no_pattern_reads_inside_the_length_table() {
     let dfa = vyre_libs_pattern::pattern::dfa_compile(&patterns);
     let pattern_count = u32::try_from(patterns.len()).expect("Fix: one pattern must count as u32");
     let max_matches = 8u32;
-    // The plain append, not the subgroup-coalesced one: the read under test is
-    // the pattern-length gather, and coalescing puts a subgroup shuffle inside
-    // a lane-divergent record loop, which is a separate contract.
-    let program = build_ac_bounded_ranges_program_with_subgroup_coalesce(
-        &dfa,
-        pattern_count,
-        max_matches,
-        false,
-    );
-    assert_eq!(
-        program
-            .buffers()
-            .iter()
-            .map(BufferDecl::name)
-            .collect::<Vec<_>>(),
-        vec![
-            "haystack",
-            "transitions",
-            "output_offsets",
-            "output_records",
-            "pattern_lengths",
-            "haystack_len",
-            "match_count",
-            "matches",
-        ],
-        "Fix: the bounded-ranges buffer ABI moved, so the buffers this case marshals no longer \
-         reach the reads it exercises"
-    );
+    // Both appends, because both are shipped. The coalesced one puts a
+    // subgroup collective in the record loop, and a bound folded on one path
+    // and not the other is the defect this case exists to catch.
+    for use_subgroup_coalesce in [false, true] {
+        let program = build_ac_bounded_ranges_program_with_subgroup_coalesce(
+            &dfa,
+            pattern_count,
+            max_matches,
+            use_subgroup_coalesce,
+        );
+        assert_eq!(
+            program
+                .buffers()
+                .iter()
+                .map(BufferDecl::name)
+                .collect::<Vec<_>>(),
+            vec![
+                "haystack",
+                "transitions",
+                "output_offsets",
+                "output_records",
+                "pattern_lengths",
+                "haystack_len",
+                "match_count",
+                "matches",
+            ],
+            "Fix: the bounded-ranges buffer ABI moved, so the buffers this case marshals no \
+             longer reach the reads it exercises"
+        );
 
-    let haystack = b"abracadabra\0";
-    let past_every_pattern = pattern_count;
-    let corrupt_records = vec![past_every_pattern; dfa.output_records.len().max(1)];
-    let buffers = vec![
-        haystack.to_vec(),
-        vyre_primitives::wire::pack_u32_slice(&dfa.transitions),
-        vyre_primitives::wire::pack_u32_slice(&dfa.output_offsets),
-        vyre_primitives::wire::pack_u32_slice(&corrupt_records),
-        vyre_primitives::wire::pack_u32_slice(&[dfa.max_pattern_len]),
-        vyre_primitives::wire::pack_u32_slice(&[11]),
-        vec![0u8; 4],
-        vec![0u8; max_matches as usize * 3 * 4],
-    ];
+        let haystack = b"abracadabra\0";
+        let past_every_pattern = pattern_count;
+        let corrupt_records = vec![past_every_pattern; dfa.output_records.len().max(1)];
+        let buffers = vec![
+            haystack.to_vec(),
+            vyre_primitives::wire::pack_u32_slice(&dfa.transitions),
+            vyre_primitives::wire::pack_u32_slice(&dfa.output_offsets),
+            vyre_primitives::wire::pack_u32_slice(&corrupt_records),
+            vyre_primitives::wire::pack_u32_slice(&[dfa.max_pattern_len]),
+            vyre_primitives::wire::pack_u32_slice(&[11]),
+            vec![0u8; 4],
+            vec![0u8; max_matches as usize * 3 * 4],
+        ];
 
-    let inputs = vyre_reference::reference_inputs(&program, buffers);
-    assert_oob_clean(
-        &program,
-        &inputs,
-        &format!(
-            "an output record naming pattern {past_every_pattern}, which the length table does \
-             not hold"
-        ),
-    );
+        let inputs = vyre_reference::reference_inputs(&program, buffers);
+        assert_oob_clean(
+            &program,
+            &inputs,
+            &format!(
+                "an output record naming pattern {past_every_pattern}, which the length table \
+                 does not hold, with subgroup coalescing {use_subgroup_coalesce}"
+            ),
+        );
+    }
 }
