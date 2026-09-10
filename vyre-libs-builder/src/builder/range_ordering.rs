@@ -5,6 +5,7 @@
 //! buffer names.
 
 use crate::builder::trip_count::clamped_by_extents;
+use vyre_foundation::composition::bounded_index_when;
 use vyre_foundation::ir::{Expr, Node};
 
 /// Maximum number of cached positions per tagged range. Matches the
@@ -99,20 +100,26 @@ pub fn match_order(left_id: Expr, right_id: Expr, res_name: &str) -> (Vec<Node>,
     );
     block.push(scan_a_loop);
 
-    // B is sorted by offset, so max_b_start is the last valid element.
+    // B is sorted by offset, so max_b_start is the last valid element. A select
+    // evaluates both arms, so an empty B still reads: its length minus one wraps to
+    // the largest u32 and the read lands past the packed slab. The index is folded
+    // to element zero, which the same select discards.
+    let last_b = bounded_index_when(
+        Expr::gt(
+            Expr::var(format!("{res_name}_len_b").as_str()),
+            Expr::u32(0),
+        ),
+        Expr::sub(
+            Expr::var(format!("{res_name}_len_b").as_str()),
+            Expr::u32(1),
+        ),
+    );
     let max_b_start = Expr::select(
         Expr::gt(
             Expr::var(format!("{res_name}_len_b").as_str()),
             Expr::u32(0),
         ),
-        packed_load(
-            "offsets",
-            right_id.clone(),
-            Expr::sub(
-                Expr::var(format!("{res_name}_len_b").as_str()),
-                Expr::u32(1),
-            ),
-        ),
+        packed_load("offsets", right_id.clone(), last_b),
         Expr::u32(0),
     );
     block.push(Node::let_bind(

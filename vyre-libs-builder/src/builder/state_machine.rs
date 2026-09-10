@@ -25,6 +25,7 @@
 //! 5. Host-side flat index calculators (`flat_index`, `flat_byte_index`).
 
 use crate::builder::trip_count::clamped_by_extents;
+use vyre_foundation::composition::bounded_index;
 use vyre_foundation::ir::{DataType, Expr, Node};
 
 /// Default alphabet size for byte-driven DFAs (0..=255).
@@ -129,6 +130,28 @@ impl<'a> TableStateMachineComposer<'a> {
         )
     }
 
+    /// [`Self::advance_node`] with both table operands folded inside the table.
+    ///
+    /// A transition table is data. Nothing checks that an entry names a state
+    /// the automaton has, and nothing checks that a symbol read out of an input
+    /// buffer is inside the alphabet, so `state * stride + symbol` reaches past
+    /// the table on the step after either one arrives out of range. Both are
+    /// folded here, which is identity for a table whose entries are states and
+    /// an input whose symbols are alphabet members.
+    ///
+    /// `state_extent` is the number of states the table holds, normally
+    /// `Expr::buf_len` of the accept vector.
+    #[must_use]
+    pub fn bounded_advance_node(&self, state_extent: Expr, symbol: Expr) -> Node {
+        Node::assign(
+            self.state_var,
+            self.transition_expr(
+                bounded_index(Expr::var(self.state_var), state_extent),
+                bounded_index(symbol, Expr::u32(self.alphabet_size)),
+            ),
+        )
+    }
+
     /// Emit a state assignment node targeting an explicitly named state variable.
     #[must_use]
     pub fn advance_node_named(&self, state_var: &str, symbol: Expr) -> Node {
@@ -203,6 +226,10 @@ impl<'a> TableStateMachineComposer<'a> {
     /// Each invocation walks the suffix window ending at byte `i`
     /// (`max(0, i + 1 - max_pattern_len)..=i`) and writes `accept[state]`
     /// into `matches[i]`.
+    ///
+    /// The accept vector holds one entry per state, so its length is the state
+    /// extent every table read is folded against. Both the walk and the accept
+    /// read take a state out of the transition table, which is data.
     #[must_use]
     pub fn bounded_suffix_scan_body(
         &self,
@@ -219,6 +246,7 @@ impl<'a> TableStateMachineComposer<'a> {
             Expr::u32(0),
             Expr::sub(end.clone(), Expr::u32(max_pattern_len)),
         );
+        let state_extent = Expr::buf_len(accept);
         vec![
             Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
             Node::if_then(
@@ -230,9 +258,19 @@ impl<'a> TableStateMachineComposer<'a> {
                         "step",
                         Expr::var("scan_start"),
                         end,
-                        vec![self.advance_node(Expr::load(haystack, Expr::var("step")))],
+                        vec![self.bounded_advance_node(
+                            state_extent.clone(),
+                            Expr::load(haystack, Expr::var("step")),
+                        )],
                     ),
-                    Node::store(matches, i, Expr::load(accept, Expr::var(self.state_var))),
+                    Node::store(
+                        matches,
+                        i,
+                        Expr::load(
+                            accept,
+                            bounded_index(Expr::var(self.state_var), state_extent),
+                        ),
+                    ),
                 ],
             ),
         ]

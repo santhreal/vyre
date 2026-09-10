@@ -33,6 +33,9 @@ pub const OP_ID: &str = "vyre-libs::graph::dominator_tree_depth";
 /// entry, because a forest mid-fixpoint can still hold a parent chain that does
 /// not terminate at the entry. A chain that runs out of steps keeps the depth
 /// reached so far, and the next sweep corrects it.
+///
+/// A parent pointer outside the forest ends the walk at the node that holds
+/// it, so the read of `idom` stays inside the buffer for any contents.
 #[must_use]
 pub fn dominator_tree_depth_body(node_count: u32, idom: &str, depth: &str) -> Vec<Node> {
     vec![Node::loop_for(
@@ -52,8 +55,11 @@ pub fn dominator_tree_depth_body(node_count: u32, idom: &str, depth: &str) -> Ve
                         Node::let_bind("parent", Expr::load(idom, Expr::var("cur"))),
                         Node::if_then(
                             Expr::and(
-                                Expr::ne(Expr::var("parent"), Expr::var("cur")),
-                                Expr::ne(Expr::var("parent"), Expr::u32(IDOM_NONE)),
+                                Expr::and(
+                                    Expr::ne(Expr::var("parent"), Expr::var("cur")),
+                                    Expr::ne(Expr::var("parent"), Expr::u32(IDOM_NONE)),
+                                ),
+                                Expr::lt(Expr::var("parent"), Expr::buf_len(idom)),
                             ),
                             vec![
                                 Node::assign("d", Expr::add(Expr::var("d"), Expr::u32(1))),

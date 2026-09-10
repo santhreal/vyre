@@ -779,6 +779,7 @@ pub const fn vyre_foundation::ir::ImageFormat::is_depth_or_stencil(self) -> bool
 pub const fn vyre_foundation::ir::LinearType::forbids_drop(self) -> bool
 pub const fn vyre_foundation::ir::LinearType::forbids_reuse(self) -> bool
 pub const fn vyre_foundation::ir::MemoryOrdering::execution_scope(self) -> vyre_foundation::ir::ExecutionScope
+pub const fn vyre_foundation::ir::MemoryOrdering::from_atomic_ordering(ordering: vyre_foundation::ir::AtomicOrdering) -> Self
 pub const fn vyre_foundation::ir::MemoryOrdering::is_valid_for_atomic_rmw(self) -> bool
 pub const fn vyre_foundation::ir::MemoryOrdering::is_valid_for_barrier(self) -> bool
 pub const fn vyre_foundation::ir::MemoryOrdering::join(self, other: Self) -> Self
@@ -1490,6 +1491,8 @@ pub fn vyre_foundation::causal::SourceSpanRef::fmt(&self, f: &mut core::fmt::For
 pub fn vyre_foundation::causal::TraceId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::causal::exhaustiveness_check_causal_phase(phase: vyre_foundation::causal::CausalPhase) -> u8
 pub fn vyre_foundation::causal::next_span_id() -> vyre_foundation::causal::CausalSpanId
+pub fn vyre_foundation::composition::bounded_index(index: vyre_foundation::ir::Expr, count: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::composition::bounded_index_when(in_range: vyre_foundation::ir::Expr, index: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::composition::duplicate_self_exclusive_regions(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<alloc::string::String>
 pub fn vyre_foundation::composition::is_anonymous_generator(generator: &str) -> bool
 pub fn vyre_foundation::composition::mark_self_exclusive_region(generator: &str) -> alloc::string::String

@@ -8,7 +8,7 @@
 
 use crate::rule::ast::{RuleCondition, RuleFormula};
 use std::sync::LazyLock;
-use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::composition::{bounded_index, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 /// `WORKGROUP_SIZE` constant.
 pub const WORKGROUP_SIZE: [u32; 3] = [64, 1, 1];
@@ -309,10 +309,18 @@ pub fn pattern_count(pattern_id: u32) -> Expr {
     pattern_buffer_value(pattern_id, "rule_counts")
 }
 
+/// A pattern slot the buffer does not hold reads zero.
+///
+/// A select evaluates both arms, so the select alone leaves the load past the
+/// end of a buffer shorter than the compiled pattern set: the index is folded
+/// inside the buffer first and the same select discards what it read.
 fn pattern_buffer_value(pattern_id: u32, buffer: &str) -> Expr {
     Expr::select(
         Expr::lt(Expr::u32(pattern_id), Expr::buf_len(buffer)),
-        Expr::load(buffer, Expr::u32(pattern_id)),
+        Expr::load(
+            buffer,
+            bounded_index(Expr::u32(pattern_id), Expr::buf_len(buffer)),
+        ),
         Expr::u32(0),
     )
 }

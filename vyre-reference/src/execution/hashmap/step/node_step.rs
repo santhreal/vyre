@@ -240,9 +240,7 @@ pub(crate) fn step_nodes_frame<'a>(
             let address = addr_val.try_as_u32().ok_or_else(|| {
                 ReferenceError::new(format!("reference trap `{tag}` address is not a u32. Fix: pass a scalar u32 trap address."))
             })?;
-            return Err(ReferenceError::new(format!(
-                "reference dispatch trapped: address={address}, tag=`{tag}`. Fix: handle the trap condition or route this Program through a backend/runtime with replay support."
-            )));
+            return Err(ReferenceError::program_trap(address, tag));
         }
         Node::Resume { tag } => {
             return Err(ReferenceError::new(format!(

@@ -13,7 +13,7 @@
 //! and writes the path length into `path_len[0]`. Bounded by
 //! `max_depth` so a corrupt parent array cannot hang the GPU.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{bounded_index, trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -244,7 +244,10 @@ pub fn path_reconstruct(
                         "next",
                         Expr::select(
                             Expr::lt(Expr::var("current"), Expr::buf_len(parent)),
-                            Expr::load(parent, Expr::var("current")),
+                            Expr::load(
+                                parent,
+                                bounded_index(Expr::var("current"), Expr::buf_len(parent)),
+                            ),
                             Expr::var("current"),
                         ),
                     ),
@@ -339,7 +342,13 @@ pub fn batched_path_reconstruct(parent_count: u32, target_count: u32, max_depth:
                                 "next",
                                 Expr::select(
                                     Expr::lt(Expr::var("current"), Expr::buf_len("parent")),
-                                    Expr::load("parent", Expr::var("current")),
+                                    Expr::load(
+                                        "parent",
+                                        bounded_index(
+                                            Expr::var("current"),
+                                            Expr::buf_len("parent"),
+                                        ),
+                                    ),
                                     Expr::var("current"),
                                 ),
                             ),

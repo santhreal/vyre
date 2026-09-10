@@ -151,7 +151,6 @@ inventory::submit! {
             let sizes = [10u32, 20, 30, 40];
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&sizes),
-                vec![0; 16],
             ]]
         }),
         Some(|| {

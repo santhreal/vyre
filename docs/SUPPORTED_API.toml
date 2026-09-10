@@ -34584,7 +34584,7 @@ seam = "foundation-ir"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 8818
+exported_item_count = 8821
 
   [[package.item]]
   path = "alloc::string::String::from(err: vyre_foundation::serial::wire::encode::WireEncodeErr) -> alloc::string::String"
@@ -41204,6 +41204,20 @@ exported_item_count = 8818
   [[package.item]]
   path = "vyre_foundation::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str"
   kind = "const"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::composition::bounded_index(index: vyre_foundation::ir::Expr, count: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::composition::bounded_index_when(in_range: vyre_foundation::ir::Expr, index: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr"
+  kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -52935,6 +52949,13 @@ exported_item_count = 8818
 
   [[package.item]]
   path = "vyre_foundation::ir::MemoryOrdering::execution_scope(self) -> vyre_foundation::ir::ExecutionScope"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "wire-bound"
+
+  [[package.item]]
+  path = "vyre_foundation::ir::MemoryOrdering::from_atomic_ordering(ordering: vyre_foundation::ir::AtomicOrdering) -> Self"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -98607,7 +98628,7 @@ seam = "libs-builder"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
 stability = "extension"
-exported_item_count = 580
+exported_item_count = 581
 
   [[package.item]]
   path = "impl core::fmt::Debug for vyre_libs_builder::builder::gemm::ContractionEpilogue"
@@ -100830,6 +100851,13 @@ exported_item_count = 580
 
   [[package.item]]
   path = "vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::alphabet_size(self, alphabet_size: u32) -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::bounded_advance_node(&self, state_extent: vyre_foundation::ir_inner::model::generated::Expr, symbol: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Node"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -150952,7 +150980,7 @@ seam = "reference-semantics"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_backend_extension"
 stability = "extension"
-exported_item_count = 1089
+exported_item_count = 1091
 
   [[package.item]]
   path = "impl core::cmp::Eq for vyre_reference::composition_witness::RuleConditionWitness"
@@ -151900,6 +151928,13 @@ exported_item_count = 1089
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_reference::ReferenceError::is_program_trap(&self) -> bool"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_reference::ReferenceError::kind(&self) -> &vyre_reference::ReferenceErrorKind"
   kind = "fn"
   stability = "extension"
@@ -151950,6 +151985,13 @@ exported_item_count = 1089
 
   [[package.item]]
   path = "vyre_reference::ReferenceError::poison(detail: impl core::convert::Into<alloc::string::String>) -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceError::program_trap(address: u32, tag: &str) -> Self"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"

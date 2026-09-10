@@ -128,6 +128,7 @@ pub fn vyre_reference::ReferenceError::error_class(&self) -> vyre_reference::Ref
 pub fn vyre_reference::ReferenceError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_reference::ReferenceError::from(source: vyre_foundation::validate::validation_error::ValidationError) -> Self
 pub fn vyre_reference::ReferenceError::incomplete_dispatch_semantics(detail: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_reference::ReferenceError::is_program_trap(&self) -> bool
 pub fn vyre_reference::ReferenceError::kind(&self) -> &vyre_reference::ReferenceErrorKind
 pub fn vyre_reference::ReferenceError::message(&self) -> &str
 pub fn vyre_reference::ReferenceError::missing_value(detail: impl core::convert::Into<alloc::string::String>) -> Self
@@ -136,6 +137,7 @@ pub fn vyre_reference::ReferenceError::nontermination(detail: impl core::convert
 pub fn vyre_reference::ReferenceError::out_of_bounds(detail: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_reference::ReferenceError::overflow(detail: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_reference::ReferenceError::poison(detail: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_reference::ReferenceError::program_trap(address: u32, tag: &str) -> Self
 pub fn vyre_reference::ReferenceError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
 pub fn vyre_reference::ReferenceError::step_ceiling(source: vyre_reference::StepCeilingExceeded) -> Self
 pub fn vyre_reference::ReferenceError::step_ceiling_source(&self) -> core::option::Option<&vyre_reference::StepCeilingExceeded>

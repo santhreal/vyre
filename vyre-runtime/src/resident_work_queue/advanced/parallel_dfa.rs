@@ -3,6 +3,7 @@
 //! Replaces scalar byte-by-byte `loop_for` ($O(N)$) with a subgroup-cooperative
 //! block-stride prefix sum ($O(N/WG_SIZE)$).
 
+use vyre_foundation::composition::{bounded_index, bounded_index_when};
 use vyre_foundation::ir::{Expr, Node};
 
 const DEFAULT_SUBGROUP_WIDTH: u32 = 32;
@@ -81,13 +82,22 @@ pub fn dfa_byte_scanner_parallel_composition_with(bindings: &ParallelDfaBindings
             "lane_active",
             Expr::lt(Expr::var("lane_byte_pos"), Expr::var(bindings.file_end)),
         ),
+        // A select evaluates both arms, so a lane past the file end reads the
+        // haystack too. Its position is folded inside the region before the read
+        // and the same select replaces the byte with zero.
         Node::let_bind(
             "lane_byte",
             Expr::select(
                 Expr::var("lane_active"),
                 Expr::cast(
                     vyre_foundation::ir::DataType::U32,
-                    Expr::load(bindings.haystack, Expr::var("lane_byte_pos")),
+                    Expr::load(
+                        bindings.haystack,
+                        bounded_index_when(
+                            Expr::var("lane_active"),
+                            Expr::var("lane_byte_pos"),
+                        ),
+                    ),
                 ),
                 Expr::u32(0),
             ),
@@ -166,13 +176,25 @@ fn append_prefix_stage(nodes: &mut Vec<Node>, bindings: &ParallelDfaBindings, st
                     Expr::var("source_lane"),
                 ),
             ),
+            // `previous_state` is a transition-table entry, and nothing in the table
+            // is checked against the state count. Both arms of the select read, so
+            // an entry naming a state the automaton does not have would index into
+            // the next lane's row or past the slab: it is folded to a live state
+            // first.
             Node::let_bind(
                 "composed_state",
                 Expr::select(
                     Expr::ge(Expr::var("lane_id"), Expr::u32(stride)),
                     Expr::load(
                         bindings.lane_prefix,
-                        table_index("lane_id", bindings.state_count, Expr::var("previous_state")),
+                        table_index(
+                            "lane_id",
+                            bindings.state_count,
+                            bounded_index(
+                                Expr::var("previous_state"),
+                                Expr::var(bindings.state_count),
+                            ),
+                        ),
                     ),
                     Expr::load(
                         bindings.lane_prefix,

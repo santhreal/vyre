@@ -182,7 +182,6 @@ inventory::submit! {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&segs),
                 vyre_primitives::wire::pack_u32_slice(&bg_pixels),
-                vec![0; 16],
             ]]
         }),
         Some(|| {

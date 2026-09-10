@@ -5,7 +5,7 @@
 //!
 //! Category A composition - pure IR over existing expressions.
 
-use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::composition::{bounded_index_when, wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::text_run";
@@ -116,11 +116,17 @@ pub fn text_run_blend(
                     Expr::mul(Expr::var(&g_v), Expr::u32(atlas_w)),
                 ),
             ),
+            // A select evaluates both arms, so a pixel outside the glyph box reads
+            // the atlas too. The index is folded inside the atlas first and the
+            // same select replaces what it read with zero coverage.
             Node::let_bind(
                 &g_cov_raw,
                 Expr::select(
                     Expr::var(&g_inside),
-                    Expr::load(atlas, Expr::var(&g_a_idx)),
+                    Expr::load(
+                        atlas,
+                        bounded_index_when(Expr::var(&g_inside), Expr::var(&g_a_idx)),
+                    ),
                     Expr::u32(0),
                 ),
             ),
@@ -276,7 +282,6 @@ inventory::submit! {
                 vyre_primitives::wire::pack_u32_slice(&glyph_data),
                 vyre_primitives::wire::pack_u32_slice(&atlas_data),
                 vyre_primitives::wire::pack_u32_slice(&bg_data),
-                vec![0; 16],
             ]]
         }),
         Some(|| {

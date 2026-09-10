@@ -23,7 +23,7 @@
 //! from. Recomputing it is `dominator_tree_depth`'s query, and the fixpoint
 //! runs that one first.
 
-use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::composition::{bounded_index, wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_libs_builder::builder::trip_count::clamped_by_extents;
@@ -76,7 +76,13 @@ pub fn dominator_tree_intersect_step_body(
                     Expr::var("p_start"),
                     Expr::var("p_end"),
                     vec![
-                        Node::let_bind("p", Expr::load("pred_targets", Expr::var("p_idx"))),
+                        Node::let_bind(
+                            "p",
+                            bounded_index(
+                                Expr::load("pred_targets", Expr::var("p_idx")),
+                                Expr::buf_len(idom),
+                            ),
+                        ),
                         Node::if_then(
                             Expr::ne(Expr::load(idom, Expr::var("p")), Expr::u32(IDOM_NONE)),
                             vec![Node::if_then_else(
@@ -135,6 +141,10 @@ pub fn dominator_tree_intersect_step_child(
 }
 
 /// Body of the dominator tree LCA intersection.
+///
+/// Both sides are node ids read out of the forest, so each one is folded back
+/// into range as it is bound. A parent pointer outside the forest walks to the
+/// entry instead of reading past `idom`.
 #[must_use]
 pub fn dominator_tree_lca_body(
     node_count: u32,
@@ -151,12 +161,30 @@ pub fn dominator_tree_lca_body(
             vec![Node::if_then(
                 Expr::ne(Expr::var("a"), Expr::var("b")),
                 vec![
-                    Node::let_bind("da", Expr::load(depth, Expr::var("a"))),
-                    Node::let_bind("db", Expr::load(depth, Expr::var("b"))),
+                    Node::let_bind(
+                        "da",
+                        Expr::load(depth, bounded_index(Expr::var("a"), Expr::buf_len(depth))),
+                    ),
+                    Node::let_bind(
+                        "db",
+                        Expr::load(depth, bounded_index(Expr::var("b"), Expr::buf_len(depth))),
+                    ),
                     Node::if_then_else(
                         Expr::gt(Expr::var("da"), Expr::var("db")),
-                        vec![Node::assign("a", Expr::load(idom, Expr::var("a")))],
-                        vec![Node::assign("b", Expr::load(idom, Expr::var("b")))],
+                        vec![Node::assign(
+                            "a",
+                            bounded_index(
+                                Expr::load(idom, Expr::var("a")),
+                                Expr::buf_len(idom),
+                            ),
+                        )],
+                        vec![Node::assign(
+                            "b",
+                            bounded_index(
+                                Expr::load(idom, Expr::var("b")),
+                                Expr::buf_len(idom),
+                            ),
+                        )],
                     ),
                 ],
             )],

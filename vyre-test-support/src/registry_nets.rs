@@ -310,6 +310,72 @@ impl RegistrySweep {
         );
     }
 
+    /// Every case reads and writes inside its buffers when the buffer CONTENTS
+    /// are hostile.
+    ///
+    /// The other three out-of-bounds nets vary the GRID. They catch an index
+    /// derived from the lane id and see nothing at all when the index is
+    /// derived from DATA: a gather offset, a CSR target, a monomial pair index,
+    /// a parent pointer. Those come out of a read-only buffer whose contents no
+    /// declared extent constrains, so a caller that passes one value too large
+    /// makes the program index past a buffer end on every lane, at the natural
+    /// grid, with every fixture net green.
+    ///
+    /// The hostile content is [`first_out_of_range_index`]: the largest element
+    /// count the program declares, which is the first index no buffer in it
+    /// accepts. It is out of range for every buffer and still bounds a loop
+    /// that reads a count out of a buffer, so the sweep stays as cheap as the
+    /// fixture.
+    ///
+    /// `Expr::select` evaluates both arms and `Expr::and` both sides, so
+    /// neither gates a load: fold the index into range with
+    /// [`vyre_foundation::composition::bounded_index`], or nest the access in
+    /// control flow.
+    ///
+    /// A case that reaches an IR trap counts as judged: the trap is the program
+    /// refusing input outside its contract with explicit control flow, which is
+    /// what the net asks for.
+    ///
+    /// # Panics
+    /// Panics when a case accesses a buffer out of bounds on hostile contents,
+    /// when a case cannot be evaluated, or when the population is empty.
+    pub fn assert_oob_clean_under_hostile_contents(&self) {
+        let mut offenders = Vec::new();
+        let mut skipped = Vec::new();
+        let mut checked = 0usize;
+
+        for case in &self.cases {
+            let index = first_out_of_range_index(&case.program, &case.inputs);
+            let inputs = hostile_contents(&case.inputs, index);
+            match vyre_reference::reference_eval_oob_report(&case.program, &inputs) {
+                Ok((_out, report)) => {
+                    checked += 1;
+                    if report.total() > 0 {
+                        offenders.push(format!(
+                            "{} (every input word = {index}): {} OOB load(s), {} OOB store(s), {} OOB atomic(s)",
+                            case.label, report.oob_loads, report.oob_stores, report.oob_atomics
+                        ));
+                    }
+                }
+                Err(err) if err.is_program_trap() => checked += 1,
+                Err(err) => skipped.push(format!("{} (hostile contents): {err}", case.label)),
+            }
+        }
+
+        self.refuse_skips("the hostile-contents out-of-bounds sweep", checked, &skipped);
+        assert!(
+            offenders.is_empty(),
+            "Fix: {} of {checked} checked {} fixture case(s) accessed a buffer OUT OF BOUNDS once an input \
+             word held an index no buffer accepts. Nothing constrains what a caller puts in a read-only \
+             buffer, so a data-derived index reaches there on a device that bounds-checks nothing. Fold the \
+             index with `vyre_foundation::composition::bounded_index`, or gate the access with control flow. \
+             Offenders:\n{}",
+            offenders.len(),
+            self.surface,
+            offenders.join("\n")
+        );
+    }
+
     /// Refuse a case the net could not evaluate, and an empty population.
     ///
     /// A net that skips what it cannot evaluate reports a clean sweep of a
@@ -333,4 +399,57 @@ impl RegistrySweep {
             self.surface
         );
     }
+}
+
+/// The first element index neither the program's declared extents nor the
+/// inputs it was handed accept.
+///
+/// A declared count of zero means the buffer is sized at run time, so the
+/// declarations alone put the bar at zero for a program built entirely out of
+/// them and the sweep would hand every case its own fixture back. The supplied
+/// buffers carry the run-time extent, counted as four-byte elements, and the
+/// larger of the two is the index no buffer in the run accepts.
+fn first_out_of_range_index(program: &Program, inputs: &[Value]) -> u32 {
+    let declared = program
+        .buffers()
+        .iter()
+        .map(vyre_foundation::ir::BufferDecl::count)
+        .max()
+        .unwrap_or(0);
+    let supplied = inputs
+        .iter()
+        .map(|input| match input {
+            Value::Bytes(bytes) => u32::try_from(bytes.len() / 4).unwrap_or(u32::MAX),
+            _ => 1,
+        })
+        .max()
+        .unwrap_or(0);
+    declared.max(supplied)
+}
+
+/// Every input word replaced with `index`.
+///
+/// A buffer is bytes to the interpreter, so the rewrite is per four-byte word
+/// and leaves a trailing partial word alone. A float buffer receives the bit
+/// pattern of `index`, which is a finite denormal and indexes nothing; the
+/// point of the sweep is the integer buffers a program reads indices out of.
+fn hostile_contents(inputs: &[Value], index: u32) -> Vec<Value> {
+    if index == 0 {
+        return inputs.to_vec();
+    }
+    let word = index.to_le_bytes();
+    inputs
+        .iter()
+        .map(|input| match input {
+            Value::Bytes(bytes) => {
+                let mut hostile = bytes.to_vec();
+                for chunk in hostile.chunks_exact_mut(4) {
+                    chunk.copy_from_slice(&word);
+                }
+                Value::Bytes(hostile.into())
+            }
+            Value::U32(_) => Value::U32(index),
+            other => other.clone(),
+        })
+        .collect()
 }

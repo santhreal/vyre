@@ -89,6 +89,38 @@ pub fn single_invocation_region(op_id: &str, body: Vec<Node>) -> Vec<Node> {
     vec![wrap_anonymous_region(op_id, single_invocation(body))]
 }
 
+/// `index` folded inside a buffer of `count` elements.
+///
+/// `Expr::select` evaluates both arms and `Expr::and` both sides, so neither
+/// gates a load: the read in the discarded arm runs too, and on a backend that
+/// bounds-checks nothing it lands wherever the index pointed. Folding the index
+/// keeps the read inside the buffer, where the same select discards what it
+/// found.
+///
+/// Index zero is the fold target because every non-empty buffer has one. A
+/// buffer of zero elements accepts no index at all, and a program that declares
+/// one has nothing to read.
+///
+/// This is the one owner of the fold. A builder that writes its own is a second
+/// definition of the same contract, and the ones that existed before this
+/// disagreed on whether the bound was a constant or a `buf_len`.
+#[must_use]
+pub fn bounded_index(index: Expr, count: Expr) -> Expr {
+    let in_range = Expr::lt(index.clone(), count);
+    bounded_index_when(in_range, index)
+}
+
+/// `index` folded to zero wherever `in_range` is false.
+///
+/// [`bounded_index`] covers the one-buffer case, where being in range is being
+/// below the element count. A two-dimensional tap, a lane past the live width,
+/// and a leader-only read each decide usability with a predicate the caller
+/// already holds, and pass it here rather than re-deriving a bound.
+#[must_use]
+pub fn bounded_index_when(in_range: Expr, index: Expr) -> Expr {
+    Expr::select(in_range, index, Expr::u32(0))
+}
+
 /// The program a builder returns when its inputs cannot produce a valid one.
 ///
 /// Every primitive and composition builder is infallible, so an invalid shape
