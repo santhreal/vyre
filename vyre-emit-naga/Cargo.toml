@@ -54,7 +54,7 @@ vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-req
 # loop-carrier scope handling on a real-world program. `parsing::python` is
 # gated behind `python-parser` (vyre-libs/Cargo.toml), so without this the test
 # binary fails to compile (E0433: no `python` in `parsing`).
-vyre-libs = { path = "../vyre-libs", features = ["python-parser"] }
+vyre-libs = { workspace = true, features = ["python-parser"] }
 proptest.workspace = true
 
 [[test]]

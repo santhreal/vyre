@@ -216,13 +216,13 @@ vyre-libs-reasoning = { workspace = true, optional = true }
 vyre-libs-scheduling = { workspace = true, optional = true }
 
 [dev-dependencies]
-vyre = { path = "../vyre" }
-vyre-primitives = { path = "../vyre-primitives", features = ["hardware"], default-features = false }
-vyre-emit-naga = { path = "../vyre-emit-naga" }
-vyre-driver-reference = { path = "../vyre-driver-reference" }
-vyre-lower = { path = "../vyre-lower" }
-vyre-driver = { path = "../vyre-driver" }
-vyre-reference = { path = "../vyre-reference" }
+vyre = { workspace = true }
+vyre-primitives = { workspace = true, features = ["hardware"], default-features = false }
+vyre-emit-naga = { workspace = true }
+vyre-driver-reference = { workspace = true }
+vyre-lower = { workspace = true }
+vyre-driver = { workspace = true }
+vyre-reference = { workspace = true }
 proptest.workspace = true
 naga.workspace = true
 tree-sitter = { workspace = true }

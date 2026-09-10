@@ -86,13 +86,42 @@ fn workspace_root() -> PathBuf {
 
 #[derive(Debug, Clone)]
 pub(crate) struct MemberInfo {
-    pub(crate) name: String,
     pub(crate) path: String,
     pub(crate) publication_class: Option<String>,
     pub(crate) publish: bool,
     pub(crate) normal_deps: Vec<String>,
     pub(crate) build_deps: Vec<String>,
-    pub(crate) dev_deps: Vec<String>,
+    /// Dev-dependencies declared with no version.
+    pub(crate) versionless_dev_deps: Vec<String>,
+}
+
+/// Names in one dependency table whose declaration states no version.
+///
+/// Cargo strips a path dependency that states no version out of the published
+/// archive, so the archive carries the test sources that need it and not the
+/// dependency itself. `workspace = true` inherits the root declaration, so the
+/// root table is what decides for an inherited entry.
+fn versionless<'a>(
+    deps: &'a toml::value::Table,
+    workspace_deps: &'a toml::value::Table,
+) -> impl Iterator<Item = String> + 'a {
+    deps.iter().filter_map(move |(dep, value)| {
+        let Some(table) = value.as_table() else {
+            return None;
+        };
+        let declaration = if table.get("workspace").and_then(toml::Value::as_bool) == Some(true) {
+            workspace_deps.get(dep)?
+        } else {
+            value
+        };
+        match declaration {
+            toml::Value::String(_) => None,
+            other => (!other
+                .as_table()
+                .is_some_and(|table| table.contains_key("version")))
+            .then(|| dep.clone()),
+        }
+    })
 }
 
 fn load_workspace_members(root: &Path) -> BTreeMap<String, MemberInfo> {
@@ -106,6 +135,13 @@ fn load_workspace_members(root: &Path) -> BTreeMap<String, MemberInfo> {
         .and_then(|w| w.get("members"))
         .and_then(|m| m.as_array())
         .expect("workspace.members must be an array");
+
+    let empty = toml::value::Table::new();
+    let workspace_deps = root_toml
+        .get("workspace")
+        .and_then(|w| w.get("dependencies"))
+        .and_then(toml::Value::as_table)
+        .unwrap_or(&empty);
 
     let mut map = BTreeMap::new();
 
@@ -138,7 +174,7 @@ fn load_workspace_members(root: &Path) -> BTreeMap<String, MemberInfo> {
 
         let mut normal_deps = Vec::new();
         let mut build_deps = Vec::new();
-        let mut dev_deps = Vec::new();
+        let mut versionless_dev_deps = Vec::new();
 
         if let Some(deps) = member_toml.get("dependencies").and_then(|d| d.as_table()) {
             normal_deps.extend(deps.keys().cloned());
@@ -153,7 +189,7 @@ fn load_workspace_members(root: &Path) -> BTreeMap<String, MemberInfo> {
             .get("dev-dependencies")
             .and_then(|d| d.as_table())
         {
-            dev_deps.extend(deps.keys().cloned());
+            versionless_dev_deps.extend(versionless(deps, workspace_deps));
         }
 
         if let Some(target) = member_toml.get("target").and_then(|t| t.as_table()) {
@@ -171,21 +207,20 @@ fn load_workspace_members(root: &Path) -> BTreeMap<String, MemberInfo> {
                     .get("dev-dependencies")
                     .and_then(|d| d.as_table())
                 {
-                    dev_deps.extend(deps.keys().cloned());
+                    versionless_dev_deps.extend(versionless(deps, workspace_deps));
                 }
             }
         }
 
         map.insert(
-            name.clone(),
+            name,
             MemberInfo {
-                name,
                 path: member_path_str.to_string(),
                 publication_class: pub_class,
                 publish,
                 normal_deps,
                 build_deps,
-                dev_deps,
+                versionless_dev_deps,
             },
         );
     }
@@ -584,13 +619,12 @@ fn mutation_newly_publishable_unclassified_package_is_caught() {
     members.insert(
         "vyre-unclassified-new-pkg".to_string(),
         MemberInfo {
-            name: "vyre-unclassified-new-pkg".to_string(),
             path: "vyre-unclassified-new-pkg".to_string(),
             publication_class: Some("stable-consumer-sdk".to_string()),
             publish: true,
             normal_deps: vec![],
             build_deps: vec![],
-            dev_deps: vec![],
+            versionless_dev_deps: vec![],
         },
     );
 
@@ -603,4 +637,40 @@ fn mutation_newly_publishable_unclassified_package_is_caught() {
     assert!(errors
         .iter()
         .any(|e| e.contains("unexpected newly publishable package `vyre-unclassified-new-pkg`")));
+}
+
+/// WHY: cargo strips a path dependency that states no version out of the
+/// published archive, but the `[[test]]` targets that need it ship in that
+/// archive regardless. The result is a published crate whose own test sources
+/// cannot compile, which nothing else here observes: the workspace build
+/// resolves the path and stays green.
+///
+/// This closes the class rather than one member. Both sides are read at run
+/// time: the roster comes from `workspace.members`, so a package added to it
+/// is covered without an edit here, and a dependency is judged only when it
+/// is itself publishable, because a dev-dependency on a package that is never
+/// published is stripped by design.
+#[test]
+fn a_publishable_package_versions_every_internal_dev_dependency() {
+    let members = load_workspace_members(&workspace_root());
+
+    let mut stripped: Vec<String> = Vec::new();
+    for (name, info) in &members {
+        if !info.publish {
+            continue;
+        }
+        for dependency in &info.versionless_dev_deps {
+            if members.get(dependency).is_some_and(|member| member.publish) {
+                stripped.push(format!("{name} -> {dependency}"));
+            }
+        }
+    }
+
+    assert!(
+        stripped.is_empty(),
+        "Fix: state a version beside the path for each of these internal \
+         dev-dependencies. Cargo drops a versionless path dependency from the \
+         published archive while still shipping the tests that import it, so \
+         the archive does not build: {stripped:?}"
+    );
 }

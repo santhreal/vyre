@@ -58,7 +58,7 @@ vyre-runtime.workspace = true
 vyre-pass-engine.workspace = true
 # `ir-fixtures` carries the shared u32 binop parity tables the live-GPU
 # parity suites read their operands and pinned oracle answers from.
-vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests", "driver-artifact-contracts"] }
+vyre-test-support = { workspace = true, features = ["semantic-requests", "driver-artifact-contracts", "parity-oracles"] }
 # The dispatch allocation budget installs the counting global allocator.
 vyre-alloc-probe = { workspace = true }
 # The canonical self-hosted optimizer scaling bench lives behind this feature,
@@ -66,7 +66,7 @@ vyre-alloc-probe = { workspace = true }
 vyre-driver = { workspace = true, features = ["test-fixtures"] }
 tempfile.workspace = true
 proptest.workspace = true
-vyre-libs = { path = "../vyre-libs", features = ["pattern", "parsing", "nn-attention", "crypto-blake3", "hash"] }
+vyre-libs = { workspace = true, features = ["pattern", "parsing", "nn-attention", "crypto-blake3", "hash"] }
 # The integration tests under tests/ exercise the public `vyre` umbrella facade
 # (vyre::ir, vyre::{DispatchConfig, VyreBackend, validate, ...}), the ergonomic
 # surface a real consumer uses. The 0.6.2 refactor dropped this dev-dep, which
@@ -77,10 +77,10 @@ vyre-libs = { path = "../vyre-libs", features = ["pattern", "parsing", "nn-atten
 # order, so a versioned/workspace dev-dep would be unsatisfiable at publish time.
 # cargo strips path-only dev-deps from the published manifest; the local test build
 # still links it through the path.
-vyre = { path = "../vyre", default-features = false }
+vyre = { workspace = true, default-features = false }
 # Tests reach `vyre_primitives::wire::pack_u32_slice`, `wire::decode_u*` and
 # `operation_catalog::intrinsic_entries` directly; the facade does not re-export them.
-vyre-primitives = { path = "../vyre-primitives", features = ["inventory-registry"], default-features = false }
+vyre-primitives = { workspace = true, features = ["inventory-registry"], default-features = false }
 # Cross-OS shader-VALIDITY coverage for the combined segmented megakernel: the
 # winning Vulkan/DX12 runs implicitly prove SPIR-V/HLSL validity, but macOS/Metal
 # is hardware-blocked, so the megakernel descriptor is lowered to MSL here (naga's
@@ -89,7 +89,7 @@ vyre-primitives = { path = "../vyre-primitives", features = ["inventory-registry
 # dev-dep above: cargo strips path-only dev-deps at publish, so this never creates a
 # publish-ordering constraint, and `--edges=normal` keeps it out of the layering lint.
 # CPU-reference parity tests compare against vyre-reference.
-vyre-reference = { path = "../vyre-reference" }
+vyre-reference = { workspace = true }
 # GPU parity tests consume the canonical conformance library without enabling
 # its optional concrete-backend dependencies. PATH-ONLY keeps this unpublished
 # harness out of the packaged dependency graph.

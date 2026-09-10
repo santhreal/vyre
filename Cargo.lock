@@ -3358,10 +3358,12 @@ dependencies = [
  "sha2 0.11.0",
  "tempfile",
  "thiserror 2.0.19",
+ "vyre-debug",
  "vyre-driver",
  "vyre-foundation",
  "vyre-lower",
  "vyre-megakernel",
+ "vyre-safetensors",
  "vyre-test-support",
 ]
 

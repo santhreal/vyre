@@ -72,23 +72,23 @@ vyre-driver = { workspace = true, features = ["test-fixtures"] }
 # exercise. `full` owns every domain this facade publishes, including the
 # compiler-owned analysis, encoding, solver, and graph-dispatch domains the live
 # parity tests drive directly.
-vyre-libs = { path = "../vyre-libs", features = ["full"] }
+vyre-libs = { workspace = true, features = ["full"] }
 tempfile.workspace = true
 # Required by tests/common/mod.rs (`vyre::ir`, `vyre_driver::DispatchConfig`) and by
 # many live CUDA integration tests. `vyre` optionally depends on
 # vyre-driver-cuda behind `features = ["cuda"]`; adding it here as a dev-dep
 # without that feature flag does not create a cycle. Cargo dev-deps are only
 # compiled for the crate being tested, not for its dependents.
-vyre = { path = "../vyre", default-features = false }
+vyre = { workspace = true, default-features = false }
 # Required by tests/common/mod.rs (vyre_reference::value::Value,
 # vyre_reference::reference_eval) and by differential tests.
-vyre-reference = { path = "../vyre-reference" }
+vyre-reference = { workspace = true }
 # Required by several _gpu_parity tests that import vyre_primitives::*.
 # `hardware` is the one domain this crate declares. The composition domains the
 # parity tests reach into (bitset, decode, fixpoint, graph, hash, math,
 # matching, parsing, reduce, text, visual) come from the vyre-libs dev-dependency
 # above on `full`, which is why naming them here is no longer possible or needed.
-vyre-primitives = { path = "../vyre-primitives", features = [
+vyre-primitives = { workspace = true, features = [
     "hardware",
 ], default-features = false }
 # Required by self_optimizer_* e2e and differential tests.

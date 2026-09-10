@@ -50,7 +50,7 @@ vyre-test-support.workspace = true
 # `vyre_test_support::spec_variant_tables`, shared by every suite that needs the
 # frozen operator variant space, names `vyre_spec` directly.
 vyre-spec.workspace = true
-vyre-emit-naga = { path = "../vyre-emit-naga" }
+vyre-emit-naga = { workspace = true }
 naga = { workspace = true }
 cudarc = { workspace = true }
 proptest.workspace = true

@@ -47,10 +47,10 @@ inventory = { workspace = true, optional = true }
 bytemuck.workspace = true
 
 [dev-dependencies]
-vyre-reference = { path = "../vyre-reference" }
+vyre-reference = { workspace = true }
 proptest.workspace = true
 criterion.workspace = true
-vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
+vyre-test-support = { workspace = true, features = ["parity-oracles"] }
 
 [package.metadata.docs.rs]
 all-features = true
