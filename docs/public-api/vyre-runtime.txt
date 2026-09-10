@@ -601,6 +601,7 @@ pub fn vyre_runtime::artifact_admission::ArtifactSession::resource(&self, name: 
 pub fn vyre_runtime::artifact_admission::ArtifactSession::submit(&self, bindings: vyre_driver::backend::artifact_lifecycle::BindingSet) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::artifact_lifecycle::Submission>, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::submit_and_wait(&self, bindings: vyre_driver::backend::artifact_lifecycle::BindingSet) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::Completion, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::submit_host_inputs(&self, inputs: &[&[u8]]) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::Completion, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::artifact_admission::ArtifactSession::submit_resident_batch_and_wait(&self, batches: alloc::vec::Vec<vyre_driver::backend::artifact_lifecycle::BindingSet>) -> core::result::Result<alloc::vec::Vec<vyre_driver::backend::artifact_lifecycle::Completion>, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::upload_resident(&self, resource: &vyre_driver::backend::resource::Resource, bytes: &[u8]) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactSession::upload_resident_at(&self, resource: &vyre_driver::backend::resource::Resource, offset_bytes: usize, bytes: &[u8]) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::ArtifactWorkspace::bindings(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, vyre_driver::backend::resource::Resource>
@@ -1853,6 +1854,8 @@ pub vyre_runtime::artifact_admission::ResourceIngestionError::LifetimeMismatch::
 pub vyre_runtime::artifact_admission::ResourceIngestionError::MissingResource
 pub vyre_runtime::artifact_admission::ResourceIngestionError::MissingResource::entry_name: alloc::string::String
 pub vyre_runtime::artifact_admission::ResourceIngestionError::MissingResource::value: vyre_megakernel::identity::ArtifactValueId
+pub vyre_runtime::artifact_admission::ResourceIngestionError::PayloadNotPrepared
+pub vyre_runtime::artifact_admission::ResourceIngestionError::PayloadNotPrepared::value: vyre_megakernel::identity::ArtifactValueId
 pub vyre_runtime::artifact_admission::ResourceIngestionError::UnknownValue
 pub vyre_runtime::artifact_admission::ResourceIngestionError::UnknownValue::value: vyre_megakernel::identity::ArtifactValueId
 pub vyre_runtime::artifact_admission::ResourceIngestionError::UploadFailed
