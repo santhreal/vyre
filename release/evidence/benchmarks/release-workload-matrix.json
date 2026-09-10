@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=a78ab2cc1d21d0e111ad1cd3bdb6bc9deefe15d0aec2092d0add736f616eb6a7"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"bfcff398d3ceacd5a27a6520fbc1bdd8fa6c1137","commit_timestamp":"1789066267","parent_commit":"7ef813df0b47a686eb8539a8b8951b04e0644c17","dirty":false,"source_fingerprint":"git:bfcff398d3ceacd5a27a6520fbc1bdd8fa6c1137:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "benchmark_evidence_schema_version": 1,
   "required_benchmark_case_fields": [
@@ -29,10 +29,9 @@
   "missing_required_cpu_sota_100x_families": [],
   "matched_required_families": 14,
   "release_suite_case_count": 24,
-  "cpu_sota_contract_count": 31,
-  "cpu_sota_100x_contract_count": 13,
+  "cpu_sota_contract_count": 29,
+  "cpu_sota_100x_contract_count": 12,
   "cpu_sota_100x_contract_cases": [
-    "conditions.yara_like.eval.1m",
     "nn.linear_4bit_affine_grouped.1m",
     "release.alias_reaching_def.1m",
     "release.ast_motif_traversal.1m",
@@ -84,7 +83,6 @@
         "release.workload.condition_eval"
       ],
       "cpu_sota_contracts": [
-        "conditions.yara_like.eval.1m => Rayon-parallel scalar short-circuit rule loop 100x",
         "metadata.condition.filesize_header.1m => optimized CPU PE-header predicate evaluator 50x",
         "release.condition_eval.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x",
         "release.megakernel_queue.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x",
@@ -93,21 +91,18 @@
         "runtime.megakernel.condition.64k => optimized CPU condition evaluator baseline 100x"
       ],
       "cpu_sota_100x_cases": [
-        "conditions.yara_like.eval.1m",
         "release.condition_eval.1m",
         "release.megakernel_queue.1m",
         "release.quantified_condition_loops.1m",
         "runtime.megakernel.condition.64k"
       ],
       "cpu_sota_baseline_names": [
-        "Rayon-parallel scalar short-circuit rule loop",
         "optimized CPU PE-header predicate evaluator",
         "optimized CPU condition evaluator baseline",
         "single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words)",
         "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
       ],
       "cpu_sota_baseline_crates": [
-        "rayon",
         "vyre",
         "vyre-libs",
         "vyre-runtime"
@@ -116,7 +111,7 @@
         "cuda",
         "wgpu"
       ],
-      "fair_cpu_sota_baseline_count": 4,
+      "fair_cpu_sota_baseline_count": 3,
       "reproducible_cuda_command": true,
       "max_cpu_sota_min_speedup_x": 100.0
     },
