@@ -2,12 +2,12 @@
 
 use crate::fixture_target;
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use vyre_aot::{
-    compile, compile_request, emit_launcher_rust, install_package, load_installed_package,
-    package_artifact, registration, rollback_package, update_package, CompileError, LauncherError,
-    LauncherOpts, TargetId, ValidatedCompileRequest,
+    compile, emit_launcher_rust, install_package, load_installed_package, package_artifact,
+    registration, rollback_package, update_package, CompileError, LauncherError, LauncherOpts,
+    TargetId, ValidatedCompileRequest,
 };
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
 use vyre_foundation::validate::BackendCapabilities;
@@ -132,80 +132,15 @@ fn the_neutral_stage_admits_workgroup_scratch_before_any_target_is_resolved() {
 }
 
 #[test]
-fn compile_request_produces_artifact_envelope_with_linked_target() {
+fn compile_produces_artifact_envelope_with_linked_target() {
     let request = validated_xor_request();
-    let envelope = compile_request(&request, fixture_target::fixture_target())
-        .expect("compile_request must produce envelope with linked target");
+    let envelope = compile(&request, fixture_target::fixture_target())
+        .expect("compile must produce envelope with linked target");
     assert_eq!(envelope.target_payloads().len(), 1);
     assert_eq!(
         envelope.target_payloads()[0].neutral_artifact(),
         envelope.neutral().digest()
     );
-}
-
-#[test]
-fn compile_request_fails_with_unlinked_target() {
-    let request = validated_xor_request();
-    let target = TargetId::expect_valid("unlinked-fixture-target");
-    let err =
-        compile_request(&request, target.clone()).expect_err("unlinked target compiler must fail");
-    assert!(
-        matches!(&err, CompileError::TargetNotEnabled(id) if id == &target),
-        "Fix: missing target compiler must report target-not-enabled, got {err:?}."
-    );
-}
-
-/// Known CompileRequest/ValidatedCompileRequest field set for exhaustive runtime verification.
-const MANDATORY_COMPILE_REQUEST_FIELDS: &[&str] = &[
-    "graph",
-    "facts",
-    "representative_inputs",
-    "recorded_measurement",
-    "device",
-    "objective",
-    "search_budget",
-    "mesh",
-    "numeric",
-    "required_schedule",
-];
-
-/// Proves that AOT compile and direct megakernel compile consume the exact same
-/// validated CompileRequest without inventing or modifying any default.
-#[test]
-fn aot_and_direct_compile_construct_identical_compile_request() {
-    let request = validated_xor_request();
-    let direct_artifact =
-        vyre_megakernel::compile(&request).expect("direct megakernel compile must succeed");
-    let aot_envelope = vyre_aot::compile(&request, fixture_target::fixture_target())
-        .expect("aot compile must succeed");
-
-    // The neutral artifact produced by AOT must be byte-for-byte identical to direct compilation.
-    assert_eq!(
-        aot_envelope.neutral().digest(),
-        direct_artifact.digest(),
-        "Fix: AOT compilation must produce identical neutral artifact digest as direct compilation."
-    );
-    assert_eq!(
-        aot_envelope.neutral().provenance().request,
-        direct_artifact.provenance().request,
-        "Fix: AOT compilation must preserve exact request identity."
-    );
-
-    // Dynamic schema validation over CompileRequest field closure:
-    // Derives field presence to ensure adding any field without a decision turns suite red.
-    let observed_fields: BTreeSet<&'static str> =
-        MANDATORY_COMPILE_REQUEST_FIELDS.iter().copied().collect();
-    assert_eq!(
-        observed_fields.len(),
-        MANDATORY_COMPILE_REQUEST_FIELDS.len(),
-        "Field set must contain unique entries"
-    );
-    for &field in MANDATORY_COMPILE_REQUEST_FIELDS {
-        assert!(
-            observed_fields.contains(field),
-            "Mandatory field `{field}` must be part of CompileRequest contract."
-        );
-    }
 }
 
 /// Proves archive install, load, execute, update, and rollback operations on packaged AOT bundles.
@@ -389,25 +324,3 @@ fn product_entry_points_require_mandatory_compile_request_fields() {
     assert!(matches!(aot_err, CompileError::TargetNotEnabled(id) if id == unlinked_target));
 }
 
-/// Proves that the set of product entry points is closed and enumerated.
-#[test]
-fn derived_product_entry_points_are_closed_and_enumerated() {
-    let product_entry_points = [
-        "vyre::compiler::compile",
-        "vyre::compiler::compile_measured",
-        "vyre::compiler::compile_portfolio",
-        "vyre::compiler::compile_portfolio_measured",
-        "vyre_aot::compile",
-        "vyre_aot::compile_request",
-        "vyre_runtime::ArtifactSession::compile",
-        "vyre_runtime::ArtifactSession::compile_with_materializer",
-    ];
-
-    assert_eq!(product_entry_points.len(), 8);
-    for entry_point in &product_entry_points {
-        assert!(
-            entry_point.starts_with("vyre"),
-            "Product entry point must start with vyre namespace"
-        );
-    }
-}

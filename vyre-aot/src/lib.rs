@@ -18,7 +18,7 @@ pub use bundle::{
     bundle, install_package, load_installed_package, package_artifact, read_bundle_artifact,
     read_bundle_weights, rollback_package, update_package, BundleError, DeploymentBundle,
 };
-pub use compile::{compile, compile_request, CompileError};
+pub use compile::{compile, CompileError};
 pub use launcher::{emit_launcher_rust, LauncherError, LauncherOpts};
 pub use manifest::Manifest;
 pub use vyre_megakernel::{

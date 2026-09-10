@@ -36,57 +36,100 @@ struct PackageManifest {
     notes: String,
 }
 
+/// Where a buffer is placed on the device.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BufferMemoryKind {
+    /// Device-global memory, visible to every workgroup.
     Global,
+    /// Workgroup-local memory, visible only within one workgroup.
     Shared,
+    /// Read-only memory the device may cache aggressively.
     Constant,
 }
 
+/// How the entry point reaches a buffer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BufferAccessKind {
+    /// The entry point reads the buffer and never writes it.
     ReadOnly,
+    /// The entry point writes the buffer and never reads it.
     WriteOnly,
+    /// The entry point both reads and writes the buffer.
     ReadWrite,
 }
 
+/// One buffer the entry point binds, projected from the compiler envelope.
 #[derive(Debug, Clone)]
 pub struct BufferEntry {
+    /// Canonical resource name.
     pub name: String,
+    /// Binding slot the entry point reads this buffer from.
     pub binding: u32,
+    /// Number of elements the resource declares.
     pub element_count: u64,
+    /// Bytes in one element.
     pub element_size_bytes: u64,
+    /// Memory space the buffer is placed in.
     pub memory_kind: BufferMemoryKind,
+    /// Access the entry point takes on the buffer.
     pub access: BufferAccessKind,
 }
 
+/// Launch geometry the compiler recorded for the entry point.
 #[derive(Debug, Clone, Copy)]
 pub struct DispatchConfig {
+    /// Workgroup extents along x, y and z.
     pub workgroup_size: [u32; 3],
+    /// Grid extents along x, y and z, in workgroups.
     pub grid_size: [u32; 3],
+    /// Dynamic shared memory the launch requests, in bytes.
     pub dynamic_shared_bytes: u32,
 }
 
+/// Everything a launcher needs to dispatch the packaged artifact.
+///
+/// Only the packaging fields come from the serialized manifest. Dispatch,
+/// buffers and the entry point are projected from the authenticated envelope.
 #[derive(Debug, Clone)]
 pub struct Manifest {
+    /// Version of the packaging crate that wrote the bundle.
     pub aot_version: String,
+    /// Name the bundle was packaged under.
     pub artifact_name: String,
+    /// Target identity the payload was compiled for.
     pub target: String,
+    /// Format identity of the attached target payload.
     pub target_payload_format: String,
+    /// Entry point the target module exports.
     pub entry_point: String,
+    /// Launch geometry for the entry point.
     pub dispatch: DispatchConfig,
+    /// Buffers the entry point binds, in slot order.
     pub buffers: Vec<BufferEntry>,
+    /// Free-form packaging notes.
     pub notes: String,
 }
 
+/// An authenticated bundle read from disk.
 #[derive(Debug)]
 pub struct LoadedBundle {
+    /// Projected manifest.
     pub manifest: Manifest,
+    /// Authenticated compiler envelope.
     pub envelope: ArtifactEnvelope,
+    /// Target module bytes for the packaged target.
     pub kernel_bytes: Vec<u8>,
+    /// Weight bytes packaged beside the artifact.
     pub weight_bytes: Vec<u8>,
 }
 
+/// Read and authenticate the bundle in `dir`.
+///
+/// # Errors
+///
+/// Returns an error when the manifest is unreadable, its schema or compression
+/// is unsupported, a digest does not match the bytes it names, or the envelope
+/// carries no payload for the packaged target.
 pub fn load_bundle(dir: &Path) -> Result<LoadedBundle, Box<dyn std::error::Error>> {
     let manifest_path = dir.join("manifest.json");
     let manifest_str = fs::read_to_string(&manifest_path)

@@ -1,2 +1,2 @@
 category = "Added"
-text = "`vyre-aot` exposes `compile_request` accepting a validated compiler request and registered target identity, allowing AOT compilation to consume the canonical `ValidatedCompileRequest` without inventing default parameters."
+text = "`vyre-aot::compile` is the crate's one compile entry point and accepts a validated compiler request plus a registered target identity, so ahead-of-time compilation consumes the caller's graph, external facts, device facts, objective and search budget without inventing a default."

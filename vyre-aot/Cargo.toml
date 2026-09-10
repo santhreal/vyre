@@ -41,6 +41,10 @@ ptx = []
 vyre-lower.workspace = true
 tempfile.workspace = true
 inventory.workspace = true
+# `product_workflow` drives the checkpoint-to-package-to-inspection path, which
+# is the only place vyre-safetensors, vyre-aot and vyre-debug meet.
+vyre-safetensors.workspace = true
+vyre-debug.workspace = true
 # Used through the shared `vyre_test_support::artifact_fixtures` module, which
 # the unused-dependency audit cannot follow into a dev-dependency's modules.
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests", "driver-artifact-contracts"] }

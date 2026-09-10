@@ -25,6 +25,10 @@ pub mod cache_contracts;
 #[path = "canonical_package.rs"]
 pub mod canonical_package;
 
+/// Integration tests from `tests/compile_request_fidelity.rs`.
+#[path = "compile_request_fidelity.rs"]
+pub mod compile_request_fidelity;
+
 /// Integration tests from `tests/compile_smoke.rs`.
 #[path = "compile_smoke.rs"]
 pub mod compile_smoke;
@@ -48,6 +52,10 @@ pub mod launcher_registry_closure_contracts;
 /// Integration tests from `tests/manifest_round_trip.rs`.
 #[path = "manifest_round_trip.rs"]
 pub mod manifest_round_trip;
+
+/// Integration tests from `tests/product_workflow.rs`.
+#[path = "product_workflow.rs"]
+pub mod product_workflow;
 
 /// Integration tests from `tests/workspace_error_diagnostic_schema.rs`.
 #[path = "workspace_error_diagnostic_schema.rs"]

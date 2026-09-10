@@ -7,7 +7,7 @@
 use vyre_aot::CompileError;
 use vyre_driver::BackendError;
 use vyre_foundation::diagnostics::{
-    CompilerLevel, DiagnosticStage, RetryClass, Severity, ToDiagnostic,
+    CauseKind, CompilerLevel, DiagnosticStage, RetryClass, Severity, ToDiagnostic,
 };
 use vyre_foundation::validate::ValidationError;
 use vyre_foundation::IrError;
@@ -92,5 +92,6 @@ fn compile_error_retains_nested_structured_cause_chain() {
     assert_eq!(diag.retry, RetryClass::RecompileSource);
     // Preserved the nested cause chain from TargetCompileError
     assert!(!diag.cause_chain.is_empty());
-    assert_eq!(diag.cause_chain[0].kind, "emission_failure");
+    assert_eq!(diag.cause_chain[0].kind, CauseKind::Emission);
+    assert_eq!(diag.cause_chain[0].subject, "emission_failure");
 }
