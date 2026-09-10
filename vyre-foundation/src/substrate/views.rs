@@ -256,7 +256,7 @@ impl<'a> PhysicalKernelView<'a> {
 /// Read-only view over Level 5 target payload.
 #[derive(Debug, Clone)]
 pub struct TargetPayloadView<'a> {
-    /// Format identity string (e.g., "ptx", "wgsl", "spirv").
+    /// Format identity supplied by the target materializer.
     pub format_name: String,
     /// Format version number.
     pub format_version: u16,

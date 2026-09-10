@@ -79,7 +79,7 @@ pub enum QueryKey {
     Emission {
         /// Graph node identifier.
         node_id: u32,
-        /// Target emission format (e.g. "ptx", "wgsl", "spirv").
+        /// Format identity supplied by the target materializer.
         target_format: String,
         /// Target device fingerprint.
         target_fingerprint: u64,

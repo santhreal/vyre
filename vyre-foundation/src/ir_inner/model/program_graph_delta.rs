@@ -131,7 +131,9 @@ impl AffectedGraphClosure {
             });
             keys.push(crate::substrate::QueryKey::Emission {
                 node_id: node_id.0,
-                target_format: "ptx".into(),
+                // The format identity comes from the target materializer, so a graph delta
+                // leaves it unset like the zero digest and fingerprint beside it.
+                target_format: String::new(),
                 target_fingerprint: 0,
             });
         }

@@ -206,7 +206,7 @@ impl ConfigFieldDef {
                         self.key, self.bounds_desc
                     ));
                 }
-                if self.key == "runtime.cuda_device_wait_timeout_ms" && (*v < 1000 || *v > 300000) {
+                if self.key == "runtime.device_wait_timeout_ms" && (*v < 1000 || *v > 300000) {
                     return Err(format!(
                         "Fix: configuration key '{}' value '{v}' violates bounds: {}",
                         self.key, self.bounds_desc
@@ -225,8 +225,14 @@ impl ConfigFieldDef {
             }
             (ConfigValue::String(s), ConfigType::String | ConfigType::Path) => {
                 if self.key == "compile.target_backend" {
-                    let allowed = ["auto", "cuda", "wgpu", "metal", "spirv", "reference"];
-                    if !allowed.contains(&s.as_str()) {
+                    // A backend id is spelled by the driver crate that registers it, so this
+                    // layer checks the selector shape and never a roster of concrete names.
+                    let well_formed = s.len() <= 64
+                        && s.starts_with(|c: char| c.is_ascii_lowercase())
+                        && s.chars().all(|c| {
+                            c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_'
+                        });
+                    if !well_formed {
                         return Err(format!(
                             "Fix: configuration key '{}' value '{s}' violates bounds: {}",
                             self.key, self.bounds_desc
@@ -274,7 +280,7 @@ pub const CANONICAL_CONFIG_FIELDS: &[ConfigFieldDef] = &[
         field_type: ConfigType::String,
         owner: "vyre-foundation",
         default_raw: "auto",
-        bounds_desc: "auto|cuda|wgpu|metal|spirv|reference",
+        bounds_desc: "auto|reference|registered backend id",
         identity_impact: IdentityImpact::AffectsCompileIdentity,
         secrecy: ConfigSecrecy::Public,
         mutability: ConfigMutability::ImmutableAtRuntime,
@@ -348,17 +354,17 @@ pub const CANONICAL_CONFIG_FIELDS: &[ConfigFieldDef] = &[
         help_text: "Persistent disk cache directory for compiled megakernels.",
     },
     ConfigFieldDef {
-        key: "runtime.cuda_device_wait_timeout_ms",
+        key: "runtime.device_wait_timeout_ms",
         partition: ConfigPartition::OperationalPolicy,
         field_type: ConfigType::U64,
-        owner: "vyre-driver-cuda",
+        owner: "vyre-driver",
         default_raw: "10000",
         bounds_desc: "1000..=300000",
         identity_impact: IdentityImpact::OperationalOnly,
         secrecy: ConfigSecrecy::Public,
         mutability: ConfigMutability::MutableBetweenRequests,
         requires_restart: false,
-        help_text: "Timeout in milliseconds waiting for CUDA device context acquisition.",
+        help_text: "Timeout in milliseconds waiting for device context acquisition.",
     },
     // Diagnostic controls
     ConfigFieldDef {
@@ -388,17 +394,17 @@ pub const CANONICAL_CONFIG_FIELDS: &[ConfigFieldDef] = &[
         help_text: "Fraction of dispatches sampled for fine-grained GPU timing.",
     },
     ConfigFieldDef {
-        key: "diag.dump_wgsl",
+        key: "diag.dump_primary_text",
         partition: ConfigPartition::DiagnosticControls,
         field_type: ConfigType::Bool,
-        owner: "vyre-driver-wgpu",
+        owner: "vyre-driver",
         default_raw: "false",
         bounds_desc: "true|false",
         identity_impact: IdentityImpact::OperationalOnly,
         secrecy: ConfigSecrecy::Public,
         mutability: ConfigMutability::MutableBetweenRequests,
         requires_restart: false,
-        help_text: "Dump emitted WGSL source code for shader diagnostics.",
+        help_text: "Dump the emitted primary text source for target diagnostics.",
     },
     // Credentials
     ConfigFieldDef {
@@ -691,11 +697,11 @@ impl ResolvedConfiguration {
             "VYRE_PLANAR_REWRITE_BATCH_THRESHOLD" => "compile.planar_rewrite_batch_threshold",
             "VYRE_MAX_QUEUE_DEPTH" => "runtime.max_queue_depth",
             "VYRE_EXECUTION_TIMEOUT_MS" => "runtime.execution_timeout_ms",
-            "VYRE_CUDA_DEVICE_WAIT_TIMEOUT_MS" => "runtime.cuda_device_wait_timeout_ms",
+            "VYRE_DEVICE_WAIT_TIMEOUT_MS" => "runtime.device_wait_timeout_ms",
             "VYRE_CACHE_DIR" => "runtime.cache_dir",
             "VYRE_TRACE_LEVEL" | "VYRE_TRACE" => "diag.trace_level",
             "VYRE_PERF_SAMPLING_RATE" => "diag.perf_sampling_rate",
-            "VYRE_DUMP_WGSL" => "diag.dump_wgsl",
+            "VYRE_DUMP_PRIMARY_TEXT" => "diag.dump_primary_text",
             _ => {
                 return Err(format!(
                     "Fix: unrecognized environment variable injection point '{env_name}'."

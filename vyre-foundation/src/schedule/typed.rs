@@ -23,7 +23,7 @@ impl ScheduleScope for DeviceScope {}
 pub struct WorkgroupScope;
 impl ScheduleScope for WorkgroupScope {}
 
-/// Subgroup (warp/wavefront) SIMD cooperative execution scope.
+/// Subgroup SIMD cooperative execution scope.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct SubgroupScope;
 impl ScheduleScope for SubgroupScope {}

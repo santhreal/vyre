@@ -338,11 +338,6 @@ name = "metal"
 reason = "the `ExternalMemoryKind` variant matched when admitting an allocation imported through the Apple platform sharing mechanism, spelled as the capability enum in `vyre-spec` spells it"
 
 [[interface]]
-prefix = "vyre-driver/src/lock_policy.rs"
-name = "wgpu"
-reason = "the concrete wgpu driver backend identifier matched for backend lock policy arbitration"
-
-[[interface]]
 prefix = "vyre-spec/src/extension.rs"
 name = "warp"
 reason = "vendor extension identifier recognized for hardware capability parsing"
