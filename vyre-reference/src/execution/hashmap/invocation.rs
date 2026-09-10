@@ -17,7 +17,7 @@ use crate::{
 };
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
-use vyre_foundation::ir::{Node, Program};
+use vyre_foundation::ir::{Node, Program, Tile};
 
 /// Local variable environment for one invocation.
 ///
@@ -160,6 +160,14 @@ pub(crate) struct HashmapInvocation<'a> {
     pub(crate) frames: Vec<Frame<'a>>,
     pub(crate) pending_async: PendingAsyncTransfers,
     pub(crate) op_cache: crate::execution::call::OpCache,
+    /// The declared [`Tile`] of every tile this lane has bound, by name.
+    ///
+    /// `Node::TileMatmul` and `Node::TileReduce` name their operands and carry
+    /// no shape of their own, so the only statement of a tile's extents and
+    /// element type is the `TileDecl` or `TileLoad` that bound it. Without
+    /// that record those two nodes have an element count and nothing else, and
+    /// an element count does not determine a 2-D shape.
+    pub(crate) tile_shapes: FxHashMap<Arc<str>, Arc<Tile>>,
 }
 
 impl<'a> HashmapInvocation<'a> {
@@ -174,6 +182,7 @@ impl<'a> HashmapInvocation<'a> {
             waiting_at_grid_fence: false,
             pending_async: PendingAsyncTransfers::new(),
             op_cache: FxHashMap::default(),
+            tile_shapes: FxHashMap::default(),
             frames: vec![Frame::Nodes {
                 nodes: entry,
                 index: 0,

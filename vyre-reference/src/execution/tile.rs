@@ -109,105 +109,252 @@ pub(crate) fn store_elements(
 }
 
 /// Accumulate a matrix product `A x B` into accumulator tile elements.
-pub(crate) fn matmul(acc_elems: &mut Vec<Value>, a_elems: &[Value], b_elems: &[Value]) {
-    let a_len = a_elems.len();
-    let b_len = b_elems.len();
-    let (m, k, n) = if a_len == 16 * 16 && b_len == 16 * 8 {
-        (16, 16, 8)
-    } else if a_len == 16 * 8 && b_len == 8 * 16 {
-        (16, 8, 16)
-    } else {
-        let k = (a_len as f64).sqrt().round() as usize;
-        let k = if k == 0 { 1 } else { k };
-        let m = a_len / k;
-        let n = if k > 0 { b_len / k } else { 1 };
-        (m.max(1), k.max(1), n.max(1))
-    };
-
-    if acc_elems.len() < m * n {
-        acc_elems.resize(m * n, Value::Float(0.0));
+///
+/// Shapes come from the declared [`Tile`] of each operand. The element count
+/// alone does not determine a 2-D shape: 256 elements is 16x16, 32x8, 64x4 and
+/// 256x1, and this used to pick between them by rounding the square root of
+/// the operand length and special-casing two literal 16x16 and 16x8 sizes. A
+/// program whose tile shape fell outside those cases got a product of some
+/// other shape and the oracle certified it.
+///
+/// # Errors
+/// Refuses when an operand tile is not rank 2, when its declared extents do
+/// not account for its elements, when the inner extents disagree, or when an
+/// element carries no number.
+pub(crate) fn matmul(
+    acc_elems: &mut Vec<Value>,
+    acc_shape: &Tile,
+    a_elems: &[Value],
+    a_shape: &Tile,
+    b_elems: &[Value],
+    b_shape: &Tile,
+) -> Result<(), ReferenceError> {
+    let (m, k) = matrix_extents("a", a_shape, a_elems.len())?;
+    let (b_rows, n) = matrix_extents("b", b_shape, b_elems.len())?;
+    if b_rows != k {
+        return Err(ReferenceError::incomplete_dispatch_semantics(format!(
+            "tile matmul inner extents disagree: a is {m}x{k} and b is {b_rows}x{n}. \
+             Fix: declare b with {k} rows."
+        )));
+    }
+    let (acc_rows, acc_cols) = matrix_extents("acc", acc_shape, acc_elems.len())?;
+    if (acc_rows, acc_cols) != (m, n) {
+        return Err(ReferenceError::incomplete_dispatch_semantics(format!(
+            "tile matmul accumulator is {acc_rows}x{acc_cols} but the product is {m}x{n}. \
+             Fix: declare the accumulator tile with extents [{m}, {n}]."
+        )));
     }
 
     for i in 0..m {
         for j in 0..n {
             let mut sum = 0.0f64;
             for p in 0..k {
-                let a_idx = i * k + p;
-                let b_idx = p * n + j;
-                let a_num = a_elems
-                    .get(a_idx)
-                    .and_then(|v| v.try_as_f64())
-                    .unwrap_or(0.0);
-                let b_num = b_elems
-                    .get(b_idx)
-                    .and_then(|v| v.try_as_f64())
-                    .unwrap_or(0.0);
-                sum += a_num * b_num;
+                sum += numeric_element("a", a_elems, i * k + p)?
+                    * numeric_element("b", b_elems, p * n + j)?;
             }
             let acc_idx = i * n + j;
-            let prev = acc_elems
-                .get(acc_idx)
-                .and_then(|v| v.try_as_f64())
-                .unwrap_or(0.0);
-            if acc_idx < acc_elems.len() {
-                acc_elems[acc_idx] = Value::Float(prev + sum);
-            }
+            let prev = numeric_element("acc", acc_elems, acc_idx)?;
+            acc_elems[acc_idx] = Value::Float(prev + sum);
         }
     }
+    Ok(())
 }
 
 /// Reduce tile elements along an axis or globally.
-pub(crate) fn reduce(elements: &[Value], op: SubgroupReduceOp, axis: u32) -> Vec<Value> {
-    if elements.is_empty() {
-        return vec![Value::Float(0.0)];
+///
+/// The row and column counts come from the declared [`Tile`], for the reason
+/// [`matmul`] gives. The operator semantics come from [`SubgroupReduceOp`],
+/// which owns them for every host-side evaluation, so a new operator is a
+/// build failure in the spec crate rather than an unannounced sum here.
+///
+/// # Errors
+/// Refuses when the declared extents do not account for the elements, when
+/// `axis` names no declared extent, when an element carries no number, or when
+/// a bitwise operator is applied to a float tile.
+pub(crate) fn reduce(
+    elements: &[Value],
+    shape: &Tile,
+    op: SubgroupReduceOp,
+    axis: u32,
+) -> Result<Vec<Value>, ReferenceError> {
+    let extents = declared_extents("reduce input", shape, elements.len())?;
+    let axis_index = usize::try_from(axis).map_err(|_| {
+        ReferenceError::incomplete_dispatch_semantics(format!(
+            "tile reduce axis {axis} exceeds the addressable range. Fix: reduce over a declared axis."
+        ))
+    })?;
+    if axis_index >= extents.len() {
+        return Err(ReferenceError::incomplete_dispatch_semantics(format!(
+            "tile reduce over axis {axis} of a rank-{} tile. Fix: reduce over an axis the tile declares.",
+            extents.len()
+        )));
     }
 
-    let reduce_slice = |slice: &[Value]| -> f64 {
-        if slice.is_empty() {
-            return 0.0;
+    match extents.len() {
+        1 => Ok(vec![reduce_slice(elements, shape, op)?]),
+        2 => {
+            let (rows, cols) = (extents[0], extents[1]);
+            if axis_index == 1 {
+                (0..rows)
+                    .map(|r| reduce_slice(&elements[r * cols..(r + 1) * cols], shape, op))
+                    .collect()
+            } else {
+                (0..cols)
+                    .map(|c| {
+                        let column: Vec<Value> =
+                            (0..rows).map(|r| elements[r * cols + c].clone()).collect();
+                        reduce_slice(&column, shape, op)
+                    })
+                    .collect()
+            }
         }
-        let mut acc = slice[0].try_as_f64().unwrap_or(0.0);
-        for elem in slice.iter().skip(1) {
-            let val = elem.try_as_f64().unwrap_or(0.0);
-            acc = match op {
-                SubgroupReduceOp::Add => acc + val,
-                SubgroupReduceOp::Mul => acc * val,
-                SubgroupReduceOp::Min => acc.min(val),
-                SubgroupReduceOp::Max => acc.max(val),
-                SubgroupReduceOp::And => ((acc as u64) & (val as u64)) as f64,
-                SubgroupReduceOp::Or => ((acc as u64) | (val as u64)) as f64,
-                SubgroupReduceOp::Xor => ((acc as u64) ^ (val as u64)) as f64,
-                _ => acc + val,
-            };
-        }
-        acc
-    };
-
-    let total = elements.len();
-    let dim = (total as f64).sqrt().round() as usize;
-    let (rows, cols) = if dim * dim == total && dim > 0 {
-        (dim, dim)
-    } else if total % 2 == 0 {
-        (total / 2, 2)
-    } else {
-        (total, 1)
-    };
-
-    if axis == 1 && rows > 0 && cols > 0 && rows * cols == total {
-        let mut res = Vec::with_capacity(rows);
-        for r in 0..rows {
-            let slice = &elements[r * cols..(r + 1) * cols];
-            res.push(Value::Float(reduce_slice(slice)));
-        }
-        res
-    } else if axis == 0 && rows > 0 && cols > 0 && rows * cols == total {
-        let mut res = Vec::with_capacity(cols);
-        for c in 0..cols {
-            let col_vals: Vec<Value> = (0..rows).map(|r| elements[r * cols + c].clone()).collect();
-            res.push(Value::Float(reduce_slice(&col_vals)));
-        }
-        res
-    } else {
-        vec![Value::Float(reduce_slice(elements))]
+        rank => Err(ReferenceError::incomplete_dispatch_semantics(format!(
+            "tile reduce over a rank-{rank} tile has no reference semantics. \
+             Fix: reduce a rank-1 or rank-2 tile."
+        ))),
     }
+}
+
+/// Fold one contiguous run of tile elements under `op`.
+///
+/// The declared element type selects the arithmetic: an integer tile folds
+/// through [`SubgroupReduceOp::reduce_u32`], a float tile folds from
+/// [`SubgroupReduceOp::f32_identity`] through
+/// [`SubgroupReduceOp::combine_f32`], canonicalizing each step the way the
+/// subgroup reduction does. A bitwise operator has no float fold and is
+/// refused rather than reinterpreted through an integer cast.
+fn reduce_slice(
+    slice: &[Value],
+    shape: &Tile,
+    op: SubgroupReduceOp,
+) -> Result<Value, ReferenceError> {
+    if op.is_bitwise() {
+        if is_float_element(&shape.element) {
+            return Err(ReferenceError::type_mismatch(format!(
+                "bitwise tile reduce `{}` over a {:?} tile. Fix: reduce an integer tile, or use an arithmetic operator.",
+                op.as_str(),
+                shape.element
+            )));
+        }
+        let mut lanes = Vec::with_capacity(slice.len());
+        for (index, element) in slice.iter().enumerate() {
+            lanes.push(element.try_as_u32().ok_or_else(|| {
+                ReferenceError::type_mismatch(format!(
+                    "bitwise tile reduce element {index} is {element:?}, which carries no u32. \
+                     Fix: reduce a tile of integer elements."
+                ))
+            })?);
+        }
+        return Ok(Value::U32(op.reduce_u32(lanes)));
+    }
+
+    let identity = op.f32_identity().ok_or_else(|| {
+        ReferenceError::incomplete_dispatch_semantics(format!(
+            "tile reduce operator `{}` has no float fold. Fix: add reference semantics for it.",
+            op.as_str()
+        ))
+    })?;
+    let mut acc = crate::execution::typed_ops::canonical_f32(identity);
+    for index in 0..slice.len() {
+        let lane = crate::execution::typed_ops::canonical_f32(
+            numeric_element("reduce input", slice, index)? as f32,
+        );
+        let combined = op.combine_f32(acc, lane).ok_or_else(|| {
+            ReferenceError::incomplete_dispatch_semantics(format!(
+                "tile reduce operator `{}` has no float fold. Fix: add reference semantics for it.",
+                op.as_str()
+            ))
+        })?;
+        acc = crate::execution::typed_ops::canonical_f32(combined);
+    }
+    Ok(Value::Float(f64::from(acc)))
+}
+
+/// True when a tile of `element` holds floating-point values.
+///
+/// The match has no catch-all so a new element type states its own answer.
+fn is_float_element(element: &vyre_foundation::ir::DataType) -> bool {
+    use vyre_foundation::ir::DataType as Dt;
+    match element {
+        Dt::F16 | Dt::BF16 | Dt::F32 | Dt::F64 | Dt::F8E4M3 | Dt::F8E5M2 | Dt::FP4 | Dt::NF4 => {
+            true
+        }
+        Dt::U8
+        | Dt::U16
+        | Dt::U32
+        | Dt::I8
+        | Dt::I16
+        | Dt::I32
+        | Dt::I64
+        | Dt::U64
+        | Dt::I4
+        | Dt::Bool
+        | Dt::Bytes
+        | Dt::Vec2U32
+        | Dt::Vec4U32
+        | Dt::Array { .. }
+        | Dt::Vec { .. }
+        | Dt::Tensor
+        | Dt::TensorShaped { .. }
+        | Dt::SparseCsr { .. }
+        | Dt::SparseCoo { .. }
+        | Dt::SparseBsr { .. }
+        | Dt::DeviceMesh { .. }
+        | Dt::Quantized { .. }
+        | Dt::Handle(_)
+        | Dt::Opaque(_) => false,
+    }
+}
+
+/// The declared extents of `shape`, checked against the elements present.
+fn declared_extents(
+    role: &str,
+    shape: &Tile,
+    len: usize,
+) -> Result<Vec<usize>, ReferenceError> {
+    if shape.extents.is_empty() {
+        return Err(ReferenceError::incomplete_dispatch_semantics(format!(
+            "tile {role} declares no extents. Fix: declare the tile with its extents."
+        )));
+    }
+    let extents: Vec<usize> = shape.extents.iter().map(|e| *e as usize).collect();
+    let declared: usize = extents.iter().product();
+    if declared != len {
+        return Err(ReferenceError::incomplete_dispatch_semantics(format!(
+            "tile {role} declares {:?} ({declared} elements) but holds {len}. \
+             Fix: declare extents that account for every element.",
+            shape.extents
+        )));
+    }
+    Ok(extents)
+}
+
+/// The rows and columns of a rank-2 operand.
+fn matrix_extents(role: &str, shape: &Tile, len: usize) -> Result<(usize, usize), ReferenceError> {
+    let extents = declared_extents(role, shape, len)?;
+    match extents.as_slice() {
+        [rows, cols] => Ok((*rows, *cols)),
+        other => Err(ReferenceError::incomplete_dispatch_semantics(format!(
+            "tile matmul operand `{role}` is rank {} but matmul takes rank-2 operands. \
+             Fix: declare `{role}` with two extents.",
+            other.len()
+        ))),
+    }
+}
+
+/// The number one tile element carries, or a refusal.
+fn numeric_element(role: &str, elements: &[Value], index: usize) -> Result<f64, ReferenceError> {
+    let element = elements.get(index).ok_or_else(|| {
+        ReferenceError::incomplete_dispatch_semantics(format!(
+            "tile `{role}` element {index} is past the {} elements it holds. \
+             Fix: declare extents that match the tile contents.",
+            elements.len()
+        ))
+    })?;
+    element.try_as_f64().ok_or_else(|| {
+        ReferenceError::type_mismatch(format!(
+            "tile `{role}` element {index} is {element:?}, which carries no number. \
+             Fix: populate the tile with numeric elements."
+        ))
+    })
 }

@@ -23,8 +23,31 @@ pub(crate) fn spec_output_value(ty: DataType, bytes: &[u8]) -> Result<Value, Ref
         DataType::Vec2U32 => Ok(Value::from(read_fixed_prefix(bytes, 8))),
         DataType::Vec4U32 => Ok(Value::from(read_fixed_prefix(bytes, 16))),
         DataType::Bytes => Ok(Value::from(bytes)),
-        other => Err(ReferenceError::new(format!(
-            "the reference call ABI decodes no output value for `{other:?}`. Fix: give it an \
+        DataType::F64
+        | DataType::F16
+        | DataType::BF16
+        | DataType::F8E4M3
+        | DataType::F8E5M2
+        | DataType::I4
+        | DataType::FP4
+        | DataType::NF4
+        | DataType::U8
+        | DataType::U16
+        | DataType::I8
+        | DataType::I16
+        | DataType::I64
+        | DataType::Array { .. }
+        | DataType::Vec { .. }
+        | DataType::Tensor
+        | DataType::TensorShaped { .. }
+        | DataType::SparseCsr { .. }
+        | DataType::SparseCoo { .. }
+        | DataType::SparseBsr { .. }
+        | DataType::DeviceMesh { .. }
+        | DataType::Quantized { .. }
+        | DataType::Handle(_)
+        | DataType::Opaque(_) => Err(ReferenceError::new(format!(
+            "the reference call ABI decodes no output value for `{ty:?}`. Fix: give it an \
              arm in `spec_output_value`, or declare an output type the ABI already decodes."
         ))),
     }
@@ -74,7 +97,9 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
         DataType::U32 => match value {
             Value::I32(v) => Ok(Value::U32(*v as u32)),
             Value::Float(v) => Ok(Value::U32((*v) as u32)),
-            _ => value
+            Value::U32(v) => Ok(Value::U32(*v)),
+            Value::Bool(b) => Ok(Value::U32(u32::from(*b))),
+            Value::U64(_) | Value::Bytes(_) | Value::Array(_) => value
                 .try_as_u32()
                 .map(Value::U32)
                 .ok_or_else(|| invalid_cast(target, value)),
@@ -82,10 +107,12 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
         DataType::I32 => match value {
             Value::I32(value) => Ok(Value::I32(*value)),
             Value::Float(v) => Ok(Value::I32(*v as i32)),
-            _ => value
-                .try_as_u32()
-                .map(|value| Value::I32(value as i32))
-                .ok_or_else(|| invalid_cast(target, value)),
+            Value::U32(_) | Value::U64(_) | Value::Bool(_) | Value::Bytes(_) | Value::Array(_) => {
+                value
+                    .try_as_u32()
+                    .map(|value| Value::I32(value as i32))
+                    .ok_or_else(|| invalid_cast(target, value))
+            }
         },
         // 64-bit integer widening. `I64` and `U64` share the `Value::U64`
         // bit-pattern representation (the model has no distinct `I64`). The
@@ -99,7 +126,12 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
         // catch-all, which silently produced a 4-byte payload with no extension.
         DataType::U64 | DataType::I64 => match value {
             Value::I32(v) => Ok(Value::U64(*v as i64 as u64)),
-            _ => value
+            Value::U32(_)
+            | Value::U64(_)
+            | Value::Bool(_)
+            | Value::Bytes(_)
+            | Value::Float(_)
+            | Value::Array(_) => value
                 .try_as_u64()
                 .map(Value::U64)
                 .ok_or_else(|| invalid_cast(target, value)),
@@ -131,7 +163,7 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
             Value::U64(v) => Ok(Value::Float(f64::from(*v as f32))),
             Value::Float(v) => Ok(Value::Float(*v)),
             Value::Bool(b) => Ok(Value::Float(if *b { 1.0 } else { 0.0 })),
-            _ => value
+            Value::Bytes(_) | Value::Array(_) => value
                 .try_as_u32()
                 .map(|v| Value::Float(f64::from(v as f32)))
                 .ok_or_else(|| invalid_cast(target, value)),
@@ -161,7 +193,30 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
         DataType::Bytes => Ok(Value::from(value.to_bytes())),
         DataType::Vec2U32 => Ok(Value::from(widen_to_words(value, 2))),
         DataType::Vec4U32 => Ok(Value::from(widen_to_words(value, 4))),
-        _ => Ok(Value::from(value.to_bytes())),
+        // No catch-all. A cast target with no arm above used to return the
+        // source's raw bytes, so a program that cast to an unsupported type
+        // got a byte payload where it declared a scalar and the oracle
+        // certified it. A new `DataType` fails this build instead.
+        DataType::F64
+        | DataType::F8E4M3
+        | DataType::F8E5M2
+        | DataType::I4
+        | DataType::FP4
+        | DataType::NF4
+        | DataType::Array { .. }
+        | DataType::Vec { .. }
+        | DataType::Tensor
+        | DataType::TensorShaped { .. }
+        | DataType::SparseCsr { .. }
+        | DataType::SparseCoo { .. }
+        | DataType::SparseBsr { .. }
+        | DataType::DeviceMesh { .. }
+        | DataType::Quantized { .. }
+        | DataType::Handle(_)
+        | DataType::Opaque(_) => Err(ReferenceError::new(format!(
+            "cast to {target:?} has no defined reference conversion. Fix: cast to a scalar \
+             or fixed-width vector type the reference evaluator converts."
+        ))),
     }
 }
 

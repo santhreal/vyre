@@ -77,8 +77,11 @@ thread_local! {
         oob_stores: 0,
         oob_atomics: 0,
     }) };
-    /// Per-thread strict mode flag. When true, OOB accesses result in structured errors.
-    static STRICT_MODE: Cell<bool> = const { Cell::new(false) };
+    /// Per-thread strictness. Strict is the default, so an entry point that
+    /// states nothing refuses an out-of-bounds access rather than absorbing
+    /// one. Diagnostic permissive evaluation opts out for the length of its
+    /// run through [`enter_strictness`].
+    static STRICT_MODE: Cell<bool> = const { Cell::new(true) };
 }
 
 /// Kind of access that fell outside a declared extent.
@@ -134,9 +137,26 @@ fn record_oob(
     )))
 }
 
-/// Set this thread's strict execution mode.
-pub(crate) fn set_strict_mode(strict: bool) {
-    STRICT_MODE.with(|s| s.set(strict));
+/// Set this thread's strictness for the length of the returned guard.
+///
+/// The guard restores the previous value on drop, so a nested evaluation
+/// cannot leave the thread in the mode it borrowed. Strict is the default, and
+/// only diagnostic permissive evaluation asks for `false`.
+pub(crate) fn enter_strictness(strict: bool) -> StrictnessGuard {
+    let previous = STRICT_MODE.with(Cell::get);
+    STRICT_MODE.with(|mode| mode.set(strict));
+    StrictnessGuard { previous }
+}
+
+/// Restores the strictness that was in effect before the run it brackets.
+pub(crate) struct StrictnessGuard {
+    previous: bool,
+}
+
+impl Drop for StrictnessGuard {
+    fn drop(&mut self) {
+        STRICT_MODE.with(|mode| mode.set(self.previous));
+    }
 }
 
 /// Return whether strict execution mode is active on this thread.
@@ -420,8 +440,7 @@ pub(crate) fn store(
         buffer.element.clone(),
         &mut bytes_guard[offset..offset + stride],
         value,
-    );
-    Ok(())
+    )
 }
 
 /// Read the 32-bit atomic word at element `index`.
@@ -481,52 +500,100 @@ fn byte_offset(index: u32, stride: usize) -> Option<usize> {
     (index as usize).checked_mul(stride)
 }
 
-fn write_element(element: IrDataType, target: &mut [u8], value: &Value) {
+/// Encode `value` into one element slot of a `element`-typed buffer.
+///
+/// The match has no catch-all arm. `DataType` is exhaustively matchable, so a
+/// new element type is a build failure here rather than a slot that silently
+/// receives whatever the last arm happened to write. Every arm below either
+/// states the element's own encoding or copies the value's canonical bytes at
+/// the slot width, which is the buffer's byte semantics for that type.
+///
+/// # Errors
+/// Returns a type mismatch when a float element receives a value that carries
+/// no number. That case used to write `0.0`, so a store of the wrong value
+/// type produced a zero the program never computed and the oracle certified it.
+fn write_element(
+    element: IrDataType,
+    target: &mut [u8],
+    value: &Value,
+) -> Result<(), ReferenceError> {
+    // A `Value::Bytes` whose length is exactly the slot width is already the
+    // element's storage encoding, so it is copied verbatim on every arm
+    // including the float ones. That is a byte-exact store, not a coercion,
+    // and it is how a load of a narrow element round-trips back into its
+    // buffer.
+    if matches!(value, Value::Bytes(bytes) if bytes.len() == target.len()) {
+        value.write_bytes_width_into(target);
+        return Ok(());
+    }
     match element {
-        IrDataType::U32 => {
-            value.write_bytes_width_into(target);
-        }
-        IrDataType::I32 => {
-            value.write_bytes_width_into(target);
-        }
-        IrDataType::Bool => {
-            value.write_bytes_width_into(target);
-        }
-        IrDataType::U64 => {
-            value.write_bytes_width_into(target);
-        }
         IrDataType::F16 => {
-            let value = match value {
-                Value::Float(value) => *value as f32,
-                _ => 0.0,
-            };
-            target.copy_from_slice(&crate::float16::f32_to_f16(value).to_le_bytes());
+            let narrowed = float_element(&element, value)?;
+            target.copy_from_slice(&crate::float16::f32_to_f16(narrowed).to_le_bytes());
         }
         IrDataType::BF16 => {
-            let value = match value {
-                Value::Float(value) => *value as f32,
-                _ => 0.0,
-            };
-            target.copy_from_slice(&crate::float16::f32_to_bf16(value).to_le_bytes());
+            let narrowed = float_element(&element, value)?;
+            target.copy_from_slice(&crate::float16::f32_to_bf16(narrowed).to_le_bytes());
         }
         IrDataType::F32 => {
             // Value::Float carries an f64; the GPU buffer is four bytes
             // of f32, so narrow via `as f32` before writing. Dropping the
             // upper four bytes of `v.to_le_bytes()` (what the default
             // to_bytes_width path does) would mangle the f32 bit pattern.
-            let v = match value {
-                Value::Float(v) => *v as f32,
-                Value::U32(v) => f32::from_bits(*v),
-                _ => 0.0,
-            };
-            let v = crate::execution::typed_ops::canonical_f32(v);
-            target.copy_from_slice(&v.to_le_bytes());
+            let narrowed = crate::execution::typed_ops::canonical_f32(float_element(
+                &element, value,
+            )?);
+            target.copy_from_slice(&narrowed.to_le_bytes());
         }
-        IrDataType::Bytes | IrDataType::Vec2U32 | IrDataType::Vec4U32 => {
+        IrDataType::U8
+        | IrDataType::U16
+        | IrDataType::U32
+        | IrDataType::I8
+        | IrDataType::I16
+        | IrDataType::I32
+        | IrDataType::I64
+        | IrDataType::U64
+        | IrDataType::Bool
+        | IrDataType::I4
+        | IrDataType::FP4
+        | IrDataType::NF4
+        | IrDataType::F8E4M3
+        | IrDataType::F8E5M2
+        | IrDataType::F64
+        | IrDataType::Vec2U32
+        | IrDataType::Vec4U32
+        | IrDataType::Bytes
+        | IrDataType::Array { .. }
+        | IrDataType::Vec { .. }
+        | IrDataType::Tensor
+        | IrDataType::TensorShaped { .. }
+        | IrDataType::SparseCsr { .. }
+        | IrDataType::SparseCoo { .. }
+        | IrDataType::SparseBsr { .. }
+        | IrDataType::DeviceMesh { .. }
+        | IrDataType::Quantized { .. }
+        | IrDataType::Handle(_)
+        | IrDataType::Opaque(_) => {
             value.write_bytes_width_into(target);
         }
-        _ => {
-            value.write_bytes_width_into(target);
+    }
+    Ok(())
+}
+
+/// The f32 a float element slot receives, or a refusal.
+///
+/// A `U32` source is the bit pattern of an f32 word, which is how a program
+/// that computed a float through integer lanes writes it back. Anything else
+/// carries no float, and a float slot has no defined encoding for it.
+fn float_element(element: &IrDataType, value: &Value) -> Result<f32, ReferenceError> {
+    match value {
+        Value::Float(value) => Ok(*value as f32),
+        Value::U32(bits) => Ok(f32::from_bits(*bits)),
+        Value::I32(_) | Value::U64(_) | Value::Bool(_) | Value::Bytes(_) | Value::Array(_) => {
+            Err(ReferenceError::type_mismatch(format!(
+                "store of {value:?} into a {element:?} element has no defined float encoding. \
+                 Fix: cast the value to f32 before the store."
+            )))
         }
     }
 }
@@ -559,18 +626,17 @@ fn write_u32(bytes: &mut [u8], value: u32) {
     bytes.copy_from_slice(&value.to_le_bytes());
 }
 
+/// The element type a load decodes as.
+///
+/// `IrDataType` and `DataType` are the same frozen contract type, so every
+/// element type decodes as itself. `Bool` is the one remap: a GPU stores a
+/// boolean as a word, so a `Bool` buffer decodes through the `U32` reader and
+/// the program sees the word it would read on a device.
 fn ir_to_conform_type(ty: IrDataType) -> DataType {
-    match ty {
-        IrDataType::U32 => DataType::U32,
-        IrDataType::I32 => DataType::I32,
-        IrDataType::U64 => DataType::U64,
-        IrDataType::F32 => DataType::F32,
-        IrDataType::F64 => DataType::F64,
-        IrDataType::Vec2U32 => DataType::Vec2U32,
-        IrDataType::Vec4U32 => DataType::Vec4U32,
-        IrDataType::Bool => DataType::U32,
-        IrDataType::Bytes => DataType::Bytes,
-        other => other,
+    if matches!(ty, IrDataType::Bool) {
+        DataType::U32
+    } else {
+        ty
     }
 }
 
@@ -623,7 +689,7 @@ mod tests {
         // (zero-fill loads / dropped stores), and nothing in-bounds, which is the
         // signal that reveals an ungated data-derived index.
         reset_oob_report();
-        set_strict_mode(false);
+        let _diagnostic = enter_strictness(false);
         let buf = Buffer::new(vec![0u8; 8], DataType::U32); // 2 elements
         let _ = load(&buf, 0);
         let _ = load(&buf, 1);

@@ -20,11 +20,13 @@ proptest! {
         prop_assert_eq!(bytes, value.to_le_bytes().to_vec());
     }
 
+    /// A store past the end of a one-element buffer is refused at the access
+    /// site for every index. The index is loaded at run time so this
+    /// exercises the store path rather than the validator's constant-index
+    /// rejection. This used to assert the store vanished and the output
+    /// stayed zero, which is an answer no device produces.
     #[test]
-    fn prop_store_oob_is_silent_noop(index in 1u32..) {
-        // Store past the end of a 1-element buffer must not panic or error.
-        // Use a runtime-loaded index so this exercises OOB store semantics
-        // instead of the validator's constant-index rejection.
+    fn prop_out_of_bounds_store_refuses(index in 1u32..) {
         let program = Program::wrapped(
             vec![
                 BufferDecl::read("idx", 0, DataType::U32).with_count(1),
@@ -36,9 +38,12 @@ proptest! {
             ],
         );
         let inputs = [Value::from(index.to_le_bytes().to_vec())];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: OOB store must be a silent no-op");
-        prop_assert_eq!(outputs[0].to_bytes(), vec![0; 4]);
+        let error = vyre_reference::reference_eval(&program, &inputs)
+            .expect_err("Fix: a store past the buffer must be refused.");
+        prop_assert_eq!(
+            error.error_class(),
+            vyre_reference::ReferenceErrorClass::OutOfBoundsAccess
+        );
     }
 }
 
