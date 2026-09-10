@@ -1,4 +1,5 @@
 use super::*;
+use vyre_driver_reference::ORACLE_EXECUTOR_ID;
 
 #[test]
 fn prove_emits_signed_certificate_on_gpu_build() {
@@ -80,9 +81,9 @@ fn prove_emits_signed_certificate_on_gpu_build() {
     let mut by_backend =
         std::collections::BTreeMap::<String, std::collections::BTreeSet<String>>::new();
     for pair in pairs {
-        let backend = pair["backend_id"]
+        let backend = pair["executor_id"]
             .as_str()
-            .expect("Fix: certificate pair must carry backend_id")
+            .expect("Fix: certificate pair must carry executor_id")
             .to_string();
         let op = pair["op_id"]
             .as_str()
@@ -104,7 +105,7 @@ fn prove_emits_signed_certificate_on_gpu_build() {
             "Fix: VYRE_BACKEND={selected} must restrict prove to the selected backend."
         );
     } else {
-        for required_backend in ["cuda", "wgpu", "cpu-ref"] {
+        for required_backend in ["cuda", "wgpu", ORACLE_EXECUTOR_ID] {
             let ops = by_backend.get(required_backend).unwrap_or_else(|| {
                 panic!("Fix: signed certificate must include backend `{required_backend}`.")
             });
@@ -117,7 +118,7 @@ fn prove_emits_signed_certificate_on_gpu_build() {
         let cuda_ops = by_backend
             .get("cuda")
             .expect("Fix: signed certificate must include cuda ops");
-        for backend in ["wgpu", "cpu-ref"] {
+        for backend in ["wgpu", ORACLE_EXECUTOR_ID] {
             let ops = by_backend
                 .get(backend)
                 .unwrap_or_else(|| panic!("Fix: signed certificate must include `{backend}` ops."));
@@ -168,7 +169,7 @@ fn prove_emits_signed_cuda_release_certificate_on_gpu_build() {
     );
     for pair in pairs {
         assert_eq!(
-            pair["backend_id"].as_str(),
+            pair["executor_id"].as_str(),
             Some(selected_backend.as_str()),
             "Fix: selected release certificate must be filtered to `{selected_backend}`."
         );

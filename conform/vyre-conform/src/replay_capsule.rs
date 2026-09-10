@@ -207,7 +207,7 @@ mod tests {
     fn pair_result_omits_capsule_on_success_and_serializes_capsule_on_failure() {
         let success = ConformanceResult {
             op_id: "test.success".into(),
-            backend_id: "metal".to_string(),
+            executor_id: "metal".to_string(),
             passed: true,
             message: "ok".to_string(),
             replay_capsule: None,
@@ -236,7 +236,7 @@ mod tests {
         };
         let failure = ConformanceResult {
             op_id: "test.failure".into(),
-            backend_id: "metal".to_string(),
+            executor_id: "metal".to_string(),
             passed: false,
             message: "diverged".to_string(),
             replay_capsule: Some(build_replay_capsule(

@@ -25,13 +25,21 @@ pub struct ConformanceCase {
     pub inputs: Vec<Vec<u8>>,
 }
 
-/// The result of one operation/backend conformance pair.
+/// The result of one operation/executor conformance pair.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ConformanceResult {
     /// Stable operation identifier.
     pub op_id: String,
-    /// Backend that executed the case set.
-    pub backend_id: String,
+    /// What executed the case set: a registered backend id, or the reference
+    /// oracle.
+    ///
+    /// A conformance run has two kinds of executor and only one of them is a
+    /// backend. The oracle is host code reached through a named API and
+    /// submits no `BackendRegistration`, so a row it produced used to record a
+    /// `backend_id` of `cpu-ref`, which put the oracle back into the backend
+    /// set through the evidence path and left readers downstream treating a
+    /// record label as a device.
+    pub executor_id: String,
     /// Whether every executed case matched the reference.
     pub passed: bool,
     /// Human-readable result or failure diagnostic.

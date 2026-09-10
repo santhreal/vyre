@@ -14,7 +14,7 @@ fn merge_verifies_and_resigns_disjoint_certificate_shards() {
         serde_json::json!([
             {
                 "op_id": "vyre-test::a",
-                "backend_id": "cuda",
+                "executor_id": "cuda",
                 "passed": true,
                 "message": "a matched"
             }
@@ -36,7 +36,7 @@ fn merge_verifies_and_resigns_disjoint_certificate_shards() {
         serde_json::json!([
             {
                 "op_id": "vyre-test::b",
-                "backend_id": "cuda",
+                "executor_id": "cuda",
                 "passed": true,
                 "message": "b matched"
             }
@@ -109,7 +109,7 @@ fn merge_rejects_tampered_certificate_shard() {
         serde_json::json!([
             {
                 "op_id": "vyre-test::a",
-                "backend_id": "cuda",
+                "executor_id": "cuda",
                 "passed": true,
                 "message": "a matched"
             }
@@ -186,7 +186,7 @@ fn merge_rejects_a_shard_whose_law_roster_was_edited_after_signing() {
         serde_json::json!([
             {
                 "op_id": "vyre-test::a",
-                "backend_id": "cuda",
+                "executor_id": "cuda",
                 "passed": true,
                 "message": "a matched"
             }
@@ -239,7 +239,7 @@ fn merge_rejects_shards_that_disagree_about_one_law_proof() {
             serde_json::json!([
                 {
                     "op_id": "vyre-test::a",
-                    "backend_id": backend,
+                    "executor_id": backend,
                     "passed": true,
                     "message": "a matched"
                 }
@@ -277,7 +277,7 @@ fn merge_rejects_a_certificate_that_predates_the_proven_law_roster() {
         serde_json::json!([
             {
                 "op_id": "vyre-test::a",
-                "backend_id": "cuda",
+                "executor_id": "cuda",
                 "passed": true,
                 "message": "a matched"
             }

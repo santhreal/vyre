@@ -49,7 +49,7 @@ struct SyntheticPlanSummary {
 #[derive(serde::Serialize, serde::Deserialize)]
 struct SyntheticConformanceResult {
     op_id: String,
-    backend_id: String,
+    executor_id: String,
     passed: bool,
     message: String,
 }

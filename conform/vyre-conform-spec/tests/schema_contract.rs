@@ -9,10 +9,9 @@ fn replay_capsule() -> ReplayCapsule {
     ReplayCapsule {
         schema_version: REPLAY_CAPSULE_SCHEMA_VERSION,
         op_id: "primitive.add.u32".to_string(),
-        backend_id: "cpu-ref".to_string(),
+        backend_id: "wgpu".to_string(),
         case_index: 0,
-        replay_command: "vyre-conform dispatch --backend cpu-ref --ops primitive.add.u32"
-            .to_string(),
+        replay_command: "vyre-conform dispatch --backend wgpu --ops primitive.add.u32".to_string(),
         program_blake3: "01".repeat(32),
         witness_input_blake3: "02".repeat(32),
         reference_output_blake3: "03".repeat(32),
@@ -58,7 +57,7 @@ fn case_round_trip_retains_exact_bytes() {
 fn result_round_trip_retains_exact_bytes() {
     let result = ConformanceResult {
         op_id: "primitive.add.u32".to_string(),
-        backend_id: "cpu-ref".to_string(),
+        executor_id: "reference-oracle".to_string(),
         passed: true,
         message: "1 case passed".to_string(),
         replay_capsule: None,
@@ -67,7 +66,7 @@ fn result_round_trip_retains_exact_bytes() {
     let bytes = serde_json::to_vec(&result).expect("result must serialize");
     assert_eq!(
         bytes,
-        br#"{"op_id":"primitive.add.u32","backend_id":"cpu-ref","passed":true,"message":"1 case passed"}"#
+        br#"{"op_id":"primitive.add.u32","executor_id":"reference-oracle","passed":true,"message":"1 case passed"}"#
     );
     let decoded: ConformanceResult =
         serde_json::from_slice(&bytes).expect("result must deserialize");
@@ -79,7 +78,7 @@ fn result_round_trip_retains_exact_bytes() {
 fn result_with_replay_capsule_round_trip_retains_exact_bytes() {
     let result = ConformanceResult {
         op_id: "primitive.add.u32".to_string(),
-        backend_id: "wgpu".to_string(),
+        executor_id: "wgpu".to_string(),
         passed: false,
         message: "mismatch".to_string(),
         replay_capsule: Some(replay_capsule()),

@@ -100,7 +100,7 @@ pub(crate) fn prepare_entries_in_parallel(
                 for backend in backends {
                     pairs.push(ConformanceResult {
                         op_id: op_id.into(),
-                        backend_id: backend.id.to_string(),
+                        executor_id: backend.id.to_string(),
                         passed: false,
                         message: error.clone(),
                         replay_capsule: None,
@@ -146,7 +146,7 @@ pub(crate) fn prove_backends_in_parallel(
                             .iter()
                             .map(|entry| ConformanceResult {
                                 op_id: entry.id.into(),
-                                backend_id: backend.id.to_string(),
+                                executor_id: backend.id.to_string(),
                                 passed: false,
                                 message: message.clone(),
                                 replay_capsule: None,
@@ -219,7 +219,7 @@ fn prove_one_backend(
                             index,
                             ConformanceResult {
                                 op_id: op_id.into(),
-                                backend_id: backend.id.to_string(),
+                                executor_id: backend.id.to_string(),
                                 passed: false,
                                 message: message.clone(),
                                 replay_capsule: None,

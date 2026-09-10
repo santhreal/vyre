@@ -14,7 +14,7 @@ mod replay_capsule;
 mod witness_fixtures;
 
 use crate::certificate_merge::merge_certificates;
-use crate::dispatch_command::dispatch_pairs;
+use crate::dispatch_command::{dispatch_pairs, Executor};
 use crate::proof_plan::emit_plan;
 use crate::prove_command::{prove, DEFAULT_CERTIFICATE_DIR, DEFAULT_CERTIFICATE_FILE};
 use vyre_conform::run_worker_from_env_or_exit;
@@ -69,11 +69,15 @@ fn main() {
 
     let mut backend_value = None::<String>;
     let mut ops_value = None::<String>;
+    let mut oracle_selected = false;
     let mut it = args;
     while let Some(arg) = it.next() {
         match arg.as_str() {
             "--backend" => {
                 backend_value = it.next();
+            }
+            "--oracle" => {
+                oracle_selected = true;
             }
             "--ops" => {
                 ops_value = it.next();
@@ -85,9 +89,20 @@ fn main() {
         }
     }
 
-    let backend = backend_value.as_deref().unwrap_or("auto");
+    if oracle_selected && backend_value.is_some() {
+        eprintln!(
+            "`--oracle` and `--backend` select different executors and cannot be combined. Fix: pass one of them."
+        );
+        std::process::exit(2);
+    }
+
     let ops = ops_value.as_deref().unwrap_or("all");
-    match dispatch_pairs(backend, ops) {
+    let executor = if oracle_selected {
+        Executor::Oracle
+    } else {
+        Executor::Backend(backend_value.as_deref().unwrap_or("auto"))
+    };
+    match dispatch_pairs(executor, ops) {
         Ok(pairs) => {
             let failed = pairs.iter().any(|pair| !pair.passed);
             for pair in pairs {
@@ -112,7 +127,7 @@ fn main() {
 }
 
 fn print_usage() {
-    println!("usage: vyre-conform dispatch --backend <backend-id|auto> --ops <all|<op_id>>");
+    println!("usage: vyre-conform dispatch [--backend <backend-id|auto> | --oracle] --ops <all|<op_id>>");
     println!("       vyre-conform plan [--out <plan.json>] [--backend <all|backend-id>] [--ops <all|op_id>] [--shard <index>/<count>]");
     println!("       vyre-conform merge --out <merged.json> <prove-shard.json>...");
     println!(

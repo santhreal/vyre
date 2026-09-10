@@ -5114,6 +5114,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   dispatches compute through, which excludes GL and the no-op backend, and the
   concurrency contract collects each thread's report under a deadline so a
   regression fails as an expired wait instead of a suite that never returns.
+- The conformance matrix dates each recorded device run against the commit
+  carrying it before judging a single OP_MATRIX cell against it, and reports a
+  record whose source fingerprint the carrier does not reproduce as unusable
+  rather than reading its pairs. A wgpu record captured before an emitter
+  change was read as current, so an operation that passes on the device was
+  reported as failing and the corrective action a reader was handed was to fix
+  a lowering that is already correct.
 - A tiled or blocked contraction seeds its accumulator and pads a partial tile
   with a zero of the buffer's own element type, so an f16, bf16 or i32 GEMM is
   no longer built with a `u32` literal the IR validator rejects.
@@ -9223,6 +9230,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   survives the fence rather than being rebuilt from zero. The single-workgroup
   statement executor `node::step` cannot observe the rest of the grid and now
   refuses a grid fence instead of releasing it as a workgroup barrier.
+- The reference oracle is recorded as its own executor rather than as a
+  backend, so a release no longer requires `cpu-ref` as a dispatch backend the
+  registry is built to refuse. A conformance row carries `executor_id`,
+  `vyre-driver-reference` owns the single `reference-oracle` id, `vyre-conform
+  dispatch` selects the oracle with `--oracle` instead of a backend spelling,
+  and the release gate converts the legacy `cpu-ref` label where it reads a
+  recorded report.
 - The cpu-ref backend reports whole-grid synchronization. The interpreter
   already runs the whole grid through one inter-fence segment before the next,
   and reporting otherwise cut every fenced program into segments a one-shot

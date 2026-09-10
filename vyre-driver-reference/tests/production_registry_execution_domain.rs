@@ -37,7 +37,19 @@ use vyre_test_support::backend_execution_domain::{
 
 /// Names a caller can spell when it wants the interpreter. None of them may
 /// resolve to a backend.
-const ORACLE_NAMES: &[&str] = &["cpu-ref", "reference", "oracle", "cpu"];
+///
+/// The oracle's own id, plus the legacy `cpu-ref` label recorded evidence
+/// still carries and the bare `cpu` nothing routes but a caller reaches for.
+/// Deriving the first from the owning constant is what keeps this judging the
+/// whole set: a change to the oracle id becomes a name this suite requires the
+/// registry to refuse, without an edit here.
+fn oracle_names() -> Vec<&'static str> {
+    vec![
+        vyre_driver_reference::ORACLE_EXECUTOR_ID,
+        "cpu-ref",
+        "cpu",
+    ]
+}
 
 fn registry_ids() -> BTreeSet<&'static str> {
     live_backend_registry()
@@ -143,7 +155,7 @@ fn no_recorded_decision_admits_host_execution() {
 #[test]
 fn no_oracle_name_resolves_to_a_backend() {
     let present = registry_ids();
-    for name in ORACLE_NAMES {
+    for name in oracle_names() {
         assert!(
             !present.contains(name),
             "Fix: `{name}` is in the production backend registry. The interpreter is an oracle \
