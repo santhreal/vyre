@@ -199,61 +199,85 @@ defends = "oracle poisoning, monotonic weakening"
 # ─── Packages carrying no protected boundary ───────────────────────
 
 [[open]]
-package = "vyre"
+packages = ["vyre"]
 reason = "Facade. It re-exports and owns no semantics; its promise is protected through /docs/public-api/."
 
 [[open]]
-package = "vyre-registry-link"
+packages = ["vyre-registry-link"]
 reason = "Link anchors only. It names submitting crates and holds no contract of its own."
 
 [[open]]
-package = "vyre-macros"
+packages = ["vyre-macros"]
 reason = "Declaration macros. What they expand into is judged by the registries and gates that read the result."
 
 [[open]]
-package = "vyre-primitives"
+packages = ["vyre-primitives"]
 reason = "Uncomposable intrinsics. Admission is enforced by the lego gates, which read the registry rather than a reviewer."
 
 [[open]]
-package = "vyre-libs"
+packages = [
+  "vyre-libs",
+  "vyre-libs-analysis",
+  "vyre-libs-bitset",
+  "vyre-libs-builder",
+  "vyre-libs-decode",
+  "vyre-libs-device",
+  "vyre-libs-encoding",
+  "vyre-libs-fixpoint",
+  "vyre-libs-graph",
+  "vyre-libs-hash",
+  "vyre-libs-math",
+  "vyre-libs-nn",
+  "vyre-libs-parsing",
+  "vyre-libs-pattern",
+  "vyre-libs-reasoning",
+  "vyre-libs-reduce",
+  "vyre-libs-rule",
+  "vyre-libs-scheduling",
+  "vyre-libs-security",
+  "vyre-libs-solvers",
+  "vyre-libs-text",
+  "vyre-libs-vfs",
+  "vyre-libs-visual",
+]
 reason = "Domain compositions built from published IR. A wrong composition fails conformance against the protected oracle."
 
 [[open]]
-package = "vyre-pass-engine"
+packages = ["vyre-pass-engine"]
 reason = "Runs optimizer passes as Vyre programs. Legality stays in the protected foundation optimizer."
 
 [[open]]
-package = "vyre-test-support"
+packages = ["vyre-test-support"]
 reason = "Shared test fixtures. It ships in no artifact and decides no contract."
 
 [[open]]
-package = "vyre-alloc-probe"
+packages = ["vyre-alloc-probe"]
 reason = "Thread-local allocation counter for measurement harnesses. It ships in no artifact and decides no contract."
 
 [[open]]
-package = "vyre-safetensors"
+packages = ["vyre-safetensors"]
 reason = "Format adapter. Its bounds are proved by its own fuzz and property suites."
 
 [[open]]
-package = "vyre-aot"
+packages = ["vyre-aot"]
 reason = "Ahead-of-time wrapper over the protected compile path; it adds no semantics."
 
 [[open]]
-package = "vyre-debug"
+packages = ["vyre-debug"]
 reason = "Read-only inspection of descriptors and artifacts. It produces no shipped decision."
 
 [[open]]
-package = "vyre-lints"
+packages = ["vyre-lints"]
 reason = "Lint implementations. Their verdicts are pinned in the protected gate baselines."
 
 [[open]]
-package = "xtask"
+packages = ["xtask"]
 reason = "Gate runner and text rules. The pins and the CODEOWNERS generator inside it are protected by path."
 
 [[open]]
-package = "xtask-registry"
+packages = ["xtask-registry"]
 reason = "Registry reader for gates that must link the compiler. It records no measurement."
 
 [[open]]
-package = "structure-gate"
+packages = ["structure-gate"]
 reason = "Structural rules over source text. Its verdicts are pinned in the protected gate baselines."

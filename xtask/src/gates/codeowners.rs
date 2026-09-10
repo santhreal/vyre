@@ -60,12 +60,17 @@ pub struct Boundary {
     pub defends: String,
 }
 
-/// A workspace member deliberately left unprotected.
+/// Workspace members deliberately left unprotected, and the one reason they
+/// share.
+///
+/// A set rather than a single name, because splitting one crate into a family
+/// of domain crates otherwise copies the same sentence once per crate, and a
+/// reason repeated twenty times stops reading as a decision.
 #[derive(Debug, Deserialize)]
 pub struct Open {
-    /// Workspace member name as it appears in the root manifest.
-    pub package: String,
-    /// Why no maintainer review is required for it.
+    /// Workspace member names as they appear in the root manifest.
+    pub packages: Vec<String>,
+    /// Why no maintainer review is required for them.
     pub reason: String,
 }
 
@@ -234,7 +239,7 @@ pub fn audit(
         .boundary
         .iter()
         .flat_map(|boundary| boundary.packages.iter())
-        .chain(manifest.open.iter().map(|open| &open.package))
+        .chain(manifest.open.iter().flat_map(|open| open.packages.iter()))
     {
         if !decided.insert(package.as_str()) {
             duplicated.push(package.clone());
@@ -352,7 +357,11 @@ impl crate::gate::GateBehavior for Codeowners {
         report.note(format!(
             "{} protected boundar(ies), {} member(s) recorded open",
             manifest.boundary.len(),
-            manifest.open.len()
+            manifest
+                .open
+                .iter()
+                .map(|open| open.packages.len())
+                .sum::<usize>()
         ));
 
         if ctx.write {
@@ -433,7 +442,7 @@ mod tests {
                 boundary("/xtask/src/gates/codeowners.rs", &[]),
             ],
             open: vec![Open {
-                package: "vyre-libs".to_string(),
+                packages: vec!["vyre-libs".to_string()],
                 reason: "reason".to_string(),
             }],
         }
@@ -578,7 +587,7 @@ mod tests {
     fn a_member_recorded_twice_is_reported() {
         let mut manifest = fixture();
         manifest.open.push(Open {
-            package: "vyre-spec".to_string(),
+            packages: vec!["vyre-spec".to_string()],
             reason: "second".to_string(),
         });
         assert!(run(&manifest)
@@ -707,7 +716,7 @@ mod tests {
             assert!(
                 open.reason.len() > 20,
                 "`{}` is open with no reason recorded",
-                open.package
+                open.packages.join(", ")
             );
         }
     }
