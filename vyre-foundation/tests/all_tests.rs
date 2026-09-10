@@ -206,6 +206,10 @@ pub mod extension_closed_schema_contract;
 #[path = "fingerprint_perf_contracts.rs"]
 pub mod fingerprint_perf_contracts;
 
+/// Integration tests from `tests/fma_operand_contract.rs`.
+#[path = "fma_operand_contract.rs"]
+pub mod fma_operand_contract;
+
 /// Integration tests from `tests/foundation_validate_contract.rs`.
 #[path = "foundation_validate_contract.rs"]
 pub mod foundation_validate_contract;

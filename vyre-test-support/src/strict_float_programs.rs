@@ -68,3 +68,47 @@ pub fn f32_multiply_add_program(count: u32, first: Option<UnOp>) -> Program {
         )],
     )
 }
+
+/// An `Expr::Fma` whose three operands are `u32` literals.
+///
+/// The f32-only operand contract is rejected in two places: the validation
+/// rule that reports it, and the emit boundary that refuses to lower it. Both
+/// suites built this program, so a change to either side could be proved
+/// against a shape the other side never sees.
+#[must_use]
+pub fn integer_operand_fma_program() -> Program {
+    Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32)],
+        [1, 1, 1],
+        vec![Node::let_bind(
+            "bad_fma",
+            Expr::Fma {
+                a: Box::new(Expr::u32(1)),
+                b: Box::new(Expr::u32(2)),
+                c: Box::new(Expr::u32(3)),
+            },
+        )],
+    )
+}
+
+/// `out[0] = fma(2.0, 3.0, 4.0)`, the accepted counterpart of
+/// [`integer_operand_fma_program`].
+///
+/// A rejection contract is only worth as much as the case it lets through, so
+/// the two shapes stay together.
+#[must_use]
+pub fn constant_f32_fma_program() -> Program {
+    Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::F32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::Fma {
+                a: Box::new(Expr::LitF32(2.0)),
+                b: Box::new(Expr::LitF32(3.0)),
+                c: Box::new(Expr::LitF32(4.0)),
+            },
+        )],
+    )
+}

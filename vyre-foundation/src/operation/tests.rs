@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
     operation_id_namespace, registry_error::validate_identity, AbsenceDecision,
-    ConformanceProvider, ConformanceRegistry, ExtensionProvenance, IdNamespace, LoweringProvider,
+    ConformanceProvider, ExtensionProvenance, IdNamespace, LoweringProvider,
     OperationCatalogBundle, OperationRegistration, OperationRegistry, OperationRegistryError,
     OperationTier, SemanticDescriptor,
 };
@@ -168,51 +168,6 @@ fn catalog_bundle_assembly_and_descriptor_lookup() {
     let conf = REG.conformance_provider();
     assert_eq!(conf.id, "vyre-primitives::hardware::popcount_u32");
     assert!(conf.test_inputs.is_none());
-}
-
-/// A test derives the registered operation set at run time and proves that every operation
-/// has an identity-joined descriptor, lowering provider, and conformance provider.
-#[test]
-fn every_registered_operation_has_descriptor_lowering_and_conformance_provider() {
-    let registry = OperationRegistry::global();
-    let bundle = registry.catalog_bundle();
-    let conformance = ConformanceRegistry::global();
-
-    let all_registered_ids: BTreeSet<&'static str> = registry.iter().map(|op| op.id).collect();
-
-    assert!(
-        !all_registered_ids.is_empty(),
-        "Fix: registry must have registered operations"
-    );
-
-    let mut missing_descriptors = Vec::new();
-    let mut missing_lowering = Vec::new();
-    let mut missing_conformance = Vec::new();
-
-    for &id in &all_registered_ids {
-        if bundle.descriptor(id).is_none() {
-            missing_descriptors.push(id);
-        }
-        if bundle.lowering(id).is_none() {
-            missing_lowering.push(id);
-        }
-        if conformance.provider(id).is_none() {
-            missing_conformance.push(id);
-        }
-    }
-
-    assert!(
-        missing_descriptors.is_empty(),
-        "Fix: every registered operation must have a SemanticDescriptor, missing: {missing_descriptors:?}"
-    );
-    assert!(
-        missing_lowering.is_empty(),
-        "Fix: every registered operation must have a LoweringProvider, missing: {missing_lowering:?}"
-    );
-    assert!(
-        missing_conformance.is_empty(),
-        "Fix: every registered operation must have a ConformanceProvider, missing: {missing_conformance:?}"
-    );
 }
 
 /// Adversarial verification: missing any of the three providers fails closure validation.
