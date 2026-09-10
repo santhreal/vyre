@@ -7632,6 +7632,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - External resource admission clears a poisoned lock and continues instead of
   reporting the admitted resource as invalidated, which leaked the external
   handle the record was the only reference to.
+- External resource import holds at most 1024 records per device on the WGPU,
+  CUDA, Metal, and runtime admission paths, evicting an invalidated record
+  before the oldest live one, so a caller that imports every frame without a
+  matching release no longer grows the registry and its dependent indexes
+  without bound.
 - `Log2`, `Exp2`, `Tan`, `Acos`, `Asin` and `Atan` had two different f32 parity
   windows depending on which gate ran a program. The per-op ULP audit had
   forked the transcendental classifier behind `f32_ulp_tolerance` and its

@@ -5,14 +5,30 @@
 //!
 //! This module provides CUDA driver API integration for external memory handles (`CUexternalMemory`)
 //! and external synchronization semaphores (`CUexternalSemaphore`).
+//!
+//! An import has no matching release call, so the imported-resource table is
+//! bounded here rather than by the caller: it holds at most
+//! [`REGISTRY_CAPACITY`] records, and admission past that ceiling evicts,
+//! taking a record the device already invalidated before the record admitted
+//! longest ago. The two dependent indexes are keyed by admitted resource id,
+//! so evicting a record drops its entries there too and both indexes carry the
+//! same ceiling.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::RwLock;
 
 use vyre_foundation::failure_domain::reclaim_poisoned_write;
 
 /// The subsystem every poison report in this module names as the owner.
 const OWNER: &str = "cuda backend external resource registry";
+
+/// How many imported external resources one device registry holds at once.
+///
+/// Every record names a live `CUexternalMemory` handle: a dma-buf descriptor,
+/// an NT handle or a pinned host allocation. The ceiling covers the per-frame
+/// imports an interop workload drives through one device and a wide margin
+/// above them.
+const REGISTRY_CAPACITY: usize = 1024;
 
 use vyre_driver::{
     AdmittedResourceRecord, DeviceLossInvalidationReport, ExternalMemoryKind, ImageDimensions,
@@ -70,11 +86,66 @@ pub struct CudaImportedResource {
     pub is_valid: bool,
 }
 
+/// The imported-resource table and the admission order eviction reads.
+///
+/// Order is held beside the records under one lock. Split across two locks the
+/// pair disagrees about which record is coldest as soon as two imports
+/// interleave.
+#[derive(Debug)]
+struct ImportedResourceTable {
+    records: HashMap<u64, CudaImportedResource>,
+    admission_order: VecDeque<u64>,
+}
+
+impl ImportedResourceTable {
+    /// An empty table that reserves its whole ceiling up front.
+    fn with_capacity(capacity: usize) -> Self {
+        Self {
+            records: HashMap::with_capacity(capacity),
+            admission_order: VecDeque::with_capacity(capacity),
+        }
+    }
+
+    /// Record `resource` under `resource_id` and return the id evicted to make
+    /// room, if the admission crossed the ceiling.
+    ///
+    /// Re-importing an id already present replaces the record in place and
+    /// keeps its original admission position, so a caller that re-imports one
+    /// resource every frame cannot hold the whole table hot.
+    fn admit(&mut self, resource_id: u64, resource: CudaImportedResource) -> Option<u64> {
+        if self.records.insert(resource_id, resource).is_some() {
+            return None;
+        }
+        self.admission_order.push_back(resource_id);
+        if self.records.len() <= REGISTRY_CAPACITY {
+            return None;
+        }
+        self.evict_one()
+    }
+
+    /// Drop one record: an invalidated one when the table holds any, otherwise
+    /// the one admitted longest ago.
+    ///
+    /// A record the device already invalidated answers every lookup with
+    /// [`ResourceAbiError::ResourceInvalidated`], which is also the answer once
+    /// it is gone, so reclaiming it first costs a caller nothing.
+    fn evict_one(&mut self) -> Option<u64> {
+        let position = self
+            .admission_order
+            .iter()
+            .position(|id| self.records.get(id).is_none_or(|record| !record.is_valid))
+            .unwrap_or(0);
+        let evicted = self.admission_order.remove(position)?;
+        self.records.remove(&evicted);
+        Some(evicted)
+    }
+}
+
 /// CUDA concrete external resource importer and synchronization engine.
 #[derive(Debug)]
 pub struct CudaExternalResourceImporter {
     device_id: u64,
-    imported_resources: RwLock<HashMap<u64, CudaImportedResource>>,
+    imported_resources: RwLock<ImportedResourceTable>,
     dependent_views: RwLock<HashMap<u64, HashSet<u64>>>,
     dependent_graphs: RwLock<HashMap<u64, HashSet<u64>>>,
 }
@@ -85,9 +156,11 @@ impl CudaExternalResourceImporter {
     pub fn new(device_id: u64) -> Self {
         Self {
             device_id,
-            imported_resources: RwLock::new(HashMap::new()),
-            dependent_views: RwLock::new(HashMap::new()),
-            dependent_graphs: RwLock::new(HashMap::new()),
+            imported_resources: RwLock::new(ImportedResourceTable::with_capacity(
+                REGISTRY_CAPACITY,
+            )),
+            dependent_views: RwLock::new(HashMap::with_capacity(REGISTRY_CAPACITY)),
+            dependent_graphs: RwLock::new(HashMap::with_capacity(REGISTRY_CAPACITY)),
         }
     }
 
@@ -220,15 +293,23 @@ impl CudaExternalResourceImporter {
             is_valid: true,
         };
 
-        let mut map = match self.imported_resources.write() {
-            Ok(g) => g,
-            Err(_) => {
-                return Err(ResourceAbiError::ResourceInvalidated {
-                    resource_id: descriptor.resource_id,
-                })
-            }
+        let evicted = {
+            let mut table = match self.imported_resources.write() {
+                Ok(g) => g,
+                Err(_) => {
+                    return Err(ResourceAbiError::ResourceInvalidated {
+                        resource_id: descriptor.resource_id,
+                    })
+                }
+            };
+            table.admit(descriptor.resource_id, imported)
         };
-        map.insert(descriptor.resource_id, imported);
+        if let Some(evicted) = evicted {
+            reclaim_poisoned_write(&self.dependent_views, OWNER, "the dependent view index")
+                .remove(&evicted);
+            reclaim_poisoned_write(&self.dependent_graphs, OWNER, "the dependent graph index")
+                .remove(&evicted);
+        }
 
         Ok(record)
     }
@@ -248,6 +329,7 @@ impl CudaExternalResourceImporter {
             Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
         };
         let resource = map
+            .records
             .get(&resource_id)
             .ok_or(ResourceAbiError::ResourceInvalidated { resource_id })?;
         if !resource.is_valid {
@@ -278,6 +360,7 @@ impl CudaExternalResourceImporter {
             Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
         };
         let resource = map
+            .records
             .get(&resource_id)
             .ok_or(ResourceAbiError::ResourceInvalidated { resource_id })?;
         if !resource.is_valid {
@@ -308,6 +391,7 @@ impl CudaExternalResourceImporter {
         };
         for (resource_id, _) in &schedule.transitions {
             let res = map
+                .records
                 .get(resource_id)
                 .ok_or(ResourceAbiError::ResourceInvalidated {
                     resource_id: *resource_id,
@@ -342,7 +426,7 @@ impl CudaExternalResourceImporter {
         let mut graphs =
             reclaim_poisoned_write(&self.dependent_graphs, OWNER, "the dependent graph index");
 
-        for (res_id, res) in map.iter_mut() {
+        for (res_id, res) in map.records.iter_mut() {
             res.is_valid = false;
             res.record.invalidate_on_device_loss();
             report.invalidated_resources.push(*res_id);

@@ -5,8 +5,16 @@
 //!
 //! This module provides runtime admission for external memory handles and executes selected
 //! transition schedules with guaranteed zero host copies and fine-grained timeline synchronization.
+//!
+//! An admission has no matching release call, so the admitted-resource table is
+//! bounded here rather than by the caller: it holds at most
+//! [`REGISTRY_CAPACITY`] records, and an admission past that ceiling evicts,
+//! taking a record device loss already invalidated before the record admitted
+//! longest ago. The two dependent indexes are keyed by admitted resource id,
+//! so evicting a record drops its entries there too and both indexes carry the
+//! same ceiling.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::RwLock;
 use thiserror::Error;
@@ -29,6 +37,13 @@ const VIEW_INDEX: &str = "the dependent view index";
 
 /// Which pipelines depend on each admitted resource.
 const PIPELINE_INDEX: &str = "the dependent pipeline index";
+
+/// How many admitted external resources one device holds at once.
+///
+/// Every record names a live external memory handle the device imported. The
+/// ceiling covers a swapchain, the per-frame imports a compositor drives
+/// through it, and a wide margin above both.
+const REGISTRY_CAPACITY: usize = 1024;
 
 /// Global lease counter for admitted external resources.
 static NEXT_LEASE_ID: AtomicU64 = AtomicU64::new(1);
@@ -162,11 +177,68 @@ impl From<ResourceAbiError> for ExternalAdmissionError {
     }
 }
 
+/// The admitted-record table and the admission order eviction reads.
+///
+/// Order is held beside the records under one lock. Split across two locks the
+/// pair disagrees about which record is coldest as soon as two admissions
+/// interleave.
+#[derive(Debug)]
+struct AdmittedRecordTable {
+    records: HashMap<u64, AdmittedResourceRecord>,
+    admission_order: VecDeque<u64>,
+}
+
+impl AdmittedRecordTable {
+    /// An empty table that reserves its whole ceiling up front.
+    fn with_capacity(capacity: usize) -> Self {
+        Self {
+            records: HashMap::with_capacity(capacity),
+            admission_order: VecDeque::with_capacity(capacity),
+        }
+    }
+
+    /// Record `record` under `resource_id` and return the id evicted to make
+    /// room, if the admission crossed the ceiling.
+    ///
+    /// Re-admitting an id already present replaces the record in place and
+    /// keeps its original admission position, so a caller that re-admits one
+    /// resource every frame cannot hold the whole table hot.
+    fn admit(&mut self, resource_id: u64, record: AdmittedResourceRecord) -> Option<u64> {
+        if self.records.insert(resource_id, record).is_some() {
+            return None;
+        }
+        self.admission_order.push_back(resource_id);
+        if self.records.len() <= REGISTRY_CAPACITY {
+            return None;
+        }
+        self.evict_one()
+    }
+
+    /// Drop one record: an invalidated one when the table holds any, otherwise
+    /// the one admitted longest ago.
+    ///
+    /// A record device loss already invalidated answers every lookup with
+    /// [`ExternalAdmissionError::ResourceInvalidated`], and once it is gone the
+    /// answer is [`ExternalAdmissionError::ResourceNotFound`]. Both say the
+    /// resource is unusable, so reclaiming an invalidated record before a live
+    /// one keeps the usable set as large as the ceiling allows.
+    fn evict_one(&mut self) -> Option<u64> {
+        let position = self
+            .admission_order
+            .iter()
+            .position(|id| self.records.get(id).is_none_or(|record| !record.is_valid))
+            .unwrap_or(0);
+        let evicted = self.admission_order.remove(position)?;
+        self.records.remove(&evicted);
+        Some(evicted)
+    }
+}
+
 /// Manager for external graphics resource admission, lifecycle, and schedule synchronization.
 #[derive(Debug)]
 pub struct ExternalResourceAdmissionManager {
     device_id: u64,
-    resources: RwLock<HashMap<u64, AdmittedResourceRecord>>,
+    resources: RwLock<AdmittedRecordTable>,
     dependent_views: RwLock<HashMap<u64, HashSet<u64>>>,
     dependent_pipelines: RwLock<HashMap<u64, HashSet<u64>>>,
 }
@@ -177,9 +249,9 @@ impl ExternalResourceAdmissionManager {
     pub fn new(device_id: u64) -> Self {
         Self {
             device_id,
-            resources: RwLock::new(HashMap::new()),
-            dependent_views: RwLock::new(HashMap::new()),
-            dependent_pipelines: RwLock::new(HashMap::new()),
+            resources: RwLock::new(AdmittedRecordTable::with_capacity(REGISTRY_CAPACITY)),
+            dependent_views: RwLock::new(HashMap::with_capacity(REGISTRY_CAPACITY)),
+            dependent_pipelines: RwLock::new(HashMap::with_capacity(REGISTRY_CAPACITY)),
         }
     }
 
@@ -286,8 +358,15 @@ impl ExternalResourceAdmissionManager {
         let row_pitch_bytes = record.row_pitch_bytes;
         let is_zero_copy = record.is_zero_copy;
 
-        let mut map = reclaim_poisoned_write(&self.resources, OWNER, RESOURCE_TABLE);
-        map.insert(resource_id, record);
+        let evicted = {
+            let mut table = reclaim_poisoned_write(&self.resources, OWNER, RESOURCE_TABLE);
+            table.admit(resource_id, record)
+        };
+        if let Some(evicted) = evicted {
+            reclaim_poisoned_write(&self.dependent_views, OWNER, VIEW_INDEX).remove(&evicted);
+            reclaim_poisoned_write(&self.dependent_pipelines, OWNER, PIPELINE_INDEX)
+                .remove(&evicted);
+        }
 
         Ok(AdmittedExternalResourceLease {
             resource_id,
@@ -311,6 +390,7 @@ impl ExternalResourceAdmissionManager {
     ) -> Result<(), ExternalAdmissionError> {
         let map = reclaim_poisoned_read(&self.resources, OWNER, RESOURCE_TABLE);
         let record = map
+            .records
             .get(&resource_id)
             .ok_or(ExternalAdmissionError::ResourceNotFound { resource_id })?;
         if !record.is_valid {
@@ -335,6 +415,7 @@ impl ExternalResourceAdmissionManager {
     ) -> Result<(), ExternalAdmissionError> {
         let map = reclaim_poisoned_read(&self.resources, OWNER, RESOURCE_TABLE);
         let record = map
+            .records
             .get(&resource_id)
             .ok_or(ExternalAdmissionError::ResourceNotFound { resource_id })?;
         if !record.is_valid {
@@ -365,6 +446,7 @@ impl ExternalResourceAdmissionManager {
         // 1. Verify every referenced resource is valid
         for (resource_id, _) in &schedule.transitions {
             let record = map
+                .records
                 .get(resource_id)
                 .ok_or(ExternalAdmissionError::ResourceNotFound {
                     resource_id: *resource_id,
@@ -393,6 +475,7 @@ impl ExternalResourceAdmissionManager {
     ) -> Result<u64, ExternalAdmissionError> {
         let mut map = reclaim_poisoned_write(&self.resources, OWNER, RESOURCE_TABLE);
         let record = map
+            .records
             .get_mut(&resource_id)
             .ok_or(ExternalAdmissionError::ResourceNotFound { resource_id })?;
         let next_gen = record.advance_generation(expected_gen)?;
@@ -413,7 +496,7 @@ impl ExternalResourceAdmissionManager {
         let mut pipelines =
             reclaim_poisoned_write(&self.dependent_pipelines, OWNER, PIPELINE_INDEX);
 
-        for (res_id, record) in map.iter_mut() {
+        for (res_id, record) in map.records.iter_mut() {
             record.invalidate_on_device_loss();
             report.invalidated_resources.push(*res_id);
 
@@ -435,7 +518,7 @@ impl ExternalResourceAdmissionManager {
     #[must_use]
     pub fn query_resource(&self, resource_id: u64) -> Option<AdmittedResourceRecord> {
         let map = reclaim_poisoned_read(&self.resources, OWNER, RESOURCE_TABLE);
-        map.get(&resource_id).cloned()
+        map.records.get(&resource_id).cloned()
     }
 }
 

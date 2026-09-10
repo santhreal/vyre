@@ -5,6 +5,9 @@
 //! 2. Zero-copy import records exact dimensions, aligned row pitch, and provenance without host copies.
 //! 3. Timeline synchronization executes exact wait/signal points without device-wide stalls.
 //! 4. Device loss invalidates all dependent views and pipelines.
+//! 5. Import is bounded: the imported-resource table and both dependent
+//!    indexes stop growing under unbounded import, the newest import survives,
+//!    and an evicted record leaves no dependent-index entry behind.
 
 use vyre_driver::{
     ExternalMemoryKind, ImageDimensions, ImageFormat, ResourceAbiError, ResourceLayoutState,
@@ -168,5 +171,121 @@ fn metal_device_loss_invalidates_views_and_pipelines() {
     assert_eq!(
         err,
         ResourceAbiError::ResourceInvalidated { resource_id: 301 }
+    );
+}
+
+/// How many imports every bounded-import case drives past the ceiling.
+///
+/// The capacity constant is private to `vyre-driver-metal`, so no test can
+/// read it. This number only has to exceed it; every assertion below compares
+/// measured live counts against each other rather than against a pinned
+/// ceiling.
+const IMPORTS_PAST_THE_CEILING: u64 = 2048;
+
+/// A descriptor that passes authentication, distinguished only by `resource_id`.
+fn importable_descriptor(resource_id: u64) -> MetalExternalMemoryDescriptor {
+    MetalExternalMemoryDescriptor {
+        resource_id,
+        format: ImageFormat::Rgba8Unorm,
+        dimensions: ImageDimensions::d2(64, 64),
+        row_pitch_bytes: 256,
+        handle: MetalExternalMemoryHandle::IOSurface(resource_id as usize),
+        permitted_usages: ResourcePermittedUsages::SAMPLED,
+        sync_protocol: TimelineSyncProtocol::ImplicitQueue,
+    }
+}
+
+/// Import `count` distinct resources into a fresh importer and return how many
+/// records it still holds, read from the device-loss report.
+fn live_records_after(count: u64) -> usize {
+    let importer = MetalExternalResourceImporter::new(7);
+    for resource_id in 1..=count {
+        importer
+            .import_external_resource(importable_descriptor(resource_id))
+            .expect("authenticated descriptor is imported");
+    }
+    importer
+        .invalidate_on_device_loss()
+        .invalidated_resources
+        .len()
+}
+
+#[test]
+fn metal_imported_resource_table_stops_growing_under_unbounded_import() {
+    let at_ceiling = live_records_after(IMPORTS_PAST_THE_CEILING);
+    assert!(
+        at_ceiling < IMPORTS_PAST_THE_CEILING as usize,
+        "the table held {at_ceiling} of {IMPORTS_PAST_THE_CEILING} imports, so it is unbounded"
+    );
+    assert_eq!(
+        at_ceiling,
+        live_records_after(IMPORTS_PAST_THE_CEILING + 512),
+        "512 imports past the ceiling moved the live count"
+    );
+}
+
+#[test]
+fn metal_eviction_takes_the_oldest_import_and_spares_the_newest() {
+    let importer = MetalExternalResourceImporter::new(7);
+    for resource_id in 1..=IMPORTS_PAST_THE_CEILING {
+        importer
+            .import_external_resource(importable_descriptor(resource_id))
+            .expect("authenticated descriptor is imported");
+    }
+
+    importer
+        .register_dependent_view(IMPORTS_PAST_THE_CEILING, 1)
+        .expect("the newest import is still held");
+
+    let err = importer
+        .register_dependent_view(1, 2)
+        .expect_err("the oldest import was evicted");
+    assert_eq!(
+        err,
+        ResourceAbiError::ResourceInvalidated { resource_id: 1 }
+    );
+
+    let surviving = importer.invalidate_on_device_loss().invalidated_resources;
+    let oldest_survivor = *surviving.first().expect("the table is not empty");
+    let expected: Vec<u64> = (oldest_survivor..=IMPORTS_PAST_THE_CEILING).collect();
+    assert_eq!(
+        surviving, expected,
+        "the survivors are not the contiguous newest imports"
+    );
+}
+
+#[test]
+fn metal_evicting_a_record_drops_its_dependent_view_and_pipeline_entries() {
+    let importer = MetalExternalResourceImporter::new(7);
+    importer
+        .import_external_resource(importable_descriptor(1))
+        .expect("authenticated descriptor is imported");
+    importer
+        .register_dependent_view(1, 8001)
+        .expect("register view on the first import");
+    importer
+        .register_dependent_pipeline(1, 9001)
+        .expect("register pipeline on the first import");
+
+    for resource_id in 2..=IMPORTS_PAST_THE_CEILING {
+        importer
+            .import_external_resource(importable_descriptor(resource_id))
+            .expect("authenticated descriptor is imported");
+    }
+
+    let report = importer.invalidate_on_device_loss();
+    assert!(
+        !report.invalidated_resources.contains(&1),
+        "resource 1 was not evicted, so this case proves nothing"
+    );
+    assert_eq!(
+        report.invalidated_views,
+        Vec::<u64>::new(),
+        "the evicted record left a dependent view entry behind"
+    );
+    assert_eq!(
+        report.invalidated_artifacts,
+        Vec::<u64>::new(),
+        "the evicted record left a dependent pipeline entry behind"
     );
 }

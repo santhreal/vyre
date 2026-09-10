@@ -8,6 +8,9 @@
 //! 4. Generation advancement detects and rejects stale frame access.
 //! 5. Device loss invalidates all resources, dependent views, and dependent pipelines.
 //! 6. Runtime variant space enumeration covers every format class and memory kind.
+//! 7. Admission is bounded: the admitted-record table and both dependent
+//!    indexes stop growing under unbounded admission, the newest admission
+//!    survives, and an evicted record leaves no dependent-index entry behind.
 
 use vyre_driver::{
     all_external_memory_kinds, all_format_classes, all_image_formats, all_sync_protocols,
@@ -371,4 +374,135 @@ fn runtime_mutation_gate_all_variants_handled() {
             }
         }
     }
+}
+
+/// How many admissions every bounded-admission case drives past the ceiling.
+///
+/// The capacity constant is private to `vyre-runtime`, so no test can read it.
+/// This number only has to exceed it; every assertion below compares measured
+/// live counts against each other rather than against a pinned ceiling.
+const ADMISSIONS_PAST_THE_CEILING: u64 = 2048;
+
+/// A record that passes every admission check, distinguished only by `resource_id`.
+fn admissible_record(resource_id: u64) -> vyre_driver::AdmittedResourceRecord {
+    vyre_driver::AdmittedResourceRecord::new_external_import_2d(
+        resource_id,
+        9,
+        ImageFormat::Rgba8Unorm,
+        ColorInterpretation::Srgb,
+        64,
+        64,
+        256,
+        ResourcePermittedUsages::SAMPLED.union(ResourcePermittedUsages::TRANSFER_DST),
+        ExternalMemoryKind::DmaBuf,
+        0x9000_0000 | resource_id,
+        TimelineSyncProtocol::Fence {
+            fence_id: 90,
+            is_signaled: false,
+        },
+    )
+}
+
+/// Admit `count` distinct resources into a fresh manager and return how many
+/// records it still holds, read from the device-loss report.
+fn live_records_after(count: u64) -> usize {
+    let manager = ExternalResourceAdmissionManager::new(9);
+    for resource_id in 1..=count {
+        manager
+            .admit_external_resource(admissible_record(resource_id))
+            .expect("admissible record is admitted");
+    }
+    manager.invalidate_device_loss().invalidated_resources.len()
+}
+
+proptest::proptest! {
+    #![proptest_config(proptest::prelude::ProptestConfig::with_cases(8))]
+
+    /// An admission has no matching release, so a caller that imports one
+    /// surface per frame admits without end. The live count must reach a
+    /// ceiling and stay there whatever it is asked for past that point.
+    #[test]
+    fn the_admitted_record_table_stops_growing_under_unbounded_admission(
+        extra in 1u64..=512,
+    ) {
+        let at_ceiling = live_records_after(ADMISSIONS_PAST_THE_CEILING);
+        proptest::prop_assert!(
+            at_ceiling < ADMISSIONS_PAST_THE_CEILING as usize,
+            "the table held {} of {} admissions, so it is unbounded",
+            at_ceiling,
+            ADMISSIONS_PAST_THE_CEILING
+        );
+        proptest::prop_assert_eq!(
+            at_ceiling,
+            live_records_after(ADMISSIONS_PAST_THE_CEILING + extra),
+            "{} admissions past the ceiling moved the live count",
+            extra
+        );
+    }
+}
+
+#[test]
+fn eviction_takes_the_oldest_admission_and_spares_the_newest() {
+    let manager = ExternalResourceAdmissionManager::new(9);
+    for resource_id in 1..=ADMISSIONS_PAST_THE_CEILING {
+        manager
+            .admit_external_resource(admissible_record(resource_id))
+            .expect("admissible record is admitted");
+    }
+
+    manager
+        .register_dependent_view(ADMISSIONS_PAST_THE_CEILING, 1)
+        .expect("the newest admission is still held");
+
+    let err = manager
+        .register_dependent_view(1, 2)
+        .expect_err("the oldest admission was evicted");
+    assert_eq!(
+        err,
+        ExternalAdmissionError::ResourceNotFound { resource_id: 1 }
+    );
+
+    let surviving = manager.invalidate_device_loss().invalidated_resources;
+    let oldest_survivor = *surviving.first().expect("the table is not empty");
+    let expected: Vec<u64> = (oldest_survivor..=ADMISSIONS_PAST_THE_CEILING).collect();
+    assert_eq!(
+        surviving, expected,
+        "the survivors are not the contiguous newest admissions"
+    );
+}
+
+#[test]
+fn evicting_a_record_drops_its_dependent_view_and_pipeline_entries() {
+    let manager = ExternalResourceAdmissionManager::new(9);
+    manager
+        .admit_external_resource(admissible_record(1))
+        .expect("admissible record is admitted");
+    manager
+        .register_dependent_view(1, 8001)
+        .expect("register view on the first admission");
+    manager
+        .register_dependent_pipeline(1, 8002)
+        .expect("register pipeline on the first admission");
+
+    for resource_id in 2..=ADMISSIONS_PAST_THE_CEILING {
+        manager
+            .admit_external_resource(admissible_record(resource_id))
+            .expect("admissible record is admitted");
+    }
+
+    let report = manager.invalidate_device_loss();
+    assert!(
+        !report.invalidated_resources.contains(&1),
+        "resource 1 was not evicted, so this case proves nothing"
+    );
+    assert_eq!(
+        report.invalidated_views,
+        Vec::<u64>::new(),
+        "the evicted record left a dependent view entry behind"
+    );
+    assert_eq!(
+        report.invalidated_artifacts,
+        Vec::<u64>::new(),
+        "the evicted record left a dependent pipeline entry behind"
+    );
 }
