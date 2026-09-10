@@ -129,15 +129,23 @@ fn thermal_or_clock_unstable(counters: &[GpuCounter]) -> bool {
         .into_iter()
         .chain(counter_value(counters, "utilization_mem_pct"))
         .any(|utilization| utilization >= ACTIVE_UTILIZATION_PCT);
-    let mem_clock_low = under_active_load
-        && match (
-            counter_value(counters, "clock_mem_current_mhz"),
-            counter_value(counters, "clock_mem_max_mhz"),
-        ) {
-            (Some(current), Some(max)) if max > 0 => current.saturating_mul(100) < max * 90,
-            _ => false,
-        };
-    throttled || hot || mem_clock_low
+    let mem_clock_low = under_active_load && clock_below_ratio(counters, "mem", 90);
+    let graphics_clock_low = under_active_load && clock_below_ratio(counters, "graphics", 90);
+    throttled || hot || mem_clock_low || graphics_clock_low
+}
+
+/// Whether a clock domain runs below `percent` of the maximum it reports.
+///
+/// A domain missing either reading answers false: an absent counter is not
+/// evidence of a depressed clock.
+fn clock_below_ratio(counters: &[GpuCounter], domain: &str, percent: u64) -> bool {
+    match (
+        counter_value(counters, &format!("clock_{domain}_current_mhz")),
+        counter_value(counters, &format!("clock_{domain}_max_mhz")),
+    ) {
+        (Some(current), Some(max)) if max > 0 => current.saturating_mul(100) < max * percent,
+        _ => false,
+    }
 }
 
 pub fn query_peak_memory_bandwidth(adapter_name: &str) -> anyhow::Result<f64> {
@@ -242,6 +250,86 @@ mod tests {
         .expect("Fix: valid loaded telemetry must parse");
 
         assert_eq!(counter_value(&counters, "thermal_unstable"), Some(1));
+    }
+
+    /// WHY: the probe collects two clock domains and judged one. On a device
+    /// whose memory clock pins at maximum while the SM clock ramps from idle,
+    /// a run measured at a tenth of the graphics clock was recorded as stable
+    /// and its speedup judged against a release floor. Every domain the parser
+    /// records is swept here, so a third domain added to the query without a
+    /// rule turns this red.
+    ///
+    /// Does not catch a clock that is depressed for the whole run and reported
+    /// at maximum in the single post-run snapshot the probe takes.
+    #[test]
+    fn a_depressed_clock_in_any_collected_domain_is_unstable() {
+        let domains: Vec<String> = parse_nvml_telemetry_row(
+            "NVIDIA GeForce RTX 5090, 14001, 14001, 2500, 2400, P0, 0x0, 420.0, 600.0, 72, 32768, 8192, 24576, 97, 88",
+        )
+        .expect("Fix: valid loaded telemetry must parse")
+        .iter()
+        .filter_map(|counter| {
+            counter
+                .name
+                .strip_prefix("clock_")
+                .and_then(|rest| rest.strip_suffix("_current_mhz"))
+                .map(str::to_string)
+        })
+        .collect();
+        assert_eq!(
+            domains,
+            vec!["mem".to_string(), "graphics".to_string()],
+            "Fix: give every collected clock domain a stability rule"
+        );
+
+        for domain in &domains {
+            let counters = vec![
+                GpuCounter {
+                    name: format!("clock_{domain}_current_mhz"),
+                    value: 100,
+                },
+                GpuCounter {
+                    name: format!("clock_{domain}_max_mhz"),
+                    value: 1_000,
+                },
+                GpuCounter {
+                    name: "utilization_gpu_pct".to_string(),
+                    value: 97,
+                },
+            ];
+            assert!(
+                thermal_or_clock_unstable(&counters),
+                "Fix: a {domain} clock at a tenth of its maximum under load must invalidate the sample"
+            );
+        }
+    }
+
+    /// A depressed graphics clock while the device is idle stays stable.
+    ///
+    /// The post-run snapshot of a short kernel reports idle clocks, and that is
+    /// the normal state rather than a throttled measurement.
+    #[test]
+    fn low_graphics_clock_while_idle_is_stable() {
+        let counters = parse_nvml_telemetry_row(
+            "NVIDIA GeForce RTX 5090, 14001, 14001, 2500, 210, P8, 0x1, 30.0, 600.0, 39, 32768, 1024, 31744, 4, 8",
+        )
+        .expect("Fix: valid idle telemetry must parse");
+
+        assert_eq!(counter_value(&counters, "thermal_unstable"), Some(0));
+    }
+
+    /// A graphics clock at speed under load stays stable.
+    ///
+    /// The negative twin of the sweep above: the new rule must not report every
+    /// loaded sample as throttled.
+    #[test]
+    fn graphics_clock_at_speed_under_load_is_stable() {
+        let counters = parse_nvml_telemetry_row(
+            "NVIDIA GeForce RTX 5090, 14001, 14001, 2500, 2400, P0, 0x0, 420.0, 600.0, 72, 32768, 8192, 24576, 97, 88",
+        )
+        .expect("Fix: valid loaded telemetry must parse");
+
+        assert_eq!(counter_value(&counters, "thermal_unstable"), Some(0));
     }
 
     /// Thermal limits must invalidate evidence even when utilization has already fallen.
