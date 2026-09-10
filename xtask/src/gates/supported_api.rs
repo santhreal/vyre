@@ -709,7 +709,12 @@ fn item_kind(rest: &str) -> Option<(&'static str, &str)> {
         return Some((keyword, tail.trim()));
     }
     let path = rest.trim();
-    if !path.contains("::") {
+    // The remainder must open with the path itself. A variant carries a tuple
+    // payload or a discriminant after it and a field carries `: type`, so the
+    // leading token is taken up to the first of those, and an unconsumed word
+    // in front of it means the line is in no form the snapshot writes.
+    let head = path.split([' ', '(', '<']).next().unwrap_or(path);
+    if !head.trim_end_matches(':').contains("::") {
         return None;
     }
     Some(if path.contains(": ") {
