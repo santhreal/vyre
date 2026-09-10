@@ -219,7 +219,6 @@ vyre-libs-scheduling = { workspace = true, optional = true }
 vyre = { workspace = true }
 vyre-primitives = { workspace = true, features = ["hardware"], default-features = false }
 vyre-emit-naga = { workspace = true }
-vyre-driver-reference = { workspace = true }
 vyre-lower = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-reference = { workspace = true }

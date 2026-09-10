@@ -40,6 +40,7 @@ vyre-libs-hash = { workspace = true }
 regex-syntax = { workspace = true, optional = true }
 
 [dev-dependencies]
+proptest.workspace = true
 vyre-test-support = { workspace = true, features = ["semantic-parity"] }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }

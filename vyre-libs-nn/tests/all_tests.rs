@@ -2,6 +2,12 @@
 
 extern crate vyre_foundation as vyre;
 
+#[path = "harness/mod.rs"]
+pub mod harness;
+
+#[path = "wire_words/mod.rs"]
+pub mod wire_words;
+
 #[path = "attention_head_to_token_contract.rs"]
 pub mod attention_head_to_token_contract;
 
@@ -29,14 +35,14 @@ pub mod depthwise_causal_conv1d_contract;
 #[path = "flash_attention_plan_shared_memory.rs"]
 pub mod flash_attention_plan_shared_memory;
 
+#[path = "fused_tile_attention_lowering.rs"]
+pub mod fused_tile_attention_lowering;
+
 #[path = "gated_rms_norm_contract.rs"]
 pub mod gated_rms_norm_contract;
 
 #[path = "gqa_attention_primitive_composition_contracts.rs"]
 pub mod gqa_attention_primitive_composition_contracts;
-
-#[path = "harness/mod.rs"]
-pub mod harness;
 
 #[path = "head_to_token_typed_contract.rs"]
 pub mod head_to_token_typed_contract;
@@ -59,6 +65,12 @@ pub mod last_dim_l2_norm_contract;
 #[path = "linear_rows_contract.rs"]
 pub mod linear_rows_contract;
 
+#[path = "llm_fused_sampler_matches_the_unfused_pipeline.rs"]
+pub mod llm_fused_sampler_matches_the_unfused_pipeline;
+
+#[path = "llm_sampler_rejects_degenerate_shapes.rs"]
+pub mod llm_sampler_rejects_degenerate_shapes;
+
 #[path = "mlp_4x_leaky_sq_multi_workgroup_span.rs"]
 pub mod mlp_4x_leaky_sq_multi_workgroup_span;
 
@@ -73,6 +85,9 @@ pub mod optimized_programs;
 
 #[path = "overflow_guards.rs"]
 pub mod overflow_guards;
+
+#[path = "paged_attention_eval.rs"]
+pub mod paged_attention_eval;
 
 #[path = "partial_rope_offset_contract.rs"]
 pub mod partial_rope_offset_contract;
@@ -97,9 +112,6 @@ pub mod recurrent_gated_delta_contract;
 
 #[path = "sigmoid_gate_typed_contract.rs"]
 pub mod sigmoid_gate_typed_contract;
-
-#[path = "wire_words/mod.rs"]
-pub mod wire_words;
 
 #[path = "workgroup_cooperative_tiling.rs"]
 pub mod workgroup_cooperative_tiling;

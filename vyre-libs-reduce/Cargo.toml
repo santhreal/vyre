@@ -32,6 +32,7 @@ inventory.workspace = true
 vyre-libs-builder = { workspace = true }
 
 [dev-dependencies]
+proptest.workspace = true
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-test-support = { workspace = true, features = ["semantic-parity"] }
 vyre-reference = { workspace = true }

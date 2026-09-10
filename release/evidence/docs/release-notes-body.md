@@ -925,6 +925,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `#[non_exhaustive]`, so a caller outside `vyre-foundation` cannot match them
   exhaustively; the facade published both types and no way to descend through
   them, which left a complete walk impossible through the public surface alone.
+- `vyre-libs` asserts its own contract: every module a `vyre-libs-<domain>`
+  crate publishes is re-exported by the facade, and every partition crate is
+  referenced by `link_anchor` so the linker retains its operation
+  registrations. The roster comes from `workspace.members` and each crate's
+  published module list from its own `src/lib.rs`, so a new partition crate or
+  a new published module fails the suite until the facade carries it.
 - The fixpoint package publishes its routing contract and program width queries
   behind a test-fixtures feature, so dependent packages assert grid sync counts
   and dispatch spans against the owning crate.
@@ -4147,6 +4153,21 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   features are on. `vyre-libs` also drops nine dependencies it never used:
   libm, rayon, regex-syntax, rustc-hash, serde, serde_json, smallvec, thiserror
   and tracing.
+- `vyre-libs` no longer carries 120 integration test files whose compositions a
+  `vyre-libs-<domain>` crate owns. 109 move to the owning crate: 32 to
+  vyre-libs-math, 20 to vyre-libs-pattern, 15 to vyre-libs-graph, 11 to
+  vyre-libs-reduce, 8 to vyre-libs-decode, 7 to vyre-libs-hash, 4 each to
+  vyre-libs-bitset and vyre-libs-nn, 3 each to vyre-libs-parsing and
+  vyre-libs-text, and 2 to vyre-libs-fixpoint. 11 are removed because the
+  destination already proves the same cases: three fixture modules the
+  destination holds a superset of, `graph_sweep_fixtures` whose one-round
+  frontier-step runner joins the vyre-libs-graph copy, `adversarial_graph.rs`
+  and `adversarial_frontier_queue_clear.rs` whose 13 cases vyre-libs-graph
+  states name-for-name, and four `visual_compositions__*` contract cases plus
+  `visual_compositions.rs` that the registry-derived conformance test in
+  vyre-libs-visual subsumes. The 166 remaining facade tests are multi-domain
+  compositions, workspace contracts, and single-domain cases needing a
+  dev-dependency outside a partition crate's vocabulary.
 - `fft4_complex` builds through the radix-2 transform at N=4 instead of
   carrying a hand-expanded copy of the four butterflies. The radix-2 module's
   doc claimed it was built on top of the verified 4-point base case and never

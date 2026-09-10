@@ -14,3 +14,6 @@ mod visual_compositions_glyph_grid;
 
 #[path = "contract_cases/visual_compositions__program_has_correct_buffers.rs"]
 mod visual_compositions_program_has_correct_buffers;
+
+#[path = "visual_compositions.rs"]
+mod visual_compositions;
