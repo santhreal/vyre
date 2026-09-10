@@ -1,5 +1,5 @@
 schema_version = 2
-bom_timestamp = "2026-09-10T09:31:59Z"
+bom_timestamp = "2026-09-10T09:49:20Z"
 rustc_version = "1.86.0 (05f9846f8 2025-03-31)"
 cargo_version = "1.86.0 (adf9b6ad1 2025-02-28)"
 target_triples = [

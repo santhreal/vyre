@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"a7e465caa5988e7852bdd9bacbc142045cc47c54","commit_timestamp":"1789032719","parent_commit":"0dab1d138112ddf7b8bcdddb988829588b890d7d","dirty":false,"source_fingerprint":"git:a7e465caa5988e7852bdd9bacbc142045cc47c54:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"58a981e513fdc27b75eda1afb0559736035ad0ae","commit_timestamp":"1789033760","parent_commit":"1711d15f369f3a89c1caa9eeebbc1aaabf4a28d3","dirty":false,"source_fingerprint":"git:58a981e513fdc27b75eda1afb0559736035ad0ae:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 2,
   "architecture": "semantic Program optimizer -> verified representation lowering -> concrete target strategy",
   "semantic_optimizer_owner": "vyre-foundation",
