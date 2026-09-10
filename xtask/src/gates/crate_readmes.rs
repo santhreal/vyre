@@ -536,7 +536,10 @@ fn render_contract(
             "This crate is the `{}` layer's `{}` seam, at `{}`.",
             record.layer, record.seam, record.path
         ),
-        format!("Every production dependency on it crosses {}", record.interface),
+        format!(
+            "Every production dependency on it crosses {}",
+            record.interface
+        ),
         "The layer ranks in the architecture manifest decide which layers may".to_string(),
         "reach it; a dependency from a layer that does not outrank this one requires".to_string(),
         "an architecture-manifest change.".to_string(),

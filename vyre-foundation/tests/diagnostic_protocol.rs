@@ -38,7 +38,10 @@ fn diagnostic_round_trip_preserves_workflow_identity() {
     assert_eq!(decoded.code.as_str(), "MKC016_DIGEST_MISMATCH");
     assert_eq!(decoded.stage, DiagnosticStage::Admit);
     assert_eq!(decoded.retry, RetryClass::RecompileSource);
-    let location = decoded.location.as_ref().expect("typed location must survive");
+    let location = decoded
+        .location
+        .as_ref()
+        .expect("typed location must survive");
     assert_eq!(location.graph_node, Some(7));
     assert_eq!(location.graph_value, Some(11));
     assert_eq!(location.path.as_deref(), Some("artifact.envelope"));

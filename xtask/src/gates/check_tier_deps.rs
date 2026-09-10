@@ -456,8 +456,7 @@ mod dependency_kind_tests {
 
         assert_eq!(failures.len(), 1, "{failures:?}");
         assert!(
-            failures[0]
-                .contains("in target.'cfg(not(target_os = \"macos\"))'.dependencies"),
+            failures[0].contains("in target.'cfg(not(target_os = \"macos\"))'.dependencies"),
             "{failures:?}"
         );
     }
@@ -505,7 +504,10 @@ mod dependency_kind_tests {
             ("compiler-boundary".to_string(), 2),
         ]);
         let layers = BTreeMap::from([
-            ("vyre-emit-ptx".to_string(), fixture_layer(&ranks, "emitter")),
+            (
+                "vyre-emit-ptx".to_string(),
+                fixture_layer(&ranks, "emitter"),
+            ),
             (
                 "vyre-megakernel".to_string(),
                 fixture_layer(&ranks, "compiler-boundary"),
@@ -524,7 +526,9 @@ mod dependency_kind_tests {
 
         assert_eq!(failures.len(), 1, "{failures:?}");
         assert!(
-            failures[0].contains("(emitter, rank 2) must not depend on vyre-megakernel (compiler-boundary, rank 2)"),
+            failures[0].contains(
+                "(emitter, rank 2) must not depend on vyre-megakernel (compiler-boundary, rank 2)"
+            ),
             "{failures:?}"
         );
     }

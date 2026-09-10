@@ -387,7 +387,10 @@ fn derive_shape_index(program: Option<&Program>) -> vyre_spec::ShapeIndexContrac
         }
         let is_output = decl.is_output
             || decl.pipeline_live_out
-            || matches!(decl.access, BufferAccess::WriteOnly | BufferAccess::ReadWrite);
+            || matches!(
+                decl.access,
+                BufferAccess::WriteOnly | BufferAccess::ReadWrite
+            );
         if is_output {
             any_output = true;
             output_elements = output_elements.saturating_add(count);

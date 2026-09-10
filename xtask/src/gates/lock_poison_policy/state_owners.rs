@@ -105,7 +105,11 @@ fn is_test_item(attrs: &[syn::Attribute]) -> bool {
 fn owner_wrapper(ty: &syn::Type) -> Option<&'static str> {
     match ty {
         syn::Type::Path(path) => path.path.segments.iter().find_map(|segment| {
-            if let Some(owner) = OWNER_TYPES.iter().copied().find(|name| segment.ident == *name) {
+            if let Some(owner) = OWNER_TYPES
+                .iter()
+                .copied()
+                .find(|name| segment.ident == *name)
+            {
                 return Some(owner);
             }
             match &segment.arguments {
@@ -436,7 +440,11 @@ mod tests {
         );
         assert_eq!(found.owners.len(), 1);
         assert_eq!(
-            found.contracts.iter().map(|(name, _)| name.as_str()).collect::<Vec<_>>(),
+            found
+                .contracts
+                .iter()
+                .map(|(name, _)| name.as_str())
+                .collect::<Vec<_>>(),
             vec!["Holder"]
         );
     }

@@ -50,16 +50,16 @@ fn write_workspace(root: &Path, members: &[&str], workspace_dependencies: &str) 
         .join(", ");
     fs::write(
         root.join("Cargo.toml"),
-        format!(
-            "[workspace]\nresolver = \"2\"\nmembers = [{members}]\n{workspace_dependencies}"
-        ),
+        format!("[workspace]\nresolver = \"2\"\nmembers = [{members}]\n{workspace_dependencies}"),
     )
     .expect("Fix: fixture workspace manifest must be writable");
 }
 
 /// One `[[layer]]` row.
 fn layer_row(name: &str, rank: i64, extra: &str) -> String {
-    format!("[[layer]]\nname = \"{name}\"\nrank = {rank}\npurpose = \"the {name} layer\"\n{extra}\n")
+    format!(
+        "[[layer]]\nname = \"{name}\"\nrank = {rank}\npurpose = \"the {name} layer\"\n{extra}\n"
+    )
 }
 
 /// One `[[crate]]` row. The seam is the package name, which is unique per row.
@@ -227,8 +227,7 @@ fn a_stale_declaration_fails_closed() {
         "Fix: an admission no edge crosses must be named; got\n{messages}"
     );
     assert!(
-        messages
-            .contains("`low` declares `facade_exported` and no exporting layer depends on it"),
+        messages.contains("`low` declares `facade_exported` and no exporting layer depends on it"),
         "Fix: an export flag no facade reaches must be named; got\n{messages}"
     );
 }

@@ -329,11 +329,7 @@ fn checkpoint_content_rewritten_after_indexing_is_rejected() {
     let root = scratch("content-rewritten");
     let shards: Vec<(&str, Vec<TensorSpec>)> = vec![(
         "model-00001-of-00001.safetensors",
-        vec![TensorSpec::new(
-            "block.0.weight",
-            SafetensorDtype::U8,
-            &[8],
-        )],
+        vec![TensorSpec::new("block.0.weight", SafetensorDtype::U8, &[8])],
     )];
     let (index_path, shard_paths, digests) = write_checkpoint(&root, &shards);
 
@@ -383,8 +379,8 @@ fn every_safetensor_element_type_ingests_or_reports_the_typed_error() {
 
         match facts.data_type {
             Some(expected) => {
-                let (manifest, _) = outcome
-                    .unwrap_or_else(|error| panic!("{dtype:?} must ingest, got {error}"));
+                let (manifest, _) =
+                    outcome.unwrap_or_else(|error| panic!("{dtype:?} must ingest, got {error}"));
                 let descriptor = manifest
                     .get("block.0.weight")
                     .unwrap_or_else(|| panic!("{dtype:?} manifest describes the tensor"));
@@ -455,7 +451,8 @@ fn covered_dtypes_match_the_safetensors_declaration() {
         .collect();
 
     assert_eq!(
-        covered, declared,
+        covered,
+        declared,
         "ingestion coverage must name every SafetensorDtype variant declared in {}",
         source_path.display()
     );

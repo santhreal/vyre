@@ -101,9 +101,9 @@ impl crate::gate::GateBehavior for PublicApiSnapshot {
         let covered: Vec<&Snapshotted> = rows
             .iter()
             .filter(|row| {
-                scoped.as_ref().is_none_or(|name| {
-                    &row.package == name || &row.directory == name
-                })
+                scoped
+                    .as_ref()
+                    .is_none_or(|name| &row.package == name || &row.directory == name)
             })
             .collect();
         // The descriptor declares every snapshot this gate owns, and the

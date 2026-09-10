@@ -1173,13 +1173,7 @@ pub fn workspace_state(tree: &Tree) -> Result<WorkspaceState, GateError> {
                 if merged.get("optional").and_then(Value::as_bool) == Some(true) {
                     optional_aliases.insert(alias.clone());
                 }
-                resolved.push((
-                    alias.clone(),
-                    destination,
-                    kind,
-                    condition.clone(),
-                    merged,
-                ));
+                resolved.push((alias.clone(), destination, kind, condition.clone(), merged));
             }
         }
         let effect = feature_effect(manifest, &optional_aliases);
@@ -1508,7 +1502,8 @@ pub fn render_graph(
         "A production dependency is legal only when the consumer's layer outranks the".to_string(),
         "dependency's layer. Two layers share a rank when neither depends on the other."
             .to_string(),
-        "A layer that admits a closed set of consumer layers names them; one that admits".to_string(),
+        "A layer that admits a closed set of consumer layers names them; one that admits"
+            .to_string(),
         "every layer the rank rule allows names none.".to_string(),
         String::new(),
         "| Rank | Layer | Admitted consumer layers | Purpose |".to_string(),
@@ -1536,8 +1531,7 @@ pub fn render_graph(
             ordered.len(),
             edges.len()
         ),
-        "under the union of every feature. An arrow points from a crate to an internal"
-            .to_string(),
+        "under the union of every feature. An arrow points from a crate to an internal".to_string(),
         "normal or build dependency. Development dependencies are excluded.".to_string(),
         String::new(),
         "```mermaid".to_string(),
@@ -1579,8 +1573,7 @@ pub fn render_graph(
         String::new(),
         "Change the Cargo manifest. The architecture manifest needs an edit only when the"
             .to_string(),
-        "edge crosses a seam the destination's layer does not admit, when the curated"
-            .to_string(),
+        "edge crosses a seam the destination's layer does not admit, when the curated".to_string(),
         "surface starts carrying a new seam, or when a member is added or moved.".to_string(),
         String::new(),
     ]);
@@ -1614,8 +1607,7 @@ pub fn render_ownership(
             .to_string(),
         "production dependency crosses the destination's seam, and the interface stated"
             .to_string(),
-        "on that destination's row is what crossing it provides, for every consumer."
-            .to_string(),
+        "on that destination's row is what crossing it provides, for every consumer.".to_string(),
         String::new(),
         "## Per-crate ownership".to_string(),
         String::new(),
@@ -1684,8 +1676,7 @@ pub fn render_ownership(
         "## Changing a boundary".to_string(),
         String::new(),
         "1. Change the Cargo manifest.".to_string(),
-        "2. Change `docs/CRATE_OWNERSHIP.toml` when the member set, a layer, a seam, a"
-            .to_string(),
+        "2. Change `docs/CRATE_OWNERSHIP.toml` when the member set, a layer, a seam, a".to_string(),
         "   publication class or the curated surface changes.".to_string(),
         format!("3. Run `{WRITE_COMMAND}`."),
         "4. Add a public import migration test when the curated surface changes.".to_string(),
@@ -1871,9 +1862,10 @@ mod tests {
         }
 
         fn edge(mut self, use_: DependencyUse) -> Self {
-            self.state
-                .dependencies
-                .insert("consumer".to_string(), BTreeMap::from([("dependency".to_string(), use_)]));
+            self.state.dependencies.insert(
+                "consumer".to_string(),
+                BTreeMap::from([("dependency".to_string(), use_)]),
+            );
             self
         }
 
@@ -2019,9 +2011,9 @@ mod tests {
             "{findings:?}"
         );
         assert!(
-            findings.iter().any(|finding| finding
-                .message
-                .contains("layer `low` admits consumer layer `other` and no production edge crosses it")),
+            findings.iter().any(|finding| finding.message.contains(
+                "layer `low` admits consumer layer `other` and no production edge crosses it"
+            )),
             "{findings:?}"
         );
     }
@@ -2077,8 +2069,9 @@ mod tests {
             "{findings:?}"
         );
         assert!(
-            findings.iter().any(|finding| finding.message
-                == "workspace package `newcomer` has no manifest row"),
+            findings.iter().any(
+                |finding| finding.message == "workspace package `newcomer` has no manifest row"
+            ),
             "{findings:?}"
         );
     }
@@ -2103,7 +2096,8 @@ mod tests {
         assert!(
             findings
                 .iter()
-                .any(|finding| finding.message == "manifest row `vyre-ghost` is not a workspace member"),
+                .any(|finding| finding.message
+                    == "manifest row `vyre-ghost` is not a workspace member"),
             "{findings:?}"
         );
     }

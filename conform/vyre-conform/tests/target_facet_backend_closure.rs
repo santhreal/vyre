@@ -149,7 +149,8 @@ fn the_published_facets_are_narrower_than_the_declared_catalog() {
 /// from a driver that quietly claims less than the catalog.
 #[test]
 fn every_linked_target_declares_the_whole_catalog() {
-    let backends = vyre_driver::registered_backends().expect("Fix: the backend registry must start");
+    let backends =
+        vyre_driver::registered_backends().expect("Fix: the backend registry must start");
     let registry_size = OperationRegistry::global().iter().len();
 
     let mut compiling = 0usize;

@@ -436,7 +436,9 @@ pub const fn data_type_for_safetensor_dtype(dtype: SafetensorDtype) -> Option<Da
 /// The byte size comes from the verified file range rather than from a
 /// recomputed element width, so the descriptor states the payload extent the
 /// digest covers.
-fn checkpoint_tensor_descriptor(entry: &SafetensorEntry) -> Result<TensorDescriptor, ManifestError> {
+fn checkpoint_tensor_descriptor(
+    entry: &SafetensorEntry,
+) -> Result<TensorDescriptor, ManifestError> {
     let dtype = data_type_for_safetensor_dtype(entry.dtype).ok_or_else(|| {
         ManifestError::UnsupportedCheckpointDtype {
             name: entry.name.clone(),

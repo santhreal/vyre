@@ -531,9 +531,10 @@ impl PlatformSupportMatrix {
     pub const fn tier(os: HostOs, arch: HostArch) -> HostSupportTier {
         match (os, arch) {
             // Desktop and server cells the compiler runs and dispatches on.
-            (HostOs::Linux | HostOs::MacOS | HostOs::Windows, HostArch::X86_64 | HostArch::AArch64) => {
-                HostSupportTier::Runtime
-            }
+            (
+                HostOs::Linux | HostOs::MacOS | HostOs::Windows,
+                HostArch::X86_64 | HostArch::AArch64,
+            ) => HostSupportTier::Runtime,
             // Cells that exist to prove the canonical identity bytes do not
             // move with pointer width or byte order. Each is reached by
             // cross-compilation, and the big-endian one is executed under a
@@ -594,7 +595,9 @@ impl PlatformSupportMatrix {
             tier @ HostSupportTier::Encoding => {
                 Err(UnsupportedPlatformError::EncodingOnlyHost { cell: *cell, tier })
             }
-            HostSupportTier::Excluded => Err(UnsupportedPlatformError::ExcludedHost { cell: *cell }),
+            HostSupportTier::Excluded => {
+                Err(UnsupportedPlatformError::ExcludedHost { cell: *cell })
+            }
         }
     }
 

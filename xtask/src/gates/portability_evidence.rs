@@ -168,7 +168,10 @@ pub fn runnable_cells(root: &Path) -> Result<Vec<RunnableCell>, GateError> {
 fn runner_binary(value: &toml::Value) -> Option<String> {
     match value {
         toml::Value::String(command) => Some(command.clone()),
-        toml::Value::Array(parts) => parts.first().and_then(toml::Value::as_str).map(str::to_owned),
+        toml::Value::Array(parts) => parts
+            .first()
+            .and_then(toml::Value::as_str)
+            .map(str::to_owned),
         _ => None,
     }
 }
@@ -324,9 +327,10 @@ fn execute_cell(root: &Path, cell: &RunnableCell) -> Result<PortabilityRun, Find
     output.push_str(&errors);
 
     let digests = printed_digests(&output);
-    let canonical = digests.get("canonical").cloned().ok_or_else(|| {
-        missing_digest(cell, "canonical", &output)
-    })?;
+    let canonical = digests
+        .get("canonical")
+        .cloned()
+        .ok_or_else(|| missing_digest(cell, "canonical", &output))?;
     let fallback = digests
         .get("fallback")
         .cloned()
@@ -626,7 +630,10 @@ mod tests {
     fn disagreeing_cells_agree_on_nothing() {
         let ledger = PortabilityLedger {
             schema_version: PORTABILITY_LEDGER_SCHEMA_VERSION,
-            runs: vec![run("x86_64-unknown-linux-gnu", "aa", "bb"), run("s390x-unknown-linux-gnu", "cc", "bb")],
+            runs: vec![
+                run("x86_64-unknown-linux-gnu", "aa", "bb"),
+                run("s390x-unknown-linux-gnu", "cc", "bb"),
+            ],
         };
         assert_eq!(agreed_identities(&ledger), None);
         assert!(judge_ledger(&ledger, &[])
@@ -639,7 +646,10 @@ mod tests {
     fn agreeing_cells_yield_one_identity() {
         let ledger = PortabilityLedger {
             schema_version: PORTABILITY_LEDGER_SCHEMA_VERSION,
-            runs: vec![run("x86_64-unknown-linux-gnu", "aa", "bb"), run("s390x-unknown-linux-gnu", "aa", "bb")],
+            runs: vec![
+                run("x86_64-unknown-linux-gnu", "aa", "bb"),
+                run("s390x-unknown-linux-gnu", "aa", "bb"),
+            ],
         };
         assert_eq!(
             agreed_identities(&ledger),
@@ -697,7 +707,12 @@ mod tests {
     /// A missing pin is an error, not a silent no-op.
     #[test]
     fn a_missing_pin_is_reported() {
-        assert!(replace_pin("const OTHER: &str = \"0\";", "CANONICAL_CORPUS_IDENTITY", "a").is_err());
+        assert!(replace_pin(
+            "const OTHER: &str = \"0\";",
+            "CANONICAL_CORPUS_IDENTITY",
+            "a"
+        )
+        .is_err());
     }
 
     fn run(triple: &str, canonical: &str, fallback: &str) -> PortabilityRun {

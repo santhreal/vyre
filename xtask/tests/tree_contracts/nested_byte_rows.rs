@@ -186,9 +186,11 @@ fn backend_sources_reject_triple_nested_byte_row_types() {
     for src_dir in backend_crate_src_dirs(&root) {
         for path in super::source_survey::rust_sources_under(&src_dir) {
             let locations = parse_or_panic(&path, nested_byte_row_locations(&read_source(&path)));
-            violations.extend(locations.into_iter().map(|location| {
-                super::source_survey::violation_location(&root, &path, location)
-            }));
+            violations.extend(
+                locations.into_iter().map(|location| {
+                    super::source_survey::violation_location(&root, &path, location)
+                }),
+            );
         }
     }
 

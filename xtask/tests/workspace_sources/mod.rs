@@ -78,4 +78,3 @@ pub(crate) fn track_fixture(root: &Path) {
         );
     }
 }
-

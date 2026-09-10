@@ -367,9 +367,9 @@ fn a_flat_element_survives_the_dense_region_roundtrip() {
                 value: Expr::u32(1),
             }],
         );
-        let encoded = program
-            .to_wire()
-            .unwrap_or_else(|error| panic!("{element} is a dense element and must encode: {error}"));
+        let encoded = program.to_wire().unwrap_or_else(|error| {
+            panic!("{element} is a dense element and must encode: {error}")
+        });
         let decoded = Program::from_wire(&encoded)
             .unwrap_or_else(|error| panic!("{element} must decode back: {error}"));
         let read_back = decoded

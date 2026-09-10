@@ -407,12 +407,7 @@ mod tests {
         ];
         for (member, expected) in cases {
             assert_eq!(
-                feature_member_resolves(
-                    member,
-                    &features,
-                    &dependencies,
-                    &optional_dependencies
-                ),
+                feature_member_resolves(member, &features, &dependencies, &optional_dependencies),
                 expected,
                 "`{member}` must resolve to {expected}"
             );

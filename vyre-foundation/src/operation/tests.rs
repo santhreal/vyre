@@ -1,10 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
-    operation_id_namespace, registry_error::validate_identity, OperationCatalogBundle, ConformanceProvider,
-    AbsenceDecision, ConformanceRegistry, ExtensionProvenance, IdNamespace, LoweringProvider,
-    OperationRegistration, OperationRegistry, OperationRegistryError, OperationTier,
-    SemanticDescriptor,
+    operation_id_namespace, registry_error::validate_identity, AbsenceDecision,
+    ConformanceProvider, ConformanceRegistry, ExtensionProvenance, IdNamespace, LoweringProvider,
+    OperationCatalogBundle, OperationRegistration, OperationRegistry, OperationRegistryError,
+    OperationTier, SemanticDescriptor,
 };
 use crate::numeric::NumericContract;
 
@@ -374,7 +374,8 @@ fn production_catalog_read_cannot_reach_fixtures_and_changing_fixtures_preserves
             ..desc
         },
     );
-    let bundle3 = OperationCatalogBundle::from_parts(modified_descriptors, lowering_providers, extensions);
+    let bundle3 =
+        OperationCatalogBundle::from_parts(modified_descriptors, lowering_providers, extensions);
     let digest3 = *bundle3.digest();
     assert_ne!(
         digest1, digest3,
@@ -568,9 +569,8 @@ fn law_label_without_executable_proof_evidence_is_rejected() {
         })
     );
 
-    let zero_witness_law =
-        vyre_spec::GuardedLaw::declared(vyre_spec::AlgebraicLaw::Commutative)
-            .with_proof_method(vyre_spec::ProofMethod::WitnessedU32 { seed: 42, count: 0 });
+    let zero_witness_law = vyre_spec::GuardedLaw::declared(vyre_spec::AlgebraicLaw::Commutative)
+        .with_proof_method(vyre_spec::ProofMethod::WitnessedU32 { seed: 42, count: 0 });
     assert_eq!(
         zero_witness_law.validate(),
         Err(vyre_spec::LawValidationError::NoExecutableProofEvidence {

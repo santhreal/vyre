@@ -510,10 +510,7 @@ pub fn collect_support_matrix(
                     .unwrap_or_default(),
                 requires: requirement_for(&tier, run.map(|run| run.evidence.as_str())),
                 tier,
-                evidence: run.map_or_else(
-                    || EVIDENCE_NONE.to_string(),
-                    |run| run.evidence.clone(),
-                ),
+                evidence: run.map_or_else(|| EVIDENCE_NONE.to_string(), |run| run.evidence.clone()),
                 target_triple: run.map(|run| run.target_triple.clone()).unwrap_or_default(),
                 emulator: run.map(|run| run.emulator.clone()).unwrap_or_default(),
                 identity_digest: run
@@ -798,14 +795,20 @@ fn enum_variants(file: &syn::File, name: &str) -> Vec<String> {
 }
 
 /// The `match self` in an inherent method, when it has exactly one.
-fn self_match<'a>(file: &'a syn::File, type_name: &str, fn_name: &str) -> Option<&'a syn::ExprMatch> {
+fn self_match<'a>(
+    file: &'a syn::File,
+    type_name: &str,
+    fn_name: &str,
+) -> Option<&'a syn::ExprMatch> {
     for item in &file.items {
         let Item::Impl(item) = item else { continue };
         if item.trait_.is_some() || !type_path_is(&item.self_ty, type_name) {
             continue;
         }
         for member in &item.items {
-            let ImplItem::Fn(member) = member else { continue };
+            let ImplItem::Fn(member) = member else {
+                continue;
+            };
             if member.sig.ident != fn_name {
                 continue;
             }
@@ -903,7 +906,9 @@ fn tier_match_arms(
             continue;
         };
         let tier = snake_case(&tier.ident.to_string());
-        let Pat::Tuple(tuple) = &arm.pat else { continue };
+        let Pat::Tuple(tuple) = &arm.pat else {
+            continue;
+        };
         let mut elements = tuple.elems.iter();
         let (Some(os_pat), Some(arch_pat)) = (elements.next(), elements.next()) else {
             continue;
@@ -1242,8 +1247,14 @@ pub mod tests {
         let arch_order = vec!["X86_64".to_string(), "Wasm32".to_string()];
         let tiers = tier_match_arms(&file, &os_order, &arch_order);
 
-        assert_eq!(tiers[&("Linux".to_string(), "X86_64".to_string())], "runtime");
-        assert_eq!(tiers[&("Linux".to_string(), "Wasm32".to_string())], "excluded");
+        assert_eq!(
+            tiers[&("Linux".to_string(), "X86_64".to_string())],
+            "runtime"
+        );
+        assert_eq!(
+            tiers[&("Linux".to_string(), "Wasm32".to_string())],
+            "excluded"
+        );
         assert_eq!(
             tiers[&("Windows".to_string(), "X86_64".to_string())],
             "excluded"

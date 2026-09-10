@@ -226,10 +226,7 @@ fn production_dependencies(manifest: &toml::Table) -> BTreeSet<String> {
 /// Returns the reason a directory or manifest under the checkout could not be read.
 pub fn collect_contract_evidence(tree: &Tree) -> Result<ContractEvidence, GateError> {
     let mut evidence = ContractEvidence::default();
-    for (directory, into) in [
-        ("consumers", true),
-        ("examples", false),
-    ] {
+    for (directory, into) in [("consumers", true), ("examples", false)] {
         let absolute = tree.absolute(directory);
         let Ok(entries) = fs::read_dir(&absolute) else {
             continue;
@@ -362,39 +359,38 @@ pub fn contract_findings(
             Err(reason) => {
                 report.find(Finding::in_file(
                     manifest.clone(),
-                    format!("`{}` declares an unreadable contract: {reason}", member.name),
+                    format!(
+                        "`{}` declares an unreadable contract: {reason}",
+                        member.name
+                    ),
                     CONTRACT_FIX,
                 ));
                 continue;
             }
         };
         let unmet = match &contract {
-            PublicationContract::ConsumerSeam(target) => evidence
-                .consumer_dependencies
-                .get(target)
-                .map_or(
+            PublicationContract::ConsumerSeam(target) => {
+                evidence.consumer_dependencies.get(target).map_or(
                     Some(format!("no package under `consumers/` is named `{target}`")),
                     |dependencies| {
-                        (!dependencies.contains(&member.name)).then(|| {
-                            format!("consumer `{target}` declares no dependency on it")
-                        })
+                        (!dependencies.contains(&member.name))
+                            .then(|| format!("consumer `{target}` declares no dependency on it"))
                     },
-                ),
-            PublicationContract::ExtensionPoint(target) => evidence
-                .example_dependencies
-                .get(target)
-                .map_or(
+                )
+            }
+            PublicationContract::ExtensionPoint(target) => {
+                evidence.example_dependencies.get(target).map_or(
                     Some(format!("no package under `examples/` is named `{target}`")),
                     |dependencies| {
-                        (!dependencies.contains(&member.name)).then(|| {
-                            format!("example `{target}` declares no dependency on it")
-                        })
+                        (!dependencies.contains(&member.name))
+                            .then(|| format!("example `{target}` declares no dependency on it"))
                     },
-                ),
-            PublicationContract::TargetSupport(target) => (!evidence
-                .claimed_drivers
-                .contains(target))
-            .then(|| format!("`{SUPPORT_MATRIX}` claims no driver `{target}`")),
+                )
+            }
+            PublicationContract::TargetSupport(target) => {
+                (!evidence.claimed_drivers.contains(target))
+                    .then(|| format!("`{SUPPORT_MATRIX}` claims no driver `{target}`"))
+            }
             PublicationContract::Closure(target) => {
                 let dependents = evidence.reverse_dependencies.get(&member.name);
                 if !dependents.is_some_and(|names| names.contains(target)) {
@@ -414,10 +410,7 @@ pub fn contract_findings(
         if let Some(reason) = unmet {
             report.find(Finding::in_file(
                 manifest,
-                format!(
-                    "`{}` declares `{declared}` and {reason}",
-                    member.name
-                ),
+                format!("`{}` declares `{declared}` and {reason}", member.name),
                 CONTRACT_FIX,
             ));
             continue;
@@ -632,7 +625,9 @@ pub fn classify_line(
     features: &BTreeMap<String, String>,
     serialized: &BTreeSet<String>,
 ) -> Option<ClassifiedItem> {
-    let stability = stability_of(publication_class).unwrap_or("unknown").to_string();
+    let stability = stability_of(publication_class)
+        .unwrap_or("unknown")
+        .to_string();
     let mut trimmed = line.trim();
     while let Some(rest) = trimmed.strip_prefix("#[") {
         let close = rest.find(']')?;
@@ -748,7 +743,9 @@ fn owning_type(path: &str) -> Option<&str> {
 pub fn render_manifest(packages: &[PackageClassification]) -> String {
     let mut out = String::new();
     out.push_str("# Generated from the committed public-API snapshots, the member manifests and\n");
-    out.push_str(&format!("# docs/CRATE_OWNERSHIP.toml by `{WRITE_COMMAND}`.\n\n"));
+    out.push_str(&format!(
+        "# docs/CRATE_OWNERSHIP.toml by `{WRITE_COMMAND}`.\n\n"
+    ));
     out.push_str(&format!("schema_version = {SCHEMA_VERSION}\n\n"));
 
     for pkg in packages {
@@ -906,10 +903,7 @@ pub fn classify_workspace(
             path: record.path.clone(),
             seam: record.seam.clone(),
             publication_class: record.publication_class.clone(),
-            publication_contract: declared
-                .get(&pkg.package)
-                .cloned()
-                .unwrap_or_default(),
+            publication_contract: declared.get(&pkg.package).cloned().unwrap_or_default(),
             stability: stability.to_string(),
             items,
         });
@@ -1064,10 +1058,13 @@ mod tests {
             &no_serde()
         )
         .is_none());
-        assert!(
-            classify_line("pub bare_name", "extension-sdk", &empty_features(), &no_serde())
-                .is_none()
-        );
+        assert!(classify_line(
+            "pub bare_name",
+            "extension-sdk",
+            &empty_features(),
+            &no_serde()
+        )
+        .is_none());
     }
 
     #[test]
@@ -1168,12 +1165,7 @@ pub use vyre_libs_text::{text, TextError};
                 PublicationContract::Closure("vyre".to_string()),
             ),
         ]);
-        assert!(unrooted(
-            "vyre-runtime",
-            &rooted["vyre-runtime"],
-            &rooted
-        )
-        .is_none());
+        assert!(unrooted("vyre-runtime", &rooted["vyre-runtime"], &rooted).is_none());
 
         let ring = BTreeMap::from([
             (

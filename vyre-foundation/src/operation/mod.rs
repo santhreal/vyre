@@ -14,7 +14,7 @@ mod semantics;
 mod target_facet;
 
 pub use self::call_graph::CallGraphClosure;
-pub use self::catalog_bundle::{OperationCatalogBundle, ExtensionProvenance};
+pub use self::catalog_bundle::{ExtensionProvenance, OperationCatalogBundle};
 pub use self::conformance::ConformanceRegistry;
 pub use self::dialect::{DialectOperationSpec, OperationVisitor};
 pub use self::records::{

@@ -20,7 +20,6 @@
 //! extension kind twice, `OpaqueExprResolver` rejects that, and the rejection
 //! becomes the answer every later `Program::from_wire` in the binary receives.
 
-
 use std::sync::Arc;
 
 use vyre_foundation::extension::{OpaqueExprResolver, OpaqueNodeResolver};

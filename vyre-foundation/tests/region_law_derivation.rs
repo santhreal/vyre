@@ -268,13 +268,18 @@ fn granting_a_contract_admits_the_law_that_declares_it() {
 
     let refused = derive_region_alternatives(&program, &[], budget)
         .expect("Fix: the pass registry must schedule");
-    let granted =
-        derive_region_alternatives(&program, &[RewriteNumericalContract::IntegerWrapping], budget)
-            .expect("Fix: the pass registry must schedule");
+    let granted = derive_region_alternatives(
+        &program,
+        &[RewriteNumericalContract::IntegerWrapping],
+        budget,
+    )
+    .expect("Fix: the pass registry must schedule");
 
     let wrapping_laws: BTreeSet<&str> = REGION_LAWS
         .iter()
-        .filter(|law| law_numerical_contract(law) == Some(RewriteNumericalContract::IntegerWrapping))
+        .filter(|law| {
+            law_numerical_contract(law) == Some(RewriteNumericalContract::IntegerWrapping)
+        })
         .map(|law| law.name)
         .collect();
     assert!(

@@ -163,13 +163,17 @@ fn denied_rust_lints(tree: &Tree) -> Result<BTreeSet<String>, GateError> {
 /// `warnings` states that it covers every lint currently at warn level, reaches
 /// every denied lint and is returned unconditionally.
 fn groups_covering(denied: &BTreeSet<String>) -> Result<BTreeSet<String>, GateError> {
-    let output = Command::new("rustc").arg("-W").arg("help").output().map_err(|err| {
-        GateError::new(
+    let output = Command::new("rustc")
+        .arg("-W")
+        .arg("help")
+        .output()
+        .map_err(|err| {
+            GateError::new(
             format!("cannot run `rustc -W help`: {err}"),
             "install the toolchain this workspace builds with; the lint group table is read from \
              the compiler rather than written into the gate",
         )
-    })?;
+        })?;
     let text = String::from_utf8_lossy(&output.stdout);
     let table = text
         .split_once("Lint groups provided by rustc:")
@@ -995,9 +999,7 @@ fn level_attributes(text: &str, inner_only: bool) -> Vec<(u32, String)> {
                 break;
             }
         }
-        let body = attribute
-            .trim_start_matches("#![")
-            .trim_start_matches("#[");
+        let body = attribute.trim_start_matches("#![").trim_start_matches("#[");
         let path = body
             .split(|character: char| !is_attribute_path_byte(character))
             .next()

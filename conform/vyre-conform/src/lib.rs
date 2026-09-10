@@ -27,9 +27,7 @@ pub use coordinator::{DeviceLeaseManager, WorkerCoordinator};
 pub use law_proof::{
     prove_declared_laws, prove_law, LawProof, LawVerdict, LawWitness, UnprovenKind,
 };
-pub use law_survey::{
-    judge, survey_operation, Disposition, DispositionDefect, OperationSurvey,
-};
+pub use law_survey::{judge, survey_operation, Disposition, DispositionDefect, OperationSurvey};
 pub use minimizer::{CounterexampleMinimizer, MinimizationBudget, MinimizerReport};
 pub use oracle::{OracleError, OracleSession};
 pub use panic_payload::panic_message;

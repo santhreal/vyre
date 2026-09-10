@@ -40,10 +40,10 @@ mod nested_byte_rows;
 mod public_api_snapshot_inventory;
 mod relation_import_certificates;
 mod release_provenance_contracts;
-mod source_survey;
 /// Unix only: the subject is a shell script, and the release hosts run it.
 #[cfg(unix)]
 mod release_shell_toml_reader;
+mod source_survey;
 mod subcommand_dispatch;
 mod test_mutation_hygiene;
 mod test_target_declaration_closure;

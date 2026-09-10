@@ -79,9 +79,9 @@ fn the_running_host_is_never_an_excluded_cell() {
             ));
             assert!(matrix.encoding_cells().contains(&current));
         }
-        HostSupportTier::Excluded => panic!(
-            "this suite is running on {current}, which the matrix excludes from every claim"
-        ),
+        HostSupportTier::Excluded => {
+            panic!("this suite is running on {current}, which the matrix excludes from every claim")
+        }
     }
 }
 
