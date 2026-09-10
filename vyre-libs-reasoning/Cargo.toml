@@ -11,6 +11,7 @@ homepage.workspace = true
 description = "Compiler-internal logic, causal reasoning, categorical rewrites, and knowledge compilation"
 readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-reasoning"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.vyre]
 publication_class = "internal-engine"

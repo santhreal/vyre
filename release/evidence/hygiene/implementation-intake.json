@@ -1,68 +1,32 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=ab2e2b4ba58b45dc748e13ab540a57116d15ff8ff539182ce68210e5bfc7273a"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/gate-findings","commit":"db3d0e2a981956148e5b67bd90c3936c3ff041c3","commit_timestamp":"1789023058","parent_commit":"1d1240d7f392bddc9a8939d0fc75fd76b0104d5a","dirty":true,"source_fingerprint":"git:db3d0e2a981956148e5b67bd90c3936c3ff041c3:dirty=true:worktree=fc99f8e913f4b282c1591636da491d406cd3958d8a7d127b00e31e8113c152b0"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
-  "release_blocker_count": 63,
+  "release_blocker_count": 0,
   "intake_summary": [
     {
       "owner_lane": "bench_harness",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 5
-    },
-    {
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "unwrap_call",
-      "release_blocker": false,
-      "count": 20
-    },
-    {
-      "owner_lane": "bench_harness",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": false,
-      "count": 3
-    },
-    {
-      "owner_lane": "bench_harness",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 4
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 51
+      "count": 1
     },
     {
-      "owner_lane": "coordination",
+      "owner_lane": "bench_harness",
       "surface": "production",
-      "risk": "informational",
+      "risk": "release_debt",
       "hot_path": false,
-      "pattern": "expect_call",
+      "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 6
+      "count": 1
     },
     {
-      "owner_lane": "coordination",
-      "surface": "production",
+      "owner_lane": "bench_harness",
+      "surface": "test",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "panic_macro",
+      "pattern": "source_inspection_test",
       "release_blocker": false,
       "count": 7
     },
@@ -71,36 +35,18 @@
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "source_inspection_test",
+      "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 4
+      "count": 53
     },
     {
       "owner_lane": "coordination",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "unwrap_call",
+      "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 6
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "truncating_duration_cast",
-      "release_blocker": true,
-      "count": 6
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "unbounded_read",
-      "release_blocker": true,
-      "count": 2
+      "count": 4
     },
     {
       "owner_lane": "coordination",
@@ -109,7 +55,7 @@
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 5
+      "count": 6
     },
     {
       "owner_lane": "coordination",
@@ -118,16 +64,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 38
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 21
+      "count": 59
     },
     {
       "owner_lane": "coordination",
@@ -235,16 +172,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "driver_shared",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 4
+      "count": 6
     },
     {
       "owner_lane": "driver_wgpu",
@@ -278,16 +206,7 @@
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "foundation_wire",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "panic_macro",
+      "pattern": "documented_panic_contract",
       "release_blocker": false,
       "count": 1
     },
@@ -307,16 +226,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "foundation_wire",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 2
+      "count": 4
     },
     {
       "owner_lane": "foundation_wire",
@@ -339,10 +249,10 @@
     {
       "owner_lane": "lower_emit",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
       "pattern": "source_inspection_test",
-      "release_blocker": true,
+      "release_blocker": false,
       "count": 5
     },
     {
@@ -359,34 +269,7 @@
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 3
-    },
-    {
-      "owner_lane": "runtime_resident_work_queue",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
       "pattern": "thread_sleep",
-      "release_blocker": false,
-      "count": 1
-    },
-    {
-      "owner_lane": "runtime_resident_work_queue",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "truncating_duration_cast",
-      "release_blocker": true,
-      "count": 1
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "expect_call",
       "release_blocker": false,
       "count": 1
     },
@@ -411,24 +294,6 @@
     {
       "owner_lane": "testing_evidence",
       "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "truncating_duration_cast",
-      "release_blocker": true,
-      "count": 6
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "unbounded_read",
-      "release_blocker": true,
-      "count": 3
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "production",
       "risk": "release_debt",
       "hot_path": false,
       "pattern": "placeholder_text",
@@ -449,18 +314,9 @@
       "surface": "release_tooling",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 1
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "informational",
-      "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 2
+      "count": 9
     },
     {
       "owner_lane": "testing_evidence",
@@ -488,24 +344,6 @@
       "pattern": "tokio_sleep",
       "release_blocker": false,
       "count": 2
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "raw_workspace_cargo",
-      "release_blocker": true,
-      "count": 1
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 7
     },
     {
       "owner_lane": "testing_evidence",
@@ -550,16 +388,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 54
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 1
+      "count": 55
     },
     {
       "owner_lane": "testing_evidence",
@@ -589,7 +418,5 @@
       "count": 1
     }
   ],
-  "blockers": [
-    "63 release-blocking hygiene finding(s) remain; implementation-intake.json groups them by owner lane, surface, risk, hot-path flag, and pattern"
-  ]
+  "blockers": []
 }

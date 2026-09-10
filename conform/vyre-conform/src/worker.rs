@@ -16,10 +16,27 @@ use crate::production::{ProductionSession, CONFORMANCE_SCHEDULES};
 /// Secret used to authenticate worker reports when none is provided via environment.
 pub const DEFAULT_WORKER_SECRET: &[u8] = b"vyre.conform.worker.internal.secret.v1";
 
+/// Bound on one worker request read from stdin.
+///
+/// A request carries one case, its inputs and its budgets. A coordinator that
+/// writes more than this is not sending a request, and reading a pipe to the end
+/// lets whatever is on the other side decide how much of this process's memory
+/// it takes.
+pub const MAX_WORKER_REQUEST_BYTES: u64 = 67_108_864;
+
+/// Bound on the binary whose digest identifies this worker.
+pub const MAX_WORKER_BINARY_BYTES: u64 = 1_073_741_824;
+
+/// Bound on one `/proc` line read for a memory estimate.
+const MAX_PROC_STATM_BYTES: u64 = 4_096;
+
 /// Run the worker stdio loop: read request from stdin, execute, write receipt to stdout.
 pub fn run_worker_stdio() {
     let mut stdin_bytes = Vec::new();
-    if let Err(e) = std::io::stdin().read_to_end(&mut stdin_bytes) {
+    if let Err(e) = std::io::stdin()
+        .take(MAX_WORKER_REQUEST_BYTES)
+        .read_to_end(&mut stdin_bytes)
+    {
         eprintln!("worker failed to read request from stdin: {e}");
         std::process::exit(1);
     }
@@ -92,7 +109,7 @@ pub fn execute_worker_request(request: &WorkerRequest, secret: &[u8]) -> WorkerR
             WorkerMode::Production => execute_production(request),
         }));
 
-    let elapsed_ms = started.elapsed().as_millis() as u64;
+    let elapsed_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
     let peak_memory_bytes = estimate_process_memory();
 
     let mut receipt = match execution_result {
@@ -262,15 +279,39 @@ fn execute_production(request: &WorkerRequest) -> Result<WorkerSuccess, String> 
 }
 
 /// Compute a canonical digest of the current binary.
+///
+/// The binary is hashed in fixed-size chunks, so the digest costs one buffer
+/// instead of a second copy of the executable in memory, and a file past
+/// [`MAX_WORKER_BINARY_BYTES`] is refused rather than read.
 #[must_use]
 pub fn current_binary_digest() -> String {
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Ok(bytes) = std::fs::read(&exe_path) {
-            return blake3::hash(&bytes).to_hex().to_string();
-        }
+    if let Some(digest) = std::env::current_exe()
+        .ok()
+        .and_then(|exe_path| hash_file_bounded(&exe_path))
+    {
+        return digest;
     }
     let fallback = format!("vyre-conform-bin-{}", env!("CARGO_PKG_VERSION"));
     blake3::hash(fallback.as_bytes()).to_hex().to_string()
+}
+
+/// Hash one file in fixed-size chunks, refusing anything past the bound.
+fn hash_file_bounded(path: &std::path::Path) -> Option<String> {
+    let mut file = std::fs::File::open(path).ok()?;
+    let mut hasher = blake3::Hasher::new();
+    let mut buffer = [0u8; 65_536];
+    let mut total = 0u64;
+    loop {
+        let filled = file.read(&mut buffer).ok()?;
+        if filled == 0 {
+            return Some(hasher.finalize().to_hex().to_string());
+        }
+        total = total.checked_add(filled as u64)?;
+        if total > MAX_WORKER_BINARY_BYTES {
+            return None;
+        }
+        hasher.update(&buffer[..filled]);
+    }
 }
 
 /// Compute a canonical digest of the execution environment.
@@ -285,16 +326,27 @@ pub fn current_environment_digest() -> String {
 }
 
 fn estimate_process_memory() -> u64 {
-    // Basic heuristic / /proc/self/statm reader on linux if available
+    /// The resident-set estimate when `/proc` does not answer.
+    const ASSUMED_RESIDENT_BYTES: u64 = 1_048_576;
+    /// Bytes per page in the `statm` counts.
+    const PAGE_BYTES: u64 = 4_096;
+
     #[cfg(target_os = "linux")]
     {
-        if let Ok(statm) = std::fs::read_to_string("/proc/self/statm") {
-            if let Some(first) = statm.split_whitespace().next() {
-                if let Ok(pages) = first.parse::<u64>() {
-                    return pages * 4096;
-                }
-            }
+        if let Some(pages) = read_first_statm_count() {
+            return pages.saturating_mul(PAGE_BYTES);
         }
     }
-    1024 * 1024
+    ASSUMED_RESIDENT_BYTES
+}
+
+/// The first `/proc/self/statm` count, read under a fixed bound.
+#[cfg(target_os = "linux")]
+fn read_first_statm_count() -> Option<u64> {
+    let file = std::fs::File::open("/proc/self/statm").ok()?;
+    let mut statm = String::new();
+    file.take(MAX_PROC_STATM_BYTES)
+        .read_to_string(&mut statm)
+        .ok()?;
+    statm.split_whitespace().next()?.parse::<u64>().ok()
 }

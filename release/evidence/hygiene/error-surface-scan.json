@@ -1,74 +1,8 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=ab2e2b4ba58b45dc748e13ab540a57116d15ff8ff539182ce68210e5bfc7273a"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/gate-findings","commit":"db3d0e2a981956148e5b67bd90c3936c3ff041c3","commit_timestamp":"1789023058","parent_commit":"1d1240d7f392bddc9a8939d0fc75fd76b0104d5a","dirty":true,"source_fingerprint":"git:db3d0e2a981956148e5b67bd90c3936c3ff041c3:dirty=true:worktree=fc99f8e913f4b282c1591636da491d406cd3958d8a7d127b00e31e8113c152b0"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
-    {
-      "path": "conform/vyre-conform/src/law_survey.rs",
-      "line": 356,
-      "pattern": "expect_call",
-      "text": ".expect(\"an absence disposition states the decision it requires\");"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 526,
-      "pattern": "expect_call",
-      "text": "let graph = build_interactive_graphics_pipeline(params).expect(\"graph build\");"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 544,
-      "pattern": "expect_call",
-      "text": ".expect(\"validate\");"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 545,
-      "pattern": "expect_call",
-      "text": "let _artifact = compile(&request).expect(\"compile\");"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 556,
-      "pattern": "unwrap_call",
-      "text": "renderer.handle_event(InteractiveEvent::DeviceLoss).unwrap();"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 585,
-      "pattern": "unwrap_call",
-      "text": "renderer.handle_event(event).unwrap();"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/main.rs",
-      "line": 13,
-      "pattern": "expect_call",
-      "text": "let json = serde_json::to_string_pretty(&report).expect(\"serialize report\");"
-    },
-    {
-      "path": "consumers/vyre-model-compiler/src/main.rs",
-      "line": 34,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|e| panic!(\"Prefill compilation failed for {}: {e}\", config.name));"
-    },
-    {
-      "path": "consumers/vyre-model-compiler/src/main.rs",
-      "line": 44,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|e| panic!(\"Prefill admission failed for {}: {e}\", config.name));"
-    },
-    {
-      "path": "consumers/vyre-model-compiler/src/main.rs",
-      "line": 54,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|e| panic!(\"Decode compilation failed for {}: {e}\", config.name));"
-    },
-    {
-      "path": "consumers/vyre-model-compiler/src/main.rs",
-      "line": 64,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|e| panic!(\"Decode admission failed for {}: {e}\", config.name));"
-    },
     {
       "path": "structure-gate/src/source_scan.rs",
       "line": 101,
@@ -83,201 +17,57 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 136,
-      "pattern": "panic_macro",
+      "line": 143,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest_path.display()));"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 138,
-      "pattern": "panic_macro",
+      "line": 145,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest_path.display()));"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 265,
+      "line": 272,
       "pattern": "documented_panic_contract",
       "text": "lane.join().expect(\"a member source lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 351,
+      "line": 358,
       "pattern": "documented_panic_contract",
       "text": "lane.join().expect(\"a crate root lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 529,
+      "line": 536,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 530,
+      "line": 537,
       "pattern": "documented_panic_contract",
       "text": "if let Some(root) = ROOTS.lock().expect(POISONED).get(&start) {"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 536,
+      "line": 543,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 542,
+      "line": 549,
       "pattern": "documented_panic_contract",
       "text": "ROOTS.lock().expect(POISONED).insert(start, root.clone());"
     },
     {
-      "path": "vyre-bench/src/evidence/campaign.rs",
-      "line": 69,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: keep MeasurementCellSpec fields serializable\");"
-    },
-    {
       "path": "vyre-bench/src/evidence/receipt.rs",
-      "line": 291,
-      "pattern": "expect_call",
+      "line": 297,
+      "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: keep every BenchmarkReceipt field serializable; a map key that is not a string breaks the content address\");"
-    },
-    {
-      "path": "vyre-bench/src/evidence/receipt.rs",
-      "line": 315,
-      "pattern": "expect_call",
-      "text": "serde_json::to_vec(&canonical).expect(\"Fix: keep input identity fields serializable\");"
-    },
-    {
-      "path": "vyre-bench/src/workloads/provenance.rs",
-      "line": 227,
-      "pattern": "expect_call",
-      "text": ".expect(\"a day of month is within 1..=31\");"
-    },
-    {
-      "path": "vyre-bench/src/workloads/provenance.rs",
-      "line": 233,
-      "pattern": "expect_call",
-      "text": ".expect(\"a month is within 1..=12\");"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1681,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1684,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1687,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1690,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1739,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1774,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1817,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1866,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1869,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1872,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1875,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1924,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1956,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1999,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2047,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2050,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2053,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2085,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2128,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2171,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
     },
     {
       "path": "vyre-driver/src/hostile_input_closure.rs",
@@ -394,18 +184,6 @@
       "text": "panic!("
     },
     {
-      "path": "vyre-foundation/src/ir_inner/model/program_graph_delta.rs",
-      "line": 285,
-      "pattern": "expect_call",
-      "text": "self.try_push(op).expect(\"Delta bounds exceeded\");"
-    },
-    {
-      "path": "vyre-foundation/src/ir_inner/model/program_graph_delta.rs",
-      "line": 291,
-      "pattern": "expect_call",
-      "text": "self.try_push(op).expect(\"Delta bounds exceeded\");"
-    },
-    {
       "path": "vyre-foundation/src/operation/call_graph.rs",
       "line": 158,
       "pattern": "documented_panic_contract",
@@ -472,42 +250,6 @@
       "text": "Err(error) => panic!("
     },
     {
-      "path": "vyre-foundation/src/schedule/tree.rs",
-      "line": 756,
-      "pattern": "unwrap_call",
-      "text": "flat.pop().unwrap()"
-    },
-    {
-      "path": "vyre-foundation/src/schedule/tree.rs",
-      "line": 772,
-      "pattern": "unwrap_call",
-      "text": "flat.pop().unwrap()"
-    },
-    {
-      "path": "vyre-foundation/src/schedule/tree.rs",
-      "line": 788,
-      "pattern": "unwrap_call",
-      "text": "let bytes: [u8; 8] = digest.as_bytes()[0..8].try_into().unwrap();"
-    },
-    {
-      "path": "vyre-foundation/src/schedule/typed.rs",
-      "line": 256,
-      "pattern": "unwrap_call",
-      "text": "trees.pop().unwrap()"
-    },
-    {
-      "path": "vyre-foundation/src/substrate/query.rs",
-      "line": 575,
-      "pattern": "expect_call",
-      "text": "outputs.push(handle.join().expect(\"Thread panicked in query execution\")?);"
-    },
-    {
-      "path": "vyre-foundation/src/substrate/query.rs",
-      "line": 588,
-      "pattern": "expect_call",
-      "text": ".map(|opt| opt.expect(\"All outputs present\"))"
-    },
-    {
       "path": "vyre-libs-bitset/src/bitset/four_russians.rs",
       "line": 125,
       "pattern": "documented_panic_contract",
@@ -536,12 +278,6 @@
       "line": 152,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: cols * rows overflows u32\");"
-    },
-    {
-      "path": "vyre-libs-builder/src/plumbing/host/scratch.rs",
-      "line": 74,
-      "pattern": "panic_macro",
-      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
     },
     {
       "path": "vyre-libs-graph/src/graph/ast_walk.rs",
@@ -1084,12 +820,6 @@
       "text": ".unwrap_or_else(|error| panic!(\"invalid segment reduce witness input: {error}\"));"
     },
     {
-      "path": "vyre-runtime/src/artifact_admission/session.rs",
-      "line": 533,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: prepare a payload in phase 1 for every non-resident dataset entry before resolving resources\");"
-    },
-    {
       "path": "vyre-runtime/src/resident_work_queue/descriptor/mod.rs",
       "line": 288,
       "pattern": "documented_panic_contract",
@@ -1144,21 +874,9 @@
       "text": "panic!(\"vyre-runtime work-unit partition failed: {error}\");"
     },
     {
-      "path": "vyre-runtime/src/uring/raw_platform.rs",
-      "line": 469,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: cap the submission-queue index at the ring's entry count\");"
-    },
-    {
-      "path": "vyre-runtime/src/uring/raw_platform.rs",
-      "line": 493,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: cap the completion-queue index at the ring's entry count\");"
-    },
-    {
       "path": "vyre-spec/src/schema_registry.rs",
-      "line": 163,
-      "pattern": "panic_macro",
+      "line": 170,
+      "pattern": "documented_panic_contract",
       "text": "panic!(\"unregistered schema id\")"
     },
     {
@@ -2084,12 +1802,6 @@
       "line": 40,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"git is available to initialize a fixture checkout. Fix: install git and put it on PATH; the fixture gates read a real checkout\");"
-    },
-    {
-      "path": "xtask/src/gates/testing_guides.rs",
-      "line": 241,
-      "pattern": "expect_call",
-      "text": "let last = testing.last().expect(\"a non-empty slice has a last element\");"
     },
     {
       "path": "xtask/src/release/package_readiness/archive_contracts.rs",

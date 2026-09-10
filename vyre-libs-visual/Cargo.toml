@@ -11,6 +11,7 @@ homepage.workspace = true
 description = "Visual rendering and compositing effects: blur, shadow, filters, gradients, glass"
 readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-visual"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.vyre]
 publication_class = "extension-sdk"

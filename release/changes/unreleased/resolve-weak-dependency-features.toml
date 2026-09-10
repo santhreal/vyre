@@ -1,2 +1,2 @@
-category = "fixed"
+category = "Fixed"
 text = "The feature matrix resolves cargo's weak dependency feature syntax, so a feature enabling an optional dependency's feature is no longer reported as unresolved."

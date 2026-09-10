@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Each of the twenty-two `vyre-libs-*` domain crates ships `LICENSE-APACHE` and `LICENSE-MIT` in its package and excludes proptest regression files and skill notes from it, so a published archive carries the licence texts its manifest names."

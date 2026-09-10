@@ -11,6 +11,7 @@ homepage.workspace = true
 description = "Substring matching, DFA, NFA, regex scanning pipelines, and bracket matching"
 readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-pattern"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.vyre]
 publication_class = "extension-sdk"

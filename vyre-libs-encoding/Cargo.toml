@@ -11,6 +11,7 @@ homepage.workspace = true
 description = "Compiler-internal bitset, provenance, matroid, and fingerprint encoding compositions"
 readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-encoding"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.vyre]
 publication_class = "internal-engine"

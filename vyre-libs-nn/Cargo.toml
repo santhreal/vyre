@@ -11,6 +11,7 @@ homepage.workspace = true
 description = "Neural network activations, linear, normalization, attention, MoE, and LLM inference"
 readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-nn"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.vyre]
 publication_class = "extension-sdk"

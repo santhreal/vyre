@@ -11,6 +11,7 @@ homepage.workspace = true
 description = "Lexer drivers, LR(1) table walkers, and language-specific AST construction kernels"
 readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-parsing"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.vyre]
 publication_class = "extension-sdk"

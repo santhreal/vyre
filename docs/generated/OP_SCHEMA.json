@@ -14118,6 +14118,11 @@
           "depth": 0,
           "operation": "vyre-libs::math::matmul_bias_tiled",
           "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::math::semiring_gemm",
+          "registered": true
         }
       ]
     },
@@ -14231,6 +14236,11 @@
         {
           "depth": 0,
           "operation": "vyre-libs::math::matmul_tiled",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::math::semiring_gemm",
           "registered": true
         }
       ]

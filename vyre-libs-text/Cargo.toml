@@ -11,6 +11,7 @@ homepage.workspace = true
 description = "Text processing, byte classification, UTF-8 validation, and line indexing"
 readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-text"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.vyre]
 publication_class = "extension-sdk"

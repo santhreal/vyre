@@ -1,10 +1,10 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=ab2e2b4ba58b45dc748e13ab540a57116d15ff8ff539182ce68210e5bfc7273a"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/gate-findings","commit":"db3d0e2a981956148e5b67bd90c3936c3ff041c3","commit_timestamp":"1789023058","parent_commit":"1d1240d7f392bddc9a8939d0fc75fd76b0104d5a","dirty":true,"source_fingerprint":"git:db3d0e2a981956148e5b67bd90c3936c3ff041c3:dirty=true:worktree=fc99f8e913f4b282c1591636da491d406cd3958d8a7d127b00e31e8113c152b0"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4856,
+  "scanned_files": 4839,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -50,23 +50,19 @@
     },
     {
       "pattern": "documented_panic_contract",
-      "count": 204
+      "count": 208
     },
     {
       "pattern": "expect_call",
-      "count": 73
+      "count": 55
     },
     {
       "pattern": "panic_macro",
-      "count": 45
+      "count": 37
     },
     {
       "pattern": "placeholder_text",
-      "count": 40
-    },
-    {
-      "pattern": "raw_workspace_cargo",
-      "count": 1
+      "count": 42
     },
     {
       "pattern": "source_inspection_test",
@@ -89,16 +85,12 @@
       "count": 2
     },
     {
-      "pattern": "truncating_duration_cast",
-      "count": 13
-    },
-    {
       "pattern": "unbounded_read",
-      "count": 7
+      "count": 2
     },
     {
       "pattern": "unwrap_call",
-      "count": 39
+      "count": 13
     }
   ],
   "classification_summary": [
@@ -108,7 +100,15 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 25
+      "count": 1
+    },
+    {
+      "owner_lane": "bench_harness",
+      "surface": "production",
+      "risk": "release_debt",
+      "hot_path": false,
+      "release_blocker": false,
+      "count": 1
     },
     {
       "owner_lane": "bench_harness",
@@ -116,15 +116,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 3
-    },
-    {
-      "owner_lane": "bench_harness",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 4
+      "count": 7
     },
     {
       "owner_lane": "coordination",
@@ -132,15 +124,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 74
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 8
+      "count": 57
     },
     {
       "owner_lane": "coordination",
@@ -148,7 +132,7 @@
       "risk": "release_debt",
       "hot_path": false,
       "release_blocker": false,
-      "count": 5
+      "count": 6
     },
     {
       "owner_lane": "coordination",
@@ -156,15 +140,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 38
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 21
+      "count": 59
     },
     {
       "owner_lane": "coordination",
@@ -212,15 +188,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "driver_shared",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 4
+      "count": 6
     },
     {
       "owner_lane": "driver_wgpu",
@@ -252,7 +220,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 3
+      "count": 1
     },
     {
       "owner_lane": "foundation_wire",
@@ -268,15 +236,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "foundation_wire",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 2
+      "count": 4
     },
     {
       "owner_lane": "foundation_wire",
@@ -297,9 +257,9 @@
     {
       "owner_lane": "lower_emit",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true,
+      "release_blocker": false,
       "count": 5
     },
     {
@@ -308,15 +268,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 13
-    },
-    {
-      "owner_lane": "runtime_resident_work_queue",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 1
+      "count": 10
     },
     {
       "owner_lane": "testing_evidence",
@@ -324,15 +276,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 3
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 9
+      "count": 2
     },
     {
       "owner_lane": "testing_evidence",
@@ -348,15 +292,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 20
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 8
+      "count": 26
     },
     {
       "owner_lane": "testing_evidence",
@@ -372,15 +308,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 54
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 1
+      "count": 55
     },
     {
       "owner_lane": "testing_evidence",
@@ -397,61 +325,25 @@
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 5
-    },
-    {
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "unwrap_call",
-      "release_blocker": false,
-      "count": 20
-    },
-    {
-      "owner_lane": "bench_harness",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": false,
-      "count": 3
-    },
-    {
-      "owner_lane": "bench_harness",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 4
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 51
+      "count": 1
     },
     {
-      "owner_lane": "coordination",
+      "owner_lane": "bench_harness",
       "surface": "production",
-      "risk": "informational",
+      "risk": "release_debt",
       "hot_path": false,
-      "pattern": "expect_call",
+      "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 6
+      "count": 1
     },
     {
-      "owner_lane": "coordination",
-      "surface": "production",
+      "owner_lane": "bench_harness",
+      "surface": "test",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "panic_macro",
+      "pattern": "source_inspection_test",
       "release_blocker": false,
       "count": 7
     },
@@ -460,36 +352,18 @@
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "source_inspection_test",
+      "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 4
+      "count": 53
     },
     {
       "owner_lane": "coordination",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "unwrap_call",
+      "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 6
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "truncating_duration_cast",
-      "release_blocker": true,
-      "count": 6
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "unbounded_read",
-      "release_blocker": true,
-      "count": 2
+      "count": 4
     },
     {
       "owner_lane": "coordination",
@@ -498,7 +372,7 @@
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 5
+      "count": 6
     },
     {
       "owner_lane": "coordination",
@@ -507,16 +381,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 38
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 21
+      "count": 59
     },
     {
       "owner_lane": "coordination",
@@ -624,16 +489,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "driver_shared",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 4
+      "count": 6
     },
     {
       "owner_lane": "driver_wgpu",
@@ -667,16 +523,7 @@
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "foundation_wire",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "panic_macro",
+      "pattern": "documented_panic_contract",
       "release_blocker": false,
       "count": 1
     },
@@ -696,16 +543,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "foundation_wire",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 2
+      "count": 4
     },
     {
       "owner_lane": "foundation_wire",
@@ -728,10 +566,10 @@
     {
       "owner_lane": "lower_emit",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
       "pattern": "source_inspection_test",
-      "release_blocker": true,
+      "release_blocker": false,
       "count": 5
     },
     {
@@ -748,34 +586,7 @@
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 3
-    },
-    {
-      "owner_lane": "runtime_resident_work_queue",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
       "pattern": "thread_sleep",
-      "release_blocker": false,
-      "count": 1
-    },
-    {
-      "owner_lane": "runtime_resident_work_queue",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "truncating_duration_cast",
-      "release_blocker": true,
-      "count": 1
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "expect_call",
       "release_blocker": false,
       "count": 1
     },
@@ -800,24 +611,6 @@
     {
       "owner_lane": "testing_evidence",
       "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "truncating_duration_cast",
-      "release_blocker": true,
-      "count": 6
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "unbounded_read",
-      "release_blocker": true,
-      "count": 3
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "production",
       "risk": "release_debt",
       "hot_path": false,
       "pattern": "placeholder_text",
@@ -838,18 +631,9 @@
       "surface": "release_tooling",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 1
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "informational",
-      "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 2
+      "count": 9
     },
     {
       "owner_lane": "testing_evidence",
@@ -877,24 +661,6 @@
       "pattern": "tokio_sleep",
       "release_blocker": false,
       "count": 2
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "raw_workspace_cargo",
-      "release_blocker": true,
-      "count": 1
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 7
     },
     {
       "owner_lane": "testing_evidence",
@@ -939,16 +705,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 54
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 1
+      "count": 55
     },
     {
       "owner_lane": "testing_evidence",
@@ -1237,7 +994,7 @@
         "reason": "Asserts that each source crate's widest aggregate feature turns on every\nfeature that gates a registration. The subject is that crate's feature table,\nwhich is consumed by cargo before any code runs."
       },
       {
-        "file": "vyre-libs/tests/quantized_dispatch_variant_coverage_gate.rs",
+        "file": "vyre-libs-solvers/tests/quantized_dispatch_variant_coverage_gate.rs",
         "test": "every_published_quantized_entry_point_has_a_readback_contract_row",
         "reason": "Derives the published quantized dispatch entry points from the `pub use\n..._via` re-exports that declare them, so an entry point shipped without a\nreadback contract row is red on its first run. The subject is the public\nexport list, which no run of the covered entry points can report on."
       },
@@ -1547,27 +1304,27 @@
         "reason": "Asserts each resident layout declaration exists exactly once in the workspace and\nthat the one site is in the owning device module. A second declaration in a crate\nthis test does not depend on is linked into no program it could run, and diverges\nfrom the owner only once a device reads a buffer laid out by the other copy."
       },
       {
-        "file": "vyre-libs/tests/graph_single_source_contracts.rs",
+        "file": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
         "test": "the_wrapper_set_is_derived_and_not_empty",
         "reason": "Floor check for the dispatch-wrapper pairing the rules below are taken over. Its\nsubject is the file set that pairing produced, which exists only inside the\nsource walk; without it every rule in the file would pass by judging nothing."
       },
       {
-        "file": "vyre-libs/tests/graph_single_source_contracts.rs",
+        "file": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
         "test": "every_dispatch_wrapper_names_the_graph_primitive_it_wraps",
         "reason": "Requires each dispatch wrapper to name the graph primitive it wraps and the CPU\nreference that primitive publishes. A wrapper that reimplements the algorithm\ninstead of delegating answers correctly today and drifts on the first fix to the\nprimitive; a parity run cannot tell delegation from a copy that currently\nagrees."
       },
       {
-        "file": "vyre-libs/tests/graph_single_source_contracts.rs",
+        "file": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
         "test": "every_dispatch_wrapper_names_its_primitive_cpu_reference",
         "reason": "Requires each dispatch wrapper to name the graph primitive it wraps and the CPU\nreference that primitive publishes. A wrapper that reimplements the algorithm\ninstead of delegating answers correctly today and drifts on the first fix to the\nprimitive; a parity run cannot tell delegation from a copy that currently\nagrees."
       },
       {
-        "file": "vyre-libs/tests/graph_single_source_contracts.rs",
+        "file": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
         "test": "no_dispatch_wrapper_is_shadowed_by_an_older_module_path",
         "reason": "Asserts the module a wrapper was migrated from no longer exists. A stale module\nthat nothing declares is compiled into no program, so no execution observes it,\nand the next edit lands in whichever copy the author opens."
       },
       {
-        "file": "vyre-libs/tests/graph_single_source_contracts.rs",
+        "file": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
         "test": "the_dispatch_module_declares_every_wrapper_once",
         "reason": "Counts the `mod` declaration for each wrapper in the dispatch module. Module\ndeclarations are consumed by the compiler and are not enumerable at run time; a\nwrapper declared twice or not at all is a source fact."
       },
@@ -1740,25 +1497,223 @@
         "file": "xtask/tests/lint_policy_mutations.rs",
         "test": "the_workspace_lint_floor_rejects_every_mutation_and_accepts_clean_source",
         "reason": "Writes mutated crates into the target temp directory and checks the lint floor\nrejects each one and accepts the clean copy. The source it reads is the fixture\nit just generated, not the checkout, and the assertion is the compiler's verdict\non that fixture."
+      },
+      {
+        "file": "consumers/vyre-model-compiler/tests/absence_proofs.rs",
+        "test": "proves_absence_of_physical_kernels_and_target_source",
+        "reason": "Assert that the downstream model-compiler package declares no physical kernel,\nno target-specific source, no schedule template or hint, and no compiler rewrite\npass. Absence of a declaration produces no execution, so nothing a running\nprogram observes distinguishes a package that never had one from a package that\ngrew one. The file set is walked at run time, so a file added to the package is\njudged on arrival."
+      },
+      {
+        "file": "consumers/vyre-model-compiler/tests/absence_proofs.rs",
+        "test": "proves_absence_of_schedule_templates_and_hints",
+        "reason": "Assert that the downstream model-compiler package declares no physical kernel,\nno target-specific source, no schedule template or hint, and no compiler rewrite\npass. Absence of a declaration produces no execution, so nothing a running\nprogram observes distinguishes a package that never had one from a package that\ngrew one. The file set is walked at run time, so a file added to the package is\njudged on arrival."
+      },
+      {
+        "file": "consumers/vyre-model-compiler/tests/absence_proofs.rs",
+        "test": "proves_absence_of_compiler_rewrites_and_passes",
+        "reason": "Assert that the downstream model-compiler package declares no physical kernel,\nno target-specific source, no schedule template or hint, and no compiler rewrite\npass. Absence of a declaration produces no execution, so nothing a running\nprogram observes distinguishes a package that never had one from a package that\ngrew one. The file set is walked at run time, so a file added to the package is\njudged on arrival."
+      },
+      {
+        "file": "consumers/vyre-model-compiler/tests/checkpoint_ingestion.rs",
+        "test": "covered_dtypes_match_the_safetensors_declaration",
+        "reason": "Holds the ingestion coverage table equal to the variant set of\n`SafetensorDtype`. Rust publishes no variant list at run time, so the enum\ndeclaration in vyre-safetensors is the only place the full set exists, and a\nvariant added there without a covering row would otherwise reach a caller as an\nunhandled dtype."
+      },
+      {
+        "file": "vyre/tests/downstream_workflow_fixture.rs",
+        "test": "public_seam_carries_zero_callbacks_zero_handles_and_zero_domain_vocabulary",
+        "reason": "Asserts that the facade's public seam declares no callback parameter, no native\nOS or driver handle, and no model-domain vocabulary. A type the seam does not\ndeclare is never constructed, so no execution witnesses its absence; the\ndeclarations are what a downstream crate compiles against."
+      },
+      {
+        "file": "vyre/tests/facade_boundary.rs",
+        "test": "facade_exposes_zero_internal_implementation_symbols",
+        "reason": "Judge which re-exports `vyre/src/lib.rs` states: that no re-export originates in\nan optimizer pass, a search planner, a lowering stage, a concrete driver or a\nruntime worker, and that the compiler module is an enumerated namespace rather\nthan a whole-crate alias. A `pub use` is resolved by the compiler, so the\npublished set has no run-time representation this crate can enumerate."
+      },
+      {
+        "file": "vyre/tests/facade_boundary.rs",
+        "test": "facade_compiler_module_is_curated_not_whole_crate_alias",
+        "reason": "Judge which re-exports `vyre/src/lib.rs` states: that no re-export originates in\nan optimizer pass, a search planner, a lowering stage, a concrete driver or a\nruntime worker, and that the compiler module is an enumerated namespace rather\nthan a whole-crate alias. A `pub use` is resolved by the compiler, so the\npublished set has no run-time representation this crate can enumerate."
+      },
+      {
+        "file": "vyre-aot/tests/compile_request_fidelity.rs",
+        "test": "the_crate_constructs_no_compile_input_of_its_own",
+        "reason": "Assert that no file in vyre-aot constructs a compile input of its own and that\nevery public function returning an artifact envelope for a named target takes a\nvalidated request. A fabricated input is indistinguishable from a caller's once\nconstructed, and a signature is erased before any call happens, so both the\nfile set and the signature set are read from the crate's source at run time."
+      },
+      {
+        "file": "vyre-aot/tests/compile_request_fidelity.rs",
+        "test": "every_public_target_compile_entry_point_consumes_a_validated_request",
+        "reason": "Assert that no file in vyre-aot constructs a compile input of its own and that\nevery public function returning an artifact envelope for a named target takes a\nvalidated request. A fabricated input is indistinguishable from a caller's once\nconstructed, and a signature is erased before any call happens, so both the\nfile set and the signature set are read from the crate's source at run time."
+      },
+      {
+        "file": "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
+        "test": "test_every_record_field_has_a_recorded_source",
+        "reason": "Holds the recorded-source table equal to the field set of\n`WholeApplicationRecord`. Struct fields carry no run-time listing, so the\ndeclaration is the only full field set, and a field added without a source entry\nwould otherwise be serialized into evidence with no stated origin."
+      },
+      {
+        "file": "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
+        "test": "test_producer_carries_no_measurement_constants",
+        "reason": "Asserts that the whole-application producers state no literal timestamp, host\nstring, schedule or device claim. A constant that replaces a measurement\nproduces a well-formed record, so a run cannot tell it from a measured one; only\nthe absence of the literal in the producer source can."
+      },
+      {
+        "file": "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
+        "test": "test_no_test_writes_into_tracked_evidence_paths",
+        "reason": "Asserts that no test in vyre-bench calls the tracked-evidence writer against the\nrepository evidence directory. A test that did would leave the same artifact the\none producer leaves, so no observation after the fact attributes it; the call\nsite is the only witness. The test file set is read at run time."
+      },
+      {
+        "file": "vyre-bench/tests/evidence_receipt_contracts.rs",
+        "test": "compiler_source_crates_name_zero_workload_or_expert_baselines",
+        "reason": "Asserts that no compiler-side crate names a benchmark workload or an expert\nbaseline. A reference that exists only as a string or an import compiles into no\nobservable call, so the declaration is the only artifact that carries the\ncoupling."
+      },
+      {
+        "file": "vyre-driver/tests/concrete_driver_dependency_boundaries.rs",
+        "test": "concrete_driver_source_files_have_no_forbidden_production_imports",
+        "reason": "Asserts that no concrete driver imports a semantic library, a schedule search\nstage, application policy or a peer driver. An import that is never called links\nin without any run-time trace, and the crate list and layer assignments are read\nfrom `docs/CRATE_OWNERSHIP.toml` at run time so a driver added there is judged\nwithout an edit here."
+      },
+      {
+        "file": "vyre-driver/tests/external_resource_path_agreement.rs",
+        "test": "every_concrete_driver_publishes_its_external_resource_surface_at_one_path",
+        "reason": "Assert that every concrete driver publishes its external-resource surface at one\nshared module path. A path is a compile-time fact: two drivers publishing the\nsame contract at different paths both work at run time and only diverge for a\ncaller reading the second one. The crate list is the concrete-backend layer of\n`docs/CRATE_OWNERSHIP.toml`."
+      },
+      {
+        "file": "vyre-driver/tests/external_resource_path_agreement.rs",
+        "test": "concrete_drivers_agree_on_the_external_resource_path",
+        "reason": "Assert that every concrete driver publishes its external-resource surface at one\nshared module path. A path is a compile-time fact: two drivers publishing the\nsame contract at different paths both work at run time and only diverge for a\ncaller reading the second one. The crate list is the concrete-backend layer of\n`docs/CRATE_OWNERSHIP.toml`."
+      },
+      {
+        "file": "vyre-driver/tests/float_lowering_refusal.rs",
+        "test": "every_wrapper_dispatch_entry_point_refuses_a_mode_the_backend_does_not_lower",
+        "reason": "Holds the set of dispatch entry points this suite calls equal to the set the\nregistry wrapper guards. The refusals themselves are exercised by calling them;\nwhat has no run-time witness is that no guarded entry point was left out, since\nan uncalled method produces nothing to observe. The guarded set is read from the\nwrapper source at run time."
+      },
+      {
+        "file": "vyre-emit-naga/tests/physical_ir_variant_exhaustiveness.rs",
+        "test": "runtime_enumerates_all_kernel_op_kind_variants_from_source",
+        "reason": "Enumerates every `KernelOpKind` variant and asserts the Naga emitter reaches a\ndeliberate decision for each. Rust exposes no variant list at run time, so the\nenum declaration is the only complete set; without it the suite would cover\nwhichever variants someone remembered."
+      },
+      {
+        "file": "vyre-emit-ptx/tests/physical_ir_variant_exhaustiveness.rs",
+        "test": "runtime_enumerates_all_kernel_op_kind_variants_from_source",
+        "reason": "Enumerates every `KernelOpKind` variant and asserts the PTX emitter reaches a\ndeliberate decision for each. Rust exposes no variant list at run time, so the\nenum declaration is the only complete set; without it the suite would cover\nwhichever variants someone remembered."
+      },
+      {
+        "file": "vyre-foundation/tests/buffer_decl_boundary.rs",
+        "test": "output_byte_range_converts_from_no_signed_range",
+        "reason": "Asserts that no signed range implements `IntoOutputByteRange`. An implementation\nthat does not exist cannot be called, so no execution witnesses its absence,\nwhile one added would convert a negative bound with `as` into an extent just\nbelow `u64::MAX`. The admitted set is read from the source on every run."
+      },
+      {
+        "file": "vyre-foundation/tests/schedule_calculus_contracts.rs",
+        "test": "schedule_calculus_operator_set_is_closed_against_source_at_runtime",
+        "reason": "Holds the exercised schedule-calculus operator set equal to the operators the\nsource declares. The operator set has no run-time listing, so an operator added\nwithout a case would leave the suite green over a smaller set than the calculus\ncarries."
+      },
+      {
+        "file": "vyre-lower/tests/physical_ir_emitter_exhaustive_decisions.rs",
+        "test": "no_catch_all_wildcard_arms_in_emitter_dispatch_modules",
+        "reason": "Asserts that no emitter dispatch module carries a catch-all match arm. A\nwildcard arm produces a silent downgrade rather than an error, so a run observes\na plausible result instead of a refusal, and the arm exists only in the match\ndeclaration. The emitter module set is read at run time."
+      },
+      {
+        "file": "vyre-lower/tests/physical_kernel_ir_policy_boundary.rs",
+        "test": "no_physical_kernel_ir_type_reuses_a_semantic_policy_type",
+        "reason": "Assert that no physical-kernel-IR type reuses a semantic policy type and that no\nbackend name appears in a shared legalization or capability path. Both are\nproperties of declarations: a reused type compiles and runs, and a backend name\nin a shared path only shows up as a wrong decision on some other backend\nlater."
+      },
+      {
+        "file": "vyre-lower/tests/physical_kernel_ir_policy_boundary.rs",
+        "test": "no_backend_name_appears_in_shared_legalization_paths",
+        "reason": "Assert that no physical-kernel-IR type reuses a semantic policy type and that no\nbackend name appears in a shared legalization or capability path. Both are\nproperties of declarations: a reused type compiles and runs, and a backend name\nin a shared path only shows up as a wrong decision on some other backend\nlater."
+      },
+      {
+        "file": "vyre-runtime/tests/generic_runtime_contracts.rs",
+        "test": "proof_runtime_public_surface_contains_no_model_concepts",
+        "reason": "Asserts that the runtime's public surface declares no model, token, expert,\nattention or safetensors concept. A concept the surface does not declare is\nnever constructed, so its absence produces no observation; the published\ndeclarations are the artifact that carries it."
+      },
+      {
+        "file": "vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs",
+        "test": "runtime_closure_no_public_constructor_produces_unbounded_quota",
+        "reason": "Exercises every standard quota constructor and every non-finite rejection by\ncalling them, then asserts vyre-runtime declares no constructor named\n`unbounded`. The calls are behaviour; the closure over constructor names is not,\nbecause a constructor nobody calls cannot be observed and Rust publishes no\nfunction list at run time."
+      },
+      {
+        "file": "vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs",
+        "test": "runtime_unsafe_permission_matches_the_recorded_set_and_every_grant_states_an_obligation",
+        "reason": "Holds the recorded `unsafe` permission set equal to the modules whose source\ncarries an unsafe block or an allow attribute, and requires each grant to state\nits obligation. An `unsafe` block compiles into ordinary code with no run-time\nmarker, so the declaration is the only place the grant exists."
+      },
+      {
+        "file": "vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs",
+        "test": "source_derived_quota_space_closure_fails_on_unrecorded_fields",
+        "reason": "Holds the quota coverage table equal to the fields the quota structs declare.\nStruct fields carry no run-time listing, so a limit added without a covering row\nwould otherwise ship unbounded with the suite still green."
+      },
+      {
+        "file": "vyre-spec/tests/one_public_path_per_item.rs",
+        "test": "no_item_is_published_at_two_paths",
+        "reason": "Assert that no item vyre-spec publishes is reachable at two public paths, and\nthat the module walk that judges it reached the crate rather than an empty set.\nA second path compiles, renders and imports exactly like the first, so nothing a\nrunning program observes separates them. The module tree is read from\n`vyre-spec/src` at run time."
+      },
+      {
+        "file": "vyre-spec/tests/one_public_path_per_item.rs",
+        "test": "the_walk_actually_reaches_the_crate",
+        "reason": "Assert that no item vyre-spec publishes is reachable at two public paths, and\nthat the module walk that judges it reached the crate rather than an empty set.\nA second path compiles, renders and imports exactly like the first, so nothing a\nrunning program observes separates them. The module tree is read from\n`vyre-spec/src` at run time."
+      },
+      {
+        "file": "xtask/tests/test_source_paths.rs",
+        "test": "tests_are_declared_under_cfg_test",
+        "reason": "Asserts that every `src/**/tests.rs` in the workspace is declared under\n`#[cfg(test)]`, which is what makes the name-based skip in `is_test_source_path`\nsound. A module the predicate skips is not compiled into the build being judged,\nso no run reveals that one of them ships; the declaration is the witness. The\nfile set is derived from the workspace at run time."
+      },
+      {
+        "file": "xtask/src/gates/platform_support_matrix.rs",
+        "test": "every_driver_crate_reaches_the_roster_under_its_declared_identifier",
+        "reason": "Holds the platform-support roster equal to the driver crates present in the\ncheckout, each under the backend identifier its own source declares. A crate\nthat declares an identifier and never registers it produces no run-time entry to\ncompare against, so the declared constant is the set the document owes rows\nto."
+      },
+      {
+        "file": "xtask/src/gates/platform_support_matrix.rs",
+        "test": "every_declared_variant_reaches_the_document",
+        "reason": "Judge the gate that renders the platform-support document, whose input is the\n`HostOs` and `HostArch` declarations and the tier match in the platform source.\nReading them is the subject under test rather than a substitute for running it:\nthe assertions are on the document and the findings the gate produces, and the\ncell space has no run-time listing to derive instead."
+      },
+      {
+        "file": "xtask/src/gates/platform_support_matrix.rs",
+        "test": "a_cell_with_no_recorded_run_is_published_as_unproven",
+        "reason": "Judge the gate that renders the platform-support document, whose input is the\n`HostOs` and `HostArch` declarations and the tier match in the platform source.\nReading them is the subject under test rather than a substitute for running it:\nthe assertions are on the document and the findings the gate produces, and the\ncell space has no run-time listing to derive instead."
+      },
+      {
+        "file": "xtask/src/gates/platform_support_matrix.rs",
+        "test": "disagreeing_identity_digests_are_a_finding",
+        "reason": "Judge the gate that renders the platform-support document, whose input is the\n`HostOs` and `HostArch` declarations and the tier match in the platform source.\nReading them is the subject under test rather than a substitute for running it:\nthe assertions are on the document and the findings the gate produces, and the\ncell space has no run-time listing to derive instead."
+      },
+      {
+        "file": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
+        "test": "file_roles_classify_every_vyre_libs_file_uniquely",
+        "reason": "Judge the file-role closure that classifies every composition-domain source\nfile, including that an unregistered nested file and two overlapping roles both\nfail it. The subject under test is a rule over the file tree, so the tree is its\ninput; a role assignment produces no run-time artifact to observe instead."
+      },
+      {
+        "file": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
+        "test": "new_unregistered_nested_file_fails_role_closure",
+        "reason": "Judge the file-role closure that classifies every composition-domain source\nfile, including that an unregistered nested file and two overlapping roles both\nfail it. The subject under test is a rule over the file tree, so the tree is its\ninput; a role assignment produces no run-time artifact to observe instead."
+      },
+      {
+        "file": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
+        "test": "overlapping_file_roles_fails_role_closure",
+        "reason": "Judge the file-role closure that classifies every composition-domain source\nfile, including that an unregistered nested file and two overlapping roles both\nfail it. The subject under test is a rule over the file tree, so the tree is its\ninput; a role assignment produces no run-time artifact to observe instead."
       }
     ],
-    "blockers": [
-      "docs/testing/STRUCTURAL_GATES.toml: `every_published_quantized_entry_point_has_a_readback_contract_row` names `vyre-libs/tests/quantized_dispatch_variant_coverage_gate.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-      "docs/testing/STRUCTURAL_GATES.toml: `the_wrapper_set_is_derived_and_not_empty` names `vyre-libs/tests/graph_single_source_contracts.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-      "docs/testing/STRUCTURAL_GATES.toml: `every_dispatch_wrapper_names_the_graph_primitive_it_wraps` names `vyre-libs/tests/graph_single_source_contracts.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-      "docs/testing/STRUCTURAL_GATES.toml: `every_dispatch_wrapper_names_its_primitive_cpu_reference` names `vyre-libs/tests/graph_single_source_contracts.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-      "docs/testing/STRUCTURAL_GATES.toml: `no_dispatch_wrapper_is_shadowed_by_an_older_module_path` names `vyre-libs/tests/graph_single_source_contracts.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-      "docs/testing/STRUCTURAL_GATES.toml: `the_dispatch_module_declares_every_wrapper_once` names `vyre-libs/tests/graph_single_source_contracts.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one."
-    ]
+    "blockers": []
   },
   "panic_budget": {
     "schema_version": 1,
     "source": "docs/testing/PANIC_BUDGET.toml",
     "rows": [
       {
+        "crate_name": "conform",
+        "ceiling": 0,
+        "measured": 0
+      },
+      {
+        "crate_name": "consumers",
+        "ceiling": 0,
+        "measured": 0
+      },
+      {
         "crate_name": "structure-gate",
         "ceiling": 0,
-        "measured": 2
+        "measured": 0
+      },
+      {
+        "crate_name": "vyre-bench",
+        "ceiling": 0,
+        "measured": 0
       },
       {
         "crate_name": "vyre-driver",
@@ -1768,10 +1723,15 @@
       {
         "crate_name": "vyre-foundation",
         "ceiling": 0,
-        "measured": 8
+        "measured": 0
       },
       {
         "crate_name": "vyre-libs",
+        "ceiling": 0,
+        "measured": 0
+      },
+      {
+        "crate_name": "vyre-libs-builder",
         "ceiling": 0,
         "measured": 0
       },
@@ -1793,12 +1753,17 @@
       {
         "crate_name": "vyre-runtime",
         "ceiling": 0,
-        "measured": 3
+        "measured": 0
+      },
+      {
+        "crate_name": "vyre-spec",
+        "ceiling": 0,
+        "measured": 0
       },
       {
         "crate_name": "xtask",
         "ceiling": 0,
-        "measured": 1
+        "measured": 0
       },
       {
         "crate_name": "xtask-evidence",
@@ -1811,77 +1776,11 @@
         "measured": 0
       }
     ],
-    "unrecorded": [
-      "conform",
-      "consumers",
-      "vyre-bench",
-      "vyre-libs-builder",
-      "vyre-spec"
-    ],
+    "unrecorded": [],
     "notes": [],
-    "blockers": [
-      "conform carries 1 undocumented panic(s) outside the release surface and docs/testing/PANIC_BUDGET.toml records no ceiling for it",
-      "consumers carries 10 undocumented panic(s) outside the release surface and docs/testing/PANIC_BUDGET.toml records no ceiling for it",
-      "structure-gate carries 2 undocumented panic(s) outside the release surface against a ceiling of 0: document the contract in a `# Panics` section, return an error instead, or delete the panic",
-      "vyre-bench carries 25 undocumented panic(s) outside the release surface and docs/testing/PANIC_BUDGET.toml records no ceiling for it",
-      "vyre-foundation carries 8 undocumented panic(s) outside the release surface against a ceiling of 0: document the contract in a `# Panics` section, return an error instead, or delete the panic",
-      "vyre-libs-builder carries 1 undocumented panic(s) outside the release surface and docs/testing/PANIC_BUDGET.toml records no ceiling for it",
-      "vyre-runtime carries 3 undocumented panic(s) outside the release surface against a ceiling of 0: document the contract in a `# Panics` section, return an error instead, or delete the panic",
-      "vyre-spec carries 1 undocumented panic(s) outside the release surface and docs/testing/PANIC_BUDGET.toml records no ceiling for it",
-      "xtask carries 1 undocumented panic(s) outside the release surface against a ceiling of 0: document the contract in a `# Panics` section, return an error instead, or delete the panic"
-    ]
+    "blockers": []
   },
   "finding_classes": [
-    {
-      "path": "conform/vyre-conform/src/coordinator.rs",
-      "line": 409,
-      "pattern": "truncating_duration_cast",
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "conform/vyre-conform/src/coordinator.rs",
-      "line": 425,
-      "pattern": "truncating_duration_cast",
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "conform/vyre-conform/src/coordinator.rs",
-      "line": 484,
-      "pattern": "truncating_duration_cast",
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "conform/vyre-conform/src/coordinator.rs",
-      "line": 532,
-      "pattern": "truncating_duration_cast",
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "conform/vyre-conform/src/coordinator.rs",
-      "line": 563,
-      "pattern": "truncating_duration_cast",
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
     {
       "path": "conform/vyre-conform/src/coordinator.rs",
       "line": 387,
@@ -1903,222 +1802,12 @@
       "release_blocker": false
     },
     {
-      "path": "conform/vyre-conform/src/law_survey.rs",
-      "line": 356,
-      "pattern": "expect_call",
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "conform/vyre-conform/src/worker.rs",
-      "line": 95,
-      "pattern": "truncating_duration_cast",
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "conform/vyre-conform/src/worker.rs",
-      "line": 22,
-      "pattern": "unbounded_read",
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "conform/vyre-conform/src/worker.rs",
-      "line": 268,
-      "pattern": "unbounded_read",
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "conform/vyre-conform/src/worker.rs",
-      "line": 291,
-      "pattern": "unbounded_read",
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
       "path": "conform/vyre-conform-spec/src/schema.rs",
       "line": 165,
       "pattern": "placeholder_text",
       "owner_lane": "testing_evidence",
       "surface": "production",
       "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 587,
-      "pattern": "truncating_duration_cast",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 594,
-      "pattern": "truncating_duration_cast",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 595,
-      "pattern": "truncating_duration_cast",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 640,
-      "pattern": "truncating_duration_cast",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 645,
-      "pattern": "truncating_duration_cast",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 646,
-      "pattern": "truncating_duration_cast",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 526,
-      "pattern": "expect_call",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 544,
-      "pattern": "expect_call",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 545,
-      "pattern": "expect_call",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 556,
-      "pattern": "unwrap_call",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 585,
-      "pattern": "unwrap_call",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/main.rs",
-      "line": 13,
-      "pattern": "expect_call",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "consumers/vyre-model-compiler/src/main.rs",
-      "line": 34,
-      "pattern": "panic_macro",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "consumers/vyre-model-compiler/src/main.rs",
-      "line": 44,
-      "pattern": "panic_macro",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "consumers/vyre-model-compiler/src/main.rs",
-      "line": 54,
-      "pattern": "panic_macro",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "consumers/vyre-model-compiler/src/main.rs",
-      "line": 64,
-      "pattern": "panic_macro",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
       "hot_path": false,
       "release_blocker": false
     },
@@ -2144,27 +1833,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 136,
-      "pattern": "panic_macro",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 138,
-      "pattern": "panic_macro",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 265,
+      "line": 143,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -2174,7 +1843,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 351,
+      "line": 145,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -2184,7 +1853,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 529,
+      "line": 272,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -2194,7 +1863,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 530,
+      "line": 358,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -2214,7 +1883,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 542,
+      "line": 537,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -2224,7 +1893,27 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 662,
+      "line": 543,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 549,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 669,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "production",
@@ -2234,7 +1923,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 697,
+      "line": 704,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "production",
@@ -2244,7 +1933,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 733,
+      "line": 740,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "production",
@@ -2254,39 +1943,9 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 753,
+      "line": 760,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-aot/src/bundle.rs",
-      "line": 262,
-      "pattern": "unbounded_read",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "vyre-aot/src/bundle.rs",
-      "line": 600,
-      "pattern": "unbounded_read",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "vyre-bench/src/evidence/campaign.rs",
-      "line": 69,
-      "pattern": "expect_call",
-      "owner_lane": "bench_harness",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -2294,238 +1953,18 @@
     },
     {
       "path": "vyre-bench/src/evidence/receipt.rs",
-      "line": 291,
-      "pattern": "expect_call",
+      "line": 289,
+      "pattern": "placeholder_text",
       "owner_lane": "bench_harness",
       "surface": "production",
-      "risk": "informational",
+      "risk": "release_debt",
       "hot_path": false,
       "release_blocker": false
     },
     {
       "path": "vyre-bench/src/evidence/receipt.rs",
-      "line": 315,
-      "pattern": "expect_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/provenance.rs",
-      "line": 227,
-      "pattern": "expect_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/provenance.rs",
-      "line": 233,
-      "pattern": "expect_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1681,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1684,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1687,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1690,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1739,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1774,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1817,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1866,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1869,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1872,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1875,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1924,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1956,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1999,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2047,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2050,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2053,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2085,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2128,
-      "pattern": "unwrap_call",
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2171,
-      "pattern": "unwrap_call",
+      "line": 297,
+      "pattern": "documented_panic_contract",
       "owner_lane": "bench_harness",
       "surface": "production",
       "risk": "informational",
@@ -2793,26 +2232,6 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-foundation/src/ir_inner/model/program_graph_delta.rs",
-      "line": 285,
-      "pattern": "expect_call",
-      "owner_lane": "foundation_wire",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-foundation/src/ir_inner/model/program_graph_delta.rs",
-      "line": 291,
-      "pattern": "expect_call",
-      "owner_lane": "foundation_wire",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "vyre-foundation/src/operation/call_graph.rs",
       "line": 158,
       "pattern": "documented_panic_contract",
@@ -2923,62 +2342,12 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-foundation/src/schedule/tree.rs",
-      "line": 756,
-      "pattern": "unwrap_call",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-foundation/src/schedule/tree.rs",
-      "line": 772,
-      "pattern": "unwrap_call",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-foundation/src/schedule/tree.rs",
-      "line": 788,
-      "pattern": "unwrap_call",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-foundation/src/schedule/typed.rs",
-      "line": 256,
-      "pattern": "unwrap_call",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "vyre-foundation/src/substrate/query.rs",
-      "line": 575,
-      "pattern": "expect_call",
+      "line": 591,
+      "pattern": "placeholder_text",
       "owner_lane": "coordination",
       "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-foundation/src/substrate/query.rs",
-      "line": 588,
-      "pattern": "expect_call",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
+      "risk": "release_debt",
       "hot_path": false,
       "release_blocker": false
     },
@@ -3046,16 +2415,6 @@
       "path": "vyre-libs-builder/src/builder/stencil.rs",
       "line": 152,
       "pattern": "documented_panic_contract",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-libs-builder/src/plumbing/host/scratch.rs",
-      "line": 74,
-      "pattern": "panic_macro",
       "owner_lane": "coordination",
       "surface": "production",
       "risk": "informational",
@@ -4013,16 +3372,6 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-runtime/src/artifact_admission/session.rs",
-      "line": 533,
-      "pattern": "expect_call",
-      "owner_lane": "runtime_resident_work_queue",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "vyre-runtime/src/resident_work_queue/descriptor/mod.rs",
       "line": 288,
       "pattern": "documented_panic_contract",
@@ -4114,38 +3463,8 @@
     },
     {
       "path": "vyre-runtime/src/structured_concurrency.rs",
-      "line": 280,
-      "pattern": "truncating_duration_cast",
-      "owner_lane": "runtime_resident_work_queue",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "vyre-runtime/src/structured_concurrency.rs",
       "line": 276,
       "pattern": "thread_sleep",
-      "owner_lane": "runtime_resident_work_queue",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-runtime/src/uring/raw_platform.rs",
-      "line": 469,
-      "pattern": "expect_call",
-      "owner_lane": "runtime_resident_work_queue",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-runtime/src/uring/raw_platform.rs",
-      "line": 493,
-      "pattern": "expect_call",
       "owner_lane": "runtime_resident_work_queue",
       "surface": "production",
       "risk": "informational",
@@ -4224,8 +3543,8 @@
     },
     {
       "path": "vyre-spec/src/schema_registry.rs",
-      "line": 163,
-      "pattern": "panic_macro",
+      "line": 170,
+      "pattern": "documented_panic_contract",
       "owner_lane": "foundation_wire",
       "surface": "production",
       "risk": "informational",
@@ -5688,9 +5007,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "consumers/vyre-model-compiler/tests/absence_proofs.rs",
@@ -5698,9 +5017,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "consumers/vyre-model-compiler/tests/absence_proofs.rs",
@@ -5708,19 +5027,19 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "consumers/vyre-model-compiler/tests/checkpoint_ingestion.rs",
-      "line": 417,
+      "line": 413,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "structure-gate/tests/checkout_provenance.rs",
@@ -5758,9 +5077,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre/tests/facade_boundary.rs",
@@ -5768,9 +5087,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre/tests/facade_boundary.rs",
@@ -5778,9 +5097,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-aot/tests/compile_request_fidelity.rs",
@@ -5788,9 +5107,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-aot/tests/compile_request_fidelity.rs",
@@ -5798,39 +5117,39 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
-      "line": 619,
+      "line": 617,
       "pattern": "source_inspection_test",
       "owner_lane": "bench_harness",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
-      "line": 700,
+      "line": 698,
       "pattern": "source_inspection_test",
       "owner_lane": "bench_harness",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
-      "line": 752,
+      "line": 750,
       "pattern": "source_inspection_test",
       "owner_lane": "bench_harness",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-bench/tests/case_declaration_contracts.rs",
@@ -5858,9 +5177,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "bench_harness",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-bench/tests/feature_cfg_contract.rs",
@@ -5878,9 +5197,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "driver_shared",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-driver/tests/error_code_catalog.rs",
@@ -5898,9 +5217,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "driver_shared",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-driver/tests/external_resource_path_agreement.rs",
@@ -5908,9 +5227,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "driver_shared",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-driver/tests/float_lowering_refusal.rs",
@@ -5918,9 +5237,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "driver_shared",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-driver/tests/vyre_backend_forwarding_closure.rs",
@@ -5958,9 +5277,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "lower_emit",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-emit-ptx/tests/physical_ir_variant_exhaustiveness.rs",
@@ -5968,9 +5287,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "lower_emit",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-foundation/tests/async_tag_discipline.rs",
@@ -5988,9 +5307,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-foundation/tests/expr_type_single_owner.rs",
@@ -6078,9 +5397,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-libs/tests/device_resident_token_fact_graph_ownership.rs",
@@ -6258,9 +5577,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
@@ -6268,9 +5587,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
@@ -6278,9 +5597,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
@@ -6288,9 +5607,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
@@ -6298,9 +5617,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-libs-solvers/tests/quantized_dispatch_variant_coverage_gate.rs",
@@ -6308,9 +5627,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-lower/tests/physical_ir_emitter_exhaustive_decisions.rs",
@@ -6318,9 +5637,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "lower_emit",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-lower/tests/physical_kernel_ir_policy_boundary.rs",
@@ -6328,9 +5647,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "lower_emit",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-lower/tests/physical_kernel_ir_policy_boundary.rs",
@@ -6338,9 +5657,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "lower_emit",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-megakernel/tests/compile_objective.rs",
@@ -6398,9 +5717,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-runtime/tests/ring_fault_selection_is_typed.rs",
@@ -6418,9 +5737,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs",
@@ -6428,9 +5747,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs",
@@ -6438,9 +5757,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-spec/tests/one_public_path_per_item.rs",
@@ -6448,9 +5767,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "foundation_wire",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-spec/tests/one_public_path_per_item.rs",
@@ -6458,9 +5777,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "foundation_wire",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "vyre-spec/tests/token_ids_have_one_owner.rs",
@@ -6954,7 +6273,7 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/tests.rs",
-      "line": 1690,
+      "line": 1746,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6978,9 +6297,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/tests/tree_contracts/cargo_invocation_resolution.rs",
@@ -7061,16 +6380,6 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false
-    },
-    {
-      "path": "xtask/src/config_space/facade_manifest.rs",
-      "line": 17,
-      "pattern": "raw_workspace_cargo",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
     },
     {
       "path": "xtask/src/fixture_checkout.rs",
@@ -7474,48 +6783,38 @@
     },
     {
       "path": "xtask/src/gates/platform_support_matrix.rs",
-      "line": 996,
+      "line": 1001,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/platform_support_matrix.rs",
-      "line": 1045,
+      "line": 1050,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/platform_support_matrix.rs",
-      "line": 1141,
+      "line": 1146,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/src/gates/platform_support_matrix.rs",
-      "line": 1201,
+      "line": 1206,
       "pattern": "source_inspection_test",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "xtask/src/gates/testing_guides.rs",
-      "line": 241,
-      "pattern": "expect_call",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
       "risk": "informational",
@@ -7688,9 +6987,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
@@ -7698,9 +6997,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
@@ -7708,43 +7007,13 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     }
   ],
-  "release_blocker_count": 63,
+  "release_blocker_count": 0,
   "findings": [
-    {
-      "path": "conform/vyre-conform/src/coordinator.rs",
-      "line": 409,
-      "pattern": "truncating_duration_cast",
-      "text": "elapsed_ms: started.elapsed().as_millis() as u64,"
-    },
-    {
-      "path": "conform/vyre-conform/src/coordinator.rs",
-      "line": 425,
-      "pattern": "truncating_duration_cast",
-      "text": "let elapsed_ms = started.elapsed().as_millis() as u64;"
-    },
-    {
-      "path": "conform/vyre-conform/src/coordinator.rs",
-      "line": 484,
-      "pattern": "truncating_duration_cast",
-      "text": "elapsed_ms: started.elapsed().as_millis() as u64,"
-    },
-    {
-      "path": "conform/vyre-conform/src/coordinator.rs",
-      "line": 532,
-      "pattern": "truncating_duration_cast",
-      "text": "elapsed_ms: started.elapsed().as_millis() as u64,"
-    },
-    {
-      "path": "conform/vyre-conform/src/coordinator.rs",
-      "line": 563,
-      "pattern": "truncating_duration_cast",
-      "text": "elapsed_ms: started.elapsed().as_millis() as u64,"
-    },
     {
       "path": "conform/vyre-conform/src/coordinator.rs",
       "line": 387,
@@ -7758,136 +7027,10 @@
       "text": "std::thread::sleep(Duration::from_millis(5));"
     },
     {
-      "path": "conform/vyre-conform/src/law_survey.rs",
-      "line": 356,
-      "pattern": "expect_call",
-      "text": ".expect(\"an absence disposition states the decision it requires\");"
-    },
-    {
-      "path": "conform/vyre-conform/src/worker.rs",
-      "line": 95,
-      "pattern": "truncating_duration_cast",
-      "text": "let elapsed_ms = started.elapsed().as_millis() as u64;"
-    },
-    {
-      "path": "conform/vyre-conform/src/worker.rs",
-      "line": 22,
-      "pattern": "unbounded_read",
-      "text": "if let Err(e) = std::io::stdin().read_to_end(&mut stdin_bytes) {"
-    },
-    {
-      "path": "conform/vyre-conform/src/worker.rs",
-      "line": 268,
-      "pattern": "unbounded_read",
-      "text": "if let Ok(bytes) = std::fs::read(&exe_path) {"
-    },
-    {
-      "path": "conform/vyre-conform/src/worker.rs",
-      "line": 291,
-      "pattern": "unbounded_read",
-      "text": "if let Ok(statm) = std::fs::read_to_string(\"/proc/self/statm\") {"
-    },
-    {
       "path": "conform/vyre-conform-spec/src/schema.rs",
       "line": 165,
       "pattern": "placeholder_text",
       "text": "/// Construct an unsigned certificate with deterministic placeholder fields."
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 587,
-      "pattern": "truncating_duration_cast",
-      "text": "cpu_sub_times.push(sub_time.as_nanos() as u64);"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 594,
-      "pattern": "truncating_duration_cast",
-      "text": "latencies.push(total_latency.as_nanos() as u64);"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 595,
-      "pattern": "truncating_duration_cast",
-      "text": "frame_times.push(frame_time.as_nanos() as u64);"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 640,
-      "pattern": "truncating_duration_cast",
-      "text": "compile_pipeline_time_ns: compile_pipeline_time.as_nanos() as u64,"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 645,
-      "pattern": "truncating_duration_cast",
-      "text": "empty_work_latency_ns: empty_work_latency.as_nanos() as u64,"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 646,
-      "pattern": "truncating_duration_cast",
-      "text": "device_loss_recovery_latency_ns: dev_loss_recovery_latency.as_nanos() as u64,"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 526,
-      "pattern": "expect_call",
-      "text": "let graph = build_interactive_graphics_pipeline(params).expect(\"graph build\");"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 544,
-      "pattern": "expect_call",
-      "text": ".expect(\"validate\");"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 545,
-      "pattern": "expect_call",
-      "text": "let _artifact = compile(&request).expect(\"compile\");"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 556,
-      "pattern": "unwrap_call",
-      "text": "renderer.handle_event(InteractiveEvent::DeviceLoss).unwrap();"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/lib.rs",
-      "line": 585,
-      "pattern": "unwrap_call",
-      "text": "renderer.handle_event(event).unwrap();"
-    },
-    {
-      "path": "consumers/vyre-graphics-app/src/main.rs",
-      "line": 13,
-      "pattern": "expect_call",
-      "text": "let json = serde_json::to_string_pretty(&report).expect(\"serialize report\");"
-    },
-    {
-      "path": "consumers/vyre-model-compiler/src/main.rs",
-      "line": 34,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|e| panic!(\"Prefill compilation failed for {}: {e}\", config.name));"
-    },
-    {
-      "path": "consumers/vyre-model-compiler/src/main.rs",
-      "line": 44,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|e| panic!(\"Prefill admission failed for {}: {e}\", config.name));"
-    },
-    {
-      "path": "consumers/vyre-model-compiler/src/main.rs",
-      "line": 54,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|e| panic!(\"Decode compilation failed for {}: {e}\", config.name));"
-    },
-    {
-      "path": "consumers/vyre-model-compiler/src/main.rs",
-      "line": 64,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|e| panic!(\"Decode admission failed for {}: {e}\", config.name));"
     },
     {
       "path": "structure-gate/src/source_scan.rs",
@@ -7903,241 +7046,91 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 136,
-      "pattern": "panic_macro",
+      "line": 143,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest_path.display()));"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 138,
-      "pattern": "panic_macro",
+      "line": 145,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest_path.display()));"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 265,
+      "line": 272,
       "pattern": "documented_panic_contract",
       "text": "lane.join().expect(\"a member source lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 351,
+      "line": 358,
       "pattern": "documented_panic_contract",
       "text": "lane.join().expect(\"a crate root lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 529,
+      "line": 536,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 530,
+      "line": 537,
       "pattern": "documented_panic_contract",
       "text": "if let Some(root) = ROOTS.lock().expect(POISONED).get(&start) {"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 536,
+      "line": 543,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 542,
+      "line": 549,
       "pattern": "documented_panic_contract",
       "text": "ROOTS.lock().expect(POISONED).insert(start, root.clone());"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 662,
+      "line": 669,
       "pattern": "source_inspection_test",
       "text": "test `a_second_request_for_the_tree_does_not_walk_it_again` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "a_second_request_for_the_tree_does_not_walk_it_again"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 697,
+      "line": 704,
       "pattern": "source_inspection_test",
       "text": "test `a_subtree_range_holds_exactly_the_sources_under_it` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "a_subtree_range_holds_exactly_the_sources_under_it"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 733,
+      "line": 740,
       "pattern": "source_inspection_test",
       "text": "test `a_second_request_for_the_same_roster_shares_the_first_read` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "a_second_request_for_the_same_roster_shares_the_first_read"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 753,
+      "line": 760,
       "pattern": "source_inspection_test",
       "text": "test `a_narrower_roster_is_not_served_the_wider_read` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "a_narrower_roster_is_not_served_the_wider_read"
     },
     {
-      "path": "vyre-aot/src/bundle.rs",
-      "line": 262,
-      "pattern": "unbounded_read",
-      "text": "let compressed = fs::read(bundle_dir.join(&manifest.weights_file))?;"
-    },
-    {
-      "path": "vyre-aot/src/bundle.rs",
-      "line": 600,
-      "pattern": "unbounded_read",
-      "text": ".read_to_end(&mut out)"
-    },
-    {
-      "path": "vyre-bench/src/evidence/campaign.rs",
-      "line": 69,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: keep MeasurementCellSpec fields serializable\");"
+      "path": "vyre-bench/src/evidence/receipt.rs",
+      "line": 289,
+      "pattern": "placeholder_text",
+      "text": "/// Panics when the receipt does not serialize. A placeholder address would"
     },
     {
       "path": "vyre-bench/src/evidence/receipt.rs",
-      "line": 291,
-      "pattern": "expect_call",
+      "line": 297,
+      "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: keep every BenchmarkReceipt field serializable; a map key that is not a string breaks the content address\");"
-    },
-    {
-      "path": "vyre-bench/src/evidence/receipt.rs",
-      "line": 315,
-      "pattern": "expect_call",
-      "text": "serde_json::to_vec(&canonical).expect(\"Fix: keep input identity fields serializable\");"
-    },
-    {
-      "path": "vyre-bench/src/workloads/provenance.rs",
-      "line": 227,
-      "pattern": "expect_call",
-      "text": ".expect(\"a day of month is within 1..=31\");"
-    },
-    {
-      "path": "vyre-bench/src/workloads/provenance.rs",
-      "line": 233,
-      "pattern": "expect_call",
-      "text": ".expect(\"a month is within 1..=12\");"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1681,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1684,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1687,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1690,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1739,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1774,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1817,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1866,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1869,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1872,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1875,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1924,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1956,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 1999,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2047,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2050,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2053,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2085,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2128,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-bench/src/workloads/whole_app.rs",
-      "line": 2171,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
     },
     {
       "path": "vyre-driver/src/backend/vyre_backend.rs",
@@ -8296,18 +7289,6 @@
       "text": "/// node records placeholder operands. Emit"
     },
     {
-      "path": "vyre-foundation/src/ir_inner/model/program_graph_delta.rs",
-      "line": 285,
-      "pattern": "expect_call",
-      "text": "self.try_push(op).expect(\"Delta bounds exceeded\");"
-    },
-    {
-      "path": "vyre-foundation/src/ir_inner/model/program_graph_delta.rs",
-      "line": 291,
-      "pattern": "expect_call",
-      "text": "self.try_push(op).expect(\"Delta bounds exceeded\");"
-    },
-    {
       "path": "vyre-foundation/src/operation/call_graph.rs",
       "line": 158,
       "pattern": "documented_panic_contract",
@@ -8374,40 +7355,10 @@
       "text": "Err(error) => panic!("
     },
     {
-      "path": "vyre-foundation/src/schedule/tree.rs",
-      "line": 756,
-      "pattern": "unwrap_call",
-      "text": "flat.pop().unwrap()"
-    },
-    {
-      "path": "vyre-foundation/src/schedule/tree.rs",
-      "line": 772,
-      "pattern": "unwrap_call",
-      "text": "flat.pop().unwrap()"
-    },
-    {
-      "path": "vyre-foundation/src/schedule/tree.rs",
-      "line": 788,
-      "pattern": "unwrap_call",
-      "text": "let bytes: [u8; 8] = digest.as_bytes()[0..8].try_into().unwrap();"
-    },
-    {
-      "path": "vyre-foundation/src/schedule/typed.rs",
-      "line": 256,
-      "pattern": "unwrap_call",
-      "text": "trees.pop().unwrap()"
-    },
-    {
       "path": "vyre-foundation/src/substrate/query.rs",
-      "line": 575,
-      "pattern": "expect_call",
-      "text": "outputs.push(handle.join().expect(\"Thread panicked in query execution\")?);"
-    },
-    {
-      "path": "vyre-foundation/src/substrate/query.rs",
-      "line": 588,
-      "pattern": "expect_call",
-      "text": ".map(|opt| opt.expect(\"All outputs present\"))"
+      "line": 591,
+      "pattern": "placeholder_text",
+      "text": "// output is cloned to leave a placeholder behind."
     },
     {
       "path": "vyre-foundation/src/validate/binding.rs",
@@ -8450,12 +7401,6 @@
       "line": 152,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: cols * rows overflows u32\");"
-    },
-    {
-      "path": "vyre-libs-builder/src/plumbing/host/scratch.rs",
-      "line": 74,
-      "pattern": "panic_macro",
-      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
     },
     {
       "path": "vyre-libs-graph/src/graph/ast_walk.rs",
@@ -9028,12 +7973,6 @@
       "text": "// op whose fixture carried a placeholder for a backend-allocated output"
     },
     {
-      "path": "vyre-runtime/src/artifact_admission/session.rs",
-      "line": 533,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: prepare a payload in phase 1 for every non-resident dataset entry before resolving resources\");"
-    },
-    {
       "path": "vyre-runtime/src/resident_work_queue/descriptor/mod.rs",
       "line": 288,
       "pattern": "documented_panic_contract",
@@ -9089,27 +8028,9 @@
     },
     {
       "path": "vyre-runtime/src/structured_concurrency.rs",
-      "line": 280,
-      "pattern": "truncating_duration_cast",
-      "text": "let elapsed = start.elapsed().as_micros() as u64;"
-    },
-    {
-      "path": "vyre-runtime/src/structured_concurrency.rs",
       "line": 276,
       "pattern": "thread_sleep",
       "text": "thread::sleep(poll_step);"
-    },
-    {
-      "path": "vyre-runtime/src/uring/raw_platform.rs",
-      "line": 469,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: cap the submission-queue index at the ring's entry count\");"
-    },
-    {
-      "path": "vyre-runtime/src/uring/raw_platform.rs",
-      "line": 493,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: cap the completion-queue index at the ring's entry count\");"
     },
     {
       "path": "vyre-spec/src/all_algebraic_laws.rs",
@@ -9155,8 +8076,8 @@
     },
     {
       "path": "vyre-spec/src/schema_registry.rs",
-      "line": 163,
-      "pattern": "panic_macro",
+      "line": 170,
+      "pattern": "documented_panic_contract",
       "text": "panic!(\"unregistered schema id\")"
     },
     {
@@ -10053,7 +8974,7 @@
     },
     {
       "path": "consumers/vyre-model-compiler/tests/checkpoint_ingestion.rs",
-      "line": 417,
+      "line": 413,
       "pattern": "source_inspection_test",
       "text": "test `covered_dtypes_match_the_safetensors_declaration` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "covered_dtypes_match_the_safetensors_declaration"
@@ -10116,21 +9037,21 @@
     },
     {
       "path": "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
-      "line": 619,
+      "line": 617,
       "pattern": "source_inspection_test",
       "text": "test `test_every_record_field_has_a_recorded_source` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "test_every_record_field_has_a_recorded_source"
     },
     {
       "path": "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
-      "line": 700,
+      "line": 698,
       "pattern": "source_inspection_test",
       "text": "test `test_producer_carries_no_measurement_constants` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "test_producer_carries_no_measurement_constants"
     },
     {
       "path": "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
-      "line": 752,
+      "line": 750,
       "pattern": "source_inspection_test",
       "text": "test `test_no_test_writes_into_tracked_evidence_paths` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "test_no_test_writes_into_tracked_evidence_paths"
@@ -10921,7 +9842,7 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/tests.rs",
-      "line": 1690,
+      "line": 1746,
       "pattern": "source_inspection_test",
       "text": "test `every_xtask_crate_carries_the_release_tooling_rules` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_xtask_crate_carries_the_release_tooling_rules"
@@ -10994,12 +9915,6 @@
       "line": 586,
       "pattern": "documented_panic_contract",
       "text": "let (lane_entries, lane_errors) = handle.join().expect("
-    },
-    {
-      "path": "xtask/src/config_space/facade_manifest.rs",
-      "line": 17,
-      "pattern": "raw_workspace_cargo",
-      "text": "const HEADER: &str = \"# Generated by `cargo xtask configuration-model --write` from the [facade]\\n\\"
     },
     {
       "path": "xtask/src/fixture_checkout.rs",
@@ -11245,37 +10160,31 @@
     },
     {
       "path": "xtask/src/gates/platform_support_matrix.rs",
-      "line": 996,
+      "line": 1001,
       "pattern": "source_inspection_test",
       "text": "test `every_driver_crate_reaches_the_roster_under_its_declared_identifier` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_driver_crate_reaches_the_roster_under_its_declared_identifier"
     },
     {
       "path": "xtask/src/gates/platform_support_matrix.rs",
-      "line": 1045,
+      "line": 1050,
       "pattern": "source_inspection_test",
       "text": "test `every_declared_variant_reaches_the_document` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_declared_variant_reaches_the_document"
     },
     {
       "path": "xtask/src/gates/platform_support_matrix.rs",
-      "line": 1141,
+      "line": 1146,
       "pattern": "source_inspection_test",
       "text": "test `a_cell_with_no_recorded_run_is_published_as_unproven` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "a_cell_with_no_recorded_run_is_published_as_unproven"
     },
     {
       "path": "xtask/src/gates/platform_support_matrix.rs",
-      "line": 1201,
+      "line": 1206,
       "pattern": "source_inspection_test",
       "text": "test `disagreeing_identity_digests_are_a_finding` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "disagreeing_identity_digests_are_a_finding"
-    },
-    {
-      "path": "xtask/src/gates/testing_guides.rs",
-      "line": 241,
-      "pattern": "expect_call",
-      "text": "let last = testing.last().expect(\"a non-empty slice has a last element\");"
     },
     {
       "path": "xtask/src/release/package_readiness/archive_contracts.rs",
@@ -11395,22 +10304,5 @@
       "test": "overlapping_file_roles_fails_role_closure"
     }
   ],
-  "blockers": [
-    "63 release-blocking source hygiene finding(s) remain; 588 total finding(s) preserved in classification output",
-    "docs/testing/STRUCTURAL_GATES.toml: `every_published_quantized_entry_point_has_a_readback_contract_row` names `vyre-libs/tests/quantized_dispatch_variant_coverage_gate.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-    "docs/testing/STRUCTURAL_GATES.toml: `the_wrapper_set_is_derived_and_not_empty` names `vyre-libs/tests/graph_single_source_contracts.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-    "docs/testing/STRUCTURAL_GATES.toml: `every_dispatch_wrapper_names_the_graph_primitive_it_wraps` names `vyre-libs/tests/graph_single_source_contracts.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-    "docs/testing/STRUCTURAL_GATES.toml: `every_dispatch_wrapper_names_its_primitive_cpu_reference` names `vyre-libs/tests/graph_single_source_contracts.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-    "docs/testing/STRUCTURAL_GATES.toml: `no_dispatch_wrapper_is_shadowed_by_an_older_module_path` names `vyre-libs/tests/graph_single_source_contracts.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-    "docs/testing/STRUCTURAL_GATES.toml: `the_dispatch_module_declares_every_wrapper_once` names `vyre-libs/tests/graph_single_source_contracts.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
-    "conform carries 1 undocumented panic(s) outside the release surface and docs/testing/PANIC_BUDGET.toml records no ceiling for it",
-    "consumers carries 10 undocumented panic(s) outside the release surface and docs/testing/PANIC_BUDGET.toml records no ceiling for it",
-    "structure-gate carries 2 undocumented panic(s) outside the release surface against a ceiling of 0: document the contract in a `# Panics` section, return an error instead, or delete the panic",
-    "vyre-bench carries 25 undocumented panic(s) outside the release surface and docs/testing/PANIC_BUDGET.toml records no ceiling for it",
-    "vyre-foundation carries 8 undocumented panic(s) outside the release surface against a ceiling of 0: document the contract in a `# Panics` section, return an error instead, or delete the panic",
-    "vyre-libs-builder carries 1 undocumented panic(s) outside the release surface and docs/testing/PANIC_BUDGET.toml records no ceiling for it",
-    "vyre-runtime carries 3 undocumented panic(s) outside the release surface against a ceiling of 0: document the contract in a `# Panics` section, return an error instead, or delete the panic",
-    "vyre-spec carries 1 undocumented panic(s) outside the release surface and docs/testing/PANIC_BUDGET.toml records no ceiling for it",
-    "xtask carries 1 undocumented panic(s) outside the release surface against a ceiling of 0: document the contract in a `# Panics` section, return an error instead, or delete the panic"
-  ]
+  "blockers": []
 }

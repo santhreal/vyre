@@ -8,7 +8,9 @@ use vyre_libs_builder::builder::BuildOptions;
 use vyre_libs_builder::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
 use super::mma_fragment::{gate_mma_path, MmaCapabilityRecord};
-use super::program::{build_matmul_tiled_program, MatmulTiledProgramSpec};
+use super::program::{
+    attribute_contraction_to_semiring_gemm, build_matmul_tiled_program, MatmulTiledProgramSpec,
+};
 use super::shape::MatrixShape;
 use super::tensor_core_policy::{
     plan_matmul_kernel, select_matmul_kernel, F32MatmulMode, MatmulKernelCapabilities,
@@ -96,7 +98,8 @@ impl MatmulTiledCore {
         let composer = ContractionComposer::tiled_2d(
             self.op_id, self.a, self.b, self.bias, self.out, m, k, n, self.tile,
         );
-        super::super::apply_contraction_options(composer, &self.options).build()
+        let program = super::super::apply_contraction_options(composer, &self.options).build()?;
+        Ok(attribute_contraction_to_semiring_gemm(program))
     }
 
     /// The tensor-core body is a distinct program shape rather than an option
