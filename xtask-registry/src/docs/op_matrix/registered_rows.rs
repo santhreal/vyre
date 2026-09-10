@@ -263,6 +263,11 @@ fn resolve_source_dir(root: &Path, crate_name: &str, domain: &str) -> String {
 
 /// Every `vyre-libs*` crate in the checkout that ships a `src` tree, as
 /// `<crate>/src`, shallowest name first for a stable answer.
+///
+/// Shipping a `src` tree is read from the Rust source under it. The split of
+/// `vyre-libs` into 22 domain crates left a `src` directory behind in every
+/// checkout that pulled a deletion, and a crate named from such a shell reaches
+/// the owner column as the owner of code defined somewhere else.
 fn composition_crate_sources(root: &Path) -> Vec<String> {
     let Ok(entries) = std::fs::read_dir(root) else {
         return Vec::new();
@@ -275,7 +280,8 @@ fn composition_crate_sources(root: &Path) -> Vec<String> {
                 || name
                     .strip_prefix("vyre-libs-")
                     .is_some_and(|domain| !domain.is_empty());
-            (is_composition && entry.path().join("src").is_dir()).then(|| format!("{name}/src"))
+            (is_composition && carries_rust_source(&entry.path().join("src")))
+                .then(|| format!("{name}/src"))
         })
         .collect();
     sources.sort();
