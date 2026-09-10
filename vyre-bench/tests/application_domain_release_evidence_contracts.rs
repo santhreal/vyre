@@ -47,6 +47,37 @@ fn repository_source(relative: &str) -> String {
     fs::read_to_string(&path).unwrap_or_else(|error| panic!("read {}: {error}", path.display()))
 }
 
+/// The producer sources of the whole-application record, discovered at run
+/// time.
+///
+/// The producer was one file and is now a module directory. A hardcoded file
+/// path turned both scans below into a read error rather than a contract the
+/// moment the module was split, so the file set is read from the directory.
+fn whole_app_producer_sources() -> Vec<(String, String)> {
+    let root = repository_file("vyre-bench/src/workloads/whole_app");
+    let workspace = vyre_test_support::monorepo::vyre_workspace_root();
+    let mut sources: Vec<(String, String)> = rust_files(&root)
+        .into_iter()
+        .map(|path| {
+            let text = fs::read_to_string(&path)
+                .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
+            let relative = path
+                .strip_prefix(&workspace)
+                .unwrap_or(path.as_path())
+                .display()
+                .to_string();
+            (relative, text)
+        })
+        .collect();
+    sources.sort();
+    assert!(
+        !sources.is_empty(),
+        "Fix: the whole-application producer module must hold at least one source file at {}",
+        root.display()
+    );
+    sources
+}
+
 /// Every `.rs` file under one directory, discovered at run time.
 fn rust_files(root: &Path) -> Vec<PathBuf> {
     let mut pending = vec![root.to_path_buf()];
@@ -615,16 +646,31 @@ fn test_parity_is_derived_from_compared_bytes() {
 /// field the record does not carry.
 #[test]
 fn test_every_record_field_has_a_recorded_source() {
-    let source = repository_source("vyre-bench/src/workloads/whole_app.rs");
-    let file = syn::parse_file(&source).expect("parse whole_app.rs");
-    let record_struct = file
+    let sources = whole_app_producer_sources();
+    let record_struct_source = sources
+        .iter()
+        .map(|(relative, text)| {
+            (
+                relative,
+                syn::parse_file(text).unwrap_or_else(|error| panic!("parse {relative}: {error}")),
+            )
+        })
+        .find_map(|(relative, file)| {
+            file.items.iter().any(|item| {
+                matches!(item, syn::Item::Struct(item) if item.ident == "WholeApplicationRecord")
+            })
+            .then(|| (relative.clone(), file))
+        })
+        .expect("Fix: the whole-application producer must define WholeApplicationRecord");
+    let (record_source_name, record_file) = record_struct_source;
+    let record_struct = record_file
         .items
         .iter()
         .find_map(|item| match item {
             syn::Item::Struct(item) if item.ident == "WholeApplicationRecord" => Some(item),
             _ => None,
         })
-        .expect("whole_app.rs must define WholeApplicationRecord");
+        .unwrap_or_else(|| panic!("{record_source_name} must define WholeApplicationRecord"));
     let declared: BTreeSet<String> = record_struct
         .fields
         .iter()
@@ -696,14 +742,16 @@ fn test_every_record_field_has_a_recorded_source() {
 /// evidence artifact.
 #[test]
 fn test_producer_carries_no_measurement_constants() {
+    let mut scanned: Vec<(String, String)> = whole_app_producer_sources();
     for relative in [
-        "vyre-bench/src/workloads/whole_app.rs",
         "vyre-bench/src/workloads/provenance.rs",
         "vyre-bench/src/workloads/native_baseline.rs",
     ] {
-        let source = repository_source(relative);
+        scanned.push((relative.to_string(), repository_source(relative)));
+    }
+    for (relative, source) in &scanned {
         assert!(
-            !contains_literal_timestamp(&source),
+            !contains_literal_timestamp(source),
             "Fix: `{relative}` carries a literal UTC timestamp. A recorded instant comes from the clock at record time."
         );
         assert!(
@@ -724,19 +772,23 @@ fn test_producer_carries_no_measurement_constants() {
         );
     }
 
-    let producer = repository_source("vyre-bench/src/workloads/whole_app.rs");
-    for line in producer.lines() {
-        let trimmed = line.trim();
-        if !trimmed.contains("native_p50_latency_ns:") || trimmed.starts_with("pub ") {
-            continue;
+    let producer_sources = whole_app_producer_sources();
+    for (relative, source) in &producer_sources {
+        for line in source.lines() {
+            let trimmed = line.trim();
+            if !trimmed.contains("native_p50_latency_ns:") || trimmed.starts_with("pub ") {
+                continue;
+            }
+            assert!(
+                trimmed.contains("measurement.p50_latency_ns"),
+                "Fix: a native baseline latency is read from the pinned baseline's own measurement, not derived. Offending assignment in `{relative}`: `{trimmed}`"
+            );
         }
-        assert!(
-            trimmed.contains("measurement.p50_latency_ns"),
-            "Fix: a native baseline latency is read from the pinned baseline's own measurement, not derived. Offending assignment: `{trimmed}`"
-        );
     }
     assert!(
-        producer.contains("measurement.p50_latency_ns"),
+        producer_sources
+            .iter()
+            .any(|(_, source)| source.contains("measurement.p50_latency_ns")),
         "Fix: the producer must read the native latency from the pinned baseline measurement"
     );
 }

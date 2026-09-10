@@ -47,3 +47,8 @@ fn every_registered_composition_output_is_invariant_under_grid_overfire() {
 fn every_registered_composition_is_race_free_under_lane_reversal() {
     sweep().assert_race_free_under_lane_reversal();
 }
+
+#[test]
+fn every_registered_composition_is_oob_clean_on_hostile_buffer_contents() {
+    sweep().assert_oob_clean_under_hostile_contents();
+}

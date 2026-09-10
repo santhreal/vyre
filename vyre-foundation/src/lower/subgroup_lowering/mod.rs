@@ -5,6 +5,7 @@
 //! reports native subgroup support and the workgroup shape fits the
 //! subgroup size.
 
+use crate::composition::bounded_index;
 use crate::ir::{Expr, Node, Program, SubgroupReduceOp};
 use crate::optimizer::ctx::AdapterCaps;
 use crate::optimizer::rewrite::rewrite_node_slices;
@@ -348,11 +349,15 @@ fn two_level_subgroup_reduce_body(
             )],
         ),
     ];
+    // Every lane in the workgroup reaches the second-level reduce, and the scratch
+    // slab holds one slot per subgroup. A select evaluates both arms, so a lane past
+    // the subgroup count reads the slab too: its index is folded inside the slab and
+    // the same select replaces the value with the reduction's neutral element.
     let second_level_sum = Expr::subgroup_reduce(
         op,
         Expr::select(
             Expr::lt(lane(), Expr::u32(subgroup_count)),
-            Expr::load(scratch, lane()),
+            Expr::load(scratch, bounded_index(lane(), Expr::u32(subgroup_count))),
             value_type.neutral(op)?,
         ),
     );

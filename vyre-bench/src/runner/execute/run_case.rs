@@ -5,12 +5,14 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
-use crate::api::case::{BenchContext, Correctness, PerformanceContract, PerformanceEvaluation};
+use crate::api::case::{
+    BenchContext, Correctness, DeviceBound, PerformanceContract, PerformanceEvaluation,
+};
 use crate::api::metric::{digest64_buffers, elapsed_ns, MetricStats};
 use crate::api::suite::SuiteKind;
 use crate::report::json::{benchmark_device_signature, benchmark_held_out_corpus_id, CaseReport};
 
-use super::collect::collect_samples;
+use super::collect::{collect_samples, derive_roofline_fractions};
 use super::stats::{compute_stats, percentile};
 use super::target_samples;
 use super::RunConfig;
@@ -206,6 +208,8 @@ pub(super) fn run_case(
     if samples.get("wall_ns").is_none_or(Vec::is_empty) {
         return Err("benchmark produced no wall_ns samples".to_string());
     }
+
+    derive_roofline_fractions(&mut samples);
 
     let mut metrics = BTreeMap::new();
     for (name, values) in samples {
@@ -549,12 +553,14 @@ fn workload_fingerprint(case_id: &str, program_fingerprint: Option<[u8; 32]>) ->
     encoded
 }
 
-pub(crate) fn evaluate_contract(
-    contract: &PerformanceContract,
-    metrics: &BTreeMap<String, MetricStats>,
-    backend_id: &str,
-) -> PerformanceEvaluation {
-    let active_gpu = metrics
+/// The device's own active time for one sample, in the order of preference the
+/// backends report it.
+///
+/// `wall_ns` is the last resort rather than the first: it includes host
+/// overhead and readback, so a case that reports device time is judged on
+/// device time and only a case that reports none falls back to its wall clock.
+fn device_active_time(metrics: &BTreeMap<String, MetricStats>) -> Option<&MetricStats> {
+    metrics
         .get("dispatch_ns")
         .filter(|stats| stats.p50 > 0)
         .or_else(|| {
@@ -562,7 +568,15 @@ pub(crate) fn evaluate_contract(
                 .get("kernel_execute_ns")
                 .filter(|stats| stats.p50 > 0)
         })
-        .or_else(|| metrics.get("wall_ns").filter(|stats| stats.p50 > 0));
+        .or_else(|| metrics.get("wall_ns").filter(|stats| stats.p50 > 0))
+}
+
+pub(crate) fn evaluate_contract(
+    contract: &PerformanceContract,
+    metrics: &BTreeMap<String, MetricStats>,
+    backend_id: &str,
+) -> PerformanceEvaluation {
+    let active_gpu = device_active_time(metrics);
     let speedup_x = match (active_gpu, metrics.get("baseline_wall_ns")) {
         (Some(gpu), Some(cpu)) => Some(cpu.p50 as f64 / gpu.p50 as f64),
         _ => None,
@@ -591,9 +605,10 @@ pub(crate) fn evaluate_contract(
             )),
         }
     }
-    if applicable_baselines == 0 {
+    let applicable_bounds = evaluate_device_bounds(contract, metrics, &mut violations);
+    if applicable_baselines == 0 && applicable_bounds == 0 {
         violations.push(format!(
-            "{} has no performance baseline that applies to backend `{backend_id}`",
+            "{} has no performance baseline or device bound that applies to backend `{backend_id}`",
             contract.primitive
         ));
     }
@@ -602,6 +617,65 @@ pub(crate) fn evaluate_contract(
         contract_passed: violations.is_empty(),
         violations,
     }
+}
+
+/// Judge every device bound the contract carries, appending one violation per
+/// bound that is missed or cannot be judged.
+///
+/// Returns how many bounds were judged. A bound whose metric is absent counts
+/// as judged and violated: a device bound that silently does not apply is a
+/// contract that certifies nothing.
+fn evaluate_device_bounds(
+    contract: &PerformanceContract,
+    metrics: &BTreeMap<String, MetricStats>,
+    violations: &mut Vec<String>,
+) -> usize {
+    for bound in &contract.device_bounds {
+        match bound {
+            DeviceBound::MemoryBandwidthFractionOfPeak {
+                min_fraction,
+                derivation,
+            } => {
+                // `roofline_mem_pct_x1000` is a percentage scaled by 1000, so
+                // 39174 is 39.174% of peak.
+                match metrics.get("roofline_mem_pct_x1000") {
+                    Some(stats) if stats.p50 > 0 => {
+                        let observed = stats.p50 as f64 / 100_000.0;
+                        if observed < *min_fraction {
+                            violations.push(format!(
+                                "{} requires at least {:.1}% of device memory bandwidth, observed {:.1}%. {derivation}",
+                                contract.primitive,
+                                min_fraction * 100.0,
+                                observed * 100.0
+                            ));
+                        }
+                    }
+                    _ => violations.push(format!(
+                        "{} requires a measured device memory bandwidth fraction, but `roofline_mem_pct_x1000` was absent: the case must state `device_bytes_moved` and the run must carry device memory-peak telemetry",
+                        contract.primitive
+                    )),
+                }
+            }
+            DeviceBound::ActiveTimeCeilingNs {
+                max_active_ns,
+                derivation,
+            } => match device_active_time(metrics) {
+                Some(stats) => {
+                    if stats.p50 > *max_active_ns {
+                        violations.push(format!(
+                            "{} requires device active time at or under {max_active_ns} ns, observed {} ns. {derivation}",
+                            contract.primitive, stats.p50
+                        ));
+                    }
+                }
+                None => violations.push(format!(
+                    "{} requires a measured device active time, but dispatch_ns/kernel_execute_ns/wall_ns were incomplete",
+                    contract.primitive
+                )),
+            },
+        }
+    }
+    contract.device_bounds.len()
 }
 
 #[cfg(test)]
@@ -622,7 +696,119 @@ mod tests {
                 min_speedup_x,
                 backend_ids: backends.iter().map(|backend| backend.to_string()).collect(),
             }],
+            device_bounds: Vec::new(),
         }
+    }
+
+    fn bandwidth_contract(min_fraction: f64) -> PerformanceContract {
+        PerformanceContract::memory_bandwidth_fraction(
+            "bandwidth-bound workload",
+            min_fraction,
+            "measured 44.4% of peak; the gather floor is 74.9%",
+        )
+    }
+
+    /// WHY: for a kernel already at the device's streaming ceiling, the
+    /// property under test is how much of that bandwidth it uses. The bound
+    /// must go red when the kernel stops being bandwidth-bound and must not
+    /// move when the host baseline does, which is exactly what a CPU multiple
+    /// on the same case could not do.
+    ///
+    /// Does not catch a wrong `device_bytes_moved`; that is the case's own
+    /// accounting, asserted where the case builds it.
+    #[test]
+    fn a_memory_bandwidth_bound_is_judged_against_the_measured_fraction_of_peak() {
+        let mut metrics = BTreeMap::new();
+        metrics.insert("dispatch_ns".to_string(), stats(50_496));
+        metrics.insert("roofline_mem_pct_x1000".to_string(), stats(44_431));
+
+        let passing = evaluate_contract(&bandwidth_contract(0.30), &metrics, "cuda");
+        assert!(
+            passing.contract_passed,
+            "Fix: 44.431% of peak must satisfy a 30% floor: {:?}",
+            passing.violations
+        );
+
+        // The kernel loses coalescing and moves the same bytes 1.5x slower.
+        let mut regressed = metrics.clone();
+        regressed.insert("roofline_mem_pct_x1000".to_string(), stats(29_620));
+        let failing = evaluate_contract(&bandwidth_contract(0.30), &regressed, "cuda");
+        assert!(
+            !failing.contract_passed,
+            "Fix: 29.62% of peak must miss a 30% floor"
+        );
+        assert!(
+            failing.violations[0].contains("29.6%")
+                && failing.violations[0].contains("gather floor"),
+            "Fix: the violation must state the observed fraction and the derivation: {:?}",
+            failing.violations
+        );
+
+        // A host baseline moving by 100x cannot change the verdict.
+        let mut with_slow_host = metrics.clone();
+        with_slow_host.insert("baseline_wall_ns".to_string(), stats(50_496));
+        assert!(
+            evaluate_contract(&bandwidth_contract(0.30), &with_slow_host, "cuda").contract_passed,
+            "Fix: a device bound must not read the host baseline."
+        );
+    }
+
+    /// WHY: a bound whose metric is absent must fail, not silently pass. A
+    /// resident case that states no `device_bytes_moved` publishes no
+    /// bandwidth fraction, and a contract that certifies what it never
+    /// measured is worse than no contract.
+    #[test]
+    fn a_device_bound_with_no_measurement_fails_closed() {
+        let mut metrics = BTreeMap::new();
+        metrics.insert("dispatch_ns".to_string(), stats(50_496));
+
+        let evaluation = evaluate_contract(&bandwidth_contract(0.30), &metrics, "cuda");
+
+        assert!(!evaluation.contract_passed);
+        assert!(
+            evaluation.violations[0].contains("roofline_mem_pct_x1000"),
+            "Fix: the violation must name the missing metric: {:?}",
+            evaluation.violations
+        );
+    }
+
+    /// WHY: a latency case's quantity is nanoseconds, so its contract asserts
+    /// nanoseconds. Against a host simulator faster than one launch, a ratio
+    /// contract can never be met however fast the launch becomes.
+    #[test]
+    fn an_active_time_ceiling_is_judged_against_device_active_time() {
+        let contract = PerformanceContract::active_time_ceiling_ns(
+            "resident megakernel slot dispatch",
+            5_000,
+            "measured floor 2848 ns",
+        );
+        let mut metrics = BTreeMap::new();
+        metrics.insert("dispatch_ns".to_string(), stats(3_904));
+        // A host loop faster than a launch, which a ratio contract would read.
+        metrics.insert("baseline_wall_ns".to_string(), stats(290));
+
+        let passing = evaluate_contract(&contract, &metrics, "cuda");
+        assert!(
+            passing.contract_passed,
+            "Fix: 3904 ns must satisfy a 5000 ns ceiling: {:?}",
+            passing.violations
+        );
+        assert_eq!(
+            passing.speedup_x,
+            Some(290.0 / 3_904.0),
+            "Fix: the measured ratio is still reported, it is just not asserted."
+        );
+
+        let mut regressed = metrics.clone();
+        regressed.insert("dispatch_ns".to_string(), stats(6_000));
+        let failing = evaluate_contract(&contract, &regressed, "cuda");
+        assert!(!failing.contract_passed);
+        assert!(
+            failing.violations[0].contains("6000 ns")
+                && failing.violations[0].contains("2848 ns"),
+            "Fix: the violation must state the observed time and the derivation: {:?}",
+            failing.violations
+        );
     }
 
     /// WHY: the status a reader tallies in `cases[]` has to agree with

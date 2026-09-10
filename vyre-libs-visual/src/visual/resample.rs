@@ -285,7 +285,6 @@ inventory::submit! {
             let pixels = [0xFF00_00FFu32]; // red
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&pixels),
-                vec![0; 16],
             ]]
         }),
         Some(|| {

@@ -3,7 +3,7 @@
 //! Token numbering is owned by `vyre_spec::go_token`, which is the wire contract
 //! between this program and every host matcher that reads its rows.
 
-use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::composition::{bounded_index, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 // `vyre_spec::go_token` owns the numbering of these ids. They are the wire
@@ -102,13 +102,19 @@ pub fn go_lexer(
 ) -> Program {
     let t = Expr::logical_index(0);
 
+    // Both neighbours are read on every lane: a select evaluates both arms, so the
+    // guard picks the value and not the access. Lane 0 subtracts past zero and the
+    // last lane adds past the end, so each neighbour index is folded inside the
+    // haystack before the read.
+    let previous = bounded_index(Expr::sub(t.clone(), Expr::u32(1)), Expr::u32(haystack_len));
+    let next = bounded_index(Expr::add(t.clone(), Expr::u32(1)), Expr::u32(haystack_len));
     let mut body = vec![
         Node::let_bind("byte", byte_load(haystack, t.clone())),
         Node::let_bind(
             "prev_byte",
             Expr::select(
                 Expr::gt(t.clone(), Expr::u32(0)),
-                byte_load(haystack, Expr::sub(t.clone(), Expr::u32(1))),
+                byte_load(haystack, previous),
                 Expr::u32(0),
             ),
         ),
@@ -116,7 +122,7 @@ pub fn go_lexer(
             "next_byte",
             Expr::select(
                 Expr::lt(Expr::add(t.clone(), Expr::u32(1)), Expr::u32(haystack_len)),
-                byte_load(haystack, Expr::add(t.clone(), Expr::u32(1))),
+                byte_load(haystack, next),
                 Expr::u32(0),
             ),
         ),

@@ -41,7 +41,7 @@ impl BodyCtx<'_> {
             memory_class,
             Some((if negate { "@!" } else { "@" }, pred)),
         )?;
-        self.emit_store_value(guard, address, &element_type, value_reg)?;
+        self.emit_store_value(binding_slot, guard, address, &element_type, value_reg)?;
         Ok(true)
     }
 

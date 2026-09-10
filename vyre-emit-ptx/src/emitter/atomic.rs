@@ -93,11 +93,42 @@ impl BodyCtx<'_> {
             "    mov.{}    {result_reg}, {zero_lit};",
             elem_ty.ptx_type_str()
         );
+        if space == "global" && self.atomic_value_is_identity(atomic_op, value_op_id) {
+            let _ = writeln!(
+                self.text,
+                "    @{in_bounds} ld.global.cv.{}    {result_reg}, [{addr}];",
+                elem_ty.ptx_type_str()
+            );
+            return self.bind_result(op, result_reg);
+        }
+        // Reached only for an atomic that writes: the identity form above
+        // returns after emitting a load.
+        self.reject_store_to_read_only_slot(binding_slot, "a read-modify-write atomic")?;
         let _ = writeln!(
             self.text,
             "    @{in_bounds} atom.{space}.{mnemonic}.{type_suffix}    {result_reg}, [{addr}], {value_reg};"
         );
         self.bind_result(op, result_reg)
+    }
+
+    /// Whether this atomic's value operand makes the read-modify-write leave
+    /// memory unchanged, so the operation returns the current value and writes
+    /// nothing.
+    ///
+    /// `Add`, `Or`, and `Xor` against a literal zero are identities on every
+    /// integer width, and the literal table only records `u32` values, so a
+    /// float `add 0.0` (which is not an identity for a stored `-0.0`) cannot
+    /// reach this. The resident work queue reads its control and status words
+    /// this way.
+    ///
+    /// Left as `atom`, each one occupies an L2 atomic slot that a plain load
+    /// does not, and invocations sharing an address serialize on it.
+    /// `ld.global.cv` returns the same value, bypasses L1 for the same
+    /// freshness, is served by the load pipeline in parallel, and being
+    /// volatile is not hoisted out of a spin loop.
+    fn atomic_value_is_identity(&self, atomic_op: AtomicOp, value_op_id: u32) -> bool {
+        matches!(atomic_op, AtomicOp::Add | AtomicOp::Or | AtomicOp::Xor)
+            && self.u32_literals.get(&value_op_id) == Some(&0)
     }
 
     /// Resolve the address and state space for an atomic on `binding_slot`.
@@ -243,6 +274,7 @@ impl BodyCtx<'_> {
             .operands
             .get(3)
             .ok_or_else(|| EmitError::InvalidDescriptor("AtomicCAS missing new value".into()))?;
+        self.reject_store_to_read_only_slot(binding_slot, "a compare-and-swap atomic")?;
         let binding = self.binding_for_slot(binding_slot)?;
         let element_type = binding.element_type.clone();
         let memory_class = binding.memory_class;

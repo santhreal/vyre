@@ -96,3 +96,8 @@ fn every_registered_primitive_program_is_ir_valid() {
         invalid.join("\n")
     );
 }
+
+#[test]
+fn every_registered_primitive_is_oob_clean_on_hostile_buffer_contents() {
+    sweep().assert_oob_clean_under_hostile_contents();
+}

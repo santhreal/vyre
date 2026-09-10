@@ -101,16 +101,22 @@ pub fn glyph_grid_blend(
     ));
     // The atlas is glyph major, so a glyph's texels are
     // contiguous and a cell reads one cache line's worth
-    // of them rather than striding the whole atlas.
+    // of them rather than striding the whole atlas. The glyph index is cell
+    // data, so the texel it selects is folded back into the atlas: a cell
+    // naming a glyph the atlas does not hold samples texel 0 instead of
+    // reading past the binding.
     body.push(Node::let_bind(
         "texel",
-        Expr::add(
-            Expr::mul(Expr::var("glyph"), Expr::u32(cell_area)),
-            vyre_libs_builder::builder::stencil::flat_index(
-                Expr::var("py"),
-                shape.cell_width,
-                Expr::var("px"),
+        vyre_foundation::composition::bounded_index(
+            Expr::add(
+                Expr::mul(Expr::var("glyph"), Expr::u32(cell_area)),
+                vyre_libs_builder::builder::stencil::flat_index(
+                    Expr::var("py"),
+                    shape.cell_width,
+                    Expr::var("px"),
+                ),
             ),
+            Expr::buf_len(atlas),
         ),
     ));
     body.push(Node::let_bind(

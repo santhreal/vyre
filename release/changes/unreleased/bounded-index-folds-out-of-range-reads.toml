@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Registered compositions that index a buffer with a value read out of another buffer now fold that index back into range, so hostile buffer contents no longer produce an out-of-range read."

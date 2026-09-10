@@ -74,3 +74,37 @@ fn timed_resident_dispatch_reports_device_time_and_outputs() {
 
     free_handle_lanes(&backend, &[(input, "input"), (output, "output")]);
 }
+
+/// WHY: `BufferAccess::ReadOnly` is what the PTX emitter compiles into
+/// `ld.global.nc`, a load served by a cache that is not coherent with this
+/// kernel's stores. A resident handle is `Copy`, so the same allocation can be
+/// presented at a read-only slot and at a written one, which makes that load
+/// return stale bytes with no diagnostic. The refusal is at the dispatch
+/// boundary, before the launch.
+///
+/// It does not catch two distinct resident allocations a driver later maps onto
+/// one device address range.
+#[test]
+fn a_resident_dispatch_aliasing_a_read_only_slot_onto_a_written_slot_is_refused() {
+    let backend = acquire();
+    let program = mul_program("input", "out", 2);
+    let shared = seeded_handle_lane(&backend, "input", &SEED);
+
+    let error = backend
+        .dispatch_resident_timed(&program, &[shared, shared], &DispatchConfig::default())
+        .expect_err(
+            "Fix: one allocation at a read-only slot and a written slot must be refused.",
+        );
+    let text = error.to_string();
+    assert!(
+        text.contains("read-only binding `input`") && text.contains("writable binding `out`"),
+        "Fix: the refusal must name both bindings so the caller knows which pair to split. Got: {text}"
+    );
+    assert_eq!(
+        download_lanes(&backend, shared, "input"),
+        SEED.to_vec(),
+        "Fix: a refused dispatch must not have launched."
+    );
+
+    free_handle_lanes(&backend, &[(shared, "input")]);
+}

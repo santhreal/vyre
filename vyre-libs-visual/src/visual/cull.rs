@@ -93,7 +93,7 @@ inventory::submit! {
                 200, 200, 300, 300 // Outside -> culled
             ];
             let box_bytes: Vec<u8> = boxes.iter().flat_map(|x| x.to_le_bytes()).collect();
-            vec![vec![box_bytes, vec![0; 8]]]
+            vec![vec![box_bytes]]
         }),
         Some(|| {
             vec![vec![EXPECTED_CULL_OUTPUT_BYTES.to_vec()]]

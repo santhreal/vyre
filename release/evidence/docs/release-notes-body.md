@@ -12,6 +12,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   register phrase, an em dash, or a host-local build setting in any authored
   Markdown page, and on a repository-root page the documentation manifest does
   not declare.
+- A performance contract can assert a device bound, either a floor on the
+  fraction of device memory bandwidth the kernel uses or a ceiling on device
+  active time per sample, each carrying the derivation it was set from.
 - Binding over an allocated workspace rejects a caller resource for a
   workspace-owned canonical value.
 - A compile request may require the selected plan to exercise one schedule
@@ -5091,6 +5094,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   implements, the reference oracle lowers the strict mode through the same
   neutral expansion a strict device kernel runs, and the registry wrapper
   judges every dispatch that carries a `DispatchConfig`.
+- The string bitmap scatter workload clamps its record index into the declared
+  extent before loading, so a subgroup lane past the last record no longer
+  reads past the end of either bitmap.
 - The alias dataflow barrier count reaches barriers under control flow. The
   count descended into `Region` only, so a barrier placed inside an `If` or a
   `Loop` was invisible and a read-after-write hazard separated by it was
@@ -5204,6 +5210,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   dispatches compute through, which excludes GL and the no-op backend, and the
   concurrency contract collects each thread's report under a deadline so a
   regression fails as an expired wait instead of a suite that never returns.
+- The megakernel condition CPU reference runs one chunk per worker on the
+  pinned baseline pool instead of one task per slot on the global pool, which
+  takes its measured time from 75 microseconds to 17 and holds it within 3%
+  across runs.
 - The conformance matrix dates each recorded device run against the commit
   carrying it before judging a single OP_MATRIX cell against it, and reports a
   record whose source fingerprint the carrier does not reproduce as unusable
@@ -6069,6 +6079,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   that module read it from, so a program whose kernel loads from a read-write
   host-staged buffer without storing to it submits instead of being refused for
   an unbound write direction.
+- A load from a binding declared read-only lowers to `ld.global.nc`, so
+  read-only tables are served by the read-only data cache instead of the
+  coherent load path.
+- A resident dispatch that binds one allocation to a read-only slot and to a
+  writable slot is refused, and a store to a binding declared read-only is
+  refused at emission.
 - A fusion module that binds a resource read-write now names an input identity
   for it at every resource lifetime. Classifying the binding by lifetime left a
   caller-visible output resource out of the input projection, so every wgpu
@@ -6275,6 +6291,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `PipelineError::IllegalSlotTransition` with the transition, the statuses it
   permits, and the status the slot held; all of them previously rendered as
   `io_uring submission queue at capacity`.
+- A roofline memory fraction is derived from every measured sample against the
+  run's device memory peak, so a scheduling outlier on the one sample that
+  carried device telemetry no longer decides the reported fraction.
+- A benchmark's roofline percentage is computed from device bytes moved over
+  device active time, and the conditional rule-condition cases state the bytes
+  their kernel reads, so a resident bandwidth-bound case reports 44% of a 1792
+  GB/s device instead of 0.45%.
 - A row-batched contraction accumulates a register tile of outputs per
   invocation whose shape is derived from the declared extents and the stated
   per-invocation register budget, and facts that admit no tile leave the
@@ -6808,6 +6831,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   dumped descriptor stays decodable and a descriptor hash taken over that
   encoding keeps its value. `TARGET_MODULE_BUNDLE_SCHEMA_VERSION` moves to 3
   because the payload can now hold values version 2 could not represent.
+- A global atomic whose value operand is a literal zero lowers to a coherent
+  load instead of a read-modify-write, so resident control-word reads no longer
+  serialize on the L2 atomic unit.
 - The duplication scan folds a wrapped import back into one line, so
   re-exporting the same names from two facades no longer counts as copied code.
 - Every command this workspace tells a reader to run names the wrapper. The
@@ -7112,6 +7138,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `vyre_driver_dispatch_launches_total`, the input byte count and the output
   byte count only ever advanced on the resident path. Every backend that does
   not override the method went uncounted.
+- Registered compositions that index a buffer with a value read out of another
+  buffer now fold that index back into range, so hostile buffer contents no
+  longer produce an out-of-range read.
 - The bounded-interleaving schedule policy runs the forward, reversed, and
   rotated step orders derived from the declared workgroup extent and refuses
   when two orders disagree on an output, instead of running the forward order

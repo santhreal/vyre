@@ -237,6 +237,7 @@ impl BodyCtx<'_> {
     ) -> Result<(), EmitError> {
         let first = &body.ops[chain[0]];
         let (binding_slot, index_op_id, _) = read_store_operands(first)?;
+        self.reject_store_to_read_only_slot(binding_slot, "a fused vector store")?;
         let element_type = self.binding_for_slot(binding_slot)?.element_type.clone();
         let elem_ty = PtxType::from_dtype(&element_type)?;
         let vector_ty = vector_memory_type(&element_type, elem_ty);
@@ -363,7 +364,7 @@ fn index_may_be_aligned_for_vector_width(
     matches!(facts.index_modulo(body, base_idx_id, width), Some(0))
 }
 
-fn vector_load_mnemonic_parts(load_space: &str) -> Option<(&'static str, &'static str)> {
+pub(super) fn vector_load_mnemonic_parts(load_space: &str) -> Option<(&'static str, &'static str)> {
     match load_space {
         "global" => Some((PTX_VECTOR_LOAD_GLOBAL_PREFIX, "")),
         "global.nc" => Some((PTX_VECTOR_LOAD_GLOBAL_PREFIX, ".nc")),

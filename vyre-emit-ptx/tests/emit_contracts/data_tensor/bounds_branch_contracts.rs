@@ -20,8 +20,8 @@ fn runtime_index_load_clamps_against_buffer_length() {
         .build();
     let s = emit(&kernel).unwrap();
     assert!(
-        s.contains("ld.global.u32") && s.contains("[%rd0 + 4]"),
-        "must load slot-0 length from params metadata at +4:\n{s}"
+        s.contains("ld.global.ca.u32") && s.contains("[%rd0 + 4]"),
+        "Fix: must load the slot-0 length from params metadata at +4:\n{s}"
     );
     assert!(
         s.contains("setp.lt.u32") && s.contains("selp.u32"),

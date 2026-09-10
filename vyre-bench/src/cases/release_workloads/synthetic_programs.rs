@@ -45,14 +45,24 @@ fn condition_eval_program(records: u32) -> Program {
 pub(super) fn string_bitmap_scatter_program(records: u32) -> Program {
     let output_words = records.div_ceil(32);
     let record_idx = Expr::var("record_idx");
+    // A subgroup ballot must be reached by every lane of the subgroup, so the
+    // two loads cannot sit under a bounds branch. `Expr::and` does not
+    // short-circuit either, so gating the ballot term on the extent left the
+    // loads themselves unguarded: the trailing partial workgroup read past the
+    // declared extent of both bitmaps. The index is clamped into range first,
+    // the same shape `warp_reduction_count_nodes` uses, and the extent test
+    // still clears the ballot bit for a clamped lane.
     let selected = Expr::and(
-        Expr::lt(record_idx.clone(), Expr::u32(records)),
+        Expr::var("in_bounds"),
         Expr::and(
             Expr::ne(
-                Expr::load("pattern_bitmap", record_idx.clone()),
+                Expr::load("pattern_bitmap", Expr::var("safe_idx")),
                 Expr::u32(0),
             ),
-            Expr::ne(Expr::load("rule_bitmap", record_idx.clone()), Expr::u32(0)),
+            Expr::ne(
+                Expr::load("rule_bitmap", Expr::var("safe_idx")),
+                Expr::u32(0),
+            ),
         ),
     );
     Program::wrapped(
@@ -68,11 +78,19 @@ pub(super) fn string_bitmap_scatter_program(records: u32) -> Program {
         [256, 1, 1],
         vec![
             Node::let_bind("record_idx", Expr::gid_x()),
+            Node::let_bind(
+                "in_bounds",
+                Expr::lt(record_idx.clone(), Expr::u32(records)),
+            ),
+            Node::let_bind(
+                "safe_idx",
+                Expr::select(Expr::var("in_bounds"), record_idx.clone(), Expr::u32(0)),
+            ),
             Node::let_bind("scatter_word", Expr::subgroup_ballot(selected)),
             Node::if_then(
                 Expr::and(
                     Expr::eq(Expr::SubgroupLocalId, Expr::u32(0)),
-                    Expr::lt(record_idx.clone(), Expr::u32(records)),
+                    Expr::var("in_bounds"),
                 ),
                 vec![Node::store(
                     "out_flags",

@@ -8,9 +8,10 @@
 
 use super::byte_pack::u32_bytes;
 use super::conditional::{
-    conditional_measure, conditional_program, file_metadata_predicates, fired_append,
-    pattern_index_binds, pattern_streams, rule_conditions, rule_fires, stream_predicates,
-    verify_sparse_outputs, ConditionalLabels, ConditionalPrepared, PatternStreams,
+    conditional_measure, conditional_program, device_bytes_moved, file_metadata_predicates,
+    fired_append, pattern_index_binds, pattern_streams, rule_conditions, rule_fires,
+    stream_predicates, verify_sparse_outputs, ConditionalLabels, ConditionalPrepared,
+    PatternStreams,
 };
 use super::harness::{CaseOps, HarnessCase, WorkloadDescription};
 use crate::api::case::{BenchCase, BenchContext, BenchError, BenchRun, Correctness};
@@ -207,6 +208,7 @@ fn prepare_conditional_batch(ctx: &mut BenchContext) -> Result<ConditionalPrepar
         reset_program,
         inputs,
         input_bytes_total,
+        device_bytes_moved: device_bytes_moved(LABELS, input_bytes_total, &baseline_output)?,
         baseline_output,
         baseline_wall_ns,
         resident,

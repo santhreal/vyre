@@ -244,6 +244,12 @@ fn classify_message(msg: &str) -> ReferenceErrorKind {
     }
 }
 
+/// Opening text of every message [`ReferenceError::program_trap`] builds.
+///
+/// One owner for the marker so the predicate that reads it cannot drift from
+/// the writer that emits it.
+const PROGRAM_TRAP_MARKER: &str = "reference dispatch trapped:";
+
 /// The work one reference evaluation was allowed and what it exceeded.
 ///
 /// A caller waiting on the parity oracle reads the ceiling and the program that
@@ -364,6 +370,35 @@ impl ReferenceError {
             validation: None,
             step_ceiling: None,
         }
+    }
+
+    /// Report an `Node::Trap` the program reached.
+    ///
+    /// A trap is the program refusing its input, not the interpreter running
+    /// out of capability, so the failure is built here rather than classified
+    /// from its text. Classifying it read the author's trap tag, which made
+    /// the class depend on whether a tag happened to contain "missing" or
+    /// "overflow".
+    #[must_use]
+    pub fn program_trap(address: u32, tag: &str) -> Self {
+        Self {
+            kind: ReferenceErrorKind::IncompleteDispatchSemantics {
+                detail: format!(
+                    "{PROGRAM_TRAP_MARKER} address={address}, tag=`{tag}`. Fix: handle the trap condition or route this Program through a backend/runtime with replay support."
+                ),
+            },
+            validation: None,
+            step_ceiling: None,
+        }
+    }
+
+    /// Whether this failure is a trap the program itself raised.
+    ///
+    /// A caller feeding a program input outside its contract reads this to
+    /// tell a deliberate refusal from a failure of the oracle.
+    #[must_use]
+    pub fn is_program_trap(&self) -> bool {
+        self.message().starts_with(PROGRAM_TRAP_MARKER)
     }
 
     /// Return the error class.

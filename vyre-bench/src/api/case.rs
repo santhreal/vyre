@@ -115,10 +115,49 @@ pub struct BaselineTarget {
     pub backend_ids: Vec<String>,
 }
 
+/// A bound a case is held to that is not a comparison against another
+/// implementation.
+///
+/// A ratio over a host baseline is the wrong assertion for a case whose
+/// ceiling is the device rather than the competition. It moves with the
+/// baseline's thread count and the host's load, it cannot state that a kernel
+/// is already at the memory system's limit, and for a case whose device work
+/// is one launch it compares against a host loop that is faster than a launch.
+/// A device bound states the physical quantity the case is pinned to, so it
+/// goes red when the kernel loses that property and stays green when the host
+/// changes.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DeviceBound {
+    /// Achieved device memory bandwidth, as a fraction of the device's reported
+    /// peak, must be at least this much.
+    ///
+    /// Read from `roofline_mem_pct_x1000`, which is device bytes moved over
+    /// device active time over the peak the device telemetry reports, so the
+    /// bound needs no device figure written into the case.
+    MemoryBandwidthFractionOfPeak {
+        min_fraction: f64,
+        /// Why this fraction is the kernel's bound, in enough detail to judge a
+        /// future measurement against it.
+        derivation: String,
+    },
+    /// Device active time for one sample must be at most this many nanoseconds.
+    ActiveTimeCeilingNs {
+        max_active_ns: u64,
+        /// Why this ceiling is the right one, in enough detail to judge a
+        /// future measurement against it.
+        derivation: String,
+    },
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceContract {
     pub primitive: String,
     pub baselines: Vec<BaselineTarget>,
+    /// Bounds on the device itself, asserted alongside `baselines`. A contract
+    /// may carry either, and a case with no comparable competing
+    /// implementation carries only these.
+    #[serde(default)]
+    pub device_bounds: Vec<DeviceBound>,
 }
 
 impl PerformanceContract {
@@ -172,6 +211,48 @@ impl PerformanceContract {
                 class,
                 min_speedup_x,
                 backend_ids: backend_ids.into_iter().map(Into::into).collect(),
+            }],
+            device_bounds: Vec::new(),
+        }
+    }
+
+    /// A floor on how much of the device's memory bandwidth the kernel uses.
+    ///
+    /// For a kernel whose time is memory traffic, this is the property the case
+    /// exists to hold. It goes red when the kernel stops being bandwidth-bound,
+    /// which is what a regression here looks like, and it does not move when
+    /// the host does.
+    pub fn memory_bandwidth_fraction(
+        primitive: impl Into<String>,
+        min_fraction: f64,
+        derivation: impl Into<String>,
+    ) -> Self {
+        Self {
+            primitive: primitive.into(),
+            baselines: Vec::new(),
+            device_bounds: vec![DeviceBound::MemoryBandwidthFractionOfPeak {
+                min_fraction,
+                derivation: derivation.into(),
+            }],
+        }
+    }
+
+    /// A ceiling on device active time for one sample.
+    ///
+    /// For a latency case, the quantity under test is how long one launch
+    /// takes, so the assertion is that time and not a ratio over something
+    /// else.
+    pub fn active_time_ceiling_ns(
+        primitive: impl Into<String>,
+        max_active_ns: u64,
+        derivation: impl Into<String>,
+    ) -> Self {
+        Self {
+            primitive: primitive.into(),
+            baselines: Vec::new(),
+            device_bounds: vec![DeviceBound::ActiveTimeCeilingNs {
+                max_active_ns,
+                derivation: derivation.into(),
             }],
         }
     }

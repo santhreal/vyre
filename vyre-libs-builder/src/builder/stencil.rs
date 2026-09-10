@@ -279,7 +279,8 @@ pub struct Stencil3x3Tap {
 }
 
 impl Stencil3x3Tap {
-    /// [`Self::input_index`] folded inside the image.
+    /// [`Self::input_index`] folded inside the image by
+    /// [`vyre_foundation::composition::bounded_index_when`].
     ///
     /// A tap outside the image contributes zero-padding, and every caller says
     /// so with a select over [`Self::in_bounds`]. A select evaluates both arms,
@@ -289,10 +290,9 @@ impl Stencil3x3Tap {
     /// discarded by the same select.
     #[must_use]
     pub fn bounded_input_index(&self) -> Expr {
-        Expr::select(
+        vyre_foundation::composition::bounded_index_when(
             self.in_bounds.clone(),
             self.input_index.clone(),
-            Expr::u32(0),
         )
     }
 }
