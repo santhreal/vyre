@@ -2160,6 +2160,7 @@ pub fn vyre_foundation::ir::eval::fold_unary_literal(op: &vyre_spec::un_op::UnOp
 pub fn vyre_foundation::ir::expr_variant_name(item: &vyre_foundation::ir::Expr) -> &'static str
 pub fn vyre_foundation::ir::node_op_id(node: &vyre_foundation::ir::Node) -> &'static str
 pub fn vyre_foundation::ir::node_variant_name(item: &vyre_foundation::ir::Node) -> &'static str
+pub fn vyre_foundation::ir::row_major_coords(index: u32, extents: &[u32]) -> alloc::vec::Vec<u32>
 pub fn vyre_foundation::ir::verify_program_obligations(program: &vyre_foundation::ir::Program) -> core::result::Result<(), vyre_foundation::ir::ObligationError>
 pub fn vyre_foundation::launch_covers_full_input_span(program: &vyre_foundation::ir::Program) -> bool
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::canonical_region_count(&self) -> usize

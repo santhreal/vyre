@@ -248,8 +248,8 @@ total_lines = 3438
 
 [[crate]]
 name = "vyre-lower"
-duplicate_lines = 53
-total_lines = 20564
+duplicate_lines = 43
+total_lines = 23465
 
 [[crate]]
 name = "vyre-macros"
@@ -278,8 +278,8 @@ total_lines = 1133
 
 [[crate]]
 name = "vyre-runtime"
-duplicate_lines = 103
-total_lines = 39616
+duplicate_lines = 90
+total_lines = 41299
 
 [[crate]]
 name = "vyre-pass-engine"

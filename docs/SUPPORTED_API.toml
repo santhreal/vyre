@@ -34766,7 +34766,7 @@ seam = "foundation-ir"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 8821
+exported_item_count = 8822
 
   [[package.item]]
   path = "alloc::string::String::from(err: vyre_foundation::serial::wire::encode::WireEncodeErr) -> alloc::string::String"
@@ -57891,6 +57891,13 @@ exported_item_count = 8821
 
   [[package.item]]
   path = "vyre_foundation::ir::node_variant_name(item: &vyre_foundation::ir::Node) -> &'static str"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::ir::row_major_coords(index: u32, extents: &[u32]) -> alloc::vec::Vec<u32>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -140359,175 +140366,175 @@ exported_item_count = 1349
   path = "vyre_lower::emit_adversarial_corpus"
   kind = "mod"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialCase"
   kind = "struct"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialCase::descriptor: vyre_lower::KernelDescriptor"
   kind = "field"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialCase::family: vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily"
   kind = "field"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialCase::id: &'static str"
   kind = "field"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialCase::outcome: vyre_lower::emit_adversarial_corpus::EmitOutcome"
   kind = "field"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily"
   kind = "enum"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::AtomicCounter"
   kind = "variant"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::DeadIdentityChain"
   kind = "variant"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::DeepIfElse"
   kind = "variant"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::HostileWorkgroup"
   kind = "variant"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::LoopWithBarrier"
   kind = "variant"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::MultiBinding"
   kind = "variant"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::RejectCall"
   kind = "variant"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::RejectGridSyncBarrier"
   kind = "variant"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::SharedGlobalTile"
   kind = "variant"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::SignedBufferArithmetic"
   kind = "variant"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::VecLoadFusion"
   kind = "variant"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitOutcome"
   kind = "enum"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitOutcome::Reject"
   kind = "variant"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::EmitOutcome::Success"
   kind = "variant"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::case_by_id(id: &str) -> core::option::Option<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>"
   kind = "fn"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::corpus() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>"
   kind = "fn"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::rejection_cases() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>"
   kind = "fn"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::emit_adversarial_corpus::success_cases() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>"
   kind = "fn"
   stability = "internal"
-  feature = "unconditional"
+  feature = "test-fixtures"
   wire_compatibility = "api-only"
 
   [[package.item]]
@@ -180281,7 +180288,7 @@ seam = "specification"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre"
 stability = "extension"
-exported_item_count = 2023
+exported_item_count = 2017
 
   [[package.item]]
   path = "F::available(&self, op: &str) -> bool"
@@ -180830,6 +180837,13 @@ exported_item_count = 2023
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "impl vyre_spec::ExtensionProofFields"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "impl vyre_spec::ExtensionRuleConditionId"
   kind = "impl"
   stability = "extension"
@@ -181174,13 +181188,6 @@ exported_item_count = 2023
 
   [[package.item]]
   path = "impl vyre_spec::UnOp"
-  kind = "impl"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl vyre_spec::Verification"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -184640,6 +184647,13 @@ exported_item_count = 2023
   [[package.item]]
   path = "vyre_spec::ExtensionProofFields::may_alias: bool"
   kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "wire-bound"
+
+  [[package.item]]
+  path = "vyre_spec::ExtensionProofFields::pure_terminating(target_capability: impl core::convert::Into<alloc::string::String>) -> Self"
+  kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "wire-bound"
@@ -188474,6 +188488,13 @@ exported_item_count = 2023
   wire_compatibility = "wire-bound"
 
   [[package.item]]
+  path = "vyre_spec::ProofMethod::witness_count(&self) -> core::option::Option<u64>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "wire-bound"
+
+  [[package.item]]
   path = "vyre_spec::ProtocolDomain"
   kind = "enum"
   stability = "extension"
@@ -191337,69 +191358,6 @@ exported_item_count = 2023
   wire_compatibility = "wire-bound"
 
   [[package.item]]
-  path = "vyre_spec::Verification"
-  kind = "enum"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_spec::Verification::ExhaustiveFloat"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_spec::Verification::ExhaustiveFloat::typ: vyre_spec::FloatType"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_spec::Verification::ExhaustiveU16"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_spec::Verification::ExhaustiveU8"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_spec::Verification::WitnessedU32"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_spec::Verification::WitnessedU32::count: u64"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_spec::Verification::WitnessedU32::seed: u64"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_spec::Verification::witness_count(&self) -> core::option::Option<u64>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_spec::all_address_modes() -> &'static [vyre_spec::AddressMode]"
   kind = "fn"
   stability = "extension"
@@ -194174,6 +194132,13 @@ exported_item_count = 2023
   [[package.item]]
   path = "vyre_spec::schema_registry::SchemaRegistry::lookup(id: vyre_spec::schema_registry::SchemaId) -> core::option::Option<&'static vyre_spec::schema_registry::SchemaDefinition>"
   kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_spec::semver_triple!"
+  kind = "macro"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"

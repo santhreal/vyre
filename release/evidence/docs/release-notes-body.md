@@ -1891,6 +1891,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Cooperative matrix tiling, contraction buffer rosters and tensor element
   counts each resolve to a single builder owner, and `MatrixShape` is exported
   from `vyre-libs-builder` instead of `vyre-libs-math`.
+- `vyre-runtime` and `vyre-lower` contract tests read shared program fixtures
+  from `vyre-test-support` and resolve the checkout through
+  `vyre_test_support::monorepo::vyre_workspace_root` instead of restating both
+  per file.
 - The cross-backend u32 parity suites read one op table instead of one
   hand-written test per op. `synthetic_binop_parity`, its CUDA twin, and both
   `div_zero_shift_mask` suites loop over the shared table with a per-backend
@@ -2117,6 +2121,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   The volume sweep runner had a three-crate list that left one tracked volume
   wave in no shard, and a shard index outside the shard count selected nothing
   and exited 0.
+- `vyre_lower::descriptor_builder` is the only definition of the elementary
+  `KernelOp` and `BindingSlot` constructors; the adversarial corpus and the
+  CUDA PTX benchmark cases call it instead of carrying their own.
 - Budgeted device measurement runs one versioned protocol covering warmup,
   rotated candidate interleaving, a trimmed-median estimator with uncertainty,
   a stopping rule and an equivalence band, and the artifact retains every
@@ -2348,6 +2355,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   shift, where the sign bit replicates instead. Rewrites that re-evaluate their
   operand now clear one duplication budget owned by `strength_reduce`, so a
   remainder of a buffer load no longer emits three loads of the same address.
+- `ExtensionProofFields::pure_terminating` is the single constructor for a
+  host-shareable, pure, terminating extension proof record.
 - The vyre public facade and vyre-libs expose complete compiler schemas, target
   profiles with provenance, resource ingestion, and admission sessions for
   downstream application consumers without internal crate dependencies, native
@@ -2700,6 +2709,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   collapse onto `vyre-lower/src/lower/loop_site.rs`, and `fixture_builders.rs`,
   whose module was never imported and whose constructors were a second copy of
   the descriptor builder's, is deleted.
+- `vyre_lower::emit_adversarial_corpus` and `vyre_lower::artifact_golden`
+  require the `test-fixtures` feature, matching `descriptor_builder`, because
+  every consumer of both is a test.
 - Lowering rewrite rules, contracts, and functions now have one public path
   through vyre_lower::rewrites; implementation modules remain private.
 - Target-payload admission has one owner for the last five clusters the four
@@ -3908,6 +3920,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   semantic operation witnesses, including each operation's declared tolerance.
   The library operation catalog distinguishes the complete semantic inventory
   from its deterministic executable-fixture projection.
+- A `major.minor.patch` version record is declared once by
+  `vyre_spec::semver_triple!`, which `ExtensionSemVer`, `ProtocolVersion`,
+  `CanonicalSchemaVersion`, and the driver registry `Semver` now use.
 - Memory ordering and concurrency are modeled with separate closed orthogonal
   types for atomic ordering, memory scope, execution scope, storage domain,
   fence semantics, barrier participation, async transaction lifecycle,
@@ -4995,6 +5010,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   as library API; a consumer reaches the same oracles at
   vyre_test_support::fixed_point, which is a dev-dependency and not part of any
   shipped binary.
+- `vyre_spec::Verification` is removed; `ProofMethod` covers every method it
+  declared and now reports `witness_count`.
 - Retired `GOAL.md`. Its roadmap and compiler boundary rules are canonically
   owned by `docs/ARCHITECTURE.md`, `docs/CRATE_OWNERSHIP.toml`, and crate
   architecture documentation.
