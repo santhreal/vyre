@@ -2,18 +2,65 @@
 //!
 //! The fallback runs when a program cannot be encoded to the wire format, and
 //! it must never format the full IR through `Debug`: the digest is built from
-//! per-variant discriminants and bounded scalars instead.
+//! per-variant canonical wire tags and bounded scalars instead.
+//!
+//! Every byte written here is fixed-width and little-endian. The digest feeds
+//! `Program::content_hash`, which is a persisted cache identity, so a value
+//! whose encoding depends on host pointer width or byte order would give one
+//! program two identities across hosts.
 
-use std::hash::{Hash, Hasher as _};
+use core::fmt;
 
-use crate::ir::{Expr, Node};
+use crate::ir::{DataType, Expr, Node};
+use crate::serial::wire::encode::WireEncodeErr;
+use crate::serial::wire::tags::{atomic_op_tag, bin_op_tag, put_data_type, un_op_tag};
 use crate::visit::{ExprSink, NodeSink};
-use rustc_hash::FxHasher;
 
-fn mix_wire_fallback_hashable<T: Hash>(hasher: &mut blake3::Hasher, value: &T) {
-    let mut state = FxHasher::default();
-    value.hash(&mut state);
-    hasher.update(&state.finish().to_le_bytes());
+/// Mix one frozen wire tag into the fallback digest.
+///
+/// A variant the frozen tag table has no entry for is mixed by its `Debug`
+/// rendering, which is bounded source text, so two untagged variants keep
+/// distinct digests instead of collapsing onto one sentinel.
+fn mix_wire_tag(
+    hasher: &mut blake3::Hasher,
+    tag: Result<u8, WireEncodeErr>,
+    value: &dyn fmt::Debug,
+) {
+    match tag {
+        Ok(tag) => {
+            hasher.update(&[0x00, tag]);
+        }
+        Err(_) => {
+            hasher.update(&[0x01]);
+            mix_variant_name(hasher, value);
+        }
+    }
+}
+
+/// Mix a length-delimited `Debug` rendering of one bounded leaf value.
+fn mix_variant_name(hasher: &mut blake3::Hasher, value: &dyn fmt::Debug) {
+    let rendered = format!("{value:?}");
+    hasher.update(&(rendered.len() as u64).to_le_bytes());
+    hasher.update(rendered.as_bytes());
+}
+
+/// Mix a data type through the frozen VIR0 encoder that owns its tag table.
+///
+/// The encoder writes the tag and every payload field as fixed-width
+/// little-endian bytes, so the digest reads the same on any host.
+fn mix_data_type(hasher: &mut blake3::Hasher, target: &DataType) {
+    let mut encoded = Vec::new();
+    match put_data_type(&mut encoded, target) {
+        Ok(()) => {
+            hasher.update(&[0x00]);
+            hasher.update(&(encoded.len() as u64).to_le_bytes());
+            hasher.update(&encoded);
+        }
+        Err(_) => {
+            hasher.update(&[0x01]);
+            mix_variant_name(hasher, target);
+        }
+    }
 }
 
 /// Bounded IR structure digest for wire-hash fallback (never formats full IR via `Debug`).
@@ -127,11 +174,11 @@ impl NodeSink for FallbackWireHasher<'_> {
             }
             Node::Barrier { ordering } => {
                 h.update(b"n:Barrier\0");
-                mix_wire_fallback_hashable(h, ordering);
+                h.update(&[ordering.wire_tag()]);
             }
             Node::LogicalBarrier { ordering } => {
                 h.update(b"n:LogicalBarrier\0");
-                mix_wire_fallback_hashable(h, ordering);
+                h.update(&[ordering.wire_tag()]);
             }
             Node::Block(_) => {
                 h.update(b"n:Block\0");
@@ -260,11 +307,11 @@ impl ExprSink for FallbackWireHasher<'_> {
             }
             Expr::BinOp { op, .. } => {
                 h.update(b"e:BinOp\0");
-                mix_wire_fallback_hashable(h, op);
+                mix_wire_tag(h, bin_op_tag(*op), op);
             }
             Expr::UnOp { op, .. } => {
                 h.update(b"e:UnOp\0");
-                mix_wire_fallback_hashable(h, op);
+                mix_wire_tag(h, un_op_tag(op), op);
             }
             Expr::Call { op_id, .. } => {
                 h.update(b"e:Call\0");
@@ -275,7 +322,7 @@ impl ExprSink for FallbackWireHasher<'_> {
             }
             Expr::Cast { target, .. } => {
                 h.update(b"e:Cast\0");
-                mix_wire_fallback_hashable(h, target);
+                mix_data_type(h, target);
             }
             Expr::Fma { .. } => {
                 h.update(b"e:Fma\0");
@@ -287,9 +334,9 @@ impl ExprSink for FallbackWireHasher<'_> {
                 ..
             } => {
                 h.update(b"e:Atomic\0");
-                mix_wire_fallback_hashable(h, op);
+                mix_wire_tag(h, atomic_op_tag(*op), op);
                 h.update(buffer.as_bytes());
-                mix_wire_fallback_hashable(h, ordering);
+                h.update(&[ordering.wire_tag()]);
             }
             Expr::SubgroupBallot { .. } => {
                 h.update(b"e:SubgroupBallot\0");

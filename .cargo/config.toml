@@ -18,12 +18,13 @@ PROPTEST_DISABLE_FAILURE_PERSISTENCE = "1"
 # emulator that runs it. Emulation proves host arithmetic, byte order and
 # decoding only; device support and performance are never claimed from an
 # emulated run.
+#
+# 32-bit PowerPC is not a cell. It has no native 64-bit atomic, and
+# `vyre-foundation` states that requirement as a compile error rather than
+# claiming a host it cannot build for. s390x carries the big-endian cell and
+# has one.
 [target.i686-unknown-linux-gnu]
 linker = "gcc"
-
-[target.powerpc-unknown-linux-gnu]
-linker = "powerpc-linux-gnu-gcc"
-runner = ["qemu-ppc-static", "-L", "/usr/powerpc-linux-gnu"]
 
 [target.s390x-unknown-linux-gnu]
 linker = "s390x-linux-gnu-gcc"

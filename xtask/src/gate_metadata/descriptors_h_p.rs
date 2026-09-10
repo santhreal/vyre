@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with H through P.
-pub const GATES_H_P: [GateDescriptor; 62] = [
+pub const GATES_H_P: [GateDescriptor; 63] = [
     GateDescriptor {
         name: "heuristic-audit",
         help: "Enforce heuristic-audit contracts",
@@ -714,6 +714,26 @@ pub const GATES_H_P: [GateDescriptor; 62] = [
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
         proof: "crate::gates::platform_support_matrix::tests::unclaimed_or_missing_cell_fails_gate",
+    },
+    GateDescriptor {
+        name: "portability-evidence",
+        help: "Execute the host-identity corpus on every runnable host cell and record what each one computed; --write re-records the ledger and the pins",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "host portability runs",
+        inputs: &[
+            ".cargo/config.toml",
+            "vyre-foundation/src/platform",
+            "vyre-foundation/src/serial/wire",
+            "vyre-foundation/tests/host_identity_invariance.rs",
+        ],
+        artifacts: &[
+            "release/evidence/portability/host-identity.json",
+            "vyre-foundation/tests/host_identity_invariance.rs",
+        ],
+        prerequisites: &[],
+        resource_class: ResourceClass::Process,
+        proof: "crate::gates::portability_evidence::tests::disagreeing_cells_agree_on_nothing",
     },
     GateDescriptor {
         name: "print-composition",

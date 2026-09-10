@@ -81,6 +81,7 @@ pub mod placement_predicate;
 pub mod platform_boundary;
 pub mod platform_docs;
 pub mod platform_support_matrix;
+pub mod portability_evidence;
 pub mod proptest_coverage;
 pub mod public_api;
 pub mod public_api_paths;
@@ -226,6 +227,10 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     (
         "platform-support-matrix",
         &platform_support_matrix::PlatformSupportMatrixGate,
+    ),
+    (
+        "portability-evidence",
+        &portability_evidence::PortabilityEvidenceGate,
     ),
     ("proptest-coverage", &proptest_coverage::ProptestCoverage),
     ("public-api-snapshot", &public_api::PublicApiSnapshot),

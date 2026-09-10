@@ -618,7 +618,7 @@ impl Program {
 
     fn structural_fingerprint_fallback(&self) -> String {
         let mut hasher = blake3::Hasher::new();
-        hasher.update(b"VYRE-WIRE-FALLBACK-V4\0");
+        hasher.update(b"VYRE-WIRE-FALLBACK-V5\0");
         if let Some(id) = self.entry_op_id.as_deref() {
             hasher.update(id.as_bytes());
         }

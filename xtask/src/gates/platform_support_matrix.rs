@@ -653,6 +653,24 @@ fn self_match<'a>(file: &'a syn::File, type_name: &str, fn_name: &str) -> Option
     None
 }
 
+/// The expression an arm evaluates to, seeing through a braced body.
+///
+/// An arm whose pattern is long enough is wrapped by the formatter into
+/// `pattern => { value }`, which parses as a block and not as the literal or
+/// path the readers below match on. Reading only the unwrapped form made the
+/// widest arm in `PlatformSupportMatrix::tier` invisible, so the gate reported
+/// six cells as having no arm in a match that has no catch-all and therefore
+/// could not have compiled with a cell missing.
+fn arm_value(body: &Expr) -> &Expr {
+    let Expr::Block(block) = body else {
+        return body;
+    };
+    let [syn::Stmt::Expr(inner, None)] = block.block.stmts.as_slice() else {
+        return body;
+    };
+    arm_value(inner)
+}
+
 /// Variant ident to string literal, from `Self::Variant => "lit"` arms.
 fn string_match_arms(file: &syn::File, type_name: &str, fn_name: &str) -> BTreeMap<String, String> {
     let mut arms = BTreeMap::new();
@@ -660,7 +678,7 @@ fn string_match_arms(file: &syn::File, type_name: &str, fn_name: &str) -> BTreeM
         return arms;
     };
     for arm in &expr.arms {
-        let Expr::Lit(literal) = arm.body.as_ref() else {
+        let Expr::Lit(literal) = arm_value(arm.body.as_ref()) else {
             continue;
         };
         let Lit::Str(value) = &literal.lit else {
@@ -681,7 +699,7 @@ fn path_match_arms(file: &syn::File, type_name: &str, fn_name: &str) -> BTreeMap
         return arms;
     };
     for arm in &expr.arms {
-        let Expr::Path(path) = arm.body.as_ref() else {
+        let Expr::Path(path) = arm_value(arm.body.as_ref()) else {
             continue;
         };
         let Some(last) = path.path.segments.last() else {
@@ -708,7 +726,7 @@ fn tier_match_arms(
         return tiers;
     };
     for arm in &expr.arms {
-        let Expr::Path(path) = arm.body.as_ref() else {
+        let Expr::Path(path) = arm_value(arm.body.as_ref()) else {
             continue;
         };
         let Some(tier) = path.path.segments.last() else {
@@ -841,6 +859,58 @@ pub mod tests {
             assert_eq!(cell.pointer_width, source.arch_pointer_width[arch]);
             assert_eq!(cell.endianness, source.arch_endianness[arch]);
         }
+    }
+
+    /// WHY: an arm wide enough to wrap is written `pattern => { value }` by
+    /// the formatter, and a reader that matched only the unwrapped body read
+    /// it as absent. That inverted the gate: it reported six cells as having
+    /// no arm in a match with no catch-all, which could not have compiled.
+    /// Both body shapes are read here, in the same match, so a reader that
+    /// handles one and not the other fails.
+    ///
+    /// What it does not catch: an arm whose body computes the tier instead of
+    /// naming it. The platform source states tiers as constants.
+    #[test]
+    pub fn a_braced_arm_body_states_its_tier() {
+        let file: syn::File = syn::parse_str(
+            "impl PlatformSupportMatrix {
+                pub const fn tier(os: HostOs, arch: HostArch) -> HostSupportTier {
+                    match (os, arch) {
+                        (HostOs::Linux | HostOs::MacOS, HostArch::X86_64 | HostArch::AArch64) => {
+                            HostSupportTier::Runtime
+                        }
+                        (HostOs::Linux, HostArch::S390x) => HostSupportTier::Encoding,
+                        (_, _) => HostSupportTier::Excluded,
+                    }
+                }
+            }",
+        )
+        .expect("the fixture parses");
+        let os = ["Linux".to_string(), "MacOS".to_string()];
+        let arch = [
+            "X86_64".to_string(),
+            "AArch64".to_string(),
+            "S390x".to_string(),
+        ];
+        let tiers = tier_match_arms(&file, &os, &arch);
+
+        for cell in [("Linux", "X86_64"), ("MacOS", "AArch64")] {
+            assert_eq!(
+                tiers.get(&(cell.0.to_string(), cell.1.to_string())),
+                Some(&"runtime".to_string()),
+                "the braced cross-product arm must state a tier for {cell:?}"
+            );
+        }
+        assert_eq!(
+            tiers.get(&("Linux".to_string(), "S390x".to_string())),
+            Some(&"encoding".to_string()),
+            "the unwrapped arm must still be read"
+        );
+        assert_eq!(
+            tiers.get(&("MacOS".to_string(), "S390x".to_string())),
+            Some(&"excluded".to_string()),
+            "a wildcard arm must still cover the cells no earlier arm claimed"
+        );
     }
 
     /// WHY: the defect this gate shipped was claiming evidence for cells that

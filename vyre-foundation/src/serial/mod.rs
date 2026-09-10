@@ -30,7 +30,7 @@ pub mod output_set;
 /// `vyre-scan` compose this primitive instead of reimplementing framing,
 /// version, and truncation handling.
 pub(crate) mod envelope;
-pub use envelope::{EnvelopeError, WireReader, WireWriter};
+pub use envelope::{section_len, EnvelopeError, WireReader, WireWriter};
 
 /// Round-trip and corruption assertions every wire-format type is held to.
 ///

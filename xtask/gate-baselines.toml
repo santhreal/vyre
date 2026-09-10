@@ -456,6 +456,10 @@ name = "platform-support-matrix"
 findings = 0
 
 [[gate]]
+name = "portability-evidence"
+findings = 0
+
+[[gate]]
 name = "print-composition"
 findings = 0
 

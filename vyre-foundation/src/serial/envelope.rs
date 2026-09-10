@@ -96,6 +96,26 @@ impl fmt::Display for EnvelopeError {
 
 impl Error for EnvelopeError {}
 
+/// The `u32` length prefix an envelope section of `len` items carries.
+///
+/// Both writers bound their prefix the same way, and a caller cannot reach
+/// that bound through them without materializing four gibibytes: the length
+/// comes from a slice, so proving the refusal meant allocating the slice that
+/// triggers it. On a 32-bit host the bound is unreachable through a slice at
+/// all, because no allocation there is longer than `u32::MAX`. The check is a
+/// function of the count alone, so it is one here and is proved by value.
+///
+/// # Errors
+///
+/// Returns [`EnvelopeError::SectionTooLarge`] when `len` does not fit the
+/// envelope's `u32` length prefix.
+pub fn section_len(len: usize) -> Result<u32, EnvelopeError> {
+    u32::try_from(len).map_err(|_| EnvelopeError::SectionTooLarge {
+        len,
+        max: u32::MAX as usize,
+    })
+}
+
 /// Build a typed binary blob with magic + version + sections.
 ///
 /// Consumers create one writer, push sections in their declared order,
@@ -125,10 +145,7 @@ impl WireWriter {
     /// Returns [`EnvelopeError::SectionTooLarge`] when the byte count cannot
     /// fit in the envelope's `u32` length prefix.
     pub fn write_section(&mut self, bytes: &[u8]) -> Result<(), EnvelopeError> {
-        let len = u32::try_from(bytes.len()).map_err(|_| EnvelopeError::SectionTooLarge {
-            len: bytes.len(),
-            max: u32::MAX as usize,
-        })?;
+        let len = section_len(bytes.len())?;
         self.out.extend_from_slice(&len.to_le_bytes());
         self.out.extend_from_slice(bytes);
         Ok(())
@@ -142,10 +159,7 @@ impl WireWriter {
     /// Returns [`EnvelopeError::SectionTooLarge`] when the word count cannot
     /// fit in the envelope's `u32` length prefix.
     pub fn write_words(&mut self, words: &[u32]) -> Result<(), EnvelopeError> {
-        let len = u32::try_from(words.len()).map_err(|_| EnvelopeError::SectionTooLarge {
-            len: words.len(),
-            max: u32::MAX as usize,
-        })?;
+        let len = section_len(words.len())?;
         self.out.extend_from_slice(&len.to_le_bytes());
         for w in words {
             self.out.extend_from_slice(&w.to_le_bytes());
