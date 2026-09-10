@@ -10,8 +10,10 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
+pub mod timestamp;
+
 /// Canonical schema version for ReleaseProvenance.
-pub const RELEASE_PROVENANCE_SCHEMA_VERSION: u32 = 1;
+pub const RELEASE_PROVENANCE_SCHEMA_VERSION: u32 = 2;
 
 /// Path to generated release provenance document.
 pub const PROVENANCE_ARTIFACT_PATH: &str = "docs/generated/release-provenance.toml";
@@ -59,6 +61,13 @@ pub enum ProvenanceError {
     Serialization(String),
     /// I/O error.
     Io(String),
+    /// A fact the document must state could not be measured.
+    UnmeasuredFact {
+        /// What the document needed.
+        fact: String,
+        /// Why the measurement did not produce it.
+        reason: String,
+    },
 }
 
 impl std::fmt::Display for ProvenanceError {
@@ -89,6 +98,9 @@ impl std::fmt::Display for ProvenanceError {
             Self::MissingChecksum(msg) => write!(f, "missing checksum: {msg}"),
             Self::Serialization(msg) => write!(f, "serialization error: {msg}"),
             Self::Io(msg) => write!(f, "io error: {msg}"),
+            Self::UnmeasuredFact { fact, reason } => {
+                write!(f, "cannot measure {fact}: {reason}")
+            }
         }
     }
 }
@@ -176,6 +188,8 @@ pub struct BuildScriptContract {
 pub struct ReleaseProvenanceAuthority {
     /// Schema version for fail-closed verification.
     pub schema_version: u32,
+    /// The instant the described source was fixed at, RFC 3339 UTC.
+    pub bom_timestamp: String,
     /// Rust compiler toolchain version.
     pub rustc_version: String,
     /// Cargo toolchain version.
@@ -373,8 +387,9 @@ impl ReleaseProvenanceAuthority {
         let schemas = collect_persisted_schemas(root);
         let build_scripts = collect_build_script_contracts();
 
-        let rustc_version = detect_rustc_version();
-        let cargo_version = detect_cargo_version();
+        let rustc_version = measure_rustc_version()?;
+        let cargo_version = measure_cargo_version()?;
+        let bom_timestamp = timestamp::rfc3339_utc(measure_source_date_epoch(root)?);
 
         // Canonical deterministic archive hash derived from all components
         let mut archive_hasher = blake3::Hasher::new();
@@ -397,6 +412,7 @@ impl ReleaseProvenanceAuthority {
 
         Ok(Self {
             schema_version: RELEASE_PROVENANCE_SCHEMA_VERSION,
+            bom_timestamp,
             rustc_version,
             cargo_version,
             target_triples,
@@ -469,7 +485,7 @@ impl ReleaseProvenanceAuthority {
             "serialNumber": format!("urn:uuid:vyre-sbom-{}", self.lockfile_digest),
             "version": 1,
             "metadata": {
-                "timestamp": "2026-09-08T00:00:00Z",
+                "timestamp": self.bom_timestamp,
                 "tools": [
                     {
                         "vendor": "vyre",
@@ -860,26 +876,163 @@ fn collect_build_script_contracts() -> Vec<BuildScriptContract> {
     ]
 }
 
-fn detect_rustc_version() -> String {
-    if let Ok(out) = Command::new("rustc").arg("-V").output() {
-        if out.status.success() {
-            let s = String::from_utf8_lossy(&out.stdout);
-            if let Some(v) = s.strip_prefix("rustc ") {
-                return v.trim().to_string();
-            }
-        }
-    }
-    "1.80.0".to_string()
+/// The running rustc version, or the reason it could not be read.
+fn measure_rustc_version() -> Result<String, ProvenanceError> {
+    measure_tool_version("rustc")
 }
 
-fn detect_cargo_version() -> String {
-    if let Ok(out) = Command::new("cargo").arg("-V").output() {
-        if out.status.success() {
-            let s = String::from_utf8_lossy(&out.stdout);
-            if let Some(v) = s.strip_prefix("cargo ") {
-                return v.trim().to_string();
-            }
+/// The running cargo version, or the reason it could not be read.
+fn measure_cargo_version() -> Result<String, ProvenanceError> {
+    measure_tool_version("cargo")
+}
+
+/// The version `tool` reports under `-V`, with its own name stripped.
+fn measure_tool_version(tool: &str) -> Result<String, ProvenanceError> {
+    let out =
+        Command::new(tool)
+            .arg("-V")
+            .output()
+            .map_err(|error| ProvenanceError::UnmeasuredFact {
+                fact: format!("{tool} version"),
+                reason: error.to_string(),
+            })?;
+    if !out.status.success() {
+        return Err(ProvenanceError::UnmeasuredFact {
+            fact: format!("{tool} version"),
+            reason: format!("{tool} -V exited with {}", out.status),
+        });
+    }
+    let reported = String::from_utf8_lossy(&out.stdout);
+    reported
+        .strip_prefix(tool)
+        .map(|version| version.trim().to_string())
+        .filter(|version| !version.is_empty())
+        .ok_or_else(|| ProvenanceError::UnmeasuredFact {
+            fact: format!("{tool} version"),
+            reason: format!("{tool} -V printed {:?}", reported.trim()),
+        })
+}
+
+/// The second the release source was fixed at, for a document that is byte
+/// compared across runs.
+///
+/// `SOURCE_DATE_EPOCH` wins when it is set, which is what a distribution build
+/// sets to pin every generated timestamp. Otherwise the commit time of `HEAD`
+/// is the instant the tree being described came into existence.
+fn measure_source_date_epoch(root: &Path) -> Result<i64, ProvenanceError> {
+    if let Ok(declared) = std::env::var("SOURCE_DATE_EPOCH") {
+        return parse_epoch_second(&declared, "SOURCE_DATE_EPOCH");
+    }
+    let out = Command::new("git")
+        .current_dir(root)
+        .args(["log", "-1", "--pretty=%ct"])
+        .output()
+        .map_err(|error| ProvenanceError::UnmeasuredFact {
+            fact: "source date epoch".to_string(),
+            reason: error.to_string(),
+        })?;
+    if !out.status.success() {
+        return Err(ProvenanceError::UnmeasuredFact {
+            fact: "source date epoch".to_string(),
+            reason: format!("git log exited with {}", out.status),
+        });
+    }
+    parse_epoch_second(
+        &String::from_utf8_lossy(&out.stdout),
+        "git log -1 --pretty=%ct",
+    )
+}
+
+/// `reported` read as a unix second, naming `origin` when it is not one.
+fn parse_epoch_second(reported: &str, origin: &str) -> Result<i64, ProvenanceError> {
+    reported
+        .trim()
+        .parse::<i64>()
+        .map_err(|error| ProvenanceError::UnmeasuredFact {
+            fact: "source date epoch".to_string(),
+            reason: format!("{origin} produced {:?}: {error}", reported.trim()),
+        })
+}
+
+#[cfg(test)]
+mod measurement_tests {
+    use super::*;
+
+    /// WHY: every fact a provenance document states used to have a literal
+    /// standing behind it, so a document produced on a host with no toolchain
+    /// still claimed a toolchain version. The contract is that a fact that
+    /// cannot be measured stops the document instead of being invented. This
+    /// covers the tool version arm; the epoch arm is below.
+    ///
+    /// What it does not catch: a tool that exists and reports a wrong version.
+    #[test]
+    fn a_tool_that_is_not_installed_stops_the_document() {
+        let measured = measure_tool_version("vyre-provenance-absent-tool");
+        let Err(ProvenanceError::UnmeasuredFact { fact, .. }) = measured else {
+            panic!("an absent tool produced a version: {measured:?}");
+        };
+        assert_eq!(fact, "vyre-provenance-absent-tool version");
+    }
+
+    /// WHY: the installed toolchain is measurable here, and the measurement
+    /// has to strip the tool's own name so the document carries a version and
+    /// not a sentence.
+    #[test]
+    fn an_installed_tool_reports_a_bare_version() {
+        let rustc = measure_rustc_version().expect("rustc is required to build this test");
+        assert!(
+            !rustc.starts_with("rustc"),
+            "the tool name survived into the version: {rustc}"
+        );
+        assert!(
+            rustc.starts_with(|c: char| c.is_ascii_digit()),
+            "not a version: {rustc}"
+        );
+    }
+
+    /// WHY: the epoch is the one fact a caller can pin, and a pin that does
+    /// not parse must fail rather than fall back to a build-time clock, which
+    /// is what would silently break byte comparison of the artifact.
+    #[test]
+    fn an_unparseable_epoch_stops_the_document() {
+        for declared in ["", "   ", "yesterday", "1789016022.5", "0x6a", "1e9"] {
+            let measured = parse_epoch_second(declared, "SOURCE_DATE_EPOCH");
+            assert!(
+                matches!(measured, Err(ProvenanceError::UnmeasuredFact { .. })),
+                "{declared:?} was accepted as a unix second: {measured:?}"
+            );
         }
     }
-    "1.80.0".to_string()
+
+    /// WHY: a pinned epoch has to reach the rendered instant unchanged, which
+    /// is what makes two runs over one tree produce the same bytes. The
+    /// negative epoch is here because the parse is signed and a document may
+    /// describe a tree older than the epoch.
+    #[test]
+    fn a_pinned_epoch_reaches_the_rendered_instant() {
+        for (declared, rendered) in [
+            (" 1789016022\n", "2026-09-10T04:53:42Z"),
+            ("0", "1970-01-01T00:00:00Z"),
+            ("-1", "1969-12-31T23:59:59Z"),
+        ] {
+            let seconds = parse_epoch_second(declared, "SOURCE_DATE_EPOCH")
+                .expect("a bare integer is a unix second");
+            assert_eq!(
+                timestamp::rfc3339_utc(seconds),
+                rendered,
+                "for {declared:?}"
+            );
+        }
+    }
+
+    /// WHY: the schema carries a field now, so a document written before it
+    /// describes a release whose provenance was never recorded. Serving that
+    /// as current is the resurrection this version number exists to stop.
+    #[test]
+    fn the_schema_version_is_past_the_timestampless_document() {
+        assert!(
+            RELEASE_PROVENANCE_SCHEMA_VERSION > 1,
+            "a v1 document carries no measured timestamp and must not verify"
+        );
+    }
 }

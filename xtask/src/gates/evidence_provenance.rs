@@ -180,16 +180,41 @@ mod tests {
     use crate::gate::GateBehavior;
 
     /// Write an artifact stamped the way the recorder stamps one.
+    ///
+    /// The stamp goes on through `evidence_record::stamp`, so a change to
+    /// where the block sits or what it holds reaches these tests instead of
+    /// leaving them agreeing with a shape nothing writes any more.
     fn write_artifact(root: &Path, name: &str, fingerprint: &str) {
         let dir = root.join(EVIDENCE_DIR).join("metadata");
         std::fs::create_dir_all(&dir).expect("Fix: create the evidence directory.");
-        std::fs::write(
-            dir.join(name),
-            format!(
-                "{{\n  \"source_fingerprint\": \"{fingerprint}\",\n  \"schema_version\": 1\n}}\n"
-            ),
+        let mut provenance = crate::evidence_record::EvidenceProvenance::capture(
+            root,
+            crate::evidence_record::MeasurementRecord::Unattributable {
+                reason: "the fixture records no measurement".to_string(),
+                recapture: "run the owning gate with --write".to_string(),
+            },
         )
-        .expect("Fix: write the evidence artifact.");
+        .expect("Fix: the fixture checkout must name a tree.");
+        provenance.tree = recorded_against(fingerprint);
+        let body = "{\n  \"schema_version\": 1\n}\n";
+        let stamped = crate::evidence_record::stamp(body, &provenance)
+            .expect("Fix: stamp the fixture artifact.");
+        std::fs::write(dir.join(name), stamped).expect("Fix: write the evidence artifact.");
+    }
+
+    /// A tree record naming exactly the fingerprint a case wants judged.
+    fn recorded_against(fingerprint: &str) -> crate::evidence_record::TreeRecord {
+        let commit = source_provenance::recorded_commit(fingerprint)
+            .expect("Fix: a fixture fingerprint names a commit.")
+            .to_string();
+        crate::evidence_record::TreeRecord::Attributed {
+            branch: "fixture".to_string(),
+            commit,
+            commit_timestamp: "0".to_string(),
+            parent_commit: String::new(),
+            dirty: fingerprint.contains(":dirty=true"),
+            source_fingerprint: fingerprint.to_string(),
+        }
     }
 
     fn findings(root: &Path) -> String {
@@ -262,8 +287,16 @@ mod tests {
         );
     }
 
+    /// WHY: this gate's claim is that every committed evidence artifact names
+    /// the source the commit carrying it holds. An artifact with no block at
+    /// all names nothing, so it is a finding here rather than a silent row in
+    /// a count. The stamped artifact beside it proves the finding is about the
+    /// unstamped file and not about the run.
+    ///
+    /// What it does not catch: an artifact whose block is present and whose
+    /// contents are a lie about a device. That is the corpus gate's judgement.
     #[test]
-    fn an_artifact_carrying_no_fingerprint_is_left_to_the_artifact_gate() {
+    fn an_artifact_carrying_no_provenance_block_is_a_finding() {
         let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
         fixture_checkout::seeded(dir.path());
         let base = fixture_checkout::head(dir.path());
@@ -282,19 +315,16 @@ mod tests {
         let report = CommittedEvidenceProvenance
             .run(&GateCtx::new(dir.path().to_path_buf(), Vec::new()))
             .expect("Fix: the fixture checkout must be judgeable.");
+        let found = report.finding_messages();
 
         assert!(
-            report.findings.is_empty(),
-            "Fix: an artifact carrying no fingerprint is the artifact gate's to report; {}",
-            report.finding_messages()
+            found.contains("plain.json") && found.contains("carries no provenance block"),
+            "Fix: an unstamped committed artifact attributes nothing and the verdict must name \
+             it; found={found}"
         );
         assert!(
-            report
-                .notes
-                .iter()
-                .any(|note| note.contains("1 artifact(s) carry none")),
-            "Fix: the count must state what was left unjudged; notes={:?}",
-            report.notes
+            !found.contains("matrix.json"),
+            "Fix: the stamped artifact beside it resolves and must stay silent; found={found}"
         );
     }
 
