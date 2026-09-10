@@ -507,9 +507,10 @@ impl PipelineError {
 }
 
 impl From<vyre_driver::BackendError> for PipelineError {
-    fn from(err: vyre_driver::BackendError) -> Self {
-        PipelineError::Backend(err.to_string())
+    fn from(error: vyre_driver::BackendError) -> Self {
+        Self::Backend(error.to_string())
     }
 }
+
 
 vyre_foundation::diagnostic_conversions!(PipelineError, diagnostic);

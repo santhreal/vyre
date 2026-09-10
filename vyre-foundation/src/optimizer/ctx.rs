@@ -21,7 +21,7 @@
 //! as part of A-C7b and the Gemini C perf blitz) can adopt the
 //! ctx-based path without breaking the registry.
 
-use crate::diagnostics::{Diagnostic, DiagnosticStage, OpLocation};
+use crate::diagnostics::{CauseKind, Diagnostic, DiagnosticStage, OpLocation};
 use rustc_hash::FxHashMap;
 
 /// The subset of device info passes read.
@@ -244,7 +244,7 @@ pub fn scheduling_error_to_diagnostic(err: &crate::optimizer::PassSchedulingErro
             format!("scheduler could not reserve {requested} {context} slot(s)"),
         )
         .with_stage(DiagnosticStage::Optimize)
-        .with_cause("allocation", message.clone())
+        .with_cause(CauseKind::ResourceExhausted, "allocation", message.clone())
         .with_fix("reduce the pass set or schedule it in shards"),
     }
 }

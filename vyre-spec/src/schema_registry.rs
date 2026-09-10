@@ -58,6 +58,8 @@ pub enum SchemaId {
     TargetFacetMatrix = 21,
     /// Execution causal receipt.
     CausalReceipt = 22,
+    /// Structured diagnostic record rendered by every reporting surface.
+    DiagnosticRecord = 23,
 }
 
 impl SchemaId {
@@ -85,6 +87,7 @@ impl SchemaId {
         Self::WireFraming,
         Self::TargetFacetMatrix,
         Self::CausalReceipt,
+        Self::DiagnosticRecord,
     ];
 
     /// Canonical string identifier for this schema.
@@ -113,6 +116,7 @@ impl SchemaId {
             Self::WireFraming => "wire_framing",
             Self::TargetFacetMatrix => "target_facet_matrix",
             Self::CausalReceipt => "causal_receipt",
+            Self::DiagnosticRecord => "diagnostic_record",
         }
     }
 
@@ -139,7 +143,9 @@ impl SchemaId {
             | Self::AotManifest
             | Self::ArtifactReport => ProtocolDomain::Artifact,
             Self::MeasurementRecord => ProtocolDomain::Measurement,
-            Self::TraceEvent | Self::CausalReceipt => ProtocolDomain::RuntimeProtocol,
+            Self::TraceEvent | Self::CausalReceipt | Self::DiagnosticRecord => {
+                ProtocolDomain::RuntimeProtocol
+            }
         }
     }
 
@@ -1314,6 +1320,127 @@ static STALE_REPORT_FIXTURES: &[&str] = &["vyre-artifact-report-v0"];
 static STALE_WIRE_FRAMING_FIXTURES: &[&str] = &["vyre-wire-v3", "vyre-wire-v2", "vyre-wire-v1"];
 static STALE_TARGET_FACET_FIXTURES: &[&str] = &["vyre-target-facet-v0"];
 static STALE_CAUSAL_FIXTURES: &[&str] = &["vyre-causal-receipt-v0"];
+static STALE_DIAGNOSTIC_FIXTURES: &[&str] = &["vyre-diagnostic-v0"];
+
+/// Canonical field order of the shared structured diagnostic record.
+///
+/// `schema_version`, `severity`, `code` and `stage` form the identity: two
+/// renderings of one failure are the same record when those four agree, and
+/// every other field is context the surfaces render around them.
+static DIAGNOSTIC_RECORD_FIELDS: &[CanonicalField] = &[
+    CanonicalField {
+        number: 1,
+        name: "schema_version",
+        field_type: FieldType::U32,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 2,
+        name: "severity",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "code",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "stage",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 5,
+        name: "compiler_level",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 6,
+        name: "message",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: true,
+    },
+    CanonicalField {
+        number: 7,
+        name: "location",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 8,
+        name: "artifact_id",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 9,
+        name: "target",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 10,
+        name: "device",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 11,
+        name: "suggested_fix",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 12,
+        name: "cause_chain",
+        field_type: FieldType::List(&FieldType::Utf8String),
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 13,
+        name: "retry",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: true,
+    },
+    CanonicalField {
+        number: 14,
+        name: "context_values",
+        field_type: FieldType::List(&FieldType::Utf8String),
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 15,
+        name: "doc_url",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 16,
+        name: "notes",
+        field_type: FieldType::List(&FieldType::Utf8String),
+        is_identity: false,
+        required: false,
+    },
+];
 
 /// The complete declarative schema registry.
 pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
@@ -1645,6 +1772,21 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         domain_separator: "VYRE_CAUSAL_RECEIPT_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_CAUSAL_FIXTURES,
+        owning_package: "vyre-foundation",
+    },
+    SchemaDefinition {
+        id: SchemaId::DiagnosticRecord,
+        semver: ProtocolVersion::new(1, 0, 0),
+        fields: DIAGNOSTIC_RECORD_FIELDS,
+        defaults_policy: DefaultsPolicy::NoDefaults,
+        bounds: SchemaBounds {
+            max_bytes: 65536,
+            max_depth: 3,
+            max_elements: 32,
+        },
+        domain_separator: "VYRE_DIAGNOSTIC_RECORD_V1",
+        compatibility: CompatibilityDisposition::Supported,
+        stale_fixtures: STALE_DIAGNOSTIC_FIXTURES,
         owning_package: "vyre-foundation",
     },
 ];

@@ -1,11 +1,113 @@
-//! Shared structured diagnostic protocol for compiler and workflow boundaries.
+//! The one structured diagnostic record every reporting surface renders.
+//!
+//! A caller classifies a failure from typed fields: the stable code, the
+//! severity, the owning stage and compiler level, the typed location, the
+//! target and device identity, the recovery class of every preserved cause, and
+//! the retry class. Rendered text is a projection of that record and never an
+//! input to a decision.
+//!
+//! The record is versioned by [`SchemaId::DiagnosticRecord`] in the canonical
+//! schema registry, which also states its size and element bounds. A decoder
+//! rejects a record whose version it does not implement rather than reading it
+//! partially.
+//!
+//! Every string a record carries is bounded by a stated rule, so two renderings
+//! of one failure are byte-identical and a hostile input cannot grow the record
+//! past its declared limit.
+
+pub mod cause;
 
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
 use serde::{Deserialize, Deserializer, Serialize};
+use vyre_spec::schema_registry::SchemaId;
 
-fn deserialize_cow_static<'de, D>(deserializer: D) -> Result<Cow<'static, str>, D::Error>
+pub use cause::{CauseKind, DiagnosticCause};
+
+/// Schema identity of the diagnostic record.
+pub const DIAGNOSTIC_SCHEMA_ID: SchemaId = SchemaId::DiagnosticRecord;
+
+/// Version of the diagnostic record this build produces and accepts.
+pub const DIAGNOSTIC_SCHEMA_VERSION: u32 = DIAGNOSTIC_SCHEMA_ID.version_u32();
+
+/// Signature domain separator for a diagnostic record digest.
+pub const DIAGNOSTIC_DOMAIN_SEPARATOR: &str = DIAGNOSTIC_SCHEMA_ID.domain_separator();
+
+/// Maximum serialized size of one record, from the canonical schema registry.
+pub const RECORD_MAX_BYTES: usize = DIAGNOSTIC_SCHEMA_ID.definition().bounds.max_bytes;
+
+/// Maximum number of contextual key-value pairs, from the schema registry.
+pub const CONTEXT_MAX_PAIRS: usize = DIAGNOSTIC_SCHEMA_ID.definition().bounds.max_elements;
+
+/// Maximum bytes of one contextual key.
+pub const CONTEXT_KEY_MAX_BYTES: usize = 64;
+
+/// Maximum bytes of one contextual value.
+pub const CONTEXT_VALUE_MAX_BYTES: usize = 256;
+
+/// Maximum bytes of the primary failure message.
+pub const MESSAGE_MAX_BYTES: usize = 4096;
+
+/// Maximum bytes of one cause detail.
+pub const CAUSE_DETAIL_MAX_BYTES: usize = 512;
+
+/// Maximum number of links a cause chain retains.
+pub const CAUSE_CHAIN_MAX_LINKS: usize = 8;
+
+/// Maximum bytes of the corrective action.
+pub const FIX_MAX_BYTES: usize = 1024;
+
+/// Maximum number of notes a record retains.
+pub const NOTES_MAX: usize = 8;
+
+/// Maximum bytes of one note.
+pub const NOTE_MAX_BYTES: usize = 512;
+
+/// Suffix appended to a value the bound truncated.
+pub const TRUNCATION_MARKER: &str = "...";
+
+/// Replacement written wherever redaction removes host-identifying material.
+pub const REDACTION_PLACEHOLDER: &str = "<redacted>";
+
+/// Contextual keys whose values name the host rather than the failure.
+///
+/// Redaction replaces the value under one of these keys outright, because the
+/// key alone already states what the value would have said.
+pub const REDACTED_CONTEXT_KEYS: &[&str] = &[
+    "home",
+    "host",
+    "hostname",
+    "source_path",
+    "token",
+    "user",
+    "username",
+    "workspace_root",
+];
+
+/// Bound one value to `max_bytes`, cutting on a character boundary.
+///
+/// A value longer than the bound keeps the longest prefix that leaves room for
+/// [`TRUNCATION_MARKER`] and ends on a character boundary, then carries the
+/// marker. The result is valid UTF-8 and never exceeds `max_bytes`, so a
+/// multi-byte character straddling the bound cannot panic the truncation and
+/// cannot push the record past its declared size.
+#[must_use]
+pub fn bound_value(mut value: String, max_bytes: usize) -> String {
+    if value.len() <= max_bytes {
+        return value;
+    }
+    let budget = max_bytes.saturating_sub(TRUNCATION_MARKER.len());
+    let mut cut = budget;
+    while cut > 0 && !value.is_char_boundary(cut) {
+        cut -= 1;
+    }
+    value.truncate(cut);
+    value.push_str(TRUNCATION_MARKER);
+    value
+}
+
+pub(crate) fn deserialize_cow_static<'de, D>(deserializer: D) -> Result<Cow<'static, str>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -19,6 +121,10 @@ where
     D: Deserializer<'de>,
 {
     Option::<String>::deserialize(deserializer).map(|value| value.map(Cow::Owned))
+}
+
+const fn current_schema_version() -> u32 {
+    DIAGNOSTIC_SCHEMA_VERSION
 }
 
 /// Severity of a diagnostic.
@@ -153,6 +259,24 @@ pub enum DiagnosticStage {
     Complete,
 }
 
+impl DiagnosticStage {
+    /// Stable serialized label, identical to the serde representation.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Validate => "validate",
+            Self::Optimize => "optimize",
+            Self::Plan => "plan",
+            Self::Lower => "lower",
+            Self::Emit => "emit",
+            Self::Admit => "admit",
+            Self::Materialize => "materialize",
+            Self::Submit => "submit",
+            Self::Complete => "complete",
+        }
+    }
+}
+
 /// Whether and where a failed workflow may be retried.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -168,8 +292,21 @@ pub enum RetryClass {
     RecompileSource,
 }
 
+impl RetryClass {
+    /// Stable serialized label, identical to the serde representation.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Never => "never",
+            Self::SameDevice => "same_device",
+            Self::NewDevice => "new_device",
+            Self::RecompileSource => "recompile_source",
+        }
+    }
+}
+
 /// Stable, machine-readable diagnostic code.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct DiagnosticCode(
     #[serde(deserialize_with = "deserialize_cow_static")] pub Cow<'static, str>,
@@ -309,20 +446,59 @@ impl OpLocation {
         self.source_span = Some(span);
         self
     }
+
+    fn redacted(&self) -> Self {
+        let mut copy = self.clone();
+        copy.path = copy.path.map(|path| redact_paths(&path));
+        copy
+    }
 }
 
-/// Structured cause preserved across owner boundaries.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct DiagnosticCause {
-    /// Stable cause family, such as `device_lost` or `version_skew`.
-    pub kind: String,
-    /// Deterministic cause detail.
-    pub detail: String,
+/// Why a serialized diagnostic record was refused.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[non_exhaustive]
+pub enum DiagnosticDecodeError {
+    /// The encoded record is larger than the schema registry permits.
+    #[error(
+        "diagnostic record is {got} bytes, limit is {limit}. Fix: bound the producing fields before encoding"
+    )]
+    TooLarge {
+        /// Encoded length.
+        got: usize,
+        /// Declared limit.
+        limit: usize,
+    },
+    /// The record declares a schema version this build does not implement.
+    #[error(
+        "diagnostic record declares schema version {got}, this build implements {expected}. Fix: re-render the record with the current compiler"
+    )]
+    VersionSkew {
+        /// Version the record declares.
+        got: u32,
+        /// Version this build implements.
+        expected: u32,
+    },
+    /// The bytes are not a diagnostic record.
+    #[error("diagnostic record is malformed: {detail}. Fix: re-render the record")]
+    Malformed {
+        /// Deterministic decode detail.
+        detail: String,
+    },
 }
 
 /// Serializable diagnostic shared by compiler, AOT, runtime, and drivers.
+///
+/// Construct through [`Diagnostic::error`], [`Diagnostic::warning`],
+/// [`Diagnostic::note`], or [`Diagnostic::emission_error`] and the `with_*`
+/// builders. The type is `#[non_exhaustive]` so a field added here reaches every
+/// producer through the builders instead of the subset of struct literals
+/// someone remembered to update.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Diagnostic {
+    /// Record schema version this diagnostic was produced under.
+    #[serde(default = "current_schema_version")]
+    pub schema_version: u32,
     /// Severity of the diagnostic.
     pub severity: Severity,
     /// Stable machine-readable code.
@@ -354,10 +530,7 @@ pub struct Diagnostic {
         deserialize_with = "deserialize_optional_cow_static"
     )]
     pub suggested_fix: Option<Cow<'static, str>>,
-    /// Primary structured cause retained from the owning stage.
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub cause: Option<DiagnosticCause>,
-    /// Complete structured cause chain from root cause to boundary.
+    /// Complete structured cause chain from the boundary to the root cause.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub cause_chain: Vec<DiagnosticCause>,
     /// Retry policy for this failure.
@@ -396,6 +569,16 @@ impl Diagnostic {
         Self::new(Severity::Note, code, message)
     }
 
+    /// Construct an error diagnostic from an owned code.
+    ///
+    /// Used by a registry whose codes are data rather than literals.
+    #[must_use]
+    pub fn error_with_code(code: DiagnosticCode, message: impl Into<Cow<'static, str>>) -> Self {
+        let mut diagnostic = Self::new(Severity::Error, "", message);
+        diagnostic.code = code;
+        diagnostic
+    }
+
     /// Construct an emission-stage error for one target, retryable by
     /// recompiling the source.
     ///
@@ -417,17 +600,17 @@ impl Diagnostic {
 
     fn new(severity: Severity, code: &'static str, message: impl Into<Cow<'static, str>>) -> Self {
         Self {
+            schema_version: DIAGNOSTIC_SCHEMA_VERSION,
             severity,
             code: DiagnosticCode::new(code),
             stage: DiagnosticStage::Validate,
             compiler_level: None,
-            message: message.into(),
+            message: bound_cow(message.into(), MESSAGE_MAX_BYTES),
             location: None,
             artifact_id: None,
             target: None,
             device: None,
             suggested_fix: None,
-            cause: None,
             cause_chain: Vec::new(),
             retry: RetryClass::Never,
             context_values: Vec::new(),
@@ -450,40 +633,46 @@ impl Diagnostic {
         self
     }
 
+    /// Set the severity.
+    #[must_use]
+    pub const fn with_severity(mut self, severity: Severity) -> Self {
+        self.severity = severity;
+        self
+    }
+
     /// Attach an artifact identifier.
     #[must_use]
     pub fn with_artifact_id(mut self, artifact_id: impl Into<String>) -> Self {
-        self.artifact_id = Some(artifact_id.into());
+        self.artifact_id = Some(bound_value(artifact_id.into(), CONTEXT_VALUE_MAX_BYTES));
         self
     }
 
     /// Attach a target identity.
     #[must_use]
     pub fn with_target(mut self, target: impl Into<String>) -> Self {
-        self.target = Some(target.into());
+        self.target = Some(bound_value(target.into(), CONTEXT_VALUE_MAX_BYTES));
         self
     }
 
     /// Attach a device identity.
     #[must_use]
     pub fn with_device(mut self, device: impl Into<String>) -> Self {
-        self.device = Some(device.into());
+        self.device = Some(bound_value(device.into(), CONTEXT_VALUE_MAX_BYTES));
         self
     }
 
     /// Attach a bounded contextual key-value pair.
+    ///
+    /// The pair is dropped once [`CONTEXT_MAX_PAIRS`] pairs are present. The key
+    /// is bound to [`CONTEXT_KEY_MAX_BYTES`] and the value to
+    /// [`CONTEXT_VALUE_MAX_BYTES`], each cut on a character boundary.
     #[must_use]
     pub fn with_context_value(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        if self.context_values.len() < 32 {
-            let mut k = key.into();
-            let mut v = value.into();
-            if k.len() > 1024 {
-                k.truncate(1024);
-            }
-            if v.len() > 1024 {
-                v.truncate(1024);
-            }
-            self.context_values.push((k, v));
+        if self.context_values.len() < CONTEXT_MAX_PAIRS {
+            self.context_values.push((
+                bound_value(key.into(), CONTEXT_KEY_MAX_BYTES),
+                bound_value(value.into(), CONTEXT_VALUE_MAX_BYTES),
+            ));
         }
         self
     }
@@ -494,8 +683,8 @@ impl Diagnostic {
         mut self,
         values: impl IntoIterator<Item = (impl Into<String>, impl Into<String>)>,
     ) -> Self {
-        for (k, v) in values {
-            self = self.with_context_value(k, v);
+        for (key, value) in values {
+            self = self.with_context_value(key, value);
         }
         self
     }
@@ -510,30 +699,62 @@ impl Diagnostic {
     /// Attach a corrective action.
     #[must_use]
     pub fn with_fix(mut self, fix: impl Into<Cow<'static, str>>) -> Self {
-        self.suggested_fix = Some(fix.into());
+        self.suggested_fix = Some(bound_cow(fix.into(), FIX_MAX_BYTES));
         self
     }
 
-    /// Attach a structured cause.
+    /// Append one classified link to the cause chain.
+    ///
+    /// The chain is ordered from the boundary that reported the failure to the
+    /// root cause, and stops growing at [`CAUSE_CHAIN_MAX_LINKS`].
     #[must_use]
-    pub fn with_cause(mut self, kind: impl Into<String>, detail: impl Into<String>) -> Self {
-        let cause = DiagnosticCause {
-            kind: kind.into(),
-            detail: detail.into(),
-        };
-        self.cause = Some(cause.clone());
-        self.cause_chain.push(cause);
+    pub fn with_cause(
+        self,
+        kind: CauseKind,
+        subject: impl Into<Cow<'static, str>>,
+        detail: impl Into<String>,
+    ) -> Self {
+        self.with_cause_link(DiagnosticCause::new(kind, subject, detail))
+    }
+
+    /// Append one already-built cause link.
+    #[must_use]
+    pub fn with_cause_link(mut self, cause: DiagnosticCause) -> Self {
+        if self.cause_chain.len() < CAUSE_CHAIN_MAX_LINKS {
+            self.cause_chain.push(cause);
+        }
         self
     }
 
-    /// Attach a structured cause chain.
+    /// Append every link of another chain, preserving order.
     #[must_use]
     pub fn with_cause_chain(mut self, chain: impl IntoIterator<Item = DiagnosticCause>) -> Self {
         for cause in chain {
-            if self.cause.is_none() {
-                self.cause = Some(cause.clone());
-            }
-            self.cause_chain.push(cause);
+            self = self.with_cause_link(cause);
+        }
+        self
+    }
+
+    /// Adopt `source` as the cause of this diagnostic.
+    ///
+    /// The source's own classified chain is appended after this diagnostic's
+    /// links, so a chain that crosses three owners still reads root-ward from
+    /// the boundary that reported it. This is how a crate preserves a cause it
+    /// cannot name the type of: the owning crate projects its error into a
+    /// record, and every crate above it keeps every link.
+    #[must_use]
+    pub fn caused_by(mut self, source: &Self) -> Self {
+        let boundary = DiagnosticCause {
+            kind: source
+                .cause_chain
+                .first()
+                .map_or(CauseKind::InternalInvariant, |first| first.kind),
+            subject: Cow::Owned(source.code.as_str().to_owned()),
+            detail: bound_value(source.message.to_string(), CAUSE_DETAIL_MAX_BYTES),
+        };
+        self = self.with_cause_link(boundary);
+        for link in &source.cause_chain {
+            self = self.with_cause_link(link.clone());
         }
         self
     }
@@ -555,7 +776,9 @@ impl Diagnostic {
     /// Attach an informational note.
     #[must_use]
     pub fn with_note(mut self, note: impl Into<Cow<'static, str>>) -> Self {
-        self.notes.push(note.into());
+        if self.notes.len() < NOTES_MAX {
+            self.notes.push(bound_cow(note.into(), NOTE_MAX_BYTES));
+        }
         self
     }
 
@@ -565,19 +788,42 @@ impl Diagnostic {
         mut self,
         notes: impl IntoIterator<Item = impl Into<Cow<'static, str>>>,
     ) -> Self {
-        self.notes.extend(notes.into_iter().map(Into::into));
+        for note in notes {
+            self = self.with_note(note);
+        }
         self
     }
+
+    /// Primary structured cause, the link closest to the reporting boundary.
+    #[must_use]
+    pub fn cause(&self) -> Option<&DiagnosticCause> {
+        self.cause_chain.first()
+    }
+
+    /// Root structured cause, the deepest preserved link.
+    #[must_use]
+    pub fn root_cause(&self) -> Option<&DiagnosticCause> {
+        self.cause_chain.last()
+    }
+
+    /// Whether any preserved link carries `kind`.
+    ///
+    /// This is the typed replacement for searching rendered text.
+    #[must_use]
+    pub fn caused_by_kind(&self, kind: CauseKind) -> bool {
+        self.cause_chain.iter().any(|cause| cause.kind == kind)
+    }
+
     /// Render a deterministic rustc-style diagnostic.
     #[must_use]
     pub fn render_human(&self) -> String {
         let mut output = String::with_capacity(256);
         let _ = write!(
             output,
-            "{}[{}]({:?}): {}",
+            "{}[{}]({}): {}",
             self.severity.label(),
             self.code,
-            self.stage,
+            self.stage.label(),
             self.message
         );
         if let Some(level) = self.compiler_level {
@@ -623,15 +869,18 @@ impl Diagnostic {
             output.push_str("\n  = help: ");
             output.push_str(fix);
         }
-        if !self.cause_chain.is_empty() {
-            for cause in &self.cause_chain {
-                let _ = write!(output, "\n  = cause[{}]: {}", cause.kind, cause.detail);
-            }
-        } else if let Some(cause) = &self.cause {
-            let _ = write!(output, "\n  = cause[{}]: {}", cause.kind, cause.detail);
+        for cause in &self.cause_chain {
+            let _ = write!(
+                output,
+                "\n  = cause[{}/{}]: {}",
+                cause.kind.label(),
+                cause.subject,
+                cause.detail
+            );
         }
-        for (k, v) in &self.context_values {
-            let _ = write!(output, "\n  = context `{k}`: {v}");
+        let _ = write!(output, "\n  = retry: {}", self.retry.label());
+        for (key, value) in &self.context_values {
+            let _ = write!(output, "\n  = context `{key}`: {value}");
         }
         if let Some(url) = &self.doc_url {
             output.push_str("\n  = note: ");
@@ -644,23 +893,174 @@ impl Diagnostic {
         output
     }
 
-    /// Serialize this diagnostic as canonical JSON.
+    /// Canonical serialized bytes of this record.
     ///
-    /// Every field is an owned string, integer, or enum, so `serde_json` has no
-    /// failing path here: it fails only on a map with non-string keys, a
-    /// non-finite float, or a `Serialize` impl that returns an error.
+    /// Field order is the declaration order of the struct and every collection
+    /// keeps insertion order, so two encodings of one record are byte-identical
+    /// in any process. This is the exact byte sequence every surface renders,
+    /// stores, and digests.
     ///
     /// # Panics
     ///
-    /// Panics if serialization fails due to a custom `Serialize` implementation returning an error.
+    /// Panics if serialization fails, which requires a field whose `Serialize`
+    /// implementation returns an error. Every field is an owned string, integer,
+    /// or enum.
     #[must_use]
-    pub fn to_json(&self) -> String {
-        serde_json::to_string(self).expect(
+    pub fn canonical_bytes(&self) -> Vec<u8> {
+        serde_json::to_vec(self).expect(
             "a diagnostic holds only owned strings, integers, and enums. \
              Fix: a field added to Diagnostic serializes fallibly; make it data \
              or give it a Serialize impl that cannot fail",
         )
     }
+
+    /// Serialize this diagnostic as canonical JSON.
+    ///
+    /// # Panics
+    ///
+    /// Panics under the same condition as [`Self::canonical_bytes`].
+    #[must_use]
+    pub fn to_json(&self) -> String {
+        String::from_utf8(self.canonical_bytes())
+            .expect("serde_json emits UTF-8. Fix: none; this cannot fail")
+    }
+
+    /// Stable identity of this record, for certificates and cache keys.
+    ///
+    /// The digest covers the schema domain separator followed by the canonical
+    /// bytes, so a record cannot be confused with another schema's payload and a
+    /// version bump changes the identity.
+    #[must_use]
+    pub fn record_digest(&self) -> [u8; 32] {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(DIAGNOSTIC_DOMAIN_SEPARATOR.as_bytes());
+        hasher.update(b"\0");
+        hasher.update(&self.canonical_bytes());
+        *hasher.finalize().as_bytes()
+    }
+
+    /// Lowercase hexadecimal [`Self::record_digest`].
+    #[must_use]
+    pub fn record_digest_hex(&self) -> String {
+        let mut out = String::with_capacity(64);
+        for byte in self.record_digest() {
+            let _ = write!(out, "{byte:02x}");
+        }
+        out
+    }
+
+    /// Decode a record, refusing a stale version or an oversized payload.
+    ///
+    /// A record that declares a version this build does not implement is
+    /// rejected rather than read partially, because a partially read record
+    /// silently loses whichever fields the newer version added.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DiagnosticDecodeError`] when the payload exceeds
+    /// [`RECORD_MAX_BYTES`], declares another schema version, or is malformed.
+    pub fn from_json(encoded: &str) -> Result<Self, DiagnosticDecodeError> {
+        if encoded.len() > RECORD_MAX_BYTES {
+            return Err(DiagnosticDecodeError::TooLarge {
+                got: encoded.len(),
+                limit: RECORD_MAX_BYTES,
+            });
+        }
+        let decoded: Self =
+            serde_json::from_str(encoded).map_err(|error| DiagnosticDecodeError::Malformed {
+                detail: bound_value(error.to_string(), CAUSE_DETAIL_MAX_BYTES),
+            })?;
+        if decoded.schema_version != DIAGNOSTIC_SCHEMA_VERSION {
+            return Err(DiagnosticDecodeError::VersionSkew {
+                got: decoded.schema_version,
+                expected: DIAGNOSTIC_SCHEMA_VERSION,
+            });
+        }
+        Ok(decoded)
+    }
+
+    /// A copy with host-identifying material removed.
+    ///
+    /// Redaction is a pure function of the record: an absolute filesystem path
+    /// keeps only its final component behind [`REDACTION_PLACEHOLDER`], and a
+    /// contextual value under a key in [`REDACTED_CONTEXT_KEYS`] is replaced
+    /// outright. Nothing else changes, so a redacted record still classifies and
+    /// still digests to one stable identity.
+    #[must_use]
+    pub fn redacted(&self) -> Self {
+        let mut copy = self.clone();
+        copy.message = Cow::Owned(redact_paths(&self.message));
+        copy.location = self.location.as_ref().map(OpLocation::redacted);
+        copy.suggested_fix = self
+            .suggested_fix
+            .as_ref()
+            .map(|fix| Cow::Owned(redact_paths(fix)));
+        for cause in &mut copy.cause_chain {
+            cause.detail = redact_paths(&cause.detail);
+        }
+        for (key, value) in &mut copy.context_values {
+            if REDACTED_CONTEXT_KEYS.contains(&key.as_str()) {
+                *value = REDACTION_PLACEHOLDER.to_owned();
+            } else {
+                *value = redact_paths(value);
+            }
+        }
+        copy.notes = self
+            .notes
+            .iter()
+            .map(|note| Cow::Owned(redact_paths(note)))
+            .collect();
+        copy
+    }
+}
+
+fn bound_cow(value: Cow<'static, str>, max_bytes: usize) -> Cow<'static, str> {
+    if value.len() <= max_bytes {
+        return value;
+    }
+    Cow::Owned(bound_value(value.into_owned(), max_bytes))
+}
+
+/// Replace every absolute filesystem path in `text` with its final component.
+///
+/// A token is an absolute path when it starts with `/` and holds a second `/`,
+/// or when its second and third bytes are `:\` or `:/`. Both forms keep the
+/// final component so the diagnostic still names the file, and lose the
+/// directories above it, which are the part that names the host.
+fn redact_paths(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut first = true;
+    for token in text.split(' ') {
+        if !first {
+            out.push(' ');
+        }
+        first = false;
+        match absolute_path_tail(token) {
+            Some(tail) => {
+                out.push_str(REDACTION_PLACEHOLDER);
+                out.push('/');
+                out.push_str(tail);
+            }
+            None => out.push_str(token),
+        }
+    }
+    out
+}
+
+fn absolute_path_tail(token: &str) -> Option<&str> {
+    let trimmed = token.trim_matches(|c| c == '`' || c == '"' || c == ',' || c == '.');
+    let bytes = trimmed.as_bytes();
+    let unix = bytes.first() == Some(&b'/') && trimmed.matches('/').count() >= 2;
+    let windows = bytes.len() > 2
+        && bytes[0].is_ascii_alphabetic()
+        && bytes[1] == b':'
+        && (bytes[2] == b'\\' || bytes[2] == b'/');
+    if !unix && !windows {
+        return None;
+    }
+    trimmed
+        .rsplit(|c| c == '/' || c == '\\')
+        .find(|part| !part.is_empty())
 }
 
 impl std::fmt::Display for Diagnostic {

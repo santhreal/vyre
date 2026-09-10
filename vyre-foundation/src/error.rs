@@ -1,10 +1,9 @@
 //! Typed failures for semantic IR transformation and versioned Program wire data.
 
-use std::borrow::Cow;
 use thiserror::Error;
 
 use crate::diagnostics::{
-    CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, OpLocation, RetryClass, Severity,
+    CauseKind, CompilerLevel, Diagnostic, DiagnosticStage, OpLocation, RetryClass,
 };
 
 /// Result for foundation-owned IR and Program wire operations.
@@ -147,194 +146,95 @@ impl IrError {
     pub fn diagnostic(&self) -> Diagnostic {
         match self {
             Self::InlineCycle { op_id } => {
-                let cause = crate::diagnostics::DiagnosticCause {
-                    kind: "inlining".to_string(),
-                    detail: format!("cyclic expansion of `{op_id}`"),
-                };
-                Diagnostic {
-                    severity: Severity::Error,
-                    code: DiagnosticCode::new("IRC001_INLINE_CYCLE"),
-                    stage: DiagnosticStage::Optimize,
-                    compiler_level: Some(CompilerLevel::Optimizer),
-                    message: format!("IR inlining cycle at operation `{op_id}`").into(),
-                    location: Some(OpLocation::op(op_id.clone())),
-                    artifact_id: None,
-                    target: None,
-                    device: None,
-                    suggested_fix: Some(
-                        "remove the recursive Expr::Call chain or split the recursive algorithm into an explicit bounded Loop"
-                            .into(),
-                    ),
-                    cause: Some(cause.clone()),
-                    cause_chain: vec![cause],
-                    retry: RetryClass::Never,
-                    context_values: vec![("op_id".to_string(), op_id.clone())],
-                    doc_url: None,
-                    notes: Vec::new(),
-                }
+                Diagnostic::error("IRC001_INLINE_CYCLE", format!("IR inlining cycle at operation `{op_id}`"))
+                    .with_stage(DiagnosticStage::Optimize)
+                    .with_compiler_level(CompilerLevel::Optimizer)
+                    .with_location(OpLocation::op(op_id.clone()))
+                    .with_fix("remove the recursive Expr::Call chain or split the recursive algorithm into an explicit bounded Loop")
+                    .with_cause(CauseKind::InvalidInput, "inlining", format!("cyclic expansion of `{op_id}`"))
+                    .with_context_value("op_id", op_id.clone())
             }
             Self::InlineUnknownOp { op_id } => {
-                let cause = crate::diagnostics::DiagnosticCause {
-                    kind: "inlining".to_string(),
-                    detail: format!("unresolved operation `{op_id}`"),
-                };
-                Diagnostic {
-                    severity: Severity::Error,
-                    code: DiagnosticCode::new("IRC002_INLINE_UNKNOWN_OP"),
-                    stage: DiagnosticStage::Optimize,
-                    compiler_level: Some(CompilerLevel::Optimizer),
-                    message: format!("IR inlining could not resolve operation `{op_id}`").into(),
-                    location: Some(OpLocation::op(op_id.clone())),
-                    artifact_id: None,
-                    target: None,
-                    device: None,
-                    suggested_fix: Some(
-                        "register a Category A operation with this id before lowering or replace the call with inline IR"
-                            .into(),
-                    ),
-                    cause: Some(cause.clone()),
-                    cause_chain: vec![cause],
-                    retry: RetryClass::Never,
-                    context_values: vec![("op_id".to_string(), op_id.clone())],
-                    doc_url: None,
-                    notes: Vec::new(),
-                }
+                Diagnostic::error(
+                    "IRC002_INLINE_UNKNOWN_OP",
+                    format!("IR inlining could not resolve operation `{op_id}`"),
+                )
+                .with_stage(DiagnosticStage::Optimize)
+                .with_compiler_level(CompilerLevel::Optimizer)
+                .with_location(OpLocation::op(op_id.clone()))
+                .with_fix("register a Category A operation with this id before lowering or replace the call with inline IR")
+                .with_cause(CauseKind::Configuration, "inlining", format!("unresolved operation `{op_id}`"))
+                .with_context_value("op_id", op_id.clone())
             }
             Self::InlineNonInlinable { op_id } => {
-                let cause = crate::diagnostics::DiagnosticCause {
-                    kind: "inlining".to_string(),
-                    detail: format!("op `{op_id}` cannot be inlined"),
-                };
-                Diagnostic {
-                    severity: Severity::Error,
-                    code: DiagnosticCode::new("IRC003_INLINE_NON_INLINABLE"),
-                    stage: DiagnosticStage::Optimize,
-                    compiler_level: Some(CompilerLevel::Optimizer),
-                    message: format!("IR inlining rejected non-inlinable operation `{op_id}`").into(),
-                    location: Some(OpLocation::op(op_id.clone())),
-                    artifact_id: None,
-                    target: None,
-                    device: None,
-                    suggested_fix: Some(
-                        "this op processes buffer inputs and must be dispatched as a separate kernel, not composed via Expr::Call"
-                            .into(),
-                    ),
-                    cause: Some(cause.clone()),
-                    cause_chain: vec![cause],
-                    retry: RetryClass::Never,
-                    context_values: vec![("op_id".to_string(), op_id.clone())],
-                    doc_url: None,
-                    notes: Vec::new(),
-                }
+                Diagnostic::error(
+                    "IRC003_INLINE_NON_INLINABLE",
+                    format!("IR inlining rejected non-inlinable operation `{op_id}`"),
+                )
+                .with_stage(DiagnosticStage::Optimize)
+                .with_compiler_level(CompilerLevel::Optimizer)
+                .with_location(OpLocation::op(op_id.clone()))
+                .with_fix("this op processes buffer inputs and must be dispatched as a separate kernel, not composed via Expr::Call")
+                .with_cause(CauseKind::InvalidInput, "inlining", format!("op `{op_id}` cannot be inlined"))
+                .with_context_value("op_id", op_id.clone())
             }
             Self::InlineArgCountMismatch {
                 op_id,
                 expected,
                 got,
-            } => {
-                let cause = crate::diagnostics::DiagnosticCause {
-                    kind: "inlining".to_string(),
-                    detail: format!("argument count mismatch: expected {expected}, got {got}"),
-                };
-                Diagnostic {
-                    severity: Severity::Error,
-                    code: DiagnosticCode::new("IRC004_INLINE_ARG_COUNT"),
-                    stage: DiagnosticStage::Optimize,
-                    compiler_level: Some(CompilerLevel::Optimizer),
-                    message: format!(
-                        "IR inlining argument count mismatch for operation `{op_id}`: expected {expected}, got {got}"
-                    )
-                    .into(),
-                    location: Some(OpLocation::op(op_id.clone())),
-                    artifact_id: None,
-                    target: None,
-                    device: None,
-                    suggested_fix: Some(
-                        "pass exactly one argument for each ReadOnly or Uniform input buffer declared by the callee program"
-                            .into(),
-                    ),
-                    cause: Some(cause.clone()),
-                    cause_chain: vec![cause],
-                    retry: RetryClass::Never,
-                    context_values: vec![
-                        ("op_id".to_string(), op_id.clone()),
-                        ("expected".to_string(), expected.to_string()),
-                        ("got".to_string(), got.to_string()),
-                    ],
-                    doc_url: None,
-                    notes: Vec::new(),
-                }
-            }
-            Self::InlineNoOutput { op_id } => {
-                let cause = crate::diagnostics::DiagnosticCause {
-                    kind: "inlining".to_string(),
-                    detail: format!("no output write in `{op_id}`"),
-                };
-                Diagnostic {
-                    severity: Severity::Error,
-                    code: DiagnosticCode::new("IRC005_INLINE_NO_OUTPUT"),
-                    stage: DiagnosticStage::Optimize,
-                    compiler_level: Some(CompilerLevel::Optimizer),
-                    message: format!("IR inlining found no output write for operation `{op_id}`")
-                        .into(),
-                    location: Some(OpLocation::op(op_id.clone())),
-                    artifact_id: None,
-                    target: None,
-                    device: None,
-                    suggested_fix: Some(
-                        "ensure the op's program() body writes to its output buffer at least once"
-                            .into(),
-                    ),
-                    cause: Some(cause.clone()),
-                    cause_chain: vec![cause],
-                    retry: RetryClass::Never,
-                    context_values: vec![("op_id".to_string(), op_id.clone())],
-                    doc_url: None,
-                    notes: Vec::new(),
-                }
-            }
-            Self::InlineOutputCountMismatch { op_id, got } => {
-                let cause = crate::diagnostics::DiagnosticCause {
-                    kind: "inlining".to_string(),
-                    detail: format!("output count mismatch: got {got}"),
-                };
-                Diagnostic {
-                    severity: Severity::Error,
-                    code: DiagnosticCode::new("IRC006_INLINE_OUTPUT_COUNT"),
-                    stage: DiagnosticStage::Optimize,
-                    compiler_level: Some(CompilerLevel::Optimizer),
-                    message: format!(
-                        "IR inlining found {got} declared output buffers for operation `{op_id}`"
-                    )
-                    .into(),
-                    location: Some(OpLocation::op(op_id.clone())),
-                    artifact_id: None,
-                    target: None,
-                    device: None,
-                    suggested_fix: Some(
-                        "mark exactly one result buffer with BufferDecl::output(...)".into(),
-                    ),
-                    cause: Some(cause.clone()),
-                    cause_chain: vec![cause],
-                    retry: RetryClass::Never,
-                    context_values: vec![
-                        ("op_id".to_string(), op_id.clone()),
-                        ("got".to_string(), got.to_string()),
-                    ],
-                    doc_url: None,
-                    notes: Vec::new(),
-                }
-            }
+            } => Diagnostic::error(
+                "IRC004_INLINE_ARG_COUNT",
+                format!(
+                    "IR inlining argument count mismatch for operation `{op_id}`: expected {expected}, got {got}"
+                ),
+            )
+            .with_stage(DiagnosticStage::Optimize)
+            .with_compiler_level(CompilerLevel::Optimizer)
+            .with_location(OpLocation::op(op_id.clone()))
+            .with_fix("pass exactly one argument for each ReadOnly or Uniform input buffer declared by the callee program")
+            .with_cause(
+                CauseKind::InvalidInput,
+                "inlining",
+                format!("argument count mismatch: expected {expected}, got {got}"),
+            )
+            .with_context_value("op_id", op_id.clone())
+            .with_context_value("expected", expected.to_string())
+            .with_context_value("got", got.to_string()),
+            Self::InlineNoOutput { op_id } => Diagnostic::error(
+                "IRC005_INLINE_NO_OUTPUT",
+                format!("IR inlining found no output write for operation `{op_id}`"),
+            )
+            .with_stage(DiagnosticStage::Optimize)
+            .with_compiler_level(CompilerLevel::Optimizer)
+            .with_location(OpLocation::op(op_id.clone()))
+            .with_fix("ensure the op's program() body writes to its output buffer at least once")
+            .with_cause(CauseKind::InvalidInput, "inlining", format!("no output write in `{op_id}`"))
+            .with_context_value("op_id", op_id.clone()),
+            Self::InlineOutputCountMismatch { op_id, got } => Diagnostic::error(
+                "IRC006_INLINE_OUTPUT_COUNT",
+                format!("IR inlining found {got} declared output buffers for operation `{op_id}`"),
+            )
+            .with_stage(DiagnosticStage::Optimize)
+            .with_compiler_level(CompilerLevel::Optimizer)
+            .with_location(OpLocation::op(op_id.clone()))
+            .with_fix("mark exactly one result buffer with BufferDecl::output(...)")
+            .with_cause(
+                CauseKind::InvalidInput,
+                "inlining",
+                format!("output count mismatch: got {got}"),
+            )
+            .with_context_value("op_id", op_id.clone())
+            .with_context_value("got", got.to_string()),
             Self::Validation { issues } => {
                 if let Some(first) = issues.first() {
                     let mut diag = first.diagnostic();
                     if issues.len() > 1 {
                         for extra in &issues[1..] {
-                            diag.notes.push(Cow::Owned(format!(
+                            diag = diag.with_note(format!(
                                 "additional validation issue [{}]: {}",
                                 extra.code(),
                                 extra.cause()
-                            )));
+                            ));
                         }
                     }
                     diag
@@ -348,154 +248,65 @@ impl IrError {
                     .with_fix("inspect validation rules and program structure")
                 }
             }
-            Self::WireFormatValidation { message } => {
-                let cause = crate::diagnostics::DiagnosticCause {
-                    kind: "wire_format".to_string(),
-                    detail: message.clone(),
-                };
-                Diagnostic {
-                    severity: Severity::Error,
-                    code: DiagnosticCode::new("WIRE001_VALIDATION_FAILED"),
-                    stage: DiagnosticStage::Validate,
-                    compiler_level: Some(CompilerLevel::Spec),
-                    message: message.clone().into(),
-                    location: None,
-                    artifact_id: None,
-                    target: None,
-                    device: None,
-                    suggested_fix: Some(
-                        "recompile the frontend program set and ensure the compiler only emits valid instructions"
-                            .into(),
-                    ),
-                    cause: Some(cause.clone()),
-                    cause_chain: vec![cause],
-                    retry: RetryClass::RecompileSource,
-                    context_values: Vec::new(),
-                    doc_url: None,
-                    notes: Vec::new(),
-                }
-            }
-            Self::Lowering { message } => {
-                let cause = crate::diagnostics::DiagnosticCause {
-                    kind: "lowering".to_string(),
-                    detail: message.clone(),
-                };
-                Diagnostic {
-                    severity: Severity::Error,
-                    code: DiagnosticCode::new("LOWER001_TARGET_TEXT_FAILED"),
-                    stage: DiagnosticStage::Lower,
-                    compiler_level: Some(CompilerLevel::Lowering),
-                    message: message.clone().into(),
-                    location: None,
-                    artifact_id: None,
-                    target: None,
-                    device: None,
-                    suggested_fix: Some(
-                        "inspect the Program shape, backend capability report, and emitted shader diagnostics before retrying"
-                            .into(),
-                    ),
-                    cause: Some(cause.clone()),
-                    cause_chain: vec![cause],
-                    retry: RetryClass::RecompileSource,
-                    context_values: Vec::new(),
-                    doc_url: None,
-                    notes: Vec::new(),
-                }
-            }
-            Self::VersionMismatch { expected, found } => {
-                let cause = crate::diagnostics::DiagnosticCause {
-                    kind: "version_skew".to_string(),
-                    detail: format!("expected wire version {expected}, got {found}"),
-                };
-                Diagnostic {
-                    severity: Severity::Error,
-                    code: DiagnosticCode::new("WIRE002_VERSION_MISMATCH"),
-                    stage: DiagnosticStage::Admit,
-                    compiler_level: Some(CompilerLevel::Spec),
-                    message: format!(
-                        "Wire-format version mismatch: expected {expected}, found {found}"
-                    )
-                    .into(),
-                    location: None,
-                    artifact_id: None,
-                    target: None,
-                    device: None,
-                    suggested_fix: Some(
-                        "re-encode with a matching vyre version or upgrade this runtime".into(),
-                    ),
-                    cause: Some(cause.clone()),
-                    cause_chain: vec![cause],
-                    retry: RetryClass::Never,
-                    context_values: vec![
-                        ("expected".to_string(), expected.to_string()),
-                        ("found".to_string(), found.to_string()),
-                    ],
-                    doc_url: None,
-                    notes: Vec::new(),
-                }
-            }
-            Self::UnknownDialect { name, requested } => {
-                let cause = crate::diagnostics::DiagnosticCause {
-                    kind: "unknown_dialect".to_string(),
-                    detail: format!("dialect `{name}` v{requested}"),
-                };
-                Diagnostic {
-                    severity: Severity::Error,
-                    code: DiagnosticCode::new("WIRE003_UNKNOWN_DIALECT"),
-                    stage: DiagnosticStage::Admit,
-                    compiler_level: Some(CompilerLevel::Spec),
-                    message: format!("Unknown dialect `{name}` (requested version `{requested}`)").into(),
-                    location: None,
-                    artifact_id: None,
-                    target: None,
-                    device: None,
-                    suggested_fix: Some(
-                        format!(
-                            "link the dialect crate providing `{name}` into this runtime or drop the op that uses it before encoding"
-                        )
-                        .into(),
-                    ),
-                    cause: Some(cause.clone()),
-                    cause_chain: vec![cause],
-                    retry: RetryClass::Never,
-                    context_values: vec![
-                        ("dialect".to_string(), name.clone()),
-                        ("requested_version".to_string(), requested.to_string()),
-                    ],
-                    doc_url: None,
-                    notes: Vec::new(),
-                }
-            }
-            Self::UnknownOp { dialect, op } => {
-                let cause = crate::diagnostics::DiagnosticCause {
-                    kind: "unknown_op".to_string(),
-                    detail: format!("op `{op}` in dialect `{dialect}`"),
-                };
-                Diagnostic {
-                    severity: Severity::Error,
-                    code: DiagnosticCode::new("WIRE004_UNKNOWN_OP"),
-                    stage: DiagnosticStage::Admit,
-                    compiler_level: Some(CompilerLevel::Spec),
-                    message: format!("Unknown op `{op}` in dialect `{dialect}`").into(),
-                    location: None,
-                    artifact_id: None,
-                    target: None,
-                    device: None,
-                    suggested_fix: Some(
-                        "upgrade the runtime to a version that includes this op, or drop the op before encoding"
-                            .into(),
-                    ),
-                    cause: Some(cause.clone()),
-                    cause_chain: vec![cause],
-                    retry: RetryClass::Never,
-                    context_values: vec![
-                        ("dialect".to_string(), dialect.clone()),
-                        ("op".to_string(), op.clone()),
-                    ],
-                    doc_url: None,
-                    notes: Vec::new(),
-                }
-            }
+            Self::WireFormatValidation { message } => Diagnostic::error(
+                "WIRE001_VALIDATION_FAILED",
+                message.clone(),
+            )
+            .with_stage(DiagnosticStage::Validate)
+            .with_compiler_level(CompilerLevel::Spec)
+            .with_fix("recompile the frontend program set and ensure the compiler only emits valid instructions")
+            .with_cause(CauseKind::Encoding, "wire_format", message.clone())
+            .with_retry(RetryClass::RecompileSource),
+            Self::Lowering { message } => Diagnostic::error("LOWER001_TARGET_TEXT_FAILED", message.clone())
+                .with_stage(DiagnosticStage::Lower)
+                .with_compiler_level(CompilerLevel::Lowering)
+                .with_fix("inspect the Program shape, backend capability report, and emitted shader diagnostics before retrying")
+                .with_cause(CauseKind::Lowering, "lowering", message.clone())
+                .with_retry(RetryClass::RecompileSource),
+            Self::VersionMismatch { expected, found } => Diagnostic::error(
+                "WIRE002_VERSION_MISMATCH",
+                format!("Wire-format version mismatch: expected {expected}, found {found}"),
+            )
+            .with_stage(DiagnosticStage::Admit)
+            .with_compiler_level(CompilerLevel::Spec)
+            .with_fix("re-encode with a matching vyre version or upgrade this runtime")
+            .with_cause(
+                CauseKind::VersionSkew,
+                "wire_version",
+                format!("expected wire version {expected}, got {found}"),
+            )
+            .with_context_value("expected", expected.to_string())
+            .with_context_value("found", found.to_string()),
+            Self::UnknownDialect { name, requested } => Diagnostic::error(
+                "WIRE003_UNKNOWN_DIALECT",
+                format!("Unknown dialect `{name}` (requested version `{requested}`)"),
+            )
+            .with_stage(DiagnosticStage::Admit)
+            .with_compiler_level(CompilerLevel::Spec)
+            .with_fix(format!(
+                "link the dialect crate providing `{name}` into this runtime or drop the op that uses it before encoding"
+            ))
+            .with_cause(
+                CauseKind::Configuration,
+                "unknown_dialect",
+                format!("dialect `{name}` v{requested}"),
+            )
+            .with_context_value("dialect", name.clone())
+            .with_context_value("requested_version", requested.clone()),
+            Self::UnknownOp { dialect, op } => Diagnostic::error(
+                "WIRE004_UNKNOWN_OP",
+                format!("Unknown op `{op}` in dialect `{dialect}`"),
+            )
+            .with_stage(DiagnosticStage::Admit)
+            .with_compiler_level(CompilerLevel::Spec)
+            .with_fix("upgrade the runtime to a version that includes this op, or drop the op before encoding")
+            .with_cause(
+                CauseKind::Configuration,
+                "unknown_op",
+                format!("op `{op}` in dialect `{dialect}`"),
+            )
+            .with_context_value("dialect", dialect.clone())
+            .with_context_value("op", op.clone()),
         }
     }
 }

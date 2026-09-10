@@ -2,7 +2,7 @@
 
 use thiserror::Error;
 use vyre_foundation::diagnostics::{
-    CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, RetryClass, Severity,
+    CauseKind, CompilerLevel, Diagnostic, DiagnosticStage, RetryClass,
 };
 
 use crate::CompileError;
@@ -33,106 +33,44 @@ impl TargetCompileError {
     #[must_use]
     pub fn diagnostic(&self) -> Diagnostic {
         match self {
-            Self::InvalidArtifact(msg) => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("MKC_TARGET_INVALID_ARTIFACT"),
-                stage: DiagnosticStage::Admit,
-                compiler_level: Some(CompilerLevel::Lowering),
-                message: format!("target compiler rejected neutral artifact: {msg}").into(),
-                location: None,
-                artifact_id: None,
-                target: None,
-                device: None,
-                suggested_fix: Some(
-                    "ensure the neutral artifact satisfies canonical graph schema invariants".into(),
-                ),
-                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "invalid_artifact".to_string(),
-                    detail: msg.clone(),
-                }),
-                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "invalid_artifact".to_string(),
-                    detail: msg.clone(),
-                }],
-                retry: RetryClass::RecompileSource,
-                context_values: Vec::new(),
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::Unsupported(msg) => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("MKC_TARGET_UNSUPPORTED"),
-                stage: DiagnosticStage::Lower,
-                compiler_level: Some(CompilerLevel::Lowering),
-                message: format!("target capability rejected selected plan: {msg}").into(),
-                location: None,
-                artifact_id: None,
-                target: None,
-                device: None,
-                suggested_fix: Some(
-                    "select a target with capabilities matching the selected plan or compile with generic schedule".into(),
-                ),
-                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "unsupported_capability".to_string(),
-                    detail: msg.clone(),
-                }),
-                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "unsupported_capability".to_string(),
-                    detail: msg.clone(),
-                }],
-                retry: RetryClass::RecompileSource,
-                context_values: Vec::new(),
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::Emission(msg) => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("MKC_TARGET_EMISSION_FAILED"),
-                stage: DiagnosticStage::Emit,
-                compiler_level: Some(CompilerLevel::Emission),
-                message: format!("target emission failed: {msg}").into(),
-                location: None,
-                artifact_id: None,
-                target: None,
-                device: None,
-                suggested_fix: Some("inspect emitter error detail and lowered shader instructions".into()),
-                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "emission_failure".to_string(),
-                    detail: msg.clone(),
-                }),
-                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "emission_failure".to_string(),
-                    detail: msg.clone(),
-                }],
-                retry: RetryClass::RecompileSource,
-                context_values: Vec::new(),
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::ModuleBundle(msg) => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("MKC_TARGET_MODULE_BUNDLE"),
-                stage: DiagnosticStage::Emit,
-                compiler_level: Some(CompilerLevel::Emission),
-                message: format!("target module bundle failed: {msg}").into(),
-                location: None,
-                artifact_id: None,
-                target: None,
-                device: None,
-                suggested_fix: Some("ensure module images and signatures are valid and non-empty".into()),
-                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "module_bundle".to_string(),
-                    detail: msg.clone(),
-                }),
-                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "module_bundle".to_string(),
-                    detail: msg.clone(),
-                }],
-                retry: RetryClass::RecompileSource,
-                context_values: Vec::new(),
-                doc_url: None,
-                notes: Vec::new(),
-            },
+            Self::InvalidArtifact(msg) => Diagnostic::error(
+                "MKC_TARGET_INVALID_ARTIFACT",
+                format!("target compiler rejected neutral artifact: {msg}"),
+            )
+            .with_stage(DiagnosticStage::Admit)
+            .with_compiler_level(CompilerLevel::Lowering)
+            .with_fix("ensure the neutral artifact satisfies canonical graph schema invariants")
+            .with_cause(CauseKind::InvalidInput, "invalid_artifact", msg.clone())
+            .with_retry(RetryClass::RecompileSource),
+            Self::Unsupported(msg) => Diagnostic::error(
+                "MKC_TARGET_UNSUPPORTED",
+                format!("target capability rejected selected plan: {msg}"),
+            )
+            .with_stage(DiagnosticStage::Lower)
+            .with_compiler_level(CompilerLevel::Lowering)
+            .with_fix(
+                "select a target with capabilities matching the selected plan or compile with generic schedule",
+            )
+            .with_cause(CauseKind::UnsupportedCapability, "unsupported_capability", msg.clone())
+            .with_retry(RetryClass::RecompileSource),
+            Self::Emission(msg) => Diagnostic::error(
+                "MKC_TARGET_EMISSION_FAILED",
+                format!("target emission failed: {msg}"),
+            )
+            .with_stage(DiagnosticStage::Emit)
+            .with_compiler_level(CompilerLevel::Emission)
+            .with_fix("inspect emitter error detail and lowered shader instructions")
+            .with_cause(CauseKind::Emission, "emission_failure", msg.clone())
+            .with_retry(RetryClass::RecompileSource),
+            Self::ModuleBundle(msg) => Diagnostic::error(
+                "MKC_TARGET_MODULE_BUNDLE",
+                format!("target module bundle failed: {msg}"),
+            )
+            .with_stage(DiagnosticStage::Emit)
+            .with_compiler_level(CompilerLevel::Emission)
+            .with_fix("ensure module images and signatures are valid and non-empty")
+            .with_cause(CauseKind::Encoding, "module_bundle", msg.clone())
+            .with_retry(RetryClass::RecompileSource),
             Self::Payload(err) => err.diagnostic.clone(),
         }
     }

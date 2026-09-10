@@ -1,7 +1,6 @@
 use std::fmt;
 use vyre_foundation::diagnostics::{
-    CompilerLevel, Diagnostic, DiagnosticCause, DiagnosticCode, DiagnosticStage, RetryClass,
-    Severity, ToDiagnostic,
+    CauseKind, CompilerLevel, Diagnostic, DiagnosticStage, RetryClass, ToDiagnostic,
 };
 
 /// The eight closed failure classes returned by the strict reference oracle.
@@ -50,6 +49,24 @@ impl ReferenceErrorClass {
             Self::IncompleteDispatchSemantics => "incomplete_dispatch_semantics",
             Self::Nontermination => "nontermination",
             Self::BudgetExhaustion => "budget_exhaustion",
+        }
+    }
+
+    /// Recovery class a caller routes on for this failure class.
+    ///
+    /// The match has no catch-all arm, so a new reference failure class is a
+    /// recorded decision rather than a silent reuse of an existing class.
+    #[must_use]
+    pub const fn cause_kind(self) -> CauseKind {
+        match self {
+            Self::MissingValue => CauseKind::Configuration,
+            Self::TypeMismatch => CauseKind::InvalidInput,
+            Self::Poison => CauseKind::InternalInvariant,
+            Self::Overflow => CauseKind::NumericOverflow,
+            Self::OutOfBoundsAccess => CauseKind::InvalidInput,
+            Self::IncompleteDispatchSemantics => CauseKind::UnsupportedCapability,
+            Self::Nontermination => CauseKind::Timeout,
+            Self::BudgetExhaustion => CauseKind::ResourceExhausted,
         }
     }
 }
@@ -390,50 +407,38 @@ impl std::error::Error for ReferenceError {
 
 impl ToDiagnostic for ReferenceError {
     fn to_diagnostic(&self) -> Diagnostic {
+        let class = self.kind.error_class();
         if let Some(validation) = &self.validation {
-            let mut diag = validation.to_diagnostic();
-            diag.cause_chain.push(DiagnosticCause {
-                kind: "reference_validation_failure".to_string(),
-                detail: self.kind.detail().to_string(),
-            });
-            return diag;
+            return validation.to_diagnostic().with_cause(
+                class.cause_kind(),
+                "reference_validation_failure",
+                self.kind.detail().to_string(),
+            );
         }
         let retry = if self.step_ceiling.is_some() {
             RetryClass::RecompileSource
         } else {
             RetryClass::Never
         };
-        Diagnostic {
-            severity: Severity::Error,
-            code: DiagnosticCode::new("REF001_REFERENCE_ERROR"),
-            stage: DiagnosticStage::Submit,
-            compiler_level: Some(CompilerLevel::DriverRuntime),
-            message: self.kind.detail().to_string().into(),
-            location: None,
-            artifact_id: None,
-            target: None,
-            device: None,
-            suggested_fix: self.step_ceiling.as_ref().map(|_| {
-                "bound program trip counts by a declared extent or evaluate a smaller input".into()
-            }),
-            cause: Some(DiagnosticCause {
-                kind: "reference_execution_error".to_string(),
-                detail: self.kind.detail().to_string(),
-            }),
-            cause_chain: vec![DiagnosticCause {
-                kind: "reference_execution_error".to_string(),
-                detail: self.kind.detail().to_string(),
-            }],
-            retry,
-            context_values: self.step_ceiling.as_ref().map_or_else(Vec::new, |sc| {
-                vec![
-                    ("program".to_string(), sc.program.clone()),
-                    ("ceiling".to_string(), sc.ceiling.to_string()),
-                ]
-            }),
-            doc_url: None,
-            notes: Vec::new(),
+        let mut diagnostic = Diagnostic::error("REF001_REFERENCE_ERROR", self.kind.detail().to_string())
+            .with_stage(DiagnosticStage::Submit)
+            .with_compiler_level(CompilerLevel::DriverRuntime)
+            .with_cause(
+                class.cause_kind(),
+                "reference_execution_error",
+                self.kind.detail().to_string(),
+            )
+            .with_retry(retry)
+            .with_context_value("reference_error_class", class.name());
+        if let Some(ceiling) = &self.step_ceiling {
+            diagnostic = diagnostic
+                .with_fix(
+                    "bound program trip counts by a declared extent or evaluate a smaller input",
+                )
+                .with_context_value("program", ceiling.program.clone())
+                .with_context_value("ceiling", ceiling.ceiling.to_string());
         }
+        diagnostic
     }
 }
 

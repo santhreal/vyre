@@ -18,7 +18,7 @@ use naga::back::msl::{BindTarget, EntryPointResources, Options, PipelineOptions}
 use naga::valid::{Capabilities, ValidationFlags, Validator};
 use naga::{AddressSpace, StorageAccess};
 use thiserror::Error;
-use vyre_foundation::diagnostics::{CompilerLevel, Diagnostic, DiagnosticStage};
+use vyre_foundation::diagnostics::{CauseKind, CompilerLevel, Diagnostic, DiagnosticStage};
 use vyre_foundation::ir::DataType;
 use vyre_lower::{BindingSlot, BindingVisibility, KernelDescriptor, MemoryClass};
 
@@ -109,7 +109,7 @@ impl EmitError {
             .with_fix(
                 "repair the shared descriptor/Naga emission path before emitting native_module artifacts",
             )
-            .with_cause("naga_validation", msg.clone()),
+            .with_cause(CauseKind::Emission, "naga_validation", msg.clone()),
             Self::EntryPoint {
                 entry_point,
                 reason,
@@ -122,6 +122,7 @@ impl EmitError {
                 "emit a compute KernelDescriptor with entry point `main` or pass the correct entry point name",
             )
             .with_cause(
+                CauseKind::Configuration,
                 "entry_point_unavailable",
                 format!("{entry_point}: {reason}"),
             )
@@ -134,7 +135,7 @@ impl EmitError {
             .with_fix(
                 "extend the shared Naga-to-MSL emission seam or lower unsupported constructs before Metal artifact emission",
             )
-            .with_cause("msl_writer", msg.clone()),
+            .with_cause(CauseKind::Emission, "msl_writer", msg.clone()),
             Self::BindingMap {
                 group,
                 binding,
@@ -148,6 +149,7 @@ impl EmitError {
                 "keep Metal buffer indices within u8::MAX or add argument-buffer metadata before native_module emission",
             )
             .with_cause(
+                CauseKind::UnsupportedCapability,
                 "binding_map",
                 format!("group {group} binding {binding}: {reason}"),
             )
@@ -163,14 +165,14 @@ impl EmitError {
             .with_fix(
                 "keep KernelDescriptor serde stable before using it as native_module artifact identity",
             )
-            .with_cause("descriptor_hash", msg.clone()),
+            .with_cause(CauseKind::Encoding, "descriptor_hash", msg.clone()),
             Self::ArtifactSerialization(msg) => Diagnostic::emission_error(
                 TARGET,
                 "MTL006_SERIALIZATION_FAILED",
                 format!("Metal native_module JSON serialization failed: {msg}"),
             )
             .with_fix("keep artifact metadata serde-compatible and deterministic")
-            .with_cause("artifact_serialization", msg.clone()),
+            .with_cause(CauseKind::Encoding, "artifact_serialization", msg.clone()),
             Self::PreEmit(msg) => Diagnostic::emission_error(
                 TARGET,
                 "MTL007_PRE_EMIT_FAILED",
@@ -181,7 +183,7 @@ impl EmitError {
             .with_fix(
                 "route through vyre-lower::lower_physical and repair the neutral descriptor mapping",
             )
-            .with_cause("pre_emit_lowering", msg.clone()),
+            .with_cause(CauseKind::Lowering, "pre_emit_lowering", msg.clone()),
         }
     }
 }

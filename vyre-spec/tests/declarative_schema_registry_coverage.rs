@@ -10,8 +10,8 @@ fn runtime_derived_schema_registry_covers_all_schema_ids() {
     let all_ids = SchemaId::ALL;
     assert_eq!(
         all_ids.len(),
-        22,
-        "Fix: all 22 persisted/transmitted schema IDs must be enumerated in ALL"
+        23,
+        "Fix: all 23 persisted/transmitted schema IDs must be enumerated in ALL"
     );
 
     let all_schemas = SchemaRegistry::all();

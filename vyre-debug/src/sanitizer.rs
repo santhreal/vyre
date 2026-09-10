@@ -12,8 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
 use vyre_foundation::diagnostics::{
-    CompilerLevel, Diagnostic, DiagnosticCause, DiagnosticCode, DiagnosticStage, RetryClass,
-    Severity,
+    CauseKind, CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, RetryClass,
 };
 
 /// Target-specific sanitizer defect family.
@@ -61,6 +60,31 @@ impl SanitizerKind {
             Self::IllegalInstruction => {
                 "verify backend capability matrix and target ISA profile before dispatch"
             }
+        }
+    }
+
+    /// Stable lowercase grouping tag for a cause this family reports.
+    #[must_use]
+    pub const fn cause_subject(self) -> &'static str {
+        match self {
+            Self::ComputeSanitizer => "compute_sanitizer",
+            Self::VulkanValidation => "validation_layer",
+            Self::DataRace => "data_race",
+            Self::OutOfBoundsMemory => "out_of_bounds_memory",
+            Self::IllegalInstruction => "illegal_instruction",
+        }
+    }
+
+    /// Recovery class a caller routes on for this defect family.
+    ///
+    /// The match has no catch-all arm, so a new sanitizer family is a recorded
+    /// decision rather than a silent reuse of an existing class.
+    #[must_use]
+    pub const fn cause_kind(self) -> CauseKind {
+        match self {
+            Self::ComputeSanitizer | Self::VulkanValidation => CauseKind::ExternalToolchain,
+            Self::DataRace | Self::OutOfBoundsMemory => CauseKind::InvalidInput,
+            Self::IllegalInstruction => CauseKind::UnsupportedCapability,
         }
     }
 }
@@ -138,46 +162,31 @@ impl SanitizerFailure {
     /// Convert this hard correctness failure into a versioned structured Diagnostic.
     #[must_use]
     pub fn diagnostic(&self) -> Diagnostic {
-        let mut diag = Diagnostic {
-            severity: Severity::Error,
-            code: DiagnosticCode::new(self.kind.code()),
-            stage: DiagnosticStage::Materialize,
-            compiler_level: Some(CompilerLevel::DriverRuntime),
-            message: self.message.clone().into(),
-            location: None,
-            artifact_id: None,
-            target: None,
-            device: None,
-            suggested_fix: Some(Cow::Borrowed(self.kind.suggested_fix())),
-            cause: Some(DiagnosticCause {
-                kind: format!("{:?}", self.kind),
-                detail: self.message.clone(),
-            }),
-            cause_chain: Vec::new(),
-            retry: RetryClass::RecompileSource,
-            context_values: Vec::new(),
-            doc_url: None,
-            notes: Vec::new(),
-        };
+        let mut diag = Diagnostic::error(self.kind.code(), self.message.clone())
+            .with_stage(DiagnosticStage::Materialize)
+            .with_compiler_level(CompilerLevel::DriverRuntime)
+            .with_fix(self.kind.suggested_fix())
+            .with_cause(
+                self.kind.cause_kind(),
+                self.kind.cause_subject(),
+                self.message.clone(),
+            )
+            .with_retry(RetryClass::RecompileSource);
 
         // A sanitizer report is consumed by tooling that locates the faulting
         // access, so each coordinate is a typed context value rather than prose
         // a reader would have to parse back out of a note.
         if let Some(addr) = self.device_address {
-            diag.context_values
-                .push(("device_address".to_string(), format!("0x{addr:016x}")));
+            diag = diag.with_context_value("device_address", format!("0x{addr:016x}"));
         }
         if let Some([x, y, z]) = self.invocation_coords {
-            diag.context_values
-                .push(("invocation_id".to_string(), format!("{x},{y},{z}")));
+            diag = diag.with_context_value("invocation_id", format!("{x},{y},{z}"));
         }
         if let Some(offset) = self.instruction_offset {
-            diag.context_values
-                .push(("instruction_offset".to_string(), format!("0x{offset:04x}")));
+            diag = diag.with_context_value("instruction_offset", format!("0x{offset:04x}"));
         }
         if let Some(raw) = &self.raw_tool_output {
-            diag.context_values
-                .push(("tool_raw_output".to_string(), raw.clone()));
+            diag = diag.with_context_value("tool_raw_output", raw.clone());
         }
 
         diag

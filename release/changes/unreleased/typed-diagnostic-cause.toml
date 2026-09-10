@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A preserved diagnostic cause carries a closed `CauseKind` recovery classification, so a caller routes on the variant instead of matching rendered text."

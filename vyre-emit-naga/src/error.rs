@@ -1,5 +1,5 @@
 use thiserror::Error;
-use vyre_foundation::diagnostics::{Diagnostic, RetryClass};
+use vyre_foundation::diagnostics::{CauseKind, Diagnostic, RetryClass};
 
 /// Target identity every diagnostic this emitter raises carries.
 const TARGET: &str = "naga";
@@ -64,7 +64,7 @@ impl EmitError {
                 format!("unsupported KernelOp kind in naga emit: {op:?}"),
             )
             .with_fix("rewrite the unsupported kernel op into supported scalar/buffer operations")
-            .with_cause("unsupported_op", format!("{op:?}")),
+            .with_cause(CauseKind::UnsupportedCapability, "unsupported_op", format!("{op:?}")),
             Self::UnsupportedCapability(cap) => Diagnostic::emission_error(
                 TARGET,
                 "NAGA002_UNSUPPORTED_CAPABILITY",
@@ -73,7 +73,11 @@ impl EmitError {
             .with_fix(
                 "select a target that supports this capability or disable optional shader feature",
             )
-            .with_cause("unsupported_capability", (*cap).to_string())
+            .with_cause(
+                CauseKind::UnsupportedCapability,
+                "unsupported_capability",
+                (*cap).to_string(),
+            )
             .with_context_value("capability", (*cap).to_string())
             .with_retry(RetryClass::Never),
             Self::UnsupportedWorkgroup(v) => Diagnostic::emission_error(
@@ -82,21 +86,21 @@ impl EmitError {
                 format!("unsupported emission capability `workgroup`: {v}"),
             )
             .with_fix("reduce workgroup dimensions to fit target limits")
-            .with_cause("workgroup_limit", format!("{v}")),
+            .with_cause(CauseKind::UnsupportedCapability, "workgroup_limit", format!("{v}")),
             Self::NagaConstructionFailed(msg) => Diagnostic::emission_error(
                 TARGET,
                 "NAGA004_CONSTRUCTION_FAILED",
                 format!("naga module construction failed: {msg}"),
             )
             .with_fix("check kernel descriptor validity and binding layouts")
-            .with_cause("naga_construction", msg.clone()),
+            .with_cause(CauseKind::Emission, "naga_construction", msg.clone()),
             Self::InvalidBinding { slot, reason } => Diagnostic::emission_error(
                 TARGET,
                 "NAGA005_INVALID_BINDING",
                 format!("binding slot {slot}: {reason}"),
             )
             .with_fix("ensure binding slots are sequentially mapped within Naga target limits")
-            .with_cause("invalid_binding", reason.clone())
+            .with_cause(CauseKind::InvalidInput, "invalid_binding", reason.clone())
             .with_context_value("slot", slot.to_string()),
             Self::InvalidDescriptor(msg) => Diagnostic::emission_error(
                 TARGET,
@@ -104,7 +108,7 @@ impl EmitError {
                 format!("invalid descriptor: {msg}"),
             )
             .with_fix("validate kernel descriptor preconditions before emission")
-            .with_cause("invalid_descriptor", msg.clone()),
+            .with_cause(CauseKind::InvalidInput, "invalid_descriptor", msg.clone()),
         }
     }
 }

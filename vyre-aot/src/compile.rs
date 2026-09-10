@@ -2,7 +2,7 @@
 
 use thiserror::Error;
 use vyre_foundation::diagnostics::{
-    CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, RetryClass, Severity,
+    CauseKind, CompilerLevel, Diagnostic, DiagnosticStage, RetryClass,
 };
 use vyre_megakernel::{
     ArtifactEnvelope, TargetCompileError, TargetCompiler, ValidatedCompileRequest,
@@ -38,57 +38,40 @@ impl CompileError {
     #[must_use]
     pub fn diagnostic(&self) -> Diagnostic {
         match self {
-            Self::TargetNotEnabled(target) => Diagnostic {
-                severity: Severity::Error,
-                code: DiagnosticCode::new("AOT001_TARGET_NOT_ENABLED"),
-                stage: DiagnosticStage::Admit,
-                compiler_level: Some(CompilerLevel::ToolingEvidence),
-                message: format!("target `{target}` has no linked target compiler").into(),
-                location: None,
-                artifact_id: None,
-                target: Some(target.as_str().to_string()),
-                device: None,
-                suggested_fix: Some(
-                    "link the concrete driver crate that registers this target".into(),
-                ),
-                cause: Some(vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "unregistered_target".to_string(),
-                    detail: format!("target `{target}`"),
-                }),
-                cause_chain: vec![vyre_foundation::diagnostics::DiagnosticCause {
-                    kind: "unregistered_target".to_string(),
-                    detail: format!("target `{target}`"),
-                }],
-                retry: RetryClass::Never,
-                context_values: vec![("target".to_string(), target.as_str().to_string())],
-                doc_url: None,
-                notes: Vec::new(),
-            },
-            Self::TargetCompilation(compile_err) => {
-                let mut diag = compile_err.diagnostic();
-                diag.notes.push("during AOT target compilation".into());
-                diag
-            }
-            Self::CanonicalArtifact { stage, source } => {
-                let mut diag = source.diagnostic.clone();
-                diag.notes
-                    .push(format!("during AOT stage `{stage}`").into());
-                diag
-            }
+            Self::TargetNotEnabled(target) => Diagnostic::error(
+                "AOT001_TARGET_NOT_ENABLED",
+                format!("target `{target}` has no linked target compiler"),
+            )
+            .with_stage(DiagnosticStage::Admit)
+            .with_compiler_level(CompilerLevel::ToolingEvidence)
+            .with_target(target.as_str())
+            .with_fix("link the concrete driver crate that registers this target")
+            .with_cause(
+                CauseKind::Configuration,
+                "unregistered_target",
+                format!("target `{target}`"),
+            )
+            .with_retry(RetryClass::Never)
+            .with_context_value("target", target.as_str()),
+            Self::TargetCompilation(compile_err) => compile_err
+                .diagnostic()
+                .with_note("during AOT target compilation"),
+            Self::CanonicalArtifact { stage, source } => source
+                .diagnostic
+                .clone()
+                .with_note(format!("during AOT stage `{stage}`")),
         }
     }
 }
 
-/// Compile one validated compiler request through the canonical graph compiler and a registered target facet.
+/// Compile one validated compiler request through the canonical graph compiler
+/// and a registered target facet.
+///
+/// The request is the caller's, whole: its graph, external facts, device facts,
+/// objective and search budget reach the canonical compiler unchanged, and this
+/// crate states none of them. An ahead-of-time compile and a direct one over
+/// the same request therefore produce one artifact identity.
 pub fn compile(
-    request: &ValidatedCompileRequest,
-    target: TargetId,
-) -> Result<ArtifactEnvelope, CompileError> {
-    compile_request(request, target)
-}
-
-/// Compile one validated compiler request through the canonical graph compiler and a registered target facet.
-pub fn compile_request(
     request: &ValidatedCompileRequest,
     target: TargetId,
 ) -> Result<ArtifactEnvelope, CompileError> {

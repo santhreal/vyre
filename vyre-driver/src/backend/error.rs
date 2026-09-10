@@ -1,6 +1,8 @@
 //! Actionable backend error taxonomy.
 
-use vyre_foundation::diagnostics::{CompilerLevel, Diagnostic, DiagnosticStage, RetryClass};
+use vyre_foundation::diagnostics::{
+    CauseKind, CompilerLevel, Diagnostic, DiagnosticStage, RetryClass,
+};
 
 /// Machine-readable classification of a backend failure kind.
 ///
@@ -408,7 +410,7 @@ impl BackendError {
             .with_compiler_level(CompilerLevel::DriverRuntime)
             .with_retry(RetryClass::SameDevice)
             .with_fix("reduce buffer sizes or split the dispatch into smaller chunks")
-            .with_cause("out_of_memory", format!("requested {requested}B, available {available}B"))
+            .with_cause(CauseKind::ResourceExhausted, "out_of_memory", format!("requested {requested}B, available {available}B"))
             .with_context_value("requested_bytes", requested.to_string())
             .with_context_value("available_bytes", available.to_string()),
 
@@ -422,7 +424,7 @@ impl BackendError {
             .with_device(device.clone())
             .with_retry(RetryClass::NewDevice)
             .with_fix("reacquire the registered materializer and rematerialize the authenticated artifact before retrying")
-            .with_cause("device_lost", message.clone())
+            .with_cause(CauseKind::DeviceLost, "device_lost", message.clone())
             .with_context_value("backend", backend.clone())
             .with_context_value("device", device.clone())
             .with_context_value("generation", generation.to_string()),
@@ -436,7 +438,7 @@ impl BackendError {
             .with_target(backend.clone())
             .with_retry(RetryClass::Never)
             .with_fix("check backend capability before using this feature, or select a backend that supports it")
-            .with_cause("unsupported_feature", format!("feature `{name}` on `{backend}`"))
+            .with_cause(CauseKind::UnsupportedCapability, "unsupported_feature", format!("feature `{name}` on `{backend}`"))
             .with_context_value("feature", name.clone())
             .with_context_value("backend", backend.clone()),
 
@@ -448,7 +450,7 @@ impl BackendError {
             .with_compiler_level(CompilerLevel::DriverRuntime)
             .with_retry(RetryClass::Never)
             .with_fix("report the panic origin, prevent panics on lock guards, and retry the backend operation")
-            .with_cause("lock_poisoned", lock_error.clone())
+            .with_cause(CauseKind::InternalInvariant, "lock_poisoned", lock_error.clone())
             .with_context_value("lock_error", lock_error.clone()),
 
             Self::KernelCompileFailed { backend, compiler_message } => Diagnostic::error(
@@ -460,7 +462,7 @@ impl BackendError {
             .with_target(backend.clone())
             .with_retry(RetryClass::Never)
             .with_fix("validate the vyre IR before lowering and check the lowered kernel source for type errors")
-            .with_cause("compiler_failure", compiler_message.clone())
+            .with_cause(CauseKind::ExternalToolchain, "compiler_failure", compiler_message.clone())
             .with_context_value("backend", backend.clone()),
 
             Self::DispatchFailed { code, message } => {
@@ -472,7 +474,7 @@ impl BackendError {
                 .with_compiler_level(CompilerLevel::DriverRuntime)
                 .with_retry(RetryClass::SameDevice)
                 .with_fix("inspect the backend error code and queue state, reduce dispatch pressure, or reacquire the backend before retrying")
-                .with_cause("dispatch_error", message.clone());
+                .with_cause(CauseKind::ExternalToolchain, "dispatch_error", message.clone());
                 if let Some(c) = code {
                     diag = diag.with_context_value("backend_code", c.to_string());
                 }
@@ -498,7 +500,7 @@ impl BackendError {
             .with_compiler_level(CompilerLevel::DriverRuntime)
             .with_retry(RetryClass::SameDevice)
             .with_fix("route this dispatch to the resident-fixpoint or host-split grid-sync path, reduce the grid/workgroup size, or lower kernel register/shared-memory pressure")
-            .with_cause("residency_exceeded", detail.clone())
+            .with_cause(CauseKind::ResourceExhausted, "residency_exceeded", detail.clone())
             .with_context_value("grid_blocks", grid_blocks.to_string())
             .with_context_value("resident_limit", resident_limit.to_string()),
 
@@ -510,7 +512,7 @@ impl BackendError {
             .with_compiler_level(CompilerLevel::DriverRuntime)
             .with_retry(RetryClass::Never)
             .with_fix("submit the next generation; the abandoned request produces no result")
-            .with_cause("aborted", reason.clone())
+            .with_cause(CauseKind::Cancelled, "aborted", reason.clone())
             .with_context_value("lifecycle_stage", stage.to_string()),
 
             Self::Other(message) => {
@@ -522,7 +524,7 @@ impl BackendError {
                 Diagnostic::error("BACKEND_OTHER", msg)
                     .with_stage(DiagnosticStage::Submit)
                     .with_compiler_level(CompilerLevel::DriverRuntime)
-                    .with_cause("backend_error", message.clone())
+                    .with_cause(CauseKind::ExternalToolchain, "backend_error", message.clone())
                     .with_fix(fix)
             }
         }

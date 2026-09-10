@@ -23,7 +23,7 @@
 //! sits in the integration-test surface (added when CI has spirv-tools).
 
 use thiserror::Error;
-use vyre_foundation::diagnostics::Diagnostic;
+use vyre_foundation::diagnostics::{CauseKind, Diagnostic};
 use vyre_lower::KernelDescriptor;
 pub mod patterns;
 
@@ -64,21 +64,21 @@ impl EmitError {
                 format!("naga validation failed during SPIR-V emission: {msg}"),
             )
             .with_fix("repair the shared descriptor/Naga emission path before emitting SPIR-V")
-            .with_cause("naga_validation", msg.clone()),
+            .with_cause(CauseKind::Emission, "naga_validation", msg.clone()),
             Self::WriterConstruction(msg) => Diagnostic::emission_error(
                 TARGET,
                 "SPV002_WRITER_CONSTRUCTION_FAILED",
                 format!("SPIR-V writer construction failed: {msg}"),
             )
             .with_fix("ensure Naga capabilities and SPIR-V writer options are compatible")
-            .with_cause("writer_construction", msg.clone()),
+            .with_cause(CauseKind::Emission, "writer_construction", msg.clone()),
             Self::WriterWrite(msg) => Diagnostic::emission_error(
                 TARGET,
                 "SPV003_WRITER_WRITE_FAILED",
                 format!("SPIR-V writer.write failed: {msg}"),
             )
             .with_fix("check Naga module instructions for SPIR-V encoding compatibility")
-            .with_cause("writer_write", msg.clone()),
+            .with_cause(CauseKind::Emission, "writer_write", msg.clone()),
         }
     }
 }

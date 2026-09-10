@@ -1,6 +1,8 @@
 //! Shared diagnostic protocol regression contracts.
 
-use vyre_foundation::diagnostics::{Diagnostic, DiagnosticStage, OpLocation, RetryClass, Severity};
+use vyre_foundation::diagnostics::{
+    CauseKind, Diagnostic, DiagnosticStage, OpLocation, RetryClass, Severity,
+};
 
 /// WHY: public workflow failures cross compiler, packaging, runtime, and driver
 /// boundaries. Serialization must preserve the code, stage, typed location,
@@ -17,6 +19,7 @@ fn diagnostic_round_trip_preserves_workflow_identity() {
                 .with_source_span(128, 256),
         )
         .with_cause(
+            CauseKind::Encoding,
             "digest_mismatch",
             "declared digest differs from canonical body",
         )
@@ -35,13 +38,14 @@ fn diagnostic_round_trip_preserves_workflow_identity() {
     assert_eq!(decoded.code.as_str(), "MKC016_DIGEST_MISMATCH");
     assert_eq!(decoded.stage, DiagnosticStage::Admit);
     assert_eq!(decoded.retry, RetryClass::RecompileSource);
-    let location = decoded.location.expect("typed location must survive");
+    let location = decoded.location.as_ref().expect("typed location must survive");
     assert_eq!(location.graph_node, Some(7));
     assert_eq!(location.graph_value, Some(11));
     assert_eq!(location.path.as_deref(), Some("artifact.envelope"));
     assert_eq!(location.source_span, Some([128, 256]));
-    let cause = decoded.cause.expect("structured cause must survive");
-    assert_eq!(cause.kind, "digest_mismatch");
+    let cause = decoded.cause().expect("structured cause must survive");
+    assert_eq!(cause.kind, CauseKind::Encoding);
+    assert_eq!(cause.subject, "digest_mismatch");
     assert_eq!(decoded.notes.len(), 2);
     assert_eq!(
         decoded.notes[0].as_ref(),
@@ -60,14 +64,18 @@ fn diagnostic_render_human_and_json_snapshot() {
                 .with_source_span(42, 58),
         )
         .with_fix("cast operand 1 from i32 to f32 using Expr::cast")
-        .with_cause("typecheck", "operand 1 type mismatch in FMA")
+        .with_cause(
+            CauseKind::InvalidInput,
+            "typecheck",
+            "operand 1 type mismatch in FMA",
+        )
         .with_note("FMA requires all three float operands to share the same scalar type");
 
     let rendered = diagnostic.render_human();
-    assert!(rendered.contains("error[V028](Validate): Fma operand has type i32, expected f32"));
+    assert!(rendered.contains("error[V028](validate): Fma operand has type i32, expected f32"));
     assert!(rendered.contains("--> op `math.fma` operand[1] at kernel.vyre:42..58"));
     assert!(rendered.contains("= help: cast operand 1 from i32 to f32 using Expr::cast"));
-    assert!(rendered.contains("= cause[typecheck]: operand 1 type mismatch in FMA"));
+    assert!(rendered.contains("= cause[invalid_input/typecheck]: operand 1 type mismatch in FMA"));
     assert!(rendered
         .contains("= note: FMA requires all three float operands to share the same scalar type"));
 
@@ -195,14 +203,16 @@ fn diagnostic_extended_schema_round_trip_and_human_render() {
         )
         .with_fix("align binding slots to 16 bytes")
         .with_cause_chain(vec![
-            DiagnosticCause {
-                kind: "alignment".to_string(),
-                detail: "binding slot 0 unaligned".to_string(),
-            },
-            DiagnosticCause {
-                kind: "target_restriction".to_string(),
-                detail: "PTX ldmatrix requires 16-byte alignment".to_string(),
-            },
+            DiagnosticCause::new(
+                CauseKind::InvalidInput,
+                "alignment",
+                "binding slot 0 unaligned",
+            ),
+            DiagnosticCause::new(
+                CauseKind::UnsupportedCapability,
+                "target_restriction",
+                "PTX ldmatrix requires 16-byte alignment",
+            ),
         ])
         .with_retry(RetryClass::RecompileSource)
         .with_context_value("requested_align", "4")
@@ -230,7 +240,9 @@ fn diagnostic_extended_schema_round_trip_and_human_render() {
     assert!(human.contains("device: sm_90a"));
     assert!(human.contains("artifact: artifact.hash.12345"));
     assert!(human.contains("field `bindings.slots.0`"));
-    assert!(human.contains("cause[alignment]: binding slot 0 unaligned"));
-    assert!(human.contains("cause[target_restriction]: PTX ldmatrix requires 16-byte alignment"));
+    assert!(human.contains("cause[invalid_input/alignment]: binding slot 0 unaligned"));
+    assert!(human.contains(
+        "cause[unsupported_capability/target_restriction]: PTX ldmatrix requires 16-byte alignment"
+    ));
     assert!(human.contains("context `requested_align`: 4"));
 }

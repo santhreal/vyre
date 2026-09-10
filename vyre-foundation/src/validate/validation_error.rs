@@ -8,8 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use super::catalog::{ValidationRule, VALIDATION_RULES};
 use crate::diagnostics::{
-    CompilerLevel, Diagnostic, DiagnosticCause, DiagnosticCode, DiagnosticStage, OpLocation,
-    RetryClass, Severity,
+    CauseKind, CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, OpLocation, RetryClass,
 };
 
 /// Stable validation rule identity.
@@ -132,6 +131,24 @@ impl ValidationPhase {
             Self::Capability => "capability",
             Self::Composition => "composition",
             Self::Limits => "limits",
+        }
+    }
+
+    /// Recovery class a caller routes on for a rejection in this phase.
+    ///
+    /// The match has no catch-all arm, so a new phase is a recorded decision
+    /// rather than a silent reuse of an existing class.
+    #[must_use]
+    pub const fn cause_kind(self) -> CauseKind {
+        match self {
+            Self::Program
+            | Self::Node
+            | Self::Expression
+            | Self::Type
+            | Self::Memory
+            | Self::Composition => CauseKind::InvalidInput,
+            Self::Capability => CauseKind::UnsupportedCapability,
+            Self::Limits => CauseKind::ResourceExhausted,
         }
     }
 }
@@ -365,31 +382,24 @@ impl ValidationError {
     /// Project the issue into the shared diagnostic protocol.
     #[must_use]
     pub fn diagnostic(&self) -> Diagnostic {
-        let cause = DiagnosticCause {
-            kind: self.phase.as_str().to_string(),
-            detail: self.cause.to_string(),
-        };
-        Diagnostic {
-            severity: Severity::Error,
-            code: DiagnosticCode::from_owned(self.code.as_str().to_string()),
-            stage: DiagnosticStage::Validate,
-            compiler_level: Some(CompilerLevel::FoundationIr),
-            message: self.cause.clone(),
-            location: Some(self.location.diagnostic_location()),
-            artifact_id: None,
-            target: None,
-            device: None,
-            suggested_fix: Some(self.corrective_action.clone()),
-            cause: Some(cause.clone()),
-            cause_chain: vec![cause],
-            retry: self.retry,
-            context_values: Vec::new(),
-            doc_url: Some(Cow::Owned(format!(
-                "https://docs.vyre.dev/validator-errors#{}",
-                self.code.as_str().to_ascii_lowercase()
-            ))),
-            notes: Vec::new(),
-        }
+        Diagnostic::error_with_code(
+            DiagnosticCode::from_owned(self.code.as_str().to_string()),
+            self.cause.clone(),
+        )
+        .with_stage(DiagnosticStage::Validate)
+        .with_compiler_level(CompilerLevel::FoundationIr)
+        .with_location(self.location.diagnostic_location())
+        .with_fix(self.corrective_action.clone())
+        .with_cause(
+            self.phase.cause_kind(),
+            self.phase.as_str(),
+            self.cause.to_string(),
+        )
+        .with_retry(self.retry)
+        .with_doc_url(format!(
+            "https://docs.vyre.dev/validator-errors#{}",
+            self.code.as_str().to_ascii_lowercase()
+        ))
     }
 }
 
@@ -481,10 +491,9 @@ mod tests {
             diagnostic.suggested_fix.as_deref(),
             Some("cast the operand to f32")
         );
-        assert_eq!(
-            diagnostic.cause.as_ref().map(|cause| cause.kind.as_str()),
-            Some("type")
-        );
+        let cause = diagnostic.cause().expect("typed cause must be present");
+        assert_eq!(cause.kind, CauseKind::InvalidInput);
+        assert_eq!(cause.subject, "type");
     }
 
     #[test]
