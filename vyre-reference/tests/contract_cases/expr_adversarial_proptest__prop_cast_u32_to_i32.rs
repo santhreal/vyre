@@ -91,18 +91,6 @@ proptest! {
 // Atomic – all ops on a ReadWrite buffer, monotonic increment for Add
 // ---------------------------------------------------------------------------
 
-fn eval_atomic(op: AtomicOp, buffer: &str, index: u32, expected: Option<u32>, value: u32) -> Value {
-    let expr = Expr::Atomic {
-        op,
-        buffer: buffer.into(),
-        index: Box::new(Expr::u32(index)),
-        expected: expected.map(|v| Box::new(Expr::u32(v))),
-        value: Box::new(Expr::u32(value)),
-        ordering: MemoryOrdering::SeqCst,
-    };
-    eval_expr_value(&expr)
-}
-
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(256))]
 

@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 
 use vyre_reference::value::Value;
 

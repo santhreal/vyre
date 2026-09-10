@@ -13,7 +13,6 @@
 //! interpreter against an independent statement of IEEE-754 canonicalization, so
 //! calling the interpreter's own helper would make the oracle check itself.
 //! `subnormal_contract.rs` owns the direct contract on the public helper.
-#![allow(dead_code)]
 
 use vyre_foundation::ir::{BinOp, Expr, Program, UnOp};
 use vyre_reference::expr as eval_expr;

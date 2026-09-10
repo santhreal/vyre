@@ -3,6 +3,46 @@
 //! This module is the executable specification for IR semantics. It is
 //! intentionally slow and direct: every current IR expression and node variant
 //! has a named evaluator function.
+//!
+//! # What the oracle borrows from `vyre-foundation`
+//!
+//! A differential oracle that reuses the transform it is checking cannot fail
+//! on a defect in that transform, so the interpreter runs the program as
+//! submitted. It calls no optimizer pass, no schedule selection, no lowering
+//! and no emitter, and it rewrites no node on the way in. A whole-grid fence
+//! is interpreted where it stands: a lane that reaches
+//! `MemoryOrdering::GridSync` suspends, the dispatch driver runs every other
+//! workgroup to its own fence, and only then does any lane resume. The
+//! interpreter used to cut the program into segments with
+//! `vyre_foundation::transform::grid_sync_split`, which is the transform a
+//! backend without a cooperative launch runs, so the oracle and the backend
+//! shared one answer to where a fence divides a program.
+//!
+//! Four dependencies remain, and none of them is a program rewrite.
+//!
+//! - The `ir` types themselves. An oracle for a program has to read the same
+//!   `Program`, `Node`, `Expr` and `BufferDecl` the compiler reads. What it
+//!   does not share is what they mean: every semantic arm is evaluated here.
+//! - `Program::reconcile_runnable_top_level`, applied by
+//!   `execution::program_for_interpreter` when the submitted program is not
+//!   top-level `Region`-wrapped. It re-applies the wrapper `Program::wrapped`
+//!   builds and moves no other node, so it changes the shape the interpreter
+//!   admits and not the semantics it evaluates.
+//! - `validate::validate_with_options`, which decides admission. The oracle
+//!   refuses exactly the programs the validator refuses, on purpose: a program
+//!   the compiler rejects has no expected output for a backend to be wrong
+//!   against. A validator that admits an illegal program therefore reaches
+//!   both sides, and that is the one shared judgement left on this path.
+//! - The operation registry behind `Expr::Call`, through
+//!   `operation::OperationRegistry` and `cpu_op::CpuFn`. The bytes come from
+//!   the registered CPU reference of the callee, which is a hand-written
+//!   scalar implementation rather than a lowering of the call, so the call ABI
+//!   is shared and the arithmetic is not.
+//!
+//! `run_storage_graph` is the exception, and it is a separate entry point that
+//! `reference_eval` never reaches: it evaluates a `NodeStorage` dataflow graph
+//! through `NodeStorage::interpret`, so foundation owns the arithmetic of that
+//! route.
 
 /// Dual-reference trait and registry types.
 pub mod dual;

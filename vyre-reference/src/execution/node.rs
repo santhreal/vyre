@@ -6,7 +6,7 @@
 //! `Barrier`, or `Store` semantics is caught by the conform gate as a concrete
 //! counterexample.
 
-use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_foundation::ir::{Expr, MemoryOrdering, Node, Program};
 
 use crate::execution::node_async::{self, AsyncLoadEval, AsyncStoreEval};
 use crate::execution::node_tile;
@@ -156,7 +156,9 @@ pub(crate) fn execute_node<'a>(
         } => eval_loop(var, from, to, body, invocation, memory, program),
         Node::Return => eval_return(invocation),
         Node::Block(nodes) => eval_block(nodes, invocation),
-        Node::Barrier { .. } | Node::LogicalBarrier { .. } => eval_barrier(invocation),
+        Node::Barrier { ordering } | Node::LogicalBarrier { ordering } => {
+            eval_barrier(*ordering, invocation)
+        }
         Node::IndirectDispatch {
             count_buffer,
             count_offset,
@@ -506,7 +508,22 @@ fn eval_block<'a>(
     Ok(())
 }
 
-fn eval_barrier(invocation: &mut Invocation<'_>) -> Result<(), crate::ReferenceError> {
+/// A workgroup barrier suspends the lane; a whole-grid fence is refused.
+///
+/// This executor advances one invocation of one workgroup and the caller owns
+/// the release, so nothing on this route can observe the rest of the grid
+/// arriving. Suspending on `GridSync` here would release as soon as the lanes
+/// of a single workgroup were waiting, which is a workgroup barrier wearing a
+/// grid fence's name and certifies an unsynchronized program as correct.
+fn eval_barrier(
+    ordering: MemoryOrdering,
+    invocation: &mut Invocation<'_>,
+) -> Result<(), crate::ReferenceError> {
+    if matches!(ordering, MemoryOrdering::GridSync) {
+        return Err(crate::ReferenceError::new(
+            "the single-workgroup statement executor cannot order a whole-grid fence, because it advances one workgroup and cannot observe the rest of the grid. Fix: evaluate the program through `reference_eval`, which runs every workgroup to the fence before releasing any of them.",
+        ));
+    }
     invocation.waiting_at_barrier = true;
     Ok(())
 }

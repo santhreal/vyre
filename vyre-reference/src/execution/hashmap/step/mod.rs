@@ -22,7 +22,10 @@ pub(crate) fn step_round_robin(
         Vec::new()
     };
     for index in 0..invocations.len() {
-        if invocations[index].done() || invocations[index].waiting_at_barrier {
+        if invocations[index].done()
+            || invocations[index].waiting_at_barrier
+            || invocations[index].waiting_at_grid_fence
+        {
             continue;
         }
         step(
@@ -44,7 +47,7 @@ fn step(
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<(), ReferenceError> {
     let invocation = &mut invocations[index];
-    if invocation.done() || invocation.waiting_at_barrier {
+    if invocation.done() || invocation.waiting_at_barrier || invocation.waiting_at_grid_fence {
         return Ok(());
     }
     loop {

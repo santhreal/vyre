@@ -26,7 +26,7 @@ use crate::{
     value::Value,
 };
 use rustc_hash::FxHashMap;
-use vyre_foundation::ir::{AtomicOp, BufferAccess, Expr, Node, Program};
+use vyre_foundation::ir::{AtomicOp, BufferAccess, Expr, Program};
 
 /// Order in which the interpreter steps workgroups and the invocations within
 /// each workgroup.
@@ -76,26 +76,17 @@ fn apply_step_order<T>(items: &mut [T], lane_order: LaneOrder) {
     }
 }
 
-/// Split `program` into the segments a whole-grid fence divides it into.
+/// One workgroup suspended on a whole-grid fence.
 ///
-/// The split itself is `vyre_foundation::transform::grid_sync_split`, the same
-/// transform a backend without a native cooperative launch runs. This crate had
-/// its own copy, which flattened only unconditional wrappers and dropped the
-/// `Let` bindings a segment inherited from an earlier one, so a program that
-/// bound a value before the fence and read it after was rejected as referencing
-/// an undeclared variable. Running the whole grid through segment `k` before
-/// any workgroup enters `k+1` is what a launch boundary does.
-fn grid_sync_segments(program: &Program) -> Result<Option<Vec<Program>>, ReferenceError> {
-    if !vyre_foundation::transform::grid_sync_split::contains_grid_sync(program) {
-        return Ok(None);
-    }
-    let segments = vyre_foundation::transform::grid_sync_split::split_on_grid_sync(program)
-        .map_err(|error| {
-            ReferenceError::new(format!(
-                "cannot order a whole-grid fence: {error}. Fix: bound the fenced program's node count, or remove the fence."
-            ))
-        })?;
-    Ok(Some(segments))
+/// The lanes keep their frames, locals and pending state exactly as the fence
+/// found them, and the workgroup memory they share travels with them, because
+/// a fence orders memory and does not end the workgroup. Resuming is therefore
+/// clearing the wait flag, not re-entering a rewritten program: the oracle
+/// evaluates the fenced program the caller submitted rather than the segments
+/// a backend without a cooperative launch would cut it into.
+struct GridFenceHold<'a> {
+    invocations: Vec<HashmapInvocation<'a>>,
+    workgroup: FxHashMap<String, Buffer>,
 }
 
 /// True when `reference_eval` RETURNS this buffer among its outputs. This is the SINGLE
@@ -329,15 +320,6 @@ pub(crate) fn run_hashmap_reference(
     );
     #[cfg(feature = "subgroup-ops")]
     let uses_subgroup_ops = vyre_foundation::program_caps::scan(program).subgroup_ops;
-    // A whole-grid fence orders every invocation in the dispatch, so the whole
-    // grid advances through one segment before any workgroup enters the next.
-    // A body with no fence is one segment and takes the original single-pass
-    // path byte for byte.
-    let split = grid_sync_segments(program)?;
-    let segments: Vec<&[Node]> = match &split {
-        Some(segments) => segments.iter().map(Program::entry).collect(),
-        None => vec![entry],
-    };
     // Canonical workgroup dispatch order (z,y,x-nested). A non-`Forward`
     // [`LaneOrder`] permutes this list, and the invocations within each workgroup, to
     // flip the deterministic last-writer of any non-atomic same-slot store, so an
@@ -352,22 +334,61 @@ pub(crate) fn run_hashmap_reference(
         }
     }
     apply_step_order(&mut wg_coords, lane_order);
+    // A whole-grid fence orders every invocation in the dispatch. Each
+    // workgroup runs until its lanes are done or suspended on the fence, the
+    // suspended state is held, and no workgroup resumes until the whole grid
+    // has arrived. The fence is a node the invocation state machine waits on,
+    // so nothing rewrites the program on the way in and the oracle's fence
+    // semantics are not borrowed from the lowering it exists to check.
     let mut memory = HashmapMemory::new(storage);
-    for &segment in &segments {
-        for &wg in &wg_coords {
-            memory.reset_workgroup(program)?;
-            let mut invocations = create_invocations(program, wg, segment)?;
-            // Permute the STEP order only; each invocation retains its true
-            // global/local ids and linear_local_index (fields move with the
-            // element), so semantics are unchanged for a race-free program.
-            apply_step_order(&mut invocations, lane_order);
-            run_invocations(
+    let mut suspended: Vec<GridFenceHold<'_>> = Vec::new();
+    for &wg in &wg_coords {
+        memory.reset_workgroup(program)?;
+        let mut invocations = create_invocations(program, wg, entry)?;
+        // Permute the STEP order only; each invocation retains its true
+        // global/local ids and linear_local_index (fields move with the
+        // element), so semantics are unchanged for a race-free program.
+        apply_step_order(&mut invocations, lane_order);
+        let fenced = run_invocations(
+            &mut memory,
+            &mut invocations,
+            #[cfg(feature = "subgroup-ops")]
+            uses_subgroup_ops,
+        )?;
+        if fenced {
+            suspended.push(GridFenceHold {
+                invocations,
+                workgroup: std::mem::take(&mut memory.workgroup),
+            });
+        }
+    }
+    while !suspended.is_empty() {
+        let mut still_fenced = Vec::with_capacity(suspended.len());
+        for hold in suspended {
+            let GridFenceHold {
+                mut invocations,
+                workgroup,
+            } = hold;
+            // The lanes of this workgroup are still resident, so they resume
+            // on the shared memory they left rather than a zeroed copy.
+            memory.workgroup = workgroup;
+            for invocation in &mut invocations {
+                invocation.waiting_at_grid_fence = false;
+            }
+            let fenced = run_invocations(
                 &mut memory,
                 &mut invocations,
                 #[cfg(feature = "subgroup-ops")]
                 uses_subgroup_ops,
             )?;
+            if fenced {
+                still_fenced.push(GridFenceHold {
+                    invocations,
+                    workgroup: std::mem::take(&mut memory.workgroup),
+                });
+            }
         }
+        suspended = still_fenced;
     }
     let oob = crate::oob::oob_report();
     if crate::oob::is_strict_mode() && oob.total() > 0 {

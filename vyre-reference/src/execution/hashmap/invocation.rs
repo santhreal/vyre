@@ -150,6 +150,13 @@ pub(crate) struct HashmapInvocation<'a> {
     pub(crate) returned: bool,
     pub(crate) waiting_at_barrier: bool,
     pub(crate) uniform_checks: Vec<(usize, bool)>,
+    /// Set when this lane reached a `MemoryOrdering::GridSync` fence.
+    ///
+    /// A workgroup barrier is released by the lanes of one workgroup, so
+    /// [`run_invocations`] owns it. A grid fence is released only once every
+    /// workgroup in the dispatch has arrived, which no single workgroup can
+    /// observe, so the lane stops here and the dispatch driver resumes it.
+    pub(crate) waiting_at_grid_fence: bool,
     pub(crate) frames: Vec<Frame<'a>>,
     pub(crate) pending_async: PendingAsyncTransfers,
     pub(crate) op_cache: crate::execution::call::OpCache,
@@ -164,6 +171,7 @@ impl<'a> HashmapInvocation<'a> {
             returned: false,
             waiting_at_barrier: false,
             uniform_checks: Vec::new(),
+            waiting_at_grid_fence: false,
             pending_async: PendingAsyncTransfers::new(),
             op_cache: FxHashMap::default(),
             frames: vec![Frame::Nodes {
@@ -246,12 +254,21 @@ pub(crate) fn create_invocations<'a>(
     Ok(invocations)
 }
 
+/// Step this workgroup's lanes until each one is finished or suspended on a
+/// whole-grid fence.
+///
+/// Returns `true` when at least one live lane is holding at a grid fence. The
+/// dispatch driver owns that release, because it is the only caller that can
+/// see whether the rest of the grid has arrived.
 pub(crate) fn run_invocations(
     memory: &mut HashmapMemory,
     invocations: &mut [HashmapInvocation<'_>],
     #[cfg(feature = "subgroup-ops")] uses_subgroup_ops: bool,
-) -> Result<(), ReferenceError> {
-    while invocations.iter().any(|inv| !inv.done()) {
+) -> Result<bool, ReferenceError> {
+    while invocations
+        .iter()
+        .any(|inv| !inv.done() && !inv.waiting_at_grid_fence)
+    {
         // Charged per round as well as per statement, so a barrier-release
         // cycle that advances no statement is still bounded.
         crate::execution::step_budget::charge()?;
@@ -269,8 +286,16 @@ pub(crate) fn run_invocations(
             return Err(ReferenceError::new("program violates uniform-control-flow rule: not every live invocation reached the same barrier. Fix: move Barrier to uniform control flow."));
         }
     }
-    for invocation in invocations.iter() {
-        invocation.pending_async.assert_drained(invocation.ids)?;
+    let fenced = invocations
+        .iter()
+        .any(|inv| !inv.done() && inv.waiting_at_grid_fence);
+    // A lane suspended mid-program may legitimately still hold an async
+    // transfer it will wait on after the fence, so the drain contract is
+    // checked once the workgroup has actually run out.
+    if !fenced {
+        for invocation in invocations.iter() {
+            invocation.pending_async.assert_drained(invocation.ids)?;
+        }
     }
-    Ok(())
+    Ok(fenced)
 }

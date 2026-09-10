@@ -6,17 +6,17 @@
 //! target and states why in `xtask/test-harness-isolation.toml`.
 
 /// Shared fixture module from `tests/dual_volume/mod.rs`.
-#[allow(dead_code, missing_docs)]
+#[allow(missing_docs)]
 #[path = "dual_volume/mod.rs"]
 pub mod dual_volume;
 
 /// Shared fixture module from `tests/flat_expr_eval/mod.rs`.
-#[allow(dead_code, missing_docs)]
+#[allow(missing_docs)]
 #[path = "flat_expr_eval/mod.rs"]
 pub mod flat_expr_eval;
 
 /// Shared fixture module from `tests/wire_words/mod.rs`.
-#[allow(dead_code, missing_docs)]
+#[allow(missing_docs)]
 #[path = "wire_words/mod.rs"]
 pub mod wire_words;
 
@@ -93,7 +93,6 @@ pub mod dual_registry_adversarial_contract;
 pub mod dual_scalar_evaluator_matrix;
 
 /// Integration tests from `tests/expr_adversarial_proptest.rs`.
-#[allow(dead_code)]
 #[path = "expr_adversarial_proptest.rs"]
 pub mod expr_adversarial_proptest;
 
@@ -140,6 +139,10 @@ pub mod hashmap_invocation_size_contracts;
 /// Integration tests from `tests/logical_execution_markers.rs`.
 #[path = "logical_execution_markers.rs"]
 pub mod logical_execution_markers;
+
+/// Integration tests from `tests/oracle_foundation_dependencies.rs`.
+#[path = "oracle_foundation_dependencies.rs"]
+pub mod oracle_foundation_dependencies;
 
 /// Integration tests from `tests/oracle_program_edges.rs`.
 #[path = "oracle_program_edges.rs"]

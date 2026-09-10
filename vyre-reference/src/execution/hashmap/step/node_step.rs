@@ -11,7 +11,7 @@ use crate::execution::async_transfer::{self, AsyncTransfer};
 use crate::execution::call::{callable_signature, invoke_signature, resolve_call};
 use crate::ReferenceError;
 use crate::{oob, value::Value, workgroup::Frame};
-use vyre_foundation::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, MemoryOrdering, Node};
 
 pub(crate) fn step_nodes_frame<'a>(
     invocation: &mut HashmapInvocation<'a>,
@@ -136,8 +136,17 @@ pub(crate) fn step_nodes_frame<'a>(
                 scoped: true,
             });
         }
-        Node::Barrier { .. } | Node::LogicalBarrier { .. } => {
-            invocation.waiting_at_barrier = true;
+        Node::Barrier { ordering } | Node::LogicalBarrier { ordering } => {
+            // Scope decides who releases the wait. Every other ordering is
+            // workgroup-scoped and the lanes of this workgroup release it.
+            // `GridSync` rendezvous across the whole dispatch, so the lane
+            // holds here until the dispatch driver has run every workgroup up
+            // to its own fence.
+            if matches!(ordering, MemoryOrdering::GridSync) {
+                invocation.waiting_at_grid_fence = true;
+            } else {
+                invocation.waiting_at_barrier = true;
+            }
         }
         Node::IndirectDispatch {
             count_buffer,
