@@ -69,7 +69,7 @@ pub use region::{
 };
 
 #[cfg(feature = "pattern-dfa")]
-pub use dfa::aho_corasick;
+pub use dfa::{aho_corasick, aho_corasick_bounded, aho_corasick_program_from_dfa_wire};
 #[cfg(feature = "pattern-dfa")]
 pub use dfa::{cooperative_dfa_scan, cooperative_dfa_scan_body_with_store};
 #[cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]

@@ -17,6 +17,9 @@ pub const METRICS_SLOTS: u32 = 32;
 /// Epoch counter; host increments on each publish batch.
 pub const EPOCH: u32 = METRICS_BASE + METRICS_SLOTS;
 /// Word index in `control` where priority partition offsets begin.
+/// `control[PRIORITY_OFFSETS_BASE + pri]` is the first slot index of priority
+/// `pri`, and the word after the last priority holds the total slot count as a
+/// sentinel.
 pub const PRIORITY_OFFSETS_BASE: u32 = EPOCH + 1;
 /// Number of priority partition offset words, including sentinel.
 pub const PRIORITY_OFFSETS_SLOTS: u32 = 6;

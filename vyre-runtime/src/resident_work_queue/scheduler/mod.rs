@@ -51,20 +51,6 @@ pub const STARVATION_THRESHOLD: u32 = 16;
 /// the tenant is considered "greedy" and may be throttled.
 pub const TENANT_FAIRNESS_THRESHOLD: u32 = 64;
 
-/// Control word storing the priority partition offsets.
-/// `control[PRIORITY_OFFSETS_BASE + pri]` = first slot index for priority `pri`.
-/// `control[PRIORITY_OFFSETS_BASE + PRIORITY_LEVELS]` = total slot count (sentinel).
-pub const PRIORITY_OFFSETS_BASE: u32 = control::PRIORITY_OFFSETS_BASE;
-
-// The priority offsets sit above every fixed control word. At or below
-// `control::EPOCH` they would overwrite the batch-fence epoch word, and a const
-// assertion fails the build for that rather than a test run, so a reordered
-// layout cannot ship.
-const _: () = assert!(PRIORITY_OFFSETS_BASE > control::EPOCH);
-
-/// Control word storing consecutive high-priority claims.
-pub const PRIORITY_STARVATION_COUNTER: u32 = control::PRIORITY_STARVATION_COUNTER;
-
 /// Policy helper: select the next slot to probe within a partition.
 ///
 /// Offsetting the start by `lane_id` reduces CAS contention on the first
@@ -162,7 +148,7 @@ pub fn priority_scan_body_with_stride(total_slots: u32, worker_stride: u32) -> V
         Node::let_bind("claimed_tenant", Expr::u32(u32::MAX)),
         Node::let_bind(
             "priority_starvation_count",
-            atomic_load_relaxed("control", Expr::u32(PRIORITY_STARVATION_COUNTER)),
+            atomic_load_relaxed("control", Expr::u32(control::PRIORITY_STARVATION_COUNTER)),
         ),
         Node::let_bind(
             "priority_force_lower",
@@ -192,7 +178,7 @@ pub fn priority_scan_body_with_stride(total_slots: u32, worker_stride: u32) -> V
                             "part_start",
                             atomic_load_relaxed(
                                 "control",
-                                Expr::add(Expr::u32(PRIORITY_OFFSETS_BASE), Expr::var("scan_pri")),
+                                Expr::add(Expr::u32(control::PRIORITY_OFFSETS_BASE), Expr::var("scan_pri")),
                             ),
                         ),
                         Node::let_bind(
@@ -200,7 +186,7 @@ pub fn priority_scan_body_with_stride(total_slots: u32, worker_stride: u32) -> V
                             atomic_load_relaxed(
                                 "control",
                                 Expr::add(
-                                    Expr::u32(PRIORITY_OFFSETS_BASE),
+                                    Expr::u32(control::PRIORITY_OFFSETS_BASE),
                                     Expr::add(Expr::var("scan_pri"), Expr::u32(1)),
                                 ),
                             ),
@@ -396,14 +382,14 @@ pub fn priority_scan_body_with_stride(total_slots: u32, worker_stride: u32) -> V
                         "priority_starvation_prev",
                         Expr::atomic_add(
                             "control",
-                            Expr::u32(PRIORITY_STARVATION_COUNTER),
+                            Expr::u32(control::PRIORITY_STARVATION_COUNTER),
                             Expr::u32(1),
                         ),
                     )],
                     vec![atomic_store_relaxed(
                         "priority_starvation_prev",
                         "control",
-                        Expr::u32(PRIORITY_STARVATION_COUNTER),
+                        Expr::u32(control::PRIORITY_STARVATION_COUNTER),
                         Expr::u32(0),
                     )],
                 ),
@@ -476,8 +462,8 @@ mod tests {
             let start = word as usize * 4;
             u32::from_le_bytes(control[start..start + 4].try_into().unwrap())
         };
-        assert_eq!(read(PRIORITY_OFFSETS_BASE), 0);
-        assert_eq!(read(PRIORITY_OFFSETS_BASE + PRIORITY_LEVELS), 10);
+        assert_eq!(read(control::PRIORITY_OFFSETS_BASE), 0);
+        assert_eq!(read(control::PRIORITY_OFFSETS_BASE + PRIORITY_LEVELS), 10);
         assert_eq!(read(control::EPOCH), 0);
     }
 

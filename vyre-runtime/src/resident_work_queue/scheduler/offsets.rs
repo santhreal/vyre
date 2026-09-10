@@ -1,4 +1,5 @@
-use super::{priority, PRIORITY_LEVELS, PRIORITY_OFFSETS_BASE};
+use super::{priority, PRIORITY_LEVELS};
+use crate::resident_work_queue::protocol::control;
 use crate::{PipelineError, RingEncodingFault};
 
 const PRIORITY_LEVELS_USIZE: usize = 5;
@@ -76,7 +77,7 @@ pub fn write_default_priority_offsets(
 }
 
 fn priority_offsets_base_usize() -> Result<usize, PipelineError> {
-    usize::try_from(PRIORITY_OFFSETS_BASE).map_err(|_| PipelineError::RingEncoding {
+    usize::try_from(control::PRIORITY_OFFSETS_BASE).map_err(|_| PipelineError::RingEncoding {
         fault: RingEncodingFault::Overflow,
         fix: "priority-offset base word cannot fit host usize; keep control ABI constants bounded",
     })
