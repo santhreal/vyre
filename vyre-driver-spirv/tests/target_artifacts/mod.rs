@@ -4,11 +4,11 @@
 //! target compiler, and each had restated the same expectation literal. The
 //! payload format identity, its version and the neutral entry point are one
 //! decision about this backend, so they are stated here once and every target
-//! reads them from here.
-
+//! reads them from here. The fixture artifacts the negative cases need come
+//! from [`TargetExpectation`], which is the single owner of them.
 
 use vyre_foundation::ir::BufferAccess;
-use vyre_test_support::target_compiler_contract::{single_lane_artifact, TargetExpectation};
+use vyre_test_support::target_compiler_contract::TargetExpectation;
 
 /// What this backend declares about the payload its registered compiler produces.
 ///
@@ -26,14 +26,4 @@ pub(crate) fn spirv() -> TargetExpectation<'static> {
         entry_point: "main",
         output_access: BufferAccess::ReadWrite,
     }
-}
-
-/// The artifact this backend's payload is authentic for.
-pub(crate) fn artifact() -> vyre_megakernel::Artifact {
-    single_lane_artifact(BufferAccess::ReadWrite, 0)
-}
-
-/// An artifact this backend's payload must never be authentic for.
-pub(crate) fn foreign_artifact() -> vyre_megakernel::Artifact {
-    single_lane_artifact(BufferAccess::ReadWrite, 1)
 }

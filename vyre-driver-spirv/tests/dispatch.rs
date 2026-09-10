@@ -12,12 +12,10 @@ use vyre_driver_spirv::SpirvBackendRegistration;
 use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
 
-#[path = "target_artifacts/elementwise.rs"]
-mod elementwise;
-use elementwise::{
-    bytes_to_u32_values, elementwise_add_program, elementwise_fma_program,
-    output_first_elementwise_add_program, u32_values_to_bytes,
+use vyre_test_support::elementwise_programs::{
+    elementwise_add_program, elementwise_fma_program, output_first_elementwise_add_program,
 };
+use vyre_test_support::le_words::{pack_words, unpack_words};
 
 fn require_vulkan_backend() -> SpirvBackendRegistration {
     SpirvBackendRegistration::acquire().unwrap_or_else(|error| {

@@ -21,7 +21,7 @@ use vyre_megakernel::{
 };
 
 use crate::target_artifacts;
-use target_artifacts::{foreign_artifact, spirv};
+use target_artifacts::spirv;
 
 /// A real artifact and the real payload a target compiler produced for it.
 fn compiled() -> (Artifact, TargetPayload) {
@@ -131,7 +131,7 @@ fn admission_states_the_frozen_launch_and_no_tuner_override() {
 #[test]
 fn admission_rejects_a_payload_sealed_for_another_artifact() {
     let (_, payload) = compiled();
-    let other = foreign_artifact();
+    let other = spirv().foreign_artifact();
     let error = materialize::admit(&other, &payload, target(&payload))
         .expect_err("foreign artifact must be rejected");
     expect_invalid_program(error, "not authenticated");

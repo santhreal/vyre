@@ -16,7 +16,7 @@ use vyre_foundation::ir::Program;
 use vyre_megakernel::{TargetModuleBundle, TargetPayload, TargetPayloadFormat};
 
 use crate::target_artifacts;
-use target_artifacts::{artifact, foreign_artifact, spirv};
+use target_artifacts::spirv;
 use vyre_test_support::target_compiler_contract::{
     assert_materializer_executes_payload, assert_target_compiler_emits_bundle, registration,
     store_one_program,
@@ -117,10 +117,10 @@ fn perturbed_payloads_fail_before_native_materialization() {
     let materializer = registration
         .materializer()
         .expect("Vulkan device materializer must acquire on the GPU-required host");
-    let artifact = artifact();
+    let artifact = spirv().artifact();
     let payload = compiler.compile(&artifact).unwrap();
     let instance = materializer.materialize(&artifact, &payload).unwrap();
-    let wrong_artifact = foreign_artifact();
+    let wrong_artifact = spirv().foreign_artifact();
     assert!(
         materializer.materialize(&wrong_artifact, &payload).is_err(),
         "payload association mismatch must fail before native materialization"

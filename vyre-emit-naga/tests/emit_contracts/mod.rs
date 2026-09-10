@@ -90,9 +90,7 @@ pub(crate) fn single_store_desc(id: &str) -> KernelDescriptor {
     single_store_desc_of(id, DataType::U32, None)
 }
 
-#[path = "../support/naga_probe.rs"]
-mod naga_probe;
-pub(crate) use naga_probe::{
+pub(crate) use crate::naga_probe::{
     block_has_atomic, block_has_barrier, block_has_loop, count_statements, entry_body,
     entry_has_binary, entry_has_unary,
 };

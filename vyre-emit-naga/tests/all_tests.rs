@@ -5,6 +5,10 @@
 //! binary for the whole set. A test that cannot share a process stays its own
 //! target and states why in `xtask/test-harness-isolation.toml`.
 
+/// Shared structural probes from `tests/support/naga_probe.rs`.
+#[path = "support/naga_probe.rs"]
+pub mod naga_probe;
+
 /// Integration tests from `tests/adversarial_emit_program_matrix.rs`.
 #[path = "adversarial_emit_program_matrix.rs"]
 pub mod adversarial_emit_program_matrix;

@@ -9,9 +9,8 @@
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 
-#[path = "../tests/target_artifacts/elementwise.rs"]
-mod elementwise;
-use elementwise::{bytes_to_u32_values, elementwise_add_program, u32_values_to_bytes};
+use vyre_test_support::elementwise_programs::elementwise_add_program;
+use vyre_test_support::le_words::{pack_words, unpack_words};
 
 fn main() {
     println!("Probing Vulkan dispatch...");

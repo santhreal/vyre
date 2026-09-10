@@ -1,14 +1,15 @@
-//! The element-wise programs the SPIR-V dispatch test and the Vulkan probe run.
+//! The element-wise programs a device dispatch is checked against.
 //!
-//! Both consumers include this file with `#[path]` from inside this crate.
+//! A dispatch proof needs a program small enough that a wrong answer names one
+//! defect. These are that program, in the three shapes a dispatch path can get
+//! wrong: the ordinary binding order, the order that catches a backend binding
+//! by raw index, and a multiply-add.
 //!
-//! One owner matters here because the two consumers ask the same question from
-//! opposite sides. The test dispatches the program and compares it against the
-//! CPU reference; the probe dispatches it and prints what the device returned so
-//! an operator can see whether Vulkan works at all. A probe that succeeds while
-//! the test fails is only informative while both ran the same program and the
-//! same binding layout.
-
+//! One owner is what makes a probe and a test comparable. A probe dispatches a
+//! program and prints what the device returned, a test dispatches it and
+//! compares against the reference, and a probe that succeeds while the test
+//! fails is only informative while both ran the same program and the same
+//! binding layout.
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
@@ -26,7 +27,8 @@ fn add_body() -> Vec<Node> {
 }
 
 /// `out[i] = a[i] + b[i]` over `count` u32 lanes, inputs at bindings 0 and 1.
-pub(crate) fn elementwise_add_program(count: u32) -> Program {
+#[must_use]
+pub fn elementwise_add_program(count: u32) -> Program {
     Program::wrapped(
         vec![
             BufferDecl::read("a", 0, DataType::U32).with_count(count),
@@ -43,7 +45,8 @@ pub(crate) fn elementwise_add_program(count: u32) -> Program {
 /// A backend that binds host inputs by raw binding order rather than through the
 /// binding plan feeds the first input buffer into the output slot here, so the
 /// answer differs from [`elementwise_add_program`] only when that bug is present.
-pub(crate) fn output_first_elementwise_add_program(count: u32) -> Program {
+#[must_use]
+pub fn output_first_elementwise_add_program(count: u32) -> Program {
     Program::wrapped(
         vec![
             BufferDecl::output("out", 0, DataType::U32).with_count(count),
@@ -56,7 +59,8 @@ pub(crate) fn output_first_elementwise_add_program(count: u32) -> Program {
 }
 
 /// `out[i] = a[i] * 2 + 1` over `count` u32 lanes.
-pub(crate) fn elementwise_fma_program(count: u32) -> Program {
+#[must_use]
+pub fn elementwise_fma_program(count: u32) -> Program {
     Program::wrapped(
         vec![
             BufferDecl::read("a", 0, DataType::U32).with_count(count),
@@ -72,21 +76,4 @@ pub(crate) fn elementwise_fma_program(count: u32) -> Program {
             ),
         )],
     )
-}
-
-/// Little-endian bytes for `values`.
-pub(crate) fn u32_values_to_bytes(values: &[u32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
-/// `bytes` decoded as little-endian u32 lanes. A trailing partial word is
-/// dropped, which is why every caller also asserts the buffer lengths agree.
-pub(crate) fn bytes_to_u32_values(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|word| u32::from_le_bytes([word[0], word[1], word[2], word[3]]))
-        .collect()
 }

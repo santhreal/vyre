@@ -1,16 +1,13 @@
 //! Harness shared by this crate's integration test targets.
 //!
-//! Every target here resolves the checkout root and most of them run a
-//! repository generator over a fixture workspace. Each target compiles this
-//! module separately and uses the subset it needs, so an item unused by one
-//! target is not dead code.
-#![allow(dead_code)]
+//! Every target here resolves the checkout root, and each of the items below is
+//! reached from both of the crate's test binaries. A helper reached from one of
+//! them is declared in that binary instead, because an item unused by a target
+//! that compiles this module is dead code and the allowance that would hide it
+//! also hides a helper that has lost its last caller.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
-
-use proc_macro2::LineColumn;
-use xtask::gate::{GateBehavior, GateCtx, Report};
 
 /// The checkout root, resolved from the working directory at run time.
 ///
@@ -60,42 +57,6 @@ pub(crate) fn sources_under(dir: &Path, extensions: &[&str]) -> Vec<PathBuf> {
     sources
 }
 
-/// Every Rust source file under `dir`, at any depth.
-pub(crate) fn rust_sources_under(dir: &Path) -> Vec<PathBuf> {
-    sources_under(dir, &["rs"])
-}
-
-/// Every Rust source file under every workspace member's `src` directory.
-pub(crate) fn workspace_member_sources(root: &Path) -> Vec<PathBuf> {
-    workspace_member_src_dirs(root)
-        .iter()
-        .flat_map(|dir| rust_sources_under(dir))
-        .collect()
-}
-
-/// Run one gate over a fixture checkout, in check or write mode.
-///
-/// The fixture has to be a real checkout: every gate here reads the tree
-/// through `git ls-files`, so a directory of untracked files reads as an empty
-/// workspace and the gate would report nothing at all.
-pub(crate) fn run_gate(
-    name: &str,
-    gate: &'static dyn GateBehavior,
-    root: &Path,
-    write: bool,
-) -> Report {
-    let args = if write {
-        vec!["--write".to_string()]
-    } else {
-        Vec::new()
-    };
-    let desc = xtask::gate_metadata::descriptor_by_name(name);
-    let registered = xtask::gate::RegisteredGate::new(desc, gate);
-    registered
-        .run(&GateCtx::new(root.to_path_buf(), args))
-        .unwrap_or_else(|error| panic!("Fix: {name} must run: {error:?}"))
-}
-
 /// Track everything currently in a fixture directory, making it a checkout the
 /// gates can read.
 pub(crate) fn track_fixture(root: &Path) {
@@ -118,16 +79,3 @@ pub(crate) fn track_fixture(root: &Path) {
     }
 }
 
-/// A `path:line:column` violation, with the path relative to `root`.
-///
-/// Column is one-based here and zero-based in `proc_macro2`, because a reader
-/// pastes this into an editor. Two structural gates formatted it identically
-/// and a third would have had to guess which convention they used.
-pub(crate) fn violation_location(root: &Path, path: &Path, location: LineColumn) -> String {
-    format!(
-        "{}:{}:{}",
-        path.strip_prefix(root).unwrap_or(path).display(),
-        location.line,
-        location.column + 1
-    )
-}

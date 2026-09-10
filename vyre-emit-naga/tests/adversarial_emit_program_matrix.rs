@@ -11,9 +11,9 @@ use vyre_lower::emit_adversarial_corpus::{
     self, EmitAdversarialCase, EmitAdversarialFamily, EmitOutcome,
 };
 
-#[path = "support/naga_probe.rs"]
-mod naga_probe;
-use naga_probe::{block_has_atomic, block_has_barrier, block_has_loop, block_if_count, entry_body};
+use crate::naga_probe::{
+    block_has_atomic, block_has_barrier, block_has_loop, block_if_count, entry_body,
+};
 
 fn assert_naga_structure(case: &EmitAdversarialCase, module: &naga::Module) {
     let entry = &module.entry_points[0];

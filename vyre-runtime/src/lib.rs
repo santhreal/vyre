@@ -5,16 +5,25 @@
 //! devices; runtime policy owns bindings, retained state, queueing, recovery,
 //! resource residency, IO, and telemetry.
 
-// A fixture module shared with the integration suites names this crate by its
-// own name, so the same file compiles inside the library and inside a test
-// binary.
+// Every `unsafe` construct in this crate is refused unless the file or the
+// single item carrying it also carries `allow(unsafe_code)`, beside the comment
+// discharging the caller obligation. A block added anywhere else is a compile
+// error rather than an inherited permission. The four files below are the
+// permitted places; each `unsafe-permitted` line is parsed by the runtime
+// unsafe-permission test, which rejects a grant in any file this list does not
+// name and any name here that carries no grant. `uring/raw_platform.rs` is the
+// only file-level allowance; the rest are one item each.
+//
+// unsafe-permitted: uring/raw_platform.rs
+// unsafe-permitted: uring/buffer.rs
+// unsafe-permitted: uring/ring.rs
+// unsafe-permitted: uring_completion_pump.rs
+#![deny(unsafe_code)]
+
+// `pipeline_error_closure` is an in-crate test module that names this crate by
+// its own name, which resolves only through this alias.
 #[cfg(test)]
 extern crate self as vyre_runtime;
-
-// The retained-cache key fixture the integration proofs own.
-#[cfg(test)]
-#[path = "../tests/retained_cache_fixtures/mod.rs"]
-mod retained_cache_fixtures;
 
 // The `PipelineError` variant-space closure. An exhaustive match over a
 // `#[non_exhaustive]` enum is legal only inside the crate that defines it.

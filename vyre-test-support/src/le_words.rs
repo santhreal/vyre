@@ -30,3 +30,24 @@ pub fn read_word(bytes: &[u8], word_idx: usize) -> u32 {
             .expect("Fix: a four-byte slice is a u32 word; state a buffer that holds the word."),
     )
 }
+
+/// `values` as the little-endian byte buffer a device reads.
+#[must_use]
+pub fn pack_words(values: &[u32]) -> Vec<u8> {
+    values
+        .iter()
+        .flat_map(|value| value.to_le_bytes())
+        .collect()
+}
+
+/// `bytes` decoded as little-endian words.
+///
+/// A trailing partial word is dropped, so a caller comparing two buffers also
+/// asserts their byte lengths agree rather than only their word prefixes.
+#[must_use]
+pub fn unpack_words(bytes: &[u8]) -> Vec<u32> {
+    bytes
+        .chunks_exact(4)
+        .map(|word| u32::from_le_bytes([word[0], word[1], word[2], word[3]]))
+        .collect()
+}

@@ -1,11 +1,10 @@
 //! Structural probes over an emitted `naga` module.
 //!
-//! Shared by the crate's inline emitter tests and by
-//! `tests/adversarial_emit_program_matrix.rs`, which includes this file
-//! directly with `#[path]`: an integration test cannot reach a `#[cfg(test)]`
-//! module, and these probes are not part of the crate's public surface.
-
-// The two inclusion sites assert over different subsets of these probes.
+//! Every probe reads the emitted module rather than a rendered string, so a
+//! test states what the emitter produced and not how it was printed. The
+//! module is declared once in `tests/all_tests.rs` and reached as
+//! `crate::naga_probe`; the probes read `naga` types, so this crate is their
+//! only correct owner.
 
 use naga::{BinaryOperator, Block, Expression, Statement, UnaryOperator};
 
