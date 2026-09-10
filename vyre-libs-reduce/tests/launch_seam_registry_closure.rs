@@ -280,9 +280,10 @@ fn launch_facts_alone_move_an_operation_onto_the_persistent_route() {
 /// so a builder that stops needing the rendezvous stops proving this side and
 /// turns the case red.
 fn grid_ordered_graph() -> ProgramGraph {
-    let program = vyre_libs_reduce::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32(
-        "input", "output", 1024,
-    );
+    let program =
+        vyre_libs_reduce::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32(
+            "input", "output", 1024,
+        );
     let constraints = vyre_foundation::GeometryRequirements::from_program(&program)
         .expect("a multi-block scan must state compatible constraints");
     assert!(

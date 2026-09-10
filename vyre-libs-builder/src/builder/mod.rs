@@ -422,7 +422,13 @@ where
     )
 }
 
-fn strided_loop(tile: u32, chunks: u32, n: u32, guarded_body: Vec<Node>) -> Node {
+/// Strided chunk loop over a tile-local lane.
+///
+/// Binds `idx = chunk * tile + local` for each of `chunks` iterations and runs
+/// `guarded_body` only where `idx < n`. The caller must bind `local` before
+/// this loop; `strided_writeback_child` and the reduction composers do so from
+/// `LogicalWithinTileId(0)`.
+pub fn strided_loop(tile: u32, chunks: u32, n: u32, guarded_body: Vec<Node>) -> Node {
     Node::loop_for(
         "chunk",
         Expr::u32(0),

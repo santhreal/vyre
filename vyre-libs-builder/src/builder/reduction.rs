@@ -160,49 +160,31 @@ impl ReductionComposer {
                     Node::let_bind("n_i", Expr::u32(0)),
                     Node::let_bind("M1_i", Expr::f32(0.0)),
                     Node::let_bind("M2_i", Expr::f32(0.0)),
-                    Node::loop_for(
-                        "chunk",
-                        Expr::u32(0),
-                        Expr::u32(chunks),
+                    super::strided_loop(
+                        tile,
+                        chunks,
+                        n,
                         vec![
-                            Node::let_bind(
-                                "idx",
+                            Node::let_bind("x", Expr::load(input, idx.clone())),
+                            Node::assign("n_i", Expr::add(Expr::var("n_i"), Expr::u32(1))),
+                            Node::let_bind("delta", Expr::sub(Expr::var("x"), Expr::var("M1_i"))),
+                            Node::assign(
+                                "M1_i",
                                 Expr::add(
-                                    Expr::mul(Expr::var("chunk"), Expr::u32(tile)),
-                                    local.clone(),
+                                    Expr::var("M1_i"),
+                                    Expr::div(
+                                        Expr::var("delta"),
+                                        Expr::cast(DataType::F32, Expr::var("n_i")),
+                                    ),
                                 ),
                             ),
-                            Node::if_then(
-                                Expr::lt(idx.clone(), Expr::u32(n)),
-                                vec![
-                                    Node::let_bind("x", Expr::load(input, idx.clone())),
-                                    Node::assign("n_i", Expr::add(Expr::var("n_i"), Expr::u32(1))),
-                                    Node::let_bind(
-                                        "delta",
-                                        Expr::sub(Expr::var("x"), Expr::var("M1_i")),
-                                    ),
-                                    Node::assign(
-                                        "M1_i",
-                                        Expr::add(
-                                            Expr::var("M1_i"),
-                                            Expr::div(
-                                                Expr::var("delta"),
-                                                Expr::cast(DataType::F32, Expr::var("n_i")),
-                                            ),
-                                        ),
-                                    ),
-                                    Node::let_bind(
-                                        "delta2",
-                                        Expr::sub(Expr::var("x"), Expr::var("M1_i")),
-                                    ),
-                                    Node::assign(
-                                        "M2_i",
-                                        Expr::add(
-                                            Expr::var("M2_i"),
-                                            Expr::mul(Expr::var("delta"), Expr::var("delta2")),
-                                        ),
-                                    ),
-                                ],
+                            Node::let_bind("delta2", Expr::sub(Expr::var("x"), Expr::var("M1_i"))),
+                            Node::assign(
+                                "M2_i",
+                                Expr::add(
+                                    Expr::var("M2_i"),
+                                    Expr::mul(Expr::var("delta"), Expr::var("delta2")),
+                                ),
                             ),
                         ],
                     ),

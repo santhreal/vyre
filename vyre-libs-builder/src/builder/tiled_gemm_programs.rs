@@ -60,13 +60,12 @@ pub(super) fn build_batched_rows_register_tiled(
         projection_counts(x, w, out, rows, in_dim, out_dim)?;
     let row_tiles = rows.div_ceil(tile_rows);
     let column_tiles = out_dim.div_ceil(tile_columns);
-    let tile_count =
-        row_tiles
-            .checked_mul(column_tiles)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: out.to_string(),
-                shape: vec![row_tiles, column_tiles],
-            })?;
+    let tile_count = row_tiles.checked_mul(column_tiles).ok_or_else(|| {
+        TensorRefError::ElementCountOverflow {
+            name: out.to_string(),
+            shape: vec![row_tiles, column_tiles],
+        }
+    })?;
 
     let row_name = |r: u32| format!("row_{r}");
     let column_name = |c: u32| format!("column_{c}");

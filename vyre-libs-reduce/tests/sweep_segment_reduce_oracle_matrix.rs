@@ -79,7 +79,10 @@ fn segment_cases() -> impl Iterator<Item = (Vec<u32>, Vec<u32>)> {
             [
                 (vec![fill; len], single_segment_offsets(len)),
                 (vec![fill; len], alternating_empty_segments(len)),
-                (ramp_words(len, fill, 0x9E37_79B9), uniform_segment_offsets(len, 4)),
+                (
+                    ramp_words(len, fill, 0x9E37_79B9),
+                    uniform_segment_offsets(len, 4),
+                ),
             ]
             .into_iter()
         })

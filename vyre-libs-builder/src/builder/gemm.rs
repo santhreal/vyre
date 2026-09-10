@@ -856,60 +856,58 @@ impl ContractionComposer {
                 in_dim,
                 out_dim,
                 weight_out_in,
-            } => {
-                match &self.tiling {
-                    ContractionTiling::RegisterTiled {
-                        rows: tile_rows,
-                        columns,
-                        workgroup_size,
-                    } => {
-                        let wg = self.options.workgroup_size.unwrap_or(*workgroup_size);
-                        build_batched_rows_register_tiled(
-                            generator,
-                            self.a.name_str(),
-                            self.b.name_str(),
-                            self.bias.as_ref().map(TensorRef::name_str),
-                            self.out.name_str(),
-                            *rows,
-                            *in_dim,
-                            *out_dim,
-                            *tile_rows,
-                            *columns,
-                            &self.dtype,
-                            &self.acc_dtype,
-                            *weight_out_in,
-                            wg,
-                        )
-                    }
-                    ContractionTiling::Linear { workgroup_size } => {
-                        let wg = self.options.workgroup_size.unwrap_or(*workgroup_size);
-                        build_batched_rows_contraction(
-                            generator,
-                            self.a.name_str(),
-                            self.b.name_str(),
-                            self.bias.as_ref().map(TensorRef::name_str),
-                            self.out.name_str(),
-                            *rows,
-                            *in_dim,
-                            *out_dim,
-                            &self.dtype,
-                            &self.acc_dtype,
-                            *weight_out_in,
-                            wg,
-                        )
-                    }
-                    ContractionTiling::CooperativeShared { .. } => {
-                        Err(TensorRefError::UnsupportedTiling {
-                            tiling: "CooperativeShared",
-                            op: self.op_id,
-                        })
-                    }
-                    ContractionTiling::Block1D { .. } => Err(TensorRefError::UnsupportedTiling {
-                        tiling: "Block1D",
-                        op: self.op_id,
-                    }),
+            } => match &self.tiling {
+                ContractionTiling::RegisterTiled {
+                    rows: tile_rows,
+                    columns,
+                    workgroup_size,
+                } => {
+                    let wg = self.options.workgroup_size.unwrap_or(*workgroup_size);
+                    build_batched_rows_register_tiled(
+                        generator,
+                        self.a.name_str(),
+                        self.b.name_str(),
+                        self.bias.as_ref().map(TensorRef::name_str),
+                        self.out.name_str(),
+                        *rows,
+                        *in_dim,
+                        *out_dim,
+                        *tile_rows,
+                        *columns,
+                        &self.dtype,
+                        &self.acc_dtype,
+                        *weight_out_in,
+                        wg,
+                    )
                 }
-            }
+                ContractionTiling::Linear { workgroup_size } => {
+                    let wg = self.options.workgroup_size.unwrap_or(*workgroup_size);
+                    build_batched_rows_contraction(
+                        generator,
+                        self.a.name_str(),
+                        self.b.name_str(),
+                        self.bias.as_ref().map(TensorRef::name_str),
+                        self.out.name_str(),
+                        *rows,
+                        *in_dim,
+                        *out_dim,
+                        &self.dtype,
+                        &self.acc_dtype,
+                        *weight_out_in,
+                        wg,
+                    )
+                }
+                ContractionTiling::CooperativeShared { .. } => {
+                    Err(TensorRefError::UnsupportedTiling {
+                        tiling: "CooperativeShared",
+                        op: self.op_id,
+                    })
+                }
+                ContractionTiling::Block1D { .. } => Err(TensorRefError::UnsupportedTiling {
+                    tiling: "Block1D",
+                    op: self.op_id,
+                }),
+            },
             ContractionGeometry::Matvec { n, matrix_cells } => {
                 let wg = self.options.workgroup_size.unwrap_or([256, 1, 1]);
                 build_matvec_contraction(

@@ -305,12 +305,7 @@ struct StagedOperand<'a> {
 /// The pad store is unconditional because a tile that overhangs the matrix
 /// keeps whatever the previous slab wrote there otherwise, and that value
 /// would enter the next accumulation.
-fn stage_operand(
-    operand: StagedOperand<'_>,
-    lanes: u32,
-    local: &Expr,
-    pad: &Expr,
-) -> Vec<Node> {
+fn stage_operand(operand: StagedOperand<'_>, lanes: u32, local: &Expr, pad: &Expr) -> Vec<Node> {
     let linear = Expr::var(operand.linear);
     vec![
         Node::let_bind(

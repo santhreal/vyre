@@ -28,7 +28,11 @@ fn bound_names(nodes: &[Node]) -> Vec<String> {
 #[test]
 fn the_tile_scaffold_binds_every_name_a_body_reads() {
     let nodes = bind_output_tile_coordinates(
-        MatrixShape { m: 40, k: 24, n: 48 },
+        MatrixShape {
+            m: 40,
+            k: 24,
+            n: 48,
+        },
         TileShape {
             k_tile: 8,
             out_rows: 8,

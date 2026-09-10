@@ -13,12 +13,12 @@
 //! declare per output element.
 
 use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_foundation::validate::BackendCapabilities;
 use vyre_foundation::visit::{for_each_expr, for_each_node};
 use vyre_libs_builder::builder::gemm::{
     ContractionComposer, ContractionOutputTile, ContractionTiling,
 };
 use vyre_libs_builder::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
-use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::DeviceFacts;
 use vyre_spec::DataType;
 
@@ -214,7 +214,9 @@ fn facts_that_admit_no_tile_leave_the_untiled_candidate_selected() {
         "Fix: facts admitting no tile must leave the untiled candidate selected"
     );
 
-    let untiled = composer().build().expect("the untiled candidate must build");
+    let untiled = composer()
+        .build()
+        .expect("the untiled candidate must build");
     assert_eq!(
         neutral, untiled,
         "Fix: device-neutral facts must select exactly the untiled candidate"

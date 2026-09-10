@@ -9,6 +9,7 @@ use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_libs_builder::builder::strided_loop;
 
 /// Canonical op id for an f32 workgroup sum over a scratch buffer.
 pub const SUM_F32_OP_ID: &str = "vyre-libs::reduce::workgroup_sum_f32";
@@ -363,26 +364,14 @@ impl<'a> WorkgroupReductionBuilder<'a> {
                 Expr::is_first_logical_tile(),
                 vec![
                     Node::let_bind("acc", fold.identity(&dtype)),
-                    Node::loop_for(
-                        "chunk",
-                        Expr::u32(0),
-                        Expr::u32(chunks),
-                        vec![
-                            Node::let_bind(
-                                "idx",
-                                Expr::add(
-                                    Expr::mul(Expr::var("chunk"), Expr::u32(tile)),
-                                    local.clone(),
-                                ),
-                            ),
-                            Node::if_then(
-                                Expr::lt(idx.clone(), Expr::u32(count)),
-                                vec![Node::assign(
-                                    "acc",
-                                    fold.combine(Expr::var("acc"), Expr::load(values, idx.clone())),
-                                )],
-                            ),
-                        ],
+                    strided_loop(
+                        tile,
+                        chunks,
+                        count,
+                        vec![Node::assign(
+                            "acc",
+                            fold.combine(Expr::var("acc"), Expr::load(values, idx.clone())),
+                        )],
                     ),
                     Node::store(scratch, local.clone(), Expr::var("acc")),
                 ],
