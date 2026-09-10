@@ -11,14 +11,8 @@
 use std::collections::BTreeMap;
 use vyre_megakernel::{compile, CompileRequest, Digest, ExternalFacts, SearchBudget};
 
-#[path = "support/search_fixtures.rs"]
-mod search_fixtures;
-
-#[path = "graph_fixtures/mod.rs"]
-mod graph_fixtures;
-
-use graph_fixtures::asymmetric_join_graph;
-use search_fixtures::{
+use vyre_test_support::graph_fixtures::asymmetric_join_graph;
+use crate::search_fixtures::{
     budget, facts, joined_graph, latency_objective, rich_device, single_stage_graph,
 };
 

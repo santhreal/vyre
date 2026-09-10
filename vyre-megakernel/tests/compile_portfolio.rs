@@ -26,10 +26,7 @@ use vyre_megakernel::{
     WorkloadClass, WorkloadProfile,
 };
 
-#[path = "support/search_fixtures.rs"]
-mod search_fixtures;
-
-use search_fixtures::{budget, fixture_request, launch_bound_device, validated, ARTIFACT_BYTES};
+use crate::search_fixtures::{budget, fixture_request, launch_bound_device, validated, ARTIFACT_BYTES};
 
 /// An interactive submission: one launch, one stream, half the workload.
 fn interactive() -> WorkloadClass {

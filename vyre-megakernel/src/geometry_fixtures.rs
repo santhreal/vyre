@@ -8,7 +8,6 @@
 
 // Every test binary compiles this module on its own, so a fixture a given suite
 // does not ask for is unused in that binary.
-#![allow(dead_code)]
 
 use vyre_foundation::schedule::SchedulePhaseId;
 

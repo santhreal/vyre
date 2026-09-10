@@ -14,10 +14,7 @@
 //! requires every production the rounding graph loses to state `Numerical`,
 //! which is what a production added later has to satisfy.
 
-#[path = "support/search_fixtures.rs"]
-mod search_fixtures;
-
-use search_fixtures::{numerically_pruned, reducing_artifact, REORDERING_PRODUCTIONS};
+use crate::search_fixtures::{numerically_pruned, reducing_artifact, REORDERING_PRODUCTIONS};
 
 use vyre_foundation::ir::DataType;
 use vyre_megakernel::{ScheduleProduction, SearchCertificate};

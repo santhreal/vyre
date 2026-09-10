@@ -23,7 +23,6 @@ use vyre_test_support::graph_values::{graph_output, u32_symbolic};
 
 use vyre_test_support::pass_programs::{add_program, copy_program, workgroup_scratch_program};
 
-use crate::graph_fixtures;
 
 const LIMIT: u64 = 1_000_000;
 
@@ -78,7 +77,7 @@ fn whole_graph() -> ProgramGraph {
         .add_node(
             "zeta",
             add_program("input", "constant", "intermediate"),
-            graph_fixtures::value_and_constant_ports(input, constant),
+            vyre_test_support::graph_fixtures::value_and_constant_ports(input, constant),
             vec![graph_output(
                 "intermediate",
                 contract(BufferAccess::ReadWrite, ValueLifetime::Invocation),

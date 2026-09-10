@@ -6,7 +6,6 @@
 //! kept identical for a precedence case in one suite to mean what a coverage
 //! case in the other says.
 
-#![allow(dead_code)]
 
 use std::collections::BTreeMap;
 

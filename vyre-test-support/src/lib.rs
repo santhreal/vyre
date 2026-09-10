@@ -215,6 +215,8 @@ pub mod fixture_instance;
 #[cfg(feature = "ir-fixtures")]
 pub mod graph_shapes;
 #[cfg(feature = "ir-fixtures")]
+/// Two-node and multi-arm program graph shapes planning suites compile.
+pub mod graph_fixtures;
 pub mod graph_values;
 #[cfg(feature = "parity-oracles")]
 pub mod hardware_oracle;

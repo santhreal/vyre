@@ -27,7 +27,6 @@ use vyre_test_support::graph_values::{graph_output, u32_symbolic};
 
 use vyre_test_support::pass_programs::{add_program, atomic_sum_program, copy_program};
 
-use crate::graph_fixtures;
 
 fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
     u32_symbolic(access, lifetime)
@@ -56,7 +55,7 @@ fn chain_graph() -> ProgramGraph {
         .add_node(
             "alpha",
             add_program("input", "constant", "middle"),
-            graph_fixtures::value_and_constant_ports(input, constant),
+            vyre_test_support::graph_fixtures::value_and_constant_ports(input, constant),
             vec![graph_output(
                 "middle",
                 contract(BufferAccess::ReadWrite, ValueLifetime::Invocation),

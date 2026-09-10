@@ -9,8 +9,7 @@ use vyre_megakernel::{
     SearchBudget,
 };
 
-use crate::graph_fixtures;
-use graph_fixtures::producer_consumer_pair;
+use vyre_test_support::graph_fixtures::producer_consumer_pair;
 use vyre_test_support::pass_programs::copy_program;
 
 fn fixture_graph() -> ProgramGraph {

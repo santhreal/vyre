@@ -33,10 +33,7 @@ use vyre_foundation::optimizer::region_law::{
 use vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract;
 use vyre_megakernel::{Artifact, SearchBudget, SearchCertificate};
 
-#[path = "support/search_fixtures.rs"]
-mod search_fixtures;
-
-use search_fixtures::{
+use crate::search_fixtures::{
     artifact_of, artifact_of_within, contract, invocation, reduce_program, reduction_over, stage,
 };
 

@@ -6,7 +6,6 @@
 //! assertions that compare derivations across the two suites to keep meaning
 //! what they say.
 
-#![allow(dead_code)]
 
 use std::collections::BTreeMap;
 

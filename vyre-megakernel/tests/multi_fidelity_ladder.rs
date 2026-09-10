@@ -21,10 +21,7 @@ use vyre_megakernel::{
     TargetProfile,
 };
 
-#[path = "support/search_fixtures.rs"]
-mod search_fixtures;
-
-use search_fixtures::{fixture_request, latency_objective, launch_bound_device, validated};
+use crate::search_fixtures::{fixture_request, latency_objective, launch_bound_device, validated};
 
 /// Launches the fixture times against every surviving finalist.
 const LAUNCHES: u32 = 3;

@@ -22,8 +22,7 @@ use vyre_megakernel::{
     ObjectiveMetric, SearchBudget, ARTIFACT_SCHEMA_VERSION,
 };
 
-use crate::graph_fixtures;
-use graph_fixtures::{
+use vyre_test_support::graph_fixtures::{
     asymmetric_join_graph, independent_two_arm_graph, raw_conflict_two_arm_graph,
 };
 

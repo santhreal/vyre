@@ -15,10 +15,7 @@ use vyre_megakernel::{
     WorkloadAggregation, WorkloadClass, WorkloadProfile, OBJECTIVE_SCHEMA_VERSION,
 };
 
-#[path = "support/search_fixtures.rs"]
-mod search_fixtures;
-
-use search_fixtures::{
+use crate::search_fixtures::{
     bare_device, budget, facts, joined_graph, refused_field, rich_device, single_stage_graph,
 };
 

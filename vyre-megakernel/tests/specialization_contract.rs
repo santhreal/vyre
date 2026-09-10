@@ -23,10 +23,7 @@ use vyre_megakernel::specialization::{
 };
 use vyre_megakernel::DeviceFacts;
 
-#[path = "support/specialization_fixtures.rs"]
-mod specialization_fixtures;
-
-use specialization_fixtures::{contract_over as contract, in_range, tokens};
+use crate::specialization_fixtures::{contract_over as contract, in_range, tokens};
 
 #[test]
 fn a_contract_states_the_schema_it_was_written_under() {

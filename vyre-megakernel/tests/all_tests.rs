@@ -5,9 +5,13 @@
 //! binary for the whole set. A test that cannot share a process stays its own
 //! target and states why in `xtask/test-harness-isolation.toml`.
 
-/// Shared fixture module from `tests/graph_fixtures/mod.rs`.
-#[path = "graph_fixtures/mod.rs"]
-pub mod graph_fixtures;
+/// Shared fixture module from `tests/support/search_fixtures.rs`.
+#[path = "support/search_fixtures.rs"]
+pub mod search_fixtures;
+
+/// Shared fixture module from `tests/support/specialization_fixtures.rs`.
+#[path = "support/specialization_fixtures.rs"]
+pub mod specialization_fixtures;
 
 /// Integration tests from `tests/algebraic_equivalence.rs`.
 #[path = "algebraic_equivalence.rs"]

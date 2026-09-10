@@ -22,10 +22,7 @@ use vyre_megakernel::{
     SEMANTIC_VERSION_SKEW,
 };
 
-#[path = "support/search_fixtures.rs"]
-mod search_fixtures;
-
-use search_fixtures::{
+use crate::search_fixtures::{
     bare_device, budget, compiled, facts, fixture_request, joined_graph, latency_objective,
     launch_bound_device, no_progress_device, occupancy_bound_device, refused_field, rich_device,
     single_stage_graph,

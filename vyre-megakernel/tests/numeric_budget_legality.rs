@@ -12,10 +12,7 @@
 //! budget. What these cases do not prove: what the device measures. The bound is
 //! proven on the IR; conformance measures the result.
 
-#[path = "support/search_fixtures.rs"]
-mod search_fixtures;
-
-use search_fixtures::{numerically_pruned, reducing_artifact, REORDERING_PRODUCTIONS};
+use crate::search_fixtures::{numerically_pruned, reducing_artifact, REORDERING_PRODUCTIONS};
 
 use vyre_foundation::ir::DataType;
 use vyre_foundation::numeric::{

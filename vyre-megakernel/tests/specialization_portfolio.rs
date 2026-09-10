@@ -31,13 +31,8 @@ use vyre_megakernel::{
     PruneReason, RequiredSchedule, SearchBudget, ValidatedCompileRequest,
 };
 
-#[path = "support/search_fixtures.rs"]
-mod search_fixtures;
-#[path = "support/specialization_fixtures.rs"]
-mod specialization_fixtures;
-
-use search_fixtures::refused_field;
-use specialization_fixtures::{contract_over, in_range, tokens};
+use crate::search_fixtures::refused_field;
+use crate::specialization_fixtures::{contract_over, in_range, tokens};
 
 fn objective(max_variants: u32) -> CompileObjective {
     CompileObjective::minimize_latency()

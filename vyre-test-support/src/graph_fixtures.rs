@@ -1,4 +1,4 @@
-//! The graph shapes the megakernel suites compile.
+//! The graph shapes the whole-program planning suites compile.
 //!
 //! Three suites ask the planner about the same two-node graph: a producer and a
 //! consumer joined by one invocation-scoped value. Each had written its own copy
@@ -6,19 +6,16 @@
 //! a suite that changes the shape changes it for every suite that reads it, which
 //! is the point of asking the same planner the same question.
 
-// Every test binary compiles this module on its own, so a fixture a given suite
-// does not ask for is unused in that binary.
-#![allow(dead_code)]
-
 use vyre_foundation::ir::{
     BufferAccess, DataType, GraphInput, GraphOutput, GraphValueId, Program, ProgramGraph, ShapeDim,
     ValueContract, ValueLifetime,
 };
-use vyre_test_support::graph_values::u32_symbolic;
-use vyre_test_support::pass_programs::copy_program;
+
+use crate::graph_values::u32_symbolic;
+use crate::pass_programs::copy_program;
 
 /// A `u32` value of symbolic length that lives for one invocation.
-pub(crate) fn invocation_contract() -> ValueContract {
+pub fn invocation_contract() -> ValueContract {
     ValueContract {
         dtype: DataType::U32,
         shape: vec![ShapeDim::Symbol("items".into())],
@@ -32,7 +29,7 @@ pub(crate) fn invocation_contract() -> ValueContract {
 /// `producer` reads `input` and writes `intermediate`; `consumer` reads
 /// `intermediate` and writes `output`. The caller supplies both programs, which
 /// is the only thing the suites disagree about.
-pub(crate) fn producer_consumer_pair(producer: Program, consumer: Program) -> ProgramGraph {
+pub fn producer_consumer_pair(producer: Program, consumer: Program) -> ProgramGraph {
     let mut graph = ProgramGraph::new();
     let input = graph
         .add_external_value("input", invocation_contract())
@@ -77,7 +74,7 @@ pub(crate) fn producer_consumer_pair(producer: Program, consumer: Program) -> Pr
     graph
 }
 /// Two independent arms joined into one graph.
-pub(crate) fn two_arm_graph(arm_a: Program, arm_b: Program) -> ProgramGraph {
+pub fn two_arm_graph(arm_a: Program, arm_b: Program) -> ProgramGraph {
     let mut graph = ProgramGraph::new();
     let in_a = graph
         .add_external_value("in_a", invocation_contract())
@@ -129,12 +126,12 @@ pub(crate) fn two_arm_graph(arm_a: Program, arm_b: Program) -> ProgramGraph {
 }
 
 /// Independent two-arm graph: two parallel copy operations reading separate inputs and writing separate outputs.
-pub(crate) fn independent_two_arm_graph() -> ProgramGraph {
+pub fn independent_two_arm_graph() -> ProgramGraph {
     two_arm_graph(copy_program("in_a", "out_a"), copy_program("in_b", "out_b"))
 }
 
 /// RAW conflicting two-arm graph: arm B reads the intermediate output of arm A within the same graph.
-pub(crate) fn raw_conflict_two_arm_graph() -> ProgramGraph {
+pub fn raw_conflict_two_arm_graph() -> ProgramGraph {
     producer_consumer_pair(
         copy_program("input", "intermediate"),
         copy_program("intermediate", "output"),
@@ -142,7 +139,7 @@ pub(crate) fn raw_conflict_two_arm_graph() -> ProgramGraph {
 }
 
 /// Asymmetric join graph: Node 0 feeds Node 1 and Node 2.
-pub(crate) fn asymmetric_join_graph() -> ProgramGraph {
+pub fn asymmetric_join_graph() -> ProgramGraph {
     let mut graph = ProgramGraph::new();
     let in0 = graph
         .add_external_value("in0", invocation_contract())
@@ -209,7 +206,7 @@ pub(crate) fn asymmetric_join_graph() -> ProgramGraph {
 /// Two suites build a node that adds a caller input to a constant, and the port
 /// declarations were the same eleven lines in both. Only the program and the
 /// output around them differ, so those stay at the call site.
-pub(crate) fn value_and_constant_ports(
+pub fn value_and_constant_ports(
     input: GraphValueId,
     constant: GraphValueId,
 ) -> Vec<GraphInput> {

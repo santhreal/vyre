@@ -10,10 +10,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use vyre_megakernel::legality::{analyze_fusion_pair, FusionDecision, FusionRejectionReason};
 use vyre_megakernel::{ArtifactNodeId, ArtifactValueId, ExecutionTopology};
 
-#[path = "graph_fixtures/mod.rs"]
-mod graph_fixtures;
-
-use graph_fixtures::producer_consumer_pair;
+use vyre_test_support::graph_fixtures::producer_consumer_pair;
 
 fn pair_program(workgroup: [u32; 3], has_barrier: bool) -> Program {
     let buffers = vec![

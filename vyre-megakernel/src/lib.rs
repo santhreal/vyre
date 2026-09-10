@@ -36,14 +36,10 @@ mod execution;
 mod facts;
 mod frame;
 #[cfg(test)]
-#[path = "../tests/geometry_fixtures/mod.rs"]
 mod geometry_fixtures;
 /// Versioned production grammar candidate search derives plans from, re-exported
 /// as `ScheduleProduction`, `DerivationStep` and `SCHEDULE_GRAMMAR_VERSION`.
 mod grammar;
-#[cfg(test)]
-#[path = "../tests/graph_fixtures/mod.rs"]
-mod graph_fixtures;
 /// Whole-grid fence detection, and the planner cut that removes it.
 pub mod grid_sync;
 mod identity;

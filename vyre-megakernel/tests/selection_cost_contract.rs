@@ -29,10 +29,9 @@ use vyre_megakernel::{
     SearchBudget,
 };
 
-use graph_fixtures::producer_consumer_pair;
+use vyre_test_support::graph_fixtures::producer_consumer_pair;
 use vyre_test_support::pass_programs::copy_program;
 
-use crate::graph_fixtures;
 
 /// The floor the cost model prices a launch at when the device measured none.
 ///
