@@ -268,8 +268,10 @@ impl vyre_foundation::config_schema::ConfigFieldDef
 impl vyre_foundation::config_schema::ConfigPartition
 impl vyre_foundation::config_schema::ConfigValue
 impl vyre_foundation::config_schema::ResolvedConfiguration
+impl vyre_foundation::diagnostics::CauseKind
 impl vyre_foundation::diagnostics::CompilerLevel
 impl vyre_foundation::diagnostics::Diagnostic
+impl vyre_foundation::diagnostics::DiagnosticCause
 impl vyre_foundation::diagnostics::DiagnosticCode
 impl vyre_foundation::diagnostics::DiagnosticStage
 impl vyre_foundation::diagnostics::OpLocation
@@ -277,8 +279,6 @@ impl vyre_foundation::diagnostics::RetryClass
 impl vyre_foundation::diagnostics::Severity
 impl vyre_foundation::diagnostics::ToDiagnostic for vyre_foundation::IrError
 impl vyre_foundation::diagnostics::ToDiagnostic for vyre_foundation::validate::ValidationError
-impl vyre_foundation::diagnostics::cause::CauseKind
-impl vyre_foundation::diagnostics::cause::DiagnosticCause
 impl vyre_foundation::dialect::DialectDescriptor
 impl vyre_foundation::dialect::DialectRegistry
 impl vyre_foundation::dialect::ExternalLayoutDeclaration
@@ -688,6 +688,8 @@ pub const fn vyre_foundation::causal::CausalTracer::mode(&self) -> vyre_foundati
 pub const fn vyre_foundation::causal::TraceId::as_u128(self) -> u128
 pub const fn vyre_foundation::causal::TraceId::new(id: u128) -> Self
 pub const fn vyre_foundation::config_schema::ConfigPartition::as_str(self) -> &'static str
+pub const fn vyre_foundation::diagnostics::CauseKind::index(self) -> usize
+pub const fn vyre_foundation::diagnostics::CauseKind::label(self) -> &'static str
 pub const fn vyre_foundation::diagnostics::CompilerLevel::label(self) -> &'static str
 pub const fn vyre_foundation::diagnostics::Diagnostic::with_compiler_level(self, level: vyre_foundation::diagnostics::CompilerLevel) -> Self
 pub const fn vyre_foundation::diagnostics::Diagnostic::with_retry(self, retry: vyre_foundation::diagnostics::RetryClass) -> Self
@@ -701,8 +703,6 @@ pub const fn vyre_foundation::diagnostics::OpLocation::with_source_span(self, st
 pub const fn vyre_foundation::diagnostics::OpLocation::with_span(self, span: [u32; 2]) -> Self
 pub const fn vyre_foundation::diagnostics::RetryClass::label(self) -> &'static str
 pub const fn vyre_foundation::diagnostics::Severity::label(self) -> &'static str
-pub const fn vyre_foundation::diagnostics::cause::CauseKind::index(self) -> usize
-pub const fn vyre_foundation::diagnostics::cause::CauseKind::label(self) -> &'static str
 pub const fn vyre_foundation::dialect::ResourceAbi::with_resources(resources: &'static [vyre_foundation::dialect::ResourceBinding]) -> Self
 pub const fn vyre_foundation::dialect::ResourceAbi::with_resources_and_layouts(resources: &'static [vyre_foundation::dialect::ResourceBinding], layouts: &'static [vyre_foundation::dialect::LayoutBinding]) -> Self
 pub const fn vyre_foundation::dialect_lookup::Signature::bytes_extractor(inputs: &'static [vyre_foundation::dialect_lookup::TypedParam], outputs: &'static [vyre_foundation::dialect_lookup::TypedParam], attrs: &'static [vyre_foundation::dialect_lookup::AttrSchema]) -> Self
@@ -1030,7 +1030,7 @@ pub const fn vyre_foundation::validate::ValidationError::location(&self) -> &vyr
 pub const fn vyre_foundation::validate::ValidationError::phase(&self) -> vyre_foundation::validate::ValidationPhase
 pub const fn vyre_foundation::validate::ValidationError::retry(&self) -> vyre_foundation::diagnostics::RetryClass
 pub const fn vyre_foundation::validate::ValidationPhase::as_str(self) -> &'static str
-pub const fn vyre_foundation::validate::ValidationPhase::cause_kind(self) -> vyre_foundation::diagnostics::cause::CauseKind
+pub const fn vyre_foundation::validate::ValidationPhase::cause_kind(self) -> vyre_foundation::diagnostics::CauseKind
 pub const fn vyre_foundation::verifier::InvariantCategory::all() -> &'static [vyre_foundation::verifier::InvariantCategory]
 pub const fn vyre_foundation::verifier::InvariantCategory::code_prefix(&self) -> &'static str
 pub const fn vyre_foundation::visit::BufferNamesMut<'a>::is_complete(&self) -> bool
@@ -1047,6 +1047,7 @@ pub const vyre_foundation::diagnostics::CAUSE_DETAIL_MAX_BYTES: usize
 pub const vyre_foundation::diagnostics::CONTEXT_KEY_MAX_BYTES: usize
 pub const vyre_foundation::diagnostics::CONTEXT_MAX_PAIRS: usize
 pub const vyre_foundation::diagnostics::CONTEXT_VALUE_MAX_BYTES: usize
+pub const vyre_foundation::diagnostics::CauseKind::ALL: &'static [Self]
 pub const vyre_foundation::diagnostics::DIAGNOSTIC_DOMAIN_SEPARATOR: &str
 pub const vyre_foundation::diagnostics::DIAGNOSTIC_SCHEMA_ID: vyre_spec::schema_registry::SchemaId
 pub const vyre_foundation::diagnostics::DIAGNOSTIC_SCHEMA_VERSION: u32
@@ -1058,7 +1059,6 @@ pub const vyre_foundation::diagnostics::RECORD_MAX_BYTES: usize
 pub const vyre_foundation::diagnostics::REDACTED_CONTEXT_KEYS: &[&str]
 pub const vyre_foundation::diagnostics::REDACTION_PLACEHOLDER: &str
 pub const vyre_foundation::diagnostics::TRUNCATION_MARKER: &str
-pub const vyre_foundation::diagnostics::cause::CauseKind::ALL: &'static [Self]
 pub const vyre_foundation::dialect::ResourceAbi::EMPTY: Self
 pub const vyre_foundation::execution_plan::fusion::FusionCandidateKind::ALL: &'static [Self]
 pub const vyre_foundation::failure_domain::FailureDomain::ALL: &'static [Self]
@@ -1238,7 +1238,6 @@ pub enum vyre_foundation::config_schema::ConfigType
 pub enum vyre_foundation::config_schema::ConfigValue
 pub enum vyre_foundation::config_schema::IdentityImpact
 pub enum vyre_foundation::diagnostics::CauseKind
-pub enum vyre_foundation::diagnostics::cause::CauseKind
 pub enum vyre_foundation::dialect::DialectVersionError
 pub enum vyre_foundation::dialect::FieldType
 pub enum vyre_foundation::dialect::SchemaTranslationError
@@ -1523,9 +1522,9 @@ pub fn vyre_foundation::config_schema::render_configuration_reference_markdown()
 pub fn vyre_foundation::cpu_op::CategoryAOp::program() -> vyre_foundation::ir::Program
 pub fn vyre_foundation::cpu_op::CpuOp::cpu(input: &[u8], output: &mut alloc::vec::Vec<u8>)
 pub fn vyre_foundation::diagnostics::Diagnostic::canonical_bytes(&self) -> alloc::vec::Vec<u8>
-pub fn vyre_foundation::diagnostics::Diagnostic::cause(&self) -> core::option::Option<&vyre_foundation::diagnostics::cause::DiagnosticCause>
+pub fn vyre_foundation::diagnostics::Diagnostic::cause(&self) -> core::option::Option<&vyre_foundation::diagnostics::DiagnosticCause>
 pub fn vyre_foundation::diagnostics::Diagnostic::caused_by(self, source: &Self) -> Self
-pub fn vyre_foundation::diagnostics::Diagnostic::caused_by_kind(&self, kind: vyre_foundation::diagnostics::cause::CauseKind) -> bool
+pub fn vyre_foundation::diagnostics::Diagnostic::caused_by_kind(&self, kind: vyre_foundation::diagnostics::CauseKind) -> bool
 pub fn vyre_foundation::diagnostics::Diagnostic::emission_error(target: impl core::convert::Into<alloc::string::String>, code: &'static str, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::error(code: &'static str, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::error_with_code(code: vyre_foundation::diagnostics::DiagnosticCode, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
@@ -1540,13 +1539,13 @@ pub fn vyre_foundation::diagnostics::Diagnostic::record_digest(&self) -> [u8; 32
 pub fn vyre_foundation::diagnostics::Diagnostic::record_digest_hex(&self) -> alloc::string::String
 pub fn vyre_foundation::diagnostics::Diagnostic::redacted(&self) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::render_human(&self) -> alloc::string::String
-pub fn vyre_foundation::diagnostics::Diagnostic::root_cause(&self) -> core::option::Option<&vyre_foundation::diagnostics::cause::DiagnosticCause>
+pub fn vyre_foundation::diagnostics::Diagnostic::root_cause(&self) -> core::option::Option<&vyre_foundation::diagnostics::DiagnosticCause>
 pub fn vyre_foundation::diagnostics::Diagnostic::to_json(&self) -> alloc::string::String
 pub fn vyre_foundation::diagnostics::Diagnostic::warning(code: &'static str, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_artifact_id(self, artifact_id: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_foundation::diagnostics::Diagnostic::with_cause(self, kind: vyre_foundation::diagnostics::cause::CauseKind, subject: impl core::convert::Into<alloc::borrow::Cow<'static, str>>, detail: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_foundation::diagnostics::Diagnostic::with_cause_chain(self, chain: impl core::iter::traits::collect::IntoIterator<Item = vyre_foundation::diagnostics::cause::DiagnosticCause>) -> Self
-pub fn vyre_foundation::diagnostics::Diagnostic::with_cause_link(self, cause: vyre_foundation::diagnostics::cause::DiagnosticCause) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::with_cause(self, kind: vyre_foundation::diagnostics::CauseKind, subject: impl core::convert::Into<alloc::borrow::Cow<'static, str>>, detail: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::with_cause_chain(self, chain: impl core::iter::traits::collect::IntoIterator<Item = vyre_foundation::diagnostics::DiagnosticCause>) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::with_cause_link(self, cause: vyre_foundation::diagnostics::DiagnosticCause) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_context_value(self, key: impl core::convert::Into<alloc::string::String>, value: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_context_values(self, values: impl core::iter::traits::collect::IntoIterator<Item = (impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>)>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_device(self, device: impl core::convert::Into<alloc::string::String>) -> Self
@@ -1556,6 +1555,7 @@ pub fn vyre_foundation::diagnostics::Diagnostic::with_location(self, location: v
 pub fn vyre_foundation::diagnostics::Diagnostic::with_note(self, note: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_notes(self, notes: impl core::iter::traits::collect::IntoIterator<Item = impl core::convert::Into<alloc::borrow::Cow<'static, str>>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::with_target(self, target: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_foundation::diagnostics::DiagnosticCause::new(kind: vyre_foundation::diagnostics::CauseKind, subject: impl core::convert::Into<alloc::borrow::Cow<'static, str>>, detail: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::diagnostics::DiagnosticCode::as_str(&self) -> &str
 pub fn vyre_foundation::diagnostics::DiagnosticCode::fmt(&self, output: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::diagnostics::DiagnosticCode::from_owned(code: alloc::string::String) -> Self
@@ -1566,7 +1566,6 @@ pub fn vyre_foundation::diagnostics::OpLocation::with_operand(self, index: u32) 
 pub fn vyre_foundation::diagnostics::OpLocation::with_path(self, path: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::diagnostics::ToDiagnostic::to_diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_foundation::diagnostics::bound_value(value: alloc::string::String, max_bytes: usize) -> alloc::string::String
-pub fn vyre_foundation::diagnostics::cause::DiagnosticCause::new(kind: vyre_foundation::diagnostics::cause::CauseKind, subject: impl core::convert::Into<alloc::borrow::Cow<'static, str>>, detail: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::dialect::Dialect::descriptor() -> &'static vyre_foundation::dialect::DialectDescriptor
 pub fn vyre_foundation::dialect::Dialect::id() -> &'static str
 pub fn vyre_foundation::dialect::Dialect::match_op_id(op_id: &str) -> core::option::Option<Self::Op>
@@ -4119,7 +4118,6 @@ pub mod vyre_foundation::composition
 pub mod vyre_foundation::config_schema
 pub mod vyre_foundation::cpu_op
 pub mod vyre_foundation::diagnostics
-pub mod vyre_foundation::diagnostics::cause
 pub mod vyre_foundation::dialect
 pub mod vyre_foundation::dialect_lookup
 pub mod vyre_foundation::execution_plan
@@ -4290,7 +4288,6 @@ pub struct vyre_foundation::config_schema::ResolvedConfiguration
 pub struct vyre_foundation::diagnostics::DiagnosticCause
 pub struct vyre_foundation::diagnostics::DiagnosticCode(pub alloc::borrow::Cow<'static, str>)
 pub struct vyre_foundation::diagnostics::OpLocation
-pub struct vyre_foundation::diagnostics::cause::DiagnosticCause
 pub struct vyre_foundation::dialect::DialectDescriptor
 pub struct vyre_foundation::dialect::DialectDescriptorRegistration
 pub struct vyre_foundation::dialect::DialectOpDescriptor
@@ -5108,7 +5105,7 @@ pub vyre_foundation::diagnostics::CompilerLevel::PrimitivesDialects
 pub vyre_foundation::diagnostics::CompilerLevel::Spec
 pub vyre_foundation::diagnostics::CompilerLevel::ToolingEvidence
 pub vyre_foundation::diagnostics::Diagnostic::artifact_id: core::option::Option<alloc::string::String>
-pub vyre_foundation::diagnostics::Diagnostic::cause_chain: alloc::vec::Vec<vyre_foundation::diagnostics::cause::DiagnosticCause>
+pub vyre_foundation::diagnostics::Diagnostic::cause_chain: alloc::vec::Vec<vyre_foundation::diagnostics::DiagnosticCause>
 pub vyre_foundation::diagnostics::Diagnostic::code: vyre_foundation::diagnostics::DiagnosticCode
 pub vyre_foundation::diagnostics::Diagnostic::compiler_level: core::option::Option<vyre_foundation::diagnostics::CompilerLevel>
 pub vyre_foundation::diagnostics::Diagnostic::context_values: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
@@ -5124,7 +5121,7 @@ pub vyre_foundation::diagnostics::Diagnostic::stage: vyre_foundation::diagnostic
 pub vyre_foundation::diagnostics::Diagnostic::suggested_fix: core::option::Option<alloc::borrow::Cow<'static, str>>
 pub vyre_foundation::diagnostics::Diagnostic::target: core::option::Option<alloc::string::String>
 pub vyre_foundation::diagnostics::DiagnosticCause::detail: alloc::string::String
-pub vyre_foundation::diagnostics::DiagnosticCause::kind: vyre_foundation::diagnostics::cause::CauseKind
+pub vyre_foundation::diagnostics::DiagnosticCause::kind: vyre_foundation::diagnostics::CauseKind
 pub vyre_foundation::diagnostics::DiagnosticCause::subject: alloc::borrow::Cow<'static, str>
 pub vyre_foundation::diagnostics::DiagnosticDecodeError::Malformed
 pub vyre_foundation::diagnostics::DiagnosticDecodeError::Malformed::detail: alloc::string::String
@@ -5158,23 +5155,6 @@ pub vyre_foundation::diagnostics::RetryClass::SameDevice
 pub vyre_foundation::diagnostics::Severity::Error
 pub vyre_foundation::diagnostics::Severity::Note
 pub vyre_foundation::diagnostics::Severity::Warning
-pub vyre_foundation::diagnostics::cause::CauseKind::Cancelled
-pub vyre_foundation::diagnostics::cause::CauseKind::Configuration
-pub vyre_foundation::diagnostics::cause::CauseKind::DeviceLost
-pub vyre_foundation::diagnostics::cause::CauseKind::Emission
-pub vyre_foundation::diagnostics::cause::CauseKind::Encoding
-pub vyre_foundation::diagnostics::cause::CauseKind::ExternalToolchain
-pub vyre_foundation::diagnostics::cause::CauseKind::InternalInvariant
-pub vyre_foundation::diagnostics::cause::CauseKind::InvalidInput
-pub vyre_foundation::diagnostics::cause::CauseKind::Lowering
-pub vyre_foundation::diagnostics::cause::CauseKind::NumericOverflow
-pub vyre_foundation::diagnostics::cause::CauseKind::ResourceExhausted
-pub vyre_foundation::diagnostics::cause::CauseKind::Timeout
-pub vyre_foundation::diagnostics::cause::CauseKind::UnsupportedCapability
-pub vyre_foundation::diagnostics::cause::CauseKind::VersionSkew
-pub vyre_foundation::diagnostics::cause::DiagnosticCause::detail: alloc::string::String
-pub vyre_foundation::diagnostics::cause::DiagnosticCause::kind: vyre_foundation::diagnostics::cause::CauseKind
-pub vyre_foundation::diagnostics::cause::DiagnosticCause::subject: alloc::borrow::Cow<'static, str>
 pub vyre_foundation::dialect::DialectDescriptor::category: &'static str
 pub vyre_foundation::dialect::DialectDescriptor::id: &'static str
 pub vyre_foundation::dialect::DialectDescriptor::min_supported_version: u32
@@ -8321,6 +8301,8 @@ pub vyre_foundation::substrate::QueryError::MemoryExceeded
 pub vyre_foundation::substrate::QueryError::MemoryExceeded::budget_bytes: usize
 pub vyre_foundation::substrate::QueryError::MemoryExceeded::requested_bytes: usize
 pub vyre_foundation::substrate::QueryError::StaleCache(vyre_foundation::substrate::StaleCacheError)
+pub vyre_foundation::substrate::QueryError::WorkerPanicked
+pub vyre_foundation::substrate::QueryError::WorkerPanicked::query: vyre_foundation::substrate::QueryKey
 pub vyre_foundation::substrate::QueryKey::Artifact
 pub vyre_foundation::substrate::QueryKey::Artifact::graph_digest: [u8; 32]
 pub vyre_foundation::substrate::QueryKey::Artifact::target_fingerprint: u64

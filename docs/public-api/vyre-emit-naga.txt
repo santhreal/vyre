@@ -9,6 +9,7 @@ impl vyre_emit_naga::patterns::vec_pack::PackingPlan
 impl vyre_foundation::diagnostics::ToDiagnostic for vyre_emit_naga::EmitError
 impl vyre_lower::pattern_audit::PatternAudit for vyre_emit_naga::patterns::NagaAuditReport
 pub const fn vyre_emit_naga::patterns::vec_pack::PackKind::lane_count(&self) -> u32
+pub const vyre_emit_naga::GRID_SEGMENT_ENTRY_PREFIX: &str
 pub const vyre_emit_naga::LOWERING_DIGEST: &str
 pub const vyre_emit_naga::patterns::NagaAuditReport::FINDING_NOUN: &'static str
 pub const vyre_emit_naga::patterns::pipeline_prewarm::PREWARM_OP_THRESHOLD: u32
@@ -22,6 +23,7 @@ pub fn vyre_emit_naga::emit(desc: &vyre_lower::descriptor::KernelDescriptor) -> 
 pub fn vyre_emit_naga::emit_many(descs: &[vyre_lower::descriptor::KernelDescriptor]) -> alloc::vec::Vec<core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>>
 pub fn vyre_emit_naga::emit_with_capabilities(desc: &vyre_lower::descriptor::KernelDescriptor, target: &vyre_lower::target::EmissionTargetCapabilities) -> core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>
 pub fn vyre_emit_naga::emit_with_float_mode(desc: &vyre_lower::descriptor::KernelDescriptor, float_lowering: vyre_foundation::fp_parity::FloatLoweringMode) -> core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>
+pub fn vyre_emit_naga::grid_segment_entry_points(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, vyre_emit_naga::EmitError>
 pub fn vyre_emit_naga::patterns::NagaAuditReport::finding_count(&self) -> usize
 pub fn vyre_emit_naga::patterns::NagaAuditReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_emit_naga::patterns::NagaAuditReport::kernel_id(&self) -> &str

@@ -15,7 +15,7 @@
 //! of one failure are byte-identical and a hostile input cannot grow the record
 //! past its declared limit.
 
-pub mod cause;
+mod cause;
 
 use std::borrow::Cow;
 use std::fmt::Write as _;
@@ -23,6 +23,7 @@ use std::fmt::Write as _;
 use serde::{Deserialize, Deserializer, Serialize};
 use vyre_spec::schema_registry::SchemaId;
 
+/// The cause types, published at this one path so a caller cites one name.
 pub use cause::{CauseKind, DiagnosticCause};
 
 /// Schema identity of the diagnostic record.

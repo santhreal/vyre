@@ -29,22 +29,55 @@ schema_version = 4
 
 # The layer DAG, and the whole of the direction contract.
 #
+# Two rules over one graph, and a production edge is legal only when both
+# pass.
+#
 # `rank` is dependency depth: the longest chain of cross-layer production edges
-# from a layer down to one that depends on nothing outside itself. A production
-# edge is legal when the source rank is strictly greater than the destination
-# rank, and same-layer edges are always legal. That single comparison rejects a
-# reversal and makes a layer cycle unrepresentable, so there is no roster of
-# permitted layer pairs to keep in agreement with the manifests.
+# from a layer down to one that depends on nothing outside itself. An edge
+# points down when the source rank is strictly greater than the destination
+# rank. That single comparison rejects a reversal and makes a cross-layer cycle
+# unrepresentable, so there is no roster of permitted layer pairs to keep in
+# agreement with the manifests.
 #
 # Two layers share a rank when neither depends on the other. A new edge between
 # two such layers fails the direction rule, which is the decision worth
 # stopping on: one of the two ranks is then wrong and the manifest records
 # which.
+#
+# `consumed_by` closes what rank leaves open. Rank permits every edge that
+# points down and does not judge an edge inside one layer at all, so a new
+# direct dependency could expand rebuild fan-out or pull a composition into a
+# driver while both endpoints kept a plausible local description. Every layer
+# states the closed set of consumer layers admitted to it, its own name
+# included when its members reach each other. An edge from a layer the
+# destination does not admit fails, and an admitted layer no production edge
+# crosses is a stale declaration and fails too, so the set is exactly the layer
+# pairs the manifests cross.
 
 [[layer]]
 name = "foundation"
 rank = 0
 purpose = "Typed IR, logical domains, specification records, diagnostics, and the derive macros that generate them."
+# Reached by every layer in the workspace, and by its own members.
+consumed_by = [
+    "backend-neutral",
+    "compiler-boundary",
+    "concrete-backend",
+    "conformance",
+    "emitter",
+    "facade",
+    "foundation",
+    "libraries",
+    "lowering",
+    "packaging",
+    "pass-engine",
+    "primitives",
+    "registry-link",
+    "runtime",
+    "semantics",
+    "test-tooling",
+    "tooling",
+]
 
 [[layer]]
 name = "standalone-tooling"
@@ -62,26 +95,79 @@ consumed_by = [
 name = "lowering"
 rank = 1
 purpose = "One verified selected-module representation between semantic IR and target emission."
+# The selected module is produced at the compiler boundary and consumed by the
+# emitters and the backends that load what they emit.
+consumed_by = [
+    "compiler-boundary",
+    "concrete-backend",
+    "emitter",
+    "registry-link",
+    "tooling",
+]
 
 [[layer]]
 name = "primitives"
 rank = 1
 purpose = "Intrinsic operations, each with its own emitter arm in every backend and its own reference arm."
+# An intrinsic is composed into a library, interpreted by the oracle, or
+# registered. A concrete backend reaches its emitter arms through the compiler
+# boundary.
+consumed_by = [
+    "conformance",
+    "libraries",
+    "pass-engine",
+    "registry-link",
+    "semantics",
+    "test-tooling",
+    "tooling",
+]
 
 [[layer]]
 name = "compiler-boundary"
 rank = 2
 purpose = "Schedule search, artifact identity, and authenticated target-payload construction."
+# The one route from semantic IR to an artifact, so every layer above it that
+# compiles anything crosses it.
+consumed_by = [
+    "backend-neutral",
+    "concrete-backend",
+    "conformance",
+    "facade",
+    "libraries",
+    "packaging",
+    "pass-engine",
+    "registry-link",
+    "runtime",
+    "test-tooling",
+    "tooling",
+]
 
 [[layer]]
 name = "emitter"
 rank = 2
 purpose = "Target text and binary emission for one dialect each."
+# A concrete backend emits through the dialect it loads. One emitter reaches
+# another where a dialect is built on a second one, so the layer admits
+# itself.
+consumed_by = [
+    "concrete-backend",
+    "emitter",
+    "tooling",
+]
 
 [[layer]]
 name = "semantics"
 rank = 2
 purpose = "The independent semantic oracle. Never a production execution route."
+# Reached by the backend that adapts it to the driver contract and by the
+# parity harnesses that join its result to a device result. Nothing in the
+# production compile path admits it.
+consumed_by = [
+    "concrete-backend",
+    "conformance",
+    "test-tooling",
+    "tooling",
+]
 
 [[layer]]
 name = "libraries"
@@ -114,47 +200,103 @@ consumed_by = []
 name = "backend-neutral"
 rank = 4
 purpose = "The dispatch, binding, and capability contract every concrete backend implements."
+# Implemented by each concrete backend and consumed by everything that holds a
+# device handle or a registration.
+consumed_by = [
+    "concrete-backend",
+    "conformance",
+    "facade",
+    "packaging",
+    "registry-link",
+    "runtime",
+    "test-tooling",
+    "tooling",
+]
 
 [[layer]]
 name = "pass-engine"
 rank = 4
 purpose = "Pass scheduling and rewrite application over semantic IR."
+# Driven by the gates that prove a rewrite, and by nothing that ships.
+consumed_by = [
+    "tooling",
+]
 
 [[layer]]
 name = "concrete-backend"
 rank = 5
 purpose = "One device family each: capability probing, module loading, and dispatch."
+# Selected through the driver registry, so only the layers that link a
+# registration or measure a device name one.
+consumed_by = [
+    "conformance",
+    "facade",
+    "registry-link",
+    "tooling",
+]
 
 [[layer]]
 name = "packaging"
 rank = 5
 purpose = "Ahead-of-time artifact packaging and load."
+# No workspace member depends on it. An ahead-of-time package is produced for
+# a consumer outside this workspace.
+consumed_by = []
 
 [[layer]]
 name = "runtime"
 rank = 5
 purpose = "Submission, admission, tenancy, and lifecycle policy over a compiled artifact."
+# Reached through the facade, and directly only by the harnesses and gates that
+# submit work.
+consumed_by = [
+    "conformance",
+    "facade",
+    "tooling",
+]
 
 [[layer]]
 name = "facade"
 rank = 6
 purpose = "The single curated consumer surface over the layers below it."
 exports_declared_seams = true
+# What a consumer outside the workspace compiles against. Inside it, only the
+# parity harnesses and the gates.
+consumed_by = [
+    "conformance",
+    "tooling",
+]
 
 [[layer]]
 name = "registry-link"
 rank = 6
 purpose = "Link anchors that pull registration submissions into a final binary."
+# Linked by the binaries that need a populated registry: the parity harnesses
+# and the gate and benchmark binaries.
+consumed_by = [
+    "conformance",
+    "tooling",
+]
 
 [[layer]]
 name = "conformance"
 rank = 7
 purpose = "Parity harnesses that join a production result to an independently produced oracle result."
+# The harness reaches its own schema crate, and nothing outside the layer
+# reaches either.
+consumed_by = [
+    "conformance",
+]
 
 [[layer]]
 name = "tooling"
 rank = 7
 purpose = "Gates, benchmarks, and generators that read the whole workspace."
+# A gate binary reaches the gate registry and the evidence crates beside it,
+# and nothing else reaches any of them.
+consumed_by = [
+    "tooling",
+]
 
 [[crate]]
 package = "structure-gate"

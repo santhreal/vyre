@@ -47,8 +47,8 @@ creates a cycle that prevents separate builds, review, and publication.
   declares, both fail.
 - The crate declares 2 features beyond `default`: `all-solvers`,
   `optimizer`. Each builds alone.
-- The public surface is recorded in `docs/public-api/vyre-pass-engine.txt`. An
-  item added, removed or moved changes that file in the same change.
+- The crate sets `publish = false`, so no public surface snapshot is
+  recorded for it and no snapshot gate reads it.
 
 ## Enforcing gates
 

@@ -222,11 +222,9 @@ tests = [
   "every_registration_constructor_convicts_a_host_oracle_in_expected_output",
   "expected_output_with_wire_pack_and_literal_helper_is_convicted",
   "gpu_dispatcher_boundary_and_validation_functions_are_permitted",
-  "mutation_catches_crate_bogus_program_masquerade",
   "mutation_catches_decoder_loop_bitshift_transform",
   "mutation_catches_decoder_loop_independent_constant_append",
   "mutation_catches_decoder_loop_subsliced_width_mismatch",
-  "mutation_catches_dispatch_error_and_resident_read_range_param_masquerade",
   "mutation_catches_dispatcher_err_fallback_branch_oracle",
   "mutation_catches_dispatcher_map_closure_post_dispatch_reduction",
   "mutation_catches_dispatcher_match_ok_post_dispatch_iter_any",
@@ -235,15 +233,7 @@ tests = [
   "mutation_catches_dispatcher_post_dispatch_loop_accumulation",
   "mutation_catches_dispatcher_unwrap_or_else_fallback_oracle",
   "mutation_catches_escaped_cache_invalidation_post_dispatch_host_projection",
-  "mutation_catches_fake_dispatch_error_without_canonical_dispatcher",
-  "mutation_catches_glob_import_program_masquerade",
-  "mutation_catches_local_dummy_program_masquerade",
-  "mutation_catches_mixed_tuple_data_type_masquerade",
-  "mutation_catches_result_vec_with_fusion_error_masquerade",
-  "mutation_catches_sibling_imported_fake_dispatcher_trait_masquerade",
-  "mutation_catches_sibling_imported_fake_program_masquerade",
   "mutation_catches_unqualified_or_custom_from_le_bytes_helper",
-  "mutation_operation_registration_aliased_as_or_catches_expected_output_oracle",
   "mutation_operation_registration_allows_test_inputs_generator_and_catches_expected_output_oracle",
   "mutation_operation_registration_catches_helper_function_in_expected_output",
   "mutation_operation_registration_catches_inline_closure_loop_and_math",
@@ -251,7 +241,6 @@ tests = [
   "mutation_operation_registration_catches_wire_pack_in_expected_output",
   "mutation_operation_registration_struct_literal_catches_expected_output_oracle",
   "mutation_oracle_detection_catches_production_vyre_reference_usage",
-  "production_trait_default_method_uncalled_oracle_is_flagged",
 ]
 reason = """
 Each fixture exercises a source-derived oracle-elimination rule while loading
@@ -970,4 +959,16 @@ Judge the file-role closure that classifies every composition-domain source
 file, including that an unregistered nested file and two overlapping roles both
 fail it. The subject under test is a rule over the file tree, so the tree is its
 input; a role assignment produces no run-time artifact to observe instead.
+"""
+
+[[gate]]
+file = "vyre-emit-naga/tests/grid_sync_dispatch_segments.rs"
+tests = ["a_fence_is_cut_only_where_a_launch_boundary_expresses_it"]
+reason = """
+Read the nested-body control enum to enumerate the variant space this contract
+covers, so a new control variant reaches the case list without an edit here.
+A hardcoded list of variants goes stale in silence, which for an exhaustiveness
+contract is the same as having no contract. The enum declaration is the only
+statement of the variant space; the type produces no run-time listing to
+enumerate instead.
 """

@@ -109,16 +109,64 @@ fn a_grid_wider_than_the_device_ceiling_is_refused_on_every_axis() {
 
 /// WHY: the negative control for the contract above. A ceiling check that refuses
 /// the ceiling itself would take every large launch off this backend, so the exact
-/// boundary value must dispatch and return the right bytes.
+/// boundary value must be admitted.
+///
+/// Admission is observed at the validation seam rather than by dispatching. The
+/// ceiling is a device capability, and on a discrete adapter it is 2147483647
+/// workgroups: at the 256-lane workgroup this program declares that is 5.5e11
+/// invocations, which does not complete. Executing it read four output words
+/// after a launch whose only bound was the test process, and one run held a
+/// device for 23 hours at full host spin while every other job on that machine
+/// queued behind it. The boundary this test defends is whether the check admits
+/// the value, and `validate_program_for_backend` answers that in full.
+///
+/// What it does not catch: a refusal raised after validation, inside command
+/// recording. The test below covers execution at a grid wide enough to prove a
+/// launch past the WebGPU per-axis minimum runs, and does it in a bounded time.
 #[test]
-fn a_grid_at_the_device_ceiling_dispatches() {
+fn a_grid_at_the_device_ceiling_is_admitted() {
     let backend = live_backend();
     let ceiling = backend.max_compute_workgroups_per_dimension();
+    let program = one_dimensional_program(1024);
+    for axis in 0..3 {
+        let mut grid = [1_u32; 3];
+        grid[axis] = ceiling;
+        let mut config = DispatchConfig::default();
+        config.grid_override = Some(grid);
+        vyre_driver::validation::validate_program_for_backend(&backend, &program, &config)
+            .unwrap_or_else(|error| {
+                let axis_name = ["x", "y", "z"][axis];
+                panic!(
+                    "Fix: a grid of exactly the reported per-axis ceiling on {axis_name} must be \
+                     admitted, because refusing it takes every large launch off this backend. \
+                     Ceiling {ceiling}, got: {error}"
+                )
+            });
+    }
+}
+
+/// WHY: the executable half of the boundary. A per-axis ceiling check is worth
+/// nothing if a launch past the WebGPU per-axis minimum of 65535 does not run, so
+/// one grid wider than that minimum dispatches and its bytes are read back.
+///
+/// The width is the minimum plus one rather than the device ceiling: the property
+/// is that the folding path is entered at all, and the smallest grid that enters
+/// it proves the same thing in milliseconds.
+#[test]
+fn a_grid_wider_than_the_per_axis_minimum_dispatches() {
+    let backend = live_backend();
+    let floor = harness::WEBGPU_MAX_WORKGROUPS_PER_AXIS;
+    let ceiling = backend.max_compute_workgroups_per_dimension();
+    assert!(
+        ceiling > floor,
+        "Fix: this backend reports a per-axis ceiling of {ceiling}, at or below the WebGPU \
+         minimum of {floor}, so there is no wider grid to dispatch."
+    );
     let mut config = DispatchConfig::default();
-    config.grid_override = Some([ceiling, 1, 1]);
+    config.grid_override = Some([floor + 1, 1, 1]);
     let outputs = backend
         .dispatch(&one_dimensional_program(1024), &[], &config)
-        .expect("Fix: a grid at exactly the reported per-axis ceiling must dispatch.");
+        .expect("Fix: a grid wider than the WebGPU per-axis minimum must dispatch.");
     assert_eq!(outputs.len(), 1);
     assert_eq!(outputs[0], 7_u32.to_le_bytes().repeat(4));
 }

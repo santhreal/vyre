@@ -1,3 +1,4 @@
+#[non_exhaustive] pub enum vyre_lower::DispatchSplitError
 impl core::cmp::Eq for vyre_lower::KernelBody
 impl core::cmp::Eq for vyre_lower::KernelDescriptor
 impl core::cmp::Eq for vyre_lower::KernelOp
@@ -190,6 +191,7 @@ pub enum vyre_lower::MatrixMmaLayout
 pub enum vyre_lower::MatrixSpecError
 pub enum vyre_lower::MemoryClass
 pub enum vyre_lower::MemoryProxyFence
+pub enum vyre_lower::NestedBodyControl
 pub enum vyre_lower::RecommendationCategory
 pub enum vyre_lower::ScanConstructIntentClass
 pub enum vyre_lower::StorageLayoutError
@@ -410,6 +412,7 @@ pub fn vyre_lower::artifact_golden::render_success_corpus(render: impl core::ops
 pub fn vyre_lower::artifact_golden::write_golden(path: &std::path::Path, actual: &str)
 pub fn vyre_lower::audit(desc: &vyre_lower::KernelDescriptor, facts: &vyre_lower::analyses::AnalysisFacts) -> vyre_lower::PerfAuditReport
 pub fn vyre_lower::audit_with_histogram(desc: &vyre_lower::KernelDescriptor, facts: &vyre_lower::analyses::AnalysisFacts) -> (vyre_lower::PerfAuditReport, vyre_lower::analyses::OpHistogram)
+pub fn vyre_lower::body_contains_grid_fence(body: &vyre_lower::KernelBody) -> bool
 pub fn vyre_lower::check_effects(semantic: &vyre_lower::EffectSignature, physical: &vyre_lower::EffectSignature, ignored: &[&str]) -> core::result::Result<(), alloc::vec::Vec<vyre_lower::EquivalenceError>>
 pub fn vyre_lower::descriptor_builder::KernelBodyBuilder::build(self) -> vyre_lower::KernelBody
 pub fn vyre_lower::descriptor_builder::KernelBodyBuilder::child(self, child: impl core::convert::Into<vyre_lower::KernelBody>) -> Self
@@ -462,6 +465,7 @@ pub fn vyre_lower::descriptor_builder::vector_store_global(slot: u32, index: u32
 pub fn vyre_lower::descriptor_builder::wait_only(id: &str, wait: vyre_lower::AsyncWaitSpec) -> vyre_lower::KernelDescriptor
 pub fn vyre_lower::descriptor_builder::workgroup_limits(max_size: [u32; 3], max_invocations: u32) -> vyre_lower::WorkgroupLimits
 pub fn vyre_lower::descriptor_trap_tags(body: &vyre_lower::KernelBody) -> core::result::Result<alloc::vec::Vec<vyre_lower::DescriptorTrapTag>, vyre_lower::LowerError>
+pub fn vyre_lower::dispatch_segments(desc: &vyre_lower::KernelDescriptor) -> core::result::Result<alloc::vec::Vec<alloc::borrow::Cow<'_, vyre_lower::KernelBody>>, vyre_lower::DispatchSplitError>
 pub fn vyre_lower::emit_adversarial_corpus::case_by_id(id: &str) -> core::option::Option<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
 pub fn vyre_lower::emit_adversarial_corpus::corpus() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
 pub fn vyre_lower::emit_adversarial_corpus::rejection_cases() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
@@ -540,6 +544,7 @@ pub struct vyre_lower::KernelOp
 pub struct vyre_lower::KernelOpsIter<'a>
 pub struct vyre_lower::MatrixMmaSpec
 pub struct vyre_lower::MatrixTileShape
+pub struct vyre_lower::NestedBodies
 pub struct vyre_lower::OpFacts
 pub struct vyre_lower::OpaqueExprData
 pub struct vyre_lower::OpaqueNodeData
@@ -698,6 +703,12 @@ pub vyre_lower::DescriptorTrapTag::code: u32
 pub vyre_lower::DescriptorTrapTag::tag: vyre_lower::Name
 pub vyre_lower::Dispatch::grid_index: vyre_lower::GridIndexSpace
 pub vyre_lower::Dispatch::workgroup_size: [u32; 3]
+pub vyre_lower::DispatchSplitError::EffectfulCarrier
+pub vyre_lower::DispatchSplitError::EffectfulCarrier::result: u32
+pub vyre_lower::DispatchSplitError::FenceUnderNestedControl
+pub vyre_lower::DispatchSplitError::FenceUnderNestedControl::construct: &'static str
+pub vyre_lower::DispatchSplitError::UnresolvedCarrier
+pub vyre_lower::DispatchSplitError::UnresolvedCarrier::result: u32
 pub vyre_lower::EmissionTargetCapabilities::subgroup: vyre_lower::SubgroupCapabilities
 pub vyre_lower::EmissionTargetCapabilities::workgroup: vyre_lower::WorkgroupLimits
 pub vyre_lower::EquivalenceError::AtomicDisagreement
@@ -846,7 +857,12 @@ pub vyre_lower::MemoryClass::Uniform
 pub vyre_lower::MemoryProxyFence::Device
 pub vyre_lower::MemoryProxyFence::None
 pub vyre_lower::MemoryProxyFence::Workgroup
-pub vyre_lower::OpFacts::child_body_start: core::option::Option<usize>
+pub vyre_lower::NestedBodies::control: vyre_lower::NestedBodyControl
+pub vyre_lower::NestedBodies::start: usize
+pub vyre_lower::NestedBodyControl::Conditional
+pub vyre_lower::NestedBodyControl::Repeated
+pub vyre_lower::NestedBodyControl::Unconditional
+pub vyre_lower::OpFacts::nested_bodies: core::option::Option<vyre_lower::NestedBodies>
 pub vyre_lower::OpFacts::retained_effect: bool
 pub vyre_lower::OpaqueExprData::extension_id: u32
 pub vyre_lower::OpaqueExprData::extension_kind: alloc::string::String

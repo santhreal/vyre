@@ -290,7 +290,6 @@ pub fn vyre_libs_builder::plumbing::host::scratch::reserve_items<T>(buffer: &mut
 pub fn vyre_libs_builder::plumbing::host::scratch::reserve_items_with<T, E>(buffer: &mut alloc::vec::Vec<T>, additional: usize, owner: &str, context: &str, map: impl core::ops::function::FnOnce(alloc::string::String) -> E) -> core::result::Result<(), E>
 pub fn vyre_libs_builder::plumbing::host::scratch::reserve_vec<T>(buffer: &mut alloc::vec::Vec<T>, additional: usize, context: &'static str) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
 pub fn vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity<T>(buffer: &mut alloc::vec::Vec<T>, capacity: usize, context: &'static str) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
-pub fn vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity_or_panic<T>(buffer: &mut alloc::vec::Vec<T>, capacity: usize, context: &'static str)
 pub fn vyre_libs_builder::plumbing::host::scratch::try_reserve_vec_capacity<T>(buffer: &mut alloc::vec::Vec<T>, capacity: usize) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_libs_builder::plumbing::host::telemetry::bump(c: &core::sync::atomic::AtomicU64)
 pub fn vyre_libs_builder::plumbing::host::telemetry::snapshot_counters() -> alloc::vec::Vec<(&'static str, u64)>

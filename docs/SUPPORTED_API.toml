@@ -32030,7 +32030,7 @@ seam = "primary-text-emitter"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre-driver-wgpu"
 stability = "internal"
-exported_item_count = 93
+exported_item_count = 95
 
   [[package.item]]
   path = "impl core::convert::From<&vyre_emit_naga::EmitError> for vyre_foundation::diagnostics::Diagnostic"
@@ -32257,6 +32257,13 @@ exported_item_count = 93
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_emit_naga::GRID_SEGMENT_ENTRY_PREFIX: &str"
+  kind = "const"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_emit_naga::LOWERING_DIGEST: &str"
   kind = "const"
   stability = "internal"
@@ -32286,6 +32293,13 @@ exported_item_count = 93
 
   [[package.item]]
   path = "vyre_emit_naga::emit_with_float_mode(desc: &vyre_lower::descriptor::KernelDescriptor, float_lowering: vyre_foundation::fp_parity::FloatLoweringMode) -> core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>"
+  kind = "fn"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_emit_naga::grid_segment_entry_points(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, vyre_emit_naga::EmitError>"
   kind = "fn"
   stability = "internal"
   feature = "unconditional"
@@ -34556,7 +34570,7 @@ seam = "foundation-ir"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 8846
+exported_item_count = 8828
 
   [[package.item]]
   path = "alloc::string::String::from(err: vyre_foundation::serial::wire::encode::WireEncodeErr) -> alloc::string::String"
@@ -36057,6 +36071,13 @@ exported_item_count = 8846
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "impl vyre_foundation::diagnostics::CauseKind"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "impl vyre_foundation::diagnostics::CompilerLevel"
   kind = "impl"
   stability = "extension"
@@ -36065,6 +36086,13 @@ exported_item_count = 8846
 
   [[package.item]]
   path = "impl vyre_foundation::diagnostics::Diagnostic"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "impl vyre_foundation::diagnostics::DiagnosticCause"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -36114,20 +36142,6 @@ exported_item_count = 8846
 
   [[package.item]]
   path = "impl vyre_foundation::diagnostics::ToDiagnostic for vyre_foundation::validate::ValidationError"
-  kind = "impl"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl vyre_foundation::diagnostics::cause::CauseKind"
-  kind = "impl"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl vyre_foundation::diagnostics::cause::DiagnosticCause"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -41860,6 +41874,13 @@ exported_item_count = 8846
   wire_compatibility = "wire-bound"
 
   [[package.item]]
+  path = "vyre_foundation::diagnostics::CauseKind::ALL: &'static [Self]"
+  kind = "const"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_foundation::diagnostics::CauseKind::Cancelled"
   kind = "variant"
   stability = "extension"
@@ -41956,6 +41977,20 @@ exported_item_count = 8846
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::diagnostics::CauseKind::index(self) -> usize"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "wire-bound"
+
+  [[package.item]]
+  path = "vyre_foundation::diagnostics::CauseKind::label(self) -> &'static str"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "wire-bound"
 
   [[package.item]]
   path = "vyre_foundation::diagnostics::CompilerLevel"
@@ -42070,14 +42105,14 @@ exported_item_count = 8846
   wire_compatibility = "wire-bound"
 
   [[package.item]]
-  path = "vyre_foundation::diagnostics::Diagnostic::cause(&self) -> core::option::Option<&vyre_foundation::diagnostics::cause::DiagnosticCause>"
+  path = "vyre_foundation::diagnostics::Diagnostic::cause(&self) -> core::option::Option<&vyre_foundation::diagnostics::DiagnosticCause>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "wire-bound"
 
   [[package.item]]
-  path = "vyre_foundation::diagnostics::Diagnostic::cause_chain: alloc::vec::Vec<vyre_foundation::diagnostics::cause::DiagnosticCause>"
+  path = "vyre_foundation::diagnostics::Diagnostic::cause_chain: alloc::vec::Vec<vyre_foundation::diagnostics::DiagnosticCause>"
   kind = "field"
   stability = "extension"
   feature = "unconditional"
@@ -42091,7 +42126,7 @@ exported_item_count = 8846
   wire_compatibility = "wire-bound"
 
   [[package.item]]
-  path = "vyre_foundation::diagnostics::Diagnostic::caused_by_kind(&self, kind: vyre_foundation::diagnostics::cause::CauseKind) -> bool"
+  path = "vyre_foundation::diagnostics::Diagnostic::caused_by_kind(&self, kind: vyre_foundation::diagnostics::CauseKind) -> bool"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -42259,7 +42294,7 @@ exported_item_count = 8846
   wire_compatibility = "wire-bound"
 
   [[package.item]]
-  path = "vyre_foundation::diagnostics::Diagnostic::root_cause(&self) -> core::option::Option<&vyre_foundation::diagnostics::cause::DiagnosticCause>"
+  path = "vyre_foundation::diagnostics::Diagnostic::root_cause(&self) -> core::option::Option<&vyre_foundation::diagnostics::DiagnosticCause>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -42322,21 +42357,21 @@ exported_item_count = 8846
   wire_compatibility = "wire-bound"
 
   [[package.item]]
-  path = "vyre_foundation::diagnostics::Diagnostic::with_cause(self, kind: vyre_foundation::diagnostics::cause::CauseKind, subject: impl core::convert::Into<alloc::borrow::Cow<'static, str>>, detail: impl core::convert::Into<alloc::string::String>) -> Self"
+  path = "vyre_foundation::diagnostics::Diagnostic::with_cause(self, kind: vyre_foundation::diagnostics::CauseKind, subject: impl core::convert::Into<alloc::borrow::Cow<'static, str>>, detail: impl core::convert::Into<alloc::string::String>) -> Self"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "wire-bound"
 
   [[package.item]]
-  path = "vyre_foundation::diagnostics::Diagnostic::with_cause_chain(self, chain: impl core::iter::traits::collect::IntoIterator<Item = vyre_foundation::diagnostics::cause::DiagnosticCause>) -> Self"
+  path = "vyre_foundation::diagnostics::Diagnostic::with_cause_chain(self, chain: impl core::iter::traits::collect::IntoIterator<Item = vyre_foundation::diagnostics::DiagnosticCause>) -> Self"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "wire-bound"
 
   [[package.item]]
-  path = "vyre_foundation::diagnostics::Diagnostic::with_cause_link(self, cause: vyre_foundation::diagnostics::cause::DiagnosticCause) -> Self"
+  path = "vyre_foundation::diagnostics::Diagnostic::with_cause_link(self, cause: vyre_foundation::diagnostics::DiagnosticCause) -> Self"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -42448,8 +42483,15 @@ exported_item_count = 8846
   wire_compatibility = "wire-bound"
 
   [[package.item]]
-  path = "vyre_foundation::diagnostics::DiagnosticCause::kind: vyre_foundation::diagnostics::cause::CauseKind"
+  path = "vyre_foundation::diagnostics::DiagnosticCause::kind: vyre_foundation::diagnostics::CauseKind"
   kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "wire-bound"
+
+  [[package.item]]
+  path = "vyre_foundation::diagnostics::DiagnosticCause::new(kind: vyre_foundation::diagnostics::CauseKind, subject: impl core::convert::Into<alloc::borrow::Cow<'static, str>>, detail: impl core::convert::Into<alloc::string::String>) -> Self"
+  kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "wire-bound"
@@ -42915,174 +42957,6 @@ exported_item_count = 8846
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause"
-  kind = "mod"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind"
-  kind = "enum"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "wire-bound"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::ALL: &'static [Self]"
-  kind = "const"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::Cancelled"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::Configuration"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::DeviceLost"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::Emission"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::Encoding"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::ExternalToolchain"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::InternalInvariant"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::InvalidInput"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::Lowering"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::NumericOverflow"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::ResourceExhausted"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::Timeout"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::UnsupportedCapability"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::VersionSkew"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::index(self) -> usize"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "wire-bound"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::CauseKind::label(self) -> &'static str"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "wire-bound"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::DiagnosticCause"
-  kind = "struct"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "wire-bound"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::DiagnosticCause::detail: alloc::string::String"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "wire-bound"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::DiagnosticCause::kind: vyre_foundation::diagnostics::cause::CauseKind"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "wire-bound"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::DiagnosticCause::new(kind: vyre_foundation::diagnostics::cause::CauseKind, subject: impl core::convert::Into<alloc::borrow::Cow<'static, str>>, detail: impl core::convert::Into<alloc::string::String>) -> Self"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "wire-bound"
-
-  [[package.item]]
-  path = "vyre_foundation::diagnostics::cause::DiagnosticCause::subject: alloc::borrow::Cow<'static, str>"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "wire-bound"
 
   [[package.item]]
   path = "vyre_foundation::dialect"
@@ -88837,6 +88711,20 @@ exported_item_count = 8846
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_foundation::substrate::QueryError::WorkerPanicked"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::substrate::QueryError::WorkerPanicked::query: vyre_foundation::substrate::QueryKey"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_foundation::substrate::QueryKey"
   kind = "enum"
   stability = "extension"
@@ -93156,7 +93044,7 @@ exported_item_count = 8846
   wire_compatibility = "wire-bound"
 
   [[package.item]]
-  path = "vyre_foundation::validate::ValidationPhase::cause_kind(self) -> vyre_foundation::diagnostics::cause::CauseKind"
+  path = "vyre_foundation::validate::ValidationPhase::cause_kind(self) -> vyre_foundation::diagnostics::CauseKind"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -98775,7 +98663,7 @@ seam = "libs-builder"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
 stability = "extension"
-exported_item_count = 580
+exported_item_count = 579
 
   [[package.item]]
   path = "impl core::fmt::Debug for vyre_libs_builder::builder::gemm::ContractionEpilogue"
@@ -101775,13 +101663,6 @@ exported_item_count = 580
 
   [[package.item]]
   path = "vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity<T>(buffer: &mut alloc::vec::Vec<T>, capacity: usize, context: &'static str) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity_or_panic<T>(buffer: &mut alloc::vec::Vec<T>, capacity: usize, context: &'static str)"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -131477,7 +131358,7 @@ seam = "lowering"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre-megakernel"
 stability = "internal"
-exported_item_count = 1329
+exported_item_count = 1345
 
   [[package.item]]
   path = "impl core::cmp::Eq for vyre_lower::KernelBody"
@@ -133088,6 +132969,55 @@ exported_item_count = 1329
   stability = "internal"
   feature = "unconditional"
   wire_compatibility = "wire-bound"
+
+  [[package.item]]
+  path = "vyre_lower::DispatchSplitError"
+  kind = "enum"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::DispatchSplitError::EffectfulCarrier"
+  kind = "variant"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::DispatchSplitError::EffectfulCarrier::result: u32"
+  kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::DispatchSplitError::FenceUnderNestedControl"
+  kind = "variant"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::DispatchSplitError::FenceUnderNestedControl::construct: &'static str"
+  kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::DispatchSplitError::UnresolvedCarrier"
+  kind = "variant"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::DispatchSplitError::UnresolvedCarrier::result: u32"
+  kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_lower::EffectSignature"
@@ -134714,6 +134644,55 @@ exported_item_count = 1329
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_lower::NestedBodies"
+  kind = "struct"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::NestedBodies::control: vyre_lower::NestedBodyControl"
+  kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::NestedBodies::start: usize"
+  kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::NestedBodyControl"
+  kind = "enum"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::NestedBodyControl::Conditional"
+  kind = "variant"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::NestedBodyControl::Repeated"
+  kind = "variant"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::NestedBodyControl::Unconditional"
+  kind = "variant"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_lower::OpFacts"
   kind = "struct"
   stability = "internal"
@@ -134721,7 +134700,7 @@ exported_item_count = 1329
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_lower::OpFacts::child_body_start: core::option::Option<usize>"
+  path = "vyre_lower::OpFacts::nested_bodies: core::option::Option<vyre_lower::NestedBodies>"
   kind = "field"
   stability = "internal"
   feature = "unconditional"
@@ -139621,6 +139600,13 @@ exported_item_count = 1329
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_lower::body_contains_grid_fence(body: &vyre_lower::KernelBody) -> bool"
+  kind = "fn"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_lower::check_effects(semantic: &vyre_lower::EffectSignature, physical: &vyre_lower::EffectSignature, ignored: &[&str]) -> core::result::Result<(), alloc::vec::Vec<vyre_lower::EquivalenceError>>"
   kind = "fn"
   stability = "internal"
@@ -140007,6 +139993,13 @@ exported_item_count = 1329
 
   [[package.item]]
   path = "vyre_lower::descriptor_trap_tags(body: &vyre_lower::KernelBody) -> core::result::Result<alloc::vec::Vec<vyre_lower::DescriptorTrapTag>, vyre_lower::LowerError>"
+  kind = "fn"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::dispatch_segments(desc: &vyre_lower::KernelDescriptor) -> core::result::Result<alloc::vec::Vec<alloc::borrow::Cow<'_, vyre_lower::KernelBody>>, vyre_lower::DispatchSplitError>"
   kind = "fn"
   stability = "internal"
   feature = "unconditional"

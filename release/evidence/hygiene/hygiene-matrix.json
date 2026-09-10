@@ -1,10 +1,10 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/gate-findings","commit":"db3d0e2a981956148e5b67bd90c3936c3ff041c3","commit_timestamp":"1789023058","parent_commit":"1d1240d7f392bddc9a8939d0fc75fd76b0104d5a","dirty":true,"source_fingerprint":"git:db3d0e2a981956148e5b67bd90c3936c3ff041c3:dirty=true:worktree=fc99f8e913f4b282c1591636da491d406cd3958d8a7d127b00e31e8113c152b0"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"4fcfdd253e098d5bcc852f7cfecb4ad60bc3c771","commit_timestamp":"1789028986","parent_commit":"c66e64f6e323404843eecf5c403c9fa54f445606","dirty":true,"source_fingerprint":"git:4fcfdd253e098d5bcc852f7cfecb4ad60bc3c771:dirty=true:worktree=e1260fba32008d1da96724c0d08e6cdffb020ae35183456af653956bab87adc8"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4839,
+  "scanned_files": 4862,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -66,7 +66,7 @@
     },
     {
       "pattern": "source_inspection_test",
-      "count": 151
+      "count": 141
     },
     {
       "pattern": "std_thread_sleep",
@@ -260,7 +260,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 5
+      "count": 6
     },
     {
       "owner_lane": "runtime_resident_work_queue",
@@ -308,7 +308,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 55
+      "count": 44
     },
     {
       "owner_lane": "testing_evidence",
@@ -570,7 +570,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 5
+      "count": 6
     },
     {
       "owner_lane": "runtime_resident_work_queue",
@@ -705,7 +705,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 55
+      "count": 44
     },
     {
       "owner_lane": "testing_evidence",
@@ -1100,11 +1100,6 @@
       },
       {
         "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-        "test": "mutation_catches_crate_bogus_program_masquerade",
-        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
-      },
-      {
-        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
         "test": "mutation_catches_decoder_loop_bitshift_transform",
         "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
       },
@@ -1116,11 +1111,6 @@
       {
         "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
         "test": "mutation_catches_decoder_loop_subsliced_width_mismatch",
-        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
-      },
-      {
-        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-        "test": "mutation_catches_dispatch_error_and_resident_read_range_param_masquerade",
         "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
       },
       {
@@ -1165,47 +1155,7 @@
       },
       {
         "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-        "test": "mutation_catches_fake_dispatch_error_without_canonical_dispatcher",
-        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
-      },
-      {
-        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-        "test": "mutation_catches_glob_import_program_masquerade",
-        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
-      },
-      {
-        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-        "test": "mutation_catches_local_dummy_program_masquerade",
-        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
-      },
-      {
-        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-        "test": "mutation_catches_mixed_tuple_data_type_masquerade",
-        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
-      },
-      {
-        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-        "test": "mutation_catches_result_vec_with_fusion_error_masquerade",
-        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
-      },
-      {
-        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-        "test": "mutation_catches_sibling_imported_fake_dispatcher_trait_masquerade",
-        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
-      },
-      {
-        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-        "test": "mutation_catches_sibling_imported_fake_program_masquerade",
-        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
-      },
-      {
-        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
         "test": "mutation_catches_unqualified_or_custom_from_le_bytes_helper",
-        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
-      },
-      {
-        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-        "test": "mutation_operation_registration_aliased_as_or_catches_expected_output_oracle",
         "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
       },
       {
@@ -1241,11 +1191,6 @@
       {
         "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
         "test": "mutation_oracle_detection_catches_production_vyre_reference_usage",
-        "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
-      },
-      {
-        "file": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-        "test": "production_trait_default_method_uncalled_oracle_is_flagged",
         "reason": "Each fixture exercises a source-derived oracle-elimination rule while loading\nthe exact canonical dispatcher trait. Dormant host semantic twins, source-level\ndataflow, and qualified type ownership have no run-time witness, so only\nstructural analysis can prove their absence. The roster is the tests that reach\nthe analyzer inside this file. A test in a sibling part file reaches it through\na helper defined here, which the per-file scan does not follow, so it inspects\nno source of its own and is declared nowhere."
       },
       {
@@ -1687,6 +1632,11 @@
         "file": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
         "test": "overlapping_file_roles_fails_role_closure",
         "reason": "Judge the file-role closure that classifies every composition-domain source\nfile, including that an unregistered nested file and two overlapping roles both\nfail it. The subject under test is a rule over the file tree, so the tree is its\ninput; a role assignment produces no run-time artifact to observe instead."
+      },
+      {
+        "file": "vyre-emit-naga/tests/grid_sync_dispatch_segments.rs",
+        "test": "a_fence_is_cut_only_where_a_launch_boundary_expresses_it",
+        "reason": "Read the nested-body control enum to enumerate the variant space this contract\ncovers, so a new control variant reaches the case list without an edit here.\nA hardcoded list of variants goes stale in silence, which for an exhaustiveness\ncontract is the same as having no contract. The enum declaration is the only\nstatement of the variant space; the type produces no run-time listing to\nenumerate instead."
       }
     ],
     "blockers": []
@@ -5272,6 +5222,16 @@
       "release_blocker": false
     },
     {
+      "path": "vyre-emit-naga/tests/grid_sync_dispatch_segments.rs",
+      "line": 308,
+      "pattern": "source_inspection_test",
+      "owner_lane": "lower_emit",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
       "path": "vyre-emit-naga/tests/physical_ir_variant_exhaustiveness.rs",
       "line": 95,
       "pattern": "source_inspection_test",
@@ -5823,7 +5783,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 69,
+      "line": 92,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5833,7 +5793,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 106,
+      "line": 129,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5843,7 +5803,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 128,
+      "line": 151,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5853,7 +5813,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 157,
+      "line": 180,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5863,7 +5823,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 185,
+      "line": 208,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5873,7 +5833,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 219,
+      "line": 242,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5883,7 +5843,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 251,
+      "line": 274,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5893,7 +5853,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 266,
+      "line": 289,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5903,7 +5863,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 288,
+      "line": 311,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5913,7 +5873,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 308,
+      "line": 331,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5923,7 +5883,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 329,
+      "line": 347,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5933,7 +5893,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 345,
+      "line": 397,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5943,7 +5903,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 365,
+      "line": 439,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5953,7 +5913,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 385,
+      "line": 461,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5963,7 +5923,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 408,
+      "line": 497,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5973,7 +5933,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 431,
+      "line": 527,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5983,7 +5943,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 456,
+      "line": 560,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5993,7 +5953,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 482,
+      "line": 605,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6003,7 +5963,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 514,
+      "line": 644,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6013,7 +5973,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 537,
+      "line": 679,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6023,7 +5983,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 556,
+      "line": 713,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6033,7 +5993,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 606,
+      "line": 747,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6043,7 +6003,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 648,
+      "line": 772,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6053,7 +6013,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 681,
+      "line": 800,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6063,7 +6023,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 703,
+      "line": 824,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6073,7 +6033,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 739,
+      "line": 854,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6083,7 +6043,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 769,
+      "line": 878,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6093,7 +6053,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 802,
+      "line": 902,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6103,7 +6063,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 847,
+      "line": 959,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6113,7 +6073,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 889,
+      "line": 982,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6123,7 +6083,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 924,
+      "line": 1008,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6133,7 +6093,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 958,
+      "line": 1033,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6143,7 +6103,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 992,
+      "line": 1057,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6153,117 +6113,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1017,
-      "pattern": "source_inspection_test",
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1045,
-      "pattern": "source_inspection_test",
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1069,
-      "pattern": "source_inspection_test",
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1099,
-      "pattern": "source_inspection_test",
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1123,
-      "pattern": "source_inspection_test",
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1147,
-      "pattern": "source_inspection_test",
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1204,
-      "pattern": "source_inspection_test",
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1227,
-      "pattern": "source_inspection_test",
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1253,
-      "pattern": "source_inspection_test",
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1278,
-      "pattern": "source_inspection_test",
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1302,
-      "pattern": "source_inspection_test",
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1326,
+      "line": 1081,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -9141,6 +8991,13 @@
       "test": "only_the_device_acquisition_module_constructs_a_wgpu_instance"
     },
     {
+      "path": "vyre-emit-naga/tests/grid_sync_dispatch_segments.rs",
+      "line": 308,
+      "pattern": "source_inspection_test",
+      "text": "test `a_fence_is_cut_only_where_a_launch_boundary_expresses_it` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "a_fence_is_cut_only_where_a_launch_boundary_expresses_it"
+    },
+    {
       "path": "vyre-emit-naga/tests/physical_ir_variant_exhaustiveness.rs",
       "line": 95,
       "pattern": "source_inspection_test",
@@ -9527,315 +9384,238 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 69,
+      "line": 92,
       "pattern": "source_inspection_test",
       "text": "test `canonical_semantic_executor_exact_path_derives_execution_methods` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "canonical_semantic_executor_exact_path_derives_execution_methods"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 106,
+      "line": 129,
       "pattern": "source_inspection_test",
       "text": "test `clean_production_code_produces_no_findings` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "clean_production_code_produces_no_findings"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 128,
+      "line": 151,
       "pattern": "source_inspection_test",
       "text": "test `expected_output_with_wire_pack_and_literal_helper_is_convicted` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "expected_output_with_wire_pack_and_literal_helper_is_convicted"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 157,
+      "line": 180,
       "pattern": "source_inspection_test",
       "text": "test `gpu_dispatcher_boundary_and_validation_functions_are_permitted` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "gpu_dispatcher_boundary_and_validation_functions_are_permitted"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 185,
+      "line": 208,
       "pattern": "source_inspection_test",
       "text": "test `compiler_planner_reachable_from_builder_is_permitted` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "compiler_planner_reachable_from_builder_is_permitted"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 219,
+      "line": 242,
       "pattern": "source_inspection_test",
       "text": "test `cfg_test_cpu_ref_is_permitted_and_not_flagged` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "cfg_test_cpu_ref_is_permitted_and_not_flagged"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 251,
+      "line": 274,
       "pattern": "source_inspection_test",
       "text": "test `cfg_test_item_level_function_body_vyre_reference_is_not_misclassified` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "cfg_test_item_level_function_body_vyre_reference_is_not_misclassified"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 266,
+      "line": 289,
       "pattern": "source_inspection_test",
       "text": "test `cfg_test_impl_block_is_scoped_as_test` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "cfg_test_impl_block_is_scoped_as_test"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 288,
+      "line": 311,
       "pattern": "source_inspection_test",
       "text": "test `cfg_test_trait_block_is_scoped_as_test` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "cfg_test_trait_block_is_scoped_as_test"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 308,
-      "pattern": "source_inspection_test",
-      "text": "test `production_trait_default_method_uncalled_oracle_is_flagged` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "production_trait_default_method_uncalled_oracle_is_flagged"
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 329,
+      "line": 331,
       "pattern": "source_inspection_test",
       "text": "test `mutation_oracle_detection_catches_production_vyre_reference_usage` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_oracle_detection_catches_production_vyre_reference_usage"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 345,
-      "pattern": "source_inspection_test",
-      "text": "test `mutation_catches_local_dummy_program_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "mutation_catches_local_dummy_program_masquerade"
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 365,
-      "pattern": "source_inspection_test",
-      "text": "test `mutation_catches_crate_bogus_program_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "mutation_catches_crate_bogus_program_masquerade"
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 385,
-      "pattern": "source_inspection_test",
-      "text": "test `mutation_catches_glob_import_program_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "mutation_catches_glob_import_program_masquerade"
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 408,
-      "pattern": "source_inspection_test",
-      "text": "test `mutation_catches_sibling_imported_fake_program_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "mutation_catches_sibling_imported_fake_program_masquerade"
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 431,
-      "pattern": "source_inspection_test",
-      "text": "test `mutation_catches_sibling_imported_fake_dispatcher_trait_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "mutation_catches_sibling_imported_fake_dispatcher_trait_masquerade"
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 456,
-      "pattern": "source_inspection_test",
-      "text": "test `mutation_catches_fake_dispatch_error_without_canonical_dispatcher` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "mutation_catches_fake_dispatch_error_without_canonical_dispatcher"
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 482,
-      "pattern": "source_inspection_test",
-      "text": "test `mutation_catches_dispatch_error_and_resident_read_range_param_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "mutation_catches_dispatch_error_and_resident_read_range_param_masquerade"
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 514,
-      "pattern": "source_inspection_test",
-      "text": "test `mutation_catches_mixed_tuple_data_type_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "mutation_catches_mixed_tuple_data_type_masquerade"
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 537,
-      "pattern": "source_inspection_test",
-      "text": "test `mutation_catches_result_vec_with_fusion_error_masquerade` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "mutation_catches_result_vec_with_fusion_error_masquerade"
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 556,
+      "line": 347,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_allows_test_inputs_generator_and_catches_expected_output_oracle` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_allows_test_inputs_generator_and_catches_expected_output_oracle"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 606,
+      "line": 397,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_struct_literal_catches_expected_output_oracle` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_struct_literal_catches_expected_output_oracle"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 648,
-      "pattern": "source_inspection_test",
-      "text": "test `mutation_operation_registration_aliased_as_or_catches_expected_output_oracle` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "mutation_operation_registration_aliased_as_or_catches_expected_output_oracle"
-    },
-    {
-      "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 681,
+      "line": 439,
       "pattern": "source_inspection_test",
       "text": "test `control_bogus_local_operation_registration_does_not_false_positive` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "control_bogus_local_operation_registration_does_not_false_positive"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 703,
+      "line": 461,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_catches_inline_closure_loop_and_math` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_catches_inline_closure_loop_and_math"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 739,
+      "line": 497,
       "pattern": "source_inspection_test",
       "text": "test `clean_operation_registration_allows_literal_and_const_byte_array` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "clean_operation_registration_allows_literal_and_const_byte_array"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 769,
+      "line": 527,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_catches_wire_pack_in_expected_output` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_catches_wire_pack_in_expected_output"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 802,
+      "line": 560,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_catches_helper_function_in_expected_output` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_catches_helper_function_in_expected_output"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 847,
+      "line": 605,
       "pattern": "source_inspection_test",
       "text": "test `every_registration_constructor_convicts_a_host_oracle_in_expected_output` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_registration_constructor_convicts_a_host_oracle_in_expected_output"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 889,
+      "line": 644,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_catches_local_closure_alias_in_expected_output` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_catches_local_closure_alias_in_expected_output"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 924,
+      "line": 679,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_err_fallback_branch_oracle` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_err_fallback_branch_oracle"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 958,
+      "line": 713,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_unwrap_or_else_fallback_oracle` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_unwrap_or_else_fallback_oracle"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 992,
+      "line": 747,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_post_dispatch_iter_any_reduction` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_post_dispatch_iter_any_reduction"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1017,
+      "line": 772,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_match_ok_post_dispatch_iter_any` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_match_ok_post_dispatch_iter_any"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1045,
+      "line": 800,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_map_closure_post_dispatch_reduction` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_map_closure_post_dispatch_reduction"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1069,
+      "line": 824,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_post_dispatch_loop_accumulation` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_post_dispatch_loop_accumulation"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1099,
+      "line": 854,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_post_dispatch_filter_count_reduction` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_post_dispatch_filter_count_reduction"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1123,
+      "line": 878,
       "pattern": "source_inspection_test",
       "text": "test `clean_dispatcher_allows_inter_dispatch_staging_loop` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "clean_dispatcher_allows_inter_dispatch_staging_loop"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1147,
+      "line": 902,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_escaped_cache_invalidation_post_dispatch_host_projection` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_escaped_cache_invalidation_post_dispatch_host_projection"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1204,
+      "line": 959,
       "pattern": "source_inspection_test",
       "text": "test `clean_dispatcher_allows_strict_fixed_width_decoder_only_return` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "clean_dispatcher_allows_strict_fixed_width_decoder_only_return"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1227,
+      "line": 982,
       "pattern": "source_inspection_test",
       "text": "test `clean_dispatcher_allows_optional_local_and_capacity_reserve_decoder_loop` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "clean_dispatcher_allows_optional_local_and_capacity_reserve_decoder_loop"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1253,
+      "line": 1008,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_decoder_loop_independent_constant_append` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_decoder_loop_independent_constant_append"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1278,
+      "line": 1033,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_decoder_loop_subsliced_width_mismatch` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_decoder_loop_subsliced_width_mismatch"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1302,
+      "line": 1057,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_decoder_loop_bitshift_transform` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_decoder_loop_bitshift_transform"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1326,
+      "line": 1081,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_unqualified_or_custom_from_le_bytes_helper` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_unqualified_or_custom_from_le_bytes_helper"

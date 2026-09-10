@@ -24,11 +24,22 @@ interpreter arm.
 ## Layers
 
 Every workspace member declares one layer in `docs/CRATE_OWNERSHIP.toml`, and
-every layer declares one rank. A production dependency is legal only when the
-consumer's layer outranks the dependency's layer; two layers share a rank when
-neither depends on the other. `xtask crate-ownership` joins the ranks to the
-resolved cargo graph and rejects a reversal. `docs/CRATE_GRAPH.md` renders the
-ranks and every declared edge.
+every layer declares one rank plus the closed set of consumer layers admitted
+to it. A production dependency is legal only when the consumer's layer outranks
+the dependency's layer and the dependency's layer admits the consumer's. Two
+layers share a rank when neither depends on the other, and a layer whose
+members reach each other admits itself, because rank does not judge an edge
+inside one layer.
+
+Cargo owns the edge set, so the manifest holds no second roster of edges.
+`xtask crate-ownership` resolves every internal edge under the union of every
+feature and rejects a reversal, a cycle, an edge across a layer pair no
+admitted set records, and an admitted layer pair no edge crosses. A new member
+with no row fails there, and so does a new edge across a pair nothing records,
+which is what stops a direct dependency from expanding rebuild fan-out or
+pulling a composition into a driver without a recorded decision.
+`docs/CRATE_GRAPH.md` renders the ranks, the admitted sets, and the resolved
+graph.
 
 - `vyre-spec` is the frozen vocabulary. It does not execute.
 - `vyre-foundation` owns validated `ProgramGraph` and schedule-free
@@ -52,7 +63,8 @@ ranks and every declared edge.
   and a budget; the compiler selects the schedule and the launch. The seam
   accepts no grid, workgroup, persistence or route, so `vyre-libs`,
   `vyre-pass-engine`, `vyre-driver-reference` and `vyre-bench` declare a
-  dependency on it and `docs/CRATE_OWNERSHIP.toml` records those edges.
+  dependency on it, and the layer DAG admits each of those layers into the
+  compiler boundary.
 - `vyre-driver` is backend-agnostic machinery. Concrete drivers own names,
   dialects, and device quirks.
 - `vyre-runtime` executes the artifact's selected persistence. It does not

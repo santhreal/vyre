@@ -81,8 +81,10 @@ pub struct LayerRecord {
     /// What the layer is for, in the manifest's own words.
     pub purpose: String,
     /// The closed set of layers whose members may cross a seam in this layer
-    /// with a production edge. `None` admits every layer the rank rule allows.
-    pub consumed_by: Option<Vec<String>>,
+    /// with a production edge. Required on every row, including the layer's
+    /// own name when its members reach each other, so no layer pair is
+    /// admitted without a row recording the decision.
+    pub consumed_by: Vec<String>,
     /// Whether a member of this layer may cross only a seam whose row sets
     /// `facade_exported`.
     pub exports_declared_seams: bool,
@@ -128,6 +130,11 @@ pub struct DependencyUse {
     /// Features of the source package that activate an optional edge, sorted.
     /// Empty for a required edge, which the default resolution already shows.
     pub activating_features: Vec<String>,
+    /// True when some feature of the source names the optional edge, as
+    /// `dep:alias`, as `alias/feature`, or as a bare alias. False for a
+    /// required edge and for one reachable only through the feature cargo
+    /// derives from the dependency key.
+    pub named_activation: bool,
 }
 
 impl DependencyUse {
@@ -261,21 +268,29 @@ fn text(row: &Value, field: &str, context: &str, report: &mut Report) -> String 
     }
 }
 
-/// Read one optional string-array field, sorted and duplicate-free.
-fn optional_strings(
-    row: &Value,
-    field: &str,
-    context: &str,
-    report: &mut Report,
-) -> Option<Vec<String>> {
-    let value = row.get(field)?;
+/// Read one required string-array field, sorted and duplicate-free.
+///
+/// An absent key is a finding rather than a permissive default. A layer that
+/// stated nothing used to admit every consumer the rank rule allowed, so
+/// fifteen of eighteen layers accepted a new edge from anywhere above them
+/// with no row recording the decision. An empty array still states that
+/// nothing may reach the layer in production, and it has to be written down.
+fn required_strings(row: &Value, field: &str, context: &str, report: &mut Report) -> Vec<String> {
+    let Some(value) = row.get(field) else {
+        report.find(Finding::in_file(
+            REGISTRY,
+            format!("{context} declares no `{field}` array"),
+            "record every layer whose members reach this one with a production edge, or `[]` when none may",
+        ));
+        return Vec::new();
+    };
     let Some(array) = value.as_array() else {
         report.find(Finding::in_file(
             REGISTRY,
             format!("{context} `{field}` is not an array of layer names"),
             FIX,
         ));
-        return Some(Vec::new());
+        return Vec::new();
     };
     let mut values = Vec::new();
     for item in array {
@@ -287,7 +302,7 @@ fn optional_strings(
                     format!("{context} `{field}` holds an entry that is not non-empty text"),
                     FIX,
                 ));
-                return Some(Vec::new());
+                return Vec::new();
             }
         }
     }
@@ -301,7 +316,7 @@ fn optional_strings(
             FIX,
         ));
     }
-    Some(values)
+    values
 }
 
 /// Read one optional boolean field, defaulting to false.
@@ -481,7 +496,7 @@ pub fn load_layers(tree: &Tree, report: &mut Report) -> Result<Vec<LayerRecord>,
             name,
             rank,
             purpose,
-            consumed_by: optional_strings(row, "consumed_by", &context, report),
+            consumed_by: required_strings(row, "consumed_by", &context, report),
             exports_declared_seams: flag(row, "exports_declared_seams", &context, report),
         });
     }
@@ -492,18 +507,22 @@ pub fn load_layers(tree: &Tree, report: &mut Report) -> Result<Vec<LayerRecord>,
 ///
 /// Four rules over one graph, and each rejects something the others cannot.
 ///
-/// Rank is the direction contract: a production edge is legal when the source
-/// layer outranks the destination layer, and an edge inside one layer is
-/// always legal. A reversal fails it directly, and a cross-layer cycle cannot
-/// be written down at all, because a cycle needs at least one edge whose
-/// source does not outrank its destination. Nothing enumerates permitted layer
+/// Rank is the direction rule: a production edge points down when the source
+/// layer outranks the destination layer, and an edge inside one layer points
+/// nowhere. A reversal fails it directly, and a cross-layer cycle cannot be
+/// written down at all, because a cycle needs at least one edge whose source
+/// does not outrank its destination. Nothing enumerates permitted layer
 /// pairs, so there is no second roster to drift from the manifests.
 ///
-/// `consumed_by` narrows a destination layer to a closed set of consumer
-/// layers, which is the one statement rank cannot make: rank says a runtime
-/// crate may reach a composition library, and `consumed_by` says which layers
-/// actually may. An entry no edge crosses is a stale declaration and is
-/// reported as one.
+/// `consumed_by` is the admission rule, and it closes what rank leaves open.
+/// Rank says a runtime crate may reach a composition library and says nothing
+/// about whether it should; a same-layer edge it does not judge at all. Every
+/// layer states the closed set of consumer layers admitted to it, its own name
+/// included when its members reach each other, so a production edge is legal
+/// only when both rules pass. A pair no row records fails, which is how a new
+/// edge between two existing crates stops for a decision instead of expanding
+/// rebuild fan-out silently. An entry no edge crosses is a stale declaration
+/// and fails as loudly.
 ///
 /// `exports_declared_seams` holds an exporting layer to the seams that admit
 /// it. The facade outranks everything, so rank permits it to reach any crate
@@ -554,7 +573,7 @@ fn direction_findings(
                 "delete the [[layer]] row, or move a member into it",
             ));
         }
-        for admitted in layer.consumed_by.iter().flatten() {
+        for admitted in &layer.consumed_by {
             if !by_name.contains_key(admitted.as_str()) {
                 findings.push(Finding::in_file(
                     REGISTRY,
@@ -607,19 +626,21 @@ fn direction_findings(
                     DIRECTION_FIX,
                 ));
             }
-            if let Some(admitted) = target_layer.consumed_by.as_deref() {
-                if admitted.iter().any(|name| name == &source_layer.name) {
-                    crossed.insert((target_layer.name.as_str(), source_layer.name.as_str()));
-                } else {
-                    findings.push(Finding::in_file(
-                        REGISTRY,
-                        format!(
-                            "`{package}` in layer `{}` depends {activation} on `{destination}` over the `{}` seam, and layer `{}` admits no consumer in `{}`",
-                            source_layer.name, target.seam, target_layer.name, source_layer.name
-                        ),
-                        "move the dependency behind a layer the destination admits, or record the consumer layer in the destination layer's `consumed_by`",
-                    ));
-                }
+            if target_layer
+                .consumed_by
+                .iter()
+                .any(|name| name == &source_layer.name)
+            {
+                crossed.insert((target_layer.name.as_str(), source_layer.name.as_str()));
+            } else {
+                findings.push(Finding::in_file(
+                    REGISTRY,
+                    format!(
+                        "`{package}` in layer `{}` depends {activation} on `{destination}` over the `{}` seam, and layer `{}` admits no consumer in `{}`",
+                        source_layer.name, target.seam, target_layer.name, source_layer.name
+                    ),
+                    "move the dependency behind a layer the destination admits, or record the consumer layer in the destination layer's `consumed_by`",
+                ));
             }
             if source_layer.exports_declared_seams {
                 if target.facade_exported {
@@ -638,7 +659,7 @@ fn direction_findings(
     }
 
     for layer in layers {
-        for admitted in layer.consumed_by.iter().flatten() {
+        for admitted in &layer.consumed_by {
             if by_name.contains_key(admitted.as_str())
                 && !crossed.contains(&(layer.name.as_str(), admitted.as_str()))
             {
@@ -766,18 +787,24 @@ fn cycle_findings(state: &WorkspaceState) -> Vec<Finding> {
     findings
 }
 
-/// Every optional edge no feature of its consumer can turn on.
+/// Every optional edge no feature of its consumer names.
 ///
-/// An optional dependency is reachable only through a feature that names it,
-/// either as `dep:name`, as `name/feature`, or as the implicit feature cargo
-/// derives when nothing writes `dep:name`. One that no feature reaches is an
-/// edge no build resolves, and it reads as a live dependency to anyone
-/// counting rebuild fan-out.
+/// An optional dependency is reachable through a feature that names it as
+/// `dep:alias`, as `alias/feature`, or as a bare alias, and otherwise only
+/// through the feature cargo derives from the dependency key. The derived one
+/// is a public feature of the crate that no line of the manifest declares, so
+/// nothing states what turning it on means and the `--all-features` graph
+/// carries an edge the feature table never mentions.
+///
+/// The rule read `activating_features` before, which holds the derived feature
+/// too, so the emptiness it tested was unreachable: cargo derives that feature
+/// for exactly the edges no feature names. It certified a shape it could not
+/// observe.
 fn activation_findings(state: &WorkspaceState) -> Vec<Finding> {
     let mut findings = Vec::new();
     for (package, destinations) in &state.dependencies {
         for (destination, use_) in destinations {
-            if use_.optional && use_.activating_features.is_empty() {
+            if use_.optional && !use_.named_activation {
                 findings.push(Finding::in_file(
                     format!("{}/Cargo.toml", state.paths.get(package).map_or("", String::as_str)),
                     format!(
@@ -1204,6 +1231,11 @@ pub fn workspace_state(tree: &Tree) -> Result<WorkspaceState, GateError> {
                     .and_then(Value::as_bool)
                     .unwrap_or(true);
             if optional {
+                let named = effect
+                    .activated_by
+                    .get(&alias)
+                    .is_some_and(|features| !features.is_empty());
+                entry.named_activation = entry.named_activation || named;
                 entry.activating_features.extend(
                     effect
                         .activated_by
@@ -1500,11 +1532,13 @@ pub fn render_graph(
         "## Layer ranks".to_string(),
         String::new(),
         "A production dependency is legal only when the consumer's layer outranks the".to_string(),
-        "dependency's layer. Two layers share a rank when neither depends on the other."
+        "dependency's layer and the dependency's layer admits the consumer's. Two layers"
             .to_string(),
-        "A layer that admits a closed set of consumer layers names them; one that admits"
+        "share a rank when neither depends on the other. Every layer names the closed set"
             .to_string(),
-        "every layer the rank rule allows names none.".to_string(),
+        "of consumer layers admitted to it, its own name included when its members reach"
+            .to_string(),
+        "each other; a layer that admits none states `None`.".to_string(),
         String::new(),
         "| Rank | Layer | Admitted consumer layers | Purpose |".to_string(),
         "| --- | --- | --- | --- |".to_string(),
@@ -1514,10 +1548,7 @@ pub fn render_graph(
             "| `{}` | `{}` | {} | {} |",
             layer.rank,
             layer.name,
-            layer
-                .consumed_by
-                .as_deref()
-                .map_or_else(|| "every outranking layer".to_string(), format_list),
+            format_list(&layer.consumed_by),
             layer.purpose
         ));
     }
@@ -1784,14 +1815,26 @@ mod tests {
     }
 
     /// WHY: cargo derives a feature named after an optional dependency unless
-    /// some feature spells it `dep:`, so treating an unnamed optional entry as
-    /// unreachable would report a live edge as dead.
+    /// some feature spells it `dep:`. The derived feature resolves the edge, so
+    /// it belongs in `activating_features`, and no line of the manifest
+    /// declares it, so it is not a named activation. Reading the two as one
+    /// left the rule that rejects an unnamed optional edge unable to fire.
     #[test]
-    fn an_implicit_feature_activates_its_optional_dependency() {
+    fn an_implicit_feature_is_a_resolution_and_not_a_named_activation() {
         let table = manifest("[dependencies]\nureq = { version = \"2\", optional = true }\n");
         let effect = feature_effect(&table, &BTreeSet::from(["ureq".to_string()]));
         assert!(effect.explicit.is_empty());
         assert!(effect.activated_by.is_empty());
+
+        let named = manifest(
+            "[dependencies]\nureq = { version = \"2\", optional = true }\n\
+             [features]\nhttp = [\"dep:ureq\"]\n",
+        );
+        let effect = feature_effect(&named, &BTreeSet::from(["ureq".to_string()]));
+        assert_eq!(
+            effect.activated_by.get("ureq"),
+            Some(&BTreeSet::from(["http".to_string()]))
+        );
     }
 
     /// One consumer, one dependency, and the rows to judge them by.
@@ -1861,7 +1904,16 @@ mod tests {
             }
         }
 
+        /// Declare the one edge, and record the admission a production edge
+        /// needs so each case below isolates the rule it changes.
         fn edge(mut self, use_: DependencyUse) -> Self {
+            if use_.is_production() {
+                let source = self.records[0].layer.clone();
+                let target = self.records[1].layer.clone();
+                if let Some(layer) = self.layers.iter_mut().find(|layer| layer.name == target) {
+                    layer.consumed_by = vec![source];
+                }
+            }
             self.state.dependencies.insert(
                 "consumer".to_string(),
                 BTreeMap::from([("dependency".to_string(), use_)]),
@@ -1978,15 +2030,15 @@ mod tests {
         assert_eq!(findings.len(), 3, "{findings:?}");
     }
 
-    /// WHY: `consumed_by` is the one statement rank cannot make. Rank permits a
-    /// runtime crate to reach a composition library; the admitted set is what
-    /// decides whether it may. An edge from a layer the destination does not
-    /// admit is the undeclared half, and an admitted layer no edge crosses is
-    /// the stale half.
+    /// WHY: `consumed_by` is the rule rank cannot state. Rank permits a runtime
+    /// crate to reach a composition library; the admitted set decides whether
+    /// it may, and every layer states one. An edge from a layer the destination
+    /// does not admit is the undeclared half, and an admitted layer no edge
+    /// crosses is the stale half.
     #[test]
     fn an_unadmitted_consumer_layer_is_a_finding_and_an_unused_admission_is_too() {
         let mut case = Case::new("high", 4, "low", 1).edge(production(&["normal"]));
-        case.layers[1].consumed_by = Some(vec!["other".to_string()]);
+        case.layers[1].consumed_by = vec!["other".to_string()];
         case.layers.push(LayerRecord {
             name: "other".to_string(),
             rank: 3,
@@ -2014,6 +2066,30 @@ mod tests {
             findings.iter().any(|finding| finding.message.contains(
                 "layer `low` admits consumer layer `other` and no production edge crosses it"
             )),
+            "{findings:?}"
+        );
+    }
+
+    /// WHY: rank does not judge an edge inside one layer, so the admitted set
+    /// is the only thing that does. A layer whose members reach each other
+    /// records its own name, and one that does not rejects the edge. Without
+    /// this the five layers that carry an intra-layer edge admitted every
+    /// further edge among their own members with nothing recording it.
+    #[test]
+    fn an_intra_layer_edge_needs_the_layer_to_admit_itself() {
+        let admitted = Case::new("libraries", 3, "libraries", 3)
+            .edge(production(&["normal"]))
+            .direction();
+        assert!(admitted.is_empty(), "{admitted:?}");
+
+        let mut case = Case::new("libraries", 3, "libraries", 3).edge(production(&["normal"]));
+        case.layers[0].consumed_by.clear();
+        let findings = case.direction();
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("layer `libraries` admits no consumer in `libraries`"),
             "{findings:?}"
         );
     }

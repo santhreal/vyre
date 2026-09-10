@@ -17,7 +17,15 @@ use super::fixture_gate::run_gate;
 use super::workspace_sources::{track_fixture, workspace_root};
 
 /// Run the gate over a fixture checkout.
+///
+/// The write run materializes the two rendered documents first. A fixture
+/// checkout carries neither, and the gate holds both to what the manifest
+/// renders, so a check run alone reported two document mismatches on every
+/// fixture whose contract was clean. That masked what three of the mutations
+/// below assert. The gate renders a document only once the contract holds, so
+/// a broken fixture writes nothing and is judged on its contract.
 fn run(root: &Path) -> Report {
+    run_gate("crate-ownership", &CrateOwnership, root, true);
     run_gate("crate-ownership", &CrateOwnership, root, false)
 }
 
@@ -55,10 +63,20 @@ fn write_workspace(root: &Path, members: &[&str], workspace_dependencies: &str) 
     .expect("Fix: fixture workspace manifest must be writable");
 }
 
-/// One `[[layer]]` row.
-fn layer_row(name: &str, rank: i64, extra: &str) -> String {
+/// One `[[layer]]` row, with the closed set of consumer layers admitted to it.
+///
+/// The admission is a parameter rather than an optional extra because every
+/// layer states one. A fixture that left it out would be judged under a
+/// permissive default and would prove nothing about the layer pair it crosses.
+fn layer_row(name: &str, rank: i64, admits: &[&str], extra: &str) -> String {
+    let admitted = admits
+        .iter()
+        .map(|layer| format!("\"{layer}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
     format!(
-        "[[layer]]\nname = \"{name}\"\nrank = {rank}\npurpose = \"the {name} layer\"\n{extra}\n"
+        "[[layer]]\nname = \"{name}\"\nrank = {rank}\npurpose = \"the {name} layer\"\n\
+         consumed_by = [{admitted}]\n{extra}\n"
     )
 }
 
@@ -98,7 +116,10 @@ fn legal_pair(root: &Path, workspace_dependencies: &str, high_tables: &str) {
     seal(
         root,
         manifest(
-            &[layer_row("upper", 4, ""), layer_row("lower", 1, "")],
+            &[
+                layer_row("upper", 4, &[], ""),
+                layer_row("lower", 1, &["upper"], ""),
+            ],
             &[
                 crate_row("high", "high", "upper", ""),
                 crate_row("low", "low", "lower", ""),
@@ -162,7 +183,10 @@ fn an_added_member_fails_closed() {
     seal(
         temp.path(),
         manifest(
-            &[layer_row("upper", 4, ""), layer_row("lower", 1, "")],
+            &[
+                layer_row("upper", 4, &[], ""),
+                layer_row("lower", 1, &[], ""),
+            ],
             &[
                 crate_row("high", "high", "upper", ""),
                 crate_row("low", "low", "lower", ""),
@@ -202,9 +226,9 @@ fn a_stale_declaration_fails_closed() {
         temp.path(),
         manifest(
             &[
-                layer_row("upper", 4, ""),
-                layer_row("lower", 1, "consumed_by = [\"upper\", \"retired\"]"),
-                layer_row("retired", 2, ""),
+                layer_row("upper", 4, &[], ""),
+                layer_row("lower", 1, &["upper", "retired"], ""),
+                layer_row("retired", 2, &[], ""),
             ],
             &[
                 crate_row("high", "high", "upper", ""),
@@ -263,7 +287,10 @@ fn a_feature_unified_hidden_edge_fails_closed() {
     seal(
         temp.path(),
         manifest(
-            &[layer_row("upper", 4, ""), layer_row("lower", 1, "")],
+            &[
+                layer_row("upper", 4, &["lower"], ""),
+                layer_row("lower", 1, &["upper"], ""),
+            ],
             &[
                 crate_row("high", "high", "upper", ""),
                 crate_row("low", "low", "lower", ""),
@@ -304,8 +331,8 @@ fn a_production_edge_where_only_a_development_edge_is_admitted_fails_closed() {
         temp.path(),
         manifest(
             &[
-                layer_row("upper", 4, ""),
-                layer_row("test-fixtures", 1, "consumed_by = []"),
+                layer_row("upper", 4, &[], ""),
+                layer_row("test-fixtures", 1, &[], ""),
             ],
             &[
                 crate_row("high", "high", "upper", ""),
@@ -336,8 +363,8 @@ fn a_production_edge_where_only_a_development_edge_is_admitted_fails_closed() {
         development.path(),
         manifest(
             &[
-                layer_row("upper", 4, ""),
-                layer_row("test-fixtures", 1, "consumed_by = []"),
+                layer_row("upper", 4, &[], ""),
+                layer_row("test-fixtures", 1, &[], ""),
             ],
             &[
                 crate_row("high", "high", "upper", ""),
@@ -370,7 +397,10 @@ fn a_reverse_layer_edge_fails_closed() {
     seal(
         temp.path(),
         manifest(
-            &[layer_row("upper", 4, ""), layer_row("lower", 1, "")],
+            &[
+                layer_row("upper", 4, &["lower"], ""),
+                layer_row("lower", 1, &[], ""),
+            ],
             &[
                 crate_row("high", "high", "upper", ""),
                 crate_row("low", "low", "lower", ""),
@@ -413,7 +443,7 @@ fn a_dependency_cycle_fails_closed() {
     seal(
         temp.path(),
         manifest(
-            &[layer_row("one", 1, "")],
+            &[layer_row("one", 1, &["one"], "")],
             &[
                 crate_row("a", "a", "one", ""),
                 crate_row("b", "b", "one", ""),
@@ -451,8 +481,8 @@ fn a_facade_import_of_an_unexported_seam_fails_closed() {
         temp.path(),
         manifest(
             &[
-                layer_row("curated", 9, "exports_declared_seams = true"),
-                layer_row("engine", 1, ""),
+                layer_row("curated", 9, &[], "exports_declared_seams = true"),
+                layer_row("engine", 1, &["curated"], ""),
             ],
             &[
                 crate_row("facade", "facade", "curated", ""),
@@ -486,7 +516,10 @@ fn two_rows_owning_one_seam_fails_closed() {
     seal(
         temp.path(),
         manifest(
-            &[layer_row("upper", 4, ""), layer_row("lower", 1, "")],
+            &[
+                layer_row("upper", 4, &[], ""),
+                layer_row("lower", 1, &[], ""),
+            ],
             &[
                 crate_row("high", "high", "upper", ""),
                 crate_row("low", "low", "lower", "").replace("low-seam", "high-seam"),
@@ -522,7 +555,10 @@ fn a_missing_publication_class_and_a_retired_row_key_both_fail_closed() {
     seal(
         temp.path(),
         manifest(
-            &[layer_row("upper", 4, ""), layer_row("lower", 1, "")],
+            &[
+                layer_row("upper", 4, &[], ""),
+                layer_row("lower", 1, &[], ""),
+            ],
             &[
                 crate_row("high", "high", "upper", ""),
                 crate_row(
@@ -567,7 +603,10 @@ fn a_retired_per_edge_roster_fails_closed() {
     seal(
         temp.path(),
         manifest(
-            &[layer_row("upper", 4, ""), layer_row("lower", 1, "")],
+            &[
+                layer_row("upper", 4, &[], ""),
+                layer_row("lower", 1, &["upper"], ""),
+            ],
             &[
                 crate_row(
                     "high",
@@ -607,7 +646,10 @@ fn an_unactivatable_optional_edge_fails_closed() {
     seal(
         temp.path(),
         manifest(
-            &[layer_row("upper", 4, ""), layer_row("lower", 1, "")],
+            &[
+                layer_row("upper", 4, &[], ""),
+                layer_row("lower", 1, &["upper"], ""),
+            ],
             &[
                 crate_row("high", "high", "upper", ""),
                 crate_row("low", "low", "lower", ""),
@@ -638,7 +680,10 @@ fn an_unranked_layer_and_an_empty_layer_both_fail_closed() {
     seal(
         temp.path(),
         manifest(
-            &[layer_row("upper", 4, ""), layer_row("vacant", 2, "")],
+            &[
+                layer_row("upper", 4, &[], ""),
+                layer_row("vacant", 2, &[], ""),
+            ],
             &[
                 crate_row("high", "high", "upper", ""),
                 crate_row("low", "low", "undeclared", ""),
@@ -672,7 +717,10 @@ fn a_row_path_that_does_not_match_the_member_fails_closed() {
     seal(
         temp.path(),
         manifest(
-            &[layer_row("upper", 4, ""), layer_row("lower", 1, "")],
+            &[
+                layer_row("upper", 4, &[], ""),
+                layer_row("lower", 1, &[], ""),
+            ],
             &[
                 crate_row("high", "high", "upper", ""),
                 crate_row("low", "low", "lower", ""),
@@ -685,5 +733,106 @@ fn a_row_path_that_does_not_match_the_member_fails_closed() {
     assert!(
         messages.contains("package `high` is declared at `high` and lives at `crates/high`"),
         "Fix: a path mismatch must name both sides; got\n{messages}"
+    );
+}
+
+/// A `[[layer]]` row that records no admitted consumers must fail closed.
+///
+/// An absent key used to admit every consumer the rank rule allowed, so
+/// fifteen of the eighteen layers accepted a new production edge from anywhere
+/// above them with nothing recording the decision. The key is required, and an
+/// empty array is how a layer states that nothing may reach it.
+#[test]
+fn a_layer_that_records_no_admitted_consumers_fails_closed() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_workspace(temp.path(), &["high", "low"], "");
+    write_member(
+        temp.path(),
+        "high",
+        "high",
+        "[dependencies]\nlow = { version = \"0.1.0\", path = \"../low\" }\n",
+    );
+    write_member(temp.path(), "low", "low", "");
+    seal(
+        temp.path(),
+        manifest(
+            &[
+                layer_row("upper", 4, &[], ""),
+                layer_row("lower", 1, &["upper"], "").replace("consumed_by = [\"upper\"]\n", ""),
+            ],
+            &[
+                crate_row("high", "high", "upper", ""),
+                crate_row("low", "low", "lower", ""),
+            ],
+        ),
+    );
+
+    let report = run(temp.path());
+    let messages = messages(&report);
+    assert!(
+        messages.contains("[[layer]] row 2 declares no `consumed_by` array"),
+        "Fix: a layer that states no admitted consumers must be named; got\n{messages}"
+    );
+    assert!(
+        messages.contains("layer `lower` admits no consumer in `upper`"),
+        "Fix: an unstated admission must reject the edge rather than permit it; got\n{messages}"
+    );
+}
+
+/// A production edge inside one layer must fail closed until the layer admits
+/// itself.
+///
+/// Rank does not judge an intra-layer edge: a layer is a set of crates at one
+/// depth, so the comparison it makes is not the one that decides. The admitted
+/// set is the only rule over that edge, and five layers in this workspace carry
+/// one.
+#[test]
+fn an_intra_layer_edge_a_layer_does_not_admit_fails_closed() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_workspace(temp.path(), &["a", "b"], "");
+    write_member(
+        temp.path(),
+        "a",
+        "a",
+        "[dependencies]\nb = { version = \"0.1.0\", path = \"../b\" }\n",
+    );
+    write_member(temp.path(), "b", "b", "");
+    let rows = &[
+        crate_row("a", "a", "one", ""),
+        crate_row("b", "b", "one", ""),
+    ];
+    seal(
+        temp.path(),
+        manifest(&[layer_row("one", 1, &[], "")], rows),
+    );
+
+    let report = run(temp.path());
+    let unadmitted = messages(&report);
+    assert!(
+        unadmitted.contains(
+            "`a` in layer `one` depends always on `b` over the `b-seam` seam, and layer `one` admits no consumer in `one`"
+        ),
+        "Fix: an intra-layer edge must be admitted by name; got\n{unadmitted}"
+    );
+
+    let admitted = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_workspace(admitted.path(), &["a", "b"], "");
+    write_member(
+        admitted.path(),
+        "a",
+        "a",
+        "[dependencies]\nb = { version = \"0.1.0\", path = \"../b\" }\n",
+    );
+    write_member(admitted.path(), "b", "b", "");
+    seal(
+        admitted.path(),
+        manifest(&[layer_row("one", 1, &["one"], "")], rows),
+    );
+
+    let report = run(admitted.path());
+    assert!(
+        report.findings.is_empty(),
+        "Fix: a layer that admits itself must accept an edge among its own members:\n{}",
+        messages(&report)
     );
 }

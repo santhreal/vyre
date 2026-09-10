@@ -48,11 +48,6 @@ pub(crate) fn f32_to_ordered(bits: u32) -> u32 {
 /// Pack little-endian `u32` lanes into backend dispatch bytes.
 pub(crate) use vyre_primitives::wire::pack_u32_slice as u32_bytes;
 
-/// Alias used by C parser integration tests.
-pub(crate) fn words_to_bytes(words: &[u32]) -> Vec<u8> {
-    u32_bytes(words)
-}
-
 /// Decode backend output bytes into little-endian `u32` lanes.
 pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as bytes_u32;
 
@@ -65,7 +60,6 @@ pub(crate) use vyre_primitives::wire::decode_f32_le_bytes_all as bytes_f32;
 pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as decode_u32_words;
 
 /// Alias used by C parser integration tests.
-pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as words_from_bytes;
 
 /// Lower a test program with the canonical unit workgroup, validate it, and return WGSL.
 pub(crate) fn emit_validated_wgsl(program: &Program) -> String {
@@ -272,17 +266,22 @@ fn main(
 }
 "#;
 
+/// The workgroups per axis WebGPU admits on every conforming adapter.
+///
+/// A discrete adapter publishes far more, so this is a floor to stay inside and
+/// not a ceiling to dispatch at.
+pub(crate) const WEBGPU_MAX_WORKGROUPS_PER_AXIS: u32 = 65_535;
+
 /// Build a long-running program that requires measurable execution time.
 ///
 /// One invocation per output word, so the element count also decides the grid.
-/// WebGPU admits at most 65535 workgroups per axis and this program declares a
-/// 1D launch, so the count has to stay inside that product or every dispatch of
-/// it is refused before it reaches the device.
+/// The count stays inside the per-axis floor, or every dispatch of it is refused
+/// before it reaches the device.
 pub(crate) fn long_running_program() -> Program {
     const WORKGROUP_INVOCATIONS: u32 = 256;
-    const MAX_WORKGROUPS_PER_AXIS: u32 = 65_535;
     const OUTPUT_WORDS: u32 = 8 * 1024 * 1024;
-    const _: () = assert!(OUTPUT_WORDS.div_ceil(WORKGROUP_INVOCATIONS) <= MAX_WORKGROUPS_PER_AXIS);
+    const _: () =
+        assert!(OUTPUT_WORDS.div_ceil(WORKGROUP_INVOCATIONS) <= WEBGPU_MAX_WORKGROUPS_PER_AXIS);
     let mut body = Vec::with_capacity(515);
     body.push(Node::let_bind("idx", Expr::gid_x()));
     body.push(Node::let_bind("acc", Expr::var("idx")));
