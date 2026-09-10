@@ -93,10 +93,9 @@ fn test_benchmark_harness_execution() {
 
 #[test]
 fn benchmark_harness_refuses_a_zero_sample_suite() {
-    assert_eq!(
-        BenchmarkHarness::run_suite(0),
-        Err("a measurement suite needs at least one sample".to_string()),
+    let refusal = BenchmarkHarness::run_suite(0).expect_err(
         "a zero-sample suite has no percentile to report and must refuse rather than index an \
-         empty sample vector"
+         empty sample vector",
     );
+    assert_eq!(refusal, "a measurement suite needs at least one sample");
 }
