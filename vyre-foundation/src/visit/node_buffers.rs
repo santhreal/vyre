@@ -57,7 +57,8 @@ impl<'a> BufferRefs<'a> {
 ///
 /// This is the ONE owner of "what does this statement do to a buffer BY NAME".
 /// A buffer reached through an operand expression is not here: that is
-/// [`node_operands`] followed by [`super::expr_buffer_ref`], and the two answers
+/// [`super::node_operands`] followed by [`super::expr_buffer_ref`], and the two
+/// answers
 /// compose. Adding a `Node` variant fails to compile here.
 ///
 /// The four collective variants are the reason this exists. They name their
