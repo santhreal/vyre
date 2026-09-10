@@ -4,7 +4,6 @@
 mod call_graph;
 mod catalog_bundle;
 mod conformance;
-mod dialect;
 mod records;
 mod registration;
 mod registry;
@@ -16,7 +15,6 @@ mod target_facet;
 pub use self::call_graph::CallGraphClosure;
 pub use self::catalog_bundle::{ExtensionProvenance, OperationCatalogBundle};
 pub use self::conformance::ConformanceRegistry;
-pub use self::dialect::{DialectOperationSpec, OperationVisitor};
 pub use self::records::{
     AbsenceDecision, ConformanceProvider, ContractProvider, LoweringProvider,
     OperationContractBuilder, OperationFixtures, SemanticDescriptor,

@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The dialect operation module is gone: its declaration macro discarded the documentation and reference obligation arguments it accepted, and its two traits had no implementors."
