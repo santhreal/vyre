@@ -1096,10 +1096,27 @@ fn only_the_declared_source_inspection_test_is_informational() {
 }
 
 /// A row the tree no longer backs is a blocker, not a silent no-op.
+///
+/// WHY: the two causes have opposite fixes, so one message for both sends the
+/// reader the wrong way. A file that exists and inspects no source holds a row
+/// that should go; a path that matches nothing usually holds a live contract
+/// that moved, and deleting the row would drop a reviewed decision about a test
+/// still running. Six rows read the second way after the `vyre-libs` split and
+/// every one of them was told to delete a gate that had not gone anywhere.
 #[test]
 fn stale_structural_gate_rows_block_the_release() {
+    let tree = tempfile::tempdir().expect("tempdir");
+    let root = tree.path();
+    std::fs::create_dir_all(root.join("driver/tests")).expect("test dir");
+    for name in ["source_contracts.rs", "prose_only_contracts.rs"] {
+        std::fs::write(root.join("driver/tests").join(name), "// present\n").expect("write");
+    }
+
     let findings = vec![HygieneFinding {
-        path: "/repo/driver/tests/source_contracts.rs".to_string(),
+        path: root
+            .join("driver/tests/source_contracts.rs")
+            .to_string_lossy()
+            .into_owned(),
         line: 7,
         pattern: "source_inspection_test",
         text: "declared".to_string(),
@@ -1108,16 +1125,17 @@ fn stale_structural_gate_rows_block_the_release() {
     let declarations = structural_gates(&[
         ("driver/tests/source_contracts.rs", "still_here"),
         ("driver/tests/source_contracts.rs", "renamed_away"),
+        ("driver/tests/prose_only_contracts.rs", "inspects_nothing"),
         ("driver/tests/deleted_contracts.rs", "gone_with_the_file"),
     ])
     .declarations;
 
-    let blockers = stale_declaration_blockers(Path::new("/repo"), &declarations, &findings);
+    let blockers = stale_declaration_blockers(root, &declarations, &findings);
 
     assert_eq!(
         blockers.len(),
-        2,
-        "Fix: a row whose test or file the tree no longer has must block the release; blockers={blockers:?}"
+        3,
+        "Fix: a row whose test, whose inspection or whose file the tree no longer has must block the release; blockers={blockers:?}"
     );
     assert!(
         blockers[0].contains("renamed_away")
@@ -1125,9 +1143,47 @@ fn stale_structural_gate_rows_block_the_release() {
         "{blockers:?}"
     );
     assert!(
-        blockers[1].contains("deleted_contracts.rs")
+        blockers[1].contains("prose_only_contracts.rs")
             && blockers[1].contains("contains no source-inspecting test"),
-        "{blockers:?}"
+        "Fix: a file that exists and inspects nothing must be reported as that, not as a dead path; {blockers:?}"
+    );
+    assert!(
+        blockers[2].contains("deleted_contracts.rs")
+            && blockers[2].contains("matches nothing in the tree"),
+        "Fix: a row naming no file must be reported as a dead path, whose fix is to repoint it; {blockers:?}"
+    );
+}
+
+/// WHY: the split of the `vyre-libs` facade moved six declared gate files, and
+/// each row then named a path that matched nothing. A registry row is read as a
+/// reviewed decision, so one naming no file records a decision about no code.
+/// The tree side is walked from the checkout rather than compared against a
+/// list, so a row that goes dead in a later move is reported without an edit
+/// here.
+#[test]
+fn every_shipped_structural_gate_row_names_a_file_in_the_tree() {
+    let root = crate::checkout::checkout_root();
+    let artifact = load_structural_gates(&root);
+
+    assert!(
+        artifact.blockers.is_empty(),
+        "Fix: the shipped registry must load cleanly; {:?}",
+        artifact.blockers
+    );
+    assert!(
+        !artifact.declarations.is_empty(),
+        "the registry declared no row, so this test judges nothing"
+    );
+    let dead: Vec<&str> = artifact
+        .declarations
+        .iter()
+        .map(|declaration| declaration.file.as_str())
+        .filter(|file| !root.join(file).is_file())
+        .collect();
+
+    assert!(
+        dead.is_empty(),
+        "Fix: these {STRUCTURAL_GATE_SOURCE} rows name no file: {dead:?}. Point each row at the path the file moved to, or delete it once the test itself is gone."
     );
 }
 

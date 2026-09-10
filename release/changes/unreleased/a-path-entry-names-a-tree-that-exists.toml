@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Every data file that pointed at the pre-split `vyre-libs/src/<domain>` layout now names the composition crate that carries the code, and a path entry matching nothing in the tree is a finding in each of the five registries that hold one: the optimization ownership lanes, the documentation coupling manifest, the structural-gate registry, the raw-IR lint allowlist, and the operation matrix, whose generator resolves an owner directory by walking the composition crates instead of the retired facade."
