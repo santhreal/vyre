@@ -183,7 +183,7 @@ pub(crate) fn arb_expr_with(opaque_leaf: BoxedStrategy<Expr>) -> BoxedStrategy<E
                     false_val: Box::new(false_val),
                 }
             ),
-            (arb_buffer_datatype(), inner.clone()).prop_map(|(target, value)| Expr::Cast {
+            (arb_datatype(), inner.clone()).prop_map(|(target, value)| Expr::Cast {
                 target,
                 value: Box::new(value),
             }),

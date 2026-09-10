@@ -24,7 +24,7 @@ inventory::submit! {
     )
     .with_category("test")
     .with_numeric(NumericContract::ieee_f32(2))
-    .with_opaque("test external fixture operation semantics")
+    .with_uncharacterized()
 }
 
 /// WHY: one semantic identity must resolve its program, derived effects,

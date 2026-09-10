@@ -1,12 +1,9 @@
 // ProgramStats cache invariants  -  50 random programs verify every field.
-// (allow(dead_code) moved to parent program_stats_proptest.rs)
 
-#[path = "ir_arbitrary.rs"]
-mod ir_arbitrary;
 #[path = "program_stats_proptest__arb_node.rs"]
 mod program_stats_proptest_arb_node;
 
-use ir_arbitrary::*;
+use crate::ir_arbitrary::*;
 use proptest::collection::vec as prop_vec;
 use proptest::prelude::*;
 use std::sync::Arc;

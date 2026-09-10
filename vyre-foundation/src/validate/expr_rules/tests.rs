@@ -54,7 +54,7 @@ inventory::submit! {
     )
     .with_signature(CALL_SIGNATURE)
     .with_category("test")
-    .with_opaque("test synthetic operation for call validator test coverage")
+    .with_uncharacterized()
 }
 
 #[derive(Debug)]

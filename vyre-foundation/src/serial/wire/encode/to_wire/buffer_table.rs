@@ -267,19 +267,52 @@ pub(super) fn memory_kind_tag(kind: MemoryKind) -> u8 {
 /// The wire tag for a DENSE memory-region element type.
 ///
 /// The tag itself comes from `tags::data_type_tag`, the one owner of that
-/// mapping. What is local here is the narrower domain: a sparse or
-/// device-mesh type is a legal `DataType` and has a wire tag, but it is not a
-/// legal element of a dense memory region, so this encoder refuses it rather
-/// than emitting a blob whose region stride is meaningless. Restating the tag
-/// table to express that restriction is what let the two copies drift.
+/// mapping. What is local here is the narrower domain: a dense region is a
+/// count of one flat element, and a type whose own payload describes further
+/// structure has no stride this encoder can write. Those types are refused
+/// rather than emitted as a bare tag whose payload never reaches the blob.
+///
+/// The match is exhaustive with no catch-all, so a new `DataType` variant
+/// stops this crate compiling until somebody states which side it is on. The
+/// list this replaced named four illegal variants while its own diagnostic
+/// named six, and the two it omitted encoded to a payload-less tag that no
+/// decoder could read back.
 pub(super) fn dense_element_tag(value: &DataType) -> Result<u8, WireEncodeErr> {
-    if matches!(
-        value,
-        DataType::SparseCsr { .. }
-            | DataType::SparseCoo { .. }
-            | DataType::SparseBsr { .. }
-            | DataType::DeviceMesh { .. }
-    ) {
+    let dense = match value {
+        DataType::U32
+        | DataType::I32
+        | DataType::U64
+        | DataType::I64
+        | DataType::U8
+        | DataType::U16
+        | DataType::I8
+        | DataType::I16
+        | DataType::I4
+        | DataType::Bool
+        | DataType::Bytes
+        | DataType::F16
+        | DataType::BF16
+        | DataType::F32
+        | DataType::F64
+        | DataType::F8E4M3
+        | DataType::F8E5M2
+        | DataType::FP4
+        | DataType::NF4
+        | DataType::Vec2U32
+        | DataType::Vec4U32
+        | DataType::Tensor
+        | DataType::Array { .. }
+        | DataType::Handle(_)
+        | DataType::Opaque(_)
+        | DataType::Quantized { .. } => true,
+        DataType::Vec { .. }
+        | DataType::TensorShaped { .. }
+        | DataType::SparseCsr { .. }
+        | DataType::SparseCoo { .. }
+        | DataType::SparseBsr { .. }
+        | DataType::DeviceMesh { .. } => false,
+    };
+    if !dense {
         return Err(dense_element_rejection());
     }
     data_type_tag(value).map_err(|_| dense_element_rejection())

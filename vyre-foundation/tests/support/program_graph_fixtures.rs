@@ -1,5 +1,4 @@
 //! Shared program graph test fixtures.
-#![allow(dead_code)]
 
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Node, Program, ShapeDim, ValueContract, ValueLifetime,
