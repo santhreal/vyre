@@ -92,8 +92,18 @@ pub mod workgroup;
 mod interleaving;
 pub use interleaving::{
     explore_bounded_interleavings, verify_closed_type_coverage_in_oracle, InterleavingConfig,
-    InterleavingReport, MemoryAccessKind, MemoryAccessRecord, ShadowMemory,
+    InterleavingReport, MemoryAccessKind, MemoryAccessRecord, RaceExplorationReport, RaceFinding,
+    ShadowMemory,
 };
+
+/// Step orders one [`ReferenceRequest::explore_races`] call runs at most.
+///
+/// The exploration is bounded so the oracle keeps a termination contract. A
+/// caller reads the exact width of a given exploration from
+/// [`ReferenceRequest::declared_race_exploration_orders`], which never exceeds
+/// this ceiling.
+pub const MAX_RACE_EXPLORATION_ORDERS: usize = execution::MAX_RACE_EXPLORATION_ORDERS;
+
 mod float16;
 mod oob;
 mod ops;

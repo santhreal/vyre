@@ -33,6 +33,7 @@ pub(crate) fn f16_to_f32(bits: u16) -> f32 {
         }
         (0x1f, 0) => sign | 0x7f80_0000,
         (0x1f, _) => 0x7fc0_0000,
+        // The scrutinee is a `(u32, u32)` pair of exponent and fraction fields, not an enum.
         _ => sign | ((exponent + 112) << 23) | (fraction << 13),
     };
     canonical_f32(f32::from_bits(result))

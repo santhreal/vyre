@@ -328,6 +328,7 @@ pub(crate) fn run_invocations(
             continue;
         }
         if release_barrier_if_ready(invocations) {
+            crate::interleaving::note_barrier_release();
             continue;
         }
         if !made_progress && live_collective_waiting_count(invocations) > 0 {

@@ -114,13 +114,25 @@ pub mod oracle_foundation_dependencies;
 #[path = "oracle_is_not_a_production_route.rs"]
 pub mod oracle_is_not_a_production_route;
 
+/// Integration tests from `tests/oracle_matches_are_exhaustive.rs`.
+#[path = "oracle_matches_are_exhaustive.rs"]
+pub mod oracle_matches_are_exhaustive;
+
 /// Integration tests from `tests/oracle_transform_independence.rs`.
 #[path = "oracle_transform_independence.rs"]
 pub mod oracle_transform_independence;
 
+/// Integration tests from `tests/oracle_witness_registry_is_derived.rs`.
+#[path = "oracle_witness_registry_is_derived.rs"]
+pub mod oracle_witness_registry_is_derived;
+
 /// Integration tests from `tests/oracle_program_edges.rs`.
 #[path = "oracle_program_edges.rs"]
 pub mod oracle_program_edges;
+
+/// Integration tests from `tests/oracle_race_exploration.rs`.
+#[path = "oracle_race_exploration.rs"]
+pub mod oracle_race_exploration;
 
 /// Integration tests from `tests/quantized_buffer_contract.rs`.
 #[path = "quantized_buffer_contract.rs"]

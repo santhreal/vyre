@@ -185,6 +185,8 @@ pub fn crc32_pair_reduce_chunks_witness(
             [left, right] => crc32_combine_chunks_witness(*left, *right)?,
             [tail] => *tail,
             [] => continue,
+            // The scrutinee is a slice whose length the compiler does not bound, though `chunks(2)`
+            // yields no other length.
             _ => unreachable!(),
         };
         reduced.push(chunk);

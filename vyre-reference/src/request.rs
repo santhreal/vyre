@@ -19,6 +19,7 @@ use vyre_foundation::ir::{BufferDecl, Program};
 use vyre_spec::{numeric_semantics_for, DataType, NumericSemantics};
 
 use crate::error::ReferenceError;
+use crate::interleaving::RaceExplorationReport;
 use crate::oob::OobReport;
 use crate::value::Value;
 
@@ -423,6 +424,42 @@ impl<'a> ReferenceRequest<'a> {
             steps_executed: steps,
             recorded_anomalies: anomalies,
         })
+    }
+
+    /// Explore a bounded set of deterministic step orders and report every
+    /// race the dispatch carries.
+    ///
+    /// A single-threaded evaluation resolves a cross-lane conflict the same way
+    /// every run, so the output looks stable while the device it grades leaves
+    /// the winner driver-defined. This terminal runs the same dispatch under
+    /// [`declared_race_exploration_orders`](Self::declared_race_exploration_orders)
+    /// step orders with shadow memory recording every buffer access, and
+    /// reports two hazard classes: an unsynchronized conflict inside one order,
+    /// and a byte difference between two orders.
+    ///
+    /// A race is reported, not refused, so one call names every hazard in the
+    /// dispatch rather than the first one. The whole exploration is charged
+    /// against one [`ReferenceBudget`], so it cannot run unbounded.
+    ///
+    /// # Errors
+    /// Returns [`ReferenceError`] for every fault class strict evaluation
+    /// refuses: missing values, type mismatches, poison, overflow,
+    /// out-of-bounds access, incomplete dispatch semantics, nontermination, and
+    /// budget exhaustion.
+    pub fn explore_races(&self) -> Result<RaceExplorationReport, ReferenceError> {
+        self.verify_numerical_contract()?;
+        crate::execution::explore_races_with_request(self)
+    }
+
+    /// Number of step orders [`explore_races`](Self::explore_races) will run
+    /// for this request.
+    ///
+    /// Derived from the workgroup extent the program declares, so a caller
+    /// states the exploration's exact width before running it and never
+    /// exceeds [`MAX_RACE_EXPLORATION_ORDERS`].
+    #[must_use]
+    pub fn declared_race_exploration_orders(&self) -> usize {
+        crate::execution::race_exploration_orders(self.program).len()
     }
 }
 

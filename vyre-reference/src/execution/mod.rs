@@ -118,6 +118,48 @@ fn bounded_interleaving_orders(program: &Program) -> Vec<hashmap::LaneOrder> {
 /// otherwise multiply one evaluation by its lane count.
 const MAX_BOUNDED_INTERLEAVINGS: usize = 4;
 
+/// Step orders a bounded race exploration covers, in the order it runs them.
+///
+/// Forward is the baseline every other order is compared against.
+/// `WorkgroupReversed` moves the workgroup axis alone, which is the only order
+/// in the set that separates a cross-workgroup conflict from an intra-workgroup
+/// one: every other order permutes both axes together, so a conflict whose two
+/// writers sit in different workgroups keeps the same last writer once the two
+/// permutations cancel. Reversed and the rotations then move the lane axis, the
+/// rotations asymmetrically so a defect that maps lane identity onto step
+/// position cannot survive by symmetry.
+///
+/// The count is a function of the workgroup extent the program declares, so a
+/// caller can state the exact number of orders an exploration will run before
+/// it runs, and a one-lane workgroup does not pay for rotations that permute
+/// nothing.
+pub(crate) fn race_exploration_orders(program: &Program) -> Vec<hashmap::LaneOrder> {
+    let [sx, sy, sz] = program.workgroup_size();
+    let lanes = [sx, sy, sz].iter().copied().fold(1u32, u32::saturating_mul);
+    let mut orders = vec![
+        hashmap::LaneOrder::Forward,
+        hashmap::LaneOrder::WorkgroupReversed,
+    ];
+    if lanes <= 1 {
+        return orders;
+    }
+    orders.push(hashmap::LaneOrder::Reversed);
+    for by in 1..lanes {
+        if orders.len() >= MAX_RACE_EXPLORATION_ORDERS {
+            break;
+        }
+        orders.push(hashmap::LaneOrder::Rotated(by));
+    }
+    orders
+}
+
+/// Step orders one bounded race exploration runs at most.
+///
+/// The exploration is bounded so the oracle keeps a termination contract: one
+/// work budget covers every order together, and a wide workgroup would
+/// otherwise multiply one evaluation by its lane count.
+pub(crate) const MAX_RACE_EXPLORATION_ORDERS: usize = 6;
+
 /// Run `runnable` once per explored step order and return the outputs every
 /// order agreed on.
 ///
@@ -199,6 +241,71 @@ pub(crate) fn run_permissive_with_request(
     let oob = crate::oob::oob_report();
     drop(budget);
     Ok((outputs, steps, oob))
+}
+
+/// Execute one request once per explored step order with race tracking on, and
+/// report every hazard the exploration found.
+///
+/// The exploration reports rather than refuses: a racing program yields a
+/// report naming each conflict, so a caller sees every hazard in the dispatch
+/// instead of the first one. A fault the interpreter cannot continue past
+/// (out-of-bounds access under strict mode, budget exhaustion, a malformed
+/// program) still ends the exploration with that error.
+///
+/// One budget covers the whole exploration, armed once before the first order
+/// and read after the last, so N orders cannot spend N times the declared work
+/// ceiling.
+pub(crate) fn explore_races_with_request(
+    request: &crate::request::ReferenceRequest<'_>,
+) -> Result<crate::interleaving::RaceExplorationReport, crate::ReferenceError> {
+    crate::oob::reset_oob_report();
+    let _strictness = crate::oob::enter_strictness(true);
+    let runnable = program_for_interpreter(request.program)?;
+    let budget = step_budget::arm_with_budget(&runnable, request.budget);
+    let _tracking = crate::interleaving::enter_race_tracking();
+    let orders = race_exploration_orders(&runnable);
+    let min_dispatch = request.workload_envelope.min_dispatch_elements.unwrap_or(0);
+    let mut findings: Vec<crate::interleaving::RaceFinding> = Vec::new();
+    let mut baseline: Option<(hashmap::LaneOrder, Vec<Value>)> = None;
+    let mut orders_explored = 0usize;
+    for &order in &orders {
+        crate::interleaving::begin_explored_order();
+        let outputs = hashmap::run_hashmap_reference(
+            &runnable,
+            &request.resource_abi.inputs,
+            min_dispatch,
+            order,
+            request.workload_envelope.workgroup_grid,
+        )?;
+        orders_explored += 1;
+        for finding in crate::interleaving::take_race_findings() {
+            if !findings.contains(&finding) {
+                findings.push(finding);
+            }
+        }
+        match &baseline {
+            None => baseline = Some((order, outputs)),
+            Some((first_order, first_outputs)) => {
+                if let Some(output_index) = first_difference(first_outputs, &outputs) {
+                    let finding = crate::interleaving::RaceFinding::ScheduleDisagreement {
+                        first_order: format!("{first_order:?}"),
+                        second_order: format!("{order:?}"),
+                        output_index,
+                    };
+                    if !findings.contains(&finding) {
+                        findings.push(finding);
+                    }
+                }
+            }
+        }
+    }
+    let steps_executed = step_budget::charged();
+    drop(budget);
+    Ok(crate::interleaving::RaceExplorationReport {
+        orders_explored,
+        findings,
+        steps_executed,
+    })
 }
 
 /// The interpreter's output ABI, single-homed: [`is_reference_output`] is the exact

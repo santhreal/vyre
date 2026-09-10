@@ -247,8 +247,34 @@ impl Value {
             vyre_foundation::ir::DataType::F64 => Some(Self::Float(0.0)),
             vyre_foundation::ir::DataType::Vec2U32 => Some(Self::Bytes(Arc::from(vec![0; 8]))),
             vyre_foundation::ir::DataType::Vec4U32 => Some(Self::Bytes(Arc::from(vec![0; 16]))),
-            _ => {
-                fixed_scalar_storage_width(&ty).map(|width| Self::Bytes(Arc::from(vec![0; width])))
+            // Every remaining declared `DataType` is named rather than
+            // absorbed, so adding a variant to the spec fails to compile here
+            // instead of silently taking the storage-width fallback.
+            other @ (vyre_foundation::ir::DataType::U8
+            | vyre_foundation::ir::DataType::U16
+            | vyre_foundation::ir::DataType::I8
+            | vyre_foundation::ir::DataType::I16
+            | vyre_foundation::ir::DataType::I64
+            | vyre_foundation::ir::DataType::F16
+            | vyre_foundation::ir::DataType::BF16
+            | vyre_foundation::ir::DataType::F8E4M3
+            | vyre_foundation::ir::DataType::F8E5M2
+            | vyre_foundation::ir::DataType::I4
+            | vyre_foundation::ir::DataType::FP4
+            | vyre_foundation::ir::DataType::NF4
+            | vyre_foundation::ir::DataType::Tensor
+            | vyre_foundation::ir::DataType::Handle(_)
+            | vyre_foundation::ir::DataType::Array { .. }
+            | vyre_foundation::ir::DataType::Vec { .. }
+            | vyre_foundation::ir::DataType::TensorShaped { .. }
+            | vyre_foundation::ir::DataType::SparseCsr { .. }
+            | vyre_foundation::ir::DataType::SparseCoo { .. }
+            | vyre_foundation::ir::DataType::SparseBsr { .. }
+            | vyre_foundation::ir::DataType::DeviceMesh { .. }
+            | vyre_foundation::ir::DataType::Quantized { .. }
+            | vyre_foundation::ir::DataType::Opaque(_)) => {
+                fixed_scalar_storage_width(&other)
+                    .map(|width| Self::Bytes(Arc::from(vec![0; width])))
             }
         }
     }
@@ -325,15 +351,42 @@ impl Value {
                 ])))
             }
             vyre_foundation::ir::DataType::Bytes => Ok(Self::Bytes(Arc::from(bytes))),
-            _ => match fixed_scalar_storage_width(&ty) {
-                Some(width) => {
-                    if bytes.len() < width {
-                        return Err(format!("{ty} requires {width} bytes"));
+            // Every remaining declared `DataType` is named rather than
+            // absorbed, so adding a variant to the spec fails to compile here
+            // instead of silently decoding as opaque storage bytes.
+            other @ (vyre_foundation::ir::DataType::U8
+            | vyre_foundation::ir::DataType::U16
+            | vyre_foundation::ir::DataType::I8
+            | vyre_foundation::ir::DataType::I16
+            | vyre_foundation::ir::DataType::I64
+            | vyre_foundation::ir::DataType::F16
+            | vyre_foundation::ir::DataType::BF16
+            | vyre_foundation::ir::DataType::F8E4M3
+            | vyre_foundation::ir::DataType::F8E5M2
+            | vyre_foundation::ir::DataType::I4
+            | vyre_foundation::ir::DataType::FP4
+            | vyre_foundation::ir::DataType::NF4
+            | vyre_foundation::ir::DataType::Tensor
+            | vyre_foundation::ir::DataType::Handle(_)
+            | vyre_foundation::ir::DataType::Array { .. }
+            | vyre_foundation::ir::DataType::Vec { .. }
+            | vyre_foundation::ir::DataType::TensorShaped { .. }
+            | vyre_foundation::ir::DataType::SparseCsr { .. }
+            | vyre_foundation::ir::DataType::SparseCoo { .. }
+            | vyre_foundation::ir::DataType::SparseBsr { .. }
+            | vyre_foundation::ir::DataType::DeviceMesh { .. }
+            | vyre_foundation::ir::DataType::Quantized { .. }
+            | vyre_foundation::ir::DataType::Opaque(_)) => {
+                match fixed_scalar_storage_width(&other) {
+                    Some(width) => {
+                        if bytes.len() < width {
+                            return Err(format!("{other} requires {width} bytes"));
+                        }
+                        Ok(Self::Bytes(Arc::from(&bytes[..width])))
                     }
-                    Ok(Self::Bytes(Arc::from(&bytes[..width])))
+                    None => Ok(Self::Bytes(Arc::from(bytes))),
                 }
-                None => Ok(Self::Bytes(Arc::from(bytes))),
-            },
+            }
         }
     }
 }
@@ -368,7 +421,23 @@ fn fixed_scalar_storage_width(ty: &vyre_foundation::ir::DataType) -> Option<usiz
         vyre_foundation::ir::DataType::Quantized { storage, .. } => {
             fixed_scalar_storage_width(storage)
         }
-        _ => None,
+        // Every remaining declared `DataType` is named rather than absorbed,
+        // so adding a variant to the spec fails to compile here instead of
+        // silently reporting no fixed storage width.
+        vyre_foundation::ir::DataType::U32
+        | vyre_foundation::ir::DataType::I32
+        | vyre_foundation::ir::DataType::U64
+        | vyre_foundation::ir::DataType::Vec2U32
+        | vyre_foundation::ir::DataType::Vec4U32
+        | vyre_foundation::ir::DataType::Bool
+        | vyre_foundation::ir::DataType::Bytes
+        | vyre_foundation::ir::DataType::F32
+        | vyre_foundation::ir::DataType::F64
+        | vyre_foundation::ir::DataType::Tensor
+        | vyre_foundation::ir::DataType::SparseCsr { .. }
+        | vyre_foundation::ir::DataType::SparseCoo { .. }
+        | vyre_foundation::ir::DataType::SparseBsr { .. }
+        | vyre_foundation::ir::DataType::Opaque(_) => None,
     }
 }
 

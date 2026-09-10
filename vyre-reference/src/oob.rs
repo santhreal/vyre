@@ -610,7 +610,39 @@ fn read_element(ty: DataType, bytes: &[u8]) -> Result<Value, String> {
             let bits = u16::from_le_bytes([bytes[0], bytes[1]]);
             Ok(Value::Float(f64::from(crate::float16::bf16_to_f32(bits))))
         }
-        _ => Value::from_element_bytes(ty, bytes),
+        // Every remaining declared `DataType` is named rather than absorbed,
+        // so adding a variant to the spec fails to compile here instead of
+        // silently decoding through the generic element path.
+        other @ (DataType::U8
+        | DataType::U16
+        | DataType::U32
+        | DataType::I8
+        | DataType::I16
+        | DataType::I32
+        | DataType::I64
+        | DataType::U64
+        | DataType::Vec2U32
+        | DataType::Vec4U32
+        | DataType::Bool
+        | DataType::Bytes
+        | DataType::F32
+        | DataType::F64
+        | DataType::F8E4M3
+        | DataType::F8E5M2
+        | DataType::I4
+        | DataType::FP4
+        | DataType::NF4
+        | DataType::Tensor
+        | DataType::Handle(_)
+        | DataType::Array { .. }
+        | DataType::Vec { .. }
+        | DataType::TensorShaped { .. }
+        | DataType::SparseCsr { .. }
+        | DataType::SparseCoo { .. }
+        | DataType::SparseBsr { .. }
+        | DataType::DeviceMesh { .. }
+        | DataType::Quantized { .. }
+        | DataType::Opaque(_)) => Value::from_element_bytes(other, bytes),
     }
 }
 

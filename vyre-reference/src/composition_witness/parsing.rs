@@ -26,6 +26,8 @@ impl LrAction {
             1 => Self::Shift(packed & 0x3FFF_FFFF),
             2 => Self::Reduce(packed & 0x3FFF_FFFF),
             3 => Self::Accept,
+            // The scrutinee is a `u32` the compiler does not narrow to the two shifted bits it
+            // carries.
             _ => Self::Error,
         }
     }

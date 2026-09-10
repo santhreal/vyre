@@ -266,6 +266,7 @@ pub fn radix_sort_masked_witness(input: &[u32], bits: u32) -> Vec<u32> {
     let mask = match bits {
         0 => 0,
         1..=31 => (1_u32 << bits) - 1,
+        // The scrutinee is a `u32` bit count outside the `0..=31` range the named arms cover.
         _ => u32::MAX,
     };
     let mut output = input.to_vec();

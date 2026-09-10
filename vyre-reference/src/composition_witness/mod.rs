@@ -4,6 +4,14 @@
 //! without Blelloch scheduling, workgroup decomposition, frontier queues, or other GPU optimizations.
 //! Composed Programs continue to run through the generic reference interpreter, with independent
 //! known-answer cases where interpreter parity alone would compare an implementation with itself.
+//!
+//! [`COMPOSITION_WITNESS_FAMILIES`] is the registry: one row per composition
+//! family, naming the module that owns that family's witnesses or the reason
+//! the family has none. The re-exports below are the witness entry points
+//! themselves, which every consumer calls by name; the registry is what states
+//! which family each module answers for, and
+//! `oracle_witness_registry_is_derived` holds it to the generated operation
+//! inventory at run time.
 
 mod bitset;
 mod causal;
@@ -30,8 +38,14 @@ mod parsing;
 mod pattern;
 mod reasoning;
 mod reduction;
+mod registry;
 mod scheduling;
 mod text;
+
+pub use registry::{
+    witness_families, witness_family, CompositionWitnessFamily, FamilyWitness, WitnessProbe,
+    COMPOSITION_WITNESS_FAMILIES, MODULES_WITHOUT_A_CATALOG_FAMILY,
+};
 
 // Re-export bitset witnesses
 pub use bitset::{

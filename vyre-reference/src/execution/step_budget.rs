@@ -280,6 +280,8 @@ fn constant_u32(expr: &Expr) -> Option<u32> {
     match expr {
         Expr::LitU32(value) => Some(*value),
         Expr::LitI32(value) => u32::try_from(*value).ok(),
+        // `Expr` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+        // oracle_matches_are_exhaustive holds the named set to the declaration.
         _ => None,
     }
 }

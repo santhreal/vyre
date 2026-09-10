@@ -4,6 +4,7 @@ use super::super::{
     eval_expr,
     invocation::HashmapInvocation,
     memory::{buffer_mut, HashmapMemory},
+    note_buffer_access,
     sync::{contains_barrier, node_id},
 };
 use super::eval_to_index;
@@ -90,6 +91,13 @@ pub(crate) fn step_nodes_frame<'a>(
                 #[cfg(feature = "subgroup-ops")]
                 snapshots,
             )?;
+            note_buffer_access(
+                memory,
+                buffer.as_str(),
+                idx,
+                invocation,
+                crate::interleaving::MemoryAccessKind::Write,
+            );
             let target = buffer_mut(memory, buffer)?;
             oob::store(target, idx, &v)?;
         }
@@ -539,6 +547,8 @@ pub(crate) fn step_nodes_frame<'a>(
                 extension.debug_identity()
             )));
         }
+        // `Node` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+        // oracle_matches_are_exhaustive holds the named set to the declaration.
         _ => {
             return Err(ReferenceError::new("hashmap reference interpreter encountered an unknown node variant. Fix: add explicit reference semantics for the new Node before dispatch."));
         }
