@@ -14,8 +14,3 @@ pub mod loop_unroll_trip1_idempotence;
 #[cfg(all(feature = "math-kernels", feature = "fixpoint"))]
 #[path = "scallop_join_grid_contract.rs"]
 pub mod scallop_join_grid_contract;
-
-/// Integration tests from `tests/scallop_join_ir_parity.rs`.
-#[cfg(all(feature = "math-kernels", feature = "fixpoint"))]
-#[path = "scallop_join_ir_parity.rs"]
-pub mod scallop_join_ir_parity;

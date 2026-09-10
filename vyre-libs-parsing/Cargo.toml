@@ -41,6 +41,7 @@ vyre-libs-text = { workspace = true }
 vyre-libs-hash = { workspace = true }
 
 [dev-dependencies]
+proptest.workspace = true
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }

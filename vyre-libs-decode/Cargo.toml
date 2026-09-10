@@ -34,6 +34,7 @@ vyre-libs-pattern = { workspace = true }
 vyre-libs-text = { workspace = true }
 
 [dev-dependencies]
+proptest.workspace = true
 vyre-test-support = { workspace = true, features = ["semantic-parity"] }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }

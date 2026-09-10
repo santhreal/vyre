@@ -133,8 +133,8 @@ total_lines = 136076
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 2583
-total_lines = 32756
+duplicate_lines = 553
+total_lines = 18014
 
 [[crate]]
 name = "vyre-libs-analysis"
@@ -173,13 +173,13 @@ total_lines = 1572
 
 [[crate]]
 name = "vyre-libs-graph"
-duplicate_lines = 1125
-total_lines = 32527
+duplicate_lines = 677
+total_lines = 35241
 
 [[crate]]
 name = "vyre-libs-hash"
-duplicate_lines = 67
-total_lines = 4308
+duplicate_lines = 39
+total_lines = 4817
 
 [[crate]]
 name = "vyre-libs-math"
@@ -188,8 +188,8 @@ total_lines = 21367
 
 [[crate]]
 name = "vyre-libs-nn"
-duplicate_lines = 779
-total_lines = 23371
+duplicate_lines = 634
+total_lines = 23761
 
 [[crate]]
 name = "vyre-libs-parsing"
@@ -198,8 +198,8 @@ total_lines = 8167
 
 [[crate]]
 name = "vyre-libs-pattern"
-duplicate_lines = 742
-total_lines = 12753
+duplicate_lines = 273
+total_lines = 14925
 
 [[crate]]
 name = "vyre-libs-reasoning"
@@ -233,13 +233,13 @@ total_lines = 11811
 
 [[crate]]
 name = "vyre-libs-text"
-duplicate_lines = 182
-total_lines = 3304
+duplicate_lines = 166
+total_lines = 3530
 
 [[crate]]
 name = "vyre-libs-visual"
-duplicate_lines = 941
-total_lines = 4373
+duplicate_lines = 206
+total_lines = 4768
 
 [[crate]]
 name = "vyre-lints"

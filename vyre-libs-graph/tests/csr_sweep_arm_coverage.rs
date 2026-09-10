@@ -12,5 +12,5 @@ use crate::csr_sweep;
 
 #[test]
 fn substrate_sweeps_draw_every_declared_csr_shape_group() {
-    csr_sweep::assert_every_group_is_swept("vyre-libs");
+    csr_sweep::assert_every_group_is_swept("vyre-libs-graph");
 }
