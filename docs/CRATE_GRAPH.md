@@ -35,7 +35,7 @@ each other; a layer that admits none states `None`.
 
 ## Workspace dependency graph
 
-The workspace contains 57 crates and 288 internal production edges, resolved
+The workspace contains 57 crates and 289 internal production edges, resolved
 under the union of every feature. An arrow points from a crate to an internal
 normal or build dependency. Development dependencies are excluded.
 
@@ -129,6 +129,7 @@ graph TD
   C5 --> C6
   C5 --> C8
   C5 --> C9
+  C5 --> C11
   C5 --> C12
   C5 --> C13
   C5 --> C18
@@ -423,6 +424,7 @@ graph TD
 | `vyre-conform` | `vyre-conform-spec` | `conformance-schema` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-conform` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-conform` | `vyre-driver-cuda` | `cuda-driver` | `normal` | `always` | None | `true` | `true` | `default`, `device-tests`, `gpu` |
+| `vyre-conform` | `vyre-driver-reference` | `reference-driver` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-conform` | `vyre-driver-spirv` | `spirv-driver` | `normal` | `always` | None | `true` | `true` | `default`, `device-tests`, `gpu` |
 | `vyre-conform` | `vyre-driver-wgpu` | `portable-driver` | `normal` | `always` | None | `true` | `true` | `default`, `device-tests`, `gpu` |
 | `vyre-conform` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |

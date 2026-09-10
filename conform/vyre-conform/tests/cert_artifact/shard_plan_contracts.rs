@@ -1,4 +1,5 @@
 use super::*;
+use vyre_driver_reference::ORACLE_EXECUTOR_ID;
 
 /// WHY: this drives two real `prove` shards through the built binary, which
 /// acquires a device. On a runner with no driver the acquisition aborts the

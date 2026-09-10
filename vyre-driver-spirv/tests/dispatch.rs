@@ -31,7 +31,7 @@ fn require_vulkan_backend() -> SpirvBackendRegistration {
 fn reference_outputs(program: &Program, lanes: &[&[u32]]) -> Vec<Vec<u8>> {
     let inputs = lanes
         .iter()
-        .map(|lane| Value::Bytes(u32_values_to_bytes(lane).into()))
+        .map(|lane| Value::Bytes(pack_words(lane).into()))
         .collect::<Vec<_>>();
     vyre_reference::reference_eval(program, &inputs)
         .expect("Fix: reference evaluation must succeed for valid test programs.")
@@ -52,8 +52,8 @@ fn assert_lanes_match_reference(context: &str, device: &[Vec<u8>], reference: &[
     );
     for (index, (device_bytes, reference_bytes)) in device.iter().zip(reference).enumerate() {
         assert_eq!(
-            bytes_to_u32_values(device_bytes),
-            bytes_to_u32_values(reference_bytes),
+            unpack_words(device_bytes),
+            unpack_words(reference_bytes),
             "Fix: SPIR-V {context} output buffer {index} does not match the reference."
         );
     }
@@ -76,7 +76,7 @@ fn spirv_output_first_binding_matches_reference() {
     let outputs = backend
         .dispatch(
             &program,
-            &[u32_values_to_bytes(&a), u32_values_to_bytes(&b)],
+            &[pack_words(&a), pack_words(&b)],
             &DispatchConfig::default(),
         )
         .expect("Fix: SPIR-V dispatch must bind output-first programs through the binding plan.");
@@ -100,7 +100,7 @@ fn spirv_elementwise_add_matches_reference() {
     let outputs = backend
         .dispatch(
             &program,
-            &[u32_values_to_bytes(&a), u32_values_to_bytes(&b)],
+            &[pack_words(&a), pack_words(&b)],
             &DispatchConfig::default(),
         )
         .expect("Fix: SPIR-V dispatch of an element-wise add must succeed.");
@@ -123,7 +123,7 @@ fn spirv_elementwise_fma_matches_reference() {
     let outputs = backend
         .dispatch(
             &program,
-            &[u32_values_to_bytes(&a)],
+            &[pack_words(&a)],
             &DispatchConfig::default(),
         )
         .expect("Fix: SPIR-V dispatch of a multiply-add must succeed.");
@@ -171,7 +171,7 @@ fn spirv_rejects_cooperative_dispatch() {
     let error = backend
         .dispatch(
             &program,
-            &[u32_values_to_bytes(&a), u32_values_to_bytes(&b)],
+            &[pack_words(&a), pack_words(&b)],
             &config,
         )
         .expect_err("Fix: SPIR-V must reject cooperative dispatch with UnsupportedFeature");
