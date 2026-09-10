@@ -145,13 +145,14 @@ const FAMILY_CASE_IDS: &[&str] = &[
 /// blake3 over the compact JSON surface of every `FAMILY_CASE_IDS` member.
 /// Regenerate only with a recorded decision about what changed and why.
 ///
-/// Last changed when the seven `foundation.*` micro cases were added to the
-/// family list. Their own surfaces are byte-identical across that collapse,
-/// which `registry_publishes_exactly_the_pinned_case_enumeration` and the
-/// pre-collapse program fingerprints in `crate::cases::micro` both hold; the
-/// digest moved only because the list it covers grew.
+/// Last changed when a performance contract gained device bounds. Every
+/// contract now serializes a `device_bounds` list, empty for a case that
+/// asserts only a baseline speedup, and two family members changed what they
+/// assert: `runtime.megakernel.dispatch.256` states a device active-time
+/// ceiling in place of a ratio over a host simulator faster than one launch,
+/// and `runtime.megakernel.condition.64k` keeps its baseline contract.
 const FAMILY_SURFACE_DIGEST: &str =
-    "62966bdad8dfdc5e5e738f67ad4bb25dbcd7e98ecc266aa5696080f1e74d9955";
+    "c3ac984081f5bd93182eb681246ff314d2360c02dc96492bb282bc45879c3432";
 
 /// The pinned ids the registry only publishes on Linux.
 ///

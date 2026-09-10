@@ -169,7 +169,7 @@ $L_exit:
     @%p0 bra $L_exit;
 
     mov.u32    %r30, 0;
-    ld.global.u32    %r31, [%rd6];
+    ld.global.nc.u32    %r31, [%rd6];
     ld.global.u32    %r32, [%rd2];
     add.u32    %r33, %r31, %r32;
     setp.lt.u32    %p1, %r30, %r27;
@@ -240,7 +240,7 @@ $L_exit:
     selp.u32    %r29, %r2, %r30, %p1;
     mul.wide.u32    %rd5, %r29, 4;
     add.u64    %rd6, %rd2, %rd5;
-    ld.global.u32    %r31, [%rd6];
+    ld.global.nc.u32    %r31, [%rd6];
     mul.lo.u32    %r32, %r2, 4;
     mov.u32    %r33, shared_buf_16777216;
     add.u32    %r34, %r33, %r32;
@@ -524,7 +524,7 @@ $L_exit:
     @%p0 bra $L_exit;
 
     mov.u32    %r29, 0;
-    ld.global.s32    %s0, [%rd2];
+    ld.global.nc.s32    %s0, [%rd2];
     // schedule: hoist independent op#2 into load-use gap after op#1
     mov.u32    %r30, 255;
     // schedule: hoist independent op#4 into load-use gap after op#1

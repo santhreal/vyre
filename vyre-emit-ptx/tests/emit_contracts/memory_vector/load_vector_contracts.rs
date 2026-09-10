@@ -27,11 +27,11 @@ fn emit_fuses_four_adjacent_load_constant_ops_to_ptx_vector_load() {
     // read-only-global buffer's `LoadGlobal` ops into `LoadConstant` and flips
     // the binding to `MemoryClass::Constant` BEFORE PTX emission. This backend
     // has no `.const` state-space path: `load_space_for` maps Constant to the
-    // plain `"global"` space, so the four consecutive `LoadConstant` ops MUST
-    // still fuse to one `ld.global.v4.u32`. Before the fix, the emit-side
-    // `is_vector_load_op` excluded `LoadConstant`, silently emitting 4× scalar
-    // `ld.global.u32` (a 4× memory-transaction Law-7 pessimization on exactly
-    // the buffers the promote pass targets).
+    // global address space, so the four consecutive `LoadConstant` ops MUST
+    // still fuse to one vector load. Before the fix, the emit-side
+    // `is_vector_load_op` excluded `LoadConstant`, silently emitting 4x scalar
+    // loads, a 4x memory-transaction pessimization on exactly the buffers the
+    // promote pass targets.
     let mut ops = four_load_chain(KernelOpKind::LoadConstant);
     ops.extend([
         op(KernelOpKind::BinOpKind(BinOp::Add), [2, 4], 9),
@@ -59,13 +59,13 @@ fn emit_fuses_four_adjacent_load_constant_ops_to_ptx_vector_load() {
         .build();
     let s = emit(&desc).unwrap();
     assert!(
-        s.contains("ld.global.v4.u32"),
-        "four consecutive LoadConstant ops must fuse to one ld.global.v4.u32\n{s}"
+        s.contains("ld.global.nc.v4.u32"),
+        "Fix: four consecutive LoadConstant ops on a read-only binding must fuse to one ld.global.nc.v4.u32\n{s}"
     );
     assert_eq!(
-        s.matches("ld.global.u32").count(),
+        s.matches("ld.global.nc.u32").count() + s.matches("ld.global.u32").count(),
         0,
-        "fused vector load must not leave scalar ld.global.u32 behind\n{s}"
+        "Fix: a fused vector load must not leave a scalar data load behind\n{s}"
     );
     assert!(s.contains("st.global.u32"), "result store must remain\n{s}");
 }
@@ -175,24 +175,27 @@ fn vector_fusion_alignment_fallback_emits_diagnostic_comment() {
     );
 }
 
-/// Constant-memory `LoadConstant` ops must NEVER emit the `.nc` (non-coherent
-/// read-only cache) suffix, that bypass is semantically distinct from the
-/// constant path. But the `.nc` decision is made by `load_space_for`, NOT by
-/// vector fusion: `analyze_texture_promote` only flags `MemoryClass::Global` +
-/// `ReadOnly` slots, so a `Constant` binding is never a read-only-cache slot and
-/// `load_space_for` maps it to the plain `"global"` space (this backend has no
-/// `.const` state-space path; constant pointers go through `cvta.to.global`).
+/// WHY: this case previously asserted that a `MemoryClass::Constant` binding
+/// never emits `.nc`, on the reasoning that the non-coherent bypass is
+/// semantically distinct from the constant path. It is not: this backend has
+/// no `.const` state-space path, so a Constant pointer reaches the body
+/// through `cvta.to.global` and every load of it is a global load. The
+/// assertion held only because the eligibility set came from an analysis that
+/// required `MemoryClass::Global`, which neutral lowering never assigns to a
+/// read-only declaration, so the set was always empty and the case certified a
+/// load form the emitter could not produce.
 ///
-/// Vectorization is orthogonal to `.nc`: a provably-aligned unit-stride chain of
-/// `LoadConstant` ops MUST fuse to a single plain `ld.global.v4.u32`, exactly as
-/// the equivalent `LoadGlobal` chain would (same global address space, same
-/// coherence, just one 16-byte transaction instead of four 4-byte ones). The
-/// old contract over-broadly forbade ALL constant-load fusion to dodge `.nc`,
-/// which threw away the 4× memory-transaction win on precisely the read-only
-/// buffers `const_buffer_promote` produces (it rewrites read-only-global
-/// `LoadGlobal` → `LoadConstant` before emission).
+/// What decides `.nc` is the declaration: `BindingVisibility::ReadOnly` states
+/// that the kernel does not write the slot, a store to such a slot is refused
+/// at emission, and a dispatch that binds one allocation to a read-only slot
+/// and to a writable slot is refused by `vyre_driver::ReadOnlyAliasCheck`.
+///
+/// Vectorization is orthogonal: a provably-aligned unit-stride chain of
+/// `LoadConstant` ops fuses into one 16-byte transaction rather than four
+/// 4-byte ones, and carries the same cache suffix a scalar load of that slot
+/// would.
 #[test]
-fn constant_binding_loads_fuse_to_plain_global_vector_load_never_nc() {
+fn constant_binding_loads_fuse_to_one_read_only_cache_vector_load() {
     let desc = KernelDescriptor {
         id: "const_no_vec".into(),
         bindings: BindingLayout {
@@ -235,28 +238,21 @@ fn constant_binding_loads_fuse_to_plain_global_vector_load_never_nc() {
         },
     };
     let s = emit(&desc).expect("Fix: constant-memory kernel must emit PTX without error.");
-    // The real semantic guard: constant loads must NEVER use the `.nc`
-    // non-coherent read-only bypass, in scalar OR vector form.
-    assert_eq!(
-        s.matches("ld.global.nc.").count(),
-        0,
-        "Fix: LoadConstant ops must NOT emit the .nc non-coherent cache suffix \
-         (constant bindings are not read-only-cache slots). PTX:\n{}",
-        &s[..s.len().min(600)]
-    );
-    // The perf contract: a provably-aligned unit-stride constant-load chain MUST
-    // fuse to one plain ld.global.v4.u32, leaving zero scalar data loads.
     assert!(
-        s.contains("ld.global.v4.u32"),
-        "Fix: four aligned unit-stride LoadConstant ops must fuse to one \
-         ld.global.v4.u32. PTX:\n{}",
+        s.contains("ld.global.nc.v4.u32"),
+        "Fix: four aligned unit-stride LoadConstant ops on a read-only binding must fuse to one ld.global.nc.v4.u32. PTX:\n{}",
         &s[..s.len().min(600)]
     );
     assert_eq!(
-        s.matches("ld.global.u32").count(),
+        s.matches("ld.global.nc.u32").count() + s.matches("ld.global.u32").count(),
         0,
-        "Fix: fused constant vector load must not leave scalar ld.global.u32 \
-         behind. PTX:\n{}",
+        "Fix: a fused constant vector load must not leave a scalar data load behind. PTX:\n{}",
+        &s[..s.len().min(600)]
+    );
+    assert_eq!(
+        s.matches("ld.global.nc.v4.u32").count(),
+        1,
+        "Fix: the four loads must fuse into exactly one vector transaction. PTX:\n{}",
         &s[..s.len().min(600)]
     );
 }

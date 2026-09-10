@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The megakernel condition CPU reference runs one chunk per worker on the pinned baseline pool instead of one task per slot on the global pool, which takes its measured time from 75 microseconds to 17 and holds it within 3% across runs."

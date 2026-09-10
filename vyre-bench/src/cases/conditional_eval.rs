@@ -14,9 +14,10 @@
 
 use super::byte_pack::u32_bytes;
 use super::conditional::{
-    conditional_measure, conditional_program, file_metadata_predicates, fired_append,
-    pattern_index_binds, pattern_streams, rule_conditions, rule_fires, stream_predicates,
-    verify_sparse_outputs, ConditionalLabels, ConditionalPrepared, PatternStreams,
+    conditional_measure, conditional_program, device_bytes_moved, file_metadata_predicates,
+    fired_append, pattern_index_binds, pattern_streams, rule_conditions, rule_fires,
+    stream_predicates, verify_sparse_outputs, ConditionalLabels, ConditionalPrepared,
+    PatternStreams,
 };
 use super::harness::{CaseOps, ContractDescription, HarnessCase, WorkloadDescription};
 use crate::api::case::{BenchCase, BenchContext, BenchError, BenchRun, Correctness};
@@ -68,7 +69,18 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
         "dataflow-adjacent",
     ],
     PATTERN_COUNT as u64 * 12 + RULE_COUNT as u64 * 40 + 4,
-    Some(ContractDescription::cpu_sota("YARA-like boolean rule-condition evaluation", "rayon", "Rayon-parallel scalar short-circuit rule loop", 100.0)),
+    Some(ContractDescription::memory_bandwidth_fraction(
+        "YARA-like boolean rule-condition evaluation",
+        0.30,
+        "The kernel streams nine per-rule u32 arrays, 37.75 MB, and appends one word per rule that fired. \
+         Coalescing the four pattern lookups on both sides, which preserves the fired set and fires more rules, \
+         leaves 29.2 us for the same 39.1 MB: 1341 GB/s, against 1272 GB/s measured on the sibling case \
+         release.condition_eval.1m on the same device. The four lookups are random indices into three 64 KiB \
+         tables, so they issue 4.19 M 32-byte sector requests against 192 KiB and add 21.4 us of L2 traffic \
+         that no rewrite of this kernel removes. Measured 39.2% of a 1792 GB/s peak at 55712 ns and 41.2% at \
+         52960 ns. The floor is 30%, crossed by anything 1.31x slower than the measured kernel and clear of \
+         the 8% run-to-run spread of the p50.",
+    )),
 );
 
 static OPS: CaseOps<ConditionalPrepared> = CaseOps {
@@ -222,6 +234,7 @@ fn prepare_conditional_eval(ctx: &mut BenchContext) -> Result<ConditionalPrepare
         reset_program,
         inputs,
         input_bytes_total,
+        device_bytes_moved: device_bytes_moved(LABELS, input_bytes_total, &baseline_output)?,
         baseline_output,
         baseline_wall_ns,
         resident,
@@ -261,6 +274,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::api::case::DeviceBound;
 
     /// This contract test keeps resident output resources aligned with their sparse binding indices.
     #[test]
@@ -315,10 +329,29 @@ mod tests {
 
         let contract = CONDITIONAL_EVAL
             .performance_contract()
-            .expect("the release proof workload must keep its CPU-baseline contract");
+            .expect("the release proof workload must keep its device bandwidth contract");
 
-        assert_eq!(contract.baselines.len(), 1);
-        assert_eq!(contract.baselines[0].min_speedup_x, 100.0);
-        assert_eq!(contract.baselines[0].crate_name, "rayon");
+        // A CPU multiple is not this case's bound: the kernel is at the
+        // device's streaming ceiling, so a ratio moves with the host's thread
+        // count and load while the property under test does not move at all.
+        assert!(
+            contract.baselines.is_empty(),
+            "Fix: this case asserts a device bandwidth fraction, not a host ratio: {:?}",
+            contract.baselines
+        );
+        match contract.device_bounds.as_slice() {
+            [DeviceBound::MemoryBandwidthFractionOfPeak {
+                min_fraction,
+                derivation,
+            }] => {
+                assert!((*min_fraction - 0.30).abs() < f64::EPSILON);
+                assert!(
+                    derivation.contains("4.19 M 32-byte sector requests")
+                        && derivation.contains("29.2 us"),
+                    "Fix: the bound must carry the derivation that produced it: {derivation}"
+                );
+            }
+            other => panic!("Fix: expected one memory bandwidth bound, got {other:?}"),
+        }
     }
 }

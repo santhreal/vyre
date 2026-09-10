@@ -303,6 +303,42 @@ fn condition_limit(slot_index: u32) -> u32 {
     32 + (slot_index.wrapping_mul(13) & 0x7F)
 }
 
+/// Count the slots whose condition fires, over the pinned baseline pool.
+///
+/// The work is one predicate over three words of a 64-byte slot, so it is
+/// divided by worker rather than by slot. Split per slot on the global pool,
+/// 65536 chunks of scheduling decisions cost more than the predicate does, and
+/// the pool is shared with the threads the measured dispatch is waiting on: the
+/// same 65536 slots took 66 us in one run and 17.5 ms in another, which decides
+/// the case's verdict without the device changing at all. The baseline pool is
+/// a fixed thread count pinned to cores, and one chunk per worker leaves the
+/// per-slot cost in the inner loop where it can be measured.
+fn condition_fired_count(ring: &[u8], slot_bytes: usize) -> u32 {
+    let pool = crate::cases::cpu_baselines::baseline_pool();
+    let workers = pool.current_num_threads().max(1);
+    let slots = ring.len() / slot_bytes.max(1);
+    let chunk_bytes = slots.div_ceil(workers).max(1).saturating_mul(slot_bytes);
+    pool.install(|| {
+        ring.par_chunks(chunk_bytes)
+            .map(|chunk| {
+                chunk
+                    .chunks_exact(slot_bytes)
+                    .map(|slot| {
+                        let flags = slot_word(slot, ARG0_WORD);
+                        let packed_count = slot_word(slot, ARG0_WORD + 1);
+                        let packed_offset = slot_word(slot, ARG0_WORD + 2);
+                        let count = packed_count & 0xFFFF;
+                        let threshold = packed_count >> 16;
+                        let offset = packed_offset & 0xFFFF;
+                        let limit = packed_offset >> 16;
+                        u32::from(condition_matches(flags, count, threshold, offset, limit))
+                    })
+                    .sum::<u32>()
+            })
+            .sum::<u32>()
+    })
+}
+
 fn condition_matches(flags: u32, count: u32, threshold: u32, offset: u32, limit: u32) -> bool {
     flags & 0b11 == 0b11 && count >= threshold && offset <= limit
 }
@@ -338,19 +374,7 @@ fn simulate_condition_outputs(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, BenchE
             ring.len()
         )));
     }
-    let fired = ring[..expected_ring_bytes]
-        .par_chunks_exact(slot_bytes)
-        .map(|slot| {
-            let flags = slot_word(slot, ARG0_WORD);
-            let packed_count = slot_word(slot, ARG0_WORD + 1);
-            let packed_offset = slot_word(slot, ARG0_WORD + 2);
-            let count = packed_count & 0xFFFF;
-            let threshold = packed_count >> 16;
-            let offset = packed_offset & 0xFFFF;
-            let limit = packed_offset >> 16;
-            u32::from(condition_matches(flags, count, threshold, offset, limit))
-        })
-        .sum::<u32>();
+    let fired = condition_fired_count(&ring[..expected_ring_bytes], slot_bytes);
 
     write_word(&mut control, control::DONE_COUNT, SLOT_COUNT, WORD_CONTEXT)?;
     write_word(&mut control, CONDITION_FIRED_WORD, fired, WORD_CONTEXT)?;

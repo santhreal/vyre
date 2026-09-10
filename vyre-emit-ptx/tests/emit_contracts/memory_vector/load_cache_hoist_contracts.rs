@@ -78,7 +78,7 @@ fn emit_hoists_ready_pure_op_into_load_use_gap() {
     .unwrap();
 
     let ld = s
-        .find("ld.global.u32")
+        .find("ld.global.nc.u32")
         .expect("test kernel must contain a scalar global load");
     let schedule_first = s
         .find("// schedule: hoist independent op#4 into load-use gap after op#2")
@@ -96,8 +96,11 @@ fn emit_hoists_ready_pure_op_into_load_use_gap() {
     );
 }
 
+/// A read-only declaration, not a load count, is what puts a slot on the
+/// read-only cache path. `ld.global.nc` is never slower than `ld.global` for a
+/// slot the kernel does not write, so a single load takes it too.
 #[test]
-fn emit_uses_read_only_cache_loads_for_texture_promoted_bindings() {
+fn emit_uses_read_only_cache_loads_for_read_only_bindings() {
     let s = emit(&two_slot_u32_kernel(
         "readonly_cache_loads",
         vec![
@@ -112,7 +115,26 @@ fn emit_uses_read_only_cache_loads_for_texture_promoted_bindings() {
 
     assert!(
         s.contains("ld.global.nc.u32"),
-        "Fix: repeated read-only global loads should use CUDA's read-only/non-coherent cache path.\n{s}"
+        "Fix: a load from a read-only binding must use the read-only, non-coherent cache path.\n{s}"
+    );
+}
+
+#[test]
+fn a_single_read_only_load_still_takes_the_read_only_cache_path() {
+    let s = emit(&two_slot_u32_kernel(
+        "single_readonly_cache_load",
+        vec![
+            lit(0, 0),
+            op(KernelOpKind::LoadGlobal, [0, 0], 1),
+            effect(KernelOpKind::StoreGlobal, [1, 0, 1]),
+        ],
+        vec![LiteralValue::U32(0)],
+    ))
+    .unwrap();
+
+    assert!(
+        s.contains("ld.global.nc.u32"),
+        "Fix: eligibility is the read-only declaration, so one load is enough.\n{s}"
     );
 }
 

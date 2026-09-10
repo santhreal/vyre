@@ -1223,7 +1223,7 @@ seam = "backend-contract"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 2706
+exported_item_count = 2712
 
   [[package.item]]
   path = "T::dispatch_bytes(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>"
@@ -2543,6 +2543,13 @@ exported_item_count = 2706
 
   [[package.item]]
   path = "impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::Target"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "impl<'name> vyre_driver::read_only_alias::ReadOnlyAliasCheck<'name>"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -7521,6 +7528,13 @@ exported_item_count = 2706
   [[package.item]]
   path = "vyre_driver::REGEX_ACCELERATOR_EVIDENCE_SCHEMA_VERSION: u32"
   kind = "const"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::ReadOnlyAliasCheck<'name>"
+  kind = "struct"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -18020,6 +18034,34 @@ exported_item_count = 2706
 
   [[package.item]]
   path = "vyre_driver::push_lower_hex(bytes: &[u8], out: &mut alloc::string::String)"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::read_only_alias"
+  kind = "mod"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::read_only_alias::ReadOnlyAliasCheck<'name>"
+  kind = "struct"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::read_only_alias::ReadOnlyAliasCheck<'name>::new() -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::read_only_alias::ReadOnlyAliasCheck<'name>::observe(&mut self, name: &'name str, access: vyre_spec::buffer_access::BufferAccess, handle: core::option::Option<vyre_driver::ResidentHandle>) -> core::result::Result<(), vyre_driver::BackendError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -34542,7 +34584,7 @@ seam = "foundation-ir"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 8830
+exported_item_count = 8818
 
   [[package.item]]
   path = "alloc::string::String::from(err: vyre_foundation::serial::wire::encode::WireEncodeErr) -> alloc::string::String"
@@ -41771,13 +41813,6 @@ exported_item_count = 8830
   [[package.item]]
   path = "vyre_foundation::cpu_op::CpuOp::cpu(input: &[u8], output: &mut alloc::vec::Vec<u8>)"
   kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::declare_dialect_op!"
-  kind = "macro"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -61887,62 +61922,6 @@ exported_item_count = 8830
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::operation::DialectOperationSpec: core::marker::Send + core::marker::Sync + 'static"
-  kind = "trait"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::operation::DialectOperationSpec::build_program(&self) -> vyre_foundation::ir::Program"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::operation::DialectOperationSpec::contract_record(&self) -> vyre_spec::op_contract::SemanticContractRecord"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::operation::DialectOperationSpec::documentation(&self) -> &'static str"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::operation::DialectOperationSpec::generate_property_input(&self, seed: u64) -> alloc::vec::Vec<u8>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::operation::DialectOperationSpec::id(&self) -> &'static str"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::operation::DialectOperationSpec::metamorphic_test(&self, inputs: &[alloc::vec::Vec<u8>]) -> bool"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::operation::DialectOperationSpec::reference_obligation(&self) -> &'static str"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_foundation::operation::ExtensionProvenance"
   kind = "struct"
   stability = "extension"
@@ -62896,27 +62875,6 @@ exported_item_count = 8830
 
   [[package.item]]
   path = "vyre_foundation::operation::OperationTier::matrix_value(self) -> &'static str"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::operation::OperationVisitor"
-  kind = "trait"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::operation::OperationVisitor::visit_effect(&mut self, effect: &str)"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::operation::OperationVisitor::visit_operand(&mut self, name: &str)"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"

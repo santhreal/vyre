@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The string bitmap scatter workload clamps its record index into the declared extent before loading, so a subgroup lane past the last record no longer reads past the end of either bitmap."

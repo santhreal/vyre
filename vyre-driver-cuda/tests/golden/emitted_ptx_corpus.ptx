@@ -65,14 +65,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     add.u32    %r37, %r33, %r36;
     mov.u32    %r39, 0;
     setp.lt.u32    %p4, %r3, %r29;
@@ -147,14 +147,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     sub.u32    %r37, %r33, %r36;
     mov.u32    %r39, 0;
     setp.lt.u32    %p4, %r3, %r29;
@@ -229,14 +229,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     mul.lo.u32    %r37, %r33, %r36;
     mov.u32    %r39, 0;
     setp.lt.u32    %p4, %r3, %r29;
@@ -311,14 +311,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     mov.u32    %r37, 4294967295;
     setp.eq.u32    %p4, %r36, 0;
     @%p4 bra $L_u32_div_done_1;
@@ -397,14 +397,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     mov.u32    %r37, 0;
     setp.eq.u32    %p4, %r36, 0;
     @%p4 bra $L_u32_mod_done_1;
@@ -483,14 +483,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     mul.hi.u32    %r37, %r33, %r36;
     mov.u32    %r39, 0;
     setp.lt.u32    %p4, %r3, %r29;
@@ -565,14 +565,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     and.b32    %r38, %r36, 31;
     shl.b32    %r37, %r33, %r38;
     mov.u32    %r40, 0;
@@ -648,14 +648,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     and.b32    %r38, %r36, 31;
     shr.u32    %r37, %r33, %r38;
     mov.u32    %r40, 0;
@@ -731,14 +731,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     and.b32    %r37, %r33, %r36;
     mov.u32    %r39, 0;
     setp.lt.u32    %p4, %r3, %r29;
@@ -813,14 +813,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     or.b32    %r37, %r33, %r36;
     mov.u32    %r39, 0;
     setp.lt.u32    %p4, %r3, %r29;
@@ -895,14 +895,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     xor.b32    %r37, %r33, %r36;
     mov.u32    %r39, 0;
     setp.lt.u32    %p4, %r3, %r29;
@@ -977,14 +977,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     min.u32    %r37, %r33, %r36;
     mov.u32    %r39, 0;
     setp.lt.u32    %p4, %r3, %r29;
@@ -1059,14 +1059,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     max.u32    %r37, %r33, %r36;
     mov.u32    %r39, 0;
     setp.lt.u32    %p4, %r3, %r29;
@@ -1141,14 +1141,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     setp.ge.u32    %p4, %r33, %r36;
     selp.u32    %r37, %r33, %r36, %p4;
     selp.u32    %r38, %r36, %r33, %p4;
@@ -1221,7 +1221,7 @@ module group FusionGroupId(0)
     selp.u32    %r30, %r3, %r31, %p2;
     mul.wide.u32    %rd5, %r30, 4;
     add.u64    %rd6, %rd2, %rd5;
-    ld.global.u32    %r32, [%rd6];
+    ld.global.nc.u32    %r32, [%rd6];
     not.b32    %r33, %r32;
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
@@ -1291,7 +1291,7 @@ module group FusionGroupId(0)
     selp.u32    %r30, %r3, %r31, %p2;
     mul.wide.u32    %rd5, %r30, 4;
     add.u64    %rd6, %rd2, %rd5;
-    ld.global.u32    %r32, [%rd6];
+    ld.global.nc.u32    %r32, [%rd6];
     popc.b32    %r33, %r32;
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
@@ -1361,7 +1361,7 @@ module group FusionGroupId(0)
     selp.u32    %r30, %r3, %r31, %p2;
     mul.wide.u32    %rd5, %r30, 4;
     add.u64    %rd6, %rd2, %rd5;
-    ld.global.u32    %r32, [%rd6];
+    ld.global.nc.u32    %r32, [%rd6];
     clz.b32    %r33, %r32;
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
@@ -1431,7 +1431,7 @@ module group FusionGroupId(0)
     selp.u32    %r30, %r3, %r31, %p2;
     mul.wide.u32    %rd5, %r30, 4;
     add.u64    %rd6, %rd2, %rd5;
-    ld.global.u32    %r32, [%rd6];
+    ld.global.nc.u32    %r32, [%rd6];
     brev.b32    %r33, %r32;
     clz.b32    %r34, %r33;
     mov.u32    %r36, 0;
@@ -1502,7 +1502,7 @@ module group FusionGroupId(0)
     selp.u32    %r30, %r3, %r31, %p2;
     mul.wide.u32    %rd5, %r30, 4;
     add.u64    %rd6, %rd2, %rd5;
-    ld.global.u32    %r32, [%rd6];
+    ld.global.nc.u32    %r32, [%rd6];
     brev.b32    %r33, %r32;
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
@@ -1578,7 +1578,7 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.f32    %f0, [%rd8];
+    ld.global.nc.f32    %f0, [%rd8];
     mul.ftz.f32    %f1, %f0, 0f3f800000;
     setp.nan.f32    %p3, %f1, %f1;
     selp.f32    %f2, 0f7fc00000, %f1, %p3;
@@ -1588,7 +1588,7 @@ module group FusionGroupId(0)
     selp.u32    %r33, %r3, %r34, %p4;
     mul.wide.u32    %rd9, %r33, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.f32    %f3, [%rd10];
+    ld.global.nc.f32    %f3, [%rd10];
     mul.ftz.f32    %f4, %f3, 0f3f800000;
     setp.nan.f32    %p5, %f4, %f4;
     selp.f32    %f5, 0f7fc00000, %f4, %p5;
@@ -1673,7 +1673,7 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.f32    %f0, [%rd8];
+    ld.global.nc.f32    %f0, [%rd8];
     mul.ftz.f32    %f1, %f0, 0f3f800000;
     setp.nan.f32    %p3, %f1, %f1;
     selp.f32    %f2, 0f7fc00000, %f1, %p3;
@@ -1683,7 +1683,7 @@ module group FusionGroupId(0)
     selp.u32    %r33, %r3, %r34, %p4;
     mul.wide.u32    %rd9, %r33, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.f32    %f3, [%rd10];
+    ld.global.nc.f32    %f3, [%rd10];
     mul.ftz.f32    %f4, %f3, 0f3f800000;
     setp.nan.f32    %p5, %f4, %f4;
     selp.f32    %f5, 0f7fc00000, %f4, %p5;
@@ -1768,7 +1768,7 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.f32    %f0, [%rd8];
+    ld.global.nc.f32    %f0, [%rd8];
     mul.ftz.f32    %f1, %f0, 0f3f800000;
     setp.nan.f32    %p3, %f1, %f1;
     selp.f32    %f2, 0f7fc00000, %f1, %p3;
@@ -1778,7 +1778,7 @@ module group FusionGroupId(0)
     selp.u32    %r33, %r3, %r34, %p4;
     mul.wide.u32    %rd9, %r33, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.f32    %f3, [%rd10];
+    ld.global.nc.f32    %f3, [%rd10];
     mul.ftz.f32    %f4, %f3, 0f3f800000;
     setp.nan.f32    %p5, %f4, %f4;
     selp.f32    %f5, 0f7fc00000, %f4, %p5;
@@ -1863,7 +1863,7 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.f32    %f0, [%rd8];
+    ld.global.nc.f32    %f0, [%rd8];
     mul.ftz.f32    %f1, %f0, 0f3f800000;
     setp.nan.f32    %p3, %f1, %f1;
     selp.f32    %f2, 0f7fc00000, %f1, %p3;
@@ -1873,7 +1873,7 @@ module group FusionGroupId(0)
     selp.u32    %r33, %r3, %r34, %p4;
     mul.wide.u32    %rd9, %r33, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.f32    %f3, [%rd10];
+    ld.global.nc.f32    %f3, [%rd10];
     mul.ftz.f32    %f4, %f3, 0f3f800000;
     setp.nan.f32    %p5, %f4, %f4;
     selp.f32    %f5, 0f7fc00000, %f4, %p5;
@@ -1958,7 +1958,7 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.f32    %f0, [%rd8];
+    ld.global.nc.f32    %f0, [%rd8];
     mul.ftz.f32    %f1, %f0, 0f3f800000;
     setp.nan.f32    %p3, %f1, %f1;
     selp.f32    %f2, 0f7fc00000, %f1, %p3;
@@ -1968,7 +1968,7 @@ module group FusionGroupId(0)
     selp.u32    %r33, %r3, %r34, %p4;
     mul.wide.u32    %rd9, %r33, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.f32    %f3, [%rd10];
+    ld.global.nc.f32    %f3, [%rd10];
     mul.ftz.f32    %f4, %f3, 0f3f800000;
     setp.nan.f32    %p5, %f4, %f4;
     selp.f32    %f5, 0f7fc00000, %f4, %p5;
@@ -2053,14 +2053,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.s32    %s0, [%rd8];
+    ld.global.nc.s32    %s0, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r34, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r33, %r3, %r34, %p3;
     mul.wide.u32    %rd9, %r33, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.s32    %s1, [%rd10];
+    ld.global.nc.s32    %s1, [%rd10];
     add.s32    %s2, %s0, %s1;
     mov.u32    %r36, 0;
     setp.lt.u32    %p4, %r3, %r29;
@@ -2136,14 +2136,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.s32    %s0, [%rd8];
+    ld.global.nc.s32    %s0, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r34, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r33, %r3, %r34, %p3;
     mul.wide.u32    %rd9, %r33, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.s32    %s1, [%rd10];
+    ld.global.nc.s32    %s1, [%rd10];
     mul.lo.s32    %s2, %s0, %s1;
     mov.u32    %r36, 0;
     setp.lt.u32    %p4, %r3, %r29;
@@ -2219,14 +2219,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.s32    %s0, [%rd8];
+    ld.global.nc.s32    %s0, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r34, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r33, %r3, %r34, %p3;
     mul.wide.u32    %rd9, %r33, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.s32    %s1, [%rd10];
+    ld.global.nc.s32    %s1, [%rd10];
     mov.s32    %s2, 0;
     setp.eq.s32    %p4, %s1, 0;
     @%p4 bra $L_i32_div_done_1;
@@ -2313,14 +2313,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.s32    %s0, [%rd8];
+    ld.global.nc.s32    %s0, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r34, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r33, %r3, %r34, %p3;
     mul.wide.u32    %rd9, %r33, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.s32    %s1, [%rd10];
+    ld.global.nc.s32    %s1, [%rd10];
     mov.s32    %s2, 0;
     setp.eq.s32    %p4, %s1, 0;
     @%p4 bra $L_i32_mod_done_1;
@@ -2404,14 +2404,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.s32    %s0, [%rd8];
+    ld.global.nc.s32    %s0, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r34, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r33, %r3, %r34, %p3;
     mul.wide.u32    %rd9, %r33, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.s32    %s1, [%rd10];
+    ld.global.nc.s32    %s1, [%rd10];
     min.s32    %s2, %s0, %s1;
     mov.u32    %r36, 0;
     setp.lt.u32    %p4, %r3, %r29;
@@ -2487,14 +2487,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.s32    %s0, [%rd8];
+    ld.global.nc.s32    %s0, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r34, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r33, %r3, %r34, %p3;
     mul.wide.u32    %rd9, %r33, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.s32    %s1, [%rd10];
+    ld.global.nc.s32    %s1, [%rd10];
     max.s32    %s2, %s0, %s1;
     mov.u32    %r36, 0;
     setp.lt.u32    %p4, %r3, %r29;
@@ -2565,7 +2565,7 @@ module group FusionGroupId(0)
     selp.u32    %r30, %r3, %r31, %p2;
     mul.wide.u32    %rd5, %r30, 4;
     add.u64    %rd6, %rd2, %rd5;
-    ld.global.u32    %r32, [%rd6];
+    ld.global.nc.u32    %r32, [%rd6];
     cvt.rn.f32.u32    %f0, %r32;
     mov.u32    %r34, 0;
     setp.lt.u32    %p3, %r3, %r28;
@@ -2640,7 +2640,7 @@ module group FusionGroupId(0)
     selp.u32    %r30, %r3, %r31, %p2;
     mul.wide.u32    %rd5, %r30, 4;
     add.u64    %rd6, %rd2, %rd5;
-    ld.global.f32    %f0, [%rd6];
+    ld.global.nc.f32    %f0, [%rd6];
     mul.ftz.f32    %f1, %f0, 0f3f800000;
     setp.nan.f32    %p3, %f1, %f1;
     selp.f32    %f2, 0f7fc00000, %f1, %p3;
@@ -2714,7 +2714,7 @@ module group FusionGroupId(0)
     selp.u32    %r30, %r3, %r31, %p2;
     mul.wide.u32    %rd5, %r30, 4;
     add.u64    %rd6, %rd2, %rd5;
-    ld.global.s32    %s0, [%rd6];
+    ld.global.nc.s32    %s0, [%rd6];
     mov.b32    %r32, %s0;
     mov.u32    %r34, 0;
     setp.lt.u32    %p3, %r3, %r28;
@@ -2789,14 +2789,14 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r35, 0;
     setp.lt.u32    %p3, %r3, %r28;
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     setp.lt.u32    %p4, %r33, %r36;
     selp.u32    %r37, 1, 0, %p4;
     mov.u32    %r39, 0;
@@ -2872,7 +2872,7 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd7, %r31, 4;
     add.u64    %rd8, %rd2, %rd7;
-    ld.global.u32    %r33, [%rd8];
+    ld.global.nc.u32    %r33, [%rd8];
     // schedule: hoist independent op#3 into load-use gap after op#2
     // schedule: hoist independent op#6 into load-use gap after op#2
     // schedule: hoist independent op#8 into load-use gap after op#2
@@ -2881,7 +2881,7 @@ module group FusionGroupId(0)
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd9, %r34, 4;
     add.u64    %rd10, %rd4, %rd9;
-    ld.global.u32    %r36, [%rd10];
+    ld.global.nc.u32    %r36, [%rd10];
     // schedule: hoist independent op#11 into load-use gap after op#4
     // schedule: hoist independent op#13 into load-use gap after op#4
     setp.ge.u32    %p4, %r33, %r36;
@@ -2890,26 +2890,26 @@ module group FusionGroupId(0)
     selp.u32    %r37, %r3, %r38, %p5;
     mul.wide.u32    %rd11, %r37, 4;
     add.u64    %rd12, %rd2, %rd11;
-    ld.global.u32    %r39, [%rd12];
+    ld.global.nc.u32    %r39, [%rd12];
     mov.u32    %r41, 0;
     setp.lt.u32    %p6, %r3, %r28;
     selp.u32    %r40, %r3, %r41, %p6;
     mul.wide.u32    %rd13, %r40, 4;
     add.u64    %rd14, %rd4, %rd13;
-    ld.global.u32    %r42, [%rd14];
+    ld.global.nc.u32    %r42, [%rd14];
     sub.u32    %r43, %r39, %r42;
     mov.u32    %r45, 0;
     setp.lt.u32    %p7, %r3, %r27;
     selp.u32    %r44, %r3, %r45, %p7;
     mul.wide.u32    %rd15, %r44, 4;
     add.u64    %rd16, %rd2, %rd15;
-    ld.global.u32    %r46, [%rd16];
+    ld.global.nc.u32    %r46, [%rd16];
     mov.u32    %r48, 0;
     setp.lt.u32    %p8, %r3, %r28;
     selp.u32    %r47, %r3, %r48, %p8;
     mul.wide.u32    %rd17, %r47, 4;
     add.u64    %rd18, %rd4, %rd17;
-    ld.global.u32    %r49, [%rd18];
+    ld.global.nc.u32    %r49, [%rd18];
     add.u32    %r50, %r46, %r49;
     selp.u32    %r51, %r43, %r50, %p4;
     mov.u32    %r53, 0;
@@ -2980,7 +2980,7 @@ module group FusionGroupId(0)
     selp.u32    %r30, %r3, %r31, %p2;
     mul.wide.u32    %rd5, %r30, 4;
     add.u64    %rd6, %rd2, %rd5;
-    ld.global.u32    %r32, [%rd6];
+    ld.global.nc.u32    %r32, [%rd6];
     // schedule: hoist independent op#2 into load-use gap after op#1
     mov.u32    %r33, 3;
     setp.lt.u32    %p3, %r32, %r33;
@@ -3000,7 +3000,7 @@ $L_if_else_1:
     selp.u32    %r37, %r3, %r38, %p6;
     mul.wide.u32    %rd9, %r37, 4;
     add.u64    %rd10, %rd2, %rd9;
-    ld.global.u32    %r39, [%rd10];
+    ld.global.nc.u32    %r39, [%rd10];
     // schedule: hoist independent op#3 into load-use gap after op#2
     mov.u32    %r40, 7;
     add.u32    %r41, %r39, %r40;
@@ -3096,7 +3096,7 @@ $L_for_head_1:
     selp.u32    %r40, %r3, %r41, %p6;
     mul.wide.u32    %rd9, %r40, 4;
     add.u64    %rd10, %rd2, %rd9;
-    ld.global.u32    %r42, [%rd10];
+    ld.global.nc.u32    %r42, [%rd10];
     mad.lo.u32    %r43, %r42, %r35, %r39;
     mov.u32    %r45, 0;
     setp.lt.u32    %p7, %r3, %r28;
@@ -3168,7 +3168,7 @@ module group FusionGroupId(0)
     selp.u32    %r30, %r3, %r31, %p2;
     mul.wide.u32    %rd5, %r30, 4;
     add.u64    %rd6, %rd2, %rd5;
-    ld.global.u32    %r32, [%rd6];
+    ld.global.nc.u32    %r32, [%rd6];
     mul.lo.u32    %r33, %r2, 4;
     mov.u32    %r34, shared_buf_16777216;
     add.u32    %r35, %r34, %r33;

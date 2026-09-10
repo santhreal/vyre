@@ -9,7 +9,7 @@ use smallvec::SmallVec;
 use vyre_driver::validation::ValidationCache;
 use vyre_driver::SpeculationMode;
 use vyre_driver::{resolve_fixpoint_iterations, BackendError, DispatchConfig, LaunchPlan};
-use vyre_driver::{BindingPlan, BindingRole};
+use vyre_driver::{BindingPlan, BindingRole, ReadOnlyAliasCheck};
 use vyre_foundation::ir::Program;
 use vyre_megakernel::EmittedResources;
 
@@ -233,6 +233,7 @@ impl CudaBackend {
         )?;
         input_lengths.extend(std::iter::repeat_n(0, static_bindings.input_indices.len()));
         let mut next_binding = 0usize;
+        let mut alias_check = ReadOnlyAliasCheck::new();
         for binding in &static_bindings.bindings {
             if binding.role == BindingRole::Shared {
                 continue;
@@ -243,7 +244,25 @@ impl CudaBackend {
                 "resident dispatch input-length derivation",
             )?;
             let byte_len = match source {
-                CudaDispatchBinding::Resident(handle) => self.resident_store.view(handle)?.byte_len,
+                CudaDispatchBinding::Resident(handle) => {
+                    // The read-only promise is checked against the resources
+                    // this dispatch binds, not against the program alone: one
+                    // resident handle may be presented at several slots, and
+                    // the emitter lowers a read-only slot through the
+                    // non-coherent read-only load path.
+                    let Some(buffer) = program.buffers().get(binding.buffer_index) else {
+                        return Err(BackendError::InvalidProgram {
+                            fix: format!(
+                                "Fix: CUDA resident dispatch binding `{}` names program buffer index {} but the program declares {} buffer(s). Rebuild the binding plan from Program::buffers before launch.",
+                                binding.name,
+                                binding.buffer_index,
+                                program.buffers().len()
+                            ),
+                        });
+                    };
+                    alias_check.observe(&binding.name, buffer.access(), Some(handle.handle))?;
+                    self.resident_store.view(handle)?.byte_len
+                }
                 CudaDispatchBinding::Borrowed(bytes) => bytes.len(),
             };
             if let Some(input_index) = binding.input_index {

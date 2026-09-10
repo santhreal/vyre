@@ -60,10 +60,10 @@ fn narrow_global_copy_kernel(element_type: DataType) -> KernelDescriptor {
 #[test]
 fn narrow_integer_global_memory_uses_narrow_ptx_ops() {
     for (data_type, load_op, store_op) in [
-        (DataType::U8, "ld.global.u8", "st.global.u8"),
-        (DataType::I8, "ld.global.s8", "st.global.u8"),
-        (DataType::U16, "ld.global.u16", "st.global.u16"),
-        (DataType::I16, "ld.global.s16", "st.global.u16"),
+        (DataType::U8, "ld.global.nc.u8", "st.global.u8"),
+        (DataType::I8, "ld.global.nc.s8", "st.global.u8"),
+        (DataType::U16, "ld.global.nc.u16", "st.global.u16"),
+        (DataType::I16, "ld.global.nc.s16", "st.global.u16"),
     ] {
         let ptx = emit(&narrow_global_copy_kernel(data_type.clone())).unwrap();
         assert!(

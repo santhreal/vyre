@@ -34,8 +34,8 @@ fn bool_global_load_uses_word_load_then_predicate_set() {
         "PTX cannot load predicate registers from memory:\n{s}"
     );
     assert!(
-        s.contains("ld.global.u32"),
-        "Bool memory load must use the physical word ABI:\n{s}"
+        s.contains("ld.global.nc.u32"),
+        "Fix: a Bool memory load must use the physical word ABI, and `input` is declared read-only so it reads through the read-only data cache:\n{s}"
     );
     assert!(
         s.contains("setp.ne.u32"),

@@ -263,7 +263,9 @@ impl<'a> BodyCtx<'a> {
         memory_class: MemoryClass,
     ) -> &'static str {
         match memory_class {
-            MemoryClass::Global if self.read_only_cache_slots.contains(&binding_slot) => {
+            MemoryClass::Global | MemoryClass::Constant | MemoryClass::Uniform
+                if self.read_only_cache_slots.contains(&binding_slot) =>
+            {
                 "global.nc"
             }
             MemoryClass::Global | MemoryClass::Constant | MemoryClass::Uniform => "global",
