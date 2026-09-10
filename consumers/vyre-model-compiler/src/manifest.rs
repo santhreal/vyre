@@ -6,8 +6,14 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::path::Path;
 use thiserror::Error;
 use vyre::ir::DataType;
+use vyre_safetensors::{SafetensorEntry, ShardedSafetensorIndex};
+
+pub use vyre_safetensors::{
+    ExpectedShardDigest, SafetensorDtype, SafetensorError, TransactionalCheckpoint,
+};
 
 use crate::config::ModelConfig;
 
@@ -50,6 +56,39 @@ pub enum ManifestError {
         /// Description of invalidity.
         reason: String,
     },
+    /// A checkpoint tensor stores an element type the IR data contract does not define.
+    #[error(
+        "Fix: checkpoint tensor '{name}' stores element type {dtype:?}, which the IR data contract does not define; re-export the checkpoint with a supported element type"
+    )]
+    UnsupportedCheckpointDtype {
+        /// Tensor name.
+        name: String,
+        /// Stored safetensors element type.
+        dtype: SafetensorDtype,
+    },
+    /// A checkpoint tensor declares a dimension wider than the target address space.
+    #[error(
+        "Fix: checkpoint tensor '{name}' declares dimension {dimension}, which exceeds the address space of this target; ingest the checkpoint on a 64-bit target"
+    )]
+    ShapeOutOfRange {
+        /// Tensor name.
+        name: String,
+        /// Declared dimension.
+        dimension: u64,
+    },
+    /// A checkpoint tensor declares a payload wider than the target address space.
+    #[error(
+        "Fix: checkpoint tensor '{name}' declares {byte_size} payload bytes, which exceeds the address space of this target; ingest the checkpoint on a 64-bit target"
+    )]
+    ByteSizeOutOfRange {
+        /// Tensor name.
+        name: String,
+        /// Declared payload byte count.
+        byte_size: u64,
+    },
+    /// Reading or verifying the safetensors checkpoint failed.
+    #[error("Fix: checkpoint ingestion failed: {0}")]
+    Checkpoint(#[from] SafetensorError),
 }
 
 /// Metadata descriptor for a single tensor in a checkpoint manifest.
@@ -124,6 +163,50 @@ impl CheckpointManifest {
     #[must_use]
     pub fn get(&self, name: &str) -> Option<&TensorDescriptor> {
         self.tensors.get(name)
+    }
+
+    /// Open a sharded safetensors checkpoint, verify every shard against the
+    /// trusted BLAKE3 digests, and build a manifest from the verified tensor set.
+    ///
+    /// The expected digest set must name every shard the index references,
+    /// exactly once and no others. The returned [`TransactionalCheckpoint`]
+    /// holds the file descriptors pinned during verification, so tensor reads
+    /// through it observe the bytes that were verified.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ManifestError::Checkpoint`] when the index is unreadable or a
+    /// shard digest does not match, and the ingestion variants below when a
+    /// verified tensor cannot be described.
+    pub fn ingest_verified_checkpoint<'a>(
+        model_name: impl Into<String>,
+        checkpoint_root: impl AsRef<Path>,
+        index_path: impl AsRef<Path>,
+        expected: impl IntoIterator<Item = ExpectedShardDigest<'a>>,
+    ) -> Result<(Self, TransactionalCheckpoint), ManifestError> {
+        let index = ShardedSafetensorIndex::open(checkpoint_root, index_path)?;
+        let checkpoint = index.verify_transactional(expected)?;
+        let manifest = Self::from_verified_checkpoint(model_name, &checkpoint)?;
+        Ok((manifest, checkpoint))
+    }
+
+    /// Build a manifest from a checkpoint whose shard content is already verified.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ManifestError::UnsupportedCheckpointDtype`] for a stored
+    /// element type the IR data contract does not define, and
+    /// [`ManifestError::ShapeOutOfRange`] or [`ManifestError::ByteSizeOutOfRange`]
+    /// for a tensor wider than the address space of the running target.
+    pub fn from_verified_checkpoint(
+        model_name: impl Into<String>,
+        checkpoint: &TransactionalCheckpoint,
+    ) -> Result<Self, ManifestError> {
+        let mut manifest = Self::new(model_name);
+        for (_, handle) in checkpoint.tensors() {
+            manifest.insert(checkpoint_tensor_descriptor(handle.tensor())?);
+        }
+        Ok(manifest)
     }
 
     /// Return the deterministic content identity digest for this complete checkpoint manifest.
@@ -319,6 +402,66 @@ impl CheckpointManifest {
         }
         Ok(())
     }
+}
+
+/// Map a safetensors element type onto the IR data type of identical width and
+/// semantics.
+///
+/// Returns `None` for an element type the IR data contract does not define. The
+/// match is exhaustive with no catch-all arm, so an element type added to
+/// `vyre-safetensors` stops this crate from compiling instead of resolving to a
+/// substitute type.
+#[must_use]
+pub const fn data_type_for_safetensor_dtype(dtype: SafetensorDtype) -> Option<DataType> {
+    match dtype {
+        SafetensorDtype::BOOL => Some(DataType::Bool),
+        SafetensorDtype::U8 => Some(DataType::U8),
+        SafetensorDtype::I8 => Some(DataType::I8),
+        SafetensorDtype::U16 => Some(DataType::U16),
+        SafetensorDtype::I16 => Some(DataType::I16),
+        SafetensorDtype::U32 => Some(DataType::U32),
+        SafetensorDtype::I32 => Some(DataType::I32),
+        SafetensorDtype::U64 => Some(DataType::U64),
+        SafetensorDtype::I64 => Some(DataType::I64),
+        SafetensorDtype::F16 => Some(DataType::F16),
+        SafetensorDtype::BF16 => Some(DataType::BF16),
+        SafetensorDtype::F32 => Some(DataType::F32),
+        SafetensorDtype::F64 => Some(DataType::F64),
+        SafetensorDtype::F8E4M3 | SafetensorDtype::F8E5M2 => None,
+    }
+}
+
+/// Describe one verified checkpoint tensor.
+///
+/// The byte size comes from the verified file range rather than from a
+/// recomputed element width, so the descriptor states the payload extent the
+/// digest covers.
+fn checkpoint_tensor_descriptor(entry: &SafetensorEntry) -> Result<TensorDescriptor, ManifestError> {
+    let dtype = data_type_for_safetensor_dtype(entry.dtype).ok_or_else(|| {
+        ManifestError::UnsupportedCheckpointDtype {
+            name: entry.name.clone(),
+            dtype: entry.dtype,
+        }
+    })?;
+    let mut shape = Vec::with_capacity(entry.shape.len());
+    for &dimension in &entry.shape {
+        shape.push(
+            usize::try_from(dimension).map_err(|_| ManifestError::ShapeOutOfRange {
+                name: entry.name.clone(),
+                dimension,
+            })?,
+        );
+    }
+    let byte_size = entry.file_range.end - entry.file_range.start;
+    Ok(TensorDescriptor {
+        name: entry.name.clone(),
+        shape,
+        dtype,
+        byte_size: usize::try_from(byte_size).map_err(|_| ManifestError::ByteSizeOutOfRange {
+            name: entry.name.clone(),
+            byte_size,
+        })?,
+    })
 }
 
 /// State edge descriptor for persistent Key/Value caches across autoregressive steps.

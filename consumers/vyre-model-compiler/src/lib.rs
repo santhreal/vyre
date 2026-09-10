@@ -19,7 +19,11 @@ pub use config::{
     all_model_families, all_named_configs, ActivationKind, MlaConfig, ModelConfig, ModelFamily,
     MoeConfig, NamedModelConfig, NormKind,
 };
-pub use manifest::{CheckpointManifest, ManifestError, StateEdgeDescriptor, TensorDescriptor};
+pub use manifest::{
+    data_type_for_safetensor_dtype, CheckpointManifest, ExpectedShardDigest, ManifestError,
+    SafetensorDtype, SafetensorError, StateEdgeDescriptor, TensorDescriptor,
+    TransactionalCheckpoint,
+};
 pub use multimodal::{
     ConnectorKind, MultimodalConnectorConfig, MultimodalError, VisionEncoderConfig,
     VisionEncoderKind,
