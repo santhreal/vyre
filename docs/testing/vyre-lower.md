@@ -32,6 +32,7 @@ The crate lives at `vyre-lower` and owns the `lowering` seam in the `lowering` l
 | --- | --- | --- | --- | --- |
 | `lib` | `vyre_lower` | `vyre-lower/src/lib.rs` | None | `./cargo_full test -p vyre-lower` |
 | `test` | `all_tests` | `vyre-lower/tests/all_tests.rs` | None | `./cargo_full test -p vyre-lower --test all_tests` |
+| `test` | `variant_space_is_independent_of_the_working_directory` | `vyre-lower/tests/variant_space_is_independent_of_the_working_directory.rs` | None | `./cargo_full test -p vyre-lower --test variant_space_is_independent_of_the_working_directory` |
 
 ## Test classes
 

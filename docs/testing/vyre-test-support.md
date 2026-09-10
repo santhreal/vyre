@@ -23,7 +23,7 @@ The crate lives at `vyre-test-support` and owns the `test-support` seam in the `
 ## Feature sets
 
 - Default feature members: None
-- Available manifest features: `default`, `driver-artifact-contracts`, `driver-contracts`, `ir-fixtures`, `parity-oracles`, `semantic-parity`, `semantic-requests`, `spec-strategies`
+- Available manifest features: `default`, `driver-artifact-contracts`, `driver-contracts`, `golden-corpus`, `host-input-abi`, `ir-fixtures`, `parity-oracles`, `semantic-parity`, `semantic-requests`, `spec-strategies`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets

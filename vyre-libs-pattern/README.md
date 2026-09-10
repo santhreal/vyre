@@ -22,10 +22,10 @@ an architecture-manifest change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-libs-pattern/tests/adversarial_matching.rs`:
+Run the checked-in behavior from `vyre-libs-pattern/tests/ac_walk_hostile_table_contents_oob.rs`:
 
 ```console
-./cargo_full test -p vyre-libs-pattern --test adversarial_matching
+./cargo_full test -p vyre-libs-pattern --test ac_walk_hostile_table_contents_oob
 ```
 
 ### Features

@@ -11,7 +11,7 @@
 //!
 //! A double that needs no other method uses [`NoOutputBackend`]. One that adds
 //! timing or resident behaviour writes its own `impl` and expands
-//! [`no_output_dispatch_borrowed`] inside it.
+//! [`crate::no_output_dispatch_borrowed`] inside it.
 
 use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
 use vyre_foundation::ir::Program;

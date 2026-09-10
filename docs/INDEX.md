@@ -34,9 +34,9 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | Status | Audience | Owner | Kind | Page | Authority | Generation |
 | --- | --- | --- | --- | --- | --- | --- |
 | `current` | `extension` | `architecture` | `ownership` | `ARCHITECTURE.md` | self | manual |
-| `generated` | `extension` | `architecture` | `ownership` | `CRATE_GRAPH.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../xtask/src/gates/crate_registry.rs](../xtask/src/gates/crate_registry.rs) |
+| `generated` | `extension` | `architecture` | `ownership` | `CRATE_GRAPH.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../xtask/src/gates/crate_registry/mod.rs](../xtask/src/gates/crate_registry/mod.rs) |
 | `generated` | `contributor` | `docs-governance` | `governance` | `INDEX.md` | [DOCS.toml](DOCS.toml) | generated: [../xtask/src/docs/docs_check.rs](../xtask/src/docs/docs_check.rs) |
-| `generated` | `extension` | `architecture` | `ownership` | `OWNERSHIP.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../xtask/src/gates/crate_registry.rs](../xtask/src/gates/crate_registry.rs) |
+| `generated` | `extension` | `architecture` | `ownership` | `OWNERSHIP.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../xtask/src/gates/crate_registry/mod.rs](../xtask/src/gates/crate_registry/mod.rs) |
 | `current` | `contributor` | `architecture` | `architecture` | `architecture/artifact.md` | self | manual |
 | `current` | `contributor` | `architecture` | `architecture` | `architecture/compile-search.md` | self | manual |
 | `current` | `contributor` | `architecture` | `architecture` | `architecture/crates.md` | self | manual |

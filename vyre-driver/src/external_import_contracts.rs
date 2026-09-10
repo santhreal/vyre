@@ -1,7 +1,8 @@
 //! The external-import contract every concrete driver's importer answers.
 //!
 //! Pre-allocation refusal, zero-copy admission, exact schedule execution and
-//! device-loss invalidation are stated by [`ExternalResourceImporter`], not by
+//! device-loss invalidation are stated by
+//! [`ExternalResourceImporter`](crate::external_import::ExternalResourceImporter), not by
 //! any one backend, so the assertions belong here too. A concrete driver names
 //! the handles and the combination its own policy refuses, and runs the set.
 

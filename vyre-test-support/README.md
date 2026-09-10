@@ -64,7 +64,7 @@ Run the checked-in behavior from `vyre-test-support/tests/adversarial_and_mutati
 
 ### Features
 
-- Manifest features: `default`, `driver-artifact-contracts`, `driver-contracts`, `ir-fixtures`, `parity-oracles`, `semantic-parity`, `semantic-requests`, `spec-strategies`
+- Manifest features: `default`, `driver-artifact-contracts`, `driver-contracts`, `golden-corpus`, `host-input-abi`, `ir-fixtures`, `parity-oracles`, `semantic-parity`, `semantic-requests`, `spec-strategies`
 - Default feature members: None
 
 ### Errors and unsupported behavior

@@ -329,7 +329,7 @@ layer = "Sparse math/AI seam"
 write = [
   "vyre-libs-math/src/**",
   "vyre-libs-nn/src/**",
-  "vyre-libs/tests/*gemm*",
+  "vyre-libs-math/tests/*gemm*",
   "vyre-libs/tests/*attention*",
   "vyre-bench/src/**",
 ]

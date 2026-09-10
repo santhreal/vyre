@@ -101,7 +101,7 @@ kind = "ownership"
 section = "Architecture and ownership"
 authority = "CRATE_OWNERSHIP.toml"
 generation = "generated"
-generator = "../xtask/src/gates/crate_registry.rs"
+generator = "../xtask/src/gates/crate_registry/mod.rs"
 nav = true
 
 [[page]]
@@ -127,7 +127,7 @@ kind = "ownership"
 section = "Architecture and ownership"
 authority = "CRATE_OWNERSHIP.toml"
 generation = "generated"
-generator = "../xtask/src/gates/crate_registry.rs"
+generator = "../xtask/src/gates/crate_registry/mod.rs"
 nav = true
 
 [[page]]

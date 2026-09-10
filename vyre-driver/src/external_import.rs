@@ -6,10 +6,12 @@
 //! and hand it to [`ExternalResourceRegistry`]. Only the middle step is
 //! backend business, so only that step is a concrete driver's to state.
 //!
-//! A driver supplies an [`ExternalImportPolicy`]: the handle type, how a handle
+//! A driver supplies an [`ExternalImportPolicy`](crate::external_import::ExternalImportPolicy):
+//! the handle type, how a handle
 //! maps to an external memory class and a provenance tag, the color
 //! interpretation its records carry, and which combinations it refuses.
-//! [`ExternalResourceImporter`] owns everything else, including the order the
+//! [`ExternalResourceImporter`](crate::external_import::ExternalResourceImporter) owns
+//! everything else, including the order the
 //! three checks answer in, which is one order for every backend.
 
 use crate::semantic_resource_abi::{
