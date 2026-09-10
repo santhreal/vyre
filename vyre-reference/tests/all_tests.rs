@@ -130,6 +130,10 @@ pub mod reference_error_contract;
 #[path = "reference_eval_fma_select_generated.rs"]
 pub mod reference_eval_fma_select_generated;
 
+/// Integration tests from `tests/reference_expression_compositionality_property_contracts.rs`.
+#[path = "reference_expression_compositionality_property_contracts.rs"]
+pub mod reference_expression_compositionality_property_contracts;
+
 /// Integration tests from `tests/reference_output_byte_stability.rs`.
 #[path = "reference_output_byte_stability.rs"]
 pub mod reference_output_byte_stability;
