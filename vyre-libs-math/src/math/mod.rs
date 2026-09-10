@@ -417,7 +417,7 @@ pub mod fixed;
 /// semiring join inside a GPU-resident fixpoint kernel over `w`-word
 /// lineage cells. User dialect: probabilistic Datalog.
 /// Self-consumer: rule-provenance tracking
-/// (`vyre_libs::encoding::scallop_provenance`).
+/// (`vyre_libs_encoding::encoding::scallop_provenance`).
 #[cfg(feature = "math-kernels")]
 pub mod scallop_join;
 /// Prefix-scan backed stream compaction over live-lane flags.

@@ -296,7 +296,7 @@ fn base64_decode_program(
 /// output can chain directly into Aho-Corasick transition-table programs.
 ///
 /// ```ignore
-/// use vyre_libs::decode::base64::base64_decode;
+/// use vyre_libs_decode::decode::base64::base64_decode;
 ///
 /// let program = base64_decode("encoded", "decoded", 8);
 /// assert_eq!(program.workgroup_size(), [64, 1, 1]);

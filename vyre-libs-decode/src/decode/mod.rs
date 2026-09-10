@@ -6,7 +6,7 @@
 //! chain never leaves the device.
 //!
 //! The codec module is the public path. Callers write
-//! `vyre_libs::decode::hex::hex_decode(...)`; this module re-exports nothing,
+//! `vyre_libs_decode::decode::hex::hex_decode(...)`; this module re-exports nothing,
 //! so an item has one path and the path names the codec that owns it.
 
 /// Base64 decode.

@@ -40,7 +40,7 @@ pub fn resolve_label_family_mask(family: &str) -> Result<u32, String> {
     canonical_family_mask(family).ok_or_else(|| {
         format!(
             "label family `@{family}` has no canonical bit allocation. \
-             Fix: declare the family in vyre_libs::security::family_mask::CANONICAL_BITS."
+             Fix: declare the family in vyre_libs_security::security::family_mask::CANONICAL_BITS."
         )
     })
 }

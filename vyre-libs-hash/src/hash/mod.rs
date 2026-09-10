@@ -1,6 +1,6 @@
 //! Hash and checksum compositions.
 //!
-//! The path is the interface. Callers write `vyre_libs::hash::fnv1a::fnv1a32(..)`
+//! The path is the interface. Callers write `vyre_libs_hash::hash::fnv1a::fnv1a32(..)`
 //! and name the operation they reached, so this module exposes its sub-modules
 //! rather than a flat namespace.
 

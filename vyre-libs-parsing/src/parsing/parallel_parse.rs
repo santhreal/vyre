@@ -40,8 +40,8 @@ use super::source_cache::{ParsedSourceLru, SourceHash};
 /// # Example
 ///
 /// ```
-/// use vyre_libs::parsing::source_cache::ParsedSourceLru;
-/// use vyre_libs::parsing::parallel_parse::parse_corpus_parallel;
+/// use vyre_libs_parsing::parsing::source_cache::ParsedSourceLru;
+/// use vyre_libs_parsing::parsing::parallel_parse::parse_corpus_parallel;
 /// use std::sync::Arc;
 ///
 /// let cache = ParsedSourceLru::with_capacity(64);

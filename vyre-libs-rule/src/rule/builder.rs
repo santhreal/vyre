@@ -250,7 +250,7 @@ pub fn try_condition_expr(condition: &RuleCondition, rule_id: u32) -> Result<Exp
         RuleCondition::FieldInSet { .. } => Err(unsupported_rule_condition(
             rule_id,
             "FieldInSet",
-            "FieldInSet requires per-record field lookup; it is supported only by the reference evaluator (`vyre_libs::rule::reference_eval`). Lower against a concrete buffer in an extension-aware builder before calling the core lowering.",
+            "FieldInSet requires per-record field lookup; it is supported only by the reference evaluator (`vyre_libs_rule::rule::reference_eval`). Lower against a concrete buffer in an extension-aware builder before calling the core lowering.",
         )),
         RuleCondition::Opaque(ext) => Err(RuleBuildError::OpaqueCondition {
             rule_id,

@@ -47,7 +47,7 @@ use vyre_primitives::wire::pack_u32_slice as pack_words;
 /// their own CPU-side refinement if desired.
 ///
 /// ```ignore
-/// use vyre_libs::decode::encodex::encodex_gpu;
+/// use vyre_libs_decode::decode::encodex::encodex_gpu;
 ///
 /// let program = encodex_gpu("bytes", "encoding", 1024);
 /// assert_eq!(program.buffers().len(), 3);

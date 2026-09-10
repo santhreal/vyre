@@ -11,7 +11,7 @@ use super::state_set::{
 };
 
 /// Caller-supplied NFA bit-tables, in the exact layout
-/// `vyre_libs::pattern::compile_regex_set` and `nfa_scan_with_plan` emit.
+/// `vyre_libs_pattern::pattern::compile_regex_set` and `nfa_scan_with_plan` emit.
 ///
 /// `transition_table[src * 256 * LANES + byte * LANES + lane]` is the
 /// u32 bitmask of NFA states (`lane * 32 + i` for `i ∈ 0..32`) reachable
