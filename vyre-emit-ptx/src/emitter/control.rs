@@ -57,11 +57,13 @@ impl BodyCtx<'_> {
     /// Called for every op as it is emitted. The descriptor is SSA-ordered, so
     /// each operand is already classified when its consumer arrives.
     ///
-    /// Only [`Self::emit_return`] consumes this, and it needs a proof rather
-    /// than a guess, so every unlisted op kind is treated as varying. Being
-    /// wrong in the permissive direction here produces a divergent branch and a
-    /// hung kernel; being wrong in the conservative direction produces a
-    /// compile-time refusal, so the default is deliberately `false`.
+    /// [`Self::emit_return`] needs a proof rather than a guess, so every
+    /// unlisted op kind is treated as varying. Being wrong in the permissive
+    /// direction there produces a divergent branch and a hung kernel; being
+    /// wrong in the conservative direction produces a compile-time refusal, so
+    /// the default is deliberately `false`. Identity-atomic lowering reads the
+    /// same set to tell a contended address from a per-invocation one, where a
+    /// missing proof costs only the rewrite.
     pub(super) fn record_uniformity(&mut self, op: &KernelOp) {
         let Some(result) = op.result else {
             return;

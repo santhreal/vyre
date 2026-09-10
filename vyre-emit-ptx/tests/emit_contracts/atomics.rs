@@ -223,3 +223,160 @@ fn every_shared_atomic_rmw_mnemonic_uses_the_shared_state_space() {
         );
     }
 }
+
+/// What `emit_atomic` must produce when the value operand is a literal zero.
+///
+/// `AtomicOp` is `#[non_exhaustive]`, so a match outside its crate cannot be
+/// checked for exhaustiveness. The fallback arm fails instead of guessing, so
+/// a variant added to the data contract and listed in [`EMITTABLE_RMWS`] turns
+/// this red until someone records whether zero is an identity for it. A
+/// variant added and never listed there is not covered.
+fn zero_value_lowering(atomic_op: AtomicOp) -> ZeroValueLowering {
+    match atomic_op {
+        // `x + 0`, `x | 0` and `x ^ 0` are `x` at every integer width and both
+        // signednesses, so the rewrite needs no element type to be sound.
+        AtomicOp::Add | AtomicOp::Or | AtomicOp::Xor => ZeroValueLowering::CoherentLoad,
+        // `x & 0` is 0, `min(x, 0)` is 0 unsigned, `exch` stores 0, and
+        // `max(x, 0)` is `x` only unsigned. None is an identity the emitter can
+        // take without reading the element type.
+        AtomicOp::And
+        | AtomicOp::Min
+        | AtomicOp::Max
+        | AtomicOp::LruUpdate
+        | AtomicOp::Exchange => ZeroValueLowering::KeepsItsAtomic,
+        // Compare-exchange takes four operands and lowers through
+        // `emit_atomic_cas`; the rest have no single-value RMW mnemonic.
+        AtomicOp::CompareExchange
+        | AtomicOp::CompareExchangeWeak
+        | AtomicOp::FetchNand
+        | AtomicOp::Opaque(_) => ZeroValueLowering::NotThisPath,
+        _ => panic!(
+            "Fix: record whether a zero value operand is an identity for {atomic_op:?} in zero_value_lowering."
+        ),
+    }
+}
+
+enum ZeroValueLowering {
+    CoherentLoad,
+    KeepsItsAtomic,
+    NotThisPath,
+}
+
+/// Every single-value RMW mnemonic the emitter can produce.
+const EMITTABLE_RMWS: [AtomicOp; 8] = [
+    AtomicOp::Add,
+    AtomicOp::Or,
+    AtomicOp::And,
+    AtomicOp::Xor,
+    AtomicOp::Min,
+    AtomicOp::Max,
+    AtomicOp::LruUpdate,
+    AtomicOp::Exchange,
+];
+
+fn global_atomic_kernel(atomic_op: AtomicOp, value: u32) -> KernelDescriptor {
+    atomic_kernel(
+        "global_atomic",
+        global_rw(0, DataType::U32, "control"),
+        64,
+        atomic_op,
+        MemoryOrdering::SeqCst,
+        value,
+    )
+}
+
+/// An identity read-modify-write on a global binding lowers to a coherent
+/// load, and every other operation keeps its atomic.
+///
+/// An identity RMW writes nothing: it is a read spelled as an atomic, which is
+/// how the resident work queue reads its control and status words. Left as
+/// `atom`, each one occupies an L2 atomic slot that a plain load does not, and
+/// invocations sharing an address serialize on it. `ld.global.cv` returns the
+/// same value and bypasses L1 for the same freshness.
+///
+/// Defect this locks out: extending the rewrite to an operation where zero is
+/// not an identity, which silently stops the store the program asked for.
+/// `And` and `Exchange` are the dangerous pair, and `Max` is the plausible one
+/// because zero is an identity for it at unsigned widths only.
+///
+/// Does not catch: whether `.cv` is the right cache qualifier for a given
+/// memory ordering. The emitter encodes no ordering qualifier on either form,
+/// so the two are equally strong in what it emits.
+#[test]
+fn an_identity_read_modify_write_on_a_global_binding_lowers_to_a_coherent_load() {
+    for atomic_op in EMITTABLE_RMWS {
+        let s = emit(&global_atomic_kernel(atomic_op, 0))
+            .unwrap_or_else(|error| panic!("Fix: global atomic {atomic_op:?} must emit: {error:?}"));
+        match zero_value_lowering(atomic_op) {
+            ZeroValueLowering::CoherentLoad => {
+                assert!(
+                    s.contains("ld.global.cv.u32"),
+                    "Fix: an identity {atomic_op:?} must lower to `ld.global.cv.u32`; emitted PTX:\n{s}"
+                );
+                assert!(
+                    !s.contains("atom.global"),
+                    "Fix: an identity {atomic_op:?} must not also emit an atom.global; emitted PTX:\n{s}"
+                );
+            }
+            ZeroValueLowering::KeepsItsAtomic => {
+                assert!(
+                    s.contains("atom.global"),
+                    "Fix: zero is not an identity for {atomic_op:?}, so it must keep its atom.global; emitted PTX:\n{s}"
+                );
+                assert!(
+                    !s.contains("ld.global.cv"),
+                    "Fix: {atomic_op:?} against zero still writes memory and must not become a load; emitted PTX:\n{s}"
+                );
+            }
+            ZeroValueLowering::NotThisPath => {}
+        }
+    }
+}
+
+/// A non-zero value operand never lowers to a load, for any operation.
+///
+/// Defect this locks out: testing the operation without testing the operand,
+/// which turns every `atom.global.add` in the program into a read.
+#[test]
+fn a_non_zero_value_operand_keeps_its_atomic_for_every_operation() {
+    for atomic_op in EMITTABLE_RMWS {
+        let s = emit(&global_atomic_kernel(atomic_op, 1))
+            .unwrap_or_else(|error| panic!("Fix: global atomic {atomic_op:?} must emit: {error:?}"));
+        assert!(
+            s.contains("atom.global"),
+            "Fix: {atomic_op:?} against 1 must keep its atom.global; emitted PTX:\n{s}"
+        );
+        assert!(
+            !s.contains("ld.global.cv"),
+            "Fix: {atomic_op:?} against 1 must not lower to a load; emitted PTX:\n{s}"
+        );
+    }
+}
+
+/// A workgroup-shared identity RMW keeps its atomic.
+///
+/// Defect this locks out: applying the rewrite to the shared state space, where
+/// `ld.shared.cv` is not a legal PTX form and ptxas rejects the module.
+#[test]
+fn an_identity_read_modify_write_on_a_shared_binding_keeps_its_atomic() {
+    for atomic_op in [AtomicOp::Add, AtomicOp::Or, AtomicOp::Xor] {
+        let kernel = atomic_kernel(
+            "shared_identity",
+            shared_rw(0, DataType::U32, 256, "wg_bins"),
+            256,
+            atomic_op,
+            MemoryOrdering::SeqCst,
+            0,
+        );
+        let s = emit(&kernel)
+            .unwrap_or_else(|error| panic!("Fix: shared atomic {atomic_op:?} must emit: {error:?}"));
+        assert!(
+            s.contains("atom.shared"),
+            "Fix: an identity {atomic_op:?} on a shared binding must keep atom.shared; emitted PTX:\n{s}"
+        );
+        assert!(
+            !s.contains(".cv."),
+            "Fix: ld.shared.cv is not a legal PTX form; emitted PTX:\n{s}"
+        );
+    }
+}
