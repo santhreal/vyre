@@ -392,7 +392,7 @@ mod tests {
     #[test]
     fn an_undeclared_artifact_is_told_to_be_declared() {
         let row = unattributed_row(
-            "release/evidence/benchmarks/megakernel-default-routing.json",
+            "release/evidence/benchmarks/no-gate-declares-this.json",
             None,
         )
         .expect("an undeclared artifact is ledger-eligible");
