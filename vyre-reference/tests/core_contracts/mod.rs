@@ -5,7 +5,6 @@
 //! catch a symbol dropped from the public surface. One integration target keeps
 //! them link-cheap and pins them to the API a consumer sees.
 
-mod dialect_dispatch;
 mod ieee754;
 mod subgroup;
 mod value;

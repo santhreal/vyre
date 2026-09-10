@@ -1,41 +1,38 @@
-//! Generic reference interpreter entry points.
+//! The canonical reference evaluator and its entry points.
 //!
-//! The stable statement-IR [`reference_eval`] entry point remains delegated to
-//! the existing invocation simulator until `Program` stores graph nodes
-//! directly.
+//! Every entry point here resolves the same way: normalize the submitted
+//! program to the top-level `Region` model, arm the work budget, and interpret
+//! the program through [`hashmap::run_hashmap_reference`]. There is one
+//! evaluator, so a node has one meaning for the whole crate.
 
 pub(crate) mod async_transfer;
 pub(crate) mod call;
-pub mod expr;
 pub(crate) mod expr_cast;
 pub(crate) mod hashmap;
-pub mod node;
-pub(crate) mod node_async;
-pub(crate) mod node_tile;
 pub(crate) mod node_tree;
 /// Thread-local arithmetic-IR-op counting for roofline / complexity analysis.
 pub mod op_count;
-pub mod sequential;
 /// Work ceiling that gives the interpreter a termination contract.
 pub mod step_budget;
+/// One-expression entry point into the canonical evaluator.
+pub(crate) mod single_expr;
 pub(crate) mod tile;
 pub(crate) mod typed_ops;
+
+use std::borrow::Cow;
+use vyre_foundation::ir::{Node, Program};
+
+use crate::value::Value;
 
 pub(crate) fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, crate::ReferenceError> {
     (axis < 3)
         .then(|| Value::U32(values[axis as usize]))
         .ok_or_else(|| {
-            crate::ReferenceError::new(format!(
+            crate::ReferenceError::incomplete_dispatch_semantics(format!(
                 "invocation/workgroup ID axis {axis} out of range. Fix: use 0, 1, or 2."
             ))
         })
 }
-use std::borrow::Cow;
-
-use rustc_hash::FxHashMap;
-use vyre_foundation::ir::{InterpCtx, Node, NodeId, NodeStorage, Program, Value as IrValue};
-
-use crate::value::Value;
 
 /// If the program satisfies the public top-level-Region model, return a
 /// byte-identical clone. If not, the usual case is
@@ -246,9 +243,7 @@ pub fn reference_input_values(
 
 /// Execute a vyre IR program on the pure Rust reference interpreter.
 ///
-/// The current public [`Program`] model is statement-oriented, so this stable
-/// entry point delegates to the statement evaluator. Graph-shaped extension
-/// nodes use [`run_storage_graph`].
+/// Delegates to the one canonical evaluator; see the module docstring.
 pub fn reference_eval(
     program: &Program,
     inputs: &[Value],
@@ -454,91 +449,11 @@ pub fn reference_eval_lane_rotated(
     hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Rotated(by), None)
 }
 
-/// Interpret a compact [`NodeStorage`] graph and return output node values.
-pub fn run_storage_graph(
-    nodes: &[(NodeId, NodeStorage)],
-    outputs: &[NodeId],
-) -> Result<Vec<IrValue>, crate::ReferenceError> {
-    let mut graph = FxHashMap::with_capacity_and_hasher(nodes.len(), Default::default());
-    for (id, node) in nodes {
-        if graph.insert(*id, node).is_some() {
-            return Err(duplicate_node_error(*id));
-        }
-    }
-    let mut ctx = InterpCtx::default();
-    let mut states = FxHashMap::with_capacity_and_hasher(graph.len(), Default::default());
-
-    for output in outputs {
-        eval_storage_node(*output, &graph, &mut ctx, &mut states)?;
-    }
-
-    outputs
-        .iter()
-        .map(|id| ctx.get(*id).map_err(interp_error))
-        .collect()
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum VisitState {
-    Visiting,
-    Done,
-}
-
-fn eval_storage_node(
-    id: NodeId,
-    graph: &FxHashMap<NodeId, &NodeStorage>,
-    ctx: &mut InterpCtx,
-    states: &mut FxHashMap<NodeId, VisitState>,
-) -> Result<(), crate::ReferenceError> {
-    match states.get(&id).copied() {
-        Some(VisitState::Done) => return Ok(()),
-        Some(VisitState::Visiting) => return Err(cycle_error(id)),
-        None => {}
-    }
-
-    let node = *graph.get(&id).ok_or_else(|| missing_node_error(id))?;
-    states.insert(id, VisitState::Visiting);
-    let inputs = node.input_ids();
-    for input in &inputs {
-        eval_storage_node(*input, graph, ctx, states)?;
-    }
-    ctx.set_operands(inputs);
-    let value = node.interpret(ctx).map_err(interp_error)?;
-    ctx.set(id, value);
-    states.insert(id, VisitState::Done);
-    Ok(())
-}
-
-fn interp_error(error: vyre_foundation::ir::EvalError) -> crate::ReferenceError {
-    crate::ReferenceError::new(error.to_string())
-}
-
-fn missing_node_error(id: NodeId) -> crate::ReferenceError {
-    crate::ReferenceError::new(format!(
-        "graph references missing node {}. Fix: include every dependency in the interpreter input graph.",
-        id.0
-    ))
-}
-
-fn cycle_error(id: NodeId) -> crate::ReferenceError {
-    crate::ReferenceError::new(format!(
-        "graph contains a dependency cycle at node {}. Fix: submit an acyclic dataflow graph.",
-        id.0
-    ))
-}
-
-fn duplicate_node_error(id: NodeId) -> crate::ReferenceError {
-    crate::ReferenceError::new(format!(
-        "graph contains duplicate node {}. Fix: submit exactly one storage record for each NodeId before reference execution.",
-        id.0
-    ))
-}
-
-// Inline: covers the crate-private `missing_node_error`, which no integration test can reach.
+// Inline: reaches the crate-private normalization the public entry points share.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, NodeStorage};
+    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
 
     #[test]
     fn reference_eval_dispatches_singleton_atomic_flags_across_dynamic_byte_input() {
@@ -661,87 +576,5 @@ mod tests {
             1,
             "an explicit grid floor of haystack_len must cover every byte position"
         );
-    }
-
-    #[test]
-    fn generic_storage_graph_matches_recursive_oracle_for_10k_programs() {
-        let mut rng = 0x9e37_79b9_u64;
-        for case in 0..10_000 {
-            let graph = random_graph(&mut rng, case);
-            let output = graph.last().expect("Fix: generated graph is non-empty").0;
-            let expected =
-                recursive_value(output, &graph).expect("Fix: recursive oracle evaluates");
-            let actual = run_storage_graph(&graph, &[output])
-                .expect("Fix: generic graph interpreter evaluates")[0];
-            assert_eq!(actual, expected, "case {case}");
-        }
-    }
-
-    fn random_graph(rng: &mut u64, case: u32) -> Vec<(NodeId, NodeStorage)> {
-        let len = 2 + (next(rng) as usize % 31);
-        let mut graph = Vec::with_capacity(len);
-        graph.push((NodeId(0), NodeStorage::LitU32(case)));
-        graph.push((NodeId(1), NodeStorage::LitU32(next(rng))));
-        for index in 2..len {
-            let left = NodeId(next(rng) % index as u32);
-            let right = NodeId(next(rng) % index as u32);
-            let op = match next(rng) % 5 {
-                0 => BinOp::Add,
-                1 => BinOp::Sub,
-                2 => BinOp::Mul,
-                3 => BinOp::BitXor,
-                _ => BinOp::BitAnd,
-            };
-            graph.push((NodeId(index as u32), NodeStorage::BinOp { op, left, right }));
-        }
-        graph
-    }
-
-    fn recursive_value(
-        id: NodeId,
-        graph: &[(NodeId, NodeStorage)],
-    ) -> Result<IrValue, crate::ReferenceError> {
-        let node = graph
-            .iter()
-            .find(|(node_id, _)| *node_id == id)
-            .map(|(_, node)| node)
-            .ok_or_else(|| missing_node_error(id))?;
-        match node {
-            NodeStorage::LitU32(value) => Ok(IrValue::U32(*value)),
-            NodeStorage::BinOp { op, left, right } => {
-                let left = expect_u32(recursive_value(*left, graph)?)?;
-                let right = expect_u32(recursive_value(*right, graph)?)?;
-                let value = match op {
-                    BinOp::Add => left.wrapping_add(right),
-                    BinOp::Sub => left.wrapping_sub(right),
-                    BinOp::Mul => left.wrapping_mul(right),
-                    BinOp::BitXor => left ^ right,
-                    BinOp::BitAnd => left & right,
-                    _ => {
-                        return Err(crate::ReferenceError::new(
-                            "recursive parity oracle received unsupported op. Fix: keep test generation within the oracle domain.",
-                        ));
-                    }
-                };
-                Ok(IrValue::U32(value))
-            }
-            _ => Err(crate::ReferenceError::new(
-                "recursive parity oracle received unsupported node. Fix: keep test generation within the oracle domain.",
-            )),
-        }
-    }
-
-    fn expect_u32(value: IrValue) -> Result<u32, crate::ReferenceError> {
-        match value {
-            IrValue::U32(value) => Ok(value),
-            other => Err(crate::ReferenceError::new(format!(
-                "recursive parity oracle expected u32, got {other:?}. Fix: keep generated graphs scalar-u32 only."
-            ))),
-        }
-    }
-
-    fn next(rng: &mut u64) -> u32 {
-        *rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1);
-        (*rng >> 32) as u32
     }
 }

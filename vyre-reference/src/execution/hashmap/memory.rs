@@ -29,6 +29,11 @@ impl HashmapMemory {
         self.workgroup = workgroup_memory(program)?;
         Ok(())
     }
+
+    /// Consume this memory and return its storage buffers.
+    pub(crate) fn into_storage(self) -> FxHashMap<String, Buffer> {
+        self.storage
+    }
 }
 
 pub(crate) fn output_value(buffer: Buffer, decl: &BufferDecl) -> Value {
@@ -187,7 +192,8 @@ mod tests {
             memory.workgroup.get_mut("scratch").unwrap(),
             0,
             &Value::U32(0xfeed_beef),
-        );
+        )
+        .expect("Fix: an in-bounds scratch store must succeed.");
 
         memory
             .reset_workgroup(&program)
@@ -198,7 +204,8 @@ mod tests {
             "Fix: matching workgroup layout must not allocate a replacement buffer."
         );
         assert_eq!(
-            oob::load(memory.workgroup.get("scratch").unwrap(), 0),
+            oob::load(memory.workgroup.get("scratch").unwrap(), 0)
+                .expect("Fix: an in-bounds scratch load must succeed."),
             Value::U32(0),
             "Fix: reused workgroup buffers must be zero-filled before the next workgroup."
         );

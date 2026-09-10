@@ -39,17 +39,18 @@
 //!   scalar implementation rather than a lowering of the call, so the call ABI
 //!   is shared and the arithmetic is not.
 //!
-//! `run_storage_graph` is the exception, and it is a separate entry point that
-//! `reference_eval` never reaches: it evaluates a `NodeStorage` dataflow graph
-//! through `NodeStorage::interpret`, so foundation owns the arithmetic of that
-//! route.
+//! One canonical evaluator owns program execution. A request is submitted to
+//! [`ReferenceRequest::execute`], which resolves the logical iteration domain
+//! from the program's own declared extents, validates the exact resource ABI,
+//! arms the mandatory budget and interprets the program through
+//! `execution::hashmap`. The crate carried four more routes into the same
+//! semantics: a statement executor over `workgroup::Invocation`, a
+//! `NodeStorage` dataflow interpreter that delegated its arithmetic to
+//! `NodeStorage::interpret`, a second byte-keyed registry of paired primitive
+//! references, and two flat-byte adapters. Each was a second answer to what a
+//! node means, and a differential oracle with two answers cannot say which one
+//! a backend must match, so they are gone rather than kept in agreement.
 
-/// Dual-reference trait and registry types.
-pub mod dual;
-/// Canonical dual implementations and reference evaluators.
-pub mod dual_impls;
-mod dual_registry;
-pub use dual_registry::{dual_op_ids, resolve_dual, DualReferenceFacet};
 mod error;
 pub use error::{ReferenceError, ReferenceErrorClass, ReferenceErrorKind, StepCeilingExceeded};
 /// Typed, versioned reference execution requests, contracts, and certificates.
@@ -77,22 +78,13 @@ pub use vyre_spec::{
 
 /// Atomic operation reference implementations.
 pub mod atomics;
-/// CPU operation traits used by concrete reference implementations.
-pub mod cpu_op;
-/// Canonical operation/reference-facet dispatch entry point.
-///
-/// Resolves semantic identity through `vyre-foundation` and invokes the
-/// separate reference-owned facet.
-pub mod dialect_dispatch;
 /// Canonical reference execution tree.
 pub(crate) mod execution;
-/// Flat byte adapter used by [`crate::cpu_op::CpuOp`].
-pub mod flat_cpu;
 /// IEEE 754 strict floating-point utilities.
 pub mod ieee754;
 /// Subgroup simulator for lane-collective Cat-C ops.
 pub mod subgroup;
-/// Workgroup simulation: invocation IDs, shared memory.
+/// Workgroup simulation: invocation ids and workgroup memory limits.
 pub mod workgroup;
 
 /// Bounded legal interleaving and race freedom verification oracle.
@@ -109,8 +101,11 @@ mod ops;
 /// tracked run, surfaces the masking that hides GPU/CPU parity hazards. See
 /// [`reference_eval_oob_report`].
 pub use oob::OobReport;
-
-pub use execution::{expr, node, op_count, sequential, step_budget};
+pub use execution::{op_count, step_budget};
+/// Typed bytes backing one declared IR buffer, as the evaluator holds them.
+pub use oob::Buffer;
+/// Evaluate one expression for one lane through the canonical evaluator.
+pub use execution::single_expr::{reference_eval_expr, ReferenceMemory};
 /// The interpreter's ABI: [`is_reference_input`] selects the buffers a caller must
 /// supply a `Value` for, [`is_reference_output`] selects the buffers `reference_eval`
 /// returns, [`output_index`] locates a named output by that predicate, and
@@ -129,5 +124,4 @@ pub use execution::{
     reference_eval_oob_report, reference_eval_step_count, reference_eval_with_dispatch,
     reference_eval_with_dispatch_oob_report, reference_eval_with_grid,
     reference_eval_with_step_ceiling, run_arena_reference, run_arena_reference_with_dispatch,
-    run_storage_graph,
 };

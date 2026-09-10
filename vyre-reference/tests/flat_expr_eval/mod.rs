@@ -1,6 +1,6 @@
-//! Evaluating a single `Expr` through the flat reference evaluator.
+//! Evaluating a single `Expr` through the canonical reference evaluator.
 //!
-//! Three test targets sweep the flat evaluator: the adversarial proptest, the
+//! Three test targets sweep expression semantics: the adversarial proptest, the
 //! adversarial gap suite, and the subnormal flushing contract. Each one used to
 //! carry its own copy of the wrapper program, the zero invocation, and the
 //! literal-to-`Expr` builders, so a change to how a bare expression is evaluated
@@ -15,30 +15,25 @@
 //! `subnormal_contract.rs` owns the direct contract on the public helper.
 
 use vyre_foundation::ir::{BinOp, Expr, Program, UnOp};
-use vyre_reference::expr as eval_expr;
 use vyre_reference::value::Value;
-use vyre_reference::workgroup::{Invocation, InvocationIds, Memory};
+use vyre_reference::workgroup::InvocationIds;
+use vyre_reference::{reference_eval_expr, ReferenceMemory};
 
 /// A program with no buffers and a single workgroup.
 pub(crate) fn empty_program() -> Program {
     Program::wrapped(Vec::new(), [1, 1, 1], Vec::new())
 }
 
-/// The invocation at thread zero of `program`.
-pub(crate) fn zero_invocation(program: &Program) -> Invocation<'_> {
-    Invocation::new(InvocationIds::ZERO, program.entry())
-}
-
 /// Evaluate `expr` with no buffers bound.
 pub(crate) fn eval_expr_value(expr: &Expr) -> Value {
     let program = empty_program();
-    eval_expr::eval(
-        expr,
-        &mut zero_invocation(&program),
-        &mut Memory::empty(),
+    reference_eval_expr(
         &program,
+        &mut ReferenceMemory::empty(),
+        InvocationIds::ZERO,
+        expr,
     )
-    .expect("Fix: flat reference evaluator must evaluate generated expression")
+    .expect("Fix: canonical reference evaluator must evaluate generated expression")
 }
 
 pub(crate) fn eval_binop_u32(op: BinOp, a: u32, b: u32) -> Value {
@@ -64,11 +59,11 @@ pub(crate) fn assert_binop_i32_err(op: BinOp, a: i32, b: i32, msg: &str) {
         left: Box::new(Expr::i32(a)),
         right: Box::new(Expr::i32(b)),
     };
-    let result = eval_expr::eval(
-        &expr,
-        &mut zero_invocation(&program),
-        &mut Memory::empty(),
+    let result = reference_eval_expr(
         &program,
+        &mut ReferenceMemory::empty(),
+        InvocationIds::ZERO,
+        &expr,
     );
     assert!(result.is_err(), "{msg}");
 }

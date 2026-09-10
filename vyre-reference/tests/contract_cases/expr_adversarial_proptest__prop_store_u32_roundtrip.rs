@@ -65,7 +65,7 @@ proptest! {
             true_val: Box::new(Expr::u32(value)),
             false_val: Box::new(Expr::u32(0)),
         };
-        let result = eval_expr::eval(&expr, &mut zero_invocation(&program), &mut Memory::empty(), &program)
+        let result = reference_eval_expr(&program, &mut ReferenceMemory::empty(), InvocationIds::ZERO, &expr)
             .expect("Fix: Expr::Select must evaluate");
         let expected = if condition != 0 { Value::U32(value) } else { Value::U32(0) };
         prop_assert_eq!(result, expected);
@@ -83,7 +83,7 @@ proptest! {
     fn prop_opaque_errors_actionably(_dummy in any::<u32>()) {
         let program = empty_program();
         let expr = Expr::opaque(DummyOpaque);
-        let result = eval_expr::eval(&expr, &mut zero_invocation(&program), &mut Memory::empty(), &program);
+        let result = reference_eval_expr(&program, &mut ReferenceMemory::empty(), InvocationIds::ZERO, &expr);
         match result {
             Err(e) => {
                 let msg = e.to_string();

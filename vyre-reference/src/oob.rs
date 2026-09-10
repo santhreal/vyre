@@ -1,13 +1,23 @@
 //! Out-of-bounds rules enforced by the parity engine.
 //!
 //! GPU drivers differ on what happens when a shader indexes past the end of a
-//! buffer: some clamp, some return zero, some crash. The reference interpreter
-//! eliminates that ambiguity by defining one deterministic behavior  -  defined-type
-//! zero-fill for scalar loads, empty slice for `Bytes`, and silent no-op for stores.
-//! Any backend that diverges from these rules fails the conform gate.
+//! buffer: some clamp, some return zero, some crash.
+//!
+//! Under [`ExecutionStrictness::Strict`](crate::request::ExecutionStrictness)
+//! an access outside a declared extent is a structured
+//! [`ReferenceErrorClass::OutOfBoundsAccess`](crate::ReferenceErrorClass) at
+//! the access site, so the oracle never issues an output derived from an
+//! index the program did not gate.
+//!
+//! Under [`ExecutionStrictness::DiagnosticPermissive`](crate::request::ExecutionStrictness)
+//! the access is absorbed deterministically instead: defined-type zero-fill for
+//! a scalar load, an empty slice for `Bytes`, and a dropped store. That mode
+//! measures how far a program relies on the absorption; it cannot issue an
+//! expected output.
 
 use vyre_foundation::ir::DataType as IrDataType;
 
+use crate::error::ReferenceError;
 use crate::value::Value;
 use vyre_foundation::ir::DataType;
 
@@ -71,28 +81,57 @@ thread_local! {
     static STRICT_MODE: Cell<bool> = const { Cell::new(false) };
 }
 
-fn record_oob_load() {
-    OOB_COUNTS.with(|c| {
-        let mut r = c.get();
-        r.oob_loads = r.oob_loads.saturating_add(1);
-        c.set(r);
-    });
+/// Kind of access that fell outside a declared extent.
+#[derive(Clone, Copy)]
+enum OobAccess {
+    Load,
+    Store,
+    Atomic,
 }
 
-fn record_oob_store() {
-    OOB_COUNTS.with(|c| {
-        let mut r = c.get();
-        r.oob_stores = r.oob_stores.saturating_add(1);
-        c.set(r);
-    });
+impl OobAccess {
+    /// Word used in the diagnostic for this access kind.
+    ///
+    /// The match has no catch-all arm, so a new access kind states its own
+    /// diagnostic rather than borrowing another kind's.
+    const fn label(self) -> &'static str {
+        match self {
+            Self::Load => "load",
+            Self::Store => "store",
+            Self::Atomic => "atomic access",
+        }
+    }
 }
 
-fn record_oob_atomic() {
+/// Tally one out-of-bounds access, and refuse it under strict mode.
+///
+/// Absorbing the access is a diagnostic-mode behavior. Strict mode is the mode
+/// whose outputs a backend is graded against, so the access ends the run with
+/// the index and the extent it exceeded.
+fn record_oob(
+    access: OobAccess,
+    buffer: &Buffer,
+    index: u32,
+    extent: u32,
+) -> Result<(), ReferenceError> {
     OOB_COUNTS.with(|c| {
         let mut r = c.get();
-        r.oob_atomics = r.oob_atomics.saturating_add(1);
+        match access {
+            OobAccess::Load => r.oob_loads = r.oob_loads.saturating_add(1),
+            OobAccess::Store => r.oob_stores = r.oob_stores.saturating_add(1),
+            OobAccess::Atomic => r.oob_atomics = r.oob_atomics.saturating_add(1),
+        }
         c.set(r);
     });
+    if !is_strict_mode() {
+        return Ok(());
+    }
+    Err(ReferenceError::out_of_bounds(format!(
+        "out-of-bounds {} at element index {index} of a {:?} buffer holding {extent} elements. \
+         Fix: gate the index against the declared buffer extent before the access.",
+        access.label(),
+        buffer.element
+    )))
 }
 
 /// Set this thread's strict execution mode.
@@ -212,33 +251,61 @@ impl Buffer {
     ///
     /// An async transfer names a byte span rather than an element index, so it
     /// reads through here instead of the element-indexed [`load`]. A span that
-    /// starts past the end, or runs off the end, yields zeros for the part that
-    /// is not backed by bytes, which is the same silent absorption the module
-    /// docstring defines for an out-of-bounds load.
+    /// starts past the end, or runs off the end, is out of bounds: strict mode
+    /// refuses it and diagnostic mode zero-pads the part that is not backed by
+    /// bytes.
+    ///
+    /// # Errors
+    /// Returns an out-of-bounds error under strict mode when the span is not
+    /// fully backed by bytes.
     ///
     /// # Panics
     /// Panics when the byte lock is poisoned; see [`Buffer::read_bytes`].
-    pub(crate) fn read_window(&self, start: usize, byte_count: usize) -> Vec<u8> {
+    pub(crate) fn read_window(
+        &self,
+        start: usize,
+        byte_count: usize,
+    ) -> Result<Vec<u8>, ReferenceError> {
         let bytes_guard = self.read_bytes();
         let mut payload = vec![0; byte_count];
-        if start < bytes_guard.len() {
-            let available = (bytes_guard.len() - start).min(byte_count);
+        let available = bytes_guard.len().saturating_sub(start).min(byte_count);
+        if available < byte_count {
+            drop(bytes_guard);
+            record_oob(OobAccess::Load, self, span_index(start), self.len())?;
+            let bytes_guard = self.read_bytes();
+            let available = bytes_guard.len().saturating_sub(start).min(byte_count);
             payload[..available].copy_from_slice(&bytes_guard[start..start + available]);
+            return Ok(payload);
         }
-        payload
+        payload[..available].copy_from_slice(&bytes_guard[start..start + available]);
+        Ok(payload)
     }
 
-    /// Write `payload` starting at `start`, dropping the part past the end.
+    /// Write `payload` starting at `start`.
+    ///
+    /// # Errors
+    /// Returns an out-of-bounds error under strict mode when the span is not
+    /// fully backed by bytes. Diagnostic mode drops the part past the end.
     ///
     /// # Panics
     /// Panics when the byte lock is poisoned; see [`Buffer::read_bytes`].
-    pub(crate) fn write_window(&self, start: usize, payload: &[u8]) {
+    pub(crate) fn write_window(
+        &self,
+        start: usize,
+        payload: &[u8],
+    ) -> Result<(), ReferenceError> {
         let mut bytes_guard = self.write_bytes();
-        if start >= bytes_guard.len() {
-            return;
+        let available = bytes_guard.len().saturating_sub(start).min(payload.len());
+        if available < payload.len() {
+            drop(bytes_guard);
+            record_oob(OobAccess::Store, self, span_index(start), self.len())?;
+            let mut bytes_guard = self.write_bytes();
+            let available = bytes_guard.len().saturating_sub(start).min(payload.len());
+            bytes_guard[start..start + available].copy_from_slice(&payload[..available]);
+            return Ok(());
         }
-        let write_len = payload.len().min(bytes_guard.len() - start);
-        bytes_guard[start..start + write_len].copy_from_slice(&payload[..write_len]);
+        bytes_guard[start..start + available].copy_from_slice(&payload[..available]);
+        Ok(())
     }
 
     /// Consume the buffer and return its bytes.
@@ -268,86 +335,145 @@ impl Buffer {
     }
 }
 
-pub(crate) fn load(buffer: &Buffer, index: u32) -> Value {
+/// Read element `index` of `buffer`.
+///
+/// # Errors
+/// Returns an out-of-bounds error under strict mode when `index` is outside the
+/// declared extent, and a type mismatch when the backing bytes do not decode as
+/// the declared element type.
+pub(crate) fn load(buffer: &Buffer, index: u32) -> Result<Value, ReferenceError> {
+    let extent = buffer.len();
     let bytes_guard = buffer.read_bytes();
     let stride = buffer.element.min_bytes();
     let ty = ir_to_conform_type(buffer.element.clone());
     if matches!(buffer.element, IrDataType::Bytes) {
         let offset = index as usize;
         if offset > bytes_guard.len() {
-            record_oob_load();
-            return Value::from(Vec::new());
+            drop(bytes_guard);
+            record_oob(OobAccess::Load, buffer, index, extent)?;
+            return Ok(Value::from(Vec::new()));
         }
-        return Value::from(&bytes_guard[offset..]);
+        return Ok(Value::from(&bytes_guard[offset..]));
     }
-    let Some(offset) = byte_offset(index, stride) else {
-        record_oob_load();
-        return Value::try_zero_for(ty).unwrap_or_else(|| Value::from(Vec::new()));
+    let in_bounds = byte_offset(index, stride)
+        .filter(|offset| stride != 0 && offset + stride <= bytes_guard.len());
+    let Some(offset) = in_bounds else {
+        drop(bytes_guard);
+        record_oob(OobAccess::Load, buffer, index, extent)?;
+        return Ok(absorbed_load(ty));
     };
-    if stride == 0 || offset + stride > bytes_guard.len() {
-        record_oob_load();
-        return Value::try_zero_for(ty).unwrap_or_else(|| Value::from(Vec::new()));
-    }
-    read_element(ty.clone(), &bytes_guard[offset..offset + stride])
-        .unwrap_or_else(|_| Value::try_zero_for(ty).unwrap_or_else(|| Value::from(Vec::new())))
+    read_element(ty.clone(), &bytes_guard[offset..offset + stride]).map_err(|detail| {
+        ReferenceError::type_mismatch(format!(
+            "element {index} of a {:?} buffer does not decode as {ty:?}: {detail}. \
+             Fix: declare the buffer with the element type its bytes carry.",
+            buffer.element
+        ))
+    })
 }
 
-pub(crate) fn store(buffer: &mut Buffer, index: u32, value: &Value) {
+/// Deterministic value a diagnostic-mode out-of-bounds load yields.
+fn absorbed_load(ty: DataType) -> Value {
+    Value::try_zero_for(ty).unwrap_or_else(|| Value::from(Vec::new()))
+}
+
+/// Element index a byte-span diagnostic reports.
+///
+/// A window names a byte offset rather than an element, and the diagnostic
+/// states element indices, so the offset is reported as itself rather than
+/// divided by a stride the span does not declare.
+fn span_index(start: usize) -> u32 {
+    u32::try_from(start).unwrap_or(u32::MAX)
+}
+
+/// Write `value` into element `index` of `buffer`.
+///
+/// # Errors
+/// Returns an out-of-bounds error under strict mode when `index` is outside the
+/// declared extent.
+pub(crate) fn store(
+    buffer: &mut Buffer,
+    index: u32,
+    value: &Value,
+) -> Result<(), ReferenceError> {
+    let extent = buffer.len();
     let mut bytes_guard = buffer.write_bytes();
     let stride = buffer.element.min_bytes();
     if matches!(buffer.element, IrDataType::Bytes) {
         let offset = index as usize;
         if offset >= bytes_guard.len() {
-            record_oob_store();
-            return;
+            drop(bytes_guard);
+            return record_oob(OobAccess::Store, buffer, index, extent);
         }
         let bytes = value.to_bytes();
         let available = bytes_guard.len() - offset;
         let write_len = bytes.len().min(available);
         bytes_guard[offset..offset + write_len].copy_from_slice(&bytes[..write_len]);
-        return;
+        return Ok(());
     }
-    let Some(offset) = byte_offset(index, stride) else {
-        record_oob_store();
-        return;
+    let in_bounds = byte_offset(index, stride)
+        .filter(|offset| stride != 0 && offset + stride <= bytes_guard.len());
+    let Some(offset) = in_bounds else {
+        drop(bytes_guard);
+        return record_oob(OobAccess::Store, buffer, index, extent);
     };
-    if stride == 0 || offset + stride > bytes_guard.len() {
-        record_oob_store();
-        return;
-    }
     write_element(
         buffer.element.clone(),
         &mut bytes_guard[offset..offset + stride],
         value,
     );
+    Ok(())
 }
 
-pub(crate) fn atomic_load(buffer: &Buffer, index: u32) -> Option<u32> {
+/// Read the 32-bit atomic word at element `index`.
+///
+/// `Ok(None)` is the diagnostic-mode absorption of an out-of-bounds atomic.
+///
+/// # Errors
+/// Returns an out-of-bounds error under strict mode when `index` is outside the
+/// declared extent.
+pub(crate) fn atomic_load(
+    buffer: &Buffer,
+    index: u32,
+) -> Result<Option<u32>, ReferenceError> {
+    let extent = buffer.len();
     let bytes_guard = buffer.read_bytes();
     let stride = buffer.element.min_bytes().max(4);
-    let Some(offset) = byte_offset(index, stride) else {
-        record_oob_atomic();
-        return None;
-    };
-    if offset + 4 > bytes_guard.len() {
-        record_oob_atomic();
-        None
-    } else {
-        Some(read_u32(&bytes_guard[offset..offset + 4]))
+    let in_bounds =
+        byte_offset(index, stride).filter(|offset| offset + 4 <= bytes_guard.len());
+    match in_bounds {
+        Some(offset) => Ok(Some(read_u32(&bytes_guard[offset..offset + 4]))),
+        None => {
+            drop(bytes_guard);
+            record_oob(OobAccess::Atomic, buffer, index, extent)?;
+            Ok(None)
+        }
     }
 }
 
-pub(crate) fn atomic_store(buffer: &mut Buffer, index: u32, value: u32) {
+/// Write the 32-bit atomic word at element `index`.
+///
+/// # Errors
+/// Returns an out-of-bounds error under strict mode when `index` is outside the
+/// declared extent.
+pub(crate) fn atomic_store(
+    buffer: &mut Buffer,
+    index: u32,
+    value: u32,
+) -> Result<(), ReferenceError> {
+    let extent = buffer.len();
     let mut bytes_guard = buffer.write_bytes();
     let stride = buffer.element.min_bytes().max(4);
-    let Some(offset) = byte_offset(index, stride) else {
-        record_oob_atomic();
-        return;
-    };
-    if offset + 4 <= bytes_guard.len() {
-        write_u32(&mut bytes_guard[offset..offset + 4], value);
-    } else {
-        record_oob_atomic();
+    let in_bounds =
+        byte_offset(index, stride).filter(|offset| offset + 4 <= bytes_guard.len());
+    match in_bounds {
+        Some(offset) => {
+            write_u32(&mut bytes_guard[offset..offset + 4], value);
+            Ok(())
+        }
+        None => {
+            drop(bytes_guard);
+            record_oob(OobAccess::Atomic, buffer, index, extent)
+        }
     }
 }
 
@@ -466,13 +592,13 @@ mod tests {
     #[test]
     fn f32_load_canonicalizes_subnormal_and_nan_payloads() {
         let positive_subnormal = Buffer::new(1u32.to_le_bytes().to_vec(), DataType::F32);
-        assert_eq!(f32_bits(load(&positive_subnormal, 0)), 0x0000_0000);
+        assert_eq!(f32_bits(load(&positive_subnormal, 0).unwrap()), 0x0000_0000);
 
         let negative_subnormal = Buffer::new(0x8000_0001u32.to_le_bytes().to_vec(), DataType::F32);
-        assert_eq!(f32_bits(load(&negative_subnormal, 0)), 0x8000_0000);
+        assert_eq!(f32_bits(load(&negative_subnormal, 0).unwrap()), 0x8000_0000);
 
         let payload_nan = Buffer::new(0x7fa0_0001u32.to_le_bytes().to_vec(), DataType::F32);
-        assert_eq!(f32_bits(load(&payload_nan, 0)), 0x7fc0_0000);
+        assert_eq!(f32_bits(load(&payload_nan, 0).unwrap()), 0x7fc0_0000);
     }
 
     #[test]
@@ -482,20 +608,22 @@ mod tests {
             &mut subnormal,
             0,
             &Value::Float(f64::from(f32::from_bits(0x8000_0001))),
-        );
+        )
+        .unwrap();
         assert_eq!(f32_bits(subnormal.into_value()), 0x8000_0000);
 
         let mut payload_nan = Buffer::new(vec![0; 4], DataType::F32);
-        store(&mut payload_nan, 0, &Value::U32(0x7fa0_0001));
+        store(&mut payload_nan, 0, &Value::U32(0x7fa0_0001)).unwrap();
         assert_eq!(f32_bits(payload_nan.into_value()), 0x7fc0_0000);
     }
 
     #[test]
     fn oob_accesses_are_counted_and_in_bounds_are_not() {
-        // The OOB tally must count exactly the accesses the interpreter silently
-        // absorbs (zero-fill loads / dropped stores), and nothing in-bounds, this
-        // is the signal that reveals an ungated data-derived index.
+        // The OOB tally must count exactly the accesses diagnostic mode absorbs
+        // (zero-fill loads / dropped stores), and nothing in-bounds, which is the
+        // signal that reveals an ungated data-derived index.
         reset_oob_report();
+        set_strict_mode(false);
         let buf = Buffer::new(vec![0u8; 8], DataType::U32); // 2 elements
         let _ = load(&buf, 0);
         let _ = load(&buf, 1);
@@ -508,8 +636,8 @@ mod tests {
         assert_eq!(after_loads.oob_stores, 0);
 
         let mut wbuf = Buffer::new(vec![0u8; 8], DataType::U32);
-        store(&mut wbuf, 1, &Value::U32(7)); // in bounds
-        store(&mut wbuf, 5, &Value::U32(9)); // OOB → dropped
+        store(&mut wbuf, 1, &Value::U32(7)).unwrap(); // in bounds
+        store(&mut wbuf, 5, &Value::U32(9)).unwrap(); // OOB, dropped
         let after_store = oob_report();
         assert_eq!(
             after_store.oob_stores, 1,
@@ -517,7 +645,7 @@ mod tests {
         );
 
         let mut abuf = Buffer::new(vec![0u8; 8], DataType::U32);
-        atomic_store(&mut abuf, 7, 3); // OOB atomic
+        atomic_store(&mut abuf, 7, 3).unwrap(); // OOB atomic
         assert_eq!(oob_report().oob_atomics, 1, "OOB atomic store counted");
 
         reset_oob_report();
@@ -573,7 +701,7 @@ mod tests {
                 }) as fn(&Buffer),
             ),
             ("write_window", |buffer: &Buffer| {
-                buffer.write_window(0, &[1, 2, 3, 4]);
+                let _ = buffer.write_window(0, &[1, 2, 3, 4]);
             }),
         ] {
             let buffer = Buffer::new(vec![0u8; 8], DataType::U32);

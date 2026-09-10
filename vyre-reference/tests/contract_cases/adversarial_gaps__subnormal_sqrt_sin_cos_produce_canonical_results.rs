@@ -60,13 +60,8 @@ fn atomic_oob_index_returns_zero() {
         [1, 1, 1],
         Vec::new(),
     );
-    let mut memory = Memory::empty().with_storage("buf", Buffer::new(vec![0xAB; 4], DataType::U32));
-    let result = eval_expr::eval(
-        &Expr::atomic_add("buf", Expr::u32(999), Expr::u32(1)),
-        &mut zero_invocation(&program),
-        &mut memory,
-        &program,
-    )
+    let mut memory = ReferenceMemory::empty().with_storage("buf", Buffer::new(vec![0xAB; 4], DataType::U32));
+    let result = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::atomic_add("buf", Expr::u32(999), Expr::u32(1)))
     .expect("Fix: OOB atomic must return zero, not panic");
     assert_eq!(result, Value::U32(0), "OOB atomic must return old=0");
 }
@@ -81,29 +76,19 @@ fn atomic_on_u64_buffer_touches_lower_half_only() {
         [1, 1, 1],
         Vec::new(),
     );
-    let mut memory = Memory::empty().with_storage(
+    let mut memory = ReferenceMemory::empty().with_storage(
         "buf",
         Buffer::new(
             0x0000_0001_0000_0000u64.to_le_bytes().to_vec(),
             DataType::U64,
         ),
     );
-    let old = eval_expr::eval(
-        &Expr::atomic_add("buf", Expr::u32(0), Expr::u32(1)),
-        &mut zero_invocation(&program),
-        &mut memory,
-        &program,
-    )
+    let old = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::atomic_add("buf", Expr::u32(0), Expr::u32(1)))
     .expect("Fix: atomic on U64 buffer must evaluate");
     // old value read as low 32 bits
     assert_eq!(old, Value::U32(0));
 
-    let loaded = eval_expr::eval(
-        &Expr::load("buf", Expr::u32(0)),
-        &mut zero_invocation(&program),
-        &mut memory,
-        &program,
-    )
+    let loaded = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::load("buf", Expr::u32(0)))
     .expect("Fix: load after atomic must succeed");
     // U64 value should now be 0x0000_0001_0000_0001
     assert_eq!(
@@ -120,33 +105,17 @@ fn multiple_atomics_on_same_location_are_deterministic() {
         [1, 1, 1],
         Vec::new(),
     );
-    let mut memory = Memory::empty().with_storage("buf", Buffer::new(vec![0; 4], DataType::U32));
-    let mut invocation = zero_invocation(&program);
+    let mut memory = ReferenceMemory::empty().with_storage("buf", Buffer::new(vec![0; 4], DataType::U32));
 
-    let first = eval_expr::eval(
-        &Expr::atomic_add("buf", Expr::u32(0), Expr::u32(1)),
-        &mut invocation,
-        &mut memory,
-        &program,
-    )
+    let first = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::atomic_add("buf", Expr::u32(0), Expr::u32(1)))
     .unwrap();
-    let second = eval_expr::eval(
-        &Expr::atomic_add("buf", Expr::u32(0), Expr::u32(1)),
-        &mut invocation,
-        &mut memory,
-        &program,
-    )
+    let second = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::atomic_add("buf", Expr::u32(0), Expr::u32(1)))
     .unwrap();
 
     assert_eq!(first, Value::U32(0), "first atomic must see old=0");
     assert_eq!(second, Value::U32(1), "second atomic must see old=1");
 
-    let final_val = eval_expr::eval(
-        &Expr::load("buf", Expr::u32(0)),
-        &mut invocation,
-        &mut memory,
-        &program,
-    )
+    let final_val = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::load("buf", Expr::u32(0)))
     .unwrap();
     assert_eq!(final_val, Value::U32(2));
 }
