@@ -8,12 +8,20 @@ use crate::backend::resident::{
 
 impl CudaBackend {
     /// Dispatch a Program using caller-provided CUDA-resident buffers.
+    ///
+    /// An over-residency grid-sync program takes the segmented route, as it
+    /// does through every other entry point. Outputs land in the bound
+    /// resident buffers either way, so the split's readback bytes are dropped.
     pub fn dispatch_resident(
         &self,
         program: &Program,
         handles: &[CudaResidentBuffer],
         config: &DispatchConfig,
     ) -> Result<(), BackendError> {
+        if let Some(resources) = self.resident_grid_sync_split_route(program, handles, config)? {
+            self.dispatch_resident_with_grid_sync_split_timed(program, &resources, config)?;
+            return Ok(());
+        }
         self.dispatch_bindings(program, &resident_bindings_from_handles(handles)?, config)
     }
 

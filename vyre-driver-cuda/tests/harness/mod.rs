@@ -172,27 +172,34 @@ pub(crate) fn reference_outputs(
         .collect()
 }
 
-/// Compile and dispatch through the authenticated CUDA artifact route.
+/// One CUDA artifact compiled and admitted onto the acquired device.
 ///
-/// There is no dispatch-config parameter and no place to put one. An artifact
-/// carries the launch geometry the compiler's search admitted, `submit` takes a
-/// binding set and nothing else, and a config that reached this route would be a
-/// second launch authority over a module compiled for one shape. A variant of
-/// this function did take a `&DispatchConfig` and drop it on the floor, which
-/// let a case assert that a hostile override lost when the override never
-/// travelled far enough to compete.
-pub(crate) fn compiled_cuda_outputs(
-    _backend: &CudaBackend,
+/// The four values travel together because none of them stands alone: the
+/// instance is materialized against this materializer's device generation, the
+/// binding value ids come from this envelope, and the binding layout comes from
+/// the collective-lowered program rather than the one the caller stated.
+pub(crate) struct AdmittedCudaArtifact {
+    /// Collective-lowered program, present when lowering rewrote it.
+    pub(crate) program: Option<Program>,
+    pub(crate) envelope: vyre_megakernel::ArtifactEnvelope,
+    pub(crate) materializer: Box<dyn vyre_driver::ArtifactMaterializer>,
+    pub(crate) instance: Box<dyn vyre_driver::ArtifactInstance>,
+}
+
+/// Compile `program` for the acquired CUDA device and materialize it.
+///
+/// Shared by every artifact-route helper here so they admit one program the
+/// same way and differ only in how they bind it.
+pub(crate) fn materialized_cuda_artifact(
     program: &Program,
-    inputs: &[Vec<u8>],
     case_name: &str,
-) -> Vec<Vec<u8>> {
+) -> AdmittedCudaArtifact {
     let lowered_program =
         vyre_foundation::transform::collectives::lower_single_rank_collectives(program)
             .unwrap_or_else(|error| {
                 panic!("Fix: CUDA generated case `{case_name}` collective lowering failed: {error}")
             });
-    let program = lowered_program.as_ref().unwrap_or(program);
+    let admitted_program = lowered_program.as_ref().unwrap_or(program);
     let registration = vyre_driver::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
         .unwrap_or_else(|error| {
             panic!("Fix: CUDA generated case `{case_name}` registration failed: {error}")
@@ -204,8 +211,8 @@ pub(crate) fn compiled_cuda_outputs(
         })
         .device_profile()
         .compile_facts();
-    let graph =
-        vyre::ir::ProgramGraph::from_program(case_name, program.clone()).unwrap_or_else(|error| {
+    let graph = vyre::ir::ProgramGraph::from_program(case_name, admitted_program.clone())
+        .unwrap_or_else(|error| {
             panic!("Fix: CUDA generated case `{case_name}` graph failed: {error}")
         });
     let request = vyre_megakernel::CompileRequest::new(
@@ -247,6 +254,33 @@ pub(crate) fn compiled_cuda_outputs(
         .unwrap_or_else(|error| {
             panic!("Fix: CUDA generated case `{case_name}` materialization failed: {error}")
         });
+    AdmittedCudaArtifact {
+        program: lowered_program,
+        envelope,
+        materializer,
+        instance,
+    }
+}
+
+/// Compile and dispatch through the authenticated CUDA artifact route.
+///
+/// There is no dispatch-config parameter and no place to put one. An artifact
+/// carries the launch geometry the compiler's search admitted, `submit` takes a
+/// binding set and nothing else, and a config that reached this route would be a
+/// second launch authority over a module compiled for one shape. A variant of
+/// this function did take a `&DispatchConfig` and drop it on the floor, which
+/// let a case assert that a hostile override lost when the override never
+/// travelled far enough to compete.
+pub(crate) fn compiled_cuda_outputs(
+    _backend: &CudaBackend,
+    program: &Program,
+    inputs: &[Vec<u8>],
+    case_name: &str,
+) -> Vec<Vec<u8>> {
+    let admitted = materialized_cuda_artifact(program, case_name);
+    let program = admitted.program.as_ref().unwrap_or(program);
+    let envelope = &admitted.envelope;
+    let instance = admitted.instance.as_ref();
     let plan = vyre_driver::BindingPlan::build(program).unwrap_or_else(|error| {
         panic!("Fix: CUDA generated case `{case_name}` binding plan failed: {error}")
     });
@@ -303,6 +337,133 @@ pub(crate) fn compiled_cuda_outputs(
                     "Fix: CUDA generated case `{case_name}` completion omitted writable value `{}`",
                     binding.name
                 )
+            });
+    }
+    outputs
+}
+
+/// Compile and dispatch through the CUDA artifact route with every buffer
+/// device-resident.
+///
+/// This is the route a caller takes when its data is already on the device:
+/// `submit` receives an all-resident binding set and launches the compiled
+/// pipeline's resident entry point instead of its borrowed one. The two entry
+/// points made different routing decisions, so a contract asserted only
+/// through [`compiled_cuda_outputs`] says nothing about this one.
+///
+/// Every non-shared buffer is bound: a buffer that consumes a host input is
+/// uploaded from `inputs` in declaration order, and a buffer the backend
+/// produces is allocated at its declared static size and zero-filled. Outputs
+/// are returned in `BindingPlan` output order, matching
+/// [`compiled_cuda_outputs`].
+pub(crate) fn resident_compiled_cuda_outputs(
+    program: &Program,
+    inputs: &[Vec<u8>],
+    case_name: &str,
+) -> Vec<Vec<u8>> {
+    let admitted = materialized_cuda_artifact(program, case_name);
+    let program = admitted.program.as_ref().unwrap_or(program);
+    let plan = vyre_driver::BindingPlan::build(program).unwrap_or_else(|error| {
+        panic!("Fix: CUDA resident artifact case `{case_name}` binding plan failed: {error}")
+    });
+    let mut bindings = vyre_driver::BindingSet::new(admitted.envelope.neutral().digest());
+    let mut allocated = Vec::new();
+    for binding in &plan.bindings {
+        if binding.role == vyre_driver::BindingRole::Shared {
+            continue;
+        }
+        let value = admitted
+            .envelope
+            .neutral()
+            .resources()
+            .iter()
+            .find(|resource| resource.name == binding.name.as_ref())
+            .unwrap_or_else(|| {
+                panic!(
+                    "Fix: CUDA resident artifact case `{case_name}` artifact omitted buffer `{}`",
+                    binding.name
+                )
+            })
+            .value;
+        let payload = match binding.input_index {
+            Some(input_index) => inputs[input_index].clone(),
+            None => vec![
+                0u8;
+                binding.static_byte_len.unwrap_or_else(|| {
+                    panic!(
+                        "Fix: CUDA resident artifact case `{case_name}` buffer `{}` is \
+                         backend-allocated with no static byte length, so a resident buffer \
+                         cannot be sized for it.",
+                        binding.name
+                    )
+                })
+            ],
+        };
+        let resource = admitted
+            .materializer
+            .allocate_resident(payload.len())
+            .unwrap_or_else(|error| {
+                panic!(
+                    "Fix: CUDA resident artifact case `{case_name}` allocation for `{}` failed: {error}",
+                    binding.name
+                )
+            });
+        admitted
+            .materializer
+            .upload_resident(&resource, &payload)
+            .unwrap_or_else(|error| {
+                panic!(
+                    "Fix: CUDA resident artifact case `{case_name}` upload for `{}` failed: {error}",
+                    binding.name
+                )
+            });
+        allocated.push(resource.clone());
+        bindings.insert(value, vyre_driver::BoundResource::Resident(resource));
+    }
+    let completion = admitted
+        .instance
+        .submit(bindings)
+        .and_then(|submission| submission.wait())
+        .unwrap_or_else(|error| {
+            panic!(
+                "Fix: CUDA resident artifact case `{case_name}` resident submission failed: {error}"
+            )
+        });
+    let mut outputs = vec![Vec::new(); plan.output_indices.len()];
+    for binding in &plan.bindings {
+        let Some(output_index) = binding.output_index else {
+            continue;
+        };
+        let resource = admitted
+            .envelope
+            .neutral()
+            .resources()
+            .iter()
+            .find(|resource| resource.name == binding.name.as_ref())
+            .unwrap_or_else(|| {
+                panic!(
+                    "Fix: CUDA resident artifact case `{case_name}` artifact omitted output `{}`",
+                    binding.name
+                )
+            });
+        outputs[output_index] = completion
+            .outputs
+            .get(&resource.value)
+            .or_else(|| completion.retained.get(&resource.value))
+            .cloned()
+            .unwrap_or_else(|| {
+                panic!(
+                    "Fix: CUDA resident artifact case `{case_name}` completion omitted writable value `{}`",
+                    binding.name
+                )
+            });
+    }
+    for resource in allocated {
+        admitted
+            .materializer
+            .free_resident(resource)
+            .unwrap_or_else(|error| {
+                panic!("Fix: CUDA resident artifact case `{case_name}` cleanup failed: {error}")
             });
     }
     outputs

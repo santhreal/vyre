@@ -10,12 +10,19 @@ use crate::backend::resident::{
 
 impl CudaBackend {
     /// Dispatch with CUDA-resident buffers and return ordered output readbacks.
+    ///
+    /// A grid-sync program whose grid exceeds cooperative thread residency has
+    /// no native launch on this device and takes the segmented route, the same
+    /// decision the borrowed entry points make from the same residency bound.
     pub fn dispatch_resident_timed(
         &self,
         program: &Program,
         handles: &[CudaResidentBuffer],
         config: &DispatchConfig,
     ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+        if let Some(resources) = self.resident_grid_sync_split_route(program, handles, config)? {
+            return self.dispatch_resident_with_grid_sync_split_timed(program, &resources, config);
+        }
         self.dispatch_bindings_timed(program, &resident_bindings_from_handles(handles)?, config)
     }
 

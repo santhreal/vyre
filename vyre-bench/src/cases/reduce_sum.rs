@@ -4,7 +4,8 @@ use crate::api::case::{
     PerformanceContract, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
-use vyre::ir::Program;
+use crate::api::resident::ResidentInputSet;
+use vyre::ir::{BufferAccess, Program};
 use vyre_driver::TimedDispatchResult;
 use vyre_libs::reduce::{grid_stride_tree, sum};
 
@@ -20,6 +21,14 @@ const ROUTE_TREE: u64 = 1;
 /// The route owns the host input bundle it is dispatched with, derived from
 /// its own program. A route added here is measured, is fingerprinted, and is
 /// checked for ABI arity without anything else naming it.
+///
+/// The bundle reaches the device once. Every measured dispatch then binds the
+/// resident resources uploaded from it, so reducing the same values a second
+/// time moves no input bytes across the host boundary, which is the traffic an
+/// application reducing one resident tensor repeatedly pays. The rayon
+/// baseline sums a `Vec<u32>` that is already in host memory and copies
+/// nothing per iteration, so the host side of the comparison has nothing to
+/// skip and both sides read values they already hold.
 pub struct ReductionRoute {
     /// Route name in diagnostics.
     pub name: &'static str,
@@ -31,6 +40,10 @@ pub struct ReductionRoute {
     pub grid: Option<[u32; 3]>,
     /// Host bytes bound in artifact ABI slot order.
     pub inputs: Vec<Vec<u8>>,
+    /// Resident resources every dispatch binds, once the backend admits them.
+    resident: Option<ResidentInputSet>,
+    /// Resident resource index and seed bytes of every caller-seeded accumulator.
+    reseed: Vec<(usize, Vec<u8>)>,
 }
 
 /// One measured input size and every route that reduces it.
@@ -118,8 +131,10 @@ impl BenchCase for ReduceSumBench {
         let profile = ctx.preferred_backend.device_profile();
         let tree_blocks = profile.grid_stride_workgroups();
         let tile_ceiling = tree_tile_ceiling(&profile);
-        let small = prepare_size(SMALL_COUNT, tree_blocks, tile_ceiling)?;
-        let large = prepare_size(LARGE_COUNT, tree_blocks, tile_ceiling)?;
+        let mut small = prepare_size(SMALL_COUNT, tree_blocks, tile_ceiling)?;
+        let mut large = prepare_size(LARGE_COUNT, tree_blocks, tile_ceiling)?;
+        upload_resident_routes(ctx, &mut small)?;
+        upload_resident_routes(ctx, &mut large)?;
 
         let pool = crate::cases::cpu_baselines::baseline_pool();
         let mut durations = Vec::with_capacity(11);
@@ -305,13 +320,16 @@ fn prepare_size(
                 name: "atomic",
                 route_id: ROUTE_ATOMIC,
                 inputs: host_input_bundle(&atomic_program, &named)?,
+                reseed: caller_seeded_accumulators(&atomic_program, &named)?,
                 program: atomic_program,
                 grid: None,
+                resident: None,
             },
             ReductionRoute {
                 name: "tree",
                 route_id: ROUTE_TREE,
                 inputs: host_input_bundle(&tree_program, &named)?,
+                reseed: caller_seeded_accumulators(&tree_program, &named)?,
                 program: tree_program,
                 // The tree program's grid is a contract of the program at every
                 // block count: pass 1 strides the input over exactly this many
@@ -319,11 +337,75 @@ fn prepare_size(
                 // launch to inference spans the widest declared buffer instead,
                 // which is the whole input.
                 grid: Some([tree_blocks, 1, 1]),
+                resident: None,
             },
         ],
         values,
         expected: crate::cases::byte_pack::u32_bytes(&[expected]),
     })
+}
+
+/// Upload every route's input bundle once, before any measured dispatch.
+///
+/// A device backend without resident allocation is a failure rather than a
+/// silent fall back to host bindings: the case would then measure a 4 MiB
+/// upload per sample against a baseline that copies nothing, and the reported
+/// speedup would describe the transfer instead of the reduction.
+fn upload_resident_routes(
+    ctx: &BenchContext,
+    prepared: &mut ReductionSizePrepared,
+) -> Result<(), BenchError> {
+    for route in &mut prepared.routes {
+        route.resident = ResidentInputSet::upload_program_ordered_with_zeroed_outputs_optional(
+            ctx,
+            &route.program,
+            &route.inputs,
+            "reduce-sum crossover",
+        )?;
+        if route.resident.is_none() && matches!(ctx.preferred_backend.id(), "cuda" | "wgpu") {
+            return Err(BenchError::BackendFailed(format!(
+                "{} lacks resident buffer allocation required to reduce a resident input without re-uploading it every dispatch",
+                ctx.preferred_backend.id()
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// Resident resource index and seed bytes of every accumulator the caller seeds.
+///
+/// A buffer that both consumes a host input slot and is read-write is an
+/// accumulator: the dispatch adds into whatever bytes it finds there, so the
+/// atomic route reads the total of every earlier dispatch unless the seed is
+/// restored first. Resident inputs stay on the device between dispatches, and
+/// this is the one binding that must not, so it is re-seeded from its own
+/// declared bytes. The index is the position among non-shared bindings, which
+/// is the order the resident resource handles are allocated in.
+fn caller_seeded_accumulators(
+    program: &Program,
+    named: &[(&str, &[u8])],
+) -> Result<Vec<(usize, Vec<u8>)>, BenchError> {
+    program
+        .buffers()
+        .iter()
+        .filter(|decl| decl.access != BufferAccess::Workgroup)
+        .enumerate()
+        .filter(|(_, decl)| {
+            decl.consumes_host_input() && decl.access == BufferAccess::ReadWrite
+        })
+        .map(|(index, decl)| {
+            named
+                .iter()
+                .find(|(name, _)| *name == decl.name())
+                .map(|(_, bytes)| (index, bytes.to_vec()))
+                .ok_or_else(|| {
+                    BenchError::ExecutionFailed(format!(
+                        "Fix: program buffer `{}` is a caller-seeded accumulator but the case supplied no seed bytes for it.",
+                        decl.name()
+                    ))
+                })
+        })
+        .collect()
 }
 
 fn measure_size(
@@ -367,7 +449,12 @@ fn measure_size(
     })
 }
 
-/// Dispatch one route with the host input bundle that route declares.
+/// Dispatch one route against its resident resources.
+///
+/// The accumulator seed is restored before the dispatch and is four bytes
+/// wide; every other binding is already on the device and moves nothing. A
+/// backend without residency dispatches the host bundle instead, which is the
+/// only shape the comparison can take when the device cannot hold an input.
 fn dispatch_route(
     ctx: &BenchContext,
     route: &ReductionRoute,
@@ -378,9 +465,19 @@ fn dispatch_route(
     if let Some(grid) = route.grid {
         config.grid_override = Some(grid);
     }
-    let result = ctx
-        .dispatch_timed(&route.program, &route.inputs, &config)
-        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+    let result = match &route.resident {
+        Some(resident) => {
+            for (index, seed) in &route.reseed {
+                resident.upload_resource(*index, seed, route.name)?;
+            }
+            resident
+                .dispatch_timed(ctx, &route.program, &config)
+                .map_err(|error| BenchError::BackendFailed(error.to_string()))?
+        }
+        None => ctx
+            .dispatch_timed(&route.program, &route.inputs, &config)
+            .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
+    };
     verify_route_output(size_name, route.name, &result.outputs, expected)?;
     Ok(result)
 }
@@ -582,5 +679,31 @@ mod tests {
             size.tree().inputs.len(),
             size.atomic().inputs.len()
         );
+    }
+
+    /// Only the accumulator is re-seeded between dispatches of resident inputs.
+    ///
+    /// WHY: resident inputs survive a dispatch, and the atomic route adds into
+    /// `out` rather than storing to it, so a second dispatch over the same
+    /// resident resources reports the running total of every earlier sample
+    /// unless its seed is restored. The tree route stores its result, so
+    /// re-seeding it would move bytes for nothing. Both facts come from the
+    /// program, so a route added to the roster is planned without this test
+    /// being edited. What this does not catch: whether the device honours the
+    /// seed, which the per-sample exact-output check covers.
+    #[test]
+    fn only_a_caller_seeded_accumulator_is_reuploaded_between_dispatches() {
+        for count in [SMALL_COUNT, LARGE_COUNT] {
+            let size = prepare_size(count, 32, 1024).expect("prepared reduction size");
+            assert_eq!(
+                size.atomic().reseed,
+                vec![(1usize, vec![0u8, 0, 0, 0])],
+                "the atomic route accumulates into its second binding, so that binding is re-seeded with four zero bytes at count {count}"
+            );
+            assert!(
+                size.tree().reseed.is_empty(),
+                "the fused tree route stores its result, so it re-seeds nothing at count {count}"
+            );
+        }
     }
 }

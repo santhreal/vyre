@@ -536,6 +536,25 @@ pub(crate) fn resident_bindings_from_handles(
     Ok(bindings)
 }
 
+/// Lift an all-resident handle list into dispatch resources.
+///
+/// The grid-sync split dispatches its segments through the `VyreBackend`
+/// resource contract, so a route selected from resident handles states the
+/// same buffers in the type that contract takes. Resident resources name
+/// device memory by handle, so this copies no bytes.
+pub(crate) fn resident_resources_from_handles(
+    handles: &[CudaResidentBuffer],
+) -> Result<SmallVec<[vyre_driver::Resource; 8]>, BackendError> {
+    let mut resources = SmallVec::new();
+    reserve_smallvec(&mut resources, handles.len(), "resident dispatch resources")?;
+    resources.extend(
+        handles
+            .iter()
+            .map(|handle| vyre_driver::Resource::Resident(handle.handle)),
+    );
+    Ok(resources)
+}
+
 fn allocate_resident_handle_id(next_id: &AtomicU64) -> Result<u64, BackendError> {
     checked_atomic_next_u64_with_order(
         next_id,

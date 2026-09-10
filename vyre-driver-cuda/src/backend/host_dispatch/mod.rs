@@ -4,7 +4,9 @@ use std::sync::Arc;
 
 use smallvec::SmallVec;
 use vyre_driver::BindingRole;
-use vyre_driver::{BackendError, DispatchConfig, OutputBuffers, PendingDispatch, VyreBackend};
+use vyre_driver::{
+    BackendError, DispatchConfig, OutputBuffers, PendingDispatch, Resource, VyreBackend,
+};
 use vyre_foundation::ir::Program;
 
 use crate::numeric::CUDA_NUMERIC;
@@ -96,6 +98,23 @@ impl VyreBackend for GridSyncSplitCudaBackend<'_> {
             .await_result_into(outputs)
     }
 
+    /// Dispatch one split segment against the caller's resident resources.
+    ///
+    /// The resources stay bound for every segment, so a read-write buffer
+    /// threads in place on device memory between segment launches and no
+    /// segment boundary costs a host round trip. A segment carries no
+    /// grid-sync barrier, so this dispatches the segment directly instead of
+    /// re-entering the routing decision that selected the split.
+    fn dispatch_resident_timed(
+        &self,
+        program: &Program,
+        resources: &[Resource],
+        config: &DispatchConfig,
+    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+        let bindings = self.0.resident_bindings_from_resources(resources)?;
+        self.0.dispatch_bindings_timed(program, &bindings, config)
+    }
+
     fn supports_grid_sync(&self) -> bool {
         self.0.supports_grid_sync()
     }
@@ -174,6 +193,68 @@ impl CudaBackend {
     ) -> Result<bool, BackendError> {
         self.require_native_grid_sync_lowering()?;
         Ok(!self.cooperative_grid_sync_launch_fits(program, inputs, config)?)
+    }
+
+    /// The resident twin of
+    /// [`CudaBackend::dispatch_borrowed_with_grid_sync_split_timed`].
+    ///
+    /// Every segment binds the same resources, so the split costs segment
+    /// launches and moves no bytes between them. The host split stages each
+    /// segment's live buffers through host memory, which on a resident
+    /// dispatch would download and re-upload device memory the caller already
+    /// owns.
+    pub(crate) fn dispatch_resident_with_grid_sync_split_timed(
+        &self,
+        program: &Program,
+        resources: &[Resource],
+        config: &DispatchConfig,
+    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+        let adapter = GridSyncSplitCudaBackend(self);
+        vyre_driver::grid_sync::dispatch_resident_with_grid_sync_split_timed(
+            &adapter, program, resources, config,
+        )
+    }
+
+    /// Resident twin of
+    /// [`CudaBackend::grid_sync_program_needs_host_split`], answering the same
+    /// question for a dispatch whose buffers are already on the device.
+    ///
+    /// A resident launch derives its grid from the bound buffers' byte
+    /// lengths, so the borrowed predicate cannot answer for it. Asking nothing
+    /// on the resident path is what sent an over-residency grid-sync program
+    /// into a cooperative launch that could only fail, while the same program
+    /// through a borrowed entry point took the split and returned an answer.
+    pub(crate) fn grid_sync_resident_program_needs_host_split(
+        &self,
+        program: &Program,
+        resources: &[Resource],
+        config: &DispatchConfig,
+    ) -> Result<bool, BackendError> {
+        self.require_native_grid_sync_lowering()?;
+        let bindings = self.resident_bindings_from_resources(resources)?;
+        Ok(!self.cooperative_grid_sync_resident_launch_fits(program, &bindings, config)?)
+    }
+
+    /// The resources to dispatch through the resident grid-sync split, or
+    /// `None` when this launch fits a native cooperative grid.
+    ///
+    /// Every resident entry point that takes handles asks this one question,
+    /// so a caller that reaches the device through handles rather than
+    /// resources takes the same route for the same program.
+    pub(crate) fn resident_grid_sync_split_route(
+        &self,
+        program: &Program,
+        handles: &[super::resident::CudaResidentBuffer],
+        config: &DispatchConfig,
+    ) -> Result<Option<SmallVec<[Resource; 8]>>, BackendError> {
+        if !vyre_driver::grid_sync::contains_grid_sync(program) {
+            return Ok(None);
+        }
+        let resources = super::resident::resident_resources_from_handles(handles)?;
+        if !self.grid_sync_resident_program_needs_host_split(program, &resources, config)? {
+            return Ok(None);
+        }
+        Ok(Some(resources))
     }
 
     /// Refuse a grid-sync program when the device has no native grid barrier.

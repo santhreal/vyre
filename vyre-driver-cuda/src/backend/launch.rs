@@ -391,6 +391,32 @@ impl CudaBackend {
         self.cooperative_residency_admits(&launch)
     }
 
+    /// Resident twin of [`Self::cooperative_grid_sync_launch_fits`].
+    ///
+    /// A resident dispatch derives its launch grid from the byte length of the
+    /// device buffers bound to it, not from host slices, so the borrowed
+    /// predicate cannot answer for it: the same program with the same grid was
+    /// routed to the split through a borrowed entry point and launched
+    /// natively through a resident one, where it could only fail with
+    /// `CooperativeResidencyExceeded`. Both now compare the same grid to the
+    /// same residency bound.
+    ///
+    /// The launch plan comes from [`Self::prepare_resident_dispatch`], the plan
+    /// builder the resident dispatch itself runs, so the preflight reads the
+    /// grid that is about to launch rather than a second derivation of it.
+    pub(crate) fn cooperative_grid_sync_resident_launch_fits(
+        &self,
+        program: &Program,
+        bindings: &[crate::backend::resident::CudaDispatchBinding<'_>],
+        config: &DispatchConfig,
+    ) -> Result<bool, BackendError> {
+        if !self.supports_grid_sync() || !vyre_driver::grid_sync::contains_grid_sync(program) {
+            return Ok(false);
+        }
+        let prepared = self.prepare_resident_dispatch(program, bindings, config)?;
+        self.cooperative_residency_admits(&prepared.launch)
+    }
+
     fn cooperative_residency_diagnostic(&self, launch: &LaunchPlan) -> String {
         match self.diagnose_launch_plan("main", launch, true, self.lowers_tensor_core_ops()) {
             Ok(envelope) => envelope.stable_message(),

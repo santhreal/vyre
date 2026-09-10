@@ -64,14 +64,78 @@ pub(super) fn resident_output_clear_for_readback(
     Ok(Some((clear_ptr, readback.byte_len)))
 }
 
+/// Whether an output binding is zero-filled before the launch.
+///
+/// A borrowed output is staged out of the transient pool, which hands back
+/// whatever the previous dispatch left in it, so the declared readback range
+/// is cleared and a kernel that writes part of it still reads back
+/// deterministically. A binding that consumes a host input carries the
+/// caller's bytes and is never cleared.
+///
+/// A resident binding the kernel READS is the third case, and it was cleared
+/// as an output because it consumes no host input. That destroys caller data:
+/// the buffer is device memory the caller owns and filled, and a read-write
+/// live-out is how one dispatch hands values to the next. It is exactly how a
+/// grid-sync split returned zeros. The split binds the same resources for
+/// every segment and threads its intermediate through a read-write live-out,
+/// so the second segment cleared the partials the first segment had just
+/// written and reduced an empty buffer.
+///
+/// The declared access decides it, not observed use: a program that MAY read
+/// the buffer is one whose data must survive the launch, and the conservative
+/// answer is the safe one in this direction.
+pub(super) fn clears_resident_output_before_launch(
+    program: &Program,
+    buffer_index: usize,
+    input_index: Option<usize>,
+    resident: bool,
+) -> Result<bool, BackendError> {
+    if input_index.is_some() {
+        return Ok(false);
+    }
+    if !resident {
+        return Ok(true);
+    }
+    let buffer = program.buffers().get(buffer_index).ok_or_else(|| {
+        BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA resident output binding names buffer index {buffer_index}, but the program declares {} buffer(s). Rebuild the binding plan before launch.",
+                program.buffers().len()
+            ),
+        }
+    })?;
+    Ok(!matches!(
+        buffer.access(),
+        vyre_foundation::ir::BufferAccess::ReadOnly
+            | vyre_foundation::ir::BufferAccess::ReadWrite
+            | vyre_foundation::ir::BufferAccess::Uniform
+    ))
+}
+
 impl CudaBackend {
     /// Dispatch a Program asynchronously using caller-provided CUDA-resident buffers.
+    ///
+    /// An over-residency grid-sync program has no single native launch to
+    /// return a pending handle for: its segments are ordered, and the next one
+    /// cannot be enqueued until the previous has run. The split therefore
+    /// completes here and the handle is returned ready, the same shape the
+    /// registry wrapper's asynchronous split takes.
     pub fn dispatch_resident_async(
         &self,
         program: &Program,
         handles: &[CudaResidentBuffer],
         config: &DispatchConfig,
     ) -> Result<Box<dyn PendingDispatch>, BackendError> {
+        if let Some(resources) = self.resident_grid_sync_split_route(program, handles, config)? {
+            let split =
+                self.dispatch_resident_with_grid_sync_split_timed(program, &resources, config)?;
+            return Ok(Box::new(crate::stream::CudaPendingDispatch::new_ready(
+                Arc::clone(&self.ctx),
+                Arc::clone(&self.launch_resources),
+                split.outputs,
+                Arc::clone(&self.telemetry),
+            )));
+        }
         self.dispatch_bindings_async(program, &resident_bindings_from_handles(handles)?, config)
     }
 
@@ -280,7 +344,12 @@ impl CudaBackend {
                     "resident async output readback",
                 )?;
                 output_handles_by_index.push((output_index, resident_handle, readback, launch_ptr));
-                if binding.input_index.is_none() {
+                if clears_resident_output_before_launch(
+                    program,
+                    binding.buffer_index,
+                    binding.input_index,
+                    resident_handle.is_some(),
+                )? {
                     output_clears.extend(resident_output_clear_for_readback(
                         launch_ptr,
                         readback,

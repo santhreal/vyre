@@ -48,7 +48,9 @@ mod tests {
 
     // Inline: covers `borrowed`, which no integration test can name.
     mod resident_preflight_planning {
-        use super::super::async_dispatch::resident_output_clear_for_readback;
+        use super::super::async_dispatch::{
+            clears_resident_output_before_launch, resident_output_clear_for_readback,
+        };
         use super::super::borrowed::order_resident_fallback_inputs_by_logical_index;
         use super::{
             prepare_resident_sequence_fills, stage_resident_fill_payload,
@@ -163,6 +165,83 @@ mod tests {
             assert!(
                 error.to_string().contains("overflowed"),
                 "overflow error must explain the CUDA resident clear pointer failure: {error}"
+            );
+        }
+
+        /// WHY: a resident output binding was zero-filled before every launch
+        /// because it consumes no host input, which wiped device memory the
+        /// caller owns and had filled. A grid-sync split threads its
+        /// intermediate through a read-write live-out bound to every segment,
+        /// so the second segment cleared the partials the first had written and
+        /// the reduction answered zero.
+        ///
+        /// The four cases are asserted together because the rule is a
+        /// partition, and the previous rule got one of the four wrong while
+        /// agreeing on the rest.
+        #[test]
+        fn a_resident_output_the_kernel_reads_keeps_its_bytes_and_a_staged_one_is_cleared() {
+            let program = vyre_foundation::ir::Program::wrapped(
+                vec![
+                    vyre_foundation::ir::BufferDecl::read(
+                        "values",
+                        0,
+                        vyre_foundation::ir::DataType::U32,
+                    )
+                    .with_count(4),
+                    vyre_foundation::ir::BufferDecl::output(
+                        "partials",
+                        1,
+                        vyre_foundation::ir::DataType::U32,
+                    )
+                    .with_count(4),
+                    vyre_foundation::ir::BufferDecl::storage(
+                        "written",
+                        2,
+                        vyre_foundation::ir::BufferAccess::WriteOnly,
+                        vyre_foundation::ir::DataType::U32,
+                    )
+                    .with_count(4),
+                ],
+                [4, 1, 1],
+                vec![vyre_foundation::ir::Node::store(
+                    "partials",
+                    vyre_foundation::ir::Expr::gid_x(),
+                    vyre_foundation::ir::Expr::load(
+                        "values",
+                        vyre_foundation::ir::Expr::gid_x(),
+                    ),
+                )],
+            );
+
+            assert!(
+                !clears_resident_output_before_launch(&program, 1, Some(0), true)
+                    .expect("Fix: the clear decision must resolve for a bound host input."),
+                "Fix: a binding that consumes a host input carries the caller's bytes and must \
+                 never be cleared."
+            );
+            assert!(
+                clears_resident_output_before_launch(&program, 1, None, false)
+                    .expect("Fix: the clear decision must resolve for a staged output."),
+                "Fix: a borrowed output is staged out of the transient pool, which holds the \
+                 previous dispatch's bytes, so its readback range must be cleared."
+            );
+            assert!(
+                !clears_resident_output_before_launch(&program, 1, None, true)
+                    .expect("Fix: the clear decision must resolve for a resident live-out."),
+                "Fix: a resident read-write output is device memory the caller owns and the \
+                 kernel reads, so clearing it destroys the values a previous dispatch left."
+            );
+            assert!(
+                clears_resident_output_before_launch(&program, 2, None, true)
+                    .expect("Fix: the clear decision must resolve for a write-only output."),
+                "Fix: nothing reads a write-only output, so clearing its readback range is what \
+                 makes a partial write read back deterministically."
+            );
+            let missing = clears_resident_output_before_launch(&program, 9, None, true)
+                .expect_err("Fix: a buffer index the program does not declare must be refused.");
+            assert!(
+                missing.to_string().contains("Rebuild the binding plan"),
+                "Fix: the refusal must state the corrective action: {missing}"
             );
         }
 
