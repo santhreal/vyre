@@ -386,13 +386,13 @@ pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_hit_rate: f64
 pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_hits: u64
 pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_insertions: u64
 pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_misses: u64
-pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::dimensions: vyre_spec::resource_capability::ImageDimensions
-pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::format: vyre_spec::resource_capability::ImageFormat
+pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::dimensions: vyre_spec::resource_capability::image::ImageDimensions
+pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::format: vyre_spec::resource_capability::image::ImageFormat
 pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::handle: vyre_driver_wgpu::WgpuExternalMemoryHandle
 pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::permitted_usages: vyre_spec::resource_capability::ResourcePermittedUsages
 pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::resource_id: u64
 pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::row_pitch_bytes: u32
-pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::sync_protocol: vyre_spec::resource_capability::TimelineSyncProtocol
+pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::sync_protocol: vyre_spec::resource_capability::sampler::TimelineSyncProtocol
 pub vyre_driver_wgpu::WgpuExternalMemoryHandle::DmaBuf(i32)
 pub vyre_driver_wgpu::WgpuExternalMemoryHandle::HalTexture(usize)
 pub vyre_driver_wgpu::WgpuExternalMemoryHandle::HostBuffer

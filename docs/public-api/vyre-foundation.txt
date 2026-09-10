@@ -2298,7 +2298,7 @@ pub fn vyre_foundation::operation::CallGraphClosure::solve_from_registrations<'a
 pub fn vyre_foundation::operation::CallGraphClosure::transitive_capabilities(&self, id: &str) -> core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub fn vyre_foundation::operation::CallGraphClosure::transitive_effects(&self, id: &str) -> core::option::Option<vyre_foundation::operation::OperationEffects>
 pub fn vyre_foundation::operation::ConformanceRegistry::contains(&self, id: &str) -> bool
-pub fn vyre_foundation::operation::ConformanceRegistry::from_registry() -> Self
+pub fn vyre_foundation::operation::ConformanceRegistry::global() -> &'static Self
 pub fn vyre_foundation::operation::ConformanceRegistry::is_empty(&self) -> bool
 pub fn vyre_foundation::operation::ConformanceRegistry::iter(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &vyre_foundation::operation::ConformanceProvider> + '_
 pub fn vyre_foundation::operation::ConformanceRegistry::len(&self) -> usize
@@ -2318,7 +2318,7 @@ pub fn vyre_foundation::operation::OperationCatalogBundle::empty() -> Self
 pub fn vyre_foundation::operation::OperationCatalogBundle::extension(&self, name: &str) -> core::option::Option<&vyre_foundation::operation::ExtensionProvenance>
 pub fn vyre_foundation::operation::OperationCatalogBundle::extensions(&self) -> &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>
 pub fn vyre_foundation::operation::OperationCatalogBundle::from_parts(descriptors: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::SemanticDescriptor>, lowering_providers: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::LoweringProvider>, extensions: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>) -> Self
-pub fn vyre_foundation::operation::OperationCatalogBundle::from_registry() -> Self
+pub fn vyre_foundation::operation::OperationCatalogBundle::global() -> &'static Self
 pub fn vyre_foundation::operation::OperationCatalogBundle::is_empty(&self) -> bool
 pub fn vyre_foundation::operation::OperationCatalogBundle::len(&self) -> usize
 pub fn vyre_foundation::operation::OperationCatalogBundle::lowering(&self, id: &str) -> core::option::Option<&vyre_foundation::operation::LoweringProvider>
@@ -3547,7 +3547,7 @@ pub fn vyre_foundation::region_ssa::lower_program_to_region_ssa(program: &vyre_f
 pub fn vyre_foundation::region_ssa::lower_region_ssa_to_program(module: &vyre_foundation::region_ssa::RegionModule) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::region_ssa::RegionSsaError>
 pub fn vyre_foundation::region_ssa::verify_dominance(func: &vyre_foundation::region_ssa::RegionFunction) -> core::result::Result<(), vyre_foundation::region_ssa::DominanceError>
 pub fn vyre_foundation::schedule::DependencyPreservationCertificate::new(theorem_id: impl core::convert::Into<alloc::string::String>, distance_bounds: alloc::vec::Vec<i64>, direction_preserved: bool) -> Self
-pub fn vyre_foundation::schedule::PartialSchedule::instantiate(&self, bindings: &std::collections::hash::map::HashMap<alloc::string::String, u64>) -> core::result::Result<vyre_foundation::schedule::SchedulePlan, vyre_foundation::schedule::ScheduleLegalityError>
+pub fn vyre_foundation::schedule::PartialSchedule::instantiate(&self, bindings: &std::collections::hash::map::HashMap<alloc::string::String, u64>, bounds: vyre_foundation::schedule::ScheduleResourceBounds) -> core::result::Result<vyre_foundation::schedule::SchedulePlan, vyre_foundation::schedule::ScheduleLegalityError>
 pub fn vyre_foundation::schedule::PartialSchedule::is_complete(&self) -> bool
 pub fn vyre_foundation::schedule::PartialSchedule::new(root: vyre_foundation::schedule::ScheduleTree, unassigned_regions: alloc::vec::Vec<u32>, symbolic_parameters: alloc::vec::Vec<vyre_foundation::schedule::SymbolicParameter>) -> Self
 pub fn vyre_foundation::schedule::ScheduleCostModel::evaluate(&self, plan: &vyre_foundation::schedule::SchedulePlan) -> vyre_foundation::schedule::ScheduleCostRecord

@@ -2756,6 +2756,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `vyre-driver-metal/src/tests/wgpu_differential.rs`. It was the second test in
   the one-shot dispatch module, whose subject is what Metal does with a program
   rather than whether two backends agree.
+- Public API snapshots state the defining module of a re-exported type. The
+  image and sampler capability records moved into
+  `vyre_spec::resource_capability::image` and `::sampler`, and the retry
+  classification into `vyre_foundation::diagnostics::classification`. Both
+  re-export from their previous path, so no reachable path changed.
 - The `vyre-emit-naga` test surface states two things once. Four recursive
   probes over an emitted `naga::Block`, whether it contains a barrier, a loop
   or an atomic at any depth and how many `If` statements it holds, existed in

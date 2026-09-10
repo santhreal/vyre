@@ -20,6 +20,12 @@ mod gemm_contracts;
 #[path = "gemm_programs.rs"]
 mod gemm_programs;
 use gemm_programs::*;
+#[path = "strassen_programs.rs"]
+mod strassen_programs;
+use strassen_programs::*;
+#[path = "tiled_gemm_programs.rs"]
+mod tiled_gemm_programs;
+use tiled_gemm_programs::*;
 
 use crate::builder::{check_tensors, BuildOptions};
 use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};

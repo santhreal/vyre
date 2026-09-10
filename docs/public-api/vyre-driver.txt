@@ -394,7 +394,7 @@ pub fn vyre_driver::AdaptiveSpeculator::record(&self, report: vyre_driver::Specu
 pub fn vyre_driver::AdaptiveSpeculator::samples(&self) -> u32
 pub fn vyre_driver::AdaptiveSpeculator::should_speculate(&self) -> bool
 pub fn vyre_driver::AdaptiveSpeculator::threshold_ppm(&self) -> u64
-pub fn vyre_driver::AdmittedResourceRecordExt::new_2d_owned(resource_id: u64, device_id: u64, format: vyre_spec::resource_capability::ImageFormat, color: vyre_spec::resource_capability::ColorInterpretation, width: u32, height: u32, permitted_usages: vyre_spec::resource_capability::ResourcePermittedUsages, owner: vyre_driver::ResidentOwner) -> vyre_spec::resource_capability::AdmittedResourceRecord
+pub fn vyre_driver::AdmittedResourceRecordExt::new_2d_owned(resource_id: u64, device_id: u64, format: vyre_spec::resource_capability::image::ImageFormat, color: vyre_spec::resource_capability::image::ColorInterpretation, width: u32, height: u32, permitted_usages: vyre_spec::resource_capability::ResourcePermittedUsages, owner: vyre_driver::ResidentOwner) -> vyre_spec::resource_capability::AdmittedResourceRecord
 pub fn vyre_driver::AotLauncherFiles::from_entries(dependencies: alloc::vec::Vec<vyre_driver::LauncherDependency>, entries: impl core::iter::traits::collect::IntoIterator<Item = (std::path::PathBuf, alloc::string::String)>) -> Self
 pub fn vyre_driver::ArtifactInstance::artifact(&self) -> vyre_megakernel::identity::Digest
 pub fn vyre_driver::ArtifactInstance::device(&self) -> &vyre_driver::DeviceIdentity
@@ -588,9 +588,9 @@ pub fn vyre_driver::ResidentOwner::resolve(self, handle: vyre_driver::ResidentHa
 pub fn vyre_driver::Resource::default() -> Self
 pub fn vyre_driver::Resource::from(bytes: alloc::vec::Vec<u8>) -> Self
 pub fn vyre_driver::Resource::from(handle: vyre_driver::ResidentHandle) -> Self
-pub fn vyre_driver::ResourceTransitionSchedule::add_signal(&mut self, signal: vyre_spec::resource_capability::TimelineSyncProtocol)
+pub fn vyre_driver::ResourceTransitionSchedule::add_signal(&mut self, signal: vyre_spec::resource_capability::sampler::TimelineSyncProtocol)
 pub fn vyre_driver::ResourceTransitionSchedule::add_transition(&mut self, resource_id: u64, transition: vyre_spec::resource_capability::ResourceUsageTransition)
-pub fn vyre_driver::ResourceTransitionSchedule::add_wait(&mut self, wait: vyre_spec::resource_capability::TimelineSyncProtocol)
+pub fn vyre_driver::ResourceTransitionSchedule::add_wait(&mut self, wait: vyre_spec::resource_capability::sampler::TimelineSyncProtocol)
 pub fn vyre_driver::ResourceTransitionSchedule::new() -> Self
 pub fn vyre_driver::RoutingTable::distribution(&self, call_site: &str) -> core::option::Option<vyre_driver::Distribution>
 pub fn vyre_driver::RoutingTable::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain
@@ -763,7 +763,7 @@ pub fn vyre_driver::arm_independence::BindingSlotSet::insert(&mut self, slot: u3
 pub fn vyre_driver::arm_independence::BindingSlotSet::intersects(&self, other: &Self) -> bool
 pub fn vyre_driver::arm_independence::can_dispatch_concurrently(a: &vyre_driver::arm_independence::ArmBindingSummary, b: &vyre_driver::arm_independence::ArmBindingSummary) -> vyre_driver::arm_independence::ArmIndependenceVerdict
 pub fn vyre_driver::async_copy_overlap::can_overlap_copy_with_kernel(copy_dst_slot: u32, kernel_arm: &vyre_driver::arm_independence::ArmBindingSummary) -> vyre_driver::async_copy_overlap::CopyOverlapDecision
-pub fn vyre_driver::authenticate_external_import(resource_id: u64, _device_id: u64, format: vyre_spec::resource_capability::ImageFormat, memory_kind: vyre_spec::resource_capability::ExternalMemoryKind, width: u32, pitch_bytes: u32) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
+pub fn vyre_driver::authenticate_external_import(resource_id: u64, _device_id: u64, format: vyre_spec::resource_capability::image::ImageFormat, memory_kind: vyre_spec::resource_capability::sampler::ExternalMemoryKind, width: u32, pitch_bytes: u32) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
 pub fn vyre_driver::auto_grid(program: &vyre_foundation::ir_inner::model::program::definition::Program, backend: &dyn vyre_driver::VyreBackend) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
 pub fn vyre_driver::autotune_store::AutotuneKey::new(spec: &vyre_driver::SpecCacheKey, adapter_id: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_driver::autotune_store::AutotuneStore::forget(&mut self, key: &vyre_driver::autotune_store::AutotuneKey) -> bool
@@ -1242,7 +1242,7 @@ pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_driver::Backe
 pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_driver::BackendError) -> Self
 pub fn vyre_foundation::optimizer::ctx::AdapterCaps::from(profile: vyre_driver::DeviceProfile) -> Self
 pub fn vyre_foundation::validate::options::BackendCapabilities::from(profile: vyre_driver::DeviceProfile) -> Self
-pub fn vyre_spec::resource_capability::AdmittedResourceRecord::new_2d_owned(resource_id: u64, device_id: u64, format: vyre_spec::resource_capability::ImageFormat, color: vyre_spec::resource_capability::ColorInterpretation, width: u32, height: u32, permitted_usages: vyre_spec::resource_capability::ResourcePermittedUsages, owner: vyre_driver::ResidentOwner) -> Self
+pub fn vyre_spec::resource_capability::AdmittedResourceRecord::new_2d_owned(resource_id: u64, device_id: u64, format: vyre_spec::resource_capability::image::ImageFormat, color: vyre_spec::resource_capability::image::ColorInterpretation, width: u32, height: u32, permitted_usages: vyre_spec::resource_capability::ResourcePermittedUsages, owner: vyre_driver::ResidentOwner) -> Self
 pub macro vyre_driver::artifact_instance_identity!
 pub macro vyre_driver::artifact_instance_unreported_resources!
 pub macro vyre_driver::executable_module!
@@ -1987,9 +1987,9 @@ pub vyre_driver::ResidentSequenceTiming::wait_ns: core::option::Option<u64>
 pub vyre_driver::ResidentSequenceTiming::wall_ns: u64
 pub vyre_driver::Resource::Borrowed(alloc::vec::Vec<u8>)
 pub vyre_driver::Resource::Resident(vyre_driver::ResidentHandle)
-pub vyre_driver::ResourceTransitionSchedule::signals: alloc::vec::Vec<vyre_spec::resource_capability::TimelineSyncProtocol>
+pub vyre_driver::ResourceTransitionSchedule::signals: alloc::vec::Vec<vyre_spec::resource_capability::sampler::TimelineSyncProtocol>
 pub vyre_driver::ResourceTransitionSchedule::transitions: alloc::vec::Vec<(u64, vyre_spec::resource_capability::ResourceUsageTransition)>
-pub vyre_driver::ResourceTransitionSchedule::waits: alloc::vec::Vec<vyre_spec::resource_capability::TimelineSyncProtocol>
+pub vyre_driver::ResourceTransitionSchedule::waits: alloc::vec::Vec<vyre_spec::resource_capability::sampler::TimelineSyncProtocol>
 pub vyre_driver::Semver::major: u32
 pub vyre_driver::Semver::minor: u32
 pub vyre_driver::Semver::patch: u32

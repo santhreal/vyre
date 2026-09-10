@@ -1,10 +1,12 @@
 impl vyre_driver_reference::CpuRefEvaluator
 impl vyre_megakernel::execution::SemanticExecutor for vyre_driver_reference::ReferenceSemanticExecutor
+pub const vyre_driver_reference::ORACLE_EXECUTOR_ID: &str
 pub const vyre_driver_reference::REFERENCE_SHARED_SCRATCH_BYTES: u32
 pub const vyre_driver_reference::REFERENCE_SUBGROUP_WIDTH: u32
 pub fn vyre_driver_reference::CpuRefEvaluator::evaluate(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_reference::CpuRefEvaluator::evaluate_default(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_reference::ReferenceSemanticExecutor::execute(&self, request: &vyre_megakernel::execution::SemanticExecutionRequest<'_>) -> core::result::Result<vyre_megakernel::execution::SemanticExecutionOutput, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_driver_reference::is_oracle_executor_id(id: &str) -> bool
 pub fn vyre_driver_reference::target_profile() -> core::result::Result<vyre_megakernel::envelope::TargetProfile, vyre_driver::backend::error::BackendError>
 pub mod vyre_driver_reference
 pub struct vyre_driver_reference::CpuRefEvaluator
