@@ -12,6 +12,11 @@ const OP_ID_PATCH: &str = "vyre-libs::visual::dirty_region_patch";
 const OP_ID_DIRECT: &str = "vyre-libs::visual::dirty_region_patch_direct";
 
 /// Build a Program that copies `atlas` to `output` while patching a sub-rectangle from `patch`.
+///
+/// The destination rectangle is clipped to the atlas extent, so a region reaching
+/// past the surface patches only the pixels inside it. `patch_w * patch_h` must be
+/// at least one: an empty dirty rectangle declares an empty `patch` buffer and has
+/// nothing to patch from.
 #[must_use]
 pub fn dirty_region_patch_rgba(
     atlas: &str,
@@ -26,6 +31,11 @@ pub fn dirty_region_patch_rgba(
 ) -> Program {
     let count = atlas_w * atlas_h;
     let patch_count = patch_w * patch_h;
+    // Exclusive destination bounds, clipped to the atlas extent. `ax` and `ay`
+    // stay below that extent, so the clip admits exactly the pixels the unclipped
+    // bound admits, and it keeps `dest + extent` from wrapping u32.
+    let dest_end_x = atlas_w.min(dest_x.saturating_add(patch_w));
+    let dest_end_y = atlas_h.min(dest_y.saturating_add(patch_h));
 
     let body = vec![
         Node::let_bind("idx", Expr::logical_index(0)),
@@ -37,11 +47,11 @@ pub fn dirty_region_patch_rgba(
             Expr::and(
                 Expr::and(
                     Expr::ge(Expr::var("ax"), Expr::u32(dest_x)),
-                    Expr::lt(Expr::var("ax"), Expr::u32(dest_x + patch_w)),
+                    Expr::lt(Expr::var("ax"), Expr::u32(dest_end_x)),
                 ),
                 Expr::and(
                     Expr::ge(Expr::var("ay"), Expr::u32(dest_y)),
-                    Expr::lt(Expr::var("ay"), Expr::u32(dest_y + patch_h)),
+                    Expr::lt(Expr::var("ay"), Expr::u32(dest_end_y)),
                 ),
             ),
         ),
@@ -54,19 +64,20 @@ pub fn dirty_region_patch_rgba(
                 Expr::mul(Expr::var("patch_y"), Expr::u32(patch_w)),
             ),
         ),
-        Node::let_bind(
-            "patch_px",
-            Expr::select(
-                Expr::var("in_patch"),
-                Expr::load(patch, Expr::var("patch_idx")),
-                Expr::u32(0),
-            ),
-        ),
+        // A select evaluates both arms, and `ax - dest_x` wraps for a pixel left
+        // of the destination rectangle, so a raw load read past the end of `patch`
+        // for every pixel outside the region. `clamped_load_to` bounds the index
+        // while `in_patch` still supplies the value, and the clamp is inert inside
+        // the region: the bound test proves `patch_idx < patch_w * patch_h` there.
         Node::let_bind(
             "out_px",
             Expr::select(
                 Expr::var("in_patch"),
-                Expr::var("patch_px"),
+                vyre_primitives::ir_safe::clamped_load_to(
+                    patch,
+                    Expr::var("patch_idx"),
+                    Expr::u32(patch_count),
+                ),
                 Expr::var("atlas_px"),
             ),
         ),

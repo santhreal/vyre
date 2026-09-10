@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The text_run conformance case encodes its blue glyph color as `0xFFFF0000`, matching the declared packing that carries B in bits 23 through 16, instead of an ARGB word that reads as red."
