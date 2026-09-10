@@ -463,3 +463,43 @@ pub fn hostile_contents(inputs: &[Value], index: u32) -> Vec<Value> {
         })
         .collect()
 }
+
+/// Run a registered entry over its declared fixture inputs and return the
+/// output bytes, one inner vector per case.
+///
+/// Four suites pinned registered outputs by restating the same loop: read
+/// `test_inputs`, build the neutral program, evaluate, and map each output
+/// value to bytes. The loop is stated once here, and it rebuilds the program
+/// per case, so a builder that carries state between calls cannot pass by
+/// being invoked once.
+///
+/// Panics when the entry declares no fixture inputs or no neutral builder: a
+/// caller pinning a witness has already asserted the entry has both.
+pub fn declared_witness_bytes(id: &str, entry: &SemanticOperation) -> Vec<Vec<Vec<u8>>> {
+    let inputs = (entry
+        .test_inputs
+        .unwrap_or_else(|| panic!("Fix: `{id}` must declare test inputs to pin a witness")))(
+    );
+    let build = entry
+        .build
+        .unwrap_or_else(|| panic!("Fix: `{id}` must declare a neutral builder to pin a witness"));
+    inputs
+        .iter()
+        .enumerate()
+        .map(|(case, input_set)| {
+            let values = input_set
+                .iter()
+                .cloned()
+                .map(Value::from)
+                .collect::<Vec<_>>();
+            vyre_reference::ReferenceRequest::standard(&build(), &values)
+                .outputs()
+                .unwrap_or_else(|error| {
+                    panic!("Fix: reference run failed for `{id}` case {case}: {error}")
+                })
+                .into_iter()
+                .map(|value| value.to_bytes())
+                .collect()
+        })
+        .collect()
+}

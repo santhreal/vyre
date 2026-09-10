@@ -132,7 +132,6 @@ fn depth_phase_witness_matches_reference() {
     let entry = OperationRegistry::global()
         .get("vyre-libs::graph::dominator_tree_depth")
         .expect("dominator_tree_depth is registered");
-    let inputs = (entry.test_inputs.expect("declared test inputs"))();
     let declared = (entry.expected_output.expect("declared expected output"))();
     // Forest `0 <- 1 <- 2` with node 3 unreached.
     assert_eq!(
@@ -141,23 +140,14 @@ fn depth_phase_witness_matches_reference() {
         "declared witness drift for dominator_tree_depth"
     );
 
-    let build = entry.build.expect("neutral builder");
-    for (case, (input_set, expected)) in inputs.iter().zip(declared.iter()).enumerate() {
-        let outputs = vyre_reference::ReferenceRequest::standard(
-            &build(),
-            &input_set
-                .iter()
-                .cloned()
-                .map(Value::from)
-                .collect::<Vec<_>>(),
-        )
-        .outputs()
-        .expect("reference run for dominator_tree_depth")
-        .into_iter()
-        .map(|value| value.to_bytes())
-        .collect::<Vec<_>>();
-        assert_eq!(outputs, *expected, "CPU witness drift, case {case}");
-    }
+    assert_eq!(
+        vyre_test_support::registry_nets::declared_witness_bytes(
+            "vyre-libs::graph::dominator_tree_depth",
+            &entry,
+        ),
+        declared,
+        "CPU witness drift for dominator_tree_depth"
+    );
 }
 
 #[test]
@@ -195,7 +185,6 @@ fn intersect_phase_witness_matches_reference() {
     let entry = OperationRegistry::global()
         .get("vyre-libs::graph::dominator_tree_intersect_step")
         .expect("dominator_tree_intersect_step is registered");
-    let inputs = (entry.test_inputs.expect("declared test inputs"))();
     let declared = (entry.expected_output.expect("declared expected output"))();
     // Diamond `0 -> {1, 2} -> 3`: node 3's two predecessors intersect at the
     // entry, and the sweep reports that it moved node 3.
@@ -208,23 +197,14 @@ fn intersect_phase_witness_matches_reference() {
         "declared witness drift for dominator_tree_intersect_step"
     );
 
-    let build = entry.build.expect("neutral builder");
-    for (case, (input_set, expected)) in inputs.iter().zip(declared.iter()).enumerate() {
-        let outputs = vyre_reference::ReferenceRequest::standard(
-            &build(),
-            &input_set
-                .iter()
-                .cloned()
-                .map(Value::from)
-                .collect::<Vec<_>>(),
-        )
-        .outputs()
-        .expect("reference run for dominator_tree_intersect_step")
-        .into_iter()
-        .map(|value| value.to_bytes())
-        .collect::<Vec<_>>();
-        assert_eq!(outputs, *expected, "CPU witness drift, case {case}");
-    }
+    assert_eq!(
+        vyre_test_support::registry_nets::declared_witness_bytes(
+            "vyre-libs::graph::dominator_tree_intersect_step",
+            &entry,
+        ),
+        declared,
+        "CPU witness drift for dominator_tree_intersect_step"
+    );
 }
 
 #[test]

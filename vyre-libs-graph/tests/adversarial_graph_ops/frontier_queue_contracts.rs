@@ -22,26 +22,16 @@ fn prefix_frontier_queue_reference(
         node_count,
         queue_capacity,
     );
-    let scatter_outputs = vyre_reference::ReferenceRequest::standard(
+    let (queue, queue_len) = crate::wire_words::run_frontier_scatter(
         &scatter,
-        &[
+        vec![
             Value::from(pack_words(frontier)),
             pass_a_outputs[0].clone(),
             pass_a_outputs[1].clone(),
-            Value::from(vec![
-                0_u8;
-                queue_capacity as usize * std::mem::size_of::<u32>()
-            ]),
-            Value::from(pack_words(&[0])),
         ],
-    )
-    .outputs()
-    .expect("prefix frontier queue scatter should reference-evaluate");
-    let queue = unpack_words(&scatter_outputs[0].to_bytes());
-    let len = unpack_words(&scatter_outputs[1].to_bytes())
-        .into_iter()
-        .next()
-        .unwrap_or(0);
+        queue_capacity,
+    );
+    let len = queue_len.into_iter().next().unwrap_or(0);
     (queue, len)
 }
 

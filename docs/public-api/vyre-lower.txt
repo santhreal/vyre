@@ -408,7 +408,9 @@ pub fn vyre_lower::artifact_golden::assert_matches_golden(path: &std::path::Path
 pub fn vyre_lower::artifact_golden::contains_case(corpus: &str, case_id: &str) -> bool
 pub fn vyre_lower::artifact_golden::hex_words(bytes: &[u8]) -> alloc::string::String
 pub fn vyre_lower::artifact_golden::render_sections<I, S>(sections: I) -> alloc::string::String where I: core::iter::traits::collect::IntoIterator<Item = (S, alloc::string::String)>, S: core::convert::AsRef<str>
+pub fn vyre_lower::artifact_golden::render_sections_with_header<I, S>(header: &str, sections: I) -> alloc::string::String where I: core::iter::traits::collect::IntoIterator<Item = (S, alloc::string::String)>, S: core::convert::AsRef<str>
 pub fn vyre_lower::artifact_golden::render_success_corpus(render: impl core::ops::function::Fn(&vyre_lower::KernelDescriptor) -> alloc::string::String) -> alloc::string::String
+pub fn vyre_lower::artifact_golden::section_id(line: &str) -> core::option::Option<&str>
 pub fn vyre_lower::artifact_golden::write_golden(path: &std::path::Path, actual: &str)
 pub fn vyre_lower::audit(desc: &vyre_lower::KernelDescriptor, facts: &vyre_lower::analyses::AnalysisFacts) -> vyre_lower::PerfAuditReport
 pub fn vyre_lower::audit_with_histogram(desc: &vyre_lower::KernelDescriptor, facts: &vyre_lower::analyses::AnalysisFacts) -> (vyre_lower::PerfAuditReport, vyre_lower::analyses::OpHistogram)

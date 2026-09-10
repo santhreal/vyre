@@ -18,6 +18,17 @@ fn pack_spine_fixture(node_count: u32) -> (Vec<u8>, Vec<u8>) {
     let region = full[start..start + node_len].to_vec();
     (full, region)
 }
+
+/// Run a walk program on the reference oracle and hand back its buffers.
+///
+/// Thirteen contracts here drive a walk the same way and differ only in the
+/// buffers they bind and the words they then assert on, so the invocation is
+/// stated once.
+fn run_walk(program: &vyre_foundation::ir::Program, inputs: &[Value]) -> Vec<Value> {
+    vyre_reference::ReferenceRequest::standard(program, inputs)
+        .outputs()
+        .expect("Fix: walk program must execute on the reference oracle")
+}
 use vyre_foundation::validate::validate;
 use vyre_reference::value::Value;
 use wire_words::decode_u32_words;
@@ -31,12 +42,7 @@ fn preorder_basic_four_node_spine() {
     let (_, node_region) = pack_spine_fixture(4);
     let outz = vec![0u8; 32];
     let program = vyre_libs_graph::graph::ast_walk_preorder("nodes", "out", 4, 8);
-    let outputs = vyre_reference::ReferenceRequest::standard(
-        &program,
-        &[Value::from(node_region.clone()), Value::from(outz)],
-    )
-    .outputs()
-    .expect("preorder must execute");
+    let outputs = run_walk(&program, &[Value::from(node_region.clone()), Value::from(outz)]);
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     let expected = vyre_foundation::vast::walk_preorder_indices(&node_region, 4, 128).unwrap();
@@ -52,12 +58,7 @@ fn preorder_single_node() {
     let (_, node_region) = pack_spine_fixture(1);
     let outz = vec![0u8; 32]; // cap=8 u32s = 32 bytes
     let program = vyre_libs_graph::graph::ast_walk_preorder("nodes", "out", 1, 8);
-    let outputs = vyre_reference::ReferenceRequest::standard(
-        &program,
-        &[Value::from(node_region.clone()), Value::from(outz)],
-    )
-    .outputs()
-    .unwrap();
+    let outputs = run_walk(&program, &[Value::from(node_region.clone()), Value::from(outz)]);
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     assert_eq!(got[0], 0, "single-node preorder must emit root = 0");
@@ -73,12 +74,7 @@ fn preorder_empty_tree_is_a_valid_noop() {
         "empty preorder walk must still be a valid program"
     );
 
-    let outputs = vyre_reference::ReferenceRequest::standard(
-        &program,
-        &[Value::from(node_region), Value::from(outz)],
-    )
-    .outputs()
-    .unwrap();
+    let outputs = run_walk(&program, &[Value::from(node_region), Value::from(outz)]);
     let got = decode_u32_words(&outputs[0].to_bytes());
     assert!(
         got.iter().all(|&word| word == 0),
@@ -92,12 +88,7 @@ fn preorder_cap_truncates_output() {
     let cap = 3u32;
     let outz = vec![0u8; 32];
     let program = vyre_libs_graph::graph::ast_walk_preorder("nodes", "out", 8, cap);
-    let outputs = vyre_reference::ReferenceRequest::standard(
-        &program,
-        &[Value::from(node_region), Value::from(outz)],
-    )
-    .outputs()
-    .unwrap();
+    let outputs = run_walk(&program, &[Value::from(node_region), Value::from(outz)]);
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     // The first `cap` entries should be 0, 1, 2 (spine preorder is sequential)
@@ -116,12 +107,7 @@ fn preorder_eight_node_spine_matches_host() {
     let (_, node_region) = pack_spine_fixture(8);
     let outz = vec![0u8; 64];
     let program = vyre_libs_graph::graph::ast_walk_preorder("nodes", "out", 8, 16);
-    let outputs = vyre_reference::ReferenceRequest::standard(
-        &program,
-        &[Value::from(node_region.clone()), Value::from(outz)],
-    )
-    .outputs()
-    .unwrap();
+    let outputs = run_walk(&program, &[Value::from(node_region.clone()), Value::from(outz)]);
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     let expected = vyre_foundation::vast::walk_preorder_indices(&node_region, 8, 128).unwrap();
@@ -133,12 +119,7 @@ fn preorder_branching_tree_matches_host() {
     let node_region = pack_branching_fixture();
     let outz = vec![0u8; 32];
     let program = vyre_libs_graph::graph::ast_walk_preorder("nodes", "out", 6, 8);
-    let outputs = vyre_reference::ReferenceRequest::standard(
-        &program,
-        &[Value::from(node_region.clone()), Value::from(outz)],
-    )
-    .outputs()
-    .unwrap();
+    let outputs = run_walk(&program, &[Value::from(node_region.clone()), Value::from(outz)]);
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     let expected = vyre_foundation::vast::walk_preorder_indices(&node_region, 6, 128).unwrap();
@@ -163,9 +144,7 @@ fn preorder_program_validates() {
 fn postorder_basic_four_node_spine() {
     let outz = vec![0u8; 32];
     let program = vyre_libs_graph::graph::ast_walk_postorder("out", 4);
-    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[Value::from(outz)])
-        .outputs()
-        .unwrap();
+    let outputs = run_walk(&program, &[Value::from(outz)]);
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     // Postorder for a spine is reverse: 3, 2, 1, 0
@@ -176,9 +155,7 @@ fn postorder_basic_four_node_spine() {
 fn postorder_single_node() {
     let outz = vec![0u8; 8];
     let program = vyre_libs_graph::graph::ast_walk_postorder("out", 1);
-    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[Value::from(outz)])
-        .outputs()
-        .unwrap();
+    let outputs = run_walk(&program, &[Value::from(outz)]);
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     assert_eq!(got[0], 0);
@@ -193,9 +170,7 @@ fn postorder_empty_tree_is_a_valid_noop() {
         "empty postorder walk must still be a valid program"
     );
 
-    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[Value::from(outz)])
-        .outputs()
-        .unwrap();
+    let outputs = run_walk(&program, &[Value::from(outz)]);
     let got = decode_u32_words(&outputs[0].to_bytes());
     assert!(
         got.iter().all(|&word| word == 0),
@@ -225,9 +200,7 @@ fn postorder_program_validates() {
 fn postorder_eight_node_sequence() {
     let outz = vec![0u8; 64];
     let program = vyre_libs_graph::graph::ast_walk_postorder("out", 8);
-    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[Value::from(outz)])
-        .outputs()
-        .unwrap();
+    let outputs = run_walk(&program, &[Value::from(outz)]);
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     let expected: Vec<u32> = (0..8).rev().collect();
@@ -239,12 +212,7 @@ fn postorder_branching_tree_matches_host() {
     let node_region = pack_branching_fixture();
     let outz = vec![0u8; 32];
     let program = vyre_libs_graph::graph::ast_walk_postorder_nodes("nodes", "out", 6, 8);
-    let outputs = vyre_reference::ReferenceRequest::standard(
-        &program,
-        &[Value::from(node_region.clone()), Value::from(outz)],
-    )
-    .outputs()
-    .unwrap();
+    let outputs = run_walk(&program, &[Value::from(node_region.clone()), Value::from(outz)]);
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     let expected = vyre_foundation::vast::walk_postorder_indices(&node_region, 6, 128).unwrap();
@@ -311,12 +279,7 @@ fn preorder_cap_less_than_node_count_truncates_correctly() {
     let cap = 5u32;
     let outz = vec![0u8; 64];
     let program = vyre_libs_graph::graph::ast_walk_preorder("nodes", "out", n, cap);
-    let outputs = vyre_reference::ReferenceRequest::standard(
-        &program,
-        &[Value::from(node_region), Value::from(outz)],
-    )
-    .outputs()
-    .unwrap();
+    let outputs = run_walk(&program, &[Value::from(node_region), Value::from(outz)]);
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     for i in 0..cap {
@@ -337,12 +300,7 @@ fn preorder_cap_of_one_only_emits_root() {
     let (_, node_region) = pack_spine_fixture(n);
     let outz = vec![0u8; 32];
     let program = vyre_libs_graph::graph::ast_walk_preorder("nodes", "out", n, 1);
-    let outputs = vyre_reference::ReferenceRequest::standard(
-        &program,
-        &[Value::from(node_region), Value::from(outz)],
-    )
-    .outputs()
-    .unwrap();
+    let outputs = run_walk(&program, &[Value::from(node_region), Value::from(outz)]);
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     assert_eq!(got[0], 0);

@@ -19,65 +19,27 @@ fn entry(id: &'static str) -> vyre_foundation::operation::SemanticOperation {
 
 fn assert_entry_matches_declared_witness(id: &'static str) {
     let entry = entry(id);
-    let inputs = (entry.test_inputs.expect("Fix: test_inputs required"))();
     let expected = (entry
         .expected_output
         .expect("Fix: expected_output required"))();
-    assert_entry_matches_cases(
-        id,
-        entry
-            .build
-            .expect("Fix: registered library operation must provide a neutral builder"),
-        inputs,
-        expected,
-    );
+    assert_entry_matches_cases(id, &entry, expected);
 }
 
 fn assert_entry_matches_cases(
     id: &'static str,
-    build: fn() -> vyre::Program,
-    inputs: Vec<Vec<Vec<u8>>>,
+    entry: &vyre_foundation::operation::SemanticOperation,
     expected: Vec<Vec<Vec<u8>>>,
 ) {
     assert_eq!(
-        inputs.len(),
-        expected.len(),
-        "Fix: witness vector count mismatch for {id}"
+        vyre_test_support::registry_nets::declared_witness_bytes(id, entry),
+        expected,
+        "CPU witness drift for {id}"
     );
-    for (case_index, (input_set, expected_outputs)) in
-        inputs.iter().zip(expected.iter()).enumerate()
-    {
-        let outputs = vyre_reference::ReferenceRequest::standard(
-            &build(),
-            &input_set
-                .iter()
-                .cloned()
-                .map(Value::from)
-                .collect::<Vec<_>>(),
-        )
-        .outputs()
-        .unwrap_or_else(|error| panic!("Fix: reference run failed for {id}: {error}"))
-        .into_iter()
-        .map(|value| value.to_bytes())
-        .collect::<Vec<_>>();
-        assert_eq!(
-            outputs, *expected_outputs,
-            "CPU witness drift for {id} case {case_index}"
-        );
-    }
 }
 
 fn assert_entry_matches_pinned_witness(id: &'static str, expected: Vec<Vec<Vec<u8>>>) {
     let entry = entry(id);
-    let inputs = (entry.test_inputs.expect("Fix: test_inputs required"))();
-    assert_entry_matches_cases(
-        id,
-        entry
-            .build
-            .expect("Fix: registered library operation must provide a neutral builder"),
-        inputs,
-        expected,
-    );
+    assert_entry_matches_cases(id, &entry, expected);
 }
 
 #[test]

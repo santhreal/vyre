@@ -8,37 +8,19 @@
 #![cfg(feature = "hash")]
 
 use vyre_libs::operation_catalog::library_entries;
-use vyre_reference::value::Value;
 
 /// Evaluate a registered op over its declared inputs and pin every output byte.
 fn assert_registered_witness(id: &str, expected: Vec<Vec<Vec<u8>>>) {
     let entry = library_entries()
         .find(|entry| entry.id == id)
         .unwrap_or_else(|| panic!("missing canonical operation registration for {id}"));
-    let inputs = (entry.test_inputs.expect("declared test inputs"))();
     let declared = (entry.expected_output.expect("declared expected output"))();
     assert_eq!(declared, expected, "declared witness drift for {id}");
-
-    let build = entry.build.expect("neutral builder");
-    for (case, (input_set, expected_outputs)) in inputs.iter().zip(expected.iter()).enumerate() {
-        let outputs = vyre_reference::ReferenceRequest::standard(
-            &build(),
-            &input_set
-                .iter()
-                .cloned()
-                .map(Value::from)
-                .collect::<Vec<_>>(),
-        )
-        .outputs()
-        .unwrap_or_else(|error| panic!("reference run failed for {id}: {error}"))
-        .into_iter()
-        .map(|value| value.to_bytes())
-        .collect::<Vec<_>>();
-        assert_eq!(
-            outputs, *expected_outputs,
-            "CPU witness drift for {id} case {case}"
-        );
-    }
+    assert_eq!(
+        vyre_test_support::registry_nets::declared_witness_bytes(id, &entry),
+        expected,
+        "CPU witness drift for {id}"
+    );
 }
 
 #[test]

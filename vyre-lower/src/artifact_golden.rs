@@ -49,7 +49,21 @@ where
     I: IntoIterator<Item = (S, String)>,
     S: AsRef<str>,
 {
-    let mut out = String::from(HEADER);
+    render_sections_with_header(HEADER, sections)
+}
+
+/// Render one `(case id, section text)` sequence under `header`.
+///
+/// A corpus whose header states a different regeneration command is still the
+/// same marked-section format, and a caller that needs its own header restated
+/// the whole framing to get one.
+#[must_use]
+pub fn render_sections_with_header<I, S>(header: &str, sections: I) -> String
+where
+    I: IntoIterator<Item = (S, String)>,
+    S: AsRef<str>,
+{
+    let mut out = String::from(header);
     for (id, rendered) in sections {
         let _ = writeln!(out, "{CASE_MARKER}{}", id.as_ref());
         out.push_str(&rendered);
@@ -67,6 +81,16 @@ where
 #[must_use]
 pub fn contains_case(corpus: &str, case_id: &str) -> bool {
     corpus.contains(&format!("{CASE_MARKER}{case_id}\n"))
+}
+
+/// The case id `line` opens, or `None` when `line` opens no section.
+///
+/// A reader that splits a corpus back into cases has to agree with the writer
+/// about the marker, and a second copy of the marker text is what lets the two
+/// drift into a corpus one side can write and the other cannot parse.
+#[must_use]
+pub fn section_id(line: &str) -> Option<&str> {
+    line.strip_prefix(CASE_MARKER)
 }
 
 /// Render every shared success-corpus case through `render`, in corpus order.

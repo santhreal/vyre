@@ -4300,6 +4300,7 @@ dependencies = [
  "toml",
  "vyre-driver",
  "vyre-foundation",
+ "vyre-lower",
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",

@@ -48,7 +48,7 @@ vyre-libs-math = { workspace = true }
 [dev-dependencies]
 proptest.workspace = true
 vyre-lower = { workspace = true }
-vyre-test-support = { workspace = true, features = ["semantic-parity"] }
+vyre-test-support = { workspace = true, features = ["semantic-parity", "golden-corpus"] }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
 [[test]]

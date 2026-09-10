@@ -83,8 +83,8 @@ total_lines = 43886
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 1171
-total_lines = 63232
+duplicate_lines = 1152
+total_lines = 63249
 
 [[crate]]
 name = "vyre-driver-metal"
@@ -113,8 +113,8 @@ total_lines = 866
 
 [[crate]]
 name = "vyre-emit-naga"
-duplicate_lines = 96
-total_lines = 10342
+duplicate_lines = 60
+total_lines = 10982
 
 [[crate]]
 name = "vyre-emit-ptx"
@@ -128,23 +128,23 @@ total_lines = 1171
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 1702
-total_lines = 147627
+duplicate_lines = 1700
+total_lines = 147699
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 553
-total_lines = 18014
+duplicate_lines = 505
+total_lines = 17872
 
 [[crate]]
 name = "vyre-libs-analysis"
-duplicate_lines = 94
-total_lines = 3977
+duplicate_lines = 69
+total_lines = 3908
 
 [[crate]]
 name = "vyre-libs-bitset"
-duplicate_lines = 327
-total_lines = 5494
+duplicate_lines = 326
+total_lines = 5745
 
 [[crate]]
 name = "vyre-libs-builder"
@@ -158,13 +158,13 @@ total_lines = 3392
 
 [[crate]]
 name = "vyre-libs-device"
-duplicate_lines = 9
+duplicate_lines = 0
 total_lines = 1271
 
 [[crate]]
 name = "vyre-libs-encoding"
-duplicate_lines = 386
-total_lines = 5529
+duplicate_lines = 360
+total_lines = 5375
 
 [[crate]]
 name = "vyre-libs-fixpoint"
@@ -173,18 +173,18 @@ total_lines = 1572
 
 [[crate]]
 name = "vyre-libs-graph"
-duplicate_lines = 677
-total_lines = 35241
+duplicate_lines = 667
+total_lines = 34827
 
 [[crate]]
 name = "vyre-libs-hash"
-duplicate_lines = 39
-total_lines = 4817
+duplicate_lines = 33
+total_lines = 4761
 
 [[crate]]
 name = "vyre-libs-math"
-duplicate_lines = 691
-total_lines = 21367
+duplicate_lines = 633
+total_lines = 24805
 
 [[crate]]
 name = "vyre-libs-nn"
@@ -203,13 +203,13 @@ total_lines = 15151
 
 [[crate]]
 name = "vyre-libs-reasoning"
-duplicate_lines = 43
-total_lines = 3300
+duplicate_lines = 18
+total_lines = 3221
 
 [[crate]]
 name = "vyre-libs-reduce"
-duplicate_lines = 112
-total_lines = 5956
+duplicate_lines = 74
+total_lines = 7195
 
 [[crate]]
 name = "vyre-libs-rule"
@@ -218,8 +218,8 @@ total_lines = 1424
 
 [[crate]]
 name = "vyre-libs-scheduling"
-duplicate_lines = 85
-total_lines = 2301
+duplicate_lines = 60
+total_lines = 2252
 
 [[crate]]
 name = "vyre-libs-security"
@@ -228,8 +228,8 @@ total_lines = 7033
 
 [[crate]]
 name = "vyre-libs-solvers"
-duplicate_lines = 493
-total_lines = 11811
+duplicate_lines = 468
+total_lines = 11611
 
 [[crate]]
 name = "vyre-libs-text"
@@ -248,8 +248,8 @@ total_lines = 3438
 
 [[crate]]
 name = "vyre-lower"
-duplicate_lines = 43
-total_lines = 23465
+duplicate_lines = 35
+total_lines = 23477
 
 [[crate]]
 name = "vyre-macros"
@@ -268,8 +268,8 @@ total_lines = 3838
 
 [[crate]]
 name = "vyre-reference"
-duplicate_lines = 393
-total_lines = 30891
+duplicate_lines = 297
+total_lines = 28578
 
 [[crate]]
 name = "vyre-registry-link"

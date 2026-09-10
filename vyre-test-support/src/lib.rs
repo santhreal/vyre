@@ -368,7 +368,7 @@ pub mod spec_op_strategies;
 pub mod spec_variant_tables;
 #[cfg(feature = "ir-fixtures")]
 pub mod strict_float_programs;
-#[cfg(feature = "ir-fixtures")]
+#[cfg(feature = "golden-corpus")]
 pub mod structural_ir;
 pub mod sweep_rng;
 #[cfg(feature = "driver-artifact-contracts")]

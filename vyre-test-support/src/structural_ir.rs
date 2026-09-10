@@ -59,9 +59,6 @@ use vyre_foundation::hashing::domain_digest;
 use vyre_foundation::ir::{expr_variant_name, node_variant_name, Expr, Node, Program};
 use vyre_foundation::visit::{child_bodies, expr_children, node_operands, node_variadic_operands};
 
-/// Line that opens each entry point's section in a golden.
-const SECTION_MARKER: &str = "===== ";
-
 /// Full structural rendering of `program`, canonicalized.
 ///
 /// The digest is taken over this. It is not checked in; see the module docs.
@@ -80,7 +77,7 @@ pub fn render_structural_ir(program: &Program) -> String {
 /// A golden that stopped naming an entry point silently stopped covering it.
 #[must_use]
 pub fn golden_contains(corpus: &str, id: &str) -> bool {
-    corpus.contains(&format!("{SECTION_MARKER}{id}\n"))
+    vyre_lower::artifact_golden::contains_case(corpus, id)
 }
 
 /// Write `actual` to `path`, creating parent directories.
@@ -129,16 +126,12 @@ impl StructuralIrGolden {
     /// Render `(entry point id, program)` pairs into a golden corpus.
     #[must_use]
     pub fn render<'a>(&self, entry_points: impl IntoIterator<Item = (&'a str, Program)>) -> String {
-        let mut out = self.header();
-        for (id, program) in entry_points {
-            let _ = writeln!(out, "{SECTION_MARKER}{id}");
-            let rendered = self.render_section(&program);
-            out.push_str(&rendered);
-            if !rendered.ends_with('\n') {
-                out.push('\n');
-            }
-        }
-        out
+        vyre_lower::artifact_golden::render_sections_with_header(
+            &self.header(),
+            entry_points
+                .into_iter()
+                .map(|(id, program)| (id, self.render_section(&program))),
+        )
     }
 
     /// Golden section body for `program`.
@@ -446,7 +439,7 @@ fn split_sections(corpus: &str) -> (Vec<&str>, Vec<(&str, Vec<&str>)>) {
     let mut header = Vec::new();
     let mut sections: Vec<(&str, Vec<&str>)> = Vec::new();
     for line in corpus.lines() {
-        if let Some(id) = line.strip_prefix(SECTION_MARKER) {
+        if let Some(id) = vyre_lower::artifact_golden::section_id(line) {
             sections.push((id, Vec::new()));
         } else if let Some((_, lines)) = sections.last_mut() {
             lines.push(line);

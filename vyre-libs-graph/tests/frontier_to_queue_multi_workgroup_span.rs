@@ -28,16 +28,9 @@
 
 use vyre_foundation::ir::Program;
 use vyre_libs_graph::graph::csr_frontier_queue::frontier_to_queue;
-use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_words;
 use vyre_primitives::wire::pack_u32_slice as pack_words;
 use vyre_reference::composition_witness::frontier_to_queue_witness as frontier_to_queue_cpu;
 use vyre_reference::value::Value;
-
-fn out_words(program: &Program, outputs: &[Value], name: &str) -> Vec<u32> {
-    let index = vyre_reference::output_index(program, name)
-        .unwrap_or_else(|| panic!("Fix: frontier queue program must declare output `{name}`"));
-    unpack_words(&outputs[index].to_bytes())
-}
 
 /// Build a frontier bitset over `node_count` nodes with exactly `set` bits set.
 fn frontier_with(node_count: u32, set: &[u32]) -> Vec<u32> {
@@ -49,22 +42,10 @@ fn frontier_with(node_count: u32, set: &[u32]) -> Vec<u32> {
 }
 
 fn run(program: &Program, frontier: &[u32], queue_capacity: u32) -> (Vec<u32>, Vec<u32>) {
-    let outputs = vyre_reference::ReferenceRequest::standard(
+    crate::wire_words::run_frontier_scatter(
         program,
-        &[
-            Value::from(pack_words(frontier)),
-            Value::from(vec![
-                0_u8;
-                queue_capacity as usize * std::mem::size_of::<u32>()
-            ]),
-            Value::from(pack_words(&[0])),
-        ],
-    )
-    .outputs()
-    .expect("Fix: frontier_to_queue must reference-evaluate");
-    (
-        out_words(program, &outputs, "queue"),
-        out_words(program, &outputs, "queue_len"),
+        vec![Value::from(pack_words(frontier))],
+        queue_capacity,
     )
 }
 

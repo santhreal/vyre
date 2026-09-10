@@ -71,3 +71,38 @@ pub(crate) fn queue_forward_oracle(
     }
     out
 }
+
+/// Run a frontier-queue scatter and decode the queue and its length.
+///
+/// Two suites drive a scatter the same way: the frontier words, whatever
+/// prefix buffers the variant needs, then a zeroed queue of `queue_capacity`
+/// slots and a single-element length of zero. Each stated that binding tail
+/// and its own decode, so a suite that sized the queue in words rather than
+/// bytes compared against a buffer the program never filled.
+///
+/// Outputs are read by declared name, not by position, so a builder that
+/// reorders its outputs is caught rather than silently swapping the two.
+#[cfg(feature = "graph")]
+pub(crate) fn run_frontier_scatter(
+    program: &vyre_foundation::ir::Program,
+    leading: Vec<vyre_reference::value::Value>,
+    queue_capacity: u32,
+) -> (Vec<u32>, Vec<u32>) {
+    use vyre_reference::value::Value;
+
+    let mut inputs = leading;
+    inputs.push(Value::from(vec![
+        0_u8;
+        queue_capacity as usize * size_of::<u32>()
+    ]));
+    inputs.push(Value::from(vyre_primitives::wire::pack_u32_slice(&[0])));
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
+        .expect("Fix: frontier queue scatter must evaluate on the reference oracle");
+    let named = |name: &str| {
+        let index = vyre_reference::output_index(program, name)
+            .unwrap_or_else(|| panic!("Fix: scatter program must declare output `{name}`"));
+        decode_u32_words(&outputs[index].to_bytes())
+    };
+    (named("queue"), named("queue_len"))
+}

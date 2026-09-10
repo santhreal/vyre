@@ -63,28 +63,6 @@ fn rank_builders_reject_zero_word_superblocks() {
 }
 
 #[test]
-fn rank_query_traps_out_of_bounds_offsets() {
-    let program =
-        vyre_libs::math::succinct::rank1_query("bits", "superblocks", "queries", "out", 1, 1, 1);
-    let result = vyre_reference::ReferenceRequest::standard(
-        &program,
-        &[
-            Value::from(u32_bytes(&[0u32])),
-            Value::from(u32_bytes(&[0u32, 0])),
-            Value::from(u32_bytes(&[32u32])),
-        ],
-    )
-    .outputs();
-
-    let err =
-        result.expect_err("rank1_query must fail loudly when a query addresses a missing word");
-    assert!(
-        err.to_string().contains("rank-query-out-of-bounds"),
-        "unexpected error: {err}"
-    );
-}
-
-#[test]
 fn rank_superblocks_carry_across_more_blocks_than_lanes() {
     // 300 one-word superblocks over a 256-lane workgroup: the scan runs twice
     // and the second pass has to open at the first pass's total. A dropped

@@ -131715,7 +131715,7 @@ seam = "lowering"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre-megakernel"
 stability = "internal"
-exported_item_count = 1349
+exported_item_count = 1351
 
   [[package.item]]
   path = "impl core::cmp::Eq for vyre_lower::KernelBody"
@@ -139929,7 +139929,21 @@ exported_item_count = 1349
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_lower::artifact_golden::render_sections_with_header<I, S>(header: &str, sections: I) -> alloc::string::String where I: core::iter::traits::collect::IntoIterator<Item = (S, alloc::string::String)>, S: core::convert::AsRef<str>"
+  kind = "fn"
+  stability = "internal"
+  feature = "test-fixtures"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_lower::artifact_golden::render_success_corpus(render: impl core::ops::function::Fn(&vyre_lower::KernelDescriptor) -> alloc::string::String) -> alloc::string::String"
+  kind = "fn"
+  stability = "internal"
+  feature = "test-fixtures"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::artifact_golden::section_id(line: &str) -> core::option::Option<&str>"
   kind = "fn"
   stability = "internal"
   feature = "test-fixtures"
