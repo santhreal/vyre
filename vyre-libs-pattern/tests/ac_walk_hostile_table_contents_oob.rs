@@ -25,6 +25,11 @@
 use vyre_foundation::ir::{BufferDecl, Program};
 use vyre_libs_pattern::pattern::classic_ac::build_ac_bounded_ranges_program_with_subgroup_coalesce;
 use vyre_reference::value::Value;
+// The out-of-range index and the hostile word rewrite are the same two
+// derivations the registry out-of-bounds sweep applies, so they have one owner
+// rather than one copy per suite.
+#[cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]
+use vyre_test_support::registry_nets::{first_out_of_range_index, hostile_contents};
 
 /// The compiled regex fixture program and the buffer list its registration
 /// supplies.
@@ -42,47 +47,6 @@ fn fixture(haystack: Vec<u8>) -> (Program, Vec<Vec<u8>>) {
         vec![0u8; 4],
     ];
     (pipeline.program, buffers)
-}
-
-/// The first element index neither the program's declared extents nor the
-/// buffers it was handed accept.
-#[cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]
-fn first_out_of_range_index(program: &Program, inputs: &[Value]) -> u32 {
-    let declared = program
-        .buffers()
-        .iter()
-        .map(BufferDecl::count)
-        .max()
-        .unwrap_or(0);
-    let supplied = inputs
-        .iter()
-        .map(|input| match input {
-            Value::Bytes(bytes) => u32::try_from(bytes.len() / 4).unwrap_or(u32::MAX),
-            _ => 1,
-        })
-        .max()
-        .unwrap_or(0);
-    declared.max(supplied)
-}
-
-/// Every four-byte word of every input buffer replaced with `index`.
-#[cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]
-fn hostile_contents(inputs: &[Value], index: u32) -> Vec<Value> {
-    let word = index.to_le_bytes();
-    inputs
-        .iter()
-        .map(|input| match input {
-            Value::Bytes(bytes) => {
-                let mut hostile = bytes.to_vec();
-                for chunk in hostile.chunks_exact_mut(4) {
-                    chunk.copy_from_slice(&word);
-                }
-                Value::Bytes(hostile.into())
-            }
-            Value::U32(_) => Value::U32(index),
-            other => other.clone(),
-        })
-        .collect()
 }
 
 /// Run the walk and assert the interpreter saw no access outside a buffer.

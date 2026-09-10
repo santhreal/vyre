@@ -1,21 +1,15 @@
 //! Program fixtures shared by the grid-sync split tests.
 
-use std::sync::Arc;
-
 use vyre_foundation::ir::MemoryOrdering;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::visit::child_bodies;
+// The two-region grid-sync program and the region constructor are also driven
+// by the split contracts in the test binary, which cannot reach a `cfg(test)`
+// module, so both have one owner outside this crate.
+pub(super) use vyre_test_support::grid_sync_programs::{cross_segment_store_program, region};
 
 pub(super) fn buffer() -> BufferDecl {
     BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
-}
-
-pub(super) fn region(generator: &str, body: Vec<Node>) -> Node {
-    Node::Region {
-        generator: Ident::from(generator),
-        source_region: None,
-        body: Arc::new(body),
-    }
 }
 
 /// One returning region per name in `regions`, separated by `ordering` barriers,
@@ -44,23 +38,6 @@ pub(super) fn barrier_chain(
 /// which is what every test that does not assert on workgroup size wants.
 pub(super) fn grid_sync_chain(regions: &[&str]) -> Program {
     barrier_chain(regions, MemoryOrdering::GridSync, [1, 1, 1])
-}
-
-/// Two grid-sync segments writing different slots of one four-element output.
-///
-/// The cross-segment accumulator regression: arm A stores element 0 in segment
-/// 0 and arm B stores element 2 in the final segment, so a split that hands the
-/// final segment a fresh write-only `out` drops arm A's slot entirely.
-pub(super) fn cross_segment_store_program() -> Program {
-    Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
-        [1, 1, 1],
-        vec![
-            region("a", vec![Node::store("out", Expr::u32(0), Expr::u32(0xAA))]),
-            Node::barrier_with_ordering(MemoryOrdering::GridSync),
-            region("b", vec![Node::store("out", Expr::u32(2), Expr::u32(0xBB))]),
-        ],
-    )
 }
 
 /// Apply every literal-index literal-value store to `out` in `nodes` onto

@@ -365,6 +365,7 @@ mod tests {
     };
     use crate::binding::{Binding, BindingPlan, BindingRole};
     use std::sync::Arc;
+    use vyre_test_support::sweep_rng::next_case_u64;
 
     fn binding(
         name: &'static str,
@@ -423,7 +424,7 @@ mod tests {
     fn generated_graph_capture_binding_plan_preserves_order_independent_counts() {
         let mut state = 0x9e37_79b9_7f4a_7c15_u64;
         for case_index in 0..768usize {
-            let binding_count = 1 + (next_u64(&mut state) as usize % 96);
+            let binding_count = 1 + (next_case_u64(&mut state) as usize % 96);
             let mut bindings = Vec::with_capacity(binding_count);
             let mut expected_input_device_capacity = 0usize;
             let mut expected_output_device_capacity = 0usize;
@@ -434,7 +435,7 @@ mod tests {
             let mut next_output = 0usize;
 
             for slot in 0..binding_count {
-                let role_selector = (next_u64(&mut state) % 4) as u8;
+                let role_selector = (next_case_u64(&mut state) % 4) as u8;
                 let (role, input_index, output_index) = match role_selector {
                     0 => {
                         let index = next_input;
@@ -607,12 +608,5 @@ mod tests {
         assert!(!classified.graph_breaking);
         assert!(classified.parameter_update_required);
         assert_eq!(classified.reason, "haystack_contents_changed_same_shape");
-    }
-
-    fn next_u64(state: &mut u64) -> u64 {
-        *state = state
-            .wrapping_mul(6_364_136_223_846_793_005)
-            .wrapping_add(1_442_695_040_888_963_407);
-        *state
     }
 }

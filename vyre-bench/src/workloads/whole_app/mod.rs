@@ -35,7 +35,7 @@ use vyre_driver::{
 use vyre_reference::value::Value;
 use vyre_runtime::artifact_admission::{ArtifactSession, TypedResource, TypedResourceDataset};
 
-use super::equality::{validate_equality_conditions, NativeComparisonConditions};
+use super::equality::{validate_equality_conditions, NativeComparisonConditions, WorkloadFacts};
 use super::native_baseline::{whole_application_native_baselines, VersionPinnedNativeBaseline};
 use super::provenance::MeasurementProvenance;
 use crate::api::metric::elapsed_ns;
@@ -623,7 +623,6 @@ pub struct WholeAppNativeBaselineUnmeasured {
     /// Why no comparison was computed against it.
     pub reason: String,
 }
-
 
 /// Error returned when required fields are missing or invalid in a whole-application record.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

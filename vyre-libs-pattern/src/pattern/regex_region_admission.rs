@@ -117,6 +117,34 @@ impl<'a> AnchoredRegionWalk<'a> {
     pub(crate) fn walk_body(self, emit_loop: Node) -> Vec<Node> {
         anchored_region_walk_body(self, emit_loop)
     }
+
+    /// The slot 0 through 5 buffer set both region-scan programs declare for
+    /// this walk's bindings.
+    ///
+    /// The four record facts are arguments rather than fields because the walk
+    /// body does not read them. Both programs passed the same nine names to
+    /// the free function, five of which this value already holds, so the call
+    /// was written out twice and a slot renumbered in one program silently
+    /// disagreed with the other.
+    pub(crate) fn common_buffers(
+        self,
+        output_records: &str,
+        state_count: u32,
+        output_records_len: u32,
+        region_count: u32,
+    ) -> Vec<BufferDecl> {
+        regex_region_scan_common_buffers(
+            self.haystack,
+            self.transitions,
+            self.output_offsets,
+            output_records,
+            self.region_starts,
+            self.region_base,
+            state_count,
+            output_records_len,
+            region_count,
+        )
+    }
 }
 
 /// One invocation per haystack byte `i`: find the region owning
@@ -170,7 +198,7 @@ pub(crate) fn anchored_region_walk_body(
     ]
 }
 
-pub(crate) fn regex_region_scan_common_buffers(
+fn regex_region_scan_common_buffers(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -223,7 +251,7 @@ pub fn regex_admission_by_region_program(
         output_records,
         vec![presence_bit_write_node(presence, Some("rs_base"))],
     );
-    let walk_body = AnchoredRegionWalk {
+    let walk = AnchoredRegionWalk {
         haystack,
         transitions,
         output_offsets,
@@ -233,15 +261,10 @@ pub fn regex_admission_by_region_program(
         presence_words,
         max_pattern_len,
         log2_max_regions,
-    }
-    .walk_body(emit_loop);
-    let mut buffers = regex_region_scan_common_buffers(
-        haystack,
-        transitions,
-        output_offsets,
+    };
+    let walk_body = walk.walk_body(emit_loop);
+    let mut buffers = walk.common_buffers(
         output_records,
-        region_starts,
-        region_base,
         state_count,
         output_records_len,
         region_count,

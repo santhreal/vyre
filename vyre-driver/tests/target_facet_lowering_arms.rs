@@ -32,11 +32,11 @@ use std::sync::LazyLock;
 use vyre_driver::{BackendError, BackendRegistration, VyreBackend};
 use vyre_foundation::ir::OpId;
 use vyre_foundation::operation::{OperationRegistry, TargetId};
-// The node walk, the published pair set and the disagreement wording are the
-// second opinion both facet contracts judge the registry with, so they have one
-// owner rather than one copy per suite.
+// The node walk, the published pair set, the pair row and the disagreement
+// wording are the second opinion both facet contracts judge the registry with,
+// so they have one owner rather than one copy per suite.
 use vyre_test_support::target_facet_join::{
-    facet_disagreement, lowered_node_ops, published_facet_pairs,
+    assert_facets_agree, facet_pairs, lowered_node_ops, FacetPair,
 };
 
 /// Registers the same language-level set the two emitting production drivers
@@ -112,59 +112,18 @@ inventory::submit! {
     }
 }
 
-/// Whether `backend` owns a lowering arm for every node of `operation`.
-fn lowers_every_node(backend: &BackendRegistration, node_ops: &HashSet<&'static str>) -> bool {
-    let supported = (backend.supported_ops)();
-    node_ops.iter().all(|op| supported.contains(*op))
-}
-
-/// One `(operation, target)` row: what the registry declared, and what the
-/// backend's arms say.
-struct Pair {
-    operation: &'static str,
-    target: String,
-    declared: bool,
-    expected: bool,
-}
-
-fn pairs() -> Vec<Pair> {
+/// Every `(operation, target)` row over every registered backend.
+fn pairs() -> Vec<FacetPair> {
     let backends = vyre_driver::registered_backends()
         .expect("Fix: the linked backend registry must start before target facets are read");
-    let published = published_facet_pairs();
-
-    let mut rows = Vec::new();
-    for operation in OperationRegistry::global().iter() {
-        let node_ops = operation.program().as_ref().map(lowered_node_ops);
-        for backend in backends {
-            let target = backend.target_id.as_str().to_string();
-            let expected = backend.target_compiler.is_some()
-                && (backend.semantic_operations)().contains(operation.id)
-                && node_ops
-                    .as_ref()
-                    .is_some_and(|node_ops| lowers_every_node(backend, node_ops));
-            rows.push(Pair {
-                operation: operation.id,
-                declared: published.contains(&(operation.id, target.clone())),
-                target,
-                expected,
-            });
-        }
-    }
-    rows
+    facet_pairs(backends)
 }
 
 /// The closing contract. Every registered operation against every linked
 /// target, with no member of either axis written down here.
 #[test]
 fn every_operation_target_pair_agrees_with_the_backend_lowering_arms() {
-    for pair in pairs() {
-        assert_eq!(
-            pair.declared,
-            pair.expected,
-            "{}",
-            facet_disagreement(&pair.target, pair.declared, pair.operation)
-        );
-    }
+    assert_facets_agree(&pairs());
 }
 
 /// Without this the contract above passes against an empty pair space, an empty
@@ -234,7 +193,8 @@ fn two_targets_with_the_same_catalog_and_different_arms_report_different_facets(
 /// would pass the contract above while proving nothing about the join.
 #[test]
 fn both_fixture_targets_declare_the_whole_catalog() {
-    let backends = vyre_driver::registered_backends().expect("Fix: the backend registry must start");
+    let backends =
+        vyre_driver::registered_backends().expect("Fix: the backend registry must start");
     let catalog = vyre_driver::dialect_only_supported_ops();
     let registry_size = OperationRegistry::global().iter().len();
 

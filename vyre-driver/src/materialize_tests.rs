@@ -8,6 +8,7 @@ use vyre_megakernel::{
     TargetResourceAccess,
 };
 
+use vyre_test_support::elementwise_programs::element_copy_program;
 use vyre_test_support::graph_values::graph_output;
 
 use crate::materialize::materialize_test_fixtures::{
@@ -935,25 +936,14 @@ impl ExecutableModule for GeometryTestModule {
 /// preserve both neutral artifact and exact payload identity.
 #[test]
 fn hostile_binding_bytes_cannot_resize_admitted_launch_geometry() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(3),
-            BufferDecl::output("output", 1, DataType::U32).with_count(1),
-        ],
-        [8, 1, 1],
-        vec![Node::store(
-            "output",
-            Expr::u32(0),
-            Expr::load("input", Expr::u32(0)),
-        )],
-    );
+    let program = element_copy_program(3, 1);
     let graph = ProgramGraph::from_program("geometry", program)
         .expect("the geometry fixture must lift to a graph");
     let artifact = compile_graph(graph);
     let input = artifact
         .resources()
         .iter()
-        .find(|resource| resource.name == "input")
+        .find(|resource| resource.name == "in")
         .expect("the artifact must contain its input")
         .value;
     let recorded = artifact
@@ -1082,16 +1072,11 @@ fn a_read_back_buffer_no_module_writes_absorbs_under_its_read_identity() {
     produced[queue_slot] = vec![9, 0, 0, 0];
 
     let mut state = BTreeMap::new();
-    core.absorb_outputs_for_module(
-        0,
-        &plan,
-        &program,
-        produced,
-        &mut state,
-        |index, name| BackendError::InvalidProgram {
+    core.absorb_outputs_for_module(0, &plan, &program, produced, &mut state, |index, name| {
+        BackendError::InvalidProgram {
             fix: format!("Fix: fixture omitted output {index} for `{name}`"),
-        },
-    )
+        }
+    })
     .expect("a read-back buffer no module writes must absorb under its read identity");
     assert_eq!(
         state.get(&queue).map(Vec::as_slice),

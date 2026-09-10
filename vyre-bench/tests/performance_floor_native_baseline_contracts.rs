@@ -20,8 +20,8 @@ use vyre_bench::workloads::{
     validate_payload_provenance, AggregateVerdict, ArtifactBehavior, CaseMeasurementRecord,
     CellVerdict, EqualityDimension, MeasurementCell, MemoryMetrics, NativeComparisonConditions,
     PayloadProvenance, RequiredMeasurementField, SharedMemoryMetrics, SpillMetrics,
-    StatisticalEstimator, ThroughputMetrics, VersionPinnedNativeBaseline, WorkloadSpecification,
-    WorkspaceTraffic,
+    StatisticalEstimator, ThroughputMetrics, VersionPinnedNativeBaseline, WorkloadFacts,
+    WorkloadSpecification, WorkspaceTraffic,
 };
 
 /// Construct a valid mock measurement record satisfying all 15 row 47 requirements.
@@ -82,22 +82,14 @@ fn valid_mock_measurement(
 
 /// Construct valid matching 14 equality conditions.
 fn valid_equality_conditions() -> NativeComparisonConditions {
-    NativeComparisonConditions {
-        semantics: Some("exact".to_string()),
-        dtype: Some("f32".to_string()),
-        shapes: Some("[4096, 4096]".to_string()),
-        raggedness: Some("uniform_contiguous".to_string()),
-        initial_and_final_state: Some("clean_buffers_unaliased".to_string()),
-        target: Some("sm_90a".to_string()),
-        stream: Some("cuda_stream_non_blocking_0".to_string()),
-        toolchain_and_flags: Some("nvcc_12.4_-O3".to_string()),
-        clock_and_power_state: Some("locked_base_clock_tdp_100pct".to_string()),
-        warmup: Some("300_warmup_iterations_discarded".to_string()),
-        interleaving: Some("ab_ba_round_robin_interleaving".to_string()),
-        repetitions: Some("30_measured_samples_clt".to_string()),
-        cache_state: Some("flushed_l2_between_iterations".to_string()),
-        objective: Some("minimize_p50_latency".to_string()),
-    }
+    NativeComparisonConditions::pinned(WorkloadFacts {
+        semantics: "exact",
+        dtype: "f32",
+        shapes: "[4096, 4096]",
+        raggedness: "uniform_contiguous",
+        target: "sm_90a",
+        objective: "minimize_p50_latency",
+    })
 }
 
 /// Construct a valid mock pinned native baseline.

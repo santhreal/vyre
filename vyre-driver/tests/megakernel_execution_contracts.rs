@@ -8,6 +8,7 @@ use vyre_driver::megakernel_execution::{
     MegakernelByteLayout, MegakernelDeviceCapabilities, MegakernelExecutionSample,
     MegakernelGraphShape, MegakernelMemoryError,
 };
+use vyre_test_support::sweep_rng::next_case_u64;
 
 #[test]
 fn memory_planner_bounds_peak_bytes_by_topology() {
@@ -88,18 +89,18 @@ fn memory_planner_rejects_budget_and_overflow_failures() {
 fn generated_execution_plans_never_exceed_budget_or_hide_overflow() {
     let mut state = 0x4d59_5df4_d0f3_3173_u64;
     for case_index in 0..1024usize {
-        let node_count = 1 + next_u64(&mut state) % 8_192;
-        let edge_count = node_count + next_u64(&mut state) % 65_536;
-        let bytes_per_node = 1 + next_u64(&mut state) % 64;
-        let bytes_per_edge = 1 + next_u64(&mut state) % 32;
-        let frontier_bytes = next_u64(&mut state) % 65_536;
-        let scratch_bytes = next_u64(&mut state) % 16_384;
-        let output_bytes = next_u64(&mut state) % 8_192;
-        let budget_bytes = 64 * 1024 + next_u64(&mut state) % (4 * 1024 * 1024);
+        let node_count = 1 + next_case_u64(&mut state) % 8_192;
+        let edge_count = node_count + next_case_u64(&mut state) % 65_536;
+        let bytes_per_node = 1 + next_case_u64(&mut state) % 64;
+        let bytes_per_edge = 1 + next_case_u64(&mut state) % 32;
+        let frontier_bytes = next_case_u64(&mut state) % 65_536;
+        let scratch_bytes = next_case_u64(&mut state) % 16_384;
+        let output_bytes = next_case_u64(&mut state) % 8_192;
+        let budget_bytes = 64 * 1024 + next_case_u64(&mut state) % (4 * 1024 * 1024);
         let sample = MegakernelExecutionSample {
-            dispatch_cost_ns: 100.0 + (next_u64(&mut state) % 10_000) as f64,
-            frontier_density: (next_u64(&mut state) % 10_001) as f64 / 10_000.0,
-            readback_bytes: next_u64(&mut state) % (1 << 20),
+            dispatch_cost_ns: 100.0 + (next_case_u64(&mut state) % 10_000) as f64,
+            frontier_density: (next_case_u64(&mut state) % 10_001) as f64 / 10_000.0,
+            readback_bytes: next_case_u64(&mut state) % (1 << 20),
         };
 
         let result = plan_megakernel_execution(
@@ -139,11 +140,4 @@ fn generated_execution_plans_never_exceed_budget_or_hide_overflow() {
             }
         }
     }
-}
-
-fn next_u64(state: &mut u64) -> u64 {
-    *state = state
-        .wrapping_mul(6_364_136_223_846_793_005)
-        .wrapping_add(1_442_695_040_888_963_407);
-    *state
 }

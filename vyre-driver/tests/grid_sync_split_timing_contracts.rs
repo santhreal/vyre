@@ -23,8 +23,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use vyre_driver::grid_sync::dispatch_with_grid_sync_split_timed;
 use vyre_driver::{BackendError, DispatchConfig, TimedDispatchResult, VyreBackend};
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Ident, MemoryOrdering, Node, Program};
-use std::sync::Arc;
+use vyre_foundation::ir::Program;
+use vyre_test_support::grid_sync_programs::cross_segment_store_program;
 
 /// Per-segment nanoseconds the fake device reports, distinct per field so a sum
 /// that pairs the wrong field with the wrong total is visible in the failure.
@@ -103,35 +103,12 @@ impl VyreBackend for ScriptedTimingBackend {
     }
 }
 
-/// Two regions writing different slots of one output, fenced by a whole-grid
-/// barrier, which is the smallest program the host split has to break apart.
-fn two_segment_grid_sync_program() -> Program {
-    let region = |generator: &str, body: Vec<Node>| Node::Region {
-        generator: Ident::from(generator),
-        source_region: None,
-        body: Arc::new(body),
-    };
-    Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
-        [1, 1, 1],
-        vec![
-            region("a", vec![Node::store("out", Expr::u32(0), Expr::u32(0xAA))]),
-            Node::barrier_with_ordering(MemoryOrdering::GridSync),
-            region("b", vec![Node::store("out", Expr::u32(2), Expr::u32(0xBB))]),
-        ],
-    )
-}
-
 fn run(timer: DeviceTimer) -> (TimedDispatchResult, u64) {
     let backend = ScriptedTimingBackend::new(timer);
-    let program = two_segment_grid_sync_program();
-    let timed = dispatch_with_grid_sync_split_timed(
-        &backend,
-        &program,
-        &[],
-        &DispatchConfig::default(),
-    )
-    .expect("split dispatch of a two-segment grid-sync program");
+    let program = cross_segment_store_program();
+    let timed =
+        dispatch_with_grid_sync_split_timed(&backend, &program, &[], &DispatchConfig::default())
+            .expect("split dispatch of a two-segment grid-sync program");
     let segments = backend.segments_dispatched();
     assert!(
         segments >= 2,

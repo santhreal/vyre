@@ -22,22 +22,14 @@ pub fn dense_numerical_pipeline() -> WholeApplicationWorkload {
         description: "Complete 3-stage dense numerical application: Feature Projection GEMM -> Layer Normalization + SwiGLU Activation -> Residual Accumulation & Dynamic Quantization",
         pinned_native_baseline_id: "native.cutlass.gemm_norm_residual_v3_5_0",
         pinned_native_baseline_name: "NVIDIA CUTLASS 3.5.0 / cuBLAS 12.4 Contraction Pipeline",
-        default_conditions: NativeComparisonConditions {
-            semantics: Some("fp32_ulp_tol:4".to_string()),
-            dtype: Some("u32_f32".to_string()),
-            shapes: Some("[1024, 1024] -> [1024, 1024] -> [1024, 1024]".to_string()),
-            raggedness: Some("uniform_contiguous".to_string()),
-            initial_and_final_state: Some("clean_buffers_unaliased".to_string()),
-            target: Some("sm_90a_sm_86".to_string()),
-            stream: Some("cuda_stream_non_blocking_0".to_string()),
-            toolchain_and_flags: Some("nvcc_12.4_-O3".to_string()),
-            clock_and_power_state: Some("locked_base_clock_tdp_100pct".to_string()),
-            warmup: Some("300_warmup_iterations_discarded".to_string()),
-            interleaving: Some("ab_ba_round_robin_interleaving".to_string()),
-            repetitions: Some("30_measured_samples_clt".to_string()),
-            cache_state: Some("flushed_l2_between_iterations".to_string()),
-            objective: Some("minimize_p50_latency".to_string()),
-        },
+        default_conditions: NativeComparisonConditions::pinned(WorkloadFacts {
+            semantics: "fp32_ulp_tol:4",
+            dtype: "u32_f32",
+            shapes: "[1024, 1024] -> [1024, 1024] -> [1024, 1024]",
+            raggedness: "uniform_contiguous",
+            target: "sm_90a_sm_86",
+            objective: "minimize_p50_latency",
+        }),
         build_graph_and_inputs: || {
             let count = 1024_u64;
             let mut graph = ProgramGraph::new();
@@ -207,22 +199,14 @@ pub fn irregular_stateful_traversal() -> WholeApplicationWorkload {
         description: "Complete 3-stage irregular stateful application: CSR SpMV Frontier Gather -> Degree-Weighted Segmented Scatter -> Stateful Persistent History Decay & Vertex Activation",
         pinned_native_baseline_id: "native.cub.spmv_segmented_scatter_v2_1_0",
         pinned_native_baseline_name: "NVIDIA CUB 2.1.0 / cuSPARSE 12.3.0 SpMV Scatter Pipeline",
-        default_conditions: NativeComparisonConditions {
-            semantics: Some("exact".to_string()),
-            dtype: Some("u32".to_string()),
-            shapes: Some("vertices=1024,edges=4096".to_string()),
-            raggedness: Some("csr_ragged_irregular".to_string()),
-            initial_and_final_state: Some("clean_buffers_unaliased".to_string()),
-            target: Some("sm_90a_sm_86".to_string()),
-            stream: Some("cuda_stream_non_blocking_0".to_string()),
-            toolchain_and_flags: Some("nvcc_12.4_-O3".to_string()),
-            clock_and_power_state: Some("locked_base_clock_tdp_100pct".to_string()),
-            warmup: Some("300_warmup_iterations_discarded".to_string()),
-            interleaving: Some("ab_ba_round_robin_interleaving".to_string()),
-            repetitions: Some("30_measured_samples_clt".to_string()),
-            cache_state: Some("flushed_l2_between_iterations".to_string()),
-            objective: Some("minimize_p50_latency".to_string()),
-        },
+        default_conditions: NativeComparisonConditions::pinned(WorkloadFacts {
+            semantics: "exact",
+            dtype: "u32",
+            shapes: "vertices=1024,edges=4096",
+            raggedness: "csr_ragged_irregular",
+            target: "sm_90a_sm_86",
+            objective: "minimize_p50_latency",
+        }),
         build_graph_and_inputs: || {
             let count = 1024_u64;
             let mut graph = ProgramGraph::new();
@@ -388,22 +372,14 @@ pub fn interactive_event_pipeline() -> WholeApplicationWorkload {
         description: "Complete 3-stage interactive streaming pipeline: Dirty-Region Spatial Cull -> Viewport Affine Coordinate Transform -> Multi-Layer Porter-Duff Composite Raster",
         pinned_native_baseline_id: "native.skia.composite_raster_blend_v1_2_0",
         pinned_native_baseline_name: "Skia / DirectWrite-Style GPU Compositor Pipeline",
-        default_conditions: NativeComparisonConditions {
-            semantics: Some("exact".to_string()),
-            dtype: Some("u32_rgba8".to_string()),
-            shapes: Some("tiles=512,pixels_per_tile=64".to_string()),
-            raggedness: Some("uniform_contiguous".to_string()),
-            initial_and_final_state: Some("clean_buffers_unaliased".to_string()),
-            target: Some("sm_90a_sm_86".to_string()),
-            stream: Some("cuda_stream_non_blocking_0".to_string()),
-            toolchain_and_flags: Some("nvcc_12.4_-O3".to_string()),
-            clock_and_power_state: Some("locked_base_clock_tdp_100pct".to_string()),
-            warmup: Some("300_warmup_iterations_discarded".to_string()),
-            interleaving: Some("ab_ba_round_robin_interleaving".to_string()),
-            repetitions: Some("30_measured_samples_clt".to_string()),
-            cache_state: Some("flushed_l2_between_iterations".to_string()),
-            objective: Some("minimize_p99_latency".to_string()),
-        },
+        default_conditions: NativeComparisonConditions::pinned(WorkloadFacts {
+            semantics: "exact",
+            dtype: "u32_rgba8",
+            shapes: "tiles=512,pixels_per_tile=64",
+            raggedness: "uniform_contiguous",
+            target: "sm_90a_sm_86",
+            objective: "minimize_p99_latency",
+        }),
         build_graph_and_inputs: || {
             let count = 512_u64;
             let mut graph = ProgramGraph::new();

@@ -1,4 +1,5 @@
-//! The deterministic xorshift the sweep oracle matrices draw cases from.
+//! The deterministic generators sweep matrices and generated-case suites draw
+//! cases from.
 //!
 //! A sweep matrix is reproducible only while its generator is: the seed in the
 //! failure message has to name one sequence. Two matrices carried a
@@ -65,4 +66,17 @@ impl Rng {
         let len = u32::try_from(len).expect("Fix: sweep case tables stay under u32::MAX entries.");
         self.range(len) as usize
     }
+}
+
+/// Advance a 64-bit linear congruential state and return it.
+///
+/// The multiplier and increment are the MMIX constants. Generated-case suites
+/// in several crates carried a byte-identical copy of this step, and a copy
+/// that drifts makes the `case_index` in two failure messages name different
+/// inputs while both suites claim to sweep the same space.
+pub fn next_case_u64(state: &mut u64) -> u64 {
+    *state = state
+        .wrapping_mul(6_364_136_223_846_793_005)
+        .wrapping_add(1_442_695_040_888_963_407);
+    *state
 }

@@ -135,7 +135,58 @@ pub struct NativeComparisonConditions {
     pub objective: Option<String>,
 }
 
+/// What a workload computes, as a pinned native comparison states it.
+///
+/// The four facts that differ per workload, plus the device target and the
+/// objective the comparison is ranked on. Everything else a comparison needs
+/// is the measurement protocol, which is the same for every pinned baseline
+/// and is supplied by [`NativeComparisonConditions::pinned`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WorkloadFacts<'a> {
+    /// Mathematical and numeric semantics contract.
+    pub semantics: &'a str,
+    /// Data type representation.
+    pub dtype: &'a str,
+    /// Tensor shapes and layout extents.
+    pub shapes: &'a str,
+    /// Regularity versus raggedness description.
+    pub raggedness: &'a str,
+    /// Target device architecture.
+    pub target: &'a str,
+    /// Target optimization objective.
+    pub objective: &'a str,
+}
+
 impl NativeComparisonConditions {
+    /// The conditions a pinned native comparison runs under.
+    ///
+    /// A measured comparison only means something when both sides ran on the
+    /// same buffer state, stream, toolchain, clock state, warmup, interleaving,
+    /// repetition count and cache state. Those eight facts are the measurement
+    /// protocol, and every workload definition wrote them out, so a protocol
+    /// change had to reach eleven copies and a copy that was missed compared
+    /// two runs taken under different conditions. A workload states only
+    /// [`WorkloadFacts`].
+    #[must_use]
+    pub fn pinned(facts: WorkloadFacts<'_>) -> Self {
+        Self {
+            semantics: Some(facts.semantics.to_string()),
+            dtype: Some(facts.dtype.to_string()),
+            shapes: Some(facts.shapes.to_string()),
+            raggedness: Some(facts.raggedness.to_string()),
+            initial_and_final_state: Some("clean_buffers_unaliased".to_string()),
+            target: Some(facts.target.to_string()),
+            stream: Some("cuda_stream_non_blocking_0".to_string()),
+            toolchain_and_flags: Some("nvcc_12.4_-O3".to_string()),
+            clock_and_power_state: Some("locked_base_clock_tdp_100pct".to_string()),
+            warmup: Some("300_warmup_iterations_discarded".to_string()),
+            interleaving: Some("ab_ba_round_robin_interleaving".to_string()),
+            repetitions: Some("30_measured_samples_clt".to_string()),
+            cache_state: Some("flushed_l2_between_iterations".to_string()),
+            objective: Some(facts.objective.to_string()),
+        }
+    }
+
     /// Return the value of a dimension by enum.
     #[must_use]
     pub fn get(&self, dim: EqualityDimension) -> Option<&str> {

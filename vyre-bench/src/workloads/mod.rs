@@ -22,7 +22,7 @@ pub mod whole_app;
 pub use definitions::{WorkloadDomain, WorkloadSpecification};
 pub use equality::{
     validate_equality_conditions, EqualityConditionRefusal, EqualityDimension,
-    NativeComparisonConditions,
+    NativeComparisonConditions, WorkloadFacts,
 };
 pub use fields::{MissingRequiredFieldsError, RequiredMeasurementField};
 pub use measurement::{

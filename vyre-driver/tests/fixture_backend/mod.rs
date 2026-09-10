@@ -2,10 +2,10 @@
 //!
 //! WHY: both gates need a dispatch-capable backend that succeeds, differing
 //! only in the `reference_oracle` flag and the precedence rank. Written out per
-//! suite, that is a `VyreBackend` impl plus three `inventory::submit!` blocks
-//! copied per backend, and the copy is what rots: a new required field on
-//! `BackendRegistration` has to be added once per copy, and a suite whose copy
-//! drifts stops registering the thing the gate is about.
+//! suite, that is three `inventory::submit!` blocks copied per backend, and the
+//! copy is what rots: a new required field on `BackendRegistration` has to be
+//! added once per copy, and a suite whose copy drifts stops registering the
+//! thing the gate is about.
 //!
 //! The registration blocks are a macro rather than a function because
 //! `inventory::submit!` is an item and each backend needs its own.
@@ -13,32 +13,12 @@
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
-use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{OpId, Program};
+use vyre_foundation::ir::OpId;
 
-/// A backend that dispatches successfully and returns nothing.
-///
-/// Returning no outputs is deliberate: every gate that registers this asks which
-/// backend was selected, never what it computed, and a fixture that produced
-/// values would be host arithmetic in a driver test.
-pub(crate) struct FixtureBackend(pub(crate) &'static str);
-
-impl vyre_driver::sealed::Sealed for FixtureBackend {}
-
-impl VyreBackend for FixtureBackend {
-    fn id(&self) -> &'static str {
-        self.0
-    }
-
-    fn dispatch_borrowed(
-        &self,
-        _program: &Program,
-        _inputs: &[&[u8]],
-        _config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
-        Ok(Vec::new())
-    }
-}
+/// The dispatch-capable double both gates register, under this crate's name
+/// for it. The impl has one owner in `vyre-test-support` because the
+/// resident-sequence unit tests need the same one.
+pub(crate) use vyre_test_support::backend_doubles::NoOutputBackend as FixtureBackend;
 
 /// A backend that claims no operation, so selection turns on eligibility alone.
 pub(crate) fn no_supported_ops() -> &'static HashSet<OpId> {
