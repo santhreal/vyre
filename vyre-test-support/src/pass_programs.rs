@@ -76,6 +76,35 @@ pub fn logical_copy_program() -> Program {
     )
 }
 
+/// One `u32` read from `in` and stored to `out`, both a single element.
+///
+/// The smallest program carrying a real input dependency, which is what every
+/// adversarial input contract needs: an evaluator that synthesizes a missing
+/// input, ignores an extra one, or reads past the declared element is
+/// observable on this and on nothing smaller. Written out per suite, the
+/// declarations drift, and a refusal proven against one spelling says nothing
+/// about the other.
+#[must_use]
+pub fn single_input_copy_program() -> Program {
+    indexed_input_copy_program(0)
+}
+
+/// One `u32` read from `in` at `load_index` and stored to `out[0]`.
+///
+/// `in` declares a single element, so any `load_index` above zero is the
+/// out-of-bounds case stated over the same program as the in-bounds one.
+#[must_use]
+pub fn indexed_input_copy_program(load_index: u32) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::read("in", 0, DataType::U32).with_count(1),
+            BufferDecl::output("out", 1, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![element_copy("out", 0, "in", load_index)],
+    )
+}
+
 /// A program declaring workgroup-scoped scratch and nothing else that could be
 /// refused.
 ///
@@ -96,6 +125,24 @@ pub fn workgroup_scratch_program() -> Program {
             Node::store("tile", Expr::u32(0), Expr::u32(1)),
             Node::store("out", Expr::u32(0), Expr::u32(2)),
         ],
+    )
+}
+
+/// `out[0] = a[0] + b[0]` over the buffer declarations given.
+///
+/// The declarations are the argument because one suite varies their order and
+/// another varies the output's access class, while the body is the same in
+/// both. Two copies of the body compare two programs that read as one.
+#[must_use]
+pub fn sum_of_two_loads(buffers: Vec<BufferDecl>) -> Program {
+    Program::wrapped(
+        buffers,
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::add(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
+        )],
     )
 }
 

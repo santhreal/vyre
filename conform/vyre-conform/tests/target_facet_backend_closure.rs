@@ -23,34 +23,15 @@
 //! lower turns this suite red until the facet join accounts for it, and linking
 //! a new concrete driver adds its whole column without an edit here.
 
-use std::collections::HashSet;
-
 use vyre_driver::BackendRegistration;
-use vyre_foundation::ir::{node_op_id, Node, Program};
 use vyre_foundation::operation::OperationRegistry;
 use vyre_foundation::transform::schedule_lowering::lower_logical_schedule_borrowed;
-use vyre_foundation::visit::child_bodies;
-
-/// Every language-level operation the program's nodes name, at every nesting
-/// depth, after schedule lowering resolves the logical execution markers.
-///
-/// Written out here rather than called through the driver so the assertion has
-/// a second opinion on the same question. Markers are resolved first because
-/// `validate_program_contract` resolves them before admission: no backend
-/// lowers `vyre.node.logical_barrier` and none needs to.
-fn lowered_node_ops(program: &Program) -> HashSet<&'static str> {
-    let lowered = lower_logical_schedule_borrowed(program);
-    let physical = lowered.as_ref().unwrap_or(program);
-    let mut ops = HashSet::new();
-    let mut stack: Vec<&Node> = physical.entry().iter().collect();
-    while let Some(node) = stack.pop() {
-        ops.insert(node_op_id(node));
-        for body in child_bodies(node) {
-            stack.extend(body.iter());
-        }
-    }
-    ops
-}
+// The node walk, the published pair set and the disagreement wording are the
+// second opinion both facet contracts judge the registry with, so they have one
+// owner rather than one copy per suite.
+use vyre_test_support::target_facet_join::{
+    facet_disagreement, lowered_node_ops, published_facet_pairs,
+};
 
 /// One `(operation, target)` row: what the facet registry published, and what
 /// the target's registered arms say.
@@ -65,12 +46,7 @@ struct Pair {
 fn pairs() -> Vec<Pair> {
     let backends = vyre_driver::registered_backends()
         .expect("Fix: the linked backend registry must start before target facets are read");
-    let facets = vyre_driver::registered_target_operation_facets()
-        .expect("Fix: the target facet registry must start");
-    let declared: HashSet<(&str, &str)> = facets
-        .iter()
-        .map(|facet| (facet.operation_id, facet.target_id.as_str()))
-        .collect();
+    let published = published_facet_pairs();
 
     let compiling: Vec<&BackendRegistration> = backends
         .iter()
@@ -88,11 +64,12 @@ fn pairs() -> Vec<Pair> {
                 && node_ops
                     .as_ref()
                     .is_some_and(|node_ops| node_ops.iter().all(|op| supported.contains(*op)));
+            let target = backend.target_id.as_str().to_string();
             rows.push(Pair {
                 operation: operation.id,
-                target: backend.target_id.as_str().to_string(),
                 claimed,
-                declared: declared.contains(&(operation.id, backend.target_id.as_str())),
+                declared: published.contains(&(operation.id, target.clone())),
+                target,
                 expected,
             });
         }
@@ -110,15 +87,10 @@ fn every_shipped_operation_target_pair_agrees_with_the_backend_lowering_arms() {
     );
     for pair in &rows {
         assert_eq!(
-            pair.declared, pair.expected,
-            "Fix: target `{}` {} operation `{}`, and its registered language-level operation set says otherwise. A target facet is the intersection of the declared catalog with the arms the backend lowers, never the declared catalog alone.",
-            pair.target,
-            if pair.declared {
-                "declares a facet for"
-            } else {
-                "declares no facet for"
-            },
-            pair.operation,
+            pair.declared,
+            pair.expected,
+            "{}",
+            facet_disagreement(&pair.target, pair.declared, pair.operation)
         );
     }
 }

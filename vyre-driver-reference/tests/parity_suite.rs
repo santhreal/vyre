@@ -11,6 +11,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use crate::dispatch_fixtures;
 use dispatch_fixtures::{binary_program, dispatch_no_input, dispatch_with_inputs, u32_out_buffer};
+use vyre_test_support::pass_programs::sum_of_two_loads;
 
 // ---------------------------------------------------------------
 // Scalar expression shapes: store, arithmetic, bitwise
@@ -296,19 +297,11 @@ fn determinism_guarantee() {
 #[test]
 fn caller_supplied_physical_grid_cannot_change_the_semantic_answer() {
     let evaluator = CpuRefEvaluator;
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("a", 0, DataType::U32),
-            BufferDecl::read("b", 1, DataType::U32),
-            u32_out_buffer("out", 2),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::add(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
-        )],
-    );
+    let program = sum_of_two_loads(vec![
+        BufferDecl::read("a", 0, DataType::U32),
+        BufferDecl::read("b", 1, DataType::U32),
+        u32_out_buffer("out", 2),
+    ]);
     let a = 17u32.to_le_bytes();
     let b = 25u32.to_le_bytes();
     let inputs = [a.as_slice(), b.as_slice()];

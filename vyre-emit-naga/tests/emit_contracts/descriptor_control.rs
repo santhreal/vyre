@@ -547,22 +547,7 @@ fn wide_source_to_wide_target_casts_emit_valid_wgsl() {
 
 /// Load a U64 (vec2<u32> backing), apply `unop`, store to a U64 out.
 fn u64_unop_desc(unop: UnOp) -> KernelDescriptor {
-    descriptor("u64_unop")
-        .slots([
-            global_ro(0, DataType::U64, "src").with_count(4),
-            global_rw(1, DataType::U64, "out").with_count(4),
-        ])
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
-                    op(KernelOpKind::UnOpKind(unop), [1], 2),
-                    effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
-                ])
-                .literal(LiteralValue::U32(0)),
-        )
-        .build()
+    vyre_lower::descriptor_builder::unop_over_load("u64_unop", DataType::U64, unop)
 }
 
 #[test]

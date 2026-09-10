@@ -76,6 +76,11 @@ pub mod dispatch_policy;
 pub(crate) mod dispatch_shape;
 /// Backend-neutral bounded fan-out for durability work on a path set.
 pub mod durable_fanout;
+/// Backend-neutral external resource import shared by every concrete driver.
+pub mod external_import;
+/// The external-import contract every concrete driver's importer answers.
+#[cfg(any(test, feature = "test-fixtures"))]
+pub mod external_import_contracts;
 /// Device-profile-aware extraction cost helpers.
 pub mod extraction_cost;
 /// Backend-neutral fixpoint-iteration resolution.

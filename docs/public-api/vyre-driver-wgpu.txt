@@ -26,10 +26,11 @@ impl vyre_driver::backend::device_buffer::DeviceBuffer for vyre_driver_wgpu::Wgp
 impl vyre_driver::backend::sealed::Sealed for vyre_driver_wgpu::WgpuBackend
 impl vyre_driver::backend::sealed::Sealed for vyre_driver_wgpu::pipeline::WgpuPipeline
 impl vyre_driver::backend::vyre_backend::VyreBackend for vyre_driver_wgpu::WgpuBackend
+impl vyre_driver::external_import::ExternalImportHandle for vyre_driver_wgpu::WgpuExternalMemoryHandle
+impl vyre_driver::external_import::ExternalImportPolicy for vyre_driver_wgpu::WgpuExternalImportPolicy
 impl vyre_driver_wgpu::DispatchArena
 impl vyre_driver_wgpu::WgpuBackend
 impl vyre_driver_wgpu::WgpuDeviceBuffer
-impl vyre_driver_wgpu::WgpuExternalResourceImporter
 impl vyre_driver_wgpu::buffer::BindGroupCache
 impl vyre_driver_wgpu::buffer::BufferPool
 impl vyre_driver_wgpu::buffer::GpuBufferHandle
@@ -56,6 +57,8 @@ pub async fn vyre_driver_wgpu::runtime::acquire_gpu() -> core::result::Result<((
 pub async fn vyre_driver_wgpu::runtime::acquire_gpu_for_adapter(index: usize) -> core::result::Result<((wgpu::api::device::Device, wgpu::api::queue::Queue), wgpu_types::AdapterInfo, vyre_driver_wgpu::runtime::EnabledFeatures), vyre_driver::backend::error::BackendError>
 pub const vyre_driver_wgpu::WGPU_BACKEND_ID: &str
 pub const vyre_driver_wgpu::WGPU_TARGET_ID: vyre_foundation::operation::target_facet::TargetId
+pub const vyre_driver_wgpu::WgpuExternalImportPolicy::COLOR: vyre_spec::resource_capability::image::ColorInterpretation
+pub const vyre_driver_wgpu::WgpuExternalImportPolicy::OWNER: &'static str
 pub const vyre_driver_wgpu::runtime::LruPolicy::DEFAULT_THRESHOLD: u32
 pub const vyre_driver_wgpu::runtime::indirect::INDIRECT_ARGS_BYTES: u64
 pub const vyre_driver_wgpu::runtime::serializer::MAX_SERIALIZED_PART_BYTES: usize
@@ -148,11 +151,9 @@ pub fn vyre_driver_wgpu::WgpuDeviceBuffer::backend_id(&self) -> &'static str
 pub fn vyre_driver_wgpu::WgpuDeviceBuffer::byte_len(&self) -> usize
 pub fn vyre_driver_wgpu::WgpuDeviceBuffer::debug_label(&self) -> core::option::Option<&str>
 pub fn vyre_driver_wgpu::WgpuDeviceBuffer::handle(&self) -> &vyre_driver_wgpu::buffer::GpuBufferHandle
-pub fn vyre_driver_wgpu::WgpuExternalResourceImporter::authenticate_import(&self, descriptor: &vyre_driver_wgpu::WgpuExternalMemoryDescriptor) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
-pub fn vyre_driver_wgpu::WgpuExternalResourceImporter::import_external_resource(&self, descriptor: vyre_driver_wgpu::WgpuExternalMemoryDescriptor) -> core::result::Result<vyre_spec::resource_capability::AdmittedResourceRecord, vyre_spec::resource_capability::ResourceAbiError>
-pub fn vyre_driver_wgpu::WgpuExternalResourceImporter::invalidate_on_device_loss(&self) -> vyre_driver::semantic_resource_abi::DeviceLossInvalidationReport
-pub fn vyre_driver_wgpu::WgpuExternalResourceImporter::new(device_id: u64) -> Self
-pub fn vyre_driver_wgpu::WgpuExternalResourceImporter::registry(&self) -> &vyre_driver::semantic_resource_abi::ExternalResourceRegistry<vyre_driver_wgpu::WgpuExternalMemoryHandle>
+pub fn vyre_driver_wgpu::WgpuExternalImportPolicy::refuse_unsupported(descriptor: &vyre_driver::external_import::ExternalImportDescriptor<Self::Handle>) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
+pub fn vyre_driver_wgpu::WgpuExternalMemoryHandle::memory_kind(&self) -> vyre_spec::resource_capability::sampler::ExternalMemoryKind
+pub fn vyre_driver_wgpu::WgpuExternalMemoryHandle::provenance_tag(&self) -> u64
 pub fn vyre_driver_wgpu::artifact_materializer(backend: vyre_driver_wgpu::WgpuBackend) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::buffer::BindGroupCache::default() -> Self
 pub fn vyre_driver_wgpu::buffer::BindGroupCache::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -328,8 +329,7 @@ pub struct vyre_driver_wgpu::DispatchArena
 pub struct vyre_driver_wgpu::WgpuBackend
 pub struct vyre_driver_wgpu::WgpuBackendStats
 pub struct vyre_driver_wgpu::WgpuDeviceBuffer
-pub struct vyre_driver_wgpu::WgpuExternalMemoryDescriptor
-pub struct vyre_driver_wgpu::WgpuExternalResourceImporter
+pub struct vyre_driver_wgpu::WgpuExternalImportPolicy
 pub struct vyre_driver_wgpu::buffer::BindGroupCache
 pub struct vyre_driver_wgpu::buffer::BindGroupCacheStats
 pub struct vyre_driver_wgpu::buffer::BufferPool
@@ -366,6 +366,9 @@ pub struct vyre_driver_wgpu::runtime::readback_ring::ReadbackTicket
 pub struct vyre_driver_wgpu::runtime::readback_ring::RingStats
 pub struct vyre_driver_wgpu::runtime::router::BackendRouter
 pub struct vyre_driver_wgpu::runtime::router::RouterDecision
+pub type vyre_driver_wgpu::WgpuExternalImportPolicy::Handle = vyre_driver_wgpu::WgpuExternalMemoryHandle
+pub type vyre_driver_wgpu::WgpuExternalMemoryDescriptor = vyre_driver::external_import::ExternalImportDescriptor<vyre_driver_wgpu::WgpuExternalMemoryHandle>
+pub type vyre_driver_wgpu::WgpuExternalResourceImporter = vyre_driver::external_import::ExternalResourceImporter<vyre_driver_wgpu::WgpuExternalImportPolicy>
 pub type vyre_driver_wgpu::engine::multi_gpu::StreamShardError = vyre_driver_wgpu::engine::multi_gpu::stream_shard::StreamShardError
 pub type vyre_driver_wgpu::runtime::readback_ring::MapResult = core::result::Result<(), wgpu::api::buffer::BufferAsyncError>
 pub type vyre_driver_wgpu::runtime::serializer::SerializerResult<T, E> = core::result::Result<T, E>
@@ -383,13 +386,6 @@ pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_hit_rate: f64
 pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_hits: u64
 pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_insertions: u64
 pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_misses: u64
-pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::dimensions: vyre_spec::resource_capability::image::ImageDimensions
-pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::format: vyre_spec::resource_capability::image::ImageFormat
-pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::handle: vyre_driver_wgpu::WgpuExternalMemoryHandle
-pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::permitted_usages: vyre_spec::resource_capability::ResourcePermittedUsages
-pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::resource_id: u64
-pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::row_pitch_bytes: u32
-pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::sync_protocol: vyre_spec::resource_capability::sampler::TimelineSyncProtocol
 pub vyre_driver_wgpu::WgpuExternalMemoryHandle::DmaBuf(i32)
 pub vyre_driver_wgpu::WgpuExternalMemoryHandle::HalTexture(usize)
 pub vyre_driver_wgpu::WgpuExternalMemoryHandle::HostBuffer

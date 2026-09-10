@@ -28,7 +28,8 @@ use vyre_megakernel::mesh::{CollectiveSupport, MeshAxis, MeshDevice, MeshFacts, 
 use vyre_megakernel::{
     compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest,
     DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetEntryPoint,
-    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory, ValidatedCompileRequest,
+    TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
+    TargetResourceMemory, ValidatedCompileRequest,
 };
 
 /// A single-dimension external value contract.
@@ -468,3 +469,32 @@ pub fn entry_over(
         resource_bindings,
     }
 }
+
+/// The payload format the fixture target compilers declare, at `version`.
+///
+/// Format identity and profile identity are compared against each other when a
+/// payload is attached, so a suite that spells one of them differently from the
+/// next tests a rejection it did not mean to state.
+pub fn payload_format(version: u16) -> TargetPayloadFormat {
+    TargetPayloadFormat::new(FIXTURE_TARGET, version).expect("fixture format must be valid")
+}
+
+/// The target profile the fixture payloads declare, at `version`.
+///
+/// One workgroup of 64 invocations with 1024 bytes of shared memory and no
+/// dynamic shared allocation: large enough for every fixture entry point and
+/// small enough that no device fact rejects it.
+pub fn target_profile(version: u16) -> TargetProfile {
+    TargetProfile::new(
+        FIXTURE_TARGET,
+        u64::from(version),
+        [64, 1, 1],
+        64,
+        1_024,
+        0,
+    )
+    .expect("fixture profile must be valid")
+}
+
+/// The target the payload fixtures name.
+const FIXTURE_TARGET: &str = "test.target-binary";

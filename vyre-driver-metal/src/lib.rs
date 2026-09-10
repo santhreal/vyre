@@ -21,7 +21,8 @@ pub const METAL_TARGET_ID: vyre_foundation::operation::TargetId =
 /// Metal external resource import/export and timeline synchronization.
 mod external_resource;
 pub use external_resource::{
-    MetalExternalMemoryDescriptor, MetalExternalMemoryHandle, MetalExternalResourceImporter,
+    MetalExternalImportPolicy, MetalExternalMemoryDescriptor, MetalExternalMemoryHandle,
+    MetalExternalResourceImporter,
 };
 mod materializer;
 #[cfg(any(target_os = "macos", target_os = "ios"))]

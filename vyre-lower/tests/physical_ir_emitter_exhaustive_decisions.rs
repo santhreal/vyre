@@ -7,8 +7,10 @@
 //! 2. No catch-all downgrade may convert an un-emittable kernel into silent host execution or a stub.
 //! 3. All target dialects (naga/wgsl, ptx, spirv, metal) must have explicit coverage.
 
+use std::collections::BTreeSet;
 use std::path::Path;
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, MemoryOrdering, SubgroupReduceOp, UnOp};
+use vyre_lower::variant_space::kernel_op_kind_variants;
 use vyre_lower::{
     AsyncTransaction, AsyncWaitSpec, FragmentValue, KernelOpKind, MatrixMmaElement,
     MatrixMmaLayout, MatrixMmaSpec, MatrixTileShape, MemoryProxyFence, Name, OpaqueExprData,
@@ -365,57 +367,114 @@ fn all_physical_ir_variants() -> Vec<KernelOpKind> {
     ]
 }
 
-#[test]
-fn every_physical_ir_variant_has_explicit_decision_for_all_targets() {
-    let variants = all_physical_ir_variants();
-    let targets = ["naga", "ptx", "spirv", "metal"];
+/// The variant name `kind` reports, taken from its derived `Debug` form.
+fn variant_name(kind: &KernelOpKind) -> String {
+    let debug = format!("{kind:?}");
+    debug
+        .split(['(', '{', ' '])
+        .next()
+        .expect("a Debug form opens with the variant identifier")
+        .to_string()
+}
 
-    for target in &targets {
-        for variant in &variants {
-            let decision = classify_physical_ir_variant_decision(variant, target);
-            // Verify that an explicit decision is recorded (either NativeEmit, Decomposed, or ExplicitReject)
-            assert!(
+/// The target dialects the decision table records an answer for.
+const TARGETS: [&str; 4] = ["naga", "ptx", "spirv", "metal"];
+
+#[test]
+fn every_kernel_op_kind_the_source_declares_has_a_representative_and_a_decision() {
+    let declared = kernel_op_kind_variants();
+    let variants = all_physical_ir_variants();
+
+    for target in TARGETS {
+        let decided: BTreeSet<String> = variants
+            .iter()
+            .filter(|kind| {
                 matches!(
-                    decision,
+                    classify_physical_ir_variant_decision(kind, target),
                     EmitterDecision::NativeEmit
                         | EmitterDecision::Decomposed
                         | EmitterDecision::ExplicitReject
-                ),
-                "Fix: target `{target}` has no explicit decision for variant `{:?}`",
-                variant
+                )
+            })
+            .map(variant_name)
+            .collect();
+
+        assert_eq!(
+            decided, declared,
+            "Fix: target `{target}` must record a decision for every declared \
+             `KernelOpKind` variant. `all_physical_ir_variants` holds one \
+             representative per variant and is written out, so a variant added to the \
+             enum enters `declared` on its own and has to be added there too"
+        );
+    }
+}
+
+#[test]
+fn no_target_rejects_an_op_without_which_no_program_can_run() {
+    // A target that refuses to load, store, name a constant or return cannot
+    // emit any program, so a reject recorded for one of these is a table entry
+    // no emitter can honour.
+    let indispensable = [
+        KernelOpKind::Literal,
+        KernelOpKind::LoadGlobal,
+        KernelOpKind::StoreGlobal,
+        KernelOpKind::Return,
+    ];
+
+    for target in TARGETS {
+        for kind in &indispensable {
+            assert_ne!(
+                classify_physical_ir_variant_decision(kind, target),
+                EmitterDecision::ExplicitReject,
+                "Fix: target `{target}` records a reject for `{}`, which leaves it \
+                 unable to emit any program at all",
+                variant_name(kind)
             );
         }
     }
 }
 
 #[test]
-fn no_catch_all_wildcard_arms_in_emitter_dispatch_modules() {
-    // Audit emitter dispatch files to ensure `classify_op_dispatch_route` and `emit_op` match exhaustively without `_ =>`
-    let dispatch_files = [
+fn emitter_dispatch_names_every_variant_rather_than_falling_through_a_catch_all() {
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("this crate is a workspace member, so its manifest has a parent");
+    let declared = kernel_op_kind_variants();
+
+    for relative_path in [
         "vyre-emit-naga/src/emitter/op_dispatch/mod.rs",
         "vyre-emit-ptx/src/emitter/dispatch.rs",
-    ];
+    ] {
+        let path = workspace_root.join(relative_path);
+        let content = std::fs::read_to_string(&path).unwrap_or_else(|e| {
+            panic!(
+                "Fix: {} is the op dispatch this contract audits and must be readable: {e}",
+                path.display()
+            )
+        });
 
-    for relative_path in &dispatch_files {
-        let path = Path::new(relative_path);
-        let fallback = Path::new("../").join(relative_path);
-        let target_path = if path.exists() {
-            path
-        } else if fallback.exists() {
-            &fallback
-        } else {
-            continue;
-        };
-
-        let content = std::fs::read_to_string(target_path)
-            .unwrap_or_else(|e| panic!("Fix: failed to read {}: {e}", target_path.display()));
-
-        // Check if there is a wildcard arm in match kind
+        let unnamed: Vec<&String> = declared
+            .iter()
+            .filter(|variant| !names_variant(&content, variant))
+            .collect();
         assert!(
-            !content.contains("match kind {\n        _ =>")
-                && !content.contains("match &op.kind {\n            _ =>"),
-            "Fix: emitter dispatch in {} must not contain a wildcard `_ =>` catch-all arm",
-            target_path.display()
+            unnamed.is_empty(),
+            "Fix: {} must state an arm for every physical-IR variant. A variant the \
+             dispatch never names reaches a catch-all instead of a decision: {unnamed:?}",
+            path.display()
         );
     }
+}
+
+/// Whether `content` names `variant` as a whole identifier.
+///
+/// A substring test alone would accept `LoopCarrier` for `LoopCarrierEnd`, which
+/// is the exact case a catch-all would hide.
+fn names_variant(content: &str, variant: &str) -> bool {
+    content.match_indices(variant).any(|(at, _)| {
+        let before = content[..at].chars().next_back();
+        let after = content[at + variant.len()..].chars().next();
+        let boundary = |c: Option<char>| !c.is_some_and(|c| c.is_alphanumeric() || c == '_');
+        boundary(before) && boundary(after)
+    })
 }

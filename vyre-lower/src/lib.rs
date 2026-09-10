@@ -47,6 +47,10 @@ pub mod pattern_audit;
 pub mod program_stability_corpus;
 pub mod rewrites;
 pub(crate) mod target;
+/// The physical-IR variant space every emitter contract suite enumerates.
+/// Test-only, like `descriptor_builder`: enable `test-fixtures` to reach it.
+#[cfg(any(test, feature = "test-fixtures"))]
+pub mod variant_space;
 mod verified_lowering;
 pub(crate) mod verify;
 

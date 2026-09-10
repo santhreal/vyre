@@ -41,6 +41,11 @@ grouping = "isolated"
 reason = "changes the process working directory, which every test resolving a relative path would then resolve against"
 
 [[test]]
+path = "vyre-lower/tests/variant_space_is_independent_of_the_working_directory.rs"
+grouping = "isolated"
+reason = "changes the process working directory, which every test resolving a relative path would then resolve against"
+
+[[test]]
 path = "vyre-driver/tests/driver_contracts.rs"
 grouping = "grouped"
 reason = "the OnceLock holds an empty operation set as a cache; no case observes when it was filled"

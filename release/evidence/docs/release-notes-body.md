@@ -1556,6 +1556,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   the `vyre` facade unify into one workflow consuming validated compile
   requests, transactional immutable tensor handles, and five-level compiler
   inspection.
+- External resource import is one generic owner in vyre-driver, and every
+  concrete driver contributes only its handle mapping and its refusal rule.
 - Backend support is a 7-stage production-path certificate join, concrete
   driver crates have zero dependencies on semantic libraries or application
   policy, physical-IR variants have exhaustive emitter decisions, and Metal
@@ -3509,6 +3511,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   stopped enumerating `Node` itself: it is a policy over the one structural
   node rewrite, so a body-bearing variant added to the IR is descended into
   instead of switching propagation off for everything inside it.
+- The physical-IR variant space is enumerated by vyre-lower from its own
+  compiled source, so an emitter contract no longer resolves the enum through
+  the working directory.
 - The six planners in `vyre-driver` that reserve their scratch before they
   decide anything declare their storage-reservation failure adapter with one
   line. `reservation_policy::storage_reserve_failure_adapter!` owns the
@@ -3908,6 +3913,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   fence semantics, barrier participation, async transaction lifecycle,
   collective group, and failure cancellation behavior, removing implicit
   defaults and verifying race freedom through bounded reference interleavings.
+- The connected-graph fixture, the host input ABI contract, the target payload
+  format and profile, the single-input copy program and the target facet node
+  walk each have one owner in vyre-test-support.
 - Five helpers that sat at a crate root now sit under the concern they serve.
   The signed fixed-point pair fixed_mul_16_16_expr and
   fixed_sdiv_by_positive_expr is vyre_libs::math::fixed. fixed_u32_matmul and
@@ -7638,6 +7646,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The GPU e-graph mirror is split into the refusals, the columnar snapshot, the
   device image, the row signature, the merge and the measured bridge, and its
   suite moved to an integration test.
+- The per-target emitter decision contract compares its representative variant
+  set against the declared enum instead of asserting that a decision is one of
+  the three decisions.
 - The registered encodex operation now records the exact ASCII, UTF-8,
   UTF-16LE, and ISO-8859-1 classifier identifiers produced by its canonical
   fixtures.
@@ -7816,6 +7827,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `Expr::Call` are unchanged. A contract reads the `Expr` enum's own source at
   run time and fails when a variant has no recorded answer, or when a second
   file in the crate defines an `expr_type` walker.
+- An external import with both an unsupported memory-kind combination and an
+  unaligned pitch is refused for the combination, on every driver.
 - The driver external resource registry now bounds its admitted record table,
   which grew without limit while every backend copy of it evicted at a ceiling.
 - External resource admission clears a poisoned lock and continues instead of

@@ -58,7 +58,7 @@ vyre-runtime.workspace = true
 vyre-pass-engine.workspace = true
 # `ir-fixtures` carries the shared u32 binop parity tables the live-GPU
 # parity suites read their operands and pinned oracle answers from.
-vyre-test-support = { workspace = true, features = ["semantic-requests", "driver-artifact-contracts", "parity-oracles"] }
+vyre-test-support = { workspace = true, features = ["semantic-requests", "driver-artifact-contracts", "parity-oracles", "host-input-abi"] }
 # The dispatch allocation budget installs the counting global allocator.
 vyre-alloc-probe = { workspace = true }
 # The canonical self-hosted optimizer scaling bench lives behind this feature,

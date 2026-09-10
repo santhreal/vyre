@@ -57,6 +57,12 @@ driver-contracts = ["dep:vyre-driver"]
 # the artifact fixtures to `driver-contracts`, because a payload contract is
 # stated against a compiled artifact.
 driver-artifact-contracts = ["driver-contracts", "semantic-requests"]
+# The host input ABI contract stated against a live backend: the program set,
+# the canonical input builder, and the agreement between a device dispatch and
+# the reference interpreter on which input counts are accepted. It needs the
+# driver boundary for `VyreBackend` and the oracle for the comparison, so it
+# composes both rather than declaring either again.
+host-input-abi = ["driver-contracts", "parity-oracles"]
 # Proptest strategies over the frozen operator tables. The tables themselves are
 # unconditional; only the draw needs proptest, so a consumer that iterates a
 # table never builds a property-testing framework.

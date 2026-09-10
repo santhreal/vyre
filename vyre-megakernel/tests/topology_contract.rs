@@ -41,12 +41,11 @@ fn device_default() -> DeviceFacts {
 }
 
 fn payload_format() -> TargetPayloadFormat {
-    TargetPayloadFormat::new("test.target-binary", 1).expect("format must be valid")
+    vyre_test_support::artifact_fixtures::payload_format(1)
 }
 
 fn payload_profile() -> TargetProfile {
-    TargetProfile::new("test.target-binary", 1, [64, 1, 1], 64, 1_024, 0)
-        .expect("profile must be valid")
+    vyre_test_support::artifact_fixtures::target_profile(1)
 }
 
 /// Which execution topology this is, with no catch-all arm.

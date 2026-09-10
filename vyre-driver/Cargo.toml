@@ -64,7 +64,11 @@ publication_contract = "extension-point:external_ir_extension"
 workspace = true
 
 [dev-dependencies]
-vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
+vyre-test-support = { workspace = true, features = [
+    "ir-fixtures",
+    "semantic-requests",
+    "driver-contracts",
+] }
 # integration tests/benches assert against these crates' public APIs
 vyre = { workspace = true, default-features = false }
 vyre-driver-reference = { workspace = true }

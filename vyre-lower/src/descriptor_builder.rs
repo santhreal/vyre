@@ -35,7 +35,7 @@
 //! ```
 
 use vyre_foundation::ir::{
-    BinOp, BufferAccess, BufferDecl, DataType, Expr, MemoryOrdering, Node, Program,
+    BinOp, BufferAccess, BufferDecl, DataType, Expr, MemoryOrdering, Node, Program, UnOp,
 };
 
 use crate::{
@@ -218,6 +218,27 @@ pub fn store_literal_kernel(id: &str, out: BindingSlot, workgroup: [u32; 3]) -> 
         .build()
 }
 
+/// A `U32` literal followed by one op of `kind` over that literal.
+///
+/// The smallest descriptor that reaches exactly one emitter arm, which is what
+/// a per-variant emitter decision contract needs and all a refusal contract
+/// can observe. Four operand slots are supplied because the widest kind reads
+/// four, and a kind that reads fewer ignores the rest.
+#[must_use]
+pub fn probe_kernel(kind: KernelOpKind) -> KernelDescriptor {
+    let mut desc = store_literal_kernel(
+        "sample_kernel",
+        global_rw(0, DataType::U32, "out"),
+        [64, 1, 1],
+    );
+    desc.body.literals = vec![LiteralValue::U32(42), LiteralValue::U32(0)];
+    desc.body.ops = vec![
+        op(KernelOpKind::Literal, [0], 0),
+        op(kind, [0, 0, 0, 0], 1),
+    ];
+    desc
+}
+
 /// A binding slot with every field named.
 #[must_use]
 pub fn slot(
@@ -333,6 +354,31 @@ pub fn binop_over_loads(id: &str, elem: DataType, binop: BinOp) -> KernelDescrip
                     effect(KernelOpKind::StoreGlobal, [1, 0, 4]),
                 ])
                 .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+        )
+        .build()
+}
+
+/// One loaded operand of `elem`, `unop` applied, stored back as `elem`.
+///
+/// The unary counterpart of [`binop_over_loads`] and the same slot layout, so
+/// a suite comparing a unary emission against a binary one is comparing two
+/// programs that differ only in the operator.
+#[must_use]
+pub fn unop_over_load(id: &str, elem: DataType, unop: UnOp) -> KernelDescriptor {
+    descriptor(id)
+        .slots([
+            global_ro(0, elem.clone(), "src").with_count(4),
+            global_rw(1, elem, "out").with_count(4),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                    op(KernelOpKind::UnOpKind(unop), [1], 2),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
+                ])
+                .literal(LiteralValue::U32(0)),
         )
         .build()
 }
