@@ -22,7 +22,7 @@ Program walks the table one byte per step.
 
 - Substring search: simple corpus + edge cases (empty haystack,
   needle-larger-than-haystack, all-zeros, Unicode multi-byte). See
-  `vyre-libs/tests/cat_a_conform.rs` and `vyre-libs/tests/aho_corasick_kat.rs`.
+  `vyre-libs/tests/cat_a_conform.rs` and `vyre-libs-pattern/tests/aho_corasick_kat.rs`.
 - Aho-Corasick: the 1975 paper's "ushers / he she his hers" example,
   hand-picked regression vectors, and the `aho-corasick` crate corpus.
 - DFA budget: `tests` under the DFA compile path exercise

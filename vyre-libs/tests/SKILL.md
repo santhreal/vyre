@@ -19,9 +19,8 @@ backend, and (d) matches the CPU reference output byte-for-byte.
 
 ## Adversarial surface
 
-- **`tests/adversarial.rs`**  -  named binary for the skills contract; also
-  run `f32_adversarial`, `op_boundaries`, `overflow_guards` (see module
-  docs in `adversarial.rs`).
+- **`tests/f32_adversarial.rs`**, **`tests/adversarial_fixpoint.rs`** and
+  **`tests/adversarial_label.rs`**  -  the adversarial suites in this crate.
 - Zero-sized buffers  -  validator must reject or produce zero-work
   `Program`, not panic.
 - Extreme dimensions (matmul with `m = u32::MAX`)  -  structured error.

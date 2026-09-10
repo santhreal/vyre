@@ -31,7 +31,7 @@ directory following the same schema.
 ## Current fixture files
 
 - `aho_corasick.toml`: 20 regression vectors from
-  `tests/aho_corasick_kat.rs`.
+  `../../vyre-libs-pattern/tests/aho_corasick_kat.rs`.
 - `blake3.toml`: 3 KAT vectors from `tests/blake3_kat.rs`.
 
 ## Why TOML

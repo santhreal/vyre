@@ -9,7 +9,7 @@ that locks the truth of a specific claim. This directory is the index.
 | 1. Positive truth        | ok     | `tests/wire_pack_into_contracts.rs` (19 contracts)                   |
 | 2. Negative precision    | ok     | `tests/wire_pack_into_contracts.rs::*_rejects_*` (truncation, empty) |
 | 3. Adversarial / evasion | ok     | `tests/proptest_wire_roundtrip.rs` NaN/Inf/subnormal/overflow corpus |
-| 4. Cross-file            | ok     | `vyre-libs/tests/wire_cross_crate_compat.rs`                         |
+| 4. Cross-file            | ok     | `vyre-libs-pattern/tests/wire_cross_crate_compat.rs`                         |
 | 5. CVE replay            | n/a    | wire is foundational substrate, not a vuln-detection rule           |
 | 6. Property (proptest)   | ok     | `tests/proptest_wire_roundtrip.rs` (8 properties × 10 000 cases)     |
 | 7. Differential          | ok     | `tests/wire_differential_std_io.rs` vs `std::io::Cursor` LE reader   |
