@@ -421,7 +421,7 @@ inventory::submit! {
         Some(canonical_regex_scan_inputs),
         Some(|| vec![vec![EXPECTED_REGEX_SCAN_HITS_BYTES.to_vec()]]),
     )
-    .with_opaque("string pattern matching DFA and aho-corasick automaton")
+    .with_uncharacterized()
 }
 
 #[cfg(test)]

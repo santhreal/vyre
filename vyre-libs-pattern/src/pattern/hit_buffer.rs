@@ -308,7 +308,7 @@ inventory::submit! {
             ]]
         }),
     )
-    .with_opaque("string pattern matching DFA and aho-corasick automaton")
+    .with_uncharacterized()
 }
 
 inventory::submit! {
@@ -318,5 +318,5 @@ inventory::submit! {
         Some(compact_hits_inputs),
         Some(|| vec![vec![EXPECTED_COMPACT_HITS_OUTPUT_BYTES.to_vec()]]),
     )
-    .with_opaque("string pattern matching DFA and aho-corasick automaton")
+    .with_uncharacterized()
 }

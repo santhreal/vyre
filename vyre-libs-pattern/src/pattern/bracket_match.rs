@@ -264,7 +264,7 @@ inventory::submit! {
             EXPECTED_BRACKET_MATCH_PAIRS_BYTES.to_vec(),
         ]]),
     )
-    .with_opaque("string pattern matching DFA and aho-corasick automaton")
+    .with_uncharacterized()
 }
 
 #[cfg(test)]

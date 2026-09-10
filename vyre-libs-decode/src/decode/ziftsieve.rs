@@ -265,7 +265,7 @@ inventory::submit! {
         Some(fixture_inputs),
         Some(|| vec![vec![EXPECTED_ZIFTSIEVE_LITERAL_BYTES.to_vec()]]),
     )
-    .with_opaque("variable-length decoding and decompression stream state")
+    .with_uncharacterized()
 }
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]

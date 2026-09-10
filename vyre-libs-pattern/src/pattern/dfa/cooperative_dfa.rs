@@ -247,7 +247,7 @@ inventory::submit! {
         Some(fixture_inputs),
         Some(|| vec![vec![EXPECTED_COOPERATIVE_DFA_OUTPUT_BYTES.to_vec()]]),
     )
-    .with_opaque("string pattern matching DFA and aho-corasick automaton")
+    .with_uncharacterized()
 }
 
 #[cfg(test)]

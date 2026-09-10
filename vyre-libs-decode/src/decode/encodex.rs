@@ -158,7 +158,7 @@ inventory::submit! {
             ]
         }),
     )
-    .with_opaque("variable-length decoding and decompression stream state")
+    .with_uncharacterized()
 }
 
 // ---------------------------------------------------------------------------
