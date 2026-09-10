@@ -4245,6 +4245,7 @@ dependencies = [
  "smallvec",
  "tempfile",
  "thiserror 2.0.19",
+ "toml",
  "tracing",
  "ureq",
  "vyre-driver",

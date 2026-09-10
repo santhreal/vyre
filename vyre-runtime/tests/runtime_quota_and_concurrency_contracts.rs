@@ -376,10 +376,38 @@ fn runtime_unsafe_permission_matches_the_recorded_set_and_every_grant_states_an_
     let src_dir = root.join("vyre-runtime/src");
 
     let lib = fs::read_to_string(src_dir.join("lib.rs")).unwrap();
-    assert!(
-        lib.contains("#![deny(unsafe_code)]"),
-        "vyre-runtime/src/lib.rs must carry `#![deny(unsafe_code)]` so a new `unsafe` block \
-         outside the recorded files is a compile error. Fix: restore the crate-root attribute."
+
+    // `unsafe_code` is denied by the workspace lint table and inherited here.
+    // The level is read from the manifest that owns it rather than from a
+    // crate-root attribute: a second declaration in lib.rs is a second policy
+    // owner, which the lint-one-policy gate refuses, and asserting the
+    // attribute's presence would pin the spelling instead of the denial.
+    let workspace: toml::Table =
+        toml::from_str(&fs::read_to_string(root.join("Cargo.toml")).unwrap()).unwrap();
+    let level = workspace
+        .get("workspace")
+        .and_then(|table| table.get("lints"))
+        .and_then(|table| table.get("rust"))
+        .and_then(|table| table.get("unsafe_code"))
+        .and_then(toml::Value::as_str);
+    assert_eq!(
+        level,
+        Some("deny"),
+        "Fix: [workspace.lints.rust] must deny `unsafe_code`, so an `unsafe` block outside the \
+         recorded files below is a compile error rather than an inherited permission."
+    );
+
+    let manifest: toml::Table =
+        toml::from_str(&fs::read_to_string(root.join("vyre-runtime/Cargo.toml")).unwrap()).unwrap();
+    let inherits = manifest
+        .get("lints")
+        .and_then(|table| table.get("workspace"))
+        .and_then(toml::Value::as_bool);
+    assert_eq!(
+        inherits,
+        Some(true),
+        "Fix: vyre-runtime/Cargo.toml must set `[lints] workspace = true`, or the workspace \
+         denial above never reaches this crate and every grant below is unnecessary."
     );
 
     let recorded: BTreeSet<String> = lib
