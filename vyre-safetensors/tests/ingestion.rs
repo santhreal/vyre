@@ -795,6 +795,72 @@ fn resource_content_change_between_verification_and_binding_is_refused_by_name()
     );
 }
 
+/// WHY: the verified handle keeps the descriptor it verified, so a rename or a
+/// symlink swap cannot reach a later read. An in-place rewrite does reach it,
+/// and one that keeps the file length leaves every length and metadata check
+/// satisfied. The bytes a binding receives must still be the bytes that were
+/// verified, so the read hashes what it returns against the digest recorded for
+/// that tensor. This does not detect a change made while a read is in flight.
+#[test]
+fn a_same_length_rewrite_of_a_verified_tensor_is_refused_by_name() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let shard_path = temp.path().join("weights.safetensors");
+    let header = br#"{"layer.weight":{"dtype":"F32","shape":[2],"data_offsets":[0,8]},"layer.bias":{"dtype":"F32","shape":[2],"data_offsets":[8,16]}}"#;
+    let original_payload = [7_u8; 16];
+    write_shard(&shard_path, header, &original_payload);
+
+    let index_path = temp.path().join("model.safetensors.index.json");
+    fs::write(
+        &index_path,
+        br#"{"weight_map":{"layer.weight":"weights.safetensors","layer.bias":"weights.safetensors"}}"#,
+    )
+    .expect("write index");
+
+    let index = ShardedSafetensorIndex::open(temp.path(), &index_path).expect("open index");
+    let shard_rel = Path::new("weights.safetensors");
+    let expected_digest = *blake3::hash(&fs::read(&shard_path).expect("read")).as_bytes();
+    let checkpoint = index
+        .verify_transactional([ExpectedShardDigest {
+            shard: shard_rel,
+            blake3: expected_digest,
+        }])
+        .expect("verify transactional");
+    assert_eq!(
+        checkpoint.read_tensor("layer.weight").expect("read tensor"),
+        original_payload[..8]
+    );
+
+    // Rewrite the first tensor's bytes in place. The header and the payload
+    // length are unchanged, so the file keeps its length and its inode and the
+    // verified descriptor reads the replacement.
+    let length_before = fs::metadata(&shard_path).expect("metadata").len();
+    let mut rewritten_payload = [9_u8; 16];
+    rewritten_payload[8..].copy_from_slice(&original_payload[8..]);
+    write_shard(&shard_path, header, &rewritten_payload);
+    assert_eq!(
+        length_before,
+        fs::metadata(&shard_path).expect("metadata").len(),
+        "the rewrite must keep the shard length so only the content check can catch it"
+    );
+
+    let error = checkpoint
+        .read_tensor("layer.weight")
+        .expect_err("a rewritten tensor must not be served as verified content");
+    assert!(
+        matches!(
+            &error,
+            SafetensorError::ShardContentChanged { name, shard }
+                if name == "layer.weight" && shard == shard_rel
+        ),
+        "Fix: a same-length rewrite must be refused by tensor name, got {error:?}"
+    );
+
+    let untouched = checkpoint
+        .read_tensor("layer.bias")
+        .expect("a tensor whose own bytes did not change must still read");
+    assert_eq!(untouched, original_payload[8..]);
+}
+
 /// Proves transactional reader operations read_bytes, read_into, and tensor lookup.
 #[test]
 fn transactional_tensor_reader_operations() {

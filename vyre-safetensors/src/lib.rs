@@ -438,6 +438,7 @@ pub struct VerifiedTensorHandle {
     file: std::sync::Arc<std::sync::Mutex<File>>,
     expected_shard_digest: [u8; 32],
     expected_file_len: u64,
+    expected_content_digest: [u8; 32],
 }
 
 impl VerifiedTensorHandle {
@@ -467,11 +468,17 @@ impl VerifiedTensorHandle {
 
     /// Read tensor bytes directly from the open verified file descriptor.
     ///
+    /// The descriptor was opened during verification, so a symlink swap or a
+    /// rename that replaces the path leaves this read on the verified file. An
+    /// in-place rewrite does reach it, so the bytes are hashed against the
+    /// digest recorded for this tensor at verification and a read that would
+    /// return different content fails instead.
+    ///
     /// # Errors
     ///
-    /// Fails with [`SafetensorError::ShardLengthChanged`] or
-    /// [`SafetensorError::ShardContentChanged`] if the underlying file
-    /// was modified, truncated, or rewritten on disk.
+    /// Returns [`SafetensorError::ShardLengthChanged`] when the shard was
+    /// truncated or extended, and [`SafetensorError::ShardContentChanged`]
+    /// when the tensor's own bytes no longer hash to the verified digest.
     pub fn read_bytes(&self) -> Result<Vec<u8>, SafetensorError> {
         let mut file = self.file.lock().map_err(|_| SafetensorError::Io {
             path: self.shard_path.clone(),
@@ -507,6 +514,12 @@ impl VerifiedTensorHandle {
                 path: self.shard_path.clone(),
                 detail: source.to_string(),
             })?;
+        if *blake3::hash(&buffer).as_bytes() != self.expected_content_digest {
+            return Err(SafetensorError::ShardContentChanged {
+                name: self.tensor.name.clone(),
+                shard: self.shard_path.clone(),
+            });
+        }
         Ok(buffer)
     }
 
@@ -855,6 +868,7 @@ impl ShardedSafetensorIndex {
         let mut verified = BTreeMap::new();
         let mut shard_handles = BTreeMap::new();
         let mut tensor_handles = BTreeMap::new();
+        let mut tensor_content: BTreeMap<String, [u8; 32]> = BTreeMap::new();
         for (shard, index) in &self.shards {
             let expected_digest = expected_by_shard[shard];
             let mut file = File::open(index.path()).map_err(|source| SafetensorError::Io {
@@ -881,8 +895,26 @@ impl ShardedSafetensorIndex {
                     path: index.path().to_path_buf(),
                     detail: source.to_string(),
                 })?;
+            // One sequential pass produces the whole-shard digest and every
+            // tensor's content digest together. The per-tensor digests are what
+            // let a later read prove the bytes it returns are the bytes that
+            // were verified, which a length check alone cannot state: an
+            // in-place rewrite of the same length reaches the open descriptor.
             let mut hasher = blake3::Hasher::new();
+            let mut tensor_hashers: Vec<(&String, Range<u64>, blake3::Hasher)> = self
+                .tensors
+                .iter()
+                .filter(|(_, checkpoint_tensor)| checkpoint_tensor.shard == *shard)
+                .map(|(name, checkpoint_tensor)| {
+                    (
+                        name,
+                        checkpoint_tensor.tensor.file_range.clone(),
+                        blake3::Hasher::new(),
+                    )
+                })
+                .collect();
             let mut buffer = vec![0_u8; SHARD_VERIFY_BUFFER_BYTES];
+            let mut chunk_start = 0_u64;
             loop {
                 let read = file
                     .read(&mut buffer)
@@ -894,6 +926,19 @@ impl ShardedSafetensorIndex {
                     break;
                 }
                 hasher.update(&buffer[..read]);
+                let chunk_end = chunk_start.saturating_add(read as u64);
+                for (_, range, tensor_hasher) in &mut tensor_hashers {
+                    let start = range.start.max(chunk_start);
+                    let end = range.end.min(chunk_end);
+                    if start < end {
+                        let from = usize::try_from(start - chunk_start)
+                            .map_err(|_| SafetensorError::OffsetOverflow)?;
+                        let to = usize::try_from(end - chunk_start)
+                            .map_err(|_| SafetensorError::OffsetOverflow)?;
+                        tensor_hasher.update(&buffer[from..to]);
+                    }
+                }
+                chunk_start = chunk_end;
             }
             let actual_digest = *hasher.finalize().as_bytes();
             if actual_digest != expected_digest {
@@ -904,6 +949,9 @@ impl ShardedSafetensorIndex {
                 });
             }
             verified.insert(shard.clone(), actual_digest);
+            for (name, _, tensor_hasher) in tensor_hashers {
+                tensor_content.insert(name.clone(), *tensor_hasher.finalize().as_bytes());
+            }
             let shared_file = std::sync::Arc::new(std::sync::Mutex::new(file));
             let shard_handle = VerifiedShardHandle {
                 shard_path: shard.clone(),
@@ -916,6 +964,7 @@ impl ShardedSafetensorIndex {
 
         for (name, checkpoint_tensor) in &self.tensors {
             let shard_handle = &shard_handles[&checkpoint_tensor.shard];
+            let expected_content_digest = tensor_content[name];
             tensor_handles.insert(
                 name.clone(),
                 VerifiedTensorHandle {
@@ -924,6 +973,7 @@ impl ShardedSafetensorIndex {
                     file: shard_handle.file.clone(),
                     expected_shard_digest: shard_handle.expected_digest,
                     expected_file_len: shard_handle.identity.file_len,
+                    expected_content_digest,
                 },
             );
         }
@@ -1164,22 +1214,6 @@ pub enum SafetensorError {
         /// Tensor name.
         name: String,
         /// Relative shard path.
-        shard: PathBuf,
-    },
-    /// Resource content changed between verification and binding.
-    #[error(
-        "resource `{name}` in shard `{shard}` content changed between verification and binding"
-    )]
-    ResourceContentModified {
-        /// Resource / tensor name.
-        name: String,
-        /// Relative shard path.
-        shard: PathBuf,
-    },
-    /// Symlink swap detected after verification.
-    #[error("symlink swap detected for shard `{shard}`")]
-    SymlinkSwapDetected {
-        /// Shard path.
         shard: PathBuf,
     },
     /// Manifest is stale or incompatible.
