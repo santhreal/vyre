@@ -16,6 +16,10 @@ use vyre_driver::{
     ImageFormat, ResourceAbiError, ResourcePermittedUsages, ResourceTransitionSchedule,
     TransitionExecutionReport,
 };
+use vyre_foundation::failure_domain::{reclaim_poisoned_read, reclaim_poisoned_write};
+
+/// The subsystem every poison report in this module names as the owner.
+const OWNER: &str = "runtime external resource admission";
 
 /// Global lease counter for admitted external resources.
 static NEXT_LEASE_ID: AtomicU64 = AtomicU64::new(1);
@@ -415,27 +419,18 @@ impl ExternalResourceAdmissionManager {
             invalidated_artifacts: Vec::new(),
         };
 
-        let mut map = match self.resources.write() {
-            Ok(g) => g,
-            Err(p) => {
-                self.resources.clear_poison();
-                p.into_inner()
-            }
-        };
-        let mut views = match self.dependent_views.write() {
-            Ok(g) => g,
-            Err(p) => {
-                self.dependent_views.clear_poison();
-                p.into_inner()
-            }
-        };
-        let mut pipelines = match self.dependent_pipelines.write() {
-            Ok(g) => g,
-            Err(p) => {
-                self.dependent_pipelines.clear_poison();
-                p.into_inner()
-            }
-        };
+        let mut map = reclaim_poisoned_write(
+            &self.resources,
+            OWNER,
+            "the admitted external resource table",
+        );
+        let mut views =
+            reclaim_poisoned_write(&self.dependent_views, OWNER, "the dependent view index");
+        let mut pipelines = reclaim_poisoned_write(
+            &self.dependent_pipelines,
+            OWNER,
+            "the dependent pipeline index",
+        );
 
         for (res_id, record) in map.iter_mut() {
             record.invalidate_on_device_loss();
@@ -458,7 +453,11 @@ impl ExternalResourceAdmissionManager {
     /// Look up an admitted resource record.
     #[must_use]
     pub fn query_resource(&self, resource_id: u64) -> Option<AdmittedResourceRecord> {
-        let map = self.resources.read().ok()?;
+        let map = reclaim_poisoned_read(
+            &self.resources,
+            OWNER,
+            "the admitted external resource table",
+        );
         map.get(&resource_id).cloned()
     }
 }

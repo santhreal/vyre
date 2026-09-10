@@ -10,7 +10,7 @@
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::{LazyLock, Mutex};
+use std::sync::{LazyLock, Mutex, MutexGuard};
 
 use serde_json::Value;
 
@@ -21,6 +21,30 @@ static CURRENT_SOURCE_FINGERPRINTS: LazyLock<Mutex<BTreeMap<PathBuf, String>>> =
 
 static CURRENT_SOURCE_TREE_FINGERPRINTS: LazyLock<Mutex<BTreeMap<PathBuf, String>>> =
     LazyLock::new(|| Mutex::new(BTreeMap::new()));
+
+/// The state name the source fingerprint memo reports on poison.
+const SOURCE_MEMO: &str = "the per-root source fingerprint memo";
+
+/// The state name the source tree fingerprint memo reports on poison.
+const TREE_MEMO: &str = "the per-root source tree fingerprint memo";
+
+/// Take one fingerprint memo, discarding it after a panic.
+///
+/// Every entry is recomputed from the tree it names, so a half-written memo is
+/// dropped and refilled rather than read. Clearing the poison flag keeps the
+/// cost of one panic at one recomputation instead of one per lookup for the
+/// life of the process.
+fn lock_memo(
+    memo: &'static Mutex<BTreeMap<PathBuf, String>>,
+    state: &'static str,
+) -> MutexGuard<'static, BTreeMap<PathBuf, String>> {
+    vyre_foundation::failure_domain::govern_mutex_restartable(
+        memo,
+        "the evidence source fingerprint checker",
+        state,
+        BTreeMap::clear,
+    )
+}
 
 pub(crate) fn source_fingerprint_freshness_issues(
     source_fingerprint: &str,
@@ -77,18 +101,15 @@ fn current_source_fingerprint_at(workspace_root: &Path) -> String {
     let key = workspace_root
         .canonicalize()
         .unwrap_or_else(|_| workspace_root.to_path_buf());
-    let cache = &*CURRENT_SOURCE_FINGERPRINTS;
-    if let Ok(cache) = cache.lock() {
-        if let Some(fingerprint) = cache.get(&key) {
-            return fingerprint.clone();
-        }
+    let memo = lock_memo(&CURRENT_SOURCE_FINGERPRINTS, SOURCE_MEMO);
+    if let Some(fingerprint) = memo.get(&key) {
+        return fingerprint.clone();
     }
+    drop(memo);
 
     let git = vyre_bench::probes::capture_git_info_at(workspace_root);
     let fingerprint = vyre_bench::probes::source_fingerprint(&git);
-    if let Ok(mut cache) = cache.lock() {
-        cache.insert(key, fingerprint.clone());
-    }
+    lock_memo(&CURRENT_SOURCE_FINGERPRINTS, SOURCE_MEMO).insert(key, fingerprint.clone());
     fingerprint
 }
 
@@ -96,17 +117,14 @@ fn current_source_tree_fingerprint_at(workspace_root: &Path) -> String {
     let key = workspace_root
         .canonicalize()
         .unwrap_or_else(|_| workspace_root.to_path_buf());
-    let cache = &*CURRENT_SOURCE_TREE_FINGERPRINTS;
-    if let Ok(cache) = cache.lock() {
-        if let Some(fingerprint) = cache.get(&key) {
-            return fingerprint.clone();
-        }
+    let memo = lock_memo(&CURRENT_SOURCE_TREE_FINGERPRINTS, TREE_MEMO);
+    if let Some(fingerprint) = memo.get(&key) {
+        return fingerprint.clone();
     }
+    drop(memo);
 
     let fingerprint = vyre_bench::probes::source_tree_fingerprint_at(workspace_root);
-    if let Ok(mut cache) = cache.lock() {
-        cache.insert(key, fingerprint.clone());
-    }
+    lock_memo(&CURRENT_SOURCE_TREE_FINGERPRINTS, TREE_MEMO).insert(key, fingerprint.clone());
     fingerprint
 }
 

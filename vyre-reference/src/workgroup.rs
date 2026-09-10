@@ -170,7 +170,7 @@ impl Memory {
             buffer
                 .bytes
                 .read()
-                .expect("reference Buffer byte lock was poisoned")
+                .unwrap_or_else(|_| crate::oob::poisoned_buffer_byte_lock())
                 .clone()
         })
     }
@@ -185,11 +185,11 @@ impl Memory {
                     std::sync::Arc::try_unwrap(buffer.bytes)
                         .map(|rw| {
                             rw.into_inner()
-                                .expect("reference Buffer byte lock was poisoned")
+                                .unwrap_or_else(|_| crate::oob::poisoned_buffer_byte_lock())
                         })
                         .unwrap_or_else(|a| {
                             a.read()
-                                .expect("reference Buffer byte lock was poisoned")
+                                .unwrap_or_else(|_| crate::oob::poisoned_buffer_byte_lock())
                                 .clone()
                         })
                 })

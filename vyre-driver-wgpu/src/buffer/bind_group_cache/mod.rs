@@ -48,18 +48,22 @@ impl Default for BindGroupCache {
 }
 
 impl BindGroupCache {
+    /// Take the cache's inner state, discarding entries after a panic.
+    ///
+    /// A cached bind group is rebuilt from the layout and the buffer handles
+    /// the caller already holds, so discarding a half-written LRU costs a
+    /// rebuild and never a wrong binding.
     fn lock_cache(&self) -> MutexGuard<'_, BindGroupCacheInner> {
-        match self.cache.lock() {
-            Ok(g) => g,
-            Err(p) => {
-                self.cache.clear_poison();
-                let mut inner = p.into_inner();
+        vyre_foundation::failure_domain::govern_mutex_restartable(
+            &self.cache,
+            "wgpu bind group cache",
+            "the bound LRU entries",
+            |inner| {
                 inner.entries.clear();
                 inner.lru.clear();
                 inner.next_generation = 0;
-                inner
-            }
-        }
+            },
+        )
     }
 
     /// Create a bind-group cache with the default 256-entry cap.

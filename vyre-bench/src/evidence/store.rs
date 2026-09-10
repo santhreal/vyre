@@ -7,10 +7,17 @@
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::RwLock;
+use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use thiserror::Error;
+use vyre_foundation::failure_domain::{reclaim_poisoned_read, reclaim_poisoned_write};
 
 use super::receipt::BenchmarkReceipt;
+
+/// The subsystem every poison report in this module names as the owner.
+const OWNER: &str = "benchmark evidence store";
+
+/// The state every poison report in this module names.
+const INDEX: &str = "the in-memory receipt index";
 
 /// Maximum allowed byte size for a single benchmark receipt on disk (16 MiB).
 pub const MAX_BENCHMARK_RECEIPT_BYTES: u64 = 16 * 1024 * 1024;
@@ -70,6 +77,19 @@ impl EvidenceStore {
         })
     }
 
+    /// Take the in-memory index for reading, keeping it after a panic.
+    ///
+    /// A store opened without a root directory holds its receipts here and
+    /// nowhere else, so discarding the index would discard the evidence.
+    fn read_index(&self) -> RwLockReadGuard<'_, BTreeMap<String, BenchmarkReceipt>> {
+        reclaim_poisoned_read(&self.in_memory, OWNER, INDEX)
+    }
+
+    /// Take the in-memory index for writing under the same policy as [`Self::read_index`].
+    fn write_index(&self) -> RwLockWriteGuard<'_, BTreeMap<String, BenchmarkReceipt>> {
+        reclaim_poisoned_write(&self.in_memory, OWNER, INDEX)
+    }
+
     /// Store a benchmark receipt indexed by its content address.
     ///
     /// Returns the computed content address hash string.
@@ -80,7 +100,7 @@ impl EvidenceStore {
             let json = serde_json::to_string_pretty(receipt)?;
             fs::write(file_path, json)?;
         }
-        let mut mem = self.in_memory.write().unwrap_or_else(|e| e.into_inner());
+        let mut mem = self.write_index();
         mem.insert(address.clone(), receipt.clone());
         Ok(address)
     }
@@ -91,7 +111,7 @@ impl EvidenceStore {
     /// the requested address.
     pub fn get(&self, address: &str) -> Result<BenchmarkReceipt, EvidenceStoreError> {
         {
-            let mem = self.in_memory.read().unwrap_or_else(|e| e.into_inner());
+            let mem = self.read_index();
             if let Some(receipt) = mem.get(address) {
                 return Ok(receipt.clone());
             }
@@ -128,7 +148,7 @@ impl EvidenceStore {
     pub fn list(&self) -> Result<Vec<String>, EvidenceStoreError> {
         let mut addresses = Vec::new();
         {
-            let mem = self.in_memory.read().unwrap_or_else(|e| e.into_inner());
+            let mem = self.read_index();
             addresses.extend(mem.keys().cloned());
         }
         if let Some(dir) = &self.root_dir {

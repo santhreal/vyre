@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every mutable state owner answers a poisoned lock through a named `vyre-foundation::failure_domain` policy that records the owner, the state it guards, and the recovery class, and `InvariantViolation` unwinds so a supervised caller reports which unit of work failed while `ProcessFatal` still ends the process."

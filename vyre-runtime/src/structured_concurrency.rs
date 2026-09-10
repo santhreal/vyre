@@ -12,6 +12,10 @@ use std::time::{Duration, Instant};
 
 use thiserror::Error;
 use vyre_driver::BackendError;
+use vyre_foundation::failure_domain::reclaim_poisoned_mutex;
+
+/// The subsystem every poison report in this module names as the owner.
+const OWNER: &str = "runtime structured concurrency";
 
 /// Structured concurrency error variants.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -109,13 +113,7 @@ impl WorkerQuarantine {
     }
 
     fn lock_workers(&self) -> std::sync::MutexGuard<'_, BTreeMap<u64, WorkerStatus>> {
-        match self.workers.lock() {
-            Ok(g) => g,
-            Err(p) => {
-                self.workers.clear_poison();
-                p.into_inner()
-            }
-        }
+        reclaim_poisoned_mutex(&self.workers, OWNER, "the worker quarantine registry")
     }
 
     /// Register a worker as active.
@@ -248,13 +246,11 @@ impl StructuredWorkerScope {
 
         let handle = thread::spawn(move || {
             let res = operation(&token);
-            let mut slot = match result_slot_clone.lock() {
-                Ok(g) => g,
-                Err(p) => {
-                    result_slot_clone.clear_poison();
-                    p.into_inner()
-                }
-            };
+            let mut slot = reclaim_poisoned_mutex(
+                &result_slot_clone,
+                OWNER,
+                "one bounded worker's result slot",
+            );
             *slot = Some(res);
             quarantine.mark_completed(worker_id);
         });
@@ -269,13 +265,8 @@ impl StructuredWorkerScope {
             }
 
             {
-                let mut slot = match result_slot.lock() {
-                    Ok(g) => g,
-                    Err(p) => {
-                        result_slot.clear_poison();
-                        p.into_inner()
-                    }
-                };
+                let mut slot =
+                    reclaim_poisoned_mutex(&result_slot, OWNER, "one bounded worker's result slot");
                 if let Some(res) = slot.take() {
                     let _ = handle.join();
                     return res.map_err(|err| ConcurrencyError::WorkerPanicked(err.to_string()));
@@ -293,13 +284,8 @@ impl StructuredWorkerScope {
             elapsed,
         );
 
-        let mut workers = match self.workers.lock() {
-            Ok(g) => g,
-            Err(p) => {
-                self.workers.clear_poison();
-                p.into_inner()
-            }
-        };
+        let mut workers =
+            reclaim_poisoned_mutex(&self.workers, OWNER, "the scope's live worker join handles");
         workers.push((worker_id, handle));
 
         Err(ConcurrencyError::WorkerQuarantined {
@@ -316,13 +302,8 @@ impl StructuredWorkerScope {
     /// Ensure no thread outlives the session holding live resources without recorded quarantine.
     pub fn close(&self) {
         self.cancel();
-        let mut workers = match self.workers.lock() {
-            Ok(g) => g,
-            Err(p) => {
-                self.workers.clear_poison();
-                p.into_inner()
-            }
-        };
+        let mut workers =
+            reclaim_poisoned_mutex(&self.workers, OWNER, "the scope's live worker join handles");
         for (id, handle) in workers.drain(..) {
             if !self.quarantine.is_quarantined(id) {
                 let _ = handle.join();

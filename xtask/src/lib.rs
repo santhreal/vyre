@@ -33,6 +33,7 @@ pub mod gates;
 pub mod generated_document;
 pub mod hash;
 pub mod json_document;
+pub mod lock_policy;
 pub mod manifest_walk;
 pub mod output_arg;
 pub mod provenance;

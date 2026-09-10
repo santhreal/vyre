@@ -11,8 +11,12 @@ use std::string::String;
 use std::sync::Mutex;
 
 use vyre_foundation::failure_domain::{
-    FailureDomain, RecoveryClass, RecoveryDisposition, TypedRecoveryError,
+    reclaim_poisoned_mutex, reclaim_poisoned_mutex_observed, FailureDomain, Reclaimed,
+    RecoveryClass, RecoveryDisposition, TypedRecoveryError,
 };
+
+/// The subsystem every poison report in this module names as the owner.
+const OWNER: &str = "runtime atomic recovery";
 
 /// Lifecycle state for an atomic guarded resource.
 #[derive(Clone, Debug, PartialEq)]
@@ -76,11 +80,30 @@ impl<T> AtomicGuardedState<T> {
     where
         T: Clone,
     {
-        let guard = match self.inner.lock() {
-            Ok(g) => g,
-            Err(poison) => poison.into_inner(),
-        };
-        guard.clone()
+        self.lock_state().clone()
+    }
+
+    /// Take the state machine's guard, transitioning it to
+    /// [`GuardedState::PoisonedTerminal`] the first time a panic is observed.
+    ///
+    /// The transition and the clearing of the poison flag happen under the same
+    /// acquisition, so one panic produces one terminal transition no matter
+    /// which entry point observes it first, and no later acquisition repeats
+    /// the transition over a state a caller has since recovered.
+    fn lock_state(&self) -> std::sync::MutexGuard<'_, GuardedState<T>> {
+        let (mut guard, reclaimed) = reclaim_poisoned_mutex_observed(
+            &self.inner,
+            OWNER,
+            "one atomically guarded state machine",
+        );
+        if reclaimed == Reclaimed::Once {
+            *guard = GuardedState::PoisonedTerminal {
+                domain: self.domain,
+                recovery_class: self.recovery_class,
+                reason: String::from("Lock was poisoned by a previous thread panic"),
+            };
+        }
+        guard
     }
 
     /// Access the guarded state with an operational closure.
@@ -92,24 +115,7 @@ impl<T> AtomicGuardedState<T> {
         &self,
         op: impl FnOnce(&mut T) -> Result<R, String>,
     ) -> Result<R, TypedRecoveryError> {
-        let mut guard = match self.inner.lock() {
-            Ok(g) => g,
-            Err(poison) => {
-                let mut inner_guard = poison.into_inner();
-                *inner_guard = GuardedState::PoisonedTerminal {
-                    domain: self.domain,
-                    recovery_class: self.recovery_class,
-                    reason: String::from("Lock was poisoned by a previous thread panic"),
-                };
-                return Err(TypedRecoveryError::new(
-                    self.domain,
-                    self.recovery_class,
-                    RecoveryDisposition::RequiresRebuild,
-                    "Lock was poisoned by a previous thread panic",
-                    "Fix: invoke recover() to rebuild the state machine from canonical input.",
-                ));
-            }
-        };
+        let mut guard = self.lock_state();
 
         match &mut *guard {
             GuardedState::Ready(val) => op(val).map_err(|err_msg| {
@@ -152,21 +158,13 @@ impl<T> AtomicGuardedState<T> {
 
     /// Explicitly recover and restore state to Ready.
     pub fn recover(&self, fresh_state: T) {
-        self.inner.clear_poison();
-        let mut guard = match self.inner.lock() {
-            Ok(g) => g,
-            Err(poison) => poison.into_inner(),
-        };
+        let mut guard = self.lock_state();
         *guard = GuardedState::Ready(fresh_state);
     }
 
     /// Mark the state as currently rebuilding.
     pub fn begin_rebuild(&self) -> Result<(), TypedRecoveryError> {
-        self.inner.clear_poison();
-        let mut guard = match self.inner.lock() {
-            Ok(g) => g,
-            Err(poison) => poison.into_inner(),
-        };
+        let mut guard = self.lock_state();
         *guard = GuardedState::Rebuilding;
         Ok(())
     }
@@ -178,10 +176,7 @@ impl<T> AtomicGuardedState<T> {
 
     /// Transition to PoisonedTerminal state explicitly with a diagnostic reason.
     pub fn fault(&self, reason: impl Into<String>) {
-        let mut guard = match self.inner.lock() {
-            Ok(g) => g,
-            Err(poison) => poison.into_inner(),
-        };
+        let mut guard = self.lock_state();
         *guard = GuardedState::PoisonedTerminal {
             domain: self.domain,
             recovery_class: self.recovery_class,
@@ -232,23 +227,19 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
     ///
     /// Returns error if key is already prepared by a concurrent operation.
     fn lock_committed(&self) -> std::sync::MutexGuard<'_, BTreeMap<K, V>> {
-        match self.committed.lock() {
-            Ok(g) => g,
-            Err(p) => {
-                self.committed.clear_poison();
-                p.into_inner()
-            }
-        }
+        reclaim_poisoned_mutex(
+            &self.committed,
+            OWNER,
+            "the prepare-commit journal's committed keys",
+        )
     }
 
     fn lock_prepared(&self) -> std::sync::MutexGuard<'_, BTreeMap<K, (PrepareTicket, V)>> {
-        match self.prepared.lock() {
-            Ok(g) => g,
-            Err(p) => {
-                self.prepared.clear_poison();
-                p.into_inner()
-            }
-        }
+        reclaim_poisoned_mutex(
+            &self.prepared,
+            OWNER,
+            "the prepare-commit journal's prepared keys",
+        )
     }
 
     /// # Errors
@@ -440,13 +431,11 @@ impl SupervisedRestartBudget {
     /// Current recorded restart count.
     #[must_use]
     fn lock_restart_count(&self) -> std::sync::MutexGuard<'_, u32> {
-        match self.restart_count.lock() {
-            Ok(g) => g,
-            Err(p) => {
-                self.restart_count.clear_poison();
-                p.into_inner()
-            }
-        }
+        reclaim_poisoned_mutex(
+            &self.restart_count,
+            OWNER,
+            "a supervised restart budget's consumed count",
+        )
     }
 
     /// Current recorded restart count.

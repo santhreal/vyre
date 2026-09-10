@@ -4,8 +4,11 @@
 //! 1. Transactional domain discards state and reports typed poisoned error.
 //! 2. DeviceContextFatal domain marks device lost and reports typed DeviceLost error.
 //! 3. RestartableFromCanonical domain resets corrupted state and returns fresh guard.
-//! 4. Source-derived closure: every Mutex and RwLock in vyre-driver and vyre-driver-wgpu
-//!    has a registered failure domain. A new lock without a registered domain turns the suite red.
+//! 4. ProcessFatal ends the process and InvariantViolation unwinds, so the two
+//!    blast radii are distinguishable rather than both merely nonzero.
+//!
+//! Closure over source is the `lock-poison-policy` gate's, which walks every
+//! production file rather than the two crates a test can link.
 
 #![forbid(unsafe_code)]
 
@@ -218,9 +221,8 @@ fn all_recovery_classes_handled_exhaustively() {
                     other => panic!("expected DeviceLost, got {other:?}"),
                 }
             }
-            RecoveryClass::ProcessFatal | RecoveryClass::InvariantViolation => {
-                // Abort semantics are verified by child process execution tests.
-            }
+            RecoveryClass::ProcessFatal => assert_process_fatal_aborts(),
+            RecoveryClass::InvariantViolation => assert_invariant_violation_unwinds(),
         }
     }
 }
@@ -276,29 +278,21 @@ fn child_process_fatal_abort_case() {
         "graphics_loader_dispatch_table",
         RecoveryClass::ProcessFatal,
     );
+    eprintln!("RETURNED");
 }
 
-#[test]
-#[ignore]
-fn child_invariant_violation_abort_case() {
-    let mutex = Arc::new(Mutex::new(42));
-    let mutex_clone = Arc::clone(&mutex);
-    let _ = std::panic::catch_unwind(move || {
-        let _guard = mutex_clone.lock().unwrap();
-        panic!("simulated panic to poison mutex");
-    });
-    let _unused = govern_mutex(
-        &mutex,
-        "compiler_ir",
-        "critical_symbol_table",
-        RecoveryClass::InvariantViolation,
-    );
-}
-
-#[test]
-fn process_fatal_policy_aborts_process_with_owner_and_state() {
+/// A `ProcessFatal` poison ends the process without unwinding.
+///
+/// Nonzero exit alone does not prove that: a panic also exits nonzero. The
+/// child prints `RETURNED` after the call, so its absence is what separates an
+/// abort from an unwind that a caller could have caught.
+fn assert_process_fatal_aborts() {
     let (aborted, stderr) = run_abort_child_process("child_process_fatal_abort_case");
     assert!(aborted, "ProcessFatal must terminate abnormally");
+    assert!(
+        !stderr.contains("RETURNED"),
+        "ProcessFatal must not unwind past the policy, got: {stderr}"
+    );
     assert!(
         stderr.contains("foreign_loader"),
         "stderr must name owner, got: {stderr}"
@@ -309,16 +303,57 @@ fn process_fatal_policy_aborts_process_with_owner_and_state() {
     );
 }
 
+/// An `InvariantViolation` poison unwinds, so a supervised caller can report
+/// which unit of work failed and reclaim what that unit held.
+///
+/// This is the property that separates it from `ProcessFatal`, which takes down
+/// every unrelated unit in the same process.
+fn assert_invariant_violation_unwinds() {
+    let mutex = Arc::new(Mutex::new(42));
+    let poisoner = Arc::clone(&mutex);
+    let _ = std::panic::catch_unwind(move || {
+        let _guard = poisoner.lock().unwrap();
+        panic!("simulated panic to poison mutex");
+    });
+
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        govern_mutex(
+            &mutex,
+            "compiler_ir",
+            "critical_symbol_table",
+            RecoveryClass::InvariantViolation,
+        )
+    }));
+    std::panic::set_hook(previous);
+
+    let payload = caught.expect_err("InvariantViolation must unwind");
+    let message = payload
+        .downcast_ref::<String>()
+        .cloned()
+        .or_else(|| {
+            payload
+                .downcast_ref::<&str>()
+                .map(|text| (*text).to_string())
+        })
+        .expect("panic payload must carry a message");
+    assert!(
+        message.contains("compiler_ir"),
+        "panic must name owner, got: {message}"
+    );
+    assert!(
+        message.contains("critical_symbol_table"),
+        "panic must name state, got: {message}"
+    );
+}
+
 #[test]
-fn invariant_violation_policy_aborts_process_with_owner_and_state() {
-    let (aborted, stderr) = run_abort_child_process("child_invariant_violation_abort_case");
-    assert!(aborted, "InvariantViolation must terminate abnormally");
-    assert!(
-        stderr.contains("compiler_ir"),
-        "stderr must name owner, got: {stderr}"
-    );
-    assert!(
-        stderr.contains("critical_symbol_table"),
-        "stderr must name state, got: {stderr}"
-    );
+fn process_fatal_policy_aborts_process_without_unwinding() {
+    assert_process_fatal_aborts();
+}
+
+#[test]
+fn invariant_violation_policy_unwinds_naming_owner_and_state() {
+    assert_invariant_violation_unwinds();
 }

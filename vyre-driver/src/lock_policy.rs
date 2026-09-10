@@ -23,8 +23,8 @@
 use std::sync::{Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 pub use vyre_foundation::failure_domain::{
-    reclaim_poisoned_for_teardown, FailureDomain, RecoveryClass, RecoveryDisposition,
-    TypedRecoveryError,
+    govern_mutex_restartable, reclaim_poisoned_for_teardown, FailureDomain, RecoveryClass,
+    RecoveryDisposition, TypedRecoveryError,
 };
 
 use crate::BackendError;
@@ -35,13 +35,31 @@ use crate::BackendError;
 /// lock excludes concurrent access to: `"the device factory"` and `"the graphics loader dispatch
 /// table"`, not `"LOADER_STARTUP"`.
 pub fn process_fatal_poison(owner: &str, state: &str) -> ! {
-    eprintln!(
-        "vyre: {owner} holds a poisoned lock over {state}. A thread panicked while that lock \
-         was held, so the state behind it is half written and no owner in this process can \
-         rebuild it. Fix: report the earlier panic. The process ends here rather than \
-         faulting inside the code that state belongs to."
-    );
-    std::process::abort()
+    vyre_foundation::failure_domain::process_fatal_poison(owner, state)
+}
+
+/// Report a governed poison decision in the vocabulary a backend caller selects on.
+///
+/// The decision itself is `vyre-foundation`'s; this only renames it. A device
+/// domain becomes [`BackendError::DeviceLost`] so a caller reacquires a device,
+/// and every other domain becomes `BackendError::PoisonedLock` so a caller
+/// rebuilds host state.
+fn as_backend_error(error: &TypedRecoveryError, owner: &str, state: &str) -> BackendError {
+    match error.domain {
+        FailureDomain::DeviceContext => BackendError::DeviceLost {
+            backend: owner.to_string(),
+            device: state.to_string(),
+            generation: 0,
+            message: error.reason.clone(),
+        },
+        FailureDomain::MemoryState
+        | FailureDomain::DiskJournal
+        | FailureDomain::WorkerProcess
+        | FailureDomain::SessionLifecycle
+        | FailureDomain::NetworkTransport => BackendError::PoisonedLock {
+            lock_error: format!("{}. {}", error.reason, error.fix),
+        },
+    }
 }
 
 /// Take a guard over process-owned state, or report the poison as recoverable.
@@ -73,31 +91,15 @@ pub fn govern_mutex_with_reset<'a, T, F>(
 where
     F: FnOnce(&mut T),
 {
-    match mutex.lock() {
-        Ok(guard) => Ok(guard),
-        Err(poison) => match class {
-            RecoveryClass::ProcessFatal | RecoveryClass::InvariantViolation => {
-                process_fatal_poison(owner, state);
-            }
-            RecoveryClass::TransactionallyRecoverable => Err(BackendError::poisoned_lock(poison)),
-            RecoveryClass::DeviceContextFatal => Err(BackendError::DeviceLost {
-                backend: owner.to_string(),
-                device: state.to_string(),
-                generation: 0,
-                message: format!(
-                    "lock over `{state}` in `{owner}` was poisoned by a previous panic"
-                ),
-            }),
-            RecoveryClass::RestartableFromCanonicalInput => {
-                let mut guard = poison.into_inner();
-                reset_on_restart(&mut guard);
-                Ok(guard)
-            }
-        },
-    }
+    vyre_foundation::failure_domain::govern_mutex_with_reset(
+        mutex,
+        owner,
+        state,
+        class,
+        reset_on_restart,
+    )
+    .map_err(|error| as_backend_error(&error, owner, state))
 }
-
-pub use vyre_foundation::failure_domain::govern_mutex_restartable;
 
 /// Take a read lock governed by an explicit failure domain contract.
 pub fn govern_rwlock_read<'a, T>(
@@ -106,27 +108,8 @@ pub fn govern_rwlock_read<'a, T>(
     state: &'static str,
     class: RecoveryClass,
 ) -> Result<RwLockReadGuard<'a, T>, BackendError> {
-    match rwlock.read() {
-        Ok(guard) => Ok(guard),
-        Err(poison) => match class {
-            RecoveryClass::ProcessFatal | RecoveryClass::InvariantViolation => {
-                process_fatal_poison(owner, state);
-            }
-            RecoveryClass::TransactionallyRecoverable => Err(BackendError::poisoned_lock(poison)),
-            RecoveryClass::DeviceContextFatal => Err(BackendError::DeviceLost {
-                backend: owner.to_string(),
-                device: state.to_string(),
-                generation: 0,
-                message: format!(
-                    "lock over `{state}` in `{owner}` was poisoned by a previous panic"
-                ),
-            }),
-            RecoveryClass::RestartableFromCanonicalInput => {
-                // Read lock cannot mutate to reset; return poisoned error to force write-side recovery
-                Err(BackendError::poisoned_lock(poison))
-            }
-        },
-    }
+    vyre_foundation::failure_domain::govern_rwlock_read(rwlock, owner, state, class)
+        .map_err(|error| as_backend_error(&error, owner, state))
 }
 
 /// Take a write lock governed by an explicit failure domain contract.
@@ -150,26 +133,12 @@ pub fn govern_rwlock_write_with_reset<'a, T, F>(
 where
     F: FnOnce(&mut T),
 {
-    match rwlock.write() {
-        Ok(guard) => Ok(guard),
-        Err(poison) => match class {
-            RecoveryClass::ProcessFatal | RecoveryClass::InvariantViolation => {
-                process_fatal_poison(owner, state);
-            }
-            RecoveryClass::TransactionallyRecoverable => Err(BackendError::poisoned_lock(poison)),
-            RecoveryClass::DeviceContextFatal => Err(BackendError::DeviceLost {
-                backend: owner.to_string(),
-                device: state.to_string(),
-                generation: 0,
-                message: format!(
-                    "lock over `{state}` in `{owner}` was poisoned by a previous panic"
-                ),
-            }),
-            RecoveryClass::RestartableFromCanonicalInput => {
-                let mut guard = poison.into_inner();
-                reset_on_restart(&mut guard);
-                Ok(guard)
-            }
-        },
-    }
+    vyre_foundation::failure_domain::govern_rwlock_write_with_reset(
+        rwlock,
+        owner,
+        state,
+        class,
+        reset_on_restart,
+    )
+    .map_err(|error| as_backend_error(&error, owner, state))
 }

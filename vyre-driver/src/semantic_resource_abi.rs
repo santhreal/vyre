@@ -10,6 +10,11 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 
+use vyre_foundation::failure_domain::reclaim_poisoned_mutex;
+
+/// The subsystem every poison report in this module names as the owner.
+const OWNER: &str = "driver semantic resource ABI";
+
 pub use vyre_spec::{
     all_address_modes, all_alias_set_kinds, all_border_colors, all_color_interpretations,
     all_compare_functions, all_external_event_kinds, all_external_memory_kinds, all_filter_modes,
@@ -237,6 +242,32 @@ impl ExternalResourceRegistry {
         Self::default()
     }
 
+    /// Take the admitted resource table, keeping every entry after a panic.
+    ///
+    /// The table is the only record of external handles the device still holds,
+    /// so recovery keeps it and clears the poison flag once.
+    fn lock_resources(&self) -> std::sync::MutexGuard<'_, HashMap<u64, AdmittedResourceRecord>> {
+        reclaim_poisoned_mutex(
+            &self.resources,
+            OWNER,
+            "the admitted external resource table",
+        )
+    }
+
+    /// Take the dependent view index under the same policy as the table it indexes.
+    fn lock_dependent_views(&self) -> std::sync::MutexGuard<'_, HashMap<u64, HashSet<u64>>> {
+        reclaim_poisoned_mutex(&self.dependent_views, OWNER, "the dependent view index")
+    }
+
+    /// Take the dependent artifact index under the same policy as the table it indexes.
+    fn lock_dependent_artifacts(&self) -> std::sync::MutexGuard<'_, HashMap<u64, HashSet<u64>>> {
+        reclaim_poisoned_mutex(
+            &self.dependent_artifacts,
+            OWNER,
+            "the dependent artifact index",
+        )
+    }
+
     /// Admit an external or resident resource record.
     ///
     /// # Errors
@@ -247,10 +278,7 @@ impl ExternalResourceRegistry {
         if !record.is_valid {
             return Err(ResourceAbiError::ResourceInvalidated { resource_id: id });
         }
-        let mut map = match self.resources.lock() {
-            Ok(g) => g,
-            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id: id }),
-        };
+        let mut map = self.lock_resources();
         map.insert(id, record);
         Ok(id)
     }
@@ -265,10 +293,7 @@ impl ExternalResourceRegistry {
         resource_id: u64,
         view_id: u64,
     ) -> Result<(), ResourceAbiError> {
-        let map = match self.resources.lock() {
-            Ok(g) => g,
-            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
-        };
+        let map = self.lock_resources();
         let record = map
             .get(&resource_id)
             .ok_or(ResourceAbiError::ResourceInvalidated { resource_id })?;
@@ -277,10 +302,7 @@ impl ExternalResourceRegistry {
         }
         drop(map);
 
-        let mut views = match self.dependent_views.lock() {
-            Ok(g) => g,
-            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
-        };
+        let mut views = self.lock_dependent_views();
         views.entry(resource_id).or_default().insert(view_id);
         Ok(())
     }
@@ -295,10 +317,7 @@ impl ExternalResourceRegistry {
         resource_id: u64,
         artifact_id: u64,
     ) -> Result<(), ResourceAbiError> {
-        let map = match self.resources.lock() {
-            Ok(g) => g,
-            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
-        };
+        let map = self.lock_resources();
         let record = map
             .get(&resource_id)
             .ok_or(ResourceAbiError::ResourceInvalidated { resource_id })?;
@@ -307,10 +326,7 @@ impl ExternalResourceRegistry {
         }
         drop(map);
 
-        let mut artifacts = match self.dependent_artifacts.lock() {
-            Ok(g) => g,
-            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
-        };
+        let mut artifacts = self.lock_dependent_artifacts();
         artifacts
             .entry(resource_id)
             .or_default()
@@ -327,27 +343,9 @@ impl ExternalResourceRegistry {
             invalidated_artifacts: Vec::new(),
         };
 
-        let mut resources = match self.resources.lock() {
-            Ok(g) => g,
-            Err(p) => {
-                self.resources.clear_poison();
-                p.into_inner()
-            }
-        };
-        let mut views = match self.dependent_views.lock() {
-            Ok(g) => g,
-            Err(p) => {
-                self.dependent_views.clear_poison();
-                p.into_inner()
-            }
-        };
-        let mut artifacts = match self.dependent_artifacts.lock() {
-            Ok(g) => g,
-            Err(p) => {
-                self.dependent_artifacts.clear_poison();
-                p.into_inner()
-            }
-        };
+        let mut resources = self.lock_resources();
+        let mut views = self.lock_dependent_views();
+        let mut artifacts = self.lock_dependent_artifacts();
 
         for (res_id, record) in resources.iter_mut() {
             if record.device_id == device_id {
@@ -372,7 +370,7 @@ impl ExternalResourceRegistry {
     /// Look up an admitted resource by ID.
     #[must_use]
     pub fn get_resource(&self, resource_id: u64) -> Option<AdmittedResourceRecord> {
-        let map = self.resources.lock().ok()?;
+        let map = self.lock_resources();
         map.get(&resource_id).cloned()
     }
 }
