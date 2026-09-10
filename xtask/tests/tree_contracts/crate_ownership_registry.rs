@@ -13,7 +13,8 @@ use std::path::Path;
 use xtask::gate::Report;
 use xtask::gates::crate_registry::CrateOwnership;
 
-use super::workspace_sources::{run_gate, track_fixture, workspace_root};
+use super::fixture_gate::run_gate;
+use super::workspace_sources::{track_fixture, workspace_root};
 
 /// Run the gate over a fixture checkout.
 fn run(root: &Path) -> Report {

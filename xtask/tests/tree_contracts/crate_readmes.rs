@@ -7,7 +7,8 @@ use xtask::gate::Report;
 use xtask::gates::crate_readmes::CrateReadmes;
 use xtask::gates::crate_registry::SCHEMA_VERSION as REGISTRY_SCHEMA_VERSION;
 
-use super::workspace_sources::{run_gate, track_fixture, workspace_root};
+use super::fixture_gate::run_gate;
+use super::workspace_sources::{track_fixture, workspace_root};
 
 /// Run the gate over a fixture checkout.
 fn run(root: &Path, write: bool) -> Report {
