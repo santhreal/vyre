@@ -16,12 +16,17 @@ const CORE_MAX_LINES: usize = 1000;
 const TEST_MAX_LINES: usize = 2000;
 
 /// Core crates whose files carry measured caps.
+///
+/// `vyre-libs` is now a facade over one crate per domain, so the prefix covers
+/// every `vyre-libs-*` crate. Without it a file that was ratcheted at 129 lines
+/// takes the flat cap instead and is free to grow to 1000.
 const CORE_ROOTS: &[&str] = &[
     "vyre-foundation/src/",
     "vyre-runtime/src/",
     "vyre-reference/src/",
     "vyre-driver-wgpu/src/",
     "vyre-libs/src/",
+    "vyre-libs-",
     "vyre-primitives/src/",
 ];
 
@@ -30,10 +35,10 @@ const CORE_ROOTS: &[&str] = &[
 ///
 /// Commit b0ac36c845 moved `matching/region.rs`, `matching/dfa_compile/compile.rs`
 /// and `math/semiring_gemm/mod.rs` out of `vyre-primitives` into `vyre-libs` and
-/// split each one. The rows follow the code to its new path at the count
-/// measured there, 198, 347 and 356 lines, rather than lapsing to the flat core
-/// cap of 2500, which would leave three files that were under 550 lines free to
-/// grow by a factor of four.
+/// split each one. The `vyre-libs` split then moved every domain into its own
+/// crate. The rows follow the code to its new path at the count measured there
+/// rather than lapsing to the flat core cap, which would leave files under 550
+/// lines free to grow by a factor of two or more.
 const CORE_MEASURED: &[(&str, usize)] = &[
     ("vyre-driver-wgpu/src/backend_dispatch.rs", 1360),
     ("vyre-driver-wgpu/src/pipeline/mod.rs", 900),
@@ -67,24 +72,24 @@ const CORE_MEASURED: &[(&str, usize)] = &[
         606,
     ),
     ("vyre-foundation/src/transform/autodiff/grad/mod.rs", 702),
-    ("vyre-libs/src/nn/attention/softmax.rs", 592),
-    ("vyre-libs/src/parsing/python/parse/structure.rs", 700),
+    ("vyre-libs-nn/src/nn/attention/softmax.rs", 439),
+    ("vyre-libs-parsing/src/parsing/python/parse/structure.rs", 506),
     ("vyre-foundation/src/validate/typecheck/mod.rs", 578),
-    ("vyre-libs/src/math/linalg/matmul.rs", 815),
+    ("vyre-libs-math/src/math/linalg/matmul.rs", 482),
     ("vyre-driver-wgpu/src/runtime/readback_ring/ring.rs", 459),
-    ("vyre-libs/src/decode/inflate.rs", 554),
+    ("vyre-libs-decode/src/decode/inflate.rs", 357),
     ("vyre-foundation/src/serial/wire/encode/to_wire/mod.rs", 690),
-    ("vyre-libs/src/parsing/python/lex.rs", 660),
+    ("vyre-libs-parsing/src/parsing/python/lex.rs", 621),
     ("vyre-runtime/src/replay/mod.rs", 549),
-    ("vyre-libs/src/pattern/region.rs", 198),
-    ("vyre-libs/src/pattern/dfa_compile/compile.rs", 347),
-    ("vyre-libs/src/parsing/go/parse/structure.rs", 539),
+    ("vyre-libs-pattern/src/pattern/region.rs", 129),
+    ("vyre-libs-pattern/src/pattern/dfa_compile/compile.rs", 112),
+    ("vyre-libs-parsing/src/parsing/go/parse/structure.rs", 387),
     ("vyre-foundation/src/ir_inner/model/expr/mod.rs", 539),
     ("vyre-foundation/src/optimizer/mod.rs", 970),
     ("vyre-foundation/src/execution_plan/mod.rs", 740),
     ("vyre-runtime/src/uring/ring.rs", 685),
     ("vyre-foundation/src/execution_plan/policy.rs", 660),
-    ("vyre-libs/src/math/semiring_gemm/mod.rs", 356),
+    ("vyre-libs-math/src/math/semiring_gemm/mod.rs", 145),
     ("vyre-foundation/src/schedule/mod.rs", 673),
     ("vyre-foundation/src/schedule/legality.rs", 321),
     ("vyre-foundation/src/schedule/preconditions.rs", 298),
