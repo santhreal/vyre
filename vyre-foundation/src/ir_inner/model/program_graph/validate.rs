@@ -1,6 +1,6 @@
 //! Validation and AST structural footprint estimation for [`ProgramGraph`](super::ProgramGraph).
 
-use super::types::{ProgramGraphError, ShapeDim, ValueContract};
+use super::contracts::{ProgramGraphError, ShapeDim, ValueContract};
 use crate::ir_inner::model::op_signature::BufferAccess;
 use crate::ir_inner::model::program::Program;
 

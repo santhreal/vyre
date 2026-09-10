@@ -4,14 +4,14 @@
 //! second neural IR: every executable node remains an ordinary `Program`.
 
 mod builder;
+mod contracts;
 mod graph;
-mod types;
 mod validate;
 
 pub use builder::ProgramGraphBuilder;
-pub use graph::ProgramGraph;
-pub use types::{
+pub use contracts::{
     ControlBounds, ExternalEffect, GraphInput, GraphNodeId, GraphOutput, GraphValueId,
     LivenessInterval, ProgramGraphError, ProgramGraphNode, ProgramGraphSharingMetrics,
     ProgramGraphTemplate, ProgramGraphValue, ShapeDim, ValueContract, ValueLifetime,
 };
+pub use graph::ProgramGraph;

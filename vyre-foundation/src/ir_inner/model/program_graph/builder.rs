@@ -2,11 +2,11 @@
 
 use std::collections::BTreeMap;
 
-use super::graph::ProgramGraph;
-use super::types::{
+use super::contracts::{
     ControlBounds, ExternalEffect, GraphInput, GraphNodeId, GraphOutput, GraphValueId,
     ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
 };
+use super::graph::ProgramGraph;
 use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
 use crate::ir_inner::model::program::Program;
 

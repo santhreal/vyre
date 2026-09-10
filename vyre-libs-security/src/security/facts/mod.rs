@@ -840,5 +840,4 @@ fn payload_digest(payload: &BTreeMap<String, String>, reason: &str) -> [u8; 32] 
 #[cfg(test)]
 mod analysis_fact_schema_contracts;
 #[cfg(test)]
-#[path = "facts_tests.rs"]
 mod tests;

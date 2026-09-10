@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use rustc_hash::FxHashMap;
 
-use super::types::{
+use super::contracts::{
     ControlBounds, ExternalEffect, GraphInput, GraphNodeId, GraphOutput, GraphValueId,
     LivenessInterval, ProgramGraphError, ProgramGraphNode, ProgramGraphSharingMetrics,
     ProgramGraphValue, ShapeDim, ValueContract, ValueLifetime,
