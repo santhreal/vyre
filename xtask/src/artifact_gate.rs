@@ -60,23 +60,44 @@ pub fn snapshot_counter_values() -> (usize, usize) {
 
 use serde::Serialize;
 
+use crate::evidence_record::{
+    self, EvidenceArtifact, EvidenceProvenance, MeasurementRecord, ProvenanceIssue,
+};
 use crate::gate::{Coverage, Finding, GateCtx, Report};
 /// Largest committed artifact this module will read into memory.
 ///
 /// The op matrix carried this cap on its own reader before it became a gate.
 /// It belongs here now, because every artifact is read through one place.
-const MAX_ARTIFACT_BYTES: u64 = 16_777_216;
+pub const MAX_ARTIFACT_BYTES: u64 = 16_777_216;
+
+/// How one generated artifact is read, and therefore what it must carry.
+///
+/// There is no third state and no default. A generator picks the arm that
+/// describes its reader, so an artifact under `release/evidence` cannot reach
+/// the writer without the class of what produced it.
+pub enum Attribution {
+    /// Read beside the source it describes; the reader has the tree.
+    BesideSource,
+    /// Read by someone who no longer has the tree, so it carries provenance.
+    ///
+    /// The generator states what took part in the measurement, which is the
+    /// one fact only it knows. The tree and the host are facts of the run and
+    /// [`settle`] supplies them, so a generator cannot state them wrongly.
+    Recorded(MeasurementRecord),
+}
 
 /// One artifact a gate owns, rendered in memory before the tree is consulted.
 pub struct Generated {
     /// Path of the artifact, relative to the workspace root.
     pub path: PathBuf,
-    /// Exact bytes the tree says the artifact holds, trailing newline included.
+    /// Exact bytes the body holds on disk, trailing newline included.
     pub content: String,
+    /// How the artifact is read, and therefore what it must carry.
+    pub attribution: Attribution,
 }
 
 impl Generated {
-    /// Render `value` as the bytes this artifact holds on disk.
+    /// Render one recorded evidence artifact from its envelope.
     ///
     /// Serialization goes through [`crate::output_arg::render_evidence_json`],
     /// the renderer the writers already used, so a difference reported here is
@@ -84,26 +105,70 @@ impl Generated {
     ///
     /// # Errors
     ///
-    /// Returns a finding naming the artifact when `value` cannot be serialized.
-    pub fn json(path: impl Into<PathBuf>, value: &impl Serialize) -> Result<Self, Finding> {
+    /// Returns a finding naming the artifact when the body cannot be
+    /// serialized.
+    pub fn evidence<T: Serialize + ?Sized>(
+        path: impl Into<PathBuf>,
+        artifact: &EvidenceArtifact<'_, T>,
+    ) -> Result<Self, Finding> {
         let path = path.into();
-        match crate::output_arg::render_evidence_json(value) {
-            Ok(content) => Ok(Self { path, content }),
-            Err(error) => Err(Finding::in_file(
-                path.clone(),
-                format!("`{}` could not be serialized: {error}", path.display()),
-                "Correct the artifact type so serde can represent it. A gate that cannot render its own artifact can never compare one.",
-            )),
+        match artifact.render_body() {
+            Ok(content) => Ok(Self {
+                path,
+                content,
+                attribution: Attribution::Recorded(artifact.measurement().clone()),
+            }),
+            Err(error) => Err(unserializable(path, &error)),
         }
     }
 
-    /// Take `content` verbatim, for an artifact that is not JSON.
-    pub fn text(path: impl Into<PathBuf>, content: impl Into<String>) -> Self {
+    /// Take `content` verbatim for a recorded artifact rendered elsewhere.
+    pub fn evidence_text(
+        path: impl Into<PathBuf>,
+        measurement: MeasurementRecord,
+        content: impl Into<String>,
+    ) -> Self {
         Self {
             path: path.into(),
             content: content.into(),
+            attribution: Attribution::Recorded(measurement),
         }
     }
+
+    /// Render one generated document, read beside the source it describes.
+    ///
+    /// # Errors
+    ///
+    /// Returns a finding naming the artifact when `value` cannot be serialized.
+    pub fn document(path: impl Into<PathBuf>, value: &impl Serialize) -> Result<Self, Finding> {
+        let path = path.into();
+        match crate::output_arg::render_evidence_json(value) {
+            Ok(content) => Ok(Self {
+                path,
+                content,
+                attribution: Attribution::BesideSource,
+            }),
+            Err(error) => Err(unserializable(path, &error)),
+        }
+    }
+
+    /// Take `content` verbatim, for a document that is not JSON.
+    pub fn document_text(path: impl Into<PathBuf>, content: impl Into<String>) -> Self {
+        Self {
+            path: path.into(),
+            content: content.into(),
+            attribution: Attribution::BesideSource,
+        }
+    }
+}
+
+/// The finding a gate reports when it cannot render its own artifact.
+fn unserializable(path: PathBuf, error: &str) -> Finding {
+    Finding::in_file(
+        path.clone(),
+        format!("`{}` could not be serialized: {error}", path.display()),
+        "Correct the artifact type so serde can represent it. A gate that cannot render its own artifact can never compare one.",
+    )
 }
 
 /// What one evidence generator found in the tree, and what it would write.
@@ -144,17 +209,45 @@ impl Inspection {
         self.findings.push(Finding::in_file(artifact, message, fix));
     }
 
-    /// Render `value` as an owned artifact, recording a serializer failure.
-    pub fn generates(&mut self, path: &str, value: &impl Serialize) {
-        match Generated::json(path, value) {
+    /// Render `body` as one recorded evidence artifact of class `measurement`.
+    ///
+    /// `measurement` is positional and has no default. A generator that has not
+    /// decided whether a device took part cannot call this.
+    pub fn generates_evidence(
+        &mut self,
+        path: &str,
+        measurement: MeasurementRecord,
+        body: &impl Serialize,
+    ) {
+        let artifact = EvidenceArtifact::new(measurement, body);
+        match Generated::evidence(path, &artifact) {
             Ok(artifact) => self.artifacts.push(artifact),
             Err(finding) => self.findings.push(finding),
         }
     }
 
-    /// Record an owned artifact whose bytes are not JSON.
-    pub fn generates_text(&mut self, path: &str, content: impl Into<String>) {
-        self.artifacts.push(Generated::text(path, content));
+    /// Record one recorded evidence artifact whose bytes are already rendered.
+    pub fn generates_evidence_text(
+        &mut self,
+        path: &str,
+        measurement: MeasurementRecord,
+        content: impl Into<String>,
+    ) {
+        self.artifacts
+            .push(Generated::evidence_text(path, measurement, content));
+    }
+
+    /// Render `value` as one generated document read beside its source.
+    pub fn generates_document(&mut self, path: &str, value: &impl Serialize) {
+        match Generated::document(path, value) {
+            Ok(artifact) => self.artifacts.push(artifact),
+            Err(finding) => self.findings.push(finding),
+        }
+    }
+
+    /// Record one generated document whose bytes are not JSON.
+    pub fn generates_document_text(&mut self, path: &str, content: impl Into<String>) {
+        self.artifacts.push(Generated::document_text(path, content));
     }
 }
 
@@ -528,17 +621,16 @@ fn digest_chunk(contents: &[(PathBuf, PathBuf)]) -> (Vec<(PathBuf, SnapshotEntry
 /// `gate` names the subcommand in each `fix`, so a reader learns the exact
 /// command that settles the disagreement rather than being told one exists.
 ///
-/// The tree is fingerprinted once here rather than once per artifact, because
-/// every artifact a gate owns is recorded from the same tree in the same run
-/// and four gates spent four `git status` walks proving that.
+/// The tree and the host are read once here rather than once per artifact,
+/// because every artifact a gate owns is recorded from one tree on one host in
+/// one run, and four gates spent four `git status` walks proving that.
 #[must_use]
 pub fn settle(root: &Path, gate: &str, generated: &[Generated], write: bool) -> Vec<Finding> {
-    let fingerprint = crate::source_provenance::capture(root);
     generated
         .iter()
         .flat_map(|artifact| {
             if write {
-                write_artifact(root, artifact, fingerprint.as_deref())
+                write_artifact(root, artifact)
             } else {
                 compare_artifact(root, gate, artifact)
             }
@@ -549,32 +641,130 @@ pub fn settle(root: &Path, gate: &str, generated: &[Generated], write: bool) -> 
 /// Whether `path` names a recorded artifact, which must name the tree it came
 /// from.
 ///
-/// Everything under `release/evidence` is a record of what some tree was, read
-/// by someone who no longer has that tree. Generated documentation elsewhere in
-/// the workspace is not: it is read beside the source it describes.
-fn records_provenance(path: &Path) -> bool {
-    path.starts_with("release/evidence")
+/// A JSON artifact under `release/evidence` is a record of what some tree was,
+/// read by someone who no longer has that tree. Generated documentation
+/// elsewhere in the workspace is not: it is read beside the source it
+/// describes. Neither is the prose under `release/evidence`, which carries the
+/// release notes rather than a measurement and has no object head to name a
+/// tree in.
+///
+/// The pair of components is matched wherever it appears rather than only at
+/// the front, because the benchmark writers name their artifacts absolutely
+/// and a check that only recognised the relative form would let every one of
+/// them through.
+#[must_use]
+pub fn records_provenance(path: &Path) -> bool {
+    if path.extension().and_then(std::ffi::OsStr::to_str) != Some("json") {
+        return false;
+    }
+    let mut components = path.components();
+    while let Some(component) = components.next() {
+        if component.as_os_str() == std::ffi::OsStr::new("release")
+            && components.clone().next().map(|next| next.as_os_str())
+                == Some(std::ffi::OsStr::new("evidence"))
+        {
+            return true;
+        }
+    }
+    false
+}
+
+/// The complete provenance of `artifact`, when it is a recorded one.
+///
+/// The two halves meet here. The generator supplied the measurement class, the
+/// run supplies the tree and the host, and neither half can be left out: a
+/// recorded artifact outside `release/evidence` and a document inside it are
+/// both reported rather than written, so the path and the class cannot
+/// disagree about how the artifact will be read.
+fn provenance_of(root: &Path, artifact: &Generated) -> Result<Option<EvidenceProvenance>, Finding> {
+    let recorded = records_provenance(&artifact.path);
+    match (&artifact.attribution, recorded) {
+        (Attribution::BesideSource, false) => Ok(None),
+        (Attribution::BesideSource, true) => Err(Finding::in_file(
+            artifact.path.clone(),
+            format!(
+                "`{}` is under release/evidence and was generated as a document, so it would carry no provenance",
+                artifact.path.display()
+            ),
+            "Record it with `generates_evidence`, naming what took part in producing it, or generate it outside release/evidence.",
+        )),
+        (Attribution::Recorded(_), false) => Err(Finding::in_file(
+            artifact.path.clone(),
+            format!(
+                "`{}` is generated as a recorded measurement and is not under release/evidence, so nothing reads its provenance",
+                artifact.path.display()
+            ),
+            "Generate it with `generates_document`, or move the artifact under release/evidence.",
+        )),
+        (Attribution::Recorded(measurement), true) => {
+            EvidenceProvenance::capture(root, measurement.clone())
+                .map(Some)
+                .map_err(|error| {
+                    Finding::in_file(
+                        artifact.path.clone(),
+                        format!(
+                            "`{}` was not written because the tree it would record cannot be identified: {error}",
+                            artifact.path.display()
+                        ),
+                        "Record evidence from a checkout git can identify. An artifact that names no tree proves nothing about one.",
+                    )
+                })
+        }
+    }
+}
+
+/// Write one recorded evidence artifact from a writer that owns no inspection.
+///
+/// The benchmark writers render their evidence as a `serde_json::Value` built
+/// at run time and put it on disk themselves. They used to do that through the
+/// plain document writer, which is how six evidence artifacts came to carry no
+/// provenance at all. They go through the same stamp as every other recorded
+/// artifact now, and [`crate::json_document::write`] refuses an evidence path
+/// so a seventh cannot appear beside them.
+///
+/// # Errors
+///
+/// Returns the sentence the caller reports when the tree cannot be identified,
+/// the body cannot be serialized, or the artifact cannot be written.
+pub fn write_recorded(
+    root: &Path,
+    relative: &Path,
+    measurement: MeasurementRecord,
+    value: &impl Serialize,
+) -> Result<(), String> {
+    let recorded = EvidenceArtifact::new(measurement, value);
+    let generated = Generated::evidence(relative, &recorded).map_err(|finding| finding.message)?;
+    let findings = write_artifact(root, &generated);
+    if findings.is_empty() {
+        return Ok(());
+    }
+    Err(Finding::messages(&findings))
 }
 
 /// Put one artifact on disk, reporting a write failure as a finding.
 ///
-/// A recorded artifact is stamped with `fingerprint` every time it is written,
-/// including when the body is unchanged. The stamp states the tree the record
-/// was taken from, and that is the tree the commit carrying it captures, so
-/// keeping an older stamp on an unchanged body records a tree the artifact is
-/// no longer committed alongside and leaves no way to correct one.
-fn write_artifact(
-    root: &Path,
-    artifact: &Generated,
-    fingerprint: Result<&str, &String>,
-) -> Vec<Finding> {
-    let content = if records_provenance(&artifact.path) {
-        match stamp_provenance(&artifact.path, &artifact.content, fingerprint) {
+/// A recorded artifact is stamped with the provenance of this run every time it
+/// is written, including when the body is unchanged. The stamp states the tree,
+/// the host and the device the record was taken from, and that tree is the one
+/// the commit carrying it captures, so keeping an older stamp on an unchanged
+/// body records a state the artifact is no longer committed alongside.
+fn write_artifact(root: &Path, artifact: &Generated) -> Vec<Finding> {
+    let provenance = match provenance_of(root, artifact) {
+        Ok(provenance) => provenance,
+        Err(finding) => return vec![finding],
+    };
+    let content = match provenance {
+        None => artifact.content.clone(),
+        Some(provenance) => match evidence_record::stamp(&artifact.content, &provenance) {
             Ok(content) => content,
-            Err(finding) => return vec![finding],
-        }
-    } else {
-        artifact.content.clone()
+            Err(error) => {
+                return vec![Finding::in_file(
+                    artifact.path.clone(),
+                    format!("`{}` was not written: {error}", artifact.path.display()),
+                    "Render the artifact as a JSON object so it can carry the provenance head, or generate it outside release/evidence.",
+                )]
+            }
+        },
     };
     let absolute = root.join(&artifact.path);
     if let Some(parent) = absolute.parent() {
@@ -596,84 +786,34 @@ fn write_artifact(
     }
 }
 
-/// Put `fingerprint` at the head of `body`, or refuse to record at all.
+/// The fingerprint the committed artifact records its tree with, if it has one.
 ///
-/// Refusal is the point. An artifact written without a fingerprint names no
-/// tree, and nothing downstream can recover the one it came from, so the
-/// recorder that cannot identify its tree writes nothing rather than one more
-/// generation of unattributable evidence.
-///
-/// # Errors
-///
-/// Returns the finding when the tree could not be fingerprinted, or when the
-/// rendered artifact is not a JSON object and so has no head to stamp.
-fn stamp_provenance(
-    path: &Path,
-    body: &str,
-    fingerprint: Result<&str, &String>,
-) -> Result<String, Finding> {
-    let fingerprint = fingerprint.map_err(|error| {
-        Finding::in_file(
-            path.to_path_buf(),
-            format!(
-                "`{}` was not written because the tree it would record has no source fingerprint: {error}",
-                path.display()
-            ),
-            "Record evidence from a checkout git can identify. An artifact that names no tree proves nothing about one.",
-        )
-    })?;
-    if let Some(issue) = crate::source_provenance::issues(fingerprint)
-        .into_iter()
-        .next()
-    {
-        return Err(Finding::in_file(
-            path.to_path_buf(),
-            format!(
-                "`{}` was not written because the {}",
-                path.display(),
-                issue.predicate()
-            ),
-            "Record evidence from a checkout whose state git can state exactly.",
-        ));
+/// Readers that only need the tree half of the record ask for this rather than
+/// re-deriving where the stamp sits.
+#[must_use]
+pub fn recorded_fingerprint(committed: &str) -> Option<String> {
+    match evidence_record::split(committed).0 {
+        Ok(provenance) => match provenance.tree {
+            evidence_record::TreeRecord::Attributed {
+                source_fingerprint, ..
+            } => Some(source_fingerprint),
+            evidence_record::TreeRecord::Unattributable { .. } => None,
+        },
+        Err(_) => None,
     }
-    let Some(rest) = body.strip_prefix("{\n") else {
-        return Err(Finding::in_file(
-            path.to_path_buf(),
-            format!(
-                "`{}` is recorded evidence and must be a JSON object so it can name the tree it came from",
-                path.display()
-            ),
-            "Render the artifact as an object with a `source_fingerprint` head, or move it out of release/evidence.",
-        ));
-    };
-    Ok(format!(
-        "{{\n  \"{PROVENANCE_KEY}\": \"{fingerprint}\",\n{rest}"
-    ))
 }
 
-/// The key a recorded artifact names its tree under, at the head of the object.
-const PROVENANCE_KEY: &str = "source_fingerprint";
-
-/// Take the recorded fingerprint off `committed` and return the body under it.
+/// Take the recorded provenance off `committed` and return the body under it.
 ///
 /// The stamp is one line at a known place, so lifting it back off is exact.
 /// The body is what the owning gate generates, and it is the only half a
-/// comparison against the tree may look at: the fingerprint names the tree the
+/// comparison against the tree may look at: the provenance names the tree the
 /// body was recorded from, which is a different tree from the one running the
 /// gate whenever anything has been committed since, and reporting that as a
 /// divergence would make every artifact rot one commit after it was written.
-pub fn split_provenance(committed: &str) -> (Option<&str>, String) {
-    let head = format!("{{\n  \"{PROVENANCE_KEY}\": \"");
-    let Some(rest) = committed.strip_prefix(head.as_str()) else {
-        return (None, committed.to_string());
-    };
-    let Some(end) = rest.find("\",\n") else {
-        return (None, committed.to_string());
-    };
-    (
-        Some(&rest[..end]),
-        format!("{{\n{}", &rest[end + "\",\n".len()..]),
-    )
+#[must_use]
+pub fn split_provenance(committed: &str) -> (Result<EvidenceProvenance, ProvenanceIssue>, String) {
+    evidence_record::split(committed)
 }
 
 /// Read the committed copy of `path`, bounded.
@@ -701,39 +841,39 @@ fn compare_artifact(root: &Path, gate: &str, artifact: &Generated) -> Vec<Findin
             )];
         }
     };
+    if let Err(finding) = provenance_of(root, artifact) {
+        return vec![finding];
+    }
     if !records_provenance(&artifact.path) {
         return divergences(gate, &artifact.path, &committed, &artifact.content);
     }
-    let (fingerprint, body) = split_provenance(&committed);
-    let mut findings = provenance_findings(gate, &artifact.path, fingerprint);
+    let (provenance, body) = split_provenance(&committed);
+    let mut findings = provenance_findings(gate, &artifact.path, provenance.as_ref());
     findings.extend(divergences(gate, &artifact.path, &body, &artifact.content));
     findings
 }
 
-/// Judge the fingerprint the committed artifact carries, if it carries one.
-fn provenance_findings(gate: &str, path: &Path, fingerprint: Option<&str>) -> Vec<Finding> {
-    let fix =
-        format!("Run `./cargo_full run --bin xtask -- {gate} --write` and commit the artifact.");
-    let Some(fingerprint) = fingerprint else {
-        return vec![Finding::in_file(
+/// Judge whether the committed artifact carries a provenance block at all.
+///
+/// The content of the block is the corpus gate's judgement, not an owning
+/// gate's: whether a commit is an ancestor of the branch, and whether a device
+/// result names a device, are facts about the corpus and are answered once for
+/// every artifact in it rather than once per owning gate.
+fn provenance_findings(
+    gate: &str,
+    path: &Path,
+    provenance: Result<&EvidenceProvenance, &ProvenanceIssue>,
+) -> Vec<Finding> {
+    match provenance {
+        Ok(_) => Vec::new(),
+        Err(issue) => vec![Finding::in_file(
             path.to_path_buf(),
+            format!("`{}` {}", path.display(), issue.predicate()),
             format!(
-                "`{}` names no source tree, so nothing it records is attributable",
-                path.display()
+                "Run `./cargo_full run --bin xtask -- {gate} --write` and commit the artifact."
             ),
-            fix,
-        )];
-    };
-    crate::source_provenance::issues(fingerprint)
-        .into_iter()
-        .map(|issue| {
-            Finding::in_file(
-                path.to_path_buf(),
-                format!("`{}` {}", path.display(), issue.predicate()),
-                fix.clone(),
-            )
-        })
-        .collect()
+        )],
+    }
 }
 
 /// One finding for an artifact that disagrees with what the tree generates.
@@ -812,7 +952,11 @@ mod tests {
     #[test]
     fn the_recorder_refuses_an_artifact_whose_tree_has_no_source_fingerprint() {
         let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
-        let artifact = Generated::text(ARTIFACT, "{\n  \"schema_version\": 1\n}\n");
+        let artifact = Generated::evidence_text(
+            ARTIFACT,
+            MeasurementRecord::HostOnly,
+            "{\n  \"schema_version\": 1\n}\n",
+        );
 
         let findings = settle(dir.path(), "metadata-matrix", &[artifact], true);
 
@@ -831,7 +975,7 @@ mod tests {
     #[test]
     fn generated_documentation_outside_the_evidence_set_still_records_without_git() {
         let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
-        let artifact = Generated::text("docs/optimization/OP_MATRIX.toml", "rows = 0\n");
+        let artifact = Generated::document_text("docs/optimization/OP_MATRIX.toml", "rows = 0\n");
 
         let findings = settle(dir.path(), "op-matrix", &[artifact], true);
 
@@ -855,7 +999,11 @@ mod tests {
         let findings = settle(
             dir.path(),
             "metadata-matrix",
-            &[Generated::text(ARTIFACT, body)],
+            &[Generated::evidence_text(
+                ARTIFACT,
+                MeasurementRecord::HostOnly,
+                body,
+            )],
             true,
         );
         assert_eq!(
@@ -875,7 +1023,11 @@ mod tests {
             settle(
                 dir.path(),
                 "metadata-matrix",
-                &[Generated::text(ARTIFACT, body)],
+                &[Generated::evidence_text(
+                    ARTIFACT,
+                    MeasurementRecord::HostOnly,
+                    body
+                )],
                 true,
             ),
             Vec::new(),
@@ -898,7 +1050,11 @@ mod tests {
             settle(
                 dir.path(),
                 "metadata-matrix",
-                &[Generated::text(ARTIFACT, "{\n  \"schema_version\": 1\n}\n")],
+                &[Generated::evidence_text(
+                    ARTIFACT,
+                    MeasurementRecord::HostOnly,
+                    "{\n  \"schema_version\": 1\n}\n"
+                )],
                 true,
             ),
             Vec::new(),
@@ -912,7 +1068,11 @@ mod tests {
             settle(
                 dir.path(),
                 "metadata-matrix",
-                &[Generated::text(ARTIFACT, "{\n  \"schema_version\": 2\n}\n")],
+                &[Generated::evidence_text(
+                    ARTIFACT,
+                    MeasurementRecord::HostOnly,
+                    "{\n  \"schema_version\": 2\n}\n"
+                )],
                 true,
             ),
             Vec::new(),
@@ -939,7 +1099,11 @@ mod tests {
         let findings = settle(
             dir.path(),
             "metadata-matrix",
-            &[Generated::text(ARTIFACT, "{\n  \"schema_version\": 2\n}\n")],
+            &[Generated::evidence_text(
+                ARTIFACT,
+                MeasurementRecord::HostOnly,
+                "{\n  \"schema_version\": 2\n}\n",
+            )],
             false,
         );
 
@@ -972,7 +1136,11 @@ mod tests {
         let findings = settle(
             dir.path(),
             "metadata-matrix",
-            &[Generated::text(ARTIFACT, "{\n  \"schema_version\": 1\n}\n")],
+            &[Generated::evidence_text(
+                ARTIFACT,
+                MeasurementRecord::HostOnly,
+                "{\n  \"schema_version\": 1\n}\n",
+            )],
             false,
         );
 
@@ -987,6 +1155,9 @@ mod tests {
         split_provenance(recorded)
             .0
             .expect("Fix: a recorded artifact names its tree.")
+            .tree
+            .source_fingerprint()
+            .expect("Fix: a recorded artifact names the source it was read from.")
             .to_string()
     }
 

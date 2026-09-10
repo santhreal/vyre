@@ -350,7 +350,11 @@ impl xtask::gate::GateBehavior for ConformanceMatrixGate {
                 "close the conformance gap this blocker names, then run the gate again",
             ));
         }
-        inspection.generates(&relative, &matrix);
+        inspection.generates_evidence(
+            &relative,
+            xtask::evidence_record::MeasurementRecord::HostOnly,
+            &matrix,
+        );
         let mut report = xtask::artifact_gate::settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.note(format!(
             "{} registered conformance op entry(ies)",

@@ -35,7 +35,7 @@ impl crate::gate::GateBehavior for EvidenceProvenance {
         let tracked = git(ctx, &["ls-files", "-z", "--", EVIDENCE_DIR])?;
         let carriers = carrier_commits(ctx)?;
         let mut uncommitted = 0_usize;
-        let mut unstamped = 0_usize;
+        let mut unattributable = 0_usize;
         let mut judged = 0_usize;
         let mut committed: Vec<(String, String)> = Vec::new();
         for path in tracked
@@ -60,8 +60,23 @@ impl crate::gate::GateBehavior for EvidenceProvenance {
                     "fetch the history that carries the committed evidence",
                 ));
             };
-            let (Some(fingerprint), _) = crate::artifact_gate::split_provenance(&content) else {
-                unstamped += 1;
+            if !path.ends_with(".json") {
+                continue;
+            }
+            let (record, _) = crate::artifact_gate::split_provenance(&content);
+            let record = match record {
+                Ok(record) => record,
+                Err(issue) => {
+                    report.find(Finding::in_file(
+                        PathBuf::from(path),
+                        format!("`{path}` {}", issue.predicate()),
+                        FIX,
+                    ));
+                    continue;
+                }
+            };
+            let Some(fingerprint) = record.tree.source_fingerprint() else {
+                unattributable += 1;
                 continue;
             };
             judged += 1;
@@ -73,8 +88,8 @@ impl crate::gate::GateBehavior for EvidenceProvenance {
         }
         report.cover_complete("committed evidence fingerprints", judged);
         report.note(format!(
-            "{judged} committed fingerprint(s) judged, {unstamped} artifact(s) carry none, \
-             {uncommitted} not committed yet"
+            "{judged} committed fingerprint(s) judged, {unattributable} artifact(s) record that \
+             nothing can attribute them, {uncommitted} not committed yet"
         ));
         Ok(report)
     }

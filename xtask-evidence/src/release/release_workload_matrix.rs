@@ -40,7 +40,11 @@ fn inspect() -> Inspection {
     let registry = vyre_bench::registry::collect_all();
     let matrix = build_release_matrix(&registry);
     report_blockers(&matrix, &mut inspection);
-    inspection.generates(ARTIFACT, &matrix);
+    inspection.generates_evidence(
+        ARTIFACT,
+        xtask::evidence_record::MeasurementRecord::HostOnly,
+        &matrix,
+    );
     inspection
 }
 
@@ -117,10 +121,16 @@ mod tests {
         let root = xtask::checkout::checkout_root();
         let committed = std::fs::read_to_string(root.join(ARTIFACT))
             .expect("Fix: the committed release workload matrix must be readable.");
-        let (fingerprint, body) = xtask::artifact_gate::split_provenance(&committed);
+        let (provenance, body) = xtask::artifact_gate::split_provenance(&committed);
+        let provenance = provenance.unwrap_or_else(|issue| {
+            panic!(
+                "Fix: the recorded matrix must name the tree it was recorded from; it {}",
+                issue.predicate()
+            )
+        });
         assert!(
-            fingerprint.is_some(),
-            "Fix: the recorded matrix must name the tree it was recorded from."
+            !provenance.is_unattributable(),
+            "Fix: the recorded matrix must name a tree, a host and its device."
         );
 
         let registry = vyre_bench::registry::collect_all();

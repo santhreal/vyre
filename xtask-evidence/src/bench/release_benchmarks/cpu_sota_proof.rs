@@ -10,7 +10,6 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use serde_json::{json, Value};
-use xtask::json_document;
 
 use super::artifact_metrics::{first_metric_p50, read_text_bounded, WallClockMinima};
 use super::release_thresholds::{
@@ -276,8 +275,10 @@ pub(super) fn write_cpu_100x_proof(
         return Err("Fix: the 100x proof evidence is a JSON object.".to_string());
     };
     evidence_obj.extend(minima.into_object());
-    json_document::write(
-        &workspace_root.join("release/evidence/benchmarks/cpu-only-100x-proof.json"),
+    xtask::artifact_gate::write_recorded(
+        workspace_root,
+        Path::new("release/evidence/benchmarks/cpu-only-100x-proof.json"),
+        xtask::evidence_record::MeasurementRecord::device(),
         &evidence,
     )
 }

@@ -129,7 +129,7 @@ impl GateBehavior for PlatformSupportMatrixGate {
         for finding in findings {
             inspection.find(finding);
         }
-        inspection.generates_text(MANIFEST_PATH, rendered);
+        inspection.generates_document_text(MANIFEST_PATH, rendered);
 
         let mut report = settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.note(format!(

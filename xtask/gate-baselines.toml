@@ -176,6 +176,10 @@ name = "error-codes"
 findings = 0
 
 [[gate]]
+name = "evidence-attribution"
+findings = 0
+
+[[gate]]
 name = "evidence-paths"
 findings = 0
 

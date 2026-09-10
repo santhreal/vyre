@@ -28,7 +28,7 @@ impl GateBehavior for ChangeClosure {
         let rendered = render_manifest(&manifest);
 
         let mut inspection = Inspection::new();
-        inspection.generates_text(MANIFEST_PATH, rendered);
+        inspection.generates_document_text(MANIFEST_PATH, rendered);
 
         let mut report = settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.note(format!(

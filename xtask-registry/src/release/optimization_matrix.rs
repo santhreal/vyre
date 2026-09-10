@@ -91,7 +91,11 @@ fn inspect() -> Inspection {
         entries,
         blockers,
     };
-    inspection.generates(ARTIFACT, &matrix);
+    inspection.generates_evidence(
+        ARTIFACT,
+        xtask::evidence_record::MeasurementRecord::HostOnly,
+        &matrix,
+    );
     inspection
 }
 #[cfg(test)]

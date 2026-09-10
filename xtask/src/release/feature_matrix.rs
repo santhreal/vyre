@@ -102,7 +102,11 @@ fn inspect(root: &Path) -> Inspection {
         packages,
         blockers,
     };
-    inspection.generates(ARTIFACT, &matrix);
+    inspection.generates_evidence(
+        ARTIFACT,
+        crate::evidence_record::MeasurementRecord::HostOnly,
+        &matrix,
+    );
     inspection
 }
 

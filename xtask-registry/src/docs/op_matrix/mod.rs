@@ -49,7 +49,7 @@ fn inspect(root: &Path) -> Inspection {
              out of the matrix until it is, so the artifact understates the op surface.",
         );
     }
-    inspection.generates_text(MATRIX_PATH, matrix);
+    inspection.generates_document_text(MATRIX_PATH, matrix);
     inspection
 }
 

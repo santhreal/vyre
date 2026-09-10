@@ -182,25 +182,6 @@ fn outer_root(vyre_root: &Path) -> Option<(PathBuf, String)> {
     (climbed > 0).then(|| (candidate, "../".repeat(climbed)))
 }
 
-/// Write `value` as pretty JSON, exiting with a `Fix:` message on failure.
-///
-/// The parent directory is created here, because an artifact writer that has to
-/// remember to create it is one that will eventually forget.
-pub fn write_json(path: &Path, value: &impl serde::Serialize) {
-    create_parent_dir(path);
-    let json = match render_evidence_json(value) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize `{}`: {error}", path.display());
-            std::process::exit(1);
-        }
-    };
-    if let Err(error) = std::fs::write(path, json) {
-        eprintln!("Fix: failed to write `{}`: {error}", path.display());
-        std::process::exit(1);
-    }
-}
-
 fn normalize_serialized_workspace_paths(
     json: &str,
     vyre_root: &Path,

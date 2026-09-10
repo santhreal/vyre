@@ -104,7 +104,7 @@ impl xtask::gate::GateBehavior for OperationSchemaGate {
             }
         };
         let mut inspection = xtask::artifact_gate::Inspection::new();
-        inspection.generates(DEFAULT_OUTPUT, &schema);
+        inspection.generates_document(DEFAULT_OUTPUT, &schema);
         let mut report = xtask::artifact_gate::settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.note(format!(
             "{} live operation contract(s)",

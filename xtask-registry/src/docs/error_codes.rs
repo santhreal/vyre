@@ -14,8 +14,8 @@ pub struct ErrorCodes;
 impl xtask::gate::GateBehavior for ErrorCodes {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut inspection = xtask::artifact_gate::Inspection::new();
-        inspection.generates_text(DRIVER_CODES_PATH, render_driver());
-        inspection.generates_text(VALIDATION_CODES_PATH, render_validation());
+        inspection.generates_document_text(DRIVER_CODES_PATH, render_driver());
+        inspection.generates_document_text(VALIDATION_CODES_PATH, render_validation());
         Ok(xtask::artifact_gate::settle_inspection(
             ctx,
             ctx.gate_name()?,

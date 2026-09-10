@@ -14,7 +14,7 @@ impl xtask::gate::GateBehavior for ListOps {
         let schema = assemble::build().map_err(crate::docs::operation_schema::schema_error)?;
         let body = render(&schema.operations);
         let mut inspection = xtask::artifact_gate::Inspection::new();
-        inspection.generates_text(INVENTORY_PATH, body);
+        inspection.generates_document_text(INVENTORY_PATH, body);
         let mut report = xtask::artifact_gate::settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.note(format!(
             "{} operation(s) in the live inventory",

@@ -104,7 +104,11 @@ fn inspect() -> Inspection {
     let cases = generate_release_corpus();
     let manifest = manifest_for(&cases);
     report_corpus_completeness(&manifest, &mut inspection);
-    inspection.generates(CORPUS, &manifest);
+    inspection.generates_evidence(
+        CORPUS,
+        xtask::evidence_record::MeasurementRecord::HostOnly,
+        &manifest,
+    );
     contracts(&manifest, &mut inspection);
     family_manifest(&manifest, &mut inspection);
     case_manifest(&cases, &manifest, &mut inspection);
@@ -170,8 +174,9 @@ fn report_corpus_completeness(manifest: &OptimizationCorpusManifest, inspection:
 }
 
 fn contracts(manifest: &OptimizationCorpusManifest, inspection: &mut Inspection) {
-    inspection.generates(
+    inspection.generates_evidence(
         CONTRACTS,
+        xtask::evidence_record::MeasurementRecord::HostOnly,
         &OptimizationCorpusContracts {
             schema_version: 2,
             required_min_cases: manifest.required_min_cases,
@@ -216,8 +221,9 @@ fn family_manifest(manifest: &OptimizationCorpusManifest, inspection: &mut Inspe
             ),
         );
     }
-    inspection.generates(
+    inspection.generates_evidence(
         FAMILIES,
+        xtask::evidence_record::MeasurementRecord::HostOnly,
         &OptimizationFamilyManifest {
             schema_version: 2,
             required_family_count: REQUIRED_FAMILIES.len(),
@@ -272,8 +278,9 @@ fn case_manifest(
             ),
         );
     }
-    inspection.generates(
+    inspection.generates_evidence(
         CASES,
+        xtask::evidence_record::MeasurementRecord::HostOnly,
         &OptimizationCaseManifest {
             schema_version: 2,
             required_min_cases: manifest.required_min_cases,
@@ -297,8 +304,9 @@ fn pass_manifest(inspection: &mut Inspection) {
              own id.",
         );
     }
-    inspection.generates(
+    inspection.generates_evidence(
         PASSES,
+        xtask::evidence_record::MeasurementRecord::HostOnly,
         &OptimizerPassManifest {
             schema_version: 1,
             executable_passes,

@@ -24,6 +24,7 @@ pub mod cli;
 pub mod config_space;
 pub mod delegate;
 pub mod docs;
+pub mod evidence_record;
 pub mod fixture_checkout;
 pub mod gate;
 pub mod gate_dag;

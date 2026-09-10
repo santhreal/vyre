@@ -407,7 +407,11 @@ fn inspect(workspace_root: &Path) -> Inspection {
              then rerun with --write.",
         );
     }
-    inspection.generates(ARTIFACT, &matrix);
+    inspection.generates_evidence(
+        ARTIFACT,
+        xtask::evidence_record::MeasurementRecord::device(),
+        &matrix,
+    );
     inspection
 }
 /// Probe this host's backend registry and devices, folding in the source scan.

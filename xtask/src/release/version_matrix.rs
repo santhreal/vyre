@@ -118,8 +118,16 @@ fn inspect(vyre_root: &Path) -> Inspection {
              clear this finding.",
         );
     }
-    inspection.generates(MATRIX, &matrix);
-    inspection.generates(TAG_PLAN, &release_tag_plan(&matrix));
+    inspection.generates_evidence(
+        MATRIX,
+        crate::evidence_record::MeasurementRecord::HostOnly,
+        &matrix,
+    );
+    inspection.generates_evidence(
+        TAG_PLAN,
+        crate::evidence_record::MeasurementRecord::HostOnly,
+        &release_tag_plan(&matrix),
+    );
     inspection
 }
 

@@ -68,7 +68,7 @@ impl GateBehavior for ReleaseProvenanceGate {
 
         // 4. Generate the 3 authoritative provenance artifacts
         match authority.to_toml() {
-            Ok(toml_str) => inspection.generates_text(PROVENANCE_ARTIFACT_PATH, toml_str),
+            Ok(toml_str) => inspection.generates_document_text(PROVENANCE_ARTIFACT_PATH, toml_str),
             Err(err) => inspection.find(Finding::in_file(
                 PathBuf::from(PROVENANCE_ARTIFACT_PATH),
                 format!("failed to render release provenance TOML: {err}"),
@@ -77,7 +77,11 @@ impl GateBehavior for ReleaseProvenanceGate {
         }
 
         match authority.generate_sbom() {
-            Ok(sbom_str) => inspection.generates_text(SBOM_ARTIFACT_PATH, sbom_str),
+            Ok(sbom_str) => inspection.generates_evidence_text(
+                SBOM_ARTIFACT_PATH,
+                crate::evidence_record::MeasurementRecord::HostOnly,
+                sbom_str,
+            ),
             Err(err) => inspection.find(Finding::in_file(
                 PathBuf::from(SBOM_ARTIFACT_PATH),
                 format!("failed to render CycloneDX SBOM: {err}"),
@@ -86,7 +90,11 @@ impl GateBehavior for ReleaseProvenanceGate {
         }
 
         match authority.generate_slsa_provenance(&ctx.root) {
-            Ok(slsa_str) => inspection.generates_text(SLSA_PROVENANCE_ARTIFACT_PATH, slsa_str),
+            Ok(slsa_str) => inspection.generates_evidence_text(
+                SLSA_PROVENANCE_ARTIFACT_PATH,
+                crate::evidence_record::MeasurementRecord::HostOnly,
+                slsa_str,
+            ),
             Err(err) => inspection.find(Finding::in_file(
                 PathBuf::from(SLSA_PROVENANCE_ARTIFACT_PATH),
                 format!("failed to render SLSA provenance record: {err}"),

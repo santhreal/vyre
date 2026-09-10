@@ -32,7 +32,7 @@ impl GateBehavior for ConfigurationModelGate {
                 "ensure model is valid",
             )
         })?;
-        inspection.generates_text(CONFIG_SPACE_ARTIFACT_PATH, rendered_toml);
+        inspection.generates_document_text(CONFIG_SPACE_ARTIFACT_PATH, rendered_toml);
 
         let (facade_path, facade_manifest) =
             ConfigurationModel::facade_manifest(root).map_err(|error| {

@@ -51,7 +51,7 @@ impl GateBehavior for ScorecardGate {
         let rendered = render_scorecard(&scorecard);
 
         let mut inspection = Inspection::new();
-        inspection.generates_text(SCORECARD_PATH, rendered);
+        inspection.generates_document_text(SCORECARD_PATH, rendered);
 
         let mut report = settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.note(format!(

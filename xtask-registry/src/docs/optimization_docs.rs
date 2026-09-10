@@ -24,7 +24,7 @@ impl xtask::gate::GateBehavior for OptimizationDocs {
             )
         })?;
         let mut inspection = xtask::artifact_gate::Inspection::new();
-        inspection.generates_text(PASSES_PATH, body);
+        inspection.generates_document_text(PASSES_PATH, body);
         Ok(xtask::artifact_gate::settle_inspection(
             ctx,
             ctx.gate_name()?,
