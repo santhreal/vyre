@@ -42,7 +42,7 @@
 //!
 //! u32 fixed-point 16.16 throughout for outputs and weights.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{bounded_index, trap_program, wrap_anonymous_region};
 use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -185,6 +185,17 @@ fn sum_product_pass_body(
     depths: Option<&str>,
 ) -> Vec<Node> {
     let t = Expr::LogicalIndex { axis: 0 };
+    // `co` is a child-list offset read out of the circuit, so every slot it
+    // addresses is folded back into the list, and every child id read out of
+    // that list is folded back into the node range before it indexes `out`.
+    let child_slot = |k: &str| {
+        bounded_index(
+            Expr::add(Expr::var("co"), Expr::var(k)),
+            Expr::buf_len(children),
+        )
+    };
+    let child_node =
+        |k: &str| bounded_index(Expr::load(children, child_slot(k)), Expr::buf_len(out));
     let mut body = vec![
         Node::let_bind("kind", Expr::load(kinds, t.clone())),
         Node::let_bind("co", Expr::load(child_offsets, t.clone())),
@@ -213,16 +224,13 @@ fn sum_product_pass_body(
                     Expr::u32(0),
                     Expr::var("cc"),
                     vec![
-                        Node::let_bind(
-                            "spc_child",
-                            Expr::load(
-                                children,
-                                Expr::add(Expr::var("co"), Expr::var("spc_child_k")),
-                            ),
-                        ),
+                        Node::let_bind("spc_child", child_node("spc_child_k")),
                         Node::if_then(
                             Expr::ge(
-                                Expr::load(depths, Expr::var("spc_child")),
+                                Expr::load(
+                                    depths,
+                                    bounded_index(Expr::var("spc_child"), Expr::buf_len(depths)),
+                                ),
                                 Expr::var("spc_depth"),
                             ),
                             vec![Node::trap(
@@ -255,13 +263,16 @@ fn sum_product_pass_body(
                     Expr::u32(0),
                     Expr::var("cc"),
                     vec![
-                        Node::let_bind(
-                            "child_node",
-                            Expr::load(children, Expr::add(Expr::var("co"), Expr::var("k"))),
-                        ),
+                        Node::let_bind("child_node", child_node("k")),
                         Node::let_bind(
                             "w",
-                            Expr::load(weights, Expr::add(Expr::var("co"), Expr::var("k"))),
+                            Expr::load(
+                                weights,
+                                bounded_index(
+                                    Expr::add(Expr::var("co"), Expr::var("k")),
+                                    Expr::buf_len(weights),
+                                ),
+                            ),
                         ),
                         Node::assign(
                             "acc_sum",
@@ -289,10 +300,7 @@ fn sum_product_pass_body(
                     Expr::u32(0),
                     Expr::var("cc"),
                     vec![
-                        Node::let_bind(
-                            "cn",
-                            Expr::load(children, Expr::add(Expr::var("co"), Expr::var("kk"))),
-                        ),
+                        Node::let_bind("cn", child_node("kk")),
                         Node::assign(
                             "acc_prod",
                             vyre_libs_math::math::fixed::fixed_mul_16_16_expr(

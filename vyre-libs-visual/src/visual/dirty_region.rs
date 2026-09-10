@@ -187,7 +187,6 @@ inventory::submit! {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&atlas),
                 vyre_primitives::wire::pack_u32_slice(&patch),
-                vec![0; 16],
             ]]
         }),
         Some(|| {

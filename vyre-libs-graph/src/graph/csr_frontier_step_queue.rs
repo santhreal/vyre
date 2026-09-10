@@ -1,6 +1,6 @@
 //! Queue-driven CSR frontier step program builder and lane decomposition.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{bounded_index, trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::graph::frontier_bits::bind_bit_address;
@@ -561,12 +561,17 @@ fn csr_queue_edge_guard_nodes(spec: &CsrQueueStepSpec<'_>) -> Vec<Node> {
     let dst = spec.var("dst");
     let dst_word = spec.var("dst_word");
     let dst_bit = spec.var("dst_bit");
+    // An edge slot past the edge count reads zero and contributes nothing, and a
+    // masked-out edge contributes a destination the node-count guard below drops.
+    // A select evaluates both arms, so both reads run for every lane whatever the
+    // guard decides: the index is folded inside the edge arrays first.
+    let edge_slot = bounded_index(Expr::var(edge.as_str()), Expr::u32(spec.edge_count));
     vec![
         Node::let_bind(
             kind.as_str(),
             Expr::select(
                 Expr::lt(Expr::var(edge.as_str()), Expr::u32(spec.edge_count)),
-                Expr::load(spec.inputs.edge_kind_mask, Expr::var(edge.as_str())),
+                Expr::load(spec.inputs.edge_kind_mask, edge_slot.clone()),
                 Expr::u32(0),
             ),
         ),
@@ -577,7 +582,7 @@ fn csr_queue_edge_guard_nodes(spec: &CsrQueueStepSpec<'_>) -> Vec<Node> {
                     Expr::bitand(Expr::var(kind.as_str()), Expr::u32(spec.allow_mask)),
                     Expr::u32(0),
                 ),
-                Expr::load(spec.inputs.edge_targets, Expr::var(edge.as_str())),
+                Expr::load(spec.inputs.edge_targets, edge_slot),
                 Expr::u32(spec.node_count),
             ),
         ),

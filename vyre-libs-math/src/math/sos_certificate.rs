@@ -21,7 +21,7 @@
 //! | future `vyre-libs::opt::polynomial` | polynomial optimization (POP) |
 //! | future `vyre-libs::security::buffer_safety` | SOS proofs of bounded-buffer-access |
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{bounded_index, trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -75,12 +75,13 @@ pub fn sos_gram_construct(
     };
     let t = Expr::LogicalIndex { axis: 0 };
 
-    // `gram[t] = p_coeffs[monomial_pairs[t]]`, but `monomial_pairs[t]` is DATA and may
-    // point OUTSIDE p_coeffs (nothing validates the pair indices are < coeff_count). The
-    // CPU reference defaults to 0 for an out-of-range pair index
-    // (`p_coeffs.get(idx).unwrap_or(0)`), so the GPU MUST gate the inner load to match
-    // otherwise it does an OOB read of p_coeffs (undefined/page-fault on real hardware)
-    // AND diverges from the CPU ref on the OOB lane (the gather / bitset_test_bit class).
+    // `gram[t] = p_coeffs[monomial_pairs[t]]`, but `monomial_pairs[t]` is DATA and nothing
+    // validates that a pair index is below `coeff_count`. The CPU reference defaults to 0 for
+    // an out-of-range pair index (`p_coeffs.get(idx).unwrap_or(0)`), so the select supplies
+    // that 0. A select evaluates both arms, so the select alone leaves the read past the end
+    // of `p_coeffs`: undefined or a page fault on hardware that bounds-checks nothing. The
+    // fold puts the read at element 0, which exists because `coeff_count > 0` is refused
+    // above, and the same select discards it.
     let body = vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(cells)),
         vec![
@@ -90,7 +91,10 @@ pub fn sos_gram_construct(
                 t.clone(),
                 Expr::select(
                     Expr::lt(Expr::var("mp_idx"), Expr::u32(coeff_count)),
-                    Expr::load(p_coeffs, Expr::var("mp_idx")),
+                    Expr::load(
+                        p_coeffs,
+                        bounded_index(Expr::var("mp_idx"), Expr::u32(coeff_count)),
+                    ),
                     Expr::u32(0),
                 ),
             ),
