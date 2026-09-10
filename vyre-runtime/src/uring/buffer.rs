@@ -37,9 +37,13 @@ pub struct GpuMappedBuffer<'a> {
 impl<'a> GpuMappedBuffer<'a> {
     /// Construct from a borrowed host-visible byte slice.
     #[must_use]
+    #[allow(unsafe_code)]
     pub fn from_host_visible_slice(slice: &'a mut [u8]) -> Self {
         let len = slice.len();
-        let raw = RawBufferPointer::new(slice.as_mut_ptr());
+        // SAFETY: the address comes from a live exclusive borrow of `len`
+        // bytes, and the `'a` anchor keeps that borrow alive for as long as
+        // this value, so nothing else reaches the range meanwhile.
+        let raw = unsafe { RawBufferPointer::new(slice.as_mut_ptr()) };
         Self {
             raw,
             len,
@@ -47,11 +51,26 @@ impl<'a> GpuMappedBuffer<'a> {
         }
     }
 
-    /// Construct from a raw pointer plus an explicit owner anchor.
+    /// Construct from a host-visible address plus an explicit owner anchor.
+    ///
+    /// # Safety
+    ///
+    /// The caller must uphold that `ptr` is the start of `len` host-visible
+    /// bytes owned by `_owner`, that the mapping stays live and unaliased for
+    /// the borrow of `_owner`, and that no other handle reads or writes the
+    /// range. `_owner` ties the region's lifetime to something the borrow
+    /// checker can see, but it does not establish that `ptr` names it.
     #[must_use]
-    pub fn from_host_visible_owner<O: ?Sized>(_owner: &'a mut O, ptr: *mut u8, len: usize) -> Self {
+    #[allow(unsafe_code)]
+    pub unsafe fn from_host_visible_owner<O: ?Sized>(
+        _owner: &'a mut O,
+        ptr: *mut u8,
+        len: usize,
+    ) -> Self {
         Self {
-            raw: RawBufferPointer::new(ptr),
+            // SAFETY: the caller has upheld that `ptr` names `len` live
+            // host-visible bytes that stay mapped and unaliased.
+            raw: unsafe { RawBufferPointer::new(ptr) },
             len,
             _owner: PhantomData,
         }
@@ -64,6 +83,7 @@ impl<'a> GpuMappedBuffer<'a> {
     /// Returns [`PipelineError::CounterOverflow`] when `offset + len` leaves
     /// the host address range, and [`PipelineError::RegionBounds`] when the
     /// range ends past the mapped buffer.
+    #[allow(unsafe_code)]
     pub fn sub_region(&self, offset: usize, len: usize) -> Result<Self, PipelineError> {
         let offset_u64 = mapped_byte_count(offset, "GpuMappedBuffer sub-region offset")?;
         let len_u64 = mapped_byte_count(len, "GpuMappedBuffer sub-region length")?;
@@ -90,8 +110,12 @@ impl<'a> GpuMappedBuffer<'a> {
                 fix: "reduce the slot size or enlarge the staging buffer",
             },
         )?;
+        // SAFETY: the bound check above has established that `offset` is
+        // inside this region, so the result names a suffix of the same
+        // host-visible range and carries the same obligation over it.
+        let raw = unsafe { self.raw.offset(offset) };
         Ok(Self {
-            raw: self.raw.offset(offset),
+            raw,
             len,
             _owner: PhantomData,
         })
@@ -115,19 +139,37 @@ impl<'a> GpuMappedBuffer<'a> {
     }
 
     /// Borrow the mapped bytes as a mutable slice.
+    ///
+    /// The exclusive borrow is what keeps a device transfer from writing into
+    /// the range while the slice exists: a submission needs the buffer, and a
+    /// buffer cannot be submitted while this borrow is outstanding.
+    #[allow(unsafe_code)]
     pub fn as_mut_slice(&mut self) -> &mut [u8] {
-        self.raw.as_mut_slice(self.len)
+        // SAFETY: construction established that `self.len` bytes from this
+        // pointer are mapped, and the exclusive borrow of `self` excludes both
+        // another host handle and an in-flight transfer over the range.
+        unsafe { self.raw.as_mut_slice(self.len) }
     }
 
-    /// Construct from a PCIe peer-memory pointer for direct storage DMA.
+    /// Construct from a PCIe peer-memory address for direct storage DMA.
+    ///
+    /// # Safety
+    ///
+    /// The caller must uphold that `peer_ptr` is the start of `len` bytes of
+    /// BAR1 peer memory that `_owner` keeps mapped for the borrow, that the
+    /// range is registered for peer-to-peer DMA, and that no other handle
+    /// reads or writes it.
     #[must_use]
-    pub fn from_bar1_peer_with_owner<O: ?Sized>(
+    #[allow(unsafe_code)]
+    pub unsafe fn from_bar1_peer_with_owner<O: ?Sized>(
         _owner: &'a mut O,
         peer_ptr: *mut u8,
         len: usize,
     ) -> Self {
         Self {
-            raw: RawBufferPointer::new(peer_ptr),
+            // SAFETY: the caller has upheld that `peer_ptr` names `len` live
+            // peer-mapped bytes that stay mapped and unaliased.
+            raw: unsafe { RawBufferPointer::new(peer_ptr) },
             len,
             _owner: PhantomData,
         }

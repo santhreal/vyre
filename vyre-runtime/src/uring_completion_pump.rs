@@ -89,25 +89,47 @@ impl<'a> UringCompletionPump<'a> {
         self.shutdown_requested
     }
 
-    /// Block until the megakernel writes a new value into the
+    /// Block until the megakernel writes a value other than `current` into the
     /// observable word. Uses `futex_waitv` on Linux 5.16+.
+    ///
+    /// # Safety
+    ///
+    /// The caller must uphold that `host_visible_addr` names a mapped,
+    /// naturally aligned `u32` that stays mapped for the whole wait. The
+    /// kernel reads that address after this call has parked the thread, so an
+    /// unmapping that races the wait is not observable from here.
     ///
     /// # Errors
     ///
     /// - [`PipelineError::NotLinux`] on non-Linux hosts.
     /// - [`PipelineError::IoUringSyscall`] on futex errors.
     #[cfg(target_os = "linux")]
-    pub fn wait_for_observable(
+    #[allow(unsafe_code)]
+    pub unsafe fn wait_for_observable(
         host_visible_addr: *const u32,
         current: u32,
         timeout_ns: u64,
     ) -> Result<(), PipelineError> {
-        crate::uring::raw_platform::sys_futex_waitv(host_visible_addr, current, timeout_ns)
+        // SAFETY: the obligation is restated verbatim on this function, so the
+        // caller has already upheld what the syscall wrapper requires.
+        unsafe {
+            crate::uring::raw_platform::sys_futex_waitv(host_visible_addr, current, timeout_ns)
+        }
     }
 
-    /// Non-Linux implementation returning the structured platform error.
+    /// Non-Linux hosts report the structured platform error.
+    ///
+    /// # Safety
+    ///
+    /// The obligation matches the Linux arm so one call site compiles on both,
+    /// even though this arm never reads the address.
+    ///
+    /// # Errors
+    ///
+    /// Always [`PipelineError::NotLinux`].
     #[cfg(not(target_os = "linux"))]
-    pub fn wait_for_observable(
+    #[allow(unsafe_code)]
+    pub unsafe fn wait_for_observable(
         _host_visible_addr: *const u32,
         _current: u32,
         _timeout_ns: u64,
