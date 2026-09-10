@@ -377,7 +377,7 @@ pub const GATES_Q_Z: [GateDescriptor; 39] = [
     GateDescriptor {
         name: "verification-budget",
         help: "Measure what verification costs each tier and hold it to the budget its row \
-        declares: the test targets cargo builds, the binaries they link, the test sources \
+        declares: the test targets built for it, the binaries they link, the test sources \
         byte-identical to a test source in another package, and the bytes the tier's test \
         sources occupy. The three counts are exact in both directions and disk use is a \
         ceiling. Also proves each shared contract body has one owning package and that no \

@@ -447,8 +447,8 @@ fn render_budget(measurement: &Measurement, declared: &BTreeMap<String, TierCost
 const HEADER: &str = "\
 # What verification costs this workspace, per tier.
 #
-# `cargo xtask verification-budget` derives every number here from the tree: the
-# test targets cargo builds, the binaries they link, the test sources
+# `./cargo_full run --bin xtask -- verification-budget` derives every number here from
+# the tree: the test targets built for it, the binaries they link, the test sources
 # byte-identical to a test source in another package, and the bytes the tier's
 # test sources occupy. A tier with no row fails, and a row for a tier the
 # ownership record no longer declares fails as stale.
@@ -570,7 +570,7 @@ fn judge(measurement: &Measurement, declared: &BTreeMap<String, TierCost>) -> Ve
                     "tier `{}` verifies {} compile unit(s) and {} link unit(s) with no budget row",
                     row.tier, row.cost.compile_units, row.cost.link_units
                 ),
-                format!("record the row with `cargo xtask {NAME} --write-budget`"),
+                format!("record the row with `./cargo_full run --bin xtask -- {NAME} --write-budget`"),
             ));
             continue;
         };
@@ -628,7 +628,7 @@ fn inspect(tree: &Tree, measurement: &Measurement) -> crate::artifact_gate::Insp
             inspection.find(Finding::in_file(
                 BUDGET,
                 error.to_string(),
-                format!("record the per-tier budget with `cargo xtask {NAME} --write-budget`"),
+                format!("record the per-tier budget with `./cargo_full run --bin xtask -- {NAME} --write-budget`"),
             ));
             BTreeMap::new()
         }
@@ -658,7 +658,7 @@ fn exact(tier: &str, column: &str, measured: u64, pinned: u64) -> Option<Finding
             )
         } else {
             format!(
-                "lower the row with `cargo xtask {NAME} --lower-budget {tier}`, which writes {measured}"
+                "lower the row with `./cargo_full run --bin xtask -- {NAME} --lower-budget {tier}`, which writes {measured}"
             )
         },
     ))

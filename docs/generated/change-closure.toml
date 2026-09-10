@@ -18840,7 +18840,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "OobAccess"
 variant_name = "Atomic"
-declaration_site = "vyre-reference/src/oob.rs:89"
+declaration_site = "vyre-reference/src/oob.rs:92"
 constructors = ["OobAccess::Atomic"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy)"
@@ -18849,7 +18849,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "OobAccess"
 variant_name = "Load"
-declaration_site = "vyre-reference/src/oob.rs:87"
+declaration_site = "vyre-reference/src/oob.rs:90"
 constructors = ["OobAccess::Load"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy)"
@@ -18858,7 +18858,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "OobAccess"
 variant_name = "Store"
-declaration_site = "vyre-reference/src/oob.rs:88"
+declaration_site = "vyre-reference/src/oob.rs:91"
 constructors = ["OobAccess::Store"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy)"
@@ -23545,7 +23545,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ReferenceErrorKind"
 variant_name = "BudgetExhaustion"
-declaration_site = "vyre-reference/src/error.rs:146"
+declaration_site = "vyre-reference/src/error.rs:153"
 constructors = ["ReferenceErrorKind::BudgetExhaustion"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -23555,7 +23555,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ReferenceErrorKind"
 variant_name = "IncompleteDispatchSemantics"
-declaration_site = "vyre-reference/src/error.rs:136"
+declaration_site = "vyre-reference/src/error.rs:143"
 constructors = ["ReferenceErrorKind::IncompleteDispatchSemantics"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -23565,7 +23565,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ReferenceErrorKind"
 variant_name = "MissingValue"
-declaration_site = "vyre-reference/src/error.rs:111"
+declaration_site = "vyre-reference/src/error.rs:118"
 constructors = ["ReferenceErrorKind::MissingValue"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -23575,7 +23575,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ReferenceErrorKind"
 variant_name = "Nontermination"
-declaration_site = "vyre-reference/src/error.rs:141"
+declaration_site = "vyre-reference/src/error.rs:148"
 constructors = ["ReferenceErrorKind::Nontermination"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -23585,7 +23585,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ReferenceErrorKind"
 variant_name = "OutOfBoundsAccess"
-declaration_site = "vyre-reference/src/error.rs:131"
+declaration_site = "vyre-reference/src/error.rs:138"
 constructors = ["ReferenceErrorKind::OutOfBoundsAccess"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -23595,7 +23595,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ReferenceErrorKind"
 variant_name = "Overflow"
-declaration_site = "vyre-reference/src/error.rs:126"
+declaration_site = "vyre-reference/src/error.rs:133"
 constructors = ["ReferenceErrorKind::Overflow"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -23605,7 +23605,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ReferenceErrorKind"
 variant_name = "Poison"
-declaration_site = "vyre-reference/src/error.rs:121"
+declaration_site = "vyre-reference/src/error.rs:128"
 constructors = ["ReferenceErrorKind::Poison"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -23615,7 +23615,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ReferenceErrorKind"
 variant_name = "TypeMismatch"
-declaration_site = "vyre-reference/src/error.rs:116"
+declaration_site = "vyre-reference/src/error.rs:123"
 constructors = ["ReferenceErrorKind::TypeMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
