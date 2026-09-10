@@ -20,7 +20,7 @@ use vyre_libs::pattern::pack_haystack_u32;
 use vyre_primitives::wire::pack_u32_slice;
 
 use super::baseline::cpu_aho_overlapping_matches;
-use super::haystack::{build_irregular_haystack, pattern_lengths};
+use super::haystack::{build_irregular_haystack, pattern_lengths, with_haystack_extent};
 use super::match_triples::{
     decode_scan_outputs, encode_match_triples, match_triples_output_bytes,
     match_triples_readback_bytes, selected_scan_output_bytes, with_matches_readback_range,
@@ -231,6 +231,7 @@ pub(super) fn prepare_scan_ac_irregular(
         false,
     )
     .map_err(BenchError::ExecutionFailed)
+    .and_then(|program| with_haystack_extent(program, HAYSTACK_BYTES))
     .and_then(|program| with_matches_readback_range(program, expected_match_count))?;
 
     let inputs = scan_ac_inputs(
