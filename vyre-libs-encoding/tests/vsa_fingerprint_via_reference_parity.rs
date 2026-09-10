@@ -13,7 +13,7 @@
 //! equal the host bit-for-bit.
 #![forbid(unsafe_code)]
 
-use crate::bounded_compile_policy;
+use vyre_test_support::semantic_requests;
 
 use vyre_libs_encoding::encoding::vsa_fingerprint::fingerprint_via;
 use vyre_reference::composition_witness::hypervector_xor_bind_witness;
@@ -39,7 +39,7 @@ fn fingerprint_via_matches_host_over_generated_hypervectors() {
 
         let via = fingerprint_via(
             &dispatcher,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &kind_hv,
             &signature_hv,
             &region_hv,
@@ -74,7 +74,7 @@ fn fingerprint_via_is_the_triple_xor_bind() {
         .collect();
     let via = fingerprint_via(
         &dispatcher,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         &kind_hv,
         &signature_hv,
         &region_hv,

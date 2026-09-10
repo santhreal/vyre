@@ -70,6 +70,34 @@ pub const fn latency_within(max_artifact_bytes: u64) -> CompileObjective {
 /// The budget a device-backed contract runs under: search allowed, measurement not.
 pub const DEVICE_BUDGET: SearchBudget = SearchBudget::new(128, 128, 0, 0, 128);
 
+/// The budget a semantic wrapper contract runs under: bounded search, no
+/// measurement, and one artifact ceiling.
+pub const WRAPPER_BUDGET: SearchBudget = SearchBudget::new(8, 64, 1, 0, 1_000);
+
+/// The external fact digest every semantic wrapper contract compiles under.
+pub const WRAPPER_DIGEST: Digest = Digest([3; 32]);
+
+/// The artifact byte ceiling every semantic wrapper contract compiles under.
+pub const WRAPPER_ARTIFACT_BYTES: u64 = 1_000_000;
+
+/// The bounded policy the semantic wrapper contracts dispatch with.
+///
+/// It states a budget and an artifact ceiling and no physical geometry, which
+/// is what the semantic seam accepts. Seven library crates each carried a
+/// byte-identical copy of this policy and the granted one beside it, so a copy
+/// whose budget drifted compiled a different search under the same name.
+#[must_use]
+pub fn wrapper_policy() -> SemanticExecutionPolicy {
+    unknown_policy(WRAPPER_DIGEST, WRAPPER_BUDGET, WRAPPER_ARTIFACT_BYTES)
+}
+
+/// The same bounded policy against a target that grants every capability, for
+/// a kernel whose program declares workgroup-scoped scratch or subgroup work.
+#[must_use]
+pub fn wrapper_granted_policy() -> SemanticExecutionPolicy {
+    granted_policy(WRAPPER_DIGEST, WRAPPER_BUDGET, WRAPPER_ARTIFACT_BYTES)
+}
+
 /// The first summand every shared contract binds.
 pub const LHS: u32 = 13;
 /// The second summand every shared contract binds.

@@ -14,7 +14,7 @@
 //! values are integer witnesses / bool / counts → BIT-EXACT (no tolerance).
 
 #![cfg(feature = "graph-dispatch")]
-use crate::bounded_compile_policy;
+use vyre_test_support::semantic_requests;
 
 use vyre_libs_graph::graph::dispatch::motif::{
     match_motif_via, motif_matches_via, motif_participation_count_via,
@@ -105,7 +105,7 @@ fn match_motif_via_matches_reference_over_random_graphs() {
 
         let got_witness = match_motif_via(
             &d,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             n,
             &offsets,
             &targets,
@@ -122,7 +122,7 @@ fn match_motif_via_matches_reference_over_random_graphs() {
 
         let got_matches = motif_matches_via(
             &d,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             n,
             &offsets,
             &targets,
@@ -138,7 +138,7 @@ fn match_motif_via_matches_reference_over_random_graphs() {
 
         let got_count = motif_participation_count_via(
             &d,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             n,
             &offsets,
             &targets,
@@ -197,7 +197,7 @@ fn match_motif_via_hand_checked_chain() {
     ];
     let got = match_motif_via(
         &d,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         3,
         &offsets,
         &targets,
@@ -210,7 +210,7 @@ fn match_motif_via_hand_checked_chain() {
     assert!(
         motif_matches_via(
             &d,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             3,
             &offsets,
             &targets,
@@ -236,7 +236,7 @@ fn match_motif_via_hand_checked_chain() {
     ];
     let got_no = match_motif_via(
         &d,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         3,
         &offsets,
         &targets,
@@ -251,7 +251,7 @@ fn match_motif_via_hand_checked_chain() {
     assert!(
         !motif_matches_via(
             &d,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             3,
             &offsets,
             &targets,

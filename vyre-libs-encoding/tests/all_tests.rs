@@ -9,8 +9,6 @@ pub mod bitset_mask_algebra_via_reference_parity;
 #[path = "bitset_summary_via_reference_parity.rs"]
 pub mod bitset_summary_via_reference_parity;
 
-#[path = "bounded_compile_policy.rs"]
-pub mod bounded_compile_policy;
 
 #[path = "dense_matvec_cases/mod.rs"]
 pub mod dense_matvec_cases;

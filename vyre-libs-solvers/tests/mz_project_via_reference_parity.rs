@@ -16,7 +16,7 @@
 //! divergence is a real IR/dispatch defect, not a rounding artifact.
 #![forbid(unsafe_code)]
 
-use crate::bounded_compile_policy;
+use vyre_test_support::semantic_requests;
 
 use vyre_libs_solvers::solvers::mori_zwanzig_region_coarsen::coarsen_region_state_fixed_via;
 
@@ -44,7 +44,7 @@ fn coarsen_region_state_fixed_via_matches_exact_fixed_point_matvec() {
 
         let via = coarsen_region_state_fixed_via(
             &dispatcher,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &p_matrix,
             &f_vec,
             n,
@@ -91,7 +91,7 @@ fn coarsen_region_state_fixed_via_matches_signed_projection_with_negative_entrie
 
         let via = coarsen_region_state_fixed_via(
             &dispatcher,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &p_matrix,
             &f_vec,
             n,
@@ -133,7 +133,7 @@ fn coarsen_region_state_fixed_via_hand_checked_negative_projection() {
     let f_vec = vec![to_fixed(2.0), to_fixed(-3.0)];
     let via = coarsen_region_state_fixed_via(
         &dispatcher,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         &p_matrix,
         &f_vec,
         2,
@@ -161,7 +161,7 @@ fn coarsen_region_state_fixed_via_computes_a_known_projection() {
     let f_vec = vec![3 * one, 4 * one];
     let via = coarsen_region_state_fixed_via(
         &dispatcher,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         &p_matrix,
         &f_vec,
         2,

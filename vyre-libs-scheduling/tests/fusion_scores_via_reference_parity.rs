@@ -15,7 +15,7 @@
 //! `2·(L̂·T_curr)` dominates `T_prev`) and every intermediate stays < 2^24, where f32 represents integers
 //! EXACTLY. So the u32 GPU output equals the f32 reference cast to integer, bit-for-bit.
 
-use crate::bounded_compile_policy;
+use vyre_test_support::semantic_requests;
 
 use vyre_libs_scheduling::scheduling::spectral_schedule::fusion_scores_fixed_via;
 use vyre_reference::composition_witness::try_chebyshev_filter_witness as chebyshev_filter_cpu;
@@ -44,7 +44,7 @@ fn fusion_scores_via_matches_chebyshev_cpu_bit_exact() {
 
         let got = fusion_scores_fixed_via(
             &d,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &laplacian,
             &signal,
             &coeffs,
@@ -84,7 +84,7 @@ fn fusion_scores_via_hand_checked_identity_filter() {
     let coeffs = [1u32, 0, 0];
     let got = fusion_scores_fixed_via(
         &d,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         &laplacian,
         &signal,
         &coeffs,
@@ -102,7 +102,7 @@ fn fusion_scores_via_hand_checked_identity_filter() {
     let coeffs = [0u32, 1, 0];
     let got = fusion_scores_fixed_via(
         &d,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         &laplacian,
         &signal,
         &coeffs,
@@ -123,7 +123,7 @@ fn fusion_scores_via_hand_checked_identity_filter() {
     let coeffs = [0u32, 1, 0];
     let got = fusion_scores_fixed_via(
         &d,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         &laplacian,
         &signal,
         &coeffs,

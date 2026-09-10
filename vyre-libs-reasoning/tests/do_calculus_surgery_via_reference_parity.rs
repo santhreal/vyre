@@ -13,7 +13,7 @@
 //! (compaction + gather + kept-index map + stride-k block) through the real dispatch boundary.
 #![forbid(unsafe_code)]
 
-use crate::bounded_compile_policy;
+use vyre_test_support::semantic_requests;
 
 use vyre_libs_reasoning::reasoning::do_calculus_change_impact::{
     intervention_delete_incoming_via, rule2_reverse_incoming_via, rule3_subgraph_via,
@@ -40,7 +40,7 @@ fn intervention_delete_incoming_via_matches_cpu_oracle() {
 
         let via = intervention_delete_incoming_via(
             &dispatcher,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &adj,
             &mask,
             n,
@@ -75,7 +75,7 @@ fn rule2_reverse_incoming_via_matches_cpu_oracle() {
 
         let via = rule2_reverse_incoming_via(
             &dispatcher,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &adj,
             &mask,
             n,
@@ -111,7 +111,7 @@ fn rule3_subgraph_via_matches_cpu_oracle() {
 
         let (via_reduced, via_kept) = rule3_subgraph_via(
             &dispatcher,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &adj,
             &keep_mask,
             n,
@@ -154,7 +154,7 @@ fn rule3_subgraph_via_round_trips_a_known_stride_k_extraction() {
     let keep_mask = vec![1u32, 0, 1, 1]; // keep 0, 2, 3
     let (via_reduced, via_kept) = rule3_subgraph_via(
         &dispatcher,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         &adj,
         &keep_mask,
         n,
@@ -177,7 +177,7 @@ fn intervention_delete_incoming_via_matches_cpu_oracle_empty_graph() {
     let dispatcher = ReferenceSemanticExecutor;
     let via = intervention_delete_incoming_via(
         &dispatcher,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         &[],
         &[],
         0,
@@ -192,7 +192,7 @@ fn intervention_delete_incoming_via_matches_cpu_oracle_empty_graph() {
 fn rule2_reverse_incoming_via_matches_cpu_oracle_empty_graph() {
     let dispatcher = ReferenceSemanticExecutor;
     let via =
-        rule2_reverse_incoming_via(&dispatcher, &bounded_compile_policy::policy(), &[], &[], 0)
+        rule2_reverse_incoming_via(&dispatcher, &semantic_requests::wrapper_policy(), &[], &[], 0)
             .expect("empty graph rule 2 must dispatch cleanly");
     let cpu = do_rule2_reverse_incoming_cpu(&[], &[], 0);
     assert_eq!(via, cpu);
@@ -203,7 +203,7 @@ fn rule2_reverse_incoming_via_matches_cpu_oracle_empty_graph() {
 fn rule3_subgraph_via_matches_cpu_oracle_empty_graph() {
     let dispatcher = ReferenceSemanticExecutor;
     let (via_reduced, via_kept) =
-        rule3_subgraph_via(&dispatcher, &bounded_compile_policy::policy(), &[], &[], 0)
+        rule3_subgraph_via(&dispatcher, &semantic_requests::wrapper_policy(), &[], &[], 0)
             .expect("empty graph rule 3 must dispatch cleanly");
     let (cpu_reduced, cpu_kept) = do_rule3_subgraph_cpu(&[], &[], 0);
     assert_eq!(via_reduced, cpu_reduced);

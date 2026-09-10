@@ -1,7 +1,5 @@
 //! One binary for every integration test in this crate.
 
-#[path = "bounded_compile_policy.rs"]
-pub mod bounded_compile_policy;
 
 #[path = "cost_model_predict_runtime_via_reference_parity.rs"]
 pub mod cost_model_predict_runtime_via_reference_parity;

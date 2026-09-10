@@ -13,7 +13,7 @@
 //! in binding order) executes the actual quantized kernel IR for the first time and proves the fixed
 //! consumers match their `_cpu` oracles. The pre-fix over-feed surfaces here as a hard dispatch error.
 
-use crate::bounded_compile_policy;
+use vyre_test_support::semantic_requests;
 
 use vyre_libs_solvers::solvers::quantized_dispatch::{
     i4x8_batched_matmul_f32_scaled_via, i4x8_batched_matmul_top1_f32_scaled_via,
@@ -77,7 +77,7 @@ fn matvec_via_matches_cpu_over_generated_systems() {
 
         let got = i4x8_matvec_f32_scaled_via(
             &dispatcher,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &weights,
             &x,
             &row_scales,
@@ -107,7 +107,7 @@ fn batched_matvec_via_matches_cpu_over_generated_systems() {
 
         let got = i4x8_batched_matvec_f32_scaled_via(
             &dispatcher,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &weights,
             &x_batches,
             &row_scales,
@@ -144,7 +144,7 @@ fn dot_via_matches_cpu_over_generated_vectors() {
 
         let got = i4x8_dot_f32_scaled_via(
             &dispatcher,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &lhs,
             &rhs,
             lhs_scale,
@@ -172,7 +172,7 @@ fn batched_matmul_via_matches_cpu_over_generated_systems() {
 
         let got = i4x8_batched_matmul_f32_scaled_via(
             &dispatcher,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &PackedI4BatchedMatmul {
                 weights_packed: &weights,
                 activation_batches_packed: &activations,
@@ -215,7 +215,7 @@ fn top1_via_matches_cpu_scores_and_indices_over_generated_systems() {
 
         let (scores, indices) = i4x8_batched_matmul_top1_f32_scaled_via(
             &dispatcher,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &PackedI4BatchedMatmul {
                 weights_packed: &weights,
                 activation_batches_packed: &activations,

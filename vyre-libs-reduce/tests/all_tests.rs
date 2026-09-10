@@ -19,8 +19,6 @@ pub mod adversarial_reduce_scatter;
 #[path = "adversarial_reduce_segment_reduce.rs"]
 pub mod adversarial_reduce_segment_reduce;
 
-#[path = "bounded_compile_policy.rs"]
-pub mod bounded_compile_policy;
 
 #[path = "grid_stride_tree_buffer_contract.rs"]
 pub mod grid_stride_tree_buffer_contract;

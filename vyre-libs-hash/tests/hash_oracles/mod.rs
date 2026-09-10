@@ -11,6 +11,35 @@ pub(crate) fn hostile_bytes(seed: u32) -> Vec<u8> {
     v
 }
 
+/// CRC-32 by the bitwise reflected algorithm, polynomial `0xEDB8_8320`.
+///
+/// Written out bit by bit rather than by table so it shares no structure with
+/// the emitted kernel or with the table-driven oracle the reference matrix
+/// uses, which is what makes agreement between the three meaningful.
+pub(crate) fn oracle_crc32(bytes: &[u8]) -> u32 {
+    let mut crc = 0xFFFF_FFFFu32;
+    for &b in bytes {
+        crc ^= u32::from(b);
+        for _ in 0..8 {
+            let mask = 0u32.wrapping_sub(crc & 1);
+            crc = (crc >> 1) ^ (0xEDB8_8320 & mask);
+        }
+    }
+    !crc
+}
+
+/// FNV-1a over 32 bits: offset basis `0x811c_9dc5`, prime `0x0100_0193`.
+pub(crate) fn oracle_fnv1a32(bytes: &[u8]) -> u32 {
+    const OFFSET: u32 = 0x811c_9dc5;
+    const PRIME: u32 = 0x0100_0193;
+    let mut h = OFFSET;
+    for &b in bytes {
+        h ^= u32::from(b);
+        h = h.wrapping_mul(PRIME);
+    }
+    h
+}
+
 pub(crate) fn oracle_blake3_g(
     state: &mut [u32; 16],
     a: usize,

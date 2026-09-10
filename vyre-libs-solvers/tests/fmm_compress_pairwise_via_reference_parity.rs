@@ -20,7 +20,7 @@
 //! f32 GPU (three chained stages) vs f64 oracle → small numeric TOLERANCE. Distances are kept in [1, 4)
 //! so the M2L reciprocal is well-conditioned and rounding stays far below tolerance.
 
-use crate::bounded_compile_policy;
+use vyre_test_support::semantic_requests;
 
 use vyre_libs_solvers::solvers::fmm_polyhedral_compress::fmm_compress_pairwise_via;
 
@@ -97,7 +97,7 @@ fn fmm_compress_pairwise_via_matches_chained_f64_oracle() {
 
         let got = fmm_compress_pairwise_via(
             &d,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &scores,
             &cell_assignment,
             &cell_distances,
@@ -134,7 +134,7 @@ fn fmm_compress_pairwise_via_hand_checked_two_cell() {
     let cell_distances = [0.0f32, 2.0, 4.0, 0.0]; // 2x2, diagonal unused
     let got = fmm_compress_pairwise_via(
         &d,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         &scores,
         &cell_assignment,
         &cell_distances,

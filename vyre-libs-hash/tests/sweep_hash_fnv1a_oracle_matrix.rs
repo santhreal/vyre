@@ -2,18 +2,10 @@
 //! Generated scaffold - oracle logic is explicit; do not reduce to `assert!(is_ok)`.
 #![forbid(unsafe_code)]
 
-use vyre_reference::composition_witness::{fnv1a32_witness, fnv1a64_witness};
+use crate::hash_oracles;
+use hash_oracles::oracle_fnv1a32;
 
-fn oracle_fnv1a32(bytes: &[u8]) -> u32 {
-    const OFFSET: u32 = 0x811c_9dc5;
-    const PRIME: u32 = 0x0100_0193;
-    let mut h = OFFSET;
-    for &b in bytes {
-        h ^= b as u32;
-        h = h.wrapping_mul(PRIME);
-    }
-    h
-}
+use vyre_reference::composition_witness::{fnv1a32_witness, fnv1a64_witness};
 
 fn oracle_fnv1a64(bytes: &[u8]) -> u64 {
     const OFFSET: u64 = 0xcbf29ce484222325;

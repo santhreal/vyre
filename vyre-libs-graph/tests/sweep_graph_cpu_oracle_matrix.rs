@@ -10,7 +10,7 @@
 
 #![cfg(feature = "graph-dispatch")]
 #![forbid(unsafe_code)]
-use crate::bounded_compile_policy;
+use vyre_test_support::semantic_requests;
 
 use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_libs_graph::graph::dispatch::exploded::build_ifds_csr_via;
@@ -606,7 +606,7 @@ fn sweep_exploded_ifds_via_matches_cpu_oracle_matrix() {
         );
         let actual = build_ifds_csr_via(
             &dispatcher,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             num_procs,
             blocks_per_proc,
             facts_per_proc,

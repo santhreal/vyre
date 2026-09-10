@@ -6,7 +6,7 @@
 //! greedy raster-order disjoint selection: a candidate cell is chosen iff no already-chosen cell
 //! lies in its k×k above-left footprint. The oracle is exact.
 
-use crate::bounded_compile_policy;
+use vyre_test_support::semantic_requests;
 
 use vyre_libs_scheduling::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via;
 use vyre_reference::composition_witness::planar_rewrite_schedule_witness as reference_planar_rewrite_schedule;
@@ -30,7 +30,7 @@ fn schedule_via_matches_cpu_greedy_disjoint_selection_over_generated_grids() {
 
         let got = schedule_disjoint_rewrites_via(
             &executor,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &candidates,
             h,
             w,
@@ -66,7 +66,7 @@ fn schedule_via_matches_hand_checked_cases() {
     assert_eq!(
         schedule_disjoint_rewrites_via(
             &executor,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &all,
             2,
             2,
@@ -83,7 +83,7 @@ fn schedule_via_matches_hand_checked_cases() {
     assert_eq!(
         schedule_disjoint_rewrites_via(
             &executor,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &row,
             1,
             4,
@@ -98,7 +98,7 @@ fn schedule_via_matches_hand_checked_cases() {
     assert_eq!(
         schedule_disjoint_rewrites_via(
             &executor,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &[0, 0, 0],
             1,
             3,

@@ -9,7 +9,7 @@
 //! `picked[winner] = 1`, and zeroes `gains[winner]`. The reference executes the same greedy contract,
 //! so the produced 0/1 vector must match exactly.
 
-use crate::bounded_compile_policy;
+use vyre_test_support::semantic_requests;
 
 use vyre_libs_scheduling::scheduling::submodular_cache_eviction::select_retention_set_via;
 
@@ -37,7 +37,7 @@ fn select_retention_set_via_matches_reference_greedy_over_random_gains() {
         let want = select_retention_set(&mut gains_ref, n, k);
         let mut gains_gpu = gains.clone();
         let got =
-            select_retention_set_via(&d, &bounded_compile_policy::policy(), &mut gains_gpu, n, k)
+            select_retention_set_via(&d, &semantic_requests::wrapper_policy(), &mut gains_gpu, n, k)
                 .expect("select_retention_set_via must execute the greedy argmax loop");
 
         assert_eq!(
@@ -82,7 +82,7 @@ fn select_retention_set_via_hand_checked_greedy_order_and_early_stop() {
     // Distinct gains [5, 9, 1, 7]: greedy keeps the top-3 by gain = indices 1 (9), 3 (7), 0 (5).
     let mut gains = vec![5u32, 9, 1, 7];
     let got =
-        select_retention_set_via(&d, &bounded_compile_policy::policy(), &mut gains, 4, 3).unwrap();
+        select_retention_set_via(&d, &semantic_requests::wrapper_policy(), &mut gains, 4, 3).unwrap();
     assert_eq!(
         got,
         vec![1, 1, 0, 1],
@@ -97,7 +97,7 @@ fn select_retention_set_via_hand_checked_greedy_order_and_early_stop() {
     // k=1 retains exactly the single highest-gain item (the argmax), even amid zero gains.
     let mut gains = vec![0u32, 3, 0];
     let got =
-        select_retention_set_via(&d, &bounded_compile_policy::policy(), &mut gains, 3, 1).unwrap();
+        select_retention_set_via(&d, &semantic_requests::wrapper_policy(), &mut gains, 3, 1).unwrap();
     assert_eq!(
         got,
         vec![0, 1, 0],
@@ -110,7 +110,7 @@ fn select_retention_set_via_hand_checked_greedy_order_and_early_stop() {
     // zero gain as NO_WINNER; the loop stops only once all n items are picked). k=n retains everything.
     let mut gains = vec![0u32, 3, 0];
     let got =
-        select_retention_set_via(&d, &bounded_compile_policy::policy(), &mut gains, 3, 3).unwrap();
+        select_retention_set_via(&d, &semantic_requests::wrapper_policy(), &mut gains, 3, 3).unwrap();
     let want = select_retention_set(&mut [0u32, 3, 0], 3, 3);
     assert_eq!(got, want, "k=n retains all items and matches the reference");
     assert_eq!(
@@ -122,7 +122,7 @@ fn select_retention_set_via_hand_checked_greedy_order_and_early_stop() {
     // k == 0 retains nothing.
     let mut gains = vec![4u32, 2];
     let got =
-        select_retention_set_via(&d, &bounded_compile_policy::policy(), &mut gains, 2, 0).unwrap();
+        select_retention_set_via(&d, &semantic_requests::wrapper_policy(), &mut gains, 2, 0).unwrap();
     assert_eq!(got, vec![0, 0], "k=0 retains nothing");
     assert_eq!(gains, vec![4, 2], "k=0 leaves gains untouched");
 }

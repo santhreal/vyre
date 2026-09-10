@@ -3,8 +3,6 @@
 #[path = "bellman_shortest_path_via_reference_parity.rs"]
 pub mod bellman_shortest_path_via_reference_parity;
 
-#[path = "bounded_compile_policy.rs"]
-pub mod bounded_compile_policy;
 
 #[path = "fmm_compress_pairwise_via_reference_parity.rs"]
 pub mod fmm_compress_pairwise_via_reference_parity;

@@ -13,7 +13,7 @@
 //! even cyclic parent arrays terminate (both the GPU IR and `cpu_ref` bound-walk identically).
 
 #![cfg(feature = "graph-dispatch")]
-use crate::bounded_compile_policy;
+use vyre_test_support::semantic_requests;
 
 use vyre_libs_graph::graph::dispatch::path_reconstruct::reconstruct_path_via;
 use vyre_reference::composition_witness::path_reconstruct_witness;
@@ -44,7 +44,7 @@ fn reconstruct_path_via_matches_cpu_ref_over_random_forests() {
         let mut got_scratch = Vec::new();
         let got_len = reconstruct_path_via(
             &d,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &parent,
             target,
             max_depth,
@@ -95,7 +95,7 @@ fn reconstruct_path_via_hand_checked_chain_and_root() {
     let mut scratch = Vec::new();
     let len = reconstruct_path_via(
         &d,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         &parent,
         3,
         8,
@@ -117,7 +117,7 @@ fn reconstruct_path_via_hand_checked_chain_and_root() {
     let mut scratch = Vec::new();
     let len = reconstruct_path_via(
         &d,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         &parent,
         3,
         2,
@@ -136,7 +136,7 @@ fn reconstruct_path_via_hand_checked_chain_and_root() {
     let mut scratch = Vec::new();
     let len = reconstruct_path_via(
         &d,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         &parent,
         1,
         4,

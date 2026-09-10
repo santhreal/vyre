@@ -104,29 +104,15 @@ fn program_for(expr: Expr) -> Program {
     )
 }
 
-/// Adversarial input values: odd/even, the two 16-bit halves, the sign bit,
-/// `i32::MAX` pattern, all-ones, and the two alternating-bit patterns, the
-/// classes that distinguish shift/rotate/mask/division rewrites from a value
-/// that happens to agree at `0`.
-const PROBES: &[u32] = &[
-    0,
-    1,
-    2,
-    3,
-    7,
-    8,
-    15,
-    16,
-    255,
-    256,
-    0x0000_FFFF,
-    0xFFFF_0000,
-    0x5555_5555,
-    0xAAAA_AAAA,
-    0x8000_0000,
-    0x7FFF_FFFF,
-    0xFFFF_FFFF,
-];
+/// Adversarial input values: the shared `u32` anchor corpus, plus the two
+/// 16-bit halves and the two alternating-bit patterns. Those four are the
+/// classes that distinguish shift, rotate and mask rewrites from a value that
+/// happens to agree at `0`, and no other sweep needs them.
+fn probes() -> Vec<u32> {
+    let mut values = vyre_test_support::scalar_corpora::u32_anchors();
+    values.extend([0x0000_FFFF, 0xFFFF_0000, 0x5555_5555, 0xAAAA_AAAA]);
+    values
+}
 
 fn assert_parity_at(program: &Program, optimized: &Program, v: u32) -> Result<(), TestCaseError> {
     let inputs = [Value::U32(v)];
@@ -158,7 +144,7 @@ proptest! {
         let program = program_for(expr);
         let optimized =
             optimize::optimize(program.clone()).expect("registered optimizer must converge");
-        for &v in PROBES {
+        for v in probes() {
             assert_parity_at(&program, &optimized, v)?;
         }
         assert_parity_at(&program, &optimized, rand_val)?;
@@ -191,7 +177,7 @@ fn optimize_preserves_nested_shift_div_mod_rotate_for_odd_inputs() {
     let optimized =
         optimize::optimize(program.clone()).expect("registered optimizer must converge");
 
-    for &v in PROBES {
+    for v in probes() {
         let inputs = [Value::U32(v)];
         let base = vyre_reference::ReferenceRequest::standard(&program, &inputs)
             .outputs()

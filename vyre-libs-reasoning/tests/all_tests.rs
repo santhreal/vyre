@@ -1,7 +1,5 @@
 //! One binary for every integration test in this crate.
 
-#[path = "bounded_compile_policy.rs"]
-pub mod bounded_compile_policy;
 
 #[path = "categorical_laws_proptest.rs"]
 pub mod categorical_laws_proptest;

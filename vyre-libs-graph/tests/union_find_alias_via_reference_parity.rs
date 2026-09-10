@@ -21,7 +21,7 @@
 //! check (exact, no tolerance).
 
 #![cfg(feature = "graph-dispatch")]
-use crate::bounded_compile_policy;
+use vyre_test_support::semantic_requests;
 
 use vyre_libs_graph::graph::dispatch::union_find_emit::union_find_alias_via;
 use vyre_reference::composition_witness::{
@@ -58,7 +58,7 @@ fn union_find_alias_via_matches_reference_partition_over_random_graphs() {
 
         let got = union_find_alias_via(
             &dispatcher,
-            &bounded_compile_policy::policy(),
+            &semantic_requests::wrapper_policy(),
             &parent_init,
             &edge_a,
             &edge_b,
@@ -92,7 +92,7 @@ fn union_find_alias_via_hand_checked_chain_and_star() {
     let parent_init: Vec<u32> = (0..5).collect();
     let got = union_find_alias_via(
         &d,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         &parent_init,
         &[0, 1, 2, 3],
         &[1, 2, 3, 4],
@@ -117,7 +117,7 @@ fn union_find_alias_via_hand_checked_chain_and_star() {
     let parent_init: Vec<u32> = (0..4).collect();
     let got = union_find_alias_via(
         &d,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         &parent_init,
         &[0, 1],
         &[2, 3],
@@ -135,7 +135,7 @@ fn union_find_alias_via_hand_checked_chain_and_star() {
     let parent_init: Vec<u32> = (0..3).collect();
     let got = union_find_alias_via(
         &d,
-        &bounded_compile_policy::policy(),
+        &semantic_requests::wrapper_policy(),
         &parent_init,
         &[0, 1, 2],
         &[0, 1, 2],

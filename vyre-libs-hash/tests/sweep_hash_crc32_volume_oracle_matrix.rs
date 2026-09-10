@@ -4,21 +4,9 @@
 #![cfg(feature = "hash")]
 
 use crate::hash_oracles;
-use hash_oracles::hostile_bytes;
+use hash_oracles::{hostile_bytes, oracle_crc32};
 
 use vyre_reference::composition_witness::crc32_witness;
-
-fn oracle_crc32(bytes: &[u8]) -> u32 {
-    let mut crc = 0xFFFF_FFFFu32;
-    for &b in bytes {
-        crc ^= b as u32;
-        for _ in 0..8 {
-            let mask = 0u32.wrapping_sub(crc & 1);
-            crc = (crc >> 1) ^ (0xEDB8_8320 & mask);
-        }
-    }
-    !crc
-}
 
 const CASES: usize = 16384;
 

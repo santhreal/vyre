@@ -21,8 +21,6 @@ pub mod wire_words;
 #[path = "adaptive_four_russians_dense_generated.rs"]
 pub mod adaptive_four_russians_dense_generated;
 
-#[path = "bounded_compile_policy.rs"]
-pub mod bounded_compile_policy;
 
 #[path = "csr_backward_or_changed_ir_fixpoint.rs"]
 pub mod csr_backward_or_changed_ir_fixpoint;
