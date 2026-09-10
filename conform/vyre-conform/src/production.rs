@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Duration;
 use thiserror::Error;
+use vyre_conform_spec::protocol::ulp_distance_f32;
 use vyre_driver::{BackendRegistration, BindingPlan};
 use vyre_foundation::ir::{BufferDecl, GraphValueId, Program, ProgramGraph};
 use vyre_foundation::logical::LogicalProgramGraph;
@@ -443,7 +444,7 @@ fn compare_f32_lanes(
     {
         let left_bits = u32::from_le_bytes([left[0], left[1], left[2], left[3]]);
         let right_bits = u32::from_le_bytes([right[0], right[1], right[2], right[3]]);
-        let distance = ulp_distance(left_bits, right_bits);
+        let distance = ulp_distance_f32(left_bits, right_bits);
         if distance > ulps {
             return Err(ScheduleDisagreement::Lane {
                 schedule,
@@ -456,22 +457,6 @@ fn compare_f32_lanes(
         }
     }
     Ok(())
-}
-
-/// Unit-in-last-place distance between two `f32` bit patterns.
-///
-/// A sign change, a non-finite value, or a class change between the two is
-/// `u32::MAX`, so only bit equality admits it.
-fn ulp_distance(left: u32, right: u32) -> u32 {
-    if left == right {
-        return 0;
-    }
-    let (a, b) = (f32::from_bits(left), f32::from_bits(right));
-    if !a.is_finite() || !b.is_finite() || a.is_sign_negative() != b.is_sign_negative() {
-        return u32::MAX;
-    }
-    let ordered = |bits: u32| bits & 0x7fff_ffff;
-    ordered(left).abs_diff(ordered(right))
 }
 
 /// Construct the explicit compiler policy from immutable registered target facts.

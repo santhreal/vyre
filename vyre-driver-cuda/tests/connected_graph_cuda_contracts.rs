@@ -36,7 +36,8 @@ use vyre_test_support::backend_execution_domain::assert_dispatch_leaves_the_host
 // the same question, so an answer that differs by which suite built the graph
 // proves nothing about the device.
 use vyre_test_support::graph_fixtures::{
-    pure_dataflow_graph, pure_dataflow_oracle, PURE_DATAFLOW_LANES,
+    pure_dataflow_graph, pure_dataflow_oracle, retained_accumulate_node, sample_and_retained_ports,
+    PURE_DATAFLOW_LANES,
 };
 
 fn contract(access: BufferAccess, lifetime: ValueLifetime, count: u64) -> ValueContract {
@@ -368,14 +369,7 @@ fn telemetry_accumulator_graph() -> ProgramGraph {
         ],
         [1, 1, 1],
         vec![
-            Node::store(
-                "s",
-                Expr::u32(0),
-                Expr::add(
-                    Expr::mul(Expr::load("s", Expr::u32(0)), Expr::u32(2)),
-                    Expr::load("u", Expr::u32(0)),
-                ),
-            ),
+            retained_accumulate_node(),
             Node::store("s_out", Expr::u32(0), Expr::load("s", Expr::u32(0))),
         ],
     );
@@ -383,18 +377,7 @@ fn telemetry_accumulator_graph() -> ProgramGraph {
         .add_node(
             "fold_node",
             fold,
-            vec![
-                GraphInput {
-                    buffer: "u".into(),
-                    value: in_u,
-                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, 1),
-                },
-                GraphInput {
-                    buffer: "s".into(),
-                    value: state,
-                    contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained, 1),
-                },
-            ],
+            sample_and_retained_ports(in_u, state),
             vec![GraphOutput {
                 buffer: "s_out".into(),
                 name: "s_snapshot".into(),

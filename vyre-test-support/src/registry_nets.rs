@@ -417,7 +417,8 @@ impl RegistrySweep {
 /// them and the sweep would hand every case its own fixture back. The supplied
 /// buffers carry the run-time extent, counted as four-byte elements, and the
 /// larger of the two is the index no buffer in the run accepts.
-fn first_out_of_range_index(program: &Program, inputs: &[Value]) -> u32 {
+#[must_use]
+pub fn first_out_of_range_index(program: &Program, inputs: &[Value]) -> u32 {
     let declared = program
         .buffers()
         .iter()
@@ -441,7 +442,8 @@ fn first_out_of_range_index(program: &Program, inputs: &[Value]) -> u32 {
 /// and leaves a trailing partial word alone. A float buffer receives the bit
 /// pattern of `index`, which is a finite denormal and indexes nothing; the
 /// point of the sweep is the integer buffers a program reads indices out of.
-fn hostile_contents(inputs: &[Value], index: u32) -> Vec<Value> {
+#[must_use]
+pub fn hostile_contents(inputs: &[Value], index: u32) -> Vec<Value> {
     if index == 0 {
         return inputs.to_vec();
     }

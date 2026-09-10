@@ -105,32 +105,17 @@ pub(crate) const REGION_CHAIN_SIG_HEX: &str =
 // ---------------------------------------------------------------------------
 // Sign a bundle cert with the deterministic key.
 // ---------------------------------------------------------------------------
-#[derive(serde::Serialize)]
-struct BundleCertSignableBody<'a> {
-    version: &'a str,
-    bundle_blake3: &'a str,
-    corpus_blake3: &'a str,
-    reference_output_blake3: &'a str,
-    witness_count: u64,
-    timestamp: &'a str,
-    pubkey: &'a str,
-}
 
+/// Sign `cert` in place with `key`.
+///
+/// The signable body is `BundleCertificate::to_signable_bytes`, which covers
+/// `pubkey`, so the verifying key is recorded on the certificate before the
+/// bytes are taken.
 pub(crate) fn sign_bundle_cert(cert: &mut BundleCertificate, key: &SigningKey) {
-    let pubkey_hex = hex::encode(key.verifying_key().to_bytes());
-    let signable = BundleCertSignableBody {
-        version: &cert.version,
-        bundle_blake3: &cert.bundle_blake3,
-        corpus_blake3: &cert.corpus_blake3,
-        reference_output_blake3: &cert.reference_output_blake3,
-        witness_count: cert.witness_count,
-        timestamp: &cert.timestamp,
-        pubkey: &pubkey_hex,
-    };
-    let signable_bytes = serde_json::to_vec(&signable).expect("canonical json");
+    cert.pubkey = hex::encode(key.verifying_key().to_bytes());
+    let signable_bytes = cert.to_signable_bytes().expect("canonical json");
     let signature = key.sign(&signable_bytes);
     cert.signature_ed25519 = hex::encode(signature.to_bytes());
-    cert.pubkey = pubkey_hex;
 }
 
 // ---------------------------------------------------------------------------

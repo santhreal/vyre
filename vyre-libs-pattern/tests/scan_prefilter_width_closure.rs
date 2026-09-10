@@ -373,18 +373,7 @@ fn prefilter_widths_form_a_mask_prefix_chain() {
 fn every_width_emits_the_same_matches_under_both_coalesce_settings() {
     use vyre_libs_pattern::pattern::pack_haystack_u32;
     use vyre_primitives::wire::pack_u32_slice;
-    use vyre_test_support::test_parity_oracles::{bytes_to_u32, eval_bytes};
-
-    fn triples(outputs: &[Vec<u8>]) -> Vec<(u32, u32, u32)> {
-        let count = bytes_to_u32(&outputs[0])[0] as usize;
-        let words = bytes_to_u32(&outputs[1]);
-        let mut decoded: Vec<(u32, u32, u32)> = words[..count.saturating_mul(3)]
-            .chunks_exact(3)
-            .map(|chunk| (chunk[0], chunk[1], chunk[2]))
-            .collect();
-        decoded.sort_unstable();
-        decoded
-    }
+    use vyre_test_support::test_parity_oracles::{eval_bytes, sorted_match_triples};
 
     let haystack: &[u8] = b"Authorization: Bearer token-a tok a token abc";
     let ac = classic_ac_compile(&PATTERNS);
@@ -409,8 +398,8 @@ fn every_width_emits_the_same_matches_under_both_coalesce_settings() {
         let coalesced = (row.build)(&ac.dfa, PATTERN_COUNT, MAX_MATCHES, true);
         let serial = (row.build)(&ac.dfa, PATTERN_COUNT, MAX_MATCHES, false);
         assert_eq!(
-            triples(&eval_bytes(row.variant, &coalesced, inputs.clone())),
-            triples(&eval_bytes(row.variant, &serial, inputs)),
+            sorted_match_triples(&eval_bytes(row.variant, &coalesced, inputs.clone())),
+            sorted_match_triples(&eval_bytes(row.variant, &serial, inputs)),
             "Fix: width {} emits different matches with subgroup coalescing on. Coalescing \
              reserves hit-buffer slots per subgroup instead of per lane; it decides where a \
              triple lands, never whether one exists.",

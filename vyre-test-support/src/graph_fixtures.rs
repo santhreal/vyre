@@ -7,8 +7,8 @@
 //! is the point of asking the same planner the same question.
 
 use vyre_foundation::ir::{
-    BufferAccess, DataType, GraphInput, GraphOutput, GraphValueId, Program, ProgramGraph, ShapeDim,
-    ValueContract, ValueLifetime,
+    BufferAccess, DataType, Expr, GraphInput, GraphOutput, GraphValueId, Node, Program,
+    ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
 };
 
 use crate::graph_values::u32_symbolic;
@@ -217,6 +217,44 @@ pub fn value_and_constant_ports(input: GraphValueId, constant: GraphValueId) -> 
             buffer: "constant".into(),
             value: constant,
             contract: u32_symbolic(BufferAccess::ReadOnly, ValueLifetime::Constant),
+        },
+    ]
+}
+
+/// The recurrence a retained-state connected-graph contract steps.
+///
+/// `s[0] = 2 * s[0] + u[0]`, over the read binding `u` and the read-write
+/// binding `s`. Two connected-graph suites state this recurrence and differ
+/// only in what they publish out of the updated state, so the recurrence has
+/// one owner and the publication stays at the call site.
+#[must_use]
+pub fn retained_accumulate_node() -> Node {
+    Node::store(
+        "s",
+        Expr::u32(0),
+        Expr::add(
+            Expr::mul(Expr::load("s", Expr::u32(0)), Expr::u32(2)),
+            Expr::load("u", Expr::u32(0)),
+        ),
+    )
+}
+
+/// The `u` and `s` ports a node running [`retained_accumulate_node`] declares.
+///
+/// `sample` arrives once per invocation and `state` survives the step, which
+/// is what makes the recurrence retained rather than a fold over one call.
+#[must_use]
+pub fn sample_and_retained_ports(sample: GraphValueId, state: GraphValueId) -> Vec<GraphInput> {
+    vec![
+        GraphInput {
+            buffer: "u".into(),
+            value: sample,
+            contract: dense_u32(BufferAccess::ReadOnly, ValueLifetime::Invocation, 1),
+        },
+        GraphInput {
+            buffer: "s".into(),
+            value: state,
+            contract: dense_u32(BufferAccess::ReadWrite, ValueLifetime::Retained, 1),
         },
     ]
 }

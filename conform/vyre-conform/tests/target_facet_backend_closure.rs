@@ -23,58 +23,22 @@
 //! lower turns this suite red until the facet join accounts for it, and linking
 //! a new concrete driver adds its whole column without an edit here.
 
-use vyre_driver::BackendRegistration;
 use vyre_foundation::operation::OperationRegistry;
 use vyre_foundation::transform::schedule_lowering::lower_logical_schedule_borrowed;
-// The node walk, the published pair set and the disagreement wording are the
-// second opinion both facet contracts judge the registry with, so they have one
-// owner rather than one copy per suite.
-use vyre_test_support::target_facet_join::{
-    facet_disagreement, lowered_node_ops, published_facet_pairs,
-};
+// The node walk, the published pair set, the pair row and the disagreement
+// wording are the second opinion both facet contracts judge the registry with,
+// so they have one owner rather than one copy per suite.
+use vyre_test_support::target_facet_join::{assert_facets_agree, facet_pairs, FacetPair};
 
-/// One `(operation, target)` row: what the facet registry published, and what
-/// the target's registered arms say.
-struct Pair {
-    operation: &'static str,
-    target: String,
-    claimed: bool,
-    declared: bool,
-    expected: bool,
-}
-
-fn pairs() -> Vec<Pair> {
+/// Every `(operation, target)` row over the linked compiler-capable drivers.
+fn pairs() -> Vec<FacetPair> {
     let backends = vyre_driver::registered_backends()
         .expect("Fix: the linked backend registry must start before target facets are read");
-    let published = published_facet_pairs();
-
-    let compiling: Vec<&BackendRegistration> = backends
-        .iter()
-        .filter(|backend| backend.target_compiler.is_some())
-        .collect();
-
-    let mut rows = Vec::new();
-    for operation in OperationRegistry::global().iter() {
-        let program = operation.program();
-        let node_ops = program.as_ref().map(lowered_node_ops);
-        for backend in &compiling {
-            let claimed = (backend.semantic_operations)().contains(operation.id);
-            let supported = (backend.supported_ops)();
-            let expected = claimed
-                && node_ops
-                    .as_ref()
-                    .is_some_and(|node_ops| node_ops.iter().all(|op| supported.contains(*op)));
-            let target = backend.target_id.as_str().to_string();
-            rows.push(Pair {
-                operation: operation.id,
-                claimed,
-                declared: published.contains(&(operation.id, target.clone())),
-                target,
-                expected,
-            });
-        }
-    }
-    rows
+    facet_pairs(
+        backends
+            .iter()
+            .filter(|backend| backend.target_compiler.is_some()),
+    )
 }
 
 /// The closing contract, over the shipped catalog and the linked drivers.
@@ -85,14 +49,7 @@ fn every_shipped_operation_target_pair_agrees_with_the_backend_lowering_arms() {
         !rows.is_empty(),
         "Fix: no compiler-capable target is linked into this binary, so the pair contract asserts nothing. The `gpu` feature links the concrete drivers this suite judges."
     );
-    for pair in &rows {
-        assert_eq!(
-            pair.declared,
-            pair.expected,
-            "{}",
-            facet_disagreement(&pair.target, pair.declared, pair.operation)
-        );
-    }
+    assert_facets_agree(&rows);
 }
 
 /// Backend maturity is asymmetric, and the facet registry has to say so.

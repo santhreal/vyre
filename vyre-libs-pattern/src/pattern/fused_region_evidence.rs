@@ -178,7 +178,7 @@ pub fn fused_region_evidence_program(
             ),
         ],
     );
-    let walk_body = super::regex_region_admission::AnchoredRegionWalk {
+    let walk = super::regex_region_admission::AnchoredRegionWalk {
         haystack,
         transitions,
         output_offsets,
@@ -188,15 +188,10 @@ pub fn fused_region_evidence_program(
         presence_words,
         max_pattern_len,
         log2_max_regions,
-    }
-    .walk_body(emit_loop);
-    let mut buffers = super::regex_region_admission::regex_region_scan_common_buffers(
-        haystack,
-        transitions,
-        output_offsets,
+    };
+    let walk_body = walk.walk_body(emit_loop);
+    let mut buffers = walk.common_buffers(
         output_records,
-        region_starts,
-        region_base,
         state_count,
         output_records_len,
         region_count,

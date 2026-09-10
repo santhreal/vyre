@@ -87,10 +87,23 @@ pub fn elementwise_fma_program(count: u32) -> Program {
 /// was compared against were separate programs that only happened to agree.
 #[must_use]
 pub fn single_element_copy_program(count: u32) -> Program {
+    element_copy_program(count, count)
+}
+
+/// `out[0] = in[0]` with `read_count` elements declared on the read binding and
+/// `write_count` on the written one.
+///
+/// The extents differ when a case is about what the declaration states rather
+/// than what the kernel touches. Admitted launch geometry is derived from the
+/// declarations, so a case proving that geometry survives hostile binding bytes
+/// needs a read extent the output does not repeat.
+#[must_use]
+pub fn element_copy_program(read_count: u32, write_count: u32) -> Program {
     Program::wrapped(
         vec![
-            BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::U32).with_count(count),
-            BufferDecl::output("out", 1, DataType::U32).with_count(count),
+            BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(read_count),
+            BufferDecl::output("out", 1, DataType::U32).with_count(write_count),
         ],
         [1, 1, 1],
         vec![Node::store(

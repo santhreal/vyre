@@ -13,6 +13,7 @@ use vyre_megakernel::{
     RequiredSchedule, ScheduleProduction, SearchBudget, SemanticExecutionError,
     SemanticExecutionOutput, SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
 };
+use vyre_test_support::elementwise_programs::single_element_copy_program;
 
 #[derive(Debug, PartialEq, Eq)]
 struct ObservedRequest {
@@ -69,18 +70,7 @@ impl SemanticExecutor for RecordingExecutor {
 /// to the compiler boundary, then retain the admitted identities it returns.
 #[test]
 fn semantic_request_and_admitted_output_cross_the_production_boundary() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(1),
-            BufferDecl::output("output", 1, DataType::U32).with_count(1),
-        ],
-        [8, 1, 1],
-        vec![Node::store(
-            "output",
-            Expr::u32(0),
-            Expr::load("input", Expr::u32(0)),
-        )],
-    );
+    let program = copy_one_word();
     let artifact = Digest([17; 32]);
     let payload = Digest([29; 32]);
     let expected_output = 41_u32.to_le_bytes().to_vec();
@@ -157,20 +147,9 @@ impl SemanticExecutor for ScheduleRecordingExecutor {
     }
 }
 
-/// The one-node copy program every schedule-family case runs.
+/// The one-node copy program every case here runs.
 fn copy_one_word() -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(1),
-            BufferDecl::output("output", 1, DataType::U32).with_count(1),
-        ],
-        [8, 1, 1],
-        vec![Node::store(
-            "output",
-            Expr::u32(0),
-            Expr::load("input", Expr::u32(0)),
-        )],
-    )
+    single_element_copy_program(1)
 }
 
 /// WHY: the requirement is stated on the policy and enforced inside the

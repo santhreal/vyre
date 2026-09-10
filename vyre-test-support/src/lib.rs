@@ -297,6 +297,8 @@ pub mod artifact_fixtures;
 pub mod async_span_parity;
 #[cfg(feature = "ir-fixtures")]
 pub mod backend_capabilities;
+#[cfg(feature = "driver-contracts")]
+pub mod backend_doubles;
 pub mod backend_execution_domain;
 pub mod bin_op_variants;
 #[cfg(feature = "ir-fixtures")]
@@ -329,6 +331,8 @@ pub mod graph_fixtures;
 pub mod graph_shapes;
 #[cfg(feature = "ir-fixtures")]
 pub mod graph_values;
+#[cfg(feature = "ir-fixtures")]
+pub mod grid_sync_programs;
 #[cfg(feature = "parity-oracles")]
 pub mod hardware_oracle;
 #[cfg(feature = "host-input-abi")]

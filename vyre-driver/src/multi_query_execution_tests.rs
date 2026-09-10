@@ -1,4 +1,5 @@
 use super::*;
+use vyre_test_support::sweep_rng::next_case_u64;
 
 fn query(
     query: u32,
@@ -157,26 +158,19 @@ fn reused_query_bucket_returns_to_pool_when_reservation_fails() {
     );
 }
 
-fn next_u64(state: &mut u64) -> u64 {
-    *state = state
-        .wrapping_mul(6_364_136_223_846_793_005)
-        .wrapping_add(1_442_695_040_888_963_407);
-    *state
-}
-
 /// WHY: generated plans close grouping, identity, budget, ordering, and
 /// aggregate-accounting variants without depending on implementation shape.
 #[test]
 fn generated_multi_query_plans_preserve_grouping_budget_and_identity_contracts() {
     let mut state = 0x6a09_e667_f3bc_c909_u64;
     for case_index in 0..768usize {
-        let query_count = 1 + (next_u64(&mut state) as usize % 64);
+        let query_count = 1 + (next_case_u64(&mut state) as usize % 64);
         let mut graph_bytes_by_hash = [0_u64; 8];
         let mut queries = Vec::new();
         for index in 0..query_count {
-            let graph_slot = (next_u64(&mut state) as usize % graph_bytes_by_hash.len()) + 1;
+            let graph_slot = (next_case_u64(&mut state) as usize % graph_bytes_by_hash.len()) + 1;
             let graph_upload_bytes = if graph_bytes_by_hash[graph_slot - 1] == 0 {
-                128 + next_u64(&mut state) % 16_384
+                128 + next_case_u64(&mut state) % 16_384
             } else {
                 graph_bytes_by_hash[graph_slot - 1]
             };
@@ -184,11 +178,11 @@ fn generated_multi_query_plans_preserve_grouping_budget_and_identity_contracts()
             queries.push(query(
                 index as u32,
                 graph_slot as u64,
-                1 + next_u64(&mut state) % 5,
+                1 + next_case_u64(&mut state) % 5,
                 graph_upload_bytes,
-                next_u64(&mut state) % 512,
-                next_u64(&mut state) % 1_024,
-                next_u64(&mut state) % 256,
+                next_case_u64(&mut state) % 512,
+                next_case_u64(&mut state) % 1_024,
+                next_case_u64(&mut state) % 256,
             ));
         }
 

@@ -12,7 +12,11 @@
 
 use std::collections::HashSet;
 
+#[cfg(feature = "driver-contracts")]
+use vyre_driver::BackendRegistration;
 use vyre_foundation::ir::{node_op_id, Node, Program};
+#[cfg(feature = "driver-contracts")]
+use vyre_foundation::operation::OperationRegistry;
 use vyre_foundation::transform::schedule_lowering::lower_logical_schedule_borrowed;
 use vyre_foundation::visit::child_bodies;
 
@@ -66,4 +70,78 @@ pub fn published_facet_pairs() -> HashSet<(&'static str, String)> {
         .iter()
         .map(|facet| (facet.operation_id, facet.target_id.as_str().to_string()))
         .collect()
+}
+
+/// One `(operation, target)` row: what the facet registry published, and what
+/// the target's registered arms say.
+#[cfg(feature = "driver-contracts")]
+pub struct FacetPair {
+    /// Registered operation the row is about.
+    pub operation: &'static str,
+    /// Target the row is about.
+    pub target: String,
+    /// The target's registration lists the operation in its semantic set.
+    pub claimed: bool,
+    /// The facet registry published this pair.
+    pub declared: bool,
+    /// The target compiles natively, claims the operation, and registers an
+    /// arm for every node of the operation's canonical program.
+    pub expected: bool,
+}
+
+/// Every `(operation, target)` row over `backends`, against the whole
+/// operation registry.
+///
+/// Both facet contracts ask one question of a different backend set: the
+/// fixture registrations in the driver suite, the linked concrete drivers in
+/// the conformance suite. The row and the join are that question, so the
+/// caller supplies only the backends and the operation axis is read here.
+#[cfg(feature = "driver-contracts")]
+#[must_use]
+pub fn facet_pairs<'a>(
+    backends: impl IntoIterator<Item = &'a BackendRegistration>,
+) -> Vec<FacetPair> {
+    let backends: Vec<&BackendRegistration> = backends.into_iter().collect();
+    let published = published_facet_pairs();
+
+    let mut rows = Vec::new();
+    for operation in OperationRegistry::global().iter() {
+        let node_ops = operation.program().as_ref().map(lowered_node_ops);
+        for backend in &backends {
+            let claimed = (backend.semantic_operations)().contains(operation.id);
+            let supported = (backend.supported_ops)();
+            let expected = backend.target_compiler.is_some()
+                && claimed
+                && node_ops
+                    .as_ref()
+                    .is_some_and(|node_ops| node_ops.iter().all(|op| supported.contains(*op)));
+            let target = backend.target_id.as_str().to_string();
+            rows.push(FacetPair {
+                operation: operation.id,
+                claimed,
+                declared: published.contains(&(operation.id, target.clone())),
+                target,
+                expected,
+            });
+        }
+    }
+    rows
+}
+
+/// Assert every row's published facet equals what the target's arms say.
+///
+/// The comparison is the contract both facet suites exist to state, so it is
+/// one loop here rather than one loop each. A suite that wrote its own could
+/// compare a different field pair or report a different failure while still
+/// claiming to check the same registry.
+#[cfg(feature = "driver-contracts")]
+pub fn assert_facets_agree(rows: &[FacetPair]) {
+    for pair in rows {
+        assert_eq!(
+            pair.declared,
+            pair.expected,
+            "{}",
+            facet_disagreement(&pair.target, pair.declared, pair.operation)
+        );
+    }
 }

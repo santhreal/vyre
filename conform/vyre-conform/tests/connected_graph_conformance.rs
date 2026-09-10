@@ -170,14 +170,7 @@ pub fn retained_state_graph() -> ProgramGraph {
         ],
         [1, 1, 1],
         vec![
-            Node::store(
-                "s",
-                Expr::u32(0),
-                Expr::add(
-                    Expr::mul(Expr::load("s", Expr::u32(0)), Expr::u32(2)),
-                    Expr::load("u", Expr::u32(0)),
-                ),
-            ),
+            fixtures::retained_accumulate_node(),
             Node::store(
                 "y",
                 Expr::u32(0),
@@ -190,18 +183,7 @@ pub fn retained_state_graph() -> ProgramGraph {
         .add_node(
             "step_node",
             prog,
-            vec![
-                GraphInput {
-                    buffer: "u".into(),
-                    value: in_u,
-                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, 1),
-                },
-                GraphInput {
-                    buffer: "s".into(),
-                    value: in_s,
-                    contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained, 1),
-                },
-            ],
+            fixtures::sample_and_retained_ports(in_u, in_s),
             vec![GraphOutput {
                 buffer: "y".into(),
                 name: "y".into(),

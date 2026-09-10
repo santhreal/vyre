@@ -452,6 +452,25 @@ pub fn bytes_to_u32(slice: &[u8]) -> Vec<u32> {
     vyre_primitives::wire::decode_u32_le_bytes_all(slice)
 }
 
+/// The `(pattern_id, origin, end)` records a pattern program emitted, sorted.
+///
+/// `outputs[0]` holds the single-word match count and `outputs[1]` the record
+/// buffer, three words per record. Every suite comparing two pattern programs
+/// decodes that pair, and each wrote the decode out: a copy that dropped the
+/// sort compares emission order instead of the match set, which is the one
+/// thing a coalesced emit is allowed to change.
+#[must_use]
+pub fn sorted_match_triples(outputs: &[Vec<u8>]) -> Vec<(u32, u32, u32)> {
+    let count = bytes_to_u32(&outputs[0])[0] as usize;
+    let words = bytes_to_u32(&outputs[1]);
+    let mut decoded: Vec<(u32, u32, u32)> = words[..count.saturating_mul(3)]
+        .chunks_exact(3)
+        .map(|chunk| (chunk[0], chunk[1], chunk[2]))
+        .collect();
+    decoded.sort_unstable();
+    decoded
+}
+
 /// Run a program and hand back its buffers, refusing an access that left a
 /// declared buffer.
 ///

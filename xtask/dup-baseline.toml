@@ -33,8 +33,8 @@
 
 [[crate]]
 name = "conform"
-duplicate_lines = 50
-total_lines = 16002
+duplicate_lines = 33
+total_lines = 18899
 
 [[crate]]
 name = "consumers"
@@ -68,8 +68,8 @@ total_lines = 1599
 
 [[crate]]
 name = "vyre-bench"
-duplicate_lines = 872
-total_lines = 39545
+duplicate_lines = 847
+total_lines = 46056
 
 [[crate]]
 name = "vyre-debug"
@@ -78,8 +78,8 @@ total_lines = 2227
 
 [[crate]]
 name = "vyre-driver"
-duplicate_lines = 407
-total_lines = 41005
+duplicate_lines = 389
+total_lines = 43886
 
 [[crate]]
 name = "vyre-driver-cuda"
@@ -148,8 +148,8 @@ total_lines = 5494
 
 [[crate]]
 name = "vyre-libs-builder"
-duplicate_lines = 185
-total_lines = 8201
+duplicate_lines = 167
+total_lines = 8292
 
 [[crate]]
 name = "vyre-libs-decode"
@@ -198,8 +198,8 @@ total_lines = 8167
 
 [[crate]]
 name = "vyre-libs-pattern"
-duplicate_lines = 273
-total_lines = 14925
+duplicate_lines = 263
+total_lines = 15151
 
 [[crate]]
 name = "vyre-libs-reasoning"

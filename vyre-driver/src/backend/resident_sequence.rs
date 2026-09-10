@@ -271,14 +271,7 @@ mod tests {
             "sequence-timing-test"
         }
 
-        fn dispatch_borrowed(
-            &self,
-            _program: &Program,
-            _inputs: &[&[u8]],
-            _config: &DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, BackendError> {
-            Ok(Vec::new())
-        }
+        vyre_test_support::no_output_dispatch_borrowed!();
 
         fn dispatch_resident_timed(
             &self,
@@ -390,14 +383,7 @@ mod tests {
             "resident-launch-recording-test"
         }
 
-        fn dispatch_borrowed(
-            &self,
-            _program: &Program,
-            _inputs: &[&[u8]],
-            _config: &DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, BackendError> {
-            Ok(Vec::new())
-        }
+        vyre_test_support::no_output_dispatch_borrowed!();
 
         fn dispatch_resident_timed(
             &self,
