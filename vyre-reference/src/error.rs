@@ -27,14 +27,14 @@ pub enum ReferenceErrorClass {
 impl ReferenceErrorClass {
     /// Every failure class, in declaration order.
     ///
-    /// Derived from [`Self::successor`], whose match has no catch-all arm, so
+    /// Derived from the successor chain, whose match has no catch-all arm, so
     /// a new class does not compile until it is placed in the chain and the
-    /// array length is corrected.
+    /// declared count is corrected.
     ///
     /// # Panics
     ///
-    /// Panics when [`Self::COUNT`] disagrees with the length of the successor
-    /// chain, in either direction. The expression is a `const`, so the panic
+    /// Panics when the declared class count disagrees with the length of the
+    /// successor chain, in either direction. The expression is a `const`, so the panic
     /// is evaluated while the crate is compiled and reports as a build
     /// failure naming the correction. It cannot be reached at run time.
     pub const ALL: [Self; Self::COUNT] = {

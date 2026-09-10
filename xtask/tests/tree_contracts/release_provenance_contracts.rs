@@ -181,22 +181,35 @@ fn sbom_and_slsa_provenance_generation_succeeds() {
     );
 }
 
+/// WHY: a document written under another schema version describes a release
+/// whose provenance was recorded under different rules, and serving it as
+/// current resurrects whatever the bump fixed. The refused versions are derived
+/// from `RELEASE_PROVENANCE_SCHEMA_VERSION`, because a literal here went stale
+/// on the bump to 2 and the test then failed on its own expectation rather
+/// than on the contract.
+///
+/// What it does not catch: a document at the current version whose fields
+/// disagree with the tree.
 #[test]
-fn stale_release_provenance_schema_fails_closed() {
+fn a_release_provenance_schema_version_that_is_not_current_fails_closed() {
     let root = checkout_root();
     let mut authority = ReleaseProvenanceAuthority::inspect_workspace(&root)
         .expect("provenance authority generation");
-    authority.schema_version = 99; // Stale schema version
 
-    let toml = authority.to_toml().expect("to toml");
-    let err = ReleaseProvenanceAuthority::from_toml(&toml).unwrap_err();
-    assert!(matches!(
-        err,
-        ProvenanceError::StaleSchemaVersion {
-            expected: 1,
-            found: 99
-        }
-    ));
+    for offered in [
+        RELEASE_PROVENANCE_SCHEMA_VERSION - 1,
+        RELEASE_PROVENANCE_SCHEMA_VERSION + 1,
+    ] {
+        authority.schema_version = offered;
+        let document = authority.to_toml().expect("to toml");
+        let error = ReleaseProvenanceAuthority::from_toml(&document)
+            .expect_err("a document at another schema version was accepted");
+        let ProvenanceError::StaleSchemaVersion { expected, found } = error else {
+            panic!("schema version {offered} was refused for the wrong reason: {error:?}");
+        };
+        assert_eq!(expected, RELEASE_PROVENANCE_SCHEMA_VERSION);
+        assert_eq!(found, offered);
+    }
 }
 
 #[test]

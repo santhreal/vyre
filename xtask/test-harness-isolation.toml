@@ -176,39 +176,24 @@ grouping = "grouped"
 reason = "names inventory::submit in a doc comment about a deduplicated builder; this binary performs no registration"
 
 [[test]]
-path = "vyre-libs/tests/internal/graph/csr_forward_or_changed/cpu_reference_and_dispatch.rs"
-grouping = "grouped"
-reason = "installs a panic hook around one refusal assertion and restores the previous hook before returning"
-
-[[test]]
-path = "vyre-libs/tests/internal/graph/exploded/mod.rs"
-grouping = "grouped"
-reason = "installs a panic hook around one refusal assertion and restores the previous hook before returning"
-
-[[test]]
 path = "vyre-libs/tests/operation_registry.rs"
 grouping = "grouped"
 reason = "registers test::operation_registry::logical_expansion and reads it back by id in the same file; the math harness links no completeness assertion over the registered op set"
 
 [[test]]
-path = "vyre-libs/tests/parsing_walker_clone_family.rs"
+path = "vyre-libs-parsing/tests/parsing_walker_clone_family.rs"
 grouping = "grouped"
 reason = "names inventory::submit! in a doc comment about two builders sharing one op id; this binary performs no registration"
 
 [[test]]
-path = "vyre-libs/tests/scan_hit_buffer_layout_contracts.rs"
+path = "vyre-libs-pattern/tests/scan_hit_buffer_layout_contracts.rs"
 grouping = "grouped"
 reason = "names inventory::submit! in a doc comment about which wrappers a registration reached; this binary performs no registration"
 
 [[test]]
-path = "vyre-libs/tests/solvers_dispatch_softmax_contract.rs"
+path = "vyre-libs-solvers/tests/solvers_dispatch_softmax_contract.rs"
 grouping = "grouped"
 reason = "names inventory::submit! in a doc comment about an uncovered wrapper; this binary performs no registration"
-
-[[test]]
-path = "vyre-reference/tests/core_contracts/dialect_dispatch.rs"
-grouping = "grouped"
-reason = "registers test::reference_echo and its two refusal siblings with reference facets, dispatched by id; no test in the reference harness enumerates the global op set"
 
 [[test]]
 path = "vyre-registry-link/tests/registry_link_rules.rs"
@@ -261,11 +246,6 @@ grouping = "grouped"
 reason = "the crate links one concrete backend, so enumeration in this binary can only answer with it"
 
 [[test]]
-path = "vyre-driver-reference/tests/backend_registration.rs"
-grouping = "grouped"
-reason = "the crate links one concrete backend, so enumeration in this binary can only answer with it"
-
-[[test]]
 path = "vyre-driver-metal/tests/target_compiler.rs"
 grouping = "grouped"
 reason = "the crate links one concrete backend, so enumeration in this binary can only answer with it"
@@ -289,3 +269,33 @@ reason = "the OnceLock is the fingerprint memo inside the programs this file bui
 path = "vyre-foundation/tests/internal/optimizer/mod.rs"
 grouping = "grouped"
 reason = "names OnceLock in a comment about the fingerprint memo it warms on its own clone; the module initializes nothing process-wide"
+
+[[test]]
+path = "vyre-driver-reference/tests/production_registry_execution_domain.rs"
+grouping = "grouped"
+reason = "enumerates every entry the binary links and requires each to carry a recorded device domain; no file in this crate's single harness submits a BackendRegistration, so the set it judges is the linked production set, and a fixture registration added to the harness fails assert_dispatch_leaves_the_host by name rather than passing unnoticed"
+
+[[test]]
+path = "vyre-driver/tests/support_certificate_join.rs"
+grouping = "grouped"
+reason = "reads the registry only to assert it is non-empty before joining seven production-path facts per operation, so a sibling registration widens the read rather than changing its answer"
+
+[[test]]
+path = "vyre-driver/tests/target_facet_lowering_arms.rs"
+grouping = "grouped"
+reason = "registers the every-arm and no-store-arm facet fixtures, both carrying factory: unavailable_backend and their own target ids, so nothing in the binary can construct them and the siblings reading the registry either assert it is non-empty or name a winner by id"
+
+[[test]]
+path = "vyre-driver/tests/lock_policy_closure.rs"
+grouping = "grouped"
+reason = "silences the panic hook across one catch_unwind and restores the previous hook on the line after it, so the window cannot outlive the call; the ProcessFatal case aborts in a child process instead. A sibling panicking inside that window loses its printed message, never its verdict"
+
+[[test]]
+path = "vyre-driver-cuda/tests/connected_graph_cuda_contracts.rs"
+grouping = "grouped"
+reason = "the crate links one concrete backend, so precedence enumeration in this binary can only answer with it"
+
+[[test]]
+path = "conform/vyre-conform/tests/target_facet_backend_closure.rs"
+grouping = "grouped"
+reason = "reads the registry to enumerate compiling targets and compares each declared catalog against the operation registry; dialect_only_supported_ops is derived from that same registry, so a fixture operation a sibling registers enters both sides and the comparison stays balanced"

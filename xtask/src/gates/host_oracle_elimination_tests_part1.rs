@@ -19,6 +19,11 @@ use super::host_oracle_elimination_scanners::{
 /// that moves between files in it is the same staleness as one that is
 /// renamed, and the roster this feeds exists because that staleness silently
 /// disabled a whole class of the gate once already.
+///
+/// The checkout is resolved from the working directory. Cargo computes the same
+/// unit hash for every checkout sharing a target directory, so a compiled-in
+/// manifest directory names whichever tree built last and this walked that
+/// tree's operation module while the gate reported on this one.
 pub(super) fn registration_expected_output_indices() -> std::collections::BTreeMap<String, usize> {
     let module = crate::checkout::checkout_root().join("vyre-foundation/src/operation");
     let mut roster = std::collections::BTreeMap::new();

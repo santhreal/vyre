@@ -654,6 +654,7 @@ fn consolidation_finding(left: &OpInfo, right: &OpInfo, evidence: &str) -> Findi
 #[cfg(test)]
 mod tests {
     use super::*;
+    use structure_gate::source_scan::carries_rust_source;
     use vyre::ir::{BufferDecl, DataType};
 
     fn fixture(id: &'static str, value: u32) -> OpInfo {
@@ -678,21 +679,26 @@ mod tests {
     }
 
     /// A partition crate of the family paired with a domain it declares and
-    /// carries a directory for, chosen from the live roster rather than named
-    /// here: the crate name is not the domain name in general, and one crate
-    /// declares four of them.
+    /// carries source for, chosen from the live roster rather than named here:
+    /// the crate name is not the domain name in general, and one crate declares
+    /// four of them.
+    ///
+    /// The pairing is read from the Rust source under the domain directory. A
+    /// domain whose files moved to another crate leaves its directory behind,
+    /// and a fixture pair chosen from such a shell judges a domain that holds no
+    /// code.
     fn partition_domain(roots: &[CategoryASource], domains: &BTreeSet<String>) -> (String, String) {
         for source in roots {
             if source.member == CATEGORY_A_CRATE {
                 continue;
             }
             for domain in domains {
-                if source.src.join(domain).is_dir() {
+                if carries_rust_source(&source.src.join(domain)) {
                     return (source.member.clone(), domain.clone());
                 }
             }
         }
-        panic!("no partition crate in the Category A family carries a declared domain directory");
+        panic!("no partition crate in the Category A family carries source for a declared domain");
     }
 
     /// WHY: exact semantic duplicates are the non-heuristic consolidation class.

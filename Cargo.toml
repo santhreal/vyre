@@ -84,6 +84,7 @@ exclude = [
     "examples/external_backend_extension",
     "examples/external_ir_extension",
     "examples/libs-template",
+    "fuzz",
     "vyre-foundation/fuzz",
     "fuzz",
     "consumers/vyre-model-compiler",

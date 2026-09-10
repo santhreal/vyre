@@ -35,11 +35,15 @@ impl GateBehavior for ConsumerCompilation {
 }
 
 /// Enumerate all out-of-workspace consumer package manifests at runtime.
+///
+/// The read is the answer. `read_dir` reports a `consumers` directory that is
+/// not there, and that report names the path and the fix, so an `is_dir()` test
+/// ahead of it turned a checkout missing the directory into an empty roster
+/// instead. An empty roster is not a pass either: `cover_complete` fails a gate
+/// that discovered zero subjects, so the two answers differ only in whether the
+/// failure names `consumers`.
 pub fn consumer_manifests(root: &Path) -> Result<Vec<PathBuf>, GateError> {
     let consumers_dir = root.join("consumers");
-    if !consumers_dir.is_dir() {
-        return Ok(Vec::new());
-    }
     let mut manifests = Vec::new();
     let entries = std::fs::read_dir(&consumers_dir).map_err(|error| {
         GateError::new(

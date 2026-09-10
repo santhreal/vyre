@@ -5675,7 +5675,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CooperativeWidth"
 variant_name = "Agnostic"
-declaration_site = "vyre-foundation/src/geometry/mod.rs:23"
+declaration_site = "vyre-foundation/src/geometry/mod.rs:24"
 constructors = ["CooperativeWidth::Agnostic"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -5685,7 +5685,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CooperativeWidth"
 variant_name = "AtLeast"
-declaration_site = "vyre-foundation/src/geometry/mod.rs:25"
+declaration_site = "vyre-foundation/src/geometry/mod.rs:26"
 constructors = ["CooperativeWidth::AtLeast"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -5695,7 +5695,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CooperativeWidth"
 variant_name = "Exactly"
-declaration_site = "vyre-foundation/src/geometry/mod.rs:27"
+declaration_site = "vyre-foundation/src/geometry/mod.rs:28"
 constructors = ["CooperativeWidth::Exactly"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -7871,7 +7871,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ElementPolicy"
 variant_name = "Any"
-declaration_site = "vyre-foundation/src/geometry/mod.rs:45"
+declaration_site = "vyre-foundation/src/geometry/mod.rs:46"
 constructors = ["ElementPolicy::Any"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -7881,7 +7881,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ElementPolicy"
 variant_name = "Multiple"
-declaration_site = "vyre-foundation/src/geometry/mod.rs:43"
+declaration_site = "vyre-foundation/src/geometry/mod.rs:44"
 constructors = ["ElementPolicy::Multiple"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -7891,7 +7891,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ElementPolicy"
 variant_name = "Scalar"
-declaration_site = "vyre-foundation/src/geometry/mod.rs:41"
+declaration_site = "vyre-foundation/src/geometry/mod.rs:42"
 constructors = ["ElementPolicy::Scalar"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -11558,7 +11558,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GeometryConstraintConflict"
 variant_name = "ElementMultipleOverflow"
-declaration_site = "vyre-foundation/src/geometry/mod.rs:337"
+declaration_site = "vyre-foundation/src/geometry/mod.rs:338"
 constructors = ["GeometryConstraintConflict::ElementMultipleOverflow"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq)"
@@ -11568,7 +11568,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GeometryConstraintConflict"
 variant_name = "ExactWidth"
-declaration_site = "vyre-foundation/src/geometry/mod.rs:312"
+declaration_site = "vyre-foundation/src/geometry/mod.rs:313"
 constructors = ["GeometryConstraintConflict::ExactWidth"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq)"
@@ -11578,7 +11578,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GeometryConstraintConflict"
 variant_name = "SharedScratchOverflow"
-declaration_site = "vyre-foundation/src/geometry/mod.rs:344"
+declaration_site = "vyre-foundation/src/geometry/mod.rs:345"
 constructors = ["GeometryConstraintConflict::SharedScratchOverflow"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq)"
@@ -11588,7 +11588,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GeometryConstraintConflict"
 variant_name = "WidthBelowMinimum"
-declaration_site = "vyre-foundation/src/geometry/mod.rs:326"
+declaration_site = "vyre-foundation/src/geometry/mod.rs:327"
 constructors = ["GeometryConstraintConflict::WidthBelowMinimum"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq)"
@@ -11598,7 +11598,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GeometryConstraintConflict"
 variant_name = "ZeroElementMultiple"
-declaration_site = "vyre-foundation/src/geometry/mod.rs:335"
+declaration_site = "vyre-foundation/src/geometry/mod.rs:336"
 constructors = ["GeometryConstraintConflict::ZeroElementMultiple"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq)"
@@ -11608,7 +11608,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GeometryConstraintConflict"
 variant_name = "ZeroWidth"
-declaration_site = "vyre-foundation/src/geometry/mod.rs:321"
+declaration_site = "vyre-foundation/src/geometry/mod.rs:322"
 constructors = ["GeometryConstraintConflict::ZeroWidth"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq)"
@@ -27308,7 +27308,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorDtype"
 variant_name = "BF16"
-declaration_site = "vyre-safetensors/src/lib.rs:49"
+declaration_site = "vyre-safetensors/src/lib.rs:59"
 constructors = ["SafetensorDtype::BF16"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)"
@@ -27318,7 +27318,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorDtype"
 variant_name = "BOOL"
-declaration_site = "vyre-safetensors/src/lib.rs:29"
+declaration_site = "vyre-safetensors/src/lib.rs:39"
 constructors = ["SafetensorDtype::BOOL"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)"
@@ -27328,7 +27328,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorDtype"
 variant_name = "F16"
-declaration_site = "vyre-safetensors/src/lib.rs:47"
+declaration_site = "vyre-safetensors/src/lib.rs:57"
 constructors = ["SafetensorDtype::F16"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)"
@@ -27338,7 +27338,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorDtype"
 variant_name = "F32"
-declaration_site = "vyre-safetensors/src/lib.rs:51"
+declaration_site = "vyre-safetensors/src/lib.rs:61"
 constructors = ["SafetensorDtype::F32"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)"
@@ -27348,7 +27348,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorDtype"
 variant_name = "F64"
-declaration_site = "vyre-safetensors/src/lib.rs:53"
+declaration_site = "vyre-safetensors/src/lib.rs:63"
 constructors = ["SafetensorDtype::F64"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)"
@@ -27358,7 +27358,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorDtype"
 variant_name = "F8E4M3"
-declaration_site = "vyre-safetensors/src/lib.rs:55"
+declaration_site = "vyre-safetensors/src/lib.rs:65"
 constructors = ["SafetensorDtype::F8E4M3"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)"
@@ -27368,7 +27368,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorDtype"
 variant_name = "F8E5M2"
-declaration_site = "vyre-safetensors/src/lib.rs:58"
+declaration_site = "vyre-safetensors/src/lib.rs:68"
 constructors = ["SafetensorDtype::F8E5M2"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)"
@@ -27378,7 +27378,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorDtype"
 variant_name = "I16"
-declaration_site = "vyre-safetensors/src/lib.rs:37"
+declaration_site = "vyre-safetensors/src/lib.rs:47"
 constructors = ["SafetensorDtype::I16"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)"
@@ -27388,7 +27388,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorDtype"
 variant_name = "I32"
-declaration_site = "vyre-safetensors/src/lib.rs:41"
+declaration_site = "vyre-safetensors/src/lib.rs:51"
 constructors = ["SafetensorDtype::I32"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)"
@@ -27398,7 +27398,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorDtype"
 variant_name = "I64"
-declaration_site = "vyre-safetensors/src/lib.rs:45"
+declaration_site = "vyre-safetensors/src/lib.rs:55"
 constructors = ["SafetensorDtype::I64"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)"
@@ -27408,7 +27408,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorDtype"
 variant_name = "I8"
-declaration_site = "vyre-safetensors/src/lib.rs:33"
+declaration_site = "vyre-safetensors/src/lib.rs:43"
 constructors = ["SafetensorDtype::I8"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)"
@@ -27418,7 +27418,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorDtype"
 variant_name = "U16"
-declaration_site = "vyre-safetensors/src/lib.rs:35"
+declaration_site = "vyre-safetensors/src/lib.rs:45"
 constructors = ["SafetensorDtype::U16"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)"
@@ -27428,7 +27428,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorDtype"
 variant_name = "U32"
-declaration_site = "vyre-safetensors/src/lib.rs:39"
+declaration_site = "vyre-safetensors/src/lib.rs:49"
 constructors = ["SafetensorDtype::U32"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)"
@@ -27438,7 +27438,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorDtype"
 variant_name = "U64"
-declaration_site = "vyre-safetensors/src/lib.rs:43"
+declaration_site = "vyre-safetensors/src/lib.rs:53"
 constructors = ["SafetensorDtype::U64"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)"
@@ -27448,7 +27448,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorDtype"
 variant_name = "U8"
-declaration_site = "vyre-safetensors/src/lib.rs:31"
+declaration_site = "vyre-safetensors/src/lib.rs:41"
 constructors = ["SafetensorDtype::U8"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)"
@@ -27458,7 +27458,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "ByteLength"
-declaration_site = "vyre-safetensors/src/lib.rs:1087"
+declaration_site = "vyre-safetensors/src/error.rs:70"
 constructors = ["SafetensorError::ByteLength"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27468,7 +27468,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "DuplicateRequirement"
-declaration_site = "vyre-safetensors/src/lib.rs:1138"
+declaration_site = "vyre-safetensors/src/error.rs:121"
 constructors = ["SafetensorError::DuplicateRequirement"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27478,7 +27478,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "DuplicateShardDigest"
-declaration_site = "vyre-safetensors/src/lib.rs:1170"
+declaration_site = "vyre-safetensors/src/error.rs:153"
 constructors = ["SafetensorError::DuplicateShardDigest"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27488,7 +27488,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "HeaderTooLarge"
-declaration_site = "vyre-safetensors/src/lib.rs:1039"
+declaration_site = "vyre-safetensors/src/error.rs:22"
 constructors = ["SafetensorError::HeaderTooLarge"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27498,7 +27498,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "InvalidName"
-declaration_site = "vyre-safetensors/src/lib.rs:1066"
+declaration_site = "vyre-safetensors/src/error.rs:49"
 constructors = ["SafetensorError::InvalidName"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27508,7 +27508,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "Io"
-declaration_site = "vyre-safetensors/src/lib.rs:1025"
+declaration_site = "vyre-safetensors/src/error.rs:8"
 constructors = ["SafetensorError::Io"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27518,7 +27518,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "Metadata"
-declaration_site = "vyre-safetensors/src/lib.rs:1055"
+declaration_site = "vyre-safetensors/src/error.rs:38"
 constructors = ["SafetensorError::Metadata"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27528,7 +27528,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "MissingMappedTensor"
-declaration_site = "vyre-safetensors/src/lib.rs:1122"
+declaration_site = "vyre-safetensors/src/error.rs:105"
 constructors = ["SafetensorError::MissingMappedTensor"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27538,7 +27538,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "MissingRequiredTensor"
-declaration_site = "vyre-safetensors/src/lib.rs:1144"
+declaration_site = "vyre-safetensors/src/error.rs:127"
 constructors = ["SafetensorError::MissingRequiredTensor"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27548,7 +27548,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "MissingShardDigest"
-declaration_site = "vyre-safetensors/src/lib.rs:1176"
+declaration_site = "vyre-safetensors/src/error.rs:159"
 constructors = ["SafetensorError::MissingShardDigest"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27558,7 +27558,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "OffsetOverflow"
-declaration_site = "vyre-safetensors/src/lib.rs:1208"
+declaration_site = "vyre-safetensors/src/error.rs:191"
 constructors = ["SafetensorError::OffsetOverflow"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27568,7 +27568,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "Overlap"
-declaration_site = "vyre-safetensors/src/lib.rs:1097"
+declaration_site = "vyre-safetensors/src/error.rs:80"
 constructors = ["SafetensorError::Overlap"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27578,7 +27578,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "RangeOutOfBounds"
-declaration_site = "vyre-safetensors/src/lib.rs:1072"
+declaration_site = "vyre-safetensors/src/error.rs:55"
 constructors = ["SafetensorError::RangeOutOfBounds"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27588,7 +27588,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "RequiredDtype"
-declaration_site = "vyre-safetensors/src/lib.rs:1150"
+declaration_site = "vyre-safetensors/src/error.rs:133"
 constructors = ["SafetensorError::RequiredDtype"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27598,7 +27598,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "RequiredShape"
-declaration_site = "vyre-safetensors/src/lib.rs:1160"
+declaration_site = "vyre-safetensors/src/error.rs:143"
 constructors = ["SafetensorError::RequiredShape"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27608,7 +27608,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "ShapeOverflow"
-declaration_site = "vyre-safetensors/src/lib.rs:1084"
+declaration_site = "vyre-safetensors/src/error.rs:67"
 constructors = ["SafetensorError::ShapeOverflow"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27618,7 +27618,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "ShardContentChanged"
-declaration_site = "vyre-safetensors/src/lib.rs:1211"
+declaration_site = "vyre-safetensors/src/error.rs:194"
 constructors = ["SafetensorError::ShardContentChanged"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27628,7 +27628,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "ShardDigestMismatch"
-declaration_site = "vyre-safetensors/src/lib.rs:1198"
+declaration_site = "vyre-safetensors/src/error.rs:181"
 constructors = ["SafetensorError::ShardDigestMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27638,7 +27638,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "ShardIndex"
-declaration_site = "vyre-safetensors/src/lib.rs:1113"
+declaration_site = "vyre-safetensors/src/error.rs:96"
 constructors = ["SafetensorError::ShardIndex"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27648,7 +27648,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "ShardIndexTooLarge"
-declaration_site = "vyre-safetensors/src/lib.rs:1105"
+declaration_site = "vyre-safetensors/src/error.rs:88"
 constructors = ["SafetensorError::ShardIndexTooLarge"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27658,7 +27658,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "ShardLengthChanged"
-declaration_site = "vyre-safetensors/src/lib.rs:1188"
+declaration_site = "vyre-safetensors/src/error.rs:171"
 constructors = ["SafetensorError::ShardLengthChanged"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27668,7 +27668,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "StaleManifest"
-declaration_site = "vyre-safetensors/src/lib.rs:1219"
+declaration_site = "vyre-safetensors/src/error.rs:202"
 constructors = ["SafetensorError::StaleManifest"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27678,7 +27678,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "TooManyTensors"
-declaration_site = "vyre-safetensors/src/lib.rs:1058"
+declaration_site = "vyre-safetensors/src/error.rs:41"
 constructors = ["SafetensorError::TooManyTensors"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27688,7 +27688,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "TruncatedHeader"
-declaration_site = "vyre-safetensors/src/lib.rs:1047"
+declaration_site = "vyre-safetensors/src/error.rs:30"
 constructors = ["SafetensorError::TruncatedHeader"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27698,7 +27698,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "TruncatedPrefix"
-declaration_site = "vyre-safetensors/src/lib.rs:1033"
+declaration_site = "vyre-safetensors/src/error.rs:16"
 constructors = ["SafetensorError::TruncatedPrefix"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27708,7 +27708,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "UnexpectedShardDigest"
-declaration_site = "vyre-safetensors/src/lib.rs:1182"
+declaration_site = "vyre-safetensors/src/error.rs:165"
 constructors = ["SafetensorError::UnexpectedShardDigest"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27718,7 +27718,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "UnmappedShardTensor"
-declaration_site = "vyre-safetensors/src/lib.rs:1130"
+declaration_site = "vyre-safetensors/src/error.rs:113"
 constructors = ["SafetensorError::UnmappedShardTensor"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -27728,7 +27728,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SafetensorError"
 variant_name = "UnsafeShardPath"
-declaration_site = "vyre-safetensors/src/lib.rs:1116"
+declaration_site = "vyre-safetensors/src/error.rs:99"
 constructors = ["SafetensorError::UnsafeShardPath"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -34186,7 +34186,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "Uniformity"
 variant_name = "None"
-declaration_site = "vyre-foundation/src/geometry/mod.rs:59"
+declaration_site = "vyre-foundation/src/geometry/mod.rs:60"
 constructors = ["Uniformity::None"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -34196,7 +34196,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "Uniformity"
 variant_name = "SubgroupUniform"
-declaration_site = "vyre-foundation/src/geometry/mod.rs:61"
+declaration_site = "vyre-foundation/src/geometry/mod.rs:62"
 constructors = ["Uniformity::SubgroupUniform"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -34206,7 +34206,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "Uniformity"
 variant_name = "WorkgroupUniform"
-declaration_site = "vyre-foundation/src/geometry/mod.rs:63"
+declaration_site = "vyre-foundation/src/geometry/mod.rs:64"
 constructors = ["Uniformity::WorkgroupUniform"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"

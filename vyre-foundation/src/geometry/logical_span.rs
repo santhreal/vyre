@@ -195,24 +195,24 @@ impl Scale<'_> {
             Node::TileLoad { tile: name, .. } | Node::TileDecl { name, .. } => facts.forget(name),
             _ => {}
         }
-        // Every nested body runs conditionally or repeatedly, so what it
-        // proves does not hold after it and each descends on its own copy.
-        // The slots come from the owner of that list, so a nesting variant
-        // added to `Node` is descended into here without naming it again.
-        let repeated = match node {
-            Node::Loop { var, .. } => Some(var),
-            _ => None,
-        };
-        for body in child_bodies(node).into_iter().filter(|body| !body.is_empty()) {
-            let mut inner = facts.clone();
-            if let Some(var) = repeated {
-                inner.forget(var);
-                let mut rebound = HashSet::new();
-                rebound_names(body, &mut rebound);
-                for name in &rebound {
-                    inner.forget(name);
-                }
+        // A nested body runs conditionally or repeatedly, so what it proves
+        // does not hold after it and each descends on its own copy. A
+        // statement with no body copies nothing.
+        let bodies = child_bodies(node);
+        if bodies.iter().all(|body| body.is_empty()) {
+            return;
+        }
+        let mut entering = facts.clone();
+        if let Node::Loop { var, body, .. } = node {
+            entering.forget(var);
+            let mut rebound = HashSet::new();
+            rebound_names(body, &mut rebound);
+            for name in &rebound {
+                entering.forget(name);
             }
+        }
+        for body in bodies.into_iter().filter(|body| !body.is_empty()) {
+            let mut inner = entering.clone();
             self.nodes(body, &mut inner);
         }
     }
