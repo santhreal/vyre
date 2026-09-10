@@ -40,7 +40,6 @@ const WRAPPER_FLOOR: usize = 9;
 /// Known non-wrapper dispatch infrastructure, fixture and pipeline modules
 /// under `src/graph/dispatch/`.
 const KNOWN_DISPATCH_INFRASTRUCTURE: &[&str] = &[
-    "csr_fixtures",
     "dispatch_bridge",
     "frontier",
     "mod",
