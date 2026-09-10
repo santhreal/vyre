@@ -12,43 +12,24 @@ use crate::operation::records::{
 };
 use crate::operation::semantic_op::{
     canonical_program, composed_schedule_constraints, conformance_provider_of, local_capabilities,
-    local_effects, lowering_provider_of, SemanticOperation,
+    local_effects, lowering_provider_of, ContractFacts, SemanticOperation,
 };
 use crate::operation::semantics::{OperationEffects, OperationTier};
 use crate::program_caps::RequiredCapabilities;
 
-/// One semantic operation identity and all target-neutral catalog policy.
-pub struct OperationRegistration {
-    /// Stable operation identifier.
-    pub id: &'static str,
-    /// Semantic schema version.
-    pub semantic_version: u32,
-    /// Optional explicitly declared signature. When absent, [`Self::program`] is authoritative.
-    pub signature: Option<Signature>,
-    /// Semantic tier.
-    pub tier: OperationTier,
-    /// Coarse taxonomy category.
-    pub category: Option<&'static str>,
-    /// Optional neutral program builder.
-    pub build: Option<fn() -> Program>,
-    /// Deterministic fixture inputs.
-    pub test_inputs: Option<OperationFixtures>,
-    /// Optional deterministic fixture outputs or reference-oracle projection.
-    pub expected_output: Option<OperationFixtures>,
-    /// Algebraic or semantic law identifiers.
-    pub laws: &'static [&'static str],
-    /// What the result is allowed to be.
-    pub numeric: NumericContract,
-    /// Recorded target-neutral schedule constraints.
-    pub geometry_requirements: GeometryRequirements,
-    /// Source file that owns the registration.
-    pub source_file: &'static str,
-    /// Optional explicit closed effects.
-    pub explicit_effects: Option<OperationEffects>,
-    /// Optional explicit closed capabilities.
-    pub explicit_capabilities: Option<RequiredCapabilities>,
-    /// Recorded decision when the operation declares no unconditional law.
-    pub absence: Option<AbsenceDecision>,
+declare_operation_record! {
+    /// One semantic operation identity and all target-neutral catalog policy.
+    pub struct OperationRegistration {
+        signature: Option<Signature>,
+        /// Optional neutral program builder.
+        build: Option<fn() -> Program>,
+        /// Deterministic fixture inputs.
+        test_inputs: Option<OperationFixtures>,
+        /// Optional deterministic fixture outputs or reference-oracle projection.
+        expected_output: Option<OperationFixtures>,
+        /// Source file that owns the registration.
+        source_file: &'static str,
+    }
 }
 
 impl OperationRegistration {
@@ -308,16 +289,10 @@ impl OperationRegistration {
     /// Construct the canonical semantic contract record.
     #[must_use]
     pub fn contract_record(&self) -> vyre_spec::SemanticContractRecord {
-        super::semantic_op::build_contract_record(&super::semantic_op::ContractFacts {
-            id: self.id,
-            signature: self.signature.as_ref(),
-            effects: self.direct_effects(),
-            capabilities: self.direct_required_capabilities(),
-            numeric: self.numeric,
-            laws: self.laws,
-            absence: self.absence,
-            program: self.program(),
-        })
+        super::semantic_op::build_contract_record(&contract_facts_of!(
+            self,
+            self.signature.as_ref()
+        ))
     }
 }
 
