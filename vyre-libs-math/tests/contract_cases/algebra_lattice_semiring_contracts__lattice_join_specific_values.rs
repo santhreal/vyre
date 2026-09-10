@@ -5,10 +5,11 @@ fn lattice_join_specific_values() {
     let a = [0x0000_FFFFu32, 0xAAAA_AAAA, 0x0000_0000, 0xFFFF_FFFF];
     let b = [0xFFFF_0000u32, 0x5555_5555, 0x0000_0000, 0x0000_0000];
     let program = vyre_libs_math::math::algebra::lattice_join("a", "b", "out", 4);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[Value::from(u32_bytes(&a)), Value::from(u32_bytes(&b))],
     )
+    .outputs()
     .expect("lattice_join must execute");
 
     assert_eq!(
@@ -41,20 +42,22 @@ fn lattice_join_associative() {
     let p_xyz = vyre_libs_math::math::algebra::lattice_join("xy", "z", "out", 1);
 
     let o_xy = eval_pair(&p_xy, &x, &y);
-    let o_xyz = vyre_reference::reference_eval(
+    let o_xyz = vyre_reference::ReferenceRequest::standard(
         &p_xyz,
         &[Value::from(o_xy.clone()), Value::from(u32_bytes(&z))],
     )
+    .outputs()
     .unwrap();
 
     // x | (y | z)
     let p_yz = vyre_libs_math::math::algebra::lattice_join("y", "z", "yz", 1);
     let o_yz = eval_pair(&p_yz, &y, &z);
     let p_xyz2 = vyre_libs_math::math::algebra::lattice_join("x", "yz", "out", 1);
-    let o_xyz2 = vyre_reference::reference_eval(
+    let o_xyz2 = vyre_reference::ReferenceRequest::standard(
         &p_xyz2,
         &[Value::from(u32_bytes(&x)), Value::from(o_yz.clone())],
     )
+    .outputs()
     .unwrap();
 
     assert_eq!(
@@ -154,19 +157,21 @@ fn lattice_meet_associative() {
     let p_xy = vyre_libs_math::math::algebra::lattice_meet("x", "y", "xy", 1);
     let o_xy = eval_pair(&p_xy, &x, &y);
     let p_xyz = vyre_libs_math::math::algebra::lattice_meet("xy", "z", "out", 1);
-    let o_xyz = vyre_reference::reference_eval(
+    let o_xyz = vyre_reference::ReferenceRequest::standard(
         &p_xyz,
         &[Value::from(o_xy.clone()), Value::from(u32_bytes(&z))],
     )
+    .outputs()
     .unwrap();
 
     let p_yz = vyre_libs_math::math::algebra::lattice_meet("y", "z", "yz", 1);
     let o_yz = eval_pair(&p_yz, &y, &z);
     let p_xyz2 = vyre_libs_math::math::algebra::lattice_meet("x", "yz", "out", 1);
-    let o_xyz2 = vyre_reference::reference_eval(
+    let o_xyz2 = vyre_reference::ReferenceRequest::standard(
         &p_xyz2,
         &[Value::from(u32_bytes(&x)), Value::from(o_yz.clone())],
     )
+    .outputs()
     .unwrap();
 
     assert_eq!(
@@ -214,10 +219,11 @@ fn lattice_join_meet_absorption() {
     let p_meet = vyre_libs_math::math::algebra::lattice_meet("a", "b", "m", 1);
     let o_meet = eval_pair(&p_meet, &a, &b);
     let p_join = vyre_libs_math::math::algebra::lattice_join("a", "m", "out", 1);
-    let o_out = vyre_reference::reference_eval(
+    let o_out = vyre_reference::ReferenceRequest::standard(
         &p_join,
         &[Value::from(u32_bytes(&a)), Value::from(o_meet.clone())],
     )
+    .outputs()
     .unwrap();
 
     assert_eq!(decode_u32_words(&o_out[0].to_bytes()), vec![0xA5A5_A5A5]);

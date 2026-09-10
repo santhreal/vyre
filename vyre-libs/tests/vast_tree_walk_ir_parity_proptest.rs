@@ -170,13 +170,14 @@ fn generated_tree(seed: u64) -> Tree {
 }
 
 fn gpu_walk(program: &vyre_foundation::ir::Program, nodes: &[u32], out_cap: u32) -> Vec<u32> {
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         program,
         &[
             Value::from(pack(nodes)),
             Value::from(pack(&vec![0u32; out_cap as usize])),
         ],
     )
+    .outputs()
     .expect("vast_tree_walk reference evaluation must succeed");
     unpack(&outputs[0].to_bytes())
 }

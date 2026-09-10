@@ -187,13 +187,14 @@ fn lineage_gemm_via_matches_cpu_provenance_matmul() {
 #[test]
 fn max_semirings_execute_their_declared_algebra() {
     for (semiring, expected) in [(Semiring::MaxPlus, 9), (Semiring::MaxTimes, 20)] {
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &semiring_gemm("a", "b", "c", 1, 1, 2, semiring),
             &[
                 Value::from(pack_u32_slice(&[2, 5])),
                 Value::from(pack_u32_slice(&[3, 4])),
             ],
         )
+        .outputs()
         .expect("max semiring GEMM must evaluate");
         assert_eq!(
             decode_u32_le_bytes_all(&outputs[0].to_bytes()),

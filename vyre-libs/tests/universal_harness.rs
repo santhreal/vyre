@@ -129,16 +129,18 @@ fn check_oracle(entry: &SemanticOperation, program: &Program, _fingerprint: Hash
             .map(|bytes| Value::Bytes(bytes.as_slice().into()))
             .collect::<Vec<_>>();
 
-        let reference_output = vyre_reference::reference_eval(program, &reference_inputs)
-            .unwrap_or_else(|error| {
-                panic!(
-                    "[harness] {} (case {}): reference interpreter failed: {error}",
-                    entry.id, case_idx
-                )
-            })
-            .into_iter()
-            .map(|value| value.to_bytes())
-            .collect::<Vec<_>>();
+        let reference_output =
+            vyre_reference::ReferenceRequest::standard(program, &reference_inputs)
+                .outputs()
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "[harness] {} (case {}): reference interpreter failed: {error}",
+                        entry.id, case_idx
+                    )
+                })
+                .into_iter()
+                .map(|value| value.to_bytes())
+                .collect::<Vec<_>>();
 
         let output_indices = output_buffer_indices(program);
         assert_eq!(

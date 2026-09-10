@@ -52,7 +52,8 @@ fn gpu_frontier(slot: u32) -> Vec<u32> {
         Value::from(pack(&FRONTIER_IN)),
         Value::from(pack(&[0u32])),
     ];
-    let outputs = vyre_reference::reference_eval(&program, &inputs)
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .unwrap_or_else(|error| panic!("arg_of_slot({slot}) must evaluate: {error}"));
     unpack(&outputs[0].to_bytes())
 }

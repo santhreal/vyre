@@ -90,8 +90,8 @@ struct GridFenceHold<'a> {
     workgroup: FxHashMap<String, Buffer>,
 }
 
-/// True when `reference_eval` RETURNS this buffer among its outputs. This is the SINGLE
-/// source of truth for the interpreter's output ABI: `reference_eval` collects exactly
+/// True when the oracle RETURNS this buffer among its outputs. This is the SINGLE
+/// source of truth for the interpreter's output ABI: the oracle collects exactly
 /// these decls, in `Program::buffers` order, into its result `Vec`. Test harnesses that
 /// need the position of a named output MUST use [`output_index`] (which filters by this
 /// predicate) rather than re-deriving the selection, a hand-rolled copy silently drifts
@@ -107,7 +107,7 @@ pub fn is_reference_output(decl: &vyre_foundation::ir::BufferDecl) -> bool {
 
 /// Does the caller have to supply a `Value` for this buffer?
 ///
-/// The other half of the interpreter's ABI: `reference_eval` consumes exactly
+/// The other half of the interpreter's ABI: the oracle consumes exactly
 /// one `Value` per matching decl, in `Program::buffers` order.
 ///
 /// The rule itself is `BufferDecl::consumes_host_input`, which `vyre_driver`'s
@@ -128,7 +128,7 @@ pub fn is_reference_input(decl: &vyre_foundation::ir::BufferDecl) -> bool {
     decl.consumes_host_input()
 }
 
-/// Position of the buffer `name` within `reference_eval`'s returned outputs, the
+/// Position of the buffer `name` within the oracle's returned outputs, the
 /// buffers matching [`is_reference_output`], in `Program::buffers` order, or `None`
 /// when the program declares no such returned output under that name.
 pub fn output_index(program: &Program, name: &str) -> Option<usize> {
@@ -205,7 +205,7 @@ pub(crate) fn run_hashmap_reference(
         .count();
     if inputs.len() > logical_input_count {
         return Err(ReferenceError::new(format!(
-            "reference_eval received {} input Value(s) for a program with {logical_input_count} \
+            "the oracle received {} input Value(s) for a program with {logical_input_count} \
              reference input buffer(s), so {} of them is an unused input Value. Fix: pass one \
              Value per buffer accepted by `vyre_reference::is_reference_input`, in \
              `Program::buffers` order, and none for a backend-allocated output.",
@@ -252,6 +252,7 @@ pub(crate) fn run_hashmap_reference(
             vec![0u8; required_bytes]
         };
         check_min_byte_len(decl, bytes.len(), required_bytes)?;
+        crate::execution::step_budget::charge_memory(bytes.len(), decl.name())?;
         let elements = element_count(decl, bytes.len())?;
         if is_reference_output(decl) {
             max_output_elements = max_output_elements.max(elements);

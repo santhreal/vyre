@@ -98,7 +98,7 @@ fn ir_fixpoint(
     // A monotone reverse closure adds at most one hop's worth of nodes per pass in the worst
     // (single-hop) ordering, so node_count + 1 passes always reach the fixed point.
     for _ in 0..node_count + 1 {
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &program,
             &[
                 Value::from(pack(&nodes)),
@@ -110,6 +110,7 @@ fn ir_fixpoint(
                 Value::from(pack(&[0u32])),
             ],
         )
+        .outputs()
         .expect("backward reverse-or-changed reference evaluation must succeed");
         frontier = out_by_name(&program, &outputs, "frontier");
         if out_by_name(&program, &outputs, "changed")[0] == 0 {

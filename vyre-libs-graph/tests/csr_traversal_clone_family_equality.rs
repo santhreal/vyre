@@ -23,7 +23,9 @@ use vyre_libs_graph::graph::csr_forward_traverse::{
     csr_forward_traverse, csr_forward_traverse_excluding,
 };
 use vyre_libs_graph::graph::csr_frontier_queue::csr_queue_forward_traverse;
-use vyre_libs_graph::graph::csr_queue_delta::{csr_queue_delta_enqueue, csr_queue_delta_strided_enqueue};
+use vyre_libs_graph::graph::csr_queue_delta::{
+    csr_queue_delta_enqueue, csr_queue_delta_strided_enqueue,
+};
 use vyre_libs_graph::graph::csr_queue_split::csr_queue_split_low_forward_traverse;
 use vyre_libs_graph::graph::csr_queue_strided::csr_queue_strided_forward_traverse;
 use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
@@ -200,7 +202,8 @@ fn eval_queue_forward_program(
         Value::from(pack_u32s(edge_kind_mask)),
         Value::from(pack_u32s(&vec![0u32; words])),
     ];
-    let outputs = vyre_reference::reference_eval(program, &inputs)
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
         .expect("CSR queue forward traverse reference evaluation must succeed");
     unpack_u32s(&outputs[0].to_bytes())
 }
@@ -228,7 +231,8 @@ fn eval_queue_delta_program(
         Value::from(pack_u32s(&vec![0u32; next_capacity as usize])),
         Value::from(pack_u32s(&[0])),
     ];
-    let outputs = vyre_reference::reference_eval(program, &inputs)
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
         .expect("CSR queue delta reference evaluation must succeed");
     let acc_out = unpack_u32s(&outputs[0].to_bytes());
     let next_q = unpack_u32s(&outputs[1].to_bytes());
@@ -259,7 +263,8 @@ fn eval_queue_split_program(
         Value::from(pack_u32s(&vec![0u32; high_capacity as usize])),
         Value::from(pack_u32s(&[0])),
     ];
-    let outputs = vyre_reference::reference_eval(program, &inputs)
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
         .expect("CSR queue split reference evaluation must succeed");
     let frontier_out = unpack_u32s(&outputs[0].to_bytes());
     let high_q = unpack_u32s(&outputs[1].to_bytes());
@@ -287,7 +292,8 @@ fn eval_program_graph_frontier_step(
         Value::from(pack_u32s(frontier_in)),
         Value::from(pack_u32s(&vec![0u32; words])),
     ];
-    let outputs = vyre_reference::reference_eval(program, &inputs)
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
         .expect("CSR frontier step reference evaluation must succeed");
     unpack_u32s(&outputs[0].to_bytes())
 }
@@ -314,7 +320,8 @@ fn eval_program_graph_frontier_step_excluding(
         Value::from(pack_u32s(excluded_sources)),
         Value::from(pack_u32s(&vec![0u32; words])),
     ];
-    let outputs = vyre_reference::reference_eval(program, &inputs)
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
         .expect("CSR forward excluding reference evaluation must succeed");
     unpack_u32s(&outputs[0].to_bytes())
 }
@@ -338,7 +345,8 @@ fn eval_program_graph_forward_or_changed(
         Value::from(pack_u32s(initial_frontier)),
         Value::from(pack_u32s(&[0])),
     ];
-    let outputs = vyre_reference::reference_eval(program, &inputs)
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
         .expect("CSR forward or changed reference evaluation must succeed");
     let frontier_out = unpack_u32s(&outputs[0].to_bytes());
     let changed = unpack_u32s(&outputs[1].to_bytes())[0];

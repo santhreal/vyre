@@ -212,9 +212,12 @@ fn evaluate(program: &Program, values: &[f32]) -> f32 {
         .iter()
         .flat_map(|value| value.to_le_bytes())
         .collect::<Vec<u8>>();
-    let outputs =
-        vyre_reference::reference_eval(program, &[Value::from(payload), Value::from(vec![0u8; 4])])
-            .expect("Fix: the reference oracle must execute the numeric fixture program");
+    let outputs = vyre_reference::ReferenceRequest::standard(
+        program,
+        &[Value::from(payload), Value::from(vec![0u8; 4])],
+    )
+    .outputs()
+    .expect("Fix: the reference oracle must execute the numeric fixture program");
     let scalar = outputs
         .iter()
         .map(vyre_reference::value::Value::to_bytes)

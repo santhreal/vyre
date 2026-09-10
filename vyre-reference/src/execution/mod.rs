@@ -12,10 +12,10 @@ pub(crate) mod hashmap;
 pub(crate) mod node_tree;
 /// Thread-local arithmetic-IR-op counting for roofline / complexity analysis.
 pub mod op_count;
-/// Work ceiling that gives the interpreter a termination contract.
-pub mod step_budget;
 /// One-expression entry point into the canonical evaluator.
 pub(crate) mod single_expr;
+/// Work ceiling that gives the interpreter a termination contract.
+pub mod step_budget;
 pub(crate) mod tile;
 pub(crate) mod typed_ops;
 
@@ -127,7 +127,7 @@ const MAX_BOUNDED_INTERLEAVINGS: usize = 4;
 /// output that differs.
 fn run_explored_orders(
     runnable: &Program,
-    request: &crate::request::ReferenceRequest,
+    request: &crate::request::ReferenceRequest<'_>,
     orders: &[hashmap::LaneOrder],
 ) -> Result<Vec<Value>, crate::ReferenceError> {
     let min_dispatch = request.workload_envelope.min_dispatch_elements.unwrap_or(0);
@@ -173,12 +173,12 @@ fn first_difference(left: &[Value], right: &[Value]) -> Option<usize> {
 }
 
 pub(crate) fn run_with_request(
-    request: &crate::request::ReferenceRequest,
+    request: &crate::request::ReferenceRequest<'_>,
 ) -> Result<(Vec<Value>, u64), crate::ReferenceError> {
     crate::oob::reset_oob_report();
     let _strictness = crate::oob::enter_strictness(true);
-    let runnable = program_for_interpreter(&request.program)?;
-    let budget = step_budget::arm_with(&runnable, request.budget.work_ceiling);
+    let runnable = program_for_interpreter(request.program)?;
+    let budget = step_budget::arm_with_budget(&runnable, request.budget);
     let orders = explored_step_orders(request.schedule_policy, &runnable);
     let outputs = run_explored_orders(&runnable, request, &orders)?;
     let steps = step_budget::charged();
@@ -187,12 +187,12 @@ pub(crate) fn run_with_request(
 }
 
 pub(crate) fn run_permissive_with_request(
-    request: &crate::request::ReferenceRequest,
+    request: &crate::request::ReferenceRequest<'_>,
 ) -> Result<(Vec<Value>, u64, crate::oob::OobReport), crate::ReferenceError> {
     crate::oob::reset_oob_report();
     let _strictness = crate::oob::enter_strictness(false);
-    let runnable = program_for_interpreter(&request.program)?;
-    let budget = step_budget::arm_with(&runnable, request.budget.work_ceiling);
+    let runnable = program_for_interpreter(request.program)?;
+    let budget = step_budget::arm_with_budget(&runnable, request.budget);
     let orders = explored_step_orders(request.schedule_policy, &runnable);
     let outputs = run_explored_orders(&runnable, request, &orders)?;
     let steps = step_budget::charged();
@@ -202,14 +202,14 @@ pub(crate) fn run_permissive_with_request(
 }
 
 /// The interpreter's output ABI, single-homed: [`is_reference_output`] is the exact
-/// predicate `reference_eval` uses to collect the buffers it returns, and
+/// predicate the evaluator uses to collect the buffers it returns, and
 /// [`output_index`] locates a named output by that predicate. Re-exported so test
 /// harnesses never hand-roll (and drift from) the selection.
 pub use hashmap::{is_reference_input, is_reference_output, output_index};
 
 /// Project a declaration-order buffer list onto the interpreter's input ABI.
 ///
-/// [`reference_eval`] takes one `Value` per [`is_reference_input`] buffer and
+/// A request takes one `Value` per [`is_reference_input`] buffer and
 /// nothing for a backend-allocated output, which is what a device artifact
 /// enforces. A harness that walks `Program::buffers()` naturally produces the
 /// longer declaration-order list instead, with a zeroed stand-in per output.
@@ -313,233 +313,6 @@ pub fn reference_input_values(
     Ok(inputs.iter().copied().map(Value::from).collect())
 }
 
-/// Execute a vyre IR program on the pure Rust reference interpreter.
-///
-/// Delegates to the one canonical evaluator; see the module docstring.
-pub fn reference_eval(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    run_arena_reference(program, inputs)
-}
-
-/// [`reference_eval`] plus an [`OobReport`](crate::oob::OobReport) of every
-/// out-of-bounds access the interpreter silently absorbed during the run.
-///
-/// The interpreter DEFINES OOB loads as zero-fill and OOB stores as a no-op so
-/// its output stays deterministic, but that silent absorption is exactly what
-/// masks a GPU/CPU parity hazard: an IR program with an ungated data-derived index
-/// "works" here yet a real GPU, which does no bounds-checking, reads garbage or
-/// corrupts memory. Use this to assert a program NEVER relies on that masking: a
-/// correctly bounds-gated program handles an out-of-contract index with explicit
-/// control flow, so it records `OobReport::total() == 0` even on hostile input. A
-/// nonzero total means the IR indexed past a buffer end and needs an explicit gate
-/// (the class of fix applied to ziftsieve/base64/sketch/simplicial).
-///
-/// The tally is per-thread and reset at the start of this call, so it measures
-/// exactly this run.
-///
-/// # Errors
-/// Same as [`reference_eval`].
-pub fn reference_eval_oob_report(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<(Vec<Value>, crate::oob::OobReport), crate::ReferenceError> {
-    // Diagnostic mode exists to MEASURE absorbed accesses, so this entry
-    // point opts out of the strict default for the duration of the run and
-    // reports the tally instead of refusing on it.
-    let _diagnostic = crate::oob::enter_strictness(false);
-    let outputs = reference_eval(program, inputs)?;
-    Ok((outputs, crate::oob::oob_report()))
-}
-
-/// [`reference_eval_with_dispatch`] plus an [`OobReport`](crate::oob::OobReport).
-///
-/// The grid floor lets a caller deliberately OVER-FIRE the dispatch (more lanes
-/// than the buffer-inferred grid) to probe whether a primitive's per-lane guard
-/// actually protects the extra lanes. A guard written as `Expr::and(t < n, load(buf,
-/// t))` does NOT, the data-flow AND evaluates the load for `t >= n`, an OOB read
-/// (the ssa_dominance_scan bug). Running a valid fixture at an inflated grid and
-/// asserting `OobReport::total() == 0` catches that whole class registry-wide.
-///
-/// # Errors
-/// Same as [`reference_eval_with_dispatch`].
-pub fn reference_eval_with_dispatch_oob_report(
-    program: &Program,
-    inputs: &[Value],
-    min_dispatch_elements: u32,
-) -> Result<(Vec<Value>, crate::oob::OobReport), crate::ReferenceError> {
-    let _diagnostic = crate::oob::enter_strictness(false);
-    let outputs = reference_eval_with_dispatch(program, inputs, min_dispatch_elements)?;
-    Ok((outputs, crate::oob::oob_report()))
-}
-
-/// [`reference_eval`] with an explicit grid floor.
-///
-/// The reference interpreter infers its dispatch grid from buffer SHAPES, which
-/// cannot express the per-invocation count of a byte-scan program (the haystack
-/// is packed 4 bytes/u32 and the scan length is a runtime value). Pass the true
-/// grid, e.g. `haystack_len` for a one-lane-per-byte scan, so the interpreter
-/// covers exactly what the real dispatch config would; otherwise high positions
-/// are silently skipped (the CPU-ref oracle under-fires while the GPU is correct).
-/// `min_dispatch_elements` is a FLOOR: the interpreter still runs at least the
-/// buffer-inferred grid, so passing `0` is identical to [`reference_eval`].
-///
-/// # Errors
-/// Same as [`reference_eval`].
-pub fn reference_eval_with_dispatch(
-    program: &Program,
-    inputs: &[Value],
-    min_dispatch_elements: u32,
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    run_arena_reference_with_dispatch(program, inputs, min_dispatch_elements)
-}
-
-/// [`reference_eval`] plus the interpreter steps the run charged.
-///
-/// The step count is what makes [`step_budget::MAX_REFERENCE_STEPS`] a measured
-/// number rather than a chosen one: the corpus measurement reads the heaviest
-/// legitimate run through this entry point and the ceiling is derived from it.
-///
-/// # Errors
-/// Same as [`reference_eval`], plus a refusal when the run exceeds the ceiling.
-pub fn reference_eval_step_count(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<(Vec<Value>, u64), crate::ReferenceError> {
-    reference_eval_with_step_ceiling(program, inputs, step_budget::MAX_REFERENCE_STEPS)
-}
-
-/// [`reference_eval`] under an explicit work ceiling, reporting steps charged.
-///
-/// A caller that must bound the oracle more tightly than the interpreter's own
-/// ceiling states the bound here instead of abandoning a thread that is still
-/// running the program.
-///
-/// # Errors
-/// Same as [`reference_eval`], plus a refusal naming the program and `ceiling`
-/// when the run exceeds it.
-pub fn reference_eval_with_step_ceiling(
-    program: &Program,
-    inputs: &[Value],
-    ceiling: u64,
-) -> Result<(Vec<Value>, u64), crate::ReferenceError> {
-    let runnable = program_for_interpreter(program)?;
-    let budget = step_budget::arm_with_mode(&runnable, ceiling, false);
-    let outputs = run_canonical(&runnable, inputs, 0, hashmap::LaneOrder::Forward, None)?;
-    let steps = step_budget::charged();
-    drop(budget);
-    Ok((outputs, steps))
-}
-
-/// Execute using the statement-IR reference evaluator.
-pub fn run_arena_reference(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    run_arena_reference_with_dispatch(program, inputs, 0)
-}
-
-/// [`run_arena_reference`] with an explicit grid floor (see
-/// [`reference_eval_with_dispatch`]).
-///
-/// # Errors
-/// Same as [`run_arena_reference`].
-pub fn run_arena_reference_with_dispatch(
-    program: &Program,
-    inputs: &[Value],
-    min_dispatch_elements: u32,
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    let program = program_for_interpreter(program)?;
-    run_canonical(
-        &program,
-        inputs,
-        min_dispatch_elements,
-        hashmap::LaneOrder::Forward,
-        None,
-    )
-}
-
-/// [`reference_eval`] with an explicit workgroup grid `[x, y, z]`.
-///
-/// Buffer-shape inference distributes the dispatch only across workgroup axes
-/// whose size is greater than one, so a program that fans a `[256, 1, 1]`
-/// workgroup across `grid.y` (batched persistent-BFS runs one query per
-/// `grid.y` block) would collapse to `grid.y == 1` and silently compute only the
-/// first query. A caller that knows the real dispatch grid, e.g. one block per
-/// query alongside the node domain the program's guard admits, passes it here
-/// so the interpreter covers every workgroup the GPU would, per axis. This is the
-/// N-dimensional counterpart of [`reference_eval_with_dispatch`]'s 1-D floor.
-///
-/// # Errors
-/// Same as [`reference_eval`].
-pub fn reference_eval_with_grid(
-    program: &Program,
-    inputs: &[Value],
-    grid: [u32; 3],
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    let program = program_for_interpreter(program)?;
-    run_canonical(&program, inputs, 0, hashmap::LaneOrder::Forward, Some(grid))
-}
-
-/// Execute a program with the workgroup/invocation STEP ORDER reversed.
-///
-/// The result is identical to [`reference_eval`] for any RACE-FREE program (every
-/// output slot is written by exactly one lane, or shared slots are touched only by
-/// commutative atomics). It DIFFERS only when a non-atomic cross-lane write-write
-/// race exists, two lanes plain-`store` the same slot, because the GPU leaves the
-/// winner driver-defined while the single-threaded reference otherwise resolves it
-/// deterministically (last stepped lane wins). Comparing this against
-/// [`reference_eval`] therefore surfaces a hidden race the same way a real GPU would
-/// nondeterministically diverge.
-///
-/// # Errors
-/// Same as [`reference_eval`].
-pub fn reference_eval_lane_reversed(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    let program = program_for_interpreter(program)?;
-    run_canonical(&program, inputs, 0, hashmap::LaneOrder::Reversed, None)
-}
-
-/// Execute a program with the workgroup/invocation STEP ORDER rotated left by `by`.
-///
-/// Same purpose as [`reference_eval_lane_reversed`], and strictly stronger on one axis:
-/// reversal is a symmetric permutation, so an implementation that confuses lane identity
-/// with step position can be made reversal-symmetric and still be wrong. A rotation is
-/// asymmetric, so it also catches a collective (ballot, shuffle, reduce) that reads its
-/// peers by step position rather than by lane index. `by` is taken modulo the list
-/// length, so any value is a legal schedule and `0` reproduces [`reference_eval`].
-///
-/// # Errors
-/// Same as [`reference_eval`].
-pub fn reference_eval_lane_rotated(
-    program: &Program,
-    inputs: &[Value],
-    by: u32,
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    let program = program_for_interpreter(program)?;
-    run_canonical(&program, inputs, 0, hashmap::LaneOrder::Rotated(by), None)
-}
-
-/// The one path from a legacy entry point into the canonical interpreter.
-///
-/// Strict refusal is the default for every entry point, and the strict check
-/// reads a per-thread out-of-bounds tally. Resetting the tally here rather
-/// than in each entry point is what keeps one evaluation from refusing on the
-/// accesses a previous evaluation on the same thread absorbed.
-fn run_canonical(
-    program: &Program,
-    inputs: &[Value],
-    min_dispatch_elements: u32,
-    order: hashmap::LaneOrder,
-    grid: Option<[u32; 3]>,
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    crate::oob::reset_oob_report();
-    hashmap::run_hashmap_reference(program, inputs, min_dispatch_elements, order, grid)
-}
-
 // Inline: reaches the crate-private normalization the public entry points share.
 #[cfg(test)]
 mod tests {
@@ -547,7 +320,7 @@ mod tests {
     use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
 
     #[test]
-    fn reference_eval_dispatches_singleton_atomic_flags_across_dynamic_byte_input() {
+    fn the_oracle_dispatches_singleton_atomic_flags_across_dynamic_byte_input() {
         let program = Program::wrapped(
             vec![
                 BufferDecl::storage("bytes_in", 0, BufferAccess::ReadOnly, DataType::U8)
@@ -576,7 +349,9 @@ mod tests {
         let mut bytes = vec![0u8; 4097];
         bytes[4096] = 1;
 
-        let outputs = reference_eval(&program, &[Value::from(bytes), Value::from(vec![0u8; 4])])
+        let inputs = [Value::from(bytes), Value::from(vec![0u8; 4])];
+        let outputs = crate::ReferenceRequest::standard(&program, &inputs)
+            .outputs()
             .expect("Fix: reference interpreter should execute singleton atomic flag scans.");
         let flag = outputs[0].to_bytes();
 
@@ -587,7 +362,7 @@ mod tests {
     /// elements than the invocations it needs, one per byte. Buffer-shape grid
     /// inference therefore UNDER-covers it, silently skipping high positions. This
     /// is exactly the region-presence CPU-ref under-fire that the GPU did not have.
-    /// `reference_eval_with_dispatch` lets the caller pass the true byte grid so
+    /// A dispatch element floor lets the caller pass the true byte grid so
     /// the interpreter covers what the real dispatch would, no silent
     /// under-coverage (Law 10). This locks both halves: the default under-covers,
     /// the floor covers.
@@ -650,7 +425,9 @@ mod tests {
         // Default grid: buffer-shape inference caps at the packed buffer's 1024
         // elements, so byte 4095 is never visited, the flag stays clear. This is
         // the SILENT under-coverage the region-presence gate hit.
-        let under = reference_eval(&program, &make_inputs())
+        let default_inputs = make_inputs();
+        let under = crate::ReferenceRequest::standard(&program, &default_inputs)
+            .outputs()
             .expect("Fix: interpreter runs the packed byte-scan");
         assert_eq!(
             read_flag(&under),
@@ -660,7 +437,10 @@ mod tests {
 
         // Floor = true byte length: the interpreter now covers byte 4095 and the
         // marker is found (parity with what the real dispatch config produces).
-        let covered = reference_eval_with_dispatch(&program, &make_inputs(), BYTE_LEN)
+        let floored_inputs = make_inputs();
+        let covered = crate::ReferenceRequest::standard(&program, &floored_inputs)
+            .with_min_dispatch_elements(BYTE_LEN)
+            .outputs()
             .expect("Fix: interpreter runs the packed byte-scan with an explicit grid floor");
         assert_eq!(
             read_flag(&covered),

@@ -38,22 +38,22 @@ pub(crate) fn step_nodes_frame<'a>(
         && super::super::sync::node_reads_peer_lanes(&nodes[index])
     {
         invocation.waiting_for_collective_peers = true;
-        invocation.frames.push(Frame::Nodes {
+        invocation.push_frame(Frame::Nodes {
             nodes,
             index,
             scoped,
-        });
+        })?;
         return Ok(true);
     }
     #[cfg(feature = "subgroup-ops")]
     {
         invocation.collective_peers_arrived = false;
     }
-    invocation.frames.push(Frame::Nodes {
+    invocation.push_frame(Frame::Nodes {
         nodes,
         index: index + 1,
         scoped,
-    });
+    })?;
     crate::execution::step_budget::charge()?;
     let node = &nodes[index];
     match node {
@@ -111,11 +111,11 @@ pub(crate) fn step_nodes_frame<'a>(
             }
             let branch = if cond_value { then } else { otherwise };
             invocation.locals.push_scope();
-            invocation.frames.push(Frame::Nodes {
+            invocation.push_frame(Frame::Nodes {
                 nodes: branch,
                 index: 0,
                 scoped: true,
-            });
+            })?;
         }
         Node::Loop {
             var,
@@ -139,12 +139,12 @@ pub(crate) fn step_nodes_frame<'a>(
                 #[cfg(feature = "subgroup-ops")]
                 snapshots,
             )?;
-            invocation.frames.push(Frame::Loop {
+            invocation.push_frame(Frame::Loop {
                 var,
                 next: from_value,
                 to: to_value,
                 body,
-            });
+            })?;
         }
         Node::Return => {
             invocation.frames.clear();
@@ -152,11 +152,11 @@ pub(crate) fn step_nodes_frame<'a>(
         }
         Node::Block(nodes) => {
             invocation.locals.push_scope();
-            invocation.frames.push(Frame::Nodes {
+            invocation.push_frame(Frame::Nodes {
                 nodes,
                 index: 0,
                 scoped: true,
-            });
+            })?;
         }
         Node::Barrier { ordering } | Node::LogicalBarrier { ordering } => {
             // Scope decides who releases the wait. Every other ordering is
@@ -323,15 +323,17 @@ pub(crate) fn step_nodes_frame<'a>(
         }
         Node::Region { body, .. } => {
             invocation.locals.push_scope();
-            invocation.frames.push(Frame::Nodes {
+            invocation.push_frame(Frame::Nodes {
                 nodes: body,
                 index: 0,
                 scoped: true,
-            });
+            })?;
         }
         Node::TileDecl { name, tile } => {
             let elements = vec![Value::Float(0.0); tile.element_count()];
-            let bound = invocation.locals.bind(name.as_str(), Value::Array(elements))?;
+            let bound = invocation
+                .locals
+                .bind(name.as_str(), Value::Array(elements))?;
             invocation
                 .tile_shapes
                 .insert(bound, std::sync::Arc::new(tile.clone()));
@@ -554,9 +556,10 @@ fn tile_operand(
     name: &str,
     role: &str,
 ) -> Result<(Value, std::sync::Arc<vyre_foundation::ir::Tile>), ReferenceError> {
-    let value = invocation.locals.local(name).ok_or_else(|| {
-        ReferenceError::new(format!("tile `{name}` not found for {role}"))
-    })?;
+    let value = invocation
+        .locals
+        .local(name)
+        .ok_or_else(|| ReferenceError::new(format!("tile `{name}` not found for {role}")))?;
     let shape = invocation.tile_shapes.get(name).cloned().ok_or_else(|| {
         ReferenceError::incomplete_dispatch_semantics(format!(
             "tile `{name}` used as a {role} declares no shape. \
@@ -579,19 +582,19 @@ pub(crate) fn step_loop_frame<'a>(
     // An empty body executes no statement, so a data-derived trip count would
     // otherwise spin without charging anything.
     crate::execution::step_budget::charge()?;
-    invocation.frames.push(Frame::Loop {
+    invocation.push_frame(Frame::Loop {
         var,
         next: next.wrapping_add(1),
         to,
         body,
-    });
+    })?;
     invocation.locals.push_scope();
     invocation.locals.bind_loop_var(var, Value::U32(next))?;
-    invocation.frames.push(Frame::Nodes {
+    invocation.push_frame(Frame::Nodes {
         nodes: body,
         index: 0,
         scoped: true,
-    });
+    })?;
     Ok(())
 }
 

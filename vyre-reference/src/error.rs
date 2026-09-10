@@ -496,16 +496,17 @@ impl ToDiagnostic for ReferenceError {
         } else {
             RetryClass::Never
         };
-        let mut diagnostic = Diagnostic::error("REF001_REFERENCE_ERROR", self.kind.detail().to_string())
-            .with_stage(DiagnosticStage::Submit)
-            .with_compiler_level(CompilerLevel::DriverRuntime)
-            .with_cause(
-                class.cause_kind(),
-                "reference_execution_error",
-                self.kind.detail().to_string(),
-            )
-            .with_retry(retry)
-            .with_context_value("reference_error_class", class.name());
+        let mut diagnostic =
+            Diagnostic::error("REF001_REFERENCE_ERROR", self.kind.detail().to_string())
+                .with_stage(DiagnosticStage::Submit)
+                .with_compiler_level(CompilerLevel::DriverRuntime)
+                .with_cause(
+                    class.cause_kind(),
+                    "reference_execution_error",
+                    self.kind.detail().to_string(),
+                )
+                .with_retry(retry)
+                .with_context_value("reference_error_class", class.name());
         if let Some(ceiling) = &self.step_ceiling {
             diagnostic = diagnostic
                 .with_fix(

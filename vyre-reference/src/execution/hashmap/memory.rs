@@ -94,6 +94,7 @@ pub(crate) fn workgroup_memory(
                 "workgroup memory requires {allocated} bytes, exceeding the {MAX_WORKGROUP_BYTES}-byte reference budget. Fix: reduce workgroup buffer counts."
             )));
         }
+        crate::execution::step_budget::charge_memory(len, decl.name())?;
         workgroup.insert(
             decl.name().to_string(),
             Buffer::new(vec![0; len], decl.element().clone()),

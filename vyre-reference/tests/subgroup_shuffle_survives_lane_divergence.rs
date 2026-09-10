@@ -64,12 +64,14 @@ fn drifting_shuffle_program(extra_nodes: u32) -> Program {
 fn a_shuffle_in_a_loop_resolves_every_peer_under_lane_drift() {
     for extra_nodes in 1..=8u32 {
         let program = drifting_shuffle_program(extra_nodes);
-        let outputs = vyre_reference::reference_eval(&program, &[]).unwrap_or_else(|error| {
-            panic!(
-                "Fix: a shuffle of a loop-scoped local must resolve every peer lane; \
+        let outputs = vyre_reference::ReferenceRequest::standard(&program, &[])
+            .outputs()
+            .unwrap_or_else(|error| {
+                panic!(
+                    "Fix: a shuffle of a loop-scoped local must resolve every peer lane; \
                      {extra_nodes} extra nodes on one lane made the oracle refuse it: {error:?}"
-            )
-        });
+                )
+            });
         let bytes = outputs
             .first()
             .expect("the program declares an out buffer")

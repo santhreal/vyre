@@ -206,10 +206,7 @@ pub fn asymmetric_join_graph() -> ProgramGraph {
 /// Two suites build a node that adds a caller input to a constant, and the port
 /// declarations were the same eleven lines in both. Only the program and the
 /// output around them differ, so those stay at the call site.
-pub fn value_and_constant_ports(
-    input: GraphValueId,
-    constant: GraphValueId,
-) -> Vec<GraphInput> {
+pub fn value_and_constant_ports(input: GraphValueId, constant: GraphValueId) -> Vec<GraphInput> {
     vec![
         GraphInput {
             buffer: "input".into(),
@@ -381,6 +378,8 @@ pub fn pure_dataflow_graph() -> ProgramGraph {
 #[must_use]
 pub fn pure_dataflow_oracle(input: [u32; 4]) -> [u32; 4] {
     let scaled = input.map(|lane| lane.wrapping_mul(3).wrapping_add(5));
-    let sum = scaled.iter().fold(0_u32, |total, lane| total.wrapping_add(*lane));
+    let sum = scaled
+        .iter()
+        .fold(0_u32, |total, lane| total.wrapping_add(*lane));
     scaled.map(|lane| lane.wrapping_add(sum))
 }

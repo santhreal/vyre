@@ -76,7 +76,7 @@ fn gpu_step(
         "nfa_out",
         num_states,
     );
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(state)),
@@ -86,6 +86,7 @@ fn gpu_step(
             Value::from(pack(&[0u32; LANES])),
         ],
     )
+    .outputs()
     .expect("subgroup_nfa reference evaluation must succeed");
     unpack(&outputs[0].to_bytes())
 }

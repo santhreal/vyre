@@ -242,7 +242,8 @@ fn a_launch_past_the_pinned_per_axis_ceiling_folds_and_keeps_every_element() {
     // a wrong answer still fail, and the fixture is sized to the fold contract
     // rather than to a large buffer so it stays inside the reference work
     // ceiling.
-    let reference = vyre_reference::reference_eval(&program, &[])
+    let reference = vyre_reference::ReferenceRequest::standard(&program, &[])
+        .outputs()
         .expect("Fix: the reference interpreter must evaluate the folded-launch fixture.")
         .into_iter()
         .map(|value| value.to_bytes())
@@ -372,7 +373,8 @@ fn an_inferred_launch_past_the_device_single_axis_ceiling_folds_and_matches_refe
         "Fix: lane 0 and the first folded lane must write their marker values at their linearized indices."
     );
 
-    let reference = vyre_reference::reference_eval(&program, &[])
+    let reference = vyre_reference::ReferenceRequest::standard(&program, &[])
+        .outputs()
         .expect("Fix: reference interpreter must evaluate the folded launch program.")
         .into_iter()
         .map(|value| value.to_bytes())
@@ -443,7 +445,8 @@ fn a_launch_one_element_above_the_pinned_per_axis_ceiling_proves_tail_guard() {
         "Fix: every lane 0..1025 must store its value and no tail invocation may overwrite elements."
     );
 
-    let reference = vyre_reference::reference_eval(&program, &[])
+    let reference = vyre_reference::ReferenceRequest::standard(&program, &[])
+        .outputs()
         .expect("Fix: reference interpreter must evaluate 1025-element folded launch.")
         .into_iter()
         .map(|value| value.to_bytes())
@@ -495,7 +498,8 @@ fn a_launch_one_element_below_fold_boundary_proves_boundary_and_tail_guard() {
             "Fix: every lane 0..{words} must store correctly without tail corruption."
         );
 
-        let reference = vyre_reference::reference_eval(&program, &[])
+        let reference = vyre_reference::ReferenceRequest::standard(&program, &[])
+            .outputs()
             .unwrap_or_else(|error| {
                 panic!("Fix: reference interpreter must evaluate {words} elements: {error}")
             })
@@ -550,7 +554,8 @@ fn an_inferred_launch_at_exact_device_ceiling_and_boundaries_matches_reference()
             .flat_map(u32::to_le_bytes)
             .collect::<Vec<_>>();
         assert_eq!(outputs[0], expected);
-        let reference = vyre_reference::reference_eval(&program, &[])
+        let reference = vyre_reference::ReferenceRequest::standard(&program, &[])
+            .outputs()
             .expect("Fix: reference must evaluate exact ceiling program.")
             .into_iter()
             .map(|value| value.to_bytes())
@@ -585,7 +590,8 @@ fn an_inferred_launch_at_exact_device_ceiling_and_boundaries_matches_reference()
             .flat_map(u32::to_le_bytes)
             .collect::<Vec<_>>();
         assert_eq!(outputs[0], expected);
-        let reference = vyre_reference::reference_eval(&program, &[])
+        let reference = vyre_reference::ReferenceRequest::standard(&program, &[])
+            .outputs()
             .expect("Fix: reference must evaluate one-below ceiling program.")
             .into_iter()
             .map(|value| value.to_bytes())
@@ -624,7 +630,8 @@ fn an_inferred_launch_at_exact_device_ceiling_and_boundaries_matches_reference()
             .flat_map(u32::to_le_bytes)
             .collect::<Vec<_>>();
         assert_eq!(outputs[0], expected);
-        let reference = vyre_reference::reference_eval(&program, &[])
+        let reference = vyre_reference::ReferenceRequest::standard(&program, &[])
+            .outputs()
             .expect("Fix: reference must evaluate one-above ceiling program.")
             .into_iter()
             .map(|value| value.to_bytes())

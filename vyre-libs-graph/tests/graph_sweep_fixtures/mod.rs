@@ -64,7 +64,7 @@ pub(crate) fn frontier_step_out(
     let node_tags = vec![0u32; node_count as usize];
     let words = bitset_words(node_count);
 
-    let outputs = vyre_reference::reference_eval_with_dispatch(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(&nodes)),
@@ -75,8 +75,9 @@ pub(crate) fn frontier_step_out(
             Value::from(pack(frontier_in)),
             Value::from(pack(&vec![0u32; words])),
         ],
-        node_count,
     )
+    .with_min_dispatch_elements(node_count)
+    .outputs()
     .expect("CSR frontier-step reference evaluation must succeed");
     unpack(&outputs[0].to_bytes())
 }

@@ -96,7 +96,7 @@ fn four_russians_dense_program_matches_row_scan_on_reference_oracle() {
         .expect("Fix: valid dense rows must build a LUT.");
     let expected = cpu_dense_step(&frontier, &adj, node_count);
     let program = adaptive_four_russians_dense_step("frontier", "tile_lut", "out", node_count);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(u32_bytes(&frontier)),
@@ -107,6 +107,7 @@ fn four_russians_dense_program_matches_row_scan_on_reference_oracle() {
             ])),
         ],
     )
+    .outputs()
     .expect("Fix: graph-level Four-Russians dense Program must execute.");
 
     assert_eq!(

@@ -44,7 +44,7 @@ fn serial_program(n: u32) -> Program {
 }
 
 fn run(program: &Program, n: u32, a: &[u32], b: &[u32], x_in: &[u32], omega: u32) -> Vec<u32> {
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         program,
         &[
             Value::from(pack(a)),
@@ -54,6 +54,7 @@ fn run(program: &Program, n: u32, a: &[u32], b: &[u32], x_in: &[u32], omega: u32
             Value::from(pack(&vec![0u32; n as usize])),
         ],
     )
+    .outputs()
     .expect("jacobi reference evaluation must succeed");
     let idx = vyre_reference::output_index(program, "x_out").expect("x_out output");
     unpack(&outputs[idx].to_bytes())[..n as usize].to_vec()

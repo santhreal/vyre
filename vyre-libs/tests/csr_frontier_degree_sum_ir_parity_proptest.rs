@@ -48,7 +48,7 @@ fn gpu_degree_sum(
     let node_tags = vec![0u32; node_count as usize];
     let nodes = vec![0u32; node_count as usize];
 
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(&nodes)),       // pg_nodes
@@ -60,6 +60,7 @@ fn gpu_degree_sum(
             Value::from(pack(&[0u32])),      // degree_sum_out
         ],
     )
+    .outputs()
     .expect("csr_frontier_degree_sum reference evaluation must succeed");
     let words = unpack(&outputs[0].to_bytes());
     words[0]

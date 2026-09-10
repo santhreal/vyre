@@ -14,7 +14,7 @@ use vyre_reference::value::Value;
 fn two_rows_match_exact_hand_computed_projection() {
     let program = linear_rows("x", "weight", "bias", "output", 2, 3, 2)
         .expect("Fix: valid row projection must build");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(bytes(&[1.0, 2.0, 3.0, -1.0, 0.0, 2.0])),
@@ -22,6 +22,7 @@ fn two_rows_match_exact_hand_computed_projection() {
             Value::from(bytes(&[0.5, -0.5])),
         ],
     )
+    .outputs()
     .expect("Fix: row projection must execute");
     assert_eq!(decode(&outputs[0]), vec![4.5, 4.5, 1.5, 1.5]);
 }
@@ -31,7 +32,7 @@ fn two_rows_match_exact_hand_computed_projection() {
 fn zero_first_row_does_not_change_nonzero_second_row() {
     let program = linear_rows("x", "weight", "bias", "output", 2, 2, 1)
         .expect("Fix: valid row isolation fixture must build");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(bytes(&[0.0, 0.0, 4.0, -1.0])),
@@ -39,6 +40,7 @@ fn zero_first_row_does_not_change_nonzero_second_row() {
             Value::from(bytes(&[0.0])),
         ],
     )
+    .outputs()
     .expect("Fix: isolated row projection must execute");
     assert_eq!(decode(&outputs[0]), vec![0.0, 5.0]);
 }
@@ -48,13 +50,14 @@ fn zero_first_row_does_not_change_nonzero_second_row() {
 fn output_major_checkpoint_weights_project_exactly() {
     let program = linear_rows_no_bias_out_in_typed("x", "weight", "output", 1, 2, 2, DataType::F32)
         .expect("Fix: valid checkpoint projection must build");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(bytes(&[2.0, 3.0])),
             Value::from(bytes(&[1.0, 10.0, 100.0, 1000.0])),
         ],
     )
+    .outputs()
     .expect("Fix: checkpoint projection must execute");
     assert_eq!(decode(&outputs[0]), vec![32.0, 3200.0]);
 }

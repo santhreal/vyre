@@ -11,7 +11,7 @@
 use vyre_bench::cases::release_workloads::{
     build_release_macro_case_for_records, release_macro_program_specs_for_records,
 };
-use vyre_reference::{reference_eval, value::Value};
+use vyre_reference::value::Value;
 
 #[test]
 fn quantified_condition_loops_matches_reference_evaluation() {
@@ -23,11 +23,13 @@ fn quantified_condition_loops_matches_reference_evaluation() {
                 .expect("Fix: quantified condition loops case must build for test record count.");
 
         let values: Vec<Value> = case.inputs.iter().cloned().map(Value::from).collect();
-        let ref_outputs: Vec<Vec<u8>> = reference_eval(&case.program, &values)
-            .expect("Fix: reference eval must succeed for quantified condition loops")
-            .into_iter()
-            .map(|v| v.to_bytes())
-            .collect();
+        let ref_outputs: Vec<Vec<u8>> =
+            vyre_reference::ReferenceRequest::standard(&case.program, &values)
+                .outputs()
+                .expect("Fix: reference eval must succeed for quantified condition loops")
+                .into_iter()
+                .map(|v| v.to_bytes())
+                .collect();
 
         assert_eq!(
             ref_outputs, case.expected_outputs,
@@ -43,13 +45,15 @@ fn egraph_saturation_and_triple_mask_programs_match_cpu_oracles() {
             .expect("Fix: release macro case must build for test record count.");
 
         let values: Vec<Value> = case.inputs.iter().cloned().map(Value::from).collect();
-        let ref_outputs: Vec<Vec<u8>> = reference_eval(&case.program, &values)
-            .unwrap_or_else(|err| {
-                panic!("Fix: reference eval failed for {}: {err}", spec.id);
-            })
-            .into_iter()
-            .map(|v| v.to_bytes())
-            .collect();
+        let ref_outputs: Vec<Vec<u8>> =
+            vyre_reference::ReferenceRequest::standard(&case.program, &values)
+                .outputs()
+                .unwrap_or_else(|err| {
+                    panic!("Fix: reference eval failed for {}: {err}", spec.id);
+                })
+                .into_iter()
+                .map(|v| v.to_bytes())
+                .collect();
 
         assert_eq!(
             ref_outputs, case.expected_outputs,

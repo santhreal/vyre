@@ -38,7 +38,7 @@ pub(crate) fn poisoned_buffer_byte_lock() -> ! {
 }
 
 /// Count of out-of-bounds accesses the interpreter silently absorbed during one
-/// tracked run (see [`crate::reference_eval_oob_report`]).
+/// tracked run.
 ///
 /// The reference interpreter DEFINES OOB loads as zero-fill and OOB stores as a
 /// no-op (see the module docstring) so its output stays deterministic. That
@@ -309,11 +309,7 @@ impl Buffer {
     ///
     /// # Panics
     /// Panics when the byte lock is poisoned; see [`Buffer::read_bytes`].
-    pub(crate) fn write_window(
-        &self,
-        start: usize,
-        payload: &[u8],
-    ) -> Result<(), ReferenceError> {
+    pub(crate) fn write_window(&self, start: usize, payload: &[u8]) -> Result<(), ReferenceError> {
         let mut bytes_guard = self.write_bytes();
         let available = bytes_guard.len().saturating_sub(start).min(payload.len());
         if available < payload.len() {
@@ -380,7 +376,7 @@ pub(crate) fn load(buffer: &Buffer, index: u32) -> Result<Value, ReferenceError>
     let Some(offset) = in_bounds else {
         drop(bytes_guard);
         record_oob(OobAccess::Load, buffer, index, extent)?;
-        return Ok(absorbed_load(ty));
+        return absorbed_load(ty);
     };
     read_element(ty.clone(), &bytes_guard[offset..offset + stride]).map_err(|detail| {
         ReferenceError::type_mismatch(format!(
@@ -392,8 +388,18 @@ pub(crate) fn load(buffer: &Buffer, index: u32) -> Result<Value, ReferenceError>
 }
 
 /// Deterministic value a diagnostic-mode out-of-bounds load yields.
-fn absorbed_load(ty: DataType) -> Value {
-    Value::try_zero_for(ty).unwrap_or_else(|| Value::from(Vec::new()))
+///
+/// # Errors
+/// Returns a type mismatch when the element type has no defined zero. A load
+/// answered with an empty payload instead would hand back a width the program
+/// never declared, which is the failure diagnostic mode exists to record.
+fn absorbed_load(ty: DataType) -> Result<Value, ReferenceError> {
+    Value::try_zero_for(ty.clone()).ok_or_else(|| {
+        ReferenceError::type_mismatch(format!(
+            "an out-of-bounds load of a {ty:?} element has no defined zero. \
+             Fix: declare the buffer with an element type of fixed storage width."
+        ))
+    })
 }
 
 /// Element index a byte-span diagnostic reports.
@@ -410,11 +416,7 @@ fn span_index(start: usize) -> u32 {
 /// # Errors
 /// Returns an out-of-bounds error under strict mode when `index` is outside the
 /// declared extent.
-pub(crate) fn store(
-    buffer: &mut Buffer,
-    index: u32,
-    value: &Value,
-) -> Result<(), ReferenceError> {
+pub(crate) fn store(buffer: &mut Buffer, index: u32, value: &Value) -> Result<(), ReferenceError> {
     let extent = buffer.len();
     let mut bytes_guard = buffer.write_bytes();
     let stride = buffer.element.min_bytes();
@@ -450,15 +452,11 @@ pub(crate) fn store(
 /// # Errors
 /// Returns an out-of-bounds error under strict mode when `index` is outside the
 /// declared extent.
-pub(crate) fn atomic_load(
-    buffer: &Buffer,
-    index: u32,
-) -> Result<Option<u32>, ReferenceError> {
+pub(crate) fn atomic_load(buffer: &Buffer, index: u32) -> Result<Option<u32>, ReferenceError> {
     let extent = buffer.len();
     let bytes_guard = buffer.read_bytes();
     let stride = buffer.element.min_bytes().max(4);
-    let in_bounds =
-        byte_offset(index, stride).filter(|offset| offset + 4 <= bytes_guard.len());
+    let in_bounds = byte_offset(index, stride).filter(|offset| offset + 4 <= bytes_guard.len());
     match in_bounds {
         Some(offset) => Ok(Some(read_u32(&bytes_guard[offset..offset + 4]))),
         None => {
@@ -482,8 +480,7 @@ pub(crate) fn atomic_store(
     let extent = buffer.len();
     let mut bytes_guard = buffer.write_bytes();
     let stride = buffer.element.min_bytes().max(4);
-    let in_bounds =
-        byte_offset(index, stride).filter(|offset| offset + 4 <= bytes_guard.len());
+    let in_bounds = byte_offset(index, stride).filter(|offset| offset + 4 <= bytes_guard.len());
     match in_bounds {
         Some(offset) => {
             write_u32(&mut bytes_guard[offset..offset + 4], value);
@@ -540,9 +537,8 @@ fn write_element(
             // of f32, so narrow via `as f32` before writing. Dropping the
             // upper four bytes of `v.to_le_bytes()` (what the default
             // to_bytes_width path does) would mangle the f32 bit pattern.
-            let narrowed = crate::execution::typed_ops::canonical_f32(float_element(
-                &element, value,
-            )?);
+            let narrowed =
+                crate::execution::typed_ops::canonical_f32(float_element(&element, value)?);
             target.copy_from_slice(&narrowed.to_le_bytes());
         }
         IrDataType::U8

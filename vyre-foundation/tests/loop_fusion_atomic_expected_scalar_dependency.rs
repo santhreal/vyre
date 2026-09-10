@@ -82,11 +82,13 @@ fn loop_fusion_declines_when_atomic_expected_reads_a_cross_loop_scalar() {
             .collect::<Vec<u8>>(),
     )];
 
-    let base = vyre_reference::reference_eval(&program, &inputs)
+    let base = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("base program is well-formed and must run on the reference oracle");
 
     let fused = LoopFusion::transform(program).program;
-    let after = vyre_reference::reference_eval(&fused, &inputs)
+    let after = vyre_reference::ReferenceRequest::standard(&fused, &inputs)
+        .outputs()
         .expect("fused program must still run on the reference oracle");
 
     assert_eq!(

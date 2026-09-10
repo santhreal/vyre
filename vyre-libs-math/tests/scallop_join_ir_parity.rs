@@ -40,7 +40,7 @@ fn run_ir(state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32) -> Vec
         1,
         max_iterations,
     );
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             pack(state),              // state (0, RW) <- final
@@ -49,6 +49,7 @@ fn run_ir(state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32) -> Vec
             pack(join_rules),         // join_rules (3, RO)
         ],
     )
+    .outputs()
     .expect("scallop_join reference evaluation must succeed");
     words(&outputs[0])
 }

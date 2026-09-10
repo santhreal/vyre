@@ -163,7 +163,8 @@ pub(crate) fn reference_outputs(
         .iter()
         .map(|input| Value::Bytes(Arc::from(input.clone().into_boxed_slice())))
         .collect::<Vec<_>>();
-    vyre_reference::reference_eval(program, &values)
+    vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
         .unwrap_or_else(|error| {
             panic!("Fix: reference CUDA test case `{case_name}` failed: {error}")
         })

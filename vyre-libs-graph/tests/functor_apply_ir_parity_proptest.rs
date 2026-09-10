@@ -32,7 +32,7 @@ fn gpu_apply(source_row: &[u32], mapping: &[u32], target_size: u32) -> Vec<u32> 
         source_row.len() as u32,
         target_size,
     );
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(source_row)),
@@ -40,6 +40,7 @@ fn gpu_apply(source_row: &[u32], mapping: &[u32], target_size: u32) -> Vec<u32> 
             Value::from(pack(&vec![0u32; target_size as usize])),
         ],
     )
+    .outputs()
     .expect("functor_apply reference evaluation must succeed");
     unpack(&outputs[0].to_bytes())
 }

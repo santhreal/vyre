@@ -73,7 +73,7 @@ fn interpret(
     let expanded = strict_expanded(program, config)?;
     let program = expanded.as_ref().unwrap_or(program);
     let values = reference_values(program, inputs)?;
-    let result = vyre_reference::reference_eval(program, &values);
+    let result = vyre_reference::ReferenceRequest::standard(program, &values).outputs();
     result
         .map(|outputs| outputs.iter().map(Value::to_bytes).collect())
         .map_err(|error| {

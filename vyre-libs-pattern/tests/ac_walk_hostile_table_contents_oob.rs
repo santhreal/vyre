@@ -87,17 +87,16 @@ fn hostile_contents(inputs: &[Value], index: u32) -> Vec<Value> {
 
 /// Run the walk and assert the interpreter saw no access outside a buffer.
 fn assert_oob_clean(program: &Program, inputs: &[Value], case: &str) {
-    let (_outputs, report) = vyre_reference::reference_eval_oob_report(program, inputs)
+    vyre_reference::ReferenceRequest::standard(program, inputs)
+        .outputs()
         .unwrap_or_else(|error| {
-            panic!("Fix: the AC walk must execute in the reference interpreter: {error:?}")
+            panic!(
+                "Fix: the AC walk must execute in the reference interpreter with {case}, and an \
+                 out-of-bounds access is refused rather than absorbed. Fold each data-derived \
+                 index with `vyre_foundation::composition::bounded_index`, or gate the access \
+                 with control flow: {error:?}"
+            )
         });
-    assert_eq!(
-        (report.oob_loads, report.oob_stores, report.oob_atomics),
-        (0, 0, 0),
-        "Fix: the AC walk accessed a buffer out of bounds with {case}. Fold each data-derived \
-         index with `vyre_foundation::composition::bounded_index`, or gate the access with \
-         control flow."
-    );
 }
 
 #[cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]

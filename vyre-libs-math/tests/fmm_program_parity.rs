@@ -53,7 +53,7 @@ fn p2m_scatters_scores_into_owning_cells() {
     let expected = [5.0f32, 18.0, 8.0];
 
     let program = p2m_zeroth_f32_step("scores", "cells", "moments", n_regions, n_cells);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_f32(&scores)),
@@ -61,6 +61,7 @@ fn p2m_scatters_scores_into_owning_cells() {
             Value::from(pack_f32(&vec![0.0f32; n_cells as usize])),
         ],
     )
+    .outputs()
     .expect("p2m reference evaluation must succeed");
     assert_f32_close(&unpack_f32(&outputs[0].to_bytes()), &expected, "p2m");
 }
@@ -76,7 +77,7 @@ fn p2m_drops_out_of_range_cell_assignment() {
     let expected = [5.0f32, 2.0, 8.0];
 
     let program = p2m_zeroth_f32_step("scores", "cells", "moments", n_regions, n_cells);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_f32(&scores)),
@@ -84,6 +85,7 @@ fn p2m_drops_out_of_range_cell_assignment() {
             Value::from(pack_f32(&vec![0.0f32; n_cells as usize])),
         ],
     )
+    .outputs()
     .expect("p2m reference evaluation must succeed");
     assert_f32_close(
         &unpack_f32(&outputs[0].to_bytes()),
@@ -105,7 +107,7 @@ fn m2l_translates_moments_by_inverse_distance() {
     let expected = [4.0f32, 3.0, 2.0];
 
     let program = m2l_zeroth_f32_step("moments", "dist", "local", n_cells);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_f32(&cell_moments)),
@@ -113,6 +115,7 @@ fn m2l_translates_moments_by_inverse_distance() {
             Value::from(pack_f32(&vec![0.0f32; n_cells as usize])),
         ],
     )
+    .outputs()
     .expect("m2l reference evaluation must succeed");
     assert_f32_close(&unpack_f32(&outputs[0].to_bytes()), &expected, "m2l");
 }
@@ -127,7 +130,7 @@ fn l2p_broadcasts_cell_local_to_assigned_regions() {
     let expected = [30.0f32, 10.0, 20.0, 10.0];
 
     let program = l2p_zeroth_f32_step("local", "cells", "out", n_regions, n_cells);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_f32(&cell_local)),
@@ -135,6 +138,7 @@ fn l2p_broadcasts_cell_local_to_assigned_regions() {
             Value::from(pack_f32(&vec![0.0f32; n_regions as usize])),
         ],
     )
+    .outputs()
     .expect("l2p reference evaluation must succeed");
     assert_f32_close(&unpack_f32(&outputs[0].to_bytes()), &expected, "l2p");
 }
@@ -150,7 +154,7 @@ fn l2p_skips_out_of_range_cell_assignment() {
     let expected = [30.0f32, 10.0, 0.0, 10.0];
 
     let program = l2p_zeroth_f32_step("local", "cells", "out", n_regions, n_cells);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_f32(&cell_local)),
@@ -158,6 +162,7 @@ fn l2p_skips_out_of_range_cell_assignment() {
             Value::from(pack_f32(&vec![0.0f32; n_regions as usize])),
         ],
     )
+    .outputs()
     .expect("l2p reference evaluation must succeed");
     assert_f32_close(
         &unpack_f32(&outputs[0].to_bytes()),

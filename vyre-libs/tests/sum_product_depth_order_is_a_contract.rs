@@ -105,7 +105,7 @@ impl Circuit {
             u32::try_from(self.children.len()).expect("edge count fits in u32"),
             max_depth,
         );
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &program,
             &[
                 Value::from(pack_u32(depths)),
@@ -118,6 +118,7 @@ impl Circuit {
                 Value::from(pack_u32(&vec![0u32; self.kinds.len()])),
             ],
         )
+        .outputs()
         .map_err(|error| error.to_string())?;
         Ok(outputs[0]
             .to_bytes()

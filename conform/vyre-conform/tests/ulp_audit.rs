@@ -62,7 +62,9 @@ fn run_cpu_from_slices<'a>(
     for input in inputs {
         values.push(Value::from(*input));
     }
-    let evaluated = vyre_reference::reference_eval(program, values).map_err(|e| e.to_string())?;
+    let evaluated = vyre_reference::ReferenceRequest::standard(program, values)
+        .outputs()
+        .map_err(|e| e.to_string())?;
     outputs.clear();
     outputs.extend(evaluated.into_iter().map(|v| v.to_bytes()));
     Ok(outputs.as_slice())

@@ -9,7 +9,6 @@ use vyre_primitives::wire::{
     decode_f32_le_bytes_all as bytes_to_f32, pack_f32_slice as f32_to_bytes,
     pack_u32_slice as u32_to_bytes,
 };
-use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
 
 #[test]
@@ -67,7 +66,9 @@ fn paged_gqa_attention_broadcasts_kv_heads() {
         Value::from(u32_to_bytes(&table_data)),
     ];
 
-    let outputs = reference_eval(&program, &inputs).expect("eval");
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
+        .expect("eval");
     let result = bytes_to_f32(&outputs[0].to_bytes());
     assert_eq!(result.len(), 8);
 
@@ -120,7 +121,9 @@ fn paged_attention_partial_page_boundary() {
         Value::from(u32_to_bytes(&table_data)),
     ];
 
-    let outputs = reference_eval(&program, &inputs).expect("eval");
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
+        .expect("eval");
     let result = bytes_to_f32(&outputs[0].to_bytes());
 
     // Dot products:

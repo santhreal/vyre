@@ -50,7 +50,8 @@ fn loop_fusion_does_not_reorder_a_cross_loop_scalar_dependency() {
     let inputs: [Value; 0] = []; // `out` is the only buffer and it is an output.
 
     // Original: loop_a runs fully with s == 0, so out == [0, 0, 0, 0].
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original program is well-scoped and must run");
     assert_eq!(
         original,
@@ -63,7 +64,8 @@ fn loop_fusion_does_not_reorder_a_cross_loop_scalar_dependency() {
     // The fused program still validates and runs -- but if loop_fusion merged
     // the two loops, the interleaved `store(out, i, s); s = i` makes each store
     // observe the previous iteration's write, so out becomes [0, 0, 1, 2].
-    let after = vyre_reference::reference_eval(&transformed, &inputs)
+    let after = vyre_reference::ReferenceRequest::standard(&transformed, &inputs)
+        .outputs()
         .expect("fused program must still be well-scoped");
     assert_eq!(
         after, original,

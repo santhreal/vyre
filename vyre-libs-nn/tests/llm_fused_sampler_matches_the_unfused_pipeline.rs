@@ -126,7 +126,7 @@ fn unfused_token() -> u32 {
         PENALTY,
     );
     let adjusted = read_bytes(
-        &vyre_reference::reference_eval(
+        &vyre_reference::ReferenceRequest::standard(
             &adjust,
             &inputs(
                 &adjust,
@@ -136,20 +136,24 @@ fn unfused_token() -> u32 {
                 ],
             ),
         )
+        .outputs()
         .expect("Fix: the adjust stage must evaluate"),
         &adjust,
         "adjusted",
     );
 
     let select = softmax_top_k("adjusted", "selected", "weights", VOCABULARY, CANDIDATES);
-    let selection =
-        vyre_reference::reference_eval(&select, &inputs(&select, &[("adjusted", adjusted)]))
-            .expect("Fix: the selection stage must evaluate");
+    let selection = vyre_reference::ReferenceRequest::standard(
+        &select,
+        &inputs(&select, &[("adjusted", adjusted)]),
+    )
+    .outputs()
+    .expect("Fix: the selection stage must evaluate");
     let selected = read_bytes(&selection, &select, "selected");
     let weights = read_bytes(&selection, &select, "weights");
 
     let draw = nucleus_select("selected", "weights", "uniform", "token", CANDIDATES, TOP_P);
-    let drawn = vyre_reference::reference_eval(
+    let drawn = vyre_reference::ReferenceRequest::standard(
         &draw,
         &inputs(
             &draw,
@@ -160,6 +164,7 @@ fn unfused_token() -> u32 {
             ],
         ),
     )
+    .outputs()
     .expect("Fix: the draw stage must evaluate");
     read_u32(&drawn, &draw, "token")
 }
@@ -168,7 +173,8 @@ fn unfused_token() -> u32 {
 fn fusing_the_sampler_draws_the_token_the_separate_stages_draw() {
     let program = sampler().program().expect("Fix: the sampler must build");
     let fused = read_u32(
-        &vyre_reference::reference_eval(&program, &fused_inputs(&program))
+        &vyre_reference::ReferenceRequest::standard(&program, &fused_inputs(&program))
+            .outputs()
             .expect("Fix: the fused sampler must evaluate"),
         &program,
         "token",
@@ -184,14 +190,17 @@ fn fusing_the_sampler_draws_the_token_the_separate_stages_draw() {
 fn the_gated_reader_never_sees_a_partly_written_row() {
     let program = sampler().program().expect("Fix: the sampler must build");
     let baseline = read_u32(
-        &vyre_reference::reference_eval(&program, &fused_inputs(&program))
+        &vyre_reference::ReferenceRequest::standard(&program, &fused_inputs(&program))
+            .outputs()
             .expect("Fix: the fused sampler must evaluate"),
         &program,
         "token",
     );
 
     let reversed = read_u32(
-        &vyre_reference::reference_eval_lane_reversed(&program, &fused_inputs(&program))
+        &vyre_reference::ReferenceRequest::standard(&program, &fused_inputs(&program))
+            .with_schedule_policy(vyre_reference::DeterministicSchedulePolicy::LaneReversed)
+            .outputs()
             .expect("Fix: the fused sampler must evaluate in reverse lane order"),
         &program,
         "token",
@@ -203,7 +212,9 @@ fn the_gated_reader_never_sees_a_partly_written_row() {
 
     for by in 1..VOCABULARY {
         let rotated = read_u32(
-            &vyre_reference::reference_eval_lane_rotated(&program, &fused_inputs(&program), by)
+            &vyre_reference::ReferenceRequest::standard(&program, &fused_inputs(&program))
+                .with_schedule_policy(vyre_reference::DeterministicSchedulePolicy::LaneRotated(by))
+                .outputs()
                 .expect("Fix: the fused sampler must evaluate in rotated lane order"),
             &program,
             "token",

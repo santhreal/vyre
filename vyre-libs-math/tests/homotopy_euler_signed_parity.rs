@@ -30,7 +30,7 @@ fn euler_fixed(x_curr: &[u32], v: &[u32], dt: u32) -> Vec<u32> {
 
 fn run_via_reference(x_curr: &[u32], v: &[u32], dt: u32, n_paths: u32, n_dim: u32) -> Vec<u32> {
     let program = homotopy_euler_predictor("x_curr", "v", "dt", "x_pred", n_paths, n_dim);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32(x_curr)),
@@ -39,6 +39,7 @@ fn run_via_reference(x_curr: &[u32], v: &[u32], dt: u32, n_paths: u32, n_dim: u3
             Value::from(pack_u32(&vec![0u32; x_curr.len()])),
         ],
     )
+    .outputs()
     .expect("homotopy_euler_predictor reference evaluation must succeed");
     outputs[0]
         .to_bytes()

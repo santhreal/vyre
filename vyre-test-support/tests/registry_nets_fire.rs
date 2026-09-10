@@ -116,9 +116,13 @@ fn the_lane_reversal_net_passes_a_disjoint_population() {
 fn reversing_the_step_order_changes_which_lane_wins_a_race() {
     let program = racing_program();
     let inputs = vec![Value::from(vec![0u8; 4])];
-    let forward = vyre_reference::reference_eval(&program, &inputs).expect("forward eval");
-    let reversed =
-        vyre_reference::reference_eval_lane_reversed(&program, &inputs).expect("reversed eval");
+    let forward = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
+        .expect("forward eval");
+    let reversed = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .with_schedule_policy(vyre_reference::DeterministicSchedulePolicy::LaneReversed)
+        .outputs()
+        .expect("reversed eval");
     assert_eq!(
         forward[0].to_bytes(),
         3u32.to_le_bytes().to_vec(),

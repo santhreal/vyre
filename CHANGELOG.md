@@ -4275,6 +4275,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `vyre_test_support::artifact_fixtures`, so `vyre-runtime` no longer ships a
   test-only module in `src/` and its integration test no longer reaches into
   the crate with a `#[path]` include.
+- The production CPU fallback scan forbids the whole `vyre_reference` crate in
+  production source rather than one entry-point name, so a renamed or newly
+  added oracle function cannot reopen a CPU route.
 - The public API snapshots record `vyre_reference::reference_inputs`,
   `vyre_foundation::ir::ProgramStats::grid_sync`,
   `vyre_driver::validation::ProgramValidationCaps::support` and
@@ -4291,6 +4294,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The reference oracle refuses an out-of-bounds load, store, or atomic at the
   access site on every entry point; the diagnostic entry points that measure
   absorbed accesses keep the zero-fill and no-op behavior.
+- The reference oracle is entered only through `ReferenceRequest`, which
+  borrows the program and inputs and carries a mandatory work, memory, and
+  recursion budget; the untyped free evaluation functions are removed and
+  permissive diagnostics are a separate method that issues no output and no
+  certificate.
 - The runtime module that owns persistent slot residency is
   `vyre-runtime/src/resident_work_queue/`, and its lane, its test files, and
   its architecture page carry the same name. The directory was `megakernel/`, a
@@ -5228,6 +5236,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   the CUDA driver profile, the external-operation contract page, the hot-path
   and benchmark target policies, and the optimization ownership data in the
   documentation evidence map.
+- Cross-entropy contributes a target logit of zero for a class label at or past
+  the vocabulary size, matching its sequential reference, instead of reading
+  the logits buffer past the end of the token's row.
 - The bank-conflict classifier states a stride for a constant left shift, so an
   access that strength reduction already rewrote out of its multiply form is
   classified rather than left unknown.
@@ -5448,6 +5459,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   the release evidence classes likewise subtract exactly the ids
   `cases::nvme_gpu_ingest` cannot register off Linux, rather than asserting
   io_uring exists on macOS.
+- The cooperative DFA scan resets to state zero and emits no match for a symbol
+  at or past the alphabet or a state at or past the state count, matching its
+  sequential reference, instead of reading the transition table and accept mask
+  past their declared extents. `cooperative_dfa_scan_body_with_store` takes the
+  state count as a parameter.
 - The cross-dialect reach-through audit asks whether the library source root
   carries Rust source instead of whether its directory exists, because a
   directory outlives the deletion of every file in it.
@@ -5675,6 +5691,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   so a gate whose job is to report a finding aborted the sweep instead. An
   undocumented panic in xtask is itself a hygiene-matrix release blocker, and
   the unreadable file is now a Finding naming the path and the io error.
+- The mixture-of-experts gating writeback folds a selected expert index into
+  the declared expert count before gathering its score, so an index the caller
+  supplies past that count reads expert zero instead of past the end of the
+  score buffer.
 - A generated evidence artifact is a function of the source, not of the
   filesystem that holds it. The shared tree walk yielded readdir order, so
   `hygiene-matrix.json` rendered its 329 finding rows in whatever sequence a
@@ -6003,6 +6023,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   CONTRIBUTING.md carries no host-local build settings, the placement charter
   points at docs/architecture/crates.md, and the vyre-primitives page lists
   only the paths and features the crate still declares.
+- The paged key-value cache folds a physical block id read from the block table
+  into the declared block count, so a block-table entry at or past the end of
+  the cache reads and writes block zero instead of an address past the cache
+  buffer.
 - `gate-canon` reads the base revision of the baseline file through the fields
   that revision wrote. Reading it with the current row shape made the gate
   unrunnable against any base older than the last schema change, so the
@@ -6499,6 +6523,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   memory a live lookup table still pointed at.
 - The strict-float verdict map is created with one slot per adapter the runtime
   enumerates, which is the number of entries it can ever hold.
+- The reference interpreter holds every lane of a workgroup at a subgroup
+  shuffle, ballot or reduce until all of them arrive, so a collective after a
+  branch whose condition is not lane-uniform reads its peers at the same
+  program point instead of reading a value from another iteration or refusing a
+  local the program binds.
 - A workflow step that runs the gate sweep with --subset credits the gates in
   that subset and no others. Recording the bare sweep for it gave every
   registered gate a workflow, so a gate no workflow selects could not be
@@ -6632,6 +6661,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   no monotonic pair, so an adapter that advertises timestamp queries and
   resolves a zero end-of-pass tick is reported as untimeable instead of failing
   a first timed dispatch with a delta underflow.
+- Embedding returns a zero row for a token at or past the vocabulary size
+  instead of reading the embedding table past its end, and the last row of the
+  vocabulary still reads itself.
 - The hygiene-matrix rule raw_workspace_cargo read `cargo +<toolchain>` as a
   command name, so a blanket `cargo +` fallback fired before every exemption
   and reported the pinned-nightly line that installs cargo-public-api for the
@@ -6767,6 +6799,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   for a literal `materialize::admit(` call and so reported all four backends as
   hand-rolling admission. It now accepts either spelling and additionally
   rejects a backend that defines `admit` or `admit_modules` itself.
+- The Aho-Corasick walk folds its transition state, its output-link span and
+  its pattern-length read inside the tables that hold them, so a transition
+  entry outside the state set or an output record naming no compiled pattern
+  reads element zero instead of indexing past a buffer end. The regex DFA scan
+  is built from those helpers and is covered by the same fold.
 - A benchmark artifact session is cached against the program fingerprint and
   the device signature together. The key was the program alone, so a context
   repointed at another backend served an artifact compiled for the previous
@@ -9252,6 +9289,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   participating-lane set is defined. Values are unchanged: the reference oracle
   and its three boundary cases are untouched and pass, including two subgroups
   of thirty-two.
+- Subgroup-coalesced match append in the Aho-Corasick bounded-ranges and regex
+  whole-buffer scans now runs its collective in subgroup-uniform control flow,
+  so the shipped default dispatch produces the same matches as the per-lane
+  append instead of reading a value no peer lane bound.
 - The registered witness programs for
   `vyre-primitives::hardware::subgroup_ballot` and
   `vyre-primitives::hardware::subgroup_shuffle` passed an unguarded buffer load

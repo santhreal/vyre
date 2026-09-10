@@ -10,7 +10,8 @@ fn prefix_frontier_queue_reference(
     let pass_a =
         frontier_word_counts_scan_pass_a("frontier", "word_partials", "block_totals", node_count);
     let pass_a_outputs =
-        vyre_reference::reference_eval(&pass_a, &[Value::from(pack_words(frontier))])
+        vyre_reference::ReferenceRequest::standard(&pass_a, &[Value::from(pack_words(frontier))])
+            .outputs()
             .expect("prefix frontier queue pass A should reference-evaluate");
     let scatter = frontier_word_block_prefix_to_queue_parallel(
         "frontier",
@@ -21,7 +22,7 @@ fn prefix_frontier_queue_reference(
         node_count,
         queue_capacity,
     );
-    let scatter_outputs = vyre_reference::reference_eval(
+    let scatter_outputs = vyre_reference::ReferenceRequest::standard(
         &scatter,
         &[
             Value::from(pack_words(frontier)),
@@ -34,6 +35,7 @@ fn prefix_frontier_queue_reference(
             Value::from(pack_words(&[0])),
         ],
     )
+    .outputs()
     .expect("prefix frontier queue scatter should reference-evaluate");
     let queue = unpack_words(&scatter_outputs[0].to_bytes());
     let len = unpack_words(&scatter_outputs[1].to_bytes())
@@ -159,7 +161,7 @@ fn word_parallel_frontier_queue_matches_cpu_and_ignores_tail_bits() {
         queue_capacity,
     );
 
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_words(&frontier)),
@@ -170,6 +172,7 @@ fn word_parallel_frontier_queue_matches_cpu_and_ignores_tail_bits() {
             Value::from(pack_words(&[0])),
         ],
     )
+    .outputs()
     .expect("word-level frontier queue materializer should reference-evaluate");
 
     let mut queue = unpack_words(&outputs[0].to_bytes());
@@ -238,7 +241,7 @@ fn word_parallel_frontier_queue_matches_cpu_len_across_2048_generated_frontiers(
             node_count,
             queue_capacity,
         );
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &program,
             &[
                 Value::from(pack_words(&frontier)),
@@ -249,6 +252,7 @@ fn word_parallel_frontier_queue_matches_cpu_len_across_2048_generated_frontiers(
                 Value::from(pack_words(&[0])),
             ],
         )
+        .outputs()
         .unwrap_or_else(|error| {
             panic!(
                 "case {case}: word-level frontier queue materializer failed reference_eval: {error}"

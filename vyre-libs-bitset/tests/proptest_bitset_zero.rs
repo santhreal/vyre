@@ -49,7 +49,8 @@ fn generated_program_shape_is_stable_for_boundary_widths() {
         assert_eq!(program.buffers[0].element, DataType::U32);
         assert_eq!(program.buffers[0].count, words);
 
-        let outputs = vyre_reference::reference_eval(&program, &[])
+        let outputs = vyre_reference::ReferenceRequest::standard(&program, &[])
+            .outputs()
             .expect("bitset_zero reference evaluation must succeed without input");
         assert_eq!(outputs.len(), 1);
         let bytes = outputs[0].to_bytes();
@@ -64,7 +65,8 @@ fn adversarial_widths_preserve_exact_reference_parity() {
         0u32, 1, 2, 7, 31, 32, 33, 63, 64, 65, 255, 256, 257, 512, 1024, 4096,
     ] {
         let program = bitset_zero("target", words);
-        let outputs = vyre_reference::reference_eval(&program, &[])
+        let outputs = vyre_reference::ReferenceRequest::standard(&program, &[])
+            .outputs()
             .expect("bitset_zero reference evaluation must succeed without input");
         assert_eq!(outputs.len(), 1);
         let words_out: Vec<u32> = outputs[0]

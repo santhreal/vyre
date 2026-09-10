@@ -7,13 +7,14 @@ use vyre_reference::value::Value;
 
 fn evaluate_empty_shape(num_heads: u32, seq_len: u32, head_dim: u32) -> Vec<u8> {
     let program = qk_gain("q_in", "q_out", "gain", num_heads, seq_len, head_dim);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(Vec::<u8>::new()),
             Value::from(vec![0_u8; num_heads as usize * size_of::<f32>()]),
         ],
     )
+    .outputs()
     .expect("an empty QK-gain shape must declare an explicit zero-byte output");
 
     outputs[0].to_bytes()

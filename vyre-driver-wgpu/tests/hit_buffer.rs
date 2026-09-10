@@ -46,7 +46,8 @@ fn run_emit_reference(
         Value::Bytes(pack_words(&[0]).into()),
         Value::Bytes(pack_words(&[0]).into()),
     ];
-    vyre_reference::reference_eval(&program, &inputs)
+    vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("Fix: hit-buffer reference run must succeed")
         .into_iter()
         .map(|value| value.to_bytes())

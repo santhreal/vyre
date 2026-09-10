@@ -11,7 +11,9 @@ use vyre_reference::value::Value;
 
 fn run(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
     let values: Vec<Value> = inputs.into_iter().map(Value::from).collect();
-    let outputs = vyre_reference::reference_eval(program, &values).expect("program must execute");
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
+        .expect("program must execute");
     outputs.into_iter().map(|v| v.to_bytes()).collect()
 }
 

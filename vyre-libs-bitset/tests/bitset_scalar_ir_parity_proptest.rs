@@ -40,7 +40,7 @@ proptest! {
     fn bitset_zero_ir_clears_every_word(target in prop::collection::vec(any::<u32>(), 1..=64)) {
         let words = target.len() as u32;
         let program = zero::bitset_zero("target", words);
-        let outputs = vyre_reference::reference_eval(&program, &[])
+        let outputs = vyre_reference::ReferenceRequest::standard(&program, &[]).outputs()
             .expect("bitset_zero reference evaluation must succeed");
         let got = decode(&outputs);
 
@@ -59,7 +59,7 @@ proptest! {
         let words = target.len() as u32;
         let bit_idx = raw_bit % (words * 32);
         let program = set_bit::bitset_set_bit("target", bit_idx, words);
-        let outputs = vyre_reference::reference_eval(&program, &[pack(&target)])
+        let outputs = vyre_reference::ReferenceRequest::standard(&program, &[pack(&target)]).outputs()
             .expect("bitset_set_bit reference evaluation must succeed");
         let got = decode(&outputs);
 
@@ -75,7 +75,7 @@ proptest! {
         let words = target.len() as u32;
         let bit_idx = raw_bit % (words * 32);
         let program = clear_bit::bitset_clear_bit("target", bit_idx, words);
-        let outputs = vyre_reference::reference_eval(&program, &[pack(&target)])
+        let outputs = vyre_reference::ReferenceRequest::standard(&program, &[pack(&target)]).outputs()
             .expect("bitset_clear_bit reference evaluation must succeed");
         let got = decode(&outputs);
 
@@ -94,7 +94,9 @@ fn bitset_scalar_ir_word_seam_boundaries() {
         // set_bit
         let program = set_bit::bitset_set_bit("target", bit_idx, words);
         let got = decode(
-            &vyre_reference::reference_eval(&program, &[pack(&base)]).expect("set_bit eval"),
+            &vyre_reference::ReferenceRequest::standard(&program, &[pack(&base)])
+                .outputs()
+                .expect("set_bit eval"),
         );
         let want = bitset_set_bit_witness(&base, bit_idx);
         assert_eq!(got, want, "set_bit seam bit_idx={bit_idx}");
@@ -102,7 +104,9 @@ fn bitset_scalar_ir_word_seam_boundaries() {
         // clear_bit
         let program = clear_bit::bitset_clear_bit("target", bit_idx, words);
         let got = decode(
-            &vyre_reference::reference_eval(&program, &[pack(&base)]).expect("clear_bit eval"),
+            &vyre_reference::ReferenceRequest::standard(&program, &[pack(&base)])
+                .outputs()
+                .expect("clear_bit eval"),
         );
         let want = bitset_clear_bit_witness(&base, bit_idx);
         assert_eq!(got, want, "clear_bit seam bit_idx={bit_idx}");

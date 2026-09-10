@@ -96,12 +96,22 @@ fn atomic_on_u64_buffer_touches_lower_half_only() {
             DataType::U64,
         ),
     );
-    let old = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::atomic_add("buf", Expr::u32(0), Expr::u32(1)))
+    let old = reference_eval_expr(
+        &program,
+        &mut memory,
+        InvocationIds::ZERO,
+        &Expr::atomic_add("buf", Expr::u32(0), Expr::u32(1)),
+    )
     .expect("Fix: atomic on U64 buffer must evaluate");
     // old value read as low 32 bits
     assert_eq!(old, Value::U32(0));
 
-    let loaded = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::load("buf", Expr::u32(0)))
+    let loaded = reference_eval_expr(
+        &program,
+        &mut memory,
+        InvocationIds::ZERO,
+        &Expr::load("buf", Expr::u32(0)),
+    )
     .expect("Fix: load after atomic must succeed");
     // U64 value should now be 0x0000_0001_0000_0001
     assert_eq!(
@@ -118,17 +128,33 @@ fn multiple_atomics_on_same_location_are_deterministic() {
         [1, 1, 1],
         Vec::new(),
     );
-    let mut memory = ReferenceMemory::empty().with_storage("buf", Buffer::new(vec![0; 4], DataType::U32));
+    let mut memory =
+        ReferenceMemory::empty().with_storage("buf", Buffer::new(vec![0; 4], DataType::U32));
 
-    let first = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::atomic_add("buf", Expr::u32(0), Expr::u32(1)))
+    let first = reference_eval_expr(
+        &program,
+        &mut memory,
+        InvocationIds::ZERO,
+        &Expr::atomic_add("buf", Expr::u32(0), Expr::u32(1)),
+    )
     .unwrap();
-    let second = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::atomic_add("buf", Expr::u32(0), Expr::u32(1)))
+    let second = reference_eval_expr(
+        &program,
+        &mut memory,
+        InvocationIds::ZERO,
+        &Expr::atomic_add("buf", Expr::u32(0), Expr::u32(1)),
+    )
     .unwrap();
 
     assert_eq!(first, Value::U32(0), "first atomic must see old=0");
     assert_eq!(second, Value::U32(1), "second atomic must see old=1");
 
-    let final_val = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::load("buf", Expr::u32(0)))
+    let final_val = reference_eval_expr(
+        &program,
+        &mut memory,
+        InvocationIds::ZERO,
+        &Expr::load("buf", Expr::u32(0)),
+    )
     .unwrap();
     assert_eq!(final_val, Value::U32(2));
 }
@@ -163,7 +189,8 @@ fn out_of_bounds_load_refuses_instead_of_returning_a_typed_zero() {
         Node::store("out", Expr::u32(0), Expr::load("in", Expr::u32(999))),
     );
     assert_out_of_bounds(
-        reference_eval(&program, &[Value::from(vec![0xAB; 4])]),
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(vec![0xAB; 4])])
+            .outputs(),
         "a load past the buffer",
     );
 }
@@ -187,7 +214,11 @@ fn out_of_bounds_store_refuses_instead_of_vanishing() {
         )],
     );
     assert_out_of_bounds(
-        reference_eval(&program, &[Value::from(999u32.to_le_bytes().to_vec())]),
+        vyre_reference::ReferenceRequest::standard(
+            &program,
+            &[Value::from(999u32.to_le_bytes().to_vec())],
+        )
+        .outputs(),
         "a store past the buffer",
     );
 }
@@ -200,7 +231,7 @@ fn load_from_a_zero_sized_buffer_refuses() {
         Node::store("out", Expr::u32(0), Expr::load("in", Expr::u32(0))),
     );
     assert_out_of_bounds(
-        reference_eval(&program, &[Value::from(vec![])]),
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(vec![])]).outputs(),
         "a load from a zero-sized buffer",
     );
 }
@@ -213,19 +244,24 @@ fn an_empty_output_range_holds_no_element_and_yields_no_bytes() {
         || vec![BufferDecl::output("out", 0, DataType::U32).with_output_byte_range(0usize..0usize)];
 
     assert_out_of_bounds(
-        reference_eval(
+        vyre_reference::ReferenceRequest::standard(
             &Program::wrapped(
                 decls(),
                 [1, 1, 1],
                 vec![Node::store("out", Expr::u32(0), Expr::u32(0xDEAD_BEEF))],
             ),
             &[],
-        ),
+        )
+        .outputs(),
         "a store into an empty output range",
     );
 
-    let outputs = reference_eval(&Program::wrapped(decls(), [1, 1, 1], Vec::new()), &[])
-        .expect("Fix: an empty output range must still be collected as an output.");
+    let outputs = vyre_reference::ReferenceRequest::standard(
+        &Program::wrapped(decls(), [1, 1, 1], Vec::new()),
+        &[],
+    )
+    .outputs()
+    .expect("Fix: an empty output range must still be collected as an output.");
     assert_eq!(
         outputs.len(),
         1,
@@ -254,7 +290,8 @@ fn u32_max_index_load_refuses() {
         )],
     );
     assert_out_of_bounds(
-        reference_eval(&program, &[Value::from(vec![0xAB; 4])]),
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(vec![0xAB; 4])])
+            .outputs(),
         "a load at an index whose byte offset overflows",
     );
 }

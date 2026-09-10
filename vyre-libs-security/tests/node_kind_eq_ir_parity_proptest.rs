@@ -24,9 +24,12 @@ fn run_ir(nodes: &[u32], kind: u32) -> Vec<u32> {
     let words = node_count.div_ceil(32).max(1) as usize;
     let program = node_kind_eq("nodes", "nodeset", node_count, kind);
     let pack = |d: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(d));
-    let outputs =
-        vyre_reference::reference_eval(&program, &[pack(nodes), pack(&vec![0u32; words])])
-            .expect("node_kind_eq reference evaluation must succeed");
+    let outputs = vyre_reference::ReferenceRequest::standard(
+        &program,
+        &[pack(nodes), pack(&vec![0u32; words])],
+    )
+    .outputs()
+    .expect("node_kind_eq reference evaluation must succeed");
     // Sole RW buffer is `nodeset` (binding 1) → results[0].
     outputs[0]
         .to_bytes()

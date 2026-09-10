@@ -32,7 +32,7 @@ fn one_hop(program: &vyre::ir::Program) -> u32 {
     let fin = [0b001u32]; // {0}
     let fout = [0b001u32]; // accumulator starts at the input frontier
 
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         program,
         &[
             Value::from(pack_u32_slice(&pg_nodes)),
@@ -44,6 +44,7 @@ fn one_hop(program: &vyre::ir::Program) -> u32 {
             Value::from(pack_u32_slice(&fout)),
         ],
     )
+    .outputs()
     .expect("flows_to reach program must execute under reference_eval");
     decode_u32_le_bytes_all(&outputs[0].to_bytes())[0]
 }

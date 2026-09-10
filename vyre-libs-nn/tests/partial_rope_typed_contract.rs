@@ -34,7 +34,7 @@ fn bf16_decode_offset_rotates_prefix_and_preserves_suffix_words() {
         DataType::BF16,
     )
     .expect("Fix: BF16 partial RoPE must build");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(bf16_bytes(&[1.0, 2.0, 3.0, 4.0])),
@@ -42,6 +42,7 @@ fn bf16_decode_offset_rotates_prefix_and_preserves_suffix_words() {
             Value::from(f32_bytes(&[0.0, 1.0])),
         ],
     )
+    .outputs()
     .expect("Fix: BF16 offset RoPE must execute");
     assert_eq!(
         decode_words(&outputs[0]),
@@ -73,7 +74,7 @@ fn bf16_rotation_rounds_once_after_f32_math() {
     .expect("Fix: BF16 full RoPE must build");
     let x0 = f32::from_bits(u32::from(bf16_word(1.1)) << 16);
     let x1 = f32::from_bits(u32::from(bf16_word(-0.7)) << 16);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(bf16_bytes(&[x0, x1])),
@@ -81,6 +82,7 @@ fn bf16_rotation_rounds_once_after_f32_math() {
             Value::from(f32_bytes(&[0.25])),
         ],
     )
+    .outputs()
     .expect("Fix: mixed-precision RoPE must execute");
     assert_eq!(
         decode_words(&outputs[0]),
@@ -131,7 +133,8 @@ fn bf16_position_range_overflow_traps_before_buffer_access() {
         DataType::BF16,
     )
     .expect("Fix: shape errors are represented by invalid programs");
-    let error = vyre_reference::reference_eval(&program, &[])
+    let error = vyre_reference::ReferenceRequest::standard(&program, &[])
+        .outputs()
         .expect_err("Fix: overflowing rotary position range must trap");
     assert!(error.to_string().contains("position range"), "{error}");
 }

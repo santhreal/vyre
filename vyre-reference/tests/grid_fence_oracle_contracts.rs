@@ -17,7 +17,6 @@
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, MemoryOrdering, Node, Program,
 };
-use vyre_reference::reference_eval_with_grid;
 use vyre_reference::value::Value;
 
 fn u32_words(value: &Value) -> Vec<u32> {
@@ -47,11 +46,12 @@ fn a_binding_made_before_the_fence_is_readable_after_it() {
         ],
     );
 
-    let outputs = reference_eval_with_grid(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[Value::from(vec![0u8; 16].as_slice())],
-        [4, 1, 1],
     )
+    .with_grid([4, 1, 1])
+    .outputs()
     .expect("a binding must survive the fence it was made before");
 
     assert_eq!(u32_words(&outputs[0]), vec![100, 101, 102, 103]);
@@ -86,7 +86,9 @@ fn a_read_after_the_fence_sees_every_lanes_write() {
     );
     let zeros = Value::from(vec![0u8; width as usize * 4].as_slice());
 
-    let outputs = reference_eval_with_grid(&program, &[zeros.clone(), zeros], [width, 1, 1])
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[zeros.clone(), zeros])
+        .with_grid([width, 1, 1])
+        .outputs()
         .expect("a fenced program must evaluate");
 
     // `out[i] == scratch[(i + 1) % width] == (i + 1) % width + 1`.
@@ -129,7 +131,9 @@ fn a_fence_inside_a_wrapper_still_partitions_the_program() {
     );
     let zeros = Value::from(vec![0u8; 16].as_slice());
 
-    let outputs = reference_eval_with_grid(&program, &[zeros.clone(), zeros], [4, 1, 1])
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[zeros.clone(), zeros])
+        .with_grid([4, 1, 1])
+        .outputs()
         .expect("a wrapped fence must still evaluate");
 
     assert_eq!(
@@ -153,11 +157,12 @@ fn a_workgroup_barrier_is_not_a_grid_fence() {
         ],
     );
 
-    let outputs = reference_eval_with_grid(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[Value::from(vec![0u8; 16].as_slice())],
-        [4, 1, 1],
     )
+    .with_grid([4, 1, 1])
+    .outputs()
     .expect("a workgroup barrier must not split the program");
 
     assert_eq!(u32_words(&outputs[0]), vec![0, 2, 4, 6]);
@@ -202,7 +207,10 @@ fn a_fence_inside_a_loop_orders_the_grid_on_every_iteration() {
                 // only if every lane wrote before any lane read.
                 Node::store(
                     "out",
-                    Expr::add(Expr::mul(Expr::gid_x(), Expr::u32(ITERATIONS)), Expr::var("k")),
+                    Expr::add(
+                        Expr::mul(Expr::gid_x(), Expr::u32(ITERATIONS)),
+                        Expr::var("k"),
+                    ),
                     Expr::load("scratch", neighbour.clone()),
                 ),
                 // The next iteration overwrites `scratch`, so the reads above
@@ -212,14 +220,15 @@ fn a_fence_inside_a_loop_orders_the_grid_on_every_iteration() {
         )],
     );
 
-    let outputs = reference_eval_with_grid(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(vec![0u8; LANES as usize * 4].as_slice()),
             Value::from(vec![0u8; (LANES * ITERATIONS) as usize * 4].as_slice()),
         ],
-        [LANES, 1, 1],
     )
+    .with_grid([LANES, 1, 1])
+    .outputs()
     .expect("a loop-nested fence must evaluate");
 
     // out[lane * 2 + k] == scratch[(lane + 1) % 2] == (lane + 1) % 2 + 10 * k.
@@ -252,19 +261,24 @@ fn a_fence_inside_a_uniform_branch_orders_the_grid() {
                     Expr::add(Expr::gid_x(), Expr::u32(7)),
                 ),
                 Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                Node::store("out", Expr::gid_x(), Expr::load("scratch", neighbour.clone())),
+                Node::store(
+                    "out",
+                    Expr::gid_x(),
+                    Expr::load("scratch", neighbour.clone()),
+                ),
             ],
         )],
     );
 
-    let outputs = reference_eval_with_grid(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(vec![0u8; LANES as usize * 4].as_slice()),
             Value::from(vec![0u8; LANES as usize * 4].as_slice()),
         ],
-        [LANES, 1, 1],
     )
+    .with_grid([LANES, 1, 1])
+    .outputs()
     .expect("a branch-nested fence must evaluate");
 
     assert_eq!(
@@ -300,11 +314,12 @@ fn workgroup_memory_survives_a_fence() {
         ],
     );
 
-    let outputs = reference_eval_with_grid(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[Value::from(vec![0u8; 8].as_slice())],
-        [2, 1, 1],
     )
+    .with_grid([2, 1, 1])
+    .outputs()
     .expect("a fence over workgroup memory must evaluate");
 
     assert_eq!(

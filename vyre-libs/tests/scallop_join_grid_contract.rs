@@ -102,7 +102,7 @@ fn wide_fixpoint_writes_every_word_of_every_cell() {
         w,
         max_iterations,
     );
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             pack(&seed),
@@ -111,6 +111,7 @@ fn wide_fixpoint_writes_every_word_of_every_cell() {
             pack(&join_rules),
         ],
     )
+    .outputs()
     .expect("wide scallop_join reference evaluation must succeed");
     let got = words(&outputs[0]);
 

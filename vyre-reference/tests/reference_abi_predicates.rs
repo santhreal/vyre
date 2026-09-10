@@ -13,7 +13,7 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, MemoryKind, Node, Program};
 use vyre_reference::value::Value;
-use vyre_reference::{is_reference_input, is_reference_output, reference_eval};
+use vyre_reference::{is_reference_input, is_reference_output};
 
 fn read_only(name: &str, binding: u32) -> BufferDecl {
     BufferDecl::read(name, binding, DataType::U32).with_count(4)
@@ -124,8 +124,12 @@ fn the_predicates_predict_the_shapes_reference_eval_uses() {
     );
 
     let pack = |words: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(words));
-    let outputs = reference_eval(&program, &[pack(&[1, 2, 3, 4]), pack(&[0, 0, 0, 0])])
-        .expect("one Value per is_reference_input decl is exactly what the interpreter wants");
+    let outputs = vyre_reference::ReferenceRequest::standard(
+        &program,
+        &[pack(&[1, 2, 3, 4]), pack(&[0, 0, 0, 0])],
+    )
+    .outputs()
+    .expect("one Value per is_reference_input decl is exactly what the interpreter wants");
     assert_eq!(
         outputs.len(),
         expected_outputs,
@@ -155,7 +159,7 @@ fn supplying_one_value_too_many_is_rejected() {
     )];
     let program = Program::wrapped(buffers, [4, 1, 1], body);
     let pack = |words: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(words));
-    let error = reference_eval(
+    let error = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             pack(&[1, 2, 3, 4]),
@@ -163,6 +167,7 @@ fn supplying_one_value_too_many_is_rejected() {
             pack(&[9, 9, 9, 9]),
         ],
     )
+    .outputs()
     .expect_err("three values for two input decls is a contract violation");
     assert!(
         error.to_string().contains("unused input"),
@@ -306,7 +311,8 @@ fn the_borrowed_walk_produces_the_vector_reference_eval_accepts() {
     let supplied: Vec<&[u8]> = vec![input.as_slice(), seed.as_slice()];
     let values = vyre_reference::reference_input_values(&program, &supplied)
         .expect("two values for two predicate inputs");
-    let outputs = reference_eval(&program, &values)
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &values)
+        .outputs()
         .expect("the walk must produce a vector the interpreter accepts");
     assert_eq!(outputs.len(), 1);
 }

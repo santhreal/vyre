@@ -93,7 +93,8 @@ fn grad_buffer_load_square_oracle_confirms_two_x() {
             .any(|decl| decl.name() == "x" && vyre_reference::is_reference_input(decl)),
         "Fix: the backward must accept `x` as an input, or this case seeds nothing and 2*x is meaningless"
     );
-    let results = vyre_reference::reference_eval(&backward, &inputs)
+    let results = vyre_reference::ReferenceRequest::standard(&backward, &inputs)
+        .outputs()
         .expect("buffer-load square backward must validate and run");
 
     // d(x^2)/dx = 2x = 6.0 at x = 3.0.

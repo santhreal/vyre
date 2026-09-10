@@ -207,8 +207,7 @@ mod tests {
                     || name
                         .strip_prefix("vyre-libs-")
                         .is_some_and(|domain| !domain.is_empty());
-                (is_composition && entry.path().join("src").is_dir())
-                    .then(|| format!("{name}/src"))
+                (is_composition && entry.path().join("src").is_dir()).then(|| format!("{name}/src"))
             })
             .collect()
     }

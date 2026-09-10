@@ -66,7 +66,8 @@ pub(crate) fn inputs_for(program: &Program, seed_bytes: usize, len: u32) -> Vec<
 
 pub(crate) fn run_reference(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
     let values: Vec<Value> = inputs.iter().map(|b| Value::from(b.as_slice())).collect();
-    vyre_reference::reference_eval(program, &values)
+    vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
         .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
         .map_err(|error| error.to_string())
 }

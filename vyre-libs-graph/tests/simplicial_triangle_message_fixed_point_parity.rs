@@ -79,7 +79,7 @@ fn run_via_reference(
     d: u32,
 ) -> Vec<f64> {
     let program = simplicial_triangle_message("e", "te", "tm", n_edges, n_triangles, d);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32_slice(edge_features_fp)),
@@ -87,6 +87,7 @@ fn run_via_reference(
             Value::from(pack_u32_slice(&vec![0u32; (n_triangles * d) as usize])),
         ],
     )
+    .outputs()
     .expect("simplicial_triangle_message reference evaluation must succeed");
     // Buffers: edge_features RO(0), triangle_edges RO(1), triangle_messages RW(2), the sole writable
     // buffer, so it is outputs[0] in binding order.

@@ -38,7 +38,7 @@ fn hensel_fixed(x: &[u32], f_x: &[u32], inv_f_prime: &[u32]) -> Vec<u32> {
 fn run_via_reference(x: &[u32], f_x: &[u32], inv_f_prime: &[u32]) -> Vec<u32> {
     let n = x.len() as u32;
     let program = hensel_lift_step("x", "f_x", "inv_f_prime", "out", n);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32(x)),
@@ -46,6 +46,7 @@ fn run_via_reference(x: &[u32], f_x: &[u32], inv_f_prime: &[u32]) -> Vec<u32> {
             Value::from(pack_u32(inv_f_prime)),
         ],
     )
+    .outputs()
     .expect("hensel_lift_step reference evaluation must succeed");
     outputs[0]
         .to_bytes()

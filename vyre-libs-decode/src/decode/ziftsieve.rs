@@ -484,7 +484,7 @@ mod primitive_tests {
                 max_output: 3,
             },
         );
-        let (_outputs, report) = vyre_test_support::test_parity_oracles::eval_bytes_oob_report(
+        vyre_test_support::test_parity_oracles::eval_bytes_in_bounds(
             "ziftsieve",
             &program,
             vec![
@@ -497,11 +497,6 @@ mod primitive_tests {
                 // literal_offset -> slots 1..4
                 vyre_primitives::wire::pack_u32_slice(&[0u32; 3]),
             ],
-        );
-        assert_eq!(
-            report.total(),
-            0,
-            "Fix: the bounds-gated copy must never trigger interpreter OOB masking on hostile input"
         );
     }
 }

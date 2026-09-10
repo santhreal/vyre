@@ -12,13 +12,13 @@ fn scan_fixture(source: &str) -> Vec<vyre_lints::Violation> {
 }
 
 #[test]
-fn flags_reference_eval_in_production_source() {
+fn flags_oracle_use_in_production_source() {
     let dir = tempfile::tempdir().expect("tempdir");
     let src = dir.path().join("vyre-libs/src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("dispatch.rs"),
-        "pub fn bad() { let _ = vyre_reference::reference_eval(&program, &values); }\n",
+        "pub fn bad() { let _ = vyre_reference::ReferenceRequest::standard(&program, &values).outputs(); }\n",
     )
     .expect("write fixture");
 
@@ -144,13 +144,13 @@ fn cli_default_production_roots_are_vyre_owned_only() {
 }
 
 #[test]
-fn permits_reference_eval_inside_cfg_test_module() {
+fn permits_oracle_use_inside_cfg_test_module() {
     let dir = tempfile::tempdir().expect("tempdir");
     let src = dir.path().join("vyre-libs/src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("dispatch.rs"),
-        "#[cfg(test)]\nmod tests {\n    fn oracle() { let _ = vyre_reference::reference_eval(&program, &values); }\n}\n",
+        "#[cfg(test)]\nmod tests {\n    fn oracle() { let _ = vyre_reference::ReferenceRequest::standard(&program, &values).outputs(); }\n}\n",
     )
     .expect("write fixture");
 
@@ -166,7 +166,7 @@ fn permits_cfg_test_module_with_intervening_attributes() {
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("dispatch.rs"),
-        "#[cfg(test)]\n#[allow(clippy::unwrap_used)]\nmod tests {\n    fn oracle() { let _ = vyre_reference::reference_eval(&program, &values); }\n}\n",
+        "#[cfg(test)]\n#[allow(clippy::unwrap_used)]\nmod tests {\n    fn oracle() { let _ = vyre_reference::ReferenceRequest::standard(&program, &values).outputs(); }\n}\n",
     )
     .expect("write fixture");
 
@@ -176,13 +176,13 @@ fn permits_cfg_test_module_with_intervening_attributes() {
 }
 
 #[test]
-fn permits_reference_eval_under_tests_directory() {
+fn permits_oracle_use_under_tests_directory() {
     let dir = tempfile::tempdir().expect("tempdir");
     let tests = dir.path().join("vyre-libs/tests");
     fs::create_dir_all(&tests).expect("create tests");
     fs::write(
         tests.join("oracle.rs"),
-        "fn oracle() { let _ = vyre_reference::reference_eval(&program, &values); }\n",
+        "fn oracle() { let _ = vyre_reference::ReferenceRequest::standard(&program, &values).outputs(); }\n",
     )
     .expect("write fixture");
 
@@ -314,7 +314,7 @@ fn permits_pub_crate_test_module() {
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("atomic.rs"),
-        "#[cfg(test)]\npub(crate) mod testutil {\n    pub(crate) fn run(program: &Program) {\n        let _ = vyre_reference::reference_eval(program, &[]);\n    }\n}\n",
+        "#[cfg(test)]\npub(crate) mod testutil {\n    pub(crate) fn run(program: &Program) {\n        let _ = vyre_reference::ReferenceRequest::standard(program, &[]).outputs();\n    }\n}\n",
     )
     .expect("write fixture");
 
@@ -340,13 +340,13 @@ fn permits_file_level_cpu_parity_module() {
 }
 
 #[test]
-fn ignores_reference_eval_in_doc_comments() {
+fn ignores_oracle_use_in_doc_comments() {
     let dir = tempfile::tempdir().expect("tempdir");
     let src = dir.path().join("vyre-libs/src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("dispatch.rs"),
-        "/// Tests may call vyre_reference::reference_eval, production may not.\npub fn ok() {}\n",
+        "/// Tests may call vyre_reference::ReferenceRequest, production may not.\npub fn ok() {}\n",
     )
     .expect("write fixture");
 
@@ -408,28 +408,48 @@ fn allows_external_consumer_cpu_reference_only_in_parity_tests() {
     assert!(violations.is_empty());
 }
 
-/// Renaming a forbidden oracle import must not hide the production fallback.
+/// Renaming an oracle import must not hide the production fallback.
 #[test]
-fn flags_renamed_reference_eval_import() {
+fn flags_renamed_oracle_import() {
     let violations = scan_fixture(
-        "use vyre_reference::reference_eval as execute;\npub fn bad() { execute(&program, &values); }\n",
+        "use vyre_reference::ReferenceRequest as Execute;\npub fn bad() { Execute::standard(&program, &values); }\n",
     );
 
     assert_eq!(violations.len(), 1);
-    assert!(violations[0].message.contains("reference_eval"));
+    assert!(violations[0].message.contains("vyre_reference"));
+}
+
+/// The oracle is keyed by crate, so a new entry point cannot reopen the route.
+///
+/// Keying on an entry-point name let a rename or an added function walk past
+/// the scan. Every item the crate exports is forbidden in production instead.
+#[test]
+fn flags_any_oracle_entry_point_by_crate() {
+    for entry in [
+        "ReferenceRequest",
+        "reference_eval_expr",
+        "an_entry_point_added_next_year",
+    ] {
+        let violations = scan_fixture(&format!(
+            "pub fn bad() {{ let _ = vyre_reference::{entry}; }}\n"
+        ));
+
+        assert_eq!(violations.len(), 1, "`{entry}` must be flagged");
+        assert!(violations[0].message.contains("vyre_reference"));
+    }
 }
 
 /// Qualified paths with arbitrary formatting must remain visible to the AST gate.
 #[test]
-fn flags_multiline_fully_qualified_reference_eval() {
+fn flags_multiline_fully_qualified_oracle_path() {
     let violations = scan_fixture(
-        "pub fn bad() { let _ = vyre_reference\n    ::reference_eval(&program, &values); }\n",
+        "pub fn bad() { let _ = vyre_reference\n    ::ReferenceRequest::standard(&program, &values).outputs(); }\n",
     );
 
     assert_eq!(violations.len(), 1);
     assert!(violations[0]
         .message
-        .contains("vyre_reference::reference_eval"));
+        .contains("vyre_reference::ReferenceRequest::standard"));
 }
 
 /// A mixed `cfg(any(...))` is production-reachable and must not exempt the item.
@@ -466,7 +486,7 @@ fn cfg_attr_test_does_not_create_parity_exemption() {
 #[test]
 fn ignores_forbidden_names_in_non_executable_text() {
     let violations = scan_fixture(
-        "/// `vyre_reference::reference_eval` is test-only.\nfn ok() { let message = \"cpu_ref()\"; assert_eq!(message.len(), 9); }\n",
+        "/// `vyre_reference::ReferenceRequest` is test-only.\nfn ok() { let message = \"cpu_ref()\"; assert_eq!(message.len(), 9); }\n",
     );
 
     assert!(violations.is_empty());

@@ -193,7 +193,7 @@ fn prepare_reference_cases(
         for input in &planned_inputs {
             reference_values.push(Value::from(*input));
         }
-        let outputs = vyre_reference::reference_eval(program, &reference_values)
+        let outputs = vyre_reference::ReferenceRequest::standard(program, &reference_values).outputs()
             .map_err(|error| {
                 format!(
                     "{op_id}: reference dispatch failed while preparing case {case_index}: {error}. Fix: repair the witness or CPU reference before running backend parity."

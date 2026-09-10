@@ -39,7 +39,8 @@ fn unary_builder_matches_the_oracle_lane_for_lane() {
         Expr::add(x, Expr::u32(7))
     });
 
-    let outputs = vyre_reference::reference_eval(&program, &[bytes(&input)])
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[bytes(&input)])
+        .outputs()
         .expect("the unary elementwise program must evaluate");
 
     let expected: Vec<u32> = input.iter().map(|x| x.wrapping_add(7)).collect();
@@ -53,7 +54,8 @@ fn binary_builder_matches_the_oracle_lane_for_lane() {
     let size = u32::try_from(a.len()).expect("lane count fits in u32");
     let program = u32_elementwise_binary(OP_BINARY, "a", "b", "out", size, Expr::add);
 
-    let outputs = vyre_reference::reference_eval(&program, &[bytes(&a), bytes(&b)])
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[bytes(&a), bytes(&b)])
+        .outputs()
         .expect("the binary elementwise program must evaluate");
 
     let expected: Vec<u32> = a.iter().zip(&b).map(|(x, y)| x.wrapping_add(*y)).collect();
@@ -64,7 +66,8 @@ fn binary_builder_matches_the_oracle_lane_for_lane() {
 #[test]
 fn a_zero_lane_request_evaluates_and_writes_no_lane() {
     let program = u32_elementwise_unary(OP_UNARY, "input", "out", 0, |x| x);
-    let outputs = vyre_reference::reference_eval(&program, &[bytes(&[])])
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[bytes(&[])])
+        .outputs()
         .expect("a zero-lane elementwise program must evaluate");
     assert!(words(&outputs[0]).is_empty());
 }
@@ -80,7 +83,8 @@ fn a_zero_lane_request_evaluates_and_writes_no_lane() {
 #[test]
 fn a_mismatched_operand_yields_a_program_that_refuses_to_evaluate() {
     let program = u32_elementwise_binary(OP_BINARY, "a", "a", "a", 4, Expr::add);
-    let error = vyre_reference::reference_eval(&program, &[])
+    let error = vyre_reference::ReferenceRequest::standard(&program, &[])
+        .outputs()
         .expect_err("a builder that could not honour its operands must hand back a refusal");
     let message = error.to_string();
     assert!(

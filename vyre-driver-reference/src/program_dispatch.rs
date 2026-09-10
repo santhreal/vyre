@@ -123,7 +123,7 @@ impl SemanticExecutor for ReferenceSemanticExecutor {
                 })?;
                 inputs.push(Value::from(bytes.clone()));
             }
-            let outputs = vyre_reference::reference_eval(&node.program, &inputs).map_err(|error| {
+            let outputs = vyre_reference::ReferenceRequest::standard(&node.program, &inputs).outputs().map_err(|error| {
                 SemanticExecutionError::Backend(format!(
                     "reference graph node `{}` failed: {error}. Fix: validate the node Program and graph-value ABI",
                     node.name

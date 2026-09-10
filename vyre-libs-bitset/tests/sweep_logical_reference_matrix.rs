@@ -14,20 +14,23 @@ fn bytes_from_u32(words: &[u32]) -> Vec<u8> {
 }
 
 fn run_binary(program: &vyre_foundation::ir::Program, a: &[u32; 4], b: &[u32; 4]) -> [u32; 4] {
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         program,
         &[
             Value::from(bytes_from_u32(a)),
             Value::from(bytes_from_u32(b)),
         ],
     )
+    .outputs()
     .unwrap_or_else(|error| panic!("Fix: logical reference run failed: {error}"));
     decode_u32x4(&outputs[0].to_bytes())
 }
 
 fn run_unary(program: &vyre_foundation::ir::Program, input: &[u32; 4]) -> [u32; 4] {
-    let outputs = vyre_reference::reference_eval(program, &[Value::from(bytes_from_u32(input))])
-        .unwrap_or_else(|error| panic!("Fix: logical unary reference run failed: {error}"));
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(program, &[Value::from(bytes_from_u32(input))])
+            .outputs()
+            .unwrap_or_else(|error| panic!("Fix: logical unary reference run failed: {error}"));
     decode_u32x4(&outputs[0].to_bytes())
 }
 

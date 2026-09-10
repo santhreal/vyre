@@ -25,7 +25,6 @@ impl core::fmt::Display for vyre_reference::composition_witness::WitnessPostProc
 impl inventory::Collect for vyre_reference::ReferenceFacet
 impl vyre_foundation::diagnostics::ToDiagnostic for vyre_reference::ReferenceError
 impl vyre_reference::Buffer
-impl vyre_reference::ExactResourceAbi
 impl vyre_reference::OobReport
 impl vyre_reference::ReferenceBudget
 impl vyre_reference::ReferenceError
@@ -33,7 +32,6 @@ impl vyre_reference::ReferenceErrorClass
 impl vyre_reference::ReferenceErrorKind
 impl vyre_reference::ReferenceFacet
 impl vyre_reference::ReferenceMemory
-impl vyre_reference::ReferenceRequest
 impl vyre_reference::ShadowMemory
 impl vyre_reference::WorkloadEnvelope
 impl vyre_reference::composition_witness::AmgSolveScratchWitness
@@ -49,13 +47,24 @@ impl vyre_reference::composition_witness::ZxColor
 impl vyre_reference::subgroup::SubgroupSimulator
 impl vyre_reference::value::Value
 impl vyre_reference::workgroup::InvocationIds
+impl<'a> vyre_reference::ExactResourceAbi<'a>
+impl<'a> vyre_reference::ReferenceRequest<'a>
+pub const fn vyre_reference::ExactResourceAbi<'a>::new(declared_buffers: &'a [vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl], inputs: &'a [vyre_reference::value::Value]) -> Self
 pub const fn vyre_reference::ReferenceBudget::bounded(steps: u64) -> Self
 pub const fn vyre_reference::ReferenceBudget::new(work_ceiling: u64, max_memory_bytes: usize, max_recursion_depth: usize) -> Self
 pub const fn vyre_reference::ReferenceBudget::standard() -> Self
+pub const fn vyre_reference::ReferenceBudget::with_max_memory_bytes(bytes: usize) -> Self
+pub const fn vyre_reference::ReferenceBudget::with_max_recursion_depth(depth: usize) -> Self
+pub const fn vyre_reference::ReferenceBudget::with_work_ceiling(steps: u64) -> Self
 pub const fn vyre_reference::ReferenceErrorClass::cause_kind(self) -> vyre_foundation::diagnostics::cause::CauseKind
 pub const fn vyre_reference::ReferenceErrorClass::name(self) -> &'static str
 pub const fn vyre_reference::ReferenceErrorKind::error_class(&self) -> vyre_reference::ReferenceErrorClass
 pub const fn vyre_reference::ReferenceFacet::new(operation_id: &'static str, execute: vyre_spec::intrinsic_descriptor::CpuFn) -> Self
+pub const fn vyre_reference::ReferenceRequest<'a>::with_budget(self, budget: vyre_reference::ReferenceBudget) -> Self
+pub const fn vyre_reference::ReferenceRequest<'a>::with_grid(self, grid: [u32; 3]) -> Self
+pub const fn vyre_reference::ReferenceRequest<'a>::with_min_dispatch_elements(self, min: u32) -> Self
+pub const fn vyre_reference::ReferenceRequest<'a>::with_schedule_policy(self, policy: vyre_reference::DeterministicSchedulePolicy) -> Self
+pub const fn vyre_reference::ReferenceRequest<'a>::with_workload_envelope(self, envelope: vyre_reference::WorkloadEnvelope) -> Self
 pub const fn vyre_reference::ShadowMemory::current_barrier_phase(&self) -> u64
 pub const fn vyre_reference::WorkloadEnvelope::for_workgroup_size(size: [u32; 3]) -> Self
 pub const fn vyre_reference::WorkloadEnvelope::with_grid(self, grid: [u32; 3]) -> Self
@@ -99,7 +108,6 @@ pub const vyre_reference::step_budget::STEP_CEILING_HEADROOM: u64
 pub const vyre_reference::workgroup::InvocationIds::ZERO: Self
 pub const vyre_reference::workgroup::MAX_WORKGROUP_BYTES: usize
 pub enum vyre_reference::DeterministicSchedulePolicy
-pub enum vyre_reference::ExecutionStrictness
 pub enum vyre_reference::MemoryAccessKind
 pub enum vyre_reference::ReferenceErrorClass
 pub enum vyre_reference::ReferenceErrorKind
@@ -119,8 +127,7 @@ pub fn vyre_foundation::diagnostics::Diagnostic::from(error: &vyre_reference::Re
 pub fn vyre_foundation::diagnostics::Diagnostic::from(error: vyre_reference::ReferenceError) -> Self
 pub fn vyre_reference::Buffer::into_value(self) -> vyre_reference::value::Value
 pub fn vyre_reference::Buffer::new(bytes: alloc::vec::Vec<u8>, element: vyre_spec::data_type::DataType) -> Self
-pub fn vyre_reference::ExactResourceAbi::for_program(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> Self
-pub fn vyre_reference::ExactResourceAbi::new(declared_buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, inputs: alloc::vec::Vec<vyre_reference::value::Value>) -> Self
+pub fn vyre_reference::ExactResourceAbi<'a>::for_program(program: &'a vyre_foundation::ir_inner::model::program::definition::Program, inputs: &'a [vyre_reference::value::Value]) -> Self
 pub fn vyre_reference::InterleavingConfig::default() -> Self
 pub fn vyre_reference::OobReport::total(&self) -> u64
 pub fn vyre_reference::ReferenceError::budget_exhaustion(detail: impl core::convert::Into<alloc::string::String>) -> Self
@@ -150,13 +157,13 @@ pub fn vyre_reference::ReferenceInputMismatch::fmt(&self, f: &mut core::fmt::For
 pub fn vyre_reference::ReferenceMemory::empty() -> Self
 pub fn vyre_reference::ReferenceMemory::storage_bytes(&self, name: &str) -> core::result::Result<alloc::vec::Vec<u8>, vyre_reference::ReferenceError>
 pub fn vyre_reference::ReferenceMemory::with_storage(self, name: &str, buffer: vyre_reference::Buffer) -> Self
-pub fn vyre_reference::ReferenceRequest::execute(&self) -> core::result::Result<vyre_reference::StrictExecutionResult, vyre_reference::ReferenceError>
-pub fn vyre_reference::ReferenceRequest::execute_permissive(&self) -> core::result::Result<vyre_reference::DiagnosticPermissiveReport, vyre_reference::ReferenceError>
-pub fn vyre_reference::ReferenceRequest::new(program: vyre_foundation::ir_inner::model::program::definition::Program, inputs: alloc::vec::Vec<vyre_reference::value::Value>, budget: vyre_reference::ReferenceBudget) -> Self
-pub fn vyre_reference::ReferenceRequest::with_numerical_contract(self, contract: vyre_spec::numeric_semantics::NumericSemantics) -> Self
-pub fn vyre_reference::ReferenceRequest::with_schedule_policy(self, policy: vyre_reference::DeterministicSchedulePolicy) -> Self
-pub fn vyre_reference::ReferenceRequest::with_strictness(self, strictness: vyre_reference::ExecutionStrictness) -> Self
-pub fn vyre_reference::ReferenceRequest::with_workload_envelope(self, envelope: vyre_reference::WorkloadEnvelope) -> Self
+pub fn vyre_reference::ReferenceRequest<'a>::execute(&self) -> core::result::Result<vyre_reference::StrictExecutionResult, vyre_reference::ReferenceError>
+pub fn vyre_reference::ReferenceRequest<'a>::execute_permissive(&self) -> core::result::Result<vyre_reference::DiagnosticPermissiveReport, vyre_reference::ReferenceError>
+pub fn vyre_reference::ReferenceRequest<'a>::new(program: &'a vyre_foundation::ir_inner::model::program::definition::Program, inputs: &'a [vyre_reference::value::Value], budget: vyre_reference::ReferenceBudget) -> Self
+pub fn vyre_reference::ReferenceRequest<'a>::outputs(&self) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::ReferenceRequest<'a>::outputs_and_steps(&self) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, u64), vyre_reference::ReferenceError>
+pub fn vyre_reference::ReferenceRequest<'a>::standard(program: &'a vyre_foundation::ir_inner::model::program::definition::Program, inputs: &'a [vyre_reference::value::Value]) -> Self
+pub fn vyre_reference::ReferenceRequest<'a>::with_numerical_contract(self, contract: vyre_spec::numeric_semantics::NumericSemantics) -> Self
 pub fn vyre_reference::ShadowMemory::advance_barrier_phase(&mut self, _scope: vyre_foundation::memory_model::scope::ExecutionScope)
 pub fn vyre_reference::ShadowMemory::new() -> Self
 pub fn vyre_reference::ShadowMemory::record_and_check_access(&mut self, buffer: &str, index: u64, invocation: [u32; 3], kind: vyre_reference::MemoryAccessKind, scope: vyre_foundation::memory_model::scope::MemoryScope, domain: vyre_foundation::memory_model::storage::StorageDomain) -> core::result::Result<(), vyre_reference::ReferenceError>
@@ -697,22 +704,11 @@ pub fn vyre_reference::is_reference_input(decl: &vyre_foundation::ir_inner::mode
 pub fn vyre_reference::is_reference_output(decl: &vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl) -> bool
 pub fn vyre_reference::op_count::count_ops<R>(f: impl core::ops::function::FnOnce() -> R) -> (R, u64)
 pub fn vyre_reference::output_index(program: &vyre_foundation::ir_inner::model::program::definition::Program, name: &str) -> core::option::Option<usize>
-pub fn vyre_reference::reference_eval(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
 pub fn vyre_reference::reference_eval_expr(program: &vyre_foundation::ir_inner::model::program::definition::Program, memory: &mut vyre_reference::ReferenceMemory, ids: vyre_reference::workgroup::InvocationIds, expr: &vyre_foundation::ir_inner::model::generated::Expr) -> core::result::Result<vyre_reference::value::Value, vyre_reference::ReferenceError>
-pub fn vyre_reference::reference_eval_lane_reversed(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::reference_eval_lane_rotated(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], by: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::reference_eval_oob_report(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>
-pub fn vyre_reference::reference_eval_step_count(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, u64), vyre_reference::ReferenceError>
-pub fn vyre_reference::reference_eval_with_dispatch(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::reference_eval_with_dispatch_oob_report(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>
-pub fn vyre_reference::reference_eval_with_grid(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], grid: [u32; 3]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::reference_eval_with_step_ceiling(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], ceiling: u64) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, u64), vyre_reference::ReferenceError>
 pub fn vyre_reference::reference_facets() -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &'static vyre_reference::ReferenceFacet>
 pub fn vyre_reference::reference_fn(operation_id: &str) -> core::option::Option<vyre_spec::intrinsic_descriptor::CpuFn>
 pub fn vyre_reference::reference_input_values(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceInputMismatch>
 pub fn vyre_reference::reference_inputs(program: &vyre_foundation::ir_inner::model::program::definition::Program, buffers: alloc::vec::Vec<alloc::vec::Vec<u8>>) -> alloc::vec::Vec<vyre_reference::value::Value>
-pub fn vyre_reference::run_arena_reference(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::run_arena_reference_with_dispatch(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
 pub fn vyre_reference::subgroup::SubgroupSimulator::add(&self, values: &[u32]) -> u32
 pub fn vyre_reference::subgroup::SubgroupSimulator::ballot<const N: usize>(&self, mask: &[bool; N]) -> u32
 pub fn vyre_reference::subgroup::SubgroupSimulator::ballot_slice(&self, mask: &[bool]) -> u32
@@ -737,7 +733,6 @@ pub fn vyre_reference::value::Value::try_as_u64(&self) -> core::option::Option<u
 pub fn vyre_reference::value::Value::try_zero_for(ty: vyre_spec::data_type::DataType) -> core::option::Option<Self>
 pub fn vyre_reference::value::Value::wide_bytes(&self) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::value::Value::write_bytes_width_into(&self, target: &mut [u8])
-pub fn vyre_reference::value::Value::zero_for(ty: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_reference::verify_closed_type_coverage_in_oracle() -> bool
 pub mod vyre_reference
 pub mod vyre_reference::atomics
@@ -750,7 +745,7 @@ pub mod vyre_reference::value
 pub mod vyre_reference::workgroup
 pub struct vyre_reference::Buffer
 pub struct vyre_reference::DiagnosticPermissiveReport
-pub struct vyre_reference::ExactResourceAbi
+pub struct vyre_reference::ExactResourceAbi<'a>
 pub struct vyre_reference::InterleavingConfig
 pub struct vyre_reference::InterleavingReport
 pub struct vyre_reference::MemoryAccessRecord
@@ -761,7 +756,7 @@ pub struct vyre_reference::ReferenceError
 pub struct vyre_reference::ReferenceFacet
 pub struct vyre_reference::ReferenceInputMismatch
 pub struct vyre_reference::ReferenceMemory
-pub struct vyre_reference::ReferenceRequest
+pub struct vyre_reference::ReferenceRequest<'a>
 pub struct vyre_reference::ShadowMemory
 pub struct vyre_reference::StepCeilingExceeded
 pub struct vyre_reference::StrictExecutionResult
@@ -827,10 +822,8 @@ pub vyre_reference::DiagnosticPermissiveReport::oob_report: vyre_reference::OobR
 pub vyre_reference::DiagnosticPermissiveReport::output_digest: alloc::string::String
 pub vyre_reference::DiagnosticPermissiveReport::recorded_anomalies: alloc::vec::Vec<alloc::string::String>
 pub vyre_reference::DiagnosticPermissiveReport::steps_executed: u64
-pub vyre_reference::ExactResourceAbi::declared_buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>
-pub vyre_reference::ExactResourceAbi::inputs: alloc::vec::Vec<vyre_reference::value::Value>
-pub vyre_reference::ExecutionStrictness::DiagnosticPermissive
-pub vyre_reference::ExecutionStrictness::Strict
+pub vyre_reference::ExactResourceAbi::declared_buffers: &'a [vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl]
+pub vyre_reference::ExactResourceAbi::inputs: &'a [vyre_reference::value::Value]
 pub vyre_reference::InterleavingConfig::grid_size: [u32; 3]
 pub vyre_reference::InterleavingConfig::max_interleavings: usize
 pub vyre_reference::InterleavingConfig::step_bound: usize
@@ -853,6 +846,7 @@ pub vyre_reference::MemoryAccessRecord::storage_domain: vyre_foundation::memory_
 pub vyre_reference::OobReport::oob_atomics: u64
 pub vyre_reference::OobReport::oob_loads: u64
 pub vyre_reference::OobReport::oob_stores: u64
+pub vyre_reference::ReferenceBudget::admit_declared_work: bool
 pub vyre_reference::ReferenceBudget::max_memory_bytes: usize
 pub vyre_reference::ReferenceBudget::max_recursion_depth: usize
 pub vyre_reference::ReferenceBudget::work_ceiling: u64
@@ -892,10 +886,9 @@ pub vyre_reference::ReferenceInputMismatch::missing: core::option::Option<alloc:
 pub vyre_reference::ReferenceInputMismatch::received: usize
 pub vyre_reference::ReferenceRequest::budget: vyre_reference::ReferenceBudget
 pub vyre_reference::ReferenceRequest::numerical_contract: vyre_spec::numeric_semantics::NumericSemantics
-pub vyre_reference::ReferenceRequest::program: vyre_foundation::ir_inner::model::program::definition::Program
-pub vyre_reference::ReferenceRequest::resource_abi: vyre_reference::ExactResourceAbi
+pub vyre_reference::ReferenceRequest::program: &'a vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_reference::ReferenceRequest::resource_abi: vyre_reference::ExactResourceAbi<'a>
 pub vyre_reference::ReferenceRequest::schedule_policy: vyre_reference::DeterministicSchedulePolicy
-pub vyre_reference::ReferenceRequest::strictness: vyre_reference::ExecutionStrictness
 pub vyre_reference::ReferenceRequest::version: u32
 pub vyre_reference::ReferenceRequest::workload_envelope: vyre_reference::WorkloadEnvelope
 pub vyre_reference::StepCeilingExceeded::ceiling: u64

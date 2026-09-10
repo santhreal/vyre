@@ -115,12 +115,14 @@ fn canonicalization_is_idempotent_on_the_release_corpus() {
 #[test]
 fn canonicalization_preserves_reference_semantics_on_the_release_corpus() {
     for (id, program) in sampled_cases() {
-        let before_values = vyre_reference::reference_eval(&program, &inputs_for(&program))
-            .unwrap_or_else(|error| {
-                panic!("corpus case `{id}` must run on the reference interpreter: {error:?}")
-            });
+        let before_values =
+            vyre_reference::ReferenceRequest::standard(&program, &inputs_for(&program))
+                .outputs()
+                .unwrap_or_else(|error| {
+                    panic!("corpus case `{id}` must run on the reference interpreter: {error:?}")
+                });
         let canonical = program.canonicalized();
-        let after_values = vyre_reference::reference_eval(&canonical, &inputs_for(&canonical))
+        let after_values = vyre_reference::ReferenceRequest::standard(&canonical, &inputs_for(&canonical)).outputs()
             .unwrap_or_else(|error| {
                 panic!("canonicalized corpus case `{id}` must still run on the reference interpreter: {error:?}")
             });
@@ -207,12 +209,14 @@ fn scope_sensitive_fixtures() -> Vec<(&'static str, Program)> {
 #[test]
 fn canonicalization_preserves_reference_semantics_on_scope_sensitive_shapes() {
     for (name, program) in scope_sensitive_fixtures() {
-        let before_values = vyre_reference::reference_eval(&program, &inputs_for(&program))
-            .unwrap_or_else(|error| {
-                panic!("fixture `{name}` must run on the reference interpreter: {error:?}")
-            });
+        let before_values =
+            vyre_reference::ReferenceRequest::standard(&program, &inputs_for(&program))
+                .outputs()
+                .unwrap_or_else(|error| {
+                    panic!("fixture `{name}` must run on the reference interpreter: {error:?}")
+                });
         let canonical = program.canonicalized();
-        let after_values = vyre_reference::reference_eval(&canonical, &inputs_for(&canonical))
+        let after_values = vyre_reference::ReferenceRequest::standard(&canonical, &inputs_for(&canonical)).outputs()
             .unwrap_or_else(|error| {
                 panic!("canonicalized fixture `{name}` must still run on the reference interpreter, but canonicalization made it invalid: {error:?}")
             });

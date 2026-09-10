@@ -27,7 +27,8 @@ impl CpuReference {
             .iter()
             .map(|b| vyre_reference::value::Value::Bytes(std::sync::Arc::from(b.clone())))
             .collect();
-        vyre_reference::reference_eval(prog, &ref_inputs)
+        vyre_reference::ReferenceRequest::standard(prog, &ref_inputs)
+            .outputs()
             .map(|values| values.iter().map(|v| v.to_bytes()).collect())
             .map_err(|e| format!("{:?}", e))
     }

@@ -41,10 +41,12 @@ fn reduced(count: u32, tile: u32, blocks: u32) -> u32 {
     let input = values(count);
     let program = grid_stride_tree_sum_u32("values", "out", count, tile, blocks);
     // `out` is a backend-allocated output, so the dispatch carries one input.
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack_u32(&input))])
-        .unwrap_or_else(|error| {
-            panic!("Fix: count={count} tile={tile} blocks={blocks} must evaluate: {error}")
-        });
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(pack_u32(&input))])
+            .outputs()
+            .unwrap_or_else(|error| {
+                panic!("Fix: count={count} tile={tile} blocks={blocks} must evaluate: {error}")
+            });
     let bytes = outputs
         .last()
         .unwrap_or_else(|| {
@@ -138,17 +140,16 @@ fn a_launch_wider_than_the_built_grid_stays_in_bounds() {
         // Four times the lanes the built grid covers, so every launch here fires
         // blocks the program has no partial slot for.
         let over_fire = effective * tile * 4;
-        let (outputs, oob) = vyre_reference::reference_eval_with_dispatch_oob_report(
-            &program,
-            &[Value::from(pack_u32(&input))],
-            over_fire,
-        )
-        .unwrap_or_else(|error| panic!("Fix: blocks={blocks} must evaluate over-fired: {error}"));
-        assert_eq!(
-            oob.total(),
-            0,
-            "Fix: blocks={blocks} (effective {effective}) indexed past a buffer under a {over_fire}-lane launch: {oob:?}"
-        );
+        let over_fire_inputs = [Value::from(pack_u32(&input))];
+        let outputs = vyre_reference::ReferenceRequest::standard(&program, &over_fire_inputs)
+            .with_min_dispatch_elements(over_fire)
+            .outputs()
+            .unwrap_or_else(|error| {
+                panic!(
+                    "Fix: blocks={blocks} (effective {effective}) must evaluate over-fired \
+                     without indexing past a buffer under a {over_fire}-lane launch: {error}"
+                )
+            });
         let bytes = outputs
             .last()
             .unwrap_or_else(|| panic!("Fix: blocks={blocks} must report an output buffer"))

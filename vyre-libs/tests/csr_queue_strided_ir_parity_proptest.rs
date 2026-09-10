@@ -72,7 +72,7 @@ fn gpu_frontier(
     let words = bitset_words(node_count);
 
     let floor = queue_capacity * LANES_PER_SOURCE; // one 32-lane team per queue slot
-    let outputs = vyre_reference::reference_eval_with_dispatch(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(active_queue)),
@@ -82,8 +82,9 @@ fn gpu_frontier(
             Value::from(pack(&kind_mask)),
             Value::from(pack(&vec![0u32; words])),
         ],
-        floor,
     )
+    .with_min_dispatch_elements(floor)
+    .outputs()
     .expect("csr_queue_strided reference evaluation must succeed");
     unpack(&outputs[0].to_bytes())
 }

@@ -58,7 +58,8 @@ fn parse_tokens(tokens: &[u32]) -> ParsedAst {
         u32::try_from(token_capacity).expect("test token capacity fits u32"),
         1,
     );
-    let outputs = vyre_reference::reference_eval(&program, &values)
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &values)
+        .outputs()
         .expect("shunting-yard parser must execute under the reference oracle");
 
     ParsedAst {

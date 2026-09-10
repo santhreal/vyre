@@ -61,7 +61,8 @@ fn evaluate(program: &Program, inputs: Vec<Value>) -> Vec<Value> {
             .map(vyre_reference::value::Value::to_bytes)
             .collect(),
     );
-    vyre_reference::reference_eval(program, &inputs)
+    vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
         .unwrap_or_else(|error| panic!("Fix: production IR reference evaluation failed: {error}"))
 }
 
@@ -269,10 +270,11 @@ fn production_ir_invalid_boundaries_fail_loudly() {
 
     let program = dp_accountant::gaussian_rdp_step("alpha", "sigma", "output", 1);
     for sigma_squared in [0, 1 << 31] {
-        let error = vyre_reference::reference_eval(
+        let error = vyre_reference::ReferenceRequest::standard(
             &program,
             &[pack(&[8]), pack(&[sigma_squared]), pack(&[0])],
         )
+        .outputs()
         .expect_err("unsafe sigma-squared must reject a zero or overflowing denominator");
         assert!(
             error.to_string().contains("sigma_squared"),

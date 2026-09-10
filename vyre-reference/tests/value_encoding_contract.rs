@@ -146,15 +146,49 @@ fn from_element_bytes_rejects_short_fixed_width_inputs() {
 }
 
 #[test]
-fn zero_for_returns_exact_public_zero_shapes() {
-    assert_eq!(Value::zero_for(DataType::U32), Value::U32(0));
-    assert_eq!(Value::zero_for(DataType::I32), Value::I32(0));
-    assert_eq!(Value::zero_for(DataType::U64), Value::U64(0));
-    assert_eq!(Value::zero_for(DataType::Bool), Value::Bool(false));
-    assert_eq!(Value::zero_for(DataType::F32), Value::Float(0.0));
-    assert_eq!(Value::zero_for(DataType::F64), Value::Float(0.0));
-    assert_eq!(Value::zero_for(DataType::Vec2U32).to_bytes(), vec![0; 8]);
-    assert_eq!(Value::zero_for(DataType::Vec4U32).to_bytes(), vec![0; 16]);
+fn try_zero_for_returns_exact_public_zero_shapes() {
+    assert_eq!(
+        Value::try_zero_for(DataType::U32)
+            .expect("Fix: the declared element type must have a defined zero"),
+        Value::U32(0)
+    );
+    assert_eq!(
+        Value::try_zero_for(DataType::I32)
+            .expect("Fix: the declared element type must have a defined zero"),
+        Value::I32(0)
+    );
+    assert_eq!(
+        Value::try_zero_for(DataType::U64)
+            .expect("Fix: the declared element type must have a defined zero"),
+        Value::U64(0)
+    );
+    assert_eq!(
+        Value::try_zero_for(DataType::Bool)
+            .expect("Fix: the declared element type must have a defined zero"),
+        Value::Bool(false)
+    );
+    assert_eq!(
+        Value::try_zero_for(DataType::F32)
+            .expect("Fix: the declared element type must have a defined zero"),
+        Value::Float(0.0)
+    );
+    assert_eq!(
+        Value::try_zero_for(DataType::F64)
+            .expect("Fix: the declared element type must have a defined zero"),
+        Value::Float(0.0)
+    );
+    assert_eq!(
+        Value::try_zero_for(DataType::Vec2U32)
+            .expect("Fix: the declared element type must have a defined zero")
+            .to_bytes(),
+        vec![0; 8]
+    );
+    assert_eq!(
+        Value::try_zero_for(DataType::Vec4U32)
+            .expect("Fix: the declared element type must have a defined zero")
+            .to_bytes(),
+        vec![0; 16]
+    );
 }
 
 #[test]
@@ -183,7 +217,9 @@ fn quantized_and_extended_fixed_width_values_have_typed_storage_widths() {
             "{ty} must preserve raw storage bits"
         );
         assert_eq!(
-            Value::zero_for(ty.clone()).to_bytes(),
+            Value::try_zero_for(ty.clone())
+                .expect("Fix: the declared element type must have a defined zero")
+                .to_bytes(),
             zero,
             "{ty} must have a typed zero payload, not an empty Bytes fallback"
         );

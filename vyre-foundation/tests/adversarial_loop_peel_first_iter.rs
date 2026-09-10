@@ -294,11 +294,13 @@ fn peel_preserves_reference_eval_on_buffer_stores() {
         }],
     );
     let inputs: [Value; 0] = [];
-    let before = vyre_reference::reference_eval(&program, &inputs)
+    let before = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original peel fixture must evaluate");
     let peeled = LoopPeelPass::transform(program);
     assert!(peeled.changed);
-    let after = vyre_reference::reference_eval(&peeled.program, &inputs)
+    let after = vyre_reference::ReferenceRequest::standard(&peeled.program, &inputs)
+        .outputs()
         .expect("peeled program must evaluate");
     assert_eq!(
         before, after,

@@ -1,11 +1,12 @@
 //! Contracts for hashmap interpreter async and indirect-dispatch nodes.
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_reference::{reference_eval, value::Value};
+use vyre_reference::value::Value;
 
 fn run(program: &Program, inputs: Vec<Vec<u8>>) -> Result<Vec<Vec<u8>>, String> {
     let values = vyre_reference::reference_inputs(program, inputs);
-    reference_eval(program, &values)
+    vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
         .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
         .map_err(|error| error.to_string())
 }
@@ -108,7 +109,9 @@ fn async_load_in_multi_invocation_workgroup_executes_once_and_synchronizes() {
             .flat_map(u32::to_le_bytes)
             .collect::<Vec<u8>>(),
     )];
-    let reversed = vyre_reference::reference_eval_lane_reversed(&program, &values)
+    let reversed = vyre_reference::ReferenceRequest::standard(&program, &values)
+        .with_schedule_policy(vyre_reference::DeterministicSchedulePolicy::LaneReversed)
+        .outputs()
         .expect("reversed lane stepping must execute correctly");
     let reversed_bytes: Vec<Vec<u8>> = reversed.into_iter().map(|v| v.to_bytes()).collect();
     assert_eq!(

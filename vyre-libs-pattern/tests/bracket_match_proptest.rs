@@ -29,13 +29,14 @@ fn run_ir(kinds: &[u32], max_depth: u32) -> Vec<u32> {
     let n = kinds.len() as u32;
     let program = bracket_match("kinds", "stack", "match_pairs", n, max_depth);
     let pack = |data: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(data));
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             pack(kinds),                                  // kinds (binding 0, RO)
             pack(&vec![0u32; max_depth.max(1) as usize]), // stack (binding 1, RW)
         ],
     )
+    .outputs()
     .expect("bracket_match reference evaluation must succeed");
     // results[0] = stack (RW), results[1] = match_pairs (output).
     outputs[1]

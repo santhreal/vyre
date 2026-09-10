@@ -19,7 +19,6 @@
 //! opinion about the shape.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
 
 /// Duplicate binding slots are a validation rejection and nothing else.
@@ -44,13 +43,14 @@ fn the_oracle_refuses_exactly_what_the_shared_validator_refuses() {
         )],
     );
 
-    let error = reference_eval(
+    let error = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(vec![0u8; 4]),
             Value::from(7u32.to_le_bytes().to_vec()),
         ],
     )
+    .outputs()
     .expect_err("a program the shared validator rejects has no reference result");
 
     let source = error
@@ -79,7 +79,8 @@ fn a_statement_entry_list_is_re_wrapped_and_evaluated() {
         ],
     );
 
-    let outputs = reference_eval(&program, &[])
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[])
+        .outputs()
         .expect("a statement-shaped entry list must be re-wrapped and evaluated");
 
     assert_eq!(outputs[0].to_bytes(), 42u32.to_le_bytes().to_vec());
@@ -98,11 +99,14 @@ fn a_store_first_entry_list_is_still_refused() {
         vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
     );
 
-    let error = reference_eval(&program, &[])
+    let error = vyre_reference::ReferenceRequest::standard(&program, &[])
+        .outputs()
         .expect_err("a store-first entry list must still name the region contract");
 
     assert!(
-        error.to_string().contains("top-level Region-wrapped Program"),
+        error
+            .to_string()
+            .contains("top-level Region-wrapped Program"),
         "the refusal must name the region contract, got: {error}"
     );
 }

@@ -397,7 +397,8 @@ pub fn try_eval_bytes(
     buffers: Vec<Vec<u8>>,
 ) -> Result<Vec<Vec<u8>>, vyre_reference::ReferenceError> {
     let values = vyre_reference::reference_inputs(program, buffers);
-    Ok(vyre_reference::reference_eval(program, &values)?
+    Ok(vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()?
         .iter()
         .map(|value| value.to_bytes())
         .collect())
@@ -451,22 +452,29 @@ pub fn bytes_to_u32(slice: &[u8]) -> Vec<u32> {
     vyre_primitives::wire::decode_u32_le_bytes_all(slice)
 }
 
-/// Run a program and hand back both its buffers and the interpreter's
-/// out-of-bounds report.
-pub fn eval_bytes_oob_report(
-    label: &str,
-    program: &Program,
-    buffers: Vec<Vec<u8>>,
-) -> (Vec<Vec<u8>>, vyre_reference::OobReport) {
+/// Run a program and hand back its buffers, refusing an access that left a
+/// declared buffer.
+///
+/// The strict oracle answers an out-of-bounds access with a structured
+/// refusal, so a program that only "works" because the interpreter absorbed
+/// the access never reaches an output here.
+///
+/// # Panics
+/// Panics when the program does not evaluate, including when it accesses a
+/// buffer out of bounds.
+pub fn eval_bytes_in_bounds(label: &str, program: &Program, buffers: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
     let values = vyre_reference::reference_inputs(program, buffers);
-    let (outputs, report) = vyre_reference::reference_eval_oob_report(program, &values)
+    vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
         .unwrap_or_else(|error| {
-            panic!("Fix: {label} program must execute in the reference interpreter: {error:?}")
-        });
-    (
-        outputs.iter().map(|value| value.to_bytes()).collect(),
-        report,
-    )
+            panic!(
+                "Fix: {label} program must execute in the reference interpreter without leaving \
+                 a declared buffer: {error:?}"
+            )
+        })
+        .iter()
+        .map(|value| value.to_bytes())
+        .collect()
 }
 
 /// Run a program with the interpreter's lanes in declaration order, or
@@ -479,9 +487,11 @@ pub fn eval_bytes_lane_order(
 ) -> Vec<Vec<u8>> {
     let values = vyre_reference::reference_inputs(program, buffers);
     let results = if reversed {
-        vyre_reference::reference_eval_lane_reversed(program, &values)
+        vyre_reference::ReferenceRequest::standard(program, &values)
+            .with_schedule_policy(vyre_reference::DeterministicSchedulePolicy::LaneReversed)
+            .outputs()
     } else {
-        vyre_reference::reference_eval(program, &values)
+        vyre_reference::ReferenceRequest::standard(program, &values).outputs()
     };
     results
         .unwrap_or_else(|error| {

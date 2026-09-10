@@ -37,7 +37,8 @@ fn run_program(source: &[u8]) -> Vec<u32> {
     while input_bytes.len() < cap * 4 {
         input_bytes.extend_from_slice(&0u32.to_le_bytes());
     }
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(input_bytes)])
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[Value::from(input_bytes)])
+        .outputs()
         .expect("Fix: utf8_validate reference evaluation must succeed");
     output_u32s(&program, &outputs, n)
 }
@@ -52,8 +53,10 @@ fn run_packed_u8_program(source: &[u8]) -> Vec<u32> {
         .expect("Fix: packed-u8 UTF-8 source buffer must be declared");
     assert_eq!(source_buffer.element(), DataType::U8);
     assert_eq!(source_buffer.count(), n as u32);
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(source.to_vec())])
-        .expect("Fix: packed-u8 utf8_validate reference evaluation must succeed");
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(source.to_vec())])
+            .outputs()
+            .expect("Fix: packed-u8 utf8_validate reference evaluation must succeed");
     output_u32s(&program, &outputs, n)
 }
 

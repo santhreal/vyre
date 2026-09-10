@@ -48,7 +48,8 @@ fn execute_graph(graph: &ProgramGraph, external: &[(&str, Vec<u8>)]) -> Value {
                 Value::from(value.to_bytes().to_vec())
             })
             .collect::<Vec<_>>();
-        let outputs = vyre_reference::reference_eval(&node.program, &arguments)
+        let outputs = vyre_reference::ReferenceRequest::standard(&node.program, &arguments)
+            .outputs()
             .unwrap_or_else(|error| panic!("Fix: dense MLP node {} failed: {error}", node.name));
         let output = outputs
             .last()

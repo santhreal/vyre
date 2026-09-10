@@ -30,7 +30,7 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, Program};
 use vyre_foundation::operation::SemanticOperation;
 use vyre_reference::value::Value;
-use vyre_reference::{is_reference_input, is_reference_output, reference_eval};
+use vyre_reference::{is_reference_input, is_reference_output};
 
 /// Why a declared law carries no executable proof.
 ///
@@ -112,8 +112,12 @@ impl UnprovenKind {
             // arrows for `(h ∘ g) ∘ f = h ∘ (g ∘ f)`. A registration names one
             // arrow, so the payload the statement needs is the partner's
             // registration id, exactly as it is for a distributive pair.
-            "de-morgan" | "distributive" | "lattice-absorption" | "inverse-of"
-            | "categorical-identity" | "categorical-associative" => Some(Self::MissingPartner),
+            "de-morgan"
+            | "distributive"
+            | "lattice-absorption"
+            | "inverse-of"
+            | "categorical-identity"
+            | "categorical-associative" => Some(Self::MissingPartner),
             "monotone" | "monotonic" | "trichotomy" => Some(Self::MissingOrder),
             "custom" => Some(Self::NoCheckDeclared),
             _ => None,
@@ -618,7 +622,8 @@ fn run(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
         .iter()
         .map(|bytes| Value::Bytes(bytes.as_slice().into()))
         .collect();
-    reference_eval(program, &values)
+    vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
         .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
         .map_err(|error| format!("the reference oracle failed: {error}"))
 }

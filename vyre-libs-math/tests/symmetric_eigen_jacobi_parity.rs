@@ -26,7 +26,7 @@ fn rand_f32(state: &mut u32) -> f32 {
 /// eigenvectors)`; eigenvectors are row-major with column `k` the eigenvector for eigenvalue `k`.
 fn run(a: &[f32], n: usize) -> (Vec<f32>, Vec<f32>) {
     let program = symmetric_eigen_jacobi("a", "evec", "eval", n as u32);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_f32(a)),
@@ -34,6 +34,7 @@ fn run(a: &[f32], n: usize) -> (Vec<f32>, Vec<f32>) {
             Value::from(pack_f32(&vec![0.0f32; n])),
         ],
     )
+    .outputs()
     .expect("symmetric_eigen_jacobi reference evaluation must succeed");
     let eigvals = unpack_f32(
         &outputs[vyre_reference::output_index(&program, "eval").expect("eval output")].to_bytes(),
@@ -200,7 +201,8 @@ fn matrix_identity_fill_multi_lane_reference_eval() {
     for &n in &[1u32, 2, 3, 5, 7, 8, 16, 64, 65, 80] {
         let program = matrix_identity_fill("m", n);
         let cells = (n * n) as usize;
-        let outputs = vyre_reference::reference_eval(&program, &[])
+        let outputs = vyre_reference::ReferenceRequest::standard(&program, &[])
+            .outputs()
             .unwrap_or_else(|err| panic!("reference_eval failed for identity_fill n={n}: {err}"));
         let result = unpack_f32(&outputs[0].to_bytes());
         assert_eq!(result.len(), cells);
@@ -226,10 +228,12 @@ fn matrix_diagonal_extract_multi_lane_reference_eval() {
         for i in 0..cells {
             matrix.push((i + 1) as f32);
         }
-        let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack_f32(&matrix))])
-            .unwrap_or_else(|err| {
-                panic!("reference_eval failed for diagonal_extract n={n}: {err}")
-            });
+        let outputs =
+            vyre_reference::ReferenceRequest::standard(&program, &[Value::from(pack_f32(&matrix))])
+                .outputs()
+                .unwrap_or_else(|err| {
+                    panic!("reference_eval failed for diagonal_extract n={n}: {err}")
+                });
         let result = unpack_f32(
             &outputs[vyre_reference::output_index(&program, "diag").unwrap()].to_bytes(),
         );
@@ -263,8 +267,10 @@ fn eigenvector_column_sign_multi_lane_reference_eval() {
         }
 
         let program = eigenvector_column_sign("evec", n);
-        let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack_f32(&matrix))])
-            .unwrap_or_else(|err| panic!("reference_eval failed for column_sign n={n}: {err}"));
+        let outputs =
+            vyre_reference::ReferenceRequest::standard(&program, &[Value::from(pack_f32(&matrix))])
+                .outputs()
+                .unwrap_or_else(|err| panic!("reference_eval failed for column_sign n={n}: {err}"));
         let result = unpack_f32(&outputs[0].to_bytes());
         assert_eq!(result.len(), cells);
 

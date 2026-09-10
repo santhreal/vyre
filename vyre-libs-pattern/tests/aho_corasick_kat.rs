@@ -45,8 +45,9 @@ fn vyre_ir_scan(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<u32> {
         Value::from(u32_bytes(&dfa.transitions)),
         Value::from(u32_bytes(&dfa.accept)),
     ];
-    let outputs =
-        vyre_reference::reference_eval(&program, &inputs).expect("aho_corasick must execute");
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
+        .expect("aho_corasick must execute");
     decode_u32_words(&outputs[0].to_bytes())
 }
 

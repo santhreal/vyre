@@ -294,7 +294,8 @@ mod tests {
         let packed = vyre_primitives::wire::pack_u32_slice(&instrs);
         let program = bytecode_program(1, instrs.len() as u32);
         let values = vec![vyre_reference::value::Value::from(packed)];
-        let raw_outputs = vyre_reference::reference_eval(&program, &values)
+        let raw_outputs = vyre_reference::ReferenceRequest::standard(&program, &values)
+            .outputs()
             .expect("Fix: cpu-ref bytecode VM reference eval must succeed");
         let outputs: Vec<Vec<u8>> = raw_outputs.into_iter().map(|v| v.to_bytes()).collect();
         let expected = cpu_interpret(&instrs, 1, instrs.len());

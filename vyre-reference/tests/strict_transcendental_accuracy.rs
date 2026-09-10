@@ -66,7 +66,12 @@ fn expansion(op: &UnOp, input: f32) -> Expr {
 /// this is the same evaluation the parity claim compares a device against.
 fn evaluate(expr: &Expr) -> f32 {
     let program = vyre_foundation::ir::Program::wrapped(Vec::new(), [1, 1, 1], Vec::new());
-    let value = reference_eval_expr(&program, &mut ReferenceMemory::empty(), InvocationIds::ZERO, expr)
+    let value = reference_eval_expr(
+        &program,
+        &mut ReferenceMemory::empty(),
+        InvocationIds::ZERO,
+        expr,
+    )
     .expect("Fix: the reference interpreter must evaluate an expanded transcendental");
     match value {
         Value::Float(inner) => inner as f32,

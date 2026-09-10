@@ -151,7 +151,8 @@ fn state_machine_scan_bodies_bound_their_trip_counts() {
 /// The range ordering builder bounds its scan loop against the counts buffer and extent buffers.
 #[test]
 fn range_ordering_scan_body_bounds_its_trip_counts() {
-    let (nodes, _) = vyre_libs_builder::builder::range_ordering::match_order(Expr::u32(0), Expr::u32(1), "test");
+    let (nodes, _) =
+        vyre_libs_builder::builder::range_ordering::match_order(Expr::u32(0), Expr::u32(1), "test");
     assert!(
         findings(&nodes).is_empty(),
         "match_order: {:?}",
@@ -163,7 +164,8 @@ fn range_ordering_scan_body_bounds_its_trip_counts() {
 
 #[test]
 fn csr_traversal_scan_body_bounds_its_trip_counts() {
-    let composer = vyre_libs_builder::builder::csr::CsrTraversalComposer::forward("test", 10, 20, 0xFF);
+    let composer =
+        vyre_libs_builder::builder::csr::CsrTraversalComposer::forward("test", 10, 20, 0xFF);
     let row_loop = composer.emit_row_bounds_and_loop(
         Expr::u32(0),
         "edge",
@@ -243,7 +245,8 @@ fn hostile_state_machine_linear_scan_returns_in_bounded_steps() {
         ),
     ];
 
-    let (outputs, steps) = vyre_reference::reference_eval_step_count(&program, &inputs)
+    let (outputs, steps) = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs_and_steps()
         .expect("hostile state machine run must succeed");
 
     assert!(
@@ -293,7 +296,8 @@ fn hostile_ziftsieve_literal_copy_returns_in_bounded_steps() {
         ),
     ];
 
-    let (outputs, steps) = vyre_reference::reference_eval_step_count(&program, &inputs)
+    let (outputs, steps) = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs_and_steps()
         .expect("hostile ziftsieve run must succeed");
 
     assert!(
@@ -342,7 +346,8 @@ fn in_contract_ziftsieve_literal_copy_produces_identical_bytes() {
         ),
     ];
 
-    let outputs = vyre_reference::reference_eval(&program, &inputs)
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("in-contract ziftsieve run must succeed");
     let out_bytes = outputs[0].to_bytes();
     let words: Vec<u32> = out_bytes

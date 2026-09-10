@@ -62,7 +62,7 @@ fn run_emit(lane_count: u32, max_hits: u32, supplied: u32) -> (Vec<u32>, u32, u3
     let file_ids: Vec<u32> = (0..supplied).map(|lane| 800 + lane).collect();
     let starts: Vec<u32> = (0..supplied).map(|lane| 900 + lane).collect();
     let lens: Vec<u32> = (0..supplied).map(|lane| 1 + lane).collect();
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32_slice(&rule_ids)),
@@ -73,6 +73,7 @@ fn run_emit(lane_count: u32, max_hits: u32, supplied: u32) -> (Vec<u32>, u32, u3
             Value::from(pack_u32_slice(&[0])),
         ],
     )
+    .outputs()
     .expect("Fix: emit_hit_with_layout must execute on the reference interpreter");
     assert_eq!(
         outputs.len(),
@@ -95,13 +96,14 @@ fn run_compact(hit_capacity: u32, max_capacity: u32, supplied_hits: u32, cursor:
     );
     let program = compact_hits_with_layout(OUT_HITS, OUT_CURSOR, hit_capacity, max_capacity);
     let hits: Vec<u32> = (0..supplied_hits * 4).collect();
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32_slice(&hits)),
             Value::from(pack_u32_slice(&[cursor])),
         ],
     )
+    .outputs()
     .expect("Fix: compact_hits_with_layout must execute on the reference interpreter");
     assert_eq!(outputs.len(), 1, "compact publishes only the live length");
     words(&outputs[0])[0]

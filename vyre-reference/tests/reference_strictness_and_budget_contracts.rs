@@ -14,9 +14,8 @@ use vyre_foundation::ir::{
 };
 use vyre_reference::value::Value;
 use vyre_reference::{
-    DeterministicSchedulePolicy, ExecutionStrictness, ReferenceBudget, ReferenceErrorClass,
-    ReferenceRequest, WorkloadEnvelope, REFERENCE_ORACLE_VERSION,
-    REFERENCE_REQUEST_SCHEMA_VERSION,
+    DeterministicSchedulePolicy, ReferenceBudget, ReferenceErrorClass, ReferenceRequest,
+    WorkloadEnvelope, REFERENCE_ORACLE_VERSION, REFERENCE_REQUEST_SCHEMA_VERSION,
 };
 use vyre_test_support::pass_programs::{indexed_input_copy_program, single_input_copy_program};
 
@@ -69,7 +68,7 @@ fn oracle_path_invokes_no_production_transforms() {
         ]
         .concat(),
     )];
-    let request = ReferenceRequest::new(program.clone(), inputs, ReferenceBudget::standard());
+    let request = ReferenceRequest::new(&program, &inputs, ReferenceBudget::standard());
     let result = request
         .execute()
         .expect("reference oracle must execute directly");
@@ -121,7 +120,7 @@ const HOST_FAULT_CLASSES: [ReferenceErrorClass; 2] = [
 #[test]
 fn strict_execution_refuses_every_fault_class_it_can_raise() {
     for (class, program, inputs) in strictness_cases() {
-        let request = ReferenceRequest::new(program, inputs, ReferenceBudget::bounded(65_536));
+        let request = ReferenceRequest::new(&program, &inputs, ReferenceBudget::bounded(65_536));
         let error = match request.execute() {
             Ok(result) => panic!(
                 "Fix: the {} case must fail, got {} outputs",
@@ -249,7 +248,7 @@ fn budget_exhaustion_terminates_and_reports_bound() {
 
     // Tight budget of 25 steps.
     let tight_budget = ReferenceBudget::bounded(25);
-    let request = ReferenceRequest::new(program, vec![], tight_budget);
+    let request = ReferenceRequest::new(&program, &[], tight_budget);
     let error = request
         .execute()
         .expect_err("execution must fail on budget exhaustion");
@@ -275,20 +274,13 @@ fn permissive_mode_cannot_issue_expected_output_or_certificate() {
     let inputs = vec![vyre_reference::value::Value::from(
         DISTINCTIVE_OUTPUT.to_le_bytes().to_vec(),
     )];
-    let permissive_request = ReferenceRequest::new(program, inputs, ReferenceBudget::standard())
-        .with_strictness(ExecutionStrictness::DiagnosticPermissive);
-
-    // Calling strict execute() on a permissive request must be rejected.
-    let strict_err = permissive_request
-        .execute()
-        .expect_err("strict execute() must fail on permissive request");
-    assert_eq!(strict_err.error_class(), ReferenceErrorClass::TypeMismatch);
+    let permissive_request = ReferenceRequest::new(&program, &inputs, ReferenceBudget::standard());
 
     // A permissive run reports what it absorbed and nothing a device could be
-    // graded against. The report's own runtime data must not carry the bytes a
-    // strict run would have produced, which is what a refusal method checked at
-    // call time never established: a caller that ignored the `Result` still had
-    // the value in hand.
+    // graded against. Permissive is the method rather than a field, so a strict
+    // caller cannot reach a permissive result at all, and the report type it
+    // does return carries no output value and no certificate: the bytes a
+    // strict run would have produced are not in the type.
     let report = permissive_request
         .execute_permissive()
         .expect("permissive execution succeeds");
@@ -330,12 +322,13 @@ fn single_rank_collectives_interpreted_directly_without_lowering() {
     let src_bytes = vec![10u32.to_le_bytes(), 20u32.to_le_bytes()].concat();
     let dst_zeros = vec![0u32.to_le_bytes(), 0u32.to_le_bytes()].concat();
 
+    let allgather_inputs = vec![
+        vyre_reference::value::Value::from(src_bytes.clone()),
+        vyre_reference::value::Value::from(dst_zeros),
+    ];
     let request = ReferenceRequest::new(
-        allgather_prog,
-        vec![
-            vyre_reference::value::Value::from(src_bytes.clone()),
-            vyre_reference::value::Value::from(dst_zeros),
-        ],
+        &allgather_prog,
+        &allgather_inputs,
         ReferenceBudget::standard(),
     );
 
@@ -354,9 +347,10 @@ fn single_rank_collectives_interpreted_directly_without_lowering() {
             group: CommGroup::WORLD,
         }],
     );
+    let allreduce_inputs = vec![vyre_reference::value::Value::from(src_bytes.clone())];
     let request_allreduce = ReferenceRequest::new(
-        allreduce_prog,
-        vec![vyre_reference::value::Value::from(src_bytes.clone())],
+        &allreduce_prog,
+        &allreduce_inputs,
         ReferenceBudget::standard(),
     );
     let result_allreduce = request_allreduce
@@ -374,9 +368,10 @@ fn single_rank_collectives_interpreted_directly_without_lowering() {
             group: CommGroup(42),
         }],
     );
+    let non_world_inputs = vec![vyre_reference::value::Value::from(src_bytes)];
     let request_non_world = ReferenceRequest::new(
-        non_world_prog,
-        vec![vyre_reference::value::Value::from(src_bytes)],
+        &non_world_prog,
+        &non_world_inputs,
         ReferenceBudget::standard(),
     );
     let non_world_err = request_non_world
@@ -398,7 +393,7 @@ fn reference_request_carries_mandatory_budget_and_envelope() {
 
     let budget = ReferenceBudget::new(10_000, 1024 * 1024, 64);
     let envelope = WorkloadEnvelope::for_program(&program).with_grid([2, 1, 1]);
-    let request = ReferenceRequest::new(program, vec![], budget)
+    let request = ReferenceRequest::new(&program, &[], budget)
         .with_workload_envelope(envelope)
         .with_schedule_policy(DeterministicSchedulePolicy::LaneReversed);
 

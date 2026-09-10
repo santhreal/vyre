@@ -60,14 +60,17 @@ fn under_every_step_order(program: &Program, inputs: &[Value]) -> Vec<(String, V
     let mut runs = vec![(
         "forward".to_string(),
         unpack(
-            &vyre_reference::reference_eval(program, inputs)
+            &vyre_reference::ReferenceRequest::standard(program, inputs)
+                .outputs()
                 .expect("forward evaluation must succeed"),
         ),
     )];
     runs.push((
         "reversed".to_string(),
         unpack(
-            &vyre_reference::reference_eval_lane_reversed(program, inputs)
+            &vyre_reference::ReferenceRequest::standard(program, inputs)
+                .with_schedule_policy(vyre_reference::DeterministicSchedulePolicy::LaneReversed)
+                .outputs()
                 .expect("reversed evaluation must succeed"),
         ),
     ));
@@ -75,7 +78,11 @@ fn under_every_step_order(program: &Program, inputs: &[Value]) -> Vec<(String, V
         runs.push((
             format!("rotated by {by}"),
             unpack(
-                &vyre_reference::reference_eval_lane_rotated(program, inputs, by)
+                &vyre_reference::ReferenceRequest::standard(program, inputs)
+                    .with_schedule_policy(vyre_reference::DeterministicSchedulePolicy::LaneRotated(
+                        by,
+                    ))
+                    .outputs()
                     .expect("rotated evaluation must succeed"),
             ),
         ));

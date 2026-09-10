@@ -519,15 +519,8 @@ pub fn payload_format(version: u16) -> TargetPayloadFormat {
 /// dynamic shared allocation: large enough for every fixture entry point and
 /// small enough that no device fact rejects it.
 pub fn target_profile(version: u16) -> TargetProfile {
-    TargetProfile::new(
-        FIXTURE_TARGET,
-        u64::from(version),
-        [64, 1, 1],
-        64,
-        1_024,
-        0,
-    )
-    .expect("fixture profile must be valid")
+    TargetProfile::new(FIXTURE_TARGET, u64::from(version), [64, 1, 1], 64, 1_024, 0)
+        .expect("fixture profile must be valid")
 }
 
 /// The target the payload fixtures name.

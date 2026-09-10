@@ -62,7 +62,7 @@ fn run_ir(
     let pack = |data: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(data));
     let nf = n_fine as usize;
     let nc = n_coarse as usize;
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             pack(&enc_vec(a)),     // a (0, RO)
@@ -78,6 +78,7 @@ fn run_ir(
             pack(&vec![0u32; nc]), // temp_coarse (10, RW)
         ],
     )
+    .outputs()
     .expect("amg_v_cycle reference evaluation must succeed");
     // RW buffers in binding order: x(2) first.
     outputs[0]

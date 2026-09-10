@@ -23,7 +23,8 @@ fn bytes_from_f32(values: &[f32]) -> Vec<u8> {
 
 fn output_bytes(program: &Program, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
     let values = vyre_reference::reference_inputs(program, inputs.to_vec());
-    vyre_reference::reference_eval(program, &values)
+    vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
         .unwrap_or_else(|error| panic!("Fix: reference execution failed: {error}"))
         .into_iter()
         .map(|value| value.to_bytes())

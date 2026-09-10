@@ -413,7 +413,8 @@ mod tests {
                 .cloned()
                 .map(vyre_reference::value::Value::from)
                 .collect::<Vec<_>>();
-            let outputs = vyre_reference::reference_eval(&(case.program)(), &values)
+            let outputs = vyre_reference::ReferenceRequest::standard(&(case.program)(), &values)
+                .outputs()
                 .unwrap_or_else(|error| {
                     panic!("Fix: `{}` must reference-evaluate: {error}", case.id)
                 })

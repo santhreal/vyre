@@ -131,7 +131,8 @@ fn run_scan(n: u32, kind: ScanKind, input: &[u32]) -> Vec<u32> {
             writable += 1;
         }
     }
-    let outputs = vyre_reference::reference_eval(&program, &values)
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &values)
+        .outputs()
         .expect("Fix: the scan Program must execute on the reference interpreter");
     let slot = out_slot.expect("Fix: the scan Program must declare a writable out buffer");
     outputs[slot]

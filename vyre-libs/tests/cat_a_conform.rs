@@ -25,8 +25,9 @@ use wire_words::{decode_u32_words, u32_bytes};
 fn run_program(program: &Program, inputs: Vec<Value>) -> Vec<Vec<u8>> {
     let inputs =
         vyre_reference::reference_inputs(program, inputs.iter().map(Value::to_bytes).collect());
-    let outputs =
-        vyre_reference::reference_eval(program, &inputs).expect("Cat-A program must execute");
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
+        .expect("Cat-A program must execute");
     outputs.into_iter().map(|v| v.to_bytes()).collect()
 }
 

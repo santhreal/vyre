@@ -39,7 +39,8 @@ fn require_backend() -> &'static WgpuBackend {
 /// Evaluate one case on the reference under the interpreter's work ceiling.
 fn bounded_reference_eval(program: &Program, inputs: &[Value]) -> Oracle<Vec<Vec<u8>>> {
     bounded_oracle(|| {
-        vyre_reference::reference_eval(program, inputs)
+        vyre_reference::ReferenceRequest::standard(program, inputs)
+            .outputs()
             .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
     })
 }

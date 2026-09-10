@@ -21,7 +21,6 @@
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::step_budget::MAX_REFERENCE_STEPS;
 use vyre_reference::value::Value;
-use vyre_reference::{reference_eval_step_count, reference_eval_with_step_ceiling};
 
 /// `for i in 0..load(trip, 0) { out[0] = i }`: the trip count is data, so no
 /// declared extent bounds it.
@@ -69,8 +68,13 @@ fn trip_inputs(trip: u32) -> Vec<Value> {
 fn a_data_derived_trip_count_is_refused_by_name() {
     let program = data_derived_trip_count();
     let start = std::time::Instant::now();
-    let error = reference_eval_with_step_ceiling(&program, &trip_inputs(u32::MAX), 4_096)
-        .expect_err("Fix: a trip count no declared extent bounds must reach the work ceiling");
+    let error = vyre_reference::ReferenceRequest::new(
+        &program,
+        &trip_inputs(u32::MAX),
+        vyre_reference::ReferenceBudget::with_work_ceiling(4_096),
+    )
+    .outputs_and_steps()
+    .expect_err("Fix: a trip count no declared extent bounds must reach the work ceiling");
     assert!(
         start.elapsed() < std::time::Duration::from_secs(2),
         "Fix: the interpreter must refuse an unbounded trip count promptly; elapsed {:?}",
@@ -101,8 +105,13 @@ fn an_anonymous_program_is_named_by_its_fingerprint() {
         program.entry_op_id.is_none(),
         "Fix: this fixture exists to exercise the unnamed-program path"
     );
-    let error = reference_eval_with_step_ceiling(&program, &trip_inputs(u32::MAX), 512)
-        .expect_err("Fix: the run must reach the ceiling");
+    let error = vyre_reference::ReferenceRequest::new(
+        &program,
+        &trip_inputs(u32::MAX),
+        vyre_reference::ReferenceBudget::with_work_ceiling(512),
+    )
+    .outputs_and_steps()
+    .expect_err("Fix: the run must reach the ceiling");
     let named = &error
         .step_ceiling_source()
         .expect("Fix: a work-ceiling refusal carries its source")
@@ -118,10 +127,13 @@ fn a_named_program_is_refused_under_its_entry_op_id() {
     let mut program = data_derived_trip_count();
     program.entry_op_id = Some("hostile::trip_count_op".to_string());
     let start = std::time::Instant::now();
-    let error = reference_eval_with_step_ceiling(&program, &trip_inputs(u32::MAX), 4_096)
-        .expect_err(
-            "Fix: a hostile trip count no declared extent bounds must reach the work ceiling",
-        );
+    let error = vyre_reference::ReferenceRequest::new(
+        &program,
+        &trip_inputs(u32::MAX),
+        vyre_reference::ReferenceBudget::with_work_ceiling(4_096),
+    )
+    .outputs_and_steps()
+    .expect_err("Fix: a hostile trip count no declared extent bounds must reach the work ceiling");
     assert!(
         start.elapsed() < std::time::Duration::from_secs(2),
         "Fix: the interpreter must refuse an unbounded trip count promptly; elapsed {:?}",
@@ -141,11 +153,12 @@ fn a_named_program_is_refused_under_its_entry_op_id() {
 
 #[test]
 fn an_empty_loop_body_is_bounded_too() {
-    let error = reference_eval_with_step_ceiling(
+    let error = vyre_reference::ReferenceRequest::new(
         &data_derived_trip_count_empty_body(),
         &trip_inputs(u32::MAX),
-        1_024,
+        vyre_reference::ReferenceBudget::with_work_ceiling(1_024),
     )
+    .outputs_and_steps()
     .expect_err("Fix: a loop whose body executes no statement must still charge its iterations");
     assert_eq!(
         error
@@ -158,9 +171,13 @@ fn an_empty_loop_body_is_bounded_too() {
 
 #[test]
 fn a_bounded_trip_count_evaluates_and_reports_its_steps() {
-    let (outputs, steps) =
-        reference_eval_with_step_ceiling(&data_derived_trip_count(), &trip_inputs(64), 4_096)
-            .expect("Fix: a trip count the ceiling admits must evaluate");
+    let (outputs, steps) = vyre_reference::ReferenceRequest::new(
+        &data_derived_trip_count(),
+        &trip_inputs(64),
+        vyre_reference::ReferenceBudget::with_work_ceiling(4_096),
+    )
+    .outputs_and_steps()
+    .expect("Fix: a trip count the ceiling admits must evaluate");
     assert_eq!(
         outputs[0].to_bytes(),
         63u32.to_le_bytes().to_vec(),
@@ -178,8 +195,10 @@ fn a_bounded_trip_count_evaluates_and_reports_its_steps() {
 
 #[test]
 fn the_default_entry_point_charges_against_the_shipped_ceiling() {
-    let (_outputs, steps) = reference_eval_step_count(&data_derived_trip_count(), &trip_inputs(8))
-        .expect("Fix: a small program must evaluate under the shipped ceiling");
+    let (_outputs, steps) =
+        vyre_reference::ReferenceRequest::standard(&data_derived_trip_count(), &trip_inputs(8))
+            .outputs_and_steps()
+            .expect("Fix: a small program must evaluate under the shipped ceiling");
     assert!(steps > 0, "Fix: an evaluated program charges steps");
     assert!(
         steps < MAX_REFERENCE_STEPS,
@@ -207,7 +226,7 @@ fn a_declared_extent_above_the_ceiling_is_admitted_at_the_work_it_declares() {
     let trips = 4_096u32;
     let ceiling = 1_024u64;
     let (outputs, steps) =
-        reference_eval_with_step_ceiling(&declared_trip_count(trips), &[], ceiling).expect(
+        vyre_reference::ReferenceRequest::new(&declared_trip_count(trips), &[], vyre_reference::ReferenceBudget::with_work_ceiling(ceiling)).outputs_and_steps().expect(
             "Fix: a program whose trip count is a declared literal must be admitted at the work it declares, not refused against a ceiling sized for a smaller program",
         );
     assert_eq!(
@@ -223,7 +242,7 @@ fn a_declared_extent_above_the_ceiling_is_admitted_at_the_work_it_declares() {
 
 #[test]
 fn admission_does_not_lift_the_ceiling_for_a_data_derived_trip_count() {
-    let error = reference_eval_with_step_ceiling(&data_derived_trip_count(), &trip_inputs(u32::MAX), 1_024)
+    let error = vyre_reference::ReferenceRequest::new(&data_derived_trip_count(), &trip_inputs(u32::MAX), vyre_reference::ReferenceBudget::with_work_ceiling(1_024)).outputs_and_steps()
         .expect_err(
             "Fix: admitting declared work must not admit a trip count nothing declares; the refusal is what bounds the oracle",
         );
@@ -257,7 +276,7 @@ fn a_declared_extent_inside_a_data_derived_loop_declares_nothing() {
             )],
         )],
     );
-    let error = reference_eval_with_step_ceiling(&program, &trip_inputs(u32::MAX), 2_048)
+    let error = vyre_reference::ReferenceRequest::new(&program, &trip_inputs(u32::MAX), vyre_reference::ReferenceBudget::with_work_ceiling(2_048)).outputs_and_steps()
         .expect_err(
             "Fix: one undeclared trip count leaves the body's work undeclared, whatever its inner loops declare",
         );
@@ -274,7 +293,7 @@ fn a_single_invocation_with_an_unbounded_inner_loop_is_refused_by_the_statement_
     let program = data_derived_trip_count();
     assert_eq!(program.workgroup_size(), [1, 1, 1]);
     let start = std::time::Instant::now();
-    let error = reference_eval_with_step_ceiling(&program, &trip_inputs(u32::MAX), 512)
+    let error = vyre_reference::ReferenceRequest::new(&program, &trip_inputs(u32::MAX), vyre_reference::ReferenceBudget::with_work_ceiling(512)).outputs_and_steps()
         .expect_err("Fix: a single invocation with an unbounded inner loop must be refused by the statement driver");
     assert!(
         start.elapsed() < std::time::Duration::from_secs(2),
@@ -303,8 +322,13 @@ fn an_unbounded_invocation_loop_is_refused_by_the_invocation_driver() {
         )],
     );
     let start = std::time::Instant::now();
-    let error = reference_eval_with_step_ceiling(&program, &trip_inputs(1), 10)
-        .expect_err("Fix: multi-invocation program exceeding step ceiling must be refused");
+    let error = vyre_reference::ReferenceRequest::new(
+        &program,
+        &trip_inputs(1),
+        vyre_reference::ReferenceBudget::with_work_ceiling(10),
+    )
+    .outputs_and_steps()
+    .expect_err("Fix: multi-invocation program exceeding step ceiling must be refused");
     assert!(
         start.elapsed() < std::time::Duration::from_secs(2),
         "Fix: invocation driver ceiling must terminate promptly; elapsed {:?}",
@@ -334,7 +358,8 @@ fn the_heaviest_legitimate_corpus_work_completes_under_the_ceiling_with_margin()
     );
     let trips = 10_000u32;
     let program = declared_trip_count(trips);
-    let (outputs, steps) = reference_eval_step_count(&program, &[])
+    let (outputs, steps) = vyre_reference::ReferenceRequest::standard(&program, &[])
+        .outputs_and_steps()
         .expect("Fix: legitimate program must complete under shipped ceiling");
     assert_eq!(outputs[0].to_bytes(), (trips - 1).to_le_bytes().to_vec());
     assert!(

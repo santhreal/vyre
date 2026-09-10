@@ -6,7 +6,7 @@ use vyre_reference::composition_witness::{
     bitset_difference_flag_witness, bitset_warm_start_witness,
 };
 
-fn reference_eval(current: &[u32], next: &[u32]) -> u32 {
+fn difference_flag(current: &[u32], next: &[u32]) -> u32 {
     bitset_difference_flag_witness(current, next)
 }
 
@@ -15,7 +15,7 @@ fn reference_eval_warm_start(current: &[u32], next: &[u32], seed: &[u32]) -> (Ve
 }
 
 #[test]
-fn reference_eval_equal_bitsets() {
+fn difference_flag_equal_bitsets() {
     let cases: Vec<(Vec<u32>, Vec<u32>)> = vec![
         (vec![], vec![]),
         (vec![0], vec![0]),
@@ -24,13 +24,13 @@ fn reference_eval_equal_bitsets() {
         (vec![0xAAAAAAAA; 16], vec![0xAAAAAAAA; 16]),
     ];
     for (current, next) in cases {
-        let got = reference_eval(&current, &next);
+        let got = difference_flag(&current, &next);
         assert_eq!(got, 0, "equal bitsets must yield 0");
     }
 }
 
 #[test]
-fn reference_eval_different_bitsets() {
+fn difference_flag_different_bitsets() {
     let cases: Vec<(Vec<u32>, Vec<u32>)> = vec![
         (vec![0], vec![1]),
         (vec![0b0001], vec![0b0011]),
@@ -38,15 +38,15 @@ fn reference_eval_different_bitsets() {
         (vec![0; 16], vec![1; 16]),
     ];
     for (current, next) in cases {
-        let got = reference_eval(&current, &next);
+        let got = difference_flag(&current, &next);
         assert_eq!(got, 1, "different bitsets must yield 1");
     }
 }
 
 #[test]
-fn reference_eval_mismatched_lengths() {
-    // reference_eval uses slice equality which returns false for mismatched lengths
-    let got = reference_eval(&[0, 0], &[0]);
+fn difference_flag_mismatched_lengths() {
+    // difference_flag uses slice equality which returns false for mismatched lengths
+    let got = difference_flag(&[0, 0], &[0]);
     assert_eq!(got, 1, "mismatched lengths treated as different");
 }
 

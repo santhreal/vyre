@@ -9,7 +9,6 @@ use vyre_graphics_app::{GraphicsRenderer, SceneGraph};
 use vyre_libs::visual::{
     apply_scissor_rect, composite_blend, path_rasterize_segments, text_run_blend, BlendMode,
 };
-use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
 
 #[test]
@@ -23,7 +22,9 @@ fn test_exact_path_rasterization_bytes() {
         Value::from(vyre_primitives::wire::pack_u32_slice(&segs)),
         Value::from(vyre_primitives::wire::pack_u32_slice(&bg)),
     ];
-    let outputs = reference_eval(&p_path, &inputs).expect("reference eval must succeed");
+    let outputs = vyre_reference::ReferenceRequest::standard(&p_path, &inputs)
+        .outputs()
+        .expect("reference eval must succeed");
 
     let expected_pixels = [
         0xFF00_00FFu32, // (0,0) - on path
@@ -54,7 +55,9 @@ fn test_exact_text_run_bytes() {
         Value::from(vyre_primitives::wire::pack_u32_slice(&atlas)),
         Value::from(vyre_primitives::wire::pack_u32_slice(&bg)),
     ];
-    let outputs = reference_eval(&p_text, &inputs).expect("reference eval must succeed");
+    let outputs = vyre_reference::ReferenceRequest::standard(&p_text, &inputs)
+        .outputs()
+        .expect("reference eval must succeed");
 
     let expected_pixels = [
         0xFF00_00FFu32, // (0,0) - blended blue glyph
@@ -83,7 +86,9 @@ fn test_exact_composite_and_clip_bytes() {
         Value::from(vyre_primitives::wire::pack_u32_slice(&fg)),
         Value::from(vyre_primitives::wire::pack_u32_slice(&bg)),
     ];
-    let outputs = reference_eval(&p_blend, &inputs).expect("blend eval must succeed");
+    let outputs = vyre_reference::ReferenceRequest::standard(&p_blend, &inputs)
+        .outputs()
+        .expect("blend eval must succeed");
 
     let bytes = outputs[0].to_bytes();
     let blended = vyre_primitives::wire::decode_u32_le_bytes_all(&bytes);
@@ -94,7 +99,9 @@ fn test_exact_composite_and_clip_bytes() {
     // Scissor clip keeping only pixel at (1,1)
     let p_clip = apply_scissor_rect("in", "out", 2, 2, 1, 1, 2, 2);
     let clip_inputs = vec![Value::from(vyre_primitives::wire::pack_u32_slice(&blended))];
-    let clip_out = reference_eval(&p_clip, &clip_inputs).expect("clip eval must succeed");
+    let clip_out = vyre_reference::ReferenceRequest::standard(&p_clip, &clip_inputs)
+        .outputs()
+        .expect("clip eval must succeed");
 
     let expected_clipped = [
         0x0000_0000u32, // (0,0) - clipped out

@@ -27,9 +27,12 @@ fn run_program(source: &[u8]) -> Vec<u32> {
     let mut input = source.to_vec();
     input.resize(pad, 0);
     let zero_mask = vec![0u8; cap * 4];
-    let outputs =
-        vyre_reference::reference_eval(&program, &[Value::from(input), Value::from(zero_mask)])
-            .expect("line_splice_classify reference evaluation must succeed");
+    let outputs = vyre_reference::ReferenceRequest::standard(
+        &program,
+        &[Value::from(input), Value::from(zero_mask)],
+    )
+    .outputs()
+    .expect("line_splice_classify reference evaluation must succeed");
     let mut mask = unpack_mask(&outputs[0].to_bytes());
     mask.truncate(n); // trim the byte_count.max(1) padding
     mask
@@ -39,10 +42,11 @@ fn run_program_u8(source: &[u8]) -> Vec<u32> {
     let n = source.len();
     let program = line_splice_classify_u8(n as u32);
     let zero_mask = vec![0u8; n.max(1) * 4];
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[Value::from(source.to_vec()), Value::from(zero_mask)],
     )
+    .outputs()
     .expect("raw-u8 line_splice_classify reference evaluation must succeed");
     let mut mask = unpack_mask(&outputs[0].to_bytes());
     mask.truncate(n);
@@ -166,19 +170,13 @@ fn u8_edge_neighbor_reads_are_oob_clean_not_interpreter_masked() {
     let src = b"\\\nx\\\n"; // splices touching both buffer ends
     let program = line_splice_classify_u8(src.len() as u32);
     let zero_mask = vec![0u8; src.len() * 4];
-    let (_outputs, report) = vyre_reference::reference_eval_oob_report(
-        &program,
-        &[Value::from(src.to_vec()), Value::from(zero_mask)],
-    )
-    .expect("raw-u8 line_splice_classify reference evaluation must succeed");
-    assert_eq!(
-        report.total(),
-        0,
-        "Fix: U8 edge neighbor reads must be clamped in-bounds by ir_safe::clamped_load_to, \
-         not left to the interpreter's silent OOB masking (got {} load(s), {} store(s))",
-        report.oob_loads,
-        report.oob_stores
-    );
+    let edge_inputs = [Value::from(src.to_vec()), Value::from(zero_mask)];
+    vyre_reference::ReferenceRequest::standard(&program, &edge_inputs)
+        .outputs()
+        .expect(
+            "Fix: U8 edge neighbor reads must be clamped in-bounds by ir_safe::clamped_load_to; \
+             the strict oracle refuses an out-of-bounds read rather than masking it",
+        );
     // And the output is still correct at the edges (both splices fully dropped).
     assert_eq!(run_program_u8(src), vec![0, 0, 1, 0, 0]);
 }

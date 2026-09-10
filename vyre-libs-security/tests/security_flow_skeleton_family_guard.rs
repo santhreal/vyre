@@ -493,7 +493,8 @@ fn eval(program: &Program, named: &[(&str, Vec<u32>)]) -> Vec<Vec<u32>> {
             Value::from(pack_u32_slice(&words))
         })
         .collect();
-    vyre_reference::reference_eval(program, &values)
+    vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
         .expect("Fix: security family guard program must evaluate")
         .iter()
         .map(|value| decode_u32_le_bytes_all(&value.to_bytes()))

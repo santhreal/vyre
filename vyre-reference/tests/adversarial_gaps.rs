@@ -4,9 +4,9 @@
 use crate::flat_expr_eval;
 
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_reference::Buffer;
 use vyre_reference::workgroup::InvocationIds;
-use vyre_reference::{reference_eval, reference_eval_expr, value::Value, ReferenceMemory};
+use vyre_reference::Buffer;
+use vyre_reference::{reference_eval_expr, value::Value, ReferenceMemory};
 
 use flat_expr_eval::{empty_program, eval_expr_value, float_bits};
 

@@ -56,7 +56,8 @@ fn launch_past_the_pinned_per_axis_ceiling_folds_and_matches_cuda_and_reference(
     let expected = identity_bytes(WORDS);
 
     // 1. Reference interpreter oracle evaluation
-    let ref_outputs = vyre_reference::reference_eval(&program, &[])
+    let ref_outputs = vyre_reference::ReferenceRequest::standard(&program, &[])
+        .outputs()
         .expect("Fix: reference_eval must evaluate the identity program");
     let ref_bytes: Vec<u8> = ref_outputs[0].to_bytes();
     assert_eq!(
@@ -175,7 +176,8 @@ fn a_two_axis_program_writes_the_same_buffer_on_every_route_that_launches_it() {
     let count = TWO_AXIS_SIDE * TWO_AXIS_SIDE;
     let expected: Vec<u8> = (0..count).flat_map(u32::to_le_bytes).collect();
 
-    let reference = vyre_reference::reference_eval(&program, &[])
+    let reference = vyre_reference::ReferenceRequest::standard(&program, &[])
+        .outputs()
         .expect("Fix: reference_eval must evaluate the two-axis program");
     assert_eq!(
         reference[0].to_bytes(),

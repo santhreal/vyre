@@ -34,7 +34,7 @@ fn execute(
         DataType::F32,
     )
     .expect("Fix: valid gated RMSNorm fixture must build");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(f32_bytes(input)),
@@ -42,6 +42,7 @@ fn execute(
             Value::from(f32_bytes(gate)),
         ],
     )
+    .outputs()
     .expect("Fix: gated RMSNorm must execute in the reference evaluator");
     assert_eq!(outputs.len(), 1);
     decode_f32(&outputs[0].to_bytes())
@@ -175,7 +176,7 @@ fn low_precision_programs_execute_with_exact_source_dtype_rounding() {
             .buffers()
             .iter()
             .all(|buffer| buffer.element == dtype));
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &program,
             &[
                 Value::from(u16_bytes(&input)),
@@ -183,6 +184,7 @@ fn low_precision_programs_execute_with_exact_source_dtype_rounding() {
                 Value::from(u16_bytes(&gate)),
             ],
         )
+        .outputs()
         .expect("Fix: low-precision gated RMSNorm must execute");
         assert_eq!(outputs.len(), 1);
         assert_eq!(outputs[0].to_bytes(), u16_bytes(&expected));
@@ -207,7 +209,7 @@ fn bf16_activations_with_f32_weights_execute_exactly() {
     assert_eq!(program.buffers()[1].element, DataType::F32);
     assert_eq!(program.buffers()[2].element, DataType::BF16);
     assert_eq!(program.buffers()[3].element, DataType::BF16);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(u16_bytes(&[0x3f80, 0xc000])),
@@ -215,6 +217,7 @@ fn bf16_activations_with_f32_weights_execute_exactly() {
             Value::from(u16_bytes(&[0x3f80, 0xbf80])),
         ],
     )
+    .outputs()
     .expect("Fix: mixed-weight gated RMSNorm must execute");
     assert_eq!(outputs[0].to_bytes(), u16_bytes(&[0x3eed, 0x3e2e]));
 }

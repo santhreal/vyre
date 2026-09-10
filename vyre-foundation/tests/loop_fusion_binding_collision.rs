@@ -70,7 +70,8 @@ fn loop_fusion_does_not_merge_same_named_locals_into_one_scope() {
 
     // Original: two disjoint loops in separate scopes. a[0] ends at 1; b[0]
     // accumulates four atomic adds to 4. Both buffers are returned as outputs.
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original program is well-scoped and must run");
     assert_eq!(
         original,
@@ -86,10 +87,12 @@ fn loop_fusion_does_not_merge_same_named_locals_into_one_scope() {
     // The transformed program must STILL validate and run. If loop_fusion merged
     // the two `let x` into one loop body, they are duplicate sibling bindings the
     // validator rejects -- reference_eval errors and this `.expect` panics.
-    let after = vyre_reference::reference_eval(&transformed, &inputs).expect(
-        "loop_fusion must not merge two loop bodies that bind the same local name \
+    let after = vyre_reference::ReferenceRequest::standard(&transformed, &inputs)
+        .outputs()
+        .expect(
+            "loop_fusion must not merge two loop bodies that bind the same local name \
          into a single scope (duplicate sibling binding, V032)",
-    );
+        );
 
     assert_eq!(
         after, original,

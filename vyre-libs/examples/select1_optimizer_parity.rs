@@ -38,7 +38,8 @@ fn outputs_of(
     values: &[Value],
     which: &str,
 ) -> Result<Vec<Vec<u8>>, String> {
-    let outputs = vyre_reference::reference_eval(program, values)
+    let outputs = vyre_reference::ReferenceRequest::standard(program, values)
+        .outputs()
         .map_err(|error| format!("{which} failed to execute on vyre-reference: {error}"))?;
     Ok(outputs.iter().map(Value::to_bytes).collect())
 }

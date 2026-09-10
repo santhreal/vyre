@@ -66,13 +66,14 @@ fn binary_broadcast_rhs_u32_modulo_indexing() {
     let out_idx = vyre_reference::output_index(&program, "out")
         .expect("output buffer `out` must be declared");
 
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32_slice(&lhs)),
             Value::from(pack_u32_slice(&rhs)),
         ],
     )
+    .outputs()
     .expect("binary_broadcast_rhs reference evaluation must succeed");
 
     let actual = decode_u32_le_bytes_all(&outputs[out_idx].to_bytes());
@@ -106,13 +107,14 @@ fn binary_broadcast_rhs_f32_scalar_broadcast() {
     let out_idx = vyre_reference::output_index(&program, "out")
         .expect("output buffer `out` must be declared");
 
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_f32_slice(&lhs)),
             Value::from(pack_f32_slice(&rhs)),
         ],
     )
+    .outputs()
     .expect("binary_broadcast_rhs scalar subtraction must succeed");
 
     let actual = decode_f32_le_bytes_all(&outputs[out_idx].to_bytes());
@@ -146,13 +148,14 @@ fn f32_binary_multiplication_over_signed_and_fractional_floats() {
     let out_idx = vyre_reference::output_index(&program, "out")
         .expect("output buffer `out` must be declared");
 
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_f32_slice(&lhs)),
             Value::from(pack_f32_slice(&rhs)),
         ],
     )
+    .outputs()
     .expect("f32_binary multiplication reference evaluation must succeed");
 
     let actual = decode_f32_le_bytes_all(&outputs[out_idx].to_bytes());
@@ -224,13 +227,14 @@ mod level_wave_tests {
         let val_out_idx = vyre_reference::output_index(&program, "val")
             .expect("output buffer `val` must be declared");
 
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &program,
             &[
                 Value::from(pack_u32_slice(&depths)),
                 Value::from(pack_u32_slice(&init_val)),
             ],
         )
+        .outputs()
         .expect("level_wave_program_with_buffers_and_op_id must execute successfully");
 
         let actual = decode_u32_le_bytes_all(&outputs[val_out_idx].to_bytes());
@@ -276,8 +280,12 @@ mod line_index_tests {
             let lines_idx = vyre_reference::output_index(&program, "lines")
                 .expect("lines output buffer must be declared");
 
-            let outputs = vyre_reference::reference_eval(&program, &[Value::from(source.to_vec())])
-                .expect("line_index_u8_with_geometry reference_eval must succeed");
+            let outputs = vyre_reference::ReferenceRequest::standard(
+                &program,
+                &[Value::from(source.to_vec())],
+            )
+            .outputs()
+            .expect("line_index_u8_with_geometry reference_eval must succeed");
 
             let mut actual = decode_u32_le_bytes_all(&outputs[lines_idx].to_bytes());
             actual.truncate(source.len());
@@ -320,7 +328,7 @@ mod attention_tests {
         let out_idx = vyre_reference::output_index(&program, "out")
             .expect("output buffer `out` must be declared");
 
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &program,
             &[
                 Value::from(pack_f32_slice(&q)),
@@ -328,6 +336,7 @@ mod attention_tests {
                 Value::from(pack_f32_slice(&v)),
             ],
         )
+        .outputs()
         .expect("online_softmax_attention reference evaluation must succeed");
 
         let actual = decode_f32_le_bytes_all(&outputs[out_idx].to_bytes());
@@ -371,7 +380,7 @@ fn ternary_u32_conditional_select() {
     let out_idx = vyre_reference::output_index(&program, "out")
         .expect("output buffer `out` must be declared");
 
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32_slice(&cond)),
@@ -379,6 +388,7 @@ fn ternary_u32_conditional_select() {
             Value::from(pack_u32_slice(&y)),
         ],
     )
+    .outputs()
     .expect("ternary select reference evaluation must succeed");
 
     let actual = decode_u32_le_bytes_all(&outputs[out_idx].to_bytes());
@@ -417,7 +427,7 @@ fn ternary_f32_fused_multiply_add() {
     let out_idx = vyre_reference::output_index(&program, "out")
         .expect("output buffer `out` must be declared");
 
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_f32_slice(&a)),
@@ -425,6 +435,7 @@ fn ternary_f32_fused_multiply_add() {
             Value::from(pack_f32_slice(&c)),
         ],
     )
+    .outputs()
     .expect("ternary fma reference evaluation must succeed");
 
     let actual = decode_f32_le_bytes_all(&outputs[out_idx].to_bytes());
@@ -456,8 +467,12 @@ fn u32_unary_bitwise_not() {
     let out_idx = vyre_reference::output_index(&program, "output")
         .expect("output buffer `output` must be declared");
 
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack_u32_slice(&input))])
-        .expect("u32_unary bit_not reference evaluation must succeed");
+    let outputs = vyre_reference::ReferenceRequest::standard(
+        &program,
+        &[Value::from(pack_u32_slice(&input))],
+    )
+    .outputs()
+    .expect("u32_unary bit_not reference evaluation must succeed");
 
     let actual = decode_u32_le_bytes_all(&outputs[out_idx].to_bytes());
     assert_eq!(
@@ -484,8 +499,12 @@ fn u32_unary_linear_transform() {
     let out_idx = vyre_reference::output_index(&program, "output")
         .expect("output buffer `output` must be declared");
 
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack_u32_slice(&input))])
-        .expect("u32_unary linear transform reference evaluation must succeed");
+    let outputs = vyre_reference::ReferenceRequest::standard(
+        &program,
+        &[Value::from(pack_u32_slice(&input))],
+    )
+    .outputs()
+    .expect("u32_unary linear transform reference evaluation must succeed");
 
     let actual = decode_u32_le_bytes_all(&outputs[out_idx].to_bytes());
     assert_eq!(
@@ -510,9 +529,12 @@ fn read_write_output_storage_is_backend_allocated() {
         "read-write output storage must not become a required host input"
     );
 
-    let outputs =
-        vyre_reference::reference_eval(&program, &[Value::from(pack_u32_slice(&[1, 2, 3]))])
-            .expect("read-write output storage must execute without a host-provided output seed");
+    let outputs = vyre_reference::ReferenceRequest::standard(
+        &program,
+        &[Value::from(pack_u32_slice(&[1, 2, 3]))],
+    )
+    .outputs()
+    .expect("read-write output storage must execute without a host-provided output seed");
     assert_eq!(
         decode_u32_le_bytes_all(&outputs[0].to_bytes()),
         vec![2, 3, 4]

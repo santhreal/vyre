@@ -118,7 +118,8 @@ fn dequantize_program(contract: &QuantizedContract, elements: u32) -> Program {
 
 /// Run `program` over `inputs` and return the one output buffer's bytes.
 fn run(program: &Program, inputs: Vec<Value>, output_bytes: usize) -> Vec<u8> {
-    let outputs = vyre_reference::reference_eval(program, &inputs)
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
         .expect("Fix: the reference oracle must execute the quantized fixture program");
     outputs
         .iter()

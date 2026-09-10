@@ -493,7 +493,8 @@ where
 #[cfg(test)]
 pub(crate) fn run_program(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
     let values = vyre_reference::reference_inputs(program, inputs);
-    vyre_reference::reference_eval(program, &values)
+    vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
         .expect("Fix: intrinsic must execute; restore this invariant before continuing.")
         .into_iter()
         .map(|v| v.to_bytes())

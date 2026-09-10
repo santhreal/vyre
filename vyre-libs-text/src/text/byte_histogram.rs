@@ -273,7 +273,7 @@ mod tests {
         // Removing the mask would OOB the atomic scatter (memory corruption on a real GPU)
         // and this test would see report.total() > 0.
         let program = byte_histogram_256("bytes", "histogram", 1);
-        let (outputs, report) = vyre_test_support::test_parity_oracles::eval_bytes_oob_report(
+        let outputs = vyre_test_support::test_parity_oracles::eval_bytes_in_bounds(
             "byte_histogram_256",
             &program,
             vec![
@@ -281,11 +281,6 @@ mod tests {
                 vyre_primitives::wire::pack_u32_slice(&[0x0141]),
                 vec![0u8; 256 * 4],
             ],
-        );
-        assert_eq!(
-            report.total(),
-            0,
-            "Fix: masked bin index must stay in bounds without relying on interpreter OOB masking"
         );
         let histogram = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0]);
         assert_eq!(

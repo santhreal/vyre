@@ -67,7 +67,7 @@ fn gpu_witness(
     let node_tags = vec![0u32; node_count as usize];
     let nodes = vec![0u32; node_count as usize];
 
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(&nodes)),
@@ -77,6 +77,7 @@ fn gpu_witness(
             Value::from(pack(&node_tags)),
         ],
     )
+    .outputs()
     .expect("motif reference evaluation must succeed");
     unpack(&outputs[1].to_bytes())
 }

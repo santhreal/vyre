@@ -11,19 +11,20 @@
 #![cfg(feature = "math-algebra")]
 #![allow(deprecated)]
 use vyre_foundation::ir::Program;
-use vyre_reference::value::Value;
 use vyre_primitives::wire::decode_u32_le_bytes_all as decode_u32_words;
 use vyre_primitives::wire::pack_u32_slice as u32_bytes;
+use vyre_reference::value::Value;
 
 /// The two-input, one-output reference evaluation every case in this suite runs.
 ///
 /// The output buffer is backend-allocated, so the interpreter sizes it from the
 /// declaration and the caller passes only the two inputs.
 fn eval_pair(program: &Program, a: &[u32], b: &[u32]) -> Vec<u8> {
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         program,
         &[Value::from(u32_bytes(a)), Value::from(u32_bytes(b))],
     )
+    .outputs()
     .unwrap();
     outputs[0].to_bytes()
 }

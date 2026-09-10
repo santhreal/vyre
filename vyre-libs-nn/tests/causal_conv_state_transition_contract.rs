@@ -30,7 +30,7 @@ fn update(input: &[f32], state: &[f32], weight: &[f32]) -> (Vec<f32>, Vec<f32>) 
         DataType::F32,
     )
     .expect("Fix: valid state update must build");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(f32_bytes(input)),
@@ -41,6 +41,7 @@ fn update(input: &[f32], state: &[f32], weight: &[f32]) -> (Vec<f32>, Vec<f32>) 
             Value::from(f32_bytes(&vec![0.0f32; state.len()])),
         ],
     )
+    .outputs()
     .expect("Fix: state update must execute");
     assert_eq!(outputs.len(), 3);
     assert_eq!(decode_f32(&outputs[0]), state);
@@ -72,13 +73,14 @@ fn chunked_state_continuation_matches_full_sequence_convolution() {
         DataType::F32,
     )
     .expect("Fix: full prefill must build");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &prefill,
         &[
             Value::from(f32_bytes(&[1.0, 2.0, 3.0, 4.0])),
             Value::from(f32_bytes(&weight)),
         ],
     )
+    .outputs()
     .expect("Fix: full prefill must execute");
     assert_eq!(decode_f32(&outputs[0]), [first, second].concat());
 }

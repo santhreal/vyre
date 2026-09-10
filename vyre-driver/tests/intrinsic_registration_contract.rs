@@ -30,7 +30,8 @@ fn canonical_identity_signature_and_fixture_reach_reference_interpreter() {
             .into_iter()
             .map(|bytes| Value::Bytes(bytes.into()))
             .collect::<Vec<_>>();
-        let actual = vyre_reference::reference_eval(&program, &values)
+        let actual = vyre_reference::ReferenceRequest::standard(&program, &values)
+            .outputs()
             .expect("reference interpreter executes canonical intrinsic")
             .into_iter()
             .map(|value| value.to_bytes())

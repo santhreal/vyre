@@ -97,7 +97,7 @@ fn csr_bidirectional_fused_program_matches_cpu_ref_via_reference_eval() {
             Value::from(pack(&vec![0u32; words])),      // frontier_out (init)
         ];
 
-        let outputs = vyre_reference::reference_eval(&program, &inputs).unwrap_or_else(|error| {
+        let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs).outputs().unwrap_or_else(|error| {
             panic!("csr_bidirectional case {case} (node_count={node_count}) reference_eval failed: {error}")
         });
         let out_idx = output_index(&program, "frontier_out");

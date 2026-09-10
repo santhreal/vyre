@@ -91,7 +91,7 @@ where
         .and_then(|op| op.program())
     {
         let input_val = Value::from(input);
-        let outputs = crate::execution::reference_eval(&prog, &[input_val])?;
+        let outputs = crate::ReferenceRequest::standard(&prog, &[input_val]).outputs()?;
         if let Some(first_out) = outputs.first() {
             Ok(first_out.clone())
         } else {

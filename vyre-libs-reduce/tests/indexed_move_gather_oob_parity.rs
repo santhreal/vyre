@@ -29,7 +29,7 @@ fn gather_out_of_range_index_matches_cpu_ref_with_reused_dst() {
     let dst_init = [sentinel; 3];
 
     let program = gather_fn("src", "indices", "dst", count);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(&src)),
@@ -37,6 +37,7 @@ fn gather_out_of_range_index_matches_cpu_ref_with_reused_dst() {
             Value::from(pack(&dst_init)),
         ],
     )
+    .outputs()
     .expect("gather reference evaluation must succeed");
 
     let gpu_ir = unpack(&outputs[0].to_bytes());

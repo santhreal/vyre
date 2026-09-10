@@ -79,8 +79,10 @@ fn output_index(program: &Program, name: &str) -> usize {
 fn run_packed_u8_program(source: &[u8]) -> Vec<u32> {
     let program = line_index_u8("source", "lines", source.len() as u32);
     let lines_index = output_index(&program, "lines");
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(source.to_vec())])
-        .expect("Fix: packed-u8 line_index reference evaluation must succeed");
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(source.to_vec())])
+            .outputs()
+            .expect("Fix: packed-u8 line_index reference evaluation must succeed");
     let mut out = unpack_u32s(&outputs[lines_index].to_bytes());
     out.truncate(source.len());
     out

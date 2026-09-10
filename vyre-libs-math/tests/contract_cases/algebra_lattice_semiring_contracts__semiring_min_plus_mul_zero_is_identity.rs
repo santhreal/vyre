@@ -56,7 +56,8 @@ fn semiring_min_plus_mul_large_size() {
 
 #[test]
 fn try_semiring_min_plus_mul_rejects_aliased_out() {
-    let err = vyre_libs_math::math::algebra::try_semiring_min_plus_mul("a", "b", "a", 4).unwrap_err();
+    let err =
+        vyre_libs_math::math::algebra::try_semiring_min_plus_mul("a", "b", "a", 4).unwrap_err();
     assert!(
         err.to_string().contains("alias") || err.to_string().contains("name"),
         "aliasing out with a must be rejected: {err}"
@@ -79,10 +80,11 @@ fn bool_semiring_matmul_specific_values() {
         0, 0,
     ];
     let program = vyre_libs_math::math::algebra::bool_semiring_matmul("a", "b", "out", 2, 3, 2);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[Value::from(u32_bytes(&a)), Value::from(u32_bytes(&b))],
     )
+    .outputs()
     .expect("bool_semiring_matmul must execute");
 
     assert_eq!(
@@ -100,15 +102,22 @@ fn bool_semiring_matmul_composes_two_hop_reachability() {
         0, 0, 0, 1, //
         0, 0, 0, 0,
     ];
-    let program =
-        vyre_libs_math::math::algebra::bool_semiring_matmul("frontier", "adjacency", "out", 4, 4, 4);
-    let outputs = vyre_reference::reference_eval(
+    let program = vyre_libs_math::math::algebra::bool_semiring_matmul(
+        "frontier",
+        "adjacency",
+        "out",
+        4,
+        4,
+        4,
+    );
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(u32_bytes(&adjacency)),
             Value::from(u32_bytes(&adjacency)),
         ],
     )
+    .outputs()
     .expect("reachability boolean semiring multiply must execute");
 
     assert_eq!(
@@ -125,8 +134,8 @@ fn bool_semiring_matmul_composes_two_hop_reachability() {
 
 #[test]
 fn try_bool_semiring_matmul_rejects_aliased_names() {
-    let err =
-        vyre_libs_math::math::algebra::try_bool_semiring_matmul("a", "b", "a", 2, 2, 2).unwrap_err();
+    let err = vyre_libs_math::math::algebra::try_bool_semiring_matmul("a", "b", "a", 2, 2, 2)
+        .unwrap_err();
     assert!(
         err.to_string().contains("alias") || err.to_string().contains("name"),
         "aliasing output with input must be rejected: {err}"
@@ -135,9 +144,15 @@ fn try_bool_semiring_matmul_rejects_aliased_names() {
 
 #[test]
 fn try_bool_semiring_matmul_rejects_output_shape_overflow() {
-    let err =
-        vyre_libs_math::math::algebra::try_bool_semiring_matmul("a", "b", "out", 1 << 20, 1, 1 << 20)
-            .unwrap_err();
+    let err = vyre_libs_math::math::algebra::try_bool_semiring_matmul(
+        "a",
+        "b",
+        "out",
+        1 << 20,
+        1,
+        1 << 20,
+    )
+    .unwrap_err();
     assert!(
         err.to_string().contains("overflows"),
         "overflowing output matrix shape must be rejected: {err}"
@@ -153,7 +168,9 @@ fn sketch_mix_specific_values() {
     let input = [1u32, 2, 3, 4];
     let program = vyre_libs_math::math::algebra::sketch_mix("input", "out", 4);
     let outputs =
-        vyre_reference::reference_eval(&program, &[Value::from(u32_bytes(&input))]).unwrap();
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(u32_bytes(&input))])
+            .outputs()
+            .unwrap();
 
     let expected = [mix(1), mix(2), mix(3), mix(4)];
     assert_eq!(decode_u32_words(&outputs[0].to_bytes()), expected.to_vec());
@@ -164,7 +181,9 @@ fn sketch_mix_zero_input() {
     let input = [0u32];
     let program = vyre_libs_math::math::algebra::sketch_mix("input", "out", 1);
     let outputs =
-        vyre_reference::reference_eval(&program, &[Value::from(u32_bytes(&input))]).unwrap();
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(u32_bytes(&input))])
+            .outputs()
+            .unwrap();
 
     let got = decode_u32_words(&outputs[0].to_bytes())[0];
     // Zero is a fixed point of the mix? Let's compute:
@@ -179,7 +198,9 @@ fn sketch_mix_large_size() {
     let input: Vec<u32> = (0..n).collect();
     let program = vyre_libs_math::math::algebra::sketch_mix("input", "out", n);
     let outputs =
-        vyre_reference::reference_eval(&program, &[Value::from(u32_bytes(&input))]).unwrap();
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(u32_bytes(&input))])
+            .outputs()
+            .unwrap();
 
     let expected: Vec<u32> = (0..n).map(mix).collect();
     assert_eq!(decode_u32_words(&outputs[0].to_bytes()), expected);
@@ -190,7 +211,9 @@ fn sketch_mix_max_u32() {
     let input = [u32::MAX];
     let program = vyre_libs_math::math::algebra::sketch_mix("input", "out", 1);
     let outputs =
-        vyre_reference::reference_eval(&program, &[Value::from(u32_bytes(&input))]).unwrap();
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(u32_bytes(&input))])
+            .outputs()
+            .unwrap();
 
     assert_eq!(
         decode_u32_words(&outputs[0].to_bytes()),
@@ -204,7 +227,9 @@ fn sketch_mix_diffusion_neighbours_differ() {
     let input: Vec<u32> = (0..n).collect();
     let program = vyre_libs_math::math::algebra::sketch_mix("input", "out", n);
     let outputs =
-        vyre_reference::reference_eval(&program, &[Value::from(u32_bytes(&input))]).unwrap();
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(u32_bytes(&input))])
+            .outputs()
+            .unwrap();
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     // Every adjacent output should differ (diffusion property  -  not a
@@ -242,10 +267,11 @@ fn lattice_join_meet_distributivity_holds_for_bitsets() {
     let p_bc = vyre_libs_math::math::algebra::lattice_meet("b", "c", "bc", 1);
     let o_bc = eval_pair(&p_bc, &b, &c);
     let p_lhs = vyre_libs_math::math::algebra::lattice_join("a", "bc", "out", 1);
-    let o_lhs = vyre_reference::reference_eval(
+    let o_lhs = vyre_reference::ReferenceRequest::standard(
         &p_lhs,
         &[Value::from(u32_bytes(&a)), Value::from(o_bc.clone())],
     )
+    .outputs()
     .unwrap();
 
     // RHS: (a | b) & (a | c)
@@ -254,10 +280,11 @@ fn lattice_join_meet_distributivity_holds_for_bitsets() {
     let p_ac = vyre_libs_math::math::algebra::lattice_join("a", "c", "ac", 1);
     let o_ac = eval_pair(&p_ac, &a, &c);
     let p_rhs = vyre_libs_math::math::algebra::lattice_meet("ab", "ac", "out", 1);
-    let o_rhs = vyre_reference::reference_eval(
+    let o_rhs = vyre_reference::ReferenceRequest::standard(
         &p_rhs,
         &[Value::from(o_ab.clone()), Value::from(o_ac.clone())],
     )
+    .outputs()
     .unwrap();
 
     assert_eq!(

@@ -5,7 +5,7 @@
 //!
 //! Why this exists beyond `optimizer_idempotence_proptest`: that harness's
 //! reference-parity check feeds programs whose only runtime value is `gid_x`,
-//! and it runs `reference_eval(.., &[Value::U32(0)])` on a single invocation
+//! and it runs `vyre_reference::ReferenceRequest::standard(.., &[Value::U32(0)]).outputs()` on a single invocation
 //! so `gid_x` is pinned to `0`. A rewrite that is value-correct at `0` but wrong
 //! for other inputs slips through. That is exactly how the `(x << 16) << 16`
 //! shift-fusion miscompile evaded it: at `x == 0` the buggy `x << 31` and the
@@ -130,9 +130,11 @@ const PROBES: &[u32] = &[
 
 fn assert_parity_at(program: &Program, optimized: &Program, v: u32) -> Result<(), TestCaseError> {
     let inputs = [Value::U32(v)];
-    let base = vyre_reference::reference_eval(program, &inputs)
+    let base = vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
         .expect("base integer program must run on the reference interpreter");
-    let opt = vyre_reference::reference_eval(optimized, &inputs)
+    let opt = vyre_reference::ReferenceRequest::standard(optimized, &inputs)
+        .outputs()
         .expect("optimized integer program must run on the reference interpreter");
     prop_assert_eq!(
         &base,
@@ -191,9 +193,11 @@ fn optimize_preserves_nested_shift_div_mod_rotate_for_odd_inputs() {
 
     for &v in PROBES {
         let inputs = [Value::U32(v)];
-        let base = vyre_reference::reference_eval(&program, &inputs)
+        let base = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+            .outputs()
             .expect("base program must run on the reference interpreter");
-        let opt = vyre_reference::reference_eval(&optimized, &inputs)
+        let opt = vyre_reference::ReferenceRequest::standard(&optimized, &inputs)
+            .outputs()
             .expect("optimized program must run on the reference interpreter");
         assert_eq!(
             base, opt,

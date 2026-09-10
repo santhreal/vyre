@@ -47,7 +47,7 @@ fn assert_entry_matches_cases(
     for (case_index, (input_set, expected_outputs)) in
         inputs.iter().zip(expected.iter()).enumerate()
     {
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &build(),
             &input_set
                 .iter()
@@ -55,6 +55,7 @@ fn assert_entry_matches_cases(
                 .map(Value::from)
                 .collect::<Vec<_>>(),
         )
+        .outputs()
         .unwrap_or_else(|error| panic!("Fix: reference run failed for {id}: {error}"))
         .into_iter()
         .map(|value| value.to_bytes())

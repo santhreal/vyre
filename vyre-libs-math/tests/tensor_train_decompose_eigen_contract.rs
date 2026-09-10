@@ -48,7 +48,7 @@ struct StepOutputs {
 fn run(matrix: &[f32], m: u32, n: u32, r_next: u32) -> StepOutputs {
     let program = tensor_train_decompose_step("input", "u", "rem", 1, m, n, r_next);
     let gram = (n * n) as usize;
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_f32(matrix)),
@@ -59,6 +59,7 @@ fn run(matrix: &[f32], m: u32, n: u32, r_next: u32) -> StepOutputs {
             Value::from(pack_f32(&vec![0.0f32; n as usize])),
         ],
     )
+    .outputs()
     .expect("tensor_train_decompose_step reference evaluation must succeed");
     let read = |name: &str| {
         unpack_f32(

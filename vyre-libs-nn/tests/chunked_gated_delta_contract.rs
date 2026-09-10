@@ -34,7 +34,7 @@ fn run_schedule(
         recurrent_gated_delta(&spec)
     }
     .expect("Fix: valid delta fixture must build");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(encode(&lanes[0])),
@@ -48,6 +48,7 @@ fn run_schedule(
             Value::from(bytes(&vec![0.0f32; state.len()])),
         ],
     )
+    .outputs()
     .expect("Fix: delta schedule must execute");
     assert_eq!(decode(&outputs[0]), state);
     (outputs[1].to_bytes(), decode(&outputs[2]))
@@ -149,7 +150,7 @@ fn execute_chunk_fixture(
     let mut spec = default_gated_delta_spec(sequence, 1, 1, key_dim, value_dim, DataType::F32);
     spec.eps = 1e-6;
     let program = chunked_gated_delta(&spec).expect("Fix: authoritative chunk fixture must build");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(bytes(query)),
@@ -163,6 +164,7 @@ fn execute_chunk_fixture(
             Value::from(bytes(&vec![0.0f32; state.len()])),
         ],
     )
+    .outputs()
     .expect("Fix: authoritative chunk fixture must execute");
     assert_eq!(decode(&outputs[0]), state);
     (decode(&outputs[1]), decode(&outputs[2]))
@@ -481,7 +483,7 @@ fn grouped_value_heads_match_recurrent_without_cross_head_state() {
             dtype: DataType::F32,
         })
         .expect("Fix: grouped delta schedule must build");
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &program,
             &[
                 Value::from(bytes(&query)),
@@ -495,6 +497,7 @@ fn grouped_value_heads_match_recurrent_without_cross_head_state() {
                 Value::from(bytes(&vec![0.0f32; state.len()])),
             ],
         )
+        .outputs()
         .expect("Fix: grouped delta schedule must execute");
         (decode(&outputs[1]), decode(&outputs[2]))
     };

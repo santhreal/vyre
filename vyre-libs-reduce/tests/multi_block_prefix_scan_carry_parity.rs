@@ -48,7 +48,8 @@ fn eval_buffers(program: &Program, inputs: &[Value], requested: &[(&str, usize)]
         .iter()
         .map(|(name, _)| output_index(program, name))
         .collect();
-    let outputs = vyre_reference::reference_eval(program, inputs)
+    let outputs = vyre_reference::ReferenceRequest::standard(program, inputs)
+        .outputs()
         .expect("multi-block prefix scan must execute under reference_eval");
     requested
         .iter()
@@ -94,8 +95,10 @@ fn multi_block_intermediates_are_globally_ordered() {
     let program = multi_block_prefix_scan::multi_block_prefix_scan_sum_u32("input", "output", n);
     let bt_idx = output_index(&program, "__output_mbps_block_totals");
     let bts_idx = output_index(&program, "__output_mbps_block_totals_scanned");
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack(&input))])
-        .expect("multi-block prefix scan must execute under reference_eval");
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(pack(&input))])
+            .outputs()
+            .expect("multi-block prefix scan must execute under reference_eval");
     let block_totals = unpack(&outputs[bt_idx].to_bytes());
     let scanned = unpack(&outputs[bts_idx].to_bytes());
 

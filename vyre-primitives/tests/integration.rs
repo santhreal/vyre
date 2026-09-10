@@ -43,9 +43,10 @@ fn every_capability() -> BackendCapabilities {
 }
 
 fn built_programs() -> Vec<(&'static str, Program)> {
-    let programs: Vec<(&'static str, Program)> = vyre_primitives::operation_catalog::intrinsic_entries()
-        .filter_map(|entry| entry.build.map(|build| (entry.id, build())))
-        .collect();
+    let programs: Vec<(&'static str, Program)> =
+        vyre_primitives::operation_catalog::intrinsic_entries()
+            .filter_map(|entry| entry.build.map(|build| (entry.id, build())))
+            .collect();
     assert!(
         !programs.is_empty(),
         "Fix: no registered intrinsic carries a program builder, so this file proves nothing about what the crate registers"

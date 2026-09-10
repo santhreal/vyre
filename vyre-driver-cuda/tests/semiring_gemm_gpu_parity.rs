@@ -135,7 +135,6 @@ fn cuda_fused_tile_attention_matches_reference() {
     use vyre_driver::DispatchConfig;
     use vyre_driver_cuda::CudaBackend;
     use vyre_libs::nn::attention::fused_tile_attention;
-    use vyre_reference::reference_eval;
     use vyre_reference::value::Value;
 
     let seq_len = 2u32;
@@ -160,7 +159,7 @@ fn cuda_fused_tile_attention_matches_reference() {
     let k_bytes = encode_f32(&k_data);
     let v_bytes = encode_f32(&v_data);
 
-    let ref_outputs = reference_eval(
+    let ref_outputs = vyre_reference::ReferenceRequest::standard(
         &prog,
         &[
             Value::from(q_bytes.clone()),
@@ -168,6 +167,7 @@ fn cuda_fused_tile_attention_matches_reference() {
             Value::from(v_bytes.clone()),
         ],
     )
+    .outputs()
     .expect("reference eval for fused_tile_attention");
     let expected_f32 = decode_f32(&ref_outputs[0].to_bytes());
 

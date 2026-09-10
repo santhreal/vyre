@@ -38,7 +38,7 @@ fn run(
         "out_ops",
         "out_counts",
     );
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32_slice(tok_types)),
@@ -49,6 +49,7 @@ fn run(
             Value::from(vec![0u8; n * 4]),
         ],
     )
+    .outputs()
     .expect("go_extract_channel_creations must execute under reference_eval");
     (
         decode_u32_le_bytes_all(&outputs[0].to_bytes()),

@@ -19,7 +19,7 @@ use vyre_libs_graph::graph::program_graph::ProgramGraphShape;
 /// interpreter validates first, so a valid program fails later with "missing input"
 /// (accepted here) while an IR-invalid one fails with "failed IR validation" (rejected).
 fn assert_ir_valid(name: &str, program: &Program) {
-    match vyre_reference::reference_eval(program, &[]) {
+    match vyre_reference::ReferenceRequest::standard(program, &[]).outputs() {
         Ok(_) => {} // validated and (somehow) ran, still valid IR
         Err(err) => {
             let msg = format!("{err}");

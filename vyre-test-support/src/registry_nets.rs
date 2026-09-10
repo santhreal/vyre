@@ -5,10 +5,10 @@
 //! registered program reads no buffer out of bounds on its own fixture, it
 //! stays out of bounds when the dispatch is over-fired by a whole workgroup, it
 //! returns the same bytes at both grids, and it returns the same bytes when the
-//! lane step order is reversed. The reference interpreter absorbs an
-//! out-of-bounds access (`vyre-reference/src/oob.rs`: zero-fill loads, dropped
-//! stores) and resolves a store race deterministically, so a program can pass
-//! every other test while a backend that bounds-checks nothing reads garbage.
+//! lane step order is reversed. The strict oracle refuses an out-of-bounds
+//! access, and it resolves a store race deterministically, so a program can
+//! pass every other test while a backend that bounds-checks nothing reads
+//! garbage.
 //!
 //! The nets were written twice, once per crate, and the second copy drifted:
 //! one refused a case it could not evaluate and the other skipped it, so the
@@ -23,6 +23,10 @@
 use vyre_foundation::ir::Program;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_reference::value::Value;
+use vyre_reference::ReferenceErrorClass;
+
+/// The refusal class an access that left a declared buffer carries.
+const OUT_OF_BOUNDS: ReferenceErrorClass = ReferenceErrorClass::OutOfBoundsAccess;
 
 use crate::pass_programs::overfire_grid;
 
@@ -129,15 +133,12 @@ impl RegistrySweep {
         let mut checked = 0usize;
 
         for case in &self.cases {
-            match vyre_reference::reference_eval_oob_report(&case.program, &case.inputs) {
-                Ok((_out, report)) => {
+            match vyre_reference::ReferenceRequest::standard(&case.program, &case.inputs).outputs()
+            {
+                Ok(_out) => checked += 1,
+                Err(err) if err.error_class() == OUT_OF_BOUNDS => {
                     checked += 1;
-                    if report.total() > 0 {
-                        offenders.push(format!(
-                            "{}: {} OOB load(s), {} OOB store(s), {} OOB atomic(s)",
-                            case.label, report.oob_loads, report.oob_stores, report.oob_atomics
-                        ));
-                    }
+                    offenders.push(format!("{}: {err}", case.label));
                 }
                 Err(err) => skipped.push(format!("{}: {err}", case.label)),
             }
@@ -169,19 +170,14 @@ impl RegistrySweep {
 
         for case in &self.cases {
             let grid = overfire_grid(&case.program);
-            match vyre_reference::reference_eval_with_dispatch_oob_report(
-                &case.program,
-                &case.inputs,
-                grid,
-            ) {
-                Ok((_out, report)) => {
+            match vyre_reference::ReferenceRequest::standard(&case.program, &case.inputs)
+                .with_min_dispatch_elements(grid)
+                .outputs()
+            {
+                Ok(_out) => checked += 1,
+                Err(err) if err.error_class() == OUT_OF_BOUNDS => {
                     checked += 1;
-                    if report.total() > 0 {
-                        offenders.push(format!(
-                            "{} (grid>={grid}): {} OOB load(s), {} OOB store(s), {} OOB atomic(s)",
-                            case.label, report.oob_loads, report.oob_stores, report.oob_atomics
-                        ));
-                    }
+                    offenders.push(format!("{} (grid>={grid}): {err}", case.label));
                 }
                 Err(err) => skipped.push(format!("{} (over-fired): {err}", case.label)),
             }
@@ -216,24 +212,27 @@ impl RegistrySweep {
 
         for case in &self.cases {
             let grid = overfire_grid(&case.program);
-            let baseline = match vyre_reference::reference_eval(&case.program, &case.inputs) {
-                Ok(baseline) => baseline,
-                Err(err) => {
-                    skipped.push(format!("{}: {err}", case.label));
-                    continue;
-                }
-            };
-            let overfired = match vyre_reference::reference_eval_with_dispatch(
-                &case.program,
-                &case.inputs,
-                grid,
-            ) {
-                Ok(overfired) => overfired,
-                Err(err) => {
-                    skipped.push(format!("{} (over-fired): {err}", case.label));
-                    continue;
-                }
-            };
+            let baseline =
+                match vyre_reference::ReferenceRequest::standard(&case.program, &case.inputs)
+                    .outputs()
+                {
+                    Ok(baseline) => baseline,
+                    Err(err) => {
+                        skipped.push(format!("{}: {err}", case.label));
+                        continue;
+                    }
+                };
+            let overfired =
+                match vyre_reference::ReferenceRequest::standard(&case.program, &case.inputs)
+                    .with_min_dispatch_elements(grid)
+                    .outputs()
+                {
+                    Ok(overfired) => overfired,
+                    Err(err) => {
+                        skipped.push(format!("{} (over-fired): {err}", case.label));
+                        continue;
+                    }
+                };
             checked += 1;
             let base_bytes: Vec<Vec<u8>> = baseline.iter().map(Value::to_bytes).collect();
             let over_bytes: Vec<Vec<u8>> = overfired.iter().map(Value::to_bytes).collect();
@@ -274,15 +273,21 @@ impl RegistrySweep {
         let mut checked = 0usize;
 
         for case in &self.cases {
-            let forward = match vyre_reference::reference_eval(&case.program, &case.inputs) {
-                Ok(forward) => forward,
-                Err(err) => {
-                    skipped.push(format!("{}: {err}", case.label));
-                    continue;
-                }
-            };
+            let forward =
+                match vyre_reference::ReferenceRequest::standard(&case.program, &case.inputs)
+                    .outputs()
+                {
+                    Ok(forward) => forward,
+                    Err(err) => {
+                        skipped.push(format!("{}: {err}", case.label));
+                        continue;
+                    }
+                };
             let reversed =
-                match vyre_reference::reference_eval_lane_reversed(&case.program, &case.inputs) {
+                match vyre_reference::ReferenceRequest::standard(&case.program, &case.inputs)
+                    .with_schedule_policy(vyre_reference::DeterministicSchedulePolicy::LaneReversed)
+                    .outputs()
+                {
                     Ok(reversed) => reversed,
                     Err(err) => {
                         skipped.push(format!("{} (reversed): {err}", case.label));
@@ -347,22 +352,25 @@ impl RegistrySweep {
         for case in &self.cases {
             let index = first_out_of_range_index(&case.program, &case.inputs);
             let inputs = hostile_contents(&case.inputs, index);
-            match vyre_reference::reference_eval_oob_report(&case.program, &inputs) {
-                Ok((_out, report)) => {
+            match vyre_reference::ReferenceRequest::standard(&case.program, &inputs).outputs() {
+                Ok(_out) => checked += 1,
+                Err(err) if err.error_class() == OUT_OF_BOUNDS => {
                     checked += 1;
-                    if report.total() > 0 {
-                        offenders.push(format!(
-                            "{} (every input word = {index}): {} OOB load(s), {} OOB store(s), {} OOB atomic(s)",
-                            case.label, report.oob_loads, report.oob_stores, report.oob_atomics
-                        ));
-                    }
+                    offenders.push(format!(
+                        "{} (every input word = {index}): {err}",
+                        case.label
+                    ));
                 }
                 Err(err) if err.is_program_trap() => checked += 1,
                 Err(err) => skipped.push(format!("{} (hostile contents): {err}", case.label)),
             }
         }
 
-        self.refuse_skips("the hostile-contents out-of-bounds sweep", checked, &skipped);
+        self.refuse_skips(
+            "the hostile-contents out-of-bounds sweep",
+            checked,
+            &skipped,
+        );
         assert!(
             offenders.is_empty(),
             "Fix: {} of {checked} checked {} fixture case(s) accessed a buffer OUT OF BOUNDS once an input \

@@ -191,7 +191,8 @@ fn bounded_ranges_program_reference_eval_matches_cpu_oracle() {
         .into_iter()
         .map(vyre_reference::value::Value::from)
         .collect::<Vec<_>>();
-    let outputs = vyre_reference::reference_eval(&program, &values)
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &values)
+        .outputs()
         .unwrap()
         .into_iter()
         .map(|value| value.to_bytes())
@@ -236,7 +237,8 @@ fn bounded_count_program_reference_eval_matches_cpu_cardinality() {
         .into_iter()
         .map(vyre_reference::value::Value::from)
         .collect::<Vec<_>>();
-    let outputs = vyre_reference::reference_eval(&program, &values)
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &values)
+        .outputs()
         .unwrap()
         .into_iter()
         .map(|value| value.to_bytes())

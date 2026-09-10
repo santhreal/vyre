@@ -128,10 +128,7 @@ impl StructuralIrGolden {
 
     /// Render `(entry point id, program)` pairs into a golden corpus.
     #[must_use]
-    pub fn render<'a>(
-        &self,
-        entry_points: impl IntoIterator<Item = (&'a str, Program)>,
-    ) -> String {
+    pub fn render<'a>(&self, entry_points: impl IntoIterator<Item = (&'a str, Program)>) -> String {
         let mut out = self.header();
         for (id, program) in entry_points {
             let _ = writeln!(out, "{SECTION_MARKER}{id}");

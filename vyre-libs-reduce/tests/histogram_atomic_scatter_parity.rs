@@ -17,13 +17,14 @@ use vyre_reference::value::Value;
 
 fn eval(input: &[u32], num_bins: u32) -> Vec<u32> {
     let program = histogram_atomic_scatter("input", "output", input.len() as u32, num_bins);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(input)),
             Value::from(pack(&vec![0u32; num_bins as usize])),
         ],
     )
+    .outputs()
     .expect("histogram_atomic_scatter reference evaluation must succeed");
     unpack(&outputs[0].to_bytes())
 }

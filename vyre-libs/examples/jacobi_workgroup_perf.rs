@@ -110,18 +110,18 @@ fn main() {
         };
 
         // Warmup
-        let _ = vyre_reference::reference_eval(&serial_prog, &val);
-        let _ = vyre_reference::reference_eval(&coop_prog, &val);
+        let _ = vyre_reference::ReferenceRequest::standard(&serial_prog, &val).outputs();
+        let _ = vyre_reference::ReferenceRequest::standard(&coop_prog, &val).outputs();
 
         let t0 = Instant::now();
         for _ in 0..iterations {
-            let _ = vyre_reference::reference_eval(&serial_prog, &val);
+            let _ = vyre_reference::ReferenceRequest::standard(&serial_prog, &val).outputs();
         }
         let serial_dur = t0.elapsed();
 
         let t1 = Instant::now();
         for _ in 0..iterations {
-            let _ = vyre_reference::reference_eval(&coop_prog, &val);
+            let _ = vyre_reference::ReferenceRequest::standard(&coop_prog, &val).outputs();
         }
         let coop_dur = t1.elapsed();
 
@@ -151,18 +151,18 @@ fn main() {
         let iterations = 50;
 
         // Warmup
-        let _ = vyre_reference::reference_eval(&serial_prog, &val);
-        let _ = vyre_reference::reference_eval(&coop_prog, &val);
+        let _ = vyre_reference::ReferenceRequest::standard(&serial_prog, &val).outputs();
+        let _ = vyre_reference::ReferenceRequest::standard(&coop_prog, &val).outputs();
 
         let t0 = Instant::now();
         for _ in 0..iterations {
-            let _ = vyre_reference::reference_eval(&serial_prog, &val);
+            let _ = vyre_reference::ReferenceRequest::standard(&serial_prog, &val).outputs();
         }
         let serial_dur = t0.elapsed();
 
         let t1 = Instant::now();
         for _ in 0..iterations {
-            let _ = vyre_reference::reference_eval(&coop_prog, &val);
+            let _ = vyre_reference::ReferenceRequest::standard(&coop_prog, &val).outputs();
         }
         let coop_dur = t1.elapsed();
 
@@ -198,18 +198,18 @@ fn main() {
         };
 
         // Warmup
-        let _ = vyre_reference::reference_eval(&serial_prog, &val);
-        let _ = vyre_reference::reference_eval(&coop_prog, &val);
+        let _ = vyre_reference::ReferenceRequest::standard(&serial_prog, &val).outputs();
+        let _ = vyre_reference::ReferenceRequest::standard(&coop_prog, &val).outputs();
 
         let t0 = Instant::now();
         for _ in 0..iterations {
-            let _ = vyre_reference::reference_eval(&serial_prog, &val);
+            let _ = vyre_reference::ReferenceRequest::standard(&serial_prog, &val).outputs();
         }
         let serial_dur = t0.elapsed();
 
         let t1 = Instant::now();
         for _ in 0..iterations {
-            let _ = vyre_reference::reference_eval(&coop_prog, &val);
+            let _ = vyre_reference::ReferenceRequest::standard(&coop_prog, &val).outputs();
         }
         let coop_dur = t1.elapsed();
 
@@ -239,12 +239,12 @@ fn main() {
             Value::from(pack_f32(&vec![0.0f32; n as usize])),
         ];
 
-        let _ = vyre_reference::reference_eval(&prog, &val);
+        let _ = vyre_reference::ReferenceRequest::standard(&prog, &val).outputs();
 
         let iters = 10;
         let t0 = Instant::now();
         for _ in 0..iters {
-            let _ = vyre_reference::reference_eval(&prog, &val);
+            let _ = vyre_reference::ReferenceRequest::standard(&prog, &val).outputs();
         }
         let dur = t0.elapsed();
         let us = dur.as_secs_f64() * 1e6 / (iters as f64);

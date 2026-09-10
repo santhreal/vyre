@@ -27,7 +27,7 @@ fn run_ir(matrix_rows: &[u32], seed: u32, group: u32, iteration_limit: u32) -> u
     let row_count = matrix_rows.len() as u32;
     let program = tensor_scc_fixpoint("rows", "seed", "group", "out", row_count, iteration_limit);
     // Input order = buffer declaration order: rows(0), seed(1), group(2), out(3).
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(matrix_rows)),
@@ -36,6 +36,7 @@ fn run_ir(matrix_rows: &[u32], seed: u32, group: u32, iteration_limit: u32) -> u
             Value::from(pack(&[0u32])),
         ],
     )
+    .outputs()
     .expect("tensor_scc_fixpoint reference evaluation must succeed");
     let index = vyre_reference::output_index(&program, "out")
         .expect("Fix: tensor_scc_fixpoint must declare output `out`");

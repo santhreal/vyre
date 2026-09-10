@@ -184,7 +184,8 @@ impl SpanCase {
     pub fn reference_outputs(&self) -> Vec<Vec<u8>> {
         let program = self.program();
         let values: Vec<Value> = self.inputs().into_iter().map(Value::from).collect();
-        vyre_reference::reference_eval(&program, &values)
+        vyre_reference::ReferenceRequest::standard(&program, &values)
+            .outputs()
             .expect("Fix: the reference evaluator must run the async transfer fixture")
             .into_iter()
             .map(|value| value.to_bytes())

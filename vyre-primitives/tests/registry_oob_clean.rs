@@ -77,7 +77,7 @@ fn every_registered_primitive_program_is_ir_valid() {
                 .collect(),
             None => Vec::new(),
         };
-        if let Err(err) = vyre_reference::reference_eval(&program, &values) {
+        if let Err(err) = vyre_reference::ReferenceRequest::standard(&program, &values).outputs() {
             if format!("{err}").contains("failed IR validation") {
                 invalid.push(format!("{}: {err}", entry.id));
             }

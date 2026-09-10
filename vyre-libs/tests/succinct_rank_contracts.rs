@@ -66,14 +66,15 @@ fn rank_builders_reject_zero_word_superblocks() {
 fn rank_query_traps_out_of_bounds_offsets() {
     let program =
         vyre_libs::math::succinct::rank1_query("bits", "superblocks", "queries", "out", 1, 1, 1);
-    let result = vyre_reference::reference_eval(
+    let result = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(u32_bytes(&[0u32])),
             Value::from(u32_bytes(&[0u32, 0])),
             Value::from(u32_bytes(&[32u32])),
         ],
-    );
+    )
+    .outputs();
 
     let err =
         result.expect_err("rank1_query must fail loudly when a query addresses a missing word");

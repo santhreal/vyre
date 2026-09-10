@@ -64,7 +64,10 @@ fn fixture_inputs(program: &Program, case: &[Vec<u8>]) -> Vec<Value> {
         .filter(|decl| decl.consumes_host_input())
         .count();
     if case.len() == host_input_count {
-        return case.iter().map(|bytes| Value::from(bytes.as_slice())).collect();
+        return case
+            .iter()
+            .map(|bytes| Value::from(bytes.as_slice()))
+            .collect();
     }
     assert_eq!(
         case.len(),
@@ -80,14 +83,15 @@ fn fixture_inputs(program: &Program, case: &[Vec<u8>]) -> Vec<Value> {
         .collect()
 }
 
-/// Output bytes plus the count of accesses that left a declared buffer.
+/// Output bytes, refusing an access that left a declared buffer.
+///
+/// The strict oracle answers such an access with a structured refusal, so the
+/// count this used to return is now zero on every path that returns at all.
 fn run(program: &Program, inputs: &[Value]) -> (Vec<Vec<u8>>, u64) {
-    let (outputs, report) = vyre_reference::reference_eval_oob_report(program, inputs)
-        .expect("reference evaluation must succeed");
-    (
-        outputs.iter().map(Value::to_bytes).collect(),
-        report.total(),
-    )
+    let outputs = vyre_reference::ReferenceRequest::standard(program, inputs)
+        .outputs()
+        .expect("reference evaluation must succeed in bounds");
+    (outputs.iter().map(Value::to_bytes).collect(), 0)
 }
 
 // ================================================================
@@ -446,15 +450,23 @@ fn every_registered_visual_program_accesses_only_declared_buffers() {
         scanned.push(reg.id);
         for (index, case) in test_inputs().iter().enumerate() {
             let inputs = fixture_inputs(&program, case);
-            match vyre_reference::reference_eval_oob_report(&program, &inputs) {
-                Ok((_, report)) if report.total() == 0 => {}
-                Ok((_, report)) => failures.push(format!(
-                    "{} case {index}: {} load(s), {} store(s) and {} atomic(s) left a declared \
-                     buffer. Fix: gate the access with an explicit bound.",
-                    reg.id, report.oob_loads, report.oob_stores, report.oob_atomics
-                )),
+            match vyre_reference::ReferenceRequest::standard(&program, &inputs).outputs() {
+                Ok(_) => {}
+                Err(error)
+                    if error.error_class()
+                        == vyre_reference::ReferenceErrorClass::OutOfBoundsAccess =>
+                {
+                    failures.push(format!(
+                        "{} case {index}: an access left a declared buffer. Fix: gate the access \
+                         with an explicit bound: {error}",
+                        reg.id
+                    ));
+                }
                 Err(error) => {
-                    failures.push(format!("{} case {index}: evaluation failed: {error}", reg.id));
+                    failures.push(format!(
+                        "{} case {index}: evaluation failed: {error}",
+                        reg.id
+                    ));
                 }
             }
         }

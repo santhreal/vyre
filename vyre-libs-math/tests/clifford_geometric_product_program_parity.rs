@@ -28,7 +28,7 @@ fn signed_half(state: &mut u32) -> f64 {
 
 fn run_via_reference(lhs: &[u32], rhs: &[u32], n_pairs: u32) -> Vec<u32> {
     let program = clifford2_product("lhs", "rhs", "out", n_pairs);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32(lhs)),
@@ -36,6 +36,7 @@ fn run_via_reference(lhs: &[u32], rhs: &[u32], n_pairs: u32) -> Vec<u32> {
             Value::from(pack_u32(&vec![0u32; (n_pairs * 4) as usize])),
         ],
     )
+    .outputs()
     .expect("clifford2_product reference evaluation must succeed");
     outputs[0]
         .to_bytes()

@@ -27,7 +27,7 @@ fn run_ir(blocks_in: &[f32], num_blocks: u32, n: u32) -> Vec<f32> {
     let program = kfac_block_inverse("bo", "bi", "s", num_blocks, n);
     let cells = (num_blocks * n * n) as usize;
     let pack = |data: &[f32]| Value::from(vyre_primitives::wire::pack_f32_slice(data));
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             pack(&vec![0.0f32; cells]), // bo (binding 0, ReadWrite), the inverse output
@@ -35,6 +35,7 @@ fn run_ir(blocks_in: &[f32], num_blocks: u32, n: u32) -> Vec<f32> {
             pack(&vec![0.0f32; cells]), // s  (binding 2, ReadWrite scratch)
         ],
     )
+    .outputs()
     .expect("kfac_block_inverse reference evaluation must succeed");
     // results[0] is the first ReadWrite buffer, `bo`.
     outputs[0]

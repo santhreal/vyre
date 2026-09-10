@@ -82,7 +82,8 @@ fn run_scan(n: u32, input: &[u32]) -> Vec<u32> {
             writable += 1;
         }
     }
-    let outputs = vyre_reference::reference_eval(&program, &values)
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &values)
+        .outputs()
         .expect("Fix: scan_prefix_sum must execute on the reference interpreter");
     let slot = output_slot.expect("Fix: scan_prefix_sum must declare a writable output buffer");
     outputs[slot]

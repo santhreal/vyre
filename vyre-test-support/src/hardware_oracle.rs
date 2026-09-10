@@ -14,7 +14,8 @@ pub fn run_cpu(entry: &SemanticOperation, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
         .program()
         .expect("Fix: registered hardware intrinsic must provide a neutral builder");
     let values = vyre_reference::reference_inputs(&program, inputs.to_vec());
-    vyre_reference::reference_eval(&program, &values)
+    vyre_reference::ReferenceRequest::standard(&program, &values)
+        .outputs()
         .expect("Fix: registered hardware intrinsic must execute on the CPU oracle.")
         .into_iter()
         .map(|value| value.to_bytes())
@@ -24,7 +25,8 @@ pub fn run_cpu(entry: &SemanticOperation, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
 /// Execute a Program on the CPU reference interpreter, asserting exactly one output buffer.
 pub fn run_eval_single(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<u8> {
     let values = vyre_reference::reference_inputs(program, inputs);
-    let outputs = vyre_reference::reference_eval(program, &values)
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
         .expect("Fix: hardware intrinsic builder must execute on the CPU oracle.");
     assert_eq!(
         outputs.len(),

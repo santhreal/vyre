@@ -14,7 +14,6 @@ use harness::bytes_u32;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryOrdering, Node, Program};
-use vyre_reference::reference_eval;
 
 /// A column walk over a 32-row tile staged in workgroup memory.
 ///
@@ -44,7 +43,8 @@ fn column_walk_tile_program(rows: u32) -> Program {
 fn a_permuted_column_walk_reads_back_what_it_wrote() {
     let program = column_walk_tile_program(32);
 
-    let expected = reference_eval(&program, &[])
+    let expected = vyre_reference::ReferenceRequest::standard(&program, &[])
+        .outputs()
         .expect("Fix: the reference interpreter must execute a workgroup column walk.");
     let expected = bytes_u32(&expected[0].to_bytes());
 

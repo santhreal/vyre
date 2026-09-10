@@ -45,7 +45,9 @@ fn run_fused(encoded: &[u8], dfa: &vyre_libs::pattern::CompiledDfa) -> Vec<u32> 
         Value::from(u32_bytes(&dfa.accept)),
         Value::from(u32_bytes(&hex_decode_table())),
     ];
-    let outputs = vyre_reference::reference_eval(&program, &inputs).expect("fused must run");
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
+        .expect("fused must run");
     // `decoded` is the first ReadWrite buffer (outputs[0]); `matches` is the second (outputs[1]).
     decode_u32_words(&outputs[1].to_bytes())
 }
@@ -62,8 +64,10 @@ fn run_separate(encoded: &[u8], dfa: &vyre_libs::pattern::CompiledDfa) -> Vec<u3
         )),
         Value::from(u32_bytes(&hex_decode_table())),
     ];
-    let decode_outputs = vyre_reference::reference_eval(&decode_program, &decode_inputs)
-        .expect("hex_decode must run");
+    let decode_outputs =
+        vyre_reference::ReferenceRequest::standard(&decode_program, &decode_inputs)
+            .outputs()
+            .expect("hex_decode must run");
     let decoded = decode_outputs[0].to_bytes();
 
     // Step 2: aho-corasick scan
@@ -80,8 +84,9 @@ fn run_separate(encoded: &[u8], dfa: &vyre_libs::pattern::CompiledDfa) -> Vec<u3
         Value::from(u32_bytes(&dfa.transitions)),
         Value::from(u32_bytes(&dfa.accept)),
     ];
-    let scan_outputs =
-        vyre_reference::reference_eval(&scan_program, &scan_inputs).expect("aho_corasick must run");
+    let scan_outputs = vyre_reference::ReferenceRequest::standard(&scan_program, &scan_inputs)
+        .outputs()
+        .expect("aho_corasick must run");
     decode_u32_words(&scan_outputs[0].to_bytes())
 }
 

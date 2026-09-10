@@ -126,8 +126,10 @@ fn generated_utf8_case(case: u32) -> Vec<u8> {
 
 fn run_packed_u8_program(source: &[u8]) -> Vec<u32> {
     let program = utf8_validate_u8("source", "classes", source.len() as u32);
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(source.to_vec())])
-        .expect("Fix: packed-u8 UTF-8 validator reference evaluation must succeed");
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(source.to_vec())])
+            .outputs()
+            .expect("Fix: packed-u8 UTF-8 validator reference evaluation must succeed");
     let mut out = unpack_u32s(&outputs[0].to_bytes());
     out.truncate(source.len());
     out
