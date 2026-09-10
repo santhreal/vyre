@@ -25,6 +25,7 @@ pub(crate) fn step_round_robin(
         if invocations[index].done()
             || invocations[index].waiting_at_barrier
             || invocations[index].waiting_at_grid_fence
+            || invocations[index].waiting_for_collective_peers
         {
             continue;
         }
@@ -47,7 +48,11 @@ fn step(
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<(), ReferenceError> {
     let invocation = &mut invocations[index];
-    if invocation.done() || invocation.waiting_at_barrier || invocation.waiting_at_grid_fence {
+    if invocation.done()
+        || invocation.waiting_at_barrier
+        || invocation.waiting_at_grid_fence
+        || invocation.waiting_for_collective_peers
+    {
         return Ok(());
     }
     loop {

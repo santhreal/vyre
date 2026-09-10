@@ -30,3 +30,29 @@ fn node_contains_barrier(node: &Node) -> bool {
 pub(crate) fn node_id(node: &Node) -> usize {
     std::ptr::from_ref(node).addr()
 }
+
+/// Whether `node` evaluates a subgroup collective in its OWN operands.
+///
+/// Child bodies are excluded on purpose: a nested statement is stepped as its
+/// own node and rendezvouses then, so counting a collective under an `If` or a
+/// `Loop` would hold every lane at the enclosing statement instead of at the
+/// collective itself.
+#[cfg(feature = "subgroup-ops")]
+pub(crate) fn node_reads_peer_lanes(node: &Node) -> bool {
+    use vyre_foundation::ir::Expr;
+    use vyre_foundation::visit::{any_subexpr, node_operands, node_variadic_operands};
+
+    let mut is_collective = |candidate: &Expr| {
+        matches!(
+            candidate,
+            Expr::SubgroupShuffle { .. }
+                | Expr::SubgroupBallot { .. }
+                | Expr::SubgroupReduce { .. }
+        )
+    };
+    node_operands(node)
+        .into_iter()
+        .flatten()
+        .chain(node_variadic_operands(node))
+        .any(|operand| any_subexpr(operand, &mut is_collective))
+}

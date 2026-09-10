@@ -27,6 +27,28 @@ pub(crate) fn step_nodes_frame<'a>(
         }
         return Ok(scoped);
     }
+    // A subgroup collective reads its peers' locals at one program point, so
+    // the lane holds here until every live lane has arrived and then runs the
+    // statement against peers that stand where it does. `snapshots` is empty
+    // unless the program uses a collective at all, so a program without one
+    // never reaches this.
+    #[cfg(feature = "subgroup-ops")]
+    if !snapshots.is_empty()
+        && !invocation.collective_peers_arrived
+        && super::super::sync::node_reads_peer_lanes(&nodes[index])
+    {
+        invocation.waiting_for_collective_peers = true;
+        invocation.frames.push(Frame::Nodes {
+            nodes,
+            index,
+            scoped,
+        });
+        return Ok(true);
+    }
+    #[cfg(feature = "subgroup-ops")]
+    {
+        invocation.collective_peers_arrived = false;
+    }
     invocation.frames.push(Frame::Nodes {
         nodes,
         index: index + 1,

@@ -170,6 +170,11 @@ pub mod strict_transcendental_accuracy;
 #[path = "subgroup_collectives_are_lane_identified.rs"]
 pub mod subgroup_collectives_are_lane_identified;
 
+/// Integration tests from `tests/subgroup_shuffle_survives_lane_divergence.rs`.
+#[cfg(feature = "subgroup-ops")]
+#[path = "subgroup_shuffle_survives_lane_divergence.rs"]
+pub mod subgroup_shuffle_survives_lane_divergence;
+
 /// Integration tests from `tests/subgroup_edge_contract.rs`.
 #[path = "subgroup_edge_contract.rs"]
 pub mod subgroup_edge_contract;

@@ -8,6 +8,8 @@ use crate::ReferenceError;
 use smallvec::SmallVec;
 use vyre_foundation::ir::BufferDecl;
 
+#[cfg(feature = "subgroup-ops")]
+pub(crate) use crate::execution::node_tree::node_reads_peer_lanes;
 pub(crate) use crate::execution::node_tree::{contains_barrier, node_id};
 
 pub(crate) fn release_barrier_if_ready(invocations: &mut [HashmapInvocation<'_>]) -> bool {
@@ -27,6 +29,49 @@ pub(crate) fn live_waiting_count(invocations: &[HashmapInvocation<'_>]) -> usize
     invocations
         .iter()
         .filter(|inv| !inv.done() && inv.waiting_at_barrier)
+        .count()
+}
+
+/// Release every lane holding for its collective peers, once each live lane of
+/// the workgroup has arrived at a rendezvous.
+///
+/// A lane parked at a `Barrier` counts as arrived, so a program that holds one
+/// lane at a barrier while another holds at a collective still converges: the
+/// collective runs first, and its lanes then reach the barrier themselves. A
+/// lane held at a grid fence is not counted, because the dispatch driver, not
+/// this workgroup, releases it.
+pub(crate) fn release_collective_rendezvous(invocations: &mut [HashmapInvocation<'_>]) -> bool {
+    let live = invocations
+        .iter()
+        .filter(|inv| !inv.done() && !inv.waiting_at_grid_fence)
+        .count();
+    let arrived = invocations
+        .iter()
+        .filter(|inv| {
+            !inv.done()
+                && !inv.waiting_at_grid_fence
+                && (inv.waiting_for_collective_peers || inv.waiting_at_barrier)
+        })
+        .count();
+    let holding = invocations
+        .iter()
+        .any(|inv| !inv.done() && inv.waiting_for_collective_peers);
+    if !holding || live == 0 || live != arrived {
+        return false;
+    }
+    for invocation in invocations.iter_mut() {
+        if invocation.waiting_for_collective_peers {
+            invocation.waiting_for_collective_peers = false;
+            invocation.collective_peers_arrived = true;
+        }
+    }
+    true
+}
+
+pub(crate) fn live_collective_waiting_count(invocations: &[HashmapInvocation<'_>]) -> usize {
+    invocations
+        .iter()
+        .filter(|inv| !inv.done() && inv.waiting_for_collective_peers)
         .count()
 }
 
