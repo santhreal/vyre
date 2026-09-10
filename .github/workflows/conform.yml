@@ -46,19 +46,17 @@ jobs:
           --features hardware,inventory-registry
           --test all_tests
 
-      # The graph and fixpoint oracle sweeps moved to vyre-libs with their
-      # domains. These are the features those suites declare as
-      # required-features, and a target whose required feature is absent is
-      # skipped without a word, so the selection is named rather than left to
-      # the default set. `graph-dispatch` implies `graph`; the persistent-BFS
-      # volume sweep addresses `graph::dispatch` and is in that suite.
+      # The graph oracle sweeps are in vyre-libs-graph. `graph-dispatch` is not
+      # one of that crate's default features and the persistent-BFS volume sweep
+      # addresses `graph::dispatch`, so the feature is named rather than left to
+      # the default set: a target whose required feature is absent is skipped
+      # without a word. The adversarial reachability fixpoint sweep stays in the
+      # facade because it crosses fixpoint, graph and math-kernels, and its row
+      # declares all three.
       - name: Verify graph and fixpoint oracle sweeps
-        run: >-
-          ./cargo_full test -p vyre-libs
-          --features graph,graph-dispatch
-          --test all_tests
-          --test all_tests_graph
-          --test all_tests_graph_dispatch
+        run: |
+          ./cargo_full test -p vyre-libs-graph --features graph-dispatch --test all_tests
+          ./cargo_full test -p vyre-libs --features fixpoint,graph,math-kernels --test all_tests_fixpoint_graph_math_kernels
 
       - name: Generate conformance matrix evidence
         run: >-

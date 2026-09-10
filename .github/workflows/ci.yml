@@ -133,23 +133,17 @@ jobs:
 
       - name: composition-library reference-parity tests
         shell: bash
-        # The default-feature run above compiles none of vyre-libs' feature-gated
-        # suites, and every end-to-end reference-parity test lives in one of them:
-        # each runs a production dispatch form through a reference-eval dispatcher
-        # against its direct vyre-reference witness. Naming the suites keeps a
-        # composition parity regression on the main PR check rather than only the
-        # slower --all-features job.
+        # Each composition domain crate enables its own domain feature by
+        # default, so the per-package run above already compiles that domain's
+        # reference-parity suite. `graph-dispatch` is the one parity surface
+        # outside a default feature set: the dispatch tests run a production
+        # dispatch form through a reference-eval dispatcher against its direct
+        # vyre-reference witness. Naming it keeps that regression on the main PR
+        # check rather than only the slower --all-features job.
         run: >-
-          ./cargo_full test -p vyre-libs
-          --features analysis,encoding,graph,graph-dispatch,reasoning,reduce,scheduling,solvers,telemetry,test-fixtures
-          --test all_tests_analysis
-          --test all_tests_encoding
-          --test all_tests_graph
-          --test all_tests_graph_dispatch
-          --test all_tests_reasoning
-          --test all_tests_reduce_telemetry
-          --test all_tests_scheduling
-          --test all_tests_solvers
+          ./cargo_full test -p vyre-libs-graph
+          --features graph-dispatch
+          --test all_tests
 
       - name: pass-engine reference-parity tests
         shell: bash
