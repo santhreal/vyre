@@ -499,6 +499,11 @@ pub mod resident_buffer_contracts;
 #[path = "resident_dispatch_contracts/mod.rs"]
 pub mod resident_dispatch_contracts;
 
+/// Integration tests from `tests/resident_grid_sync_fixpoint_abi.rs`.
+#[cfg(feature = "device-tests")]
+#[path = "resident_grid_sync_fixpoint_abi.rs"]
+pub mod resident_grid_sync_fixpoint_abi;
+
 /// Integration tests from `tests/resident_handle_ownership_contracts.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "resident_handle_ownership_contracts.rs"]

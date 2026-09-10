@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A workgroup reduction lowered to subgroup instructions binds the lane index it reads inside the body it replaces, so fusing a reduction into an arm no longer renames that binding away and leaves physical lowering rejecting the whole program with `variable is referenced before binding`."

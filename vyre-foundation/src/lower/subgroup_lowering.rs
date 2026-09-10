@@ -17,6 +17,28 @@ const WORKGROUP_SUM_PREFIX: &str = "vyre-libs::reduce::workgroup_sum_";
 const WORKGROUP_MAX_PREFIX: &str = "vyre-libs::reduce::workgroup_max_";
 const WORKGROUP_MIN_PREFIX: &str = "vyre-libs::reduce::workgroup_min_";
 
+/// Name the replacement body binds its lane index to.
+///
+/// The body emitted here indexes `scratch` by the invocation's index inside
+/// the workgroup. Reading that index from a caller-declared name, which the
+/// shipped reduction builders all spell `local`, makes the replacement depend
+/// on a binding it does not own. Fusion alpha-renames an arm's locals to
+/// `__vyre_fuse_a{arm}_local`, so the emitted body referenced a name that was
+/// no longer in scope and physical lowering refused the program as a variable
+/// referenced before binding. Binding the lane here puts it out of reach of
+/// any renaming transform and of any caller's naming choice.
+const SUBGROUP_LANE: &str = "vyre_subgroup_lane";
+
+/// The lane index the replacement body reads.
+fn lane() -> Expr {
+    Expr::var(SUBGROUP_LANE)
+}
+
+/// Bind the lane index the replacement body reads.
+fn bind_lane() -> Node {
+    Node::let_bind(SUBGROUP_LANE, Expr::LogicalWithinTileId { axis: 0 })
+}
+
 /// Scope deduced from a workgroup reduction region body.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ReductionScope {
@@ -282,13 +304,14 @@ fn single_subgroup_reduce_body(
     scratch: &str,
     scope: ReductionScope,
 ) -> Vec<Node> {
-    let load_expr = Expr::load(scratch, Expr::var("local"));
+    let load_expr = Expr::load(scratch, lane());
     let subgroup_expr = Expr::subgroup_reduce(op, load_expr);
-    let store_node = Node::store(scratch, Expr::var("local"), subgroup_expr);
+    let store_node = Node::store(scratch, lane(), subgroup_expr);
 
     match scope {
-        ReductionScope::EveryWorkgroup => vec![store_node, Node::barrier()],
+        ReductionScope::EveryWorkgroup => vec![bind_lane(), store_node, Node::barrier()],
         ReductionScope::FirstWorkgroup => vec![
+            bind_lane(),
             Node::if_then(Expr::is_first_workgroup(), vec![store_node]),
             Node::barrier(),
         ],
@@ -303,11 +326,19 @@ fn two_level_subgroup_reduce_body(
     value_type: ReductionValueType,
 ) -> Option<Vec<Node>> {
     let subgroup_count = plan.workgroup_total.div_ceil(plan.subgroup_size);
-    let subgroup_slot = Expr::div(Expr::var("local"), Expr::u32(plan.subgroup_size));
-    let subgroup_sum = Expr::subgroup_reduce(op, Expr::load(scratch, Expr::var("local")));
+    let subgroup_slot = Expr::div(lane(), Expr::u32(plan.subgroup_size));
+    let subgroup_sum = Expr::subgroup_reduce(op, Expr::load(scratch, lane()));
     let subgroup_head = Expr::eq(Expr::subgroup_local_id(), Expr::u32(0));
     let first_level = vec![
         Node::let_bind("vyre_subgroup_sum", subgroup_sum),
+        // Every subgroup reads its own span of the tile above, and the head
+        // store below writes back into the low slots of that same tile. One
+        // subgroup's store lands in a slot another subgroup has not read yet,
+        // so without this fence the second subgroup sums a partial in place of
+        // a lane value and the workgroup total comes out high by whatever the
+        // partial exceeded it. That is a wrong answer, not a slow one, and it
+        // varies run to run with subgroup scheduling.
+        Node::barrier(),
         Node::if_then(
             subgroup_head,
             vec![Node::store(
@@ -320,15 +351,15 @@ fn two_level_subgroup_reduce_body(
     let second_level_sum = Expr::subgroup_reduce(
         op,
         Expr::select(
-            Expr::lt(Expr::var("local"), Expr::u32(subgroup_count)),
-            Expr::load(scratch, Expr::var("local")),
+            Expr::lt(lane(), Expr::u32(subgroup_count)),
+            Expr::load(scratch, lane()),
             value_type.neutral(op)?,
         ),
     );
     let second_level = vec![
         Node::let_bind("vyre_workgroup_sum", second_level_sum),
         Node::if_then(
-            Expr::eq(Expr::var("local"), Expr::u32(0)),
+            Expr::eq(lane(), Expr::u32(0)),
             vec![Node::store(
                 scratch,
                 Expr::u32(0),
@@ -339,13 +370,15 @@ fn two_level_subgroup_reduce_body(
 
     Some(match scope {
         ReductionScope::EveryWorkgroup => {
-            let mut nodes = first_level;
+            let mut nodes = vec![bind_lane()];
+            nodes.extend(first_level);
             nodes.push(Node::barrier());
             nodes.extend(second_level);
             nodes.push(Node::barrier());
             nodes
         }
         ReductionScope::FirstWorkgroup => vec![
+            bind_lane(),
             Node::if_then(Expr::is_first_workgroup(), first_level),
             Node::barrier(),
             Node::if_then(Expr::is_first_workgroup(), second_level),
@@ -579,6 +612,70 @@ mod tests {
         assert_eq!(lowered, program);
     }
 
+    /// Splits a lowered reduction body into the lane binding it opens with and
+    /// the reduction nodes that follow.
+    ///
+    /// The replacement binds its own lane index instead of reading one the
+    /// enclosing scope declared. A body that reads a caller-declared name is
+    /// broken by any transform that renames the enclosing scope's bindings, and
+    /// fusion renames every arm binding it copies.
+    fn lane_bound_body(body: &[Node]) -> &[Node] {
+        let Node::Let { name, value, .. } = &body[0] else {
+            panic!(
+                "a lowered reduction must open by binding its own lane, got {:?}",
+                body[0]
+            );
+        };
+        assert_eq!(name.as_str(), SUBGROUP_LANE);
+        assert!(
+            matches!(value, Expr::LogicalWithinTileId { axis: 0 }),
+            "the lane binding must come from the tile index, got {value:?}"
+        );
+        &body[1..]
+    }
+
+    /// Appends the name of every `Let` under `nodes`, at any depth.
+    fn collect_let_names(nodes: &[Node], out: &mut Vec<String>) {
+        for node in nodes {
+            if let Node::Let { name, .. } = node {
+                out.push(name.as_str().to_string());
+            }
+            for child in crate::visit::child_bodies(node) {
+                collect_let_names(child, out);
+            }
+        }
+    }
+
+    #[test]
+    fn lowered_reduction_body_is_closed_over_the_lanes_it_reads() {
+        // The emitted body must bind every variable it reads. A body that reads
+        // a name the enclosing scope declared holds only while that name
+        // survives, and fusion alpha-renames every arm binding it copies, which
+        // leaves the read dangling and refuses the whole program at physical
+        // lowering with "variable is referenced before binding".
+        for workgroup in [4u32, 256] {
+            let region = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup);
+            let program = Program::wrapped(
+                vec![BufferDecl::workgroup("scratch", workgroup, DataType::F32)],
+                [workgroup, 1, 1],
+                vec![region],
+            );
+            let lowered = lower_subgroup_reductions(program, &caps_with_subgroup(32));
+            let Node::Region { body, .. } = &lowered.entry()[0] else {
+                panic!("expected Region");
+            };
+            let mut bound: Vec<String> = Vec::new();
+            collect_let_names(body, &mut bound);
+            let reads_a_free_variable = any_expr_matching(body, &|expr| {
+                matches!(expr, Expr::Var(v) if !bound.iter().any(|name| name == v.as_str()))
+            });
+            assert!(
+                !reads_a_free_variable,
+                "workgroup {workgroup}: the lowered body reads a variable it does not bind: {body:?}"
+            );
+        }
+    }
+
     #[test]
     fn lowers_every_workgroup_sum_to_subgroup_add() {
         let region = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup);
@@ -595,12 +692,13 @@ mod tests {
         let Node::Region { body, .. } = &entry[0] else {
             panic!("expected Region");
         };
-        // Should be: store(scratch, local, subgroup_add(load(scratch, local))); barrier
+        // Should be: let lane = tile index; store(scratch, lane, subgroup_add(load(scratch, lane))); barrier
+        let body = lane_bound_body(body);
         assert_eq!(body.len(), 2);
         assert!(
             matches!(&body[0], Node::Store { buffer, index, value } if
                 buffer.as_str() == "scratch" &&
-                matches!(index, Expr::Var(v) if v.as_str() == "local") &&
+                matches!(index, Expr::Var(v) if v.as_str() == SUBGROUP_LANE) &&
                 matches!(value, Expr::SubgroupReduce { .. })
             ),
             "expected subgroup_add store, got {:?}",
@@ -635,6 +733,7 @@ mod tests {
         let Node::Region { body, .. } = &entry[0] else {
             panic!("expected Region");
         };
+        let body = lane_bound_body(body);
         assert_eq!(
             body.len(),
             2,
@@ -684,6 +783,7 @@ mod tests {
         let Node::Region { body, .. } = &entry[0] else {
             panic!("expected Region");
         };
+        let body = lane_bound_body(body);
         let Node::Store { value, .. } = &body[0] else {
             panic!("expected a store, got {:?}", body[0]);
         };
@@ -724,6 +824,7 @@ mod tests {
         let Node::Region { body, .. } = &lowered.entry()[0] else {
             panic!("expected Region");
         };
+        let body = lane_bound_body(body);
         let Node::Store { value, .. } = &body[0] else {
             panic!("expected a store, got {:?}", body[0]);
         };
@@ -763,6 +864,7 @@ mod tests {
         let Node::Region { body, .. } = &lowered.entry()[0] else {
             panic!("expected Region");
         };
+        let body = lane_bound_body(body);
         let Node::Store { value, .. } = &body[0] else {
             panic!("expected a store, got {:?}", body[0]);
         };
@@ -803,9 +905,10 @@ mod tests {
         let Node::Region { body, .. } = &entry[0] else {
             panic!("expected Region");
         };
+        let body = lane_bound_body(body);
         assert!(
             nodes_contain_subgroup_reduce_max(&body[0..1])
-                && nodes_contain_subgroup_reduce_max(&body[3..4]),
+                && nodes_contain_subgroup_reduce_max(&body[4..5]),
             "both levels of the 256-lane max reduction must use subgroup_reduce(Max): {body:?}"
         );
         assert!(
@@ -855,17 +958,22 @@ mod tests {
         let Node::Region { body, .. } = &entry[0] else {
             panic!("expected Region");
         };
+        let body = lane_bound_body(body);
         assert_eq!(
             body.len(),
-            6,
-            "Fix: two-level subgroup lowering should emit first-level subgroup work, a barrier, full-subgroup second-level subgroup work, and a final barrier."
+            7,
+            "Fix: two-level subgroup lowering should emit first-level subgroup work, a fence before the head store overwrites the tile that level just read, the head store, a barrier, full-subgroup second-level subgroup work, and a final barrier."
         );
         assert!(
-            nodes_contain_subgroup_add(&body[0..1]) && nodes_contain_subgroup_add(&body[3..4]),
+            nodes_contain_subgroup_add(&body[0..1]) && nodes_contain_subgroup_add(&body[4..5]),
             "Fix: both levels of the 256-lane reduction must use subgroup_add instead of the shared-memory tree: {body:?}"
         );
-        assert!(matches!(&body[2], Node::Barrier { .. }));
-        assert!(matches!(&body[5], Node::Barrier { .. }));
+        assert!(
+            matches!(&body[1], Node::Barrier { .. }),
+            "Fix: the first level must fence its tile-wide read against the head store that writes back into that tile: {body:?}"
+        );
+        assert!(matches!(&body[3], Node::Barrier { .. }));
+        assert!(matches!(&body[6], Node::Barrier { .. }));
     }
 
     #[test]
@@ -885,6 +993,7 @@ mod tests {
             panic!("expected Region");
         };
         // Should be: if (workgroup_id.x == 0) { store(...) } barrier
+        let body = lane_bound_body(body);
         assert_eq!(body.len(), 2);
         let Node::If { cond, then, .. } = &body[0] else {
             panic!("expected If guard");
