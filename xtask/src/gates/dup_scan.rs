@@ -70,12 +70,47 @@ pub(crate) struct CrateCount {
 ///
 /// Indentation is normalized away so that moving a block into a loop does not
 /// read as new code, which would let a pure re-indent hide a copy.
+///
+/// An import wrapped over several lines is folded back into one line. A `use`
+/// item states nothing on its own, and rustfmt decides how wide it is written,
+/// so counting its continuation lines charged a facade for re-exporting the
+/// names it exists to re-export.
 fn normalize(text: &str) -> Vec<String> {
-    text.lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty() && !line.starts_with("//"))
-        .map(str::to_string)
-        .collect()
+    let mut lines: Vec<String> = Vec::new();
+    let mut pending: Option<String> = None;
+    for line in text.lines().map(str::trim) {
+        if line.is_empty() || line.starts_with("//") {
+            continue;
+        }
+        match pending.as_mut() {
+            Some(item) => {
+                item.push(' ');
+                item.push_str(line);
+                if line.ends_with(';') {
+                    lines.push(pending.take().unwrap_or_default());
+                }
+            }
+            None if is_use_opener(line) => pending = Some(line.to_string()),
+            None => lines.push(line.to_string()),
+        }
+    }
+    lines.extend(pending);
+    lines
+}
+
+/// True when `line` opens an import item that continues on the next line.
+fn is_use_opener(line: &str) -> bool {
+    is_import_item(line) && !line.ends_with(';')
+}
+
+/// True when `line` starts an import item at any visibility.
+fn is_import_item(line: &str) -> bool {
+    let body = line
+        .strip_prefix("pub(crate) ")
+        .or_else(|| line.strip_prefix("pub(super) "))
+        .or_else(|| line.strip_prefix("pub "))
+        .unwrap_or(line);
+    body.starts_with("use ")
 }
 
 /// True when `line` is only enum variant patterns, as an exhaustive match arm
@@ -127,7 +162,7 @@ fn is_structural_line(line: &str) -> bool {
     if line.starts_with("#[") || line.starts_with("#![") {
         return true;
     }
-    if line.starts_with("use ") || line.starts_with("pub use ") {
+    if is_import_item(line) {
         return true;
     }
     if is_module_header(line) {
@@ -842,6 +877,8 @@ mod tests {
             "pub use crate::gate::Finding;",
             "mod tests {",
             "pub(crate) mod scan {",
+            "pub(crate) use crate::gate::Finding;",
+            "pub(super) use crate::gate::Finding;",
         ] {
             assert!(is_structural_line(line), "{line} states nothing");
         }
@@ -857,6 +894,37 @@ mod tests {
         ] {
             assert!(!is_structural_line(line), "{line} states something");
         }
+    }
+
+    /// WHY: two facades re-exporting the same forty names share every
+    /// continuation line of one `pub use` item, and the scan charged both for
+    /// it. An import states nothing whatever width rustfmt wrapped it to, and
+    /// a pin paid for re-exporting the names a facade exists to re-export is a
+    /// tax on having a facade.
+    #[test]
+    fn a_wrapped_import_is_one_structural_line() {
+        let folded = normalize("pub use crate::spec::{\n    Alpha,\n    Beta,\n    Gamma,\n};\n");
+        assert_eq!(
+            folded,
+            vec!["pub use crate::spec::{ Alpha, Beta, Gamma, };".to_string()]
+        );
+        assert!(is_structural_line(&folded[0]), "an import states nothing");
+    }
+
+    /// WHY: folding stops at the item terminator, so a body that follows a
+    /// wrapped import is still counted. Swallowing it would hide every copy
+    /// that happens to sit under one.
+    #[test]
+    fn folding_an_import_leaves_the_body_under_it_counted() {
+        let folded = normalize("use crate::a::{\n    Alpha,\n};\nlet total = compute(alpha);\n");
+        assert_eq!(
+            folded,
+            vec![
+                "use crate::a::{ Alpha, };".to_string(),
+                "let total = compute(alpha);".to_string()
+            ]
+        );
+        assert!(!is_structural_line(&folded[1]), "the body states something");
     }
 
     /// WHY: eight lines were assumed to be past the reach of shared boilerplate.
