@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Whole-application evidence records state measured device execution: the `whole-app-evidence` command compiles, attaches, admits, and submits each workload graph on an acquired dispatch backend, records the host, device, digests, latencies, and reference parity it measured, and refuses to write a record when no dispatch device is available."

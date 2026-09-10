@@ -1,12 +1,15 @@
-//! Version-pinned expert-written native kernel baselines catalog for BACKLOG row 47.
+//! Version-pinned external native kernel baselines a measured comparison runs against.
 //!
-//! BACKLOG row 47 requires:
-//! "Version-pinned expert-written native kernels are compared under identical
-//! semantics, dtype, shapes, raggedness, initial and final state, target, stream,
-//! toolchain and flags, clock and power state, warmup, interleaving, repetitions,
-//! cache state, and objective."
-//! "The version-pinned native kernel baselines must be vendored as a pinned external
-//! baseline with its version recorded, never copied into a Vyre crate as an emitted payload."
+//! A comparison counts only when the native kernel is expert-written, pinned to a
+//! released version, and measured under identical semantics, dtype, shapes,
+//! raggedness, initial and final state, target, stream, toolchain and flags,
+//! clock and power state, warmup, interleaving, repetitions, cache state, and
+//! objective. Each baseline is vendored as a pinned external dependency with its
+//! version recorded, never copied into a Vyre crate as an emitted payload.
+//!
+//! A baseline carries its measurement in an `Option`. `None` states that no run
+//! on this host measured that kernel, and a consumer omits the comparison rather
+//! than deriving one.
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -114,8 +117,42 @@ impl NativeBaselineCatalog {
         self.baselines.get(id)
     }
 
+    /// Retrieve a baseline that carries a recorded measurement.
+    ///
+    /// # Errors
+    ///
+    /// Returns a diagnostic naming whether the identifier is unregistered or
+    /// registered without a measurement. A caller states one of those instead of
+    /// a comparison it cannot compute.
+    pub fn measured(&self, id: &str) -> Result<&VersionPinnedNativeBaseline, String> {
+        let Some(baseline) = self.baselines.get(id) else {
+            return Err(format!(
+                "no version-pinned native baseline `{id}` is vendored. Fix: vendor the pinned native kernel and register it before claiming a comparison against it."
+            ));
+        };
+        if baseline.measurement.is_none() {
+            return Err(format!(
+                "version-pinned native baseline `{id}` ({}) carries no recorded measurement on this host. Fix: build and measure the pinned native kernel under the declared comparison conditions before claiming a comparison against it.",
+                baseline.name
+            ));
+        }
+        Ok(baseline)
+    }
+
     /// Return an iterator over all registered baselines.
     pub fn iter(&self) -> impl Iterator<Item = &VersionPinnedNativeBaseline> {
         self.baselines.values()
     }
+}
+
+/// Pinned native baselines the whole-application workloads compare against.
+///
+/// A baseline enters this catalog when its native kernel is vendored at a pinned
+/// version and measured on the host that records the comparison. The catalog is
+/// the single place a whole-application record resolves its pinned comparator
+/// from, so an unvendored or unmeasured baseline produces no comparison instead
+/// of a derived one.
+#[must_use]
+pub fn whole_application_native_baselines() -> NativeBaselineCatalog {
+    NativeBaselineCatalog::new()
 }

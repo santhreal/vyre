@@ -127,6 +127,20 @@ enum Commands {
         #[arg(long)]
         enforce: bool,
     },
+    /// Measure the whole-application evidence suite on this host's device.
+    ///
+    /// Every record is written from submissions an acquired dispatch device
+    /// completed. A host with no such device writes nothing and exits nonzero.
+    /// This is the only producer of the whole-application evidence artifacts,
+    /// and the directory it writes is the one named on the command line.
+    WholeAppEvidence {
+        #[arg(long)]
+        output: String,
+        #[arg(long)]
+        backend: Option<String>,
+        #[arg(long, default_value_t = 30)]
+        measured_samples: usize,
+    },
     EvolveServer,
 }
 
@@ -277,6 +291,21 @@ where
             );
             if *enforce {
                 crate::release_matrix::enforce_release_matrix(&matrix)?;
+            }
+        }
+        Commands::WholeAppEvidence {
+            output,
+            backend,
+            measured_samples,
+        } => {
+            let written = crate::workloads::write_whole_application_evidence_artifacts(
+                std::path::Path::new(output),
+                backend.as_deref(),
+                *measured_samples,
+            )
+            .map_err(|error| anyhow::anyhow!("{error}"))?;
+            for path in &written {
+                println!("whole_app_evidence_written path={}", path.display());
             }
         }
         Commands::EvolveServer => evolve_server::run_evolve_server()?,
