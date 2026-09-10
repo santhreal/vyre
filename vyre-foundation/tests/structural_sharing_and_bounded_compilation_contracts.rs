@@ -1,4 +1,4 @@
-//! Contract and regression tests for structural sharing and bounded compilation (BACKLOG row 67).
+//! Contract and regression tests for structural sharing and bounded compilation.
 //!
 //! # Proofs
 //! - Budget overruns across CPU steps, transformation steps, memory bytes, and code size

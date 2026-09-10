@@ -1,6 +1,6 @@
 //! Contracts for versioned benchmark receipts and content-addressed evidence store.
 //!
-//! BACKLOG row 95 requires one versioned benchmark protocol and content-addressed evidence
+//! The contract requires one versioned benchmark protocol and content-addressed evidence
 //! store. A test proves the content address changes when any recorded field changes,
 //! derived from the schema's field set at run time so a field added without being hashed
 //! turns the suite red. The store must hold real measured production-path evidence.

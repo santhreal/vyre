@@ -1,6 +1,6 @@
 //! Dialect external schema, field contract, resource ABI, layout, and translation error closure contracts.
 //!
-//! BACKLOG row 55 requires versioned domain-neutral schema, field, resource, layout,
+//! The contract requires versioned domain-neutral schema, field, resource, layout,
 //! and translation contracts with exhaustive visitors and canonical identity, proving
 //! unknown, duplicate, missing, incompatible, overflowing, unused, and unmapped members
 //! fail closed before compilation.

@@ -1,6 +1,6 @@
-//! Required measurement fields derived from BACKLOG row 47 specification.
+//! Required measurement fields.
 //!
-//! BACKLOG row 47 requires benchmarks to record:
+//! The contract requires benchmarks to record:
 //! 1. compile time
 //! 2. candidate count
 //! 3. prediction error

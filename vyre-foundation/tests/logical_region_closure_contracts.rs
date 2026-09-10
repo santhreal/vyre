@@ -1,6 +1,6 @@
 //! Logical region, dependence, partition axis, and exchange kind closure contracts.
 //!
-//! BACKLOG row 51 requires logical region IR to represent segmented maps, associative
+//! The contract requires logical region IR to represent segmented maps, associative
 //! reductions, scans, recurrent state, windows, ragged extents, and partial-result joins,
 //! generically validating scratch, progress, ordering, and numerical contracts.
 

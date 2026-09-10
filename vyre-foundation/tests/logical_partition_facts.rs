@@ -1,6 +1,6 @@
 //! What the logical stage states about distributing a region.
 //!
-//! WHY: BACKLOG row 64 requires the logical stage to express partitionable
+//! WHY: The contract requires the logical stage to express partitionable
 //! values and semantic exchanges without naming a device. Schedule selection
 //! reads exactly these facts to place shards on a mesh, so a wrong axis kind or
 //! a missing payload size becomes a placement that computes the wrong values or

@@ -1,6 +1,6 @@
-//! Native kernel comparison equality conditions and invariants for BACKLOG row 47.
+//! Native kernel comparison equality conditions and invariants.
 //!
-//! BACKLOG row 47 requires:
+//! The contract requires:
 //! "Version-pinned expert-written native kernels are compared under identical:
 //! 1. semantics
 //! 2. dtype

@@ -1,6 +1,6 @@
-//! Per-cell verdict engine and statistical evaluation for BACKLOG row 47.
+//! Per-cell verdict engine and statistical evaluation.
 //!
-//! BACKLOG row 47 requires:
+//! The contract requires:
 //! "Report a per-cell verdict, not an aggregate: a regression on one target,
 //! sequence layout, or retained-state mode is a finding even when the mean improves.
 //! Statistically indistinguishable is its own verdict, never a win."

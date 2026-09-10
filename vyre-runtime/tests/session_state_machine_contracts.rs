@@ -1,6 +1,6 @@
 //! Session state machine, retained generation, error classification, and recovery contracts.
 //!
-//! BACKLOG row 54 requires a typed domain-neutral execution session that owns artifact
+//! The contract requires a typed domain-neutral execution session that owns artifact
 //! identity, authenticated resources, retained generations, bounded step/control state,
 //! IO readiness, and recovery across one-shot, iterative, and event-driven graphs.
 

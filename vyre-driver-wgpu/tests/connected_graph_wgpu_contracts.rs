@@ -1,6 +1,6 @@
 //! WGPU connected-graph production route contracts.
 //!
-//! BACKLOG row 56: Representative connected graphs from unrelated domains must execute
+//! Representative connected graphs from unrelated domains must execute
 //! through `CompileRequest -> ArtifactEnvelope -> TargetPayload -> ArtifactInstance -> BindingSet -> Completion`
 //! and match independent semantics under declared tolerances.
 

@@ -1,6 +1,6 @@
 schema_version = 1
 
-# Machine-readable domain roster for the vyre-libs ownership family (BACKLOG row 81).
+# Machine-readable domain roster for the vyre-libs ownership family.
 #
 # Generates facade features, registry linkage, documentation, feature-isolation cases,
 # and release membership. Adding a domain requires one ownership record here.
