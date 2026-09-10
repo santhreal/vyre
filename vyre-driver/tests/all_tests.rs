@@ -158,6 +158,10 @@ pub mod error_code_catalog;
 #[path = "error_code_frozen.rs"]
 pub mod error_code_frozen;
 
+/// Integration tests from `tests/external_import_order.rs`.
+#[path = "external_import_order.rs"]
+pub mod external_import_order;
+
 /// Integration tests from `tests/external_resource_path_agreement.rs`.
 #[path = "external_resource_path_agreement.rs"]
 pub mod external_resource_path_agreement;

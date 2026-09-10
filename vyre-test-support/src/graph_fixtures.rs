@@ -223,3 +223,164 @@ pub fn value_and_constant_ports(
         },
     ]
 }
+
+/// Lanes the pure-dataflow graph runs over.
+pub const PURE_DATAFLOW_LANES: u64 = 4;
+
+/// A `u32` value of `count` dense lanes.
+fn dense_u32(access: BufferAccess, lifetime: ValueLifetime, count: u64) -> ValueContract {
+    ValueContract::dense_1d(DataType::U32, count, access, lifetime)
+}
+
+/// The three-stage pure-dataflow graph every concrete driver's connected-graph
+/// contract compiles.
+///
+/// `scale_node` writes `y = 3x + 5` over [`PURE_DATAFLOW_LANES`] lanes,
+/// `sum_node` reduces `y` to a single `s`, and `norm_node` writes
+/// `z = y + s`. Two value edges leave `scale_node`, so a planner that
+/// collapses the graph to a chain produces a different answer. The external
+/// input is `in_x` and the graph output is `z_out`.
+///
+/// Three suites built this graph line for line. The shape is the question every
+/// backend is asked, so a suite that changes it changes it for all of them.
+#[must_use]
+pub fn pure_dataflow_graph() -> ProgramGraph {
+    use vyre_foundation::ir::{BufferDecl, Expr, Node};
+
+    let count = PURE_DATAFLOW_LANES;
+    let lanes = u32::try_from(count).expect("the lane count fits a dispatch dimension");
+    let mut graph = ProgramGraph::new();
+
+    let in_x = graph
+        .add_external_value(
+            "in_x",
+            dense_u32(BufferAccess::ReadOnly, ValueLifetime::Invocation, count),
+        )
+        .expect("the external input value is the first value in an empty graph");
+
+    let scale = Program::wrapped(
+        vec![
+            BufferDecl::read("x", 0, DataType::U32).with_count(lanes),
+            BufferDecl::written("y", 1, BufferAccess::WriteOnly, DataType::U32).with_count(lanes),
+        ],
+        [lanes, 1, 1],
+        vec![Node::store(
+            "y",
+            Expr::gid_x(),
+            Expr::add(
+                Expr::mul(Expr::load("x", Expr::gid_x()), Expr::u32(3)),
+                Expr::u32(5),
+            ),
+        )],
+    );
+    let (_, val_y) = graph
+        .add_node(
+            "scale_node",
+            scale,
+            vec![GraphInput {
+                buffer: "x".into(),
+                value: in_x,
+                contract: dense_u32(BufferAccess::ReadOnly, ValueLifetime::Invocation, count),
+            }],
+            vec![GraphOutput {
+                buffer: "y".into(),
+                name: "y".into(),
+                contract: dense_u32(BufferAccess::WriteOnly, ValueLifetime::Invocation, count),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("the scale node declares one input and one output");
+
+    let sum = Program::wrapped(
+        vec![
+            BufferDecl::read("y_in", 0, DataType::U32).with_count(lanes),
+            BufferDecl::written("sum_out", 1, BufferAccess::WriteOnly, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![Node::store(
+            "sum_out",
+            Expr::u32(0),
+            Expr::add(
+                Expr::add(
+                    Expr::load("y_in", Expr::u32(0)),
+                    Expr::load("y_in", Expr::u32(1)),
+                ),
+                Expr::add(
+                    Expr::load("y_in", Expr::u32(2)),
+                    Expr::load("y_in", Expr::u32(3)),
+                ),
+            ),
+        )],
+    );
+    let (_, val_s) = graph
+        .add_node(
+            "sum_node",
+            sum,
+            vec![GraphInput {
+                buffer: "y_in".into(),
+                value: val_y[0],
+                contract: dense_u32(BufferAccess::ReadOnly, ValueLifetime::Invocation, count),
+            }],
+            vec![GraphOutput {
+                buffer: "sum_out".into(),
+                name: "sum_out".into(),
+                contract: dense_u32(BufferAccess::WriteOnly, ValueLifetime::Invocation, 1),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("the sum node reads the scale node's output");
+
+    let norm = Program::wrapped(
+        vec![
+            BufferDecl::read("y_norm_in", 0, DataType::U32).with_count(lanes),
+            BufferDecl::read("s_in", 1, DataType::U32).with_count(1),
+            BufferDecl::output("z_out", 2, DataType::U32).with_count(lanes),
+        ],
+        [lanes, 1, 1],
+        vec![Node::store(
+            "z_out",
+            Expr::gid_x(),
+            Expr::add(
+                Expr::load("y_norm_in", Expr::gid_x()),
+                Expr::load("s_in", Expr::u32(0)),
+            ),
+        )],
+    );
+    graph
+        .add_node(
+            "norm_node",
+            norm,
+            vec![
+                GraphInput {
+                    buffer: "y_norm_in".into(),
+                    value: val_y[0],
+                    contract: dense_u32(BufferAccess::ReadOnly, ValueLifetime::Invocation, count),
+                },
+                GraphInput {
+                    buffer: "s_in".into(),
+                    value: val_s[0],
+                    contract: dense_u32(BufferAccess::ReadOnly, ValueLifetime::Invocation, 1),
+                },
+            ],
+            vec![GraphOutput {
+                buffer: "z_out".into(),
+                name: "z_out".into(),
+                contract: dense_u32(BufferAccess::WriteOnly, ValueLifetime::Output, count),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("the norm node joins both intra-graph values");
+
+    graph
+}
+
+/// An independent host evaluation of [`pure_dataflow_graph`] over `input`.
+///
+/// Written from the mathematics the graph states, not from its IR, so a lowering
+/// that computes something else is separated from one that computes the answer.
+#[must_use]
+pub fn pure_dataflow_oracle(input: [u32; 4]) -> [u32; 4] {
+    let scaled = input.map(|lane| lane.wrapping_mul(3).wrapping_add(5));
+    let sum = scaled.iter().fold(0_u32, |total, lane| total.wrapping_add(*lane));
+    scaled.map(|lane| lane.wrapping_add(sum))
+}

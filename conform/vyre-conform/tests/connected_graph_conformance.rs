@@ -22,6 +22,7 @@ use vyre_megakernel::{
 };
 use vyre_registry_link::backend::live_backend_registry;
 use vyre_runtime::artifact_admission::ArtifactSession;
+use vyre_test_support::graph_fixtures as fixtures;
 
 /// The four required connected graph classes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -110,159 +111,31 @@ fn facts() -> ExternalFacts {
 // ---------------------------------------------------------------------------
 // Case 1: Pure Dataflow (DSP Numerical Pipeline)
 // ---------------------------------------------------------------------------
-/// Builds a 3-stage pure dataflow connected graph (scale -> sum -> norm).
+/// The 3-stage pure dataflow connected graph (scale -> sum -> norm).
+///
+/// The shape belongs to [`vyre_test_support::graph_fixtures`]. Every backend
+/// suite compiles the same graph, so one owner keeps the question identical
+/// across them.
 pub fn pure_dataflow_graph() -> ProgramGraph {
-    let count = 4_u64;
-    let mut graph = ProgramGraph::new();
-
-    let in_x = graph
-        .add_external_value(
-            "in_x",
-            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count),
-        )
-        .unwrap();
-
-    let node0_prog = Program::wrapped(
-        vec![
-            BufferDecl::read("x", 0, DataType::U32).with_count(count as u32),
-            BufferDecl::written("y", 1, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(count as u32),
-        ],
-        [count as u32, 1, 1],
-        vec![Node::store(
-            "y",
-            Expr::gid_x(),
-            Expr::add(
-                Expr::mul(Expr::load("x", Expr::gid_x()), Expr::u32(3)),
-                Expr::u32(5),
-            ),
-        )],
-    );
-
-    let (_, val_y) = graph
-        .add_node(
-            "scale_node",
-            node0_prog,
-            vec![GraphInput {
-                buffer: "x".into(),
-                value: in_x,
-                contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count),
-            }],
-            vec![GraphOutput {
-                buffer: "y".into(),
-                name: "y".into(),
-                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Invocation, count),
-                retained_successor_of: None,
-            }],
-        )
-        .unwrap();
-
-    let node1_prog = Program::wrapped(
-        vec![
-            BufferDecl::read("y_in", 0, DataType::U32).with_count(count as u32),
-            BufferDecl::written("sum_out", 1, BufferAccess::WriteOnly, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "sum_out",
-            Expr::u32(0),
-            Expr::add(
-                Expr::add(
-                    Expr::load("y_in", Expr::u32(0)),
-                    Expr::load("y_in", Expr::u32(1)),
-                ),
-                Expr::add(
-                    Expr::load("y_in", Expr::u32(2)),
-                    Expr::load("y_in", Expr::u32(3)),
-                ),
-            ),
-        )],
-    );
-
-    let (_, val_s) = graph
-        .add_node(
-            "sum_node",
-            node1_prog,
-            vec![GraphInput {
-                buffer: "y_in".into(),
-                value: val_y[0],
-                contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count),
-            }],
-            vec![GraphOutput {
-                buffer: "sum_out".into(),
-                name: "sum_out".into(),
-                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Invocation, 1),
-                retained_successor_of: None,
-            }],
-        )
-        .unwrap();
-
-    let node2_prog = Program::wrapped(
-        vec![
-            BufferDecl::read("y_norm_in", 0, DataType::U32).with_count(count as u32),
-            BufferDecl::read("s_in", 1, DataType::U32).with_count(1),
-            BufferDecl::output("z_out", 2, DataType::U32).with_count(count as u32),
-        ],
-        [count as u32, 1, 1],
-        vec![Node::store(
-            "z_out",
-            Expr::gid_x(),
-            Expr::add(
-                Expr::load("y_norm_in", Expr::gid_x()),
-                Expr::load("s_in", Expr::u32(0)),
-            ),
-        )],
-    );
-
-    let _ = graph
-        .add_node(
-            "norm_node",
-            node2_prog,
-            vec![
-                GraphInput {
-                    buffer: "y_norm_in".into(),
-                    value: val_y[0],
-                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count),
-                },
-                GraphInput {
-                    buffer: "s_in".into(),
-                    value: val_s[0],
-                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, 1),
-                },
-            ],
-            vec![GraphOutput {
-                buffer: "z_out".into(),
-                name: "z_out".into(),
-                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output, count),
-                retained_successor_of: None,
-            }],
-        )
-        .unwrap();
-
-    graph
+    fixtures::pure_dataflow_graph()
 }
 
 /// Returns step inputs and oracle outputs for the pure dataflow graph.
 pub fn pure_dataflow_steps() -> Vec<StepOracle> {
-    // Input X = [1, 2, 3, 4]
-    // Node 0: Y = [3*1+5, 3*2+5, 3*3+5, 3*4+5] = [8, 11, 14, 17]
-    // Node 1: S = 8 + 11 + 14 + 17 = 50
-    // Node 2: Z = [8+50, 11+50, 14+50, 17+50] = [58, 61, 64, 67]
-    let input_bytes = [1_u32, 2, 3, 4]
+    let input = [1_u32, 2, 3, 4];
+    let lanes = usize::try_from(fixtures::PURE_DATAFLOW_LANES).expect("lane count fits a length");
+    let input_bytes = input.into_iter().flat_map(u32::to_le_bytes).collect();
+    let expected_z = fixtures::pure_dataflow_oracle(input)
         .into_iter()
         .flat_map(u32::to_le_bytes)
-        .collect::<Vec<_>>();
-    let expected_z = [58_u32, 61, 64, 67]
-        .into_iter()
-        .flat_map(u32::to_le_bytes)
-        .collect::<Vec<_>>();
+        .collect();
 
     vec![StepOracle {
         inputs: vec![StepInput {
             name: "in_x",
             bytes: input_bytes,
         }],
-        intermediates: vec![("y", 16), ("sum_out", 4)],
+        intermediates: vec![("y", lanes * 4), ("sum_out", 4)],
         expected_outputs: vec![("z_out", expected_z)],
         expected_retained: vec![],
     }]

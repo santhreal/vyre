@@ -58,3 +58,12 @@ bincode = { workspace = true }
 [[test]]
 name = "all_tests"
 path = "tests/all_tests.rs"
+
+# Isolated: the body calls `set_current_dir`, and a process has one working
+# directory. The contract is that the variant space answers for the compiled
+# source rather than for the directory the process stands in, which can only be
+# observed by changing that directory, so any test sharing the binary would
+# resolve its own paths against whichever directory this one had set.
+[[test]]
+name = "variant_space_is_independent_of_the_working_directory"
+path = "tests/variant_space_is_independent_of_the_working_directory.rs"

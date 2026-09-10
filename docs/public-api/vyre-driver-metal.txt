@@ -1,24 +1,20 @@
-impl vyre_driver_metal::MetalExternalResourceImporter
+impl vyre_driver::external_import::ExternalImportHandle for vyre_driver_metal::MetalExternalMemoryHandle
+impl vyre_driver::external_import::ExternalImportPolicy for vyre_driver_metal::MetalExternalImportPolicy
 pub const vyre_driver_metal::METAL_BACKEND_ID: &str
 pub const vyre_driver_metal::METAL_TARGET_ID: vyre_foundation::operation::target_facet::TargetId
+pub const vyre_driver_metal::MetalExternalImportPolicy::COLOR: vyre_spec::resource_capability::image::ColorInterpretation
+pub const vyre_driver_metal::MetalExternalImportPolicy::OWNER: &'static str
 pub enum vyre_driver_metal::MetalExternalMemoryHandle
-pub fn vyre_driver_metal::MetalExternalResourceImporter::authenticate_import(&self, descriptor: &vyre_driver_metal::MetalExternalMemoryDescriptor) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
-pub fn vyre_driver_metal::MetalExternalResourceImporter::import_external_resource(&self, descriptor: vyre_driver_metal::MetalExternalMemoryDescriptor) -> core::result::Result<vyre_spec::resource_capability::AdmittedResourceRecord, vyre_spec::resource_capability::ResourceAbiError>
-pub fn vyre_driver_metal::MetalExternalResourceImporter::invalidate_on_device_loss(&self) -> vyre_driver::semantic_resource_abi::DeviceLossInvalidationReport
-pub fn vyre_driver_metal::MetalExternalResourceImporter::new(device_id: u64) -> Self
-pub fn vyre_driver_metal::MetalExternalResourceImporter::registry(&self) -> &vyre_driver::semantic_resource_abi::ExternalResourceRegistry<vyre_driver_metal::MetalExternalMemoryHandle>
+pub fn vyre_driver_metal::MetalExternalImportPolicy::refuse_unsupported(descriptor: &vyre_driver::external_import::ExternalImportDescriptor<Self::Handle>) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
+pub fn vyre_driver_metal::MetalExternalMemoryHandle::memory_kind(&self) -> vyre_spec::resource_capability::sampler::ExternalMemoryKind
+pub fn vyre_driver_metal::MetalExternalMemoryHandle::provenance_tag(&self) -> u64
 pub fn vyre_driver_metal::acquire() -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::vyre_backend::VyreBackend>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_metal::registered_backend_id() -> core::option::Option<&'static str>
 pub mod vyre_driver_metal
-pub struct vyre_driver_metal::MetalExternalMemoryDescriptor
-pub struct vyre_driver_metal::MetalExternalResourceImporter
-pub vyre_driver_metal::MetalExternalMemoryDescriptor::dimensions: vyre_spec::resource_capability::image::ImageDimensions
-pub vyre_driver_metal::MetalExternalMemoryDescriptor::format: vyre_spec::resource_capability::image::ImageFormat
-pub vyre_driver_metal::MetalExternalMemoryDescriptor::handle: vyre_driver_metal::MetalExternalMemoryHandle
-pub vyre_driver_metal::MetalExternalMemoryDescriptor::permitted_usages: vyre_spec::resource_capability::ResourcePermittedUsages
-pub vyre_driver_metal::MetalExternalMemoryDescriptor::resource_id: u64
-pub vyre_driver_metal::MetalExternalMemoryDescriptor::row_pitch_bytes: u32
-pub vyre_driver_metal::MetalExternalMemoryDescriptor::sync_protocol: vyre_spec::resource_capability::sampler::TimelineSyncProtocol
+pub struct vyre_driver_metal::MetalExternalImportPolicy
+pub type vyre_driver_metal::MetalExternalImportPolicy::Handle = vyre_driver_metal::MetalExternalMemoryHandle
+pub type vyre_driver_metal::MetalExternalMemoryDescriptor = vyre_driver::external_import::ExternalImportDescriptor<vyre_driver_metal::MetalExternalMemoryHandle>
+pub type vyre_driver_metal::MetalExternalResourceImporter = vyre_driver::external_import::ExternalResourceImporter<vyre_driver_metal::MetalExternalImportPolicy>
 pub vyre_driver_metal::MetalExternalMemoryHandle::IOSurface(usize)
 pub vyre_driver_metal::MetalExternalMemoryHandle::SharedBuffer
 pub vyre_driver_metal::MetalExternalMemoryHandle::SharedBuffer::byte_size: u64

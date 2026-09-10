@@ -221,6 +221,8 @@ pub mod graph_fixtures;
 pub mod graph_values;
 #[cfg(feature = "parity-oracles")]
 pub mod hardware_oracle;
+#[cfg(feature = "host-input-abi")]
+pub mod host_input_abi;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_regions;
 #[cfg(feature = "ir-fixtures")]
@@ -255,6 +257,8 @@ pub mod strict_float_programs;
 #[cfg(feature = "ir-fixtures")]
 pub mod structural_ir;
 pub mod sweep_rng;
+#[cfg(feature = "ir-fixtures")]
+pub mod target_facet_join;
 #[cfg(feature = "driver-artifact-contracts")]
 pub mod target_compiler_contract;
 #[cfg(feature = "semantic-parity")]

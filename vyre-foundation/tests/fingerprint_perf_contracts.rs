@@ -11,6 +11,7 @@
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::optimizer::optimize;
 use vyre_foundation::optimizer::{fingerprint_program, pipeline_fingerprint_bytes};
+use vyre_test_support::pass_programs::sum_of_two_loads;
 
 // ── Determinism ──────────────────────────────────────────────────────
 //
@@ -117,32 +118,16 @@ fn different_workgroup_sizes_produce_different_fingerprints() {
 #[test]
 fn buffer_declaration_order_does_not_affect_pipeline_fingerprint() {
     // Same program, different buffer declaration order.
-    let p1 = Program::wrapped(
-        vec![
-            BufferDecl::read("a", 0, DataType::U32),
-            BufferDecl::read("b", 1, DataType::U32),
-            BufferDecl::read_write("out", 2, DataType::U32),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::add(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
-        )],
-    );
-    let p2 = Program::wrapped(
-        vec![
-            BufferDecl::read_write("out", 2, DataType::U32),
-            BufferDecl::read("b", 1, DataType::U32),
-            BufferDecl::read("a", 0, DataType::U32),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::add(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
-        )],
-    );
+    let p1 = sum_of_two_loads(vec![
+        BufferDecl::read("a", 0, DataType::U32),
+        BufferDecl::read("b", 1, DataType::U32),
+        BufferDecl::read_write("out", 2, DataType::U32),
+    ]);
+    let p2 = sum_of_two_loads(vec![
+        BufferDecl::read_write("out", 2, DataType::U32),
+        BufferDecl::read("b", 1, DataType::U32),
+        BufferDecl::read("a", 0, DataType::U32),
+    ]);
     assert_eq!(
         pipeline_fingerprint_bytes(&p1),
         pipeline_fingerprint_bytes(&p2),

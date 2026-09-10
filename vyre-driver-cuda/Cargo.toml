@@ -60,6 +60,7 @@ vyre-test-support = { workspace = true, features = [
     "semantic-requests",
     "driver-artifact-contracts",
     "parity-oracles",
+    "host-input-abi",
 ] }
 # Byte-stability golden harness (`artifact_golden`) shared with the emitter
 # crates, so the emitted-PTX corpus is pinned the same way emitted artifacts

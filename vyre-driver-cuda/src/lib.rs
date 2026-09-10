@@ -85,7 +85,8 @@ pub use backend::{
     CudaTelemetrySnapshot,
 };
 pub use external_resource::{
-    CudaExternalMemoryDescriptor, CudaExternalMemoryHandle, CudaExternalResourceImporter,
+    CudaExternalImportPolicy, CudaExternalMemoryDescriptor, CudaExternalMemoryHandle,
+    CudaExternalResourceImporter,
 };
 pub use stream::CudaLaunchResourceCounts;
 /// CUDA megakernel global-barrier minimization for dependency-typed waves.

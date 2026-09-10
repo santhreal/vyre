@@ -18,16 +18,14 @@ use vyre_megakernel::{
 };
 use vyre_spec::IrLevel;
 
-use vyre_test_support::artifact_fixtures::{entry_point, neutral_artifact};
+use vyre_test_support::artifact_fixtures::{self, entry_point, neutral_artifact};
 
 fn format() -> TargetPayloadFormat {
-    TargetPayloadFormat::new("test.target-binary", 1)
-        .expect("Fix: the fixture format must be valid")
+    artifact_fixtures::payload_format(1)
 }
 
 fn profile() -> TargetProfile {
-    TargetProfile::new("test.target-binary", 1, [64, 1, 1], 64, 1_024, 0)
-        .expect("Fix: the fixture profile must be valid")
+    artifact_fixtures::target_profile(1)
 }
 
 fn payload_for(artifact: &Artifact) -> TargetPayload {

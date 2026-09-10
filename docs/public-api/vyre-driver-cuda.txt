@@ -29,6 +29,8 @@ impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver_cuda::CudaResid
 impl vyre_driver::backend::device_buffer::DeviceBuffer for vyre_driver_cuda::CudaDeviceBuffer
 impl vyre_driver::backend::sealed::Sealed for vyre_driver_cuda::CudaBackendRegistration
 impl vyre_driver::backend::vyre_backend::VyreBackend for vyre_driver_cuda::CudaBackendRegistration
+impl vyre_driver::external_import::ExternalImportHandle for vyre_driver_cuda::CudaExternalMemoryHandle
+impl vyre_driver::external_import::ExternalImportPolicy for vyre_driver_cuda::CudaExternalImportPolicy
 impl vyre_driver_cuda::CudaBackend
 impl vyre_driver_cuda::CudaBackendRegistration
 impl vyre_driver_cuda::CudaDeviceCaps
@@ -39,7 +41,6 @@ impl vyre_driver_cuda::CudaEGraphDeviceKernelView
 impl vyre_driver_cuda::CudaEGraphDeviceUploadPlan
 impl vyre_driver_cuda::CudaEGraphResidentColumnSnapshot
 impl vyre_driver_cuda::CudaEGraphResidentSignatureSnapshot
-impl vyre_driver_cuda::CudaExternalResourceImporter
 impl vyre_driver_cuda::CudaKernelLaunchDiagnostic
 impl vyre_driver_cuda::CudaKernelLaunchDiagnosticRef<'_>
 impl vyre_driver_cuda::CudaKernelLaunchDiagnosticScratch
@@ -114,6 +115,8 @@ pub const vyre_driver_cuda::CUDA_EGRAPH_STRUCTURAL_EQUIVALENCE_KERNEL_PARAM_COUN
 pub const vyre_driver_cuda::CUDA_REGEX_HARDWARE_COMPARISON_SCHEMA_VERSION: u32
 pub const vyre_driver_cuda::CUDA_TARGET_ID: vyre_foundation::operation::target_facet::TargetId
 pub const vyre_driver_cuda::CUDA_WARP_WORD_AUTOMATA_LAYOUT_SCHEMA_VERSION: u32
+pub const vyre_driver_cuda::CudaExternalImportPolicy::COLOR: vyre_spec::resource_capability::image::ColorInterpretation
+pub const vyre_driver_cuda::CudaExternalImportPolicy::OWNER: &'static str
 pub const vyre_driver_cuda::MEGAKERNEL_SPEEDUP_EVIDENCE_CSV_HEADER: &str
 pub const vyre_driver_cuda::occupancy::OccupancyEstimate::ZERO: Self
 pub const vyre_driver_cuda::profiler::CUDA_CODEGEN_RANGE: &[u8]
@@ -328,11 +331,9 @@ pub fn vyre_driver_cuda::CudaEGraphResidentSignatureSnapshot::from_device_image(
 pub fn vyre_driver_cuda::CudaEGraphResidentSignatureSnapshot::row_count(&self) -> usize
 pub fn vyre_driver_cuda::CudaEGraphResidentSignatureSnapshot::try_from_column_snapshot(snapshot: &vyre_driver_cuda::CudaEGraphResidentColumnSnapshot) -> core::result::Result<Self, vyre_driver_cuda::CudaEGraphKernelPlanError>
 pub fn vyre_driver_cuda::CudaEGraphResidentSignatureSnapshot::try_from_device_image(image: &vyre_foundation::optimizer::eqsat_gpu::device_image::GpuEGraphDeviceImage) -> core::result::Result<Self, vyre_driver_cuda::CudaEGraphKernelPlanError>
-pub fn vyre_driver_cuda::CudaExternalResourceImporter::authenticate_import(&self, descriptor: &vyre_driver_cuda::CudaExternalMemoryDescriptor) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
-pub fn vyre_driver_cuda::CudaExternalResourceImporter::import_external_resource(&self, descriptor: vyre_driver_cuda::CudaExternalMemoryDescriptor) -> core::result::Result<vyre_spec::resource_capability::AdmittedResourceRecord, vyre_spec::resource_capability::ResourceAbiError>
-pub fn vyre_driver_cuda::CudaExternalResourceImporter::invalidate_on_device_loss(&self) -> vyre_driver::semantic_resource_abi::DeviceLossInvalidationReport
-pub fn vyre_driver_cuda::CudaExternalResourceImporter::new(device_id: u64) -> Self
-pub fn vyre_driver_cuda::CudaExternalResourceImporter::registry(&self) -> &vyre_driver::semantic_resource_abi::ExternalResourceRegistry<vyre_driver_cuda::CudaExternalMemoryHandle>
+pub fn vyre_driver_cuda::CudaExternalImportPolicy::refuse_unsupported(descriptor: &vyre_driver::external_import::ExternalImportDescriptor<Self::Handle>) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
+pub fn vyre_driver_cuda::CudaExternalMemoryHandle::memory_kind(&self) -> vyre_spec::resource_capability::sampler::ExternalMemoryKind
+pub fn vyre_driver_cuda::CudaExternalMemoryHandle::provenance_tag(&self) -> u64
 pub fn vyre_driver_cuda::CudaKernelLaunchDiagnostic::is_launchable(&self) -> bool
 pub fn vyre_driver_cuda::CudaKernelLaunchDiagnostic::stable_message(&self) -> alloc::string::String
 pub fn vyre_driver_cuda::CudaKernelLaunchDiagnostic::stable_message_into(&self, out: &mut alloc::string::String)
@@ -466,8 +467,7 @@ pub struct vyre_driver_cuda::CudaEGraphStructuralEquivalenceOutputPlan
 pub struct vyre_driver_cuda::CudaEGraphStructuralEquivalencePlan
 pub struct vyre_driver_cuda::CudaEGraphUnionCompactionPlan
 pub struct vyre_driver_cuda::CudaEGraphUnionCompactionWave
-pub struct vyre_driver_cuda::CudaExternalMemoryDescriptor
-pub struct vyre_driver_cuda::CudaExternalResourceImporter
+pub struct vyre_driver_cuda::CudaExternalImportPolicy
 pub struct vyre_driver_cuda::CudaKernelDeviceEnvelope
 pub struct vyre_driver_cuda::CudaKernelLaunchDiagnostic
 pub struct vyre_driver_cuda::CudaKernelLaunchDiagnosticRef<'a>
@@ -500,6 +500,9 @@ pub struct vyre_driver_cuda::occupancy::KernelResourceUsage
 pub struct vyre_driver_cuda::occupancy::OccupancyEstimate
 pub struct vyre_driver_cuda::profiler::CudaProfilerRange
 pub struct vyre_driver_cuda::profiler::CudaProfilerRangeSpec
+pub type vyre_driver_cuda::CudaExternalImportPolicy::Handle = vyre_driver_cuda::CudaExternalMemoryHandle
+pub type vyre_driver_cuda::CudaExternalMemoryDescriptor = vyre_driver::external_import::ExternalImportDescriptor<vyre_driver_cuda::CudaExternalMemoryHandle>
+pub type vyre_driver_cuda::CudaExternalResourceImporter = vyre_driver::external_import::ExternalResourceImporter<vyre_driver_cuda::CudaExternalImportPolicy>
 pub type vyre_driver_cuda::CudaMegakernelFrontierExecutionPlan = vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlan
 pub type vyre_driver_cuda::CudaMegakernelFrontierExecutionPlanError = vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError
 pub unsafe fn vyre_driver_cuda::CudaBackend::pin_host_buffer(&self, ptr: u64, byte_len: usize) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
@@ -696,13 +699,6 @@ pub vyre_driver_cuda::CudaEGraphUnionCompactionWave::first_item: u64
 pub vyre_driver_cuda::CudaEGraphUnionCompactionWave::item_count: u64
 pub vyre_driver_cuda::CudaEGraphUnionCompactionWave::pass: vyre_driver_cuda::CudaEGraphUnionCompactionPass
 pub vyre_driver_cuda::CudaEGraphUnionCompactionWave::threads_per_block: u32
-pub vyre_driver_cuda::CudaExternalMemoryDescriptor::dimensions: vyre_spec::resource_capability::image::ImageDimensions
-pub vyre_driver_cuda::CudaExternalMemoryDescriptor::format: vyre_spec::resource_capability::image::ImageFormat
-pub vyre_driver_cuda::CudaExternalMemoryDescriptor::handle: vyre_driver_cuda::CudaExternalMemoryHandle
-pub vyre_driver_cuda::CudaExternalMemoryDescriptor::permitted_usages: vyre_spec::resource_capability::ResourcePermittedUsages
-pub vyre_driver_cuda::CudaExternalMemoryDescriptor::resource_id: u64
-pub vyre_driver_cuda::CudaExternalMemoryDescriptor::row_pitch_bytes: u32
-pub vyre_driver_cuda::CudaExternalMemoryDescriptor::sync_protocol: vyre_spec::resource_capability::sampler::TimelineSyncProtocol
 pub vyre_driver_cuda::CudaExternalMemoryHandle::DmaBufFd(i32)
 pub vyre_driver_cuda::CudaExternalMemoryHandle::HostPointer
 pub vyre_driver_cuda::CudaExternalMemoryHandle::HostPointer::byte_size: u64

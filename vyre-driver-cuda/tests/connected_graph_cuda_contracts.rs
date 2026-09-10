@@ -32,6 +32,12 @@ use vyre_megakernel::{
 };
 use vyre_runtime::artifact_admission::ArtifactSession;
 use vyre_test_support::backend_execution_domain::assert_dispatch_leaves_the_host;
+// The pure-dataflow graph and its host oracle: every concrete driver is asked
+// the same question, so an answer that differs by which suite built the graph
+// proves nothing about the device.
+use vyre_test_support::graph_fixtures::{
+    pure_dataflow_graph, pure_dataflow_oracle, PURE_DATAFLOW_LANES,
+};
 
 fn contract(access: BufferAccess, lifetime: ValueLifetime, count: u64) -> ValueContract {
     ValueContract::dense_1d(DataType::U32, count, access, lifetime)
@@ -301,154 +307,17 @@ fn ulp_distance(left: f32, right: f32) -> u32 {
 // rounding freedom, so any nonzero tolerance would accept a wrong answer.
 // -------------------------------------------------------------------------
 
-/// Y = 3*X + 5, S = sum(Y), Z = Y + S.
-///
-/// Three nodes, two intra-graph value edges, and the second edge is consumed
-/// by a node in the same fusion group as its producer under a different buffer
-/// name in each arm.
-fn tone_mapping_graph(count: u64) -> ProgramGraph {
-    let mut graph = ProgramGraph::new();
-    let in_x = graph
-        .add_external_value(
-            "in_x",
-            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count),
-        )
-        .expect("external input value");
-
-    let scale = Program::wrapped(
-        vec![
-            BufferDecl::read("x", 0, DataType::U32).with_count(count as u32),
-            BufferDecl::written("y", 1, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(count as u32),
-        ],
-        [count as u32, 1, 1],
-        vec![Node::store(
-            "y",
-            Expr::gid_x(),
-            Expr::add(
-                Expr::mul(Expr::load("x", Expr::gid_x()), Expr::u32(3)),
-                Expr::u32(5),
-            ),
-        )],
-    );
-    let (_, val_y) = graph
-        .add_node(
-            "scale_node",
-            scale,
-            vec![GraphInput {
-                buffer: "x".into(),
-                value: in_x,
-                contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count),
-            }],
-            vec![GraphOutput {
-                buffer: "y".into(),
-                name: "y".into(),
-                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Invocation, count),
-                retained_successor_of: None,
-            }],
-        )
-        .expect("scale node");
-
-    let reduce = Program::wrapped(
-        vec![
-            BufferDecl::read("y_in", 0, DataType::U32).with_count(count as u32),
-            BufferDecl::written("sum_out", 1, BufferAccess::WriteOnly, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "sum_out",
-            Expr::u32(0),
-            Expr::add(
-                Expr::add(
-                    Expr::load("y_in", Expr::u32(0)),
-                    Expr::load("y_in", Expr::u32(1)),
-                ),
-                Expr::add(
-                    Expr::load("y_in", Expr::u32(2)),
-                    Expr::load("y_in", Expr::u32(3)),
-                ),
-            ),
-        )],
-    );
-    let (_, val_s) = graph
-        .add_node(
-            "sum_node",
-            reduce,
-            vec![GraphInput {
-                buffer: "y_in".into(),
-                value: val_y[0],
-                contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count),
-            }],
-            vec![GraphOutput {
-                buffer: "sum_out".into(),
-                name: "sum_out".into(),
-                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Invocation, 1),
-                retained_successor_of: None,
-            }],
-        )
-        .expect("sum node");
-
-    let normalize = Program::wrapped(
-        vec![
-            BufferDecl::read("y_norm_in", 0, DataType::U32).with_count(count as u32),
-            BufferDecl::read("s_in", 1, DataType::U32).with_count(1),
-            BufferDecl::output("z_out", 2, DataType::U32).with_count(count as u32),
-        ],
-        [count as u32, 1, 1],
-        vec![Node::store(
-            "z_out",
-            Expr::gid_x(),
-            Expr::add(
-                Expr::load("y_norm_in", Expr::gid_x()),
-                Expr::load("s_in", Expr::u32(0)),
-            ),
-        )],
-    );
-    graph
-        .add_node(
-            "norm_node",
-            normalize,
-            vec![
-                GraphInput {
-                    buffer: "y_norm_in".into(),
-                    value: val_y[0],
-                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count),
-                },
-                GraphInput {
-                    buffer: "s_in".into(),
-                    value: val_s[0],
-                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, 1),
-                },
-            ],
-            vec![GraphOutput {
-                buffer: "z_out".into(),
-                name: "z_out".into(),
-                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output, count),
-                retained_successor_of: None,
-            }],
-        )
-        .expect("norm node");
-    graph
-}
-
-/// Independent host implementation of the tone-mapping graph.
-fn tone_mapping_oracle(x: &[u32]) -> Vec<u32> {
-    let y: Vec<u32> = x.iter().map(|value| value * 3 + 5).collect();
-    let s: u32 = y.iter().sum();
-    y.iter().map(|value| value + s).collect()
-}
-
 #[test]
 fn cuda_executes_pure_dataflow_connected_graph() {
-    let count = 4_u64;
-    let run = DeviceGraphRun::admit(tone_mapping_graph(count));
+    let run = DeviceGraphRun::admit(pure_dataflow_graph());
     let in_x = run.resource("in_x");
     let z_out = run.resource("z_out");
 
     let x = [1_u32, 2, 3, 4];
+    let output_bytes = usize::try_from(PURE_DATAFLOW_LANES).expect("lane count fits a length") * 4;
     let mut bindings = run.session.bindings().expect("binding set");
     bindings.insert(in_x, BoundResource::Host(u32_bytes(&x)));
-    bindings.insert(z_out, BoundResource::Host(vec![0u8; 16]));
+    bindings.insert(z_out, BoundResource::Host(vec![0u8; output_bytes]));
 
     let (completion, evidence) = run.submit(bindings);
     run.assert_device_executed(&evidence, "image tone mapping", &[z_out], &[]);
@@ -459,7 +328,7 @@ fn cuda_executes_pure_dataflow_connected_graph() {
     );
     assert_eq!(
         actual,
-        tone_mapping_oracle(&x),
+        pure_dataflow_oracle(x).to_vec(),
         "image tone mapping: device answer must equal the host oracle exactly"
     );
 }

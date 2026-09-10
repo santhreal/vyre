@@ -9,23 +9,12 @@
 #![forbid(unsafe_code)]
 use vyre_driver::DispatchConfig;
 use vyre_driver_reference::CpuRefEvaluator;
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_test_support::pass_programs::single_input_copy_program;
 
 #[test]
 fn hostile_input_closure_rejects_missing_and_extra_inputs() {
     let evaluator = CpuRefEvaluator;
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("in", 0, DataType::U32),
-            BufferDecl::output("out", 1, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::load("in", Expr::u32(0)),
-        )],
-    );
+    let program = single_input_copy_program();
 
     // Missing input
     let err = evaluator

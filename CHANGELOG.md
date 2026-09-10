@@ -1557,6 +1557,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   the `vyre` facade unify into one workflow consuming validated compile
   requests, transactional immutable tensor handles, and five-level compiler
   inspection.
+- External resource import is one generic owner in vyre-driver, and every
+  concrete driver contributes only its handle mapping and its refusal rule.
 - Backend support is a 7-stage production-path certificate join, concrete
   driver crates have zero dependencies on semantic libraries or application
   policy, physical-IR variants have exhaustive emitter decisions, and Metal
@@ -2992,6 +2994,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   payload format, target profile, launch geometry, resource binding and
   instance core are constructed in one place, so a change to the fixture device
   or search budget reaches both modules.
+- The integer-operand and constant f32 Fma programs the validation rule and the
+  emit boundary are asserted against now come from one fixture owner.
 - `vyre_foundation::execution_plan::fusion::FusionRejectionReason` is the one
   definition of why a fusion is refused, and it is matchable exhaustively
   across crates. The megakernel carried a second copy of the same eleven
@@ -3160,6 +3164,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   declaration's own count and element size. The elementwise builder computed it
   by hand, which put the layout rule in two places and made the builder read as
   host data processing.
+- A registration and the semantic record derived from it now share one
+  definition of the canonical program, the composed schedule constraints, the
+  local effects and capabilities, and the byte order those are hashed into a
+  composite version with.
 - gpu_sequential_three_pass is the one spelling of the canonicalize,
   const-fold, dead-code sequence every backend's borrowed dispatch surface
   supports. gpu_optimize runs it as the first half of its non-resident route
@@ -3324,6 +3332,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   geometry, topology, persistence, layout, and placement. Foundation retains
   semantic analyses and neutral facts only, while drivers report capabilities
   and runtime submits the selected artifact without post-freeze retuning.
+- Every canonical schema whose first field states a schema version now shares
+  one named field entry instead of repeating the literal.
 - The two grouped INT4 linear lowerings, the lane-predicated one and the
   weight-tile-reuse one, shared five stages by copy: the workgroup lane
   decomposition, the packed-column index, the nibble select, the affine
@@ -3499,6 +3509,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   stopped enumerating `Node` itself: it is a policy over the one structural
   node rewrite, so a body-bearing variant added to the IR is descended into
   instead of switching propagation off for everything inside it.
+- The physical-IR variant space is enumerated by vyre-lower from its own
+  compiled source, so an emitter contract no longer resolves the enum through
+  the working directory.
 - The six planners in `vyre-driver` that reserve their scratch before they
   decide anything declare their storage-reservation failure adapter with one
   line. `reservation_policy::storage_reserve_failure_adapter!` owns the
@@ -3898,6 +3911,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   fence semantics, barrier participation, async transaction lifecycle,
   collective group, and failure cancellation behavior, removing implicit
   defaults and verifying race freedom through bounded reference interleavings.
+- The connected-graph fixture, the host input ABI contract, the target payload
+  format and profile, the single-input copy program and the target facet node
+  walk each have one owner in vyre-test-support.
 - Five helpers that sat at a crate root now sit under the concern they serve.
   The signed fixed-point pair fixed_mul_16_16_expr and
   fixed_sdiv_by_positive_expr is vyre_libs::math::fixed. fixed_u32_matmul and
@@ -4889,6 +4905,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - `vyre_foundation::optimizer::effect_lattice::AtomicOrdering` is deleted. The
   effect lattice joins orderings through `memory_model::AtomicOrdering`, which
   carries all five orderings and one `join`.
+- The dialect operation module is gone: its declaration macro discarded the
+  documentation and reference obligation arguments it accepted, and its two
+  traits had no implementors.
 - The `ProgramDispatcher` seam in `vyre-foundation` is gone;
   `vyre_megakernel::SemanticExecutor` is the one boundary a program crosses to
   reach a backend, and the host-oracle gate derives its execution and
@@ -6793,6 +6812,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   dumped descriptor stays decodable and a descriptor hash taken over that
   encoding keeps its value. `TARGET_MODULE_BUNDLE_SCHEMA_VERSION` moves to 3
   because the payload can now hold values version 2 could not represent.
+- The duplication scan folds a wrapped import back into one line, so
+  re-exporting the same names from two facades no longer counts as copied code.
 - Every command this workspace tells a reader to run names the wrapper. The
   dispatcher usage text, its rebuild and help messages, the scaffold and audit
   binaries, the structure gate header, the error catalog regeneration note, the
@@ -7597,6 +7618,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The GPU e-graph mirror is split into the refusals, the columnar snapshot, the
   device image, the row signature, the merge and the measured bridge, and its
   suite moved to an integration test.
+- The per-target emitter decision contract compares its representative variant
+  set against the declared enum instead of asserting that a decision is one of
+  the three decisions.
 - The registered encodex operation now records the exact ASCII, UTF-8,
   UTF-16LE, and ISO-8859-1 classifier identifiers produced by its canonical
   fixtures.
@@ -7775,6 +7799,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `Expr::Call` are unchanged. A contract reads the `Expr` enum's own source at
   run time and fails when a variant has no recorded answer, or when a second
   file in the crate defines an `expr_type` walker.
+- An external import with both an unsupported memory-kind combination and an
+  unaligned pitch is refused for the combination, on every driver.
 - The driver external resource registry now bounds its admitted record table,
   which grew without limit while every backend copy of it evicted at a ceiling.
 - External resource admission clears a poisoned lock and continues instead of
@@ -8353,6 +8379,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   of raising on the first, and carry a pinned baseline; check-tier-deps no
   longer shells into python3 to validate the registry, so one owner answers for
   the contract.
+- The combined memory ordering model derives its wire tags and its join from
+  the closed atomic ordering, so the five orderings both models name can no
+  longer encode to different tags.
 - Both history-reading gates resolve their base ref through one owner, so a
   base revision the checkout already holds is compared against directly instead
   of demanded from a remote.

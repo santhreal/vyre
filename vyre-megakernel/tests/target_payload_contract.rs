@@ -26,21 +26,9 @@ fn diagnostic_path(error: &CompileError) -> Option<&str> {
         .and_then(|location| location.path.as_deref())
 }
 
-fn format(version: u16) -> TargetPayloadFormat {
-    TargetPayloadFormat::new("test.target-binary", version).expect("fixture format must be valid")
-}
-
-fn profile(version: u16) -> TargetProfile {
-    TargetProfile::new(
-        "test.target-binary",
-        u64::from(version),
-        [64, 1, 1],
-        64,
-        1_024,
-        0,
-    )
-    .expect("fixture profile must be valid")
-}
+use vyre_test_support::artifact_fixtures::{
+    payload_format as format, target_profile as profile,
+};
 struct FixtureCompiler {
     format: TargetPayloadFormat,
     profile: TargetProfile,

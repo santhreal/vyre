@@ -20,7 +20,6 @@ use vyre_megakernel::{
     CompileRequest, DependencyEndpoint, DeviceFacts, Digest, EmittedTargetModule, EntryPersistence,
     ExecutionMode, ExternalFacts, GeometryRecord, ObjectiveMetric, ResourceLifetime,
     ResourceRecord, SearchBudget, TargetEntryPoint, TargetModuleBundle, TargetPayload,
-    TargetPayloadFormat, TargetProfile,
 };
 
 use vyre_test_support::graph_values::{graph_output, u32_symbolic};
@@ -90,21 +89,9 @@ fn facts(launch_batch: u32) -> ExternalFacts {
         .insert(vyre_foundation::ir::GraphValueId(1), Digest([0x5A; 32]));
     facts
 }
-fn target_format(version: u16) -> TargetPayloadFormat {
-    TargetPayloadFormat::new("test.target-binary", version).expect("fixture format must be valid")
-}
-
-fn target_profile(version: u16) -> TargetProfile {
-    TargetProfile::new(
-        "test.target-binary",
-        u64::from(version),
-        [64, 1, 1],
-        64,
-        1_024,
-        0,
-    )
-    .expect("fixture profile must be valid")
-}
+use vyre_test_support::artifact_fixtures::{
+    payload_format as target_format, target_profile,
+};
 
 fn artifact_for(device: DeviceFacts, launch_batch: u32) -> Artifact {
     let request = CompileRequest::new(

@@ -141,3 +141,91 @@ fn the_validated_input_count_equals_the_declarations_that_consume_input() {
         "Fix: the rejection must state the expected input count, got: {under_error}"
     );
 }
+
+/// The refusal wording every caller of a wrong-length input list reads.
+fn both_counts(expected: usize, received: usize) -> String {
+    format!(
+        "expected {expected} input buffer(s) from Program declarations but received {received}"
+    )
+}
+
+/// WHY: `BindingPlan` takes an input list through seven public entry points,
+/// four that build a plan and three that validate against one. All seven route
+/// to one length check, and a caller that reached the wrong one used to get a
+/// refusal that named neither count, so a concrete driver restated the
+/// assertion for whichever entry point it happened to call. The wording is one
+/// contract, so it is pinned once here against every entry point that can
+/// produce it.
+///
+/// What this does not judge: byte lengths per slot. A list of the right length
+/// whose entries are too small is a separate refusal.
+#[test]
+fn every_input_taking_entry_point_refuses_a_wrong_count_naming_both_counts() {
+    let buffers = vec![
+        BufferDecl::storage("read", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
+        BufferDecl::storage("scratch", 1, BufferAccess::ReadWrite, DataType::F32).with_count(4),
+        BufferDecl::workgroup("shared", 4, DataType::F32),
+        BufferDecl::output("written", 2, DataType::F32).with_count(4),
+    ];
+    let expected = buffers
+        .iter()
+        .filter(|buffer| buffer.consumes_host_input())
+        .count();
+    assert!(
+        expected > 0,
+        "Fix: the fixture must consume at least one host input, or the short case is unreachable."
+    );
+    let program = Program::wrapped(buffers, [4, 1, 1], Vec::new());
+    let plan = BindingPlan::build(&program)
+        .expect("Fix: the mixed-role fixture must build a binding plan.");
+
+    let exact = vec![vec![0_u8; 16]; expected];
+    let mut over = exact.clone();
+    over.push(vec![0_u8; 16]);
+    let under = exact[..expected - 1].to_vec();
+
+    for wrong in [&over, &under] {
+        let received = wrong.len();
+        let borrowed: Vec<&[u8]> = wrong.iter().map(Vec::as_slice).collect();
+        let lengths: Vec<usize> = wrong.iter().map(Vec::len).collect();
+        let refusals = [
+            (
+                "BindingPlan::from_program",
+                BindingPlan::from_program(&program, wrong).err(),
+            ),
+            (
+                "BindingPlan::from_borrowed_inputs",
+                BindingPlan::from_borrowed_inputs(&program, &borrowed).err(),
+            ),
+            (
+                "BindingPlan::from_input_lengths",
+                BindingPlan::from_input_lengths(&program, &lengths).err(),
+            ),
+            (
+                "BindingPlan::validate_inputs",
+                plan.validate_inputs(wrong).err(),
+            ),
+            (
+                "BindingPlan::validate_borrowed_inputs",
+                plan.validate_borrowed_inputs(&borrowed).err(),
+            ),
+            (
+                "BindingPlan::validate_input_byte_lengths",
+                plan.validate_input_byte_lengths(&lengths).err(),
+            ),
+        ];
+        for (entry_point, refusal) in refusals {
+            let refusal = refusal.unwrap_or_else(|| {
+                panic!("Fix: {entry_point} accepted {received} inputs where {expected} are declared.")
+            });
+            let text = refusal.to_string();
+            assert!(
+                text.contains(&both_counts(expected, received)),
+                "Fix: {entry_point} must state expected {expected} and received {received}, got: {text}"
+            );
+        }
+    }
+
+    plan.validate_inputs(&exact)
+        .expect("Fix: an input list one entry per consuming declaration must validate.");
+}

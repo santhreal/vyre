@@ -35,7 +35,8 @@ use vyre_foundation::operation::TargetId;
 /// Validated target identity owned by the WGPU driver.
 pub const WGPU_TARGET_ID: TargetId = TargetId::expect_valid(WGPU_BACKEND_ID);
 pub use external_resource::{
-    WgpuExternalMemoryDescriptor, WgpuExternalMemoryHandle, WgpuExternalResourceImporter,
+    WgpuExternalImportPolicy, WgpuExternalMemoryDescriptor, WgpuExternalMemoryHandle,
+    WgpuExternalResourceImporter,
 };
 pub use stats::WgpuBackendStats;
 use std::hash::BuildHasherDefault;

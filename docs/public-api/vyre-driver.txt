@@ -196,11 +196,13 @@ impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::Target
 impl<A: vyre_driver::EnforceGate, B: vyre_driver::EnforceGate> vyre_driver::Chain<A, B>
 impl<A: vyre_driver::EnforceGate, B: vyre_driver::EnforceGate> vyre_driver::EnforceGate for vyre_driver::Chain<A, B>
 impl<H: core::clone::Clone> vyre_driver::ExternalResourceRegistry<H>
+impl<H: vyre_driver::external_import::ExternalImportHandle> vyre_driver::external_import::ExternalImportDescriptor<H>
 impl<H> vyre_driver::ExternalResourceRegistry<H>
 impl<H> vyre_foundation::failure_domain::StateOwnerRecovery for vyre_driver::ExternalResourceRegistry<H>
 impl<K, S> core::default::Default for vyre_driver::reservation_policy::ReusableIndexScratch<K, S> where S: core::default::Default
 impl<K, S> core::fmt::Debug for vyre_driver::reservation_policy::ReusableIndexScratch<K, S>
 impl<K, S> vyre_driver::reservation_policy::ReusableIndexScratch<K, S> where K: core::cmp::Eq + core::hash::Hash, S: core::hash::BuildHasher + core::default::Default
+impl<P: vyre_driver::external_import::ExternalImportPolicy> vyre_driver::external_import::ExternalResourceImporter<P>
 impl<T: vyre_driver::VyreBackend + ?core::marker::Sized> vyre_driver::Backend for T
 impl<T: vyre_driver::VyreBackend + ?core::marker::Sized> vyre_driver::TypedDispatchExt for T
 pub const fn vyre_driver::BindingSet::artifact(&self) -> vyre_megakernel::identity::Digest
@@ -292,6 +294,8 @@ pub const vyre_driver::REGEX_ACCELERATOR_EVIDENCE_SCHEMA_VERSION: u32
 pub const vyre_driver::SUPPORT_CERTIFICATE_SCHEMA: u32
 pub const vyre_driver::bindless_policy::BINDLESS_RESOURCE_COUNT_THRESHOLD: u32
 pub const vyre_driver::cache_eviction_heat::DECAY_HALF_LIFE_S: f64
+pub const vyre_driver::external_import::ExternalImportPolicy::COLOR: vyre_spec::resource_capability::image::ColorInterpretation
+pub const vyre_driver::external_import::ExternalImportPolicy::OWNER: &'static str
 pub const vyre_driver::extraction_cost::COLD_PATH_COST_SCALE: f32
 pub const vyre_driver::extraction_cost::COLD_PATH_COST_SCALE_BPS: u32
 pub const vyre_driver::extraction_cost::HOT_PATH_COST_SCALE: f32
@@ -860,6 +864,18 @@ pub fn vyre_driver::encode_counter_tail(report: vyre_driver::SpeculationReport) 
 pub fn vyre_driver::enforce_actual_output_budget(config: &vyre_driver::DispatchConfig, outputs: &[alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::enforce_output_budget(config: &vyre_driver::DispatchConfig, actual: usize) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::error_catalog::render_catalog_toml() -> alloc::string::String
+pub fn vyre_driver::external_import::ExternalImportDescriptor<H>::unsupported_combination(&self) -> vyre_spec::resource_capability::ResourceAbiError
+pub fn vyre_driver::external_import::ExternalImportHandle::memory_kind(&self) -> vyre_spec::resource_capability::sampler::ExternalMemoryKind
+pub fn vyre_driver::external_import::ExternalImportHandle::provenance_tag(&self) -> u64
+pub fn vyre_driver::external_import::ExternalImportPolicy::admitted_memory_kind(handle: &Self::Handle) -> vyre_spec::resource_capability::sampler::ExternalMemoryKind
+pub fn vyre_driver::external_import::ExternalImportPolicy::refuse_unsupported(descriptor: &vyre_driver::external_import::ExternalImportDescriptor<Self::Handle>) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
+pub fn vyre_driver::external_import::ExternalResourceImporter<P>::authenticate_import(&self, descriptor: &vyre_driver::external_import::ExternalImportDescriptor<<P as vyre_driver::external_import::ExternalImportPolicy>::Handle>) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
+pub fn vyre_driver::external_import::ExternalResourceImporter<P>::device_id(&self) -> u64
+pub fn vyre_driver::external_import::ExternalResourceImporter<P>::import_external_resource(&self, descriptor: vyre_driver::external_import::ExternalImportDescriptor<<P as vyre_driver::external_import::ExternalImportPolicy>::Handle>) -> core::result::Result<vyre_spec::resource_capability::AdmittedResourceRecord, vyre_spec::resource_capability::ResourceAbiError>
+pub fn vyre_driver::external_import::ExternalResourceImporter<P>::invalidate_on_device_loss(&self) -> vyre_driver::DeviceLossInvalidationReport
+pub fn vyre_driver::external_import::ExternalResourceImporter<P>::new(device_id: u64) -> Self
+pub fn vyre_driver::external_import::ExternalResourceImporter<P>::registry(&self) -> &vyre_driver::ExternalResourceRegistry<<P as vyre_driver::external_import::ExternalImportPolicy>::Handle>
+pub fn vyre_driver::external_import_contracts::assert_external_import_contract<P>(case: vyre_driver::external_import_contracts::ExternalImportContractCase<<P as vyre_driver::external_import::ExternalImportPolicy>::Handle>) where P: vyre_driver::external_import::ExternalImportPolicy, <P as vyre_driver::external_import::ExternalImportPolicy>::Handle: core::clone::Clone + core::fmt::Debug
 pub fn vyre_driver::extract_best_for_device<L, B, H>(egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>, root: vyre_foundation::optimizer::eqsat::EClassId, device: vyre_driver::ExtractionDevice<'_>, base_cost: B, hint_lookup: H) -> core::option::Option<vyre_driver::DeviceExtraction<L>> where L: vyre_foundation::optimizer::eqsat::ENodeLang, B: core::ops::function::Fn(&L) -> u64, H: core::ops::function::Fn(&L) -> vyre_driver::extraction_cost::NodeHints
 pub fn vyre_driver::extract_best_for_devices<'a, L, B, H>(egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>, root: vyre_foundation::optimizer::eqsat::EClassId, devices: impl core::iter::traits::collect::IntoIterator<Item = vyre_driver::ExtractionDevice<'a>>, base_cost: B, hint_lookup: H) -> smallvec::SmallVec<[vyre_driver::DeviceExtraction<L>; 4]> where L: vyre_foundation::optimizer::eqsat::ENodeLang, B: core::ops::function::Fn(&L) -> u64, H: core::ops::function::Fn(&L) -> vyre_driver::extraction_cost::NodeHints
 pub fn vyre_driver::extraction_cost::device_aware_cost<L, B, H>(profile: &vyre_driver::DeviceProfile, hot: bool, base_cost_fn: B, hint_lookup: H) -> impl core::ops::function::Fn(&L) -> u64 where L: vyre_foundation::optimizer::eqsat::ENodeLang, B: core::ops::function::Fn(&L) -> u64, H: core::ops::function::Fn(&L) -> vyre_driver::extraction_cost::NodeHints
@@ -1277,6 +1293,8 @@ pub mod vyre_driver::device_work_queue
 pub mod vyre_driver::dispatch_policy
 pub mod vyre_driver::durable_fanout
 pub mod vyre_driver::error_catalog
+pub mod vyre_driver::external_import
+pub mod vyre_driver::external_import_contracts
 pub mod vyre_driver::extraction_cost
 pub mod vyre_driver::fusion
 pub mod vyre_driver::graph_capture
@@ -1421,6 +1439,9 @@ pub struct vyre_driver::device_work_queue::DeviceWorkQueuePlan
 pub struct vyre_driver::device_work_queue::DeviceWorkQueueProfile
 pub struct vyre_driver::dispatch_policy::DispatchPolicyInputs
 pub struct vyre_driver::dispatch_policy::DispatchPolicyVerdict
+pub struct vyre_driver::external_import::ExternalImportDescriptor<H>
+pub struct vyre_driver::external_import::ExternalResourceImporter<P: vyre_driver::external_import::ExternalImportPolicy>
+pub struct vyre_driver::external_import_contracts::ExternalImportContractCase<H>
 pub struct vyre_driver::extraction_cost::NodeHints
 pub struct vyre_driver::fusion::DispatchShape
 pub struct vyre_driver::fusion::FusionCaps
@@ -1507,6 +1528,8 @@ pub trait vyre_driver::Submission: core::marker::Send + core::marker::Sync
 pub trait vyre_driver::TypedDispatchExt: vyre_driver::VyreBackend
 pub trait vyre_driver::VyreBackend: sealed::Sealed + core::marker::Send + core::marker::Sync
 pub trait vyre_driver::accounting::ArithmeticOverflow: core::marker::Sized
+pub trait vyre_driver::external_import::ExternalImportHandle
+pub trait vyre_driver::external_import::ExternalImportPolicy
 pub trait vyre_driver::lowering::LowerableOp: core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_driver::lowering::TargetGenCtx
 pub trait vyre_driver::materialize::ExecutableModule
@@ -1516,6 +1539,7 @@ pub trait vyre_driver::megakernel_execution::MegakernelExecutionPlanner
 pub trait vyre_driver::observability::BackendObservabilityProvider
 pub trait vyre_driver::strategy::LoweringStrategy: core::marker::Send + core::marker::Sync + core::fmt::Debug
 pub type vyre_driver::OutputBuffers = alloc::vec::Vec<alloc::vec::Vec<u8>>
+pub type vyre_driver::external_import::ExternalImportPolicy::Handle: vyre_driver::external_import::ExternalImportHandle
 pub type vyre_driver::input_identity::ExactInputKey = [u8; 32]
 pub type vyre_driver::materialize::MaterializedInstance::Module: vyre_driver::materialize::ExecutableModule
 pub type vyre_driver::parity_harness::ParityDispatch<'a> = &'a dyn core::ops::function::Fn(&vyre_foundation::ir_inner::model::program::definition::Program, &[&[u8]]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
@@ -2275,6 +2299,20 @@ pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::command_reuse: vyre_dri
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::copy_overlap: core::option::Option<vyre_driver::async_copy_overlap::CopyOverlapDecision>
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::execution: vyre_megakernel::schema::plan::ExecutionMode
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::trace_jit: vyre_driver::trace_jit_policy::TraceJitDecision
+pub vyre_driver::external_import::ExternalImportDescriptor::dimensions: vyre_spec::resource_capability::image::ImageDimensions
+pub vyre_driver::external_import::ExternalImportDescriptor::format: vyre_spec::resource_capability::image::ImageFormat
+pub vyre_driver::external_import::ExternalImportDescriptor::handle: H
+pub vyre_driver::external_import::ExternalImportDescriptor::permitted_usages: vyre_spec::resource_capability::ResourcePermittedUsages
+pub vyre_driver::external_import::ExternalImportDescriptor::resource_id: u64
+pub vyre_driver::external_import::ExternalImportDescriptor::row_pitch_bytes: u32
+pub vyre_driver::external_import::ExternalImportDescriptor::sync_protocol: vyre_spec::resource_capability::sampler::TimelineSyncProtocol
+pub vyre_driver::external_import_contracts::ExternalImportContractCase::admitted_handle: H
+pub vyre_driver::external_import_contracts::ExternalImportContractCase::device_loss_handle: H
+pub vyre_driver::external_import_contracts::ExternalImportContractCase::refused_format: vyre_spec::resource_capability::image::ImageFormat
+pub vyre_driver::external_import_contracts::ExternalImportContractCase::refused_handle: H
+pub vyre_driver::external_import_contracts::ExternalImportContractCase::refused_memory_kind: vyre_spec::resource_capability::sampler::ExternalMemoryKind
+pub vyre_driver::external_import_contracts::ExternalImportContractCase::refused_usages: vyre_spec::resource_capability::ResourcePermittedUsages
+pub vyre_driver::external_import_contracts::ExternalImportContractCase::sync_protocol: vyre_spec::resource_capability::sampler::TimelineSyncProtocol
 pub vyre_driver::extraction_cost::NodeHints::compile_time_constant: bool
 pub vyre_driver::extraction_cost::NodeHints::fp16_eligible: bool
 pub vyre_driver::fusion::DispatchShape::id: &'static str

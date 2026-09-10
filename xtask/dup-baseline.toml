@@ -83,8 +83,8 @@ total_lines = 41005
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 1230
-total_lines = 63091
+duplicate_lines = 1171
+total_lines = 63232
 
 [[crate]]
 name = "vyre-driver-metal"
@@ -103,8 +103,8 @@ total_lines = 2249
 
 [[crate]]
 name = "vyre-driver-wgpu"
-duplicate_lines = 224
-total_lines = 34503
+duplicate_lines = 212
+total_lines = 34925
 
 [[crate]]
 name = "vyre-emit-metal"

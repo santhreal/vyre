@@ -18,6 +18,7 @@ use vyre_reference::{
     ReferenceRequest, WorkloadEnvelope, REFERENCE_ORACLE_VERSION,
     REFERENCE_REQUEST_SCHEMA_VERSION,
 };
+use vyre_test_support::pass_programs::{indexed_input_copy_program, single_input_copy_program};
 
 #[test]
 fn oracle_path_invokes_no_production_transforms() {
@@ -164,18 +165,7 @@ fn strictness_cases() -> Vec<(ReferenceErrorClass, Program, Vec<Value>)> {
     vec![
         (
             ReferenceErrorClass::MissingValue,
-            Program::wrapped(
-                vec![
-                    BufferDecl::read("in", 0, DataType::U32).with_count(1),
-                    BufferDecl::output("out", 1, DataType::U32).with_count(1),
-                ],
-                [1, 1, 1],
-                vec![Node::store(
-                    "out",
-                    Expr::u32(0),
-                    Expr::load("in", Expr::u32(0)),
-                )],
-            ),
+            single_input_copy_program(),
             Vec::new(),
         ),
         (
@@ -202,18 +192,7 @@ fn strictness_cases() -> Vec<(ReferenceErrorClass, Program, Vec<Value>)> {
         ),
         (
             ReferenceErrorClass::OutOfBoundsAccess,
-            Program::wrapped(
-                vec![
-                    BufferDecl::read("in", 0, DataType::U32).with_count(1),
-                    BufferDecl::output("out", 1, DataType::U32).with_count(1),
-                ],
-                [1, 1, 1],
-                vec![Node::store(
-                    "out",
-                    Expr::u32(0),
-                    Expr::load("in", Expr::u32(64)),
-                )],
-            ),
+            indexed_input_copy_program(64),
             vec![Value::from(7u32.to_le_bytes().to_vec())],
         ),
         (
@@ -291,18 +270,7 @@ fn budget_exhaustion_terminates_and_reports_bound() {
 
 #[test]
 fn permissive_mode_cannot_issue_expected_output_or_certificate() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("in", 0, DataType::U32).with_count(1),
-            BufferDecl::output("out", 1, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::load("in", Expr::u32(0)),
-        )],
-    );
+    let program = single_input_copy_program();
 
     let inputs = vec![vyre_reference::value::Value::from(
         DISTINCTIVE_OUTPUT.to_le_bytes().to_vec(),
