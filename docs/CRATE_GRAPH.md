@@ -7,30 +7,31 @@ together, then regenerate this file.
 ## Layer ranks
 
 A production dependency is legal only when the consumer's layer outranks the
-dependency's layer. Two layers share a rank when neither depends on the other.
-A layer that admits a closed set of consumer layers names them; one that admits
-every layer the rank rule allows names none.
+dependency's layer and the dependency's layer admits the consumer's. Two layers
+share a rank when neither depends on the other. Every layer names the closed set
+of consumer layers admitted to it, its own name included when its members reach
+each other; a layer that admits none states `None`.
 
 | Rank | Layer | Admitted consumer layers | Purpose |
 | --- | --- | --- | --- |
-| `0` | `foundation` | every outranking layer | Typed IR, logical domains, specification records, diagnostics, and the derive macros that generate them. |
+| `0` | `foundation` | `backend-neutral`, `compiler-boundary`, `concrete-backend`, `conformance`, `emitter`, `facade`, `foundation`, `libraries`, `lowering`, `packaging`, `pass-engine`, `primitives`, `registry-link`, `runtime`, `semantics`, `test-tooling`, `tooling` | Typed IR, logical domains, specification records, diagnostics, and the derive macros that generate them. |
 | `0` | `standalone-tooling` | `test-tooling`, `tooling` | Source-structure gates that read the tree and depend on no compiler crate. |
-| `1` | `lowering` | every outranking layer | One verified selected-module representation between semantic IR and target emission. |
-| `1` | `primitives` | every outranking layer | Intrinsic operations, each with its own emitter arm in every backend and its own reference arm. |
-| `2` | `compiler-boundary` | every outranking layer | Schedule search, artifact identity, and authenticated target-payload construction. |
-| `2` | `emitter` | every outranking layer | Target text and binary emission for one dialect each. |
-| `2` | `semantics` | every outranking layer | The independent semantic oracle. Never a production execution route. |
+| `1` | `lowering` | `compiler-boundary`, `concrete-backend`, `emitter`, `registry-link`, `tooling` | One verified selected-module representation between semantic IR and target emission. |
+| `1` | `primitives` | `conformance`, `libraries`, `pass-engine`, `registry-link`, `semantics`, `test-tooling`, `tooling` | Intrinsic operations, each with its own emitter arm in every backend and its own reference arm. |
+| `2` | `compiler-boundary` | `backend-neutral`, `concrete-backend`, `conformance`, `facade`, `libraries`, `packaging`, `pass-engine`, `registry-link`, `runtime`, `test-tooling`, `tooling` | Schedule search, artifact identity, and authenticated target-payload construction. |
+| `2` | `emitter` | `concrete-backend`, `emitter`, `tooling` | Target text and binary emission for one dialect each. |
+| `2` | `semantics` | `concrete-backend`, `conformance`, `test-tooling`, `tooling` | The independent semantic oracle. Never a production execution route. |
 | `3` | `libraries` | `backend-neutral`, `conformance`, `libraries`, `pass-engine`, `registry-link`, `runtime`, `tooling` | Domain-neutral compositions built from existing IR. |
-| `4` | `backend-neutral` | every outranking layer | The dispatch, binding, and capability contract every concrete backend implements. |
-| `4` | `pass-engine` | every outranking layer | Pass scheduling and rewrite application over semantic IR. |
-| `5` | `concrete-backend` | every outranking layer | One device family each: capability probing, module loading, and dispatch. |
-| `5` | `packaging` | every outranking layer | Ahead-of-time artifact packaging and load. |
-| `5` | `runtime` | every outranking layer | Submission, admission, tenancy, and lifecycle policy over a compiled artifact. |
+| `4` | `backend-neutral` | `concrete-backend`, `conformance`, `facade`, `packaging`, `registry-link`, `runtime`, `test-tooling`, `tooling` | The dispatch, binding, and capability contract every concrete backend implements. |
+| `4` | `pass-engine` | `tooling` | Pass scheduling and rewrite application over semantic IR. |
+| `5` | `concrete-backend` | `conformance`, `facade`, `registry-link`, `tooling` | One device family each: capability probing, module loading, and dispatch. |
+| `5` | `packaging` | None | Ahead-of-time artifact packaging and load. |
+| `5` | `runtime` | `conformance`, `facade`, `tooling` | Submission, admission, tenancy, and lifecycle policy over a compiled artifact. |
 | `5` | `test-tooling` | None | Shared verification fixtures and harness support, private to the workspace. |
-| `6` | `facade` | every outranking layer | The single curated consumer surface over the layers below it. |
-| `6` | `registry-link` | every outranking layer | Link anchors that pull registration submissions into a final binary. |
-| `7` | `conformance` | every outranking layer | Parity harnesses that join a production result to an independently produced oracle result. |
-| `7` | `tooling` | every outranking layer | Gates, benchmarks, and generators that read the whole workspace. |
+| `6` | `facade` | `conformance`, `tooling` | The single curated consumer surface over the layers below it. |
+| `6` | `registry-link` | `conformance`, `tooling` | Link anchors that pull registration submissions into a final binary. |
+| `7` | `conformance` | `conformance` | Parity harnesses that join a production result to an independently produced oracle result. |
+| `7` | `tooling` | `tooling` | Gates, benchmarks, and generators that read the whole workspace. |
 
 ## Workspace dependency graph
 
