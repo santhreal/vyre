@@ -566,6 +566,38 @@ impl InstanceCore {
         self.value_for_module_slot(module_values, module_index, group, slot, &binding.name)
     }
 
+    /// Identity a module implements for `binding` once its dispatch returns.
+    ///
+    /// The binding plan is program-wide and names every buffer a dispatch reads
+    /// back, while a module writes the subset its own kernel stores to. A
+    /// module that only reads such a buffer returns the bytes it read, so the
+    /// identity to record them under is the one it read them from. The
+    /// alternative is a refusal, and the bytes still have to arrive: a resident
+    /// submission fills its whole completion from these absorbs, so a declared
+    /// value no module wrote would be reported as left behind.
+    ///
+    /// The resident work queue is that case. Its kernel reads the IO queue and
+    /// never writes it, the declaration is read-write host-staged storage and so
+    /// is read back, and the module projects the slot read-only because the
+    /// program is the authority on which directions the kernel exercises.
+    ///
+    /// # Errors
+    ///
+    /// Returns the output projection's own rejection when the module names the
+    /// binding in neither direction.
+    pub fn absorbed_value_for_module_binding(
+        &self,
+        module_index: usize,
+        binding: &crate::binding::Binding,
+    ) -> Result<ArtifactValueId, BackendError> {
+        match self.value_for_module_binding(&self.module_outputs, module_index, binding) {
+            Ok(value) => Ok(value),
+            Err(refusal) => self
+                .value_for_module_binding(&self.module_inputs, module_index, binding)
+                .map_err(|_| refusal),
+        }
+    }
+
     /// Resolve one exact target descriptor slot through an input or output projection.
     ///
     /// # Errors
@@ -732,8 +764,7 @@ impl InstanceCore {
                 continue;
             };
             let buffer = &program.buffers()[binding.buffer_index];
-            let value =
-                self.value_for_module_binding(&self.module_outputs, module_index, binding)?;
+            let value = self.absorbed_value_for_module_binding(module_index, binding)?;
             let bytes = produced
                 .get_mut(output_index)
                 .and_then(Option::take)

@@ -1019,3 +1019,83 @@ fn hostile_binding_bytes_cannot_resize_admitted_launch_geometry() {
     assert_eq!(core.artifact, artifact_identity);
     assert_eq!(core.payload, payload_identity);
 }
+
+/// WHY: a read-write host-staged declaration is uploaded before the dispatch
+/// and read back after it, so the binding plan names it an output slot, while
+/// the module projects the directions its kernel exercises and a kernel that
+/// only loads from the buffer projects it read-only. Demanding a write identity
+/// for it refused the whole submission, which is how the resident work queue
+/// stopped dispatching: its kernel reads the IO queue and never writes it.
+/// A resident completion is built from these absorbs alone, so the bytes have
+/// to arrive under the identity the module read them from.
+#[test]
+fn a_read_back_buffer_no_module_writes_absorbs_under_its_read_identity() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read_write("queue", 0, DataType::U32).with_count(4),
+            BufferDecl::output("report", 1, DataType::U32).with_count(1),
+        ],
+        [4, 1, 1],
+        vec![Node::store(
+            "report",
+            Expr::u32(0),
+            Expr::load("queue", Expr::u32(0)),
+        )],
+    );
+    let graph = ProgramGraph::from_program("work", program.clone())
+        .expect("the read-back fixture must lift to a graph");
+    let artifact = compile_graph(graph);
+    let queue = artifact
+        .resources()
+        .iter()
+        .find(|resource| resource.name == "queue")
+        .expect("the artifact must contain the queue resource")
+        .value;
+    let payload =
+        compile_selected_modules(&artifact, test_format(), test_profile(), |selected, _| {
+            Ok(EmittedTargetModule {
+                entry_point: "main".to_string(),
+                resource_bindings: selected.canonical_bindings.clone(),
+                bytes: vec![1, 2, 3],
+            })
+        })
+        .expect("the read-back fixture must compile a target payload");
+    let core = test_instance_core(&artifact, &payload).expect("the payload must materialize");
+
+    assert!(
+        core.module_inputs[0].contains(&queue),
+        "Fix: a buffer the kernel loads from must appear in the input projection"
+    );
+    assert!(
+        !core.module_outputs[0].contains(&queue),
+        "Fix: a buffer the kernel never stores to must stay out of the output projection"
+    );
+
+    let plan = BindingPlan::build(&program).expect("the fixture program must plan");
+    let queue_slot = plan
+        .bindings
+        .iter()
+        .find(|binding| binding.name.as_ref() == "queue")
+        .and_then(|binding| binding.output_index)
+        .expect("a read-write host-staged declaration is read back");
+    let mut produced = vec![Vec::new(); plan.output_indices.len()];
+    produced[queue_slot] = vec![9, 0, 0, 0];
+
+    let mut state = BTreeMap::new();
+    core.absorb_outputs_for_module(
+        0,
+        &plan,
+        &program,
+        produced,
+        &mut state,
+        |index, name| BackendError::InvalidProgram {
+            fix: format!("Fix: fixture omitted output {index} for `{name}`"),
+        },
+    )
+    .expect("a read-back buffer no module writes must absorb under its read identity");
+    assert_eq!(
+        state.get(&queue).map(Vec::as_slice),
+        Some(&[9, 0, 0, 0][..]),
+        "Fix: the returned bytes must land on the identity the module read"
+    );
+}
