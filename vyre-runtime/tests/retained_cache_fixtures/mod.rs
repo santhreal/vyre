@@ -5,8 +5,6 @@
 //! to the identity is added in every copy, and a copy that drifts silently stops
 //! testing the same cache.
 
-#![allow(dead_code)]
-
 use vyre_foundation::ir::DataType;
 use vyre_runtime::retained_page_cache::{RetainedPageCacheKey, RetainedPageLayout};
 

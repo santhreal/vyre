@@ -1,4 +1,5 @@
 use thiserror::Error;
+use vyre_foundation::failure_domain::TypedRecoveryError;
 
 use super::admission::{ResourceSetKey, StateId};
 
@@ -151,9 +152,12 @@ pub enum ResourceResidencyError {
         "residency accounting underflowed. Fix: stop using the manager and rebuild residency state"
     )]
     AccountingUnderflow,
-    /// Another thread panicked while holding residency state.
-    #[error(
-        "residency state lock is poisoned. Fix: rebuild the manager before admitting more work"
-    )]
-    LockPoisoned,
+    /// Another thread panicked while holding residency state, or the residency
+    /// is otherwise not accepting operations.
+    ///
+    /// The device context is fatal here: the table records which handles the
+    /// device still holds, a half-written table proves nothing about them, and
+    /// the handles are released by this owner's teardown rather than reused.
+    #[error("{0}")]
+    Recovery(#[from] TypedRecoveryError),
 }

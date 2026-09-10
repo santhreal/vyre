@@ -4,6 +4,7 @@
 use std::collections::BTreeMap;
 
 use thiserror::Error;
+use vyre_foundation::failure_domain::TypedRecoveryError;
 use vyre_foundation::ir::DataType;
 
 /// Layout and geometry for retained cache pages.
@@ -222,9 +223,11 @@ pub enum RetainedPageCacheError {
     /// Reassignment of unscrubbed page.
     #[error("page {0} has not been scrubbed before reassignment")]
     UnscrubbedPageReassignment(u32),
-    /// Mutex lock poisoning.
-    #[error("retained page cache mutex poisoned")]
-    LockPoisoned,
+    /// The pool is not accepting operations. A panic left it terminal, or a
+    /// generation rebuild is in progress, and the documented recovery is
+    /// `RetainedPageCache::invalidate_generation`.
+    #[error("{0}")]
+    Recovery(#[from] TypedRecoveryError),
 }
 
 /// Record of one physical page in the runtime pool.

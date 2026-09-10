@@ -4,7 +4,6 @@
 //! and fixture backend registration shared across session state machine,
 //! typed resource ingestion, and workspace contracts.
 
-#![allow(dead_code)]
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
