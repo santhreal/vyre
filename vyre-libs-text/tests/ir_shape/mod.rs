@@ -12,6 +12,7 @@
 //! facts it pins.
 
 use std::fmt;
+use vyre_foundation::visit::{any_descendant, for_each_node};
 
 /// The structural facts a suite pins about a built program.
 pub(crate) struct ProgramShape {
@@ -71,34 +72,16 @@ pub(crate) fn shape_of(program: &vyre_foundation::ir::Program) -> ProgramShape {
 
 fn node_contains_loop(node: &vyre_foundation::ir::Node) -> bool {
     use vyre_foundation::ir::Node;
-    match node {
-        Node::Loop { .. } => true,
-        Node::Block(children) => children.iter().any(node_contains_loop),
-        Node::If {
-            then, otherwise, ..
-        } => then.iter().any(node_contains_loop) || otherwise.iter().any(node_contains_loop),
-        Node::Region { body, .. } => body.iter().any(node_contains_loop),
-        _ => false,
-    }
+    any_descendant(node, &mut |current| {
+        matches!(current, Node::Loop { .. })
+    })
 }
 
 fn node_contains_invocation_zero_gate(node: &vyre_foundation::ir::Node) -> bool {
     use vyre_foundation::ir::Node;
-    match node {
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            expr_is_invocation_zero(cond)
-                || then.iter().any(node_contains_invocation_zero_gate)
-                || otherwise.iter().any(node_contains_invocation_zero_gate)
-        }
-        Node::Block(children) => children.iter().any(node_contains_invocation_zero_gate),
-        Node::Loop { body, .. } => body.iter().any(node_contains_invocation_zero_gate),
-        Node::Region { body, .. } => body.iter().any(node_contains_invocation_zero_gate),
-        _ => false,
-    }
+    any_descendant(node, &mut |current| {
+        matches!(current, Node::If { cond, .. } if expr_is_invocation_zero(cond))
+    })
 }
 
 fn expr_is_invocation_zero(expr: &vyre_foundation::ir::Expr) -> bool {
@@ -147,29 +130,17 @@ fn expr_is_invocation_zero(expr: &vyre_foundation::ir::Expr) -> bool {
 
 fn node_contains_invocation_id(node: &vyre_foundation::ir::Node) -> bool {
     use vyre_foundation::ir::Node;
-    match node {
+    any_descendant(node, &mut |current| match current {
         Node::Let { value, .. } | Node::Assign { value, .. } => expr_contains_invocation_id(value),
         Node::Store { index, value, .. } => {
             expr_contains_invocation_id(index) || expr_contains_invocation_id(value)
         }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            expr_contains_invocation_id(cond)
-                || then.iter().any(node_contains_invocation_id)
-                || otherwise.iter().any(node_contains_invocation_id)
+        Node::If { cond, .. } => expr_contains_invocation_id(cond),
+        Node::Loop { from, to, .. } => {
+            expr_contains_invocation_id(from) || expr_contains_invocation_id(to)
         }
-        Node::Loop { from, to, body, .. } => {
-            expr_contains_invocation_id(from)
-                || expr_contains_invocation_id(to)
-                || body.iter().any(node_contains_invocation_id)
-        }
-        Node::Block(children) => children.iter().any(node_contains_invocation_id),
-        Node::Region { body, .. } => body.iter().any(node_contains_invocation_id),
         _ => false,
-    }
+    })
 }
 
 fn expr_contains_invocation_id(expr: &vyre_foundation::ir::Expr) -> bool {
@@ -217,22 +188,16 @@ fn expr_contains_invocation_id(expr: &vyre_foundation::ir::Expr) -> bool {
 fn node_grid_sync_barrier_count(node: &vyre_foundation::ir::Node) -> usize {
     use vyre_foundation::ir::MemoryOrdering;
     use vyre_foundation::ir::Node;
-    match node {
-        Node::LogicalBarrier {
-            ordering: MemoryOrdering::GridSync,
-        } => 1,
-        Node::Block(children) => children.iter().map(node_grid_sync_barrier_count).sum(),
-        Node::If {
-            then, otherwise, ..
-        } => {
-            then.iter().map(node_grid_sync_barrier_count).sum::<usize>()
-                + otherwise
-                    .iter()
-                    .map(node_grid_sync_barrier_count)
-                    .sum::<usize>()
+    let mut count = 0;
+    for_each_node(std::slice::from_ref(node), |current| {
+        if matches!(
+            current,
+            Node::LogicalBarrier {
+                ordering: MemoryOrdering::GridSync
+            }
+        ) {
+            count += 1;
         }
-        Node::Loop { body, .. } => body.iter().map(node_grid_sync_barrier_count).sum(),
-        Node::Region { body, .. } => body.iter().map(node_grid_sync_barrier_count).sum(),
-        _ => 0,
-    }
+    });
+    count
 }

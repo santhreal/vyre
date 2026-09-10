@@ -9,6 +9,7 @@ use vyre_foundation::ir::{
     ExecutionScope, FailureCancellationBehavior, FenceSemantics, MemoryScope, Node, Program,
     StorageDomain,
 };
+use vyre_foundation::visit::child_bodies;
 
 use crate::value::Value;
 use crate::ReferenceError;
@@ -266,22 +267,10 @@ fn walk_and_check_nodes(
                 let exec_scope = ordering.execution_scope();
                 shadow.advance_barrier_phase(exec_scope);
             }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                walk_and_check_nodes(then, invocations, shadow)?;
-                walk_and_check_nodes(otherwise, invocations, shadow)?;
-            }
-            Node::Loop { body, .. } => {
-                walk_and_check_nodes(body, invocations, shadow)?;
-            }
-            Node::Block(inner) => {
-                walk_and_check_nodes(inner, invocations, shadow)?;
-            }
-            Node::Region { body, .. } => {
-                walk_and_check_nodes(body.as_slice(), invocations, shadow)?;
-            }
             _ => {}
+        }
+        for body in child_bodies(node) {
+            walk_and_check_nodes(body, invocations, shadow)?;
         }
     }
     Ok(())

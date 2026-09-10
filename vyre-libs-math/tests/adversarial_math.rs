@@ -4,6 +4,7 @@
 #![cfg(feature = "math")]
 
 use vyre_foundation::ir::{Expr, Node};
+use vyre_foundation::visit::child_bodies;
 use vyre_libs_math::math::conv1d::{
     conv1d_program, pack_params, MAX_RADIUS, OP_ID as CONV1D_OP_ID,
 };
@@ -34,16 +35,15 @@ fn find_region<'a>(nodes: &'a [Node], generator: &str) -> Option<&'a [Node]> {
 }
 
 fn node_binds_expr_named<'a>(nodes: &'a [Node], wanted: &str) -> Option<&'a Expr> {
-    nodes.iter().find_map(|node| match node {
-        Node::Let { name, value } if name.as_str() == wanted => Some(value),
-        Node::If {
-            then, otherwise, ..
-        } => {
-            node_binds_expr_named(then, wanted).or_else(|| node_binds_expr_named(otherwise, wanted))
+    nodes.iter().find_map(|node| {
+        if let Node::Let { name, value } = node {
+            if name.as_str() == wanted {
+                return Some(value);
+            }
         }
-        Node::Loop { body, .. } => node_binds_expr_named(body, wanted),
-        Node::Region { body, .. } => node_binds_expr_named(body, wanted),
-        _ => None,
+        child_bodies(node)
+            .into_iter()
+            .find_map(|body| node_binds_expr_named(body, wanted))
     })
 }
 

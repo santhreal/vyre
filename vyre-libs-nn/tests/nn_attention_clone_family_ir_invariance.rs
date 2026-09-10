@@ -48,11 +48,8 @@
 use std::path::PathBuf;
 
 use crate::harness;
-use harness::structural_ir::{
-    assert_matches_golden, golden_contains, render_golden, render_section, render_structural_ir,
-    write_golden,
-};
 use vyre_foundation::ir::{DataType, Node, Program};
+use vyre_foundation::visit::for_each_node;
 use vyre_libs_nn::nn::attention::{
     attention, attention_head_to_token, attention_reference, attention_token_to_head,
     chunked_gated_delta, flash_attention, flash_attention_2, gqa_attention, gqa_attention_causal,
@@ -61,6 +58,9 @@ use vyre_libs_nn::nn::attention::{
     AttentionPermuteSpec, GatedDeltaSpec, KvCacheAppendSpec,
 };
 use vyre_libs_nn::nn::norm::layer_norm;
+use vyre_test_support::structural_ir::{
+    golden_contains, render_structural_ir, write_golden, StructuralIrGolden,
+};
 
 /// Sequence length used by every tiled fixture. Deliberately not a multiple of
 /// the 64-wide tile so the ragged final tile is part of the pinned IR.
@@ -340,6 +340,15 @@ fn entry_points() -> Vec<(&'static str, Program)> {
         .collect()
 }
 
+/// The structural IR golden for this roster.
+fn golden() -> StructuralIrGolden {
+    StructuralIrGolden::new(
+        "vyre-libs-nn/nn-attention-clone-family-structural-ir/v1",
+        "the nn/attention clone families",
+        golden_path(),
+    )
+}
+
 /// Path of the structural IR golden.
 fn golden_path() -> PathBuf {
     harness::crate_dir().join("tests/golden/nn_attention_clone_family_ir.txt")
@@ -347,10 +356,10 @@ fn golden_path() -> PathBuf {
 
 /// The roster's structural IR, rendered in golden order.
 fn render_corpus() -> String {
-    render_golden(
+    golden().render(
         CloneFamilyEntry::ALL
             .iter()
-            .map(|entry| (entry.id(), render_section(&entry.build()))),
+            .map(|entry| (entry.id(), entry.build())),
     )
 }
 
@@ -412,7 +421,7 @@ const NOT_A_CLONE_FAMILY_MEMBER: [(&str, &str); 9] = [
 /// reorder or a commutative operand swap does not.
 #[test]
 fn clone_family_entry_points_emit_the_pinned_ir() {
-    assert_matches_golden(&golden_path(), &render_corpus());
+    golden().assert_matches(&render_corpus());
 }
 
 /// A golden that no longer names an entry point silently stopped covering it.
@@ -561,7 +570,7 @@ fn structural_ir_is_deterministic_across_builds() {
 #[test]
 #[ignore = "bless: rewrites the pinned structural IR golden; run deliberately and review the diff"]
 fn bless_pinned_structural_ir_golden() {
-    write_golden(&golden_path(), &render_corpus());
+    golden().bless(&render_corpus());
 }
 
 /// Write the full structural IR of every entry point under the test target
@@ -669,27 +678,12 @@ fn mla_and_flash_attention_2_share_the_online_softmax_skeleton() {
 /// Every distinct region-generator identity reachable from a program's entry,
 /// sorted and deduplicated.
 fn region_identities(program: &Program) -> Vec<String> {
-    fn walk(node: &Node, out: &mut Vec<String>) {
-        match node {
-            Node::Region {
-                generator, body, ..
-            } => {
-                out.push(generator.as_str().to_string());
-                body.iter().for_each(|child| walk(child, out));
-            }
-            Node::Block(body) => body.iter().for_each(|child| walk(child, out)),
-            Node::Loop { body, .. } => body.iter().for_each(|child| walk(child, out)),
-            Node::If {
-                then, otherwise, ..
-            } => {
-                then.iter().for_each(|child| walk(child, out));
-                otherwise.iter().for_each(|child| walk(child, out));
-            }
-            _ => {}
-        }
-    }
     let mut out = Vec::new();
-    program.entry().iter().for_each(|node| walk(node, &mut out));
+    for_each_node(program.entry(), |node| {
+        if let Node::Region { generator, .. } = node {
+            out.push(generator.as_str().to_string());
+        }
+    });
     out.sort();
     out.dedup();
     out

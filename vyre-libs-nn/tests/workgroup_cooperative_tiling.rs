@@ -7,16 +7,13 @@
 #![cfg(all(feature = "nn-attention", feature = "nn-norm"))]
 
 use vyre_foundation::ir::Node;
+use vyre_foundation::visit::any_descendant;
 
 fn has_barrier(nodes: &[Node]) -> bool {
-    nodes.iter().any(|node| match node {
-        Node::LogicalBarrier { .. } => true,
-        Node::If {
-            then, otherwise, ..
-        } => has_barrier(then) || has_barrier(otherwise),
-        Node::Loop { body, .. } | Node::Block(body) => has_barrier(body),
-        Node::Region { body, .. } => has_barrier(body),
-        _ => false,
+    nodes.iter().any(|root| {
+        any_descendant(root, &mut |node| {
+            matches!(node, Node::LogicalBarrier { .. })
+        })
     })
 }
 

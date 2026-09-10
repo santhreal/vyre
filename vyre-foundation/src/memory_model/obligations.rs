@@ -9,6 +9,7 @@ use super::fence::BarrierParticipation;
 use super::scope::{ExecutionScope, MemoryScope};
 use super::storage::StorageDomain;
 use crate::ir::{Node, Program};
+use crate::visit::child_bodies;
 
 /// Closed ownership state of a resource.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, serde::Deserialize, serde::Serialize)]
@@ -488,24 +489,19 @@ fn walk_and_track_obligations(
                     });
                 }
             }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                let mut then_tracker = tracker.clone();
-                walk_and_track_obligations(then, &mut then_tracker, current_idx + 1)?;
-                let mut else_tracker = tracker.clone();
-                walk_and_track_obligations(otherwise, &mut else_tracker, current_idx + 1)?;
+            // Each conditional arm tracks its own copy, so a transfer started in
+            // one arm is not consumed by a wait in the other.
+            Node::If { .. } => {
+                for body in child_bodies(node) {
+                    let mut branch = tracker.clone();
+                    walk_and_track_obligations(body, &mut branch, current_idx + 1)?;
+                }
             }
-            Node::Loop { body, .. } => {
-                walk_and_track_obligations(body, tracker, current_idx + 1)?;
+            _ => {
+                for body in child_bodies(node) {
+                    walk_and_track_obligations(body, tracker, current_idx + 1)?;
+                }
             }
-            Node::Block(inner) => {
-                walk_and_track_obligations(inner, tracker, current_idx + 1)?;
-            }
-            Node::Region { body, .. } => {
-                walk_and_track_obligations(body.as_slice(), tracker, current_idx + 1)?;
-            }
-            _ => {}
         }
         current_idx += 1;
     }

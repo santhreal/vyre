@@ -135,16 +135,6 @@ const WAIVERS: &[Waiver] = &[
         reason: "driver test walk, converted with the driver walker lane",
     },
     Waiver {
-        path: "vyre-libs/src/nn/linear/layer/linear_4bit/affine_grouped.rs",
-        seam: "semantic-library",
-        reason: "domain op builder walk, owned by the vyre-libs lane",
-    },
-    Waiver {
-        path: "vyre-libs/src/security/aliases_dataflow.rs",
-        seam: "semantic-library",
-        reason: "domain dataflow walk, owned by the vyre-libs lane",
-    },
-    Waiver {
         path: "vyre-libs/tests/blake3_kat.rs",
         seam: "semantic-library",
         reason: "domain test walk, owned by the vyre-libs lane",
@@ -161,11 +151,6 @@ const WAIVERS: &[Waiver] = &[
     },
     Waiver {
         path: "vyre-libs/tests/math_algebra_branchless_contracts.rs",
-        seam: "semantic-library",
-        reason: "domain test walk, owned by the vyre-libs lane",
-    },
-    Waiver {
-        path: "vyre-libs/tests/nn_attention_clone_family_ir_invariance.rs",
         seam: "semantic-library",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
@@ -313,21 +298,6 @@ const WAIVERS: &[Waiver] = &[
         path: "vyre-foundation/tests/tile_nodes_contracts.rs",
         seam: "foundation-ir",
         reason: "tile node contract descent verification oracle",
-    },
-    Waiver {
-        path: "vyre-libs/tests/internal/graph/dominator_tree/mod.rs",
-        seam: "semantic-library",
-        reason: "test oracle deliberately independent of the dominator construction it audits",
-    },
-    Waiver {
-        path: "vyre-libs/tests/internal/graph/persistent_bfs/behavior_contracts/program_sync_contracts.rs",
-        seam: "semantic-library",
-        reason: "test oracle deliberately independent of the traversal it audits",
-    },
-    Waiver {
-        path: "vyre-libs/tests/internal/graph/persistent_bfs/validation_and_builders.rs",
-        seam: "semantic-library",
-        reason: "test oracle deliberately independent of the traversal it audits",
     },
     Waiver {
         path: "vyre-libs/tests/adversarial_math.rs",

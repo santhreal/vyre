@@ -3,6 +3,8 @@
 #[cfg(feature = "nn-attention")]
 use vyre_foundation::ir::Expr;
 use vyre_foundation::ir::{MemoryKind, Node};
+#[cfg(feature = "nn-attention")]
+use vyre_foundation::visit::{child_bodies, for_each_node};
 
 #[cfg(feature = "nn-linear")]
 #[test]
@@ -139,38 +141,31 @@ fn root_region_body(program: &vyre::ir::Program) -> &[Node] {
 /// region body finds nothing and makes a correct kernel look broken.
 #[cfg(feature = "nn-attention")]
 fn find_let<'a>(nodes: &'a [Node], name: &str) -> Option<&'a Expr> {
-    for node in nodes {
-        let found = match node {
-            Node::Let { name: bound, value } if bound.as_str() == name => return Some(value),
-            Node::If {
-                then, otherwise, ..
-            } => find_let(then, name).or_else(|| find_let(otherwise, name)),
-            Node::Loop { body, .. } | Node::Block(body) => find_let(body, name),
-            Node::Region { body, .. } => find_let(body.as_slice(), name),
-            _ => None,
-        };
-        if found.is_some() {
-            return found;
+    nodes.iter().find_map(|node| {
+        if let Node::Let { name: bound, value } = node {
+            if bound.as_str() == name {
+                return Some(value);
+            }
         }
-    }
-    None
+        child_bodies(node)
+            .into_iter()
+            .find_map(|body| find_let(body, name))
+    })
 }
 
 #[cfg(feature = "nn-attention")]
 fn count_logical_index_lets(nodes: &[Node], name: &str) -> usize {
-    nodes
-        .iter()
-        .map(|node| match node {
+    let mut count = 0;
+    for_each_node(nodes, |node| {
+        if matches!(
+            node,
             Node::Let {
                 name: let_name,
                 value: Expr::LogicalIndex { .. },
-            } if let_name.as_str() == name => 1,
-            Node::If {
-                then, otherwise, ..
-            } => count_logical_index_lets(then, name) + count_logical_index_lets(otherwise, name),
-            Node::Loop { body, .. } | Node::Block(body) => count_logical_index_lets(body, name),
-            Node::Region { body, .. } => count_logical_index_lets(body, name),
-            _ => 0,
-        })
-        .sum()
+            } if let_name.as_str() == name
+        ) {
+            count += 1;
+        }
+    });
+    count
 }

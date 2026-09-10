@@ -267,6 +267,7 @@ inventory::submit! {
 mod tests {
     use super::*;
     use vyre_foundation::ir::Node;
+    use vyre_foundation::visit::for_each_node;
 
     #[test]
     fn cpu_ref_unions_two_directions() {
@@ -311,23 +312,14 @@ mod tests {
             "yx",
             "out",
         );
-        // The fused Program is wrapped in a Region; flatten one level
-        // to inspect the per-arm entry sequence.
+        // The fused Program is wrapped in a Region, so the count is taken over
+        // the whole entry tree rather than the top-level sequence.
         let mut barrier_count = 0usize;
-        fn count_barriers(node: &Node, n: &mut usize) {
-            match node {
-                Node::LogicalBarrier { .. } => *n += 1,
-                Node::Region { body, .. } => {
-                    for child in body.iter() {
-                        count_barriers(child, n);
-                    }
-                }
-                _ => {}
+        for_each_node(&p.entry, |node| {
+            if matches!(node, Node::LogicalBarrier { .. }) {
+                barrier_count += 1;
             }
-        }
-        for node in p.entry.iter() {
-            count_barriers(node, &mut barrier_count);
-        }
+        });
         assert!(
             barrier_count >= 1,
             "aliases_dataflow fused program has no barriers; RAW hazards \

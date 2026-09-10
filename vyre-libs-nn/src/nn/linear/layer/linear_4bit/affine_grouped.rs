@@ -343,6 +343,7 @@ fn linear_4bit_affine_grouped_batch_impl(
 #[cfg(test)]
 mod tests {
     use vyre_foundation::ir::{Expr, Node};
+    use vyre_foundation::visit::{any_descendant, for_each_node};
     use vyre_test_support::test_parity_oracles::eval_bytes;
 
     use super::super::grouped_layout::AFFINE_GROUPED_WORKGROUP_SIZE;
@@ -399,65 +400,33 @@ mod tests {
     }
 
     fn nodes_contain_subgroup_shuffle(nodes: &[Node]) -> bool {
-        nodes.iter().any(|node| match node {
-            Node::Let { value, .. } | Node::Assign { value, .. } => {
-                expr_contains_subgroup_shuffle(value)
-            }
-            Node::Store { index, value, .. } => {
-                expr_contains_subgroup_shuffle(index) || expr_contains_subgroup_shuffle(value)
-            }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                expr_contains_subgroup_shuffle(cond)
-                    || nodes_contain_subgroup_shuffle(then)
-                    || nodes_contain_subgroup_shuffle(otherwise)
-            }
-            Node::Loop { from, to, body, .. } => {
-                expr_contains_subgroup_shuffle(from)
-                    || expr_contains_subgroup_shuffle(to)
-                    || nodes_contain_subgroup_shuffle(body)
-            }
-            Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
-                expr_contains_subgroup_shuffle(offset) || expr_contains_subgroup_shuffle(size)
-            }
-            Node::Trap { address, .. } => expr_contains_subgroup_shuffle(address),
-            Node::Block(body) => nodes_contain_subgroup_shuffle(body),
-            Node::Region { body, .. } => nodes_contain_subgroup_shuffle(body),
-            Node::IndirectDispatch { .. }
-            | Node::AsyncWait { .. }
-            | Node::AllReduce { .. }
-            | Node::AllGather { .. }
-            | Node::ReduceScatter { .. }
-            | Node::Broadcast { .. }
-            | Node::Return
-            | Node::LogicalBarrier { .. }
-            | Node::Resume { .. }
-            | Node::Opaque(_) => false,
-            _ => false,
+        nodes.iter().any(|root| {
+            any_descendant(root, &mut |node| match node {
+                Node::Let { value, .. } | Node::Assign { value, .. } => {
+                    expr_contains_subgroup_shuffle(value)
+                }
+                Node::Store { index, value, .. } => {
+                    expr_contains_subgroup_shuffle(index) || expr_contains_subgroup_shuffle(value)
+                }
+                Node::If { cond, .. } => expr_contains_subgroup_shuffle(cond),
+                Node::Loop { from, to, .. } => {
+                    expr_contains_subgroup_shuffle(from) || expr_contains_subgroup_shuffle(to)
+                }
+                Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
+                    expr_contains_subgroup_shuffle(offset) || expr_contains_subgroup_shuffle(size)
+                }
+                Node::Trap { address, .. } => expr_contains_subgroup_shuffle(address),
+                _ => false,
+            })
         })
     }
 
     fn collect_loop_vars(nodes: &[Node], vars: &mut Vec<String>) {
-        for node in nodes {
-            match node {
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    collect_loop_vars(then, vars);
-                    collect_loop_vars(otherwise, vars);
-                }
-                Node::Loop { var, body, .. } => {
-                    vars.push(var.to_string());
-                    collect_loop_vars(body, vars);
-                }
-                Node::Block(body) => collect_loop_vars(body, vars),
-                Node::Region { body, .. } => collect_loop_vars(body, vars),
-                _ => {}
+        for_each_node(nodes, |node| {
+            if let Node::Loop { var, .. } = node {
+                vars.push(var.to_string());
             }
-        }
+        });
     }
 
     fn reference_affine_grouped(
