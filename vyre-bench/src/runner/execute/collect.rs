@@ -113,23 +113,28 @@ pub(super) fn collect_derived_metrics(
             .unwrap_or(0)
             .saturating_add(metrics.output_bytes.unwrap_or(0))
     });
-    // device_gb_s_x1000 requires explicit bytes_read + bytes_written from the case.
-    // If neither is set, omit device_gb_s_x1000 entirely rather than substituting
-    // host_bytes, that substitution would report a spurious device bandwidth figure
-    // computed from host I/O, which is a metric miscompile (Law 10 silent fallback).
-    let device_bytes = match (metrics.bytes_read, metrics.bytes_written) {
-        (Some(r), Some(w)) => {
-            let total = r.saturating_add(w);
-            if total > 0 {
-                Some(total)
-            } else {
-                None
+    // device_gb_s_x1000 states a device bandwidth, so it is computed from the
+    // bytes the device moves. A case that states `device_bytes_moved` is taken
+    // at its word. Otherwise the host transfer total stands in, which is exact
+    // for a transfer case whose host traffic IS its device traffic, and the
+    // metric is omitted entirely when neither is set rather than substituting
+    // `host_bytes`: that substitution reported a device bandwidth computed from
+    // host I/O.
+    let device_bytes = metrics.device_bytes_moved.filter(|bytes| *bytes > 0).or_else(
+        || match (metrics.bytes_read, metrics.bytes_written) {
+            (Some(r), Some(w)) => {
+                let total = r.saturating_add(w);
+                if total > 0 {
+                    Some(total)
+                } else {
+                    None
+                }
             }
-        }
-        (Some(r), None) if r > 0 => Some(r),
-        (None, Some(w)) if w > 0 => Some(w),
-        _ => None,
-    };
+            (Some(r), None) if r > 0 => Some(r),
+            (None, Some(w)) if w > 0 => Some(w),
+            _ => None,
+        },
+    );
 
     if let Some(wall_ns) = metrics.wall_ns.filter(|ns| *ns > 0) {
         if host_bytes > 0 {
@@ -266,6 +271,45 @@ mod tests {
             val, 536,
             "Fix: device_gb_s_x1000 must equal 536 for 512 MiB device transfer / 1 s; got {val}"
         );
+    }
+
+    /// WHY: `bytes_read` and `bytes_written` are HOST transfer bytes. On a
+    /// resident dispatch they are 0 and the readback size, so a device rate
+    /// derived from them states host I/O as device bandwidth. The release
+    /// scatter case published 12.047 GB/s from a 131072-byte readback while its
+    /// kernel moved 8650752 bytes. A case that states `device_bytes_moved` must
+    /// have that figure used instead.
+    ///
+    /// Does not catch a case that states a wrong `device_bytes_moved`; that is
+    /// the case's own accounting, asserted where the case builds it.
+    #[test]
+    fn device_rate_prefers_stated_device_traffic_over_host_transfers() {
+        // A resident dispatch: no host read, a 131072-byte readback, and a
+        // kernel that moved 8650752 bytes in 10828 ns.
+        let metrics = BenchMetrics {
+            bytes_read: Some(0),
+            bytes_written: Some(131_072),
+            device_bytes_moved: Some(8_650_752),
+            dispatch_ns: Some(10_828),
+            wall_ns: Some(94_088),
+            ..Default::default()
+        };
+        let mut samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
+        collect_derived_metrics("", &metrics, &mut samples);
+
+        // 8650752 B / 10828 ns = 798.9 GB/s. The host-transfer figure would
+        // have been 131072 / 10828 = 12.1 GB/s.
+        assert_eq!(samples["device_gb_s_x1000"][0], 798_924);
+
+        // A case that states no device traffic keeps the host transfer total,
+        // which is exact when the host transfer IS the device traffic.
+        let transfer_only = BenchMetrics {
+            device_bytes_moved: None,
+            ..metrics
+        };
+        let mut transfer_samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
+        collect_derived_metrics("", &transfer_only, &mut transfer_samples);
+        assert_eq!(transfer_samples["device_gb_s_x1000"][0], 12_104);
     }
 
     /// Regression for dead-cold-fields-in-collect-fields-array: the 7 cold_* names

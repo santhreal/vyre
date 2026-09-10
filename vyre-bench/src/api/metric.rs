@@ -129,6 +129,16 @@ pub struct BenchMetrics {
     pub bytes_touched: Option<u64>,
     pub bytes_read: Option<u64>,
     pub bytes_written: Option<u64>,
+    /// Bytes the device itself moves for one dispatch: what the kernel reads
+    /// from and writes to device memory.
+    ///
+    /// `bytes_read` and `bytes_written` are host-transfer bytes, so on a
+    /// resident dispatch they are 0 and the output readback size. Deriving a
+    /// device bandwidth rate from those states host I/O as device throughput,
+    /// which for a resident bandwidth-bound case understates it by the ratio of
+    /// readback size to kernel traffic. A case that knows its kernel traffic
+    /// states it here.
+    pub device_bytes_moved: Option<u64>,
     pub atomic_op_count: Option<u64>,
     pub wall_throughput_gb_s: Option<f64>,
     pub device_throughput_gb_s: Option<f64>,

@@ -208,6 +208,26 @@ impl ArtifactSession {
         Ok(self.submit(bindings)?.wait()?)
     }
 
+    /// Submit several resident binding sets as one batch and wait for every
+    /// completion.
+    ///
+    /// Completions are returned in submission order, one per binding set. A
+    /// backend whose resident path submits the whole batch before awaiting any
+    /// of it runs the items back to back on the device; the rest fall back to
+    /// one submit-and-wait per item.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ArtifactSessionError`] when the session is unusable or any
+    /// item's validation or dispatch fails.
+    pub fn submit_resident_batch_and_wait(
+        &self,
+        batches: Vec<BindingSet>,
+    ) -> Result<Vec<Completion>, ArtifactSessionError> {
+        let state = self.read_state()?;
+        Ok(state.instance.submit_resident_batch(batches)?)
+    }
+
     /// Reacquire the registered device and rematerialize authenticated target bytes.
     ///
     /// This path never invokes the target compiler, semantic optimizer, or lowering.

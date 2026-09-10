@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A resident throughput batch summarizes its rows' device time with a median instead of a mean, so one launch delayed outside the process no longer moves the whole sample, and `device_gb_s_x1000` is computed from the bytes the device moves rather than from host transfer bytes, which on a resident dispatch reported a readback size as device bandwidth."

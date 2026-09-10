@@ -12,11 +12,16 @@ use crate::api::resident::{
     resident_set_resource_count, ResidentDispatch, ResidentResourcePayload,
 };
 
-/// Batched resident dispatch outputs plus batch-level wall and device timing.
+/// Batched resident dispatch outputs plus batch-level wall and per-item device
+/// timing.
 pub struct ResidentBatchDispatch {
     pub outputs: Vec<OutputBuffers>,
     pub wall_ns_total: u64,
-    pub device_ns_total: Option<u64>,
+    /// Every batch row's device duration, in submission order.
+    ///
+    /// `None` when any row reported no positive device timestamp: a partial set
+    /// cannot summarize the batch.
+    pub device_ns_by_item: Option<Vec<u64>>,
     pub batch_len: usize,
 }
 
@@ -29,14 +34,35 @@ impl ResidentBatchDispatch {
         self.wall_ns_total.saturating_add(self.batch_len as u64 - 1) / self.batch_len as u64
     }
 
-    /// Per-item device duration when every batch row reported a positive device timestamp.
+    /// Per-item device duration when every batch row reported a positive device
+    /// timestamp.
+    ///
+    /// The rows are independent launches, so the summary is their median at the
+    /// same nearest-rank p50 the suite reports for every other distribution. A
+    /// mean was reported here before, and one launch delayed by contention
+    /// outside the process moved the whole batch: with 16 rows a single 2 ms
+    /// outlier raises the reported figure by more than 100 us, and the outlier
+    /// population measured on a display-serving device hits roughly half of all
+    /// batches. A median states what a row costs; a mean states what the worst
+    /// row costs divided by 16.
     pub fn per_item_device_ns(&self) -> Option<u64> {
-        let total = self.device_ns_total?;
-        if self.batch_len == 0 || total == 0 {
+        let by_item = self.device_ns_by_item.as_ref()?;
+        if by_item.is_empty() {
             return None;
         }
-        Some(total.div_ceil(self.batch_len as u64))
+        let mut sorted = by_item.clone();
+        sorted.sort_unstable();
+        Some(batch_median_ns(&sorted))
     }
+}
+
+/// The p50 of an ascending sample set, at the suite's nearest-rank convention:
+/// `ceil((n - 1) * 0.5)`, so an even count reports the upper middle row rather
+/// than averaging the two.
+fn batch_median_ns(ascending: &[u64]) -> u64 {
+    let last = ascending.len().saturating_sub(1);
+    let index = ((last as f64) * 0.5).ceil() as usize;
+    ascending[index.min(last)]
 }
 
 /// Rotating pool of resident input-buffer sets for persistent benchmarks.
@@ -154,7 +180,14 @@ impl ResidentInputPool {
         Ok(&self.sets[index])
     }
 
-    /// Dispatch the first `batch_len` resident sets through one materialized artifact.
+    /// Dispatch the first `batch_len` resident sets through one materialized
+    /// artifact, as one batch.
+    ///
+    /// The whole batch is submitted before any item is awaited, so an item is
+    /// already enqueued when the item before it finishes and each item's device
+    /// timer covers its own launch instead of a host round trip. `wall_ns_total`
+    /// covers the whole batch, which is what a per-item host window cannot
+    /// describe once the items overlap.
     pub fn dispatch_artifact_batch_timed(
         &self,
         ctx: &BenchContext,
@@ -173,22 +206,27 @@ impl ResidentInputPool {
                 self.sets.len()
             )));
         }
+        let mut sets = Vec::with_capacity(batch_len);
+        sets.extend(self.sets[..batch_len].iter().map(Vec::as_slice));
         let started = std::time::Instant::now();
-        let mut outputs = Vec::with_capacity(batch_len);
-        let mut device_ns_total = Some(0u64);
-        for resources in &self.sets[..batch_len] {
-            let timed = ctx.dispatch_resident_timed(program, resources, config)?;
-            device_ns_total = match (device_ns_total, timed.device_ns.filter(|&ns| ns > 0)) {
-                (Some(total), Some(ns)) => Some(total.saturating_add(ns)),
+        let dispatched = ctx.dispatch_resident_batch_timed(program, &sets, config)?;
+        let wall_ns_total = elapsed_ns(started);
+        let mut outputs = Vec::with_capacity(dispatched.len());
+        let mut device_ns_by_item = Some(Vec::with_capacity(dispatched.len()));
+        for (item_outputs, device_ns) in dispatched {
+            device_ns_by_item = match (device_ns_by_item, device_ns.filter(|&ns| ns > 0)) {
+                (Some(mut rows), Some(ns)) => {
+                    rows.push(ns);
+                    Some(rows)
+                }
                 _ => None,
             };
-            outputs.push(timed.outputs);
+            outputs.push(item_outputs);
         }
-        let wall_ns_total = elapsed_ns(started);
         Ok(ResidentBatchDispatch {
             outputs,
             wall_ns_total,
-            device_ns_total,
+            device_ns_by_item,
             batch_len,
         })
     }
@@ -392,24 +430,65 @@ fn upload_resident_inputs(
 mod tests {
     use super::*;
 
-    /// WHY: resident throughput batches must retain complete device timestamp evidence instead
-    /// of substituting host dispatch/readback latency for the release contract's device metric.
+    /// WHY: a resident throughput batch summarizes independent launches, so one
+    /// row delayed by contention outside the process must not move the figure
+    /// the release contract reads. The mean this replaced moved with every
+    /// outlier: sixteen rows of 10 us plus one 2 ms row averaged above 127 us.
+    /// Does not catch a device timer that is wrong on every row at once; that
+    /// is a driver contract, asserted where the timing events are recorded.
     #[test]
-    fn resident_batch_normalizes_complete_device_timestamps_per_item() {
-        let complete = ResidentBatchDispatch {
+    fn resident_batch_device_summary_is_the_nearest_rank_median() {
+        // Sixteen rows: fifteen at 10_000 and one 2 ms outlier. The mean is
+        // 134_375; the p50 row is 10_000.
+        let mut rows = vec![10_000_u64; 15];
+        rows.push(2_000_000);
+        let poisoned = ResidentBatchDispatch {
             outputs: Vec::new(),
             wall_ns_total: 41,
-            device_ns_total: Some(21),
-            batch_len: 4,
+            device_ns_by_item: Some(rows),
+            batch_len: 16,
         };
-        assert_eq!(complete.per_item_wall_ns(), 11);
-        assert_eq!(complete.per_item_device_ns(), Some(6));
+        assert_eq!(poisoned.per_item_device_ns(), Some(10_000));
 
+        // Even count: the upper middle row, matching `ceil((n - 1) * 0.5)`.
+        let even = ResidentBatchDispatch {
+            device_ns_by_item: Some(vec![4, 1, 3, 2]),
+            batch_len: 4,
+            ..poisoned
+        };
+        assert_eq!(even.per_item_device_ns(), Some(3));
+        assert_eq!(even.per_item_wall_ns(), 11);
+
+        // Odd count: the exact middle row.
+        let odd = ResidentBatchDispatch {
+            device_ns_by_item: Some(vec![9, 1, 5]),
+            batch_len: 3,
+            ..even
+        };
+        assert_eq!(odd.per_item_device_ns(), Some(5));
+
+        // One row: itself.
+        let single = ResidentBatchDispatch {
+            device_ns_by_item: Some(vec![7]),
+            batch_len: 1,
+            ..odd
+        };
+        assert_eq!(single.per_item_device_ns(), Some(7));
+
+        // A row without a positive device timestamp voids the whole batch
+        // rather than summarizing the rows that happened to report.
         let incomplete = ResidentBatchDispatch {
-            device_ns_total: None,
-            ..complete
+            device_ns_by_item: None,
+            ..single
         };
         assert_eq!(incomplete.per_item_device_ns(), None);
+
+        let empty = ResidentBatchDispatch {
+            device_ns_by_item: Some(Vec::new()),
+            batch_len: 0,
+            ..incomplete
+        };
+        assert_eq!(empty.per_item_device_ns(), None);
     }
 
     /// A materializer that refuses every resident upload, so an attempted upload

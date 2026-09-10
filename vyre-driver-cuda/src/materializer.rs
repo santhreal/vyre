@@ -5,7 +5,7 @@ use vyre_driver::materialize::{
     ResidentInstance,
 };
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, CompiledPipeline,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, CompiledPipeline, Completion,
     DispatchConfig, Submission, TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
@@ -104,6 +104,24 @@ impl ArtifactInstance for CudaArtifactInstance {
                 "CUDA artifact submission cannot mix host and resident resources",
             )
         })
+    }
+
+    /// Submit every item of a resident batch in one enqueue sequence.
+    ///
+    /// The resident pipeline enqueues each item back to back on one stream
+    /// under a single module-globals lease, so an item is already submitted
+    /// when the item before it finishes and its device timer covers its own
+    /// launch rather than a host round trip.
+    fn submit_resident_batch(
+        &self,
+        batches: Vec<BindingSet>,
+    ) -> Result<Vec<Completion>, BackendError> {
+        let items = self.core().resident_batch_resources(&batches, || {
+            materialize::invalid_module(
+                "CUDA artifact submission cannot mix host and resident resources",
+            )
+        })?;
+        self.execute_resident_batch(&items)
     }
 
     fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError> {

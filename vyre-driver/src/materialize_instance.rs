@@ -7,7 +7,7 @@ use vyre_megakernel::ArtifactValueId;
 
 use crate::{
     BackendError, BindingPlan, BindingRole, BindingSet, BoundResource, Completion, DispatchConfig,
-    Resource, Submission, TimedDispatchResult,
+    OutputBuffers, Resource, Submission, TimedDispatchResult,
 };
 
 use crate::materialize::{
@@ -110,6 +110,42 @@ impl InstanceCore {
             resident(&bound.resident)
         };
         Ok(self.ready(result))
+    }
+
+    /// Accept every binding set of a resident batch and resolve each one's
+    /// resident resources.
+    ///
+    /// A batched submission is resident by definition: it exists so several
+    /// items reach the device in one submission, and a host-bound value has
+    /// nothing to submit alongside them.
+    ///
+    /// # Errors
+    ///
+    /// Returns the backend's `foreign_artifact` rejection when any set names
+    /// another artifact, and `mixed` when any set binds a host value.
+    pub fn resident_batch_resources(
+        &self,
+        batches: &[BindingSet],
+        mixed: fn() -> BackendError,
+    ) -> Result<Vec<BTreeMap<ArtifactValueId, Resource>>, BackendError> {
+        let mut items = Vec::new();
+        items
+            .try_reserve_exact(batches.len())
+            .map_err(|error| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: failed to reserve {} resident batch binding set(s): {error}. Submit a smaller resident batch.",
+                    batches.len()
+                ),
+            })?;
+        for bindings in batches {
+            self.accept(bindings)?;
+            let bound = partition_bindings(bindings);
+            if !bound.host.is_empty() {
+                return Err(mixed());
+            }
+            items.push(bound.resident);
+        }
+        Ok(items)
     }
 
     /// Route one submission on a backend that has no resident execution path.
@@ -439,6 +475,29 @@ pub trait MaterializedInstance {
     }
 }
 
+/// Reserve exactly `len` slots for a resident batch, naming what ran out.
+///
+/// A batch is sized by the caller, so an allocation that cannot be served is a
+/// rejected submission and not a panic.
+///
+/// # Errors
+///
+/// Returns [`BackendError::InvalidProgram`] carrying `what` and the allocator's
+/// reason.
+fn reserve_batch_items<T>(
+    items: &mut Vec<T>,
+    len: usize,
+    what: &str,
+) -> Result<(), BackendError> {
+    items.try_reserve_exact(len).map_err(|error| {
+        BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: failed to reserve {len} {what} slot(s): {error}. Submit a smaller resident batch."
+            ),
+        }
+    })
+}
+
 /// The resident execution path of a materialized instance whose backend has
 /// one.
 ///
@@ -555,6 +614,93 @@ pub trait ResidentInstance: MaterializedInstance {
             has_device_timing.then_some(device_ns),
             self.resident_messages(),
         )
+    }
+
+    /// Launch one resident module over every item of a batch.
+    ///
+    /// A backend that can submit the whole batch before awaiting any of it
+    /// overrides this, so item N is already enqueued when item N-1's work
+    /// finishes and the device timer of each item covers the item's work rather
+    /// than the host latency of submitting it. The default is one
+    /// submit-and-wait per item, which is what the batch replaces.
+    ///
+    /// A batched item has no host window of its own, because the whole batch is
+    /// submitted before any item is awaited, so each item reports its outputs
+    /// and its device duration and no wall time.
+    ///
+    /// # Errors
+    ///
+    /// Returns whatever the launches report.
+    fn launch_resident_batch(
+        &self,
+        module: &Self::Module,
+        batches: &[&[Resource]],
+        config: &DispatchConfig,
+    ) -> Result<Vec<(OutputBuffers, Option<u64>)>, BackendError> {
+        let mut dispatched = Vec::new();
+        reserve_batch_items(&mut dispatched, batches.len(), "resident batch launch")?;
+        for ordered in batches {
+            let timed = self.launch_resident(module, ordered, config)?;
+            dispatched.push((timed.outputs, timed.device_ns));
+        }
+        Ok(dispatched)
+    }
+
+    /// Execute every item of a resident batch and report one completion each.
+    ///
+    /// A single-module plan submits the whole batch through
+    /// [`Self::launch_resident_batch`], because every item runs the same module
+    /// over its own resources and the launch order across items is the caller's
+    /// submission order. A multi-module plan runs item by item through
+    /// [`Self::execute_resident`]: its modules alternate within one item, so a
+    /// per-module batch would reorder the recorded plan.
+    ///
+    /// # Errors
+    ///
+    /// Returns whatever [`Self::ordered_resident`] and
+    /// [`Self::launch_resident_batch`] report, and the resident completion
+    /// rejections when a launch left a declared value behind.
+    fn execute_resident_batch(
+        &self,
+        items: &[BTreeMap<ArtifactValueId, Resource>],
+    ) -> Result<Vec<Completion>, BackendError> {
+        let mut completions = Vec::new();
+        reserve_batch_items(&mut completions, items.len(), "resident batch completion")?;
+        let modules = self.modules();
+        let [module] = modules else {
+            for resources in items {
+                completions.push(self.execute_resident(resources)?);
+            }
+            return Ok(completions);
+        };
+        if items.is_empty() {
+            return Ok(completions);
+        }
+        let core = self.core();
+        let label = self.resident_module_label();
+        let plan = BindingPlan::build(module.program())?;
+        let mut ordered = Vec::new();
+        reserve_batch_items(&mut ordered, items.len(), "resident batch handles")?;
+        for resources in items {
+            ordered.push(self.ordered_resident(0, module, &plan, resources)?);
+        }
+        let mut views = Vec::new();
+        reserve_batch_items(&mut views, ordered.len(), "resident batch handle views")?;
+        views.extend(ordered.iter().map(Vec::as_slice));
+        let dispatched = self.launch_resident_batch(module, &views, module.config())?;
+        for (outputs, device_ns) in dispatched {
+            let mut state = BTreeMap::new();
+            core.absorb_outputs_for_module(
+                0,
+                &plan,
+                module.program(),
+                outputs,
+                &mut state,
+                |output_index, name| omitted_output(label, output_index, name),
+            )?;
+            completions.push(core.completion_with(&state, device_ns, self.resident_messages())?);
+        }
+        Ok(completions)
     }
 
     /// Route one submission to the host or the resident path.
@@ -742,6 +888,42 @@ macro_rules! resident_pipeline_launch {
                 module.pipeline.as_ref(),
                 ordered,
                 config,
+            )
+        }
+
+        fn launch_resident_batch(
+            &self,
+            module: &Self::Module,
+            batches: &[&[$crate::Resource]],
+            config: &$crate::DispatchConfig,
+        ) -> ::std::result::Result<
+            ::std::vec::Vec<(
+                $crate::OutputBuffers,
+                ::std::option::Option<u64>,
+            )>,
+            $crate::BackendError,
+        > {
+            let mut outputs = ::std::vec::Vec::new();
+            let mut device_ns_by_item = ::std::vec::Vec::new();
+            $crate::CompiledPipeline::dispatch_persistent_handles_batched_timed(
+                module.pipeline.as_ref(),
+                batches,
+                config,
+                &mut outputs,
+                &mut device_ns_by_item,
+            )?;
+            if outputs.len() != batches.len() || device_ns_by_item.len() != batches.len() {
+                return ::std::result::Result::Err($crate::BackendError::InvalidProgram {
+                    fix: ::std::format!(
+                        "Fix: resident batch of {} item(s) reported {} output set(s) and {} timing(s). The backend's batched dispatch must report one of each per item.",
+                        batches.len(),
+                        outputs.len(),
+                        device_ns_by_item.len(),
+                    ),
+                });
+            }
+            ::std::result::Result::Ok(
+                outputs.into_iter().zip(device_ns_by_item).collect(),
             )
         }
     };

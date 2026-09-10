@@ -421,6 +421,36 @@ impl CompiledPipeline for CudaCompiledPipeline {
         self.dispatch_resident_batches_into(&resident_batches, config, outputs)
     }
 
+    fn dispatch_persistent_handles_batched_timed(
+        &self,
+        batches: &[&[Resource]],
+        config: &DispatchConfig,
+        outputs: &mut Vec<OutputBuffers>,
+        device_ns_by_item: &mut Vec<Option<u64>>,
+    ) -> Result<(), BackendError> {
+        let _profiler_range = crate::profiler::cuda_profiler_range(
+            crate::profiler::CUDA_PIPELINE_BATCH_DISPATCH_RANGE,
+        );
+        if batches.is_empty() {
+            outputs.clear();
+            device_ns_by_item.clear();
+            return Ok(());
+        }
+        let mut resident_batches =
+            SmallVec::<[SmallVec<[crate::backend::CudaResidentBuffer; 8]>; 8]>::new();
+        reserve_smallvec(&mut resident_batches, batches.len(), "resident batch")?;
+        for batch in batches {
+            resident_batches.push(self.backend.resident_handles_from_resources(batch)?);
+        }
+
+        self.dispatch_resident_batches_timed_into(
+            &resident_batches,
+            config,
+            outputs,
+            Some(device_ns_by_item),
+        )
+    }
+
     fn dispatch_persistent_handle_rows_into(
         &self,
         rows: &[[Resource; 4]],

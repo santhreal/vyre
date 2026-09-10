@@ -23,31 +23,8 @@ pub(crate) const GENERATED_LANE_COUNT: usize = 512;
 /// Default generated-matrix workgroup width for live CUDA/reference differential tests.
 pub(crate) const GENERATED_WORKGROUP_SIZE_X: u32 = 128;
 
-/// Pack node ids into canonical little-endian frontier words.
-pub(crate) fn pack_nodes(nodes: &[u32], node_count: u32) -> Vec<u32> {
-    let mut words = vec![0; node_count.div_ceil(32).max(1) as usize];
-    for &node in nodes {
-        words[node as usize / 32] |= 1 << (node % 32);
-    }
-    words
-}
 pub(crate) fn bytes_to_u32_per_lane(source: &[u8]) -> Vec<u32> {
     source.iter().map(|&b| b as u32).collect()
-}
-
-pub(crate) fn set_frontier_node(frontier: &mut [u32], node: u32) {
-    frontier[node as usize / 32] |= 1_u32 << (node & 31);
-}
-pub(crate) fn frontier_has_node(frontier: &[u32], node: u32) -> bool {
-    frontier[node as usize / 32] & (1_u32 << (node & 31)) != 0
-}
-
-pub(crate) fn mix32_value(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7feb_352d);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846c_a68b);
-    value ^ (value >> 16)
 }
 
 pub(crate) fn is_required_input_buffer(buffer: &BufferDecl) -> bool {
@@ -73,18 +50,6 @@ pub(crate) fn find_output_buffer_index(program: &Program, name: &str) -> usize {
         })
         .position(|buffer| buffer.name() == name)
         .unwrap_or_else(|| panic!("Fix: output buffer `{name}` must be declared in program"))
-}
-
-pub(crate) fn output_range_store_program(range: std::ops::Range<usize>) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("state", 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(4)
-                .with_output_byte_range(range),
-        ],
-        [1, 1, 1],
-        vec![Node::store("state", Expr::u32(3), Expr::u32(99))],
-    )
 }
 
 pub(crate) fn csr_traversal_inputs(

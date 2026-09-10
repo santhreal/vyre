@@ -44,6 +44,7 @@ pub(super) fn bench_run_from_timed_with_accounting(
             bytes_touched: Some(logical_bytes_touched),
             bytes_read: Some(accounting.bytes_read),
             bytes_written: Some(accounting.bytes_written),
+            device_bytes_moved: Some(logical_bytes_touched),
             wall_throughput_gb_s: Some(gb_per_second(logical_bytes_touched, wall_ns)),
             device_throughput_gb_s: Some(gb_per_second(logical_bytes_touched, device_ns)),
             custom: vec![MetricPoint {

@@ -572,6 +572,98 @@ mod tests {
             assert_eq!(*pipeline.calls.lock().unwrap(), vec![vec![9_u8, 8, 7]]);
         }
 
+        /// A batched timed dispatch reports one device duration per item, in
+        /// submission order, and an empty batch reports nothing.
+        ///
+        /// WHY: a resident batch summary is computed from these entries, so an
+        /// entry that lands out of order, is dropped, or survives from a
+        /// previous batch attributes one item's device time to another item and
+        /// silently changes every figure derived from it. This default is what
+        /// a backend without a batched submission path uses, so it holds the
+        /// same contract as a backend override.
+        ///
+        /// Does not catch whether an override enqueues the whole batch before
+        /// awaiting any of it, which is only observable on a device.
+        #[test]
+        fn compiled_pipeline_batched_timed_default_reports_one_device_time_per_item() {
+            struct TimedBatchPipeline;
+
+            impl crate::backend::sealed::Sealed for TimedBatchPipeline {}
+
+            impl CompiledPipeline for TimedBatchPipeline {
+                fn id(&self) -> &str {
+                    "batched-timed-default"
+                }
+
+                fn dispatch_borrowed(
+                    &self,
+                    _: &[&[u8]],
+                    _: &DispatchConfig,
+                ) -> Result<Vec<Vec<u8>>, BackendError> {
+                    panic!("batched timed default must route through resident-handle dispatch")
+                }
+
+                fn dispatch_persistent_handles_timed(
+                    &self,
+                    inputs: &[Resource],
+                    _: &DispatchConfig,
+                ) -> Result<crate::TimedDispatchResult, BackendError> {
+                    let Some(Resource::Borrowed(bytes)) = inputs.first() else {
+                        return Err(BackendError::new(
+                            "batched timed test item requires one borrowed resource. Fix: bind one resource per batch item.",
+                        ));
+                    };
+                    let device_ns = u64::from(bytes[0]) * 1000;
+                    Ok(crate::TimedDispatchResult::device_timed(
+                        vec![bytes.clone()],
+                        7,
+                        Some(device_ns),
+                    ))
+                }
+            }
+
+            let pipeline = TimedBatchPipeline;
+            let items = [
+                vec![Resource::Borrowed(vec![3_u8])],
+                vec![Resource::Borrowed(vec![1_u8])],
+                vec![Resource::Borrowed(vec![2_u8])],
+            ];
+            let batches: Vec<&[Resource]> = items.iter().map(Vec::as_slice).collect();
+            let mut outputs = Vec::new();
+            let mut device_ns_by_item = vec![Some(999_u64)];
+
+            pipeline
+                .dispatch_persistent_handles_batched_timed(
+                    &batches,
+                    &DispatchConfig::default(),
+                    &mut outputs,
+                    &mut device_ns_by_item,
+                )
+                .unwrap();
+
+            assert_eq!(
+                device_ns_by_item,
+                vec![Some(3000), Some(1000), Some(2000)],
+                "each item reports its own device time, in submission order"
+            );
+            assert_eq!(
+                outputs,
+                vec![vec![vec![3_u8]], vec![vec![1_u8]], vec![vec![2_u8]]]
+            );
+
+            pipeline
+                .dispatch_persistent_handles_batched_timed(
+                    &[],
+                    &DispatchConfig::default(),
+                    &mut outputs,
+                    &mut device_ns_by_item,
+                )
+                .unwrap();
+
+            assert!(device_ns_by_item.is_empty(), "an empty batch times nothing");
+            assert!(outputs.is_empty(), "an empty batch produces no output set");
+        }
+
         #[test]
         fn compiled_pipeline_persistent_defaults_fail_explicitly_without_host_fallback() {
             struct UnsupportedPersistentPipeline;

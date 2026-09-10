@@ -1223,7 +1223,7 @@ seam = "backend-contract"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 2684
+exported_item_count = 2689
 
   [[package.item]]
   path = "T::dispatch_bytes(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>"
@@ -2836,6 +2836,13 @@ exported_item_count = 2684
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_driver::ArtifactInstance::submit_resident_batch(&self, batches: alloc::vec::Vec<vyre_driver::BindingSet>) -> core::result::Result<alloc::vec::Vec<vyre_driver::Completion>, vyre_driver::BackendError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_driver::ArtifactMaterializer: core::marker::Send + core::marker::Sync"
   kind = "trait"
   stability = "extension"
@@ -4013,6 +4020,13 @@ exported_item_count = 2684
 
   [[package.item]]
   path = "vyre_driver::CompiledPipeline::dispatch_persistent_handles_batched_into(&self, batches: &[&[vyre_driver::Resource]], config: &vyre_driver::DispatchConfig, outputs: &mut alloc::vec::Vec<vyre_driver::OutputBuffers>) -> core::result::Result<(), vyre_driver::BackendError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::CompiledPipeline::dispatch_persistent_handles_batched_timed(&self, batches: &[&[vyre_driver::Resource]], config: &vyre_driver::DispatchConfig, outputs: &mut alloc::vec::Vec<vyre_driver::OutputBuffers>, device_ns_by_item: &mut alloc::vec::Vec<core::option::Option<u64>>) -> core::result::Result<(), vyre_driver::BackendError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -14316,6 +14330,13 @@ exported_item_count = 2684
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_driver::materialize::InstanceCore::resident_batch_resources(&self, batches: &[vyre_driver::BindingSet], mixed: fn() -> vyre_driver::BackendError) -> core::result::Result<alloc::vec::Vec<alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, vyre_driver::Resource>>, vyre_driver::BackendError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_driver::materialize::InstanceCore::retained: alloc::collections::btree::set::BTreeSet<vyre_megakernel::identity::ArtifactValueId>"
   kind = "field"
   stability = "extension"
@@ -14603,7 +14624,21 @@ exported_item_count = 2684
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_driver::materialize::ResidentInstance::execute_resident_batch(&self, items: &[alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, vyre_driver::Resource>]) -> core::result::Result<alloc::vec::Vec<vyre_driver::Completion>, vyre_driver::BackendError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_driver::materialize::ResidentInstance::launch_resident(&self, module: &Self::Module, ordered: &[vyre_driver::Resource], config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::materialize::ResidentInstance::launch_resident_batch(&self, module: &Self::Module, batches: &[&[vyre_driver::Resource]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<(vyre_driver::OutputBuffers, core::option::Option<u64>)>, vyre_driver::BackendError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -160383,7 +160418,7 @@ seam = "runtime"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre"
 stability = "internal"
-exported_item_count = 2865
+exported_item_count = 2866
 
   [[package.item]]
   path = "impl bytemuck::pod::Pod for vyre_runtime::resident_work_queue::planner::ResidentWorkItem"
@@ -164041,6 +164076,13 @@ exported_item_count = 2865
 
   [[package.item]]
   path = "vyre_runtime::artifact_admission::ArtifactSession::submit_host_inputs(&self, inputs: &[&[u8]]) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::Completion, vyre_runtime::artifact_admission::ArtifactSessionError>"
+  kind = "fn"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_runtime::artifact_admission::ArtifactSession::submit_resident_batch_and_wait(&self, batches: alloc::vec::Vec<vyre_driver::backend::artifact_lifecycle::BindingSet>) -> core::result::Result<alloc::vec::Vec<vyre_driver::backend::artifact_lifecycle::Completion>, vyre_runtime::artifact_admission::ArtifactSessionError>"
   kind = "fn"
   stability = "internal"
   feature = "unconditional"

@@ -38,6 +38,7 @@ impl CudaBackend {
         module_key: ModuleCacheKey,
         static_params_ptr: Option<u64>,
         prepared: &CudaDispatchPlan,
+        capture_item_timing: bool,
     ) -> Result<CudaResidentBatchDispatch, BackendError> {
         if batches.is_empty() {
             return Err(BackendError::InvalidProgram {
@@ -277,6 +278,19 @@ impl CudaBackend {
             output_readbacks_by_batch.push(output_readbacks);
         }
 
+        // Acquired before the launch lease so a failure to obtain one costs no
+        // enqueued work. On the error path below `guards.abandon` synchronizes
+        // the stream first, so dropping a recorded event cannot destroy one the
+        // device still holds.
+        let mut item_timing =
+            SmallVec::<[(crate::stream::CudaEvent, crate::stream::CudaEvent); 8]>::new();
+        if capture_item_timing {
+            reserve_smallvec(&mut item_timing, batches.len(), "resident batch item timing")?;
+            for _ in 0..batches.len() {
+                item_timing.push(self.launch_resources.acquire_timing_event_pair()?);
+            }
+        }
+
         // Marked in-flight before the launch lease is taken: the lease blocks
         // while another launch holds it, and a handle must already be pinned
         // before this dispatch can wait behind one that reads it.
@@ -311,9 +325,12 @@ impl CudaBackend {
                 stream_raw,
                 "resident batch launch",
                 |module_globals| {
-                    for launch_ptrs in launch_ptrs_by_batch.iter_mut() {
+                    for (batch_index, launch_ptrs) in launch_ptrs_by_batch.iter_mut().enumerate() {
                         let mut params_ref = params_ptr;
                         Self::kernel_args_into(launch_ptrs, &mut params_ref, &mut kernel_args)?;
+                        if let Some((start, _)) = item_timing.get(batch_index) {
+                            start.record(stream_raw)?;
+                        }
                         self.replay_fixpoint_launches(
                             module_globals,
                             func,
@@ -321,6 +338,9 @@ impl CudaBackend {
                             prepared,
                             stream_raw,
                         )?;
+                        if let Some((_, end)) = item_timing.get(batch_index) {
+                            end.record(stream_raw)?;
+                        }
                     }
                     Ok(())
                 },
@@ -388,6 +408,45 @@ impl CudaBackend {
             pending,
             output_handles: output_handles_by_batch,
             output_readbacks: output_readbacks_by_batch,
+            item_timing,
         })
+    }
+
+    /// Read each submitted item's device duration and return its events to the
+    /// pool.
+    ///
+    /// Call this only after the submission's completion event has been awaited.
+    /// `cuEventElapsedTime` reports the interval between two retired events, so
+    /// a pair whose end event has not retired has no interval to report.
+    pub(crate) fn collect_batch_item_device_ns(
+        &self,
+        item_timing: SmallVec<[(crate::stream::CudaEvent, crate::stream::CudaEvent); 8]>,
+        device_ns_by_item: &mut Vec<Option<u64>>,
+    ) -> Result<(), BackendError> {
+        device_ns_by_item.clear();
+        device_ns_by_item
+            .try_reserve_exact(item_timing.len())
+            .map_err(|error| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: failed to reserve {} resident batch item timing slot(s): {error}. Submit a smaller resident batch.",
+                    item_timing.len()
+                ),
+            })?;
+        let mut first_error = None;
+        for (start, end) in item_timing {
+            match start.elapsed_time_ns(&end) {
+                Ok(ns) => device_ns_by_item.push(Some(ns)),
+                Err(error) => {
+                    device_ns_by_item.push(None);
+                    first_error = first_error.or(Some(error));
+                }
+            }
+            self.launch_resources.release_timing_event(start);
+            self.launch_resources.release_timing_event(end);
+        }
+        match first_error {
+            Some(error) => Err(error),
+            None => Ok(()),
+        }
     }
 }
