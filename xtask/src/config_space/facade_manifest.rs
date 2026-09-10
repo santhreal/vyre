@@ -8,6 +8,7 @@
 //! it, so a row cannot forward to a package the record does not name and a
 //! recorded domain feature cannot be missing a row.
 
+use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
 use super::roster::{FacadeFeature, FacadeRoster};
@@ -111,6 +112,64 @@ pub fn render(roster: &FacadeRoster) -> String {
     text
 }
 
+/// Every `(feature, dependency)` pair whose `activates` entry names a
+/// dependency the facade manifest does not declare.
+///
+/// `activates` renders as a bare `dep:<name>` in the facade's own feature
+/// body, and cargo rejects a manifest whose feature activates a dependency
+/// that manifest never declared. A row that named a dependency belonging to
+/// the domain package instead of the facade rendered a `[features]` table no
+/// cargo command could read, which took down every gate in the regeneration
+/// order rather than the one that produced it.
+///
+/// The domain package's own optional dependency needs no entry here: the
+/// generated `<domain>?/<feature>` forward turns it on inside the package that
+/// declares it.
+#[must_use]
+pub fn undeclared_activations(roster: &FacadeRoster, manifest: &str) -> Vec<(String, String)> {
+    // A manifest that does not parse states nothing about its dependencies.
+    // Reading it as declaring none would report every activation at once and
+    // bury the parse failure cargo already reports.
+    let Some(declared) = declared_dependencies(manifest) else {
+        return Vec::new();
+    };
+    let mut undeclared = Vec::new();
+    for feature in &roster.feature {
+        for dependency in &feature.activates {
+            if !declared.contains(dependency) {
+                undeclared.push((feature.name.clone(), dependency.clone()));
+            }
+        }
+    }
+    undeclared
+}
+
+/// Every dependency name a manifest declares, across every dependency table.
+///
+/// `None` when the manifest does not parse.
+fn declared_dependencies(manifest: &str) -> Option<BTreeSet<String>> {
+    let document = toml::from_str::<toml::Table>(manifest).ok()?;
+    let mut names = BTreeSet::new();
+    collect_dependency_tables(&document, &mut names);
+    if let Some(toml::Value::Table(targets)) = document.get("target") {
+        for value in targets.values() {
+            if let toml::Value::Table(table) = value {
+                collect_dependency_tables(table, &mut names);
+            }
+        }
+    }
+    Some(names)
+}
+
+/// Add every key of the three dependency tables `table` declares.
+fn collect_dependency_tables(table: &toml::Table, names: &mut BTreeSet<String>) {
+    for key in ["dependencies", "dev-dependencies", "build-dependencies"] {
+        if let Some(toml::Value::Table(entries)) = table.get(key) {
+            names.extend(entries.keys().cloned());
+        }
+    }
+}
+
 /// Splice the rendered table into `manifest`, leaving every other section byte
 /// for byte as it was.
 ///
@@ -148,4 +207,77 @@ pub fn splice(manifest: &str, table: &str) -> Result<String, String> {
     replacement.push("");
     lines.splice(start..end, replacement);
     Ok(lines.join("\n"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// One roster row naming `dependency` as an activation.
+    fn roster_activating(dependency: &str) -> FacadeRoster {
+        FacadeRoster {
+            package: "vyre-libs".to_string(),
+            default: Vec::new(),
+            local: Vec::new(),
+            aggregate: Vec::new(),
+            domain: Vec::new(),
+            feature: vec![FacadeFeature {
+                name: "pattern-regex".to_string(),
+                domain: "vyre-libs-pattern".to_string(),
+                requires: vec!["pattern-nfa".to_string()],
+                activates: vec![dependency.to_string()],
+            }],
+        }
+    }
+
+    /// A manifest declaring one optional dependency in each dependency table.
+    const MANIFEST: &str = "[package]\nname = \"vyre-libs\"\n\n\
+        [dependencies]\nvyre-libs-pattern = { version = \"0.8.0\", optional = true }\n\n\
+        [dev-dependencies]\nvyre-test-support = { version = \"0.8.0\" }\n\n\
+        [target.'cfg(unix)'.dependencies]\nlibc = { version = \"0.2\", optional = true }\n\n\
+        [features]\npattern-regex = []\n";
+
+    /// WHY: an `activates` entry renders as a bare `dep:<name>` in the facade's
+    /// own feature body, and cargo refuses a manifest whose feature activates a
+    /// dependency that manifest never declares. A row naming a dependency the
+    /// domain package owns produced a `[features]` table no cargo command could
+    /// read, so every gate in the regeneration order failed instead of the one
+    /// that wrote it.
+    ///
+    /// What it does not catch: a dependency declared under a `[target.<cfg>]`
+    /// the build never selects. Cargo accepts the activation there, so it is
+    /// not this check's concern.
+    #[test]
+    fn a_row_activating_an_undeclared_dependency_is_named() {
+        let undeclared = undeclared_activations(&roster_activating("regex-syntax"), MANIFEST);
+        assert_eq!(
+            undeclared,
+            vec![("pattern-regex".to_string(), "regex-syntax".to_string())],
+            "a dependency the facade does not declare must be reported"
+        );
+    }
+
+    /// WHY: the check must not report a dependency the facade does declare,
+    /// whichever table declares it, or it would refuse a manifest cargo accepts
+    /// and no roster row could ever activate a real dependency.
+    #[test]
+    fn a_row_activating_a_declared_dependency_is_accepted() {
+        for declared in ["vyre-libs-pattern", "vyre-test-support", "libc"] {
+            assert!(
+                undeclared_activations(&roster_activating(declared), MANIFEST).is_empty(),
+                "`{declared}` is declared in this manifest and must be accepted"
+            );
+        }
+    }
+
+    /// WHY: an unparseable manifest must not read as a manifest that declares
+    /// nothing, which would report every activation as undeclared and turn a
+    /// read failure into a wall of false findings.
+    #[test]
+    fn an_unparseable_manifest_reports_no_activation() {
+        assert!(
+            undeclared_activations(&roster_activating("regex-syntax"), "[features").is_empty(),
+            "a manifest that does not parse states nothing about its dependencies"
+        );
+    }
 }

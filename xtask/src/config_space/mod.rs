@@ -299,6 +299,19 @@ impl ConfigurationModel {
         let path = format!("{relative}/Cargo.toml");
         let text = fs::read_to_string(root.join(&path))
             .map_err(|error| ConfigSpaceError::ManifestParse(format!("{path}: {error}")))?;
+        let undeclared = facade_manifest::undeclared_activations(&facade_roster, &text);
+        if !undeclared.is_empty() {
+            let named: Vec<String> = undeclared
+                .iter()
+                .map(|(feature, dependency)| format!("{feature} activates {dependency}"))
+                .collect();
+            return Err(ConfigSpaceError::ManifestParse(format!(
+                "{path}: the roster activates dependencies the facade does not declare: {}. \
+                 Declare each one optional in the facade, or drop it from the roster row when \
+                 the domain package owns it and the weak forward already turns it on.",
+                named.join(", ")
+            )));
+        }
         let table = facade_manifest::render(&facade_roster);
         let spliced = facade_manifest::splice(&text, &table)
             .map_err(|reason| ConfigSpaceError::ManifestParse(format!("{path}: {reason}")))?;
