@@ -3058,7 +3058,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CanonicalConst"
 variant_name = "Blob"
-declaration_site = "vyre-foundation/src/substrate/arenas.rs:198"
+declaration_site = "vyre-foundation/src/substrate/arenas.rs:231"
 constructors = ["CanonicalConst::Blob"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -3068,7 +3068,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CanonicalConst"
 variant_name = "Bool"
-declaration_site = "vyre-foundation/src/substrate/arenas.rs:196"
+declaration_site = "vyre-foundation/src/substrate/arenas.rs:229"
 constructors = ["CanonicalConst::Bool"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -3078,7 +3078,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CanonicalConst"
 variant_name = "F32"
-declaration_site = "vyre-foundation/src/substrate/arenas.rs:192"
+declaration_site = "vyre-foundation/src/substrate/arenas.rs:225"
 constructors = ["CanonicalConst::F32"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -3088,7 +3088,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CanonicalConst"
 variant_name = "F64"
-declaration_site = "vyre-foundation/src/substrate/arenas.rs:194"
+declaration_site = "vyre-foundation/src/substrate/arenas.rs:227"
 constructors = ["CanonicalConst::F64"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -3098,7 +3098,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CanonicalConst"
 variant_name = "I32"
-declaration_site = "vyre-foundation/src/substrate/arenas.rs:188"
+declaration_site = "vyre-foundation/src/substrate/arenas.rs:221"
 constructors = ["CanonicalConst::I32"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -3108,7 +3108,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CanonicalConst"
 variant_name = "I64"
-declaration_site = "vyre-foundation/src/substrate/arenas.rs:190"
+declaration_site = "vyre-foundation/src/substrate/arenas.rs:223"
 constructors = ["CanonicalConst::I64"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -3118,7 +3118,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CanonicalConst"
 variant_name = "U32"
-declaration_site = "vyre-foundation/src/substrate/arenas.rs:184"
+declaration_site = "vyre-foundation/src/substrate/arenas.rs:217"
 constructors = ["CanonicalConst::U32"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -3128,7 +3128,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CanonicalConst"
 variant_name = "U64"
-declaration_site = "vyre-foundation/src/substrate/arenas.rs:186"
+declaration_site = "vyre-foundation/src/substrate/arenas.rs:219"
 constructors = ["CanonicalConst::U64"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -3138,7 +3138,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CanonicalType"
 variant_name = "Composite"
-declaration_site = "vyre-foundation/src/substrate/arenas.rs:104"
+declaration_site = "vyre-foundation/src/substrate/arenas.rs:137"
 constructors = ["CanonicalType::Composite"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -3148,7 +3148,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CanonicalType"
 variant_name = "Scalar"
-declaration_site = "vyre-foundation/src/substrate/arenas.rs:88"
+declaration_site = "vyre-foundation/src/substrate/arenas.rs:121"
 constructors = ["CanonicalType::Scalar"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -3158,7 +3158,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CanonicalType"
 variant_name = "Tensor"
-declaration_site = "vyre-foundation/src/substrate/arenas.rs:97"
+declaration_site = "vyre-foundation/src/substrate/arenas.rs:130"
 constructors = ["CanonicalType::Tensor"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -3168,7 +3168,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CanonicalType"
 variant_name = "Vector"
-declaration_site = "vyre-foundation/src/substrate/arenas.rs:90"
+declaration_site = "vyre-foundation/src/substrate/arenas.rs:123"
 constructors = ["CanonicalType::Vector"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -3578,7 +3578,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CodecError"
 variant_name = "InvalidUtf8"
-declaration_site = "vyre-foundation/src/canonical_codec.rs:120"
+declaration_site = "vyre-foundation/src/canonical_codec.rs:127"
 constructors = ["CodecError::InvalidUtf8"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq)"
@@ -3588,7 +3588,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CodecError"
 variant_name = "MissingRequiredField"
-declaration_site = "vyre-foundation/src/canonical_codec.rs:106"
+declaration_site = "vyre-foundation/src/canonical_codec.rs:113"
 constructors = ["CodecError::MissingRequiredField"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq)"
@@ -3628,7 +3628,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CodecError"
 variant_name = "SignatureVerificationFailed"
-declaration_site = "vyre-foundation/src/canonical_codec.rs:132"
+declaration_site = "vyre-foundation/src/canonical_codec.rs:139"
 constructors = ["CodecError::SignatureVerificationFailed"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq)"
@@ -3638,7 +3638,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CodecError"
 variant_name = "StaleSchemaVersion"
-declaration_site = "vyre-foundation/src/canonical_codec.rs:125"
+declaration_site = "vyre-foundation/src/canonical_codec.rs:132"
 constructors = ["CodecError::StaleSchemaVersion"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq)"
@@ -3657,8 +3657,18 @@ disposition = "implemented"
 
 [[closure]]
 type_name = "CodecError"
+variant_name = "UndeclaredField"
+declaration_site = "vyre-foundation/src/canonical_codec.rs:106"
+constructors = ["CodecError::UndeclaredField"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Clone, Debug, PartialEq, Eq)"
+public_api_entry = "docs/public-api/vyre-foundation.txt"
+disposition = "implemented"
+
+[[closure]]
+type_name = "CodecError"
 variant_name = "UnexpectedEof"
-declaration_site = "vyre-foundation/src/canonical_codec.rs:113"
+declaration_site = "vyre-foundation/src/canonical_codec.rs:120"
 constructors = ["CodecError::UnexpectedEof"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq)"
@@ -6249,7 +6259,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "DefaultsPolicy"
 variant_name = "ExplicitDefaultOnly"
-declaration_site = "vyre-spec/src/schema_registry.rs:205"
+declaration_site = "vyre-spec/src/schema_registry.rs:261"
 constructors = ["DefaultsPolicy::ExplicitDefaultOnly"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq)"
@@ -6259,7 +6269,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "DefaultsPolicy"
 variant_name = "NoDefaults"
-declaration_site = "vyre-spec/src/schema_registry.rs:203"
+declaration_site = "vyre-spec/src/schema_registry.rs:259"
 constructors = ["DefaultsPolicy::NoDefaults"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq)"
@@ -6269,7 +6279,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "DefaultsPolicy"
 variant_name = "PreserveUnknownSafe"
-declaration_site = "vyre-spec/src/schema_registry.rs:207"
+declaration_site = "vyre-spec/src/schema_registry.rs:263"
 constructors = ["DefaultsPolicy::PreserveUnknownSafe"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq)"
@@ -7819,7 +7829,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "Endianness"
 variant_name = "BigEndian"
-declaration_site = "vyre-foundation/src/platform/matrix.rs:182"
+declaration_site = "vyre-foundation/src/platform/matrix.rs:200"
 constructors = ["Endianness::BigEndian"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)"
@@ -7829,7 +7839,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "Endianness"
 variant_name = "LittleEndian"
-declaration_site = "vyre-foundation/src/platform/matrix.rs:180"
+declaration_site = "vyre-foundation/src/platform/matrix.rs:198"
 constructors = ["Endianness::LittleEndian"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)"
@@ -9852,7 +9862,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldType"
 variant_name = "Bool"
-declaration_site = "vyre-spec/src/schema_registry.rs:173"
+declaration_site = "vyre-spec/src/schema_registry.rs:229"
 constructors = ["FieldType::Bool"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -9892,7 +9902,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldType"
 variant_name = "F32"
-declaration_site = "vyre-spec/src/schema_registry.rs:169"
+declaration_site = "vyre-spec/src/schema_registry.rs:225"
 constructors = ["FieldType::F32"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -9912,7 +9922,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldType"
 variant_name = "F64"
-declaration_site = "vyre-spec/src/schema_registry.rs:171"
+declaration_site = "vyre-spec/src/schema_registry.rs:227"
 constructors = ["FieldType::F64"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -9922,7 +9932,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldType"
 variant_name = "FixedBytes"
-declaration_site = "vyre-spec/src/schema_registry.rs:175"
+declaration_site = "vyre-spec/src/schema_registry.rs:231"
 constructors = ["FieldType::FixedBytes"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -9942,7 +9952,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldType"
 variant_name = "I32"
-declaration_site = "vyre-spec/src/schema_registry.rs:165"
+declaration_site = "vyre-spec/src/schema_registry.rs:221"
 constructors = ["FieldType::I32"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -9962,7 +9972,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldType"
 variant_name = "I64"
-declaration_site = "vyre-spec/src/schema_registry.rs:167"
+declaration_site = "vyre-spec/src/schema_registry.rs:223"
 constructors = ["FieldType::I64"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -9972,7 +9982,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldType"
 variant_name = "List"
-declaration_site = "vyre-spec/src/schema_registry.rs:181"
+declaration_site = "vyre-spec/src/schema_registry.rs:237"
 constructors = ["FieldType::List"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -9992,7 +10002,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldType"
 variant_name = "U16"
-declaration_site = "vyre-spec/src/schema_registry.rs:159"
+declaration_site = "vyre-spec/src/schema_registry.rs:215"
 constructors = ["FieldType::U16"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -10012,7 +10022,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldType"
 variant_name = "U32"
-declaration_site = "vyre-spec/src/schema_registry.rs:161"
+declaration_site = "vyre-spec/src/schema_registry.rs:217"
 constructors = ["FieldType::U32"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -10032,7 +10042,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldType"
 variant_name = "U64"
-declaration_site = "vyre-spec/src/schema_registry.rs:163"
+declaration_site = "vyre-spec/src/schema_registry.rs:219"
 constructors = ["FieldType::U64"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -10042,7 +10052,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldType"
 variant_name = "U8"
-declaration_site = "vyre-spec/src/schema_registry.rs:157"
+declaration_site = "vyre-spec/src/schema_registry.rs:213"
 constructors = ["FieldType::U8"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -10052,7 +10062,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldType"
 variant_name = "Utf8String"
-declaration_site = "vyre-spec/src/schema_registry.rs:179"
+declaration_site = "vyre-spec/src/schema_registry.rs:235"
 constructors = ["FieldType::Utf8String"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -10062,7 +10072,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldType"
 variant_name = "VarBytes"
-declaration_site = "vyre-spec/src/schema_registry.rs:177"
+declaration_site = "vyre-spec/src/schema_registry.rs:233"
 constructors = ["FieldType::VarBytes"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -11547,7 +11557,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GraphDeltaError"
 variant_name = "EmptyDelta"
-declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:244"
+declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:252"
 constructors = ["GraphDeltaError::EmptyDelta"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -11577,8 +11587,18 @@ disposition = "implemented"
 [[closure]]
 type_name = "GraphDeltaError"
 variant_name = "InvalidStateTransition"
-declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:193"
+declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:201"
 constructors = ["GraphDeltaError::InvalidStateTransition"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
+public_api_entry = "docs/public-api/vyre-foundation.txt"
+disposition = "implemented"
+
+[[closure]]
+type_name = "GraphDeltaError"
+variant_name = "LockPoisoned"
+declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:183"
+constructors = ["GraphDeltaError::LockPoisoned"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
 public_api_entry = "docs/public-api/vyre-foundation.txt"
@@ -11607,7 +11627,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GraphDeltaError"
 variant_name = "NameLengthExceeded"
-declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:215"
+declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:223"
 constructors = ["GraphDeltaError::NameLengthExceeded"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -11617,7 +11637,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GraphDeltaError"
 variant_name = "OperationLimitExceeded"
-declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:209"
+declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:217"
 constructors = ["GraphDeltaError::OperationLimitExceeded"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -11627,7 +11647,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GraphDeltaError"
 variant_name = "RankExceeded"
-declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:223"
+declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:231"
 constructors = ["GraphDeltaError::RankExceeded"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -11637,7 +11657,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GraphDeltaError"
 variant_name = "ResourceGenerationMismatch"
-declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:183"
+declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:191"
 constructors = ["GraphDeltaError::ResourceGenerationMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -11647,7 +11667,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GraphDeltaError"
 variant_name = "SupersededGeneration"
-declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:231"
+declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:239"
 constructors = ["GraphDeltaError::SupersededGeneration"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -11667,7 +11687,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GraphDeltaError"
 variant_name = "VersionMismatch"
-declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:201"
+declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:209"
 constructors = ["GraphDeltaError::VersionMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -11677,7 +11697,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GraphDeltaError"
 variant_name = "Wire"
-declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:241"
+declaration_site = "vyre-foundation/src/ir_inner/model/program_graph_delta.rs:249"
 constructors = ["GraphDeltaError::Wire"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -11885,7 +11905,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GuardedState"
 variant_name = "PoisonedTerminal"
-declaration_site = "vyre-runtime/src/atomic_recovery.rs:22"
+declaration_site = "vyre-runtime/src/atomic_recovery.rs:24"
 constructors = ["GuardedState::PoisonedTerminal"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq)"
@@ -11895,7 +11915,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GuardedState"
 variant_name = "Ready"
-declaration_site = "vyre-runtime/src/atomic_recovery.rs:18"
+declaration_site = "vyre-runtime/src/atomic_recovery.rs:20"
 constructors = ["GuardedState::Ready"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq)"
@@ -11905,7 +11925,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "GuardedState"
 variant_name = "Rebuilding"
-declaration_site = "vyre-runtime/src/atomic_recovery.rs:20"
+declaration_site = "vyre-runtime/src/atomic_recovery.rs:22"
 constructors = ["GuardedState::Rebuilding"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq)"
@@ -22329,8 +22349,18 @@ disposition = "implemented"
 [[closure]]
 type_name = "QueryError"
 variant_name = "ExecutionFailed"
-declaration_site = "vyre-foundation/src/substrate/query.rs:175"
+declaration_site = "vyre-foundation/src/substrate/query.rs:181"
 constructors = ["QueryError::ExecutionFailed"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
+public_api_entry = "docs/public-api/vyre-foundation.txt"
+disposition = "implemented"
+
+[[closure]]
+type_name = "QueryError"
+variant_name = "LockPoisoned"
+declaration_site = "vyre-foundation/src/substrate/query.rs:175"
+constructors = ["QueryError::LockPoisoned"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
 public_api_entry = "docs/public-api/vyre-foundation.txt"
@@ -22783,6 +22813,7 @@ declaration_site = "vyre-foundation/src/lower/subgroup_lowering.rs:23"
 constructors = ["ReductionScope::EveryWorkgroup"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq)"
+public_api_entry = "docs/public-api/vyre-libs-reduce.txt"
 disposition = "implemented"
 
 [[closure]]
@@ -22792,6 +22823,7 @@ declaration_site = "vyre-foundation/src/lower/subgroup_lowering.rs:24"
 constructors = ["ReductionScope::FirstWorkgroup"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq)"
+public_api_entry = "docs/public-api/vyre-libs-reduce.txt"
 disposition = "implemented"
 
 [[closure]]
@@ -29928,7 +29960,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ShapeConstraint"
 variant_name = "DivisibleBy"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:71"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:96"
 constructors = ["ShapeConstraint::DivisibleBy"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -29938,7 +29970,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ShapeConstraint"
 variant_name = "Equal"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:67"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:92"
 constructors = ["ShapeConstraint::Equal"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -29948,7 +29980,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ShapeConstraint"
 variant_name = "LessEqual"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:69"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:94"
 constructors = ["ShapeConstraint::LessEqual"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -29958,7 +29990,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ShapeConstraint"
 variant_name = "ModuloEqual"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:87"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:112"
 constructors = ["ShapeConstraint::ModuloEqual"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -29968,7 +30000,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ShapeConstraint"
 variant_name = "Range"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:78"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:103"
 constructors = ["ShapeConstraint::Range"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -31531,7 +31563,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SymbolicDim"
 variant_name = "Add"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:39"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:64"
 constructors = ["SymbolicDim::Add"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -31541,7 +31573,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SymbolicDim"
 variant_name = "AlignTo"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:55"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:80"
 constructors = ["SymbolicDim::AlignTo"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -31551,7 +31583,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SymbolicDim"
 variant_name = "Constant"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:28"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:53"
 constructors = ["SymbolicDim::Constant"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -31561,7 +31593,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SymbolicDim"
 variant_name = "DivCeil"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:47"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:72"
 constructors = ["SymbolicDim::DivCeil"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -31571,7 +31603,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SymbolicDim"
 variant_name = "DivFloor"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:45"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:70"
 constructors = ["SymbolicDim::DivFloor"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -31581,7 +31613,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SymbolicDim"
 variant_name = "Max"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:53"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:78"
 constructors = ["SymbolicDim::Max"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -31591,7 +31623,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SymbolicDim"
 variant_name = "Min"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:51"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:76"
 constructors = ["SymbolicDim::Min"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -31601,7 +31633,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SymbolicDim"
 variant_name = "Mod"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:49"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:74"
 constructors = ["SymbolicDim::Mod"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -31611,7 +31643,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SymbolicDim"
 variant_name = "Mul"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:43"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:68"
 constructors = ["SymbolicDim::Mul"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -31621,7 +31653,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SymbolicDim"
 variant_name = "Param"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:32"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:57"
 constructors = ["SymbolicDim::Param"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -31631,7 +31663,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SymbolicDim"
 variant_name = "Sub"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:41"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:66"
 constructors = ["SymbolicDim::Sub"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -31641,7 +31673,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SymbolicDim"
 variant_name = "Symbol"
-declaration_site = "vyre-foundation/src/types/shape/mod.rs:30"
+declaration_site = "vyre-foundation/src/types/shape/mod.rs:55"
 constructors = ["SymbolicDim::Symbol"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
@@ -33568,7 +33600,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "UnsupportedPlatformError"
 variant_name = "Serialization"
-declaration_site = "vyre-foundation/src/platform/matrix.rs:268"
+declaration_site = "vyre-foundation/src/platform/matrix.rs:303"
 constructors = ["UnsupportedPlatformError::Serialization"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Error)"
@@ -33578,7 +33610,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "UnsupportedPlatformError"
 variant_name = "StaleSchemaVersion"
-declaration_site = "vyre-foundation/src/platform/matrix.rs:260"
+declaration_site = "vyre-foundation/src/platform/matrix.rs:295"
 constructors = ["UnsupportedPlatformError::StaleSchemaVersion"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Error)"
@@ -33588,7 +33620,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "UnsupportedPlatformError"
 variant_name = "UnsupportedHost"
-declaration_site = "vyre-foundation/src/platform/matrix.rs:248"
+declaration_site = "vyre-foundation/src/platform/matrix.rs:281"
 constructors = ["UnsupportedPlatformError::UnsupportedHost"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Error)"
