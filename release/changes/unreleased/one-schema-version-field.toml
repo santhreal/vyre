@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every canonical schema whose first field states a schema version now shares one named field entry instead of repeating the literal."

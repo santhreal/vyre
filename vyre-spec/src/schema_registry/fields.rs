@@ -7,6 +7,17 @@
 
 use super::{CanonicalField, FieldType};
 
+/// Field 1 of every schema whose first field states the version it was written
+/// at. The number, type and identity flag are part of the wire contract, so the
+/// entry is stated once and shared by every table that opens with it.
+pub(super) const SCHEMA_VERSION_FIELD: CanonicalField = CanonicalField {
+    number: 1,
+    name: "schema_version",
+    field_type: FieldType::U32,
+    is_identity: true,
+    required: true,
+};
+
 pub(super) static CONFORMANCE_CERT_FIELDS: &[CanonicalField] = &[
     CanonicalField {
         number: 1,
@@ -88,13 +99,7 @@ pub(super) static CONFORMANCE_CERT_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static ARTIFACT_PAYLOAD_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "artifact_hash",
@@ -133,13 +138,7 @@ pub(super) static ARTIFACT_PAYLOAD_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static SCHEDULE_RECORD_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "schedule_id",
@@ -171,13 +170,7 @@ pub(super) static SCHEDULE_RECORD_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static PROOF_RECEIPT_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "proof_digest",
@@ -202,13 +195,7 @@ pub(super) static PROOF_RECEIPT_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static MEASUREMENT_RECORD_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "workload_hash",
@@ -233,13 +220,7 @@ pub(super) static MEASUREMENT_RECORD_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static TRACE_EVENT_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "event_id",
@@ -264,13 +245,7 @@ pub(super) static TRACE_EVENT_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static CACHE_ENTRY_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "key_hash",
@@ -295,13 +270,7 @@ pub(super) static CACHE_ENTRY_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static CONFIG_RECEIPT_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "config_hash",
@@ -326,13 +295,7 @@ pub(super) static CONFIG_RECEIPT_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static WIRE_OP_METADATA_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "op_id",
@@ -357,13 +320,7 @@ pub(super) static WIRE_OP_METADATA_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static INVARIANT_DIGEST_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "invariant_id",
@@ -381,13 +338,7 @@ pub(super) static INVARIANT_DIGEST_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static ANALYSIS_FACT_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "fact_kind",
@@ -405,13 +356,7 @@ pub(super) static ANALYSIS_FACT_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static EXTENSION_SCHEMA_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "extension_id",
@@ -443,13 +388,7 @@ pub(super) static EXTENSION_SCHEMA_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static REPLAY_CAPSULE_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "op_id",
@@ -665,13 +604,7 @@ pub(super) static PROOF_PLAN_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static SAFETENSOR_INDEX_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "framing_version",
@@ -703,13 +636,7 @@ pub(super) static SAFETENSOR_INDEX_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static AOT_MANIFEST_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "schema_name",
@@ -838,13 +765,7 @@ pub(super) static WIRE_FRAMING_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static TARGET_FACET_MATRIX_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "platform_name",
@@ -869,13 +790,7 @@ pub(super) static TARGET_FACET_MATRIX_FIELDS: &[CanonicalField] = &[
 ];
 
 pub(super) static CAUSAL_RECEIPT_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "session_id",

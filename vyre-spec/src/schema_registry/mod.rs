@@ -448,13 +448,7 @@ static STALE_DIAGNOSTIC_FIXTURES: &[&str] = &["vyre-diagnostic-v0"];
 /// renderings of one failure are the same record when those four agree, and
 /// every other field is context the surfaces render around them.
 static DIAGNOSTIC_RECORD_FIELDS: &[CanonicalField] = &[
-    CanonicalField {
-        number: 1,
-        name: "schema_version",
-        field_type: FieldType::U32,
-        is_identity: true,
-        required: true,
-    },
+    SCHEMA_VERSION_FIELD,
     CanonicalField {
         number: 2,
         name: "severity",
