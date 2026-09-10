@@ -1,0 +1,441 @@
+{
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"afe7d9c3ef662b35191f1047d3ec8a31fbe7d35d","commit_timestamp":"1789040792","parent_commit":"c5e305aa5b4acb24f0cb8cbf758beca9362bb3ee","dirty":true,"source_fingerprint":"git:afe7d9c3ef662b35191f1047d3ec8a31fbe7d35d:dirty=true:worktree=b1732cdc5d84269444124ed816c26f331bd8ef5d83c0ae87d88488ab871454d5"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "schema_version": 1,
+  "tiers": [
+    {
+      "tier": "backend-neutral",
+      "packages": [
+        "vyre-driver"
+      ],
+      "compile_units": 6,
+      "link_units": 7,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 520622
+    },
+    {
+      "tier": "compiler-boundary",
+      "packages": [
+        "vyre-megakernel"
+      ],
+      "compile_units": 1,
+      "link_units": 2,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 444153
+    },
+    {
+      "tier": "concrete-backend",
+      "packages": [
+        "vyre-driver-cuda",
+        "vyre-driver-metal",
+        "vyre-driver-reference",
+        "vyre-driver-spirv",
+        "vyre-driver-wgpu"
+      ],
+      "compile_units": 7,
+      "link_units": 12,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 2288940
+    },
+    {
+      "tier": "conformance",
+      "packages": [
+        "vyre-conform",
+        "vyre-conform-spec"
+      ],
+      "compile_units": 5,
+      "link_units": 8,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 520678
+    },
+    {
+      "tier": "emitter",
+      "packages": [
+        "vyre-emit-metal",
+        "vyre-emit-naga",
+        "vyre-emit-ptx",
+        "vyre-emit-spirv"
+      ],
+      "compile_units": 4,
+      "link_units": 8,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 533850
+    },
+    {
+      "tier": "facade",
+      "packages": [
+        "vyre"
+      ],
+      "compile_units": 1,
+      "link_units": 2,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 63795
+    },
+    {
+      "tier": "foundation",
+      "packages": [
+        "vyre-foundation",
+        "vyre-macros",
+        "vyre-spec"
+      ],
+      "compile_units": 3,
+      "link_units": 6,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 2697479
+    },
+    {
+      "tier": "libraries",
+      "packages": [
+        "vyre-libs",
+        "vyre-libs-analysis",
+        "vyre-libs-bitset",
+        "vyre-libs-builder",
+        "vyre-libs-decode",
+        "vyre-libs-device",
+        "vyre-libs-encoding",
+        "vyre-libs-fixpoint",
+        "vyre-libs-graph",
+        "vyre-libs-hash",
+        "vyre-libs-math",
+        "vyre-libs-nn",
+        "vyre-libs-parsing",
+        "vyre-libs-pattern",
+        "vyre-libs-reasoning",
+        "vyre-libs-reduce",
+        "vyre-libs-rule",
+        "vyre-libs-scheduling",
+        "vyre-libs-security",
+        "vyre-libs-solvers",
+        "vyre-libs-text",
+        "vyre-libs-vfs",
+        "vyre-libs-visual"
+      ],
+      "compile_units": 32,
+      "link_units": 55,
+      "duplicate_source_bytes": 22010,
+      "disk_use_bytes": 2960135
+    },
+    {
+      "tier": "lowering",
+      "packages": [
+        "vyre-lower"
+      ],
+      "compile_units": 1,
+      "link_units": 2,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 248553
+    },
+    {
+      "tier": "packaging",
+      "packages": [
+        "vyre-aot"
+      ],
+      "compile_units": 1,
+      "link_units": 2,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 89377
+    },
+    {
+      "tier": "pass-engine",
+      "packages": [
+        "vyre-pass-engine"
+      ],
+      "compile_units": 3,
+      "link_units": 4,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 77440
+    },
+    {
+      "tier": "primitives",
+      "packages": [
+        "vyre-primitives"
+      ],
+      "compile_units": 2,
+      "link_units": 3,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 74839
+    },
+    {
+      "tier": "registry-link",
+      "packages": [
+        "vyre-registry-link"
+      ],
+      "compile_units": 3,
+      "link_units": 4,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 52572
+    },
+    {
+      "tier": "runtime",
+      "packages": [
+        "vyre-runtime",
+        "vyre-safetensors"
+      ],
+      "compile_units": 2,
+      "link_units": 4,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 625007
+    },
+    {
+      "tier": "semantics",
+      "packages": [
+        "vyre-reference"
+      ],
+      "compile_units": 1,
+      "link_units": 2,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 417238
+    },
+    {
+      "tier": "standalone-tooling",
+      "packages": [
+        "structure-gate",
+        "vyre-alloc-probe"
+      ],
+      "compile_units": 2,
+      "link_units": 5,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 164739
+    },
+    {
+      "tier": "test-tooling",
+      "packages": [
+        "vyre-test-support"
+      ],
+      "compile_units": 3,
+      "link_units": 4,
+      "duplicate_source_bytes": 0,
+      "disk_use_bytes": 62306
+    },
+    {
+      "tier": "tooling",
+      "packages": [
+        "vyre-bench",
+        "vyre-debug",
+        "vyre-lints",
+        "xtask",
+        "xtask-evidence",
+        "xtask-registry"
+      ],
+      "compile_units": 9,
+      "link_units": 20,
+      "duplicate_source_bytes": 1172,
+      "disk_use_bytes": 1001052
+    }
+  ],
+  "shared_contracts": [
+    {
+      "module": "vyre-test-support/src/adversarial_generators.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/artifact_fixtures.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/async_span_parity.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/backend_capabilities.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/backend_execution_domain.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/bin_op_variants.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/binop_parity.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/case_table.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/cast_parity.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/collective_programs.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/consumer_boundary.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/data_type_elements.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/data_type_variants.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/differential_matrix.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/elementwise_programs.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/exploded_ifds_cases.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/expr_variants.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/extension_variants.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/fixed_point.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/fixture_instance.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/graph_fixtures.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/graph_shapes.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/graph_values.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/hardware_oracle.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/ir_regions.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/ir_variants.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/le_words.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/lib.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/logical_markers.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/memory_order_variants.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/monorepo.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/mutation_testing.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/pass_programs.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/preferred_dispatch_backend_contract.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/public_api.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/registry_closure.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/registry_nets.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/replay_capsule.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/resident_async_overlap_contract.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/scalar_corpora.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/selected_schedules.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/semantic_requests.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/spec_op_strategies.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/spec_variant_tables.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/strict_float_programs.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/structural_ir.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/sweep_rng.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/target_compiler_contract.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/test_parity_oracles.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/tile_programs.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/wire_hostile_inputs.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/wire_round_trip.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/word_corpora.rs",
+      "owner": "vyre-test-support"
+    }
+  ],
+  "duplicated_shared_contracts": [],
+  "escaping_path_includes": []
+}

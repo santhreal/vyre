@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with Q through Z.
-pub const GATES_Q_Z: [GateDescriptor; 38] = [
+pub const GATES_Q_Z: [GateDescriptor; 39] = [
     GateDescriptor {
         name: "readback-ring",
         help: "Enforce readback-ring contracts",
@@ -373,6 +373,24 @@ pub const GATES_Q_Z: [GateDescriptor; 38] = [
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
         proof: "crate::gates::variant_list_closure::tests::a_variant_the_list_omits_is_a_finding",
+    },
+    GateDescriptor {
+        name: "verification-budget",
+        help: "Measure what verification costs each tier and hold it to the budget its row \
+        declares: the test targets cargo builds, the binaries they link, the test sources \
+        byte-identical to a test source in another package, and the bytes the tier's test \
+        sources occupy. The three counts are exact in both directions and disk use is a \
+        ceiling. Also proves each shared contract body has one owning package and that no \
+        `#[path]` include in a test resolves outside its own package. Proves nothing about \
+        what the tests assert.",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "workspace tiers",
+        inputs: &["docs/CRATE_OWNERSHIP.toml", "docs/testing/VERIFICATION_BUDGET.toml"],
+        artifacts: &["docs/testing/VERIFICATION_BUDGET.toml", "release/evidence/tests/verification-budget.json"],
+        prerequisites: &[],
+        resource_class: ResourceClass::Io,
+        proof: "crate::gates::verification_budget::tests::a_count_below_its_row_fails_as_loudly_as_one_above",
     },
     GateDescriptor {
         name: "verify-rewrite-proofs",
