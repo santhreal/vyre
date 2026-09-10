@@ -14,6 +14,7 @@ use crate::pattern::CompiledDfa;
 use super::super::{
     ac_ranges_output_records_len, bounded_ranges_presence_and_positions_by_region_nodes,
     bounded_ranges_presence_by_region_nodes, bounded_ranges_presence_nodes, AcInputBindings,
+    ScanBody,
 };
 use super::{
     build_ranges_scan, gated_ranges_program, try_build_ranges_scan, PrefilterGate, PrefilterWidth,
@@ -60,14 +61,14 @@ fn suffix3_presence_program(
             .with_count(presence_bitmap_words(pattern_count)),
         Vec::new(),
         "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence",
-        bounded_ranges_presence_nodes(
+        ScanBody::gated_only(bounded_ranges_presence_nodes(
             inputs.haystack,
             inputs.transitions,
             inputs.output_offsets,
             inputs.output_records,
             presence,
             max_pattern_len,
-        ),
+        )),
     )
 }
 
@@ -167,7 +168,7 @@ fn suffix3_presence_by_region_program(
             .with_count(presence_by_region_words(pattern_count, max_regions)),
         region_table_decls(region_starts, region_base),
         "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence_by_region",
-        bounded_ranges_presence_by_region_nodes(
+        ScanBody::gated_only(bounded_ranges_presence_by_region_nodes(
             inputs.haystack,
             inputs.transitions,
             inputs.output_offsets,
@@ -178,7 +179,7 @@ fn suffix3_presence_by_region_program(
             max_pattern_len,
             presence_bitmap_words(pattern_count),
             ceil_log2(max_regions),
-        ),
+        )),
     )
 }
 
@@ -262,7 +263,7 @@ fn suffix3_presence_and_positions_by_region_program_filtered(
             .with_count(presence_by_region_words(pattern_count, max_regions)),
         trailing,
         "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region",
-        bounded_ranges_presence_and_positions_by_region_nodes(
+        ScanBody::gated_only(bounded_ranges_presence_and_positions_by_region_nodes(
             inputs.haystack,
             inputs.transitions,
             inputs.output_offsets,
@@ -277,7 +278,7 @@ fn suffix3_presence_and_positions_by_region_program_filtered(
             presence_bitmap_words(pattern_count),
             ceil_log2(max_regions),
             first_positioned_pattern_id,
-        ),
+        )),
     )
 }
 

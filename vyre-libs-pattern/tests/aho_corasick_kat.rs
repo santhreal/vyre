@@ -13,9 +13,9 @@
 #![allow(deprecated)]
 use vyre_libs_pattern::pattern::aho_corasick;
 use vyre_libs_pattern::pattern::{dfa_compile, CompiledDfa};
-use vyre_reference::value::Value;
 use vyre_primitives::wire::decode_u32_le_bytes_all as decode_u32_words;
 use vyre_primitives::wire::pack_u32_slice as u32_bytes;
+use vyre_reference::value::Value;
 
 /// Reference oracle: walk the DFA byte-by-byte, emit accept[state] at each
 /// offset. This is the oracle the vyre IR must match.

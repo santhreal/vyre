@@ -273,16 +273,33 @@ fn transition_step(program: &Program) -> Option<String> {
     )
 }
 
-/// The `let out_begin` / `let out_end` pair that reads the flat output links.
+/// The `out_begin` / `out_end` pair that reads the flat output links.
+///
+/// A walk whose emit runs outside its admission gate binds the two names to
+/// zero ahead of the gate and writes the span inside it, so both `Let` and
+/// `Assign` count and the zero initialiser, which reads no table, does not.
+/// Any other way of producing the span is a second reader of the output
+/// links and fails here rather than going uncompared.
 fn output_link_span(program: &Program) -> Option<String> {
     canonical(
         all_nodes(program)
             .into_iter()
             .filter_map(|node| match node {
-                Node::Let { name, value } if *name == "out_begin" || *name == "out_end" => {
-                    Some(format!("{}={value:?}", &**name))
+                Node::Let { name, value } | Node::Assign { name, value }
+                    if *name == "out_begin" || *name == "out_end" =>
+                {
+                    Some((name, value))
                 }
                 _ => None,
+            })
+            .filter_map(|(name, value)| match value {
+                Expr::LitU32(0) => None,
+                Expr::Load { .. } => Some(format!("{}={value:?}", &**name)),
+                other => panic!(
+                    "{} is written from {other:?}; the flat output-link span is read by \
+                     ac_output_span_nodes and nowhere else",
+                    &**name
+                ),
             })
             .collect(),
     )
@@ -371,6 +388,25 @@ fn every_ac_builder_emits_the_same_output_link_span() {
     );
 }
 
+/// Whether `expr` is the walk's `state`, through the fold that keeps a table
+/// entry inside the state count.
+///
+/// `bounded_index` renders as `select(state < extent, state, 0)`. A walk that
+/// folds its row index reads the same table row for every state the table
+/// declares, so peeling the fold here keeps the comparison on the walk rather
+/// than on whether a builder has adopted the fold yet.
+fn names_state(expr: &Expr) -> bool {
+    match expr {
+        Expr::Var(name) => &**name == "state",
+        Expr::Select {
+            true_val,
+            false_val,
+            ..
+        } => matches!(&**false_val, Expr::LitU32(0)) && names_state(true_val),
+        _ => false,
+    }
+}
+
 /// Peel `transitions[state * 256 + byte]` into the table name, the dense row
 /// stride, and the byte operand.
 fn transition_shape(value: &Expr) -> Option<(String, u32, String)> {
@@ -393,15 +429,12 @@ fn transition_shape(value: &Expr) -> Option<(String, u32, String)> {
     else {
         return None;
     };
-    let Expr::Var(state) = &**row else {
+    if !names_state(row) {
         return None;
-    };
+    }
     let Expr::LitU32(stride) = &**stride else {
         return None;
     };
-    if &**state != "state" {
-        return None;
-    }
     Some((buffer.to_string(), *stride, format!("{right:?}")))
 }
 

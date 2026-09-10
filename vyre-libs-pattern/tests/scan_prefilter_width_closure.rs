@@ -353,3 +353,68 @@ fn prefilter_widths_form_a_mask_prefix_chain() {
         );
     }
 }
+
+/// Every width's coalesced program is reference-evaluable and emits exactly
+/// what its uncoalesced twin emits.
+///
+/// `use_subgroup_coalesce` is a slot-reservation strategy, so it may not
+/// change which matches a dispatch produces. The strategy is also the shipped
+/// default of every builder above, and the reference-backed recall tests all
+/// pass `false`, which left the default unjudged for long enough that it
+/// stopped being evaluable at all: the coalesced append put a subgroup shuffle
+/// inside the per-record loop, whose trip count is the lane's own output span,
+/// so a lane with no records never reached the collective its peers were
+/// reading from. Running the selector as a closure over the same width table
+/// means a new width cannot reintroduce that without turning this red.
+///
+/// The masks are all ones so every position is admitted, which is the setting
+/// that puts the widest spread of record spans across one subgroup.
+#[test]
+fn every_width_emits_the_same_matches_under_both_coalesce_settings() {
+    use vyre_libs_pattern::pattern::pack_haystack_u32;
+    use vyre_primitives::wire::pack_u32_slice;
+    use vyre_test_support::test_parity_oracles::{bytes_to_u32, eval_bytes};
+
+    fn triples(outputs: &[Vec<u8>]) -> Vec<(u32, u32, u32)> {
+        let count = bytes_to_u32(&outputs[0])[0] as usize;
+        let words = bytes_to_u32(&outputs[1]);
+        let mut decoded: Vec<(u32, u32, u32)> = words[..count.saturating_mul(3)]
+            .chunks_exact(3)
+            .map(|chunk| (chunk[0], chunk[1], chunk[2]))
+            .collect();
+        decoded.sort_unstable();
+        decoded
+    }
+
+    let haystack: &[u8] = b"Authorization: Bearer token-a tok a token abc";
+    let ac = classic_ac_compile(&PATTERNS);
+    let lengths: Vec<u32> = PATTERNS
+        .iter()
+        .map(|pattern| pattern.len() as u32)
+        .collect();
+
+    for row in rows() {
+        let mut inputs = vec![
+            pack_haystack_u32(haystack),
+            pack_u32_slice(&ac.dfa.transitions),
+            pack_u32_slice(&ac.dfa.output_offsets),
+            pack_u32_slice(&ac.dfa.output_records),
+            pack_u32_slice(&lengths),
+            pack_u32_slice(&[haystack.len() as u32]),
+            pack_u32_slice(&[0]),
+        ];
+        for (_, words) in row.masks {
+            inputs.push(pack_u32_slice(&vec![u32::MAX; *words as usize]));
+        }
+        let coalesced = (row.build)(&ac.dfa, PATTERN_COUNT, MAX_MATCHES, true);
+        let serial = (row.build)(&ac.dfa, PATTERN_COUNT, MAX_MATCHES, false);
+        assert_eq!(
+            triples(&eval_bytes(row.variant, &coalesced, inputs.clone())),
+            triples(&eval_bytes(row.variant, &serial, inputs)),
+            "Fix: width {} emits different matches with subgroup coalescing on. Coalescing \
+             reserves hit-buffer slots per subgroup instead of per lane; it decides where a \
+             triple lands, never whether one exists.",
+            row.variant
+        );
+    }
+}

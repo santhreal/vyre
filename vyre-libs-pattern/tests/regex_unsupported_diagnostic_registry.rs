@@ -150,7 +150,9 @@ fn frontend_emits_registry_diagnostic_codes_from_real_patterns() {
 
     // The exported ONE-PLACE map agrees with the registry codes.
     assert_eq!(
-        vyre_libs_pattern::pattern::regex_construct_diagnostic_code(RegexConstruct::HugeAlternation),
+        vyre_libs_pattern::pattern::regex_construct_diagnostic_code(
+            RegexConstruct::HugeAlternation
+        ),
         "VYRE_SCAN_UNSUPPORTED_HUGE_ALTERNATION_BUDGET"
     );
 }

@@ -23,7 +23,7 @@ use super::super::count_program::{
 };
 use super::{
     ac_ranges_output_records_len, ac_ranges_program_or_fail_closed, bounded_ranges_scan_nodes,
-    candidate_end_gate_nodes, AcInputBindings,
+    candidate_end_gate_nodes, AcInputBindings, ScanBody,
 };
 
 mod suffix3;
@@ -244,9 +244,11 @@ pub(in crate::pattern) fn gated_ranges_program(
     result: BufferDecl,
     trailing: Vec<BufferDecl>,
     generator: &'static str,
-    replay: Vec<Node>,
+    replay: ScanBody,
 ) -> Program {
-    let body = gate.gate_nodes(inputs.haystack, inputs.haystack_len, replay);
+    let mut body = replay.prelude;
+    body.extend(gate.gate_nodes(inputs.haystack, inputs.haystack_len, replay.gated));
+    body.extend(replay.uniform);
     let mut buffers = inputs.decls();
     buffers.reserve(1 + gate.width.mask_count() as usize + trailing.len());
     buffers.push(result);

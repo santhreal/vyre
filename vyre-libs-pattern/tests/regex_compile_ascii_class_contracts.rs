@@ -4,7 +4,11 @@
 use vyre_libs_pattern::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
 use vyre_libs_pattern::pattern::{compile_regex_set, RegexCompileError};
 
-fn transition_mask(compiled: &vyre_libs_pattern::pattern::CompiledRegexSet, state: u32, byte: u8) -> u32 {
+fn transition_mask(
+    compiled: &vyre_libs_pattern::pattern::CompiledRegexSet,
+    state: u32,
+    byte: u8,
+) -> u32 {
     let idx = state as usize * 256 * LANES_PER_SUBGROUP + byte as usize * LANES_PER_SUBGROUP;
     compiled.transition_table[idx]
 }

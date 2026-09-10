@@ -11,6 +11,7 @@
 //! shape. The gate widths and the program assembly built on top of them belong
 //! to the `prefilter` submodule, and the ungated scan below is one of its rows.
 
+use vyre_foundation::composition::bounded_index_when;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 
@@ -67,13 +68,44 @@ pub(in crate::pattern) fn ac_transition_step_nodes(
     vec![load_byte, ac_advance_state_node(transitions, byte)]
 }
 
+/// How a walk introduces the results a later emit reads.
+///
+/// `Let` is the ordinary shape: the emit runs where the walk ran, inside the
+/// admission gate. `Assign` writes into names the caller bound outside that
+/// gate, which is what an emit carrying a subgroup collective needs, because a
+/// collective reads across lanes and a rejected lane never enters the gate.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(in crate::pattern) enum WalkBinding {
+    /// Introduce the name here.
+    Let,
+    /// Write into a name the caller already bound.
+    Assign,
+}
+
+impl WalkBinding {
+    fn bind(self, name: &str, value: Expr) -> Node {
+        match self {
+            Self::Let => Node::let_bind(name, value),
+            Self::Assign => Node::assign(name, value),
+        }
+    }
+}
+
 /// Bind `out_begin`/`out_end` to the flat output-link span of the current
 /// `state`. Every walk pairs this with the transition step before emitting, so
 /// an `output_offsets` layout change has one place to land.
 pub(in crate::pattern) fn ac_output_span_nodes(output_offsets: &str) -> Vec<Node> {
+    ac_output_span_nodes_bound(output_offsets, WalkBinding::Let)
+}
+
+/// [`ac_output_span_nodes`] under an explicit [`WalkBinding`].
+pub(in crate::pattern) fn ac_output_span_nodes_bound(
+    output_offsets: &str,
+    binding: WalkBinding,
+) -> Vec<Node> {
     vec![
-        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
-        Node::let_bind(
+        binding.bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
+        binding.bind(
             "out_end",
             Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
         ),
@@ -90,6 +122,27 @@ pub(in crate::pattern) fn bounded_walk_prologue_nodes(
     output_offsets: &str,
     max_pattern_len: u32,
 ) -> Vec<Node> {
+    bounded_walk_prologue_bound(
+        haystack,
+        transitions,
+        output_offsets,
+        max_pattern_len,
+        WalkBinding::Let,
+    )
+}
+
+/// [`bounded_walk_prologue_nodes`] under an explicit [`WalkBinding`].
+///
+/// `state` and `scan_start` are always introduced here: nothing outside the
+/// gate reads them. `scan_end` and the output-link span follow `binding`,
+/// because those three are exactly what an emit hoisted out of the gate needs.
+pub(in crate::pattern) fn bounded_walk_prologue_bound(
+    haystack: &str,
+    transitions: &str,
+    output_offsets: &str,
+    max_pattern_len: u32,
+    binding: WalkBinding,
+) -> Vec<Node> {
     let max_pattern_len = max_pattern_len.max(1);
     let i = Expr::var("i");
     let end = Expr::add(i.clone(), Expr::u32(1));
@@ -104,7 +157,7 @@ pub(in crate::pattern) fn bounded_walk_prologue_nodes(
         // `end` derives from the live `haystack_len` load, which is not an
         // extent. The step body reads `haystack` through `load_packed_byte`,
         // four bytes per word, so the real ceiling is four times its extent.
-        Node::let_bind(
+        binding.bind(
             "scan_end",
             Expr::min(end, Expr::mul(Expr::buf_len(haystack), Expr::u32(4))),
         ),
@@ -115,7 +168,7 @@ pub(in crate::pattern) fn bounded_walk_prologue_nodes(
             ac_transition_step_nodes(haystack, transitions, Expr::var("step")),
         ),
     ];
-    nodes.extend(ac_output_span_nodes(output_offsets));
+    nodes.extend(ac_output_span_nodes_bound(output_offsets, binding));
     nodes
 }
 
@@ -326,6 +379,34 @@ pub(in crate::pattern) fn ac_ranges_program_or_fail_closed(
     }
 }
 
+/// A scan body split at the admission gate.
+///
+/// `gated` runs only for an admitted candidate. `uniform` runs in every lane
+/// of the dispatch, because it carries a subgroup collective and a collective
+/// reads across lanes: a rejected lane that never entered the gate has none of
+/// the names its peers are reading. `prelude` introduces the names `gated`
+/// writes and `uniform` reads, outside the gate, and is empty for an emit with
+/// no collective in it.
+pub(in crate::pattern) struct ScanBody {
+    /// Bindings the gate assigns into and the uniform tail reads.
+    pub(in crate::pattern) prelude: Vec<Node>,
+    /// The walk and, for a non-collective emit, the emit itself.
+    pub(in crate::pattern) gated: Vec<Node>,
+    /// The collective emit, at invocation level.
+    pub(in crate::pattern) uniform: Vec<Node>,
+}
+
+impl ScanBody {
+    /// A body with nothing to run outside the gate.
+    pub(in crate::pattern) fn gated_only(gated: Vec<Node>) -> Self {
+        Self {
+            prelude: Vec::new(),
+            gated,
+            uniform: Vec::new(),
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn bounded_ranges_scan_nodes(
     haystack: &str,
@@ -337,18 +418,9 @@ fn bounded_ranges_scan_nodes(
     matches: &str,
     max_pattern_len: u32,
     use_subgroup_coalesce: bool,
-) -> Vec<Node> {
+) -> ScanBody {
     let mut per_record = match_span_start_nodes(pattern_lengths);
-    if use_subgroup_coalesce {
-        per_record.extend(append_match_subgroup(
-            matches,
-            match_count,
-            Expr::var("pattern_id"),
-            Expr::var("match_start"),
-            Expr::var("scan_end"),
-            Expr::bool(true),
-        ));
-    } else {
+    if !use_subgroup_coalesce {
         per_record.push(append_match(
             matches,
             match_count,
@@ -356,11 +428,37 @@ fn bounded_ranges_scan_nodes(
             Expr::var("match_start"),
             Expr::var("scan_end"),
         ));
+        let mut gated =
+            bounded_walk_prologue_nodes(haystack, transitions, output_offsets, max_pattern_len);
+        gated.push(output_record_loop_node(output_records, per_record));
+        return ScanBody::gated_only(gated);
     }
-    let mut nodes =
-        bounded_walk_prologue_nodes(haystack, transitions, output_offsets, max_pattern_len);
-    nodes.push(output_record_loop_node(output_records, per_record));
-    nodes
+    per_record.extend(append_match_subgroup(
+        matches,
+        match_count,
+        Expr::var("pattern_id"),
+        Expr::var("match_start"),
+        Expr::var("scan_end"),
+        Expr::var(RECORD_ACTIVE),
+    ));
+    // A rejected candidate leaves the span empty, so the uniform tail walks
+    // zero records for that lane and emits nothing, while still reaching the
+    // collective with every peer.
+    ScanBody {
+        prelude: vec![
+            Node::let_bind("scan_end", Expr::u32(0)),
+            Node::let_bind("out_begin", Expr::u32(0)),
+            Node::let_bind("out_end", Expr::u32(0)),
+        ],
+        gated: bounded_walk_prologue_bound(
+            haystack,
+            transitions,
+            output_offsets,
+            max_pattern_len,
+            WalkBinding::Assign,
+        ),
+        uniform: uniform_output_record_loop_nodes(output_records, None, per_record),
+    }
 }
 
 /// Emit the bounded-window DFA replay for a single candidate position, writing a
@@ -555,6 +653,82 @@ pub(in crate::pattern) fn output_record_loop_node(
         clamped_by_extents(Expr::var("out_end"), output_records, []),
         body,
     )
+}
+
+/// Name a lane binds to whether its current record-loop iteration addresses a
+/// real record. Every emit that runs under
+/// [`uniform_output_record_loop_nodes`] gates its writes on it.
+pub(in crate::pattern) const RECORD_ACTIVE: &str = "out_active";
+
+/// Subgroup-uniform counterpart of [`output_record_loop_node`], for an emit
+/// that runs a subgroup collective per record.
+///
+/// A collective reads a value out of a peer lane, so every lane of the
+/// subgroup has to reach it with that value bound. The record span is
+/// per-lane, so under [`output_record_loop_node`] a lane whose span is empty
+/// never enters the body, and the peer read of a name that lane never bound
+/// has no result at all: the program is not merely wrong, it cannot be
+/// evaluated. This walks `subgroup_max(span)` iterations in every lane of the
+/// subgroup and binds [`RECORD_ACTIVE`] to `out_k < out_span`, which puts the
+/// collective in uniform control flow and leaves the emit predicate to
+/// `per_record`.
+///
+/// The record index is folded to zero on an inactive iteration, so a lane
+/// walking another lane's trip count reads a slot that exists and emits
+/// nothing.
+///
+/// `active` names a caller predicate that says whether the span itself is
+/// real. A walk that runs its steps uniformly reaches this with a span left
+/// over from a step its lane never took, and zeroing the span here keeps
+/// [`ac_output_span_nodes`] the only writer of `out_begin` and `out_end`.
+pub(in crate::pattern) fn uniform_output_record_loop_nodes(
+    output_records: &str,
+    active: Option<Expr>,
+    per_record: Vec<Node>,
+) -> Vec<Node> {
+    let span_end = Expr::var("out_span_end");
+    let begin = Expr::var("out_begin");
+    let mut body = vec![
+        Node::let_bind(
+            RECORD_ACTIVE,
+            Expr::lt(Expr::var("out_k"), Expr::var("out_span")),
+        ),
+        Node::let_bind(
+            "out_idx",
+            bounded_index_when(
+                Expr::var(RECORD_ACTIVE),
+                Expr::add(begin.clone(), Expr::var("out_k")),
+            ),
+        ),
+        Node::let_bind(
+            "pattern_id",
+            Expr::load(output_records, Expr::var("out_idx")),
+        ),
+    ];
+    body.extend(per_record);
+    vec![
+        Node::let_bind(
+            "out_span_end",
+            clamped_by_extents(Expr::var("out_end"), output_records, []),
+        ),
+        Node::let_bind(
+            "out_span",
+            match active {
+                Some(active) => Expr::select(
+                    Expr::and(active, Expr::lt(begin.clone(), span_end.clone())),
+                    Expr::sub(span_end, begin),
+                    Expr::u32(0),
+                ),
+                None => Expr::select(
+                    Expr::lt(begin.clone(), span_end.clone()),
+                    Expr::sub(span_end, begin),
+                    Expr::u32(0),
+                ),
+            },
+        ),
+        Node::let_bind("out_uniform", Expr::subgroup_max(Expr::var("out_span"))),
+        Node::loop_for("out_k", Expr::u32(0), Expr::var("out_uniform"), body),
+    ]
 }
 
 /// Set this pattern's bit in a per-pattern bitset:
@@ -866,5 +1040,60 @@ mod tests {
         // pattern_lengths only has 3 entries (pids 0..2) (pid=5 is OOB).
         // This must panic, not silently produce a zero-length match.
         let _result = classic_ac_bounded_ranges_scan(&ac, &[1u32, 2u32, 3u32], b"A");
+    }
+
+    /// Patterns whose output spans differ per candidate position, so some
+    /// lanes of a subgroup carry records and some carry none. A pattern set
+    /// with a uniform span would hide the divergence these two tests exist to
+    /// catch.
+    const DIVERGENT_SPANS: &[&[u8]] = &[b"he", b"she", b"his", b"hers"];
+    const DIVERGENT_HAYSTACK: &[u8] = b"ushers and his hershey he she";
+
+    fn unfiltered_ranges_scan(coalesce: bool) -> Vec<(u32, u32, u32)> {
+        let ac = classic_ac_compile(DIVERGENT_SPANS);
+        let lengths =
+            crate::pattern::classic_ac::test_dispatch_and_decode::pattern_lengths(DIVERGENT_SPANS);
+        let program = build_ac_bounded_ranges_program_with_subgroup_coalesce(
+            &ac.dfa,
+            DIVERGENT_SPANS.len() as u32,
+            256,
+            coalesce,
+        );
+        let mut inputs = crate::pattern::classic_ac::test_dispatch_and_decode::ac_ranges_inputs(
+            &ac.dfa,
+            DIVERGENT_HAYSTACK,
+            &lengths,
+        );
+        inputs.push(crate::pattern::classic_ac::test_dispatch_and_decode::u32_input(&[0]));
+        let outputs = vyre_test_support::test_parity_oracles::eval_bytes(
+            "bounded_ranges_coalesce",
+            &program,
+            inputs,
+        );
+        let mut decoded =
+            crate::pattern::classic_ac::test_dispatch_and_decode::decode_match_triples(&outputs);
+        decoded.sort_unstable();
+        decoded
+    }
+
+    /// The shipped entrypoint selects `use_subgroup_coalesce = true`, so the
+    /// reference oracle has to be able to judge that program. Every other
+    /// bounded-ranges test passes `false`, which left the default dispatch
+    /// shape unjudged.
+    #[test]
+    fn the_coalesced_scan_reproduces_the_host_oracle() {
+        let ac = classic_ac_compile(DIVERGENT_SPANS);
+        let lengths =
+            crate::pattern::classic_ac::test_dispatch_and_decode::pattern_lengths(DIVERGENT_SPANS);
+        let mut expected = classic_ac_bounded_ranges_scan(&ac, &lengths, DIVERGENT_HAYSTACK);
+        expected.sort_unstable();
+        assert_eq!(unfiltered_ranges_scan(true), expected);
+    }
+
+    /// Subgroup coalescing changes how a hit buffer slot is reserved, never
+    /// which matches are emitted.
+    #[test]
+    fn both_coalesce_settings_emit_the_same_matches() {
+        assert_eq!(unfiltered_ranges_scan(true), unfiltered_ranges_scan(false));
     }
 }

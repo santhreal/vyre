@@ -12,6 +12,9 @@ pub mod adversarial_matching;
 #[path = "adversarial_nfa.rs"]
 pub mod adversarial_nfa;
 
+#[path = "regex_exact_coalesce_parity.rs"]
+pub mod regex_exact_coalesce_parity;
+
 #[allow(deprecated)]
 #[path = "aho_corasick_kat.rs"]
 pub mod aho_corasick_kat;

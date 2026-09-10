@@ -19,8 +19,8 @@ use wire_words::decode_u32_words as decode_u32;
 
 use crate::presence_oracle;
 use presence_oracle::{random_haystack, random_literals, random_region_starts, PackedCase};
-use vyre_test_support::word_corpora::Lcg;
 use std::collections::BTreeSet;
+use vyre_test_support::word_corpora::Lcg;
 
 use vyre_libs_pattern::pattern::classic_ac::{
     try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
