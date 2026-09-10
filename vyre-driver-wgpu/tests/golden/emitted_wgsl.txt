@@ -1490,12 +1490,14 @@ fn main(@builtin(global_invocation_id) _vyre_global_id: vec3<u32>, @builtin(work
         let _e243 = a[_e240];
         vyre_block_scope_30_ = _e243;
         let _e248 = vyre_block_scope_30_;
-        vyre_block_scope_31_ = (1f / _e248);
-        let _e255 = vyre_block_scope_28_;
-        let _e259 = vyre_block_scope_31_;
-        let _e261 = vyre_block_scope_28_;
-        if (_e261 < arrayLength((&out))) {
-            out[_e255] = _e259;
+        let _e250 = (1f / _e248);
+        let _e255 = fma(fma(-(_e248), _e250, 1f), (1f / _e248), _e250);
+        vyre_block_scope_31_ = select(_e250, _e255, (abs(_e255) <= 340282350000000000000000000000000000000f));
+        let _e264 = vyre_block_scope_28_;
+        let _e268 = vyre_block_scope_31_;
+        let _e270 = vyre_block_scope_28_;
+        if (_e270 < arrayLength((&out))) {
+            out[_e264] = _e268;
         }
     }
 }

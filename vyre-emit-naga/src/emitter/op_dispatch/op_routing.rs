@@ -323,12 +323,11 @@ impl BodyBuilder<'_> {
                     expr
                 };
                 let value = if matches!(unop, UnOp::Reciprocal) {
+                    // The operator states `1.0 / v` and is graded in the
+                    // elementary window, so it takes the same correctly-rounded
+                    // quotient `BinOp::Div` takes rather than a bare `Divide`.
                     let one = self.append_expr(Expression::Literal(Literal::F32(1.0)));
-                    self.append_expr(Expression::Binary {
-                        op: BinaryOperator::Divide,
-                        left: one,
-                        right: expr,
-                    })
+                    self.emit_f32_divide(one, expr)
                 } else if matches!(unop, UnOp::IsNan) {
                     self.append_expr(Expression::Binary {
                         op: BinaryOperator::NotEqual,
