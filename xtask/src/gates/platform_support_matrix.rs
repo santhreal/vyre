@@ -1261,4 +1261,59 @@ pub mod tests {
         );
         assert_eq!(tiers.len(), 4);
     }
+
+    /// WHY: the matrix exists to say what is supported and on what evidence, so
+    /// the two ways a cell can be empty are the two the gate must never pass
+    /// silently. A cell the platform source states no tier for arrives here as
+    /// `undeclared`, and a cell whose tier outranks the evidence recorded for
+    /// it is a claim with nothing behind it. Both have to name what would
+    /// raise them.
+    ///
+    /// The tier list is read from the platform source at run time rather than
+    /// written down here, so a tier added there with no arm in
+    /// `requirement_for` falls to the catch-all and turns this red instead of
+    /// being reported as satisfied.
+    ///
+    /// What this does not catch: whether the evidence a ledger row records was
+    /// truthfully produced. That is the attribution gate's subject.
+    #[test]
+    pub fn unclaimed_or_missing_cell_fails_gate() {
+        for evidence in [
+            None,
+            Some(EVIDENCE_NONE),
+            Some(EVIDENCE_TYPE_CHECKED),
+            Some(EVIDENCE_EMULATED),
+            Some(EVIDENCE_NATIVE),
+        ] {
+            assert!(
+                !requirement_for("undeclared", evidence).is_empty(),
+                "a cell with no declared tier states no requirement at evidence {evidence:?}"
+            );
+        }
+
+        let root = crate::checkout::checkout_root();
+        let (source, _) = parse_matrix_source(&root).expect("the platform source parses");
+        let declared: std::collections::BTreeSet<&str> =
+            source.tiers.values().map(String::as_str).collect();
+        assert!(
+            !declared.is_empty(),
+            "the platform source declared no tier at all, so nothing below is measured"
+        );
+
+        for tier in declared {
+            let satisfied = requirement_for(tier, Some(EVIDENCE_NATIVE));
+            assert!(
+                satisfied.is_empty(),
+                "tier `{tier}` is not satisfied by a native run, so it has no arm in \
+                 requirement_for and every cell claiming it reads as unraisable: {satisfied}"
+            );
+            if tier == "excluded" {
+                continue;
+            }
+            assert!(
+                !requirement_for(tier, Some(EVIDENCE_NONE)).is_empty(),
+                "tier `{tier}` claims support with no evidence and asks for nothing"
+            );
+        }
+    }
 }

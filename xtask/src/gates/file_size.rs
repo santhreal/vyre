@@ -215,12 +215,28 @@ fn is_core(path: &str) -> bool {
 mod tests {
     use super::*;
 
-    /// WHY: a measured legacy row is a ceiling, not a growth allowance. Any
-    /// increase must fail so organization improves monotonically.
+    /// WHY: a measured row is a ceiling, not a growth allowance, and the row
+    /// only holds if the gate actually consults it. Nine rows were silently
+    /// inert because the crates they name had moved out from under the core
+    /// root list, so every one of those files took the flat cap instead. This
+    /// reads the tables at run time rather than naming a member: a row whose
+    /// path stops resolving to its own number fails here, whichever row it is.
     #[test]
-    fn measured_rows_grant_no_headroom() {
-        assert_eq!(cap_for("vyre-libs/src/decode/inflate.rs"), 554);
-        assert_eq!(cap_for("vyre-driver-cuda/src/codegen/mod.rs"), 1160);
+    fn every_measured_row_is_the_cap_it_declares() {
+        for (path, measured) in CORE_MEASURED {
+            assert_eq!(
+                cap_for(path),
+                *measured,
+                "the core row for {path} is not the cap that path takes"
+            );
+        }
+        for (path, ceiling) in AUDIT_CEILINGS {
+            assert_eq!(
+                cap_for(path),
+                *ceiling,
+                "the audit row for {path} is not the cap that path takes"
+            );
+        }
     }
 
     /// WHY: the core ratchet has to win over the audit ceiling, because it is the
