@@ -445,15 +445,20 @@ fn schedule_calculus_partial_schedule_and_symbolic_parameters() {
     let mut bindings = HashMap::new();
     bindings.insert("tile_dim_k".to_string(), 32);
 
+    let selected = ScheduleResourceBounds::default();
     let plan = partial
-        .instantiate(&bindings)
+        .instantiate(&bindings, selected.clone())
         .expect("instantiation within legal bounds succeeds");
     assert_eq!(plan.version, 2);
+    assert_eq!(
+        plan.resource_bounds, selected,
+        "the plan validates under the bounds the caller selected, not one the schedule invented"
+    );
 
     // Out-of-bounds parameter instantiation fails closed
     let mut invalid_bindings = HashMap::new();
     invalid_bindings.insert("tile_dim_k".to_string(), 128); // Exceeds max_value: 64
-    assert!(partial.instantiate(&invalid_bindings).is_err());
+    assert!(partial.instantiate(&invalid_bindings, selected).is_err());
 }
 
 #[test]

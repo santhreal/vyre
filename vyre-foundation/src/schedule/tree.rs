@@ -960,10 +960,18 @@ impl PartialSchedule {
         self.unassigned_regions.is_empty() && self.symbolic_parameters.is_empty()
     }
 
-    /// Instantiate symbolic parameters with concrete values to produce a complete validated [`SchedulePlan`].
+    /// Instantiate symbolic parameters with concrete values to produce a
+    /// complete validated [`SchedulePlan`] under the bounds the caller
+    /// selected.
+    ///
+    /// The bounds arrive as an argument rather than as a default. Defaulting
+    /// them here made the foundation choose the resource envelope a schedule
+    /// runs under, which is a second selection route: the plan would validate
+    /// against an envelope no selector had ranked.
     pub fn instantiate(
         &self,
         bindings: &std::collections::HashMap<String, u64>,
+        bounds: ScheduleResourceBounds,
     ) -> Result<SchedulePlan, ScheduleLegalityError> {
         for param in &self.symbolic_parameters {
             if let Some(&val) = bindings.get(&param.name) {
@@ -978,7 +986,6 @@ impl PartialSchedule {
                 )));
             }
         }
-        let bounds = ScheduleResourceBounds::default();
         let plan = SchedulePlan::new(self.root.canonicalize(), bounds);
         plan.validate()?;
         Ok(plan)
