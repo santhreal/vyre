@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The mixture-of-experts gating writeback folds a selected expert index into the declared expert count before gathering its score, so an index the caller supplies past that count reads expert zero instead of past the end of the score buffer."

@@ -1,6 +1,7 @@
 //! Workgroup geometry, buffer identity, and the IR stages shared by every
 //! grouped INT4 lowering strategy.
 
+use vyre_foundation::composition::bounded_index;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
 
 pub(super) const AFFINE_GROUPED_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
@@ -62,22 +63,6 @@ pub(super) fn affine_grouped_buffers(
     ]
 }
 
-/// `index` folded inside a buffer of `count` elements.
-///
-/// Every packed-word and sidecar read below sits in the taken arm of a select
-/// whose condition already decides whether the value matters: a non-leader lane,
-/// a reduction step past the input, or a padded output the workgroup grid rounded
-/// up to. A select evaluates both arms, so the read runs for those lanes too and
-/// lands past the buffer on a backend that does not bounds-check. Folding the
-/// index keeps it inside, where the same select discards what it read.
-pub(super) fn bounded_index(index: Expr, count: u32) -> Expr {
-    Expr::select(
-        Expr::lt(index.clone(), Expr::u32(count)),
-        index,
-        Expr::u32(0),
-    )
-}
-
 /// Lane-cooperative packed-word fetch: the leader of each 8-lane group loads the
 /// `u32` holding its eight nibbles and shuffles it across the group.
 ///
@@ -112,7 +97,7 @@ pub(super) fn push_packed_word_fetch(
             "packed_word_lane",
             Expr::select(
                 load_when,
-                Expr::load(w_packed, bounded_index(packed_idx, packed_count)),
+                Expr::load(w_packed, bounded_index(packed_idx, Expr::u32(packed_count))),
                 Expr::u32(0),
             ),
         ),
@@ -139,7 +124,7 @@ pub(super) fn push_lane0_sidecar_loads(
                 Expr::eq(lane.clone(), Expr::u32(0)),
                 Expr::load(
                     scale,
-                    bounded_index(Expr::var("sidecar_idx"), sidecar_count),
+                    bounded_index(Expr::var("sidecar_idx"), Expr::u32(sidecar_count)),
                 ),
                 Expr::f32(0.0),
             ),
@@ -150,7 +135,7 @@ pub(super) fn push_lane0_sidecar_loads(
                 Expr::eq(lane.clone(), Expr::u32(0)),
                 Expr::load(
                     zero_point,
-                    bounded_index(Expr::var("sidecar_idx"), sidecar_count),
+                    bounded_index(Expr::var("sidecar_idx"), Expr::u32(sidecar_count)),
                 ),
                 Expr::u32(0),
             ),

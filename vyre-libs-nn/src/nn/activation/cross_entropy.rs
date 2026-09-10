@@ -3,7 +3,7 @@
 //! Category A composition. One workgroup owns one token row and cooperatively
 //! reduces the vocabulary dimension with log-sum-exp stabilization.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{bounded_index_when, trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_libs_reduce::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
@@ -20,6 +20,8 @@ const OP_ID: &str = "vyre-libs::nn::cross_entropy";
 ///   `target_logit = logits[t * vocab + targets[t]]`
 ///   `lse = log(sum_v(exp(logits[t * vocab + v] - max_logit)))`
 ///   `loss[t] = -target_logit + max_logit + lse`
+///
+/// A class label at or past `vocab_size` contributes a target logit of zero.
 #[must_use]
 pub fn cross_entropy(
     logits: &str,
@@ -173,9 +175,12 @@ fn cross_entropy_body(
             vec![Node::Store {
                 buffer: "ce_target_logit".into(),
                 index: Expr::u32(0),
-                value: Expr::load(
+                value: target_logit_or_zero(
                     logits,
-                    Expr::add(base.clone(), Expr::load(targets, token.clone())),
+                    base.clone(),
+                    targets,
+                    token.clone(),
+                    vocab_size,
                 ),
             }],
         ),
@@ -256,6 +261,31 @@ fn cross_entropy_body(
     body
 }
 
+/// The logit of `token`'s class label, or zero when the label is at or past
+/// `vocab_size`.
+///
+/// A class label is data. Indexed with it directly, a label past the
+/// vocabulary read past the end of the logits buffer, which is one row per
+/// token. `reference_cross_entropy_bytes` already states the answer for that
+/// case, `row.get(target).unwrap_or(0.0)`, so the emitted program states the
+/// same one. The label is folded as well as tested, because a select
+/// evaluates both arms and the load would otherwise still run.
+fn target_logit_or_zero(
+    logits: &str,
+    base: Expr,
+    targets: &str,
+    token: Expr,
+    vocab_size: u32,
+) -> Expr {
+    let label = Expr::load(targets, token);
+    let in_vocab = Expr::lt(label.clone(), Expr::u32(vocab_size));
+    Expr::select(
+        in_vocab.clone(),
+        Expr::load(logits, Expr::add(base, bounded_index_when(in_vocab, label))),
+        Expr::f32(0.0),
+    )
+}
+
 const EXPECTED_CROSS_ENTROPY_OUTPUT_BYTES: [u8; 8] =
     [0x81, 0xEA, 0xEB, 0x3E, 0xCE, 0x71, 0xC5, 0x3F];
 
@@ -324,6 +354,33 @@ mod tests {
         assert_eq!(
             outputs[0].clone(),
             reference_cross_entropy_bytes(&logits, &targets, 4)
+        );
+    }
+
+    /// WHY: a class label is data. Indexed with it directly, a label at or
+    /// past the vocabulary read past the end of the logits buffer, and the
+    /// value it happened to read decided the loss.
+    /// `reference_cross_entropy_bytes` already answers that case with a target
+    /// logit of zero, so the emitted program is compared against the reference
+    /// on a hostile label rather than only on a valid one.
+    ///
+    /// Does not catch a label inside the vocabulary but wrong; that is the
+    /// caller's value, not an extent.
+    #[test]
+    fn a_class_label_past_the_vocabulary_matches_the_reference() {
+        let logits = [1.0_f32, 2.0, 3.0, 0.5, 0.1, 0.2, 0.3, 0.4];
+        let targets = [4_u32, 9999];
+        let program = cross_entropy("logits", "targets", "loss", 2, 4);
+        let inputs = vec![
+            vyre_primitives::wire::pack_f32_slice(&logits),
+            vyre_primitives::wire::pack_u32_slice(&targets),
+            vec![0u8; 4 * 2 * 256],
+        ];
+        let outputs = eval_bytes("cross_entropy", &program, inputs);
+        assert_eq!(
+            outputs[0].clone(),
+            reference_cross_entropy_bytes(&logits, &targets, 4),
+            "Fix: a class label past the vocabulary must contribute a zero target logit"
         );
     }
 

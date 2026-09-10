@@ -11,7 +11,9 @@
 //! shape. The gate widths and the program assembly built on top of them belong
 //! to the `prefilter` submodule, and the ungated scan below is one of its rows.
 
+use vyre_foundation::composition::bounded_index;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_libs_builder::builder::state_machine::TableStateMachineComposer;
 use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 
 use crate::pattern::builders::{
@@ -43,7 +45,7 @@ use prefilter::{build_ranges_scan, try_build_ranges_scan, PrefilterWidth};
 pub(in crate::pattern) use regex_exact::regex_exact_ranges_program;
 
 /// Advance `state` one byte through the dense `state * 256 + byte` transition
-/// row.
+/// row, with both operands folded inside the table.
 ///
 /// THE Aho-Corasick transition step. The bounded suffix replay, the anchored
 /// forward walk, the per-region admission walk and the unbounded classic walk
@@ -51,9 +53,17 @@ pub(in crate::pattern) use regex_exact::regex_exact_ranges_program;
 /// all of them at once. `byte` is whatever the caller's haystack encoding
 /// yields: a direct element load for an unpacked haystack, or the masked byte
 /// [`ac_transition_step_nodes`] unpacks from a u32 word.
+///
+/// The state this reads is the previous step's table entry, and nothing
+/// constrains the contents of a read-only buffer, so `state * 256 + byte`
+/// indexes past the table on the step after an entry falls outside the state
+/// set. The state extent is the table's own run-time length over the row
+/// stride, which is identity for a table whose entries are states and covers
+/// every caller without a signature change.
 pub(in crate::pattern) fn ac_advance_state_node(transitions: &str, byte: Expr) -> Node {
-    vyre_libs_builder::builder::state_machine::TableStateMachineComposer::new(transitions)
-        .advance_node(byte)
+    let composer = TableStateMachineComposer::new(transitions);
+    let state_extent = Expr::div(Expr::buf_len(transitions), Expr::u32(composer.stride));
+    composer.bounded_advance_node(state_extent, byte)
 }
 
 /// One byte of the walk over a PACKED haystack: unpack the byte at `idx` from
@@ -70,12 +80,31 @@ pub(in crate::pattern) fn ac_transition_step_nodes(
 /// Bind `out_begin`/`out_end` to the flat output-link span of the current
 /// `state`. Every walk pairs this with the transition step before emitting, so
 /// an `output_offsets` layout change has one place to land.
+///
+/// `state` is a transition-table entry, so both offsets are read at a
+/// data-derived index. Each read is folded against the offset buffer's own
+/// run-time length, which is identity for a well-formed table holding one
+/// offset per state plus the terminating end, and reads element zero for a
+/// state the table does not describe. A `length - 1` extent would wrap for a
+/// table declared with no offsets at all.
 pub(in crate::pattern) fn ac_output_span_nodes(output_offsets: &str) -> Vec<Node> {
     vec![
-        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
+        Node::let_bind(
+            "out_begin",
+            Expr::load(
+                output_offsets,
+                bounded_index(Expr::var("state"), Expr::buf_len(output_offsets)),
+            ),
+        ),
         Node::let_bind(
             "out_end",
-            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
+            Expr::load(
+                output_offsets,
+                bounded_index(
+                    Expr::add(Expr::var("state"), Expr::u32(1)),
+                    Expr::buf_len(output_offsets),
+                ),
+            ),
         ),
     ]
 }
@@ -600,11 +629,17 @@ pub(in crate::pattern) fn presence_bit_write_node(presence: &str, row_base: Opti
 ///
 /// The subtraction is floored at zero: a pattern longer than the window walked
 /// so far would wrap, and the emitted span has to stay inside the haystack.
+///
+/// `pattern_id` is an `output_records` entry, so the length read is folded into
+/// `pattern_lengths`, which holds one length per compiled pattern.
 pub(in crate::pattern) fn match_span_start_nodes(pattern_lengths: &str) -> Vec<Node> {
     vec![
         Node::let_bind(
             "pat_len",
-            Expr::load(pattern_lengths, Expr::var("pattern_id")),
+            Expr::load(
+                pattern_lengths,
+                bounded_index(Expr::var("pattern_id"), Expr::buf_len(pattern_lengths)),
+            ),
         ),
         Node::let_bind(
             "match_start",

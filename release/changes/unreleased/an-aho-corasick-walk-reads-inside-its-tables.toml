@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The Aho-Corasick walk folds its transition state, its output-link span and its pattern-length read inside the tables that hold them, so a transition entry outside the state set or an output record naming no compiled pattern reads element zero instead of indexing past a buffer end. The regex DFA scan is built from those helpers and is covered by the same fold."

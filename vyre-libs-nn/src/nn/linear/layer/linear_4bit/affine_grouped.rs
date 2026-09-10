@@ -1,15 +1,15 @@
 //! Fused affine grouped INT4 linear: public entry points, strategy selection,
 //! and the lane-predicated lowering used when weight-tile reuse does not apply.
 
-use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::composition::{bounded_index, wrap_anonymous_region};
 use vyre_foundation::ir::{Expr, Node, Program};
 
 use super::affine_grouped_weight_reuse::linear_4bit_affine_grouped_weight_reuse;
 use super::grouped_layout::{
-    affine_grouped_buffers, affine_grouped_output_extent, bounded_index, broadcast_from_lane0,
-    dequantized_weight, lane_decomposition, packed_column_index, push_group_affine_terms,
-    push_lane0_sidecar_loads, push_packed_word_fetch, push_subgroup_reduction_store,
-    AFFINE_GROUPED_LANES_PER_OUTPUT, AFFINE_GROUPED_OP_ID, AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP,
+    affine_grouped_buffers, affine_grouped_output_extent, broadcast_from_lane0, dequantized_weight,
+    lane_decomposition, packed_column_index, push_group_affine_terms, push_lane0_sidecar_loads,
+    push_packed_word_fetch, push_subgroup_reduction_store, AFFINE_GROUPED_LANES_PER_OUTPUT,
+    AFFINE_GROUPED_OP_ID, AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP,
     AFFINE_GROUPED_SUBGROUPS_PER_WORKGROUP, AFFINE_GROUPED_WEIGHT_TILE,
     AFFINE_GROUPED_WORKGROUP_SIZE,
 };
@@ -269,11 +269,11 @@ fn linear_4bit_affine_grouped_batch_impl(
             &mut chunk,
             Expr::load(
                 scale,
-                bounded_index(Expr::var("sidecar_idx"), sidecar_count),
+                bounded_index(Expr::var("sidecar_idx"), Expr::u32(sidecar_count)),
             ),
             Expr::load(
                 zero_point,
-                bounded_index(Expr::var("sidecar_idx"), sidecar_count),
+                bounded_index(Expr::var("sidecar_idx"), Expr::u32(sidecar_count)),
             ),
         );
         chunk.push(Node::if_then(
