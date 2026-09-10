@@ -1,7 +1,7 @@
 use crate::api::case::{
     host_input_bundle, prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer,
-    BenchMetadata, BenchRequirements, BenchRun, Correctness, DeterminismClass,
-    PerformanceContract, PreparedCase, WorkloadClass,
+    BenchMetadata, BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract,
+    PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use vyre::ir::Program;
