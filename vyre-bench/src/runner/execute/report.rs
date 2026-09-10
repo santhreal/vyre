@@ -1,7 +1,7 @@
 //! JSON / textual report formatting. Public entry point exported via
 //! `super::print_report`.
 
-use crate::report::json::{generate_json_report, ReportSchema};
+use crate::report::json::{generate_json_report, ReportSchema, ReportSummary};
 
 use super::stats::{format_scaled_metric, format_scaled_percent};
 
@@ -113,18 +113,121 @@ pub fn print_report(
     println!(
         "------------------------------------------------------------------------------------------------------------------------------------------------------------"
     );
-    if let Some(rate) = report.summary.cache_hit_rate {
-        println!(
+    println!("{}", summary_line(&report.summary));
+    Ok(())
+}
+
+/// Render the pass and fail line printed under the case table.
+///
+/// WHY: the printed pair is what a reader tallies against the `cases` array, so
+/// it is rendered here from `ReportSummary` alone, which
+/// `ReportSummary::from_cases` derives from that same array.
+fn summary_line(summary: &ReportSummary) -> String {
+    match summary.cache_hit_rate {
+        Some(rate) => format!(
             "Passed: {}, Failed: {}, Cache Hit Rate: {:.1}%",
-            report.summary.passed,
-            report.summary.failed,
+            summary.passed,
+            summary.failed,
             rate * 100.0
+        ),
+        None => format!("Passed: {}, Failed: {}", summary.passed, summary.failed),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::case::{Correctness, PerformanceEvaluation};
+    use crate::report::fixture;
+    use crate::report::json::CaseReport;
+
+    /// Every combination of the three inputs the verdict reads.
+    fn mixed_cases() -> Vec<CaseReport> {
+        let mut cases = Vec::new();
+        for status in ["pass", "unstable", "failed"] {
+            for invalid in [false, true] {
+                for performance in [
+                    None,
+                    Some(true),
+                    Some(false),
+                ] {
+                    let mut case = fixture::case(
+                        &format!("case.{status}.{invalid}.{performance:?}"),
+                        &[("wall_ns", 10, 20)],
+                    );
+                    case.status = status.to_string();
+                    if invalid {
+                        case.correctness = Correctness::Invalid {
+                            reason: "digest mismatch".to_string(),
+                        };
+                    }
+                    case.performance = performance.map(|contract_passed| PerformanceEvaluation {
+                        speedup_x: Some(10.0),
+                        contract_passed,
+                        violations: if contract_passed {
+                            Vec::new()
+                        } else {
+                            vec!["speedup below floor".to_string()]
+                        },
+                    });
+                    cases.push(case);
+                }
+            }
+        }
+        cases
+    }
+
+    /// WHY: the pass and fail pair printed under the table is what a reader
+    /// believes, and it disagreed with the `cases` array because the runner
+    /// counted while cases executed instead of counting the list. The tally is
+    /// recomputed here from the case list for every combination of status,
+    /// correctness, and contract outcome, so a second counting site or a
+    /// divergent predicate turns this red.
+    #[test]
+    fn the_printed_pair_equals_the_case_tally() {
+        let cases = mixed_cases();
+        let expected_passed = cases
+            .iter()
+            .filter(|case| case.passes_summary_evidence())
+            .count();
+        let expected_failed = cases.len() - expected_passed;
+        assert_eq!(
+            expected_passed, 2,
+            "Fix: only a case that passed, verified, and met its contract counts as passing evidence."
         );
-    } else {
-        println!(
-            "Passed: {}, Failed: {}",
-            report.summary.passed, report.summary.failed
+
+        let summary = ReportSummary::from_cases(&cases, 1, None);
+
+        assert_eq!(
+            summary.total_cases,
+            cases.len(),
+            "Fix: summary.total_cases must count the case list the report carries."
+        );
+        assert_eq!(
+            summary.passed + summary.failed,
+            summary.total_cases,
+            "Fix: every case must be counted exactly once as passed or failed."
+        );
+        assert_eq!(
+            summary_line(&summary),
+            format!("Passed: {expected_passed}, Failed: {expected_failed}"),
+            "Fix: the printed pass and fail pair must equal the tally of the case list."
         );
     }
-    Ok(())
+
+    /// WHY: a cache hit rate changes the line's shape, so the pair has to stay
+    /// the case tally in that shape too.
+    #[test]
+    fn the_printed_pair_equals_the_case_tally_with_a_cache_hit_rate() {
+        let cases = mixed_cases();
+        let summary = ReportSummary::from_cases(&cases, 1, Some(0.25));
+        assert_eq!(
+            summary_line(&summary),
+            format!(
+                "Passed: {}, Failed: {}, Cache Hit Rate: 25.0%",
+                summary.passed, summary.failed
+            ),
+            "Fix: the printed pass and fail pair must equal the tally of the case list."
+        );
+    }
 }

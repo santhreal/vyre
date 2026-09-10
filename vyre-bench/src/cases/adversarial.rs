@@ -47,6 +47,21 @@ pub(crate) struct RegisterExhaustionPrepared {
 }
 
 fn prepare(_ctx: &mut BenchContext) -> Result<RegisterExhaustionPrepared, BenchError> {
+    // Seeded, so the bytes are the same every sample. Generated once here rather
+    // than re-filled per sample inside the measured loop.
+    let mut input = vec![0u8; LANES as usize * 4];
+    rand::rngs::StdRng::seed_from_u64(1337).fill(input.as_mut_slice());
+
+    Ok(RegisterExhaustionPrepared {
+        program: register_exhaustion_program(),
+        inputs: [input],
+    })
+}
+
+/// The program under measurement: `LIVE_VARIABLES` independent values, a
+/// mixing loop that keeps every one of them live, and a reduction that
+/// consumes them all.
+fn register_exhaustion_program() -> Program {
     let mut body = Vec::with_capacity(LIVE_VARIABLES + 3);
     body.push(Node::let_bind("tid", Expr::gid_x()));
 
@@ -78,32 +93,45 @@ fn prepare(_ctx: &mut BenchContext) -> Result<RegisterExhaustionPrepared, BenchE
         body: loop_body,
     });
 
-    // A reduce tree over all of them, so none is eliminated as dead.
-    let mut reduce_expr = Expr::var("v0");
-    for index in 1..LIVE_VARIABLES {
-        reduce_expr = Expr::add(reduce_expr, Expr::var(format!("v{index}")));
-    }
+    // A reduce over all of them, so none is eliminated as dead.
+    let reduced = balanced_sum(
+        (0..LIVE_VARIABLES)
+            .map(|index| Expr::var(format!("v{index}")))
+            .collect(),
+    );
+    body.push(Node::store("out", Expr::var("tid"), reduced));
 
-    body.push(Node::store("out", Expr::var("tid"), reduce_expr));
-
-    let program = Program::wrapped(
+    Program::wrapped(
         vec![
             BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::U32).with_count(LANES),
             BufferDecl::output("out", 1, DataType::U32).with_count(LANES),
         ],
         [256, 1, 1],
         body,
-    );
+    )
+}
 
-    // Seeded, so the bytes are the same every sample. Generated once here rather
-    // than re-filled per sample inside the measured loop.
-    let mut input = vec![0u8; LANES as usize * 4];
-    rand::rngs::StdRng::seed_from_u64(1337).fill(input.as_mut_slice());
-
-    Ok(RegisterExhaustionPrepared {
-        program,
-        inputs: [input],
-    })
+/// Sum `terms` through a balanced tree.
+///
+/// A chain that adds each term to the running total in turn nests one
+/// expression per term, which for a hundred of them is deeper than the IR wire
+/// format decodes, and artifact preparation refuses the program before it
+/// reaches a device. Pairing the terms instead makes the depth logarithmic in
+/// their count. `u32` addition wraps and is associative, so the value is the
+/// one the reference computes by adding them in order.
+fn balanced_sum(mut terms: Vec<Expr>) -> Expr {
+    while terms.len() > 1 {
+        let mut folded = Vec::with_capacity(terms.len().div_ceil(2));
+        let mut pending = terms.into_iter();
+        while let Some(left) = pending.next() {
+            folded.push(match pending.next() {
+                Some(right) => Expr::add(left, right),
+                None => left,
+            });
+        }
+        terms = folded;
+    }
+    terms.pop().unwrap_or_else(|| Expr::u32(0))
 }
 
 fn measure(
@@ -172,4 +200,61 @@ fn cpu_register_exhaustion_outputs(lanes: usize) -> Vec<u8> {
 
 inventory::submit! {
     &CASE as &'static dyn BenchCase
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// WHY: artifact preparation decodes the program from its wire form, and
+    /// the decoder refuses a nesting depth a hostile blob could use to overflow
+    /// the stack. A producer that builds its reduction as a chain crosses that
+    /// limit at a term count it never states, and the case fails before any
+    /// kernel runs. The contract is the round trip itself, so the limit stays
+    /// owned by the wire format rather than restated here.
+    #[test]
+    fn the_measured_program_survives_the_wire_format() {
+        let program = register_exhaustion_program();
+        let bytes = program
+            .to_wire()
+            .expect("the measured program must encode to the IR wire format");
+        let decoded = Program::from_wire(&bytes)
+            .expect("the measured program must decode from the IR wire format");
+        assert_eq!(
+            decoded.fingerprint(),
+            program.fingerprint(),
+            "the round trip must preserve the program"
+        );
+    }
+
+    /// WHY: the balanced tree exists to keep the depth bounded, and it is only
+    /// correct because it sums the same terms. An odd count is the case a
+    /// pairing fold drops a term in, so both parities are read, and the value
+    /// is checked against the order the reference adds them in.
+    #[test]
+    fn a_balanced_sum_adds_every_term_at_any_count() {
+        for count in 0u32..=9 {
+            let terms = (0..count).map(Expr::u32).collect::<Vec<_>>();
+            let folded = balanced_sum(terms);
+            let expected = (0..count).fold(0u32, u32::wrapping_add);
+            assert_eq!(
+                constant_fold_u32(&folded),
+                Some(expected),
+                "{count} terms must sum to {expected}"
+            );
+        }
+    }
+
+    /// Value of a tree of `u32` literals and additions.
+    fn constant_fold_u32(expr: &Expr) -> Option<u32> {
+        match expr {
+            Expr::LitU32(value) => Some(*value),
+            Expr::BinOp {
+                op: vyre_foundation::ir::BinOp::Add,
+                left,
+                right,
+            } => Some(constant_fold_u32(left)?.wrapping_add(constant_fold_u32(right)?)),
+            _ => None,
+        }
+    }
 }

@@ -35,12 +35,19 @@ pub(crate) fn required_coverage(program: &Program) -> u64 {
     ))
 }
 
-/// Widest logical element count `program` declares outside workgroup scope.
+/// Widest logical point count `program` declares outside workgroup scope.
 ///
 /// Workgroup scratch is one allocation per group rather than a domain, so its
 /// count states nothing about how many invocations run. A declaration whose
 /// count is resolved per dispatch contributes zero and leaves the region domain
 /// in force.
+///
+/// A declaration states elements and a launch covers logical points, and the
+/// two differ wherever the program packs several points into one element. The
+/// byte scan is that case: it declares a `U32` haystack and gives one lane one
+/// byte, so its point count is four times the declared count.
+/// `vyre_foundation::logical_points_per_element` reads that factor out of the
+/// program's own index arithmetic.
 fn declared_span(program: &Program) -> u32 {
     program
         .buffers()
@@ -48,7 +55,11 @@ fn declared_span(program: &Program) -> u32 {
         .filter(|buffer| {
             buffer.kind() != MemoryKind::Shared && buffer.access() != BufferAccess::Workgroup
         })
-        .map(|buffer| buffer.count())
+        .map(|buffer| {
+            buffer.count().saturating_mul(
+                vyre_foundation::logical_points_per_element(program, buffer.name()),
+            )
+        })
         .max()
         .unwrap_or(0)
 }
@@ -139,6 +150,44 @@ mod tests {
                 ),
             ],
         )
+    }
+
+    /// A byte scan over a haystack declared as `words` packed `U32` elements:
+    /// one lane per byte, four bytes per element, counting into an accumulator.
+    fn packed_byte_scan(words: u32) -> Program {
+        Program::wrapped(
+            vec![
+                BufferDecl::read("haystack", 0, DataType::U32).with_count(words),
+                BufferDecl::storage("hits", 1, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(1),
+            ],
+            [128, 1, 1],
+            vec![
+                Node::let_bind("i", Expr::logical_index(0)),
+                Node::if_then(
+                    Expr::lt(Expr::var("i"), Expr::u32(words.saturating_mul(4))),
+                    vec![Node::let_bind(
+                        "prior",
+                        Expr::atomic_add(
+                            "hits",
+                            Expr::u32(0),
+                            Expr::load("haystack", Expr::div(Expr::var("i"), Expr::u32(4))),
+                        ),
+                    )],
+                ),
+            ],
+        )
+    }
+
+    /// WHY: a declaration states elements and a launch covers logical points,
+    /// and a packed program gives one lane one byte of a `U32` element. A
+    /// coverage read off the declared count launches one quarter of the lanes,
+    /// and the scan reports the matches of the first quarter as its whole
+    /// answer.
+    #[test]
+    fn a_packed_byte_scan_requires_four_points_per_declared_element() {
+        assert_eq!(required_coverage(&packed_byte_scan(1024)), 4096);
+        assert_eq!(required_coverage(&packed_byte_scan(3)), 12);
     }
 
     /// WHY: the accumulator is one element and the input is the domain, so a

@@ -29,6 +29,12 @@
 //! and branches on that value being nonzero, so the bound reaches the effect
 //! through two locals. The walk proves that chain rather than reporting the
 //! program unbounded.
+//!
+//! A span also has to be widened, and for the same reason: the program states
+//! it. A declaration states elements and a launch covers logical points, so the
+//! two differ wherever the program packs several points into one element. The
+//! byte scan is that case, and `logical_points_per_element` reads its divisor
+//! out of the index arithmetic.
 
 use std::collections::{HashMap, HashSet};
 
@@ -93,6 +99,149 @@ pub fn admitted_logical_span(program: &Program, resource_span: u32) -> u32 {
     match guarded_logical_span(program) {
         Some(guarded) => resource_span.min(guarded).max(1),
         None => resource_span.max(1),
+    }
+}
+
+/// Logical points axis-0 index spans per element of `buffer`.
+///
+/// A packed program addresses a narrower unit than the element type it
+/// declares. The byte scan is the case: the haystack is declared `U32`, one
+/// lane owns one byte, and the load is `haystack[i / 4]`, so the index domain
+/// is four times the declared count and equals no declared buffer. A launch
+/// span taken from the widest declaration covers one quarter of the input and
+/// the program reports the matches of the first quarter as its whole answer.
+///
+/// The divisor is already in the IR. This analysis reads it, so the widening
+/// is a compiler-owned fact derived from the program, the dual of the
+/// narrowing [`guarded_logical_span`] reads out of the guards.
+///
+/// The result is the largest constant divisor applied to axis-0 logical index
+/// on the way to an access of `buffer`, and 1 when the index reaches it
+/// undivided or does not reach it at all. Division by a power of two also
+/// appears as a right shift, because strength reduction rewrites the divisor,
+/// so both forms are read. A divisor of zero contributes nothing, since it
+/// divides no domain.
+#[must_use]
+pub fn logical_points_per_element(program: &Program, buffer: &str) -> u32 {
+    let mut scale = Scale {
+        buffer,
+        points: 1,
+    };
+    scale.nodes(&program.entry, &mut Facts::default());
+    scale.points
+}
+
+/// Largest divisor seen so far on the way to an access of one buffer.
+struct Scale<'a> {
+    buffer: &'a str,
+    points: u32,
+}
+
+impl Scale<'_> {
+    /// Walk a statement list, keeping the locals proven equal to the index.
+    fn nodes(&mut self, nodes: &[Node], facts: &mut Facts) {
+        for node in nodes {
+            self.node(node, facts);
+        }
+    }
+
+    /// Read every access this node performs in its own operand positions.
+    ///
+    /// A load and an atomic read-modify-write both reach memory from an
+    /// expression position, and a store names its buffer on the statement, so
+    /// the statement case is read separately. Operand positions come from
+    /// `node_operands` and `node_variadic_operands`, so a new node variant
+    /// carries its operands here without naming them again.
+    fn operands(&mut self, node: &Node, facts: &Facts) {
+        for operand in node_operands(node).into_iter().flatten() {
+            self.expr(operand, facts);
+        }
+        for operand in node_variadic_operands(node) {
+            self.expr(operand, facts);
+        }
+    }
+
+    /// Read every access `expr` and its subexpressions perform.
+    ///
+    /// The predicate reports no match, so the walk visits every subexpression
+    /// rather than stopping at the first access.
+    fn expr(&mut self, expr: &Expr, facts: &Facts) {
+        let mut read = |sub: &Expr| {
+            if let Expr::Load { buffer, index } | Expr::Atomic { buffer, index, .. } = sub {
+                if buffer.as_str() == self.buffer {
+                    self.points = self.points.max(index_divisor(index, facts));
+                }
+            }
+            false
+        };
+        let _exhausted = any_subexpr(expr, &mut read);
+    }
+
+    fn node(&mut self, node: &Node, facts: &mut Facts) {
+        self.operands(node, facts);
+        if let Node::Store {
+            buffer,
+            index,
+            value: _,
+        } = node
+        {
+            if buffer.as_str() == self.buffer {
+                self.points = self.points.max(index_divisor(index, facts));
+            }
+        }
+        match node {
+            Node::Let { name, value } => facts.learn(name, value),
+            Node::Assign { name, .. } => facts.forget(name),
+            Node::If {
+                then, otherwise, ..
+            } => {
+                let mut taken = facts.clone();
+                self.nodes(then, &mut taken);
+                let mut alternate = facts.clone();
+                self.nodes(otherwise, &mut alternate);
+            }
+            Node::Loop { var, body, .. } => {
+                let mut inner = facts.clone();
+                inner.forget(var);
+                let mut rebound = HashSet::new();
+                rebound_names(body, &mut rebound);
+                for name in &rebound {
+                    inner.forget(name);
+                }
+                self.nodes(body, &mut inner);
+            }
+            Node::Block(body) | Node::TileElementwise { body, .. } => {
+                let mut inner = facts.clone();
+                self.nodes(body, &mut inner);
+            }
+            Node::Region { body, .. } => {
+                let mut inner = facts.clone();
+                self.nodes(body, &mut inner);
+            }
+            Node::TileLoad { tile: name, .. } | Node::TileDecl { name, .. } => facts.forget(name),
+            _ => {}
+        }
+    }
+}
+
+/// Constant divisor `index` applies to axis-0 logical index, or 1.
+///
+/// A packed index is `i / k` or, once strength reduction has run, `i >> s`.
+/// Anything else states no relation between the index and the axis, so it
+/// widens nothing.
+fn index_divisor(index: &Expr, facts: &Facts) -> u32 {
+    let Expr::BinOp { op, left, right } = index else {
+        return 1;
+    };
+    if !is_axis_zero_index(left, &facts.index) {
+        return 1;
+    }
+    match op {
+        BinOp::Div => literal_u32(right).filter(|divisor| *divisor > 0).unwrap_or(1),
+        BinOp::Shr => literal_u32(right)
+            .filter(|shift| *shift < u32::BITS)
+            .map_or(1, |shift| 1u32 << shift),
+        _ => 1,
     }
 }
 

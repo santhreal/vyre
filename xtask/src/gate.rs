@@ -1184,21 +1184,37 @@ pub fn finish_run(
 /// finding, and comparing the tree it just wrote must produce none either. A
 /// gate that only passed in one mode would either fail the sweep after its own
 /// regeneration or accept a tree it never rewrote.
+///
+/// Proving that costs a real write, and the only tree these gates can write to
+/// is this checkout. The artifacts the descriptor names are therefore read
+/// before the write and put back byte for byte after it, so a suite run leaves
+/// no tracked file changed. It used to leave whichever artifact happened to be
+/// stale rewritten, which stamps every evidence record taken afterwards as
+/// coming from a dirty tree.
 #[cfg(test)]
 pub fn assert_regenerates_clean(name: &str) {
     let root = crate::checkout::checkout_root();
     let gate = crate::subcommands::find(name).expect("Fix: the gate must be registered");
-    let write_report = gate
-        .run(&GateCtx::new(root.clone(), vec!["--write".to_string()]))
-        .expect("Fix: the gate must run in write mode");
+    let restore = ArtifactRestore::capture(&root, gate.descriptor().artifacts);
+    let write_report = gate.run(&GateCtx::new(
+        root.clone(),
+        vec!["--write".to_string()],
+    ));
+    let comparison_report = write_report
+        .as_ref()
+        .ok()
+        .map(|_| gate.run(&GateCtx::new(root, Vec::new())));
+    restore.put_back();
+
+    let write_report = write_report.expect("Fix: the gate must run in write mode");
     assert_eq!(
         write_report.count(),
         0,
         "Fix: `{name} --write` reported {:?}",
         write_report.findings
     );
-    let comparison_report = gate
-        .run(&GateCtx::new(root, Vec::new()))
+    let comparison_report = comparison_report
+        .expect("Fix: the comparison run follows a successful write")
         .expect("Fix: the gate must run in comparison mode");
     assert_eq!(
         comparison_report.count(),
@@ -1206,6 +1222,50 @@ pub fn assert_regenerates_clean(name: &str) {
         "Fix: `{name}` reported {:?} against the tree it just wrote",
         comparison_report.findings
     );
+}
+
+/// The bytes an artifact held before a proof rewrote it.
+///
+/// An artifact that did not exist is recorded as absent, so putting it back
+/// deletes it rather than leaving an untracked file behind.
+#[cfg(test)]
+struct ArtifactRestore {
+    before: Vec<(PathBuf, Option<Vec<u8>>)>,
+}
+
+#[cfg(test)]
+impl ArtifactRestore {
+    fn capture(root: &Path, artifacts: &[&str]) -> Self {
+        Self {
+            before: artifacts
+                .iter()
+                .map(|relative| {
+                    let path = root.join(relative);
+                    let bytes = std::fs::read(&path).ok();
+                    (path, bytes)
+                })
+                .collect(),
+        }
+    }
+
+    fn put_back(&self) {
+        for (path, bytes) in &self.before {
+            match bytes {
+                Some(bytes) => {
+                    if std::fs::read(path).ok().as_ref() != Some(bytes) {
+                        std::fs::write(path, bytes)
+                            .expect("Fix: put the artifact back as the proof found it.");
+                    }
+                }
+                None => {
+                    if path.exists() {
+                        std::fs::remove_file(path)
+                            .expect("Fix: remove the artifact the proof created.");
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]

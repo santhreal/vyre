@@ -15,6 +15,8 @@ mod syntax;
 mod threshold_policy;
 
 #[cfg(test)]
+mod source_inspection_tests;
+#[cfg(test)]
 mod tests;
 
 use classification::*;
