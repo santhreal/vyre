@@ -213,6 +213,7 @@ fn capability_by_gate(tree: &Tree, roots: &[String]) -> Result<BTreeMap<String, 
 
 /// Whether a finding construction is reachable from `body`.
 fn emits(body: &str, functions: &[(String, String)], depth: usize) -> bool {
+    let body = &token_spacing_removed(body);
     if EMIT_MARKERS.iter().any(|marker| body.contains(marker)) {
         return true;
     }
@@ -224,6 +225,26 @@ fn emits(body: &str, functions: &[(String, String)], depth: usize) -> bool {
         .iter()
         .filter(|(name, _)| called.iter().any(|call| call == name))
         .any(|(_, callee)| emits(callee, functions, depth + 1))
+}
+
+/// `body` with the spacing a token stream prints around `::` and before `(`
+/// removed.
+///
+/// A body reaches here two ways: verbatim from source, and printed back from a
+/// parse tree, which writes `Finding :: new (` where the source says
+/// `Finding::new(`. The markers are spelled the source way, so on the parsed
+/// path every marker missed and every gate was judged unable to produce a
+/// finding. That is the one distinction this gate exists to make, so it failed
+/// silently on the path it prefers.
+///
+/// Only those two spacings are closed. Dropping every space instead would join
+/// `let mut report` into one identifier and invent call names out of adjacent
+/// keywords.
+fn token_spacing_removed(body: &str) -> String {
+    body.replace(" :: ", "::")
+        .replace(":: ", "::")
+        .replace(" ::", "::")
+        .replace(" (", "(")
 }
 
 /// Every function name called in `body`, method calls included.
@@ -307,7 +328,8 @@ fn gate_run_bodies_registered(
                 if !is_gate_behavior {
                     continue;
                 }
-                let type_name = quote::quote!(#item_impl.self_ty).to_string();
+                let self_ty = &item_impl.self_ty;
+                let type_name = quote::quote!(#self_ty).to_string();
                 if type_name.contains('$') {
                     continue;
                 }
@@ -318,7 +340,8 @@ fn gate_run_bodies_registered(
                 for impl_item in &item_impl.items {
                     if let syn::ImplItem::Fn(fn_item) = impl_item {
                         if fn_item.sig.ident == "run" {
-                            let body_code = quote::quote!(#fn_item.block).to_string();
+                            let block = &fn_item.block;
+                            let body_code = quote::quote!(#block).to_string();
                             out.push((name.clone(), body_code));
                         }
                     }
@@ -755,19 +778,46 @@ fn without_comments(text: &str) -> String {
 ///
 /// A test constructs findings to assert on them, so counting a test would make
 /// every gate look able to fail.
+///
+/// The parse tree only names which lines to drop; what is kept is the original
+/// source. Reprinting the retained items through `quote!` was returning a token
+/// stream, so `Finding::new(` came back as `Finding :: new (`, `fn production()`
+/// as `fn production ()`, and a `macro_rules!` body in a shape none of the text
+/// scanners downstream could read. Every gate declared through a macro then
+/// dropped out of the census entirely.
 fn without_test_modules(text: &str) -> String {
-    if let Ok(mut syntax) = syn::parse_file(text) {
-        syntax.items.retain(|item| {
-            if let syn::Item::Mod(item_mod) = item {
-                !item_mod.attrs.iter().any(|attr| {
-                    let s = quote::quote!(#attr).to_string();
-                    s.contains("cfg (test)") || s.contains("cfg(test)")
-                })
-            } else {
-                true
+    if let Ok(syntax) = syn::parse_file(text) {
+        let mut cuts: Vec<(usize, usize)> = Vec::new();
+        for item in &syntax.items {
+            let syn::Item::Mod(item_mod) = item else {
+                continue;
+            };
+            let compiled_out_of_release = item_mod.attrs.iter().any(|attr| {
+                let rendered = quote::quote!(#attr).to_string();
+                rendered.contains("cfg (test)") || rendered.contains("cfg(test)")
+            });
+            if !compiled_out_of_release {
+                continue;
             }
-        });
-        return quote::quote!(#syntax).to_string();
+            let first = item_mod
+                .attrs
+                .first()
+                .map_or_else(|| item_mod.mod_token.span.start().line, |attr| {
+                    attr.pound_token.span.start().line
+                });
+            let last = syn::spanned::Spanned::span(item).end().line;
+            cuts.push((first, last));
+        }
+        return text
+            .lines()
+            .enumerate()
+            .filter(|(index, _)| {
+                let line = index + 1;
+                !cuts.iter().any(|(first, last)| line >= *first && line <= *last)
+            })
+            .map(|(_, line)| line)
+            .collect::<Vec<_>>()
+            .join("\n");
     }
     let mut out = String::with_capacity(text.len());
     let mut rest = text;

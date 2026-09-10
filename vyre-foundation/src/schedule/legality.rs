@@ -178,9 +178,24 @@ impl SelectedSchedule {
                 });
             }
             T::SetWorkgroup { phase, shape } => {
-                self.phase_mut(*phase)
-                    .ok_or(ScheduleLegalityError::MissingPhase(*phase))?
-                    .workgroup = *shape;
+                let selected = self
+                    .phase_mut(*phase)
+                    .ok_or(ScheduleLegalityError::MissingPhase(*phase))?;
+                // A phase covers its domain on the axes its workgroup occupies.
+                // The coverage a baseline states is flat, because a region
+                // domain is one declared extent, and a shape with y or z lanes
+                // launched against a flat coverage covers x alone: every lane
+                // on y reads the same ids, and a program addressing two axes
+                // computes only the first `shape[1]` columns of every row.
+                // Redistributing here is what keeps the pair consistent,
+                // because this is the only transform that changes a shape.
+                let points = selected
+                    .grid
+                    .iter()
+                    .copied()
+                    .fold(1u64, u64::saturating_mul);
+                selected.grid = crate::geometry::axis_coverage(points, *shape);
+                selected.workgroup = *shape;
             }
             T::Pipeline {
                 producer, consumer, ..

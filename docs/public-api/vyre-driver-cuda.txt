@@ -418,6 +418,7 @@ pub fn vyre_driver_cuda::profiler::CudaProfilerRange::drop(&mut self)
 pub fn vyre_driver_cuda::profiler::cuda_profiler_range(label: &'static [u8]) -> vyre_driver_cuda::profiler::CudaProfilerRange
 pub fn vyre_driver_cuda::profiler::cuda_profiler_ranges_enabled() -> bool
 pub fn vyre_driver_cuda::registered_backend_id() -> core::option::Option<&'static str>
+pub fn vyre_driver_cuda::registered_device() -> core::result::Result<vyre_driver_cuda::CudaBackend, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_cuda::resident_graph_session_speedup_sample(evidence: vyre_driver_cuda::CudaResidentGraphSessionEvidence) -> core::result::Result<vyre_driver_cuda::CudaMegakernelSpeedupSample, vyre_driver_cuda::CudaResidentGraphSessionError>
 pub fn vyre_driver_cuda::select_cuda_megakernel_topology(sample: vyre_driver_cuda::CudaMegakernelScheduleSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64) -> vyre_megakernel::candidate::FrontierTopologyDecision
 pub fn vyre_driver_cuda::select_cuda_megakernel_topology_stable(sample: vyre_driver_cuda::CudaMegakernelScheduleSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64, previous_topology: vyre_megakernel::candidate::FrontierTopology) -> vyre_megakernel::candidate::FrontierTopologyDecision

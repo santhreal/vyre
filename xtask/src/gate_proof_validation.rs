@@ -31,32 +31,11 @@ impl PackageSymbolIndex {
         let mut index = Self::default();
         let mut files = Vec::new();
         collect_rs_files(crate_src, &mut files, &mut index.failures);
-        for file in files {
-            let relative = match file.strip_prefix(crate_src) {
-                Ok(rel) => rel,
-                Err(err) => {
-                    index.failures.push(format!(
-                        "failed to strip prefix `{}` from `{}`: {err}",
-                        crate_src.display(),
-                        file.display()
-                    ));
-                    continue;
-                }
-            };
-            let mut file_mod_parts: Vec<String> = relative
-                .with_extension("")
-                .iter()
-                .map(|s| s.to_string_lossy().to_string())
-                .collect();
-            if file_mod_parts.last().map(String::as_str) == Some("mod")
-                || file_mod_parts.last().map(String::as_str) == Some("lib")
-                || file_mod_parts.last().map(String::as_str) == Some("main")
-            {
-                file_mod_parts.pop();
-            }
 
+        let mut parsed: Vec<(PathBuf, syn::File)> = Vec::new();
+        for file in files {
             let text = match fs::read_to_string(&file) {
-                Ok(t) => t,
+                Ok(text) => text,
                 Err(err) => {
                     index
                         .failures
@@ -64,27 +43,138 @@ impl PackageSymbolIndex {
                     continue;
                 }
             };
-            let syntax_file = match syn::parse_file(&text) {
-                Ok(sf) => sf,
-                Err(err) => {
-                    index.failures.push(format!(
-                        "failed to parse syntax for `{}`: {err}",
-                        file.display()
-                    ));
-                    continue;
-                }
-            };
+            match syn::parse_file(&text) {
+                Ok(syntax) => parsed.push((file, syntax)),
+                Err(err) => index.failures.push(format!(
+                    "failed to parse syntax for `{}`: {err}",
+                    file.display()
+                )),
+            }
+        }
 
-            let mut current_mod = file_mod_parts;
-            index_items(
-                &syntax_file.items,
-                &mut current_mod,
-                &file,
-                &mut index.symbols,
-            );
+        let mut module_of: HashMap<PathBuf, Vec<String>> = HashMap::new();
+        for (file, _) in &parsed {
+            match module_path_from_file_name(crate_src, file) {
+                Ok(parts) => {
+                    module_of.insert(file.clone(), parts);
+                }
+                Err(message) => index.failures.push(message),
+            }
+        }
+
+        // A file name is only the module path when nothing declares the file.
+        // `#[path = "x_tests.rs"] mod tests;` puts `x_tests.rs` at `x::tests`,
+        // and every proof naming a test in one of those read as missing while
+        // the test was there the whole time. Repeated because a declared module
+        // can itself declare one, and the declaring file has to be placed first.
+        for _ in 0..parsed.len() {
+            let mut moved = false;
+            for (file, syntax) in &parsed {
+                let Some(prefix) = module_of.get(file).cloned() else {
+                    continue;
+                };
+                for (target, path) in declared_modules(file, &syntax.items, &prefix) {
+                    if module_of.get(&target) != Some(&path) {
+                        module_of.insert(target, path);
+                        moved = true;
+                    }
+                }
+            }
+            if !moved {
+                break;
+            }
+        }
+
+        for (file, syntax) in &parsed {
+            let Some(prefix) = module_of.get(file) else {
+                continue;
+            };
+            let mut current_mod = prefix.clone();
+            index_items(&syntax.items, &mut current_mod, file, &mut index.symbols);
         }
         index
     }
+}
+
+/// The module path a file takes from its own name.
+fn module_path_from_file_name(crate_src: &Path, file: &Path) -> Result<Vec<String>, String> {
+    let relative = file.strip_prefix(crate_src).map_err(|err| {
+        format!(
+            "failed to strip prefix `{}` from `{}`: {err}",
+            crate_src.display(),
+            file.display()
+        )
+    })?;
+    let mut parts: Vec<String> = relative
+        .with_extension("")
+        .iter()
+        .map(|part| part.to_string_lossy().to_string())
+        .collect();
+    if matches!(
+        parts.last().map(String::as_str),
+        Some("mod" | "lib" | "main")
+    ) {
+        parts.pop();
+    }
+    Ok(parts)
+}
+
+/// Every file this one declares as a module, with the path that module takes.
+fn declared_modules(
+    declaring: &Path,
+    items: &[syn::Item],
+    prefix: &[String],
+) -> Vec<(PathBuf, Vec<String>)> {
+    let directory = declaring.parent().unwrap_or_else(|| Path::new("."));
+    let stem = declaring
+        .file_stem()
+        .map(|stem| stem.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let children = if matches!(stem.as_str(), "mod" | "lib" | "main") {
+        directory.to_path_buf()
+    } else {
+        directory.join(&stem)
+    };
+
+    let mut out = Vec::new();
+    for item in items {
+        let syn::Item::Mod(item_mod) = item else {
+            continue;
+        };
+        if item_mod.content.is_some() {
+            continue;
+        }
+        let mut path = prefix.to_vec();
+        path.push(item_mod.ident.to_string());
+        let explicit = item_mod.attrs.iter().find_map(|attr| {
+            if !attr.path().is_ident("path") {
+                return None;
+            }
+            let syn::Meta::NameValue(pair) = &attr.meta else {
+                return None;
+            };
+            let syn::Expr::Lit(literal) = &pair.value else {
+                return None;
+            };
+            match &literal.lit {
+                syn::Lit::Str(text) => Some(text.value()),
+                _ => None,
+            }
+        });
+        let target = match explicit {
+            Some(relative) => directory.join(relative),
+            None => {
+                let flat = children.join(format!("{}.rs", item_mod.ident));
+                if flat.exists() {
+                    flat
+                } else {
+                    children.join(item_mod.ident.to_string()).join("mod.rs")
+                }
+            }
+        };
+        out.push((target, path));
+    }
+    out
 }
 
 fn index_items(

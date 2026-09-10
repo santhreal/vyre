@@ -189,8 +189,11 @@ impl CudaBackend {
     ) -> Result<CudaGraphReplayStats, BackendError> {
         let prepared = prepare_cuda_graph_replay_launch(cached, inputs, input_state)?;
         launch_prepared_cuda_graph_replay(cached, &prepared, "cuGraphLaunch")?;
-        self.telemetry
-            .record_cuda_graph_launch(cached.replay_kernel_launches);
+        self.telemetry.record_cuda_graph_launch(
+            cached.replay_kernel_launches,
+            cached.replay_scheduled_thread_slots,
+            cached.replay_launched_elements,
+        );
         Ok(prepared.stats)
     }
 
@@ -304,8 +307,11 @@ impl CudaBackend {
             let (start, end) = timing_events.events()?;
             start.record(cached.stream.ptr().as_ptr())?;
             launch_prepared_cuda_graph_replay(cached, &prepared, "cuGraphLaunch")?;
-            self.telemetry
-                .record_cuda_graph_launch(cached.replay_kernel_launches);
+            self.telemetry.record_cuda_graph_launch(
+                cached.replay_kernel_launches,
+                cached.replay_scheduled_thread_slots,
+                cached.replay_launched_elements,
+            );
             end.record(cached.stream.ptr().as_ptr())?;
             end.synchronize()?;
         }

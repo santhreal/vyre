@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A resident CUDA dispatch of a grid-sync program whose grid exceeds cooperative thread residency now takes the segmented route instead of failing the launch."

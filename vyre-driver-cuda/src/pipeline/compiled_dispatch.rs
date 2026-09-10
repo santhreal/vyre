@@ -39,6 +39,69 @@ impl CudaCompiledPipeline {
         self.backend
             .grid_sync_program_needs_host_split(&self.program, inputs, config)
     }
+
+    /// Whether this resident launch must take the grid-sync split.
+    ///
+    /// The pipeline's resident entry points bind device memory the caller
+    /// already owns, and the launch grid comes from those buffers' byte
+    /// lengths, so the borrowed predicate above cannot answer for them. They
+    /// asked nothing at all: a compiled pipeline holds one native launch
+    /// shape, and an over-residency grid-sync program submitted through a
+    /// resident entry point launched cooperatively and failed with
+    /// `CooperativeResidencyExceeded`, while the same program through a
+    /// borrowed entry point returned an answer. The artifact runtime submits
+    /// resident resources, so that was the whole shipped route for a
+    /// multi-block grid-sync reduction.
+    fn needs_resident_grid_sync_host_split(
+        &self,
+        inputs: &[Resource],
+        config: &DispatchConfig,
+    ) -> Result<bool, BackendError> {
+        if !vyre_driver::grid_sync::contains_grid_sync(&self.program) {
+            return Ok(false);
+        }
+        self.backend
+            .grid_sync_resident_program_needs_host_split(&self.program, inputs, config)
+    }
+
+    /// Dispatch `inputs` through the grid-sync split, one segment at a time
+    /// against the same resident resources.
+    fn dispatch_resident_grid_sync_split_timed(
+        &self,
+        inputs: &[Resource],
+        config: &DispatchConfig,
+    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+        self.backend
+            .dispatch_resident_with_grid_sync_split_timed(&self.program, inputs, config)
+    }
+
+    /// Dispatch every batch item through the grid-sync split.
+    ///
+    /// Items run back to back. The concurrent batch route submits every item
+    /// before awaiting any, which a segmented item cannot join: its later
+    /// segments read the device state its earlier segments leave in the bound
+    /// resources, so a second item submitted into the same resources
+    /// mid-sequence would overwrite them.
+    fn dispatch_resident_batches_grid_sync_split_into(
+        &self,
+        batches: &[&[Resource]],
+        config: &DispatchConfig,
+        outputs: &mut Vec<OutputBuffers>,
+        mut device_ns_by_item: Option<&mut Vec<Option<u64>>>,
+    ) -> Result<(), BackendError> {
+        resize_vec_slots(outputs, batches.len(), "resident split batched output")?;
+        if let Some(rows) = device_ns_by_item.as_deref_mut() {
+            *rows = reserved_vec(batches.len(), "resident split batched item device time")?;
+        }
+        for (inputs, item_outputs) in batches.iter().zip(outputs.iter_mut()) {
+            let split = self.dispatch_resident_grid_sync_split_timed(inputs, config)?;
+            if let Some(rows) = device_ns_by_item.as_deref_mut() {
+                rows.push(split.device_ns);
+            }
+            vyre_driver::replace_output_buffers_preserving_slots(split.outputs, item_outputs);
+        }
+        Ok(())
+    }
 }
 
 impl CompiledPipeline for CudaCompiledPipeline {
@@ -279,6 +342,9 @@ impl CompiledPipeline for CudaCompiledPipeline {
     ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
         let _profiler_range =
             crate::profiler::cuda_profiler_range(crate::profiler::CUDA_PIPELINE_DISPATCH_RANGE);
+        if self.needs_resident_grid_sync_host_split(inputs, config)? {
+            return self.dispatch_resident_grid_sync_split_timed(inputs, config);
+        }
         if crate::instrumentation::cuda_resident_borrowed_fallback_enabled() {
             let started = std::time::Instant::now();
             let outputs = self.dispatch_persistent_handles(inputs, config)?;
@@ -369,6 +435,11 @@ impl CompiledPipeline for CudaCompiledPipeline {
     ) -> Result<(), BackendError> {
         let _profiler_range =
             crate::profiler::cuda_profiler_range(crate::profiler::CUDA_PIPELINE_DISPATCH_RANGE);
+        if self.needs_resident_grid_sync_host_split(inputs, config)? {
+            let split = self.dispatch_resident_grid_sync_split_timed(inputs, config)?;
+            vyre_driver::replace_output_buffers_preserving_slots(split.outputs, outputs);
+            return Ok(());
+        }
         let bindings = self.backend.resident_bindings_from_resources(inputs)?;
         if dispatch_configs_share_launch_shape(&self.compiled_config, config)
             && !crate::instrumentation::cuda_resident_borrowed_fallback_enabled()
@@ -411,6 +482,10 @@ impl CompiledPipeline for CudaCompiledPipeline {
             outputs.clear();
             return Ok(());
         }
+        if self.needs_resident_grid_sync_host_split(batches[0], config)? {
+            return self
+                .dispatch_resident_batches_grid_sync_split_into(batches, config, outputs, None);
+        }
         let mut resident_batches =
             SmallVec::<[SmallVec<[crate::backend::CudaResidentBuffer; 8]>; 8]>::new();
         reserve_smallvec(&mut resident_batches, batches.len(), "resident batch")?;
@@ -435,6 +510,14 @@ impl CompiledPipeline for CudaCompiledPipeline {
             outputs.clear();
             device_ns_by_item.clear();
             return Ok(());
+        }
+        if self.needs_resident_grid_sync_host_split(batches[0], config)? {
+            return self.dispatch_resident_batches_grid_sync_split_into(
+                batches,
+                config,
+                outputs,
+                Some(device_ns_by_item),
+            );
         }
         let mut resident_batches =
             SmallVec::<[SmallVec<[crate::backend::CudaResidentBuffer; 8]>; 8]>::new();
@@ -463,6 +546,13 @@ impl CompiledPipeline for CudaCompiledPipeline {
         if rows.is_empty() {
             outputs.clear();
             return Ok(());
+        }
+        if self.needs_resident_grid_sync_host_split(rows[0].as_slice(), config)? {
+            let mut batches = SmallVec::<[&[Resource]; 8]>::new();
+            reserve_smallvec(&mut batches, rows.len(), "resident split row batch")?;
+            batches.extend(rows.iter().map(<[Resource; 4]>::as_slice));
+            return self
+                .dispatch_resident_batches_grid_sync_split_into(&batches, config, outputs, None);
         }
         let mut resident_batches =
             SmallVec::<[SmallVec<[crate::backend::CudaResidentBuffer; 8]>; 8]>::new();
@@ -531,7 +621,13 @@ impl CompiledPipeline for CudaCompiledPipeline {
                 output_handles.push(handle);
             }
         }
-        if borrowed_fallback {
+        if self.needs_resident_grid_sync_host_split(inputs, config)? {
+            // Every output of this entry point is one of the resident buffers
+            // returned below, and the split leaves its result in them, so its
+            // readback bytes are dropped rather than copied back over device
+            // memory that already holds them.
+            self.dispatch_resident_grid_sync_split_timed(inputs, config)?;
+        } else if borrowed_fallback {
             self.backend
                 .dispatch_resident_via_borrowed(&self.program, &bindings, config)?;
         } else {

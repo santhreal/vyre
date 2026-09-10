@@ -34,7 +34,7 @@ const POLICY_OWNER_PATHS: &[&str] = &[
     "vyre-foundation/src/failure_domain.rs",
     "vyre-driver/src/lock_policy.rs",
     "xtask/src/lock_policy.rs",
-    "xtask/src/gates/lock_poison_policy.rs",
+    "xtask/src/gates/lock_poison_policy/mod.rs",
 ];
 
 /// A way to answer a poisoned lock outside the policy owners.

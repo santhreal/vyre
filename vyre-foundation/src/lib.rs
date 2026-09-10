@@ -30,8 +30,9 @@ pub mod operation;
 /// Versioned backend-neutral selected schedule stage.
 pub mod schedule;
 pub use geometry::{
-    admitted_logical_span, guarded_logical_span, launch_covers_full_input_span, CooperativeWidth,
-    ElementPolicy, GeometryConstraintConflict, GeometryRequirements, LaunchGeometry, Uniformity,
+    admitted_logical_span, axis_coverage, guarded_logical_span, launch_covers_full_input_span,
+    CooperativeWidth, ElementPolicy, GeometryConstraintConflict, GeometryRequirements,
+    LaunchGeometry, Uniformity,
 };
 
 /// Canonical binary codec and verification for schema registry records.

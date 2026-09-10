@@ -285,7 +285,11 @@ impl CudaBackend {
         let mut item_timing =
             SmallVec::<[(crate::stream::CudaEvent, crate::stream::CudaEvent); 8]>::new();
         if capture_item_timing {
-            reserve_smallvec(&mut item_timing, batches.len(), "resident batch item timing")?;
+            reserve_smallvec(
+                &mut item_timing,
+                batches.len(),
+                "resident batch item timing",
+            )?;
             for _ in 0..batches.len() {
                 item_timing.push(self.launch_resources.acquire_timing_event_pair()?);
             }
