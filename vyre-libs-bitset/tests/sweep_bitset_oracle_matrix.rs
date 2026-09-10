@@ -17,6 +17,8 @@
 #![forbid(unsafe_code)]
 #![cfg(feature = "bitset")]
 
+use vyre_libs_builder::plumbing::registration::operation_catalog::library_entries;
+
 mod and {
     pub(super) use vyre_reference::composition_witness::bitset_and_witness as cpu_ref;
     pub(super) use vyre_reference::composition_witness::bitset_and_witness_into as cpu_ref_into;
@@ -398,10 +400,12 @@ fn in_place_indexed_bitset_updates_match_independent_oracles() {
 #[test]
 fn bitset_registry_is_fully_covered() {
     let covered = swept_ids();
-    for operation in vyre_primitives::operation_catalog::all_entries() {
+    let mut judged = 0usize;
+    for operation in library_entries() {
         if !operation.id.starts_with("vyre-libs::bitset::") {
             continue;
         }
+        judged += 1;
         let exempt = EXEMPT.iter().find(|(id, _)| *id == operation.id);
         assert!(
             covered.contains(&operation.id) || exempt.is_some(),
@@ -409,13 +413,18 @@ fn bitset_registry_is_fully_covered() {
             operation.id
         );
     }
+    assert!(
+        judged >= covered.len(),
+        "Fix: this matrix sweeps {} bitset ids but the registry reader returned only {judged} in the `vyre-libs::bitset::` namespace, so the coverage loop judged a partial roster. Read the library tier through `vyre_libs_builder::plumbing::registration::operation_catalog::library_entries`, not an intrinsic-tier reader.",
+        covered.len()
+    );
     for (id, owner) in EXEMPT {
         assert!(
             !covered.contains(id),
             "Fix: bitset operation {id} is both swept here and exempted to {owner}. Drop the exemption."
         );
         assert!(
-            vyre_primitives::operation_catalog::all_entries()
+            library_entries()
                 .any(|op| op.id == *id),
             "Fix: exempted bitset operation {id} is no longer registered. Drop the exemption, or restore the registration `{owner}` proves."
         );

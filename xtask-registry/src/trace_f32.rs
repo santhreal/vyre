@@ -136,8 +136,8 @@ fn corpus(selected: Option<&str>) -> Vec<Case> {
             }
         };
     }
-    collect!(vyre_libs::operation_catalog::all_entries);
-    collect!(vyre_primitives::operation_catalog::all_entries);
+    collect!(vyre_libs::operation_catalog::library_entries);
+    collect!(vyre_primitives::operation_catalog::intrinsic_entries);
     cases
 }
 #[cfg(test)]

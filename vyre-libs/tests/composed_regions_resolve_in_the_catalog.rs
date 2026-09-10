@@ -55,7 +55,7 @@ fn every_emitted_region_names_a_catalog_operation() {
 
     let mut built = 0_usize;
     let mut unresolved: Vec<String> = Vec::new();
-    for operation in operation_catalog::all_entries() {
+    for operation in operation_catalog::library_entries() {
         let Some(build) = operation.build else {
             continue;
         };

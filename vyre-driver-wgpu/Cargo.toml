@@ -79,7 +79,7 @@ vyre-libs = { path = "../vyre-libs", features = ["pattern", "parsing", "nn-atten
 # still links it through the path.
 vyre = { path = "../vyre", default-features = false }
 # Tests reach `vyre_primitives::wire::pack_u32_slice`, `wire::decode_u*` and
-# `operation_catalog::all_entries` directly; the facade does not re-export them.
+# `operation_catalog::intrinsic_entries` directly; the facade does not re-export them.
 vyre-primitives = { path = "../vyre-primitives", features = ["inventory-registry"], default-features = false }
 # Cross-OS shader-VALIDITY coverage for the combined segmented megakernel: the
 # winning Vulkan/DX12 runs implicitly prove SPIR-V/HLSL validity, but macOS/Metal

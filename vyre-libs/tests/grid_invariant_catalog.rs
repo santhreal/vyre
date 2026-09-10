@@ -109,7 +109,7 @@ fn every_multi_workgroup_registered_program_names_a_grid_varying_index() {
     // inventory registrations come with it. An integration test that touches
     // only `vyre-foundation` links no registrations at all, and the sweep then
     // examines an empty registry and proves nothing.
-    let library_entries = vyre_libs::operation_catalog::all_entries().count();
+    let library_entries = vyre_libs::operation_catalog::library_entries().count();
     assert!(
         library_entries > 0,
         "Fix: this build registers no library operation, so the sweep has no population to read"

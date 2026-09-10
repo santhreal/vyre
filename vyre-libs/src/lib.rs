@@ -68,7 +68,7 @@ pub fn link_anchor() -> usize {
     vyre_libs_reasoning::link_anchor();
     #[cfg(feature = "scheduling")]
     vyre_libs_scheduling::link_anchor();
-    operation_catalog::all_entries().count()
+    operation_catalog::library_entries().count()
 }
 
 #[cfg(feature = "geom")]

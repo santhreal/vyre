@@ -3,7 +3,7 @@
 //! unregistered generator is a black box: opaque provenance, and nothing an
 //! audit can follow.
 //!
-//! The test walks every op in `vyre_libs::operation_catalog::all_entries()`,
+//! The test walks every op in `vyre_libs::operation_catalog::library_entries()`,
 //! builds its Program, collects the set of generator names referenced
 //! anywhere in the Region chain, and asserts every generator name
 //! either (a) resolves to a registered op id, or (b) is an
@@ -61,10 +61,10 @@ fn walk(node: &Node, out: &mut BTreeSet<String>) {
 
 fn registered_op_ids() -> BTreeSet<String> {
     let mut out = BTreeSet::new();
-    for entry in vyre_libs::operation_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::library_entries() {
         out.insert(entry.id.to_string());
     }
-    for entry in vyre_primitives::operation_catalog::all_entries() {
+    for entry in vyre_primitives::operation_catalog::intrinsic_entries() {
         out.insert(entry.id.to_string());
     }
     out
@@ -118,7 +118,7 @@ fn only_the_canonical_root_generator_is_an_anonymous_boundary() {
 fn every_tier3_op_region_chain_resolves_to_registered_generators() {
     let registered = registered_op_ids();
     let mut offenders: Vec<(String, Vec<String>)> = Vec::new();
-    for entry in vyre_libs::operation_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::library_entries() {
         let program = entry
             .program()
             .expect("Fix: registered library operation must provide a neutral builder");

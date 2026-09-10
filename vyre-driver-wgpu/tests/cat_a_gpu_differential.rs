@@ -214,7 +214,7 @@ fn assert_diff(op: &'static str, tolerance: u32, program: &Program, inputs: Vec<
 }
 
 fn entry_by_id(op_id: &str) -> vyre_foundation::operation::SemanticOperation {
-    vyre_libs::operation_catalog::all_entries()
+    vyre_libs::operation_catalog::library_entries()
         .find(|entry| entry.id == op_id)
         .expect("Fix: expected canonical operation registration")
 }

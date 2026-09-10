@@ -22,7 +22,7 @@
 
 use vyre::ir::BufferDecl;
 use vyre::Program;
-use vyre_libs::operation_catalog::all_entries;
+use vyre_libs::operation_catalog::library_entries;
 
 /// The dispatch ABI of a program: the host-staged inputs and the backend
 /// outputs, by name, in binding order.
@@ -53,7 +53,7 @@ fn optimizing_a_registered_operation_preserves_its_dispatch_abi() {
     let mut checked = 0usize;
     let mut drifted = Vec::new();
 
-    for entry in all_entries() {
+    for entry in library_entries() {
         let Some(build) = entry.build else {
             continue;
         };
@@ -88,7 +88,7 @@ fn lowering_a_schedule_preserves_the_dispatch_abi() {
     let mut checked = 0usize;
     let mut drifted = Vec::new();
 
-    for entry in all_entries() {
+    for entry in library_entries() {
         let Some(build) = entry.build else {
             continue;
         };

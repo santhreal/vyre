@@ -17,7 +17,7 @@
 //! registration the moment it links.
 
 use vyre_foundation::ir::Node;
-use vyre_libs::operation_catalog::all_entries;
+use vyre_libs::operation_catalog::library_entries;
 
 /// Registrations whose entry region names an operation other than themselves.
 ///
@@ -39,7 +39,7 @@ fn every_library_operation_stamps_its_own_id_on_its_entry_region() {
     let mut offenders: Vec<String> = Vec::new();
     let mut without_program: Vec<&str> = Vec::new();
     let mut stale_exemptions: Vec<&str> = Vec::new();
-    for operation in all_entries() {
+    for operation in library_entries() {
         let Some(program) = operation.program() else {
             without_program.push(operation.id);
             continue;

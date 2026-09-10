@@ -166,7 +166,7 @@ fn read_helper_result(root: &Path) -> (Duration, Vec<Vec<u8>>) {
 }
 
 fn helper_case(case_id: &str) -> SemanticOperation {
-    vyre_libs::operation_catalog::all_entries()
+    vyre_libs::operation_catalog::library_entries()
         .find(|entry| entry.id == case_id)
         .unwrap_or_else(|| panic!("Fix: no harness fixture registered for `{case_id}`"))
 }

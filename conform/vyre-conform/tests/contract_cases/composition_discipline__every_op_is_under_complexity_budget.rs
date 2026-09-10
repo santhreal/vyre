@@ -37,7 +37,7 @@ const MAX_LOOPS: usize = 8;
 fn every_op_is_under_complexity_budget() {
     let mut violations = Vec::new();
 
-    for entry in vyre_libs::operation_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::library_entries() {
         let program = entry
             .program()
             .expect("Fix: conformance operation must provide a neutral builder");
@@ -81,7 +81,7 @@ fn every_op_is_under_complexity_budget() {
 
 #[test]
 fn no_op_reinvents_another_registered_op() {
-    let entries: Vec<_> = vyre_libs::operation_catalog::all_entries().collect();
+    let entries: Vec<_> = vyre_libs::operation_catalog::library_entries().collect();
     let programs: Vec<(&str, Program)> = entries
         .iter()
         .map(|e| {
@@ -196,7 +196,7 @@ fn every_op_has_test_fixtures() {
 #[test]
 fn print_complexity_report() {
     let mut report = Vec::new();
-    for entry in vyre_libs::operation_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::library_entries() {
         let program = entry
             .program()
             .expect("Fix: conformance operation must provide a neutral builder");

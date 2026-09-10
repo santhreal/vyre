@@ -136,7 +136,7 @@ fn is_float_type(ty: &DataType) -> bool {
 
 #[test]
 fn every_registered_float_op_states_its_fused_multiply_adds() {
-    let catalog = vyre_libs::operation_catalog::all_entries().count();
+    let catalog = vyre_libs::operation_catalog::library_entries().count();
     assert!(
         catalog > 0,
         "Fix: the library catalog is empty, so no library registration reached the registry."

@@ -12,7 +12,7 @@
 // hit `try_compose`.  Incompatible pairs must return `Err`  -  never panic,
 // never produce a silent-wrong Program.
 //
-// Coverage: `vyre_libs::operation_catalog::all_entries()`.
+// Coverage: `vyre_libs::operation_catalog::library_entries()`.
 
 use std::collections::HashSet;
 use std::sync::{Arc, LazyLock};
@@ -37,7 +37,7 @@ pub(crate) struct UnifiedEntry {
 
 pub(crate) fn all_entries_vec() -> Vec<UnifiedEntry> {
     let mut out = Vec::new();
-    for e in vyre_libs::operation_catalog::all_entries() {
+    for e in vyre_libs::operation_catalog::library_entries() {
         let Some(build) = e.build else {
             continue;
         };

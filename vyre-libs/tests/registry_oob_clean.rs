@@ -24,7 +24,7 @@ use vyre_test_support::registry_nets::RegistrySweep;
 fn sweep() -> RegistrySweep {
     RegistrySweep::from_catalog(
         "the library catalog",
-        vyre_libs::operation_catalog::all_entries(),
+        vyre_libs::operation_catalog::library_entries(),
     )
 }
 

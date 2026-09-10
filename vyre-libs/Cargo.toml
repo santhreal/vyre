@@ -262,11 +262,6 @@ path = "tests/all_tests_analysis_encoding.rs"
 required-features = ["analysis", "encoding"]
 
 [[test]]
-name = "all_tests_bitset"
-path = "tests/all_tests_bitset.rs"
-required-features = ["bitset"]
-
-[[test]]
 name = "all_tests_decode"
 path = "tests/all_tests_decode.rs"
 required-features = ["decode"]

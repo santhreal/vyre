@@ -11,7 +11,7 @@ use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
 use vyre_foundation::operation::SemanticOperation;
-use vyre_libs::operation_catalog::all_entries;
+use vyre_libs::operation_catalog::library_entries;
 fn backend() -> &'static WgpuBackend {
     static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();
     BACKEND.get_or_init(|| {
@@ -25,7 +25,7 @@ fn backend() -> &'static WgpuBackend {
 }
 
 fn entry(id: &'static str) -> SemanticOperation {
-    all_entries()
+    library_entries()
         .find(|entry| entry.id == id)
         .unwrap_or_else(|| panic!("Fix: missing canonical operation registration for {id}"))
 }

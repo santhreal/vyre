@@ -9,13 +9,13 @@
 //! happened not to exercise.
 //!
 //! Closes: the witness input ABI across the whole operation catalog. The entry
-//! set is read from `all_entries()` at run time, so a newly registered
+//! set is read from `library_entries()` at run time, so a newly registered
 //! operation is covered with nothing else edited, and every case of every entry
 //! that declares `test_inputs` is checked. `vyre-libs/tests/universal_harness.rs`
 //! makes the same assertion but only over `fixture_entries()`, which requires
 //! both `test_inputs` and `expected_output`; an entry that declares witnesses
 //! without an oracle still reaches the wgpu op-pairwise harness through
-//! `all_entries()` and escaped that check.
+//! `library_entries()` and escaped that check.
 //!
 //! Does not catch: whether the bytes in a case are the right bytes. That is the
 //! oracle's job, pinned in `vyre-libs/tests/cpu_witnesses.rs`. It also does not
@@ -24,7 +24,7 @@
 
 #![allow(deprecated)]
 
-use vyre_libs::operation_catalog::all_entries;
+use vyre_libs::operation_catalog::library_entries;
 
 /// Buffers a witness case must supply a value for, and the ones it must not.
 struct WitnessShape {
@@ -55,7 +55,7 @@ fn every_registered_witness_case_supplies_one_value_per_reference_input() {
     let mut checked_entries = 0usize;
     let mut checked_cases = 0usize;
 
-    for entry in all_entries() {
+    for entry in library_entries() {
         let (Some(build), Some(test_inputs)) = (entry.build, entry.test_inputs) else {
             continue;
         };
@@ -94,7 +94,7 @@ fn every_registered_witness_case_supplies_one_value_per_reference_input() {
     assert!(
         checked_entries > 0,
         "the operation catalog reported no entry with both a builder and witnesses, so this \
-         test proved nothing. Fix: check `vyre_libs::operation_catalog::all_entries`."
+         test proved nothing. Fix: check `vyre_libs::operation_catalog::library_entries`."
     );
     assert!(
         checked_cases >= checked_entries,
@@ -113,7 +113,7 @@ fn every_registered_witness_case_supplies_one_value_per_reference_input() {
 /// every intermediate unchecked, which is the same as having no oracle for the
 /// stages that produce them.
 ///
-/// The entry set is `all_entries()` read at run time, so a newly registered
+/// The entry set is `library_entries()` read at run time, so a newly registered
 /// operation is covered with nothing else edited.
 ///
 /// Does not catch: whether the declared bytes are the right bytes. That is the
@@ -124,7 +124,7 @@ fn every_registered_oracle_case_declares_one_value_per_returned_buffer() {
     let mut checked_cases = 0usize;
     let mut failures = Vec::new();
 
-    for entry in all_entries() {
+    for entry in library_entries() {
         let (Some(build), Some(expected_output)) = (entry.build, entry.expected_output) else {
             continue;
         };
@@ -155,7 +155,7 @@ fn every_registered_oracle_case_declares_one_value_per_returned_buffer() {
     assert!(
         checked_entries > 0,
         "the operation catalog reported no entry with both a builder and an oracle, so this \
-         test proved nothing. Fix: check `vyre_libs::operation_catalog::all_entries`."
+         test proved nothing. Fix: check `vyre_libs::operation_catalog::library_entries`."
     );
     assert!(
         checked_cases >= checked_entries,
@@ -185,7 +185,7 @@ fn every_registered_oracle_case_declares_one_value_per_returned_buffer() {
 fn the_placeholder_shape_differs_from_the_logical_shape_somewhere_in_the_catalog() {
     let mut distinguishing = Vec::new();
 
-    for entry in all_entries() {
+    for entry in library_entries() {
         let Some(build) = entry.build else {
             continue;
         };

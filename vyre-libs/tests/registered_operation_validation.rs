@@ -21,7 +21,7 @@
 
 use vyre_foundation::program_caps::RequiredCapabilities;
 use vyre_foundation::validate::{validate_with_options, BackendCapabilities, ValidationOptions};
-use vyre_libs::operation_catalog::all_entries;
+use vyre_libs::operation_catalog::library_entries;
 
 /// The backend surface a registration's declared requirements ask for.
 ///
@@ -45,7 +45,7 @@ fn every_registered_operation_builds_a_program_the_validator_accepts() {
     let mut validated = 0usize;
     let mut refused: Vec<String> = Vec::new();
 
-    for operation in all_entries() {
+    for operation in library_entries() {
         let Some(program) = operation.program() else {
             continue;
         };

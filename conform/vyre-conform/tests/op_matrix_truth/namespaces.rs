@@ -3,8 +3,6 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::operation::OperationTier as OpTier;
-
 use super::registry::registered_ops;
 
 #[test]
@@ -17,7 +15,7 @@ fn registry_namespaces_do_not_pollute_other_tiers() {
         );
     }
 
-    for entry in vyre_primitives::operation_catalog::all_entries() {
+    for entry in vyre_primitives::operation_catalog::intrinsic_entries() {
         assert!(
             entry.id.starts_with("vyre-primitives::"),
             "Fix: intrinsic-tier entry `{}` must use the vyre-primitives namespace.",
@@ -25,12 +23,11 @@ fn registry_namespaces_do_not_pollute_other_tiers() {
         );
     }
 
-    for entry in vyre_libs::operation_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::library_entries() {
         assert!(
-            matches!(entry.tier, OpTier::Library | OpTier::External),
-            "Fix: shared harness entry `{}` must be a composition or an external consumer op, not {:?}.",
-            entry.id,
-            entry.tier
+            entry.id.starts_with("vyre-libs::"),
+            "Fix: library-tier entry `{}` must use the vyre-libs namespace.",
+            entry.id
         );
     }
 }

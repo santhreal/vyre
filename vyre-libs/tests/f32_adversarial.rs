@@ -6,10 +6,10 @@ use proptest::prelude::*;
 use vyre::ir::Program;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::optimizer::optimize;
-use vyre_libs::operation_catalog::all_entries;
+use vyre_libs::operation_catalog::library_entries;
 
 fn entry(id: &'static str) -> SemanticOperation {
-    all_entries()
+    library_entries()
         .find(|entry| entry.id == id)
         .unwrap_or_else(|| panic!("Fix: missing canonical operation registration for {id}"))
 }

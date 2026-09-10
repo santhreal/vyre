@@ -64,7 +64,7 @@ fn selected_schedule_legalizes_markers_introduced_by_call_expansion() {
 
 #[test]
 fn library_fixtures_are_canonical_semantic_registrations() {
-    let entries: Vec<_> = vyre_libs::operation_catalog::all_entries().collect();
+    let entries: Vec<_> = vyre_libs::operation_catalog::library_entries().collect();
     let registered_library_ids: Vec<_> = OperationRegistry::global()
         .iter()
         .filter(|entry| entry.tier == OperationTier::Library)

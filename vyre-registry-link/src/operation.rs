@@ -13,13 +13,13 @@ use vyre_foundation::operation::OperationRegistry;
 static SOURCES: LazyLock<[(&str, usize); 2]> = LazyLock::new(|| {
     let libs_count = {
         let _ = vyre_libs::link_anchor();
-        vyre_libs::operation_catalog::all_entries().count()
+        vyre_libs::operation_catalog::library_entries().count()
     };
     [
         ("vyre-libs-builder", libs_count),
         (
             "vyre-primitives",
-            vyre_primitives::operation_catalog::all_entries().count(),
+            vyre_primitives::operation_catalog::intrinsic_entries().count(),
         ),
     ]
 });

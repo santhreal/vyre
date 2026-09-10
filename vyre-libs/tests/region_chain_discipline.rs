@@ -11,13 +11,13 @@
 //! `fn(...) -> Program` builder.
 
 use vyre_foundation::ir::Node;
-use vyre_libs::operation_catalog::all_entries;
+use vyre_libs::operation_catalog::library_entries;
 
 #[test]
 fn every_cat_a_program_entry_is_a_single_generator_region() {
     let mut violations: Vec<String> = Vec::new();
 
-    for entry in all_entries() {
+    for entry in library_entries() {
         let program = entry
             .program()
             .expect("Fix: registered library operation must provide a neutral builder");

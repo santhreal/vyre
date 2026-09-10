@@ -552,7 +552,7 @@ fn an_unregistered_child_region_does_not_hide_complexity() {
 /// pushes authors back toward monoliths.
 #[test]
 fn a_registered_child_region_is_still_exempt() {
-    let registered = vyre_libs::operation_catalog::all_entries()
+    let registered = vyre_libs::operation_catalog::library_entries()
         .next()
         .expect("Fix: the operation catalog must register at least one op");
 

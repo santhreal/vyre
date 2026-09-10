@@ -17,7 +17,7 @@
 //! catch it on one machine.
 
 use vyre_foundation::execution_plan::fusion::relies_on_single_invocation_workgroup;
-use vyre_libs::operation_catalog::all_entries;
+use vyre_libs::operation_catalog::library_entries;
 
 /// Invocations in the program's own declared workgroup.
 fn declared_invocations(workgroup: [u32; 3]) -> u64 {
@@ -29,7 +29,7 @@ fn a_single_point_program_guards_on_its_point_not_its_tile() {
     let mut offenders = Vec::new();
     let mut checked = 0usize;
 
-    for entry in all_entries() {
+    for entry in library_entries() {
         let Some(build) = entry.build else {
             continue;
         };

@@ -8,11 +8,11 @@
     feature = "crypto-blake3"
 ))]
 
-use vyre_libs::operation_catalog::all_entries;
+use vyre_libs::operation_catalog::library_entries;
 use vyre_reference::value::Value;
 
 fn entry(id: &'static str) -> vyre_foundation::operation::SemanticOperation {
-    all_entries()
+    library_entries()
         .find(|entry| entry.id == id)
         .unwrap_or_else(|| panic!("Fix: missing canonical operation registration for {id}"))
 }

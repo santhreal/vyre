@@ -128,7 +128,7 @@ fn no_registered_program_selects_between_both_directions_of_a_difference() {
     // inventory registrations come with it. An integration test that touches
     // only `vyre-foundation` links no registrations at all, and the sweep then
     // reads an empty registry and proves nothing.
-    let library_entries = vyre_libs::operation_catalog::all_entries().count();
+    let library_entries = vyre_libs::operation_catalog::library_entries().count();
     let mut examined = 0usize;
     let mut offenders = Vec::new();
     for entry in OperationRegistry::global().iter() {

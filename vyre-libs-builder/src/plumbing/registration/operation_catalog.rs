@@ -10,8 +10,12 @@ use std::sync::LazyLock;
 
 use vyre_foundation::operation::{OperationRegistry, OperationTier, SemanticOperation};
 
-/// Iterate over canonical library composition registrations.
-pub fn all_entries() -> impl Iterator<Item = SemanticOperation> {
+/// Iterate every registration in the library tier.
+///
+/// Selects on [`OperationTier::Library`], so a Category C hardware intrinsic
+/// is not returned here. Intrinsic-tier readers use
+/// `vyre_primitives::operation_catalog::intrinsic_entries`.
+pub fn library_entries() -> impl Iterator<Item = SemanticOperation> {
     OperationRegistry::global()
         .iter()
         .filter(|entry| entry.tier == OperationTier::Library)
@@ -22,17 +26,17 @@ pub fn all_entries() -> impl Iterator<Item = SemanticOperation> {
 /// Returns the number of canonical library operations contributed by the active feature set.
 #[must_use]
 pub fn link_anchor() -> usize {
-    all_entries().count()
+    library_entries().count()
 }
 
 /// Iterate over library operations with complete deterministic execution fixtures.
 ///
-/// Callable composition components remain present in [`all_entries`] for
+/// Callable composition components remain present in [`library_entries`] for
 /// validation, inlining, documentation, and complexity accounting. They are
 /// omitted here when their execution is covered through a parent operation's
 /// fixture rather than a standalone dispatch shape.
 pub fn fixture_entries() -> impl Iterator<Item = SemanticOperation> {
-    all_entries().filter(|entry| entry.test_inputs.is_some() && entry.expected_output.is_some())
+    library_entries().filter(|entry| entry.test_inputs.is_some() && entry.expected_output.is_some())
 }
 
 /// Convergence metadata consumed by upper execution harnesses.

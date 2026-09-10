@@ -144,7 +144,7 @@ mod tests {
 
     #[test]
     fn convergence_contract_ops_are_discoverable() {
-        let convergent_ids: Vec<&str> = vyre_libs::operation_catalog::all_entries()
+        let convergent_ids: Vec<&str> = vyre_libs::operation_catalog::library_entries()
             .filter_map(|entry| convergence_contract(entry.id).map(|_| entry.id))
             .collect();
         assert!(

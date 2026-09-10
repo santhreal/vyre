@@ -571,6 +571,10 @@ pub mod motif_ir_parity_proptest;
 #[path = "multi_block_prefix_scan_carry_parity.rs"]
 pub mod multi_block_prefix_scan_carry_parity;
 
+/// Integration tests from `tests/operation_tier_readers.rs`.
+#[path = "operation_tier_readers.rs"]
+pub mod operation_tier_readers;
+
 /// Integration tests from `tests/operator_reporting_interchange.rs`.
 #[path = "operator_reporting_interchange.rs"]
 pub mod operator_reporting_interchange;

@@ -376,8 +376,12 @@ fn offline_target_profile_refusal_and_legality_provenance() {
 
 #[test]
 fn public_seam_carries_zero_callbacks_zero_handles_and_zero_domain_vocabulary() {
-    let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-    let lib_rs_path = manifest_dir.join("src/lib.rs");
+    // The crate directory is resolved from the working directory through the
+    // workspace member roster. A compiled-in manifest path names whichever
+    // checkout last built this binary through the shared target directory, so
+    // the facade read would be that tree's.
+    let lib_rs_path =
+        vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")).join("src/lib.rs");
     let content = std::fs::read_to_string(&lib_rs_path).expect("read vyre/src/lib.rs");
     let _ast = syn::parse_file(&content).expect("parse AST");
 
@@ -431,7 +435,7 @@ fn vyre_libs_feature_registration_needs_no_workspace_internal_knowledge() {
         "vyre-libs link_anchor must return a positive count of registered operations"
     );
 
-    let entries: Vec<_> = vyre_libs::operation_catalog::all_entries().collect();
+    let entries: Vec<_> = vyre_libs::operation_catalog::library_entries().collect();
     assert_eq!(entries.len(), count);
 
     for entry in &entries {

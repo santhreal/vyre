@@ -25,7 +25,7 @@ use vyre_test_support::registry_nets::RegistrySweep;
 fn sweep() -> RegistrySweep {
     RegistrySweep::from_catalog(
         "the primitive catalog",
-        vyre_primitives::operation_catalog::all_entries(),
+        vyre_primitives::operation_catalog::intrinsic_entries(),
     )
 }
 
@@ -62,7 +62,7 @@ fn every_registered_primitive_is_race_free_under_lane_reversal() {
 fn every_registered_primitive_program_is_ir_valid() {
     let mut invalid = Vec::new();
     let mut total = 0usize;
-    for entry in vyre_primitives::operation_catalog::all_entries() {
+    for entry in vyre_primitives::operation_catalog::intrinsic_entries() {
         total += 1;
         let program = entry
             .program()

@@ -98,7 +98,7 @@ fn compile_registered(
 /// the registry would read empty and every closure below would pass over an
 /// empty roster.
 fn linked_registrations() -> usize {
-    vyre_libs::operation_catalog::all_entries().count()
+    vyre_libs::operation_catalog::library_entries().count()
 }
 
 /// Every registered operation that builds a program, paired with its graph.

@@ -6,8 +6,13 @@
 
 use vyre_foundation::operation::{OperationRegistry, OperationTier, SemanticOperation};
 
-/// Iterate over canonical registrations owned by this crate.
-pub fn all_entries() -> impl Iterator<Item = SemanticOperation> {
+/// Iterate every registration in the intrinsic tier.
+///
+/// Selects on [`OperationTier::Intrinsic`], so a library composition
+/// registered through `OperationRegistration::library_unconstrained` is not
+/// returned here. Library-tier readers use
+/// `vyre_libs_builder::plumbing::registration::operation_catalog::library_entries`.
+pub fn intrinsic_entries() -> impl Iterator<Item = SemanticOperation> {
     OperationRegistry::global()
         .iter()
         .filter(|entry| entry.tier == OperationTier::Intrinsic)

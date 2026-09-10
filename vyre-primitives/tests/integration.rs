@@ -11,7 +11,7 @@ use vyre_foundation::validate::{validate_with_options, BackendCapabilities, Vali
 
 #[test]
 fn inventory_registry_exposes_only_primitive_ids() {
-    let ids: Vec<_> = vyre_primitives::operation_catalog::all_entries()
+    let ids: Vec<_> = vyre_primitives::operation_catalog::intrinsic_entries()
         .map(|entry| entry.id)
         .collect();
     assert!(
@@ -43,7 +43,7 @@ fn every_capability() -> BackendCapabilities {
 }
 
 fn built_programs() -> Vec<(&'static str, Program)> {
-    let programs: Vec<(&'static str, Program)> = vyre_primitives::operation_catalog::all_entries()
+    let programs: Vec<(&'static str, Program)> = vyre_primitives::operation_catalog::intrinsic_entries()
         .filter_map(|entry| entry.build.map(|build| (entry.id, build())))
         .collect();
     assert!(
