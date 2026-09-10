@@ -6,6 +6,9 @@ pub mod presence_oracle;
 #[path = "wire_words/mod.rs"]
 pub mod wire_words;
 
+#[path = "ac_walk_hostile_table_contents_oob.rs"]
+pub mod ac_walk_hostile_table_contents_oob;
+
 #[path = "adversarial_matching.rs"]
 pub mod adversarial_matching;
 

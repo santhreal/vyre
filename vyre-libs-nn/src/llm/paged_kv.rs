@@ -13,6 +13,7 @@
 //! read and a contiguous read comparable by reading them.
 
 use thiserror::Error;
+use vyre_foundation::composition::bounded_index;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use crate::nn::attention::layout::{
@@ -159,12 +160,24 @@ impl PagedKvCache<'_> {
     /// This is the whole of paging: the logical token splits into a block and a
     /// slot, the block table turns the logical block into a physical one, and
     /// the physical address is the ordinary row-major index from there.
+    ///
+    /// The block table is an input, so a physical block id is data and nothing
+    /// upstream of the emitted program constrains it. The id is folded into
+    /// `blocks` before it reaches the row-major arithmetic, which keeps the
+    /// flat index inside the cache buffer: the head, the slot and the column
+    /// are each already below their axis length. An id at or past `blocks`
+    /// therefore addresses block zero rather than memory the cache does not
+    /// own. That is a wrong element, not a wrong page, and it stays the
+    /// responsibility of whoever allocates blocks.
     fn address(&self, sequence: Expr, head: Expr, token: &Expr, column: Expr) -> Expr {
         let logical_block = Expr::div(token.clone(), Expr::u32(self.block_tokens));
         let slot = Expr::rem(token.clone(), Expr::u32(self.block_tokens));
-        let physical = Expr::load(
-            self.block_table,
-            block_index(sequence, self.blocks_per_sequence, logical_block),
+        let physical = bounded_index(
+            Expr::load(
+                self.block_table,
+                block_index(sequence, self.blocks_per_sequence, logical_block),
+            ),
+            Expr::u32(self.blocks),
         );
         self.physical().index(physical, head, slot, column)
     }
@@ -177,9 +190,9 @@ impl PagedKvCache<'_> {
 /// contiguous key-value tensor, and paging is a property of where those tokens
 /// are stored rather than of the attention itself.
 ///
-/// The block table is data, so its entries carry the same range precondition
-/// documented on [`paged_kv_append`]: an entry at or past `blocks` reads past
-/// the end of the cache buffer, and no guard here can bound it.
+/// The block table is data, so its entries carry the same range treatment
+/// documented on [`paged_kv_append`]: an entry at or past `blocks` is folded
+/// into the cache buffer and reads block zero.
 ///
 /// # Errors
 ///
@@ -236,10 +249,12 @@ pub fn paged_kv_gather(
 /// Range is the second precondition and a separate failure. Every entry of the
 /// block table must name a physical block below `blocks`. The guard bounds the
 /// chunk index, which decides how many invocations store, and the table lookup
-/// then decides where; an entry at or past `blocks` addresses past the end of
-/// the cache buffer. [`paged_kv_gather`] reads through the same lookup and has
-/// the same requirement, with an out-of-range read in place of a store. Both
-/// belong to whoever allocates blocks, because the table is an input here.
+/// then decides where. A physical block id is folded into `blocks` before it
+/// reaches the cache arithmetic, so an entry at or past `blocks` stores into
+/// block zero instead of past the end of the cache buffer.
+/// [`paged_kv_gather`] reads through the same lookup and is folded the same
+/// way. Naming the right block belongs to whoever allocates blocks, because
+/// the table is an input here.
 ///
 /// # Errors
 ///
@@ -371,6 +386,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     #[test]
     fn an_append_launches_over_the_chunk_it_moves_not_the_cache_it_writes() {
@@ -391,6 +407,52 @@ mod tests {
         assert_eq!(
             overflow.moved_elements(4),
             Err(PagedKvError::ElementCountOverflow)
+        );
+    }
+
+    /// WHY: the block table is an input, so a physical block id is data and no
+    /// guard in the emitted program constrains it. The append stores at the
+    /// address that id produces, so an entry past `blocks` wrote outside the
+    /// cache buffer, and the gather read outside it. The id is folded into the
+    /// declared block count, which puts both moves in block zero.
+    ///
+    /// Asserts the whole cache, so a fold that clamped to the last block or
+    /// wrote a second element as well is caught. Does not catch a table that
+    /// names an in-range block belonging to another sequence; that is
+    /// injectivity, which the emitted program cannot check.
+    #[test]
+    fn a_block_table_entry_past_the_cache_moves_block_zero() {
+        let spec = fixture_cache();
+        let append = paged_kv_append(&spec, "chunk", 1, 1).expect("append program");
+        let stored = eval_bytes(
+            "paged_kv_append",
+            &append,
+            vec![
+                fixture_f32(&[0.0; 8]),
+                fixture_f32(&[9.0, 10.0]),
+                fixture_u32(&[7, 0]),
+            ],
+        );
+        assert_eq!(
+            stored[0].clone(),
+            fixture_f32(&[0.0, 0.0, 9.0, 10.0, 0.0, 0.0, 0.0, 0.0]),
+            "Fix: a physical block id past the declared block count must store into block zero"
+        );
+
+        let gather = paged_kv_gather(&spec, "window", 2).expect("gather program");
+        let read = eval_bytes(
+            "paged_kv_gather",
+            &gather,
+            vec![
+                fixture_f32(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]),
+                fixture_u32(&[7, 0]),
+                vec![0u8; 4 * 4],
+            ],
+        );
+        assert_eq!(
+            read[0].clone(),
+            fixture_f32(&[1.0, 2.0, 3.0, 4.0]),
+            "Fix: a physical block id past the declared block count must read block zero"
         );
     }
 }

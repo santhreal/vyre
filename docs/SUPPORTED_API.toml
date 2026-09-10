@@ -124502,7 +124502,7 @@ exported_item_count = 379
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_libs_pattern::pattern::cooperative_dfa_scan_body_with_store(input: &str, transitions: &str, accept_mask: &str, matches: &str, subgroup_size: u32, store_value: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>"
+  path = "vyre_libs_pattern::pattern::cooperative_dfa_scan_body_with_store(input: &str, transitions: &str, accept_mask: &str, matches: &str, state_count: u32, subgroup_size: u32, store_value: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>"
   kind = "fn"
   stability = "extension"
   feature = "pattern"

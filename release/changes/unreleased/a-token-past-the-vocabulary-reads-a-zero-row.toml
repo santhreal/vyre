@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Embedding returns a zero row for a token at or past the vocabulary size instead of reading the embedding table past its end, and the last row of the vocabulary still reads itself."

@@ -3,6 +3,7 @@
 //! Category A composition  -  gather from weight buffer by token index.
 //! Tokens are U32, embedding table is F32.
 
+use vyre_foundation::composition::bounded_index_when;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use vyre_libs_builder::builder::build_indexed_map;
@@ -13,6 +14,14 @@ const OP_ID: &str = "vyre-libs::nn::embedding";
 ///
 /// `embed_table[vocab_size * embed_dim]` (F32), `tokens[n]` (U32),
 /// `output[n * embed_dim]` (F32).
+///
+/// A token id is data, so it is bounded against the table's own extent rather
+/// than a declared count: this form takes no vocabulary size, and a buffer
+/// declaration whose count is unset states none. A token at or past the
+/// vocabulary reads nothing and its output row is zero, which is what
+/// `embedding_out_of_bounds_token_may_trap_or_return_zero` states. The index
+/// is folded as well as tested, because a select evaluates both arms and the
+/// load would otherwise still run for the rejected lane.
 #[must_use]
 pub fn embedding(embed_table: &str, tokens: &str, output: &str, n: u32, embed_dim: u32) -> Program {
     let total_out = n * embed_dim;
@@ -34,16 +43,41 @@ pub fn embedding(embed_table: &str, tokens: &str, output: &str, n: u32, embed_di
             let dim_idx = Expr::sub(i.clone(), Expr::mul(seq_idx.clone(), Expr::u32(embed_dim)));
             let token_id = Expr::load(tokens, seq_idx);
             let table_offset = Expr::add(Expr::mul(token_id, Expr::u32(embed_dim)), dim_idx);
-            (i, Expr::load(embed_table, table_offset))
+            (
+                i,
+                table_gather_or_zero(
+                    embed_table,
+                    table_offset,
+                    Expr::buf_len(embed_table),
+                    DataType::F32,
+                ),
+            )
         },
+    )
+}
+
+/// `table[offset]`, or a zero of `dtype` when `offset` is at or past `extent`.
+///
+/// A gather index that comes from an input buffer is bounded here, and the
+/// caller names the extent: a declared count where the form takes a vocabulary
+/// size, and the bound buffer's own length where it does not. The index is
+/// folded as well as tested, because a select evaluates both arms and the load
+/// would otherwise still run for the rejected lane, so that lane reads element
+/// zero and discards it instead of reading memory the table does not own.
+fn table_gather_or_zero(table: &str, offset: Expr, extent: Expr, dtype: DataType) -> Expr {
+    let in_table = Expr::lt(offset.clone(), extent);
+    Expr::select(
+        in_table.clone(),
+        Expr::load(table, bounded_index_when(in_table, offset)),
+        Expr::cast(dtype, Expr::f32(0.0)),
     )
 }
 
 /// Build a typed embedding lookup with an explicit checkpoint table extent.
 ///
 /// `table` uses `[vocab_size, embed_dim]`, `tokens` uses `[n]`, and `output`
-/// uses `[n, embed_dim]`. Token IDs outside the declared vocabulary retain the
-/// backend's bounds-trap semantics.
+/// uses `[n, embed_dim]`. A token id at or past the declared vocabulary reads
+/// nothing and its output row is zero.
 #[allow(clippy::too_many_arguments)]
 pub fn embedding_typed(
     table: &str,
@@ -71,6 +105,7 @@ pub fn embedding_typed(
     let output_count = n
         .checked_mul(embed_dim)
         .ok_or_else(|| "Fix: embedding output count overflows u32".to_string())?;
+    let value_dtype = dtype.clone();
     Ok(build_indexed_map(
         OP_ID,
         vec![
@@ -88,9 +123,11 @@ pub fn embedding_typed(
             let token_id = Expr::load(tokens, token);
             (
                 index,
-                Expr::load(
+                table_gather_or_zero(
                     table,
                     Expr::add(Expr::mul(token_id, Expr::u32(embed_dim)), feature),
+                    Expr::u32(table_count),
+                    value_dtype.clone(),
                 ),
             )
         },
@@ -128,7 +165,6 @@ mod tests {
     use vyre_test_support::test_parity_oracles::decode_f32;
     use vyre_test_support::test_parity_oracles::eval_bytes;
     use vyre_test_support::test_parity_oracles::f32_bytes;
-    use vyre_test_support::test_parity_oracles::try_eval_bytes;
     use vyre_test_support::test_parity_oracles::u32_bytes;
 
     #[test]
@@ -194,31 +230,71 @@ mod tests {
         assert_eq!(out[1], 2.0);
     }
 
+    /// WHY: a token id is data. The lookup used to index the table with it
+    /// directly, so a token at or past the vocabulary read past the end of the
+    /// table and this case accepted either a trap or a zero, which no defect
+    /// can turn red. The answer is now determinate: the row is zero, and the
+    /// access stays inside the table.
+    ///
+    /// Does not catch a token that is inside the vocabulary but wrong; that is
+    /// the caller's value, not an extent.
     #[test]
-    fn embedding_out_of_bounds_token_may_trap_or_return_zero() {
-        // Adversarial: token index >= vocab_size. The IR does an
-        // unguarded load at table_offset = token_id * embed_dim + dim_idx.
-        // The reference interpreter may trap or return 0 for OOB.
-        // We assert that it does not silently produce a finite non-zero value.
+    fn a_token_past_the_vocabulary_reads_a_zero_row() {
         let program = embedding("table", "tokens", "output", 1, 2);
-        let result = try_eval_bytes(
+        let outputs = eval_bytes(
+            "embedding",
             &program,
             vec![f32_bytes(&[1.0, 2.0]), u32_bytes(&[9999]), vec![0u8; 8]],
         );
-        match result {
-            Ok(outputs) => {
-                let out = decode_f32(&outputs[0]);
-                // If the interpreter does not trap, it should at least not
-                // silently claim the lookup is valid (0 is acceptable for OOB).
-                assert!(
-                    out.iter().all(|&v| v == 0.0 || v.is_nan()),
-                    "OOB embedding lookup must trap or return 0/NaN, got {:?}",
-                    out
-                );
-            }
-            Err(_) => {
-                // Trapping is acceptable behavior for OOB.
-            }
-        }
+        assert_eq!(
+            decode_f32(&outputs[0]),
+            vec![0.0, 0.0],
+            "Fix: a token id past the vocabulary must read a zero row, not the table's first row"
+        );
+    }
+
+    /// WHY: the fold must not move a lookup that was already inside the table.
+    /// A fold written as an unconditional clamp would send the last row to the
+    /// first one and pass the case above.
+    #[test]
+    fn the_last_row_of_the_vocabulary_still_reads_itself() {
+        let program = embedding("table", "tokens", "output", 1, 2);
+        let outputs = eval_bytes(
+            "embedding",
+            &program,
+            vec![
+                f32_bytes(&[1.0, 2.0, 3.0, 4.0]),
+                u32_bytes(&[1]),
+                vec![0u8; 8],
+            ],
+        );
+        assert_eq!(
+            decode_f32(&outputs[0]),
+            vec![3.0, 4.0],
+            "Fix: the highest in-vocabulary token must read its own row"
+        );
+    }
+
+    /// WHY: the typed form declares its vocabulary, so it bounds against the
+    /// declared count rather than the bound buffer's length. Both forms must
+    /// answer the same way, or one of them is the unbounded one.
+    #[test]
+    fn a_typed_token_past_the_declared_vocabulary_reads_a_zero_row() {
+        let program = embedding_typed("table", "tokens", "output", 1, 2, 2, DataType::F32)
+            .expect("Fix: a two-token F32 vocabulary must build");
+        let outputs = eval_bytes(
+            "embedding_typed",
+            &program,
+            vec![
+                f32_bytes(&[1.0, 2.0, 3.0, 4.0]),
+                u32_bytes(&[7]),
+                vec![0u8; 8],
+            ],
+        );
+        assert_eq!(
+            decode_f32(&outputs[0]),
+            vec![0.0, 0.0],
+            "Fix: a typed token id past the declared vocabulary must read a zero row"
+        );
     }
 }

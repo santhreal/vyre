@@ -5,7 +5,7 @@
 //! replaying the whole prefix independently.
 
 use crate::pattern::{dfa_compile, CompiledDfa};
-use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::composition::{bounded_index_when, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::pattern::cooperative_dfa";
@@ -32,6 +32,35 @@ fn transition_expr(transitions: &str, state: Expr, byte: Expr) -> Expr {
     )
 }
 
+/// Whether a step from `state` on `byte` lands inside the transition table.
+fn step_valid_expr(state: Expr, byte: Expr, state_count: u32) -> Expr {
+    Expr::and(
+        Expr::lt(byte, Expr::u32(ALPHABET_SIZE)),
+        Expr::lt(state, Expr::u32(state_count)),
+    )
+}
+
+/// One DFA step, folded to the declared extents of the transition table.
+///
+/// `state` arrives from a table load or a subgroup shuffle and `byte` arrives
+/// from the input, so both are data. `reference_cooperative_dfa` states the
+/// answer when a symbol is at or past the alphabet or a state is at or past
+/// `state_count`: the step resets to state zero. Row and column are folded as
+/// well as tested, because a select evaluates both arms and the table load
+/// would otherwise still run.
+fn bounded_transition_expr(transitions: &str, state: Expr, byte: Expr, state_count: u32) -> Expr {
+    let valid = step_valid_expr(state.clone(), byte.clone(), state_count);
+    Expr::select(
+        valid.clone(),
+        transition_expr(
+            transitions,
+            bounded_index_when(valid.clone(), state),
+            bounded_index_when(valid, byte),
+        ),
+        Expr::u32(0),
+    )
+}
+
 fn fixture_case() -> (Vec<u32>, CompiledDfa, Vec<u32>) {
     let compiled = dfa_compile(&[b"a"]);
     let input = b"banana"
@@ -45,6 +74,11 @@ fn fixture_case() -> (Vec<u32>, CompiledDfa, Vec<u32>) {
 /// Build the cooperative DFA scan body as a `Vec<Node>` so it can be
 /// inlined into fused decode→scan programs.
 ///
+/// `state_count` is the number of DFA states, so the transition table holds
+/// `state_count * 256` entries and the accept mask holds `state_count`. A
+/// symbol at or past 256 or a state at or past `state_count` resets the step
+/// to state zero and emits no match.
+///
 /// `store_value` is the [`Expr`] written to `matches[idx]`; callers that
 /// want `aho_corasick` semantics (store `accept[state]` directly) pass
 /// `Expr::var("accepting")`, while callers that want a boolean mask pass
@@ -55,6 +89,7 @@ pub fn cooperative_dfa_scan_body_with_store(
     transitions: &str,
     accept_mask: &str,
     matches: &str,
+    state_count: u32,
     subgroup_size: u32,
     store_value: Expr,
 ) -> Vec<Node> {
@@ -69,9 +104,18 @@ pub fn cooperative_dfa_scan_body_with_store(
             Expr::select(Expr::var("in_bounds"), idx.clone(), Expr::u32(0)),
         ),
         Node::let_bind("byte", Expr::load(input, Expr::var("safe_idx"))),
+        Node::let_bind(
+            "step_valid",
+            step_valid_expr(Expr::var("state"), Expr::var("byte"), state_count),
+        ),
         Node::assign(
             "state",
-            transition_expr(transitions, Expr::var("state"), Expr::var("byte")),
+            bounded_transition_expr(
+                transitions,
+                Expr::var("state"),
+                Expr::var("byte"),
+                state_count,
+            ),
         ),
     ];
 
@@ -86,19 +130,35 @@ pub fn cooperative_dfa_scan_body_with_store(
             },
         ));
         lane_body.push(Node::assign(
+            "step_valid",
+            step_valid_expr(
+                Expr::var(shuffled_name.as_str()),
+                Expr::var("byte"),
+                state_count,
+            ),
+        ));
+        lane_body.push(Node::assign(
             "state",
-            transition_expr(
+            bounded_transition_expr(
                 transitions,
                 Expr::var(shuffled_name.as_str()),
                 Expr::var("byte"),
+                state_count,
             ),
         ));
     }
 
-    lane_body.push(Node::let_bind(
-        "accepting",
-        Expr::load(accept_mask, Expr::var("state")),
-    ));
+    lane_body.push(Node::let_bind("accepting", {
+        let accepts = Expr::and(
+            Expr::var("step_valid"),
+            Expr::lt(Expr::var("state"), Expr::u32(state_count)),
+        );
+        Expr::select(
+            accepts.clone(),
+            Expr::load(accept_mask, bounded_index_when(accepts, Expr::var("state"))),
+            Expr::u32(0),
+        )
+    }));
     lane_body.push(Node::if_then(
         Expr::var("in_bounds"),
         vec![Node::Store {
@@ -144,6 +204,7 @@ pub fn cooperative_dfa_scan(
         transitions,
         accept_mask,
         matches,
+        state_count,
         subgroup_size,
         Expr::select(
             Expr::ne(Expr::var("accepting"), Expr::u32(0)),
@@ -253,6 +314,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_test_support::test_parity_oracles::eval_bytes;
 
     fn compile_patterns(patterns: &[&[u8]]) -> (Vec<u32>, Vec<u32>, u32) {
         let compiled = dfa_compile(patterns);
@@ -261,6 +323,55 @@ mod tests {
 
     fn encode(bytes: &[u8]) -> Vec<u32> {
         bytes.iter().map(|&byte| u32::from(byte)).collect()
+    }
+
+    /// WHY: a DFA symbol and a DFA state are both data. Indexed with them
+    /// directly, a symbol at or past the alphabet read past the end of a
+    /// transition row and a state at or past `state_count` read past the end
+    /// of the accept mask, and whatever those reads returned decided the
+    /// match. `reference_cooperative_dfa` already answers that case, reset to
+    /// state zero and emit no match, so the emitted program is compared
+    /// against the reference on symbols past the alphabet.
+    ///
+    /// Uses a single-byte pattern so the DFA synchronizes after one symbol and
+    /// the shuffle correction rounds are exact against a sequential scan.
+    /// Does not catch a transition entry that itself names a state past
+    /// `state_count`; the accept-mask fold covers that, not this input.
+    #[test]
+    fn a_symbol_past_the_alphabet_matches_the_reference() {
+        let input = vec![u32::from(b'a'), 9999, u32::from(b'a'), 0x1_0000];
+        let (transitions, accept_mask, state_count) = compile_patterns(&[b"a"]);
+        let input_len = u32::try_from(input.len()).expect("Fix: fixture input must fit in u32");
+        let program = cooperative_dfa_scan(
+            "input",
+            "transitions",
+            "accept_mask",
+            "matches",
+            input_len,
+            state_count,
+            4,
+        );
+        let outputs = eval_bytes(
+            "cooperative_dfa",
+            &program,
+            vec![
+                pack_u32(&input),
+                pack_u32(&transitions),
+                pack_u32(&accept_mask),
+                vec![0u8; 4 * input.len()],
+            ],
+        );
+        assert_eq!(
+            outputs[0].clone(),
+            pack_u32(&reference_cooperative_dfa(
+                &input,
+                &transitions,
+                &accept_mask,
+                state_count,
+                ALPHABET_SIZE
+            )),
+            "Fix: a symbol past the alphabet must reset the DFA to state zero and emit no match"
+        );
     }
 
     #[test]

@@ -7,7 +7,7 @@
 //! softmax does rather than walking it in lane zero.
 
 use crate::nn::quest_paging_passes::{quest_select_top_k_body, QUEST_SELECT_TOP_K_OP_ID};
-use vyre_foundation::composition::wrap_child_region;
+use vyre_foundation::composition::{bounded_index, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp, PORTABLE_WORKGROUP_INVOCATIONS,
@@ -95,6 +95,7 @@ pub fn moe_gate(
         input_scores,
         output_indices,
         output_weights,
+        num_experts,
         k,
     ))
     .build()
@@ -170,11 +171,18 @@ fn softmax_stats_phases(
 }
 
 /// The writeback that turns `k` selected expert indices into gating weights.
+///
+/// `output_indices` is an input buffer here, so a selected index is data. Its
+/// producer, the top-k selection, only ever writes an index below
+/// `num_experts`, but this region also stands alone as a registered
+/// composition whose indices arrive from the caller, so the index is folded
+/// into `num_experts` before it reaches the score gather.
 fn weight_write_child(
     parent: &'static str,
     input_scores: &str,
     output_indices: &str,
     output_weights: &str,
+    num_experts: u32,
     k: u32,
 ) -> Node {
     strided_writeback_child(
@@ -190,7 +198,10 @@ fn weight_write_child(
         |j| {
             Expr::div(
                 exp_expr(Expr::sub(
-                    Expr::load(input_scores, Expr::load(output_indices, j)),
+                    Expr::load(
+                        input_scores,
+                        bounded_index(Expr::load(output_indices, j), Expr::u32(num_experts)),
+                    ),
                     Expr::var("weight_max_score"),
                 )),
                 Expr::var("weight_sum_exp"),
@@ -275,6 +286,7 @@ fn weight_write_program() -> Program {
         "scores",
         "indices",
         "weights",
+        8,
         2,
     ))
     .build()

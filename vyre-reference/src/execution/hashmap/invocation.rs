@@ -7,7 +7,10 @@
 use super::{
     memory::HashmapMemory,
     step::step_round_robin,
-    sync::{live_waiting_count, release_barrier_if_ready, verify_uniform_control_flow},
+    sync::{
+        live_collective_waiting_count, live_waiting_count, release_barrier_if_ready,
+        release_collective_rendezvous, verify_uniform_control_flow,
+    },
 };
 use crate::execution::async_transfer::{AsyncTransfer, PendingAsyncTransfers};
 use crate::ReferenceError;
@@ -157,6 +160,23 @@ pub(crate) struct HashmapInvocation<'a> {
     /// workgroup in the dispatch has arrived, which no single workgroup can
     /// observe, so the lane stops here and the dispatch driver resumes it.
     pub(crate) waiting_at_grid_fence: bool,
+    /// Set while this lane holds at a statement whose operands read its peers.
+    ///
+    /// A subgroup collective is defined over the lanes of one subgroup at one
+    /// program point. Lanes step one node per round, and a branch whose
+    /// condition is not lane-uniform gives one lane more nodes to run, so the
+    /// lanes drift apart and stay apart across a loop back-edge. Reading a
+    /// peer's locals at that point reads them from a different statement:
+    /// either a local the peer has already unbound, which refused a name the
+    /// program does bind, or the previous iteration's value, which is a wrong
+    /// answer with no diagnostic at all. Hardware reconverges a subgroup
+    /// before a converged collective, so the lane holds here until every live
+    /// lane of the workgroup has arrived, and the statement then runs against
+    /// peers that stand at the same point.
+    pub(crate) waiting_for_collective_peers: bool,
+    /// Set once this lane has been released from its rendezvous and may run
+    /// the collective statement it holds at.
+    pub(crate) collective_peers_arrived: bool,
     pub(crate) frames: Vec<Frame<'a>>,
     pub(crate) pending_async: PendingAsyncTransfers,
     pub(crate) op_cache: crate::execution::call::OpCache,
@@ -180,6 +200,8 @@ impl<'a> HashmapInvocation<'a> {
             waiting_at_barrier: false,
             uniform_checks: Vec::new(),
             waiting_at_grid_fence: false,
+            waiting_for_collective_peers: false,
+            collective_peers_arrived: false,
             pending_async: PendingAsyncTransfers::new(),
             op_cache: FxHashMap::default(),
             tile_shapes: FxHashMap::default(),
@@ -288,8 +310,14 @@ pub(crate) fn run_invocations(
             uses_subgroup_ops,
         )?;
         verify_uniform_control_flow(invocations)?;
+        if release_collective_rendezvous(invocations) {
+            continue;
+        }
         if release_barrier_if_ready(invocations) {
             continue;
+        }
+        if !made_progress && live_collective_waiting_count(invocations) > 0 {
+            return Err(ReferenceError::new("program violates uniform-control-flow rule: not every live invocation reached the same subgroup collective. Fix: evaluate the collective in control flow every lane of the subgroup enters."));
         }
         if !made_progress && live_waiting_count(invocations) > 0 {
             return Err(ReferenceError::new("program violates uniform-control-flow rule: not every live invocation reached the same barrier. Fix: move Barrier to uniform control flow."));
