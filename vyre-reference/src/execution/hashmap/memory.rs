@@ -36,17 +36,45 @@ impl HashmapMemory {
     }
 }
 
-pub(crate) fn output_value(buffer: Buffer, decl: &BufferDecl) -> Value {
+/// Slice a completed buffer down to the byte range its declaration states.
+///
+/// # Errors
+/// Refuses a declared range this host cannot address, an inverted range, and
+/// a range past the buffer. Each used to fall back to a substitute bound
+/// (`0`, the buffer length, or the whole buffer), so a declaration that
+/// disagreed with the buffer produced an output slice the declaration never
+/// described and the oracle certified it.
+pub(crate) fn output_value(buffer: Buffer, decl: &BufferDecl) -> Result<Value, ReferenceError> {
     let mut bytes = buffer.into_bytes();
     if let Some(range) = decl.output_byte_range() {
-        let start = usize::try_from(range.start).unwrap_or(0);
-        let end = usize::try_from(range.end).unwrap_or(bytes.len());
-        if start <= end && end <= bytes.len() {
-            bytes.truncate(end);
-            bytes.drain(..start);
+        let name = decl.name();
+        let bound = |edge: &'static str, value: u64| -> Result<usize, ReferenceError> {
+            usize::try_from(value).map_err(|_| {
+                ReferenceError::out_of_bounds(format!(
+                    "buffer `{name}` declares an output range {edge} of {value}, which this host cannot address. \
+                     Fix: declare an output range within the addressable range."
+                ))
+            })
+        };
+        let start = bound("start", range.start)?;
+        let end = bound("end", range.end)?;
+        if start > end {
+            return Err(ReferenceError::out_of_bounds(format!(
+                "buffer `{name}` declares an inverted output range {start}..{end}. \
+                 Fix: declare a range whose start does not exceed its end."
+            )));
         }
+        if end > bytes.len() {
+            return Err(ReferenceError::out_of_bounds(format!(
+                "buffer `{name}` declares an output range {start}..{end} but holds {} bytes. \
+                 Fix: declare a range within the buffer.",
+                bytes.len()
+            )));
+        }
+        bytes.truncate(end);
+        bytes.drain(..start);
     }
-    Value::from(bytes)
+    Ok(Value::from(bytes))
 }
 
 pub(crate) fn workgroup_memory(
@@ -249,9 +277,31 @@ mod tests {
         let buffer = Buffer::new((0u8..16).collect(), DataType::U32);
 
         assert_eq!(
-            output_value(buffer, &decl).to_bytes(),
+            output_value(buffer, &decl)
+                .expect("Fix: a declared range inside the buffer must slice.")
+                .to_bytes(),
             vec![4, 5, 6, 7, 8, 9, 10, 11],
             "Fix: output byte ranges must slice the buffer payload without changing bytes."
+        );
+    }
+
+    /// A declared output range past the buffer states a slice the buffer
+    /// cannot supply. The reference used to leave the range unapplied and
+    /// return the whole buffer, so the caller received bytes outside the
+    /// range the declaration named and the oracle certified them.
+    #[test]
+    fn output_value_refuses_a_declared_range_past_the_buffer() {
+        let decl = BufferDecl::output("out", 0, DataType::U32)
+            .with_count(4)
+            .with_output_byte_range(4usize..64usize);
+        let buffer = Buffer::new((0u8..16).collect(), DataType::U32);
+
+        let error = output_value(buffer, &decl)
+            .expect_err("Fix: a declared output range past the buffer must be refused.");
+        assert_eq!(
+            error.error_class(),
+            crate::error::ReferenceErrorClass::OutOfBoundsAccess,
+            "Fix: a range past the buffer is an out-of-bounds refusal, got {error:?}."
         );
     }
 }

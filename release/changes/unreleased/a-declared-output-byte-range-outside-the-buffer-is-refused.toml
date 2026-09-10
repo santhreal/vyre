@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A declared output byte range that is inverted, unaddressable, or past the buffer is refused instead of falling back to the whole buffer."

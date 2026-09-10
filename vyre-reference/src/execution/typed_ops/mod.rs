@@ -39,7 +39,7 @@ pub(super) fn eval_binop(
         (Value::U64(left), Value::U64(right)) => binop_u64(op, left, right),
         (Value::Bool(left), Value::Bool(right)) => binop_bool(op, left, right),
         (Value::Float(left), Value::Float(right)) => binop_f32(op, left as f32, right as f32),
-        (left, right) => Err(ReferenceError::new(format!(
+        (left, right) => Err(ReferenceError::type_mismatch(format!(
             "binary op `{op:?}` received mismatched operands {left:?} and {right:?}. Fix: insert an explicit Cast so both operands have the same primitive type."
         ))),
     }
@@ -109,8 +109,9 @@ pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, crate::Refer
         let bits = match operand {
             Value::U32(v) => v,
             Value::I32(v) => v as u32,
-            other => {
-                return Err(ReferenceError::new(format!(
+            other @ (Value::U64(_) | Value::Bool(_) | Value::Float(_) | Value::Bytes(_)
+            | Value::Array(_)) => {
+                return Err(ReferenceError::type_mismatch(format!(
                     "unary op `{op:?}` (bit unpack) requires a 32-bit integer operand, got {other:?}. Fix: cast to u32/i32 before unpacking."
                 )))
             }
@@ -125,7 +126,8 @@ pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, crate::Refer
         UnOp::BitcastF32ToU32 => {
             return match operand {
                 Value::Float(value) => Ok(Value::U32((value as f32).to_bits())),
-                other => Err(ReferenceError::new(format!(
+                other @ (Value::U32(_) | Value::I32(_) | Value::U64(_) | Value::Bool(_)
+                | Value::Bytes(_) | Value::Array(_)) => Err(ReferenceError::type_mismatch(format!(
                     "unary op `{op:?}` reinterprets an f32 word as u32 and requires an f32 operand, got {other:?}. Fix: produce an f32 value before reinterpreting its bits."
                 ))),
             };
@@ -133,7 +135,8 @@ pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, crate::Refer
         UnOp::BitcastU32ToF32 => {
             return match operand {
                 Value::U32(value) => Ok(Value::Float(f64::from(f32::from_bits(value)))),
-                other => Err(ReferenceError::new(format!(
+                other @ (Value::I32(_) | Value::U64(_) | Value::Bool(_) | Value::Float(_)
+                | Value::Bytes(_) | Value::Array(_)) => Err(ReferenceError::type_mismatch(format!(
                     "unary op `{op:?}` reinterprets a u32 word as f32 and requires a u32 operand, got {other:?}. Fix: produce a u32 value before reinterpreting its bits."
                 ))),
             };
@@ -146,7 +149,7 @@ pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, crate::Refer
         Value::U64(value) => unop_u64(op, value),
         Value::Bool(value) => unop_bool(op, value),
         Value::Float(value) => unop_f32(op, value as f32),
-        value => Err(ReferenceError::new(format!(
+        value @ (Value::Bytes(_) | Value::Array(_)) => Err(ReferenceError::type_mismatch(format!(
             "unary op `{op:?}` received non-primitive operand {value:?}. Fix: load or cast to a scalar primitive before applying unary ops."
         ))),
     }
@@ -286,7 +289,7 @@ macro_rules! int_bin_helpers {
                 BinOp::Ge => Ok($ge(left, right)),
                 BinOp::And => Ok($and(left, right)),
                 BinOp::Or => Ok($or(left, right)),
-                _ => Err(ReferenceError::new(format!(
+                _ => Err(ReferenceError::incomplete_dispatch_semantics(format!(
                     "unsupported IR `unknown BinOp variant: {op:?}`. Fix: update vyre-reference for the new foundation IR variant."
                 ))),
             }
@@ -345,7 +348,7 @@ macro_rules! int_un_helpers {
                 UnOp::Clz => Ok($clz(value)),
                 UnOp::Ctz => Ok($ctz(value)),
                 UnOp::ReverseBits => Ok($reverse_bits(value)),
-                _ => Err(ReferenceError::new(format!(
+                _ => Err(ReferenceError::incomplete_dispatch_semantics(format!(
                     "unsupported IR `unknown UnOp variant: {op:?}`. Fix: update vyre-reference for the new foundation IR variant."
                 ))),
             }
@@ -550,7 +553,7 @@ fn binop_bool(op: BinOp, left: bool, right: bool) -> Result<Value, crate::Refere
         BinOp::Ne => Ok(Value::Bool(left != right)),
         BinOp::And => Ok(Value::Bool(left && right)),
         BinOp::Or => Ok(Value::Bool(left || right)),
-        _ => Err(ReferenceError::new(format!(
+        _ => Err(ReferenceError::incomplete_dispatch_semantics(format!(
             "binary op `{op:?}` is not defined for bool operands. Fix: cast bools to u32 before numeric or bitwise operations."
         ))),
     }
@@ -559,7 +562,7 @@ fn binop_bool(op: BinOp, left: bool, right: bool) -> Result<Value, crate::Refere
 fn unop_bool(op: &UnOp, value: bool) -> Result<Value, crate::ReferenceError> {
     match op {
         UnOp::LogicalNot => Ok(Value::Bool(!value)),
-        _ => Err(ReferenceError::new(format!(
+        _ => Err(ReferenceError::incomplete_dispatch_semantics(format!(
             "unary op `{op:?}` is not defined for bool operands. Fix: cast bool to u32 before numeric or bitwise unary operations."
         ))),
     }

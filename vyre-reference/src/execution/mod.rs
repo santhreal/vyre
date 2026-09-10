@@ -62,67 +62,139 @@ pub(crate) fn program_for_interpreter(
     Ok(normalized)
 }
 
+/// Deterministic step orders one schedule policy explores, in the order it
+/// explores them.
+///
+/// The match has no catch-all arm, so a new policy states its own exploration
+/// rather than borrowing the previous variant's. `BoundedInterleaving` used to
+/// borrow `Forward` here, which made every parity result under that policy a
+/// claim about a schedule the oracle never ran.
+fn explored_step_orders(
+    policy: crate::request::DeterministicSchedulePolicy,
+    program: &Program,
+) -> Vec<hashmap::LaneOrder> {
+    match policy {
+        crate::request::DeterministicSchedulePolicy::Forward => vec![hashmap::LaneOrder::Forward],
+        crate::request::DeterministicSchedulePolicy::LaneReversed => {
+            vec![hashmap::LaneOrder::Reversed]
+        }
+        crate::request::DeterministicSchedulePolicy::LaneRotated(by) => {
+            vec![hashmap::LaneOrder::Rotated(by)]
+        }
+        crate::request::DeterministicSchedulePolicy::BoundedInterleaving => {
+            bounded_interleaving_orders(program)
+        }
+    }
+}
+
+/// Step orders a bounded interleaving exploration covers.
+///
+/// Forward, reversed, and the rotations that move at least one lane without
+/// repeating the forward order, capped at
+/// [`MAX_BOUNDED_INTERLEAVINGS`]. The rotation count comes from the workgroup
+/// extent the program declares, so a one-lane workgroup explores one schedule
+/// and a wide one explores the cap rather than a number chosen here.
+fn bounded_interleaving_orders(program: &Program) -> Vec<hashmap::LaneOrder> {
+    let [sx, sy, sz] = program.workgroup_size();
+    let lanes = [sx, sy, sz].iter().copied().fold(1u32, u32::saturating_mul);
+    let mut orders = vec![hashmap::LaneOrder::Forward];
+    if lanes <= 1 {
+        return orders;
+    }
+    orders.push(hashmap::LaneOrder::Reversed);
+    for by in 1..lanes {
+        if orders.len() >= MAX_BOUNDED_INTERLEAVINGS {
+            break;
+        }
+        orders.push(hashmap::LaneOrder::Rotated(by));
+    }
+    orders
+}
+
+/// Schedules one bounded interleaving exploration runs at most.
+///
+/// The exploration is bounded so the oracle keeps a termination contract: the
+/// work budget covers every schedule together, and a wide workgroup would
+/// otherwise multiply one evaluation by its lane count.
+const MAX_BOUNDED_INTERLEAVINGS: usize = 4;
+
+/// Run `runnable` once per explored step order and return the outputs every
+/// order agreed on.
+///
+/// Two orders that disagree mean the program's result depends on the order the
+/// lanes were stepped in, which a device leaves driver-defined. The oracle has
+/// no single answer to certify in that case, so it names both schedules and the
+/// output that differs.
+fn run_explored_orders(
+    runnable: &Program,
+    request: &crate::request::ReferenceRequest,
+    orders: &[hashmap::LaneOrder],
+) -> Result<Vec<Value>, crate::ReferenceError> {
+    let min_dispatch = request.workload_envelope.min_dispatch_elements.unwrap_or(0);
+    let mut agreed: Option<(hashmap::LaneOrder, Vec<Value>)> = None;
+    for &order in orders {
+        let outputs = hashmap::run_hashmap_reference(
+            runnable,
+            &request.resource_abi.inputs,
+            min_dispatch,
+            order,
+            request.workload_envelope.workgroup_grid,
+        )?;
+        match &agreed {
+            None => agreed = Some((order, outputs)),
+            Some((first_order, first_outputs)) => {
+                if let Some(index) = first_difference(first_outputs, &outputs) {
+                    return Err(crate::ReferenceError::incomplete_dispatch_semantics(format!(
+                        "schedule exploration disagreed: output {index} differs between step order \
+                         {first_order:?} and {order:?}. Fix: give every shared output slot a single \
+                         writer, or write it through a commutative atomic, so the program's result \
+                         does not depend on the order the lanes were stepped in."
+                    )));
+                }
+            }
+        }
+    }
+    agreed.map(|(_, outputs)| outputs).ok_or_else(|| {
+        crate::ReferenceError::incomplete_dispatch_semantics(
+            "the schedule policy explored no step order. Fix: state a policy that names at least \
+             one deterministic step order.",
+        )
+    })
+}
+
+/// Index of the first output two schedules disagree on.
+fn first_difference(left: &[Value], right: &[Value]) -> Option<usize> {
+    if left.len() != right.len() {
+        return Some(left.len().min(right.len()));
+    }
+    left.iter()
+        .zip(right)
+        .position(|(left, right)| left.to_bytes() != right.to_bytes())
+}
+
 pub(crate) fn run_with_request(
     request: &crate::request::ReferenceRequest,
 ) -> Result<(Vec<Value>, u64), crate::ReferenceError> {
     crate::oob::reset_oob_report();
-    crate::oob::set_strict_mode(true);
-    let result = (|| {
-        let runnable = program_for_interpreter(&request.program)?;
-        let budget = step_budget::arm_with(&runnable, request.budget.work_ceiling);
-        let lane_order = match request.schedule_policy {
-            crate::request::DeterministicSchedulePolicy::Forward => hashmap::LaneOrder::Forward,
-            crate::request::DeterministicSchedulePolicy::LaneReversed => {
-                hashmap::LaneOrder::Reversed
-            }
-            crate::request::DeterministicSchedulePolicy::LaneRotated(by) => {
-                hashmap::LaneOrder::Rotated(by)
-            }
-            crate::request::DeterministicSchedulePolicy::BoundedInterleaving => {
-                hashmap::LaneOrder::Forward
-            }
-        };
-        let min_dispatch = request.workload_envelope.min_dispatch_elements.unwrap_or(0);
-        let outputs = hashmap::run_hashmap_reference(
-            &runnable,
-            &request.resource_abi.inputs,
-            min_dispatch,
-            lane_order,
-            request.workload_envelope.workgroup_grid,
-        )?;
-        let steps = step_budget::charged();
-        drop(budget);
-        Ok((outputs, steps))
-    })();
-    crate::oob::set_strict_mode(false);
-    result
+    let _strictness = crate::oob::enter_strictness(true);
+    let runnable = program_for_interpreter(&request.program)?;
+    let budget = step_budget::arm_with(&runnable, request.budget.work_ceiling);
+    let orders = explored_step_orders(request.schedule_policy, &runnable);
+    let outputs = run_explored_orders(&runnable, request, &orders)?;
+    let steps = step_budget::charged();
+    drop(budget);
+    Ok((outputs, steps))
 }
 
 pub(crate) fn run_permissive_with_request(
     request: &crate::request::ReferenceRequest,
 ) -> Result<(Vec<Value>, u64, crate::oob::OobReport), crate::ReferenceError> {
     crate::oob::reset_oob_report();
-    crate::oob::set_strict_mode(false);
+    let _strictness = crate::oob::enter_strictness(false);
     let runnable = program_for_interpreter(&request.program)?;
     let budget = step_budget::arm_with(&runnable, request.budget.work_ceiling);
-    let lane_order = match request.schedule_policy {
-        crate::request::DeterministicSchedulePolicy::Forward => hashmap::LaneOrder::Forward,
-        crate::request::DeterministicSchedulePolicy::LaneReversed => hashmap::LaneOrder::Reversed,
-        crate::request::DeterministicSchedulePolicy::LaneRotated(by) => {
-            hashmap::LaneOrder::Rotated(by)
-        }
-        crate::request::DeterministicSchedulePolicy::BoundedInterleaving => {
-            hashmap::LaneOrder::Forward
-        }
-    };
-    let min_dispatch = request.workload_envelope.min_dispatch_elements.unwrap_or(0);
-    let outputs = hashmap::run_hashmap_reference(
-        &runnable,
-        &request.resource_abi.inputs,
-        min_dispatch,
-        lane_order,
-        request.workload_envelope.workgroup_grid,
-    )?;
+    let orders = explored_step_orders(request.schedule_policy, &runnable);
+    let outputs = run_explored_orders(&runnable, request, &orders)?;
     let steps = step_budget::charged();
     let oob = crate::oob::oob_report();
     drop(budget);
@@ -273,7 +345,10 @@ pub fn reference_eval_oob_report(
     program: &Program,
     inputs: &[Value],
 ) -> Result<(Vec<Value>, crate::oob::OobReport), crate::ReferenceError> {
-    crate::oob::reset_oob_report();
+    // Diagnostic mode exists to MEASURE absorbed accesses, so this entry
+    // point opts out of the strict default for the duration of the run and
+    // reports the tally instead of refusing on it.
+    let _diagnostic = crate::oob::enter_strictness(false);
     let outputs = reference_eval(program, inputs)?;
     Ok((outputs, crate::oob::oob_report()))
 }
@@ -294,7 +369,7 @@ pub fn reference_eval_with_dispatch_oob_report(
     inputs: &[Value],
     min_dispatch_elements: u32,
 ) -> Result<(Vec<Value>, crate::oob::OobReport), crate::ReferenceError> {
-    crate::oob::reset_oob_report();
+    let _diagnostic = crate::oob::enter_strictness(false);
     let outputs = reference_eval_with_dispatch(program, inputs, min_dispatch_elements)?;
     Ok((outputs, crate::oob::oob_report()))
 }
@@ -351,8 +426,7 @@ pub fn reference_eval_with_step_ceiling(
 ) -> Result<(Vec<Value>, u64), crate::ReferenceError> {
     let runnable = program_for_interpreter(program)?;
     let budget = step_budget::arm_with_mode(&runnable, ceiling, false);
-    let outputs =
-        hashmap::run_hashmap_reference(&runnable, inputs, 0, hashmap::LaneOrder::Forward, None)?;
+    let outputs = run_canonical(&runnable, inputs, 0, hashmap::LaneOrder::Forward, None)?;
     let steps = step_budget::charged();
     drop(budget);
     Ok((outputs, steps))
@@ -377,7 +451,7 @@ pub fn run_arena_reference_with_dispatch(
     min_dispatch_elements: u32,
 ) -> Result<Vec<Value>, crate::ReferenceError> {
     let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(
+    run_canonical(
         &program,
         inputs,
         min_dispatch_elements,
@@ -405,7 +479,7 @@ pub fn reference_eval_with_grid(
     grid: [u32; 3],
 ) -> Result<Vec<Value>, crate::ReferenceError> {
     let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Forward, Some(grid))
+    run_canonical(&program, inputs, 0, hashmap::LaneOrder::Forward, Some(grid))
 }
 
 /// Execute a program with the workgroup/invocation STEP ORDER reversed.
@@ -426,7 +500,7 @@ pub fn reference_eval_lane_reversed(
     inputs: &[Value],
 ) -> Result<Vec<Value>, crate::ReferenceError> {
     let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Reversed, None)
+    run_canonical(&program, inputs, 0, hashmap::LaneOrder::Reversed, None)
 }
 
 /// Execute a program with the workgroup/invocation STEP ORDER rotated left by `by`.
@@ -446,7 +520,24 @@ pub fn reference_eval_lane_rotated(
     by: u32,
 ) -> Result<Vec<Value>, crate::ReferenceError> {
     let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Rotated(by), None)
+    run_canonical(&program, inputs, 0, hashmap::LaneOrder::Rotated(by), None)
+}
+
+/// The one path from a legacy entry point into the canonical interpreter.
+///
+/// Strict refusal is the default for every entry point, and the strict check
+/// reads a per-thread out-of-bounds tally. Resetting the tally here rather
+/// than in each entry point is what keeps one evaluation from refusing on the
+/// accesses a previous evaluation on the same thread absorbed.
+fn run_canonical(
+    program: &Program,
+    inputs: &[Value],
+    min_dispatch_elements: u32,
+    order: hashmap::LaneOrder,
+    grid: Option<[u32; 3]>,
+) -> Result<Vec<Value>, crate::ReferenceError> {
+    crate::oob::reset_oob_report();
+    hashmap::run_hashmap_reference(program, inputs, min_dispatch_elements, order, grid)
 }
 
 // Inline: reaches the crate-private normalization the public entry points share.

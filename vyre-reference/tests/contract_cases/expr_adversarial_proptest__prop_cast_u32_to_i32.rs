@@ -236,6 +236,9 @@ proptest! {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(256))]
 
+    /// An index inside the buffer loads its word; an index past the buffer is
+    /// refused. The out-of-range half used to expect `U32(0)`, the value the
+    /// interpreter absorbed, which no device produces.
     #[test]
     fn prop_load_u32(idx in any::<u32>()) {
         let data: Vec<u8> = vec![1, 2, 3, 4, 5, 6, 7, 8];
@@ -247,20 +250,26 @@ proptest! {
         let mut memory = ReferenceMemory::empty()
             .with_storage("buf", Buffer::new(data.clone(), DataType::U32));
 
-        let result = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::load("buf", Expr::u32(idx))).unwrap();
+        let result = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::load("buf", Expr::u32(idx)));
 
-        let expected = if (idx as usize) < (data.len() / 4) {
+        if (idx as usize) < (data.len() / 4) {
             let offset = idx as usize * 4;
-            Value::U32(u32::from_le_bytes([
-                data[offset],
-                data[offset + 1],
-                data[offset + 2],
-                data[offset + 3],
-            ]))
+            prop_assert_eq!(
+                result.expect("Fix: an in-bounds load must succeed."),
+                Value::U32(u32::from_le_bytes([
+                    data[offset],
+                    data[offset + 1],
+                    data[offset + 2],
+                    data[offset + 3],
+                ]))
+            );
         } else {
-            Value::U32(0)
-        };
-        prop_assert_eq!(result, expected);
+            let error = result.expect_err("Fix: a load past the buffer must be refused.");
+            prop_assert_eq!(
+                error.error_class(),
+                vyre_reference::ReferenceErrorClass::OutOfBoundsAccess
+            );
+        }
     }
 
     #[test]

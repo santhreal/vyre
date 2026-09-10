@@ -65,20 +65,47 @@ pub(crate) fn eval_subgroup_shuffle(
         "subgroup_shuffle lane index is not a u32. Fix: use a scalar u32 lane argument.",
     )?;
     let local_offset = (invocation.linear_local_index as usize) % subgroup_simulator().width();
-    let src_lane = src_lanes.get(local_offset).copied().unwrap_or(u32::MAX) as usize;
+    // One validation for both value paths. A lane index outside the active
+    // subgroup used to become `u32::MAX`, miss the lookup, and be absorbed as
+    // `0.0` on the float path and `0` on the u32 path, so a program that
+    // shuffled from an out-of-range lane got a zero the hardware never
+    // produces and the oracle certified it.
+    let src_lane = *src_lanes.get(local_offset).ok_or_else(|| {
+        ReferenceError::out_of_bounds(format!(
+            "subgroup_shuffle evaluated {} lane indices but lane {local_offset} needs one. \
+             Fix: evaluate the lane argument on every active lane.",
+            src_lanes.len()
+        ))
+    })? as usize;
+    if src_lane >= values.len() {
+        return Err(ReferenceError::out_of_bounds(format!(
+            "subgroup_shuffle reads lane {src_lane} of {} active lanes. \
+             Fix: clamp the lane argument to the active subgroup width.",
+            values.len()
+        )));
+    }
     if values.iter().all(|value| matches!(value, Value::U32(_))) {
         let lanes = values
             .iter()
             .filter_map(Value::try_as_u32)
             .collect::<SmallVec<[u32; 32]>>();
         let shuffled = subgroup_simulator().shuffle(&lanes, &src_lanes);
-        return Ok(Value::U32(shuffled.get(local_offset).copied().unwrap_or(0)));
+        return shuffled
+            .get(local_offset)
+            .copied()
+            .map(Value::U32)
+            .ok_or_else(|| {
+                ReferenceError::out_of_bounds(format!(
+                    "subgroup_shuffle produced {} results but lane {local_offset} needs one. \
+                     Fix: shuffle across the full active subgroup.",
+                    shuffled.len()
+                ))
+            });
     }
-    if values.iter().all(|value| matches!(value, Value::Float(_))) {
-        return match values.get(src_lane) {
-            Some(Value::Float(value)) => Ok(Value::Float(*value)),
-            _ => Ok(Value::Float(0.0)),
-        };
+    if let Some(Value::Float(value)) = values.get(src_lane) {
+        if values.iter().all(|value| matches!(value, Value::Float(_))) {
+            return Ok(Value::Float(*value));
+        }
     }
     Err(ReferenceError::new("subgroup_shuffle lanes have mixed or unsupported value types. Fix: cast every lane value to the same primitive u32 or f32 type before the subgroup collective."))
 }
@@ -211,26 +238,38 @@ mod tests {
         assert_eq!(value, Value::Float(3.75));
     }
 
+    /// A shuffle whose source lane is outside the active subgroup used to
+    /// return `0.0` on the float path and `0` on the u32 path. No hardware
+    /// produces that value: the ISA leaves the result of an out-of-range
+    /// shuffle undefined, so an absorbed zero is an answer the oracle
+    /// invented and then certified. Both value paths now refuse.
     #[test]
-    fn f32_shuffle_zeroes_out_of_range_lane() {
-        let snapshots = vec![
-            snapshot_lane(0, Value::Float(1.25), 9),
-            snapshot_lane(1, Value::Float(2.5), 0),
-        ];
+    fn shuffle_refuses_an_out_of_range_source_lane_on_both_value_paths() {
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
         let memory = HashmapMemory::new(FxHashMap::default());
 
-        let value = eval_subgroup_shuffle(
-            &Expr::var("lane_value"),
-            &Expr::var("source_lane"),
-            &invocation,
-            &snapshots,
-            &memory,
-        )
-        .expect("Fix: f32 subgroup shuffle must evaluate.");
+        for (label, first, second) in [
+            ("f32", Value::Float(1.25), Value::Float(2.5)),
+            ("u32", Value::U32(1), Value::U32(2)),
+        ] {
+            let snapshots = vec![snapshot_lane(0, first, 9), snapshot_lane(1, second, 0)];
 
-        assert_eq!(value, Value::Float(0.0));
+            let error = eval_subgroup_shuffle(
+                &Expr::var("lane_value"),
+                &Expr::var("source_lane"),
+                &invocation,
+                &snapshots,
+                &memory,
+            )
+            .expect_err("Fix: an out-of-range shuffle source lane must be refused.");
+
+            assert_eq!(
+                error.error_class(),
+                crate::error::ReferenceErrorClass::OutOfBoundsAccess,
+                "Fix: the {label} shuffle path must refuse lane 9 of 2 as out of bounds, got {error:?}."
+            );
+        }
     }
 
     fn reduce_snapshots(values: &[Value]) -> Vec<HashmapInvocationSnapshot> {

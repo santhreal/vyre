@@ -424,15 +424,13 @@ pub(crate) fn run_hashmap_reference(
     output_decls
         .into_iter()
         .map(|decl| {
-            storage
-                .remove(decl.name())
-                .map(|buffer| output_value(buffer, &decl))
-                .ok_or_else(|| {
-                    let name = decl.name();
-                    ReferenceError::new(format!(
-                        "missing output buffer `{name}` after dispatch. Fix: keep buffer declarations unique."
-                    ))
-                })
+            let buffer = storage.remove(decl.name()).ok_or_else(|| {
+                let name = decl.name();
+                ReferenceError::new(format!(
+                    "missing output buffer `{name}` after dispatch. Fix: keep buffer declarations unique."
+                ))
+            })?;
+            output_value(buffer, &decl)
         })
         .collect()
 }

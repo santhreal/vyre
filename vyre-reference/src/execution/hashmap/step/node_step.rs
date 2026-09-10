@@ -311,9 +311,10 @@ pub(crate) fn step_nodes_frame<'a>(
         }
         Node::TileDecl { name, tile } => {
             let elements = vec![Value::Float(0.0); tile.element_count()];
+            let bound = invocation.locals.bind(name.as_str(), Value::Array(elements))?;
             invocation
-                .locals
-                .bind(name.as_str(), Value::Array(elements))?;
+                .tile_shapes
+                .insert(bound, std::sync::Arc::new(tile.clone()));
         }
         Node::TileLoad {
             tile,
@@ -338,9 +339,12 @@ pub(crate) fn step_nodes_frame<'a>(
             let target = buffer_mut(memory, buffer.as_str())?;
             let elements =
                 crate::execution::tile::load_elements(target, &origin_coords, tile_type, layout)?;
-            invocation
+            let bound = invocation
                 .locals
                 .bind(tile.as_str(), Value::Array(elements))?;
+            invocation
+                .tile_shapes
+                .insert(bound, std::sync::Arc::new(tile_type.clone()));
         }
         Node::TileStore {
             buffer,
@@ -372,22 +376,20 @@ pub(crate) fn step_nodes_frame<'a>(
             crate::execution::tile::store_elements(target, &origin_coords, &elements)?;
         }
         Node::TileMatmul { acc, a, b } => {
-            let acc_val = invocation
-                .locals
-                .local(acc.as_str())
-                .unwrap_or(Value::Array(Vec::new()));
-            let a_val = invocation
-                .locals
-                .local(a.as_str())
-                .ok_or_else(|| ReferenceError::new(format!("tile `{a}` not found for matmul")))?;
-            let b_val = invocation
-                .locals
-                .local(b.as_str())
-                .ok_or_else(|| ReferenceError::new(format!("tile `{b}` not found for matmul")))?;
+            let (acc_val, acc_shape) = tile_operand(invocation, acc, "matmul accumulator")?;
+            let (a_val, a_shape) = tile_operand(invocation, a, "matmul operand")?;
+            let (b_val, b_shape) = tile_operand(invocation, b, "matmul operand")?;
             let a_elems = crate::execution::tile::to_elements(&a_val);
             let b_elems = crate::execution::tile::to_elements(&b_val);
             let mut acc_elems = crate::execution::tile::to_elements(&acc_val);
-            crate::execution::tile::matmul(&mut acc_elems, &a_elems, &b_elems);
+            crate::execution::tile::matmul(
+                &mut acc_elems,
+                &acc_shape,
+                &a_elems,
+                &a_shape,
+                &b_elems,
+                &b_shape,
+            )?;
             invocation
                 .locals
                 .assign(acc.as_str(), Value::Array(acc_elems))?;
@@ -398,17 +400,24 @@ pub(crate) fn step_nodes_frame<'a>(
             op,
             axis,
         } => {
-            let tile_val = invocation.locals.local(tile.as_str()).ok_or_else(|| {
-                ReferenceError::new(format!("tile `{tile}` not found for reduce"))
+            let (tile_val, shape) = tile_operand(invocation, tile, "reduce input")?;
+            let elements = crate::execution::tile::to_elements(&tile_val);
+            let out_vec = crate::execution::tile::reduce(&elements, &shape, *op, *axis)?;
+            let out_extent = u32::try_from(out_vec.len()).map_err(|_| {
+                ReferenceError::incomplete_dispatch_semantics(
+                    "tile reduce produced more elements than a tile extent can state. Fix: reduce a smaller tile.",
+                )
             })?;
-            let elements = match tile_val {
-                Value::Array(e) => e,
-                s => vec![s],
-            };
-            let out_vec = crate::execution::tile::reduce(&elements, *op, *axis);
-            invocation
+            let out_shape = std::sync::Arc::new(vyre_foundation::ir::Tile::new(
+                shape.element.clone(),
+                vec![out_extent],
+                shape.layout.clone(),
+                shape.residency,
+            ));
+            let bound = invocation
                 .locals
                 .bind(out.as_str(), Value::Array(out_vec))?;
+            invocation.tile_shapes.insert(bound, out_shape);
         }
         Node::TileElementwise { out, inputs, body } => {
             let mut input_arrays = Vec::with_capacity(inputs.len());
@@ -441,10 +450,12 @@ pub(crate) fn step_nodes_frame<'a>(
                 for (i, input) in inputs.iter().enumerate() {
                     let n = input_arrays[i].len();
                     let elem_idx = if n > 0 { idx / (max_len / n) } else { 0 };
-                    let elem = input_arrays[i]
-                        .get(elem_idx)
-                        .cloned()
-                        .unwrap_or(Value::Float(0.0));
+                    let elem = input_arrays[i].get(elem_idx).cloned().ok_or_else(|| {
+                        ReferenceError::incomplete_dispatch_semantics(format!(
+                            "tile elementwise input `{input}` has no element {elem_idx} for output element {idx}. \
+                             Fix: give every input a length that divides the output length."
+                        ))
+                    })?;
                     invocation.locals.bind(input.as_str(), elem)?;
                 }
                 for child in body {
@@ -469,13 +480,26 @@ pub(crate) fn step_nodes_frame<'a>(
                             )?;
                             invocation.locals.assign(name.as_str(), v)?;
                         }
-                        _ => {}
+                        other => {
+                            // A body node that is neither a binding nor an
+                            // assignment used to be discarded here, so a
+                            // `Store`, an `If`, or a `Barrier` inside a tile
+                            // elementwise body ran as a no-op and the oracle
+                            // certified an output that skipped it.
+                            return Err(ReferenceError::incomplete_dispatch_semantics(format!(
+                                "tile elementwise body contains `{}`, which has no per-element reference semantics. \
+                                 Fix: restrict the body to Let and Assign nodes.",
+                                node_id(other)
+                            )));
+                        }
                     }
                 }
-                let out_val = invocation
-                    .locals
-                    .local(out.as_str())
-                    .unwrap_or(Value::Float(0.0));
+                let out_val = invocation.locals.local(out.as_str()).ok_or_else(|| {
+                    ReferenceError::incomplete_dispatch_semantics(format!(
+                        "tile elementwise body left `{out}` unbound for element {idx}. \
+                         Fix: assign `{out}` in the body."
+                    ))
+                })?;
                 out_elems.push(out_val);
                 invocation.locals.pop_scope();
             }
@@ -498,6 +522,28 @@ pub(crate) fn step_nodes_frame<'a>(
         }
     }
     Ok(true)
+}
+
+/// The value and the declared shape of a tile named by a tile node.
+///
+/// A tile operand is usable only when both are present. The shape is recorded
+/// by the `TileDecl` or `TileLoad` that bound the name, so a name bound as an
+/// ordinary array is refused here instead of being reshaped by guessing.
+fn tile_operand(
+    invocation: &HashmapInvocation<'_>,
+    name: &str,
+    role: &str,
+) -> Result<(Value, std::sync::Arc<vyre_foundation::ir::Tile>), ReferenceError> {
+    let value = invocation.locals.local(name).ok_or_else(|| {
+        ReferenceError::new(format!("tile `{name}` not found for {role}"))
+    })?;
+    let shape = invocation.tile_shapes.get(name).cloned().ok_or_else(|| {
+        ReferenceError::incomplete_dispatch_semantics(format!(
+            "tile `{name}` used as a {role} declares no shape. \
+             Fix: bind it with TileDecl or TileLoad before the operation."
+        ))
+    })?;
+    Ok((value, shape))
 }
 
 pub(crate) fn step_loop_frame<'a>(
