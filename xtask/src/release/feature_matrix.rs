@@ -305,7 +305,19 @@ fn feature_member_resolves(
             .any(|candidate| candidate == dependency);
     }
     if let Some((dependency, _feature)) = member.split_once('/') {
-        return dependencies.iter().any(|candidate| candidate == dependency);
+        // `dep?/feat` enables a feature of an optional dependency without
+        // enabling the dependency, and cargo accepts the `?` only there.
+        // Splitting on `/` alone left the mark on the name, so every weak
+        // member in the workspace read as a dependency that does not exist.
+        if let Some(dependency) = dependency.strip_suffix('?') {
+            return optional_dependencies
+                .iter()
+                .any(|candidate| candidate == dependency);
+        }
+        return dependencies
+            .iter()
+            .chain(optional_dependencies.iter())
+            .any(|candidate| candidate == dependency);
     }
     features.iter().any(|feature| feature == member)
         || optional_dependencies
@@ -371,5 +383,39 @@ mod tests {
         assert!(blockers
             .iter()
             .any(|b| b.contains("vyre-driver-cuda default feature set must stay empty")));
+    }
+    /// WHY: cargo spells a feature of an optional dependency `dep?/feat`, and
+    /// a resolver that splits on `/` alone keeps the `?` on the name, so every
+    /// weak member reads as a dependency the manifest never declared. The
+    /// workspace carries dozens of these, and cargo accepts every one of them.
+    ///
+    /// What it does not catch: a `dep/feat` naming a feature the dependency
+    /// does not define. Resolving that needs the dependency's own manifest.
+    #[test]
+    fn a_weak_dependency_feature_resolves_against_the_optional_dependency() {
+        let features = vec!["default".to_string()];
+        let dependencies = vec!["required_dep".to_string()];
+        let optional_dependencies = vec!["optional_dep".to_string()];
+
+        let cases = [
+            ("optional_dep?/feat", true),
+            ("optional_dep/feat", true),
+            ("required_dep/feat", true),
+            ("required_dep?/feat", false),
+            ("absent_dep?/feat", false),
+            ("absent_dep/feat", false),
+        ];
+        for (member, expected) in cases {
+            assert_eq!(
+                feature_member_resolves(
+                    member,
+                    &features,
+                    &dependencies,
+                    &optional_dependencies
+                ),
+                expected,
+                "`{member}` must resolve to {expected}"
+            );
+        }
     }
 }
