@@ -5121,6 +5121,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The bank-conflict classifier states a stride for a constant left shift, so an
   access that strength reduction already rewrote out of its multiply form is
   classified rather than left unknown.
+- The composition placement gate resolves a registration against every crate of
+  the composition family rather than the facade crate alone, and reports a
+  registration whose operation id names one family owner while its source sits
+  under another. The domain roster is read from each family crate's module
+  declarations instead of a frozen list, and a canonical block skeleton is read
+  from the parse tree instead of a substring match, so a name occurring in a
+  doc comment, inside a longer identifier, or under `cfg(test)` no longer
+  counts as its definition.
 - Concurrent wgpu backend acquisition deadlocked on teardown. Every instance
   enabled the GL backend, whose EGL runtime registers a thread-local destructor
   that takes an EGL lock at thread exit, and `vkDestroyDevice` joins threads
@@ -6605,6 +6613,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   them was a format inside a return Err. Each file's note now ends with its
   error-path count, and every hot-path budget in
   docs/optimization/HOT_PATHS.toml is lowered to the measurement that remains.
+- Exemption liveness resolves a directory row against every crate of the
+  composition family, so a row whose subject module now lives in a partition
+  crate is live instead of reported dead. An empty family roster fails the gate
+  instead of convicting every row.
 - The composition audit reports an exemption row that matches nothing. The
   phase-marker list and the declared Tier-3 leaf list are named once each and
   every row is checked against the live registry, so a row naming a renamed or

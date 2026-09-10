@@ -9,16 +9,30 @@ use crate::workspace_manifest::crate_ident;
 /// `Program` built from existing IR, including compiler-internal domains such
 /// as solvers, encoding, analysis, scheduling, device and graph dispatch. Who
 /// calls it does not move it; only rewriting it in host Rust does.
-pub(crate) const CATEGORY_A_CRATE: &str = "vyre-libs";
+///
+/// The name is both the facade crate and the first segment of every Category A
+/// operation id, so a placement rule reads the owning family off the id.
+pub const CATEGORY_A_CRATE: &str = "vyre-libs";
 
-/// Returns true if the crate name is the Category A facade or any domain partition crate.
-pub(crate) fn is_category_a_crate(crate_name: &str) -> bool {
+/// Returns true if the crate name is the Category A facade or any domain
+/// partition crate.
+///
+/// The family is a prefix rather than a roster, so a partition crate added to
+/// the workspace is Category A the moment the manifest names it. Every rule
+/// that resolves a composition's home reads this predicate, because a second
+/// copy of the family drifts the day a partition is added.
+#[must_use]
+pub fn is_category_a_crate(crate_name: &str) -> bool {
     crate_name == CATEGORY_A_CRATE || crate_name.starts_with("vyre-libs-")
 }
+
 /// Category C owner: strict hardware intrinsics, one emitter arm and one
 /// reference-interpreter arm each. Absorbed the former standalone hardware
 /// crate on 2026-08-13; the intrinsics live in `vyre-primitives/src/hardware`.
-pub(crate) const CATEGORY_C_CRATE: &str = "vyre-primitives";
+///
+/// Like [`CATEGORY_A_CRATE`], the name is also the id prefix of every operation
+/// the crate owns.
+pub const CATEGORY_C_CRATE: &str = "vyre-primitives";
 
 /// Directory that owns every module named `*substrate*`.
 ///

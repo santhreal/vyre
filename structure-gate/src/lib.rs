@@ -62,18 +62,17 @@ pub use workspace_manifest::{
     workspace_excludes, workspace_members, workspace_root, workspace_root_from, MAX_SOURCE_BYTES,
 };
 pub use workspace_rules::{
-    category_home_failures, frontend_owner_failures, materializer_admission_failures,
-    operation_identity_failures, registration_owner_failures, registry_link_failures,
-    roster_failures, substrate_home_failures, DiscardingImport, Registration,
+    category_home_failures, frontend_owner_failures, is_category_a_crate,
+    materializer_admission_failures, operation_identity_failures, registration_owner_failures,
+    registry_link_failures, roster_failures, substrate_home_failures, DiscardingImport,
+    Registration, CATEGORY_A_CRATE, CATEGORY_C_CRATE,
 };
 
 use crate::workspace_manifest::{
     crate_source_roots, member_sources, read_source_bounded, relative, tree_files, MemberSource,
     SELF_CRATE,
 };
-use crate::workspace_rules::{
-    crate_declares_frontend, CATEGORY_A_CRATE, CATEGORY_C_CRATE, FRONTEND_OWNERS,
-};
+use crate::workspace_rules::{crate_declares_frontend, FRONTEND_OWNERS};
 
 use crate::backend_vocabulary::is_test_source;
 use crate::module_layout::{
