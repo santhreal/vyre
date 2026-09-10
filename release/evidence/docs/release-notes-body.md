@@ -2226,6 +2226,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   the crate root, `ShapeExprId` through `types` instead of `ir`, and the
   file-split submodules of `execution_plan::fusion` and `schedule` are private
   behind the module that re-exports them.
+- Every `[[layer]]` row in the architecture manifest records the closed set of
+  consumer layers admitted to it, and `crate-ownership` rejects a production
+  edge across a layer pair no row records, including one inside a single layer.
 - Every library composition in vyre-libs sits behind a feature. The text,
   representation, parsing and graph module trees were declared with no cfg, so
   forty-two files submitted an operation registration in every build that
@@ -6666,6 +6669,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Descriptor verification rejects an operation that addresses a binding slot
   the layout does not declare, instead of passing the unresolvable slot to a
   backend.
+- `crate-ownership` rejects an optional internal dependency that no feature
+  names, which the rule could not observe while it credited the feature cargo
+  derives from the dependency key as a named activation.
 - The operation placement reader reports a source file it could not read or
   that exceeds the read cap, so the registrations that file holds are no longer
   silently missing from the schema.
