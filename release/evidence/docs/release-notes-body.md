@@ -4068,6 +4068,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   library modules in `vyre-test-support` rather than relative `#[path]` textual
   includes, so zero `#[path]` attributes resolve outside their declaring Cargo
   package and no contract body is textually compiled across package boundaries.
+- The `application-runnable` gate stages every registered generic frontend
+  dialect into one connected graph and compiles and lowers it through every
+  registered production backend, so a route that stops at a builder, a proxy,
+  an isolated kernel, or host-only evidence is refused.
 - Artifact schema 10 records the selected launch of every entry point,
   including the entry dependency order, logical coverage, grid, workgroup,
   vector width, pipeline roles, ring slots, barrier phases, dynamic shared
@@ -8966,6 +8970,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The analysis package enables the graph analysis feature its reachability and
   dominance queries compile against, so it builds standalone instead of failing
   on unresolved graph items.
+- The artifact topology contract asserts the selected execution topology by
+  value and reads it back from the lowered target module bundle, so a lowering
+  that drops the topology onto the sequential baseline fails.
 - The criterion regression gate reported its threshold check as a median change
   while reading the upper bound of the confidence interval. It now prints both
   and names the bound it gates on. The threshold is unchanged.

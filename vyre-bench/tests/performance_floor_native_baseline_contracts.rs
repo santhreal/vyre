@@ -1,4 +1,4 @@
-//! Acceptance and regression contracts for BACKLOG row 47:
+//! Acceptance and regression contracts:
 //! End-to-end performance floor against expert-written native kernels.
 //!
 //! Acceptance criteria verified:
@@ -338,7 +338,7 @@ fn test_per_cell_verdict_rejects_regression_despite_improving_mean() {
         report.mean_speedup_x
     );
 
-    // BACKLOG row 47 requirement:
+    // Requirement:
     // "Report a per-cell verdict, not an aggregate: a regression on one target,
     // sequence layout, or retained-state mode is a finding even when the mean improves."
     match report.overall_verdict {

@@ -1,6 +1,6 @@
 //! Device fleet leasing coordinator, clock/interference calibration, and authenticated campaign execution.
 //!
-//! BACKLOG row 95 requires:
+//! The contract requires:
 //! "A fleet coordinator leases authenticated idle devices, calibrates clocks and interference,
 //! randomizes balanced trial order deterministically, resumes interrupted campaigns, and
 //! never averages across incompatible cells."

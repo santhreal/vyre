@@ -1,7 +1,7 @@
 //! Connected-graph compilation, artifact envelope materialization, resident binding,
 //! and device execution conformance test suite.
 //!
-//! BACKLOG row 56 requires representative connected graphs from unrelated domains to execute
+//! The contract requires representative connected graphs from unrelated domains to execute
 //! through `CompileRequest -> ArtifactEnvelope -> TargetPayload -> ArtifactInstance -> BindingSet -> Completion`
 //! and match independent semantics under declared tolerances. Tests fail if execution substitutes
 //! per-node host interpretation or if a requested device is unavailable. Graphs cover pure dataflow,

@@ -1,6 +1,6 @@
 //! Conformance of one coordinated topology across a device mesh.
 //!
-//! WHY: BACKLOG row 64 requires conformance to prove cross-device ordering,
+//! WHY: The contract requires conformance to prove cross-device ordering,
 //! numerical parity, deadlock freedom, and bounded progress for a placement that
 //! spans devices. A placement is a schedule decision, so a defect here is a plan
 //! that reorders combines across devices, waits forever, or computes something

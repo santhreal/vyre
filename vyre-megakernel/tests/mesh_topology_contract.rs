@@ -1,6 +1,6 @@
 //! Mesh facts and the coordinated topology one selected schedule records.
 //!
-//! WHY: BACKLOG row 64 requires one owner for multi-device execution. These
+//! WHY: The contract requires one owner for multi-device execution. These
 //! cases defend the rules a decoded topology must satisfy without the graph:
 //! every logical point is covered exactly once, every communicating device holds
 //! work, stages are contiguous, and no stage can deadlock. They also defend the

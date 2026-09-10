@@ -1,6 +1,6 @@
 # Canonical version-pinned expert-written native kernel baselines catalog.
 #
-# BACKLOG row 47 requirement:
+# Requirement:
 # "Version-pinned native kernel baselines must be vendored as a pinned external baseline
 # with its version recorded, never copied into a Vyre crate as an emitted payload."
 

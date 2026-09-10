@@ -1,6 +1,6 @@
 //! Resumable benchmark campaign protocol, cell identity, and incompatible cell refusal.
 //!
-//! BACKLOG row 95 requires:
+//! The contract requires:
 //! 1. A campaign must be resumable: an interrupted run continues rather than restarting.
 //! 2. A recorded cell is never averaged with an incompatible cell (refused by name).
 //! 3. Trial order is randomized deterministically from the campaign identity.
@@ -425,7 +425,7 @@ pub fn assert_cells_compatible(
 
 /// A typed, homogeneous collection of benchmark receipts that share an identical cell identity.
 ///
-/// BACKLOG row 95 requires:
+/// The contract requires:
 /// "never averages across incompatible cells. Make averaging across incompatible cells
 /// impossible to express, not merely unused. Prefer a type that cannot represent the
 /// invalid combination over a runtime check."

@@ -1,6 +1,6 @@
 //! Conformance of a declared numeric contract against a measured result.
 //!
-//! WHY: BACKLOG row 65 requires conformance to cover adversarial magnitudes,
+//! WHY: The contract requires conformance to cover adversarial magnitudes,
 //! cancellation, long recurrences and reductions, special values, deterministic
 //! and intentionally nondeterministic modes, and to fail each schedule variant
 //! whose measured error exceeds the declared complete-graph contract. A

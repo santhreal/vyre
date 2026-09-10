@@ -1,6 +1,6 @@
 //! Representative complete graph and adversarial kernel-sized region workload definitions.
 //!
-//! BACKLOG row 47 requires:
+//! The contract requires:
 //! "Cover representative complete graphs and adversarial kernel-sized regions."
 //! "Version-pinned expert-written native kernels are compared under identical
 //! semantics, dtype, shapes, raggedness, initial and final state, target, stream,
