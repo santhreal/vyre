@@ -8,9 +8,10 @@ use std::collections::HashMap;
 use std::time::Instant;
 use vyre_emit_ptx::{patterns, ComputeCapability};
 use vyre_foundation::ir::{BinOp, DataType};
+use vyre_lower::descriptor_builder::{effect, op};
 use vyre_lower::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, FragmentValue, KernelBody,
-    KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout,
+    KernelDescriptor, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout,
     MatrixMmaSpec, MatrixTileShape, MemoryClass,
 };
 
@@ -391,14 +392,14 @@ fn predicated_literal_store_kernel() -> KernelDescriptor {
         dispatch: Dispatch::new(64, 1, 1),
         body: KernelBody {
             ops: vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::Literal, vec![1], Some(1)),
-                op(KernelOpKind::StructuredIfThen, vec![0, 0], None),
+                op(KernelOpKind::Literal, vec![0], 0),
+                op(KernelOpKind::Literal, vec![1], 1),
+                effect(KernelOpKind::StructuredIfThen, vec![0, 0]),
             ],
             child_bodies: vec![KernelBody {
                 ops: vec![
-                    op(KernelOpKind::Literal, vec![0], Some(20)),
-                    op(KernelOpKind::StoreGlobal, vec![0, 1, 20], None),
+                    op(KernelOpKind::Literal, vec![0], 20),
+                    effect(KernelOpKind::StoreGlobal, vec![0, 1, 20]),
                 ],
                 child_bodies: vec![],
                 literals: vec![LiteralValue::U32(13)],
@@ -417,9 +418,9 @@ fn predicated_else_store_kernel() -> KernelDescriptor {
         dispatch: Dispatch::new(64, 1, 1),
         body: KernelBody {
             ops: vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::Literal, vec![1], Some(1)),
-                op(KernelOpKind::StructuredIfThenElse, vec![0, 0, 1], None),
+                op(KernelOpKind::Literal, vec![0], 0),
+                op(KernelOpKind::Literal, vec![1], 1),
+                effect(KernelOpKind::StructuredIfThenElse, vec![0, 0, 1]),
             ],
             child_bodies: vec![store_child(20, 21), store_child(21, 34)],
             literals: vec![LiteralValue::Bool(true), LiteralValue::U32(0)],
@@ -430,8 +431,8 @@ fn predicated_else_store_kernel() -> KernelDescriptor {
 fn store_child(result_id: u32, value: u32) -> KernelBody {
     KernelBody {
         ops: vec![
-            op(KernelOpKind::Literal, vec![0], Some(result_id)),
-            op(KernelOpKind::StoreGlobal, vec![0, 1, result_id], None),
+            op(KernelOpKind::Literal, vec![0], result_id),
+            effect(KernelOpKind::StoreGlobal, vec![0, 1, result_id]),
         ],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(value)],
@@ -447,22 +448,22 @@ fn vector_load_store_kernel() -> KernelDescriptor {
         dispatch: Dispatch::new(64, 1, 1),
         body: KernelBody {
             ops: vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::Literal, vec![1], Some(1)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(10)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 1], Some(2)),
-                op(KernelOpKind::LoadGlobal, vec![0, 2], Some(11)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![2, 1], Some(3)),
-                op(KernelOpKind::LoadGlobal, vec![0, 3], Some(12)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![3, 1], Some(4)),
-                op(KernelOpKind::LoadGlobal, vec![0, 4], Some(13)),
-                op(KernelOpKind::StoreGlobal, vec![1, 0, 10], None),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 1], Some(5)),
-                op(KernelOpKind::StoreGlobal, vec![1, 5, 11], None),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![5, 1], Some(6)),
-                op(KernelOpKind::StoreGlobal, vec![1, 6, 12], None),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![6, 1], Some(7)),
-                op(KernelOpKind::StoreGlobal, vec![1, 7, 13], None),
+                op(KernelOpKind::Literal, vec![0], 0),
+                op(KernelOpKind::Literal, vec![1], 1),
+                op(KernelOpKind::LoadGlobal, vec![0, 0], 10),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 1], 2),
+                op(KernelOpKind::LoadGlobal, vec![0, 2], 11),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![2, 1], 3),
+                op(KernelOpKind::LoadGlobal, vec![0, 3], 12),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![3, 1], 4),
+                op(KernelOpKind::LoadGlobal, vec![0, 4], 13),
+                effect(KernelOpKind::StoreGlobal, vec![1, 0, 10]),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 1], 5),
+                effect(KernelOpKind::StoreGlobal, vec![1, 5, 11]),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![5, 1], 6),
+                effect(KernelOpKind::StoreGlobal, vec![1, 6, 12]),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![6, 1], 7),
+                effect(KernelOpKind::StoreGlobal, vec![1, 7, 13]),
             ],
             child_bodies: vec![],
             literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
@@ -479,13 +480,13 @@ fn scheduled_load_gap_kernel() -> KernelDescriptor {
         dispatch: Dispatch::new(64, 1, 1),
         body: KernelBody {
             ops: vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::Literal, vec![1], Some(1)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(2)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![2, 1], Some(3)),
-                op(KernelOpKind::Literal, vec![2], Some(4)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![4, 1], Some(5)),
-                op(KernelOpKind::StoreGlobal, vec![1, 0, 3], None),
+                op(KernelOpKind::Literal, vec![0], 0),
+                op(KernelOpKind::Literal, vec![1], 1),
+                op(KernelOpKind::LoadGlobal, vec![0, 0], 2),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![2, 1], 3),
+                op(KernelOpKind::Literal, vec![2], 4),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![4, 1], 5),
+                effect(KernelOpKind::StoreGlobal, vec![1, 0, 3]),
             ],
             child_bodies: vec![],
             literals: vec![
@@ -523,9 +524,9 @@ fn cp_async_candidate_kernel() -> KernelDescriptor {
         dispatch: Dispatch::new(64, 1, 1),
         body: KernelBody {
             ops: vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-                op(KernelOpKind::StoreShared, vec![1, 0, 1], None),
+                op(KernelOpKind::Literal, vec![0], 0),
+                op(KernelOpKind::LoadGlobal, vec![0, 0], 1),
+                effect(KernelOpKind::StoreShared, vec![1, 0, 1]),
             ],
             child_bodies: vec![],
             literals: vec![LiteralValue::U32(0)],
@@ -559,14 +560,10 @@ fn async_copy_emit_kernel() -> KernelDescriptor {
         dispatch: Dispatch::new(64, 1, 1),
         body: KernelBody {
             ops: vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::Literal, vec![1], Some(1)),
-                op(
-                    KernelOpKind::async_load("tile".into()),
-                    vec![0, 1, 0, 1],
-                    None,
-                ),
-                op(KernelOpKind::async_wait("tile".into()), vec![], None),
+                op(KernelOpKind::Literal, vec![0], 0),
+                op(KernelOpKind::Literal, vec![1], 1),
+                effect(KernelOpKind::async_load("tile".into()), vec![0, 1, 0, 1]),
+                effect(KernelOpKind::async_wait("tile".into()), vec![]),
             ],
             child_bodies: vec![],
             literals: vec![LiteralValue::U32(0), LiteralValue::U32(256)],
@@ -579,10 +576,10 @@ fn tensor_core_candidate_kernel() -> KernelDescriptor {
     let mut literals = Vec::new();
     for id in 0..3 {
         literals.push(LiteralValue::F32(id as f32));
-        ops.push(op(KernelOpKind::Literal, vec![id], Some(id)));
+        ops.push(op(KernelOpKind::Literal, vec![id], id));
     }
     for result in 3..11 {
-        ops.push(op(KernelOpKind::Fma, vec![0, 1, 2], Some(result)));
+        ops.push(op(KernelOpKind::Fma, vec![0, 1, 2], result));
     }
     KernelDescriptor {
         id: "ptx_tensor_core_candidate".to_string(),
@@ -601,14 +598,13 @@ fn matrix_mma_emit_kernel() -> KernelDescriptor {
     let mut literals = Vec::new();
     for id in 0..6 {
         literals.push(LiteralValue::U32(id));
-        ops.push(op(KernelOpKind::Literal, vec![id], Some(id)));
+        ops.push(op(KernelOpKind::Literal, vec![id], id));
     }
     for id in 6..10 {
         literals.push(LiteralValue::F32(0.0));
-        ops.push(op(KernelOpKind::Literal, vec![id], Some(id)));
+        ops.push(op(KernelOpKind::Literal, vec![id], id));
     }
-    ops.push(op(
-        KernelOpKind::MatrixMma(Box::new(MatrixMmaSpec {
+    ops.push(op(KernelOpKind::MatrixMma(Box::new(MatrixMmaSpec {
             tile: MatrixTileShape { m: 16, n: 8, k: 16 },
             left: FragmentValue::in_registers(MatrixMmaElement::F16, MatrixMmaLayout::RowMajor, 32),
             right: FragmentValue::in_registers(
@@ -621,10 +617,7 @@ fn matrix_mma_emit_kernel() -> KernelDescriptor {
                 MatrixMmaLayout::RowMajor,
                 32,
             ),
-        })),
-        (0..10).collect(),
-        Some(10),
-    ));
+        })), (0..10).collect::<Vec<u32>>(), 10));
     KernelDescriptor {
         id: "ptx_matrix_mma_emit".to_string(),
         bindings: BindingLayout { slots: vec![] },
@@ -634,14 +627,6 @@ fn matrix_mma_emit_kernel() -> KernelDescriptor {
             child_bodies: vec![],
             literals,
         },
-    }
-}
-
-fn op(kind: KernelOpKind, operands: Vec<u32>, result: Option<u32>) -> KernelOp {
-    KernelOp {
-        kind,
-        operands,
-        result,
     }
 }
 

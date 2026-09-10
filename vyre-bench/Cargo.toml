@@ -36,7 +36,7 @@ vyre-libs = { workspace = true, features = [
     "predicate",
 ] }
 vyre-primitives = { workspace = true, features = ["hardware"] }
-vyre-lower = { workspace = true }
+vyre-lower = { workspace = true, features = ["test-fixtures"] }
 vyre-pass-engine = { workspace = true }
 vyre-megakernel = { workspace = true }
 vyre-emit-ptx = { workspace = true }

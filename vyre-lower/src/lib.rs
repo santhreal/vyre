@@ -25,6 +25,9 @@ pub mod analyses;
 /// Byte-stability harness for emitted backend artifacts. Test-only, like
 /// `descriptor_builder`: enable `test-fixtures` to reach it.
 #[cfg(any(test, feature = "test-fixtures"))]
+/// Golden-corpus framing for emitted artifacts. Every consumer is a byte-stability
+/// test, so this is not part of the shipped surface: enable `test-fixtures` to reach it.
+#[cfg(any(test, feature = "test-fixtures"))]
 pub mod artifact_golden;
 pub(crate) mod audit;
 pub(crate) mod canonicalize;
@@ -33,6 +36,10 @@ pub(crate) mod descriptor;
 /// is not part of the shipped surface: enable `test-fixtures` to reach it.
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod descriptor_builder;
+/// Hostile descriptor corpus shared by the backend emit matrices. Every consumer
+/// is a test, so this is not part of the shipped surface: enable `test-fixtures`
+/// to reach it.
+#[cfg(any(test, feature = "test-fixtures"))]
 pub mod emit_adversarial_corpus;
 pub(crate) mod equivalence;
 pub(crate) mod error;
