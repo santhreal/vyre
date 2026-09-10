@@ -465,6 +465,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Every semantic operation carries a generated contract record with an explicit
   four-state transform decision, rejecting uncharacterized operations, law
   labels without executable proof evidence, and placeholder opaque reasons.
+- `vyre-test-support` declares `test_payload_expr_extension!` and
+  `test_payload_node_extension!`, which build an extension fixture whose
+  fingerprint is the digest of its wire payload.
 - `UnOp::BitcastF32ToU32` and `UnOp::BitcastU32ToF32` reinterpret the 32 bits
   of a value without converting it, with wire tags `0x25` and `0x26`, a
   reference-interpreter arm that preserves every NaN payload and subnormal, and
@@ -613,6 +616,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   grid-sync wrapper reaches a `Program`-carrying entry point without deciding
   the split, and when the wrapper hand-writes a forward the owner already
   emits.
+- `node_visitor_uniform_arms!` implements the named `NodeVisitor` methods with
+  one shared body, from a single declaration of each method parameter list. The
+  trait stays abstract by default, so a method added to it is still missing
+  until an implementor names it.
 - The neural library now composes F32 query and key normalization,
   cache-position partial rotary embedding, explicit query-to-KV head grouping,
   and dynamically bounded causal attention in one typed ProgramGraph. Prompt
@@ -3433,6 +3440,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Operation registration defines three identity-joined records
   (SemanticDescriptor, LoweringProvider, ConformanceProvider) and an immutable
   CatalogBundle with content digest.
+- `SemanticDescriptor`, `SemanticOperation`, and `OperationRegistration`
+  declare their shared operation identity fields from one macro, and both
+  `contract_record` implementations read the contract facts from one list. A
+  field added to the identity now reaches all three records.
 - Three optimizer hot paths stopped allocating per sample.
   `HotPathHints::record` allocated the key on every call including a repeat
   sample, and its LRU eviction cloned every key in the map to find the oldest;
@@ -3583,6 +3594,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   shipped release corpus and over shapes the corpus does not generate: a
   `Block` that owns a binding is a scope, so it survives, while a `Block` that
   owns none is spliced into its parent at every body position.
+- `ProgramGraphBuilder` reaches node and subgraph composition through
+  `Deref<Target = ProgramGraph>` instead of mirroring six `ProgramGraph`
+  signatures, so each signature is declared once. `finish` is gone and `build`
+  carries the validation it duplicated.
 - The optimizer replaces closure-based rule predicates with typed fact
   identities, deterministic cache keys, and replayable proof terms, enforces
   content-addressed opaque expression interning, and establishes

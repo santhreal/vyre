@@ -34766,7 +34766,7 @@ seam = "foundation-ir"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 8822
+exported_item_count = 8823
 
   [[package.item]]
   path = "alloc::string::String::from(err: vyre_foundation::serial::wire::encode::WireEncodeErr) -> alloc::string::String"
@@ -35980,7 +35980,21 @@ exported_item_count = 8822
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "impl core::ops::deref::Deref for vyre_foundation::ir::ProgramGraphBuilder"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "impl core::ops::deref::Deref for vyre_foundation::security::SanitizedBuffer"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "impl core::ops::deref::DerefMut for vyre_foundation::ir::ProgramGraphBuilder"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -55601,36 +55615,8 @@ exported_item_count = 8822
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::ir::ProgramGraphBuilder::add_bounded_loop(&mut self, name_prefix: &str, body: &vyre_foundation::ir::ProgramGraph, loop_carried_inputs: &[vyre_foundation::ir::GraphValueId], step_inputs: &[vyre_foundation::ir::GraphValueId], bounds: vyre_foundation::ir::ControlBounds) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir::GraphValueId>, vyre_foundation::ir::ProgramGraphError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::ir::ProgramGraphBuilder::add_conditional_branch(&mut self, name_prefix: &str, condition: vyre_foundation::ir::GraphValueId, then_graph: &vyre_foundation::ir::ProgramGraph, else_graph: &vyre_foundation::ir::ProgramGraph, inputs: &[vyre_foundation::ir::GraphValueId]) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir::GraphValueId>, vyre_foundation::ir::ProgramGraphError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::ir::ProgramGraphBuilder::add_effect_barrier(&mut self, name: impl core::convert::Into<alloc::string::String>, effect: vyre_foundation::ir::ExternalEffect, inputs: alloc::vec::Vec<vyre_foundation::ir::GraphInput>, outputs: alloc::vec::Vec<vyre_foundation::ir::GraphOutput>) -> core::result::Result<(vyre_foundation::ir::GraphNodeId, alloc::vec::Vec<vyre_foundation::ir::GraphValueId>), vyre_foundation::ir::ProgramGraphError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::ir::ProgramGraphBuilder::add_node(&mut self, name: impl core::convert::Into<alloc::string::String>, program: vyre_foundation::ir::Program, inputs: alloc::vec::Vec<vyre_foundation::ir::GraphInput>, outputs: alloc::vec::Vec<vyre_foundation::ir::GraphOutput>) -> core::result::Result<(vyre_foundation::ir::GraphNodeId, alloc::vec::Vec<vyre_foundation::ir::GraphValueId>), vyre_foundation::ir::ProgramGraphError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::ir::ProgramGraphBuilder::add_registered_operation(&mut self, name: impl core::convert::Into<alloc::string::String>, program: vyre_foundation::ir::Program, inputs: alloc::vec::Vec<vyre_foundation::ir::GraphInput>, outputs: alloc::vec::Vec<vyre_foundation::ir::GraphOutput>) -> core::result::Result<(vyre_foundation::ir::GraphNodeId, alloc::vec::Vec<vyre_foundation::ir::GraphValueId>), vyre_foundation::ir::ProgramGraphError>"
-  kind = "fn"
+  path = "vyre_foundation::ir::ProgramGraphBuilder::Target = vyre_foundation::ir::ProgramGraph"
+  kind = "type"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -55650,14 +55636,14 @@ exported_item_count = 8822
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::ir::ProgramGraphBuilder::finish(self) -> core::result::Result<vyre_foundation::ir::ProgramGraph, vyre_foundation::ir::ProgramGraphError>"
+  path = "vyre_foundation::ir::ProgramGraphBuilder::deref(&self) -> &Self::Target"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::ir::ProgramGraphBuilder::inline_subgraph(&mut self, name_prefix: &str, subgraph: &vyre_foundation::ir::ProgramGraph, input_mapping: &alloc::collections::btree::map::BTreeMap<vyre_foundation::ir::GraphValueId, vyre_foundation::ir::GraphValueId>) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir::GraphValueId>, vyre_foundation::ir::ProgramGraphError>"
+  path = "vyre_foundation::ir::ProgramGraphBuilder::deref_mut(&mut self) -> &mut Self::Target"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -59677,6 +59663,27 @@ exported_item_count = 8822
   [[package.item]]
   path = "vyre_foundation::match_result::ByteRange::tag: u32"
   kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::node_visitor_arm!"
+  kind = "macro"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::node_visitor_uniform_arm!"
+  kind = "macro"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::node_visitor_uniform_arms!"
+  kind = "macro"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
