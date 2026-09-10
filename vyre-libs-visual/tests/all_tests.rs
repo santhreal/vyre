@@ -1,5 +1,8 @@
 //! One binary for every integration test in this crate.
 
+#[path = "contract_cases/visual_compositions__conformance_semantics.rs"]
+mod visual_compositions_conformance_semantics;
+
 #[path = "contract_cases/visual_compositions__cell_grid.rs"]
 mod visual_compositions_cell_grid;
 

@@ -268,7 +268,8 @@ inventory::submit! {
         OP_ID,
         || text_run_blend("glyphs", 1, "atlas", 2, 2, "bg", "out", 2, 2),
         Some(|| {
-            let glyph_data = [0u32, 0, 1, 1, 0, 0, 0xFF00_00FF]; // (0,0) 1x1 at atlas (0,0), blue
+            // (0,0) 1x1 at atlas (0,0), blue: bits [23:16] carry B.
+            let glyph_data = [0u32, 0, 1, 1, 0, 0, 0xFFFF_0000];
             let atlas_data = [0xFF00_0000u32, 0, 0, 0]; // 255 alpha at (0,0)
             let bg_data = [0xFF00_0000u32; 4]; // black opaque
             vec![vec![

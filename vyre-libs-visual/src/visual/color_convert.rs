@@ -266,7 +266,10 @@ pub fn unpremultiply_alpha(input: &str, output: &str, count: u32) -> Program {
     )
 }
 
-const EXPECTED_GRAYSCALE_OUTPUT_BYTES: [u8; 8] = [0x4C, 0x4C, 0x4C, 0xFF, 0x96, 0x96, 0x96, 0xFF];
+// Rec. 601 fixed point over the case input: red gives
+// `(77 * 255 + 128) >> 8 = 77 = 0x4D` and green gives
+// `(150 * 255 + 128) >> 8 = 149 = 0x95`.
+const EXPECTED_GRAYSCALE_OUTPUT_BYTES: [u8; 8] = [0x4D, 0x4D, 0x4D, 0xFF, 0x95, 0x95, 0x95, 0xFF];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library_unconstrained(
