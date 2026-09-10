@@ -11,9 +11,11 @@ use vyre_lower::KernelDescriptor;
 
 mod emitter;
 mod error;
+mod grid_segments;
 pub mod patterns;
 pub mod program;
 pub use error::EmitError;
+pub use grid_segments::grid_segment_entry_points;
 
 /// Digest of this emitter's source, stamped in at build time.
 ///
@@ -32,28 +34,6 @@ pub const LOWERING_DIGEST: &str = env!("VYRE_NAGA_LOWERING_DIGEST");
 /// that order, and the boundary between two submissions publishes every write
 /// the earlier segment made.
 pub const GRID_SEGMENT_ENTRY_PREFIX: &str = "main_grid_segment_";
-
-/// Entry-point names of the dispatch segments `desc` emits, in submission
-/// order.
-///
-/// # Errors
-///
-/// Returns [`EmitError`] when the descriptor's fence placement admits no
-/// launch boundary.
-pub fn grid_segment_entry_points(desc: &KernelDescriptor) -> Result<Vec<String>, EmitError> {
-    let count = vyre_lower::dispatch_segments(desc)
-        .map_err(|source| EmitError::InvalidDescriptor(source.to_string()))?
-        .len();
-    Ok((0..count)
-        .map(|index| {
-            if index == 0 {
-                "main".to_owned()
-            } else {
-                format!("{GRID_SEGMENT_ENTRY_PREFIX}{index}")
-            }
-        })
-        .collect())
-}
 
 /// Stable diagnostic row emitted when binding a lowered Vyre operation into a
 /// Naga module.
