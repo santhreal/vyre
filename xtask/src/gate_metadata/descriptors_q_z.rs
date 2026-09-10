@@ -103,7 +103,7 @@ pub const GATES_Q_Z: [GateDescriptor; 39] = [
         ],
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::release_provenance::tests::release_provenance_gate_enforces_clean_tree_and_rejects_unapproved_dependencies",
+        proof: "crate::gates::release_provenance::tests::an_unapproved_license_becomes_a_finding_naming_the_dependency",
     },
     GateDescriptor {
         name: "release-workload-matrix",
@@ -471,7 +471,7 @@ pub const GATES_Q_Z: [GateDescriptor; 39] = [
         artifacts: &[],
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::workspace_build::tests::workspace_check_invokes_cargo_check_across_all_features",
+        proof: "crate::gates::workspace_build::tests::every_workspace_gate_compiles_the_whole_workspace",
     },
     GateDescriptor {
         name: "workspace-clippy",
@@ -483,7 +483,7 @@ pub const GATES_Q_Z: [GateDescriptor; 39] = [
         artifacts: &[],
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::workspace_build::tests::the_driver_separator_bounds_the_cargo_arguments",
+        proof: "crate::gates::workspace_build::tests::only_clippy_sends_arguments_past_the_driver_separator",
     },
     GateDescriptor {
         name: "workspace-docs",
@@ -495,7 +495,7 @@ pub const GATES_Q_Z: [GateDescriptor; 39] = [
         artifacts: &[],
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::workspace_build::tests::only_the_gate_that_cannot_deny_a_warning_judges_one",
+        proof: "crate::cargo_runner::tests::only_the_gate_that_cannot_deny_a_warning_judges_one",
     },
     GateDescriptor {
         name: "workspace-membership",
@@ -519,6 +519,6 @@ pub const GATES_Q_Z: [GateDescriptor; 39] = [
         artifacts: &[],
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::workspace_build::tests::workspace_tests_resolves_tested_layer_contract",
+        proof: "crate::gates::workspace_build::tests::every_tested_layer_is_one_the_registry_declares",
     },
 ];

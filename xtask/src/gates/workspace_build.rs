@@ -16,142 +16,6 @@ use std::process::Command;
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
-/// One compiler diagnostic, reduced to what a finding carries.
-struct Diagnostic {
-    file: Option<String>,
-    line: Option<u32>,
-    message: String,
-}
-
-/// What one cargo invocation produced.
-///
-/// The two answers are kept apart because they mean opposite things. `found` is
-/// what the compiler said about the source. `unmeasured` names a file the build
-/// needed and did not find under its own build directory, which says the run
-/// never reached the source at all.
-struct Run {
-    /// Error diagnostics the compiler emitted.
-    found: Vec<Diagnostic>,
-    /// A build-directory path the run named that is no longer there.
-    unmeasured: Option<String>,
-}
-
-/// Run one cargo invocation and return the diagnostics it emitted.
-///
-/// `--message-format=json` is the only reason this is reliable: a gate that
-/// scraped human output counted the same error twice as soon as cargo repeated
-/// its summary. It goes before any `--`, because everything after that
-/// separator reaches the compiler driver instead of cargo, and clippy-driver
-/// answers an unknown option with `Unrecognized option` and exit 101 per crate.
-/// Appended blindly, it turned the clippy gate into one that could only report
-/// that it had not run, so the workspace was neither clippy-clean nor dirty for
-/// as long as it stood. Nothing here sets a build-affecting flag or variable,
-/// because build configuration is declared once in `.cargo/config.toml`.
-///
-/// `judge_warnings` is for a gate whose command cannot deny them. `cargo doc`
-/// takes no trailing rustdoc argument, so a broken intra-doc link arrives as a
-/// warning, and recording only errors let this gate report a clean workspace
-/// while rustdoc under a deny flag refused the same tree. A gate that cannot
-/// fail on the thing its name claims certifies what it never checked.
-fn diagnostics(root: &Path, arguments: &[&str], judge_warnings: bool) -> Result<Run, GateError> {
-    let cargo = crate::cargo_runner::binary(root);
-    let (cargo_arguments, driver_arguments) = split_at_driver(arguments);
-    let output = Command::new(&cargo)
-        .args(cargo_arguments)
-        .arg("--message-format=json")
-        .args(driver_arguments)
-        .current_dir(root)
-        .output()
-        .map_err(|error| {
-            GateError::new(
-                format!(
-                    "cannot run `{} {}`: {error}",
-                    cargo.display(),
-                    arguments.join(" ")
-                ),
-                "restore the cargo_full wrapper at the workspace root",
-            )
-        })?;
-    let mut found = Vec::new();
-    for line in String::from_utf8_lossy(&output.stdout).lines() {
-        let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
-            continue;
-        };
-        if value.get("reason").and_then(serde_json::Value::as_str) != Some("compiler-message") {
-            continue;
-        }
-        let Some(message) = value.get("message") else {
-            continue;
-        };
-        let level = message.get("level").and_then(serde_json::Value::as_str);
-        if !judged(level, judge_warnings) {
-            continue;
-        }
-        let text = message
-            .get("message")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or("the compiler reported a diagnostic with no message")
-            .to_string();
-        let primary = message
-            .get("spans")
-            .and_then(serde_json::Value::as_array)
-            .and_then(|spans| {
-                spans.iter().find(|span| {
-                    span.get("is_primary")
-                        .and_then(serde_json::Value::as_bool)
-                        .unwrap_or(false)
-                })
-            });
-        found.push(Diagnostic {
-            file: primary
-                .and_then(|span| span.get("file_name"))
-                .and_then(serde_json::Value::as_str)
-                .map(str::to_string),
-            line: primary
-                .and_then(|span| span.get("line_start"))
-                .and_then(serde_json::Value::as_u64)
-                .and_then(|line| u32::try_from(line).ok()),
-            message: text,
-        });
-    }
-    // A build directory deleted under a running compile fails with a diagnostic
-    // naming a file that is not there. The run measured nothing, so it is
-    // classified before the status is judged: reporting it as a compile error
-    // would blame the source for the state of the disk, and reporting the
-    // status as an unexplained failure would do the same in one line.
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let unmeasured = crate::cargo_runner::unmeasured(&stderr).or_else(|| {
-        found
-            .iter()
-            .find_map(|diagnostic| crate::cargo_runner::unmeasured(&diagnostic.message))
-    });
-    // A failing status with no parsed diagnostic is still a failure, and it is
-    // the one shape a diagnostic-counting gate can report as clean. That is the
-    // gate-that-cannot-fail defect, so the status is judged too.
-    if unmeasured.is_none() && !output.status.success() && found.is_empty() {
-        return Err(GateError::new(
-            format!(
-                "`cargo {}` exited {} and emitted no diagnostic: {}",
-                arguments.join(" "),
-                output.status.code().unwrap_or(-1),
-                stderr.trim()
-            ),
-            "run the same cargo command by hand and fix what it reports",
-        ));
-    }
-    Ok(Run { found, unmeasured })
-}
-
-/// Whether a diagnostic at `level` is one the calling gate judges.
-///
-/// Split out because the gate that could not fail on a broken intra-doc link
-/// was proven by a test that read its command line. A command line is not a
-/// verdict, and the verdict was the defect: a predicate is decidable without a
-/// cargo run, so what the gate counts is what gets proven.
-fn judged(level: Option<&str>, judge_warnings: bool) -> bool {
-    level == Some("error") || (judge_warnings && level == Some("warning"))
-}
-
 /// Turn the diagnostics of one cargo invocation into a report.
 fn report_diagnostics(
     root: &Path,
@@ -162,7 +26,7 @@ fn report_diagnostics(
     let mut report = Report::clean();
     let tree = Tree::open(root)?;
     report.cover_complete("workspace members", tree.member_manifests()?.len());
-    let run = diagnostics(root, arguments, judge_warnings)?;
+    let run = crate::cargo_runner::diagnostics(root, arguments, judge_warnings)?;
     if let Some(missing) = run.unmeasured {
         report.find(Finding::new(
             format!(
@@ -174,12 +38,26 @@ fn report_diagnostics(
         report.note(format!("cargo {}", arguments.join(" ")));
         return Ok(report);
     }
-    for diagnostic in run.found {
-        report.find(match (diagnostic.file, diagnostic.line) {
-            (Some(file), Some(line)) => Finding::at(file, line, diagnostic.message, fix),
-            (Some(file), None) => Finding::in_file(file, diagnostic.message, fix),
-            (None, _) => Finding::new(diagnostic.message, fix),
-        });
+    // A failing status with no parsed diagnostic is still a failure, and it is
+    // the one shape a diagnostic-counting gate can report as clean. That is the
+    // gate-that-cannot-fail defect, so the status is judged too.
+    if run.failed_silently() {
+        return Err(GateError::new(
+            format!(
+                "`cargo {}` exited {} and emitted no diagnostic: {}",
+                arguments.join(" "),
+                run.code(),
+                run.stderr.trim()
+            ),
+            "run the same cargo command by hand and fix what it reports",
+        ));
+    }
+    for diagnostic in &run.found {
+        report.find(
+            diagnostic
+                .place(root, &diagnostic.message, fix)
+                .unwrap_or_else(|| Finding::new(diagnostic.message.clone(), fix)),
+        );
     }
     report.note(format!("cargo {}", arguments.join(" ")));
     Ok(report)
@@ -192,7 +70,7 @@ impl crate::gate::GateBehavior for WorkspaceCheck {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         report_diagnostics(
             &ctx.root,
-            &["check", "--workspace", "--all-features", "--all-targets"],
+            CHECK,
             "fix the compile error the diagnostic names",
             false,
         )
@@ -206,15 +84,7 @@ impl crate::gate::GateBehavior for WorkspaceClippy {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         report_diagnostics(
             &ctx.root,
-            &[
-                "clippy",
-                "--workspace",
-                "--all-features",
-                "--all-targets",
-                "--",
-                "-D",
-                "warnings",
-            ],
+            CLIPPY,
             "fix the lint the diagnostic names, or justify an allow at the item with a reason",
             false,
         )
@@ -232,7 +102,7 @@ impl crate::gate::GateBehavior for WorkspaceDocs {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         report_diagnostics(
             &ctx.root,
-            &["doc", "--workspace", "--all-features", "--no-deps"],
+            DOC,
             "repair the item the diagnostic names, including its intra-doc links",
             true,
         )
@@ -349,99 +219,105 @@ impl crate::gate::GateBehavior for WorkspaceTests {
     }
 }
 
-/// Split an argument list into what cargo reads and what the compiler driver
-/// reads, at the first `--`.
-fn split_at_driver<'a>(arguments: &'a [&'a str]) -> (&'a [&'a str], &'a [&'a str]) {
-    match arguments.iter().position(|argument| *argument == "--") {
-        Some(at) => (&arguments[..at], &arguments[at..]),
-        None => (arguments, &arguments[arguments.len()..]),
-    }
-}
+/// Every argument list this file hands cargo, so a test can read the real one.
+///
+/// Inlined at the call site, each list was only ever asserted against a copy of
+/// itself in a test, which proves the copy and not the gate.
+const CHECK: &[&str] = &["check", "--workspace", "--all-features", "--all-targets"];
+
+/// Clippy's argument list, denying warnings past the driver separator.
+const CLIPPY: &[&str] = &[
+    "clippy",
+    "--workspace",
+    "--all-features",
+    "--all-targets",
+    "--",
+    "-D",
+    "warnings",
+];
+
+/// Rustdoc's argument list.
+const DOC: &[&str] = &["doc", "--workspace", "--all-features", "--no-deps"];
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// WHY: `--message-format=json` after the `--` reaches clippy-driver, which
-    /// answers with `Unrecognized option: 'message-format'` and exit 101 for
-    /// every crate. The gate then had no diagnostic to count and could only
-    /// report that it had not run, so the workspace was neither clippy-clean nor
-    /// dirty while that stood. The split is what keeps the flag on cargo's side.
+    /// WHY: every one of these gates judges the whole workspace, and a list
+    /// that quietly lost `--all-features` or `--all-targets` would still report
+    /// a clean tree while leaving most of it uncompiled. The earlier proofs
+    /// built their own copy of each list and asserted the copy, so the gates
+    /// could be narrowed without turning anything red. These read the lists the
+    /// gates actually hand cargo.
     #[test]
-    fn the_driver_separator_bounds_the_cargo_arguments() {
-        let clippy = [
-            "clippy",
-            "--workspace",
-            "--all-features",
-            "--all-targets",
-            "--",
-            "-D",
-            "warnings",
-        ];
-        let (cargo, driver) = split_at_driver(&clippy);
+    fn every_workspace_gate_compiles_the_whole_workspace() {
+        for (name, arguments) in [("check", CHECK), ("clippy", CLIPPY), ("doc", DOC)] {
+            let (cargo, _) = crate::cargo_runner::split_at_driver(arguments);
+            assert_eq!(
+                cargo.first(),
+                Some(&name),
+                "the `{name}` gate must run `cargo {name}`"
+            );
+            for required in ["--workspace", "--all-features"] {
+                assert!(
+                    cargo.contains(&required),
+                    "`cargo {name}` must pass `{required}` or it judges part of the tree"
+                );
+            }
+        }
+        assert!(
+            CHECK.contains(&"--all-targets") && CLIPPY.contains(&"--all-targets"),
+            "a compile that skips tests and benches leaves them unjudged"
+        );
+        assert!(
+            DOC.contains(&"--no-deps"),
+            "rendering dependency documentation reports defects nobody here can fix"
+        );
+    }
+
+    /// WHY: `--message-format=json` after the `--` reaches clippy-driver, which
+    /// answers `Unrecognized option: 'message-format'` and exit 101 per crate,
+    /// so only the clippy list may carry a driver separator at all, and what
+    /// follows it must be the deny flag rather than anything cargo needs.
+    #[test]
+    fn only_clippy_sends_arguments_past_the_driver_separator() {
+        let (cargo, driver) = crate::cargo_runner::split_at_driver(CLIPPY);
         assert_eq!(
             cargo,
             ["clippy", "--workspace", "--all-features", "--all-targets"]
         );
         assert_eq!(driver, ["--", "-D", "warnings"]);
-
-        let check = ["check", "--workspace"];
-        let (cargo, driver) = split_at_driver(&check);
-        assert_eq!(cargo, ["check", "--workspace"]);
-        assert!(driver.is_empty());
-    }
-    /// WHY: workspace-check compiles every target with all features enabled.
-    #[test]
-    fn workspace_check_invokes_cargo_check_across_all_features() {
-        let check_args = ["check", "--workspace", "--all-targets", "--all-features"];
-        let (cargo, driver) = split_at_driver(&check_args);
-        assert_eq!(
-            cargo,
-            ["check", "--workspace", "--all-targets", "--all-features"]
-        );
-        assert!(driver.is_empty());
-    }
-
-    /// WHY: workspace-docs renders docs without dependencies.
-    #[test]
-    fn workspace_docs_constructs_no_deps_doc_arguments() {
-        let doc_args = ["doc", "--workspace", "--no-deps"];
-        let (cargo, driver) = split_at_driver(&doc_args);
-        assert_eq!(cargo, ["doc", "--workspace", "--no-deps"]);
-        assert!(driver.is_empty());
-    }
-
-    /// WHY: `cargo doc` takes no trailing rustdoc argument, so a broken
-    /// intra-doc link arrives as a warning. Recording only errors let this gate
-    /// report a clean workspace while rustdoc under a deny flag refused the same
-    /// tree, and the gate's own proof read its command line instead of its
-    /// verdict. This decides every level the compiler emits.
-    #[test]
-    fn only_the_gate_that_cannot_deny_a_warning_judges_one() {
-        assert!(judged(Some("error"), false), "an error is always judged");
-        assert!(judged(Some("error"), true), "an error is always judged");
-        assert!(
-            judged(Some("warning"), true),
-            "a broken intra-doc link is a warning, and this gate has no flag to deny it"
-        );
-        assert!(
-            !judged(Some("warning"), false),
-            "clippy denies warnings on its own command line, so they arrive as errors"
-        );
-        for ignored in ["note", "help", "failure-note"] {
+        for (name, arguments) in [("check", CHECK), ("doc", DOC)] {
+            let (_, driver) = crate::cargo_runner::split_at_driver(arguments);
             assert!(
-                !judged(Some(ignored), true),
-                "`{ignored}` explains a diagnostic and is not one"
+                driver.is_empty(),
+                "`cargo {name}` sends nothing to a compiler driver"
             );
         }
-        assert!(
-            !judged(None, true),
-            "a compiler message with no level states no verdict"
-        );
     }
 
-    /// WHY: workspace-tests runs tests across contract-owning layer packages.
+    /// WHY: the roster of tested crates is derived from these layer names, so a
+    /// layer renamed in the ownership registry reduces this gate to running no
+    /// tests. Asserting the constant against a copy of itself proved the copy;
+    /// this reads the registry in the checkout and fails when a name stops
+    /// naming anything.
     #[test]
-    fn workspace_tests_resolves_tested_layer_contract() {
-        assert_eq!(TESTED_LAYERS, &["foundation", "libraries", "semantics"]);
+    fn every_tested_layer_is_one_the_registry_declares() {
+        let root = crate::checkout::checkout_root();
+        let tree = Tree::open(&root).expect("open the checkout");
+        let mut report = Report::clean();
+        let records =
+            crate::gates::crate_registry::load_registry(&tree, &mut report).expect("read registry");
+        assert!(
+            report.findings.is_empty(),
+            "the ownership registry does not parse: {:?}",
+            report.findings
+        );
+        for layer in TESTED_LAYERS {
+            assert!(
+                records.iter().any(|record| record.layer == *layer),
+                "no crate declares layer `{layer}`, so naming it here tests nothing"
+            );
+        }
     }
 }

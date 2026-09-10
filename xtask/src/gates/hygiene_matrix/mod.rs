@@ -237,11 +237,7 @@ impl GateBehavior for HygieneMatrix {
             blockers,
         };
 
-        inspection.generates_evidence(
-            &format!("{ARTIFACT_DIR}/hygiene-matrix.json"),
-            crate::evidence_record::MeasurementRecord::HostOnly,
-            &matrix,
-        );
+        inspection.generates_host_evidence(&format!("{ARTIFACT_DIR}/hygiene-matrix.json"), &matrix);
         declare_sibling_artifacts(&mut inspection, &matrix);
         let mut report = crate::artifact_gate::settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.cover_complete("scanned release files", scanned_files);
@@ -312,21 +308,13 @@ fn declare_sibling_artifacts(
             matrix.release_blocker_count
         )]
     };
-    inspection.generates_evidence(
-        &format!("{ARTIFACT_DIR}/implementation-intake.json"),
-        crate::evidence_record::MeasurementRecord::HostOnly,
-        &HygieneIntakeArtifact {
-            schema_version: 1,
-            release_blocker_count: matrix.release_blocker_count,
-            intake_summary: matrix.intake_summary.clone(),
-            blockers: intake_blockers,
-        },
-    );
-    inspection.generates_evidence(
-        &format!("{ARTIFACT_DIR}/threshold-policy.json"),
-        crate::evidence_record::MeasurementRecord::HostOnly,
-        &matrix.threshold_policy,
-    );
+    inspection.generates_host_evidence(&format!("{ARTIFACT_DIR}/implementation-intake.json"), &HygieneIntakeArtifact {
+        schema_version: 1,
+        release_blocker_count: matrix.release_blocker_count,
+        intake_summary: matrix.intake_summary.clone(),
+        blockers: intake_blockers,
+    });
+    inspection.generates_host_evidence(&format!("{ARTIFACT_DIR}/threshold-policy.json"), &matrix.threshold_policy);
     for &(artifact, scan, patterns) in HYGIENE_SCANS {
         let findings = matrix
             .findings
@@ -351,16 +339,12 @@ fn declare_sibling_artifacts(
                 release_blocking_findings.len()
             )]
         };
-        inspection.generates_evidence(
-            &format!("{ARTIFACT_DIR}/{artifact}"),
-            crate::evidence_record::MeasurementRecord::HostOnly,
-            &HygieneScan {
-                schema_version: 1,
-                scan: scan.to_string(),
-                findings,
-                release_blocking_findings,
-                blockers,
-            },
-        );
+        inspection.generates_host_evidence(&format!("{ARTIFACT_DIR}/{artifact}"), &HygieneScan {
+            schema_version: 1,
+            scan: scan.to_string(),
+            findings,
+            release_blocking_findings,
+            blockers,
+        });
     }
 }

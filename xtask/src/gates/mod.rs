@@ -107,6 +107,7 @@ pub mod use_paths;
 pub mod variant_list_closure;
 pub mod verification_budget;
 pub mod wire_determinism;
+pub mod workflow_commands;
 pub mod workspace_build;
 pub mod worktree_lifetime;
 

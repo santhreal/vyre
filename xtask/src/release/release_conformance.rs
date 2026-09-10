@@ -343,11 +343,7 @@ fn measure(workspace_root: &Path, config: &Config) -> Inspection {
         }
         inspection.generates_evidence(artifact, measurement_of(backend_id), &body);
     }
-    inspection.generates_evidence(
-        RELEASE_LOG,
-        crate::evidence_record::MeasurementRecord::HostOnly,
-        &release_log(workspace_root, config, &failures),
-    );
+    inspection.generates_host_evidence(RELEASE_LOG, &release_log(workspace_root, config, &failures));
     inspection
 }
 

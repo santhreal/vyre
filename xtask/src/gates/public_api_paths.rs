@@ -698,22 +698,6 @@ fn declared_item_name(line: &str) -> Option<String> {
     Some(name.to_string())
 }
 
-/// Every Rust source of one crate, as text.
-///
-/// The tree walk already excludes build output and version control, and a crate
-/// with no `src` directory is a crate that publishes nothing this gate can judge.
-fn crate_sources(tree: &scan::Tree, directory: &str) -> Result<Vec<String>, GateError> {
-    let root = format!("{directory}/src");
-    if !tree.exists(&root) {
-        return Ok(Vec::new());
-    }
-    let mut sources = Vec::new();
-    for path in tree.rust(&[root.as_str()])? {
-        sources.push(tree.read(&path)?);
-    }
-    Ok(sources)
-}
-
 /// What an unreadable snapshot axis costs, and how to restore it.
 const SNAPSHOT_FIX: &str = "restore the committed snapshots under docs/public-api; `xtask public-api-snapshot --write --crate <name>` regenerates one from the crate it belongs to";
 
@@ -811,7 +795,7 @@ impl crate::gate::GateBehavior for PublicApiPaths {
                     SNAPSHOT_FIX,
                 )
             })?;
-            let sources = crate_sources(&tree, directory)?;
+            let sources = tree.crate_sources(directory)?;
             let declared = declarations(&sources);
             let mut found = duplicates(&text);
             let before = found.len();

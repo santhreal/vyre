@@ -636,11 +636,7 @@ fn inspect(tree: &Tree, measurement: &Measurement) -> crate::artifact_gate::Insp
     for finding in judge(measurement, &declared) {
         inspection.find(finding);
     }
-    inspection.generates_evidence(
-        ARTIFACT,
-        crate::evidence_record::MeasurementRecord::HostOnly,
-        measurement,
-    );
+    inspection.generates_host_evidence(ARTIFACT, measurement);
     inspection
 }
 

@@ -321,7 +321,7 @@ pub const GATES_A_G: [GateDescriptor; 56] = [
         artifacts: &[],
         prerequisites: &[],
         resource_class: ResourceClass::Process,
-        proof: "crate::gates::consumer_compilation::tests::finds_compile_failure_in_consumer",
+        proof: "crate::gates::consumer_compilation::tests::every_consumer_directory_holding_a_manifest_is_enumerated",
     },
     GateDescriptor {
         name: "contract-in-source",
@@ -475,7 +475,7 @@ pub const GATES_A_G: [GateDescriptor; 56] = [
         artifacts: &[],
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::device_test_compilation::tests::diagnostic_to_finding_formats_message_and_fix",
+        proof: "crate::gates::device_test_compilation::tests::a_diagnostic_naming_an_unrequested_target_is_attributed_to_the_requested_one",
     },
     GateDescriptor {
         name: "device-test-gating",

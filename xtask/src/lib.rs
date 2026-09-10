@@ -23,6 +23,7 @@ pub mod checkout;
 pub mod cli;
 pub mod config_space;
 pub mod delegate;
+pub mod device_probe;
 pub mod docs;
 pub mod evidence_record;
 pub mod fixture_checkout;

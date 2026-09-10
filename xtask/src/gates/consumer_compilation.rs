@@ -9,7 +9,6 @@
 //! each package with `--all-targets`.
 
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use crate::gate::{Finding, GateBehavior, GateCtx, GateError, Report};
 
@@ -76,42 +75,30 @@ pub fn consumer_manifests(root: &Path) -> Result<Vec<PathBuf>, GateError> {
     Ok(manifests)
 }
 
-/// One compiler diagnostic parsed from `--message-format=json`.
-#[derive(Debug)]
-struct Diagnostic {
-    file: Option<String>,
-    line: Option<u32>,
-    message: String,
-}
-
 /// Run cargo check on one consumer manifest and collect findings.
 fn check_consumer(root: &Path, manifest_path: &Path) -> Result<Vec<Finding>, GateError> {
-    let cargo = crate::cargo_runner::binary(root);
     let full_manifest = root.join(manifest_path);
+    let Some(manifest_argument) = full_manifest.to_str() else {
+        return Err(GateError::new(
+            format!(
+                "consumer manifest `{}` is not valid UTF-8, so it cannot be named on a command line",
+                full_manifest.display()
+            ),
+            "rename the consumer directory to a UTF-8 path",
+        ));
+    };
+    let run = crate::cargo_runner::diagnostics(
+        root,
+        &[
+            "check",
+            "--manifest-path",
+            manifest_argument,
+            "--all-targets",
+        ],
+        false,
+    )?;
 
-    let output = Command::new(&cargo)
-        .arg("check")
-        .arg("--manifest-path")
-        .arg(&full_manifest)
-        .arg("--all-targets")
-        .arg("--message-format=json")
-        .current_dir(root)
-        .output()
-        .map_err(|error| {
-            GateError::new(
-                format!(
-                    "cannot run `cargo check --manifest-path {} --all-targets`: {error}",
-                    manifest_path.display()
-                ),
-                "restore the cargo_full wrapper at the workspace root",
-            )
-        })?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let diagnostics = parse_compiler_diagnostics(&stdout);
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    if let Some(missing) = crate::cargo_runner::unmeasured(&stderr) {
+    if let Some(missing) = run.unmeasured {
         return Ok(vec![Finding::new(
             format!(
                 "`cargo check --manifest-path {}` measured nothing: the build named `{missing}`, which the build directory does not carry",
@@ -121,14 +108,14 @@ fn check_consumer(root: &Path, manifest_path: &Path) -> Result<Vec<Finding>, Gat
         )]);
     }
 
-    if !output.status.success() && diagnostics.is_empty() {
+    if run.failed_silently() {
         return Ok(vec![Finding::in_file(
             manifest_path,
             format!(
                 "consumer `{}` exited {} and emitted no compiler diagnostic: {}",
                 manifest_path.display(),
-                output.status.code().unwrap_or(-1),
-                stderr.trim()
+                run.code(),
+                run.stderr.trim()
             ),
             format!(
                 "repair compilation of consumer `{}`",
@@ -137,115 +124,64 @@ fn check_consumer(root: &Path, manifest_path: &Path) -> Result<Vec<Finding>, Gat
         )]);
     }
 
-    let mut findings = Vec::new();
-    if let Some(diag) = diagnostics.into_iter().next() {
-        let msg = format!(
-            "consumer `{}` compile error: {}",
-            manifest_path.display(),
-            diag.message
-        );
-        let fix = format!("fix compiler error in `{}`", manifest_path.display());
-        let finding = match (diag.file, diag.line) {
-            (Some(file), Some(line)) => {
-                let file_path = PathBuf::from(file);
-                let relative = file_path.strip_prefix(root).unwrap_or(&file_path);
-                Finding::at(relative, line, msg, fix)
-            }
-            (Some(file), None) => {
-                let file_path = PathBuf::from(file);
-                let relative = file_path.strip_prefix(root).unwrap_or(&file_path);
-                Finding::in_file(relative, msg, fix)
-            }
-            (None, _) => Finding::in_file(manifest_path, msg, fix),
-        };
-        findings.push(finding);
-    }
-
-    Ok(findings)
-}
-
-/// Parse compiler error diagnostics from `--message-format=json` lines.
-fn parse_compiler_diagnostics(stdout: &str) -> Vec<Diagnostic> {
-    let mut diagnostics = Vec::new();
-    for line in stdout.lines() {
-        let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
-            continue;
-        };
-        if value.get("reason").and_then(serde_json::Value::as_str) != Some("compiler-message") {
-            continue;
-        }
-        let Some(message) = value.get("message") else {
-            continue;
-        };
-        if message.get("level").and_then(serde_json::Value::as_str) != Some("error") {
-            continue;
-        }
-        let text = message
-            .get("message")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or("compiler reported an error")
-            .to_string();
-        let primary = message
-            .get("spans")
-            .and_then(serde_json::Value::as_array)
-            .and_then(|spans| {
-                spans.iter().find(|span| {
-                    span.get("is_primary")
-                        .and_then(serde_json::Value::as_bool)
-                        .unwrap_or(false)
-                })
-            });
-        diagnostics.push(Diagnostic {
-            file: primary
-                .and_then(|span| span.get("file_name"))
-                .and_then(serde_json::Value::as_str)
-                .map(str::to_string),
-            line: primary
-                .and_then(|span| span.get("line_start"))
-                .and_then(serde_json::Value::as_u64)
-                .and_then(|l| u32::try_from(l).ok()),
-            message: text,
-        });
-    }
-    diagnostics
+    // One consumer that does not build is one finding. Every later diagnostic
+    // is a consequence of the first and names the same repair.
+    let Some(diagnostic) = run.found.first() else {
+        return Ok(Vec::new());
+    };
+    let message = format!(
+        "consumer `{}` compile error: {}",
+        manifest_path.display(),
+        diagnostic.message
+    );
+    let fix = format!("fix compiler error in `{}`", manifest_path.display());
+    Ok(vec![diagnostic
+        .place(root, &message, &fix)
+        .unwrap_or_else(|| Finding::in_file(manifest_path, message.clone(), fix.clone()))])
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// WHY: proves consumer enumeration finds manifests under the consumers directory.
+    /// WHY: nothing else compiles these packages. `cargo check --workspace`
+    /// skips them because they declare their own workspace table, so a consumer
+    /// this enumeration misses is never built by anything, and the gate reports
+    /// a clean tree while it is broken. The roster is derived from the
+    /// directory rather than declared, so what the derivation admits and
+    /// rejects is the contract.
     #[test]
-    fn enumerates_consumers_from_directory() {
+    fn every_consumer_directory_holding_a_manifest_is_enumerated() {
         let temp = tempfile::tempdir().expect("tempdir");
         let consumers = temp.path().join("consumers");
-        std::fs::create_dir_all(consumers.join("pkg-a")).unwrap();
-        std::fs::create_dir_all(consumers.join("pkg-b")).unwrap();
-        std::fs::write(
-            consumers.join("pkg-a/Cargo.toml"),
-            "[package]\nname = \"pkg-a\"\n",
-        )
-        .unwrap();
-        std::fs::write(
-            consumers.join("pkg-b/Cargo.toml"),
-            "[package]\nname = \"pkg-b\"\n",
-        )
-        .unwrap();
+        for package in ["pkg-b", "pkg-a"] {
+            std::fs::create_dir_all(consumers.join(package)).unwrap();
+            std::fs::write(
+                consumers.join(package).join("Cargo.toml"),
+                format!("[package]\nname = \"{package}\"\n"),
+            )
+            .unwrap();
+        }
+        std::fs::create_dir_all(consumers.join("not-a-package")).unwrap();
+        std::fs::write(consumers.join("README.md"), "consumers live here\n").unwrap();
 
         let manifests = consumer_manifests(temp.path()).expect("enumerate");
-        assert_eq!(manifests.len(), 2);
-        assert_eq!(manifests[0], PathBuf::from("consumers/pkg-a/Cargo.toml"));
-        assert_eq!(manifests[1], PathBuf::from("consumers/pkg-b/Cargo.toml"));
+        assert_eq!(
+            manifests,
+            vec![
+                PathBuf::from("consumers/pkg-a/Cargo.toml"),
+                PathBuf::from("consumers/pkg-b/Cargo.toml"),
+            ],
+            "every manifest is found, stated relative to the checkout, in a stable order"
+        );
     }
 
-    /// WHY: proves compiler error diagnostics are extracted from JSON output.
+    /// WHY: a checkout with no consumers directory is not a checkout whose
+    /// consumers all build. An error here would fail every gate run in a tree
+    /// that legitimately has none.
     #[test]
-    fn finds_compile_failure_in_consumer() {
-        let json = r#"{"reason":"compiler-message","package_id":"foo","message":{"rendered":"...","level":"error","message":"cannot find value `x` in this scope","spans":[{"file_name":"src/lib.rs","line_start":42,"is_primary":true}]}}"#;
-        let diags = parse_compiler_diagnostics(json);
-        assert_eq!(diags.len(), 1);
-        assert_eq!(diags[0].message, "cannot find value `x` in this scope");
-        assert_eq!(diags[0].file.as_deref(), Some("src/lib.rs"));
-        assert_eq!(diags[0].line, Some(42));
+    fn a_checkout_with_no_consumers_directory_enumerates_nothing() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        assert!(consumer_manifests(temp.path()).expect("enumerate").is_empty());
     }
 }

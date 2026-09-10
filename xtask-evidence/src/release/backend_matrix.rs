@@ -1153,32 +1153,20 @@ fn probe_nvidia_smi() -> GpuProbe {
 }
 
 fn probe_nvidia_smi_versions() -> (Option<String>, Option<String>) {
-    let Ok(output) = Command::new("nvidia-smi").output() else {
-        return (None, None);
-    };
-    if !output.status.success() {
-        return (None, None);
+    match xtask::device_probe::query(&[]) {
+        Some(answer) => parse_nvidia_smi_versions(&answer),
+        None => (None, None),
     }
-    parse_nvidia_smi_versions(&String::from_utf8_lossy(&output.stdout))
 }
 
 fn probe_nvidia_smi_device_details() -> Vec<GpuProbeDevice> {
-    let Ok(output) = Command::new("nvidia-smi")
-        .args([
+    xtask::device_probe::query_rows(
+        &[
             "--query-gpu=name,driver_version,memory.total,compute_cap",
             "--format=csv,noheader,nounits",
-        ])
-        .output()
-    else {
-        return Vec::new();
-    };
-    if !output.status.success() {
-        return Vec::new();
-    }
-    String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .filter_map(parse_nvidia_smi_device_detail)
-        .collect()
+        ],
+        parse_nvidia_smi_device_detail,
+    )
 }
 
 fn parse_nvidia_smi_device_detail(line: &str) -> Option<GpuProbeDevice> {

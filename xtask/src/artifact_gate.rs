@@ -226,6 +226,15 @@ impl Inspection {
         }
     }
 
+    /// Render `body` as one recorded evidence artifact no device took part in.
+    ///
+    /// The measurement class is in the name rather than an argument, which is
+    /// still the decision `generates_evidence` requires: a generator picks the
+    /// method that states what produced its numbers.
+    pub fn generates_host_evidence(&mut self, path: &str, body: &impl Serialize) {
+        self.generates_evidence(path, MeasurementRecord::HostOnly, body);
+    }
+
     /// Record one recorded evidence artifact whose bytes are already rendered.
     pub fn generates_evidence_text(
         &mut self,

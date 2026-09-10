@@ -1952,11 +1952,7 @@ impl GateBehavior for ApplicationRunnable {
             "{application_count} derived application(s) lowered through {target_count} registered production target(s); {} certificate(s) read",
             evidence.device_execution_certificates.len()
         ));
-        inspection.generates_evidence(
-            READINESS_EVIDENCE_PATH,
-            xtask::evidence_record::MeasurementRecord::HostOnly,
-            &evidence,
-        );
+        inspection.generates_host_evidence(READINESS_EVIDENCE_PATH, &evidence);
 
         let mut report = xtask::artifact_gate::settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.cover_complete("application-runnable contract paths", 9);

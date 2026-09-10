@@ -389,7 +389,7 @@ impl ReleaseProvenanceAuthority {
 
         let rustc_version = measure_rustc_version()?;
         let cargo_version = measure_cargo_version()?;
-        let bom_timestamp = timestamp::rfc3339_utc(measure_source_date_epoch(root)?);
+        let bom_timestamp = timestamp::rfc3339_utc(measure_source_date_epoch(root)?)?;
 
         // Canonical deterministic archive hash derived from all components
         let mut archive_hasher = blake3::Hasher::new();
@@ -1018,7 +1018,7 @@ mod measurement_tests {
             let seconds = parse_epoch_second(declared, "SOURCE_DATE_EPOCH")
                 .expect("a bare integer is a unix second");
             assert_eq!(
-                timestamp::rfc3339_utc(seconds),
+                timestamp::rfc3339_utc(seconds).expect("a representable second"),
                 rendered,
                 "for {declared:?}"
             );
