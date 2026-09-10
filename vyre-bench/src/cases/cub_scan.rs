@@ -137,6 +137,7 @@ impl BenchCase for CubScanBench {
                 min_speedup_x: 0.0,
                 backend_ids: vec!["cuda".to_string()],
             }],
+            device_bounds: Vec::new(),
         })
     }
 

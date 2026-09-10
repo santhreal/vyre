@@ -48,6 +48,9 @@ pub(crate) struct ConditionalPrepared {
     pub(crate) reset_program: Program,
     pub(crate) inputs: Vec<Vec<u8>>,
     pub(crate) input_bytes_total: u64,
+    /// Bytes the condition kernel moves in device memory for one sample, from
+    /// [`device_bytes_moved`].
+    pub(crate) device_bytes_moved: u64,
     pub(crate) baseline_output: Vec<Vec<u8>>,
     pub(crate) baseline_wall_ns: u64,
     pub(crate) resident: Option<ResidentInputSet>,
@@ -214,6 +217,7 @@ fn conditional_bench_run(
             bytes_read: Some(accounting.bytes_read),
             bytes_written: Some(accounting.bytes_written),
             bytes_touched: Some(accounting.bytes_touched),
+            device_bytes_moved: Some(prepared.device_bytes_moved),
             custom: super::conditional_metric_points(
                 prepared.labels.metric_prefix,
                 resident_used,
@@ -288,6 +292,31 @@ pub(crate) fn verify_sparse_outputs(
             "{noun} set differs between backend and baseline"
         )))
     }
+}
+
+/// Bytes the condition kernel moves in device memory for one sample.
+///
+/// Every input buffer is read once per sample whether it arrived that sample or
+/// was uploaded before it, and the kernel writes the counter word plus one
+/// identifier per rule that fired. The sparse output's readback size is not
+/// this figure: the buffer is sized for every rule firing at once, so
+/// reporting it as device traffic states a 4 MiB transfer for a kernel that
+/// streams 38 MB.
+pub(crate) fn device_bytes_moved(
+    labels: ConditionalLabels,
+    input_bytes_total: u64,
+    baseline_output: &[Vec<u8>],
+) -> Result<u64, BenchError> {
+    let count_words = baseline_output.get(FIRED_COUNT_OUTPUT).ok_or_else(|| {
+        BenchError::ExecutionFailed(format!(
+            "{} baseline produced no {} counter buffer",
+            labels.subject, labels.fired_noun
+        ))
+    })?;
+    let fired = u64::from(read_le_u32(labels, count_words, 0)?);
+    Ok(input_bytes_total
+        .saturating_add(4)
+        .saturating_add(fired.saturating_mul(4)))
 }
 
 fn read_le_u32(
@@ -530,6 +559,7 @@ mod tests {
             reset_program: Program::wrapped(vec![], [1, 1, 1], vec![]),
             inputs: vec![],
             input_bytes_total: 1_024,
+            device_bytes_moved: 1_032,
             baseline_output: vec![words(&[1]), words(&[7])],
             baseline_wall_ns: 99,
             resident: None,

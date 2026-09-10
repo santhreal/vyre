@@ -15,7 +15,7 @@ use crate::api::case::{
 use crate::api::suite::SuiteKind;
 use vyre_foundation::ir::Program;
 
-/// The speedup floor a case is held to, and what the floor is measured against.
+/// The bound a case is held to, and what the bound is measured against.
 ///
 /// Built through one of the constructors below rather than field by field: the
 /// class is a provenance claim, so a case says which comparison it is making by
@@ -24,10 +24,26 @@ use vyre_foundation::ir::Program;
 #[derive(Clone, Copy)]
 pub(crate) struct ContractDescription {
     pub(crate) primitive: &'static str,
-    pub(crate) baseline_crate: &'static str,
-    pub(crate) baseline_name: &'static str,
-    pub(crate) baseline_class: BaselineClass,
-    pub(crate) min_speedup_x: f64,
+    pub(crate) bound: ContractBound,
+}
+
+/// What a case's contract asserts.
+#[derive(Clone, Copy)]
+pub(crate) enum ContractBound {
+    /// A speedup floor over a named implementation of the same primitive.
+    Baseline {
+        baseline_crate: &'static str,
+        baseline_name: &'static str,
+        baseline_class: BaselineClass,
+        min_speedup_x: f64,
+    },
+    /// A floor on the fraction of the device's memory bandwidth the kernel
+    /// uses, for a case whose time is memory traffic rather than a race against
+    /// a host implementation.
+    MemoryBandwidthFraction {
+        min_fraction: f64,
+        derivation: &'static str,
+    },
 }
 
 impl ContractDescription {
@@ -40,10 +56,12 @@ impl ContractDescription {
     ) -> Self {
         Self {
             primitive,
-            baseline_crate,
-            baseline_name,
-            baseline_class: BaselineClass::CpuSota,
-            min_speedup_x,
+            bound: ContractBound::Baseline {
+                baseline_crate,
+                baseline_name,
+                baseline_class: BaselineClass::CpuSota,
+                min_speedup_x,
+            },
         }
     }
 
@@ -57,10 +75,32 @@ impl ContractDescription {
     ) -> Self {
         Self {
             primitive,
-            baseline_crate,
-            baseline_name,
-            baseline_class: BaselineClass::SelfUnoptimized,
-            min_speedup_x,
+            bound: ContractBound::Baseline {
+                baseline_crate,
+                baseline_name,
+                baseline_class: BaselineClass::SelfUnoptimized,
+                min_speedup_x,
+            },
+        }
+    }
+
+    /// A floor on the fraction of the device's memory bandwidth the kernel
+    /// uses.
+    ///
+    /// `derivation` states why that fraction is the kernel's bound, because a
+    /// fraction with no derivation is the same unfounded number as a speedup
+    /// multiple chosen to match a measurement.
+    pub(crate) const fn memory_bandwidth_fraction(
+        primitive: &'static str,
+        min_fraction: f64,
+        derivation: &'static str,
+    ) -> Self {
+        Self {
+            primitive,
+            bound: ContractBound::MemoryBandwidthFraction {
+                min_fraction,
+                derivation,
+            },
         }
     }
 
@@ -70,13 +110,28 @@ impl ContractDescription {
     /// copy of the call meant the class argument had to be threaded through two
     /// identical bodies, and a case shape added later would have copied a third.
     pub(crate) fn performance_contract(self) -> PerformanceContract {
-        PerformanceContract::min_speedup(
-            self.primitive,
-            self.baseline_crate,
-            self.baseline_name,
-            self.baseline_class,
-            self.min_speedup_x,
-        )
+        match self.bound {
+            ContractBound::Baseline {
+                baseline_crate,
+                baseline_name,
+                baseline_class,
+                min_speedup_x,
+            } => PerformanceContract::min_speedup(
+                self.primitive,
+                baseline_crate,
+                baseline_name,
+                baseline_class,
+                min_speedup_x,
+            ),
+            ContractBound::MemoryBandwidthFraction {
+                min_fraction,
+                derivation,
+            } => PerformanceContract::memory_bandwidth_fraction(
+                self.primitive,
+                min_fraction,
+                derivation,
+            ),
+        }
     }
 }
 

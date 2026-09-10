@@ -148,20 +148,25 @@ pub(super) fn collect_derived_metrics(
         }
     }
 
-    if let Some(dev_bytes) = device_bytes {
-        if let Some(device_ns) = metrics.dispatch_ns.or(metrics.wall_ns).filter(|ns| *ns > 0) {
-            if let Some(key) = derived_metric_key(prefix, "device_gb_s_x1000") {
-                samples.entry(key).or_default().push(rate_per_second_x1000(
-                    dev_bytes,
-                    device_ns,
-                    1_000_000_000,
-                ));
-            }
+    // The device's own active time, which both device-side rates below are
+    // computed against. A roofline fraction states how much of the device's
+    // bandwidth the kernel used while it was running, so wall time is the wrong
+    // denominator: it includes readback and host overhead, and on a resident
+    // case whose sample wall time is ten times its kernel time it reported a
+    // bandwidth-bound kernel as using 0.4% of the device.
+    let device_ns = metrics.dispatch_ns.or(metrics.wall_ns).filter(|ns| *ns > 0);
+    if let (Some(dev_bytes), Some(device_ns)) = (device_bytes, device_ns) {
+        if let Some(key) = derived_metric_key(prefix, "device_gb_s_x1000") {
+            samples.entry(key).or_default().push(rate_per_second_x1000(
+                dev_bytes,
+                device_ns,
+                1_000_000_000,
+            ));
         }
     }
 
     if let Some(flop_count) = custom_metric_value(metrics, "flop_count") {
-        if let Some(active_ns) = metrics.dispatch_ns.or(metrics.wall_ns).filter(|ns| *ns > 0) {
+        if let Some(active_ns) = device_ns {
             if let Some(key) = derived_metric_key(prefix, "gflops_x1000") {
                 samples.entry(key).or_default().push(rate_per_second_x1000(
                     flop_count,
@@ -175,10 +180,8 @@ pub(super) fn collect_derived_metrics(
     if let Some(peak_gb_s_x1000) =
         gpu_counter_value(metrics, "memory_peak_gb_s_x1000").filter(|v| *v > 0)
     {
-        if let (Some(dev_bytes), Some(wall_ns)) =
-            (device_bytes, metrics.wall_ns.filter(|ns| *ns > 0))
-        {
-            let achieved_gb_s_x1000 = rate_per_second_x1000(dev_bytes, wall_ns, 1_000_000_000);
+        if let (Some(dev_bytes), Some(device_ns)) = (device_bytes, device_ns) {
+            let achieved_gb_s_x1000 = rate_per_second_x1000(dev_bytes, device_ns, 1_000_000_000);
             if let Some(key) = derived_metric_key(prefix, "roofline_mem_pct_x1000") {
                 samples.entry(key).or_default().push(
                     ((u128::from(achieved_gb_s_x1000) * 100_000) / u128::from(peak_gb_s_x1000))
@@ -310,6 +313,38 @@ mod tests {
         let mut transfer_samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
         collect_derived_metrics("", &transfer_only, &mut transfer_samples);
         assert_eq!(transfer_samples["device_gb_s_x1000"][0], 12_104);
+    }
+
+    /// WHY: a roofline percentage states how much of the device's bandwidth the
+    /// kernel used while it was running, so it is computed against device
+    /// active time. Computed against sample wall time it charges readback and
+    /// host overhead to the device: the resident conditional case published
+    /// 0.45% of a 1792 GB/s device for a kernel using 44%, because its wall
+    /// time is ten times its kernel time.
+    ///
+    /// Does not catch a wrong `memory_peak_gb_s_x1000`; that is the device
+    /// telemetry's own figure.
+    #[test]
+    fn roofline_fraction_is_computed_against_device_active_time() {
+        let metrics = BenchMetrics {
+            device_bytes_moved: Some(8_650_752),
+            dispatch_ns: Some(10_828),
+            wall_ns: Some(94_088),
+            gpu_counter: vec![crate::api::metric::GpuCounter {
+                name: "memory_peak_gb_s_x1000".to_string(),
+                value: 1_792_000,
+            }],
+            ..Default::default()
+        };
+        let mut samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
+        collect_derived_metrics("", &metrics, &mut samples);
+
+        // 8650752 B / 10828 ns = 798.924 GB/s, which is 44.582% of 1792 GB/s.
+        // Against wall time it would have been 91.943 GB/s, or 5.131%.
+        assert_eq!(
+            samples["roofline_mem_pct_x1000"][0], 44_582,
+            "Fix: roofline_mem_pct_x1000 must divide device bytes by device active time."
+        );
     }
 
     /// Regression for dead-cold-fields-in-collect-fields-array: the 7 cold_* names

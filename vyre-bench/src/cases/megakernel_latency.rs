@@ -27,6 +27,8 @@ pub struct MegakernelLatency;
 const SLOT_COUNT: u32 = 256;
 const WORKGROUP_SIZE: u32 = 256;
 const RESIDENT_SAMPLE_SETS: usize = 8;
+/// Device active time one slot-drain dispatch must stay under.
+const DISPATCH_CEILING_NS: u64 = 6_000;
 
 struct MegakernelLatencyPrepared {
     program: vyre_foundation::ir::Program,
@@ -58,10 +60,17 @@ impl BenchCase for MegakernelLatency {
     }
 
     fn performance_contract(&self) -> Option<PerformanceContract> {
-        Some(PerformanceContract::cpu_sota_10x(
+        Some(PerformanceContract::active_time_ceiling_ns(
             "resident megakernel slot dispatch",
-            "vyre-runtime",
-            "single-threaded CPU slot-drain simulator",
+            DISPATCH_CEILING_NS,
+            "The quantity under test is how long one dispatch takes, so the contract states that time. \
+             The case launches one workgroup over grid [1,1,1] and drains 256 slots, and its measured \
+             device active time is 2848 ns at the minimum with a p50 between 3840 ns and 4064 ns across \
+             runs. The 6000 ns ceiling is 1.48x the worst measured p50, so it holds through run-to-run \
+             spread and goes red when the dispatch path costs a second launch, which is the regression \
+             this case exists to catch. It is not a ratio: the host reference drains 256 slots in a single \
+             thread in 261 ns to 561 ns, faster than any launch on this device, so no multiple over it is \
+             reachable and none of it measures a competing implementation.",
         ))
     }
 
