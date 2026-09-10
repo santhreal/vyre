@@ -15,6 +15,13 @@
 //! not stated here at all: subgroup width, shared memory size and tensor-core
 //! presence are measurements, and a table of them in a gate that runs no probe
 //! is a fabrication.
+//!
+//! The driver roster is read the same way. Each driver crate declares the
+//! registry identifier it answers to as a `pub const` ending in
+//! `_BACKEND_ID`, and that constant is the row. Payload formats, API families
+//! and minimum API versions are not recorded, because no source states them
+//! and the rows that once carried them were typed into this generated file by
+//! hand.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -71,6 +78,8 @@ pub struct PlatformSupportMatrixDocument {
     pub canonical_rust_version: String,
     /// Every host cell the platform source declares.
     pub host_cells: Vec<HostCellEntry>,
+    /// Every backend driver the workspace ships, as its own source declares it.
+    pub drivers: Vec<DriverEntry>,
     /// Every declared feature of every workspace package.
     pub package_features: Vec<PackageFeatureEntry>,
 }
@@ -98,6 +107,26 @@ pub struct HostCellEntry {
     pub identity_digest: String,
     /// What would raise this cell's evidence, empty when the cell is excluded.
     pub requires: String,
+}
+
+/// One backend driver the workspace ships.
+///
+/// A driver crate registers under an identifier it declares in its own source
+/// as a `pub const` ending in `_BACKEND_ID`. That constant is the only thing
+/// that decides what the registry answers to, so it is what this document
+/// records. The rows this replaced were written by hand into a generated file
+/// and carried payload formats, API families and minimum API versions that no
+/// source states, which made every one of them unfalsifiable.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct DriverEntry {
+    /// Registry identifier the crate declares for itself.
+    pub id: String,
+    /// Workspace package that declares it.
+    pub package: String,
+    /// Path of the source file the identifier is declared in.
+    pub declared_in: String,
+    /// Whether the package is published, and so claimed as a shipped driver.
+    pub claimed: bool,
 }
 
 /// One package feature cell.
@@ -160,8 +189,9 @@ impl GateBehavior for PlatformSupportMatrixGate {
             .count();
         let mut report = settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.note(format!(
-            "{} host cell(s), {proven} with an executed run, {} package feature cell(s)",
+            "{} host cell(s), {proven} with an executed run, {} driver(s), {} package feature cell(s)",
             matrix_doc.host_cells.len(),
+            matrix_doc.drivers.len(),
             matrix_doc.package_features.len()
         ));
         Ok(report)
@@ -493,6 +523,7 @@ pub fn collect_support_matrix(
         }
     }
 
+    let drivers = collect_drivers(root, &mut findings);
     let package_features = collect_package_features(root, &mut findings);
 
     let document = PlatformSupportMatrixDocument {
@@ -500,6 +531,7 @@ pub fn collect_support_matrix(
         canonical_endianness: "little_endian".to_string(),
         canonical_rust_version: rust_version,
         host_cells,
+        drivers,
         package_features,
     };
     Ok((document, findings))
@@ -551,6 +583,144 @@ fn workspace_rust_version(root: &Path) -> Result<String, GateError> {
                 "declare the minimum toolchain once in the workspace manifest",
             )
         })
+}
+
+/// Prefix every driver package name carries.
+const DRIVER_PACKAGE_PREFIX: &str = "vyre-driver-";
+
+/// Suffix of the constant a driver crate declares its registry identifier in.
+const BACKEND_ID_SUFFIX: &str = "_BACKEND_ID";
+
+/// Every backend driver the workspace ships, read out of each driver crate.
+///
+/// The identifier is parsed rather than assembled from the package name. A
+/// crate whose constant disagrees with its own package name is a registration
+/// nothing can reach by the name the manifest advertises, and that is the
+/// defect worth catching.
+fn collect_drivers(root: &Path, findings: &mut Vec<Finding>) -> Vec<DriverEntry> {
+    let mut located: Vec<(PackageManifest, std::path::PathBuf)> = Vec::new();
+    let mut blockers: Vec<String> = Vec::new();
+    manifest_walk::collect_manifests(
+        root,
+        "platform support matrix",
+        &mut located,
+        &mut blockers,
+        |path| {
+            let parsed = manifest_walk::parse_package_manifest(path, "platform support matrix")?;
+            let Some(manifest) = parsed else {
+                return Ok(None);
+            };
+            let dir = path
+                .parent()
+                .map(Path::to_path_buf)
+                .unwrap_or_else(|| root.to_path_buf());
+            Ok(Some((manifest, dir)))
+        },
+    );
+    for blocker in blockers {
+        findings.push(Finding::in_file(
+            MANIFEST_PATH,
+            blocker,
+            "repair the manifest syntax so the driver roster can be derived",
+        ));
+    }
+    located.sort_by(|left, right| left.0.name.cmp(&right.0.name));
+
+    let mut entries = Vec::new();
+    for (manifest, dir) in &located {
+        if !manifest.name.starts_with(DRIVER_PACKAGE_PREFIX) {
+            continue;
+        }
+        let claimed = manifest
+            .document
+            .get("package")
+            .and_then(|table| table.get("publish"))
+            .and_then(toml::Value::as_bool)
+            != Some(false);
+        // A driver crate that declares no identifier registers no backend and
+        // is absent from the roster rather than reported here. The reference
+        // oracle is such a crate: it executes programs to give a device answer
+        // something to be wrong against and is never dispatched to as a device.
+        // Absence still costs a crate that claims one, because a
+        // `target-support` contract is checked against this roster.
+        let declared = backend_id_constants(&dir.join("src"));
+        let ids: BTreeSet<&str> = declared.iter().map(|(id, _)| id.as_str()).collect();
+        if ids.len() > 1 {
+            findings.push(Finding::in_file(
+                MANIFEST_PATH,
+                format!(
+                    "driver package `{}` declares {} different backend identifiers: {}",
+                    manifest.name,
+                    ids.len(),
+                    ids.iter().copied().collect::<Vec<_>>().join(", ")
+                ),
+                "leave one registry identifier per driver crate",
+            ));
+        }
+        for (id, declared_in) in declared {
+            let relative = declared_in
+                .strip_prefix(root)
+                .unwrap_or(&declared_in)
+                .to_string_lossy()
+                .replace('\\', "/");
+            entries.push(DriverEntry {
+                id,
+                package: manifest.name.clone(),
+                declared_in: relative,
+                claimed,
+            });
+        }
+    }
+    entries.sort_by(|left, right| {
+        (&left.id, &left.package, &left.declared_in).cmp(&(
+            &right.id,
+            &right.package,
+            &right.declared_in,
+        ))
+    });
+    entries
+}
+
+/// Every `pub const *_BACKEND_ID: &str = "..."` under a crate source tree,
+/// with the file it was declared in.
+///
+/// The constant is not always in `lib.rs`. One driver declares it in a
+/// submodule and re-exports it, so a reader that opened only the crate root
+/// would report that crate as declaring no identifier at all.
+fn backend_id_constants(src: &Path) -> Vec<(String, std::path::PathBuf)> {
+    let mut found = Vec::new();
+    for entry in crate::tree_walk::pruned(src, crate::tree_walk::BUILD_OUTPUT_AND_VCS) {
+        let Ok(entry) = entry else {
+            continue;
+        };
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+            continue;
+        }
+        let Ok(text) = std::fs::read_to_string(path) else {
+            continue;
+        };
+        let Ok(file) = syn::parse_file(&text) else {
+            continue;
+        };
+        for item in &file.items {
+            let Item::Const(item) = item else {
+                continue;
+            };
+            if !matches!(item.vis, syn::Visibility::Public(_))
+                || !item.ident.to_string().ends_with(BACKEND_ID_SUFFIX)
+            {
+                continue;
+            }
+            if let Expr::Lit(literal) = item.expr.as_ref() {
+                if let Lit::Str(value) = &literal.lit {
+                    found.push((value.value(), path.to_path_buf()));
+                }
+            }
+        }
+    }
+    found.sort();
+    found
 }
 
 /// Every declared feature of every workspace package, with the publication
@@ -810,6 +980,57 @@ fn snake_case(ident: &str) -> String {
 /// Contract tests for the platform support matrix gate.
 pub mod tests {
     use super::*;
+
+    /// WHY: every driver crate the workspace ships must appear in the roster
+    /// under the identifier its own source declares. This closes the class the
+    /// hand-written rows left open, where a driver could be added, renamed or
+    /// removed and the document kept claiming whatever was typed into it. The
+    /// crate set and the identifier are both read at run time, so adding a
+    /// driver crate that declares an identifier changes this document with no
+    /// edit here.
+    ///
+    /// What it does not catch: a crate that declares the constant and never
+    /// registers it with the backend registry. Reaching that needs the
+    /// registry to run, which is what the backend matrix evidence does.
+    #[test]
+    pub fn every_driver_crate_reaches_the_roster_under_its_declared_identifier() {
+        let root = crate::checkout::checkout_root();
+        let (document, _) = collect_support_matrix(&root).expect("matrix collection must succeed");
+
+        let mut expected: BTreeSet<(String, String)> = BTreeSet::new();
+        for entry in std::fs::read_dir(&root).expect("the checkout root must be readable") {
+            let entry = entry.expect("a checkout root entry must be readable");
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if !name.starts_with(DRIVER_PACKAGE_PREFIX) || !entry.path().is_dir() {
+                continue;
+            }
+            for (id, _) in backend_id_constants(&entry.path().join("src")) {
+                expected.insert((id, name.clone()));
+            }
+        }
+        assert!(
+            !expected.is_empty(),
+            "the workspace must ship at least one driver crate declaring a backend identifier"
+        );
+
+        let recorded: BTreeSet<(String, String)> = document
+            .drivers
+            .iter()
+            .map(|driver| (driver.id.clone(), driver.package.clone()))
+            .collect();
+        assert_eq!(
+            recorded, expected,
+            "the driver roster must state exactly the identifiers the driver crates declare"
+        );
+        for driver in &document.drivers {
+            assert!(
+                root.join(&driver.declared_in).is_file(),
+                "driver `{}` names a declaration site that does not exist: {}",
+                driver.id,
+                driver.declared_in
+            );
+        }
+    }
 
     /// WHY: the cell space must come from the platform source, so that adding
     /// a `HostOs` or `HostArch` variant changes this document rather than

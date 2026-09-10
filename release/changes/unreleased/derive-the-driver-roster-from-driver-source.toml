@@ -1,0 +1,2 @@
+category = "fixed"
+text = "The platform support matrix derives its driver roster from the backend identifier each driver crate declares, instead of a hand-written list."

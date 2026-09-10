@@ -581,6 +581,30 @@ emulator = ""
 identity_digest = ""
 requires = ""
 
+[[drivers]]
+id = "cuda"
+package = "vyre-driver-cuda"
+declared_in = "vyre-driver-cuda/src/lib.rs"
+claimed = true
+
+[[drivers]]
+id = "metal"
+package = "vyre-driver-metal"
+declared_in = "vyre-driver-metal/src/lib.rs"
+claimed = true
+
+[[drivers]]
+id = "spirv"
+package = "vyre-driver-spirv"
+declared_in = "vyre-driver-spirv/src/lib.rs"
+claimed = true
+
+[[drivers]]
+id = "wgpu"
+package = "vyre-driver-wgpu"
+declared_in = "vyre-driver-wgpu/src/device_buffer.rs"
+claimed = true
+
 [[package_features]]
 package = "structure-gate"
 feature = "default"
