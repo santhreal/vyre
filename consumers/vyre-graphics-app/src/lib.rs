@@ -503,7 +503,15 @@ pub struct BenchmarkHarness;
 
 impl BenchmarkHarness {
     /// Run the full interactive graphics measurement suite.
-    pub fn run_suite(samples: usize) -> BenchmarkReport {
+    ///
+    /// # Errors
+    ///
+    /// Returns a message when `samples` is zero, or when the pipeline the suite
+    /// measures refuses to build, validate, compile, or accept an event.
+    pub fn run_suite(samples: usize) -> Result<BenchmarkReport, String> {
+        if samples == 0 {
+            return Err("a measurement suite needs at least one sample".to_string());
+        }
         let mut renderer = GraphicsRenderer::new(SceneGraph::new_ui_scene(64, 64));
 
         // 1. Measure compile/pipeline time
@@ -523,7 +531,8 @@ impl BenchmarkHarness {
             patch_h: 4,
             patch_dest: (2, 2),
         };
-        let graph = build_interactive_graphics_pipeline(params).expect("graph build");
+        let graph = build_interactive_graphics_pipeline(params)
+            .map_err(|error| format!("interactive graphics pipeline build failed: {error}"))?;
         let mut facts = ExternalFacts::new(Digest([42; 32]), BTreeMap::new());
         for (v_id, v) in graph.values().iter().enumerate() {
             if v.contract.lifetime == ValueLifetime::Constant {
@@ -541,8 +550,9 @@ impl BenchmarkHarness {
                 .with_bound(ObjectiveMetric::ArtifactBytes, 10_000_000),
         )
         .validate()
-        .expect("validate");
-        let _artifact = compile(&request).expect("compile");
+        .map_err(|error| format!("compile request validation failed: {error}"))?;
+        let _artifact =
+            compile(&request).map_err(|error| format!("pipeline compile failed: {error}"))?;
         let compile_pipeline_time = compile_start.elapsed();
 
         // 2. Measure empty work latency
@@ -553,7 +563,9 @@ impl BenchmarkHarness {
 
         // 3. Measure device loss recovery latency
         let dev_loss_start = Instant::now();
-        renderer.handle_event(InteractiveEvent::DeviceLoss).unwrap();
+        renderer
+            .handle_event(InteractiveEvent::DeviceLoss)
+            .map_err(|error| format!("device-loss recovery failed: {error}"))?;
         let _ = renderer.render_frame();
         let dev_loss_recovery_latency = dev_loss_start.elapsed();
 
@@ -582,7 +594,9 @@ impl BenchmarkHarness {
 
             let t0 = Instant::now();
             let sub_t0 = Instant::now();
-            renderer.handle_event(event).unwrap();
+            renderer
+                .handle_event(event)
+                .map_err(|error| format!("interactive event refused: {error}"))?;
             let sub_time = sub_t0.elapsed();
             cpu_sub_times.push(sub_time.as_nanos() as u64);
 
@@ -624,7 +638,7 @@ impl BenchmarkHarness {
         let missed_144 = frame_times.iter().filter(|&&t| t > d144).count();
         let missed_240 = frame_times.iter().filter(|&&t| t > d240).count();
 
-        BenchmarkReport {
+        Ok(BenchmarkReport {
             total_samples: samples,
             input_latency_ns_p50: latencies[p50_idx],
             input_latency_ns_p90: latencies[p90_idx],
@@ -645,6 +659,6 @@ impl BenchmarkHarness {
             empty_work_latency_ns: empty_work_latency.as_nanos() as u64,
             device_loss_recovery_latency_ns: dev_loss_recovery_latency.as_nanos() as u64,
             total_memory_bytes: renderer.retained_framebuffer.len() * 4,
-        }
+        })
     }
 }

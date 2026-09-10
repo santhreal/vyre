@@ -150,6 +150,13 @@ impl SchemaId {
     }
 
     /// Retrieve the authoritative schema definition from the canonical registry.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the id carries no row in `CANONICAL_SCHEMA_REGISTRY`. Every
+    /// caller reaches this through a `SchemaId` variant, so a missing row is a
+    /// registry that lost an entry, and a synthesized default would hand out a
+    /// version and a wire layout that nothing agreed to.
     #[must_use]
     pub const fn definition(self) -> &'static SchemaDefinition {
         let all = CANONICAL_SCHEMA_REGISTRY;

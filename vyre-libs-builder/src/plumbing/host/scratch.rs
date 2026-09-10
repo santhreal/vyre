@@ -64,13 +64,3 @@ pub fn reserve_vec_capacity<T>(
     })
 }
 
-/// Reserve scratch capacity for `capacity` items, failing closed when the allocation is refused.
-pub fn reserve_vec_capacity_or_panic<T>(
-    buffer: &mut Vec<T>,
-    capacity: usize,
-    context: &'static str,
-) {
-    if let Err(message) = try_reserve_vec_capacity(buffer, capacity) {
-        panic!("{context} could not reserve scratch capacity for {capacity} item(s): {message}");
-    }
-}

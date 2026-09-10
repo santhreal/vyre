@@ -283,6 +283,12 @@ impl BenchmarkReceipt {
     /// Every field in the receipt contributes to the identity: two receipts
     /// with identical field values produce the exact same content address,
     /// and altering any field changes the address.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the receipt does not serialize. A placeholder address would
+    /// let two different receipts share one content address, which is the one
+    /// property the address exists to carry.
     #[must_use]
     pub fn content_address(&self) -> String {
         let mut hasher = blake3::Hasher::new();
@@ -311,9 +317,7 @@ impl BenchmarkReceipt {
             "target_facts": &self.target_facts,
             "environment": &self.environment,
         });
-        let bytes =
-            serde_json::to_vec(&canonical).expect("Fix: keep input identity fields serializable");
-        hasher.update(&bytes);
+        hasher.update(canonical.to_string().as_bytes());
         hasher.finalize().to_hex().to_string()
     }
 }

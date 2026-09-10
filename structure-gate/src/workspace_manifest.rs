@@ -130,6 +130,13 @@ struct WorkspaceSection {
     exclude: Option<Vec<String>>,
 }
 
+/// The `workspace.<key>` path list from the root manifest.
+///
+/// # Panics
+///
+/// Panics when the root manifest cannot be read or parsed. An empty list would
+/// report a workspace with no members as a workspace with nothing to lint, so
+/// every structural gate would pass on an unreadable tree.
 pub(crate) fn workspace_paths(root: &Path, key: &str) -> Vec<String> {
     let manifest_path = root.join("Cargo.toml");
     let text = read_source_bounded(&manifest_path)

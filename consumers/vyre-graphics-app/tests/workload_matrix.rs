@@ -85,8 +85,18 @@ fn test_workload_device_loss_recovery() {
 
 #[test]
 fn test_benchmark_harness_execution() {
-    let report = BenchmarkHarness::run_suite(20);
+    let report = BenchmarkHarness::run_suite(20).expect("the fixture suite must measure");
     assert_eq!(report.total_samples, 20);
     assert!(report.frame_time_ns_p50 > 0);
     assert!(report.total_memory_bytes > 0);
+}
+
+#[test]
+fn benchmark_harness_refuses_a_zero_sample_suite() {
+    assert_eq!(
+        BenchmarkHarness::run_suite(0),
+        Err("a measurement suite needs at least one sample".to_string()),
+        "a zero-sample suite has no percentile to report and must refuse rather than index an \
+         empty sample vector"
+    );
 }

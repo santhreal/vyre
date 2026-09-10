@@ -65,9 +65,7 @@ impl MeasurementCellSpec {
             "target_facts": &self.target_facts,
             "environment": &self.environment,
         });
-        let bytes = serde_json::to_vec(&canonical)
-            .expect("Fix: keep MeasurementCellSpec fields serializable");
-        hasher.update(&bytes);
+        hasher.update(canonical.to_string().as_bytes());
         hasher.finalize().to_hex().to_string()
     }
 }

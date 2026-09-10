@@ -33,6 +33,17 @@ fn tensor(
     }
 }
 
+/// A delta carrying `ops`, refusing any operation that exceeds the declared bounds.
+fn delta_with<const N: usize>(ops: [GraphDeltaOp; N]) -> GraphDelta {
+    let mut delta = GraphDelta::new();
+    for op in ops {
+        delta
+            .try_push(op)
+            .expect("Fix: this delta operation must fit the declared bounds");
+    }
+    delta
+}
+
 /// A single-input single-output program.
 ///
 /// `Program::wrapped` carries no name, so the workgroup width is what makes two
@@ -147,15 +158,17 @@ fn graph_delta_insert_external_value_and_node() {
     let initial_value_count = graph.values().len();
 
     let mut delta = GraphDelta::new();
-    delta.push(GraphDeltaOp::InsertExternalValue {
-        name: "overlay_alpha".into(),
-        contract: tensor(
-            DataType::F32,
-            vec![ShapeDim::Known(1080)],
-            BufferAccess::ReadOnly,
-            ValueLifetime::Constant,
-        ),
-    });
+    delta
+        .try_push(GraphDeltaOp::InsertExternalValue {
+            name: "overlay_alpha".into(),
+            contract: tensor(
+                DataType::F32,
+                vec![ShapeDim::Known(1080)],
+                BufferAccess::ReadOnly,
+                ValueLifetime::Constant,
+            ),
+        })
+        .expect("Fix: this delta operation must fit the declared bounds");
 
     let (new_graph, closure) = delta
         .apply_transactional(&graph)
@@ -173,31 +186,33 @@ fn graph_delta_replace_node_propagates_dirty_closure() {
     let (graph, input, node1, node2) = build_pipeline_graph();
 
     let mut delta = GraphDelta::new();
-    delta.push(GraphDeltaOp::ReplaceNode {
-        node_id: node1,
-        program: make_unary_node_sized("blur.in", "blur.out", 64),
-        inputs: vec![GraphInput {
-            buffer: "blur.in".into(),
-            value: input,
-            contract: tensor(
-                DataType::F32,
-                vec![ShapeDim::Symbol("width".into()), ShapeDim::Known(1080)],
-                BufferAccess::ReadOnly,
-                ValueLifetime::Invocation,
-            ),
-        }],
-        outputs: vec![GraphOutput {
-            buffer: "blur.out".into(),
-            name: "blur_output".into(),
-            contract: tensor(
-                DataType::F32,
-                vec![ShapeDim::Symbol("width".into()), ShapeDim::Known(1080)],
-                BufferAccess::ReadWrite,
-                ValueLifetime::Invocation,
-            ),
-            retained_successor_of: None,
-        }],
-    });
+    delta
+        .try_push(GraphDeltaOp::ReplaceNode {
+            node_id: node1,
+            program: make_unary_node_sized("blur.in", "blur.out", 64),
+            inputs: vec![GraphInput {
+                buffer: "blur.in".into(),
+                value: input,
+                contract: tensor(
+                    DataType::F32,
+                    vec![ShapeDim::Symbol("width".into()), ShapeDim::Known(1080)],
+                    BufferAccess::ReadOnly,
+                    ValueLifetime::Invocation,
+                ),
+            }],
+            outputs: vec![GraphOutput {
+                buffer: "blur.out".into(),
+                name: "blur_output".into(),
+                contract: tensor(
+                    DataType::F32,
+                    vec![ShapeDim::Symbol("width".into()), ShapeDim::Known(1080)],
+                    BufferAccess::ReadWrite,
+                    ValueLifetime::Invocation,
+                ),
+                retained_successor_of: None,
+            }],
+        })
+        .expect("Fix: this delta operation must fit the declared bounds");
 
     let (mutated_graph, closure) = delta
         .apply_transactional(&graph)
@@ -215,7 +230,9 @@ fn graph_delta_delete_node_with_dependents_fails_transactional() {
     let (graph, _, node1, node2) = build_pipeline_graph();
 
     let mut delta = GraphDelta::new();
-    delta.push(GraphDeltaOp::DeleteNode { node_id: node1 });
+    delta
+        .try_push(GraphDeltaOp::DeleteNode { node_id: node1 })
+        .expect("Fix: this delta operation must fit the declared bounds");
 
     // Node 1 cannot be deleted while Node 2 consumes its output
     let err = delta
@@ -240,11 +257,13 @@ fn graph_delta_shape_bound_update_identifies_affected_closure() {
     let (graph, input, node1, node2) = build_pipeline_graph();
 
     let mut delta = GraphDelta::new();
-    delta.push(GraphDeltaOp::UpdateShapeBound {
-        symbol: "width".into(),
-        old_bound: 1920,
-        new_bound: 2560,
-    });
+    delta
+        .try_push(GraphDeltaOp::UpdateShapeBound {
+            symbol: "width".into(),
+            old_bound: 1920,
+            new_bound: 2560,
+        })
+        .expect("Fix: this delta operation must fit the declared bounds");
 
     let (_, closure) = delta
         .apply_transactional(&graph)
@@ -263,11 +282,13 @@ fn graph_delta_resource_generation_bump_tracks_resource() {
     let (graph, _, _, _) = build_pipeline_graph();
 
     let mut delta = GraphDelta::new();
-    delta.push(GraphDeltaOp::UpdateResourceGeneration {
-        resource_name: "retained_atlas".into(),
-        prior_generation: 4,
-        new_generation: 5,
-    });
+    delta
+        .try_push(GraphDeltaOp::UpdateResourceGeneration {
+            resource_name: "retained_atlas".into(),
+            prior_generation: 4,
+            new_generation: 5,
+        })
+        .expect("Fix: this delta operation must fit the declared bounds");
 
     let (_, closure) = delta
         .apply_transactional(&graph)
@@ -278,11 +299,11 @@ fn graph_delta_resource_generation_bump_tracks_resource() {
     assert!(closure.affected_resource_names.contains("retained_atlas"));
 
     // Stale generation bump (not strictly greater) fails
-    let stale_delta = GraphDelta::new().with_op(GraphDeltaOp::UpdateResourceGeneration {
+    let stale_delta = delta_with([GraphDeltaOp::UpdateResourceGeneration {
         resource_name: "retained_atlas".into(),
         prior_generation: 4,
         new_generation: 4,
-    });
+    }]);
     assert!(matches!(
         stale_delta.apply_transactional(&graph),
         Err(GraphDeltaError::ResourceGenerationMismatch { .. })
@@ -292,25 +313,31 @@ fn graph_delta_resource_generation_bump_tracks_resource() {
 #[test]
 fn graph_delta_wire_roundtrip_preserves_semantics() {
     let mut delta = GraphDelta::new();
-    delta.push(GraphDeltaOp::InsertExternalValue {
-        name: "glyph_cache".into(),
-        contract: tensor(
-            DataType::U8,
-            vec![ShapeDim::Known(4096), ShapeDim::Known(4096)],
-            BufferAccess::ReadOnly,
-            ValueLifetime::Constant,
-        ),
-    });
-    delta.push(GraphDeltaOp::UpdateShapeBound {
-        symbol: "viewport_w".into(),
-        old_bound: 1080,
-        new_bound: 1440,
-    });
-    delta.push(GraphDeltaOp::UpdateResourceGeneration {
-        resource_name: "glyph_cache".into(),
-        prior_generation: 1,
-        new_generation: 2,
-    });
+    delta
+        .try_push(GraphDeltaOp::InsertExternalValue {
+            name: "glyph_cache".into(),
+            contract: tensor(
+                DataType::U8,
+                vec![ShapeDim::Known(4096), ShapeDim::Known(4096)],
+                BufferAccess::ReadOnly,
+                ValueLifetime::Constant,
+            ),
+        })
+        .expect("Fix: this delta operation must fit the declared bounds");
+    delta
+        .try_push(GraphDeltaOp::UpdateShapeBound {
+            symbol: "viewport_w".into(),
+            old_bound: 1080,
+            new_bound: 1440,
+        })
+        .expect("Fix: this delta operation must fit the declared bounds");
+    delta
+        .try_push(GraphDeltaOp::UpdateResourceGeneration {
+            resource_name: "glyph_cache".into(),
+            prior_generation: 1,
+            new_generation: 2,
+        })
+        .expect("Fix: this delta operation must fit the declared bounds");
 
     let wire_bytes = delta
         .to_wire()
@@ -325,11 +352,13 @@ fn graph_delta_wire_roundtrip_preserves_semantics() {
 #[test]
 fn stale_or_corrupt_graph_delta_version_is_rejected() {
     let mut delta = GraphDelta::new();
-    delta.push(GraphDeltaOp::UpdateResourceGeneration {
-        resource_name: "font_atlas".into(),
-        prior_generation: 1,
-        new_generation: 2,
-    });
+    delta
+        .try_push(GraphDeltaOp::UpdateResourceGeneration {
+            resource_name: "font_atlas".into(),
+            prior_generation: 1,
+            new_generation: 2,
+        })
+        .expect("Fix: this delta operation must fit the declared bounds");
     let mut wire_bytes = delta
         .to_wire()
         .expect("Fix: delta wire encode must succeed");
@@ -485,31 +514,33 @@ fn scale_closure_bounding_one_node_in_large_graph() {
     let target_in = graph.nodes()[15].inputs[0].value;
 
     let mut delta = GraphDelta::new();
-    delta.push(GraphDeltaOp::ReplaceNode {
-        node_id: target_node,
-        program: make_unary_node_sized("in_15", "out_15", 64),
-        inputs: vec![GraphInput {
-            buffer: "in_15".into(),
-            value: target_in,
-            contract: tensor(
-                DataType::F32,
-                vec![ShapeDim::Known(64)],
-                BufferAccess::ReadOnly,
-                ValueLifetime::Invocation,
-            ),
-        }],
-        outputs: vec![GraphOutput {
-            buffer: "out_15".into(),
-            name: "val_15".into(),
-            contract: tensor(
-                DataType::F32,
-                vec![ShapeDim::Known(64)],
-                BufferAccess::ReadWrite,
-                ValueLifetime::Invocation,
-            ),
-            retained_successor_of: None,
-        }],
-    });
+    delta
+        .try_push(GraphDeltaOp::ReplaceNode {
+            node_id: target_node,
+            program: make_unary_node_sized("in_15", "out_15", 64),
+            inputs: vec![GraphInput {
+                buffer: "in_15".into(),
+                value: target_in,
+                contract: tensor(
+                    DataType::F32,
+                    vec![ShapeDim::Known(64)],
+                    BufferAccess::ReadOnly,
+                    ValueLifetime::Invocation,
+                ),
+            }],
+            outputs: vec![GraphOutput {
+                buffer: "out_15".into(),
+                name: "val_15".into(),
+                contract: tensor(
+                    DataType::F32,
+                    vec![ShapeDim::Known(64)],
+                    BufferAccess::ReadWrite,
+                    ValueLifetime::Invocation,
+                ),
+                retained_successor_of: None,
+            }],
+        })
+        .expect("Fix: this delta operation must fit the declared bounds");
 
     let (_, closure) = delta
         .apply_transactional(&graph)
@@ -592,7 +623,7 @@ fn scale_closure_bounding_one_leaf_in_thousand_node_graph() {
 
     // Mutate only leaf node 42
     let target = leaf_nodes[42];
-    let delta = GraphDelta::new().with_op(GraphDeltaOp::ReplaceNode {
+    let delta = delta_with([GraphDeltaOp::ReplaceNode {
         node_id: target,
         program: make_unary_node_sized("in_42", "out_42", 64),
         inputs: vec![GraphInput {
@@ -616,7 +647,7 @@ fn scale_closure_bounding_one_leaf_in_thousand_node_graph() {
             ),
             retained_successor_of: None,
         }],
-    });
+    }]);
 
     let (_, closure) = delta
         .apply_transactional(&graph)
@@ -639,7 +670,7 @@ fn replacing_a_node_installs_the_new_program() {
     );
 
     let ports = graph.nodes()[node1.0 as usize].output_ports.clone();
-    let delta = GraphDelta::new().with_op(GraphDeltaOp::ReplaceNode {
+    let delta = delta_with([GraphDeltaOp::ReplaceNode {
         node_id: node1,
         program: replacement.clone(),
         inputs: vec![GraphInput {
@@ -653,7 +684,7 @@ fn replacing_a_node_installs_the_new_program() {
             ),
         }],
         outputs: ports,
-    });
+    }]);
 
     let (mutated, _) = delta
         .apply_transactional(&graph)
@@ -690,7 +721,7 @@ fn replacing_a_node_rewires_the_values_it_reads() {
     // Repoint node2 at the external input instead of node1's output. Both
     // values carry the same contract, so only the edge changes.
     let ports = graph.nodes()[node2.0 as usize].output_ports.clone();
-    let delta = GraphDelta::new().with_op(GraphDeltaOp::ReplaceNode {
+    let delta = delta_with([GraphDeltaOp::ReplaceNode {
         node_id: node2,
         program: make_unary_node("composite.in", "composite.out"),
         inputs: vec![GraphInput {
@@ -704,7 +735,7 @@ fn replacing_a_node_rewires_the_values_it_reads() {
             ),
         }],
         outputs: ports,
-    });
+    }]);
 
     let (mutated, _) = delta
         .apply_transactional(&graph)
@@ -755,7 +786,7 @@ fn a_replacement_that_changes_output_ports_is_refused() {
         ("dropped the output entirely", Vec::new()),
         ("added a second output", vec![base.clone(), base.clone()]),
     ] {
-        let delta = GraphDelta::new().with_op(GraphDeltaOp::ReplaceNode {
+        let delta = delta_with([GraphDeltaOp::ReplaceNode {
             node_id: node1,
             program: make_unary_node_sized("blur.in", "blur.out", 64),
             inputs: vec![GraphInput {
@@ -769,7 +800,7 @@ fn a_replacement_that_changes_output_ports_is_refused() {
                 ),
             }],
             outputs,
-        });
+        }]);
 
         let err = delta
             .apply_transactional(&graph)
@@ -788,7 +819,7 @@ fn a_refused_replacement_leaves_the_node_untouched() {
     // The port names a buffer the replacement program does not declare, so
     // validation fails after the graph has already been cloned.
     let ports = graph.nodes()[node1.0 as usize].output_ports.clone();
-    let delta = GraphDelta::new().with_op(GraphDeltaOp::ReplaceNode {
+    let delta = delta_with([GraphDeltaOp::ReplaceNode {
         node_id: node1,
         program: make_unary_node_sized("other.in", "blur.out", 64),
         inputs: vec![GraphInput {
@@ -802,7 +833,7 @@ fn a_refused_replacement_leaves_the_node_untouched() {
             ),
         }],
         outputs: ports,
-    });
+    }]);
 
     assert!(
         delta.apply_transactional(&graph).is_err(),
@@ -824,11 +855,11 @@ fn a_shape_bound_update_that_states_no_change_is_refused() {
         ("states a zero extent", 1920, 0),
         ("states zero for both", 0, 0),
     ] {
-        let delta = GraphDelta::new().with_op(GraphDeltaOp::UpdateShapeBound {
+        let delta = delta_with([GraphDeltaOp::UpdateShapeBound {
             symbol: "width".into(),
             old_bound,
             new_bound,
-        });
+        }]);
         let err = delta
             .apply_transactional(&graph)
             .expect_err(&format!("Fix: a bound update that {label} must be refused"));
@@ -843,11 +874,11 @@ fn a_shape_bound_update_that_states_no_change_is_refused() {
 fn a_shape_bound_update_naming_an_undeclared_symbol_is_refused() {
     let (graph, _, _, _) = build_pipeline_graph();
 
-    let delta = GraphDelta::new().with_op(GraphDeltaOp::UpdateShapeBound {
+    let delta = delta_with([GraphDeltaOp::UpdateShapeBound {
         symbol: "height".into(),
         old_bound: 1080,
         new_bound: 1440,
-    });
+    }]);
 
     let err = delta
         .apply_transactional(&graph)
@@ -892,7 +923,7 @@ fn every_buffer_access_survives_a_delta_wire_round_trip() {
     );
 
     for (name, access) in cases {
-        let delta = GraphDelta::new().with_op(GraphDeltaOp::InsertExternalValue {
+        let delta = delta_with([GraphDeltaOp::InsertExternalValue {
             name: "probe".into(),
             contract: tensor(
                 DataType::U32,
@@ -900,7 +931,7 @@ fn every_buffer_access_survives_a_delta_wire_round_trip() {
                 access,
                 ValueLifetime::Constant,
             ),
-        });
+        }]);
 
         let bytes = delta
             .to_wire()
@@ -920,31 +951,33 @@ fn delta_retains_unaffected_interned_storage_certificates_and_cache_entries_by_i
     // Replace only node 1 in pipeline
     // Replace only node 1
     let mut delta = GraphDelta::new();
-    delta.push(GraphDeltaOp::ReplaceNode {
-        node_id: node1,
-        program: make_unary_node_sized("blur.in", "blur.out", 4),
-        inputs: vec![GraphInput {
-            buffer: "blur.in".into(),
-            value: _in_val,
-            contract: tensor(
-                DataType::F32,
-                vec![ShapeDim::Symbol("width".into()), ShapeDim::Known(1080)],
-                BufferAccess::ReadOnly,
-                ValueLifetime::Invocation,
-            ),
-        }],
-        outputs: vec![GraphOutput {
-            buffer: "blur.out".into(),
-            name: "blur_output".into(),
-            contract: tensor(
-                DataType::F32,
-                vec![ShapeDim::Symbol("width".into()), ShapeDim::Known(1080)],
-                BufferAccess::ReadWrite,
-                ValueLifetime::Invocation,
-            ),
-            retained_successor_of: None,
-        }],
-    });
+    delta
+        .try_push(GraphDeltaOp::ReplaceNode {
+            node_id: node1,
+            program: make_unary_node_sized("blur.in", "blur.out", 4),
+            inputs: vec![GraphInput {
+                buffer: "blur.in".into(),
+                value: _in_val,
+                contract: tensor(
+                    DataType::F32,
+                    vec![ShapeDim::Symbol("width".into()), ShapeDim::Known(1080)],
+                    BufferAccess::ReadOnly,
+                    ValueLifetime::Invocation,
+                ),
+            }],
+            outputs: vec![GraphOutput {
+                buffer: "blur.out".into(),
+                name: "blur_output".into(),
+                contract: tensor(
+                    DataType::F32,
+                    vec![ShapeDim::Symbol("width".into()), ShapeDim::Known(1080)],
+                    BufferAccess::ReadWrite,
+                    ValueLifetime::Invocation,
+                ),
+                retained_successor_of: None,
+            }],
+        })
+        .expect("Fix: this delta operation must fit the declared bounds");
 
     let (_mutated, closure) = delta
         .apply_transactional(&graph)
@@ -1042,31 +1075,33 @@ fn delta_retains_unaffected_interned_storage_certificates_and_cache_entries_by_i
 
     // Apply delta mutating ONLY node_a
     let mut ind_delta = GraphDelta::new();
-    ind_delta.push(GraphDeltaOp::ReplaceNode {
-        node_id: n_a,
-        program: make_unary_node_sized("a.in", "a.out", 8),
-        inputs: vec![GraphInput {
-            buffer: "a.in".into(),
-            value: ind_in,
-            contract: tensor(
-                DataType::F32,
-                vec![ShapeDim::Known(100)],
-                BufferAccess::ReadOnly,
-                ValueLifetime::Invocation,
-            ),
-        }],
-        outputs: vec![GraphOutput {
-            buffer: "a.out".into(),
-            name: "a_out".into(),
-            contract: tensor(
-                DataType::F32,
-                vec![ShapeDim::Known(100)],
-                BufferAccess::ReadWrite,
-                ValueLifetime::Invocation,
-            ),
-            retained_successor_of: None,
-        }],
-    });
+    ind_delta
+        .try_push(GraphDeltaOp::ReplaceNode {
+            node_id: n_a,
+            program: make_unary_node_sized("a.in", "a.out", 8),
+            inputs: vec![GraphInput {
+                buffer: "a.in".into(),
+                value: ind_in,
+                contract: tensor(
+                    DataType::F32,
+                    vec![ShapeDim::Known(100)],
+                    BufferAccess::ReadOnly,
+                    ValueLifetime::Invocation,
+                ),
+            }],
+            outputs: vec![GraphOutput {
+                buffer: "a.out".into(),
+                name: "a_out".into(),
+                contract: tensor(
+                    DataType::F32,
+                    vec![ShapeDim::Known(100)],
+                    BufferAccess::ReadWrite,
+                    ValueLifetime::Invocation,
+                ),
+                retained_successor_of: None,
+            }],
+        })
+        .expect("Fix: this delta operation must fit the declared bounds");
 
     let (mutated_ind, ind_closure) = ind_delta
         .apply_transactional(&independent_graph)
@@ -1095,9 +1130,9 @@ fn rejected_delta_leaves_no_partial_state_under_all_error_modes() {
     let orig_wire = graph.to_wire().expect("Wire serialization must succeed");
 
     // 1. Missing node error
-    let bad_delta1 = GraphDelta::new().with_op(GraphDeltaOp::DeleteNode {
+    let bad_delta1 = delta_with([GraphDeltaOp::DeleteNode {
         node_id: GraphNodeId(9999),
-    });
+    }]);
     assert!(bad_delta1.apply_transactional(&graph).is_err());
     assert_eq!(
         graph.to_wire().unwrap(),
@@ -1106,7 +1141,7 @@ fn rejected_delta_leaves_no_partial_state_under_all_error_modes() {
     );
 
     // 2. Dependency violation error
-    let bad_delta2 = GraphDelta::new().with_op(GraphDeltaOp::DeleteNode { node_id: node1 });
+    let bad_delta2 = delta_with([GraphDeltaOp::DeleteNode { node_id: node1 }]);
     assert!(bad_delta2.apply_transactional(&graph).is_err());
     assert_eq!(
         graph.to_wire().unwrap(),
@@ -1115,11 +1150,11 @@ fn rejected_delta_leaves_no_partial_state_under_all_error_modes() {
     );
 
     // 3. Unknown shape symbol
-    let bad_delta3 = GraphDelta::new().with_op(GraphDeltaOp::UpdateShapeBound {
+    let bad_delta3 = delta_with([GraphDeltaOp::UpdateShapeBound {
         symbol: "nonexistent_symbol".into(),
         old_bound: 10,
         new_bound: 20,
-    });
+    }]);
     assert!(bad_delta3.apply_transactional(&graph).is_err());
     assert_eq!(
         graph.to_wire().unwrap(),
@@ -1128,11 +1163,11 @@ fn rejected_delta_leaves_no_partial_state_under_all_error_modes() {
     );
 
     // 4. Illegal shape bound (zero bound)
-    let bad_delta4 = GraphDelta::new().with_op(GraphDeltaOp::UpdateShapeBound {
+    let bad_delta4 = delta_with([GraphDeltaOp::UpdateShapeBound {
         symbol: "width".into(),
         old_bound: 1080,
         new_bound: 0,
-    });
+    }]);
     assert!(bad_delta4.apply_transactional(&graph).is_err());
     assert_eq!(
         graph.to_wire().unwrap(),
@@ -1216,31 +1251,33 @@ fn affected_graph_closure_derives_exact_invalidated_queries() {
     let (graph, _in_val, node1, _node2) = build_pipeline_graph();
 
     let mut delta = GraphDelta::new();
-    delta.push(GraphDeltaOp::ReplaceNode {
-        node_id: node1,
-        program: make_unary_node_sized("blur.in", "blur.out", 2),
-        inputs: vec![GraphInput {
-            buffer: "blur.in".into(),
-            value: _in_val,
-            contract: tensor(
-                DataType::F32,
-                vec![ShapeDim::Symbol("width".into()), ShapeDim::Known(1080)],
-                BufferAccess::ReadOnly,
-                ValueLifetime::Invocation,
-            ),
-        }],
-        outputs: vec![GraphOutput {
-            buffer: "blur.out".into(),
-            name: "blur_output".into(),
-            contract: tensor(
-                DataType::F32,
-                vec![ShapeDim::Symbol("width".into()), ShapeDim::Known(1080)],
-                BufferAccess::ReadWrite,
-                ValueLifetime::Invocation,
-            ),
-            retained_successor_of: None,
-        }],
-    });
+    delta
+        .try_push(GraphDeltaOp::ReplaceNode {
+            node_id: node1,
+            program: make_unary_node_sized("blur.in", "blur.out", 2),
+            inputs: vec![GraphInput {
+                buffer: "blur.in".into(),
+                value: _in_val,
+                contract: tensor(
+                    DataType::F32,
+                    vec![ShapeDim::Symbol("width".into()), ShapeDim::Known(1080)],
+                    BufferAccess::ReadOnly,
+                    ValueLifetime::Invocation,
+                ),
+            }],
+            outputs: vec![GraphOutput {
+                buffer: "blur.out".into(),
+                name: "blur_output".into(),
+                contract: tensor(
+                    DataType::F32,
+                    vec![ShapeDim::Symbol("width".into()), ShapeDim::Known(1080)],
+                    BufferAccess::ReadWrite,
+                    ValueLifetime::Invocation,
+                ),
+                retained_successor_of: None,
+            }],
+        })
+        .expect("Fix: this delta operation must fit the declared bounds");
 
     let (_mutated, closure) = delta.apply_transactional(&graph).unwrap();
     let query_keys = closure.invalidated_query_keys();

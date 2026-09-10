@@ -752,10 +752,9 @@ impl ScheduleTree {
                         flat.push(canon);
                     }
                 }
-                if flat.len() == 1 {
-                    flat.pop().unwrap()
-                } else {
-                    Self::Sequence(flat)
+                match <[Self; 1]>::try_from(flat) {
+                    Ok([only]) => only,
+                    Err(flat) => Self::Sequence(flat),
                 }
             }
             Self::Parallel(children) => {
@@ -768,11 +767,12 @@ impl ScheduleTree {
                         flat.push(canon);
                     }
                 }
-                if flat.len() == 1 {
-                    flat.pop().unwrap()
-                } else {
-                    flat.sort_by_key(|t| t.canonical_hash());
-                    Self::Parallel(flat)
+                match <[Self; 1]>::try_from(flat) {
+                    Ok([only]) => only,
+                    Err(mut flat) => {
+                        flat.sort_by_key(Self::canonical_hash);
+                        Self::Parallel(flat)
+                    }
                 }
             }
         }
@@ -785,8 +785,8 @@ impl ScheduleTree {
         hasher.update(b"ScheduleTree:v2:");
         self.feed_canonical_bytes(&mut hasher);
         let digest = hasher.finalize();
-        let bytes: [u8; 8] = digest.as_bytes()[0..8].try_into().unwrap();
-        u64::from_le_bytes(bytes)
+        let [a, b, c, d, e, f, g, h, ..] = *digest.as_bytes();
+        u64::from_le_bytes([a, b, c, d, e, f, g, h])
     }
 
     fn feed_canonical_bytes(&self, hasher: &mut blake3::Hasher) {

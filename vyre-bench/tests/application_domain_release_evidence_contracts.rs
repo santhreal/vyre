@@ -23,10 +23,6 @@ use vyre::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ValueContract,
     ValueLifetime,
 };
-#[cfg(feature = "device-tests")]
-use vyre_bench::workloads::{
-    dense_numerical_pipeline, interactive_event_pipeline, irregular_stateful_traversal,
-};
 use vyre_bench::workloads::{
     all_whole_application_workloads, whole_application_native_baselines, ApplicationDomain,
     NativeComparisonConditions, RequiredWholeApplicationField, WholeAppNativeBaselineUnmeasured,
@@ -34,6 +30,10 @@ use vyre_bench::workloads::{
     WholeAppStateMetrics, WholeAppThroughputRecord, WholeApplicationRecord,
     WholeApplicationRecordField, WholeApplicationRefusal, WholeApplicationWorkload,
     MIN_MEASURED_SAMPLES, WHOLE_APPLICATION_RECORD_SCHEMA_V1, WHOLE_APPLICATION_RECORD_SCHEMA_V2,
+};
+#[cfg(feature = "device-tests")]
+use vyre_bench::workloads::{
+    dense_numerical_pipeline, interactive_event_pipeline, irregular_stateful_traversal,
 };
 
 /// Absolute path of one file inside this repository.
@@ -188,7 +188,8 @@ fn test_whole_application_domain_class_completeness_and_runtime_closure() {
     let mut covered_domains = BTreeSet::new();
     for workload in &workloads {
         covered_domains.insert(workload.domain);
-        let (graph, inputs) = (workload.build_graph_and_inputs)();
+        let (graph, inputs) = (workload.build_graph_and_inputs)()
+            .unwrap_or_else(|error| panic!("workload `{}` must build: {error}", workload.id));
         workload
             .validate_topology(&graph)
             .expect("Workload topology must be a connected multi-node graph");
@@ -246,7 +247,7 @@ fn test_isolated_kernel_cannot_satisfy_whole_application_class() {
         pinned_native_baseline_id: "native.topology_probe",
         pinned_native_baseline_name: "Topology Probe Native",
         default_conditions: complete_conditions(),
-        build_graph_and_inputs: || (ProgramGraph::new(), BTreeMap::new()),
+        build_graph_and_inputs: || Ok((ProgramGraph::new(), BTreeMap::new())),
     };
 
     let mut single_node_graph = ProgramGraph::new();
@@ -582,10 +583,7 @@ fn test_parity_is_derived_from_compared_bytes() {
         "Fix: parity must report differing bytes as a mismatch"
     );
     assert_eq!(mismatched.max_ulp_distance, 7);
-    assert_eq!(
-        mismatched.parity_status,
-        "mismatched_max_lane_difference_7"
-    );
+    assert_eq!(mismatched.parity_status, "mismatched_max_lane_difference_7");
     assert_ne!(mismatched.reference_digest, mismatched.candidate_digest);
 
     let renamed = BTreeMap::from([("other".to_string(), vec![1u8, 0, 0, 0, 2, 0, 0, 0])]);
@@ -826,7 +824,10 @@ fn test_end_to_end_whole_application_device_execution_and_parity() {
         .expect("this host must acquire a dispatch device for device-tests");
 
     for (workload, domain) in [
-        (dense_numerical_pipeline(), ApplicationDomain::DenseNumerical),
+        (
+            dense_numerical_pipeline(),
+            ApplicationDomain::DenseNumerical,
+        ),
         (
             irregular_stateful_traversal(),
             ApplicationDomain::IrregularStateful,
@@ -905,11 +906,11 @@ fn test_whole_application_evidence_artifacts_are_written_where_directed() {
     assert_eq!(suite.total_workloads, 3);
     assert_eq!(suite.covered_domains, 3);
     assert_eq!(suite.status, "measured_with_unstated_fields");
-    assert!(suite
-        .readiness_gaps
-        .contains(&RequiredWholeApplicationField::NativeBaselineComparison
+    assert!(suite.readiness_gaps.contains(
+        &RequiredWholeApplicationField::NativeBaselineComparison
             .as_str()
-            .to_string()));
+            .to_string()
+    ));
 
     let directory = tempfile::tempdir().expect("create a temporary directory");
     let written = vyre_bench::workloads::write_whole_application_evidence_artifacts(

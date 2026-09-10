@@ -279,18 +279,6 @@ impl GraphDelta {
         Self::default()
     }
 
-    /// Add an operation to the delta with bounds checking.
-    #[must_use]
-    pub fn with_op(mut self, op: GraphDeltaOp) -> Self {
-        self.try_push(op).expect("Delta bounds exceeded");
-        self
-    }
-
-    /// Push an operation onto the delta with bounds checking.
-    pub fn push(&mut self, op: GraphDeltaOp) {
-        self.try_push(op).expect("Delta bounds exceeded");
-    }
-
     /// Check bounds on an individual operation.
     pub fn validate_op_bounds(op: &GraphDeltaOp) -> Result<(), GraphDeltaError> {
         match op {

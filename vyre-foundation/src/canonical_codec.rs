@@ -369,6 +369,19 @@ impl CanonicalEncoder {
     }
 }
 
+/// The first `N` bytes as a fixed-size array, or the shortfall.
+///
+/// Every fixed-width read in this decoder was a length test followed by
+/// `try_into().unwrap()`, which states the width twice and trusts the two
+/// spellings to agree. Reading the array directly states it once, and a short
+/// input returns the same truncation error the test used to raise.
+fn take_prefix<const N: usize>(bytes: &[u8]) -> Result<&[u8; N], CodecError> {
+    bytes.first_chunk::<N>().ok_or(CodecError::UnexpectedEof {
+        expected: N,
+        remaining: bytes.len(),
+    })
+}
+
 /// Canonical binary decoder for schema records.
 pub struct CanonicalDecoder;
 
@@ -389,7 +402,7 @@ impl CanonicalDecoder {
             return Err(CodecError::UnknownSchema(SchemaId::ConformanceCertificate));
         }
 
-        let schema_id_raw = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
+        let schema_id_raw = u32::from_le_bytes(*take_prefix::<4>(&bytes[4..])?);
         let schema_id = SchemaId::ALL
             .iter()
             .copied()
@@ -411,13 +424,7 @@ impl CanonicalDecoder {
         let mut last_field_num = 0;
 
         while offset < bytes.len() {
-            if offset + 4 > bytes.len() {
-                return Err(CodecError::UnexpectedEof {
-                    expected: 4,
-                    remaining: bytes.len() - offset,
-                });
-            }
-            let field_num = u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap());
+            let field_num = u32::from_le_bytes(*take_prefix::<4>(&bytes[offset..])?);
             offset += 4;
 
             if field_num == last_field_num {
@@ -497,90 +504,34 @@ impl CanonicalDecoder {
                 }
                 Ok((CanonicalValue::U8(bytes[0]), 1))
             }
-            FieldType::U16 => {
-                if bytes.len() < 2 {
-                    return Err(CodecError::UnexpectedEof {
-                        expected: 2,
-                        remaining: bytes.len(),
-                    });
-                }
-                Ok((
-                    CanonicalValue::U16(u16::from_le_bytes(bytes[0..2].try_into().unwrap())),
-                    2,
-                ))
-            }
-            FieldType::U32 => {
-                if bytes.len() < 4 {
-                    return Err(CodecError::UnexpectedEof {
-                        expected: 4,
-                        remaining: bytes.len(),
-                    });
-                }
-                Ok((
-                    CanonicalValue::U32(u32::from_le_bytes(bytes[0..4].try_into().unwrap())),
-                    4,
-                ))
-            }
-            FieldType::U64 => {
-                if bytes.len() < 8 {
-                    return Err(CodecError::UnexpectedEof {
-                        expected: 8,
-                        remaining: bytes.len(),
-                    });
-                }
-                Ok((
-                    CanonicalValue::U64(u64::from_le_bytes(bytes[0..8].try_into().unwrap())),
-                    8,
-                ))
-            }
-            FieldType::I32 => {
-                if bytes.len() < 4 {
-                    return Err(CodecError::UnexpectedEof {
-                        expected: 4,
-                        remaining: bytes.len(),
-                    });
-                }
-                Ok((
-                    CanonicalValue::I32(i32::from_le_bytes(bytes[0..4].try_into().unwrap())),
-                    4,
-                ))
-            }
-            FieldType::I64 => {
-                if bytes.len() < 8 {
-                    return Err(CodecError::UnexpectedEof {
-                        expected: 8,
-                        remaining: bytes.len(),
-                    });
-                }
-                Ok((
-                    CanonicalValue::I64(i64::from_le_bytes(bytes[0..8].try_into().unwrap())),
-                    8,
-                ))
-            }
-            FieldType::F32 => {
-                if bytes.len() < 4 {
-                    return Err(CodecError::UnexpectedEof {
-                        expected: 4,
-                        remaining: bytes.len(),
-                    });
-                }
-                Ok((
-                    CanonicalValue::F32(f32::from_le_bytes(bytes[0..4].try_into().unwrap())),
-                    4,
-                ))
-            }
-            FieldType::F64 => {
-                if bytes.len() < 8 {
-                    return Err(CodecError::UnexpectedEof {
-                        expected: 8,
-                        remaining: bytes.len(),
-                    });
-                }
-                Ok((
-                    CanonicalValue::F64(f64::from_le_bytes(bytes[0..8].try_into().unwrap())),
-                    8,
-                ))
-            }
+            FieldType::U16 => Ok((
+                CanonicalValue::U16(u16::from_le_bytes(*take_prefix(bytes)?)),
+                2,
+            )),
+            FieldType::U32 => Ok((
+                CanonicalValue::U32(u32::from_le_bytes(*take_prefix(bytes)?)),
+                4,
+            )),
+            FieldType::U64 => Ok((
+                CanonicalValue::U64(u64::from_le_bytes(*take_prefix(bytes)?)),
+                8,
+            )),
+            FieldType::I32 => Ok((
+                CanonicalValue::I32(i32::from_le_bytes(*take_prefix(bytes)?)),
+                4,
+            )),
+            FieldType::I64 => Ok((
+                CanonicalValue::I64(i64::from_le_bytes(*take_prefix(bytes)?)),
+                8,
+            )),
+            FieldType::F32 => Ok((
+                CanonicalValue::F32(f32::from_le_bytes(*take_prefix(bytes)?)),
+                4,
+            )),
+            FieldType::F64 => Ok((
+                CanonicalValue::F64(f64::from_le_bytes(*take_prefix(bytes)?)),
+                8,
+            )),
             FieldType::Bool => {
                 if bytes.is_empty() {
                     return Err(CodecError::UnexpectedEof {
@@ -606,13 +557,7 @@ impl CanonicalDecoder {
                 Ok((CanonicalValue::FixedBytes(bytes[0..n].to_vec()), n))
             }
             FieldType::VarBytes => {
-                if bytes.len() < 4 {
-                    return Err(CodecError::UnexpectedEof {
-                        expected: 4,
-                        remaining: bytes.len(),
-                    });
-                }
-                let len = u32::from_le_bytes(bytes[0..4].try_into().unwrap()) as usize;
+                let len = u32::from_le_bytes(*take_prefix::<4>(bytes)?) as usize;
                 if bytes.len() < 4 + len {
                     return Err(CodecError::UnexpectedEof {
                         expected: 4 + len,
@@ -625,13 +570,7 @@ impl CanonicalDecoder {
                 ))
             }
             FieldType::Utf8String => {
-                if bytes.len() < 4 {
-                    return Err(CodecError::UnexpectedEof {
-                        expected: 4,
-                        remaining: bytes.len(),
-                    });
-                }
-                let len = u32::from_le_bytes(bytes[0..4].try_into().unwrap()) as usize;
+                let len = u32::from_le_bytes(*take_prefix::<4>(bytes)?) as usize;
                 if bytes.len() < 4 + len {
                     return Err(CodecError::UnexpectedEof {
                         expected: 4 + len,
@@ -646,13 +585,7 @@ impl CanonicalDecoder {
                 Ok((CanonicalValue::Utf8String(String::from(s)), 4 + len))
             }
             FieldType::List(elem_type) => {
-                if bytes.len() < 4 {
-                    return Err(CodecError::UnexpectedEof {
-                        expected: 4,
-                        remaining: bytes.len(),
-                    });
-                }
-                let count = u32::from_le_bytes(bytes[0..4].try_into().unwrap()) as usize;
+                let count = u32::from_le_bytes(*take_prefix::<4>(bytes)?) as usize;
                 if count > schema.bounds.max_elements {
                     return Err(CodecError::ElementCountExceeded {
                         count,

@@ -214,7 +214,11 @@ pub fn utc_timestamp(instant: std::time::SystemTime) -> Result<String, String> {
 ///
 /// The shift places the epoch inside a 400-year era that starts on a leap-year
 /// boundary, which removes the leap-day special cases from the division.
-fn civil_from_unix_days(days: i64) -> (i64, u32, u32) {
+///
+/// Month and day stay `i64` alongside the year. Narrowing them to `u32` states
+/// a range the arithmetic already guarantees and costs two conversions that can
+/// only be answered with a panic.
+fn civil_from_unix_days(days: i64) -> (i64, i64, i64) {
     let shifted = days + 719_468;
     let era = shifted.div_euclid(146_097);
     let day_of_era = shifted.rem_euclid(146_097);
@@ -223,13 +227,11 @@ fn civil_from_unix_days(days: i64) -> (i64, u32, u32) {
     let year = year_of_era + era * 400;
     let day_of_year = day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
     let shifted_month = (5 * day_of_year + 2) / 153;
-    let day = u32::try_from(day_of_year - (153 * shifted_month + 2) / 5 + 1)
-        .expect("a day of month is within 1..=31");
-    let month = u32::try_from(if shifted_month < 10 {
+    let day = day_of_year - (153 * shifted_month + 2) / 5 + 1;
+    let month = if shifted_month < 10 {
         shifted_month + 3
     } else {
         shifted_month - 9
-    })
-    .expect("a month is within 1..=12");
+    };
     (if month <= 2 { year + 1 } else { year }, month, day)
 }

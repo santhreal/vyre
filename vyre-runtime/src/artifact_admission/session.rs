@@ -530,7 +530,7 @@ impl ArtifactSession {
                     let bytes = prepared_payloads
                         .get(val_id)
                         .and_then(|b| b.as_ref())
-                        .expect("Fix: prepare a payload in phase 1 for every non-resident dataset entry before resolving resources");
+                        .ok_or(ResourceIngestionError::PayloadNotPrepared { value: *val_id })?;
 
                     let resource =
                         state

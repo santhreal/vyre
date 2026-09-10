@@ -107,9 +107,13 @@ impl UnprovenKind {
             | "right-absorbing" | "bounded" | "complement" | "zero-product" => {
                 Some(Self::MissingElement)
             }
-            "de-morgan" | "distributive" | "lattice-absorption" | "inverse-of" => {
-                Some(Self::MissingPartner)
-            }
+            // A categorical law relates the arrow to the arrows it composes
+            // with: the identity arrow for `f ∘ id = id ∘ f = f`, two further
+            // arrows for `(h ∘ g) ∘ f = h ∘ (g ∘ f)`. A registration names one
+            // arrow, so the payload the statement needs is the partner's
+            // registration id, exactly as it is for a distributive pair.
+            "de-morgan" | "distributive" | "lattice-absorption" | "inverse-of"
+            | "categorical-identity" | "categorical-associative" => Some(Self::MissingPartner),
             "monotone" | "monotonic" | "trichotomy" => Some(Self::MissingOrder),
             "custom" => Some(Self::NoCheckDeclared),
             _ => None,

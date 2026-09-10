@@ -279,73 +279,39 @@ fn compute_sccs(adj: &BTreeMap<&'static str, Vec<&'static str>>) -> Vec<Vec<&'st
         adj: &'a BTreeMap<&'static str, Vec<&'static str>>,
         index: usize,
         indices: BTreeMap<&'static str, usize>,
-        lowlinks: BTreeMap<&'static str, usize>,
         on_stack: BTreeSet<&'static str>,
         stack: Vec<&'static str>,
         sccs: Vec<Vec<&'static str>>,
     }
 
-    impl<'a> Tarjan<'a> {
-        fn strongconnect(&mut self, v: &'static str) {
-            self.indices.insert(v, self.index);
-            self.lowlinks.insert(v, self.index);
+    impl Tarjan<'_> {
+        /// Visit `v` and return its lowlink.
+        ///
+        /// The lowlink travels back as the return value rather than through a
+        /// second map. Every read of it was a lookup for a key this function
+        /// had just written, so the map could only ever answer, and eight
+        /// `expect` calls said so in prose instead of in the types.
+        fn strongconnect(&mut self, v: &'static str) -> usize {
+            let v_index = self.index;
+            self.indices.insert(v, v_index);
             self.index += 1;
             self.stack.push(v);
             self.on_stack.insert(v);
 
-            let neighbors = self
-                .adj
-                .get(v)
-                .expect("Fix: Tarjan traversal node must have an adjacency entry");
-            for &w in neighbors {
-                if !self.indices.contains_key(w) {
-                    if self.adj.contains_key(w) {
-                        self.strongconnect(w);
-                        let w_low = self
-                            .lowlinks
-                            .get(w)
-                            .copied()
-                            .expect("Fix: Tarjan visited child node must have a lowlink entry");
-                        let v_low = self
-                            .lowlinks
-                            .get_mut(v)
-                            .expect("Fix: Tarjan active node must have a lowlink entry");
-                        *v_low = (*v_low).min(w_low);
-                    }
-                } else if self.on_stack.contains(w) {
-                    let w_idx = self
-                        .indices
-                        .get(w)
-                        .copied()
-                        .expect("Fix: Tarjan on-stack node must have an index entry");
-                    let v_low = self
-                        .lowlinks
-                        .get_mut(v)
-                        .expect("Fix: Tarjan active node must have a lowlink entry");
-                    *v_low = (*v_low).min(w_idx);
+            let mut v_low = v_index;
+            let adj = self.adj;
+            for &w in adj.get(v).map_or(&[][..], Vec::as_slice) {
+                match self.indices.get(w).copied() {
+                    None if adj.contains_key(w) => v_low = v_low.min(self.strongconnect(w)),
+                    Some(w_index) if self.on_stack.contains(w) => v_low = v_low.min(w_index),
+                    _ => {}
                 }
             }
-            let v_low = self
-                .lowlinks
-                .get(v)
-                .copied()
-                .expect("Fix: Tarjan active node must have a lowlink entry");
-            let v_idx = self
-                .indices
-                .get(v)
-                .copied()
-                .expect("Fix: Tarjan active node must have an index entry");
-            if v_low == v_idx {
+
+            if v_low == v_index {
                 let mut scc = Vec::new();
-                loop {
-                    let w = self
-                        .stack
-                        .pop()
-                        .expect("Fix: Tarjan component stack must contain its root");
-                    assert!(
-                        self.on_stack.remove(w),
-                        "Fix: Tarjan component member must be marked on-stack"
-                    );
+                while let Some(w) = self.stack.pop() {
+                    self.on_stack.remove(w);
                     scc.push(w);
                     if w == v {
                         break;
@@ -353,6 +319,7 @@ fn compute_sccs(adj: &BTreeMap<&'static str, Vec<&'static str>>) -> Vec<Vec<&'st
                 }
                 self.sccs.push(scc);
             }
+            v_low
         }
     }
 
@@ -360,7 +327,6 @@ fn compute_sccs(adj: &BTreeMap<&'static str, Vec<&'static str>>) -> Vec<Vec<&'st
         adj,
         index: 0,
         indices: BTreeMap::new(),
-        lowlinks: BTreeMap::new(),
         on_stack: BTreeSet::new(),
         stack: Vec::new(),
         sccs: Vec::new(),

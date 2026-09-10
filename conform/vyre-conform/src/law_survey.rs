@@ -349,24 +349,42 @@ pub fn judge(entry: &SemanticOperation, survey: &OperationSurvey) -> Vec<Disposi
                 });
             }
         }
-        Disposition::NoLegalRewrite | Disposition::Uncharacterized => {
-            let required = survey
-                .disposition
-                .required_absence()
-                .expect("an absence disposition states the decision it requires");
-            match recorded {
-                Some(absence) if absence == required => {}
-                Some(absence) => defects.push(DispositionDefect::WrongAbsence {
-                    recorded: absence.name(),
-                    derived: required.name(),
-                    evidence: survey.evidence(),
-                }),
-                None => defects.push(DispositionDefect::DeclaredWithoutVerdict {
-                    derived: required.name(),
-                    evidence: survey.evidence(),
-                }),
-            }
-        }
+        Disposition::NoLegalRewrite => judge_absence(
+            vyre_foundation::operation::AbsenceDecision::NoLegalRewrite,
+            recorded,
+            survey,
+            &mut defects,
+        ),
+        Disposition::Uncharacterized => judge_absence(
+            vyre_foundation::operation::AbsenceDecision::Uncharacterized,
+            recorded,
+            survey,
+            &mut defects,
+        ),
     }
     defects
+}
+
+/// Judge a recorded decision against the absence `required` by the disposition.
+///
+/// Each absence arm names its own decision, so the requirement travels as a
+/// value rather than as an `Option` the caller has to re-derive and then trust.
+fn judge_absence(
+    required: vyre_foundation::operation::AbsenceDecision,
+    recorded: Option<vyre_foundation::operation::AbsenceDecision>,
+    survey: &OperationSurvey,
+    defects: &mut Vec<DispositionDefect>,
+) {
+    match recorded {
+        Some(absence) if absence == required => {}
+        Some(absence) => defects.push(DispositionDefect::WrongAbsence {
+            recorded: absence.name(),
+            derived: required.name(),
+            evidence: survey.evidence(),
+        }),
+        None => defects.push(DispositionDefect::DeclaredWithoutVerdict {
+            derived: required.name(),
+            evidence: survey.evidence(),
+        }),
+    }
 }

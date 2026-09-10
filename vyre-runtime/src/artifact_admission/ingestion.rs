@@ -688,6 +688,12 @@ pub enum ResourceIngestionError {
         /// Error message.
         error: String,
     },
+    /// Resource resolution reached a non-resident entry that phase one left unprepared.
+    #[error("no prepared payload for canonical value {} at resource resolution. Fix: prepare a payload for every non-resident dataset entry before resolving resources.", value.0)]
+    PayloadNotPrepared {
+        /// Value identity.
+        value: ArtifactValueId,
+    },
     /// Concrete driver upload failed.
     #[error("driver upload failed for value {}: {error}. Fix: verify device connectivity and retry upload.", value.0)]
     UploadFailed {

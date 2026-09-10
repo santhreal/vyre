@@ -575,8 +575,7 @@ impl WholeAppNativeComparisonRecord {
         )
         .map_err(|err| err.to_string())?;
 
-        let speedup_ratio =
-            (measurement.p50_latency_ns as f64) / (vyre_p50_latency_ns as f64);
+        let speedup_ratio = (measurement.p50_latency_ns as f64) / (vyre_p50_latency_ns as f64);
         let verdict = if speedup_ratio >= 1.0 + COMPARISON_EQUIVALENCE_BAND {
             "win"
         } else if speedup_ratio <= 1.0 - COMPARISON_EQUIVALENCE_BAND {
@@ -990,9 +989,8 @@ impl WholeApplicationRecord {
             missing.push("cold_and_warm_state".to_string());
         }
         if self.cold_state.is_cold_start == self.warm_state.is_cold_start {
-            missing.push(
-                "cold_and_warm_state: exactly one state must be the cold start".to_string(),
-            );
+            missing
+                .push("cold_and_warm_state: exactly one state must be the cold start".to_string());
         }
         if self.selected_schedule_id.is_empty() {
             missing.push("selected_schedule_identity".to_string());
@@ -1008,9 +1006,8 @@ impl WholeApplicationRecord {
                 "native_baseline_comparison and native_baseline_unmeasured are both present"
                     .to_string(),
             ),
-            (None, None) => missing.push(
-                "native_baseline_comparison is absent with no recorded reason".to_string(),
-            ),
+            (None, None) => missing
+                .push("native_baseline_comparison is absent with no recorded reason".to_string()),
             (Some(comparison), None) => {
                 if comparison.baseline_id.is_empty()
                     || comparison.baseline_pinned_version.is_empty()
@@ -1113,25 +1110,24 @@ impl WholeApplicationDevice {
             reason: error.to_string(),
         })?;
         let id = backend.id().to_string();
-        let registration =
-            backend_registration(&id).map_err(|error| WholeApplicationRefusal::NoDispatchDevice {
+        let registration = backend_registration(&id).map_err(|error| {
+            WholeApplicationRefusal::NoDispatchDevice {
                 reason: error.to_string(),
-            })?;
+            }
+        })?;
         if registration.reference_oracle {
             return Err(WholeApplicationRefusal::ReferenceOracleBackend { backend_id: id });
         }
-        let materializer =
-            registration
-                .materializer()
-                .map_err(|error| WholeApplicationRefusal::NoDispatchDevice {
-                    reason: error.to_string(),
-                })?;
-        let target_compiler =
-            registration
-                .target_compiler()
-                .map_err(|error| WholeApplicationRefusal::NoDispatchDevice {
-                    reason: error.to_string(),
-                })?;
+        let materializer = registration.materializer().map_err(|error| {
+            WholeApplicationRefusal::NoDispatchDevice {
+                reason: error.to_string(),
+            }
+        })?;
+        let target_compiler = registration.target_compiler().map_err(|error| {
+            WholeApplicationRefusal::NoDispatchDevice {
+                reason: error.to_string(),
+            }
+        })?;
         Ok(Self {
             device_facts: backend.device_profile().compile_facts(),
             backend_id: id,
@@ -1166,7 +1162,7 @@ pub struct WholeApplicationWorkload {
     /// Default 14-point comparison equality conditions.
     pub default_conditions: NativeComparisonConditions,
     /// Builder constructing the connected multi-node ProgramGraph and concrete input buffers.
-    pub build_graph_and_inputs: fn() -> (ProgramGraph, BTreeMap<String, Vec<u8>>),
+    pub build_graph_and_inputs: fn() -> Result<(ProgramGraph, BTreeMap<String, Vec<u8>>), String>,
 }
 
 impl WholeApplicationWorkload {
@@ -1364,7 +1360,7 @@ impl WholeApplicationWorkload {
             ));
         }
 
-        let (graph, inputs) = (self.build_graph_and_inputs)();
+        let (graph, inputs) = (self.build_graph_and_inputs)()?;
         self.validate_topology(&graph)
             .map_err(|err| err.to_string())?;
 
@@ -1445,9 +1441,7 @@ impl WholeApplicationWorkload {
             };
             dataset
                 .insert(typed.with_lifetime(resource.lifetime))
-                .map_err(|err| {
-                    format!("resource `{}` cannot be ingested: {err}", resource.name)
-                })?;
+                .map_err(|err| format!("resource `{}` cannot be ingested: {err}", resource.name))?;
         }
 
         let bindings = session
@@ -1516,7 +1510,10 @@ impl WholeApplicationWorkload {
             }
             if let BoundResource::Resident(resource) = bound {
                 session.free_resident(resource.clone()).map_err(|err| {
-                    format!("Ingested resource release failed for value {}: {err}", value.0)
+                    format!(
+                        "Ingested resource release failed for value {}: {err}",
+                        value.0
+                    )
                 })?;
             }
         }
@@ -1678,16 +1675,16 @@ pub fn dense_numerical_pipeline() -> WholeApplicationWorkload {
             // External Inputs
             let in_feat = graph
                 .add_external_value("feat_in", contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count))
-                .unwrap();
+                .map_err(|error| error.to_string())?;
             let in_weights = graph
                 .add_external_value("weights", contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count))
-                .unwrap();
+                .map_err(|error| error.to_string())?;
             let in_bias = graph
                 .add_external_value("bias", contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count))
-                .unwrap();
+                .map_err(|error| error.to_string())?;
             let in_residual = graph
                 .add_external_value("residual", contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count))
-                .unwrap();
+                .map_err(|error| error.to_string())?;
 
             // Stage 1: Linear Feature Projection (proj = feat_in * weights + bias)
             let prog_proj = Program::wrapped(
@@ -1736,7 +1733,7 @@ pub fn dense_numerical_pipeline() -> WholeApplicationWorkload {
                         retained_successor_of: None,
                     }],
                 )
-                .unwrap();
+                .map_err(|error| error.to_string())?;
 
             // Stage 2: Activation and Layer Normalization (norm = proj_in * 3 + 7)
             let prog_norm = Program::wrapped(
@@ -1771,7 +1768,7 @@ pub fn dense_numerical_pipeline() -> WholeApplicationWorkload {
                         retained_successor_of: None,
                     }],
                 )
-                .unwrap();
+                .map_err(|error| error.to_string())?;
 
             // Stage 3: Residual Fusion and Dynamic Quantization (final = norm_in + residual)
             let prog_res = Program::wrapped(
@@ -1814,7 +1811,7 @@ pub fn dense_numerical_pipeline() -> WholeApplicationWorkload {
                         retained_successor_of: None,
                     }],
                 )
-                .unwrap();
+                .map_err(|error| error.to_string())?;
 
             // Concrete Input Buffers
             let mut inputs = BTreeMap::new();
@@ -1823,7 +1820,7 @@ pub fn dense_numerical_pipeline() -> WholeApplicationWorkload {
             inputs.insert("bias".to_string(), (0..count).map(|i| (i * 2 + 1) as u32).flat_map(|v| v.to_le_bytes()).collect());
             inputs.insert("residual".to_string(), (0..count).map(|i| (i * 11 + 9) as u32).flat_map(|v| v.to_le_bytes()).collect());
 
-            (graph, inputs)
+            Ok((graph, inputs))
         },
     }
 }
@@ -1863,16 +1860,16 @@ pub fn irregular_stateful_traversal() -> WholeApplicationWorkload {
             // External Inputs
             let in_offsets = graph
                 .add_external_value("row_offsets", contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count))
-                .unwrap();
+                .map_err(|error| error.to_string())?;
             let in_cols = graph
                 .add_external_value("col_indices", contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count))
-                .unwrap();
+                .map_err(|error| error.to_string())?;
             let in_frontier = graph
                 .add_external_value("frontier_mask", contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count))
-                .unwrap();
+                .map_err(|error| error.to_string())?;
             let in_history = graph
                 .add_external_value("retained_hist", contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count))
-                .unwrap();
+                .map_err(|error| error.to_string())?;
 
             // Stage 1: CSR Frontier SpMV Gather (active = frontier[cols[i]] * offsets[i])
             let prog_spmv = Program::wrapped(
@@ -1921,7 +1918,7 @@ pub fn irregular_stateful_traversal() -> WholeApplicationWorkload {
                         retained_successor_of: None,
                     }],
                 )
-                .unwrap();
+                .map_err(|error| error.to_string())?;
 
             // Stage 2: Degree-Weighted Scatter Accumulator (scatter = active * degree_weight)
             let prog_scatter = Program::wrapped(
@@ -1953,7 +1950,7 @@ pub fn irregular_stateful_traversal() -> WholeApplicationWorkload {
                         retained_successor_of: None,
                     }],
                 )
-                .unwrap();
+                .map_err(|error| error.to_string())?;
 
             // Stage 3: Stateful History Update with Retained State (final_state = history * decay + scatter)
             let prog_hist = Program::wrapped(
@@ -1996,7 +1993,7 @@ pub fn irregular_stateful_traversal() -> WholeApplicationWorkload {
                         retained_successor_of: None,
                     }],
                 )
-                .unwrap();
+                .map_err(|error| error.to_string())?;
 
             let mut inputs = BTreeMap::new();
             inputs.insert("row_offsets".to_string(), (0..count).map(|i| (i * 4) as u32).flat_map(|v| v.to_le_bytes()).collect());
@@ -2004,7 +2001,7 @@ pub fn irregular_stateful_traversal() -> WholeApplicationWorkload {
             inputs.insert("frontier_mask".to_string(), (0..count).map(|i| if i % 3 == 0 { 1u32 } else { 0u32 }).flat_map(|v| v.to_le_bytes()).collect());
             inputs.insert("retained_hist".to_string(), (0..count).map(|i| (i + 1) as u32).flat_map(|v| v.to_le_bytes()).collect());
 
-            (graph, inputs)
+            Ok((graph, inputs))
         },
     }
 }
@@ -2044,13 +2041,13 @@ pub fn interactive_event_pipeline() -> WholeApplicationWorkload {
             // External Inputs
             let in_boxes = graph
                 .add_external_value("dirty_boxes", contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count))
-                .unwrap();
+                .map_err(|error| error.to_string())?;
             let in_fg = graph
                 .add_external_value("layer_fg", contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count))
-                .unwrap();
+                .map_err(|error| error.to_string())?;
             let in_bg = graph
                 .add_external_value("layer_bg", contract(BufferAccess::ReadOnly, ValueLifetime::Invocation, count))
-                .unwrap();
+                .map_err(|error| error.to_string())?;
 
             // Stage 1: Dirty Region Culling & Spatial Hit-Test (mask = boxes[i] * 1)
             let prog_cull = Program::wrapped(
@@ -2082,7 +2079,7 @@ pub fn interactive_event_pipeline() -> WholeApplicationWorkload {
                         retained_successor_of: None,
                     }],
                 )
-                .unwrap();
+                .map_err(|error| error.to_string())?;
 
             // Stage 2: Spatial Affine Transform & Mapping (xform_fg = fg * mask + 10)
             let prog_xform = Program::wrapped(
@@ -2125,7 +2122,7 @@ pub fn interactive_event_pipeline() -> WholeApplicationWorkload {
                         retained_successor_of: None,
                     }],
                 )
-                .unwrap();
+                .map_err(|error| error.to_string())?;
 
             // Stage 3: Multi-Layer Porter-Duff Alpha Blend & Framebuffer Output (final_frame = xform_fg + bg)
             let prog_blend = Program::wrapped(
@@ -2168,14 +2165,14 @@ pub fn interactive_event_pipeline() -> WholeApplicationWorkload {
                         retained_successor_of: None,
                     }],
                 )
-                .unwrap();
+                .map_err(|error| error.to_string())?;
 
             let mut inputs = BTreeMap::new();
             inputs.insert("dirty_boxes".to_string(), (0..count).map(|i| if i % 2 == 0 { 1u32 } else { 0u32 }).flat_map(|v| v.to_le_bytes()).collect());
             inputs.insert("layer_fg".to_string(), (0..count).map(|i| (0xFF0000FF_u32 ^ (i as u32))).flat_map(|v| v.to_le_bytes()).collect());
             inputs.insert("layer_bg".to_string(), (0..count).map(|i| (0x00FF00FF_u32 ^ (i as u32))).flat_map(|v| v.to_le_bytes()).collect());
 
-            (graph, inputs)
+            Ok((graph, inputs))
         },
     }
 }

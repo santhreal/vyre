@@ -58,7 +58,7 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 #[cfg(test)]
-use vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity_or_panic;
+use vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity;
 use vyre_libs_math::math::submodular_greedy::{argmax_of_marginals, NO_WINNER};
 use vyre_megakernel::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
@@ -198,20 +198,31 @@ fn execute_argmax_step_with_scratch(
 }
 
 /// Convenience: invert retention to eviction (1 = evict).
+///
+/// # Errors
+///
+/// Returns [`SemanticExecutionError`] when the allocator refuses the eviction buffer.
 #[cfg(test)]
-#[must_use]
-pub fn invert_to_eviction_set(retention: &[u32]) -> Vec<u32> {
+pub fn invert_to_eviction_set(retention: &[u32]) -> Result<Vec<u32>, SemanticExecutionError> {
     let mut eviction = Vec::with_capacity(retention.len());
-    invert_to_eviction_set_into(retention, &mut eviction);
-    eviction
+    invert_to_eviction_set_into(retention, &mut eviction)?;
+    Ok(eviction)
 }
 
 /// Invert retention to eviction (1 = evict) into caller-owned storage.
+///
+/// # Errors
+///
+/// Returns [`SemanticExecutionError`] when the allocator refuses the eviction buffer.
 #[cfg(test)]
-pub fn invert_to_eviction_set_into(retention: &[u32], eviction: &mut Vec<u32>) {
+pub fn invert_to_eviction_set_into(
+    retention: &[u32],
+    eviction: &mut Vec<u32>,
+) -> Result<(), SemanticExecutionError> {
     eviction.clear();
-    reserve_vec_capacity_or_panic(eviction, retention.len(), "submodular eviction output");
-    eviction.extend(retention.iter().map(|&r| if r == 0 { 1 } else { 0 }));
+    reserve_vec_capacity(eviction, retention.len(), "submodular eviction output")?;
+    eviction.extend(retention.iter().map(|&r| u32::from(r == 0)));
+    Ok(())
 }
 
 /// Approximate worst-case retention quality bound: greedy submodular
@@ -421,7 +432,7 @@ mod tests {
     #[test]
     fn invert_complements_retention() {
         let retention = vec![1, 0, 1, 0, 1];
-        let eviction = invert_to_eviction_set(&retention);
+        let eviction = invert_to_eviction_set(&retention).expect("reservation must succeed");
         assert_eq!(eviction, vec![0, 1, 0, 1, 0]);
     }
 
@@ -430,7 +441,7 @@ mod tests {
         let retention = vec![1, 0, 1, 0, 1];
         let mut eviction = Vec::with_capacity(8);
         let ptr = eviction.as_ptr();
-        invert_to_eviction_set_into(&retention, &mut eviction);
+        invert_to_eviction_set_into(&retention, &mut eviction).expect("reservation must succeed");
         assert_eq!(eviction, vec![0, 1, 0, 1, 0]);
         assert_eq!(eviction.as_ptr(), ptr);
     }

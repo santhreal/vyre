@@ -34,10 +34,32 @@ schema = 1
 # infallible wrappers documented their panic contracts.
 
 [[crate_budget]]
+name = "conform"
+# 1 -> 0: each absence disposition names the decision it requires in its own
+# match arm, so the requirement travels as a value instead of an `Option` the
+# caller re-derives and then has to trust.
+ceiling = 0
+
+[[crate_budget]]
+name = "consumers"
+# 10 -> 0: both consumer binaries return `ExitCode` and report a refusal on
+# stderr. A demonstration that aborts mid-run leaves no exit status a caller
+# can read.
+ceiling = 0
+
+[[crate_budget]]
 name = "structure-gate"
 # 3 -> 0: the three thread-join sites document the contract they resume. A
 # partial corpus, roster, or crate-root set would let a sweep pass on whatever
 # loaded, so a lane panic ends the process instead of shrinking the population.
+ceiling = 0
+
+[[crate_budget]]
+name = "vyre-bench"
+# 25 -> 0: a whole-application workload builds its graph through a fallible
+# constructor, so a workload that cannot be built refuses the measurement
+# instead of ending the harness. Canonical JSON hashes through `Display`,
+# which cannot fail, and the civil-date arithmetic stays in one integer width.
 ceiling = 0
 
 [[crate_budget]]
@@ -50,6 +72,12 @@ ceiling = 0
 
 [[crate_budget]]
 name = "vyre-libs"
+ceiling = 0
+
+[[crate_budget]]
+name = "vyre-libs-builder"
+# 1 -> 0: the panicking twin of `reserve_vec_capacity` is gone and its one
+# caller propagates the allocator's refusal.
 ceiling = 0
 
 [[crate_budget]]
@@ -72,6 +100,13 @@ name = "vyre-runtime"
 # 4 -> 0 measured 2026-08-15 by hygiene-matrix: the four sites are in
 # `pipeline_cache/test_artifact_fixtures.rs`, a module `pipeline_cache/mod.rs`
 # declares under `#[cfg(test)]`, so no build outside `cargo test` holds them.
+ceiling = 0
+
+[[crate_budget]]
+name = "vyre-spec"
+# 1 -> 0: the canonical registry lookup documents the contract it fails closed
+# on. A synthesized default would hand out a version and a wire layout that
+# nothing agreed to.
 ceiling = 0
 
 [[crate_budget]]

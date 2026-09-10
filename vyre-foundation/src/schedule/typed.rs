@@ -247,15 +247,14 @@ impl TypedScheduleStage<InnermostLoopScope> {
     /// Build the validated schedule tree.
     #[must_use]
     pub fn build(self) -> ScheduleTree {
-        let mut trees = self
+        let trees = self
             .ops
             .into_iter()
             .map(ScheduleTree::Leaf)
             .collect::<Vec<_>>();
-        if trees.len() == 1 {
-            trees.pop().unwrap()
-        } else {
-            ScheduleTree::Sequence(trees)
+        match <[ScheduleTree; 1]>::try_from(trees) {
+            Ok([only]) => only,
+            Err(trees) => ScheduleTree::Sequence(trees),
         }
     }
 }

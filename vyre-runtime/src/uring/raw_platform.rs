@@ -463,13 +463,17 @@ impl MappedRing {
     }
 
     /// Borrow submission entry `index` for the duration of this mutable borrow.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the entry leaves the mapped SQE table. The mapping is what
+    /// makes the dereference below sound, so a caller that did not mask the
+    /// index has no recoverable state to return to.
     pub(crate) fn sqe_mut(&mut self, index: usize) -> &mut io_uring_sqe {
-        let byte_offset = index
-            .checked_mul(mem::size_of::<io_uring_sqe>())
-            .expect("Fix: cap the submission-queue index at the ring's entry count");
         assert!(
-            byte_offset
-                .checked_add(mem::size_of::<io_uring_sqe>())
+            index
+                .checked_add(1)
+                .and_then(|count| count.checked_mul(mem::size_of::<io_uring_sqe>()))
                 .is_some_and(|end| end <= self.sqes_size),
             "submission entry {index} leaves the {} byte SQE table. \
              Fix: mask the index with the kernel's ring_mask before submitting",
@@ -485,14 +489,18 @@ impl MappedRing {
     }
 
     /// Borrow completion entry `index` in the array at `offset`.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the entry leaves the mapped completion ring, for the same
+    /// reason [`Self::sqe_mut`] does.
     pub(crate) fn cqe(&self, offset: usize, index: usize) -> &io_uring_cqe {
-        let end = index
-            .checked_add(1)
-            .and_then(|count| count.checked_mul(mem::size_of::<io_uring_cqe>()))
-            .and_then(|span| span.checked_add(offset))
-            .expect("Fix: cap the completion-queue index at the ring's entry count");
         assert!(
-            end <= self.cq_ring_size,
+            index
+                .checked_add(1)
+                .and_then(|count| count.checked_mul(mem::size_of::<io_uring_cqe>()))
+                .and_then(|span| span.checked_add(offset))
+                .is_some_and(|end| end <= self.cq_ring_size),
             "completion entry {index} at offset {offset} leaves the {} byte completion ring. \
              Fix: mask the index with the kernel's ring_mask before reading",
             self.cq_ring_size

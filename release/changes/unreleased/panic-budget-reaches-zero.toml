@@ -1,0 +1,2 @@
+category = "changed"
+text = "Every crate that carried an undocumented panic now returns an error, states the contract in a `# Panics` section, or no longer needs the call: the two consumer binaries report a refusal on stderr and exit nonzero, a whole-application benchmark workload refuses a measurement it cannot build instead of ending the harness, and resource ingestion reports an unprepared payload rather than aborting."

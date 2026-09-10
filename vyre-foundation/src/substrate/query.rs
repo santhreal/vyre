@@ -178,6 +178,12 @@ pub enum QueryError {
         /// Name of the poisoned lock.
         lock_name: String,
     },
+    /// A parallel worker thread panicked while evaluating a query.
+    #[error("parallel query worker for `{query}` panicked. Fix: rebuild the query engine")]
+    WorkerPanicked {
+        /// Query the panicking worker was evaluating.
+        query: QueryKey,
+    },
     /// General query evaluation failure.
     #[error("Query execution failed: {0}")]
     ExecutionFailed(String),
@@ -563,30 +569,28 @@ impl QueryEngine {
         sorted_indices.sort_by_key(|&idx| queries[idx].key());
 
         // Concurrent execution across chunks.
-        let results = std::thread::scope(|s| {
+        let mut results = std::thread::scope(|s| {
             let mut handles = Vec::with_capacity(sorted_indices.len());
             for &idx in &sorted_indices {
                 let q = &queries[idx];
-                handles.push(s.spawn(move || self.execute(q, token)));
+                handles.push((idx, q.key(), s.spawn(move || self.execute(q, token))));
             }
 
             let mut outputs = Vec::with_capacity(handles.len());
-            for handle in handles {
-                outputs.push(handle.join().expect("Thread panicked in query execution")?);
+            for (idx, key, handle) in handles {
+                let output = handle
+                    .join()
+                    .map_err(|_| QueryError::WorkerPanicked { query: key })??;
+                outputs.push((idx, output));
             }
-            Ok::<Vec<QueryOutput>, QueryError>(outputs)
+            Ok::<Vec<(usize, QueryOutput)>, QueryError>(outputs)
         })?;
 
-        // Order results to match original query slice indices.
-        let mut ordered_outputs = vec![None; queries.len()];
-        for (i, &original_idx) in sorted_indices.iter().enumerate() {
-            ordered_outputs[original_idx] = Some(results[i].clone());
-        }
-
-        Ok(ordered_outputs
-            .into_iter()
-            .map(|opt| opt.expect("All outputs present"))
-            .collect())
+        // Restore the caller's query order. Pairing each output with its index
+        // carries the permutation in the data, so no slot can be missing and no
+        // output is cloned to leave a placeholder behind.
+        results.sort_by_key(|&(idx, _)| idx);
+        Ok(results.into_iter().map(|(_, output)| output).collect())
     }
 
     /// Invalidate queries matching `dirty_keys` and all their transitive dependents.
