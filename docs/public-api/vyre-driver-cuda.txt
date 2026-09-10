@@ -699,13 +699,13 @@ pub vyre_driver_cuda::CudaEGraphUnionCompactionWave::first_item: u64
 pub vyre_driver_cuda::CudaEGraphUnionCompactionWave::item_count: u64
 pub vyre_driver_cuda::CudaEGraphUnionCompactionWave::pass: vyre_driver_cuda::CudaEGraphUnionCompactionPass
 pub vyre_driver_cuda::CudaEGraphUnionCompactionWave::threads_per_block: u32
-pub vyre_driver_cuda::CudaExternalMemoryDescriptor::dimensions: vyre_spec::resource_capability::ImageDimensions
-pub vyre_driver_cuda::CudaExternalMemoryDescriptor::format: vyre_spec::resource_capability::ImageFormat
+pub vyre_driver_cuda::CudaExternalMemoryDescriptor::dimensions: vyre_spec::resource_capability::image::ImageDimensions
+pub vyre_driver_cuda::CudaExternalMemoryDescriptor::format: vyre_spec::resource_capability::image::ImageFormat
 pub vyre_driver_cuda::CudaExternalMemoryDescriptor::handle: vyre_driver_cuda::CudaExternalMemoryHandle
 pub vyre_driver_cuda::CudaExternalMemoryDescriptor::permitted_usages: vyre_spec::resource_capability::ResourcePermittedUsages
 pub vyre_driver_cuda::CudaExternalMemoryDescriptor::resource_id: u64
 pub vyre_driver_cuda::CudaExternalMemoryDescriptor::row_pitch_bytes: u32
-pub vyre_driver_cuda::CudaExternalMemoryDescriptor::sync_protocol: vyre_spec::resource_capability::TimelineSyncProtocol
+pub vyre_driver_cuda::CudaExternalMemoryDescriptor::sync_protocol: vyre_spec::resource_capability::sampler::TimelineSyncProtocol
 pub vyre_driver_cuda::CudaExternalMemoryHandle::DmaBufFd(i32)
 pub vyre_driver_cuda::CudaExternalMemoryHandle::HostPointer
 pub vyre_driver_cuda::CudaExternalMemoryHandle::HostPointer::byte_size: u64

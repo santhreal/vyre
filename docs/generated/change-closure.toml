@@ -4265,7 +4265,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CombineOrder"
 variant_name = "Changed"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:417"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:418"
 constructors = ["CombineOrder::Changed"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)"
@@ -4275,7 +4275,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CombineOrder"
 variant_name = "ChangedWhenReshaped"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:414"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:415"
 constructors = ["CombineOrder::ChangedWhenReshaped"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)"
@@ -4285,7 +4285,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "CombineOrder"
 variant_name = "Preserved"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:412"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:413"
 constructors = ["CombineOrder::Preserved"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)"
@@ -9479,7 +9479,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ExternalAdmissionError"
 variant_name = "GenerationMismatch"
-declaration_site = "vyre-runtime/src/external_resource_admission.rs:98"
+declaration_site = "vyre-runtime/src/external_resource_admission.rs:113"
 constructors = ["ExternalAdmissionError::GenerationMismatch", "ExternalAdmissionError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -9489,7 +9489,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ExternalAdmissionError"
 variant_name = "InvalidCombination"
-declaration_site = "vyre-runtime/src/external_resource_admission.rs:56"
+declaration_site = "vyre-runtime/src/external_resource_admission.rs:71"
 constructors = ["ExternalAdmissionError::InvalidCombination", "ExternalAdmissionError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -9499,7 +9499,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ExternalAdmissionError"
 variant_name = "InvalidDimensions"
-declaration_site = "vyre-runtime/src/external_resource_admission.rs:76"
+declaration_site = "vyre-runtime/src/external_resource_admission.rs:91"
 constructors = ["ExternalAdmissionError::InvalidDimensions", "ExternalAdmissionError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -9509,7 +9509,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ExternalAdmissionError"
 variant_name = "InvalidPitch"
-declaration_site = "vyre-runtime/src/external_resource_admission.rs:66"
+declaration_site = "vyre-runtime/src/external_resource_admission.rs:81"
 constructors = ["ExternalAdmissionError::InvalidPitch", "ExternalAdmissionError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -9519,7 +9519,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ExternalAdmissionError"
 variant_name = "ResourceInvalidated"
-declaration_site = "vyre-runtime/src/external_resource_admission.rs:92"
+declaration_site = "vyre-runtime/src/external_resource_admission.rs:107"
 constructors = ["ExternalAdmissionError::ResourceInvalidated", "ExternalAdmissionError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -9529,7 +9529,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ExternalAdmissionError"
 variant_name = "ResourceNotFound"
-declaration_site = "vyre-runtime/src/external_resource_admission.rs:110"
+declaration_site = "vyre-runtime/src/external_resource_admission.rs:125"
 constructors = ["ExternalAdmissionError::ResourceNotFound", "ExternalAdmissionError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -9539,7 +9539,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ExternalAdmissionError"
 variant_name = "UsageNotPermitted"
-declaration_site = "vyre-runtime/src/external_resource_admission.rs:84"
+declaration_site = "vyre-runtime/src/external_resource_admission.rs:99"
 constructors = ["ExternalAdmissionError::UsageNotPermitted", "ExternalAdmissionError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -16520,7 +16520,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MappingLevel"
 variant_name = "ComputeUnitPartition"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:64"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:65"
 constructors = ["MappingLevel::ComputeUnitPartition"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)"
@@ -16530,7 +16530,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MappingLevel"
 variant_name = "DevicePartition"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:66"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:67"
 constructors = ["MappingLevel::DevicePartition"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)"
@@ -16540,7 +16540,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MappingLevel"
 variant_name = "Lane"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:58"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:59"
 constructors = ["MappingLevel::Lane"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)"
@@ -16550,7 +16550,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MappingLevel"
 variant_name = "Subgroup"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:60"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:61"
 constructors = ["MappingLevel::Subgroup"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)"
@@ -16560,7 +16560,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MappingLevel"
 variant_name = "Workgroup"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:62"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:63"
 constructors = ["MappingLevel::Workgroup"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)"
@@ -17260,7 +17260,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryPlacement"
 variant_name = "Device"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:78"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:79"
 constructors = ["MemoryPlacement::Device"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)"
@@ -17270,7 +17270,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryPlacement"
 variant_name = "Invocation"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:74"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:75"
 constructors = ["MemoryPlacement::Invocation"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)"
@@ -17280,7 +17280,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryPlacement"
 variant_name = "Retained"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:80"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:81"
 constructors = ["MemoryPlacement::Retained"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)"
@@ -17290,7 +17290,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryPlacement"
 variant_name = "Workgroup"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:76"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:77"
 constructors = ["MemoryPlacement::Workgroup"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)"
@@ -20896,7 +20896,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineRole"
 variant_name = "Consumer"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:102"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:103"
 constructors = ["PipelineRole::Consumer"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)"
@@ -20906,7 +20906,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineRole"
 variant_name = "Producer"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:100"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:101"
 constructors = ["PipelineRole::Producer"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)"
@@ -28508,7 +28508,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleBoundKind"
 variant_name = "Bytes"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:203"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:204"
 constructors = ["ScheduleBoundKind::Bytes"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -28518,7 +28518,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleBoundKind"
 variant_name = "Factor"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:201"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:202"
 constructors = ["ScheduleBoundKind::Factor"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -28528,7 +28528,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleBoundKind"
 variant_name = "PartitionCount"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:211"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:212"
 constructors = ["ScheduleBoundKind::PartitionCount"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -28538,7 +28538,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleBoundKind"
 variant_name = "PipelineRing"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:207"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:208"
 constructors = ["ScheduleBoundKind::PipelineRing"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -28548,7 +28548,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleBoundKind"
 variant_name = "PrefetchDistance"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:205"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:206"
 constructors = ["ScheduleBoundKind::PrefetchDistance"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -28558,7 +28558,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleBoundKind"
 variant_name = "QueueCapacity"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:209"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:210"
 constructors = ["ScheduleBoundKind::QueueCapacity"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29198,7 +29198,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchedulePrecondition"
 variant_name = "Acyclic"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:236"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:237"
 constructors = ["SchedulePrecondition::Acyclic"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29208,7 +29208,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchedulePrecondition"
 variant_name = "AxisExists"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:221"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:222"
 constructors = ["SchedulePrecondition::AxisExists"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29218,7 +29218,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchedulePrecondition"
 variant_name = "AxisPermutation"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:238"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:239"
 constructors = ["SchedulePrecondition::AxisPermutation"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29228,7 +29228,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchedulePrecondition"
 variant_name = "BoundedResource"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:234"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:235"
 constructors = ["SchedulePrecondition::BoundedResource"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29238,7 +29238,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchedulePrecondition"
 variant_name = "DistinctPhases"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:232"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:233"
 constructors = ["SchedulePrecondition::DistinctPhases"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29248,7 +29248,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchedulePrecondition"
 variant_name = "Divisible"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:225"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:226"
 constructors = ["SchedulePrecondition::Divisible"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29258,7 +29258,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchedulePrecondition"
 variant_name = "NonZero"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:223"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:224"
 constructors = ["SchedulePrecondition::NonZero"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29268,7 +29268,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchedulePrecondition"
 variant_name = "PhaseExists"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:219"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:220"
 constructors = ["SchedulePrecondition::PhaseExists"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29448,7 +29448,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "AsymmetricJoin"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:394"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:395"
 constructors = ["ScheduleTransform::AsymmetricJoin"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29458,7 +29458,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "DispatchCut"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:380"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:381"
 constructors = ["ScheduleTransform::DispatchCut"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29468,7 +29468,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "Fuse"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:271"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:272"
 constructors = ["ScheduleTransform::Fuse"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29478,7 +29478,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "Map"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:308"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:309"
 constructors = ["ScheduleTransform::Map"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29488,7 +29488,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "PersistentQueue"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:364"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:365"
 constructors = ["ScheduleTransform::PersistentQueue"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29498,7 +29498,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "PhaseFission"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:264"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:265"
 constructors = ["ScheduleTransform::PhaseFission"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29508,7 +29508,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "Pipeline"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:346"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:347"
 constructors = ["ScheduleTransform::Pipeline"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29518,7 +29518,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "PlaceMemory"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:324"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:325"
 constructors = ["ScheduleTransform::PlaceMemory"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29528,7 +29528,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "Prefetch"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:335"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:336"
 constructors = ["ScheduleTransform::Prefetch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29538,7 +29538,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "Recompute"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:357"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:358"
 constructors = ["ScheduleTransform::Recompute"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29548,7 +29548,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "Reorder"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:292"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:293"
 constructors = ["ScheduleTransform::Reorder"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29558,7 +29558,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "SetWorkgroup"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:317"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:318"
 constructors = ["ScheduleTransform::SetWorkgroup"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29568,7 +29568,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "SpatialPartition"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:371"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:372"
 constructors = ["ScheduleTransform::SpatialPartition"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29578,7 +29578,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "Split"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:283"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:284"
 constructors = ["ScheduleTransform::Split"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29588,7 +29588,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "Synchronize"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:387"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:388"
 constructors = ["ScheduleTransform::Synchronize"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29598,7 +29598,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "Tile"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:276"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:277"
 constructors = ["ScheduleTransform::Tile"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29608,7 +29608,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ScheduleTransform"
 variant_name = "Vectorize"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:299"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:300"
 constructors = ["ScheduleTransform::Vectorize"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -32349,7 +32349,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SynchronizationScope"
 variant_name = "Device"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:92"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:93"
 constructors = ["SynchronizationScope::Device"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)"
@@ -32359,7 +32359,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SynchronizationScope"
 variant_name = "Subgroup"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:88"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:89"
 constructors = ["SynchronizationScope::Subgroup"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)"
@@ -32369,7 +32369,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SynchronizationScope"
 variant_name = "Workgroup"
-declaration_site = "vyre-foundation/src/schedule/mod.rs:90"
+declaration_site = "vyre-foundation/src/schedule/mod.rs:91"
 constructors = ["SynchronizationScope::Workgroup"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)"

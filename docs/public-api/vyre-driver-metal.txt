@@ -15,13 +15,13 @@ pub mod vyre_driver_metal
 pub struct vyre_driver_metal::MetalExternalMemoryDescriptor
 pub struct vyre_driver_metal::MetalExternalResourceImporter
 pub struct vyre_driver_metal::MetalImportedResource
-pub vyre_driver_metal::MetalExternalMemoryDescriptor::dimensions: vyre_spec::resource_capability::ImageDimensions
-pub vyre_driver_metal::MetalExternalMemoryDescriptor::format: vyre_spec::resource_capability::ImageFormat
+pub vyre_driver_metal::MetalExternalMemoryDescriptor::dimensions: vyre_spec::resource_capability::image::ImageDimensions
+pub vyre_driver_metal::MetalExternalMemoryDescriptor::format: vyre_spec::resource_capability::image::ImageFormat
 pub vyre_driver_metal::MetalExternalMemoryDescriptor::handle: vyre_driver_metal::MetalExternalMemoryHandle
 pub vyre_driver_metal::MetalExternalMemoryDescriptor::permitted_usages: vyre_spec::resource_capability::ResourcePermittedUsages
 pub vyre_driver_metal::MetalExternalMemoryDescriptor::resource_id: u64
 pub vyre_driver_metal::MetalExternalMemoryDescriptor::row_pitch_bytes: u32
-pub vyre_driver_metal::MetalExternalMemoryDescriptor::sync_protocol: vyre_spec::resource_capability::TimelineSyncProtocol
+pub vyre_driver_metal::MetalExternalMemoryDescriptor::sync_protocol: vyre_spec::resource_capability::sampler::TimelineSyncProtocol
 pub vyre_driver_metal::MetalExternalMemoryHandle::IOSurface(usize)
 pub vyre_driver_metal::MetalExternalMemoryHandle::SharedBuffer
 pub vyre_driver_metal::MetalExternalMemoryHandle::SharedBuffer::byte_size: u64

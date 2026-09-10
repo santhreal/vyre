@@ -779,7 +779,7 @@ pub fn vyre_runtime::pipeline_cache::RemoteCache::metrics(&self) -> vyre_runtime
 pub fn vyre_runtime::pipeline_cache::RemoteCache::new(base_url: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_runtime::pipeline_cache::RemoteCache::put(&self, _fp: vyre_runtime::pipeline_cache::PipelineFingerprint, _artifact: alloc::vec::Vec<u8>)
 pub fn vyre_runtime::pipeline_cache::RemoteCache::with_required_metadata(self, source_provenance: impl core::convert::Into<alloc::string::String>, device_compatibility: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_runtime::recovery::classify_backend_error(error: &vyre_driver::backend::error::BackendError) -> vyre_foundation::diagnostics::RetryClass
+pub fn vyre_runtime::recovery::classify_backend_error(error: &vyre_driver::backend::error::BackendError) -> vyre_foundation::diagnostics::classification::RetryClass
 pub fn vyre_runtime::recovery::recover_artifact_session(session: &vyre_runtime::artifact_admission::ArtifactSession, failure: vyre_driver::backend::error::BackendError) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::recovery::recover_session_with_expected_identity(session: &vyre_runtime::artifact_admission::ArtifactSession, expected_artifact: &vyre_megakernel::identity::Digest) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::replay::ReplayFailureEvidence::from_backend_error(slot_status: u32, error: &vyre_driver::backend::error::BackendError, output_bytes: &[u8]) -> Self
@@ -1561,8 +1561,8 @@ pub use vyre_runtime::RecoveryClass
 pub use vyre_runtime::RecoveryDisposition
 pub use vyre_runtime::StateOwnerRecovery
 pub use vyre_runtime::TypedRecoveryError
-pub vyre_runtime::AdmittedExternalResourceLease::dimensions: vyre_spec::resource_capability::ImageDimensions
-pub vyre_runtime::AdmittedExternalResourceLease::format: vyre_spec::resource_capability::ImageFormat
+pub vyre_runtime::AdmittedExternalResourceLease::dimensions: vyre_spec::resource_capability::image::ImageDimensions
+pub vyre_runtime::AdmittedExternalResourceLease::format: vyre_spec::resource_capability::image::ImageFormat
 pub vyre_runtime::AdmittedExternalResourceLease::is_zero_copy: bool
 pub vyre_runtime::AdmittedExternalResourceLease::lease_id: u64
 pub vyre_runtime::AdmittedExternalResourceLease::resource_id: u64
@@ -1579,11 +1579,11 @@ pub vyre_runtime::ExternalAdmissionError::GenerationMismatch::actual: u64
 pub vyre_runtime::ExternalAdmissionError::GenerationMismatch::expected: u64
 pub vyre_runtime::ExternalAdmissionError::GenerationMismatch::resource_id: u64
 pub vyre_runtime::ExternalAdmissionError::InvalidCombination
-pub vyre_runtime::ExternalAdmissionError::InvalidCombination::format: vyre_spec::resource_capability::ImageFormat
-pub vyre_runtime::ExternalAdmissionError::InvalidCombination::memory_kind: vyre_spec::resource_capability::ExternalMemoryKind
+pub vyre_runtime::ExternalAdmissionError::InvalidCombination::format: vyre_spec::resource_capability::image::ImageFormat
+pub vyre_runtime::ExternalAdmissionError::InvalidCombination::memory_kind: vyre_spec::resource_capability::sampler::ExternalMemoryKind
 pub vyre_runtime::ExternalAdmissionError::InvalidCombination::resource_id: u64
 pub vyre_runtime::ExternalAdmissionError::InvalidDimensions
-pub vyre_runtime::ExternalAdmissionError::InvalidDimensions::dimensions: vyre_spec::resource_capability::ImageDimensions
+pub vyre_runtime::ExternalAdmissionError::InvalidDimensions::dimensions: vyre_spec::resource_capability::image::ImageDimensions
 pub vyre_runtime::ExternalAdmissionError::InvalidDimensions::resource_id: u64
 pub vyre_runtime::ExternalAdmissionError::InvalidPitch
 pub vyre_runtime::ExternalAdmissionError::InvalidPitch::provided: u32
