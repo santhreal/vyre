@@ -130,11 +130,11 @@ fn u32_mod_by_zero_in_program_returns_zero() {
 fn i32_mod_by_zero_errors_at_runtime() {
     // The IR validator rejects `Mod` with i32 operands entirely, so this
     // gap can only be reached through direct expression evaluation.
-    let result = eval_expr::eval(
-        &Expr::rem(Expr::i32(7), Expr::i32(0)),
-        &mut zero_invocation(&empty_program()),
-        &mut Memory::empty(),
+    let result = reference_eval_expr(
         &empty_program(),
+        &mut ReferenceMemory::empty(),
+        InvocationIds::ZERO,
+        &Expr::rem(Expr::i32(7), Expr::i32(0)),
     );
     let err = result.expect_err("Fix: i32 mod by zero must error");
     assert!(
@@ -168,11 +168,11 @@ fn bitwise_op_on_incompatible_types_errors_at_runtime() {
         left: Box::new(Expr::u32(1)),
         right: Box::new(Expr::f32(1.0)),
     };
-    let err = eval_expr::eval(
-        &expr,
-        &mut zero_invocation(&empty_program()),
-        &mut Memory::empty(),
+    let err = reference_eval_expr(
         &empty_program(),
+        &mut ReferenceMemory::empty(),
+        InvocationIds::ZERO,
+        &expr,
     )
     .expect_err("Fix: bitwise op on mismatched types must error at runtime");
     assert!(

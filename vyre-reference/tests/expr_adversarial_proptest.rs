@@ -8,13 +8,13 @@ use crate::flat_expr_eval;
 
 use proptest::prelude::*;
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_reference::expr::Buffer;
-use vyre_reference::{expr as eval_expr, value::Value, workgroup::Memory};
+use vyre_reference::Buffer;
+use vyre_reference::workgroup::InvocationIds;
+use vyre_reference::{reference_eval_expr, value::Value, ReferenceMemory};
 
 use flat_expr_eval::{
     assert_binop_i32_err, canonical_f32, empty_program, eval_binop_f32, eval_binop_i32,
     eval_binop_u32, eval_expr_value, eval_unop_f32, eval_unop_i32, eval_unop_u32, expected_f32,
-    zero_invocation,
 };
 
 fn eval_cast(target: DataType, value: Expr) -> Value {

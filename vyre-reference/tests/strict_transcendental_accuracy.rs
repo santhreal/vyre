@@ -31,13 +31,14 @@ use vyre_foundation::fp_expansion::{
 use vyre_foundation::fp_parity::{canonical_f32, REFERENCE_TRANSCENDENTAL_ULP_BUDGET};
 use vyre_foundation::ir::{Expr, UnOp};
 use vyre_reference::{
-    expr as eval_expr,
     ieee754::{
         canonical_cos, canonical_exp, canonical_log, canonical_sin, canonical_sqrt,
         canonical_ulp_distance,
     },
+    reference_eval_expr,
     value::Value,
-    workgroup::{Invocation, InvocationIds, Memory},
+    workgroup::InvocationIds,
+    ReferenceMemory,
 };
 
 /// Accuracy of the expansion against the correctly-rounded f32 result.
@@ -65,12 +66,7 @@ fn expansion(op: &UnOp, input: f32) -> Expr {
 /// this is the same evaluation the parity claim compares a device against.
 fn evaluate(expr: &Expr) -> f32 {
     let program = vyre_foundation::ir::Program::wrapped(Vec::new(), [1, 1, 1], Vec::new());
-    let value = eval_expr::eval(
-        expr,
-        &mut Invocation::new(InvocationIds::ZERO, program.entry()),
-        &mut Memory::empty(),
-        &program,
-    )
+    let value = reference_eval_expr(&program, &mut ReferenceMemory::empty(), InvocationIds::ZERO, expr)
     .expect("Fix: the reference interpreter must evaluate an expanded transcendental");
     match value {
         Value::Float(inner) => inner as f32,

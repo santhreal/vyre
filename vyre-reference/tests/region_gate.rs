@@ -24,16 +24,3 @@ fn reference_eval_rejects_non_region_programs() {
         "Fix: reference_eval rejection must mention the region invariant, got: {error}"
     );
 }
-
-#[test]
-fn flat_cpu_rejects_non_region_programs() {
-    let mut output = Vec::new();
-    let error = vyre_reference::flat_cpu::run_flat(&raw_program(), &[], &mut output)
-        .expect_err("Fix: flat_cpu must reject raw top-level statements");
-    assert!(
-        error
-            .to_string()
-            .contains("top-level Region-wrapped Program"),
-        "Fix: flat_cpu rejection must mention the region invariant, got: {error}"
-    );
-}

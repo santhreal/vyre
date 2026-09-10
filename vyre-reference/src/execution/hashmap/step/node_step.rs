@@ -69,7 +69,7 @@ pub(crate) fn step_nodes_frame<'a>(
                 snapshots,
             )?;
             let target = buffer_mut(memory, buffer)?;
-            oob::store(target, idx, &v);
+            oob::store(target, idx, &v)?;
         }
         Node::If {
             cond,
@@ -256,10 +256,10 @@ pub(crate) fn step_nodes_frame<'a>(
                         "AllGather input buffer `{input}` not found"
                     ))
                 })?;
-                src.read_window(0, src.byte_len())
+                src.read_window(0, src.byte_len())?
             };
             let dst = buffer_mut(memory, output.as_str())?;
-            dst.write_window(0, &src_bytes);
+            dst.write_window(0, &src_bytes)?;
         }
         Node::ReduceScatter {
             input,
@@ -279,10 +279,10 @@ pub(crate) fn step_nodes_frame<'a>(
                         "ReduceScatter input buffer `{input}` not found"
                     ))
                 })?;
-                src.read_window(0, src.byte_len())
+                src.read_window(0, src.byte_len())?
             };
             let dst = buffer_mut(memory, output.as_str())?;
-            dst.write_window(0, &src_bytes);
+            dst.write_window(0, &src_bytes)?;
         }
         Node::Broadcast {
             buffer: _,
@@ -337,7 +337,7 @@ pub(crate) fn step_nodes_frame<'a>(
             }
             let target = buffer_mut(memory, buffer.as_str())?;
             let elements =
-                crate::execution::tile::load_elements(target, &origin_coords, tile_type, layout);
+                crate::execution::tile::load_elements(target, &origin_coords, tile_type, layout)?;
             invocation
                 .locals
                 .bind(tile.as_str(), Value::Array(elements))?;
@@ -369,7 +369,7 @@ pub(crate) fn step_nodes_frame<'a>(
                 single => vec![single],
             };
             let target = buffer_mut(memory, buffer.as_str())?;
-            crate::execution::tile::store_elements(target, &origin_coords, &elements);
+            crate::execution::tile::store_elements(target, &origin_coords, &elements)?;
         }
         Node::TileMatmul { acc, a, b } => {
             let acc_val = invocation
@@ -643,7 +643,7 @@ fn read_bytes(
     start: usize,
     byte_count: usize,
 ) -> Result<Vec<u8>, ReferenceError> {
-    Ok(super::super::memory::resolve_buffer(memory, source)?.read_window(start, byte_count))
+    super::super::memory::resolve_buffer(memory, source)?.read_window(start, byte_count)
 }
 
 fn ensure_buffer_exists(memory: &HashmapMemory, name: &str) -> Result<(), ReferenceError> {
@@ -655,8 +655,7 @@ fn apply_async_transfer(
     memory: &mut HashmapMemory,
 ) -> Result<(), ReferenceError> {
     let buffer = buffer_mut(memory, transfer.destination())?;
-    transfer.apply_to(buffer);
-    Ok(())
+    transfer.apply_to(buffer)
 }
 
 // Inline: covers the crate-private `apply_async_transfer` and `read_bytes`, which no integration test can reach.

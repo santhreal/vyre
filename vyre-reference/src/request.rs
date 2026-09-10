@@ -1,7 +1,9 @@
 //! Typed, versioned reference interpreter execution request and contract.
 //!
-//! WHY: row 86 closes the defect where the oracle lacked an explicit semantic
-//! execution contract, exact resource ABI, workload envelope, and mandatory work budget.
+//! One submission carries the logical program, the exact resource ABI, the
+//! workload envelope, the numerical contract, the schedule policy, and a
+//! mandatory work, memory, and recursion budget. Nothing about an execution is
+//! implicit, and nothing about it is optional.
 
 use vyre_foundation::ir::{BufferDecl, Program};
 use vyre_spec::NumericSemantics;
@@ -163,8 +165,8 @@ pub enum ExecutionStrictness {
     /// Strict mode: any out-of-bounds, type mismatch, missing value, overflow, poison,
     /// or incomplete dispatch returns a structured error.
     Strict,
-    /// Diagnostic permissive mode: records hypothetical target behavior (such as OOB tallies),
-    /// but cannot issue expected outputs or certificates.
+    /// Diagnostic permissive mode: records what a program absorbed, such as an
+    /// out-of-bounds tally. It carries no output value and no certificate.
     DiagnosticPermissive,
 }
 
@@ -270,23 +272,22 @@ impl ReferenceRequest {
 
     /// Execute in diagnostic permissive mode.
     ///
-    /// Diagnostic permissive mode records hypothetical target behavior, but
-    /// CANNOT issue an expected output or a certificate.
+    /// Diagnostic permissive mode records what the run absorbed. The report it
+    /// returns carries no output value and no certificate.
     ///
     /// # Errors
     /// Returns [`ReferenceError`] on unrecoverable host faults.
     pub fn execute_permissive(&self) -> Result<DiagnosticPermissiveReport, ReferenceError> {
-        let (hypothetical_outputs, steps, oob) =
-            crate::execution::run_permissive_with_request(self)?;
+        let (outputs, steps, oob) = crate::execution::run_permissive_with_request(self)?;
         let mut anomalies = Vec::new();
         if oob.total() > 0 {
             anomalies.push(format!(
-                "OOB access detected: loads={}, stores={}, atomics={}",
+                "out-of-bounds accesses absorbed: loads={}, stores={}, atomics={}",
                 oob.oob_loads, oob.oob_stores, oob.oob_atomics
             ));
         }
         Ok(DiagnosticPermissiveReport {
-            hypothetical_outputs,
+            output_digest: output_digest(&outputs),
             oob_report: oob,
             steps_executed: steps,
             recorded_anomalies: anomalies,
@@ -320,27 +321,37 @@ pub struct StrictExecutionResult {
     pub certificate: ReferenceCertificate,
 }
 
+/// Digest of the bytes a permissive run produced.
+///
+/// A digest is the whole record of what permissive mode observed. It is enough
+/// to tell two permissive runs apart and not enough to grade a device against,
+/// because the bytes it summarizes were computed while out-of-bounds accesses
+/// were being absorbed rather than refused.
+fn output_digest(outputs: &[Value]) -> String {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(&(outputs.len() as u64).to_le_bytes());
+    for output in outputs {
+        let bytes = output.to_bytes();
+        hasher.update(&(bytes.len() as u64).to_le_bytes());
+        hasher.update(&bytes);
+    }
+    hasher.finalize().to_hex().to_string()
+}
+
 /// Diagnostic report for permissive evaluation.
 ///
-/// Notice: This struct has NO certificate field and CANNOT produce a certificate
-/// or be used as an expected output authority.
-#[derive(Clone, Debug, PartialEq)]
+/// Permissive mode cannot issue an expected output or a certificate. That is a
+/// property of this type rather than of a check inside it: there is no output
+/// value and no certificate anywhere in the report, so no caller can extract
+/// one, mistake one for a graded result, or reach one by ignoring a `Result`.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DiagnosticPermissiveReport {
-    /// Hypothetical target outputs observed under permissive masking.
-    pub hypothetical_outputs: Vec<Value>,
+    /// Digest of the bytes the run produced under absorption.
+    pub output_digest: String,
     /// Tally of out-of-bounds accesses absorbed.
     pub oob_report: OobReport,
     /// Steps executed.
     pub steps_executed: u64,
     /// Recorded anomaly diagnostics.
     pub recorded_anomalies: Vec<String>,
-}
-
-impl DiagnosticPermissiveReport {
-    /// Explicitly refused: permissive mode cannot issue an expected output or certificate.
-    pub fn certificate(&self) -> Result<&ReferenceCertificate, ReferenceError> {
-        Err(ReferenceError::type_mismatch(
-            "diagnostic permissive mode cannot issue a certificate or expected output authority",
-        ))
-    }
 }

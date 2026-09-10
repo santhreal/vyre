@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`DiagnosticPermissiveReport` carries a digest of the bytes a permissive run produced instead of the values themselves, and has no `certificate` method. Permissive incapability is a property of the type rather than a check a caller can ignore the result of."

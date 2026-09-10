@@ -2,9 +2,7 @@
 
 use vyre_foundation::ir::{DataType, Expr, Program};
 use vyre_reference::{
-    expr as eval_expr,
-    value::Value,
-    workgroup::{Invocation, InvocationIds, Memory},
+    reference_eval_expr, value::Value, workgroup::InvocationIds, ReferenceMemory,
 };
 
 use vyre_test_support::scalar_corpora::mix32;
@@ -15,12 +13,7 @@ fn eval_cast(target: DataType, source: Expr) -> Value {
         target,
         value: Box::new(source),
     };
-    eval_expr::eval(
-        &expr,
-        &mut Invocation::new(InvocationIds::ZERO, program.entry()),
-        &mut Memory::empty(),
-        &program,
-    )
+    reference_eval_expr(&program, &mut ReferenceMemory::empty(), InvocationIds::ZERO, &expr)
     .expect("Fix: generated vector cast expression must evaluate in the reference oracle.")
 }
 

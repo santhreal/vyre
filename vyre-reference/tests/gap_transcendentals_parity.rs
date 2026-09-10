@@ -8,18 +8,15 @@
 use proptest::prelude::*;
 use vyre_foundation::ir::{Expr, UnOp};
 use vyre_reference::{
-    expr as eval_expr,
     ieee754::{canonical_cos, canonical_exp, canonical_log, canonical_sin, canonical_sqrt},
+    reference_eval_expr,
     value::Value,
-    workgroup::{Invocation, InvocationIds, Memory},
+    workgroup::InvocationIds,
+    ReferenceMemory,
 };
 
 fn empty_program() -> vyre_foundation::ir::Program {
     vyre_foundation::ir::Program::wrapped(Vec::new(), [1, 1, 1], Vec::new())
-}
-
-fn zero_invocation(program: &vyre_foundation::ir::Program) -> Invocation<'_> {
-    Invocation::new(InvocationIds::ZERO, program.entry())
 }
 
 fn eval_unop_f32(op: &UnOp, input: f32) -> Value {
@@ -28,12 +25,7 @@ fn eval_unop_f32(op: &UnOp, input: f32) -> Value {
         op: op.clone(),
         operand: Box::new(Expr::f32(input)),
     };
-    eval_expr::eval(
-        &expr,
-        &mut zero_invocation(&program),
-        &mut Memory::empty(),
-        &program,
-    )
+    reference_eval_expr(&program, &mut ReferenceMemory::empty(), InvocationIds::ZERO, &expr)
     .expect("Fix: reference interpreter must evaluate generated transcendental expression")
 }
 

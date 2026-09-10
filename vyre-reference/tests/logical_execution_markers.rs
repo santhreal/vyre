@@ -7,8 +7,8 @@
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryOrdering, Node, Program};
 use vyre_reference::value::Value;
-use vyre_reference::workgroup::{Invocation, InvocationIds, Memory};
-use vyre_reference::{expr as eval_expr, reference_eval};
+use vyre_reference::workgroup::InvocationIds;
+use vyre_reference::{reference_eval, reference_eval_expr, ReferenceMemory};
 
 #[test]
 fn logical_coordinates_read_the_semantic_invocation_coordinates() {
@@ -30,12 +30,7 @@ fn logical_coordinates_read_the_semantic_invocation_coordinates() {
         (Expr::logical_within_tile_index(1), 31),
         (Expr::logical_within_tile_index(2), 32),
     ] {
-        let value = eval_expr::eval(
-            &expr,
-            &mut Invocation::new(ids, program.entry()),
-            &mut Memory::empty(),
-            &program,
-        )
+        let value = reference_eval_expr(&program, &mut ReferenceMemory::empty(), ids, &expr)
         .unwrap();
         assert_eq!(value, Value::U32(expected), "{expr:?}");
     }
