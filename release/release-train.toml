@@ -11,6 +11,18 @@ required_release_note_tokens = [
   "vyre-v0.8.0",
 ]
 
+# Claims the landing page must state. The shipped version is not listed here:
+# `readme-contract` prepends it from `versions.vyre`, so a bump cannot leave a
+# stale version behind in this list.
+required_readme_tokens = [
+  "cuda",
+  "wgpu",
+  "vyre-reference",
+  "docs/SUMMARY.md",
+  "CONTRIBUTING.md",
+  "LICENSE-APACHE",
+]
+
 required_packaging_steps = [
   "package versions align before tag creation",
   "release candidate tags are cut before final tags",

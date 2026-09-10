@@ -1,22 +1,20 @@
 {
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"9e66c4621b3abc946de30dcbc81f41d05cac415e","commit_timestamp":"1789068953","parent_commit":"cd5d2b659476fb3fe5dba31517a8a17eaf71dac7","dirty":true,"source_fingerprint":"git:9e66c4621b3abc946de30dcbc81f41d05cac415e:dirty=true:worktree=04fb570d35c7a3e43261a1d5e0297244a3d89420255b723702fab49e02d0ebfe"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 2,
   "path": "README.md",
   "exists": true,
   "read_error": null,
-  "source_bytes": 38237,
+  "source_bytes": 2285,
   "required_tokens": [
-    "0.7.2",
-    "vyre",
-    "gpu",
+    "0.8.0",
     "cuda",
     "wgpu",
-    "wire",
-    "condition",
-    "vyre::program",
-    "release/evidence",
-    "cargo add vyre"
+    "vyre-reference",
+    "docs/SUMMARY.md",
+    "CONTRIBUTING.md",
+    "LICENSE-APACHE"
   ],
   "missing_tokens": [],
-  "example_count": 6,
+  "example_count": 2,
   "blockers": []
 }

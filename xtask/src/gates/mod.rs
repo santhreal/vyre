@@ -85,6 +85,7 @@ pub mod portability_evidence;
 pub mod proptest_coverage;
 pub mod public_api;
 pub mod public_api_paths;
+pub mod readme_contract;
 pub mod release_provenance;
 pub mod repo_hygiene;
 pub mod scan;
@@ -237,6 +238,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("proptest-coverage", &proptest_coverage::ProptestCoverage),
     ("public-api-snapshot", &public_api::PublicApiSnapshot),
     ("public-api-paths", &public_api_paths::PublicApiPaths),
+    ("readme-contract", &readme_contract::ReadmeContractGate),
     (
         "release-provenance",
         &release_provenance::ReleaseProvenanceGate,

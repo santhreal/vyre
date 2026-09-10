@@ -15,6 +15,7 @@ struct ReleaseTrainData {
     versions: Versions,
     tags: Tags,
     required_release_note_tokens: Vec<String>,
+    required_readme_tokens: Vec<String>,
     required_packaging_steps: Vec<String>,
     package_verify_passed: Vec<String>,
 }
@@ -71,6 +72,15 @@ pub(crate) fn tag_policy() -> &'static str {
 pub fn required_release_note_tokens() -> Vec<&'static str> {
     data()
         .required_release_note_tokens
+        .iter()
+        .map(String::as_str)
+        .collect()
+}
+
+/// Claims the published landing page must state.
+pub fn required_readme_tokens() -> Vec<&'static str> {
+    data()
+        .required_readme_tokens
         .iter()
         .map(String::as_str)
         .collect()

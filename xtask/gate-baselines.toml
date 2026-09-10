@@ -484,6 +484,10 @@ name = "readback-ring"
 findings = 0
 
 [[gate]]
+name = "readme-contract"
+findings = 0
+
+[[gate]]
 name = "release-benchmarks"
 findings = 0
 

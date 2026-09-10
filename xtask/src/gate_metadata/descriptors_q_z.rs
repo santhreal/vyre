@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with Q through Z.
-pub const GATES_Q_Z: [GateDescriptor; 39] = [
+pub const GATES_Q_Z: [GateDescriptor; 40] = [
     GateDescriptor {
         name: "readback-ring",
         help: "Enforce readback-ring contracts",
@@ -16,6 +16,23 @@ pub const GATES_Q_Z: [GateDescriptor; 39] = [
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
         proof: "crate::gates::frozen_contract::tests::neither_a_default_body_nor_a_comment_is_part_of_the_contract",
+    },
+    GateDescriptor {
+        name: "readme-contract",
+        help: "Record what the published landing page carries into \
+        release/evidence/docs/vyre-readme-contracts.json and report every release claim it \
+        drops. Proves README.md exists, states the version the release train ships and every \
+        token release/release-train.toml declares, shows at least one fenced example, and \
+        offers no relative link the checkout does not carry. Proves nothing about the prose \
+        around those claims.",
+        package: "xtask",
+        areas: &["docs", "release-evidence"],
+        subject: "owned documentation pages",
+        inputs: &["README.md", "release/release-train.toml"],
+        artifacts: &["release/evidence/docs/vyre-readme-contracts.json"],
+        prerequisites: &[],
+        resource_class: ResourceClass::Process,
+        proof: "crate::gates::readme_contract::tests::a_token_the_page_does_not_state_is_reported_missing",
     },
     GateDescriptor {
         name: "release-benchmarks",
