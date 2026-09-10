@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 use vyre_bench::probes;
-use vyre_bench::{api, registry, release_matrix, report, runner};
+use vyre_bench::{api, registry, release_matrix, report, runner, workloads};
 
 // Per-thread counters: the runner measures one sample on one thread, and a
 // process-wide counter would charge it for every other thread's allocations.
