@@ -36,7 +36,6 @@ use vyre_foundation::operation::TargetId;
 pub const WGPU_TARGET_ID: TargetId = TargetId::expect_valid(WGPU_BACKEND_ID);
 pub use external_resource::{
     WgpuExternalMemoryDescriptor, WgpuExternalMemoryHandle, WgpuExternalResourceImporter,
-    WgpuImportedResource,
 };
 pub use stats::WgpuBackendStats;
 use std::hash::BuildHasherDefault;

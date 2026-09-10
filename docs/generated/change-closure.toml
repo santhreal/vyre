@@ -264,6 +264,36 @@ public_api_entry = "docs/public-api/vyre-megakernel.txt"
 disposition = "implemented"
 
 [[closure]]
+type_name = "AdmissionState"
+variant_name = "Absent"
+declaration_site = "vyre-driver/src/semantic_resource_abi.rs:321"
+constructors = ["AdmissionState::Absent"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq)"
+public_api_entry = "docs/public-api/vyre-driver.txt"
+disposition = "implemented"
+
+[[closure]]
+type_name = "AdmissionState"
+variant_name = "Invalidated"
+declaration_site = "vyre-driver/src/semantic_resource_abi.rs:323"
+constructors = ["AdmissionState::Invalidated"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq)"
+public_api_entry = "docs/public-api/vyre-driver.txt"
+disposition = "implemented"
+
+[[closure]]
+type_name = "AdmissionState"
+variant_name = "Valid"
+declaration_site = "vyre-driver/src/semantic_resource_abi.rs:325"
+constructors = ["AdmissionState::Valid"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq)"
+public_api_entry = "docs/public-api/vyre-driver.txt"
+disposition = "implemented"
+
+[[closure]]
 type_name = "AffineMapError"
 variant_name = "AlignmentViolation"
 declaration_site = "vyre-lower/src/analyses/affine_access_map.rs:195"
@@ -9479,7 +9509,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ExternalAdmissionError"
 variant_name = "GenerationMismatch"
-declaration_site = "vyre-runtime/src/external_resource_admission.rs:113"
+declaration_site = "vyre-runtime/src/external_resource_admission.rs:92"
 constructors = ["ExternalAdmissionError::GenerationMismatch", "ExternalAdmissionError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -9489,7 +9519,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ExternalAdmissionError"
 variant_name = "InvalidCombination"
-declaration_site = "vyre-runtime/src/external_resource_admission.rs:71"
+declaration_site = "vyre-runtime/src/external_resource_admission.rs:50"
 constructors = ["ExternalAdmissionError::InvalidCombination", "ExternalAdmissionError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -9499,7 +9529,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ExternalAdmissionError"
 variant_name = "InvalidDimensions"
-declaration_site = "vyre-runtime/src/external_resource_admission.rs:91"
+declaration_site = "vyre-runtime/src/external_resource_admission.rs:70"
 constructors = ["ExternalAdmissionError::InvalidDimensions", "ExternalAdmissionError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -9509,7 +9539,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ExternalAdmissionError"
 variant_name = "InvalidPitch"
-declaration_site = "vyre-runtime/src/external_resource_admission.rs:81"
+declaration_site = "vyre-runtime/src/external_resource_admission.rs:60"
 constructors = ["ExternalAdmissionError::InvalidPitch", "ExternalAdmissionError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -9519,7 +9549,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ExternalAdmissionError"
 variant_name = "ResourceInvalidated"
-declaration_site = "vyre-runtime/src/external_resource_admission.rs:107"
+declaration_site = "vyre-runtime/src/external_resource_admission.rs:86"
 constructors = ["ExternalAdmissionError::ResourceInvalidated", "ExternalAdmissionError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -9529,7 +9559,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ExternalAdmissionError"
 variant_name = "ResourceNotFound"
-declaration_site = "vyre-runtime/src/external_resource_admission.rs:125"
+declaration_site = "vyre-runtime/src/external_resource_admission.rs:104"
 constructors = ["ExternalAdmissionError::ResourceNotFound", "ExternalAdmissionError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -9539,7 +9569,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ExternalAdmissionError"
 variant_name = "UsageNotPermitted"
-declaration_site = "vyre-runtime/src/external_resource_admission.rs:99"
+declaration_site = "vyre-runtime/src/external_resource_admission.rs:78"
 constructors = ["ExternalAdmissionError::UsageNotPermitted", "ExternalAdmissionError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"

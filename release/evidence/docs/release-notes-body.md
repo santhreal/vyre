@@ -2970,6 +2970,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   metadata and crate ownership, internal non-extension crates default to
   unpublishable, the public facade curates compiler re-exports to exclude
   internal modules, and release ordering derives from the dependency graph.
+- Every backend importer and the runtime admission manager now share one
+  bounded external resource registry, so an admitted record, its dependent
+  views and its dependent artifacts have a single owner.
 - One fixture compares a tiled f32 program against its scalar reference.
   fixture_bytes::assert_tiled_matches_reference evaluates both programs and
   compares them lane by lane, and asserts the lane counts match first: zipping
@@ -6724,6 +6727,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   them was a format inside a return Err. Each file's note now ends with its
   error-path count, and every hot-path budget in
   docs/optimization/HOT_PATHS.toml is lowered to the measurement that remains.
+- Eviction clearing both dependent indexes is now proven by a case that
+  re-admits the evicted id, which the previous case could not observe.
 - Exemption liveness resolves a directory row against every crate of the
   composition family, so a row whose subject module now lives in a partition
   crate is live instead of reported dead. An empty family roster fails the gate
@@ -7745,6 +7750,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `Expr::Call` are unchanged. A contract reads the `Expr` enum's own source at
   run time and fails when a variant has no recorded answer, or when a second
   file in the crate defines an `expr_type` walker.
+- The driver external resource registry now bounds its admitted record table,
+  which grew without limit while every backend copy of it evicted at a ceiling.
 - External resource admission clears a poisoned lock and continues instead of
   reporting the admitted resource as invalidated, which leaked the external
   handle the record was the only reference to.

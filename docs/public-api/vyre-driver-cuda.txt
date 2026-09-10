@@ -329,12 +329,10 @@ pub fn vyre_driver_cuda::CudaEGraphResidentSignatureSnapshot::row_count(&self) -
 pub fn vyre_driver_cuda::CudaEGraphResidentSignatureSnapshot::try_from_column_snapshot(snapshot: &vyre_driver_cuda::CudaEGraphResidentColumnSnapshot) -> core::result::Result<Self, vyre_driver_cuda::CudaEGraphKernelPlanError>
 pub fn vyre_driver_cuda::CudaEGraphResidentSignatureSnapshot::try_from_device_image(image: &vyre_foundation::optimizer::eqsat_gpu::device_image::GpuEGraphDeviceImage) -> core::result::Result<Self, vyre_driver_cuda::CudaEGraphKernelPlanError>
 pub fn vyre_driver_cuda::CudaExternalResourceImporter::authenticate_import(&self, descriptor: &vyre_driver_cuda::CudaExternalMemoryDescriptor) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
-pub fn vyre_driver_cuda::CudaExternalResourceImporter::execute_transition_schedule(&self, schedule: &vyre_driver::semantic_resource_abi::ResourceTransitionSchedule) -> core::result::Result<vyre_driver::semantic_resource_abi::TransitionExecutionReport, vyre_spec::resource_capability::ResourceAbiError>
 pub fn vyre_driver_cuda::CudaExternalResourceImporter::import_external_resource(&self, descriptor: vyre_driver_cuda::CudaExternalMemoryDescriptor) -> core::result::Result<vyre_spec::resource_capability::AdmittedResourceRecord, vyre_spec::resource_capability::ResourceAbiError>
 pub fn vyre_driver_cuda::CudaExternalResourceImporter::invalidate_on_device_loss(&self) -> vyre_driver::semantic_resource_abi::DeviceLossInvalidationReport
 pub fn vyre_driver_cuda::CudaExternalResourceImporter::new(device_id: u64) -> Self
-pub fn vyre_driver_cuda::CudaExternalResourceImporter::register_dependent_graph(&self, resource_id: u64, graph_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
-pub fn vyre_driver_cuda::CudaExternalResourceImporter::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
+pub fn vyre_driver_cuda::CudaExternalResourceImporter::registry(&self) -> &vyre_driver::semantic_resource_abi::ExternalResourceRegistry<vyre_driver_cuda::CudaExternalMemoryHandle>
 pub fn vyre_driver_cuda::CudaKernelLaunchDiagnostic::is_launchable(&self) -> bool
 pub fn vyre_driver_cuda::CudaKernelLaunchDiagnostic::stable_message(&self) -> alloc::string::String
 pub fn vyre_driver_cuda::CudaKernelLaunchDiagnostic::stable_message_into(&self, out: &mut alloc::string::String)
@@ -470,7 +468,6 @@ pub struct vyre_driver_cuda::CudaEGraphUnionCompactionPlan
 pub struct vyre_driver_cuda::CudaEGraphUnionCompactionWave
 pub struct vyre_driver_cuda::CudaExternalMemoryDescriptor
 pub struct vyre_driver_cuda::CudaExternalResourceImporter
-pub struct vyre_driver_cuda::CudaImportedResource
 pub struct vyre_driver_cuda::CudaKernelDeviceEnvelope
 pub struct vyre_driver_cuda::CudaKernelLaunchDiagnostic
 pub struct vyre_driver_cuda::CudaKernelLaunchDiagnosticRef<'a>
@@ -711,11 +708,6 @@ pub vyre_driver_cuda::CudaExternalMemoryHandle::HostPointer
 pub vyre_driver_cuda::CudaExternalMemoryHandle::HostPointer::byte_size: u64
 pub vyre_driver_cuda::CudaExternalMemoryHandle::HostPointer::ptr: usize
 pub vyre_driver_cuda::CudaExternalMemoryHandle::Win32Nt(usize)
-pub vyre_driver_cuda::CudaImportedResource::generation: u64
-pub vyre_driver_cuda::CudaImportedResource::handle: vyre_driver_cuda::CudaExternalMemoryHandle
-pub vyre_driver_cuda::CudaImportedResource::is_valid: bool
-pub vyre_driver_cuda::CudaImportedResource::is_zero_copy: bool
-pub vyre_driver_cuda::CudaImportedResource::record: vyre_spec::resource_capability::AdmittedResourceRecord
 pub vyre_driver_cuda::CudaKernelCapabilityFailure::CooperativeLaunch
 pub vyre_driver_cuda::CudaKernelCapabilityFailure::SharedMemory
 pub vyre_driver_cuda::CudaKernelCapabilityFailure::SharedMemory::maximum: u64

@@ -6,44 +6,23 @@
 //! This module provides runtime admission for external memory handles and executes selected
 //! transition schedules with guaranteed zero host copies and fine-grained timeline synchronization.
 //!
-//! An admission has no matching release call, so the admitted-resource table is
-//! bounded here rather than by the caller: it holds at most
-//! [`REGISTRY_CAPACITY`] records, and an admission past that ceiling evicts,
-//! taking a record device loss already invalidated before the record admitted
-//! longest ago. The two dependent indexes are keyed by admitted resource id,
-//! so evicting a record drops its entries there too and both indexes carry the
-//! same ceiling.
+//! The admitted resource table, its dependent indexes, the ceiling every
+//! admission is bounded by and device-loss invalidation belong to
+//! [`ExternalResourceRegistry`]. What is runtime here is the pre-allocation
+//! authentication a record passes, the lease an admission mints, and an error
+//! vocabulary that separates an absent record from an invalidated one.
 
-use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::RwLock;
 use thiserror::Error;
 
 use vyre_driver::{
-    AdmittedResourceRecord, DeviceLossInvalidationReport, ExternalMemoryKind, ImageDimensions,
-    ImageFormat, ResourceAbiError, ResourcePermittedUsages, ResourceTransitionSchedule,
-    TransitionExecutionReport,
+    AdmissionState, AdmittedResourceRecord, DeviceLossInvalidationReport, ExternalMemoryKind,
+    ExternalResourceRegistry, ImageDimensions, ImageFormat, ResourceAbiError,
+    ResourcePermittedUsages, ResourceTransitionSchedule, TransitionExecutionReport,
 };
-use vyre_foundation::failure_domain::{reclaim_poisoned_read, reclaim_poisoned_write};
 
-/// The subsystem every poison report in this module names as the owner.
+/// The subsystem every poison report from this registry names as the owner.
 const OWNER: &str = "runtime external resource admission";
-
-/// The record of every external memory handle the device currently holds.
-const RESOURCE_TABLE: &str = "the admitted external resource table";
-
-/// Which views depend on each admitted resource.
-const VIEW_INDEX: &str = "the dependent view index";
-
-/// Which pipelines depend on each admitted resource.
-const PIPELINE_INDEX: &str = "the dependent pipeline index";
-
-/// How many admitted external resources one device holds at once.
-///
-/// Every record names a live external memory handle the device imported. The
-/// ceiling covers a swapchain, the per-frame imports a compositor drives
-/// through it, and a wide margin above both.
-const REGISTRY_CAPACITY: usize = 1024;
 
 /// Global lease counter for admitted external resources.
 static NEXT_LEASE_ID: AtomicU64 = AtomicU64::new(1);
@@ -177,70 +156,11 @@ impl From<ResourceAbiError> for ExternalAdmissionError {
     }
 }
 
-/// The admitted-record table and the admission order eviction reads.
-///
-/// Order is held beside the records under one lock. Split across two locks the
-/// pair disagrees about which record is coldest as soon as two admissions
-/// interleave.
-#[derive(Debug)]
-struct AdmittedRecordTable {
-    records: HashMap<u64, AdmittedResourceRecord>,
-    admission_order: VecDeque<u64>,
-}
-
-impl AdmittedRecordTable {
-    /// An empty table that reserves its whole ceiling up front.
-    fn with_capacity(capacity: usize) -> Self {
-        Self {
-            records: HashMap::with_capacity(capacity),
-            admission_order: VecDeque::with_capacity(capacity),
-        }
-    }
-
-    /// Record `record` under `resource_id` and return the id evicted to make
-    /// room, if the admission crossed the ceiling.
-    ///
-    /// Re-admitting an id already present replaces the record in place and
-    /// keeps its original admission position, so a caller that re-admits one
-    /// resource every frame cannot hold the whole table hot.
-    fn admit(&mut self, resource_id: u64, record: AdmittedResourceRecord) -> Option<u64> {
-        if self.records.insert(resource_id, record).is_some() {
-            return None;
-        }
-        self.admission_order.push_back(resource_id);
-        if self.records.len() <= REGISTRY_CAPACITY {
-            return None;
-        }
-        self.evict_one()
-    }
-
-    /// Drop one record: an invalidated one when the table holds any, otherwise
-    /// the one admitted longest ago.
-    ///
-    /// A record device loss already invalidated answers every lookup with
-    /// [`ExternalAdmissionError::ResourceInvalidated`], and once it is gone the
-    /// answer is [`ExternalAdmissionError::ResourceNotFound`]. Both say the
-    /// resource is unusable, so reclaiming an invalidated record before a live
-    /// one keeps the usable set as large as the ceiling allows.
-    fn evict_one(&mut self) -> Option<u64> {
-        let position = self
-            .admission_order
-            .iter()
-            .position(|id| self.records.get(id).is_none_or(|record| !record.is_valid))
-            .unwrap_or(0);
-        let evicted = self.admission_order.remove(position)?;
-        self.records.remove(&evicted);
-        Some(evicted)
-    }
-}
-
 /// Manager for external graphics resource admission, lifecycle, and schedule synchronization.
 #[derive(Debug)]
 pub struct ExternalResourceAdmissionManager {
     device_id: u64,
-    resources: RwLock<AdmittedRecordTable>,
-    dependent_views: RwLock<HashMap<u64, HashSet<u64>>>,
-    dependent_pipelines: RwLock<HashMap<u64, HashSet<u64>>>,
+    registry: ExternalResourceRegistry,
 }
 
 impl ExternalResourceAdmissionManager {
@@ -249,9 +169,7 @@ impl ExternalResourceAdmissionManager {
     pub fn new(device_id: u64) -> Self {
         Self {
             device_id,
-            resources: RwLock::new(AdmittedRecordTable::with_capacity(REGISTRY_CAPACITY)),
-            dependent_views: RwLock::new(HashMap::with_capacity(REGISTRY_CAPACITY)),
-            dependent_pipelines: RwLock::new(HashMap::with_capacity(REGISTRY_CAPACITY)),
+            registry: ExternalResourceRegistry::new(OWNER),
         }
     }
 
@@ -259,6 +177,25 @@ impl ExternalResourceAdmissionManager {
     #[must_use]
     pub fn device_id(&self) -> u64 {
         self.device_id
+    }
+
+    /// The admitted resources of this device, their dependent views and their
+    /// dependent artifacts.
+    #[must_use]
+    pub fn registry(&self) -> &ExternalResourceRegistry {
+        &self.registry
+    }
+
+    /// Report what the registry holds under `resource_id` in this manager's
+    /// error vocabulary.
+    fn require_valid(&self, resource_id: u64) -> Result<(), ExternalAdmissionError> {
+        match self.registry.admission(resource_id) {
+            AdmissionState::Valid => Ok(()),
+            AdmissionState::Invalidated => {
+                Err(ExternalAdmissionError::ResourceInvalidated { resource_id })
+            }
+            AdmissionState::Absent => Err(ExternalAdmissionError::ResourceNotFound { resource_id }),
+        }
     }
 
     /// Authenticate and admit an external resource before allocation.
@@ -309,73 +246,35 @@ impl ExternalResourceAdmissionManager {
         if let vyre_driver::ResourceProvenance::ExternalImport { memory_kind, .. } =
             record.provenance
         {
-            match memory_kind {
-                ExternalMemoryKind::DmaBuf | ExternalMemoryKind::OpaqueFd => {
-                    if record.format.is_depth_stencil() {
-                        return Err(ExternalAdmissionError::InvalidCombination {
-                            resource_id: record.resource_id,
-                            format: record.format,
-                            memory_kind,
-                        });
-                    }
-                }
+            let rejected = match memory_kind {
+                ExternalMemoryKind::DmaBuf
+                | ExternalMemoryKind::OpaqueFd
+                | ExternalMemoryKind::HostAllocation => record.format.is_depth_stencil(),
                 ExternalMemoryKind::Win32Nt | ExternalMemoryKind::Win32Kmt => {
-                    if record.format.is_planar_video()
+                    record.format.is_planar_video()
                         && record.format != ImageFormat::Yuv420SemiPlanar
-                    {
-                        return Err(ExternalAdmissionError::InvalidCombination {
-                            resource_id: record.resource_id,
-                            format: record.format,
-                            memory_kind,
-                        });
-                    }
                 }
-                ExternalMemoryKind::MetalSharedResource => {
-                    if record.format.is_planar_video() {
-                        return Err(ExternalAdmissionError::InvalidCombination {
-                            resource_id: record.resource_id,
-                            format: record.format,
-                            memory_kind,
-                        });
-                    }
-                }
-                ExternalMemoryKind::HostAllocation => {
-                    if record.format.is_depth_stencil() {
-                        return Err(ExternalAdmissionError::InvalidCombination {
-                            resource_id: record.resource_id,
-                            format: record.format,
-                            memory_kind,
-                        });
-                    }
-                }
+                ExternalMemoryKind::MetalSharedResource => record.format.is_planar_video(),
+            };
+            if rejected {
+                return Err(ExternalAdmissionError::InvalidCombination {
+                    resource_id: record.resource_id,
+                    format: record.format,
+                    memory_kind,
+                });
             }
         }
 
-        let lease_id = NEXT_LEASE_ID.fetch_add(1, Ordering::Relaxed);
-        let resource_id = record.resource_id;
-        let format = record.format;
-        let dimensions = record.dimensions;
-        let row_pitch_bytes = record.row_pitch_bytes;
-        let is_zero_copy = record.is_zero_copy;
-
-        let evicted = {
-            let mut table = reclaim_poisoned_write(&self.resources, OWNER, RESOURCE_TABLE);
-            table.admit(resource_id, record)
+        let lease = AdmittedExternalResourceLease {
+            resource_id: record.resource_id,
+            lease_id: NEXT_LEASE_ID.fetch_add(1, Ordering::Relaxed),
+            format: record.format,
+            dimensions: record.dimensions,
+            row_pitch_bytes: record.row_pitch_bytes,
+            is_zero_copy: record.is_zero_copy,
         };
-        if let Some(evicted) = evicted {
-            reclaim_poisoned_write(&self.dependent_views, OWNER, VIEW_INDEX).remove(&evicted);
-            reclaim_poisoned_write(&self.dependent_pipelines, OWNER, PIPELINE_INDEX)
-                .remove(&evicted);
-        }
-
-        Ok(AdmittedExternalResourceLease {
-            resource_id,
-            lease_id,
-            format,
-            dimensions,
-            row_pitch_bytes,
-            is_zero_copy,
-        })
+        self.registry.admit_resource(record)?;
+        Ok(lease)
     }
 
     /// Register a dependent view on an admitted resource.
@@ -388,18 +287,9 @@ impl ExternalResourceAdmissionManager {
         resource_id: u64,
         view_id: u64,
     ) -> Result<(), ExternalAdmissionError> {
-        let map = reclaim_poisoned_read(&self.resources, OWNER, RESOURCE_TABLE);
-        let record = map
-            .records
-            .get(&resource_id)
-            .ok_or(ExternalAdmissionError::ResourceNotFound { resource_id })?;
-        if !record.is_valid {
-            return Err(ExternalAdmissionError::ResourceInvalidated { resource_id });
-        }
-        drop(map);
-
-        let mut views = reclaim_poisoned_write(&self.dependent_views, OWNER, VIEW_INDEX);
-        views.entry(resource_id).or_default().insert(view_id);
+        self.require_valid(resource_id)?;
+        self.registry
+            .register_dependent_view(resource_id, view_id)?;
         Ok(())
     }
 
@@ -413,22 +303,9 @@ impl ExternalResourceAdmissionManager {
         resource_id: u64,
         pipeline_id: u64,
     ) -> Result<(), ExternalAdmissionError> {
-        let map = reclaim_poisoned_read(&self.resources, OWNER, RESOURCE_TABLE);
-        let record = map
-            .records
-            .get(&resource_id)
-            .ok_or(ExternalAdmissionError::ResourceNotFound { resource_id })?;
-        if !record.is_valid {
-            return Err(ExternalAdmissionError::ResourceInvalidated { resource_id });
-        }
-        drop(map);
-
-        let mut pipelines =
-            reclaim_poisoned_write(&self.dependent_pipelines, OWNER, PIPELINE_INDEX);
-        pipelines
-            .entry(resource_id)
-            .or_default()
-            .insert(pipeline_id);
+        self.require_valid(resource_id)?;
+        self.registry
+            .register_dependent_artifact(resource_id, pipeline_id)?;
         Ok(())
     }
 
@@ -441,26 +318,10 @@ impl ExternalResourceAdmissionManager {
         &self,
         schedule: &ResourceTransitionSchedule,
     ) -> Result<TransitionExecutionReport, ExternalAdmissionError> {
-        let map = reclaim_poisoned_write(&self.resources, OWNER, RESOURCE_TABLE);
-
-        // 1. Verify every referenced resource is valid
         for (resource_id, _) in &schedule.transitions {
-            let record = map
-                .records
-                .get(resource_id)
-                .ok_or(ExternalAdmissionError::ResourceNotFound {
-                    resource_id: *resource_id,
-                })?;
-            if !record.is_valid {
-                return Err(ExternalAdmissionError::ResourceInvalidated {
-                    resource_id: *resource_id,
-                });
-            }
+            self.require_valid(*resource_id)?;
         }
-
-        // 2. Execute transitions exactly
-        let report = TransitionExecutionReport::execute_exact(schedule);
-        Ok(report)
+        Ok(TransitionExecutionReport::execute_exact(schedule))
     }
 
     /// Mutate resource and advance generation, verifying expected generation matches.
@@ -473,171 +334,24 @@ impl ExternalResourceAdmissionManager {
         resource_id: u64,
         expected_gen: u64,
     ) -> Result<u64, ExternalAdmissionError> {
-        let mut map = reclaim_poisoned_write(&self.resources, OWNER, RESOURCE_TABLE);
-        let record = map
-            .records
-            .get_mut(&resource_id)
+        let advanced = self
+            .registry
+            .mutate(resource_id, |record| {
+                record.advance_generation(expected_gen)
+            })
             .ok_or(ExternalAdmissionError::ResourceNotFound { resource_id })?;
-        let next_gen = record.advance_generation(expected_gen)?;
-        Ok(next_gen)
+        Ok(advanced?)
     }
 
     /// Invalidate all resources, views, and dependent pipelines upon device loss.
     pub fn invalidate_device_loss(&self) -> DeviceLossInvalidationReport {
-        let mut report = DeviceLossInvalidationReport {
-            device_id: self.device_id,
-            invalidated_resources: Vec::new(),
-            invalidated_views: Vec::new(),
-            invalidated_artifacts: Vec::new(),
-        };
-
-        let mut map = reclaim_poisoned_write(&self.resources, OWNER, RESOURCE_TABLE);
-        let mut views = reclaim_poisoned_write(&self.dependent_views, OWNER, VIEW_INDEX);
-        let mut pipelines =
-            reclaim_poisoned_write(&self.dependent_pipelines, OWNER, PIPELINE_INDEX);
-
-        for (res_id, record) in map.records.iter_mut() {
-            record.invalidate_on_device_loss();
-            report.invalidated_resources.push(*res_id);
-
-            if let Some(view_set) = views.remove(res_id) {
-                report.invalidated_views.extend(view_set);
-            }
-            if let Some(pipe_set) = pipelines.remove(res_id) {
-                report.invalidated_artifacts.extend(pipe_set);
-            }
-        }
-
-        report.invalidated_resources.sort_unstable();
-        report.invalidated_views.sort_unstable();
-        report.invalidated_artifacts.sort_unstable();
-        report
+        self.registry.invalidate_on_device_loss(self.device_id)
     }
 
     /// Look up an admitted resource record.
     #[must_use]
     pub fn query_resource(&self, resource_id: u64) -> Option<AdmittedResourceRecord> {
-        let map = reclaim_poisoned_read(&self.resources, OWNER, RESOURCE_TABLE);
-        map.records.get(&resource_id).cloned()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::Arc;
-
-    use vyre_driver::{
-        ColorInterpretation, ResourceLayoutState, ResourceUsageTransition, TimelineSyncProtocol,
-    };
-
-    const RESOURCE_ID: u64 = 7001;
-
-    fn manager_with_one_resource() -> Arc<ExternalResourceAdmissionManager> {
-        let manager = Arc::new(ExternalResourceAdmissionManager::new(9));
-        let record = AdmittedResourceRecord::new_external_import_2d(
-            RESOURCE_ID,
-            9,
-            ImageFormat::Rgba8Unorm,
-            ColorInterpretation::Srgb,
-            64,
-            64,
-            64 * 4,
-            ResourcePermittedUsages::SAMPLED.union(ResourcePermittedUsages::TRANSFER_DST),
-            ExternalMemoryKind::DmaBuf,
-            0x7001_C001,
-            TimelineSyncProtocol::TimelineSemaphore {
-                timeline_id: 1,
-                wait_value: 0,
-                signal_value: 1,
-            },
-        );
-        manager
-            .admit_external_resource(record)
-            .expect("admit the fixture resource");
-        manager
-    }
-
-    /// Poison one of the manager's locks from a thread that panics holding it.
-    fn poison<T: Send + Sync + 'static>(
-        manager: Arc<ExternalResourceAdmissionManager>,
-        pick: fn(&ExternalResourceAdmissionManager) -> &RwLock<T>,
-    ) {
-        let joined = std::thread::spawn(move || {
-            let _guard = pick(&manager).write().expect("lock is not yet poisoned");
-            panic!("a panic holding an external admission lock");
-        })
-        .join();
-        assert!(joined.is_err(), "the poisoning thread must have panicked");
-    }
-
-    /// Closes the class "a poisoned lock reported as an invalidated resource".
-    ///
-    /// `AdmittedResourceRecord` is the only record of an external handle the
-    /// device holds, so discarding the table on a poison report leaks every
-    /// handle in it and tells the caller the resource died when only a guard
-    /// did. Every lock-touching method clears the poison and continues, so the
-    /// three locks are poisoned first and then each method is exercised.
-    ///
-    /// A `ResourceInvalidated` result here means poison is being reported as
-    /// device loss again. It does not prove the table is internally consistent
-    /// after an arbitrary panic; consistency comes from every mutation between
-    /// the guard and the panic being a single map insert or a generation bump.
-    #[test]
-    fn external_admission_recovers_every_poisoned_lock_instead_of_invalidating_resources() {
-        let manager = manager_with_one_resource();
-
-        poison(Arc::clone(&manager), |m| &m.resources);
-        poison(Arc::clone(&manager), |m| &m.dependent_views);
-        poison(Arc::clone(&manager), |m| &m.dependent_pipelines);
-
-        assert!(
-            manager.resources.is_poisoned()
-                && manager.dependent_views.is_poisoned()
-                && manager.dependent_pipelines.is_poisoned(),
-            "the fixture must leave all three locks poisoned"
-        );
-
-        manager
-            .register_dependent_view(RESOURCE_ID, 11)
-            .expect("Fix: register_dependent_view must clear the poison and continue");
-        manager
-            .register_dependent_pipeline(RESOURCE_ID, 12)
-            .expect("Fix: register_dependent_pipeline must clear the poison and continue");
-
-        let mut schedule = ResourceTransitionSchedule::new();
-        schedule.add_transition(
-            RESOURCE_ID,
-            ResourceUsageTransition::to_sampled(ResourceLayoutState::General),
-        );
-        manager
-            .execute_transition_schedule(&schedule)
-            .expect("Fix: execute_transition_schedule must clear the poison and continue");
-
-        assert_eq!(
-            manager
-                .mutate_resource(RESOURCE_ID, 1)
-                .expect("Fix: mutate_resource must clear the poison and continue"),
-            2,
-            "the generation must advance across a recovered poison"
-        );
-
-        let record = manager
-            .query_resource(RESOURCE_ID)
-            .expect("Fix: query_resource must clear the poison and continue");
-        assert!(
-            record.is_valid,
-            "a recovered poison must not mark the resource invalid"
-        );
-
-        let report = manager.invalidate_device_loss();
-        assert_eq!(
-            report.invalidated_resources,
-            vec![RESOURCE_ID],
-            "device loss must still see the resource the recovered table holds"
-        );
-        assert_eq!(report.invalidated_views, vec![11]);
-        assert_eq!(report.invalidated_artifacts, vec![12]);
+        self.registry.get_resource(resource_id)
     }
 }
 

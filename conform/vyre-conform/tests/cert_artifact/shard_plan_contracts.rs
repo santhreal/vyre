@@ -1,4 +1,5 @@
 use super::*;
+#[cfg(feature = "device-tests")]
 use vyre_driver_reference::ORACLE_EXECUTOR_ID;
 
 /// WHY: this drives two real `prove` shards through the built binary, which

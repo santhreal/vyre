@@ -1223,7 +1223,7 @@ seam = "backend-contract"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 2691
+exported_item_count = 2706
 
   [[package.item]]
   path = "T::dispatch_bytes(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>"
@@ -1863,7 +1863,7 @@ exported_item_count = 2691
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "impl vyre_driver::ExternalResourceRegistry"
+  path = "impl vyre_driver::ExternalResourceRegistry<()>"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -2514,13 +2514,6 @@ exported_item_count = 2691
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_driver::ExternalResourceRegistry"
-  kind = "impl"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_driver::RoutingTable"
   kind = "impl"
   stability = "extension"
@@ -2564,6 +2557,27 @@ exported_item_count = 2691
 
   [[package.item]]
   path = "impl<A: vyre_driver::EnforceGate, B: vyre_driver::EnforceGate> vyre_driver::EnforceGate for vyre_driver::Chain<A, B>"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "impl<H: core::clone::Clone> vyre_driver::ExternalResourceRegistry<H>"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "impl<H> vyre_driver::ExternalResourceRegistry<H>"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "impl<H> vyre_foundation::failure_domain::StateOwnerRecovery for vyre_driver::ExternalResourceRegistry<H>"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -2670,6 +2684,34 @@ exported_item_count = 2691
   [[package.item]]
   path = "vyre_driver::AddressMode"
   kind = "use"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::AdmissionState"
+  kind = "enum"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::AdmissionState::Absent"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::AdmissionState::Invalidated"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::AdmissionState::Valid"
+  kind = "variant"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -5447,63 +5489,105 @@ exported_item_count = 2691
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::ExternalResourceRegistry"
+  path = "vyre_driver::ExternalResourceRegistry<()>::admit_resource(&self, record: vyre_spec::resource_capability::AdmittedResourceRecord) -> core::result::Result<u64, vyre_spec::resource_capability::ResourceAbiError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::ExternalResourceRegistry<H>"
   kind = "struct"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::ExternalResourceRegistry::admit_resource(&self, record: vyre_spec::resource_capability::AdmittedResourceRecord) -> core::result::Result<u64, vyre_spec::resource_capability::ResourceAbiError>"
+  path = "vyre_driver::ExternalResourceRegistry<H>::admission(&self, resource_id: u64) -> vyre_driver::AdmissionState"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::ExternalResourceRegistry::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain"
+  path = "vyre_driver::ExternalResourceRegistry<H>::admit(&self, resource: vyre_driver::ImportedResource<H>) -> core::result::Result<u64, vyre_spec::resource_capability::ResourceAbiError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::ExternalResourceRegistry::get_resource(&self, resource_id: u64) -> core::option::Option<vyre_spec::resource_capability::AdmittedResourceRecord>"
+  path = "vyre_driver::ExternalResourceRegistry<H>::execute_transition_schedule(&self, schedule: &vyre_driver::ResourceTransitionSchedule) -> core::result::Result<vyre_driver::TransitionExecutionReport, vyre_spec::resource_capability::ResourceAbiError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::ExternalResourceRegistry::invalidate_on_device_loss(&self, device_id: u64) -> vyre_driver::DeviceLossInvalidationReport"
+  path = "vyre_driver::ExternalResourceRegistry<H>::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::ExternalResourceRegistry::new() -> Self"
+  path = "vyre_driver::ExternalResourceRegistry<H>::get(&self, resource_id: u64) -> core::option::Option<vyre_driver::ImportedResource<H>>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::ExternalResourceRegistry::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass"
+  path = "vyre_driver::ExternalResourceRegistry<H>::get_resource(&self, resource_id: u64) -> core::option::Option<vyre_spec::resource_capability::AdmittedResourceRecord>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::ExternalResourceRegistry::register_dependent_artifact(&self, resource_id: u64, artifact_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>"
+  path = "vyre_driver::ExternalResourceRegistry<H>::invalidate_on_device_loss(&self, device_id: u64) -> vyre_driver::DeviceLossInvalidationReport"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::ExternalResourceRegistry::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>"
+  path = "vyre_driver::ExternalResourceRegistry<H>::mutate<R>(&self, resource_id: u64, mutation: impl core::ops::function::FnOnce(&mut vyre_spec::resource_capability::AdmittedResourceRecord) -> R) -> core::option::Option<R>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::ExternalResourceRegistry<H>::new(owner: &'static str) -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::ExternalResourceRegistry<H>::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::ExternalResourceRegistry<H>::register_dependent_artifact(&self, resource_id: u64, artifact_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::ExternalResourceRegistry<H>::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::ExternalResourceRegistry<H>::require_admitted(&self, resource_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -5743,6 +5827,27 @@ exported_item_count = 2691
   [[package.item]]
   path = "vyre_driver::ImageViewKind"
   kind = "use"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::ImportedResource::handle: H"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::ImportedResource::record: vyre_spec::resource_capability::AdmittedResourceRecord"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::ImportedResource<H>"
+  kind = "struct"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -20069,7 +20174,7 @@ seam = "cuda-driver"
 publication_class = "concrete-backend"
 publication_contract = "target-support:cuda"
 stability = "backend"
-exported_item_count = 1030
+exported_item_count = 1022
 
   [[package.item]]
   path = "impl core::convert::From<&vyre_driver_cuda::CudaDeviceCaps> for vyre_driver_cuda::CudaMegakernelDeviceKey"
@@ -23901,13 +24006,6 @@ exported_item_count = 1030
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver_cuda::CudaExternalResourceImporter::execute_transition_schedule(&self, schedule: &vyre_driver::semantic_resource_abi::ResourceTransitionSchedule) -> core::result::Result<vyre_driver::semantic_resource_abi::TransitionExecutionReport, vyre_spec::resource_capability::ResourceAbiError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_driver_cuda::CudaExternalResourceImporter::import_external_resource(&self, descriptor: vyre_driver_cuda::CudaExternalMemoryDescriptor) -> core::result::Result<vyre_spec::resource_capability::AdmittedResourceRecord, vyre_spec::resource_capability::ResourceAbiError>"
   kind = "fn"
   stability = "backend"
@@ -23929,57 +24027,8 @@ exported_item_count = 1030
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver_cuda::CudaExternalResourceImporter::register_dependent_graph(&self, resource_id: u64, graph_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>"
+  path = "vyre_driver_cuda::CudaExternalResourceImporter::registry(&self) -> &vyre_driver::semantic_resource_abi::ExternalResourceRegistry<vyre_driver_cuda::CudaExternalMemoryHandle>"
   kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_cuda::CudaExternalResourceImporter::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_cuda::CudaImportedResource"
-  kind = "struct"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_cuda::CudaImportedResource::generation: u64"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_cuda::CudaImportedResource::handle: vyre_driver_cuda::CudaExternalMemoryHandle"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_cuda::CudaImportedResource::is_valid: bool"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_cuda::CudaImportedResource::is_zero_copy: bool"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_cuda::CudaImportedResource::record: vyre_spec::resource_capability::AdmittedResourceRecord"
-  kind = "field"
   stability = "backend"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -27288,7 +27337,7 @@ seam = "metal-driver"
 publication_class = "concrete-backend"
 publication_contract = "target-support:metal"
 stability = "backend"
-exported_item_count = 34
+exported_item_count = 26
 
   [[package.item]]
   path = "impl vyre_driver_metal::MetalExternalResourceImporter"
@@ -27431,13 +27480,6 @@ exported_item_count = 34
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver_metal::MetalExternalResourceImporter::execute_transition_schedule(&self, schedule: &vyre_driver::semantic_resource_abi::ResourceTransitionSchedule) -> core::result::Result<vyre_driver::semantic_resource_abi::TransitionExecutionReport, vyre_spec::resource_capability::ResourceAbiError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_driver_metal::MetalExternalResourceImporter::import_external_resource(&self, descriptor: vyre_driver_metal::MetalExternalMemoryDescriptor) -> core::result::Result<vyre_spec::resource_capability::AdmittedResourceRecord, vyre_spec::resource_capability::ResourceAbiError>"
   kind = "fn"
   stability = "backend"
@@ -27459,57 +27501,8 @@ exported_item_count = 34
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver_metal::MetalExternalResourceImporter::register_dependent_pipeline(&self, resource_id: u64, pipeline_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>"
+  path = "vyre_driver_metal::MetalExternalResourceImporter::registry(&self) -> &vyre_driver::semantic_resource_abi::ExternalResourceRegistry<vyre_driver_metal::MetalExternalMemoryHandle>"
   kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_metal::MetalExternalResourceImporter::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_metal::MetalImportedResource"
-  kind = "struct"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_metal::MetalImportedResource::generation: u64"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_metal::MetalImportedResource::handle: vyre_driver_metal::MetalExternalMemoryHandle"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_metal::MetalImportedResource::is_valid: bool"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_metal::MetalImportedResource::is_zero_copy: bool"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_metal::MetalImportedResource::record: vyre_spec::resource_capability::AdmittedResourceRecord"
-  kind = "field"
   stability = "backend"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -27896,7 +27889,7 @@ seam = "portable-driver"
 publication_class = "concrete-backend"
 publication_contract = "target-support:wgpu"
 stability = "backend"
-exported_item_count = 527
+exported_item_count = 519
 
   [[package.item]]
   path = "impl core::convert::From<alloc::vec::Vec<u8>> for vyre_driver_wgpu::engine::graph::GpuResource"
@@ -29061,13 +29054,6 @@ exported_item_count = 527
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver_wgpu::WgpuExternalResourceImporter::execute_transition_schedule(&self, schedule: &vyre_driver::semantic_resource_abi::ResourceTransitionSchedule) -> core::result::Result<vyre_driver::semantic_resource_abi::TransitionExecutionReport, vyre_spec::resource_capability::ResourceAbiError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_driver_wgpu::WgpuExternalResourceImporter::import_external_resource(&self, descriptor: vyre_driver_wgpu::WgpuExternalMemoryDescriptor) -> core::result::Result<vyre_spec::resource_capability::AdmittedResourceRecord, vyre_spec::resource_capability::ResourceAbiError>"
   kind = "fn"
   stability = "backend"
@@ -29089,57 +29075,8 @@ exported_item_count = 527
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver_wgpu::WgpuExternalResourceImporter::register_dependent_pipeline(&self, resource_id: u64, pipeline_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>"
+  path = "vyre_driver_wgpu::WgpuExternalResourceImporter::registry(&self) -> &vyre_driver::semantic_resource_abi::ExternalResourceRegistry<vyre_driver_wgpu::WgpuExternalMemoryHandle>"
   kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::WgpuExternalResourceImporter::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::WgpuImportedResource"
-  kind = "struct"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::WgpuImportedResource::generation: u64"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::WgpuImportedResource::handle: vyre_driver_wgpu::WgpuExternalMemoryHandle"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::WgpuImportedResource::is_valid: bool"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::WgpuImportedResource::is_zero_copy: bool"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::WgpuImportedResource::record: vyre_spec::resource_capability::AdmittedResourceRecord"
-  kind = "field"
   stability = "backend"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -158689,7 +158626,7 @@ seam = "runtime"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre"
 stability = "internal"
-exported_item_count = 2866
+exported_item_count = 2867
 
   [[package.item]]
   path = "impl bytemuck::pod::Pod for vyre_runtime::resident_work_queue::planner::ResidentWorkItem"
@@ -160639,6 +160576,13 @@ exported_item_count = 2866
 
   [[package.item]]
   path = "vyre_runtime::ExternalResourceAdmissionManager::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_runtime::ExternalAdmissionError>"
+  kind = "fn"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_runtime::ExternalResourceAdmissionManager::registry(&self) -> &vyre_driver::semantic_resource_abi::ExternalResourceRegistry"
   kind = "fn"
   stability = "internal"
   feature = "unconditional"

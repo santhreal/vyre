@@ -542,6 +542,7 @@ pub fn vyre_runtime::ExternalResourceAdmissionManager::query_resource(&self, res
 pub fn vyre_runtime::ExternalResourceAdmissionManager::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
 pub fn vyre_runtime::ExternalResourceAdmissionManager::register_dependent_pipeline(&self, resource_id: u64, pipeline_id: u64) -> core::result::Result<(), vyre_runtime::ExternalAdmissionError>
 pub fn vyre_runtime::ExternalResourceAdmissionManager::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_runtime::ExternalAdmissionError>
+pub fn vyre_runtime::ExternalResourceAdmissionManager::registry(&self) -> &vyre_driver::semantic_resource_abi::ExternalResourceRegistry
 pub fn vyre_runtime::GenerationScopedNamespace::scoped_key(&self, raw_key: &str) -> alloc::string::String
 pub fn vyre_runtime::IoQuota::default() -> Self
 pub fn vyre_runtime::PipelineError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
