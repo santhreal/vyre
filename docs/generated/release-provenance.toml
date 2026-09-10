@@ -1,4 +1,5 @@
-schema_version = 1
+schema_version = 2
+bom_timestamp = "2026-09-10T09:31:59Z"
 rustc_version = "1.86.0 (05f9846f8 2025-03-31)"
 cargo_version = "1.86.0 (adf9b6ad1 2025-02-28)"
 target_triples = [
@@ -10,7 +11,7 @@ target_triples = [
 ]
 lockfile_digest = "522c3a52ba1e5396dd4cd442d1635a2519946bf6b6655a7fb5bc962622e90fc9"
 is_offline_capable = true
-reproducible_archive_hash = "982a5848dcec853b3f2592b7af6f6aebeedfaa09123c50acf2728c4de8ecc470"
+reproducible_archive_hash = "d98593300f61f2b4556ac7b5aec2420187e0d6b52a021900d147598687316e4b"
 
 [[dependencies]]
 name = "adler2"
@@ -3922,10 +3923,6 @@ path = "release/evidence/benchmarks/bench-release-axes.json"
 digest = "42d93d671a3c189596d0082b52dd7b8683bed3141c415caa08c66ed44d0ceed2"
 
 [[benchmark_baselines]]
-path = "release/evidence/benchmarks/compiler-grade-thesis-workloads.json"
-digest = "5e13a358544cc8322ecbcf6ae807c0393bd2ad452e8ed5ce0f11e8c6a747adf3"
-
-[[benchmark_baselines]]
 path = "release/evidence/benchmarks/cpu-only-100x-proof.json"
 digest = "86f66f1073fcb3e1bfb66b38ee8a6d85af0f7d8c1605a3939e7f7a937bf3a0ab"
 
@@ -3963,7 +3960,7 @@ digest = "ca6ec745d56728e04260f7f63c0d41aebc87477d70e4956a4fe3a1b8d09f07f6"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/release-workload-matrix.json"
-digest = "44b98963be4af0e19834f0d3685159eba6060db841d699c61ebff0c9534fd1d6"
+digest = "136daf0d089c3cf6eae40b157074cefb5e79874a4c8b4b9b01bbae7d715ca31b"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/resident-optimizer-pipeline.json"
@@ -4043,19 +4040,19 @@ digest = "1921dcf73446fe391f80344985f20b8f10104d62c32a90cfb77465c719d6acd5"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/whole-app-dense-numerical-pipeline.json"
-digest = "5ee9f3773e59ccbf5f34299aa25fffe45f6dffb27a0403aae85146f657501c04"
+digest = "ad6a04a94969be79e5bd2725d8acefb9a783374e3d200ff8ffc47b089014d0a9"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/whole-app-interactive-event-pipeline.json"
-digest = "778ebc80c231cbdc5df124fa2f580b4c855f6e3cd050096bf809c4ba40b73b30"
+digest = "54e591ae2e54521220684ce44fe56878cda5865bee34d3909d2761a5e00b0f55"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/whole-app-irregular-stateful-traversal.json"
-digest = "f4ff9509463f53b906135348b24883e4bbc68c0950f5052e00c44708dee92bd9"
+digest = "53b438bbe28d1bca57ca8081f21009accc01ad2447d9740f84a412b21481ef08"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/whole-application-domain-matrix.json"
-digest = "9cca9244769b59844b87ecd57e94cbf308dc331cf323e742f519dee9f520ffff"
+digest = "a38acc4f714598c00bbad98c47f37552f1fd7c944d8a398520d3d4701f792195"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-01-condition-eval.json"
@@ -4127,7 +4124,7 @@ digest = "fdd2a2fba036ce3be37771f4db1f3e835e20ff8abd50081b2e5e959363881db0"
 
 [[schemas]]
 path = "docs/generated/OP_SCHEMA.json"
-digest = "34c7a6633384ae2c5d988cc4dc95c84a56ddc08ad7a08d8941e2525bb909257e"
+digest = "b3e188929772346ac3090e6ed316f4b6965e08562de6eb98bd2c9294927bf527"
 
 [[schemas]]
 path = "docs/generated/catalog.toml"
@@ -4135,7 +4132,7 @@ digest = "ab7433710f7119519c205c4179d6a766f0b8361ee6ec65665c9cc513151641bb"
 
 [[schemas]]
 path = "docs/generated/change-closure.toml"
-digest = "f20c43db272e7bf7154411251bc97a1d131eafd94035f3b18dd3ecc89a169e4b"
+digest = "538b6577a48bf8e05ca0513f9ae58a59de6fd3de7120d5b1f983f540a6e313f3"
 
 [[schemas]]
 path = "docs/generated/configuration-space.toml"
@@ -4147,7 +4144,7 @@ digest = "2fbb1f049e9985434e389a67eedd95c9c20315bab34655ce8ebc1b0f4d2438d6"
 
 [[schemas]]
 path = "docs/generated/engineering-scorecard.toml"
-digest = "af70be1ffbacd206289fc10a1eafb7e6e94bfe65283102f3c2ce166a46274bde"
+digest = "7823bc796cb46394cb7aa82c3a66c307f64ba5bff81884c13fdb2f5bfedd05d9"
 
 [[schemas]]
 path = "docs/generated/error-codes.toml"

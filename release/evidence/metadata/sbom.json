@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=ab2e2b4ba58b45dc748e13ab540a57116d15ff8ff539182ce68210e5bfc7273a"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"a7e465caa5988e7852bdd9bacbc142045cc47c54","commit_timestamp":"1789032719","parent_commit":"0dab1d138112ddf7b8bcdddb988829588b890d7d","dirty":true,"source_fingerprint":"git:a7e465caa5988e7852bdd9bacbc142045cc47c54:dirty=true:worktree=a64143202249db38634f874d499f55ac0bac82d3eeafa1ea6d1dc70c770bd61b"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
   "bomFormat": "CycloneDX",
   "components": [
     {
@@ -9111,7 +9111,7 @@
       "type": "framework",
       "version": "0.8.0"
     },
-    "timestamp": "2026-09-08T00:00:00Z",
+    "timestamp": "2026-09-10T09:31:59Z",
     "tools": [
       {
         "name": "xtask-release-provenance",

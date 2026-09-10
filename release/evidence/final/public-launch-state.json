@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:e6b8a488d48bb8076217b25e91279ba53e809a5f:dirty=true:worktree=63d55087b12233bf741bf73d570af6ae7e406a46a143f5e96331c28e7200794c",
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"a7e465caa5988e7852bdd9bacbc142045cc47c54","commit_timestamp":"1789032719","parent_commit":"0dab1d138112ddf7b8bcdddb988829588b890d7d","dirty":true,"source_fingerprint":"git:a7e465caa5988e7852bdd9bacbc142045cc47c54:dirty=true:worktree=a64143202249db38634f874d499f55ac0bac82d3eeafa1ea6d1dc70c770bd61b"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 2,
   "objective": "publish the canonical Vyre release artifacts",
   "current_state": "prepublish_release_ready",

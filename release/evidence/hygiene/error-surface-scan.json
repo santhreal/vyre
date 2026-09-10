@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"4fcfdd253e098d5bcc852f7cfecb4ad60bc3c771","commit_timestamp":"1789028986","parent_commit":"c66e64f6e323404843eecf5c403c9fa54f445606","dirty":true,"source_fingerprint":"git:4fcfdd253e098d5bcc852f7cfecb4ad60bc3c771:dirty=true:worktree=e1260fba32008d1da96724c0d08e6cdffb020ae35183456af653956bab87adc8"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"a7e465caa5988e7852bdd9bacbc142045cc47c54","commit_timestamp":"1789032719","parent_commit":"0dab1d138112ddf7b8bcdddb988829588b890d7d","dirty":false,"source_fingerprint":"git:a7e465caa5988e7852bdd9bacbc142045cc47c54:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -167,13 +167,13 @@
     },
     {
       "path": "vyre-foundation/src/diagnostics/mod.rs",
-      "line": 910,
+      "line": 911,
       "pattern": "documented_panic_contract",
       "text": "serde_json::to_vec(self).expect("
     },
     {
       "path": "vyre-foundation/src/diagnostics/mod.rs",
-      "line": 925,
+      "line": 926,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"serde_json emits UTF-8. Fix: none; this cannot fail\")"
     },
